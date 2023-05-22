@@ -1,9 +1,19 @@
 use opendp_derive::bootstrap;
 
-use crate::core::FfiResult;
+use crate::core::{
+    AnyOdometerAnswer, AnyOdometerQuery, OdometerAnswer, OdometerQuery, StabilityMap,
+};
+use crate::core::{FfiResult, Function, Odometer};
 
 use crate::error::Fallible;
-use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyTransformation};
+use crate::ffi::any::{
+    AnyFunction, AnyMeasurement, AnyObject, AnyOdometer, AnyTransformation, Downcast,
+    QueryOdometerMapType,
+};
+use crate::ffi::util::{ExtrinsicObject, Type};
+use crate::interactive::{Answer, Query, Queryable};
+use crate::measures::ffi::TypedMeasure;
+use crate::metrics::ffi::TypedMetric;
 
 #[bootstrap(
     features("contrib"),
@@ -33,6 +43,147 @@ pub extern "C" fn opendp_combinators__make_chain_mt(
     let transformation0 = try_as_ref!(transformation0);
     let measurement1 = try_as_ref!(measurement1);
     make_chain_mt(measurement1, transformation0).into()
+}
+
+// 1. create fully adaptive composition odometer
+//    - external queries are partially typed
+//    - internal queries are partially typed
+// 2. erase types in ffi
+//    - external queries are AnyObject
+//    - internal queries are left partially typed
+// 3.
+
+#[bootstrap(
+    name = "make_chain_ot",
+    features("contrib"),
+    arguments(odometer1(rust_type = b"null"), transformation0(rust_type = b"null"))
+)]
+/// Construct the functional composition (`odometer1` ○ `transformation0`).
+/// Returns a Measurement that when invoked, computes `odometer1(transformation0(x))`.
+///
+/// # Arguments
+/// * `odometer1` - outer odometer
+/// * `transformation0` - inner transformation
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_combinators__make_chain_ot(
+    odometer1: *const AnyOdometer,
+    transformation0: *const AnyTransformation,
+) -> FfiResult<*mut AnyOdometer> {
+    let transformation0 = try_as_ref!(transformation0);
+    let odometer1 = try_as_ref!(odometer1);
+
+    fn monomorphize<QI: 'static + Clone, QX: 'static + Clone, QO: 'static>(
+        transformation0: &AnyTransformation,
+        odometer1: &AnyOdometer,
+    ) -> Fallible<AnyOdometer> {
+        let stability_map = transformation0.stability_map.clone();
+        let transformation0 = try_!(transformation0.with_map(
+            try_!(TypedMetric::<QI>::new(transformation0.input_metric.clone())),
+            try_!(TypedMetric::<QX>::new(
+                transformation0.output_metric.clone()
+            )),
+            StabilityMap::new_fallible(move |d_in: &QI| {
+                stability_map
+                    .eval(&AnyObject::new(d_in.clone()))?
+                    .downcast::<QX>()
+            },)
+        ));
+
+        let function = odometer1.function.clone();
+        let odometer1 = try_!(Odometer::new(
+            odometer1.input_domain.clone(),
+            try_!(TypedMetric::<QX>::new(odometer1.input_metric.clone())),
+            try_!(TypedMeasure::<QO>::new(odometer1.output_measure.clone())),
+            Function::new_fallible(
+                move |arg: &AnyObject| -> Fallible<
+                    Queryable<OdometerQuery<AnyObject, QX>, OdometerAnswer<AnyObject, QO>>,
+                > {
+                    let mut inner_qbl = function.eval(arg)?;
+
+                    Ok(Queryable::new_raw(
+                        move |_self, query: Query<OdometerQuery<AnyObject, QX>>| match query {
+                            Query::External(OdometerQuery::Invoke(arg)) => {
+                                let release = inner_qbl.invoke(arg.clone())?;
+                                Ok(Answer::External(OdometerAnswer::Invoke(release)))
+                            }
+                            Query::External(OdometerQuery::PrivacyLoss(d_in)) => {
+                                let d_out = inner_qbl.privacy_loss(AnyObject::new(d_in.clone()))?;
+                                Ok(Answer::External(OdometerAnswer::PrivacyLoss(
+                                    d_out.downcast::<QO>()?,
+                                )))
+                            }
+                            Query::Internal(any) => {
+                                let Answer::Internal(answer) =
+                                    inner_qbl.eval_query(Query::Internal(any))?
+                                else {
+                                    return fallible!(FailedFunction, "expected internal answer");
+                                };
+                                Ok(Answer::Internal(answer))
+                            }
+                        },
+                    ))
+                },
+            ),
+        ));
+
+        let odometer = try_!(super::make_chain_ot(&odometer1, &transformation0));
+
+        let function = odometer.function.clone();
+        Odometer::new(
+            odometer.input_domain.clone(),
+            odometer.input_metric.metric.clone(),
+            odometer.output_measure.measure.clone(),
+            Function::new_fallible(
+                move |arg: &AnyObject| -> Fallible<Queryable<AnyOdometerQuery, AnyOdometerAnswer>> {
+                    let mut inner_qbl = function.eval(arg)?;
+
+                    Ok(Queryable::new_raw(
+                        move |_self, query: Query<AnyOdometerQuery>| match query {
+                            Query::External(OdometerQuery::Invoke(query)) => {
+                                let answer = inner_qbl.invoke(query.clone())?;
+                                Ok(Answer::External(OdometerAnswer::Invoke(answer)))
+                            }
+                            Query::External(OdometerQuery::PrivacyLoss(d_in)) => {
+                                let answer = AnyObject::new(
+                                    inner_qbl.privacy_loss(d_in.downcast_ref::<QI>()?.clone())?,
+                                );
+                                Ok(Answer::External(OdometerAnswer::PrivacyLoss(answer)))
+                            }
+                            Query::Internal(query) => {
+                                if query.downcast_ref::<QueryOdometerMapType>().is_some() {
+                                    return Ok(Answer::internal(Type::of::<QI>()));
+                                }
+
+                                let Answer::Internal(answer) =
+                                    inner_qbl.eval_query(Query::Internal(query))?
+                                else {
+                                    return fallible!(
+                                        FailedFunction,
+                                        "internal query returned external answer"
+                                    );
+                                };
+                                Ok(Answer::Internal(answer))
+                            }
+                        },
+                    ))
+                },
+            ),
+        )
+    }
+
+    let QI = transformation0.input_metric.distance_type.clone();
+    let QX = transformation0.output_metric.distance_type.clone();
+    let QO = odometer1.output_measure.distance_type.clone();
+    dispatch!(
+        monomorphize,
+        [
+            (QI, @numbers),
+            (QX, @numbers_plus),
+            (QO, [f64, (f64, f64)])
+        ],
+        (transformation0, odometer1)
+    )
+    .into()
 }
 
 #[bootstrap(
