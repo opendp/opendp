@@ -19,7 +19,7 @@ mod ffi;
 /// * `MI` - Input Metric.
 /// * `MO` - Output Measure of the input argument. Must be `SmoothedMaxDivergence<Q>`
 pub fn make_fix_delta<DI, TO, MI, MO>(
-    measurement: &Measurement<DI, TO, MI, MO>,
+    m: &Measurement<DI, TO, MI, MO>,
     delta: MO::Atom,
 ) -> Fallible<Measurement<DI, TO, MI, MO::FixedMeasure>>
 where
@@ -28,19 +28,12 @@ where
     MO: 'static + FixDeltaMeasure,
     (DI, MI): MetricSpace,
 {
-    let Measurement {
-        input_domain,
-        function,
-        input_metric,
-        output_measure,
-        privacy_map,
-    } = measurement.clone();
+    let privacy_map = m.privacy_map.clone();
+    let output_measure: MO = m.output_measure.clone();
 
-    Measurement::new(
-        input_domain,
-        function,
-        input_metric,
-        output_measure.new_fixed_measure()?,
+    m.with_map(
+        m.input_metric.clone(),
+        m.output_measure.new_fixed_measure()?,
         PrivacyMap::new_fallible(move |d_in| {
             // find the smallest epsilon at the given delta
             let curve = privacy_map.eval(d_in)?;

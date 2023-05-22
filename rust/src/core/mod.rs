@@ -228,10 +228,8 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 /// It is, however, left to constructor functions to prove that:
 /// * `input_metric` is compatible with `input_domain`
 /// * `privacy_map` is a mapping from the input metric to the output measure
-pub struct Measurement<DI: Domain, TO, MI: Metric, MO: Measure>
-where
-    (DI, MI): MetricSpace,
-{
+#[readonly::make]
+pub struct Measurement<DI: Domain, TO, MI: Metric, MO: Measure> {
     pub input_domain: DI,
     pub function: Function<DI::Carrier, TO>,
     pub input_metric: MI,
@@ -239,10 +237,7 @@ where
     pub privacy_map: PrivacyMap<MI, MO>,
 }
 
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, MO>
-where
-    (DI, MI): MetricSpace,
-{
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, MO> {
     fn clone(&self) -> Self {
         Self {
             input_domain: self.input_domain.clone(),
@@ -275,6 +270,26 @@ where
         })
     }
 
+    pub(crate) fn with_map<MI2: Metric, MO2: Measure>(
+        &self,
+        input_metric: MI2,
+        output_metric: MO2,
+        privacy_map: PrivacyMap<MI2, MO2>,
+    ) -> Fallible<Measurement<DI, TO, MI2, MO2>>
+    where
+        (DI, MI2): MetricSpace,
+    {
+        Measurement::new(
+            self.input_domain.clone(),
+            self.function.clone(),
+            input_metric,
+            output_metric,
+            privacy_map,
+        )
+    }
+}
+
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
     pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<TO> {
         self.function.eval(arg)
     }
@@ -313,11 +328,8 @@ pub trait MetricSpace {
 /// * `function` is a mapping from the input domain to the output domain
 /// * `stability_map` is a mapping from the input metric to the output metric
 #[derive(Clone)]
-pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric>
-where
-    (DI, MI): MetricSpace,
-    (DO, MO): MetricSpace,
-{
+#[readonly::make]
+pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
     pub input_domain: DI,
     pub output_domain: DO,
     pub function: Function<DI::Carrier, DO::Carrier>,
@@ -351,6 +363,28 @@ where
         })
     }
 
+    pub(crate) fn with_map<MI2: Metric, MO2: Metric>(
+        &self,
+        input_metric: MI2,
+        output_metric: MO2,
+        privacy_map: StabilityMap<MI2, MO2>,
+    ) -> Fallible<Transformation<DI, DO, MI2, MO2>>
+    where
+        (DI, MI2): MetricSpace,
+        (DO, MO2): MetricSpace,
+    {
+        Transformation::new(
+            self.input_domain.clone(),
+            self.output_domain.clone(),
+            self.function.clone(),
+            input_metric,
+            output_metric,
+            privacy_map,
+        )
+    }
+}
+
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, MO> {
     pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
         self.function.eval(arg)
     }

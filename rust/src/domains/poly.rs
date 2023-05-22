@@ -42,13 +42,14 @@ where
     /// Converts this Measurement into one with polymorphic output. This is useful for composition
     /// of heterogeneous Measurements.
     pub fn into_poly(self) -> Measurement<DI, Box<dyn Any>, MI, MO> {
-        Measurement {
-            input_domain: self.input_domain,
-            function: self.function.into_poly(),
-            input_metric: self.input_metric,
-            output_measure: self.output_measure,
-            privacy_map: self.privacy_map,
-        }
+        Measurement::new(
+            self.input_domain.clone(),
+            self.function.clone().into_poly(),
+            self.input_metric.clone(),
+            self.output_measure.clone(),
+            self.privacy_map.clone(),
+        )
+        .expect("compatibility check already passed")
     }
 }
 
