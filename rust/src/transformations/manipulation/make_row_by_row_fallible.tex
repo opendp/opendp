@@ -29,7 +29,7 @@ The function is permitted to return a data-independent error.
     \item \texttt{DO} (output domain) is a type with trait \rustdoc{transformations/trait}{DatasetDomain}. 
         \texttt{DatasetDomain} is used to define the type of the row domain.
     \item \texttt{M} (metric) is a type with trait \rustdoc{transformations/trait}{DatasetMetric}. 
-        \texttt{DatasetMetric} is used to restrict set of valid metrics to those which measure distances between datasets.
+        \texttt{DatasetMetric} is used to restrict the set of valid metrics to those which measure distances between datasets.
     \item \rustdoc{core/trait}{MetricSpace} is implemented for \texttt{(DI, M)}. Therefore \texttt{M} is a valid metric on \texttt{DI}.
     \item \rustdoc{core/trait}{MetricSpace} is implemented for \texttt{(DO, M)}.
     \item \texttt{row\_function} has no side-effects.
