@@ -79,14 +79,6 @@ where
     )
 }
 
-/// Denotes the prospective privacy loss of after releasing a query.
-pub enum PendingLoss<U> {
-    /// The pending loss is the same as the current loss
-    Same,
-    /// What the pending loss would be if the query were released
-    New(U),
-}
-
 /// # Proof Definition
 /// Returns a function that wraps a queryable.
 /// The wrapped queryable refuses to release any query
