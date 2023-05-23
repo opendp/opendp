@@ -2160,14 +2160,16 @@ def make_sink_csv(
     output_path: str,
     MI: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """[make_sink_csv in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sink_csv.html)
+    """Write a `LazyFrame` to a CSV file.
+    
+    [make_sink_csv in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sink_csv.html)
     
     **Supporting Elements:**
     
     * Input Domain:   `LazyFrameDomain`
-    * Output Domain:  `AtomDomain<bool>`
+    * Output Domain:  `CsvDomain`
     * Input Metric:   `MI`
-    * Output Metric:  `DiscreteDistance`
+    * Output Metric:  `MI`
     
     :param input_domain: 
     :param input_metric: 
