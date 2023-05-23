@@ -6,12 +6,8 @@ mod ffi;
 use crate::domains::type_name;
 use crate::error::*;
 use crate::traits::CheckNull;
-<<<<<<< HEAD
-use std::fmt::Formatter;
-=======
 use std::any::Any;
 use std::fmt::Debug;
->>>>>>> origin/695-polars-2
 
 pub trait IsVec: Debug {
     // Not sure if we need into_any() (which consumes the Form), keeping it for now.
@@ -20,7 +16,6 @@ pub trait IsVec: Debug {
     fn box_clone(&self) -> Box<dyn IsVec>;
     fn eq(&self, other: &dyn Any) -> bool;
     fn subset(&self, indicator: &Vec<bool>) -> Box<dyn IsVec>;
-    fn partition(&self, indices: &Vec<usize>, num_partitions: usize) -> Vec<Box<dyn IsVec>>;
 }
 
 impl<T> IsVec for Vec<T>
@@ -48,24 +43,7 @@ where
                 .collect::<Vec<_>>(),
         ) as Box<dyn IsVec>
     }
-    fn partition(&self, indices: &Vec<usize>, num_partitions: usize) -> Vec<Box<dyn IsVec>> {
-        let mut parts = (0..num_partitions).map(|_| Vec::<T>::new()).collect::<Vec<Vec<T>>>();
-        self.iter().cloned().zip(indices).for_each(|(v, i)| parts[*i].push(v));
-        parts.into_iter().map(|v| Box::new(v) as Box<dyn IsVec>).collect()
-    }
 }
-
-impl PartialEq for dyn IsVec {
-    fn eq(&self, other: &Self) -> bool {
-        self.eq(other.as_any())
-    }
- }
-
- impl Clone for Box<dyn IsVec> {
-    fn clone(&self) -> Self {
-        self.box_clone()
-    }
- }
 
 impl<T> From<Vec<T>> for Column
 where
@@ -107,9 +85,6 @@ impl Column {
     pub fn subset(&self, indicator: &Vec<bool>) -> Self {
         Self(self.0.subset(indicator))
     }
-    pub fn partition(&self, indices: &Vec<usize>, num_partitions: usize) -> Vec<Self> {
-        self.0.partition(indices, num_partitions).into_iter().map(Self).collect()
-    }
 }
 
 impl Clone for Column {
@@ -118,17 +93,11 @@ impl Clone for Column {
     }
 }
 
-// impl Debug for Column {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-//         write!(f, "Column is ({:?})", self.0.box_clone())
-//     }
-// }
-
- impl PartialEq for Column {
-     fn eq(&self, other: &Self) -> bool {
-         self.0.eq(&other.0)
-     }
- }
+impl PartialEq for Column {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq(other.0.as_any())
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -139,54 +108,6 @@ mod tests {
     fn test_vec() {
         let form = vec![1, 2, 3];
         test_round_trip(form);
-
-        use crate::{transformations::make_create_dataframe};
-
-        fn print_type_of<T>(_: &T) {
-            println!("{}", std::any::type_name::<T>())
-        }
-
-        let transformation = make_create_dataframe::<&str>(vec!["colA", "colB"]).unwrap();
-
-        let data_string = vec![
-            vec!["1".to_owned(), "A".to_owned()],
-            vec!["4".to_owned(), "A".to_owned()],
-            vec!["2".to_owned(), "B".to_owned()],
-            vec!["0".to_owned(), "A".to_owned()],
-            vec!["10".to_owned(), "B".to_owned()],
-        ];
-        
-        let df = transformation.invoke(&data_string).unwrap();
-
-        let records = vec!["A","A","B","A","B"];
-
-        let data = Column(Box::new(records));
-        println!("{:?}", data);
-        
-        let col = df.get("colB").unwrap_test()
-                .to_owned();
-        println!("{:?}", col);
-
-
-        let tmp = data.0.box_clone();
-        print_type_of(&tmp);
-        let tmp: &Vec<&str> = tmp.as_any().downcast_ref().unwrap_test();
-        print_type_of(&tmp);
-        println!("{:?}", tmp);
-        
-        let tmp2 = col.0.box_clone();
-        print_type_of(&tmp2);
-        let tmp2: &Vec<&str> = tmp2.as_any().downcast_ref().unwrap_test();
-        print_type_of(&tmp2);
-        println!("{:?}", tmp2);
-
-        let cat = col        
-                .as_form::<Vec<&str>>()
-                .unwrap_test();
-        assert_eq!(data, col);
-
-        println!("{:?}", cat);
-
     }
 
     // #[test]
@@ -202,5 +123,4 @@ mod tests {
         assert_eq!(&form, data.as_form().unwrap_test());
         assert_eq!(form, data.into_form().unwrap_test())
     }
-
 }

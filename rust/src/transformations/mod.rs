@@ -48,21 +48,12 @@ mod mean;
 #[cfg(feature = "contrib")]
 pub use crate::transformations::mean::*;
 
-<<<<<<< HEAD
 #[cfg(feature="contrib")]
 pub mod partitioned_sum;
 #[cfg(feature="contrib")]
 pub use crate::transformations::partitioned_sum::*;
 
 #[cfg(feature="contrib")]
-=======
-#[cfg(feature = "contrib")]
-mod polars;
-#[cfg(feature = "contrib")]
-pub use crate::transformations::polars::*;
-
-#[cfg(feature = "contrib")]
->>>>>>> origin/695-polars-2
 mod variance;
 #[cfg(feature = "contrib")]
 pub use crate::transformations::variance::*;
