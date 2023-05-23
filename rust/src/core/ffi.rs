@@ -15,8 +15,6 @@ use crate::ffi::util::into_c_char_p;
 use crate::ffi::util::{self, c_bool, Type};
 use crate::{try_, try_as_ref};
 
-use super::{Domain, Function, Measure, Measurement, Metric, MetricSpace, Transformation};
-
 #[repr(C)]
 pub struct FfiSlice {
     pub ptr: *const c_void,
@@ -146,11 +144,7 @@ pub trait IntoAnyMeasurementFfiResultExt {
     fn into_any(self) -> FfiResult<*mut AnyMeasurement>;
 }
 
-impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
-    IntoAnyMeasurementFfiResultExt for Fallible<Measurement<DI, TO, MI, MO>>
-where
-    (DI, MI): MetricSpace,
-{
+impl<T: IntoAnyMeasurementExt> IntoAnyMeasurementFfiResultExt for Fallible<T> {
     fn into_any(self) -> FfiResult<*mut AnyMeasurement> {
         self.map(IntoAnyMeasurementExt::into_any).into()
     }
@@ -163,12 +157,7 @@ pub trait IntoAnyTransformationFfiResultExt {
     fn into_any(self) -> FfiResult<*mut AnyTransformation>;
 }
 
-impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
-    IntoAnyTransformationFfiResultExt for Fallible<Transformation<DI, DO, MI, MO>>
-where
-    (DI, MI): MetricSpace,
-    (DO, MO): MetricSpace,
-{
+impl<T: IntoAnyTransformationExt> IntoAnyTransformationFfiResultExt for Fallible<T> {
     fn into_any(self) -> FfiResult<*mut AnyTransformation> {
         self.map(IntoAnyTransformationExt::into_any).into()
     }
@@ -178,7 +167,7 @@ pub trait IntoAnyFunctionFfiResultExt {
     fn into_any(self) -> FfiResult<*mut AnyFunction>;
 }
 
-impl<TI: 'static, TO: 'static> IntoAnyFunctionFfiResultExt for Fallible<Function<TI, TO>> {
+impl<T: IntoAnyFunctionExt> IntoAnyFunctionFfiResultExt for Fallible<T> {
     fn into_any(self) -> FfiResult<*mut AnyFunction> {
         self.map(IntoAnyFunctionExt::into_any).into()
     }
