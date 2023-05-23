@@ -693,7 +693,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(feature = "use-mpfr")]
+    #[cfg(all(feature = "use-mpfr", feature = "derive"))]
     #[test]
     fn test_any_chain() -> Fallible<()> {
         let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?
