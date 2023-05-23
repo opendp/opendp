@@ -53,7 +53,7 @@ where
     )
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "derive"))]
 mod tests {
     use crate::{error::Fallible, metrics::SymmetricDistance, transformations::partial_clamp};
 

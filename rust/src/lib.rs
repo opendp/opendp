@@ -37,7 +37,7 @@
 //! ```
 //! use opendp::error::Fallible;
 //!
-//! #[cfg(feature = "untrusted")]
+//! #[cfg(all(feature = "untrusted", feature = "derive"))]
 //! pub fn example() -> Fallible<()> {
 //!     use opendp::transformations::{make_split_lines, make_cast_default, partial_clamp, make_bounded_sum};
 //!     use opendp::combinators::{make_chain_tt, make_chain_mt};
@@ -79,7 +79,7 @@
 //!     println!("release = {}", release);
 //!     Ok(())
 //! }
-//! #[cfg(feature = "untrusted")]
+//! #[cfg(all(feature = "untrusted", feature = "derive"))]
 //! example().unwrap();
 //! ```
 //!

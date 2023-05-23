@@ -287,7 +287,7 @@ where
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "derive"))]
 mod tests_shr {
     use crate::measurements::make_base_discrete_laplace;
     use crate::transformations::{
