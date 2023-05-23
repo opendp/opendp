@@ -106,7 +106,9 @@ mod tests {
     use crate::combinators::tests::{make_test_measurement, make_test_transformation};
     use crate::core::{self, Function};
     use crate::error::Fallible;
-    use crate::ffi::any::{AnyObject, Downcast};
+    use crate::ffi::any::{
+        AnyObject, Downcast, IntoAnyFunctionExt, IntoAnyMeasurementExt, IntoAnyTransformationExt,
+    };
     use crate::ffi::util;
 
     use super::*;

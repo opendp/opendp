@@ -8,7 +8,8 @@ use opendp_derive::bootstrap;
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
 use crate::ffi::any::{
     AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyQueryable,
-    AnyTransformation, Downcast, QueryType,
+    AnyTransformation, Downcast, IntoAnyFunctionExt, IntoAnyMeasurementExt,
+    IntoAnyTransformationExt, QueryType,
 };
 use crate::ffi::util::into_c_char_p;
 use crate::ffi::util::{self, c_bool, Type};
@@ -151,7 +152,7 @@ where
     (DI, MI): MetricSpace,
 {
     fn into_any(self) -> FfiResult<*mut AnyMeasurement> {
-        self.map(Measurement::into_any).into()
+        self.map(IntoAnyMeasurementExt::into_any).into()
     }
 }
 
@@ -169,7 +170,7 @@ where
     (DO, MO): MetricSpace,
 {
     fn into_any(self) -> FfiResult<*mut AnyTransformation> {
-        self.map(Transformation::into_any).into()
+        self.map(IntoAnyTransformationExt::into_any).into()
     }
 }
 
@@ -179,7 +180,7 @@ pub trait IntoAnyFunctionFfiResultExt {
 
 impl<TI: 'static, TO: 'static> IntoAnyFunctionFfiResultExt for Fallible<Function<TI, TO>> {
     fn into_any(self) -> FfiResult<*mut AnyFunction> {
-        self.map(Function::into_any).into()
+        self.map(IntoAnyFunctionExt::into_any).into()
     }
 }
 
