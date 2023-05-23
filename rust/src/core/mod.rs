@@ -270,6 +270,7 @@ where
         })
     }
 
+    #[allow(dead_code)]
     pub(crate) fn with_map<MI2: Metric, MO2: Measure>(
         &self,
         input_metric: MI2,
@@ -383,6 +384,7 @@ where
         })
     }
 
+    #[allow(dead_code)]
     pub(crate) fn with_map<MI2: Metric, MO2: Metric>(
         &self,
         input_metric: MI2,
