@@ -3,7 +3,7 @@ import typing
 from collections.abc import Hashable
 from typing import Union, Any, Type, List
 
-from opendp.mod import UnknownTypeException, Measurement, Transformation
+from opendp.mod import UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES
 
 if sys.version_info >= (3, 7):
@@ -164,6 +164,12 @@ class RuntimeType(object):
 
         # parse a string-- "Vec<f32>",
         if isinstance(type_name, str):
+
+            if "AllDomain" in type_name:
+                import warnings
+                warnings.warn("AllDomain is deprecated. Use AtomDomain instead.", DeprecationWarning)
+                type_name = type_name.replace("AllDomain", "AtomDomain")
+
             type_name = type_name.strip()
             if type_name in generics:
                 return GenericType(type_name)
@@ -188,11 +194,9 @@ class RuntimeType(object):
                 return closeness
 
             domain = {
-                'AllDomain': AllDomain,
-                'BoundedDomain': BoundedDomain,
+                'AtomDomain': AtomDomain,
                 'VectorDomain': VectorDomain,
-                'OptionNullDomain': OptionNullDomain,
-                'InherentNullDomain': InherentNullDomain,
+                'OptionDomain': OptionDomain,
                 'SizedDomain': SizedDomain
             }.get(origin)
             if domain is not None:
@@ -239,6 +243,9 @@ class RuntimeType(object):
         """
         if type(public_example) in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type(public_example)]
+        
+        if isinstance(public_example, (Domain, Metric, Measure)):
+            return RuntimeType.parse(public_example.type)
 
         if isinstance(public_example, tuple):
             return RuntimeType('Tuple', list(map(cls.infer, public_example)))
@@ -323,6 +330,18 @@ class RuntimeType(object):
         ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
         if isinstance(inferred, UnknownType):
             return
+        
+        # allow extra flexibility around options, as the inferred type of an Option::<T>::Some will just be T
+        def is_option(type_name):
+            return isinstance(type_name, RuntimeType) and type_name.origin == "Option"
+        if is_option(expected):
+            expected = expected.args[0]
+            if is_option(inferred):
+                if isinstance(inferred.args[0], UnknownType):
+                    return
+                else:
+                    inferred = inferred.args[0]
+
         if isinstance(expected, str) and isinstance(inferred, str):
             if inferred in ATOM_EQUIVALENCE_CLASSES:
                 if expected not in ATOM_EQUIVALENCE_CLASSES[inferred]:
@@ -332,10 +351,6 @@ class RuntimeType(object):
                     raise TypeError(f"inferred type is {inferred}, expected {expected}. See {ERROR_URL_298}")
 
         elif isinstance(expected, RuntimeType) and isinstance(inferred, RuntimeType):
-            # allow extra flexibility around options, as the inferred type of an Option::<T>::Some will just be T
-            if expected.origin == "Option" and inferred.origin != "Option":
-                expected = expected.args[0]
-
             if expected.origin != inferred.origin:
                 raise TypeError(f"inferred type is {inferred.origin}, expected {expected.origin}. See {ERROR_URL_298}")
 
@@ -438,21 +453,22 @@ usize = 'usize'
 f32 = 'f32'
 f64 = 'f64'
 String = 'String'
+char = 'char'
 AnyMeasurementPtr = "AnyMeasurementPtr"
 AnyTransformationPtr = "AnyTransformationPtr"
+AnyDomainPtr = "AnyDomainPtr"
+SeriesDomain = "SeriesDomain"
 
 
-class Domain(RuntimeType):
+class DomainDescriptor(RuntimeType):
     def __getitem__(self, subdomain):
-        return Domain(self.origin, [self.parse(type_name=subdomain)])
+        return DomainDescriptor(self.origin, [self.parse(type_name=subdomain)])
 
 
-AllDomain = Domain('AllDomain')
-BoundedDomain = Domain('BoundedDomain')
-VectorDomain = Domain('VectorDomain')
-OptionNullDomain = Domain('OptionNullDomain')
-InherentNullDomain = Domain('InherentNullDomain')
-SizedDomain = Domain('SizedDomain')
+AtomDomain = DomainDescriptor('AtomDomain')
+VectorDomain = DomainDescriptor('VectorDomain')
+OptionDomain = DomainDescriptor('OptionDomain')
+SizedDomain = DomainDescriptor('SizedDomain')
 
 
 def get_atom(type_name):
@@ -469,14 +485,24 @@ def get_atom_or_infer(type_name: RuntimeType, example):
 
 
 def get_first(value):
-    return next(iter(value), None)
-
+    if value is None or not len(value):
+        return None
+    return next(iter(value))
 
 def parse_or_infer(type_name: RuntimeType, example):
     return RuntimeType.parse_or_infer(type_name, example)
+
+def pass_through(value):
+    return value
 
 def get_dependencies(value):
     return getattr(value, "_dependencies", None)
 
 def get_dependencies_iterable(value):
     return list(map(get_dependencies, value))
+
+def get_carrier_type(value):
+    return value.carrier_type
+
+def get_distance_type(value):
+    return value.distance_type

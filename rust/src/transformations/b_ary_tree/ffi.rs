@@ -4,7 +4,8 @@ use std::{
 };
 
 use crate::{
-    core::{FfiResult, IntoAnyTransformationFfiResultExt},
+    core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace},
+    domains::{AtomDomain, VectorDomain},
     ffi::{any::AnyTransformation, util::Type},
     metrics::{L1Distance, L2Distance},
     traits::{Integer, Number},
@@ -29,9 +30,13 @@ pub extern "C" fn opendp_transformations__make_b_ary_tree(
     where
         Q: Number,
     {
-        fn monomorphize2<M, TA>(leaf_count: usize, branching_factor: usize) -> FfiResult<*mut AnyTransformation>
+        fn monomorphize2<M, TA>(
+            leaf_count: usize,
+            branching_factor: usize,
+        ) -> FfiResult<*mut AnyTransformation>
         where
             TA: Integer,
+            (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             M: 'static + BAryTreeMetric,
             M::Distance: Number,
         {
@@ -54,11 +59,8 @@ pub extern "C" fn opendp_transformations__make_b_ary_tree(
     ], (leaf_count, branching_factor, M, TA))
 }
 
-
 #[no_mangle]
-pub extern "C" fn opendp_transformations__choose_branching_factor(
-    size_guess: c_uint,
-) -> c_uint {
+pub extern "C" fn opendp_transformations__choose_branching_factor(size_guess: c_uint) -> c_uint {
     let size_guess = size_guess as usize;
     choose_branching_factor(size_guess) as c_uint
 }

@@ -1,40 +1,38 @@
 use crate::{
-    core::{Function, Metric, StabilityMap, Transformation},
-    metrics::LpDistance,
-    domains::{AllDomain, VectorDomain},
+    core::{Function, Metric, MetricSpace, StabilityMap, Transformation},
+    domains::{AtomDomain, VectorDomain},
     error::Fallible,
+    metrics::LpDistance,
     traits::{InfCast, Integer, Number},
 };
 
-#[cfg(feature="ffi")]
+#[cfg(feature = "ffi")]
 mod ffi;
 
 mod consistency_postprocessor;
 pub use consistency_postprocessor::*;
 use opendp_derive::bootstrap;
 
-#[bootstrap(
-    features("contrib"),
-    generics(TA(default = "int"))
-)]
-/// Expand a vector of counts into a b-ary tree of counts, 
+#[bootstrap(features("contrib"), generics(TA(default = "int")))]
+/// Expand a vector of counts into a b-ary tree of counts,
 /// where each branch is the sum of its `b` immediate children.
-/// 
+///
 /// # Arguments
 /// * `leaf_count` - The number of leaf nodes in the b-ary tree.
 /// * `branching_factor` - The number of children on each branch of the resulting tree. Larger branching factors result in shallower trees.
-/// 
+///
 /// # Generics
 /// * `M` - Metric. Must be `L1Distance<Q>` or `L2Distance<Q>`
 /// * `TA` - Atomic Type of the input data.
 pub fn make_b_ary_tree<M, TA>(
     leaf_count: usize,
     branching_factor: usize,
-) -> Fallible<Transformation<VectorDomain<AllDomain<TA>>, VectorDomain<AllDomain<TA>>, M, M>>
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, VectorDomain<AtomDomain<TA>>, M, M>>
 where
     TA: Integer,
     M: BAryTreeMetric,
     M::Distance: Number,
+    (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
 {
     if leaf_count == 0 {
         return fallible!(MakeTransformation, "leaf_count must be at least 1");
@@ -48,9 +46,9 @@ where
     let num_leaves = branching_factor.pow(num_layers as u32 - 1);
     // leaf_count is the number of leaves in the final layer of a complete tree
 
-    Ok(Transformation::new(
-        VectorDomain::new_all(),
-        VectorDomain::new_all(),
+    Transformation::new(
+        VectorDomain::new(AtomDomain::default()),
+        VectorDomain::new(AtomDomain::default()),
         Function::new(move |arg: &Vec<TA>| {
             // if arg.len() != num_bins, then user has a bug that will affect utility, but cannot alert
             //    if less data is passed than num_bins, then pad with extra zeros
@@ -83,9 +81,8 @@ where
         M::default(),
         M::default(),
         StabilityMap::new_from_constant(M::Distance::inf_cast(num_layers)?),
-    ))
+    )
 }
-
 
 // find i such that b^i >= x
 // returns 0 when x == 0
@@ -116,12 +113,10 @@ fn num_nodes_from_num_layers(num_layers: usize, b: usize) -> usize {
 pub trait BAryTreeMetric: Metric {}
 impl<const P: usize, T> BAryTreeMetric for LpDistance<P, T> {}
 
-#[bootstrap(
-    features("contrib")
-)]
-/// Returns an approximation to the ideal `branching_factor` for a dataset of a given size, 
+#[bootstrap(features("contrib"))]
+/// Returns an approximation to the ideal `branching_factor` for a dataset of a given size,
 /// that minimizes error in cdf and quantile estimates based on b-ary trees.
-/// 
+///
 /// # Citations
 /// * [QYL13 Understanding Hierarchical Methods for Differentially Private Histograms](http://www.vldb.org/pvldb/vol6/p1954-qardaji.pdf)
 ///
@@ -142,10 +137,9 @@ pub fn choose_branching_factor(size_guess: usize) -> usize {
         .unwrap_or(size_guess)
 }
 
-
 #[cfg(test)]
 pub mod test_b_trees {
-    use crate::{metrics::L1Distance, measurements::make_base_discrete_laplace};
+    use crate::{measurements::make_base_discrete_laplace, metrics::L1Distance};
 
     use super::*;
 
@@ -246,7 +240,11 @@ pub mod test_b_trees {
 
         let noisy_tree = meas.invoke(&vec![1; 10])?;
         // casting should not lose data, as noise was integral
-        let consi_leaves = post.invoke(&noisy_tree)?.into_iter().map(|v| v as i32).collect();
+        let consi_leaves = post
+            .eval(&noisy_tree)?
+            .into_iter()
+            .map(|v| v as i32)
+            .collect();
         let consi_tree = make_b_ary_tree::<L1Distance<f64>, i32>(10, b)?.invoke(&consi_leaves)?;
 
         println!("noisy      leaves {:?}", noisy_tree[15..].to_vec());

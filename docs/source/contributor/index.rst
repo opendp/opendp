@@ -1,7 +1,7 @@
-Developer Guide
-###############
+Contributor Guide
+#################
 
-This guide is directed towards people interested in participating in OpenDP development.
+This guide is directed towards people interested in contributing to the OpenDP Library and Commons.
 
 If your focus is using OpenDP to build your own applications, please consult the :doc:`../user/index`.
 

@@ -4,8 +4,8 @@ mod ffi;
 use num::Float;
 use opendp_derive::bootstrap;
 
-use crate::core::{Metric, Transformation};
-use crate::domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
+use crate::core::{Metric, MetricSpace, Transformation};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::AbsoluteDistance;
 use crate::traits::{ExactIntCast, InfMul};
@@ -20,9 +20,9 @@ use super::{
     generics(MI(default = "SymmetricDistance"), T(example = "$get_first(bounds)"))
 )]
 /// Make a Transformation that computes the mean of bounded data.
-/// 
+///
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size.
-/// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+/// Use `make_clamp` to bound data and `make_resize` to establish dataset size.
 ///
 /// # Arguments
 /// * `size` - Number of records in input data.
@@ -34,19 +34,13 @@ use super::{
 pub fn make_sized_bounded_mean<MI, T>(
     size: usize,
     bounds: (T, T),
-) -> Fallible<
-    Transformation<
-        SizedDomain<VectorDomain<BoundedDomain<T>>>,
-        AllDomain<T>,
-        MI,
-        AbsoluteDistance<T>,
-    >,
->
+) -> Fallible<Transformation<VectorDomain<AtomDomain<T>>, AtomDomain<T>, MI, AbsoluteDistance<T>>>
 where
     MI: 'static + Metric,
     T: 'static + MakeSizedBoundedSum<MI> + ExactIntCast<usize> + Float + InfMul,
-    AllDomain<T>: LipschitzMulFloatDomain<Atom = T>,
+    AtomDomain<T>: LipschitzMulFloatDomain<Atom = T>,
     AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
+    (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
 {
     if size == 0 {
         return fallible!(MakeTransformation, "dataset size must be positive");
@@ -55,7 +49,7 @@ where
     // don't loosen the bounds by the relaxation term because any value greater than nU is pure error
     let sum_bounds = (size_.neg_inf_mul(&bounds.0)?, size_.inf_mul(&bounds.1)?);
     make_sized_bounded_sum::<MI, T>(size, bounds)?
-        >> make_lipschitz_float_mul(size_.recip(), sum_bounds)?
+        >> make_lipschitz_float_mul::<AtomDomain<T>, _>(size_.recip(), sum_bounds)?
 }
 
 #[cfg(test)]

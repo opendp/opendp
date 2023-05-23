@@ -1,5 +1,6 @@
 import pytest
 
+from opendp.typing import *
 from opendp.mod import enable_features
 enable_features('floating-point', 'contrib')
 
@@ -67,13 +68,14 @@ def test_bisect_edge():
 
 def test_bisect_chain():
     from opendp.mod import binary_search_chain, binary_search_param, enable_features
-    from opendp.transformations import make_clamp, make_bounded_resize, make_sized_bounded_mean
+    from opendp.transformations import make_clamp, make_resize, make_sized_bounded_mean
+    from opendp.domains import atom_domain
     from opendp.measurements import make_base_laplace
     enable_features("contrib")
 
     pre = (
         make_clamp(bounds=(0., 1.)) >>
-        make_bounded_resize(size=10, bounds=(0., 1.), constant=0.) >>
+        make_resize(size=10, atom_domain=atom_domain((0., 1.)), constant=0.) >>
         make_sized_bounded_mean(size=10, bounds=(0., 1.))
     )
     chain = binary_search_chain(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
@@ -81,3 +83,82 @@ def test_bisect_chain():
 
     scale = binary_search_param(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
     assert scale - 0.1 < 1e-8
+
+
+def test_supporting_elements():
+    from opendp.transformations import make_clamp
+    clamper = make_clamp((0, 2))
+    print(clamper.input_domain)
+    print(clamper.input_domain.carrier_type)
+    print(clamper.output_domain)
+    print(clamper.output_domain.carrier_type)
+    print(clamper.input_metric)
+    print(clamper.input_metric.distance_type)
+    print(clamper.output_metric)
+    print(clamper.output_metric.distance_type)
+
+    from opendp.measurements import make_base_laplace
+    mechanism = make_base_laplace(1.)
+    print(mechanism.input_domain)
+    print(mechanism.input_domain.carrier_type)
+    print(mechanism.input_metric)
+    print(mechanism.input_metric.distance_type)
+    print(mechanism.output_measure)
+    print(mechanism.output_measure.distance_type)
+
+
+def test_function():
+    from opendp.measurements import make_base_laplace
+    mechanism = make_base_laplace(1.)
+    pow = 4 # add noise 2^pow times
+    for _ in range(pow):
+        mechanism = mechanism >> mechanism.function
+    print(mechanism(0.))
+
+
+
+def test_member():
+    from opendp.transformations import make_clamp
+    clamper = make_clamp((0, 2))
+    assert clamper.input_domain.member([1])
+    assert not clamper.output_domain.member([4, 1])
+
+    from opendp.measurements import make_base_laplace
+    mechanism = make_base_laplace(1.)
+    assert not mechanism.input_domain.member(float("NaN"))
+
+def test_new_domain():
+    from opendp.domains import atom_domain, vector_domain
+    domain = atom_domain(T=i32)
+    assert domain.member(3)
+    domain = atom_domain(T=f64)
+    assert not domain.member(float("nan"))
+
+    domain = atom_domain((1, 2))
+    assert domain.member(2)
+    assert not domain.member(3)
+    print(domain)
+
+    domain = vector_domain(atom_domain(T=i32))
+    assert domain.member([2])
+    print(domain)
+    domain = vector_domain(atom_domain((2, 3)))
+    assert domain.member([2])
+    assert not domain.member([2, 4])
+    print(domain)
+    
+    domain = vector_domain(atom_domain(T=i32), 10)
+    assert domain.member([1] * 10)
+    print(domain)
+    domain = vector_domain(atom_domain((2., 7.)), 10)
+    assert domain.member([3.] * 10)
+    assert not domain.member([1.] * 10)
+    print(domain)
+
+    null_domain = atom_domain(nullable=True, T=float)
+    print(null_domain)
+    assert null_domain.member(float("nan"))
+
+    not_null_domain = atom_domain(nullable=False, T=float)
+    print(not_null_domain)
+    assert not not_null_domain.member(float("nan"))

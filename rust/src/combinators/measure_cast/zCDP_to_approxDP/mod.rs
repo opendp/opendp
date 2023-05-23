@@ -1,5 +1,5 @@
 use crate::{
-    core::{Domain, Measurement, Metric, PrivacyMap},
+    core::{Domain, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     measures::{SMDCurve, SmoothedMaxDivergence, ZeroConcentratedDivergence},
     traits::Float,
@@ -12,45 +12,43 @@ mod ffi;
 
 mod cdp_epsilon;
 
-/// Constructs a new output measurement where the output measure 
+/// Constructs a new output measurement where the output measure
 /// is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
-/// 
+///
 /// # Arguments
 /// * `meas` - a measurement with a privacy measure to be casted
-/// 
+///
 /// # Generics
 /// * `DI` - Input Domain
-/// * `DO` - Output Domain
+/// * `TO` - Output Type
 /// * `MI` - Input Metric
 /// * `QO` - Output distance type. One of `f32` or `f64`.
-pub fn make_zCDP_to_approxDP<DI, DO, MI, QO>(
-    meas: Measurement<DI, DO, MI, ZeroConcentratedDivergence<QO>>,
-) -> Fallible<Measurement<DI, DO, MI, SmoothedMaxDivergence<QO>>>
+pub fn make_zCDP_to_approxDP<DI, TO, MI, QO>(
+    meas: Measurement<DI, TO, MI, ZeroConcentratedDivergence<QO>>,
+) -> Fallible<Measurement<DI, TO, MI, SmoothedMaxDivergence<QO>>>
 where
     DI: Domain,
-    DO: Domain,
     MI: 'static + Metric,
     QO: Float,
+    (DI, MI): MetricSpace,
 {
     let Measurement {
         input_domain,
-        output_domain,
         function,
         input_metric,
         privacy_map,
         ..
     } = meas;
 
-    Ok(Measurement::new(
+    Measurement::new(
         input_domain,
-        output_domain,
         function,
         input_metric,
         SmoothedMaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             let rho = privacy_map.eval(d_in)?;
-            
+
             Ok(SMDCurve::new(move |&delta: &QO| cdp_epsilon(rho, delta)))
         }),
-    ))
+    )
 }

@@ -76,7 +76,6 @@
 //! # Memory Management
 //!
 
-
 #[macro_use]
 pub mod dispatch;
 pub mod any;
@@ -91,7 +90,7 @@ macro_rules! try_ {
             Ok(x) => x,
             Err(e) => return e.into(),
         }
-    }
+    };
 }
 // attempt to convert a raw pointer to a reference
 //      as_ref      ok_or_else       try_!
@@ -99,6 +98,15 @@ macro_rules! try_ {
 #[macro_export]
 macro_rules! try_as_ref {
     ($value:expr) => {
-        try_!($crate::ffi::util::as_ref($value).ok_or_else(|| err!(FFI, concat!("null pointer: ", stringify!($value)))))
-    }
+        try_!($crate::ffi::util::as_ref($value)
+            .ok_or_else(|| err!(FFI, concat!("null pointer: ", stringify!($value)))))
+    };
+}
+
+#[macro_export]
+macro_rules! try_as_mut_ref {
+    ($value:expr) => {
+        try_!($crate::ffi::util::as_mut_ref($value)
+            .ok_or_else(|| err!(FFI, concat!("null pointer: ", stringify!($value)))))
+    };
 }

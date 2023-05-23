@@ -19,7 +19,7 @@ Chaining
 Two of the most essential constructors are the "chainers" that chain transformations with transformations, and transformations with measurements.
 Chainers are used to incrementally piece Transformations or Measurements together that represent longer computational pipelines.
 
-The :py:func:`opendp.combinators.make_chain_tt` constructor creates a new Transformation by combining an inner and an outer Transformation.
+The :py:func:`opendp.combinators.make_chain_tt` constructor creates a new Transformation by stitching together two Transformations sequentially.
 The resulting Transformation contains a function that sequentially executes the function of the constituent Transformations.
 It also contains a privacy map that takes an input distance bound on the inner Transformation and emits an output distance bound on the outer transformation.
 
@@ -29,7 +29,7 @@ Any computation beyond a measurement is postprocessing and need not be governed 
 
 Postprocessing functionality is provided by the :py:func:`opendp.combinators.make_chain_tm` constructor that allows transformations to be chained onto a Measurement.
 Since the outer Transformation is postprocessing, the metrics and stability map of the outer Transformation are ignored.
-In this case, it is only necessary for the domains to conform.
+In this case, it is only necessary for the types to conform.
 
 In the following example we chain :py:func:`opendp.measurements.make_base_discrete_laplace` with :py:func:`opendp.transformations.make_bounded_sum`.
 
@@ -85,11 +85,11 @@ but the chaining fails because the sum emits floats and the discrete laplace mec
     ... except OpenDPException as err:
     ...     print(err.message[:-1])
     Intermediate domains don't match. See https://github.com/opendp/opendp/discussions/297
-        output_domain: AllDomain(f64)
-        input_domain:  AllDomain(i32)
+        output_domain: AtomDomain(T=f64)
+        input_domain:  AtomDomain(T=i32)
 
 Note that ``noisy_sum``'s input domain and input metric come from ``bounded_sum``'s input domain and input metric.
-This is intended to enable further chaining with preprocessors like :py:func:`make_cast <opendp.transformations.make_cast>`, :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`, :py:func:`make_clamp <opendp.transformations.make_clamp>` and :py:func:`make_bounded_resize <opendp.transformations.make_bounded_resize>`.
+This is intended to enable further chaining with preprocessors like :py:func:`make_cast <opendp.transformations.make_cast>`, :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`, :py:func:`make_clamp <opendp.transformations.make_clamp>` and :py:func:`make_resize <opendp.transformations.make_resize>`.
 See the section on :ref:`transformation-constructors` for more information on how to preprocess data in OpenDP.
 
 Composition
@@ -113,6 +113,7 @@ Thus the privacy map simply sums the constituent output distances.
     2.0
 
 This combinator can compose Measurements with ``ZeroConcentratedDivergence``, ``MaxDivergence`` and ``FixedSmoothedMaxDivergence`` output measures.
+More sophisticated and adaptive composition will come with interactive measurements, which are underway.
 
 .. _measure-casting:
 
@@ -248,23 +249,15 @@ It is possible to construct Transformations, Measurements and Postprocessors on 
    * - Component
      - Constructor
    * - Transformation
-     - :func:`opendp.combinators.make_default_user_transformation`
+     - :func:`opendp.combinators.make_user_transformation`
    * - Measurement
-     - :func:`opendp.combinators.make_default_user_measurement`
+     - :func:`opendp.combinators.make_user_measurement`
    * - Postprocessor
-     - :func:`opendp.combinators.make_default_user_postprocessor`
+     - :func:`opendp.combinators.make_user_postprocessor`
 
 .. note::
 
-    This API is currently limited to domains that have a default. 
-    Domains that carry state do not have a default:
-    ``SizedDomain`` carries a size parameter, and ``BoundedDomain`` carries bounds, so they are not currently supported.
-    The output domain of ``make_basic_composition`` suffers from the same issue.
-    This restriction may be lifted after `#232 <https://github.com/opendp/opendp/issues/232>`_.
-
-.. note::
-
-    This requires a looser trust model, as we cannot verify any correctness properties of user-defined functions.
+    This requires a looser trust model, as we cannot verify any privacy or stability properties of user-defined functions.
 
     .. doctest::
 
@@ -274,7 +267,9 @@ In this example, we mock the typical API of the OpenDP library:
 
 .. doctest::
 
-    >>> from opendp.combinators import make_default_user_transformation
+    >>> from opendp.combinators import make_user_transformation
+    >>> from opendp.domains import vector_domain, atom_domain
+    >>> from opendp.metrics import symmetric_distance
     >>> from opendp.typing import *
     ...
     >>> def make_repeat(multiplicity):
@@ -287,13 +282,13 @@ In this example, we mock the typical API of the OpenDP library:
     ...         # they can now influence `d_in` * `multiplicity` records
     ...         return d_in * multiplicity
     ...
-    ...     return make_default_user_transformation(
+    ...     return make_user_transformation(
+    ...         vector_domain(atom_domain(T=int)),
+    ...         vector_domain(atom_domain(T=int)),
     ...         function,
+    ...         symmetric_distance(),
+    ...         symmetric_distance(),
     ...         stability_map,
-    ...         DI=VectorDomain[AllDomain[int]],
-    ...         DO=VectorDomain[AllDomain[int]],
-    ...         MI=SymmetricDistance,
-    ...         MO=SymmetricDistance,
     ...     )
     
 The resulting Transformation may be used interchangeably with those constructed via the library:

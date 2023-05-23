@@ -1,12 +1,13 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_uint};
 
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric};
+use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSpace};
 
-use crate::metrics::{InsertDeleteDistance, SymmetricDistance};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
+use crate::metrics::{InsertDeleteDistance, SymmetricDistance};
 use crate::transformations::sum::{MakeBoundedSum, MakeSizedBoundedSum};
 use crate::transformations::{make_bounded_sum, make_sized_bounded_sum};
 
@@ -20,6 +21,7 @@ pub extern "C" fn opendp_transformations__make_bounded_sum(
     where
         MI: 'static + Metric,
         T: 'static + MakeBoundedSum<MI>,
+        (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
         make_bounded_sum::<MI, T>(bounds).into_any()
@@ -46,6 +48,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_sum(
     where
         MI: 'static + Metric,
         T: 'static + MakeSizedBoundedSum<MI>,
+        (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
         make_sized_bounded_sum::<MI, T>(size, bounds).into_any()

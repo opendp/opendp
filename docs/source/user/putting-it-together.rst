@@ -20,12 +20,13 @@ Our transformation will
 :func:`cast <opendp.transformations.make_cast>`,
 :func:`impute <opendp.transformations.make_impute_constant>`,
 :func:`clamp <opendp.transformations.make_clamp>`,
-:func:`resize <opendp.transformations.make_bounded_resize>` and then aggregate with the
+:func:`resize <opendp.transformations.make_resize>` and then aggregate with the
 :func:`mean <opendp.transformations.make_sized_bounded_mean>`.
 
 .. doctest::
 
     >>> from opendp.transformations import *
+    >>> from opendp.domains import option_domain, atom_domain
     >>> from opendp.mod import enable_features
     >>> enable_features('contrib') # we are using un-vetted constructors
     ...
@@ -41,9 +42,9 @@ Our transformation will
     ...     make_split_dataframe(',', col_names=['Student', 'Score']) >>
     ...     make_select_column(key='Score', TOA=str) >>
     ...     make_cast(TIA=str, TOA=float) >>
-    ...     make_impute_constant(constant=constant) >>
+    ...     make_impute_constant(option_domain(atom_domain(T=float)), constant=constant) >>
     ...     make_clamp(bounds) >>
-    ...     make_bounded_resize(size, bounds, constant=constant) >>
+    ...     make_resize(size, atom_domain(bounds), constant=constant) >>
     ...     make_sized_bounded_mean(size, bounds)
     ... )
 

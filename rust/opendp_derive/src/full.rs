@@ -79,7 +79,10 @@ pub(crate) fn proven(attr_args: TokenStream, input: TokenStream) -> TokenStream 
         _ => unreachable!(),
     };
     // mutate the docstring to add a proof path
-    try_!(insert_proof_attribute(attr_docs, proof_path), original_input);
+    try_!(
+        insert_proof_attribute(attr_docs, proof_path),
+        original_input
+    );
 
     let mut output = TokenStream::new();
 

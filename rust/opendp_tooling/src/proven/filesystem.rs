@@ -77,10 +77,13 @@ fn get_out_dir() -> Result<PathBuf> {
     Ok(PathBuf::from(manifest_dir))
 }
 
-pub fn make_proof_link(relative_path: &str) -> Result<String> {
-    let mut relative_path = PathBuf::from(relative_path);
+pub fn make_proof_link(
+    source_dir: PathBuf,
+    mut relative_path: PathBuf,
+    repo_path: PathBuf,
+) -> Result<String> {
     // construct absolute path
-    let absolute_path = get_src_dir()?.join(&relative_path);
+    let absolute_path = source_dir.join(&relative_path);
 
     if !absolute_path.exists() {
         return Err(Error::custom(format!("{absolute_path:?} does not exist!")));
@@ -98,16 +101,20 @@ pub fn make_proof_link(relative_path: &str) -> Result<String> {
             .unwrap_or_else(|_| "https://docs.opendp.org".to_string());
 
         // find the version
-        let mut version = env!("CARGO_PKG_VERSION");
-        if version == "0.0.0+development" {
-            version = "latest";
+        let version = env!("CARGO_PKG_VERSION");
+        let version_segment = if version == "0.0.0+development" {
+            "latest".to_string()
+        } else {
+            format!("v{version}")
         };
 
-        format!("{docs_uri}/en/{version}")
+        format!("{docs_uri}/en/{version_segment}")
     };
-    
+
     Ok(format!(
-        "[(Proof Document)]({proof_uri}/proofs/rust/src/{relative_path}) ",
+        "{proof_uri}/proofs/{repo_path}/{relative_path}",
+        proof_uri = proof_uri,
+        repo_path = repo_path.display(),
         relative_path = relative_path.display()
     ))
 }

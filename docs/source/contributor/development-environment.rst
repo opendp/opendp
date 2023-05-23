@@ -2,9 +2,9 @@
 
 Development Environment
 =======================
-The first task to tackle is setting up the development environment.
+If you are writing code, the first task to tackle is setting up the development environment.
 
-Follow the steps below to get an OpenDP development environment set up, including the ability to run tests in both Rust and Python.
+Follow the steps below to set up an OpenDP Library development environment, including the ability to run tests in both Rust and Python.
 
 * Install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
 * Install `Python version 3.7 or higher <https://www.python.org>`_.

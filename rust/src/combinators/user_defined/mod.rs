@@ -1,1 +1,2 @@
-pub(crate) mod ffi;
+#[cfg(feature = "ffi")]
+mod ffi;

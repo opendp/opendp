@@ -2,13 +2,16 @@ use std::convert::TryFrom;
 use std::os::raw::{c_char, c_uint};
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::metrics::AbsoluteDistance;
-use crate::domains::AllDomain;
+use crate::domains::AtomDomain;
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::transformations::{make_sized_bounded_variance, UncheckedSum, LipschitzMulFloatDomain, LipschitzMulFloatMetric, Sequential, Pairwise};
+use crate::metrics::AbsoluteDistance;
 use crate::traits::Float;
+use crate::transformations::{
+    make_sized_bounded_variance, LipschitzMulFloatDomain, LipschitzMulFloatMetric, Pairwise,
+    Sequential, UncheckedSum,
+};
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_sized_bounded_variance(
@@ -29,12 +32,12 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_variance(
         fn monomorphize2<S>(
             size: usize,
             bounds: (S::Item, S::Item),
-            ddof: usize
+            ddof: usize,
         ) -> FfiResult<*mut AnyTransformation>
         where
             S: UncheckedSum,
             S::Item: 'static + Float,
-            AllDomain<S::Item>: LipschitzMulFloatDomain<Atom = S::Item>,
+            AtomDomain<S::Item>: LipschitzMulFloatDomain<Atom = S::Item>,
             AbsoluteDistance<S::Item>: LipschitzMulFloatMetric<Distance = S::Item>,
         {
             make_sized_bounded_variance::<S>(size, bounds, ddof).into_any()

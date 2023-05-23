@@ -1,10 +1,12 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use crate::core::{Transformation, Function, StabilityMap, Domain, Metric};
-use crate::metrics::{SymmetricDistance, InsertDeleteDistance, IntDistance};
-use crate::domains::{VectorDomain, SizedDomain};
+use opendp_derive::bootstrap;
+
+use crate::core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation};
+use crate::domains::VectorDomain;
 use crate::error::Fallible;
+use crate::metrics::{InsertDeleteDistance, IntDistance, SymmetricDistance};
 use crate::traits::samplers::Shuffle;
 use crate::traits::CheckNull;
 use std::cmp::Ordering;
@@ -20,31 +22,41 @@ impl IsMetricOrdered for InsertDeleteDistance {
     const ORDERED: bool = true;
 }
 
-/// Make a Transformation that either truncates or imputes records 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        atom_domain(c_type = "AnyDomain *", hint = "Domain"),
+        constant(c_type = "AnyObject *", rust_type = "$get_atom(DA)")
+    ),
+    generics(MI(default = "SymmetricDistance"), MO(default = "SymmetricDistance"))
+)]
+/// Make a Transformation that either truncates or imputes records
 /// with `constant` to match a provided `size`.
-/// 
+///
 /// # Arguments
 /// * `size` - Number of records in output data.
 /// * `atom_domain` - Domain of elements.
 /// * `constant` - Value to impute with.
-/// 
+///
 /// # Generics
 /// * `DA` - Atomic Domain.
 /// * `MI` - Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
 /// * `MO` - Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-/// 
+///
 /// # Returns
 /// A vector of the same type `TA`, but with the provided `size`.
 pub fn make_resize<DA, MI, MO>(
     size: usize,
     atom_domain: DA,
     constant: DA::Carrier,
-) -> Fallible<Transformation<VectorDomain<DA>, SizedDomain<VectorDomain<DA>>, MI, MO>>
+) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<DA>, MI, MO>>
 where
     DA: 'static + Clone + Domain,
     DA::Carrier: 'static + Clone + CheckNull,
     MI: IsMetricOrdered<Distance = IntDistance>,
     MO: IsMetricOrdered<Distance = IntDistance>,
+    (VectorDomain<DA>, MI): MetricSpace,
+    (VectorDomain<DA>, MO): MetricSpace,
 {
     if !atom_domain.member(&constant)? {
         return fallible!(MakeTransformation, "constant must be a member of DA");
@@ -53,9 +65,9 @@ where
         return fallible!(MakeTransformation, "row size must be greater than zero");
     }
 
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(atom_domain.clone()),
-        SizedDomain::new(VectorDomain::new(atom_domain), size),
+        VectorDomain::new(atom_domain).with_size(size),
         Function::new_fallible(move |arg: &Vec<DA::Carrier>| {
             Ok(match arg.len().cmp(&size) {
                 Ordering::Less | Ordering::Equal => {
@@ -89,21 +101,18 @@ where
         // `vec![constant]` and `vec![value]` differ by an addition and deletion, or distance 2.
         // In the worst case, for each addition in the input, there are two changes in the output
         StabilityMap::new_from_constant(2),
-    ))
+    )
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::domains::AllDomain;
+    use crate::domains::AtomDomain;
 
     #[test]
     fn test() -> Fallible<()> {
-        let trans = make_resize::<_, SymmetricDistance, SymmetricDistance>(
-            3,
-            AllDomain::new(),
-            "x",
-        )?;
+        let trans =
+            make_resize::<_, SymmetricDistance, SymmetricDistance>(3, AtomDomain::default(), "x")?;
         assert_eq!(trans.invoke(&vec!["A"; 2])?, vec!["A", "A", "x"]);
         assert_eq!(trans.invoke(&vec!["A"; 3])?, vec!["A"; 3]);
         assert_eq!(trans.invoke(&vec!["A"; 4])?, vec!["A", "A", "A"]);

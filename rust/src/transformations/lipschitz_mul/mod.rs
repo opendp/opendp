@@ -2,16 +2,15 @@ use num::One;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Domain, Function, Metric, StabilityMap, Transformation},
-    metrics::{AbsoluteDistance, LpDistance},
-    domains::{AllDomain, VectorDomain},
+    core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation},
+    domains::{AtomDomain, VectorDomain},
     error::Fallible,
+    metrics::{AbsoluteDistance, LpDistance},
     traits::{
-        AlertingAbs, CheckNull, ExactIntCast, FloatBits, InfAdd, InfMul, InfPow, InfSub,
-        SaturatingMul, TotalOrd, Float
+        AlertingAbs, CheckNull, ExactIntCast, Float, FloatBits, InfAdd, InfMul, InfPow, InfSub,
+        SaturatingMul, TotalOrd,
     },
 };
-
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -19,23 +18,25 @@ mod ffi;
 #[bootstrap(
     features("contrib"),
     arguments(
-        constant(rust_type = "T", c_type = "void *"), 
-        bounds(rust_type = "(T, T)")),
+        constant(rust_type = "T", c_type = "void *"),
+        bounds(rust_type = "(T, T)")
+    ),
     generics(
-        D(default = "AllDomain<T>", generics = "T"),
-        M(default = "AbsoluteDistance<T>", generics = "T")),
+        D(default = "AtomDomain<T>", generics = "T"),
+        M(default = "AbsoluteDistance<T>", generics = "T")
+    ),
     derived_types(T = "$get_atom_or_infer(D, constant)")
 )]
 /// Make a transformation that multiplies an aggregate by a constant.
-/// 
+///
 /// The bounds clamp the input, in order to bound the increase in sensitivity from float rounding.
-/// 
+///
 /// # Arguments
 /// * `constant` - The constant to multiply aggregates by.
 /// * `bounds` - Tuple of inclusive lower and upper bounds.
-/// 
+///
 /// # Generics
-/// * `D` - Domain of the function. Must be `AllDomain<T>` or `VectorDomain<AllDomain<T>>`
+/// * `D` - Domain of the function. Must be `AtomDomain<T>` or `VectorDomain<AtomDomain<T>>`
 /// * `M` - Metric. Must be `AbsoluteDistance<T>`, `L1Distance<T>` or `L2Distance<T>`
 pub fn make_lipschitz_float_mul<D, M>(
     constant: D::Atom,
@@ -44,6 +45,7 @@ pub fn make_lipschitz_float_mul<D, M>(
 where
     D: LipschitzMulFloatDomain,
     M: LipschitzMulFloatMetric<Distance = D::Atom>,
+    (D, M): MetricSpace,
 {
     let mantissa_bits = D::Atom::exact_int_cast(D::Atom::MANTISSA_BITS)?;
     let exponent_bias = D::Atom::exact_int_cast(D::Atom::EXPONENT_BIAS)?;
@@ -75,7 +77,7 @@ where
     // greatest possible error is the ulp of the greatest possible output
     let output_ulp = _2.inf_pow(&max_unbiased_exponent.inf_sub(&mantissa_bits)?)?;
 
-    Ok(Transformation::new(
+    Transformation::new(
         D::default(),
         D::default(),
         Function::new_fallible(move |arg: &D::Carrier| D::transform(&constant, &bounds, arg)),
@@ -84,7 +86,7 @@ where
         StabilityMap::new_fallible(move |d_in| {
             constant.alerting_abs()?.inf_mul(d_in)?.inf_add(&output_ulp)
         }),
-    ))
+    )
 }
 
 /// Implemented for any domain that supports multiplication lipschitz extensions
@@ -97,7 +99,7 @@ pub trait LipschitzMulFloatDomain: Domain + Default {
     ) -> Fallible<Self::Carrier>;
 }
 
-impl<T> LipschitzMulFloatDomain for AllDomain<T>
+impl<T> LipschitzMulFloatDomain for AtomDomain<T>
 where
     T: 'static + Float,
 {
@@ -136,7 +138,7 @@ pub mod test {
     #[test]
     fn test_lipschitz_mul() -> Fallible<()> {
         let extension =
-            make_lipschitz_float_mul::<AllDomain<f64>, AbsoluteDistance<f64>>(2., (0., 10.))?;
+            make_lipschitz_float_mul::<AtomDomain<f64>, AbsoluteDistance<f64>>(2., (0., 10.))?;
         assert_eq!(extension.invoke(&1.3)?, 2.6);
         println!("{:?}", extension.invoke(&1.3));
         Ok(())

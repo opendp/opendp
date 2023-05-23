@@ -39,7 +39,9 @@ impl<T: ?Sized> Clone for Glue<T> {
 }
 
 impl<T: ?Sized> PartialEq for Glue<T> {
-    fn eq(&self, _other: &Self) -> bool { true }
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
 }
 
 impl<T: ?Sized> Deref for Glue<T> {
@@ -48,7 +50,6 @@ impl<T: ?Sized> Deref for Glue<T> {
         self.0.deref()
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -62,7 +63,10 @@ mod tests {
         }
         impl Foo {
             pub fn new(val: i32) -> Self {
-                Self { val, add_glue: Glue::new(|self_: &Foo, other: &Foo| self_.val + other.val) }
+                Self {
+                    val,
+                    add_glue: Glue::new(|self_: &Foo, other: &Foo| self_.val + other.val),
+                }
             }
             pub fn add(&self, other: &Self) -> i32 {
                 (self.add_glue)(self, other)
@@ -83,7 +87,12 @@ mod tests {
         }
         impl Foo {
             pub fn new(val: i32) -> Self {
-                Self { val, add_glue: Glue::new_rc(Rc::new(|self_: &Foo, other: &Foo| self_.val + other.val)) }
+                Self {
+                    val,
+                    add_glue: Glue::new_rc(Rc::new(|self_: &Foo, other: &Foo| {
+                        self_.val + other.val
+                    })),
+                }
             }
             pub fn add(&self, other: &Self) -> i32 {
                 (self.add_glue)(self, other)

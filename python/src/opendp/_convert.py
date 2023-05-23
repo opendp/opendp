@@ -2,7 +2,7 @@ from typing import Sequence, Tuple, List, Union, Dict
 
 from opendp._lib import *
 
-from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve
+from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable, Domain
 from opendp.typing import RuntimeType, Vec
 
 try:
@@ -23,8 +23,10 @@ ATOM_MAP = {
     'i64': ctypes.c_int64,
     'usize': ctypes.c_size_t,
     'bool': ctypes.c_bool,
+    'char': ctypes.c_char,
     'AnyMeasurementPtr': Measurement,
     'AnyTransformationPtr': Transformation,
+    'SeriesDomain': Domain
 }
 
 def c_int_limits(type_name):
@@ -79,6 +81,10 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
 
         rust_type = str(type_name)
         if rust_type in ATOM_MAP:
+
+            if rust_type == "char":
+                value = value.encode()
+            
             if rust_type in INT_SIZES:
                 check_c_int_cast(value, rust_type)
             return ctypes.byref(ATOM_MAP[rust_type](value))
@@ -120,6 +126,8 @@ def c_to_py(value):
         obj_type = object_type(value)
         if "SMDCurve" in obj_type:
             return SMDCurve(value)
+        if "Queryable" in obj_type:
+            return Queryable(value)
         ffi_slice = object_as_slice(value)
         try:
             return _slice_to_py(ffi_slice, RuntimeType.parse(obj_type))
@@ -187,6 +195,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
     """
     if isinstance(type_name, str) and type_name in ATOM_MAP:
         return _scalar_to_slice(value, type_name)
+    
+    if type_name == "AnyMeasurement":
+        return _wrap_in_slice(value, 1)
 
     if type_name == "String":
         return _string_to_slice(value)
@@ -251,6 +262,10 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         ffislice = _wrap_in_slice(array, len(val))
         ffislice.depends_on(*c_repr)
         return ffislice
+    
+    if inner_type_name == "SeriesDomain":
+        array = (Domain * len(val))(*val)
+        return _wrap_in_slice(array, len(val))
 
     if inner_type_name not in ATOM_MAP:
         raise TypeError(f"Members must be one of {tuple(ATOM_MAP.keys())}. Found {inner_type_name}.")

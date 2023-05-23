@@ -23,8 +23,7 @@ Opening an issue first also gives us a chance to connect you with people who are
 or identify existing tooling that may be useful to you.
 
 If you open an issue for adding a new constructor,
-please include a link to the research paper(s) your contribution will be derived from,
-if you already have an existing implementation,
+please include a link to the research paper(s) and/or existing implementation your contribution will be derived from,
 and make a case for why this constructor should be added to the library.
 
 * Is it unique and does it have reasonable utility?
@@ -39,9 +38,11 @@ Once you find an issue you can tackle, comment on the issue to claim it.
 Feel free to ask clarifying questions!
 
 
-Write Documentation
--------------------
-We need your help to make OpenDP more accessible through documentation.
+Documentation
+-------------
+We need your help to make OpenDP more accessible through documentation, 
+either by giving feedback, making revisions or writing your own additions.
+
 There are many forms of documentation!
 
 * Python docstrings and type hints

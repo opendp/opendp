@@ -1,5 +1,6 @@
 from opendp.transformations import *
 from opendp.measurements import *
+from opendp.domains import atom_domain, option_domain
 from opendp.mod import enable_features
 
 enable_features("floating-point", "contrib")
@@ -28,11 +29,11 @@ def test_dp_mean():
         # Cast the column as Vec<Optional<Float>>
         make_cast(TIA=str, TOA=float) >>
         # Impute missing values to 0 Vec<Float>
-        make_impute_constant(impute_constant) >>
+        make_impute_constant(option_domain(atom_domain(T=float)), impute_constant) >>
         # Clamp values
         make_clamp(bounds) >>
         # Resize dataset length
-        make_bounded_resize(n, bounds, impute_constant) >>
+        make_resize(n, atom_domain(bounds), impute_constant) >>
         # Aggregate with mean
         make_sized_bounded_mean(n, bounds) >>
         # Noise

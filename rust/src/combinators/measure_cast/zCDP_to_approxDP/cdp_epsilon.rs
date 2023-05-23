@@ -13,13 +13,17 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
         return Ok(Q::zero());
     }
 
+    if rho.is_infinite() {
+        return Ok(Q::infinity());
+    }
+
     let _1 = Q::one();
     let _2 = _1 + _1;
 
     // It has been proven that...
     //     delta = exp((α-1) (αρ - ε) + α ln1p(-1/α)) / (α-1)
     // ...for any choice of alpha in (1, infty)
-    
+
     // The following expression is equivalent for ε:
     //   epsilon = δρ + (ln(1/δ) + (α - 1)ln(1 - 1/α) - ln(α)) / (α - 1)
 

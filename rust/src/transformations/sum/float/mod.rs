@@ -14,7 +14,6 @@ use crate::{
 /// Marker type to represent sequential, or recursive summation
 pub struct Sequential<T>(PhantomData<T>);
 
-
 /// Marker type to represent pairwise, or cascading summation
 pub struct Pairwise<T>(PhantomData<T>);
 
@@ -50,13 +49,10 @@ impl<T: Float> SumRelaxation for Pairwise<T> {
         let _2 = T::exact_int_cast(2)?;
 
         // u * k where k = log_2(n)
-        let uk = size
-            .inf_log2()?
-            .inf_div(&_2.inf_pow(&mantissa_bits)?)?;
+        let uk = size.inf_log2()?.inf_div(&_2.inf_pow(&mantissa_bits)?)?;
 
         // (uk / (1 - uk)) n max(|L|, U)
-        uk
-            .inf_div(&T::one().neg_inf_sub(&uk)?)?
+        uk.inf_div(&T::one().neg_inf_sub(&uk)?)?
             .inf_mul(&size)?
             .inf_mul(&lower.alerting_abs()?.total_max(upper)?)
     }

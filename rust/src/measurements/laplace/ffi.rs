@@ -1,13 +1,13 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_long, c_void};
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
-use crate::domains::{AllDomain, VectorDomain};
+use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
 use crate::measurements::{make_base_laplace, LaplaceDomain};
 use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
-use crate::traits::{ExactIntCast, FloatBits, Float};
+use crate::traits::{ExactIntCast, Float, FloatBits};
 use crate::{err, try_, try_as_ref};
 
 #[no_mangle]
@@ -18,9 +18,10 @@ pub extern "C" fn opendp_measurements__make_base_laplace(
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<D>(scale: *const c_void, k: i32) -> FfiResult<*mut AnyMeasurement>
     where
-    D: 'static + LaplaceDomain,
-    D::Atom: Float + SampleDiscreteLaplaceZ2k,
-    i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
+        D: 'static + LaplaceDomain,
+        (D, D::InputMetric): MetricSpace,
+        D::Atom: Float + SampleDiscreteLaplaceZ2k,
+        i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
     {
         let scale = *try_as_ref!(scale as *const D::Atom);
         make_base_laplace::<D>(scale, Some(k)).into_any()
@@ -28,7 +29,7 @@ pub extern "C" fn opendp_measurements__make_base_laplace(
     let k = k as i32;
     let D = try_!(Type::try_from(D));
     dispatch!(monomorphize, [
-        (D, [AllDomain<f64>, AllDomain<f32>, VectorDomain<AllDomain<f64>>, VectorDomain<AllDomain<f32>>])
+        (D, [AtomDomain<f64>, AtomDomain<f32>, VectorDomain<AtomDomain<f64>>, VectorDomain<AtomDomain<f32>>])
     ], (scale, k))
 }
 
@@ -47,7 +48,7 @@ mod tests {
         let measurement = Result::from(opendp_measurements__make_base_laplace(
             util::into_raw(0.0) as *const c_void,
             -1078,
-            "AllDomain<f64>".to_char_p(),
+            "AtomDomain<f64>".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(1.0);
         let res = core::opendp_core__measurement_invoke(&measurement, arg);
@@ -61,7 +62,7 @@ mod tests {
         let measurement = Result::from(opendp_measurements__make_base_laplace(
             util::into_raw(0.0) as *const c_void,
             -1078,
-            "VectorDomain<AllDomain<f64>>".to_char_p(),
+            "VectorDomain<AtomDomain<f64>>".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);
         let res = core::opendp_core__measurement_invoke(&measurement, arg);

@@ -53,7 +53,10 @@ fn generate_module(
 
     // the comb module needs access to core functions for type introspection on measurements/transformations
     let comb_import = if module_name == "combinators" {
-        "from opendp.core import *\n"
+        r#"from opendp.core import *
+from opendp.domains import *
+from opendp.metrics import *
+from opendp.measures import *"#
     } else {
         ""
     };
@@ -100,6 +103,7 @@ fn generate_function(
 
     format!(
         r#"
+@versioned
 def {func_name}(
 {args}
 ){sig_return}:
@@ -152,14 +156,11 @@ fn generate_input_argument(
 
 /// generate a docstring for the current function, with the function description, args, and return
 /// in Sphinx format: https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
-fn generate_docstring(
-    func: &Function,
-    hierarchy: &HashMap<String, Vec<String>>,
-) -> String {
+fn generate_docstring(func: &Function, hierarchy: &HashMap<String, Vec<String>>) -> String {
     let description = (func.description.as_ref())
         .map(|v| format!("{}\n", v))
         .unwrap_or_else(String::new);
-    
+
     let doc_args = func
         .args
         .iter()
@@ -366,7 +367,7 @@ fn generate_data_converter(func: &Function, typemap: &HashMap<String, String>) -
         .map(|arg| {
             let name = arg.name();
             if arg.do_not_convert {
-                return format!("c_{name} = {name}")
+                return format!("c_{name} = {name}");
             };
             format!(
                 r#"c_{name} = py_to_c({name}, c_type={c_type}{rust_type_arg})"#,
@@ -444,14 +445,15 @@ output = {call}"#,
     )
 }
 
-
-fn set_dependencies(
-    dependencies: &Vec<TypeRecipe>
-) -> String {
+fn set_dependencies(dependencies: &Vec<TypeRecipe>) -> String {
     if dependencies.is_empty() {
         String::new()
     } else {
-        let dependencies = dependencies.iter().map(|dep| dep.to_python()).collect::<Vec<String>>().join(", ");
+        let dependencies = dependencies
+            .iter()
+            .map(|dep| dep.to_python())
+            .collect::<Vec<String>>()
+            .join(", ");
         format!("output._depends_on({dependencies})")
     }
 }

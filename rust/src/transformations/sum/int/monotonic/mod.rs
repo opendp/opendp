@@ -2,9 +2,9 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
-    domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
+    domains::{AtomDomain, VectorDomain},
     error::Fallible,
+    metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
     traits::Number,
 };
 
@@ -13,28 +13,25 @@ use super::AddIsExact;
 #[cfg(feature = "ffi")]
 mod ffi;
 
-#[bootstrap(
-    features("contrib"),
-    generics(T(example = "$get_first(bounds)"))
-)]
-/// Make a Transformation that computes the sum of bounded ints, 
+#[bootstrap(features("contrib"), generics(T(example = "$get_first(bounds)")))]
+/// Make a Transformation that computes the sum of bounded ints,
 /// where all values share the same sign.
-/// 
+///
 /// # Citations
 /// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
 /// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-/// 
+///
 /// # Arguments
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
-/// 
+///
 /// # Generics
 /// * `T` - Atomic Input Type and Output Type
 pub fn make_bounded_int_monotonic_sum<T>(
     bounds: (T, T),
 ) -> Fallible<
     Transformation<
-        VectorDomain<BoundedDomain<T>>,
-        AllDomain<T>,
+        VectorDomain<AtomDomain<T>>,
+        AtomDomain<T>,
         SymmetricDistance,
         AbsoluteDistance<T>,
     >,
@@ -51,31 +48,28 @@ where
 
     let (lower, upper) = bounds.clone();
 
-    Ok(Transformation::new(
-        VectorDomain::new(BoundedDomain::new_closed(bounds)?),
-        AllDomain::new(),
+    Transformation::new(
+        VectorDomain::new(AtomDomain::new_closed(bounds)?),
+        AtomDomain::default(),
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityMap::new_from_constant(lower.alerting_abs()?.total_max(upper)?),
-    ))
+    )
 }
 
-#[bootstrap(
-    features("contrib"),
-    generics(T(example = "$get_first(bounds)"))
-)]
-/// Make a Transformation that computes the sum of bounded ints, 
+#[bootstrap(features("contrib"), generics(T(example = "$get_first(bounds)")))]
+/// Make a Transformation that computes the sum of bounded ints,
 /// where all values share the same sign.
-/// 
+///
 /// # Citations
 /// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
 /// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-/// 
+///
 /// # Arguments
 /// * `size` - Number of records in input data.
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
-/// 
+///
 /// # Generics
 /// * `T` - Atomic Input Type and Output Type
 pub fn make_sized_bounded_int_monotonic_sum<T>(
@@ -83,8 +77,8 @@ pub fn make_sized_bounded_int_monotonic_sum<T>(
     bounds: (T, T),
 ) -> Fallible<
     Transformation<
-        SizedDomain<VectorDomain<BoundedDomain<T>>>,
-        AllDomain<T>,
+        VectorDomain<AtomDomain<T>>,
+        AtomDomain<T>,
         SymmetricDistance,
         AbsoluteDistance<T>,
     >,
@@ -102,9 +96,9 @@ where
     let (lower, upper) = bounds.clone();
     let range = upper.inf_sub(&lower)?;
 
-    Ok(Transformation::new(
-        SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds)?), size),
-        AllDomain::new(),
+    Transformation::new(
+        VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
+        AtomDomain::default(),
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
@@ -113,7 +107,7 @@ where
             //    so floor division is acceptable
             move |d_in: &IntDistance| T::inf_cast(d_in / 2).and_then(|d_in| d_in.inf_mul(&range)),
         ),
-    ))
+    )
 }
 
 #[doc(hidden)]

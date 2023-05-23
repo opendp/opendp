@@ -42,7 +42,7 @@
 //!     use opendp::transformations::{make_split_lines, make_cast_default, make_clamp, make_bounded_sum};
 //!     use opendp::combinators::{make_chain_tt, make_chain_mt};
 //!     use opendp::measurements::make_base_laplace;
-//! 
+//!
 //!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
 //!     let bounds = (0.0, 100.0);
 //!     let epsilon = 1.0;
@@ -85,10 +85,10 @@
 //! example().unwrap();
 //! ```
 //!
-//! # Developer Guide
+//! # Contributor Guide
 //!
-//! A more thorough Developer Guide [can be found on the docs website](https://docs.opendp.org/en/stable/developer/index.html).
-//! 
+//! A more thorough Contributor Guide [can be found on the docs website](https://docs.opendp.org/en/stable/contributor/index.html).
+//!
 //! ## Adding Constructors
 //!
 //! Measurement constructors go in the module [`crate::measurements`],
@@ -110,15 +110,15 @@
 //! ```
 //!# use opendp::core::{Transformation, StabilityMap, Function};
 //!# use opendp::metrics::AbsoluteDistance;
-//!# use opendp::domains::AllDomain;
-//! pub fn make_i32_identity() -> Transformation<AllDomain<i32>, AllDomain<i32>, AbsoluteDistance<i32>, AbsoluteDistance<i32>> {
-//!     let input_domain = AllDomain::new();
-//!     let output_domain = AllDomain::new();
+//!# use opendp::domains::AtomDomain;
+//! pub fn make_i32_identity() -> Transformation<AtomDomain<i32>, AtomDomain<i32>, AbsoluteDistance<i32>, AbsoluteDistance<i32>> {
+//!     let input_domain = AtomDomain::default();
+//!     let output_domain = AtomDomain::default();
 //!     let function = Function::new(|arg: &i32| -> i32 { *arg });
 //!     let input_metric = AbsoluteDistance::default();
 //!     let output_metric = AbsoluteDistance::default();
 //!     let stability_map = StabilityMap::new_from_constant(1);
-//!     Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_map)
+//!     Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_map).unwrap()
 //! }
 //! make_i32_identity();
 //! ```
@@ -138,15 +138,13 @@
 
 #![allow(clippy::just_underscores_and_digits)]
 #![allow(clippy::type_complexity)]
-
-#![cfg_attr(feature="ffi", allow(clippy::upper_case_acronyms))]
-#![cfg_attr(feature="ffi", allow(non_snake_case))]
-
-#![recursion_limit="512"]
+#![cfg_attr(feature = "ffi", allow(clippy::upper_case_acronyms))]
+#![cfg_attr(feature = "ffi", allow(non_snake_case))]
+#![recursion_limit = "512"]
 
 // create clones of variables that are free to be consumed by a closure
 // Once we have things using `enclose!` that are outside of `contrib`, this should specify `feature="ffi"`.
-#[cfg(feature="contrib")]
+#[cfg(feature = "contrib")]
 macro_rules! enclose {
     ( $x:ident, $y:expr ) => (enclose!(($x), $y));
     ( ($( $x:ident ),*), $y:expr ) => {
@@ -160,25 +158,25 @@ macro_rules! enclose {
 // #![feature(trace_macros)]
 // trace_macros!(true);
 
-#[cfg(feature="ffi")]
+#[cfg(feature = "ffi")]
 #[macro_use]
 mod ffi;
-#[cfg(feature="ffi")]
+#[cfg(feature = "ffi")]
 #[macro_use]
 extern crate lazy_static;
 
 #[macro_use]
 pub mod error;
 
+pub mod accuracy;
+pub mod combinators;
 pub mod core;
 pub mod data;
-#[cfg(feature="contrib")]
+pub mod domains;
+#[cfg(feature = "contrib")]
 pub mod interactive;
 pub mod measurements;
+pub mod measures;
+pub mod metrics;
 pub mod traits;
 pub mod transformations;
-pub mod combinators;
-pub mod accuracy;
-pub mod domains;
-pub mod metrics;
-pub mod measures;

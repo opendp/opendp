@@ -1,7 +1,7 @@
 import ctypes
 from typing import Union, Tuple, Callable, Optional
 
-from opendp._lib import AnyMeasurement, AnyTransformation
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
 
 
 class Measurement(ctypes.POINTER(AnyMeasurement)):
@@ -86,13 +86,36 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
                 return False
             raise
 
-    def __rshift__(self, other: "Transformation"):
+    def __rshift__(self, other: Union["Function", "Transformation"]):
         if isinstance(other, Transformation):
-            from opendp.combinators import make_chain_tm
-            return make_chain_tm(other, self)
+            other = other.function
+
+        if isinstance(other, Function):
+            from opendp.combinators import make_chain_pm
+            return make_chain_pm(other, self)
 
         raise ValueError(f"rshift expected a postprocessing transformation, got {other}")
 
+    @property
+    def input_domain(self) -> "Domain":
+        from opendp.core import measurement_input_domain
+        return measurement_input_domain(self)
+    
+    @property
+    def input_metric(self) -> "Metric":
+        from opendp.core import measurement_input_metric
+        return measurement_input_metric(self)
+    
+    @property
+    def output_measure(self) -> "Measure":
+        from opendp.core import measurement_output_measure
+        return measurement_output_measure(self)
+    
+    @property
+    def function(self) -> "Function":
+        from opendp.core import measurement_function
+        return measurement_function(self)
+    
     @property
     def input_distance_type(self):
         """Retrieve the distance type of the input metric.
@@ -137,6 +160,9 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         except (ImportError, TypeError):
             # ImportError: sys.meta_path is None, Python is likely shutting down
             pass
+    
+    def __str__(self) -> str:
+        return f"Measurement(\n    input_domain   = {self.input_domain}, \n    input_metric   = {self.input_metric}, \n    output_measure = {self.output_measure}\n)"
 
 
 class Transformation(ctypes.POINTER(AnyTransformation)):
@@ -163,11 +189,10 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     >>> assert count.check(1, 1)
     ...
     >>> # chain with more transformations from the trans module
-    >>> from opendp.transformations import make_split_lines, make_cast, make_impute_constant
+    >>> from opendp.transformations import make_split_lines, make_cast_default
     >>> chained = (
     ...     make_split_lines() >>
-    ...     make_cast(TIA=str, TOA=int) >>
-    ...     make_impute_constant(constant=0) >>
+    ...     make_cast_default(TIA=str, TOA=int) >>
     ...     count
     ... )
     ...
@@ -232,6 +257,33 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         raise ValueError(f"rshift expected a measurement or transformation, got {other}")
 
     @property
+    def input_domain(self) -> "Domain":
+        from opendp.core import transformation_input_domain
+        return transformation_input_domain(self)
+    
+
+    @property
+    def output_domain(self) -> "Domain":
+        from opendp.core import transformation_output_domain
+        return transformation_output_domain(self)
+    
+
+    @property
+    def input_metric(self) -> "Metric":
+        from opendp.core import transformation_input_metric
+        return transformation_input_metric(self)
+    
+    @property
+    def output_metric(self) -> "Metric":
+        from opendp.core import transformation_output_metric
+        return transformation_output_metric(self)
+    
+    @property
+    def function(self) -> "Function":
+        from opendp.core import transformation_function
+        return transformation_function(self)
+
+    @property
     def input_distance_type(self):
         """Retrieve the distance type of the input metric.
         This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
@@ -276,6 +328,117 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
             # ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
+    def __str__(self) -> str:
+        return f"Transformation(\n    input_domain   = {self.input_domain},\n    output_domain  = {self.output_domain},\n    input_metric   = {self.input_metric},\n    output_metric  = {self.output_metric}\n)"
+
+
+class Queryable(object):
+    def __init__(self, value):
+        self.value = value
+
+    def __call__(self, query):
+        from opendp.core import queryable_eval
+        return queryable_eval(self.value, query)
+    
+    def eval(self, query):
+        from opendp.core import queryable_eval
+        return queryable_eval(self.value, query)
+
+    @property
+    def query_type(self):
+        from opendp.core import queryable_query_type
+        from opendp.typing import RuntimeType
+        return RuntimeType.parse(queryable_query_type(self.value))
+
+    def __str__(self):
+        return f"Queryable(Q={self.query_type})"
+        
+
+class Function(ctypes.POINTER(AnyFunction)):
+    _type_ = AnyFunction
+
+    def __call__(self, arg):
+        from opendp.core import function_eval
+        return function_eval(self, arg)
+    
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
+    
+    def __del__(self):
+        from opendp.core import _function_free
+        _function_free(self)
+
+
+class Domain(ctypes.POINTER(AnyDomain)):
+    _type_ = AnyDomain
+
+    def member(self, val):
+        from opendp.domains import member
+        return member(self, val)
+
+    @property
+    def type(self):
+        from opendp.domains import domain_type
+        return domain_type(self)
+    
+    @property
+    def carrier_type(self):
+        from opendp.domains import domain_carrier_type
+        return domain_carrier_type(self)
+
+    def __str__(self):
+        from opendp.domains import domain_debug
+        return domain_debug(self)
+    
+    def __del__(self):
+        from opendp.domains import _domain_free
+        _domain_free(self)
+
+
+class Metric(ctypes.POINTER(AnyMetric)):
+    _type_ = AnyMetric
+
+    @property
+    def type(self):
+        from opendp.metrics import metric_type
+        return metric_type(self)
+    
+    @property
+    def distance_type(self):
+        from opendp.metrics import metric_distance_type
+        return metric_distance_type(self)
+
+    def __str__(self):
+        from opendp.metrics import metric_debug
+        return metric_debug(self)
+    
+    def __del__(self):
+        from opendp.metrics import _metric_free
+        _metric_free(self)
+
+
+class Measure(ctypes.POINTER(AnyMeasure)):
+    _type_ = AnyMeasure
+
+    @property
+    def type(self):
+        from opendp.measures import measure_type
+        return measure_type(self)
+    
+    @property
+    def distance_type(self):
+        from opendp.measures import measure_distance_type
+        return measure_distance_type(self)
+
+    def __str__(self):
+        from opendp.measures import measure_debug
+        return measure_debug(self)
+    
+    def __del__(self):
+        from opendp.measures import _measure_free
+        _measure_free(self)
+
 
 class SMDCurve(object):
     def __init__(self, curve):
@@ -309,7 +472,7 @@ class OpenDPException(Exception):
     def frames(self):
         def format_frame(frame):
             return "\n  ".join(l.strip() for l in frame.split("\n"))
-        return [format_frame(f) for f in self.raw_frames() if f.startswith("opendp")]
+        return [format_frame(f) for f in self.raw_frames() if f.startswith("opendp") or f.startswith("<opendp")]
 
     def __str__(self) -> str:
         response = ''
@@ -370,14 +533,15 @@ def binary_search_chain(
     Find a base_laplace measurement with the smallest noise scale that is still (d_in, d_out)-close.
 
     >>> from opendp.mod import binary_search_chain, enable_features
-    >>> from opendp.transformations import make_clamp, make_bounded_resize, make_sized_bounded_mean
+    >>> from opendp.transformations import make_clamp, make_resize, make_sized_bounded_mean
     >>> from opendp.measurements import make_base_laplace
+    >>> from opendp.domains import atom_domain
     >>> enable_features("floating-point", "contrib")
     ...
     >>> # The majority of the chain only needs to be defined once.
     >>> pre = (
     ...     make_clamp(bounds=(0., 1.)) >>
-    ...     make_bounded_resize(size=10, bounds=(0., 1.), constant=0.) >>
+    ...     make_resize(size=10, atom_domain=atom_domain((0., 1.)), constant=0.) >>
     ...     make_sized_bounded_mean(size=10, bounds=(0., 1.))
     ... )
     ...
@@ -462,6 +626,11 @@ def binary_search_param(
     ...     bounds=(1, 1000000))
     1498
     """
+
+    # one might think running scipy.optimize.brent* would be better, but 
+    # 1. benchmarking showed no difference or minor regressions
+    # 2. brentq is more complicated
+
     return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, T)
 
 
@@ -473,7 +642,7 @@ def binary_search(
     """Find the closest passing value to the decision boundary of `predicate` within float or integer `bounds`.
 
     If bounds are not passed, conducts an exponential search.
-
+    
     :param predicate: a monotonic unary function from a number to a boolean
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
     :param T: type of argument to `predicate`, one of {float, int}
@@ -497,7 +666,7 @@ def binary_search(
 
     .. testsetup:: *
 
-        from opendp.typing import L2Distance, VectorDomain, AllDomain
+        from opendp.typing import L2Distance, VectorDomain, AtomDomain
         from opendp.transformations import make_sized_bounded_mean
         from opendp.measurements import make_base_gaussian
         from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP
@@ -664,3 +833,4 @@ def exponential_bounds_search(
     center, sign = binary_search(exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
     at_center = predicate(center)
     return signed_band_search(center, at_center, sign)
+

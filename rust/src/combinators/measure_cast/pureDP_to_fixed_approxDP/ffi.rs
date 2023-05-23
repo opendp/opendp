@@ -15,20 +15,17 @@ use crate::{
 /// # Arguments
 /// * `measurement` - a measurement with a privacy measure to be casted
 fn make_pureDP_to_fixed_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
-    
     fn monomorphize<QO: Float>(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
         let AnyMeasurement {
             input_domain,
-            output_domain,
             function,
             input_metric,
             output_measure,
             privacy_map,
         } = measurement.clone();
-    
+
         let measurement = Measurement {
             input_domain,
-            output_domain,
             function,
             input_metric,
             output_measure: try_!(output_measure.downcast::<MaxDivergence<QO>>()),
@@ -36,21 +33,19 @@ fn make_pureDP_to_fixed_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMe
                 privacy_map.eval(d_in)?.downcast::<QO>()
             }),
         };
-    
+
         let measurement = super::make_pureDP_to_fixed_approxDP(measurement)?;
-    
+
         let Measurement {
             input_domain,
-            output_domain,
             function,
             input_metric,
             output_measure,
             privacy_map,
         } = measurement;
-    
+
         Ok(AnyMeasurement {
             input_domain,
-            output_domain,
             function,
             input_metric,
             output_measure: AnyMeasure::new(output_measure),

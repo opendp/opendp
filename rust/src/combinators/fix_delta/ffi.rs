@@ -16,7 +16,8 @@ use super::FixDeltaMeasure;
     features("contrib"),
     arguments(
         measurement(rust_type = b"null"),
-        delta(rust_type = "$get_atom(measurement_output_distance_type(measurement))")),
+        delta(rust_type = "$get_atom(measurement_output_distance_type(measurement))")
+    ),
     dependencies("$get_dependencies(measurement)")
 )]
 /// Fix the delta parameter in the privacy map of a `measurement` with a SmoothedMaxDivergence output measure.

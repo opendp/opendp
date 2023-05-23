@@ -37,7 +37,7 @@ make html-rustdoc
 The output is located in `../rust/target/doc`.
 
 ## Simulating documentation sites locally
-It is possible to fully simulate all developer documentation locally, 
+It is possible to fully simulate all documentation locally, 
 with functioning links across documentation sites and proofs.
 
 If the following environment variables are set, Sphinx and Rustdoc will build with links to locally-hosted docs:

@@ -3,16 +3,14 @@ use std::os::raw::{c_char, c_void};
 
 use az::SaturatingCast;
 
-use crate::core::FfiResult;
+use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::ffi::any::AnyMeasurement;
 use crate::{
-    domains::{AllDomain, VectorDomain},
+    domains::{AtomDomain, VectorDomain},
     ffi::util::Type,
     measurements::{make_base_discrete_laplace_cks20, DiscreteLaplaceDomain},
     traits::InfCast,
 };
-use crate::core::IntoAnyMeasurementFfiResultExt;
-
 
 #[no_mangle]
 pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
@@ -20,7 +18,11 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
     D: *const c_char,
     QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize<T, QO>(scale: *const c_void, D: Type, QO: Type) -> FfiResult<*mut AnyMeasurement>
+    fn monomorphize<T, QO>(
+        scale: *const c_void,
+        D: Type,
+        QO: Type,
+    ) -> FfiResult<*mut AnyMeasurement>
     where
         T: crate::traits::Integer,
         QO: crate::traits::Float + InfCast<T>,
@@ -31,6 +33,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
         where
             D: 'static + DiscreteLaplaceDomain,
             D::Atom: crate::traits::Integer,
+            (D, D::InputMetric): MetricSpace,
             QO: crate::traits::Float + InfCast<D::Atom>,
             rug::Rational: TryFrom<QO>,
             rug::Integer: From<D::Atom> + SaturatingCast<D::Atom>,
@@ -39,7 +42,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
         }
         let scale = *try_as_ref!(scale as *const QO);
         dispatch!(monomorphize2, [
-            (D, [AllDomain<T>, VectorDomain<AllDomain<T>>]),
+            (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
             (QO, [QO])
         ], (scale))
     }
@@ -51,8 +54,6 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
         (QO, @floats)
     ], (scale, D, QO))
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -68,7 +69,7 @@ mod tests {
     fn test_make_base_discrete_laplace_cks20_ffi() -> Fallible<()> {
         let measurement = Result::from(opendp_measurements__make_base_discrete_laplace_cks20(
             util::into_raw(0.0) as *const c_void,
-            "AllDomain<i32>".to_char_p(),
+            "AtomDomain<i32>".to_char_p(),
             "f64".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(99);
@@ -82,7 +83,7 @@ mod tests {
     fn test_constant_time_make_base_discrete_laplace_cks20_ffi() -> Fallible<()> {
         let measurement = Result::from(opendp_measurements__make_base_discrete_laplace_cks20(
             util::into_raw(0.0) as *const c_void,
-            "AllDomain<i32>".to_char_p(),
+            "AtomDomain<i32>".to_char_p(),
             "f64".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(99);

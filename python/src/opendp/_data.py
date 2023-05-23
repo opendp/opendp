@@ -18,10 +18,11 @@ __all__ = [
 ]
 
 
+@versioned
 def bool_free(
     this
 ):
-    """Internal function. Free the memory associated with `this`, a bool. 
+    """Internal function. Free the memory associated with `this`, a bool.
     Used to clean up after the relation check.
     
     [bool_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.bool_free.html)
@@ -45,6 +46,7 @@ def bool_free(
     return output
 
 
+@versioned
 def ffislice_of_anyobjectptrs(
     raw: Any
 ) -> Any:
@@ -73,6 +75,7 @@ def ffislice_of_anyobjectptrs(
     return output
 
 
+@versioned
 def object_as_slice(
     obj: Any
 ) -> Any:
@@ -102,6 +105,7 @@ def object_as_slice(
     return output
 
 
+@versioned
 def object_free(
     this: Any
 ):
@@ -129,6 +133,7 @@ def object_free(
     return output
 
 
+@versioned
 def object_type(
     this: Any
 ) -> str:
@@ -157,6 +162,7 @@ def object_type(
     return output
 
 
+@versioned
 def slice_as_object(
     raw: FfiSlicePtr,
     T: str
@@ -169,7 +175,7 @@ def slice_as_object(
     :type raw: FfiSlicePtr
     :param T: 
     :type T: str
-    :return: An AnyObject that contains the data in `slice`. 
+    :return: An AnyObject that contains the data in `slice`.
     The AnyObject also captures rust type information.
     :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
@@ -193,10 +199,11 @@ def slice_as_object(
     return output
 
 
+@versioned
 def slice_free(
     this: Any
 ):
-    """Internal function. Free the memory associated with `this`, an FfiSlicePtr. 
+    """Internal function. Free the memory associated with `this`, an FfiSlicePtr.
     Used to clean up after object_as_slice.
     Frees the slice, but not what the slice references!
     
@@ -222,6 +229,7 @@ def slice_free(
     return output
 
 
+@versioned
 def smd_curve_epsilon(
     curve: Any,
     delta: Any
@@ -255,10 +263,11 @@ def smd_curve_epsilon(
     return output
 
 
+@versioned
 def str_free(
     this: str
 ):
-    """Internal function. Free the memory associated with `this`, a string. 
+    """Internal function. Free the memory associated with `this`, a string.
     Used to clean up after the type getter functions.
     
     [str_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.str_free.html)
@@ -283,6 +292,7 @@ def str_free(
     return output
 
 
+@versioned
 def to_string(
     this: Any
 ) -> str:

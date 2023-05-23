@@ -18,9 +18,10 @@ __all__ = [
 ]
 
 
+@versioned
 def make_base_discrete_gaussian(
     scale,
-    D: RuntimeTypeDescriptor = "AllDomain<int>",
+    D: RuntimeTypeDescriptor = "AtomDomain<int>",
     MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<QO>",
     QI: RuntimeTypeDescriptor = "int"
 ) -> Measurement:
@@ -30,20 +31,20 @@ def make_base_discrete_gaussian(
     
     | `D`                          | input type   | `D::InputMetric`        |
     | ---------------------------- | ------------ | ----------------------- |
-    | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<QI>`  |
-    | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L2Distance<QI>`        |
+    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<QI>`  |
+    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L2Distance<QI>`        |
     
     [make_base_discrete_gaussian in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_gaussian.html)
     
     **Supporting Elements:**
     
     * Input Domain:   `D`
-    * Output Domain:  `D`
+    * Output Type:    `D::Carrier`
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MO`
     
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
-    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
+    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
     :type D: :py:ref:`RuntimeTypeDescriptor`
     :param MO: Output measure. The only valid measure is `ZeroConcentratedDivergence<QO>`, but QO can be any float.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
@@ -79,9 +80,10 @@ def make_base_discrete_gaussian(
     return output
 
 
+@versioned
 def make_base_discrete_laplace(
     scale,
-    D: RuntimeTypeDescriptor = "AllDomain<int>",
+    D: RuntimeTypeDescriptor = "AtomDomain<int>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
@@ -90,8 +92,8 @@ def make_base_discrete_laplace(
     
     | `D`                          | input type   | `D::InputMetric`       |
     | ---------------------------- | ------------ | ---------------------- |
-    | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-    | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
     
     This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
     
@@ -105,12 +107,12 @@ def make_base_discrete_laplace(
     **Supporting Elements:**
     
     * Input Domain:   `D`
-    * Output Domain:  `D`
+    * Output Type:    `D::Carrier`
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MaxDivergence<QO>`
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
-    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
     :type D: :py:ref:`RuntimeTypeDescriptor`
     :param QO: Data type of the output distance and scale. `f32` or `f64`.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
@@ -140,20 +142,22 @@ def make_base_discrete_laplace(
     return output
 
 
+@versioned
 def make_base_discrete_laplace_cks20(
     scale,
-    D: RuntimeTypeDescriptor = "AllDomain<int>",
+    D: RuntimeTypeDescriptor = "AtomDomain<int>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input, 
+    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
     using an efficient algorithm on rational bignums.
     
     Set `D` to change the input data type and input metric:
     
+    
     | `D`                          | input type   | `D::InputMetric`       |
     | ---------------------------- | ------------ | ---------------------- |
-    | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-    | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
     
     [make_base_discrete_laplace_cks20 in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace_cks20.html)
     
@@ -164,12 +168,12 @@ def make_base_discrete_laplace_cks20(
     **Supporting Elements:**
     
     * Input Domain:   `D`
-    * Output Domain:  `D`
+    * Output Type:    `D::Carrier`
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MaxDivergence<QO>`
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
-    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
     :type D: :py:ref:`RuntimeTypeDescriptor`
     :param QO: Data type of the output distance and scale.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
@@ -199,22 +203,24 @@ def make_base_discrete_laplace_cks20(
     return output
 
 
+@versioned
 def make_base_discrete_laplace_linear(
     scale,
     bounds: Any = None,
-    D: RuntimeTypeDescriptor = "AllDomain<int>",
+    D: RuntimeTypeDescriptor = "AtomDomain<int>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input, 
+    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
     using a linear-time algorithm on finite data types.
     
     This algorithm can be executed in constant time if bounds are passed.
     Set `D` to change the input data type and input metric:
     
+    
     | `D`                          | input type   | `D::InputMetric`       |
     | ---------------------------- | ------------ | ---------------------- |
-    | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-    | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
     
     [make_base_discrete_laplace_linear in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace_linear.html)
     
@@ -225,14 +231,14 @@ def make_base_discrete_laplace_linear(
     **Supporting Elements:**
     
     * Input Domain:   `D`
-    * Output Domain:  `D`
+    * Output Type:    `D::Carrier`
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MaxDivergence<QO>`
     
     :param scale: Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
     :param bounds: Set bounds on the count to make the algorithm run in constant-time.
     :type bounds: Any
-    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
     :type D: :py:ref:`RuntimeTypeDescriptor`
     :param QO: Data type of the scale and output distance.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
@@ -265,23 +271,25 @@ def make_base_discrete_laplace_linear(
     return output
 
 
+@versioned
 def make_base_gaussian(
     scale,
     k: int = -1074,
-    D: RuntimeTypeDescriptor = "AllDomain<T>",
+    D: RuntimeTypeDescriptor = "AtomDomain<T>",
     MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
     
     Set `D` to change the input data type and input metric:
     
+    
     | `D`                          | input type   | `D::InputMetric`       |
     | ---------------------------- | ------------ | ---------------------- |
-    | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-    | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L2Distance<T>`        |
+    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L2Distance<T>`        |
     
-    This function takes a noise granularity in terms of 2^k. 
-    Larger granularities are more computationally efficient, but have a looser privacy map. 
+    This function takes a noise granularity in terms of 2^k.
+    Larger granularities are more computationally efficient, but have a looser privacy map.
     If k is not set, k defaults to the smallest granularity.
     
     [make_base_gaussian in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_gaussian.html)
@@ -289,14 +297,14 @@ def make_base_gaussian(
     **Supporting Elements:**
     
     * Input Domain:   `D`
-    * Output Domain:  `D`
+    * Output Type:    `D::Carrier`
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MO`
     
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
     :param k: The noise granularity in terms of 2^k.
     :type k: int
-    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
+    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
     :type D: :py:ref:`RuntimeTypeDescriptor`
     :param MO: Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
@@ -330,14 +338,15 @@ def make_base_gaussian(
     return output
 
 
+@versioned
 def make_base_geometric(
     scale,
     bounds: Any = None,
-    D: RuntimeTypeDescriptor = "AllDomain<int>",
+    D: RuntimeTypeDescriptor = "AtomDomain<int>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Deprecated. 
-    Use `make_base_discrete_laplace` instead (more efficient). 
+    """Deprecated.
+    Use `make_base_discrete_laplace` instead (more efficient).
     `make_base_discrete_laplace_linear` has a similar interface with the optional constant-time bounds.
     
     [make_base_geometric in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_geometric.html)
@@ -345,7 +354,7 @@ def make_base_geometric(
     **Supporting Elements:**
     
     * Input Domain:   `D`
-    * Output Domain:  `D`
+    * Output Type:    `D::Carrier`
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MaxDivergence<QO>`
     
@@ -385,10 +394,11 @@ def make_base_geometric(
     return output
 
 
+@versioned
 def make_base_laplace(
     scale,
     k: int = -1074,
-    D: RuntimeTypeDescriptor = "AllDomain<T>"
+    D: RuntimeTypeDescriptor = "AtomDomain<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
     
@@ -396,12 +406,12 @@ def make_base_laplace(
     
     | `D`                          | input type   | `D::InputMetric`       |
     | ---------------------------- | ------------ | ---------------------- |
-    | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-    | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
     
     
-    This function takes a noise granularity in terms of 2^k. 
-    Larger granularities are more computationally efficient, but have a looser privacy map. 
+    This function takes a noise granularity in terms of 2^k.
+    Larger granularities are more computationally efficient, but have a looser privacy map.
     If k is not set, k defaults to the smallest granularity.
     
     [make_base_laplace in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_laplace.html)
@@ -409,14 +419,14 @@ def make_base_laplace(
     **Supporting Elements:**
     
     * Input Domain:   `D`
-    * Output Domain:  `D`
+    * Output Type:    `D::Carrier`
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MaxDivergence<D::Atom>`
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
     :param k: The noise granularity in terms of 2^k.
     :type k: int
-    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
     :type D: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
@@ -445,6 +455,7 @@ def make_base_laplace(
     return output
 
 
+@versioned
 def make_base_ptr(
     scale,
     threshold,
@@ -453,16 +464,17 @@ def make_base_ptr(
     TV: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
-    This function takes a noise granularity in terms of 2^k. 
-    Larger granularities are more computationally efficient, but have a looser privacy map. 
+    
+    This function takes a noise granularity in terms of 2^k.
+    Larger granularities are more computationally efficient, but have a looser privacy map.
     If k is not set, k defaults to the smallest granularity.
     
     [make_base_ptr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_ptr.html)
     
     **Supporting Elements:**
     
-    * Input Domain:   `MapDomain<AllDomain<TK>, AllDomain<TV>>`
-    * Output Domain:  `MapDomain<AllDomain<TK>, AllDomain<TV>>`
+    * Input Domain:   `MapDomain<AtomDomain<TK>, AtomDomain<TV>>`
+    * Output Type:    `HashMap<TK, TV>`
     * Input Metric:   `L1Distance<TV>`
     * Output Measure: `SmoothedMaxDivergence<TV>`
     
@@ -502,6 +514,7 @@ def make_base_ptr(
     return output
 
 
+@versioned
 def make_randomized_response(
     categories: Any,
     prob,
@@ -515,8 +528,8 @@ def make_randomized_response(
     
     **Supporting Elements:**
     
-    * Input Domain:   `AllDomain<T>`
-    * Output Domain:  `AllDomain<T>`
+    * Input Domain:   `AtomDomain<T>`
+    * Output Type:    `T`
     * Input Metric:   `DiscreteDistance`
     * Output Measure: `MaxDivergence<QO>`
     
@@ -557,6 +570,7 @@ def make_randomized_response(
     return output
 
 
+@versioned
 def make_randomized_response_bool(
     prob,
     constant_time: bool = False,
@@ -568,8 +582,8 @@ def make_randomized_response_bool(
     
     **Supporting Elements:**
     
-    * Input Domain:   `AllDomain<bool>`
-    * Output Domain:  `AllDomain<bool>`
+    * Input Domain:   `AtomDomain<bool>`
+    * Output Type:    `bool`
     * Input Metric:   `DiscreteDistance`
     * Output Measure: `MaxDivergence<QO>`
     

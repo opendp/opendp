@@ -3,7 +3,9 @@
 use std::fmt;
 use std::fmt::Debug;
 
-use backtrace::Backtrace as _Backtrace;
+use std::backtrace::Backtrace as _Backtrace;
+
+use polars::prelude::PolarsError;
 
 /// Create an instance of [`Fallible`]
 #[macro_export]
@@ -30,21 +32,15 @@ macro_rules! err {
     // args to format into message
     ($variant:ident, $template:expr, $($args:expr),+) =>
         (err!($variant, format!($template, $($args,)+)));
-    
-    // always resolve backtraces in debug mode
-    (@backtrace) => (if cfg!(debug_assertions) { 
-        backtrace::Backtrace::new()
-    } else {
-        backtrace::Backtrace::new_unresolved() 
-    });
-}
 
+    (@backtrace) => (std::backtrace::Backtrace::capture());
+}
 
 #[derive(thiserror::Error, Debug)]
 pub struct Error {
     pub variant: ErrorVariant,
     pub message: Option<String>,
-    pub backtrace: _Backtrace
+    pub backtrace: _Backtrace,
 }
 
 impl PartialEq for Error {
@@ -106,7 +102,7 @@ impl fmt::Display for Error {
 }
 
 // simplify error creation from vega_lite_4
-#[cfg(all(test, feature="test-plot"))]
+#[cfg(all(test, feature = "test-plot"))]
 impl From<String> for Error {
     fn from(v: String) -> Self {
         err!(FailedFunction, v)
@@ -115,13 +111,27 @@ impl From<String> for Error {
 
 impl From<ErrorVariant> for Error {
     fn from(variant: ErrorVariant) -> Self {
-        Self { variant, message: None, backtrace: _Backtrace::new() }
+        Self {
+            variant,
+            message: None,
+            backtrace: std::backtrace::Backtrace::capture(),
+        }
     }
 }
 
 impl<T> From<Error> for Result<T, Error> {
     fn from(e: Error) -> Self {
         Err(e)
+    }
+}
+
+impl From<PolarsError> for Error {
+    fn from(error: PolarsError) -> Self {
+        Self {
+            variant: ErrorVariant::FailedFunction,
+            message: Some(format!("{:?}", error)),
+            backtrace: std::backtrace::Backtrace::capture(),
+        }
     }
 }
 

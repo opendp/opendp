@@ -2,8 +2,8 @@ use std::collections::HashSet;
 
 use darling::{Error, Result};
 use syn::{
-    FnArg, GenericArgument, GenericParam, Pat, Path, PathArguments, Signature, Type, TypeParam,
-    TypePath, TypePtr, TypeReference, ReturnType,
+    FnArg, GenericArgument, GenericParam, Pat, Path, PathArguments, ReturnType, Signature, Type,
+    TypeParam, TypePath, TypePtr, TypeReference,
 };
 
 use crate::TypeRecipe;
@@ -25,19 +25,29 @@ pub struct BootSigArgType {
 
 impl BootstrapSignature {
     pub fn from_syn(sig: Signature) -> Result<Self> {
-        let generics = sig.generics.params.into_iter().map(|generic| {
-            syn_generic_to_syn_type_param(&generic).map(|v| v.ident.to_string())
-        }).collect::<Result<Vec<_>>>()?;
+        let generics = sig
+            .generics
+            .params
+            .into_iter()
+            .map(|generic| syn_generic_to_syn_type_param(&generic).map(|v| v.ident.to_string()))
+            .collect::<Result<Vec<_>>>()?;
         Ok(BootstrapSignature {
             name: sig.ident.to_string(),
-            arguments: sig.inputs.into_iter().map(|fn_arg| {
-                let (pat, ty) = syn_fnarg_to_syn_pattype(fn_arg)?;
-                
-                Ok((syn_pat_to_string(&pat)?, BootSigArgType {
-                    rust_type: syn_type_to_type_recipe(&ty),
-                    c_type: syn_type_to_c_type(ty, &HashSet::from_iter(generics.clone())),
-                }))
-            }).collect::<Result<Vec<_>>>()?,
+            arguments: sig
+                .inputs
+                .into_iter()
+                .map(|fn_arg| {
+                    let (pat, ty) = syn_fnarg_to_syn_pattype(fn_arg)?;
+
+                    Ok((
+                        syn_pat_to_string(&pat)?,
+                        BootSigArgType {
+                            rust_type: syn_type_to_type_recipe(&ty),
+                            c_type: syn_type_to_c_type(ty, &HashSet::from_iter(generics.clone())),
+                        },
+                    ))
+                })
+                .collect::<Result<Vec<_>>>()?,
             generics: generics.clone(),
             output_c_type: syn_type_to_c_type(
                 match sig.output {
@@ -164,7 +174,9 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                     }
                 }
                 i if i == "String" => "AnyObject *".to_string(),
+                i if i == "str" => "char *".to_string(),
                 i if i == "c_char" => "char *".to_string(),
+                i if i == "char" => "char".to_string(),
                 i if i == "AnyObject" => "AnyObject *".to_string(),
                 i if i == "Vec" => "AnyObject *".to_string(),
                 i if i == "HashSet" => "AnyObject *".to_string(),
@@ -183,9 +195,14 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                 i if i == "FfiSlice" => "FfiSlice *".to_string(),
                 i if i == "Transformation" => "AnyTransformation *".to_string(),
                 i if i == "Measurement" => "AnyMeasurement *".to_string(),
-                i if i == "Postprocessor" => "AnyTransformation *".to_string(),
+                i if i == "Function" => "AnyFunction *".to_string(),
+                i if i == "AnyFunction" => "AnyFunction *".to_string(),
                 i if i == "AnyTransformation" => "AnyTransformation *".to_string(),
                 i if i == "AnyMeasurement" => "AnyMeasurement *".to_string(),
+                i if i == "AnyQueryable" => "AnyQueryable *".to_string(),
+                i if i == "AnyDomain" => "AnyDomain *".to_string(),
+                i if i == "AnyMetric" => "AnyMetric *".to_string(),
+                i if i == "AnyMeasure" => "AnyMeasure *".to_string(),
                 i if i == "CallbackFn" => "CallbackFn".to_string(),
                 i if i == "Fallible" || i == "FfiResult" => {
                     let args = match &segment.arguments {

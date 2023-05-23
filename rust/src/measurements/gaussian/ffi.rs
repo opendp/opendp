@@ -1,8 +1,8 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_long, c_void};
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
-use crate::domains::{AllDomain, VectorDomain};
+use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
 use crate::measurements::{make_base_gaussian, GaussianDomain, GaussianMeasure};
@@ -33,6 +33,7 @@ pub extern "C" fn opendp_measurements__make_base_gaussian(
         fn monomorphize2<D, MO>(scale: D::Atom, k: i32) -> FfiResult<*mut AnyMeasurement>
         where
             D: 'static + GaussianDomain,
+            (D, D::InputMetric): MetricSpace,
             D::Atom: Float + SampleDiscreteGaussianZ2k,
             MO: 'static + GaussianMeasure<D>,
             i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
@@ -41,7 +42,7 @@ pub extern "C" fn opendp_measurements__make_base_gaussian(
         }
 
         dispatch!(monomorphize2, [
-            (D, [AllDomain<T>, VectorDomain<AllDomain<T>>]),
+            (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
             (MO, [ZeroConcentratedDivergence<T>])
         ], (scale, k))
     }
@@ -69,7 +70,7 @@ mod tests {
         let measurement = Result::from(opendp_measurements__make_base_gaussian(
             util::into_raw(0.0) as *const c_void,
             -1078,
-            "VectorDomain<AllDomain<f64>>".to_char_p(),
+            "VectorDomain<AtomDomain<f64>>".to_char_p(),
             "ZeroConcentratedDivergence<f64>".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);
@@ -84,7 +85,7 @@ mod tests {
         let measurement = Result::from(opendp_measurements__make_base_gaussian(
             util::into_raw(0.0) as *const c_void,
             -1078,
-            "AllDomain<f64>".to_char_p(),
+            "AtomDomain<f64>".to_char_p(),
             "ZeroConcentratedDivergence<f64>".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(1.0);

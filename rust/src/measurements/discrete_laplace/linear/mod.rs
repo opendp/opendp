@@ -3,7 +3,7 @@ mod ffi;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Measurement, PrivacyMap};
+use crate::core::{Measurement, MetricSpace, PrivacyMap};
 use crate::error::*;
 use crate::measures::MaxDivergence;
 use crate::traits::samplers::SampleDiscreteLaplaceLinear;
@@ -15,42 +15,41 @@ use super::DiscreteLaplaceDomain;
     features("contrib"),
     arguments(
         scale(c_type = "void *"),
-        bounds(rust_type = "OptionT", default = b"null")),
-    generics(
-        D(default = "AllDomain<int>")),
-    derived_types(
-        T = "$get_atom(D)",
-        OptionT = "Option<(T, T)>")
+        bounds(rust_type = "OptionT", default = b"null")
+    ),
+    generics(D(default = "AtomDomain<int>")),
+    derived_types(T = "$get_atom(D)", OptionT = "Option<(T, T)>")
 )]
-/// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input, 
+/// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
 /// using a linear-time algorithm on finite data types.
-/// 
+///
 /// This algorithm can be executed in constant time if bounds are passed.
 /// Set `D` to change the input data type and input metric:
 ///
-/// 
+///
 /// | `D`                          | input type   | `D::InputMetric`       |
 /// | ---------------------------- | ------------ | ---------------------- |
-/// | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-/// | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+/// | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+/// | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
 ///
-/// 
+///
 /// # Citations
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
-/// 
+///
 /// # Arguments
 /// * `scale` - Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
 /// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
-/// 
+///
 /// # Generics
-/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `QO` - Data type of the scale and output distance.
 pub fn make_base_discrete_laplace_linear<D, QO>(
     scale: QO,
     bounds: Option<(D::Atom, D::Atom)>,
-) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
     D: DiscreteLaplaceDomain,
+    (D, D::InputMetric): MetricSpace,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {
@@ -65,8 +64,7 @@ where
         return fallible!(MakeMeasurement, "lower may not be greater than upper");
     }
 
-    Ok(Measurement::new(
-        D::default(),
+    Measurement::new(
         D::default(),
         D::new_map_function(move |v: &D::Atom| {
             D::Atom::sample_discrete_laplace_linear(*v, scale, bounds)
@@ -87,30 +85,28 @@ where
             // d_in / scale
             d_in.inf_div(&scale)
         }),
-    ))
+    )
 }
 
 #[bootstrap(
     features("contrib"),
     arguments(
         scale(c_type = "void *"),
-        bounds(rust_type = "OptionT", default = b"null")),
-    generics(
-        D(default = "AllDomain<int>")),
-    derived_types(
-        T = "$get_atom(D)",
-        OptionT = "Option<(T, T)>")
+        bounds(rust_type = "OptionT", default = b"null")
+    ),
+    generics(D(default = "AtomDomain<int>")),
+    derived_types(T = "$get_atom(D)", OptionT = "Option<(T, T)>")
 )]
-/// Deprecated. 
-/// Use `make_base_discrete_laplace` instead (more efficient). 
+/// Deprecated.
+/// Use `make_base_discrete_laplace` instead (more efficient).
 /// `make_base_discrete_laplace_linear` has a similar interface with the optional constant-time bounds.
-/// 
+///
 /// # Arguments
 /// * `scale` - Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
 /// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
-/// 
+///
 /// # Arguments
-/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `QO` - Data type of the scale and output distance
 #[deprecated(
     since = "0.5.0",
@@ -119,9 +115,10 @@ where
 pub fn make_base_geometric<D, QO>(
     scale: QO,
     bounds: Option<(D::Atom, D::Atom)>,
-) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
     D: DiscreteLaplaceDomain,
+    (D, D::InputMetric): MetricSpace,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {
@@ -130,14 +127,14 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::domains::{AllDomain, VectorDomain};
+    use crate::domains::{AtomDomain, VectorDomain};
 
     use super::*;
 
     #[test]
     fn test_make_discrete_laplace_mechanism_bounded() {
         let measurement =
-            make_base_discrete_laplace_linear::<AllDomain<_>, f64>(10.0, Some((200, 210)))
+            make_base_discrete_laplace_linear::<AtomDomain<_>, f64>(10.0, Some((200, 210)))
                 .unwrap_test();
         let arg = 205;
         let _ret = measurement.invoke(&arg).unwrap_test();
@@ -161,7 +158,7 @@ mod tests {
     #[test]
     fn test_make_discrete_laplace_mechanism() {
         let measurement =
-            make_base_discrete_laplace_linear::<AllDomain<_>, f64>(10.0, None).unwrap_test();
+            make_base_discrete_laplace_linear::<AtomDomain<_>, f64>(10.0, None).unwrap_test();
         let arg = 205;
         let _ret = measurement.invoke(&arg).unwrap_test();
         println!("{:?}", _ret);

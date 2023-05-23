@@ -5,7 +5,7 @@ use opendp_derive::bootstrap;
 use crate::{
     core::{Function, StabilityMap, Transformation},
     data::Column,
-    domains::{AllDomain, VectorDomain},
+    domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::SymmetricDistance,
     traits::Hashable,
@@ -63,17 +63,17 @@ fn create_dataframe<K: Hashable>(col_names: Vec<K>, records: &[Vec<&str>]) -> Da
 
 #[bootstrap(features("contrib"))]
 /// Make a Transformation that constructs a dataframe from a `Vec<Vec<String>>` (a vector of records).
-/// 
+///
 /// # Arguments
 /// * `col_names` - Column names for each record entry.
-/// 
+///
 /// # Generics
 /// * `K` - categorical/hashable data type of column names
 pub fn make_create_dataframe<K>(
     col_names: Vec<K>,
 ) -> Fallible<
     Transformation<
-        VectorDomain<VectorDomain<AllDomain<String>>>,
+        VectorDomain<VectorDomain<AtomDomain<String>>>,
         DataFrameDomain<K>,
         SymmetricDistance,
         SymmetricDistance,
@@ -82,9 +82,9 @@ pub fn make_create_dataframe<K>(
 where
     K: Hashable,
 {
-    Ok(Transformation::new(
-        VectorDomain::new(VectorDomain::new_all()),
-        DataFrameDomain::new_all(),
+    Transformation::new(
+        VectorDomain::new(VectorDomain::new(AtomDomain::default())),
+        DataFrameDomain::new(),
         Function::new(move |arg: &Vec<Vec<String>>| -> DataFrame<K> {
             let arg: Vec<_> = arg.iter().map(|e| vec_string_to_str(e)).collect();
             create_dataframe(col_names.clone(), &arg)
@@ -92,7 +92,7 @@ where
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 fn split_dataframe<K: Hashable>(separator: &str, col_names: Vec<K>, s: &str) -> DataFrame<K> {
@@ -103,36 +103,36 @@ fn split_dataframe<K: Hashable>(separator: &str, col_names: Vec<K>, s: &str) -> 
 }
 
 #[bootstrap(
-    features("contrib"), 
+    features("contrib"),
     arguments(separator(c_type = "char *", rust_type = b"null"))
 )]
 /// Make a Transformation that splits each record in a String into a `Vec<Vec<String>>`,
 /// and loads the resulting table into a dataframe keyed by `col_names`.
-/// 
+///
 /// # Arguments
 /// * `separator` - The token(s) that separate entries in each record.
 /// * `col_names` - Column names for each record entry.
-/// 
+///
 /// # Generics
 /// * `K` - categorical/hashable data type of column names
 pub fn make_split_dataframe<K>(
     separator: Option<&str>,
     col_names: Vec<K>,
 ) -> Fallible<
-    Transformation<AllDomain<String>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>,
+    Transformation<AtomDomain<String>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>,
 >
 where
     K: Hashable,
 {
     let separator = separator.unwrap_or(",").to_owned();
-    Ok(Transformation::new(
-        AllDomain::new(),
-        DataFrameDomain::new_all(),
+    Transformation::new(
+        AtomDomain::default(),
+        DataFrameDomain::new(),
         Function::new(move |arg: &String| split_dataframe(&separator, col_names.clone(), &arg)),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 fn vec_string_to_str(src: &[String]) -> Vec<&str> {
@@ -151,22 +151,22 @@ fn split_lines(s: &str) -> Vec<&str> {
 /// Make a Transformation that takes a string and splits it into a `Vec<String>` of its lines.
 pub fn make_split_lines() -> Fallible<
     Transformation<
-        AllDomain<String>,
-        VectorDomain<AllDomain<String>>,
+        AtomDomain<String>,
+        VectorDomain<AtomDomain<String>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
 > {
-    Ok(Transformation::new(
-        AllDomain::<String>::new(),
-        VectorDomain::new_all(),
+    Transformation::new(
+        AtomDomain::<String>::default(),
+        VectorDomain::new(AtomDomain::default()),
         Function::new(|arg: &String| -> Vec<String> {
             arg.lines().map(|v| v.to_owned()).collect()
         }),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 fn split_records<'a>(separator: &str, lines: &[&'a str]) -> Vec<Vec<&'a str>> {
@@ -180,27 +180,27 @@ fn split_records<'a>(separator: &str, lines: &[&'a str]) -> Vec<Vec<&'a str>> {
 }
 
 #[bootstrap(
-    features("contrib"), 
+    features("contrib"),
     arguments(separator(c_type = "char *", rust_type = b"null"))
 )]
 /// Make a Transformation that splits each record in a `Vec<String>` into a `Vec<Vec<String>>`.
-/// 
+///
 /// # Arguments
 /// * `separator` - The token(s) that separate entries in each record.
 pub fn make_split_records(
     separator: Option<&str>,
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<String>>,
-        VectorDomain<VectorDomain<AllDomain<String>>>,
+        VectorDomain<AtomDomain<String>>,
+        VectorDomain<VectorDomain<AtomDomain<String>>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
 > {
     let separator = separator.unwrap_or(",").to_owned();
-    Ok(Transformation::new(
-        VectorDomain::new_all(),
-        VectorDomain::new(VectorDomain::new_all()),
+    Transformation::new(
+        VectorDomain::new(AtomDomain::default()),
+        VectorDomain::new(VectorDomain::new(AtomDomain::default())),
         // move is necessary because it captures `separator`
         Function::new(move |arg: &Vec<String>| -> Vec<Vec<String>> {
             let arg = vec_string_to_str(arg);
@@ -210,7 +210,7 @@ pub fn make_split_records(
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 #[cfg(test)]

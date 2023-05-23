@@ -4,13 +4,10 @@ mod ffi;
 use num::Zero;
 
 use crate::{
-    core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
-    domains::VectorDomain,
+    core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{
-        FixedSmoothedMaxDivergence, MaxDivergence,
-        ZeroConcentratedDivergence,
-    },
+    interactive::wrap,
+    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
     traits::InfAdd,
 };
 
@@ -26,23 +23,23 @@ use crate::{
 ///
 /// # Generics
 /// * `DI` - Input Domain.
-/// * `DO` - Output Domain.
+/// * `TO` - Output Type.
 /// * `MI` - Input Metric
 /// * `MO` - Output Metric
-pub fn make_basic_composition<DI, DO, MI, MO>(
-    measurements: Vec<&Measurement<DI, DO, MI, MO>>,
-) -> Fallible<Measurement<DI, VectorDomain<DO>, MI, MO>>
+pub fn make_basic_composition<DI, TO, MI, MO>(
+    measurements: Vec<&Measurement<DI, TO, MI, MO>>,
+) -> Fallible<Measurement<DI, Vec<TO>, MI, MO>>
 where
     DI: 'static + Domain,
-    DO: 'static + Domain,
+    TO: 'static,
     MI: 'static + Metric,
     MO: 'static + BasicCompositionMeasure,
+    (DI, MI): MetricSpace,
 {
     if measurements.is_empty() {
         return fallible!(MakeMeasurement, "Must have at least one measurement");
     }
     let input_domain = measurements[0].input_domain.clone();
-    let output_domain = measurements[0].output_domain.clone();
     let input_metric = measurements[0].input_metric.clone();
     let output_measure = measurements[0].output_measure.clone();
 
@@ -69,11 +66,23 @@ where
         .map(|m| m.privacy_map.clone())
         .collect::<Vec<_>>();
 
-    Ok(Measurement::new(
+    Measurement::new(
         input_domain,
-        VectorDomain::new(output_domain),
         Function::new_fallible(move |arg: &DI::Carrier| {
-            functions.iter().map(|f| f.eval(arg)).collect()
+            wrap(
+                |_qbl| {
+                    fallible!(
+                        FailedFunction,
+                        "cannot return queryables from a noninteractive compositor"
+                    )
+                },
+                || {
+                    functions
+                        .iter()
+                        .map(|f| f.eval(arg))
+                        .collect::<Fallible<_>>()
+                },
+            )
         }),
         input_metric,
         output_measure.clone(),
@@ -84,7 +93,7 @@ where
                     .collect::<Fallible<_>>()?,
             )
         }),
-    ))
+    )
 }
 
 pub trait BasicCompositionMeasure: Measure {
@@ -116,57 +125,54 @@ impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for ZeroConcentratedDiver
 #[cfg(test)]
 mod tests {
     use crate::core::*;
-    use crate::domains::AllDomain;
-    use crate::error::ExplainUnwrap;
+    use crate::domains::AtomDomain;
     use crate::measurements::make_base_laplace;
     use crate::measures::MaxDivergence;
-    use crate::metrics::L1Distance;
+    use crate::metrics::AbsoluteDistance;
 
     use super::*;
 
     #[test]
-    fn test_make_basic_composition() {
-        let input_domain0 = AllDomain::<i32>::new();
-        let output_domain0 = AllDomain::<f64>::new();
+    fn test_make_basic_composition() -> Fallible<()> {
+        let input_domain0 = AtomDomain::<i32>::default();
         let function0 = Function::new(|arg: &i32| (arg + 1) as f64);
-        let input_metric0 = L1Distance::<i32>::default();
+        let input_metric0 = AbsoluteDistance::<i32>::default();
         let output_measure0 = MaxDivergence::default();
         let privacy_map0 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
         let measurement0 = Measurement::new(
             input_domain0,
-            output_domain0,
             function0,
             input_metric0,
             output_measure0,
             privacy_map0,
-        );
-        let input_domain1 = AllDomain::<i32>::new();
-        let output_domain1 = AllDomain::<f64>::new();
+        )?;
+        let input_domain1 = AtomDomain::<i32>::default();
         let function1 = Function::new(|arg: &i32| (arg - 1) as f64);
-        let input_metric1 = L1Distance::<i32>::default();
+        let input_metric1 = AbsoluteDistance::<i32>::default();
         let output_measure1 = MaxDivergence::default();
         let privacy_map1 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
         let measurement1 = Measurement::new(
             input_domain1,
-            output_domain1,
             function1,
             input_metric1,
             output_measure1,
             privacy_map1,
-        );
-        let composition = make_basic_composition(vec![&measurement0, &measurement1]).unwrap_test();
+        )?;
+        let composition = make_basic_composition(vec![&measurement0, &measurement1])?;
         let arg = 99;
-        let ret = composition.invoke(&arg).unwrap_test();
+        let ret = composition.invoke(&arg)?;
         assert_eq!(ret, vec![100_f64, 98_f64]);
+
+        Ok(())
     }
 
     #[test]
     fn test_make_basic_composition_2() -> Fallible<()> {
-        let laplace = make_base_laplace::<AllDomain<_>>(1.0f64, None)?;
+        let laplace = make_base_laplace::<AtomDomain<_>>(1.0f64, None)?;
         let measurements = vec![&laplace; 2];
         let composition = make_basic_composition(measurements)?;
         let arg = 99.;
-        let ret = composition.function.eval(&arg)?;
+        let ret = composition.invoke(&arg)?;
 
         assert_eq!(ret.len(), 2);
         println!("return: {:?}", ret);

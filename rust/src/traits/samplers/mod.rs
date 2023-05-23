@@ -3,14 +3,14 @@
 mod bernoulli;
 pub use bernoulli::*;
 
-#[cfg(feature="use-mpfr")]
+#[cfg(feature = "use-mpfr")]
 mod cks20;
-#[cfg(feature="use-mpfr")]
+#[cfg(feature = "use-mpfr")]
 pub use cks20::*;
 
-#[cfg(feature="use-mpfr")]
+#[cfg(feature = "use-mpfr")]
 mod discretize;
-#[cfg(feature="use-mpfr")]
+#[cfg(feature = "use-mpfr")]
 pub use discretize::*;
 
 mod geometric;
@@ -25,38 +25,40 @@ mod vulnerable_fallbacks;
 #[cfg(not(feature = "use-mpfr"))]
 pub use vulnerable_fallbacks::*;
 
-
-use rand::RngCore;
 use rand::prelude::SliceRandom;
-#[cfg(feature="use-mpfr")]
+use rand::RngCore;
+#[cfg(feature = "use-mpfr")]
 use rug::rand::ThreadRandGen;
 
-
 use crate::error::Fallible;
-#[cfg(any(not(feature="use-mpfr"), not(feature="use-openssl")))]
+#[cfg(any(not(feature = "use-mpfr"), not(feature = "use-openssl")))]
 use rand::Rng;
 
 /// Fill a byte buffer with random bits.
-/// 
+///
 /// # Proof Definition
 /// For any input `buffer`, fill the `buffer` with random bits, where each bit is an iid draw from Bernoulli(p=0.5).
 /// Return `Err(e)` if there is insufficient system entropy, otherwise return `Ok(())`.
-#[cfg(feature="use-openssl")]
+#[cfg(feature = "use-openssl")]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     use openssl::rand::rand_bytes;
     if let Err(e) = rand_bytes(buffer) {
         fallible!(FailedFunction, "OpenSSL error: {:?}", e)
-    } else { Ok(()) }
+    } else {
+        Ok(())
+    }
 }
 
 /// Non-securely fill a byte buffer with random bits.
-/// 
+///
 /// Enable `use-openssl` for a secure implementation.
-#[cfg(not(feature="use-openssl"))]
+#[cfg(not(feature = "use-openssl"))]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     if let Err(e) = rand::thread_rng().try_fill(buffer) {
         fallible!(FailedFunction, "Rand error: {:?}", e)
-    } else { Ok(()) }
+    } else {
+        Ok(())
+    }
 }
 
 /// A struct that aids in sampling from [`rug`] and [`rand`].
@@ -76,7 +78,7 @@ impl Default for GeneratorOpenDP {
     }
 }
 
-#[cfg(feature="use-mpfr")]
+#[cfg(feature = "use-mpfr")]
 impl ThreadRandGen for GeneratorOpenDP {
     fn gen(&mut self) -> u32 {
         let mut buffer = [0u8; 4];
@@ -114,7 +116,7 @@ impl RngCore for GeneratorOpenDP {
 /// Shuffle a mutable reference to a collection.
 pub trait Shuffle {
     /// # Proof Definition
-    /// For any input `self` of type `Self`, 
+    /// For any input `self` of type `Self`,
     /// mutate `self` such that the elements within are ordered randomly.
     /// Returns `Err(e)` if there is insufficient system entropy,
     /// or `Ok(())` otherwise.
@@ -127,7 +129,6 @@ impl<T> Shuffle for Vec<T> {
         rng.error
     }
 }
-
 
 #[cfg(test)]
 mod test_utils {
@@ -146,11 +147,22 @@ mod test_utils {
         std::f64::consts::SQRT_2 * erf::erfc_inv(2.0 * p)
     }
 
-    macro_rules! c {($expr:expr; $ty:ty) => ({let t: $ty = NumCast::from($expr).unwrap(); t})}
+    macro_rules! c {
+        ($expr:expr; $ty:ty) => {{
+            let t: $ty = NumCast::from($expr).unwrap();
+            t
+        }};
+    }
 
-    pub fn test_proportion_parameters<T, FS: Fn() -> T>(sampler: FS, p_pop: T, alpha: f64, err_margin: T) -> bool
-        where T: Sum<T> + Sub<Output=T> + Div<Output=T> + Real + Debug + One {
-
+    pub fn test_proportion_parameters<T, FS: Fn() -> T>(
+        sampler: FS,
+        p_pop: T,
+        alpha: f64,
+        err_margin: T,
+    ) -> bool
+    where
+        T: Sum<T> + Sub<Output = T> + Div<Output = T> + Real + Debug + One,
+    {
         // |z_{alpha/2}|
         let z_stat = c!(normal_cdf_inverse(alpha / 2.).abs(); T);
 
@@ -160,8 +172,11 @@ mod test_utils {
         // confidence interval for the mean
         let abs_p_tol = z_stat * (p_pop * (T::one() - p_pop) / n).sqrt(); // almost the same as err_margin
 
-        println!("sampling {:?} observations to detect a change in proportion with {:.4?}% confidence",
-                 c!(n; u32), (1. - alpha) * 100.);
+        println!(
+            "sampling {:?} observations to detect a change in proportion with {:.4?}% confidence",
+            c!(n; u32),
+            (1. - alpha) * 100.
+        );
 
         // take n samples from the distribution, compute average as empirical proportion
         let p_emp: T = (0..c!(n; u32)).map(|_| sampler()).sum::<T>() / n;
@@ -169,10 +184,12 @@ mod test_utils {
         let passed = (p_emp - p_pop).abs() < abs_p_tol;
 
         println!("stat: (tolerance, pop, emp, passed)");
-        println!("    proportion:     {:?}, {:?}, {:?}, {:?}", abs_p_tol, p_pop, p_emp, passed);
+        println!(
+            "    proportion:     {:?}, {:?}, {:?}, {:?}",
+            abs_p_tol, p_pop, p_emp, passed
+        );
         println!();
 
         passed
     }
-
 }

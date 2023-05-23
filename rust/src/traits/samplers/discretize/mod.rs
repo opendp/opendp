@@ -4,24 +4,24 @@ use std::convert::TryFrom;
 // stands for Big Integer, an integer with unlimited precision, from gmp
 use rug::{Integer, Rational};
 
-use crate::traits::samplers::sample_discrete_laplace;
 use crate::error::Fallible;
+use crate::traits::samplers::sample_discrete_laplace;
 
 use super::sample_discrete_gaussian;
 
 /// Sample from the discrete laplace distribution on $\mathbb{Z} \cdot 2^k$.
-/// 
+///
 /// Implemented for floating-point types f32 and f64.
-/// 
-/// k can be chosen to be very negative, 
+///
+/// k can be chosen to be very negative,
 /// to get an arbitrarily fine approximation to continuous laplacian noise.
 pub trait SampleDiscreteLaplaceZ2k: Sized {
     #![allow(non_snake_case)]
     /// # Proof Definition
-    /// For any setting of the input arguments, return either 
+    /// For any setting of the input arguments, return either
     /// `Err(e)` if there is insufficient system entropy, or
     /// `Ok(sample)`, where `sample` is distributed according to a modified discrete_laplace(`shift`, `scale`).
-    /// 
+    ///
     /// The modifications to the discrete laplace are as follows:
     /// - the `shift` is rounded to the nearest multiple of $2^k$
     /// - the `sample` is rounded to the nearest value of type `Self`.
@@ -47,18 +47,18 @@ where
 }
 
 /// Sample from the discrete gaussian distribution on $\mathbb{Z} \cdot 2^k$.
-/// 
+///
 /// Implemented for floating-point types f32 and f64.
-/// 
-/// k can be chosen to be very negative, 
+///
+/// k can be chosen to be very negative,
 /// to get an arbitrarily fine approximation to continuous gaussian noise.
 pub trait SampleDiscreteGaussianZ2k: Sized {
     #![allow(non_snake_case)]
     /// # Proof Definition
-    /// For any setting of the input arguments, return either 
+    /// For any setting of the input arguments, return either
     /// `Err(e)` if there is insufficient system entropy, or
     /// `Ok(sample)`, where `sample` is distributed according to a modified discrete_gaussian(`shift`, `scale`).
-    /// 
+    ///
     /// The modifications to the discrete gaussian are as follows:
     /// - the `shift` is rounded to the nearest multiple of $2^k$
     /// - the `sample` is rounded to the nearest value of type `Self`.
@@ -83,9 +83,8 @@ where
     }
 }
 
-
 /// Find index of nearest multiple of $2^k$ from x.
-/// 
+///
 /// # Proof Definition
 /// For any setting of input arguments, return the integer $argmin_i |i 2^k - x|$.
 fn find_nearest_multiple_of_2k(x: Rational, k: i32) -> Integer {
@@ -97,7 +96,7 @@ fn find_nearest_multiple_of_2k(x: Rational, k: i32) -> Integer {
 }
 
 /// Exactly multiply x by 2^k.
-/// 
+///
 /// This is a postprocessing operation.
 fn x_mul_2k(x: Integer, k: i32) -> Rational {
     Rational::from((x, Integer::one())) << k
@@ -110,7 +109,7 @@ pub trait CastInternalRational {
     /// `out` may saturate to +/- infinity.
     fn from_rational(v: Rational) -> Self;
     /// # Proof Definition
-    /// For any `self` of type `Self`, either return 
+    /// For any `self` of type `Self`, either return
     /// `Err(e)` if `self` is not finite, or
     /// `Ok(out)`, where `out` is a [`Rational`] that exactly represents `self`.
     fn into_rational(self) -> Fallible<Rational>;
@@ -152,7 +151,10 @@ mod test {
         assert_eq!(f64::sample_discrete_laplace_Z2k(-3., 0f64, 2)?, -4.0);
         assert_eq!(f64::sample_discrete_laplace_Z2k(-2., 0f64, 2)?, -4.0);
         assert_eq!(f64::sample_discrete_laplace_Z2k(-1., 0f64, 2)?, 0.0);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(-3.6522343492937, 0f64, 2)?, -4.0);
+        assert_eq!(
+            f64::sample_discrete_laplace_Z2k(-3.6522343492937, 0f64, 2)?,
+            -4.0
+        );
 
         assert_eq!(f64::sample_discrete_laplace_Z2k(0., 0f64, 2)?, 0.0);
 
@@ -161,20 +163,25 @@ mod test {
         assert_eq!(f64::sample_discrete_laplace_Z2k(2., 0f64, 2)?, 4.0);
         assert_eq!(f64::sample_discrete_laplace_Z2k(3., 0f64, 2)?, 4.0);
         assert_eq!(f64::sample_discrete_laplace_Z2k(4., 0f64, 2)?, 4.0);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(3.6522343492937, 0f64, 2)?, 4.0);
+        assert_eq!(
+            f64::sample_discrete_laplace_Z2k(3.6522343492937, 0f64, 2)?,
+            4.0
+        );
 
         // check that noise is applied in increments of 4
         assert_eq!(f64::sample_discrete_laplace_Z2k(4., 23f64, 2)? % 4., 0.);
         assert_eq!(f64::sample_discrete_laplace_Z2k(4., 2f64, 2)? % 4., 0.);
         assert_eq!(f64::sample_discrete_laplace_Z2k(4., 456e3f64, 2)? % 4., 0.);
-        
+
         Ok(())
     }
 
-
     #[test]
     fn test_sample_discrete_laplace_neg_k() -> Fallible<()> {
-        assert_eq!(f64::sample_discrete_laplace_Z2k(-100.23, 0f64, -2)?, -100.25);
+        assert_eq!(
+            f64::sample_discrete_laplace_Z2k(-100.23, 0f64, -2)?,
+            -100.25
+        );
         assert_eq!(f64::sample_discrete_laplace_Z2k(-34.29, 0f64, -2)?, -34.25);
         assert_eq!(f64::sample_discrete_laplace_Z2k(-0.1, 0f64, -2)?, 0.0);
         assert_eq!(f64::sample_discrete_laplace_Z2k(0., 0f64, -2)?, 0.0);
@@ -183,10 +190,19 @@ mod test {
         assert_eq!(f64::sample_discrete_laplace_Z2k(0.13, 0f64, -2)?, 0.25);
 
         // check that noise is applied in increments of .25
-        assert_eq!(f64::sample_discrete_laplace_Z2k(2342.234532, 23f64, -2)? % 0.25, 0.);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(2.8954, 2f64, -2)? % 0.25, 0.);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(834.349, 456e3f64, -2)? % 0.25, 0.);
-        
+        assert_eq!(
+            f64::sample_discrete_laplace_Z2k(2342.234532, 23f64, -2)? % 0.25,
+            0.
+        );
+        assert_eq!(
+            f64::sample_discrete_laplace_Z2k(2.8954, 2f64, -2)? % 0.25,
+            0.
+        );
+        assert_eq!(
+            f64::sample_discrete_laplace_Z2k(834.349, 456e3f64, -2)? % 0.25,
+            0.
+        );
+
         Ok(())
     }
 
@@ -206,14 +222,11 @@ mod test {
     }
 }
 
-
-
-
-#[cfg(all(test, feature="test-plot"))]
+#[cfg(all(test, feature = "test-plot"))]
 mod test_plotting {
-    use crate::traits::samplers::Fallible;
-    use crate::error::ExplainUnwrap;
     use super::*;
+    use crate::error::ExplainUnwrap;
+    use crate::traits::samplers::Fallible;
 
     fn plot_continuous(title: String, data: Vec<f64>) -> Fallible<()> {
         use vega_lite_4::*;
@@ -235,7 +248,9 @@ mod test_plotting {
                         .build()?)
                     .build()?,
             )
-            .build()?.show().unwrap_test();
+            .build()?
+            .show()
+            .unwrap_test();
         Ok(())
     }
 
@@ -252,7 +267,6 @@ mod test_plotting {
         plot_continuous(title, data).unwrap_test();
         Ok(())
     }
-
 
     #[test]
     fn plot_gaussian() -> Fallible<()> {

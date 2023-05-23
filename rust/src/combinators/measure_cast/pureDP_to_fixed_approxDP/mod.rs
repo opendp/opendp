@@ -1,7 +1,7 @@
 use crate::{
-    core::{Domain, Measurement, Metric, PrivacyMap},
+    core::{Domain, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{MaxDivergence, FixedSmoothedMaxDivergence},
+    measures::{FixedSmoothedMaxDivergence, MaxDivergence},
     traits::Float,
 };
 
@@ -19,32 +19,30 @@ mod ffi;
 /// * `DO` - Output Domain
 /// * `MI` - Input Metric
 /// * `QO` - Output distance type. One of `f32` or `f64`.
-pub fn make_pureDP_to_fixed_approxDP<DI, DO, MI, QO>(
-    meas: Measurement<DI, DO, MI, MaxDivergence<QO>>,
-) -> Fallible<Measurement<DI, DO, MI, FixedSmoothedMaxDivergence<QO>>>
+pub fn make_pureDP_to_fixed_approxDP<DI, TO, MI, QO>(
+    meas: Measurement<DI, TO, MI, MaxDivergence<QO>>,
+) -> Fallible<Measurement<DI, TO, MI, FixedSmoothedMaxDivergence<QO>>>
 where
     DI: Domain,
-    DO: Domain,
     MI: 'static + Metric,
     QO: Float,
+    (DI, MI): MetricSpace,
 {
     let Measurement {
         input_domain,
-        output_domain,
         function,
         input_metric,
         privacy_map,
         ..
     } = meas;
 
-    Ok(Measurement::new(
+    Measurement::new(
         input_domain,
-        output_domain,
         function,
         input_metric,
         FixedSmoothedMaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             privacy_map.eval(d_in).map(|eps| (eps, QO::zero()))
         }),
-    ))
+    )
 }

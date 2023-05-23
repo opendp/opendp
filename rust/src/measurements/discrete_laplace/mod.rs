@@ -1,13 +1,14 @@
 use crate::{
-    core::{Domain, Function, Measurement, Metric},
-    domains::{AllDomain, VectorDomain},
+    core::{Domain, Function, Measurement, Metric, MetricSpace},
+    domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measures::MaxDivergence,
     metrics::{AbsoluteDistance, L1Distance},
-    traits::samplers::SampleDiscreteLaplaceLinear,
-    traits::{CheckNull, Float, InfCast, Integer},
+    traits::{samplers::SampleDiscreteLaplaceLinear, CheckAtom},
+    traits::{Float, InfCast, Integer},
 };
 
+#[cfg(feature = "use-mpfr")]
 use opendp_derive::bootstrap;
 
 #[cfg(feature = "use-mpfr")]
@@ -34,12 +35,12 @@ pub trait MappableDomain: Domain {
 
     fn new_map_function(
         func: impl Fn(&Self::Atom) -> Fallible<Self::Atom> + 'static,
-    ) -> Function<Self, Self> {
+    ) -> Function<Self::Carrier, Self::Carrier> {
         Function::new_fallible(move |arg: &Self::Carrier| Self::map_over(arg, &func))
     }
 }
 
-impl<T: Clone + CheckNull> MappableDomain for AllDomain<T> {
+impl<T: Clone + CheckAtom> MappableDomain for AtomDomain<T> {
     type Atom = T;
     fn map_over(
         arg: &Self::Carrier,
@@ -62,46 +63,47 @@ impl<D: MappableDomain> MappableDomain for VectorDomain<D> {
 pub trait DiscreteLaplaceDomain: MappableDomain + Default {
     type InputMetric: Metric<Distance = Self::Atom> + Default;
 }
-impl<T: Clone + CheckNull> DiscreteLaplaceDomain for AllDomain<T> {
+impl<T: Clone + CheckAtom> DiscreteLaplaceDomain for AtomDomain<T> {
     type InputMetric = AbsoluteDistance<T>;
 }
-impl<T: Clone + CheckNull> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>> {
+impl<T: Clone + CheckAtom> DiscreteLaplaceDomain for VectorDomain<AtomDomain<T>> {
     type InputMetric = L1Distance<T>;
 }
 
 #[bootstrap(
     features("contrib"),
     arguments(scale(c_type = "void *")),
-    generics(D(default = "AllDomain<int>"))
+    generics(D(default = "AtomDomain<int>"))
 )]
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
-/// 
+///
 /// Set `D` to change the input data type and input metric:
-/// 
+///
 /// | `D`                          | input type   | `D::InputMetric`       |
 /// | ---------------------------- | ------------ | ---------------------- |
-/// | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-/// | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
-/// 
+/// | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+/// | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+///
 /// This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
 ///
 /// # Citations
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 /// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
-/// 
+///
 /// # Arguments
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
-/// 
+///
 /// # Generics
-/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `QO` - Data type of the output distance and scale. `f32` or `f64`.
 #[cfg(feature = "use-mpfr")]
 pub fn make_base_discrete_laplace<D, QO>(
     scale: QO,
-) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
     D: DiscreteLaplaceDomain,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
+    (D, D::InputMetric): MetricSpace,
     QO: Float + InfCast<D::Atom> + InfCast<D::Atom>,
     rug::Rational: std::convert::TryFrom<QO>,
     rug::Integer: From<D::Atom> + SaturatingCast<D::Atom>,
@@ -143,9 +145,10 @@ where
 #[cfg(not(feature = "use-mpfr"))]
 pub fn make_base_discrete_laplace<D, QO>(
     scale: QO,
-) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
     D: DiscreteLaplaceDomain,
+    (D, D::InputMetric): MetricSpace,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {
@@ -155,13 +158,13 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::domains::AllDomain;
+    use crate::domains::AtomDomain;
 
     // there is a distributional test in the accuracy module
 
     #[test]
     fn test_make_base_discrete_laplace() -> Fallible<()> {
-        let meas = make_base_discrete_laplace::<AllDomain<_>, _>(1f64)?;
+        let meas = make_base_discrete_laplace::<AtomDomain<_>, _>(1f64)?;
         println!("{:?}", meas.invoke(&0)?);
         assert!(meas.check(&1, &1.)?);
         Ok(())

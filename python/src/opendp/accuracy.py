@@ -16,6 +16,7 @@ __all__ = [
 ]
 
 
+@versioned
 def accuracy_to_discrete_gaussian_scale(
     accuracy,
     alpha,
@@ -56,6 +57,7 @@ def accuracy_to_discrete_gaussian_scale(
     return output
 
 
+@versioned
 def accuracy_to_discrete_laplacian_scale(
     accuracy,
     alpha,
@@ -97,6 +99,7 @@ def accuracy_to_discrete_laplacian_scale(
     return output
 
 
+@versioned
 def accuracy_to_gaussian_scale(
     accuracy,
     alpha,
@@ -133,6 +136,7 @@ def accuracy_to_gaussian_scale(
     return output
 
 
+@versioned
 def accuracy_to_laplacian_scale(
     accuracy,
     alpha,
@@ -170,6 +174,7 @@ def accuracy_to_laplacian_scale(
     return output
 
 
+@versioned
 def discrete_gaussian_scale_to_accuracy(
     scale,
     alpha,
@@ -210,6 +215,7 @@ def discrete_gaussian_scale_to_accuracy(
     return output
 
 
+@versioned
 def discrete_laplacian_scale_to_accuracy(
     scale,
     alpha,
@@ -220,7 +226,7 @@ def discrete_laplacian_scale_to_accuracy(
     $\alpha = P[Y \ge accuracy]$, where $Y = |X - z|$, and $X \sim \mathcal{L}_{Z}(0, scale)$.
     That is, $X$ is a discrete Laplace random variable and $Y$ is the distribution of the errors.
     
-    This function returns a float accuracy. 
+    This function returns a float accuracy.
     You can take the floor without affecting the coverage probability.
     
     [discrete_laplacian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.discrete_laplacian_scale_to_accuracy.html)
@@ -256,6 +262,7 @@ def discrete_laplacian_scale_to_accuracy(
     return output
 
 
+@versioned
 def gaussian_scale_to_accuracy(
     scale,
     alpha,
@@ -292,6 +299,7 @@ def gaussian_scale_to_accuracy(
     return output
 
 
+@versioned
 def laplacian_scale_to_accuracy(
     scale,
     alpha,

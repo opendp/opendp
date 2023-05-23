@@ -1,18 +1,24 @@
 use opendp_derive::bootstrap;
 
-use crate::{core::{Transformation, Function, StabilityMap}, error::Fallible, domains::{VectorDomain, AllDomain}, metrics::SymmetricDistance, traits::{Hashable, Primitive}};
+use crate::{
+    core::{Function, StabilityMap, Transformation},
+    domains::{AtomDomain, VectorDomain},
+    error::Fallible,
+    metrics::SymmetricDistance,
+    traits::{Hashable, Primitive},
+};
 
-use super::{DataFrameDomain, DataFrame};
+use super::{DataFrame, DataFrameDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
 #[bootstrap(features("contrib"))]
 /// Make a Transformation that retrieves the column `key` from a dataframe as `Vec<TOA>`.
-/// 
+///
 /// # Arguments
 /// * `key` - categorical/hashable data type of the key/column name
-/// 
+///
 /// # Generics
 /// * `K` - data type of key
 /// * `TOA` - Atomic Output Type to downcast vector to
@@ -21,7 +27,7 @@ pub fn make_select_column<K, TOA>(
 ) -> Fallible<
     Transformation<
         DataFrameDomain<K>,
-        VectorDomain<AllDomain<TOA>>,
+        VectorDomain<AtomDomain<TOA>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -30,9 +36,9 @@ where
     K: Hashable,
     TOA: Primitive,
 {
-    Ok(Transformation::new(
-        DataFrameDomain::new_all(),
-        VectorDomain::new_all(),
+    Transformation::new(
+        DataFrameDomain::new(),
+        VectorDomain::new(AtomDomain::default()),
         Function::new_fallible(move |arg: &DataFrame<K>| -> Fallible<Vec<TOA>> {
             // retrieve column from dataframe and handle error
             arg.get(&key)
@@ -44,13 +50,13 @@ where
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{error::ExplainUnwrap, data::Column};
+    use crate::{data::Column, error::ExplainUnwrap};
 
     #[test]
     fn test_make_select_column() {

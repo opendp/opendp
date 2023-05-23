@@ -2,6 +2,10 @@ from opendp.transformations import make_cast_default, make_clamp, make_bounded_s
 from opendp.measurements import make_base_discrete_laplace
 from opendp.combinators import *
 from opendp.mod import enable_features
+
+from opendp.domains import vector_domain, atom_domain
+from opendp.metrics import symmetric_distance, absolute_distance
+from opendp.measures import max_divergence
 from opendp.typing import *
 
 enable_features("contrib", "honest-but-curious")
@@ -17,16 +21,16 @@ def make_duplicate(multiplicity, raises=False):
     def stability_map(d_in):
         return d_in * multiplicity
 
-    return make_default_user_transformation(
+    return make_user_transformation(
+        vector_domain(atom_domain(T=int)),
+        vector_domain(atom_domain(T=int)),
         function,
-        stability_map,
-        DI=VectorDomain[AllDomain[i32]],
-        DO=VectorDomain[AllDomain[i32]],
-        MI=SymmetricDistance,
-        MO=SymmetricDistance,
+        symmetric_distance(),
+        symmetric_distance(),
+        stability_map
     )
 
-def test_make_default_user_transformation():
+def test_make_user_transformation():
     trans = (
         make_cast_default(TIA=str, TOA=int)
         >> make_duplicate(2)
@@ -53,33 +57,65 @@ def make_constant_mechanism(constant):
     def stability_map(_d_in):
         return 0.
 
-    return make_default_user_measurement(
+    return make_user_measurement(
+        atom_domain(T=int),
         function,
+        absolute_distance(int),
+        max_divergence(float),
         stability_map,
-        DI=AllDomain[i32],
-        DO=AllDomain[i32],
-        MI=AbsoluteDistance[i32],
-        MO=MaxDivergence[f64],
+        int,
     )
 
-def test_make_default_user_measurement():
+def test_make_user_measurement():
     mech = make_constant_mechanism(23)
     print(mech(1))
 
     assert mech.map(200) == 0.
-
+    
 
 def make_postprocess_frac():
     """An example user-defined postprocessor from Python"""
     def function(arg):
         return arg[0] / arg[1]
 
-    return make_default_user_postprocessor(
-        function,
-        DI=VectorDomain[AllDomain[f64]],
-        DO=AllDomain[f64],
-    )
+    return make_user_postprocessor(function, float)
 
-def test_make_default_user_postprocessor():
+def test_make_user_postprocessor():
     mech = make_postprocess_frac()
     print(mech([12., 100.]))
+
+
+def test_user_constructors():
+
+    from opendp.combinators import make_user_transformation, make_user_measurement
+    from opendp.domains import vector_domain, atom_domain
+    from opendp.metrics import symmetric_distance
+    from opendp.measures import max_divergence
+
+    trans = make_user_transformation(
+        atom_domain((2, 10)),
+        vector_domain(atom_domain((2, 10)), 10),
+        lambda x: [x] * 10,
+        symmetric_distance(),
+        symmetric_distance(),
+        lambda d_in: d_in * 10
+    )
+    print(trans(2))
+    print(trans.map(1))
+
+
+    meas = make_user_measurement(
+        atom_domain((2, 10)),
+        lambda x: [x] * 10,
+        symmetric_distance(),
+        max_divergence(f64),
+        lambda d_in: float(d_in * 10),
+        Vec[int],
+    )
+    print(meas(2))
+    print(meas.map(1))
+
+
+    post = make_user_postprocessor(lambda x: x[0], i32)
+
+    print((meas >> post)(2))

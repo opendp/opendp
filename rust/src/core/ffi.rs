@@ -1,16 +1,19 @@
-use std::{fmt, ptr};
 use std::ffi::{c_void, CStr};
 use std::fmt::{Debug, Formatter};
 use std::os::raw::c_char;
+use std::{fmt, ptr};
 
 use opendp_derive::bootstrap;
 
-use crate::combinators::ffi::{default_domain, default_metric, default_measure};
-use crate::{try_, try_as_ref};
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
-use crate::ffi::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt};
-use crate::ffi::util::{self, c_bool, Type};
+use crate::ffi::any::{
+    AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyQueryable,
+    AnyTransformation, Downcast, IntoAnyFunctionExt, IntoAnyMeasurementExt,
+    IntoAnyTransformationExt, QueryType,
+};
 use crate::ffi::util::into_c_char_p;
+use crate::ffi::util::{self, c_bool, Type};
+use crate::{try_, try_as_ref};
 
 #[repr(C)]
 pub struct FfiSlice {
@@ -34,32 +37,41 @@ pub struct FfiError {
 
 impl FfiError {
     fn variant_str(&self) -> &str {
-        unsafe { CStr::from_ptr(self.variant).to_str().unwrap_or("Couldn't get variant!") }
+        unsafe {
+            CStr::from_ptr(self.variant)
+                .to_str()
+                .unwrap_or("Couldn't get variant!")
+        }
     }
 
     fn message_str(&self) -> Option<&str> {
-        unsafe { self.message.as_ref().map(|s| CStr::from_ptr(s).to_str().unwrap_or("Couldn't get message!")) }
+        unsafe {
+            self.message.as_ref().map(|s| {
+                CStr::from_ptr(s)
+                    .to_str()
+                    .unwrap_or("Couldn't get message!")
+            })
+        }
     }
 }
 
 impl From<Error> for FfiError {
-    fn from(mut error: Error) -> Self {
+    fn from(error: Error) -> Self {
         Self {
             variant: try_!(util::into_c_char_p(format!("{:?}", error.variant))),
-            message: try_!(error.message.map_or(Ok(ptr::null::<c_char>() as *mut c_char), util::into_c_char_p)),
-            backtrace: try_!(util::into_c_char_p(if let ErrorVariant::RelationDebug = error.variant{
-                String::default()
-            } else {
-                error.backtrace.resolve();
-                format!("{:?}", error.backtrace)
-            })),
+            message: try_!(error.message.map_or(
+                Ok(ptr::null::<c_char>() as *mut c_char),
+                util::into_c_char_p
+            )),
+            backtrace: try_!(util::into_c_char_p(error.backtrace.to_string())),
         }
     }
 }
 
 impl Drop for FfiError {
     fn drop(&mut self) {
-        let _variant = util::into_string(self.variant).unwrap_assert("variants do not contain null bytes");
+        let _variant =
+            util::into_string(self.variant).unwrap_assert("variants do not contain null bytes");
         let _message = unsafe { self.message.as_mut() }.map(|p| util::into_string(p).unwrap());
         let _backtrace = util::into_string(self.backtrace).unwrap();
     }
@@ -73,7 +85,12 @@ impl PartialEq for FfiError {
 
 impl Debug for FfiError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "FfiError: {{ type: {}, message: {:?} }}", self.variant_str(), self.message_str())
+        write!(
+            f,
+            "FfiError: {{ type: {}, message: {:?} }}",
+            self.variant_str(),
+            self.message_str()
+        )
     }
 }
 
@@ -90,7 +107,8 @@ impl<TI, TO: From<TI>> From<Fallible<TI>> for FfiResult<*mut TO> {
     fn from(result: Fallible<TI>) -> Self {
         result.map_or_else(
             |e| Self::Err(util::into_raw(FfiError::from(e))),
-            |v| Self::Ok(util::into_raw(TO::from(v))))
+            |v| Self::Ok(util::into_raw(TO::from(v))),
+        )
     }
 }
 
@@ -105,7 +123,7 @@ impl<T: PartialEq> PartialEq for FfiResult<*mut T> {
         match (self, other) {
             (Self::Ok(self_), Self::Ok(other)) => util::as_ref(*self_) == util::as_ref(*other),
             (Self::Err(self_), Self::Err(other)) => util::as_ref(*self_) == util::as_ref(*other),
-            _ => false
+            _ => false,
         }
     }
 }
@@ -145,6 +163,16 @@ impl<T: IntoAnyTransformationExt> IntoAnyTransformationFfiResultExt for Fallible
     }
 }
 
+pub trait IntoAnyFunctionFfiResultExt {
+    fn into_any(self) -> FfiResult<*mut AnyFunction>;
+}
+
+impl<T: IntoAnyFunctionExt> IntoAnyFunctionFfiResultExt for Fallible<T> {
+    fn into_any(self) -> FfiResult<*mut AnyFunction> {
+        self.map(IntoAnyFunctionExt::into_any).into()
+    }
+}
+
 impl From<FfiError> for Error {
     fn from(val: FfiError) -> Self {
         let variant = util::to_str(val.variant).unwrap_assert("variants do not contain null bytes");
@@ -160,12 +188,14 @@ impl From<FfiError> for Error {
             "MakeMeasurement" => ErrorVariant::MakeMeasurement,
             "InvalidDistance" => ErrorVariant::InvalidDistance,
             "NotImplemented" => ErrorVariant::NotImplemented,
-            unknown => return err!(NotImplemented, "Unknown ErrorVariant {}", unknown)
+            unknown => return err!(NotImplemented, "Unknown ErrorVariant {}", unknown),
         };
         Error {
             variant,
-            message: util::to_option_str(val.message).unwrap_test().map(|s| s.to_owned()),
-            backtrace: backtrace::Backtrace::new_unresolved(),
+            message: util::to_option_str(val.message)
+                .unwrap_test()
+                .map(|s| s.to_owned()),
+            backtrace: std::backtrace::Backtrace::capture(),
         }
     }
 }
@@ -184,7 +214,7 @@ impl<T> From<FfiResult<*mut T>> for Fallible<T> {
     arguments(this(c_type = "FfiError *", do_not_convert = true, hint = "FfiError"))
 )]
 /// Internal function. Free the memory associated with `error`.
-/// 
+///
 /// # Returns
 /// A boolean, where true indicates successful free
 #[no_mangle]
@@ -194,20 +224,149 @@ pub extern "C" fn opendp_core___error_free(this: *mut FfiError) -> bool {
 }
 
 #[bootstrap(
+    name = "transformation_input_domain",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyDomain *>", do_not_convert = true)
+)]
+/// Get the input domain from a `transformation`.
+///
+/// # Arguments
+/// * `this` - The transformation to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_input_domain(
+    this: *mut AnyTransformation,
+) -> FfiResult<*mut AnyDomain> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).input_domain.clone()))
+}
+
+#[bootstrap(
+    name = "transformation_output_domain",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyDomain *>", do_not_convert = true)
+)]
+/// Get the output domain from a `transformation`.
+///
+/// # Arguments
+/// * `this` - The transformation to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_output_domain(
+    this: *mut AnyTransformation,
+) -> FfiResult<*mut AnyDomain> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).output_domain.clone()))
+}
+
+#[bootstrap(
+    name = "transformation_input_metric",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyMetric *>", do_not_convert = true)
+)]
+/// Get the input domain from a `transformation`.
+///
+/// # Arguments
+/// * `this` - The transformation to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_input_metric(
+    this: *mut AnyTransformation,
+) -> FfiResult<*mut AnyMetric> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).input_metric.clone()))
+}
+
+#[bootstrap(
+    name = "transformation_output_metric",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyMetric *>", do_not_convert = true)
+)]
+/// Get the output domain from a `transformation`.
+///
+/// # Arguments
+/// * `this` - The transformation to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_output_metric(
+    this: *mut AnyTransformation,
+) -> FfiResult<*mut AnyMetric> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).output_metric.clone()))
+}
+
+#[bootstrap(
+    name = "measurement_input_domain",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyDomain *>", do_not_convert = true)
+)]
+/// Get the input domain from a `measurement`.
+///
+/// # Arguments
+/// * `this` - The measurement to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_input_domain(
+    this: *mut AnyMeasurement,
+) -> FfiResult<*mut AnyDomain> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).input_domain.clone()))
+}
+
+#[bootstrap(
+    name = "measurement_input_metric",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyMetric *>", do_not_convert = true)
+)]
+/// Get the input domain from a `measurement`.
+///
+/// # Arguments
+/// * `this` - The measurement to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_input_metric(
+    this: *mut AnyMeasurement,
+) -> FfiResult<*mut AnyMetric> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).input_metric.clone()))
+}
+
+#[bootstrap(
+    name = "measurement_output_measure",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyMeasure *>", do_not_convert = true)
+)]
+/// Get the output domain from a `measurement`.
+///
+/// # Arguments
+/// * `this` - The measurement to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_output_measure(
+    this: *mut AnyMeasurement,
+) -> FfiResult<*mut AnyMeasure> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).output_measure.clone()))
+}
+
+#[bootstrap(
+    name = "measurement_function",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyFunction *>", do_not_convert = true)
+)]
+/// Get the function from a measurement.
+///
+/// # Arguments
+/// * `this` - The measurement to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_function(
+    this: *mut AnyMeasurement,
+) -> FfiResult<*mut AnyFunction> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).function.clone()))
+}
+
+#[bootstrap(
     name = "transformation_map",
     arguments(
         transformation(rust_type = b"null"),
-        distance_in(rust_type = "$transformation_input_distance_type(transformation)"))
+        distance_in(rust_type = "$transformation_input_distance_type(transformation)")
+    )
 )]
 /// Use the `transformation` to map a given `d_in` to `d_out`.
-/// 
+///
 /// # Arguments
 /// * `transformation` - Transformation to check the map distances with.
 /// * `distance_in` - Distance in terms of the input metric.
 #[no_mangle]
 pub extern "C" fn opendp_core__transformation_map(
     transformation: *const AnyTransformation,
-    distance_in: *const AnyObject
+    distance_in: *const AnyObject,
 ) -> FfiResult<*mut AnyObject> {
     let transformation = try_as_ref!(transformation);
     let distance_in = try_as_ref!(distance_in);
@@ -225,12 +384,12 @@ pub extern "C" fn opendp_core__transformation_map(
     returns(c_type = "FfiResult<bool *>", hint = "bool")
 )]
 /// Check the privacy relation of the `measurement` at the given `d_in`, `d_out`
-/// 
+///
 /// # Arguments
 /// * `measurement` - Measurement to check the privacy relation of.
 /// * `d_in` - Distance in terms of the input metric.
 /// * `d_out` - Distance in terms of the output metric.
-/// 
+///
 /// # Returns
 /// True indicates that the relation passed at the given distance.
 #[no_mangle]
@@ -255,14 +414,14 @@ pub extern "C" fn opendp_core__transformation_check(
     )
 )]
 /// Use the `measurement` to map a given `d_in` to `d_out`.
-/// 
+///
 /// # Arguments
 /// * `measurement` - Measurement to check the map distances with.
 /// * `distance_in` - Distance in terms of the input metric.
 #[no_mangle]
 pub extern "C" fn opendp_core__measurement_map(
     measurement: *const AnyMeasurement,
-    distance_in: *const AnyObject
+    distance_in: *const AnyObject,
 ) -> FfiResult<*mut AnyObject> {
     let measurement = try_as_ref!(measurement);
     let distance_in = try_as_ref!(distance_in);
@@ -280,12 +439,12 @@ pub extern "C" fn opendp_core__measurement_map(
     returns(c_type = "FfiResult<bool *>", hint = "bool")
 )]
 /// Check the privacy relation of the `measurement` at the given `d_in`, `d_out`
-/// 
+///
 /// # Arguments
 /// * `measurement` - Measurement to check the privacy relation of.
 /// * `d_in` - Distance in terms of the input metric.
 /// * `d_out` - Distance in terms of the output metric.
-/// 
+///
 /// # Returns
 /// True indicates that the relation passed at the given distance.
 #[no_mangle]
@@ -301,7 +460,6 @@ pub extern "C" fn opendp_core__measurement_check(
     FfiResult::Ok(util::into_raw(util::from_bool(status)))
 }
 
-
 #[bootstrap(
     name = "measurement_invoke",
     arguments(
@@ -310,12 +468,15 @@ pub extern "C" fn opendp_core__measurement_check(
     )
 )]
 /// Invoke the `measurement` with `arg`. Returns a differentially private release.
-/// 
+///
 /// # Arguments
 /// * `this` - Measurement to invoke.
 /// * `arg` - Input data to supply to the measurement. A member of the measurement's input domain.
 #[no_mangle]
-pub extern "C" fn opendp_core__measurement_invoke(this: *const AnyMeasurement, arg: *const AnyObject) -> FfiResult<*mut AnyObject> {
+pub extern "C" fn opendp_core__measurement_invoke(
+    this: *const AnyMeasurement,
+    arg: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
     let this = try_as_ref!(this);
     let arg = try_as_ref!(arg);
     this.invoke(arg).into()
@@ -340,15 +501,34 @@ pub extern "C" fn opendp_core___measurement_free(this: *mut AnyMeasurement) -> F
     )
 )]
 /// Invoke the `transformation` with `arg`. Returns a differentially private release.
-/// 
+///
 /// # Arguments
 /// * `this` - Transformation to invoke.
 /// * `arg` - Input data to supply to the transformation. A member of the transformation's input domain.
 #[no_mangle]
-pub extern "C" fn opendp_core__transformation_invoke(this: *const AnyTransformation, arg: *const AnyObject) -> FfiResult<*mut AnyObject> {
+pub extern "C" fn opendp_core__transformation_invoke(
+    this: *const AnyTransformation,
+    arg: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
     let this = try_as_ref!(this);
     let arg = try_as_ref!(arg);
     this.invoke(arg).into()
+}
+
+#[bootstrap(
+    name = "transformation_function",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyFunction *>", do_not_convert = true)
+)]
+/// Get the function from a transformation.
+///
+/// # Arguments
+/// * `this` - The transformation to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_function(
+    this: *mut AnyTransformation,
+) -> FfiResult<*mut AnyFunction> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).function.clone()))
 }
 
 #[bootstrap(
@@ -358,7 +538,9 @@ pub extern "C" fn opendp_core__transformation_invoke(this: *const AnyTransformat
 )]
 /// Internal function. Free the memory associated with `this`.
 #[no_mangle]
-pub extern "C" fn opendp_core___transformation_free(this: *mut AnyTransformation) -> FfiResult<*mut ()> {
+pub extern "C" fn opendp_core___transformation_free(
+    this: *mut AnyTransformation,
+) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
@@ -368,13 +550,17 @@ pub extern "C" fn opendp_core___transformation_free(this: *mut AnyTransformation
     returns(c_type = "FfiResult<char *>")
 )]
 /// Get the input (carrier) data type of `this`.
-/// 
+///
 /// # Arguments
 /// * `this` - The transformation to retrieve the type from.
 #[no_mangle]
-pub extern "C" fn opendp_core__transformation_input_carrier_type(this: *mut AnyTransformation) -> FfiResult<*mut c_char> {
+pub extern "C" fn opendp_core__transformation_input_carrier_type(
+    this: *mut AnyTransformation,
+) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
-    FfiResult::Ok(try_!(into_c_char_p(this.input_domain.carrier_type.descriptor.to_string())))
+    FfiResult::Ok(try_!(into_c_char_p(
+        this.input_domain.carrier_type.descriptor.to_string()
+    )))
 }
 
 #[bootstrap(
@@ -383,13 +569,17 @@ pub extern "C" fn opendp_core__transformation_input_carrier_type(this: *mut AnyT
     returns(c_type = "FfiResult<char *>")
 )]
 /// Get the input (carrier) data type of `this`.
-/// 
+///
 /// # Arguments
 /// * `this` - The measurement to retrieve the type from.
 #[no_mangle]
-pub extern "C" fn opendp_core__measurement_input_carrier_type(this: *mut AnyMeasurement) -> FfiResult<*mut c_char> {
+pub extern "C" fn opendp_core__measurement_input_carrier_type(
+    this: *mut AnyMeasurement,
+) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
-    FfiResult::Ok(try_!(into_c_char_p(this.input_domain.carrier_type.descriptor.to_string())))
+    FfiResult::Ok(try_!(into_c_char_p(
+        this.input_domain.carrier_type.descriptor.to_string()
+    )))
 }
 
 #[bootstrap(
@@ -398,13 +588,17 @@ pub extern "C" fn opendp_core__measurement_input_carrier_type(this: *mut AnyMeas
     returns(c_type = "FfiResult<char *>")
 )]
 /// Get the input distance type of `transformation`.
-/// 
+///
 /// # Arguments
 /// * `this` - The transformation to retrieve the type from.
 #[no_mangle]
-pub extern "C" fn opendp_core__transformation_input_distance_type(this: *mut AnyTransformation) -> FfiResult<*mut c_char> {
+pub extern "C" fn opendp_core__transformation_input_distance_type(
+    this: *mut AnyTransformation,
+) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
-    FfiResult::Ok(try_!(into_c_char_p(this.input_metric.distance_type.descriptor.to_string())))
+    FfiResult::Ok(try_!(into_c_char_p(
+        this.input_metric.distance_type.descriptor.to_string()
+    )))
 }
 
 #[bootstrap(
@@ -413,13 +607,17 @@ pub extern "C" fn opendp_core__transformation_input_distance_type(this: *mut Any
     returns(c_type = "FfiResult<char *>")
 )]
 /// Get the output distance type of `transformation`.
-/// 
+///
 /// # Arguments
 /// * `this` - The transformation to retrieve the type from.
 #[no_mangle]
-pub extern "C" fn opendp_core__transformation_output_distance_type(this: *mut AnyTransformation) -> FfiResult<*mut c_char> {
+pub extern "C" fn opendp_core__transformation_output_distance_type(
+    this: *mut AnyTransformation,
+) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
-    FfiResult::Ok(try_!(into_c_char_p(this.output_metric.distance_type.descriptor.to_string())))
+    FfiResult::Ok(try_!(into_c_char_p(
+        this.output_metric.distance_type.descriptor.to_string()
+    )))
 }
 
 #[bootstrap(
@@ -428,13 +626,17 @@ pub extern "C" fn opendp_core__transformation_output_distance_type(this: *mut An
     returns(c_type = "FfiResult<char *>")
 )]
 /// Get the input distance type of `measurement`.
-/// 
+///
 /// # Arguments
 /// * `this` - The measurement to retrieve the type from.
 #[no_mangle]
-pub extern "C" fn opendp_core__measurement_input_distance_type(this: *mut AnyMeasurement) -> FfiResult<*mut c_char> {
+pub extern "C" fn opendp_core__measurement_input_distance_type(
+    this: *mut AnyMeasurement,
+) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
-    FfiResult::Ok(try_!(into_c_char_p(this.input_metric.distance_type.descriptor.to_string())))
+    FfiResult::Ok(try_!(into_c_char_p(
+        this.input_metric.distance_type.descriptor.to_string()
+    )))
 }
 
 #[bootstrap(
@@ -443,77 +645,102 @@ pub extern "C" fn opendp_core__measurement_input_distance_type(this: *mut AnyMea
     returns(c_type = "FfiResult<char *>")
 )]
 /// Get the output distance type of `measurement`.
-/// 
+///
 /// # Arguments
 /// * `this` - The measurement to retrieve the type from.
 #[no_mangle]
-pub extern "C" fn opendp_core__measurement_output_distance_type(this: *mut AnyMeasurement) -> FfiResult<*mut c_char> {
+pub extern "C" fn opendp_core__measurement_output_distance_type(
+    this: *mut AnyMeasurement,
+) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
-    FfiResult::Ok(try_!(into_c_char_p(this.output_measure.distance_type.descriptor.to_string())))
+    FfiResult::Ok(try_!(into_c_char_p(
+        this.output_measure.distance_type.descriptor.to_string()
+    )))
 }
 
 #[bootstrap(
-    name = "domain_carrier_type",
-    arguments(D(c_type = "char *", rust_type = b"null")),
-    returns(c_type = "FfiResult<char *>")
+    name = "function_eval",
+    arguments(
+        this(rust_type = b"null"),
+        arg(rust_type = "$parse_or_infer(TI, arg)"),
+        TI(rust_type = b"null", default = b"null"),
+    )
 )]
-/// Get the carrier type associated with a domain descriptor
-/// 
+/// Eval the `function` with `arg`.
+///
 /// # Arguments
-/// * `D` - The domain to get the carrier type from.
+/// * `this` - Function to invoke.
+/// * `arg` - Input data to supply to the measurement. A member of the measurement's input domain.
+/// * `TI` - Input Type.
 #[no_mangle]
-pub extern "C" fn opendp_core__domain_carrier_type(D: *const c_char) -> FfiResult<*mut c_char> {
-    let D = try_!(Type::try_from(D));
-    let T = try_!(default_domain(D)).carrier_type.to_string();
-    match into_c_char_p(T.to_string()) {
-        Ok(v) => FfiResult::Ok(v),
-        Err(e) => e.into(),
-    }
+pub extern "C" fn opendp_core__function_eval(
+    this: *const AnyFunction,
+    arg: *const AnyObject,
+    TI: *const c_char,
+) -> FfiResult<*mut AnyObject> {
+    let this = try_as_ref!(this);
+    let arg = try_as_ref!(arg);
+    let _TI = TI;
+    this.eval(arg).into()
 }
 
 #[bootstrap(
-    name = "metric_distance_type",
-    arguments(M(c_type = "char *", rust_type = b"null")),
-    returns(c_type = "FfiResult<char *>")
+    name = "_function_free",
+    arguments(this(do_not_convert = true)),
+    returns(c_type = "FfiResult<void *>")
 )]
-/// Get the distance type associated with a metric descriptor
-/// 
-/// # Arguments
-/// * `M` - The metric to get the distance type from.
+/// Internal function. Free the memory associated with `this`.
 #[no_mangle]
-pub extern "C" fn opendp_core__metric_distance_type(M: *const c_char) -> FfiResult<*mut c_char> {
-    let M = try_!(Type::try_from(M));
-    let Q = try_!(default_metric(M)).distance_type.to_string();
-    match into_c_char_p(Q.to_string()) {
-        Ok(v) => FfiResult::Ok(v),
-        Err(e) => e.into(),
-    }
+pub extern "C" fn opendp_core___function_free(this: *mut AnyFunction) -> FfiResult<*mut ()> {
+    util::into_owned(this).map(|_| ()).into()
 }
 
 #[bootstrap(
-    name = "measure_distance_type",
-    arguments(M(c_type = "char *", rust_type = b"null")),
-    returns(c_type = "FfiResult<char *>")
+    name = "queryable_eval",
+    arguments(
+        queryable(rust_type = b"null"),
+        query(rust_type = "$queryable_query_type(queryable)")
+    )
 )]
-/// Get the distance type associated with a measure descriptor
-/// 
+/// Invoke the `queryable` with `query`. Returns a differentially private release.
+///
 /// # Arguments
-/// * `M` - The measure to get the distance type from.
+/// * `queryable` - Queryable to eval.
+/// * `query` - Input data to supply to the measurement. A member of the measurement's input domain.
 #[no_mangle]
-pub extern "C" fn opendp_core__measure_distance_type(M: *const c_char) -> FfiResult<*mut c_char> {
-    let M = try_!(Type::try_from(M));
-    let Q = try_!(default_measure(M)).distance_type.to_string();
-    match into_c_char_p(Q.to_string()) {
-        Ok(v) => FfiResult::Ok(v),
-        Err(e) => e.into(),
-    }
+pub extern "C" fn opendp_core__queryable_eval(
+    queryable: *mut AnyObject,
+    query: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let queryable = try_as_mut_ref!(queryable);
+    let queryable = try_!(queryable.downcast_mut::<AnyQueryable>());
+    let query = try_as_ref!(query);
+    queryable.eval(query).into()
 }
 
+#[bootstrap(
+    name = "queryable_query_type",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<char *>")
+)]
+/// Get the query type of `queryable`.
+///
+/// # Arguments
+/// * `this` - The queryable to retrieve the query type from.
+#[no_mangle]
+pub extern "C" fn opendp_core__queryable_query_type(
+    this: *mut AnyObject,
+) -> FfiResult<*mut c_char> {
+    let this = try_as_mut_ref!(this);
+    let this = try_!(this.downcast_mut::<AnyQueryable>());
+    let answer: Type = try_!(this.eval_internal(&QueryType));
+    FfiResult::Ok(try_!(into_c_char_p(answer.descriptor.to_string())))
+}
 
 #[cfg(test)]
 mod tests {
     use crate::combinators::tests::{make_test_measurement, make_test_transformation};
-    use crate::ffi::any::{Downcast, IntoAnyMeasurementExt, IntoAnyTransformationExt};
+    use crate::ffi::any::{Downcast, IntoAnyTransformationExt};
     use crate::ffi::util::ToCharP;
 
     use super::*;
@@ -584,8 +811,8 @@ mod tests {
 
     #[test]
     fn test_measurement_invoke() -> Fallible<()> {
-        let measurement = util::into_raw(make_test_measurement::<i32>().into_any());
-        let arg = AnyObject::new_raw(999);
+        let measurement = util::into_raw(make_test_measurement::<i32>()?.into_any());
+        let arg = AnyObject::new_raw(vec![999]);
         let res = opendp_core__measurement_invoke(measurement, arg);
         let res: i32 = Fallible::from(res)?.downcast()?;
         assert_eq!(res, 999);
@@ -594,8 +821,8 @@ mod tests {
 
     #[test]
     fn test_measurement_invoke_wrong_type() -> Fallible<()> {
-        let measurement = util::into_raw(make_test_measurement::<i32>().into_any());
-        let arg = AnyObject::new_raw(999.0);
+        let measurement = util::into_raw(make_test_measurement::<i32>()?.into_any());
+        let arg = AnyObject::new_raw(vec![999.0]);
         let res = Fallible::from(opendp_core__measurement_invoke(measurement, arg));
         assert_eq!(res.err().unwrap_test().variant, ErrorVariant::FailedCast);
         Ok(())
@@ -603,17 +830,17 @@ mod tests {
 
     #[test]
     fn test_transformation_invoke() -> Fallible<()> {
-        let transformation = util::into_raw(make_test_transformation::<i32>().into_any());
-        let arg = AnyObject::new_raw(999);
+        let transformation = util::into_raw(make_test_transformation::<i32>()?.into_any());
+        let arg = AnyObject::new_raw(vec![999]);
         let res = opendp_core__transformation_invoke(transformation, arg);
-        let res: i32 = Fallible::from(res)?.downcast()?;
-        assert_eq!(res, 999);
+        let res: Vec<i32> = Fallible::from(res)?.downcast()?;
+        assert_eq!(res, vec![999]);
         Ok(())
     }
 
     #[test]
     fn test_transformation_invoke_wrong_type() -> Fallible<()> {
-        let transformation = util::into_raw(make_test_transformation::<i32>().into_any());
+        let transformation = util::into_raw(make_test_transformation::<i32>()?.into_any());
         let arg = AnyObject::new_raw(999.0);
         let res = Fallible::from(opendp_core__transformation_invoke(transformation, arg));
         assert_eq!(res.err().unwrap_test().variant, ErrorVariant::FailedCast);

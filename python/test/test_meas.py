@@ -38,7 +38,7 @@ def test_base_laplace():
 
 def test_base_vector_laplace():
     from opendp.measurements import make_base_laplace
-    meas = make_base_laplace(scale=10.5, D="VectorDomain<AllDomain<f64>>")
+    meas = make_base_laplace(scale=10.5, D="VectorDomain<AtomDomain<f64>>")
     print("base laplace:", meas([80., 90., 100.]))
     assert meas.check(1., 1.3)
 
@@ -72,7 +72,7 @@ def test_base_vector_gaussian():
     delta = .000001
     meas = make_fix_delta(
         make_zCDP_to_approxDP(
-            make_base_gaussian(scale=10.5, D="VectorDomain<AllDomain<f64>>")), delta)
+            make_base_gaussian(scale=10.5, D="VectorDomain<AtomDomain<f64>>")), delta)
     print("base gaussian:", meas([80., 90., 100.]))
     assert meas.check(1., (0.6, delta))
 
@@ -107,7 +107,7 @@ def test_base_discrete_laplace_cks20():
 
 def test_base_vector_discrete_laplace_cks20():
     from opendp.measurements import make_base_discrete_laplace_cks20
-    meas = make_base_discrete_laplace_cks20(scale=2., D="VectorDomain<AllDomain<i32>>")
+    meas = make_base_discrete_laplace_cks20(scale=2., D="VectorDomain<AtomDomain<i32>>")
     print("vector base_dl:", meas([100, 10, 12]))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
@@ -123,7 +123,7 @@ def test_base_discrete_laplace_linear():
 
 def test_base_vector_discrete_laplace():
     from opendp.measurements import make_base_discrete_laplace
-    meas = make_base_discrete_laplace(scale=2., D="VectorDomain<AllDomain<i32>>")
+    meas = make_base_discrete_laplace(scale=2., D="VectorDomain<AtomDomain<i32>>")
     print("vector base_dl:", meas([100, 10, 12]))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
@@ -137,7 +137,7 @@ def test_base_discrete_gaussian():
 
 def test_base_vector_discrete_gaussian():
     from opendp.measurements import make_base_discrete_gaussian
-    meas = make_base_discrete_gaussian(scale=2., D="VectorDomain<AllDomain<i32>>", QI=float)
+    meas = make_base_discrete_gaussian(scale=2., D="VectorDomain<AtomDomain<i32>>", QI=float)
     print("vector base_dl:", meas([100, 10, 12]))
     assert meas.check(1., 0.125)
     assert not meas.check(1., 0.124)

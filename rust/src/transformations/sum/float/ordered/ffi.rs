@@ -8,8 +8,8 @@ use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::traits::Float;
 use crate::transformations::{
-    make_bounded_float_ordered_sum, make_sized_bounded_float_ordered_sum, Pairwise,
-    SaturatingSum, Sequential,
+    make_bounded_float_ordered_sum, make_sized_bounded_float_ordered_sum, Pairwise, SaturatingSum,
+    Sequential,
 };
 
 #[no_mangle]
@@ -106,11 +106,13 @@ mod tests {
 
     #[test]
     fn test_make_sized_bounded_float_ordered_sum_ffi() -> Fallible<()> {
-        let transformation = Result::from(opendp_transformations__make_sized_bounded_float_ordered_sum(
-            3 as c_uint,
-            util::into_raw(AnyObject::new((0., 10.))),
-            "Pairwise<f64>".to_char_p(),
-        ))?;
+        let transformation = Result::from(
+            opendp_transformations__make_sized_bounded_float_ordered_sum(
+                3 as c_uint,
+                util::into_raw(AnyObject::new((0., 10.))),
+                "Pairwise<f64>".to_char_p(),
+            ),
+        )?;
         let arg = AnyObject::new_raw(vec![1., 2., 3.]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
         let res: f64 = Fallible::from(res)?.downcast()?;

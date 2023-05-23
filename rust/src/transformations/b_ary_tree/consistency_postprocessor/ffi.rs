@@ -4,9 +4,9 @@ use std::{
 };
 
 use crate::{
-    core::{FfiResult, IntoAnyTransformationFfiResultExt},
-    ffi::{any::AnyTransformation, util::Type},
-    traits::{CheckNull, Float, RoundCast},
+    core::{FfiResult, IntoAnyFunctionFfiResultExt},
+    ffi::{any::AnyFunction, util::Type},
+    traits::{CheckAtom, Float, RoundCast},
     transformations::make_consistent_b_ary_tree,
 };
 
@@ -15,10 +15,10 @@ pub extern "C" fn opendp_transformations__make_consistent_b_ary_tree(
     branching_factor: c_uint,
     TIA: *const c_char,
     TOA: *const c_char,
-) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<TIA, TOA>(branching_factor: usize) -> FfiResult<*mut AnyTransformation>
+) -> FfiResult<*mut AnyFunction> {
+    fn monomorphize<TIA, TOA>(branching_factor: usize) -> FfiResult<*mut AnyFunction>
     where
-        TIA: 'static + CheckNull + Clone,
+        TIA: 'static + CheckAtom + Clone,
         TOA: Float + RoundCast<TIA>,
     {
         make_consistent_b_ary_tree::<TIA, TOA>(branching_factor).into_any()

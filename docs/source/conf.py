@@ -27,43 +27,34 @@ extensions = [
 ]
 
 # convert markdown to rst when rendering with sphinx
-
-generated_dirs = {
+markdown_modules = {
     "accuracy", 
     "combinators", 
     "core",
     "measurements", 
-    "transformations", 
+    "transformations",
+    "domains",
+    "metrics",
+    "measures"
 }
+
 import pypandoc
 import re
 py_attr_re = re.compile(r"\:py\:\w+\:(``[^:`]+``)")
-generated_dirs = {
-    "accuracy", 
-    "combinators", 
-    "core",
-    "measurements", 
-    "transformations", 
-}
 
 def docstring(app, what, name, obj, options, lines):
     path = name.split(".")
 
-    if len(path) > 1 and path[1] in generated_dirs:
-        description = []
-        params = []
-        found_param = False
-        for line in lines:
-            found_param |= line.startswith(":")
-            if found_param:
-                params.append(line.replace("`", "``"))
-            else:
-                description.append(line)
+    if len(path) > 1 and path[1] in markdown_modules:
+        # split docstring into description and params
+        param_index = next((i for i, line in enumerate(lines) if line.startswith(":")), len(lines))
+        description, params = lines[:param_index], lines[param_index:]
         
-        rst = pypandoc.convert_text('\n'.join(description), 'rst', format='md')                
-        params = "\n".join(params)
-        
+        # rust documentation is markdown, convert to rst
+        rst = pypandoc.convert_text('\n'.join(description), 'rst', format='md')
+
         # allow sphinx notation to pass through
+        params = "\n".join(line.replace("`", "``") for line in params)
         indexes = set()
         for match in py_attr_re.finditer(params):
             a, b = match.span(1)

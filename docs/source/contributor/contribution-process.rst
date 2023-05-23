@@ -36,7 +36,7 @@ On the OpenDP side, the vetting process to remove the ``contrib`` flag goes as f
 #. Reviewers are assigned.
 #. Reviewer confirms the privacy claims of the proof.
 #. Reviewer validates the pseudo-code against the proof.
-#. Reviewer validates the Rust code against the pseudo-code.
+#. Reviewer validates the code against the pseudo-code.
 
 Please be patient— this process may take several iterations as issues come up in the review process.
 

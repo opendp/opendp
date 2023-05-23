@@ -3,7 +3,7 @@ import pytest
 from opendp.mod import enable_features
 from opendp.measurements import *
 from opendp.transformations import *
-from opendp.typing import AllDomain, VectorDomain, ZeroConcentratedDivergence
+from opendp.typing import AtomDomain, VectorDomain, ZeroConcentratedDivergence
 
 enable_features("floating-point", "contrib", "honest-but-curious")
 
@@ -19,7 +19,6 @@ def test_amplification():
     assert not meas.check(2, 2.)
     assert amplified.check(2, 1.494)
     assert not amplified.check(2, .494)
-
 
 def test_fix_delta():
     base_gaussian = make_zCDP_to_approxDP(make_base_gaussian(10.))
@@ -44,7 +43,7 @@ def test_make_basic_composition():
             (
                 make_cast_default(int, str) >> 
                 make_count_by_categories(categories=["0", "12", "22"]) >> 
-                make_base_discrete_laplace(scale=2., D=VectorDomain[AllDomain[int]])
+                make_base_discrete_laplace(scale=2., D=VectorDomain[AtomDomain[int]])
             )
         ])
     ])
@@ -59,7 +58,7 @@ def test_make_basic_composition_leak():
 
     # choose a vector-valued mechanism that should run quickly for large inputs
     # we want to add as little noise as possible, so that execution time is small
-    meas = make_base_discrete_laplace(scale=1e-6, D=VectorDomain[AllDomain[int]])
+    meas = make_base_discrete_laplace(scale=1e-6, D=VectorDomain[AtomDomain[int]])
 
     # memory usage remains the same when this line is commented,
     # supporting that AnyObject's free recursively frees children

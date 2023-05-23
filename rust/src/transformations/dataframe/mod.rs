@@ -12,6 +12,7 @@ pub use subset::*;
 
 use std::hash::Hash;
 use std::collections::HashMap;
+<<<<<<< HEAD
 use std::fmt::{Debug};
 use std::collections::hash_map::Entry;
 
@@ -97,10 +98,43 @@ impl Domain for SizedDataFrameDomain {
     type Carrier = polars::prelude::DataFrame;
     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
         // TO BE IMPLEMENTED.
+=======
+use std::fmt::Debug;
+use std::hash::Hash;
+use std::marker::PhantomData;
+
+use crate::core::Domain;
+use crate::data::Column;
+use crate::domains::type_name;
+use crate::error::Fallible;
+
+pub type DataFrame<K> = HashMap<K, Column>;
+
+#[derive(PartialEq)]
+pub struct DataFrameDomain<K: Hash + Eq> {
+    pub _marker: PhantomData<K>,
+}
+impl<K: Hash + Eq> Clone for DataFrameDomain<K> {
+    fn clone(&self) -> Self {
+        Self::new()
+    }
+}
+impl<K: Hash + Eq> DataFrameDomain<K> {
+    pub fn new() -> Self {
+        DataFrameDomain {
+            _marker: PhantomData,
+        }
+    }
+}
+impl<K: Hash + Eq> Domain for DataFrameDomain<K> {
+    type Carrier = HashMap<K, Column>;
+    fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
+>>>>>>> origin/695-polars-2
         Ok(true)
     }
 }
 
+<<<<<<< HEAD
 /// Vector type for categorical variables.
 pub trait CatVec: IsVec {
     fn counts(&self, cats: &dyn CatVec) -> Option<Vec<usize>>;
@@ -218,3 +252,10 @@ mod test {
         Ok(())
     }
 }
+=======
+impl<K: Hash + Eq> Debug for DataFrameDomain<K> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "DataFrameDomain({:?})", type_name!(K))
+    }
+}
+>>>>>>> origin/695-polars-2
