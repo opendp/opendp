@@ -119,7 +119,7 @@ where
     Ok((k, relaxation))
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "derive"))]
 mod tests {
     use super::*;
     use crate::{metrics::SymmetricDistance, transformations::make_sized_bounded_mean};
