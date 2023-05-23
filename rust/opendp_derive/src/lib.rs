@@ -270,6 +270,20 @@ mod full;
 ///     pass
 /// ```
 /// The extern "C" rust function would throw an error if any type that is not a sensitivity metric were passed.
+/// 
+/// ## Suppress
+/// In some cases you want generated code not to include a type argument for a particular generic,
+/// because it is unambiguously determined by another argument.
+/// This comes up often when the type is already captured in the `input_domain` or `input_metric` argument.
+/// ```no_run
+/// #[bootstrap(
+///     generics(DI(suppress))
+/// )]
+/// fn my_func<DI>(input_domain: DI) {}
+/// ```
+/// 
+/// In this case, the generated code will not include the type argument for DI.
+/// The extern "C" function will get a handle on DI by introspecting the received `AnyDomain` struct.
 ///
 /// ## Do Not Convert
 /// By default, generated bindings code always calls a function to convert between rust types and C types.
