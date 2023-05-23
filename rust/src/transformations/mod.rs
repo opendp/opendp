@@ -48,6 +48,11 @@ mod mean;
 #[cfg(feature = "contrib")]
 pub use crate::transformations::mean::*;
 
+#[cfg(feature = "contrib")]
+mod polars;
+#[cfg(feature = "contrib")]
+pub use crate::transformations::polars::*;
+
 #[cfg(feature="contrib")]
 pub mod partitioned_sum;
 #[cfg(feature="contrib")]

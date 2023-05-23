@@ -535,29 +535,3 @@ mod contrib {
         }
     }
 }
-
-/// A Domain that represents partitioned data
-#[derive(Clone, PartialEq)]
-pub struct ProductDomain<D: Domain> {
-    pub inner_domains: Vec<D>
-}
-impl<D: Domain> ProductDomain<D> {
-    pub fn new(inner_domains: Vec<D>) -> Self {
-        ProductDomain { inner_domains }
-    }
-}
-impl<D: Domain> Debug for ProductDomain<D> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "ProductDomain({:?})", self.inner_domains)
-    }
-}
-
-impl<D: Domain> Domain for ProductDomain<D> {
-    type Carrier = Vec<D::Carrier>;
-    fn member(&self, val: &Vec<D::Carrier>) -> Fallible<bool> {
-        if self.inner_domains.len() != val.len() {
-            return Ok(false)
-        }
-        val.iter().zip(self.inner_domains.iter()).try_fold(true, |acc, (v, d)| d.member(v).map(|v| acc && v))
-    }
-}
