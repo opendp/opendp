@@ -870,25 +870,34 @@ def exponential_bounds_search(
     return signed_band_search(center, at_center, sign)
 
 
-def space_of(T=None, U=None, D=None, M=None, infer=False) -> Tuple[Domain, Metric]:
-    """
-    Constructs a metric space consisting of a domain and metric.
+def space_of(T=None, D=None, M=None, infer=False) -> Tuple[Domain, Metric]:
+    """Constructs a metric space consisting of a domain and metric.
+
+    Must pass one of carrier/data type `T` or domain type `D`.
 
     If `infer` is set, then `T` is treated as an example of the sensitive dataset.
     Passing the sensitive dataset may result in a privacy violation.
     
-    :param T: carrier type
-    :param U: distance type
+    :param T: carrier type (the type of members in the domain)
     :param D: domain type
     :param M: metric type
     :param infer: See above documentation.
     """
     domain = domain_of(T, D, infer=infer)
-    metric = metric_of(M, U=U, D=domain.type)
+    metric = metric_of(M, D=domain.type)
     return domain, metric
 
 
 def domain_of(T=None, D=None, infer=False) -> Domain:
+    """Constructs a domain from a carrier type `T` or domain type `D`.
+
+    If `infer` is set, then `T` is treated as an example of the sensitive dataset.
+    Passing the sensitive dataset may result in a privacy violation.
+
+    :param T: carrier type
+    :param D: domain type
+    :param infer: See above documentation.
+    """
     from opendp.typing import RuntimeType
     from opendp.domains import vector_domain, atom_domain, option_domain
 
@@ -920,43 +929,48 @@ def domain_of(T=None, D=None, infer=False) -> Domain:
     if D.origin == "OptionDomain":
         return option_domain(domain_of(D=D.args[0]))
 
-    raise TypeError(f"unable to infer default domain for type {D}")
+    raise TypeError(f"unrecognized domain: {D}")
 
         
-def metric_of(M=None, U=None, D=None) -> Metric:
-    from opendp.typing import RuntimeType, get_atom
+def metric_of(M=None, D=None) -> Metric:
+    import opendp.typing as ty
     import opendp.metrics as metrics
-    if M and U:
-        raise ValueError("cannot specify both U and M")
-    
+
     # 1. normalize to M
     if M:
         if isinstance(M, Metric):
             return M
-        M = RuntimeType.parse(M)
+        M = ty.RuntimeType.parse(M)
         if M.args is None:
-            M.args = [U or get_atom(D)]
+            M.args = [ty.get_atom(D)]
     else:
-        M = RuntimeType.metric_type_of(D, U=U)
+        D = ty.RuntimeType.parse(D)
+
+        # fill in a default metric for certain kinds of domains
+        if D.origin == "VectorDomain":
+            M = ty.SymmetricDistance
+        elif D.origin == "AtomDomain":
+            M = ty.AbsoluteDistance[ty.get_atom(D)]
+        raise TypeError(f"unable to infer default metric for domain {D}")
     
     # 2. construct M
-    if isinstance(M, RuntimeType):
+    if isinstance(M, ty.RuntimeType):
         if M.origin == "AbsoluteDistance":
             return metrics.absolute_distance(T=M.args[0])
         if M.origin == "L1Distance":
             return metrics.l1_distance(T=M.args[0])
         if M.origin == "L2Distance":
             return metrics.l2_distance(T=M.args[0])
-        if M.origin == "DiscreteDistance":
-            return metrics.discrete_distance(T=M.args[0])
         
-    if M == "HammingDistance":
+    if M == ty.HammingDistance:
         return metrics.hamming_distance()
-    if M == "SymmetricDistance":
+    if M == ty.SymmetricDistance:
         return metrics.symmetric_distance()
-    if M == "InsertDeleteDistance":
+    if M == ty.InsertDeleteDistance:
         return metrics.insert_delete_distance()
-    if M == "ChangeOneDistance":
+    if M == ty.ChangeOneDistance:
         return metrics.change_one_distance()
+    if M == ty.DiscreteDistance:
+        return metrics.discrete_distance()
 
-    raise TypeError(f"unrecognized metric {M}")
+    raise TypeError(f"unrecognized metric: {M}")

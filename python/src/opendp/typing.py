@@ -403,22 +403,8 @@ class RuntimeType(object):
         if T in ATOM_MAP:
             return RuntimeType(origin="AtomDomain", args=[T])
 
-        raise TypeError(f"domain_of not implemented for type {T}")
+        raise TypeError(f"domain_type_of is not implemented for type {T}")
     
-    @classmethod
-    def metric_type_of(cls, D, U=None) -> "RuntimeType":
-        """Converts a carrier type to a domain type."""
-        
-        D = RuntimeType.parse(D)
-
-        if D.origin == "VectorDomain":
-            return SymmetricDistance
-        elif D.origin == "AtomDomain":
-            return AbsoluteDistance[U or get_atom(D)]
-        elif D.origin == "Option":
-            U = D.params[0]
-        raise TypeError(f"unable to infer default metric for domain {D}")
-
 
 class GenericType(RuntimeType):
     def __str__(self):
@@ -438,18 +424,10 @@ class UnknownType(RuntimeType):
         raise UnknownTypeException(f"attempted to create a type_name with an unknown type: {self.reason}")
 
 
-class DatasetMetric(RuntimeType):
-    """All dataset metric RuntimeTypes inherit from DatasetMetric.
-    Provides static type checking in user-code for dataset metrics.
-    """
-    pass
-
-
-SymmetricDistance = DatasetMetric('SymmetricDistance')
-InsertDeleteDistance = DatasetMetric('InsertDeleteDistance')
-
-ChangeOneDistance = DatasetMetric('ChangeOneDistance')
-HammingDistance = DatasetMetric('HammingDistance')
+SymmetricDistance = 'SymmetricDistance'
+InsertDeleteDistance = 'InsertDeleteDistance'
+ChangeOneDistance = 'ChangeOneDistance'
+HammingDistance = 'HammingDistance'
 
 
 class SensitivityMetric(RuntimeType):
@@ -463,6 +441,7 @@ class SensitivityMetric(RuntimeType):
 AbsoluteDistance = SensitivityMetric('AbsoluteDistance')
 L1Distance = SensitivityMetric('L1Distance')
 L2Distance = SensitivityMetric('L2Distance')
+DiscreteDistance = SensitivityMetric('DiscreteDistance')
 
 
 class PrivacyMeasure(RuntimeType):
