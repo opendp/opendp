@@ -40,7 +40,11 @@ try:
 except ImportError:
     np = None
 
-NUMERIC_TYPES = {"i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "usize", "f32", "f64"}
+INTEGER_TYPES = {"i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "usize"}
+NUMERIC_TYPES = INTEGER_TYPES | {"f32", "f64"}
+HASHABLE_TYPES = INTEGER_TYPES | {"bool", "String"}
+PRIMITIVE_TYPES = NUMERIC_TYPES | {"bool", "String"}
+
 
 # all ways of providing type information
 RuntimeTypeDescriptor = Union[
@@ -50,12 +54,12 @@ RuntimeTypeDescriptor = Union[
     tuple,  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, List[int])
 ]
 
-if sys.version_info >= (3, 7):
+if sys.version_info >= (3, 8):
     from typing import _GenericAlias
     # a Python type hint from the std typing module -- List[int]
     RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (_GenericAlias,)
 
-if sys.version_info >= (3, 8):
+if sys.version_info >= (3, 9):
     from types import GenericAlias
     # a Python type hint from the std types module -- list[int]
     RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (GenericAlias,)
@@ -387,25 +391,6 @@ class RuntimeType(object):
         return self
     
 
-    @classmethod
-    def domain_type_of(cls, T) -> "RuntimeType":
-        """Converts a carrier type to a domain type."""
-        from opendp._convert import ATOM_MAP
-
-        T = RuntimeType.parse(T)
-        
-        if isinstance(T, RuntimeType):
-            if T.origin == "Vec":
-                return VectorDomain[cls.domain_type_of(T.args[0])]
-            if T.origin == "HashMap":
-                return MapDomain[cls.domain_type_of(T.args[0]), cls.domain_type_of(T.args[1])]
-    
-        if T in ATOM_MAP:
-            return RuntimeType(origin="AtomDomain", args=[T])
-
-        raise TypeError(f"domain_type_of is not implemented for type {T}")
-    
-
 class GenericType(RuntimeType):
     def __str__(self):
         raise UnknownTypeException(f"attempted to create a type_name with an unknown generic: {self.origin}")
@@ -429,6 +414,8 @@ InsertDeleteDistance = 'InsertDeleteDistance'
 ChangeOneDistance = 'ChangeOneDistance'
 HammingDistance = 'HammingDistance'
 
+DiscreteDistance = 'DiscreteDistance'
+
 
 class SensitivityMetric(RuntimeType):
     """All sensitivity RuntimeTypes inherit from SensitivityMetric.
@@ -441,7 +428,6 @@ class SensitivityMetric(RuntimeType):
 AbsoluteDistance = SensitivityMetric('AbsoluteDistance')
 L1Distance = SensitivityMetric('L1Distance')
 L2Distance = SensitivityMetric('L2Distance')
-DiscreteDistance = SensitivityMetric('DiscreteDistance')
 
 
 class PrivacyMeasure(RuntimeType):

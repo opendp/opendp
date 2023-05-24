@@ -383,7 +383,8 @@ class Domain(ctypes.POINTER(AnyDomain)):
     @property
     def type(self):
         from opendp.domains import domain_type
-        return domain_type(self)
+        from opendp.typing import RuntimeType
+        return RuntimeType.parse(domain_type(self))
     
     @property
     def carrier_type(self):
@@ -870,90 +871,84 @@ def exponential_bounds_search(
     return signed_band_search(center, at_center, sign)
 
 
-def space_of(T=None, D=None, M=None, infer=False) -> Tuple[Domain, Metric]:
-    """Constructs a metric space consisting of a domain and metric.
+def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
+    """A shorthand for building a metric space, consisting of a domain and a metric.
 
-    Must pass one of carrier/data type `T` or domain type `D`.
+    :example:
 
-    If `infer` is set, then `T` is treated as an example of the sensitive dataset.
-    Passing the sensitive dataset may result in a privacy violation.
+    >>> import opendp.prelude as dp
+    >>> from typing import List # in Python 3.9, can just write list[int] below
+    ...
+    >>> dp.space_of(List[int])
+    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
+    ...
+    >>> # the verbose form allows greater control:
+    >>> (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())
+    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
     
     :param T: carrier type (the type of members in the domain)
-    :param D: domain type
     :param M: metric type
-    :param infer: See above documentation.
+    :param infer: if True, `T` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
     """
-    domain = domain_of(T, D, infer=infer)
-    metric = metric_of(M, D=domain.type)
-    return domain, metric
+    import opendp.typing as ty
+    domain = domain_of(T, infer=infer)
+    D = domain.type
+
+    # choose a metric type if not set
+    if M is None:
+        if D.origin == "VectorDomain":
+            M = ty.SymmetricDistance
+        elif D.origin == "AtomDomain" and ty.get_atom(D) in ty.NUMERIC_TYPES:
+            M = ty.AbsoluteDistance
+        else:
+            raise TypeError(f"no default metric for domain {D}. Please set `M`")
+    
+    # choose a distance type if not set
+    if isinstance(M, ty.RuntimeType) and M.args is None:
+        M.args = [ty.get_atom(D)]
+
+    return domain, metric_of(M)
 
 
-def domain_of(T=None, D=None, infer=False) -> Domain:
-    """Constructs a domain from a carrier type `T` or domain type `D`.
-
-    If `infer` is set, then `T` is treated as an example of the sensitive dataset.
-    Passing the sensitive dataset may result in a privacy violation.
+def domain_of(T, infer=False) -> Domain:
+    """Constructs an instance of a domain from carrier type `T`.
 
     :param T: carrier type
-    :param D: domain type
-    :param infer: See above documentation.
+    :param infer: if True, `T` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
     """
-    from opendp.typing import RuntimeType
-    from opendp.domains import vector_domain, atom_domain, option_domain
+    import opendp.typing as ty
+    from opendp.domains import vector_domain, atom_domain, option_domain, map_domain
 
-    if T and D:
-        raise ValueError("cannot specify both T and D")
-
-    # 1. normalize to D
-    if T:
-        if infer:
-            T = RuntimeType.infer(T)
-        D = RuntimeType.domain_type_of(T)
-    elif D:
-        if isinstance(D, Domain):
-            return D
-        D = RuntimeType.parse(D)
+    # normalize to a type descriptor
+    if infer:
+        T = ty.RuntimeType.infer(T)
     else:
-        raise TypeError("must specify either T or D")
+        T = ty.RuntimeType.parse(T)
     
-    if not isinstance(D, RuntimeType):
-        raise TypeError("D must be a Domain type")
+    # construct the domain
+    if isinstance(T, ty.RuntimeType):
+        if T.origin == "Vec":
+            return vector_domain(domain_of(T.args[0]))
+        if T.origin == "HashMap":
+            return map_domain(domain_of(T.args[0]), domain_of(T.args[1]))
+        if T.origin == "Option":
+            return option_domain(domain_of(T.args[0]))
+
+    if T in ty.PRIMITIVE_TYPES:
+        return atom_domain(T=T)
     
-    # 2. construct D
-    if D.origin == "VectorDomain":
-        return vector_domain(domain_of(D=D.args[0]))
-    if D.origin == "HashMap":
-        raise NotImplementedError("ffi is not yet implemented for map_domain")
-    if D.origin == "AtomDomain":
-        return atom_domain(T=D.args[0])
-    if D.origin == "OptionDomain":
-        return option_domain(domain_of(D=D.args[0]))
-
-    raise TypeError(f"unrecognized domain: {D}")
-
+    raise TypeError(f"unrecognized carrier type: {T}")
+    
         
-def metric_of(M=None, D=None) -> Metric:
+def metric_of(M) -> Metric:
+    """Constructs an instance of a metric from metric type `M`."""
     import opendp.typing as ty
     import opendp.metrics as metrics
 
-    # 1. normalize to M
-    if M:
-        if isinstance(M, Metric):
-            return M
-        M = ty.RuntimeType.parse(M)
-        if M.args is None:
-            M.args = [ty.get_atom(D)]
-    else:
-        D = ty.RuntimeType.parse(D)
+    if isinstance(M, Metric):
+        return M
+    M = ty.RuntimeType.parse(M)
 
-        # fill in a default metric for certain kinds of domains
-        if D.origin == "VectorDomain":
-            M = ty.SymmetricDistance
-        elif D.origin == "AtomDomain":
-            M = ty.AbsoluteDistance[ty.get_atom(D)]
-        raise TypeError(f"unable to infer default metric for domain {D}")
-    
-    # 2. construct M
     if isinstance(M, ty.RuntimeType):
         if M.origin == "AbsoluteDistance":
             return metrics.absolute_distance(T=M.args[0])
