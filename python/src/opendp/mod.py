@@ -872,7 +872,9 @@ def exponential_bounds_search(
 
 
 def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
-    """A shorthand for building a metric space, consisting of a domain and a metric.
+    """A shorthand for building a metric space.
+     
+    A metric space consists of a domain and a metric.
 
     :example:
 
@@ -881,7 +883,6 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
     ...
     >>> dp.space_of(List[int])
     (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
-    ...
     >>> # the verbose form allows greater control:
     >>> (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())
     (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
