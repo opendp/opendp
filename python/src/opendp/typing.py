@@ -54,7 +54,7 @@ RuntimeTypeDescriptor = Union[
     tuple,  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, List[int])
 ]
 
-if sys.version_info >= (3, 8):
+if sys.version_info >= (3, 7):
     from typing import _GenericAlias
     # a Python type hint from the std typing module -- List[int]
     RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (_GenericAlias,)
@@ -161,7 +161,7 @@ class RuntimeType(object):
             from types import GenericAlias
             if isinstance(type_name, GenericAlias):
                 hinted_type = type_name.__origin__, type_name.__args__
-        if sys.version_info >= (3, 8):
+        if sys.version_info >= (3, 7):
             from typing import _GenericAlias
             if isinstance(type_name, _GenericAlias):
                 hinted_type = typing.get_origin(type_name), typing.get_args(type_name)
