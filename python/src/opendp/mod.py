@@ -398,6 +398,13 @@ class Domain(ctypes.POINTER(AnyDomain)):
         from opendp.domains import _domain_free
         _domain_free(self)
 
+    def __repr__(self) -> str:
+        return str(self)
+    
+    def __eq__(self, other) -> bool:
+        # TODO: consider adding ffi equality
+        return str(self) == str(other)
+
 
 class Metric(ctypes.POINTER(AnyMetric)):
     _type_ = AnyMetric
@@ -420,6 +427,13 @@ class Metric(ctypes.POINTER(AnyMetric)):
     def __del__(self):
         from opendp.metrics import _metric_free
         _metric_free(self)
+    
+    def __repr__(self) -> str:
+        return str(self)
+    
+    def __eq__(self, other) -> bool:
+        # TODO: consider adding ffi equality
+        return str(self) == str(other)
 
 
 class Measure(ctypes.POINTER(AnyMeasure)):
@@ -855,3 +869,94 @@ def exponential_bounds_search(
     at_center = predicate(center)
     return signed_band_search(center, at_center, sign)
 
+
+def space_of(T=None, U=None, D=None, M=None, infer=False) -> Tuple[Domain, Metric]:
+    """
+    Constructs a metric space consisting of a domain and metric.
+
+    If `infer` is set, then `T` is treated as an example of the sensitive dataset.
+    Passing the sensitive dataset may result in a privacy violation.
+    
+    :param T: carrier type
+    :param U: distance type
+    :param D: domain type
+    :param M: metric type
+    :param infer: See above documentation.
+    """
+    domain = domain_of(T, D, infer=infer)
+    metric = metric_of(M, U=U, D=domain.type)
+    return domain, metric
+
+
+def domain_of(T=None, D=None, infer=False) -> Domain:
+    from opendp.typing import RuntimeType
+    from opendp.domains import vector_domain, atom_domain, option_domain
+
+    if T and D:
+        raise ValueError("cannot specify both T and D")
+
+    # 1. normalize to D
+    if T:
+        if infer:
+            T = RuntimeType.infer(T)
+        D = RuntimeType.domain_type_of(T)
+    elif D:
+        if isinstance(D, Domain):
+            return D
+        D = RuntimeType.parse(D)
+    else:
+        raise TypeError("must specify either T or D")
+    
+    if not isinstance(D, RuntimeType):
+        raise TypeError("D must be a Domain type")
+    
+    # 2. construct D
+    if D.origin == "VectorDomain":
+        return vector_domain(domain_of(D=D.args[0]))
+    if D.origin == "HashMap":
+        raise NotImplementedError("ffi is not yet implemented for map_domain")
+    if D.origin == "AtomDomain":
+        return atom_domain(T=D.args[0])
+    if D.origin == "OptionDomain":
+        return option_domain(domain_of(D=D.args[0]))
+
+    raise TypeError(f"unable to infer default domain for type {D}")
+
+        
+def metric_of(M=None, U=None, D=None) -> Metric:
+    from opendp.typing import RuntimeType, get_atom
+    import opendp.metrics as metrics
+    if M and U:
+        raise ValueError("cannot specify both U and M")
+    
+    # 1. normalize to M
+    if M:
+        if isinstance(M, Metric):
+            return M
+        M = RuntimeType.parse(M)
+        if M.args is None:
+            M.args = [U or get_atom(D)]
+    else:
+        M = RuntimeType.metric_type_of(D, U=U)
+    
+    # 2. construct M
+    if isinstance(M, RuntimeType):
+        if M.origin == "AbsoluteDistance":
+            return metrics.absolute_distance(T=M.args[0])
+        if M.origin == "L1Distance":
+            return metrics.l1_distance(T=M.args[0])
+        if M.origin == "L2Distance":
+            return metrics.l2_distance(T=M.args[0])
+        if M.origin == "DiscreteDistance":
+            return metrics.discrete_distance(T=M.args[0])
+        
+    if M == "HammingDistance":
+        return metrics.hamming_distance()
+    if M == "SymmetricDistance":
+        return metrics.symmetric_distance()
+    if M == "InsertDeleteDistance":
+        return metrics.insert_delete_distance()
+    if M == "ChangeOneDistance":
+        return metrics.change_one_distance()
+
+    raise TypeError(f"unrecognized metric {M}")

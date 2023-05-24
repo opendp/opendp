@@ -6,11 +6,6 @@ from typing import Union, Any, Type, List
 from opendp.mod import UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES
 
-if sys.version_info >= (3, 7):
-    from typing import _GenericAlias
-else:
-    from typing import GenericMeta as _GenericAlias
-
 ELEMENTARY_TYPES = {
     int: 'i32',
     float: 'f64',
@@ -45,14 +40,25 @@ try:
 except ImportError:
     np = None
 
+NUMERIC_TYPES = {"i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "usize", "f32", "f64"}
+
 # all ways of providing type information
 RuntimeTypeDescriptor = Union[
     "RuntimeType",  # as the normalized type -- ChangeOneDistance; RuntimeType.parse("i32")
-    _GenericAlias,  # a Python type hint from the std typing module -- List[int]
     str,  # plaintext string in terms of Rust types -- "Vec<i32>"
     Type[Union[typing.List, typing.Tuple, int, float, str, bool]],  # using the Python type class itself -- int, float
     tuple,  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, List[int])
 ]
+
+if sys.version_info >= (3, 7):
+    from typing import _GenericAlias
+    # a Python type hint from the std typing module -- List[int]
+    RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (_GenericAlias,)
+
+if sys.version_info >= (3, 8):
+    from types import GenericAlias
+    # a Python type hint from the std types module -- list[int]
+    RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (GenericAlias,)
 
 
 def set_default_int_type(T: RuntimeTypeDescriptor):
@@ -146,16 +152,26 @@ class RuntimeType(object):
             return type_name
 
         # parse type hints from the typing module
-        if isinstance(type_name, _GenericAlias):
-            if sys.version_info < (3, 8):
-                raise NotImplementedError("parsing type hint annotations are only supported in Python 3.8 and above")
-
-            origin = typing.get_origin(type_name)
-            args = [RuntimeType.parse(v, generics=generics) for v in typing.get_args(type_name)] or None
+        hinted_type = None
+        if sys.version_info >= (3, 9):
+            from types import GenericAlias
+            if isinstance(type_name, GenericAlias):
+                hinted_type = type_name.__origin__, type_name.__args__
+        if sys.version_info >= (3, 8):
+            from typing import _GenericAlias
+            if isinstance(type_name, _GenericAlias):
+                hinted_type = typing.get_origin(type_name), typing.get_args(type_name)
+    
+        if hinted_type:
+            origin, args = hinted_type
+            args = [RuntimeType.parse(v, generics=generics) for v in args] or None
             if origin == tuple:
                 origin = 'Tuple'
-            if origin == list:
+            elif origin == list:
                 origin = 'Vec'
+            elif origin == dict:
+                origin = 'HashMap'
+            
             return RuntimeType(RuntimeType.parse(origin, generics=generics), args)
 
         # parse a tuple of types-- (int, "f64"); (List[int], (int, bool))
@@ -196,8 +212,8 @@ class RuntimeType(object):
             domain = {
                 'AtomDomain': AtomDomain,
                 'VectorDomain': VectorDomain,
+                'MapDomain': MapDomain,
                 'OptionDomain': OptionDomain,
-                'SizedDomain': SizedDomain
             }.get(origin)
             if domain is not None:
                 return domain[cls._parse_args(type_name[start + 1: end], generics=generics)[0]]
@@ -369,6 +385,39 @@ class RuntimeType(object):
         if isinstance(self, RuntimeType):
             return RuntimeType(self.origin, self.args and [RuntimeType.substitute(arg, **kwargs) for arg in self.args])
         return self
+    
+
+    @classmethod
+    def domain_type_of(cls, T) -> "RuntimeType":
+        """Converts a carrier type to a domain type."""
+        from opendp._convert import ATOM_MAP
+
+        T = RuntimeType.parse(T)
+        
+        if isinstance(T, RuntimeType):
+            if T.origin == "Vec":
+                return VectorDomain[cls.domain_type_of(T.args[0])]
+            if T.origin == "HashMap":
+                return MapDomain[cls.domain_type_of(T.args[0]), cls.domain_type_of(T.args[1])]
+    
+        if T in ATOM_MAP:
+            return RuntimeType(origin="AtomDomain", args=[T])
+
+        raise TypeError(f"domain_of not implemented for type {T}")
+    
+    @classmethod
+    def metric_type_of(cls, D, U=None) -> "RuntimeType":
+        """Converts a carrier type to a domain type."""
+        
+        D = RuntimeType.parse(D)
+
+        if D.origin == "VectorDomain":
+            return SymmetricDistance
+        elif D.origin == "AtomDomain":
+            return AbsoluteDistance[U or get_atom(D)]
+        elif D.origin == "Option":
+            U = D.params[0]
+        raise TypeError(f"unable to infer default metric for domain {D}")
 
 
 class GenericType(RuntimeType):
@@ -459,13 +508,15 @@ AnyTransformationPtr = "AnyTransformationPtr"
 
 class DomainDescriptor(RuntimeType):
     def __getitem__(self, subdomain):
-        return DomainDescriptor(self.origin, [self.parse(type_name=subdomain)])
+        if not isinstance(subdomain, tuple):
+            subdomain = (subdomain,)
+        return DomainDescriptor(self.origin, [self.parse(type_name=sub_i) for sub_i in subdomain])    
 
 
 AtomDomain = DomainDescriptor('AtomDomain')
 VectorDomain = DomainDescriptor('VectorDomain')
+MapDomain = DomainDescriptor('MapDomain')
 OptionDomain = DomainDescriptor('OptionDomain')
-SizedDomain = DomainDescriptor('SizedDomain')
 
 
 def get_atom(type_name):
