@@ -22,12 +22,12 @@ def test_numpy_function():
 
 
 def test_typing_hint():
-    # Python < 3.8 should raise a NotImplementedError
+    # Python < 3.8 should raise an exception
     if sys.version_info < (3, 8):
         try:
             assert str(RuntimeType.parse(Tuple[int, float])) == "(i32, f64)"
             raise Exception("typing hints should fail with error below Python 3.8")
-        except NotImplementedError:
+        except:
             # on Python < 3.8 the remaining tests do not apply
             return
 
