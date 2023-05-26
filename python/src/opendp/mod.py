@@ -268,15 +268,6 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         raise ValueError(f"rshift expected a measurement or transformation, got {other}")
 
 
-    def __rrshift__(self, other):
-        if isinstance(other, tuple) and list(map(type, other)) == [Domain, Metric]:
-            if self.input_domain != other[0] or self.input_metric != other[1]:
-                raise TypeError(f"Input space {other} does not conform with {self}")
-            
-            return self
-        raise TypeError(f"Cannot chain {type(self)} with {type(other)}")
-
-
     @property
     def input_domain(self) -> "Domain":
         from opendp.core import transformation_input_domain
