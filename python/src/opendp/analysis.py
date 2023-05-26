@@ -1,4 +1,3 @@
-from collections.abc import Iterable
 from typing import Any, get_type_hints
 import opendp.prelude as dp
 import importlib
@@ -9,10 +8,13 @@ constructors = {}
 for module_name in ["transformations", "measurements"]:
     module = importlib.import_module(f"opendp.{module_name}")
     for name in module.__all__:
-        if name.startswith("make_"):
-            constructors.setdefault(name[5:], {})["make"] = getattr(module, name)
-        elif name.startswith("partial_"):
-            constructors.setdefault(name[8:], {})["partial"] = getattr(module, name)
+        if not name.startswith("make_"):
+            continue
+        partial_name = "partial_" + name[5:]
+        if partial_name in module.__all__:
+            constructors[name[5:]] = getattr(module, partial_name), True
+        else:
+            constructors[name[5:]] = getattr(module, name), False
 
 
 def privacy_loss(epsilon=None, delta=None, rho=None, U=None):
@@ -92,17 +94,14 @@ class Query(object):
         self._eager = eager
 
     def __getattr__(self, name: str) -> Any:
-        constructor_meta = constructors.get(name)
-        if constructor_meta is None:
+        if name not in constructors:
             raise AttributeError(f"Unrecognized constructor {name}")
-        parameters = inspect.signature(constructor_meta["make"]).parameters
+        constructor, is_partial = constructors[name]
+        parameters = inspect.signature(constructor).parameters
+        is_measurement = get_type_hints(constructor)["return"] == dp.Measurement
 
         def make(*args, **kwargs):
-            nonlocal constructor_meta
-            is_measurement = (
-                get_type_hints(constructor_meta["make"])["return"] == dp.Measurement
-            )
-
+            nonlocal constructor, is_partial
             # determine how many parameters are missing
             param_diff = len(args)
             for param in parameters.values():
@@ -111,12 +110,6 @@ class Query(object):
                 if param.default is not param.empty:
                     break
                 param_diff -= 1
-
-            if "partial" in constructor_meta:
-                param_diff += 2
-                constructor = constructor_meta["partial"]
-            else:
-                constructor = constructor_meta["make"]
 
             if param_diff == -1:
                 if isinstance(self._chain, PartialChain):
@@ -144,7 +137,7 @@ class Query(object):
 
         return make
 
-    def __dir__(self) -> Iterable[str]:
+    def __dir__(self):
         return super().__dir__() + list(constructors.keys())
 
     def resolve(self):
@@ -152,7 +145,6 @@ class Query(object):
         if isinstance(self._chain, PartialChain):
             chain = self._chain.fix(self._d_in, self._d_out)
             if chain.output_measure != self._output_measure:
-                print(chain.output_measure, self._output_measure)
                 raise ValueError("Output measure does not match.")
             self._chain = chain
 
