@@ -260,8 +260,22 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         
         if isinstance(other, PartialConstructor):
             return self >> other(self.output_domain, self.output_metric)
+        
+        from opendp.analysis import PartialChain
+        if isinstance(other, PartialChain):
+            return PartialChain(lambda x: self >> other.partial(x))
 
         raise ValueError(f"rshift expected a measurement or transformation, got {other}")
+
+
+    def __rrshift__(self, other):
+        if isinstance(other, tuple) and list(map(type, other)) == [Domain, Metric]:
+            if self.input_domain != other[0] or self.input_metric != other[1]:
+                raise TypeError(f"Input space {other} does not conform with {self}")
+            
+            return self
+        raise TypeError(f"Cannot chain {type(self)} with {type(other)}")
+
 
     @property
     def input_domain(self) -> "Domain":
@@ -446,6 +460,9 @@ class Metric(ctypes.POINTER(AnyMetric)):
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
+        return str(self) == str(other)
+
+    def __eq__(self, other):
         return str(self) == str(other)
 
 
