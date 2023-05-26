@@ -33,4 +33,4 @@ def test_analysis_init():
     # print(analysis.query().clamp((1, 10)).sum().laplace())
     # print(analysis.query().dp_sum((1, 10)))
 
-    
+test_analysis_init()
