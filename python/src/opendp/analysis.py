@@ -20,6 +20,7 @@ for module_name in ["transformations", "measurements"]:
 def privacy_loss_of(*, epsilon=None, delta=None, rho=None, U=None):
     """Standardize privacy loss parameters to (measure, distance)
 
+    >>> from opendp.analysis import privacy_loss_of
     >>> measure, distance = privacy_loss_of(epsilon=1.0)
     >>> measure, distance = privacy_loss_of(epsilon=1.0, delta=1e-9)
     >>> measure, distance = privacy_loss_of(rho=1.0)
