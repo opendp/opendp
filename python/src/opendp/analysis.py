@@ -113,9 +113,13 @@ class Query(object):
                 raise ValueError(f"{name} is missing {-param_diff} parameter(s).")
             elif param_diff > 0:
                 raise ValueError(f"{name} has {param_diff} parameter(s) too many.")
-
+            
+            new_chain = constructor(*args, **kwargs)
+            if is_partial or not isinstance(self._chain, tuple):
+                new_chain = self._chain >> new_chain
+            
             new_query = Query(
-                input_space=self._chain >> constructor(*args, **kwargs),
+                input_space=new_chain,
                 output_measure=self._output_measure,
                 d_in=self._d_in,
                 d_out=self._d_out,
@@ -169,25 +173,6 @@ class PartialChain(object):
             return PartialChain(lambda x: self.partial(x) >> other)
 
         raise ValueError("other must be a Transformation or Measurement")
-
-    def __rrshift__(self, other):
-        if isinstance(other, tuple) and list(map(type, other)) == [
-            dp.Domain,
-            dp.Metric,
-        ]:
-
-            def chain(x):
-                operation = self.partial(x)
-                if (
-                    operation.input_domain != other[0]
-                    or operation.input_metric != other[1]
-                ):
-                    raise TypeError(f"Input space {other} does not conform with {self}")
-
-                return operation
-
-            return PartialChain(chain)
-        raise TypeError(f"Cannot chain {type(self)} with {type(other)}")
 
     @classmethod
     def wrap(cls, f):
