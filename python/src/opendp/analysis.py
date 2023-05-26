@@ -1,7 +1,7 @@
 from typing import Any, get_type_hints
 import opendp.prelude as dp
 import importlib
-import inspect
+from inspect import signature
 from functools import partial
 
 constructors = {}
@@ -17,12 +17,12 @@ for module_name in ["transformations", "measurements"]:
             constructors[name[5:]] = getattr(module, name), False
 
 
-def privacy_loss(epsilon=None, delta=None, rho=None, U=None):
+def privacy_loss_of(*, epsilon=None, delta=None, rho=None, U=None):
     """Standardize privacy loss parameters to (measure, distance)
 
-    >>> loss = privacy_loss(epsilon=1.0)
-    >>> loss = privacy_loss(epsilon=1.0, delta=1e-9)
-    >>> loss = privacy_loss(rho=1.0)
+    >>> measure, distance = privacy_loss_of(epsilon=1.0)
+    >>> measure, distance = privacy_loss_of(epsilon=1.0, delta=1e-9)
+    >>> measure, distance = privacy_loss_of(rho=1.0)
     """
     if epsilon is None and rho is None:
         raise ValueError("Either epsilon or rho must be specified.")
@@ -38,7 +38,8 @@ def privacy_loss(epsilon=None, delta=None, rho=None, U=None):
         return dp.fixed_smoothed_max_divergence(T=U), (epsilon, delta)
 
 
-def data_distance(
+def distance_of(
+    *,
     contributions=None,
     changes=None,
     absolute=None,
@@ -47,17 +48,14 @@ def data_distance(
     ordered=False,
     U=None,
 ):
-    kwargs = (
-        x
-        for x in {
-            ("contributions", contributions),
-            ("changes", changes),
-            ("absolute", absolute),
-            ("l1", l1),
-            ("l2", l2),
-        }
-        if x[1] is not None
-    )
+    kwargs = {
+        ("contributions", contributions),
+        ("changes", changes),
+        ("absolute", absolute),
+        ("l1", l1),
+        ("l2", l2),
+    }
+    kwargs = (x for x in kwargs if x[1] is not None)
 
     try:
         descriptor, distance = next(kwargs)
@@ -74,12 +72,11 @@ def data_distance(
         return metric(), distance
 
     U = dp.RuntimeType.parse_or_infer(U, distance)
-    metrics = {
+    return {
         "absolute": dp.absolute_distance,
         "l1": dp.l1_distance,
         "l2": dp.l2_distance,
-    }
-    metrics[descriptor][U](), distance
+    }[descriptor](T=U), distance
 
 
 class Query(object):
@@ -97,27 +94,22 @@ class Query(object):
         if name not in constructors:
             raise AttributeError(f"Unrecognized constructor {name}")
         constructor, is_partial = constructors[name]
-        parameters = inspect.signature(constructor).parameters
         is_measurement = get_type_hints(constructor)["return"] == dp.Measurement
 
         def make(*args, **kwargs):
             nonlocal constructor, is_partial
             # determine how many parameters are missing
             param_diff = len(args)
-            for param in parameters.values():
+            for param in signature(constructor).parameters.values():
                 if param.name in kwargs:
                     continue
                 if param.default is not param.empty:
                     break
                 param_diff -= 1
 
-            if param_diff == -1:
-                if isinstance(self._chain, PartialChain):
-                    raise ValueError(
-                        f"{name} is missing a parameter, and at most one parameter may be omitted from a query."
-                    )
+            if param_diff == -1 and not isinstance(self._chain, PartialChain):
                 constructor = PartialChain.wrap(constructor)
-            elif param_diff < -1:
+            elif param_diff < 0:
                 raise ValueError(f"{name} is missing {-param_diff} parameter(s).")
             elif param_diff > 0:
                 raise ValueError(f"{name} has {param_diff} parameter(s) too many.")
@@ -146,20 +138,17 @@ class Query(object):
             chain = self._chain.fix(self._d_in, self._d_out)
             if chain.output_measure != self._output_measure:
                 raise ValueError("Output measure does not match.")
-            self._chain = chain
+            return chain
+        if isinstance(self._chain, dp.Measurement):
+            return self._chain
+        raise ValueError("Query is not yet a measurement.")
 
     def release(self) -> Any:
-        self.resolve()
-
-        if isinstance(self._chain, dp.Measurement):
-            return self._analysis.queryable(self._chain)
-
-        raise ValueError("Query is not a measurement.")
+        return self._analysis.queryable(self.resolve())
 
     def param(self):
         """returns the discovered parameter, if there is one"""
-        self.resolve()
-        return getattr(self._chain, "param", None)
+        return getattr(self.resolve(), "param", None)
 
 
 class PartialChain(object):
@@ -227,11 +216,8 @@ class Analysis(object):
             self.compositor = dp.c.make_sequential_composition(
                 input_domain, input_metric, output_measure, d_in, d_mids
             )
-            if d_out:
-                if not self.compositor.check(d_in, d_out):
-                    raise ValueError(
-                        f"Composition of {d_in} -> {d_mids} -> {d_out} is not valid."
-                    )
+            if d_out and not self.compositor.check(d_in, d_out):
+                raise ValueError(f"Compositor is not (d_in={d_in}, d_out={d_out})-DP")
         else:
             self.compositor = dp.c.make_sequential_odometer(
                 input_domain, input_metric, output_measure
@@ -244,9 +230,9 @@ class Analysis(object):
         if self.d_mids is not None:
             d_query = self.d_mids.pop(0)
             if kwargs:
-                raise ValueError(f"Expected no arguments, but got {kwargs}.")
+                raise ValueError(f"Expected no privacy arguments, but got {kwargs}.")
         else:
-            measure, d_query = privacy_loss(**kwargs)
+            measure, d_query = privacy_loss_of(**kwargs)
             if measure != self.output_measure:
                 raise ValueError(
                     f"Expected output measure {self.output_measure} but got {measure}"
