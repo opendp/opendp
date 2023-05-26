@@ -84,7 +84,7 @@ class Query(object):
     def __init__(
         self, input_space, output_measure, d_in, d_out=None, analysis=None, eager=True
     ) -> None:
-        self._input_space = input_space
+        self._chain = input_space
         self._output_measure = output_measure
         self._d_in = d_in
         self._d_out = d_out
@@ -92,44 +92,45 @@ class Query(object):
         self._eager = eager
 
     def __getattr__(self, name: str) -> Any:
-        constructor = constructors.get(name)
-        if constructor is None:
+        constructor_meta = constructors.get(name)
+        if constructor_meta is None:
             raise AttributeError(f"Unrecognized constructor {name}")
-        num_func_params = len(inspect.signature(constructor["make"]).parameters)
+        parameters = inspect.signature(constructor_meta["make"]).parameters
 
         def make(*args, **kwargs):
-            nonlocal constructor
-            num_real_params = len(args) + len(kwargs)
-            # param_diff = num_func_params - num_real_params
+            nonlocal constructor_meta
+            is_measurement = (
+                get_type_hints(constructor_meta["make"])["return"] == dp.Measurement
+            )
 
-            is_measurement = get_type_hints(constructor["make"])["return"] == dp.Measurement
-
-            arg_spec = inspect.signature(constructor["make"])
-
-            param_diff = -len(args)
-            for param in arg_spec.parameters.values():
+            # determine how many parameters are missing
+            param_diff = len(args)
+            for param in parameters.values():
                 if param.name in kwargs:
                     continue
                 if param.default is not param.empty:
                     break
-                param_diff += 1
-            
-            if param_diff in (0, 1):
-                constructor = constructor["make"]
-            elif param_diff in (2, 3):
-                constructor = constructor["partial"]
-            else:
-                signif_params = num_func_params - (2 if "partial" in constructor else 0)
-                raise ValueError(
-                    f"{name} has {signif_params} significant parameter(s), {num_real_params} provided."
-                )
+                param_diff -= 1
 
-            # if short by one param, then wrap in partial
-            if param_diff % 2 == 1:
+            if "partial" in constructor_meta:
+                param_diff += 2
+                constructor = constructor_meta["partial"]
+            else:
+                constructor = constructor_meta["make"]
+
+            if param_diff == -1:
+                if isinstance(self._chain, PartialChain):
+                    raise ValueError(
+                        f"{name} is missing a parameter, and at most one parameter may be omitted from a query."
+                    )
                 constructor = PartialChain.wrap(constructor)
+            elif param_diff < -1:
+                raise ValueError(f"{name} is missing {-param_diff} parameter(s).")
+            elif param_diff > 0:
+                raise ValueError(f"{name} has {param_diff} parameter(s) too many.")
 
             new_query = Query(
-                input_space=self._input_space >> constructor(*args, **kwargs),
+                input_space=self._chain >> constructor(*args, **kwargs),
                 output_measure=self._output_measure,
                 d_in=self._d_in,
                 d_out=self._d_out,
@@ -145,24 +146,29 @@ class Query(object):
 
     def __dir__(self) -> Iterable[str]:
         return super().__dir__() + list(constructors.keys())
-    
+
     def resolve(self):
-        if isinstance(self._input_space, PartialChain):
-            self._input_space = self._input_space.fix(self._d_in, self._d_out)
+        """Resolve the query into a transformation or measurement."""
+        if isinstance(self._chain, PartialChain):
+            chain = self._chain.fix(self._d_in, self._d_out)
+            if chain.output_measure != self._output_measure:
+                print(chain.output_measure, self._output_measure)
+                raise ValueError("Output measure does not match.")
+            self._chain = chain
 
     def release(self) -> Any:
         self.resolve()
 
-        if isinstance(self._input_space, dp.Measurement):
-            return self._analysis.queryable(self._input_space)
+        if isinstance(self._chain, dp.Measurement):
+            return self._analysis.queryable(self._chain)
 
         raise ValueError("Query is not a measurement.")
-    
+
     def param(self):
         """returns the discovered parameter, if there is one"""
         self.resolve()
-        return getattr(self._input_space, "param", None)
-    
+        return getattr(self._chain, "param", None)
+
 
 class PartialChain(object):
     def __init__(self, f, *args, **kwargs):
@@ -184,13 +190,21 @@ class PartialChain(object):
         raise ValueError("other must be a Transformation or Measurement")
 
     def __rrshift__(self, other):
-        if isinstance(other, tuple) and list(map(type, other)) == [dp.Domain, dp.Metric]:
+        if isinstance(other, tuple) and list(map(type, other)) == [
+            dp.Domain,
+            dp.Metric,
+        ]:
+
             def chain(x):
                 operation = self.partial(x)
-                if operation.input_domain != other[0] or operation.input_metric != other[1]:
+                if (
+                    operation.input_domain != other[0]
+                    or operation.input_metric != other[1]
+                ):
                     raise TypeError(f"Input space {other} does not conform with {self}")
-            
+
                 return operation
+
             return PartialChain(chain)
         raise TypeError(f"Cannot chain {type(self)} with {type(other)}")
 

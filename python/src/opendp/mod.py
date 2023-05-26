@@ -488,6 +488,9 @@ class Measure(ctypes.POINTER(AnyMeasure)):
         from opendp.measures import _measure_free
         _measure_free(self)
 
+    def __eq__(self, other):
+        return str(self) == str(other)
+
 
 class SMDCurve(object):
     def __init__(self, curve):
