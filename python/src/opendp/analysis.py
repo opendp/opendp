@@ -337,9 +337,9 @@ class Analysis(object):
 
     @staticmethod
     def sequential_composition(data, privacy_unit, privacy_loss, weights, domain=None):
-        if domain is None:
-            # from https://github.com/opendp/opendp/pull/749
-            domain = domain_of(data, infer=True)
+        # TODO: uncomment after https://github.com/opendp/opendp/pull/749
+        # if domain is None:
+        #     domain = domain_of(data, infer=True)
 
         accountant, d_mids = _sequential_composition_accountant(
             domain, privacy_unit, privacy_loss, weights
