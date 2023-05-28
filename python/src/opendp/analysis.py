@@ -88,7 +88,7 @@ class Query(object):
         self._analysis = analysis
         self._eager = eager
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> Callable[[Any], "Query"]:
         if name not in constructors:
             raise AttributeError(f"Unrecognized constructor {name}")
         constructor, is_partial = constructors[name]
@@ -153,34 +153,86 @@ class Query(object):
         return getattr(self.resolve(), "param", None)
 
     def zCDP_to_approxDP(self, map_query: Callable[["Query"], "Query"]) -> "Query":
-        if self._output_measure.type.origin != "FixedSmoothedMaxDivergence":
-            raise ValueError("Output measure must be FixedSmoothedMaxDivergence.")
+        new_measure = dp.zero_concentrated_divergence(
+            T=self._output_measure.type.args[0]
+        )
 
-        zCDP_query = Query(
+        def caster(measurement):
+            return dp.c.make_fix_delta(
+                dp.c.make_zCDP_to_approxDP(measurement), delta=self._d_out[1]
+            )
+
+        return self._cast_measure(new_measure, caster, map_query)
+
+    def pureDP_to_fixed_approxDP(
+        self, map_query: Callable[["Query"], "Query"]
+    ) -> "Query":
+        new_measure = dp.fixed_smoothed_max_divergence(
+            T=self._output_measure.type.args[0]
+        )
+
+        def caster(measurement):
+            return dp.c.make_pureDP_to_fixed_approxDP(measurement)
+
+        return self._cast_measure(new_measure, caster, map_query)
+
+    def pureDP_to_zCDP(self, map_query: Callable[["Query"], "Query"]) -> "Query":
+        new_measure = dp.zero_concentrated_divergence(
+            T=self._output_measure.type.args[0]
+        )
+
+        def caster(measurement):
+            return dp.c.make_pureDP_to_zCDP(measurement)
+
+        return self._cast_measure(new_measure, caster, map_query)
+
+    def sequential_composition(self, weights) -> "Analysis":
+        # TODO: when partial chaining merged, only need to rshift into part_sequential_composition
+        if isinstance(self._chain, tuple):
+            input_domain, input_metric = self._chain
+            d_sc_in = self._d_in
+        elif isinstance(self._chain, dp.Transformation):
+            input_domain = self._chain.output_domain
+            input_metric = self._chain.output_metric
+            d_sc_in = self._chain.map(self._d_in)
+        else:
+            raise ValueError(
+                "Sequential composition requires a metric space or transformation."
+            )
+
+        if not self._eager:
+            raise ValueError("Sequential composition requires eager=True.")
+
+        privacy_unit = input_metric, d_sc_in
+        privacy_loss = self._output_measure, self._d_out
+
+        accountant, d_mids = _sequential_composition_accountant(
+            input_domain, privacy_unit, privacy_loss, weights
+        )
+        if isinstance(self._chain, dp.Transformation):
+            accountant = self._chain >> accountant
+        queryable = self._analysis(accountant)
+
+        return Analysis(accountant=accountant, queryable=queryable, d_in=d_sc_in, d_mids=d_mids)
+
+    def _cast_measure(self, measure, caster, map_query):
+        new_query = Query(
             input_space=self._chain,
-            output_measure=dp.zero_concentrated_divergence(
-                T=self._output_measure.type.args[0]
-            ),
+            output_measure=measure,
             # these can be None because eager=False
             d_in=None,
             d_out=None,
             eager=False,
         )
 
-        zCDP_chain = map_query(zCDP_query)._chain
-        if isinstance(zCDP_chain, PartialChain):
-            approxDP_chain = PartialChain(
-                lambda x: dp.c.make_fix_delta(
-                    dp.c.make_zCDP_to_approxDP(zCDP_chain(x)), delta=self._d_out[1]
-                )
-            )
+        inner_chain = map_query(new_query)._chain
+        if isinstance(inner_chain, PartialChain):
+            casted_chain = PartialChain(lambda x: caster(inner_chain(x)))
         else:
-            approxDP_chain = dp.c.make_fix_delta(
-                dp.c.make_zCDP_to_approxDP(zCDP_chain), delta=self._d_out[1]
-            )
+            casted_chain = caster(inner_chain)
 
         new_query = Query(
-            input_space=approxDP_chain,
+            input_space=casted_chain,
             output_measure=self._output_measure,
             d_in=self._d_in,
             d_out=self._d_out,
@@ -202,8 +254,8 @@ class PartialChain(object):
     def __call__(self, v):
         return self.partial(v)
 
-    def fix(self, d_in, d_out):
-        param = dp.binary_search(lambda x: self.partial(x).check(d_in, d_out))
+    def fix(self, d_in, d_out, T=None):
+        param = dp.binary_search(lambda x: self.partial(x).check(d_in, d_out), T=T)
         chain = self.partial(param)
         chain.param = param
         return chain
@@ -226,64 +278,45 @@ class Analysis(object):
     compositor: dp.Measurement  # union dp.Odometer once merged
     queryable: dp.Queryable
 
-    def __init__(self, accountant, data, d_in):
+    def __init__(self, accountant, queryable, d_in, d_mids=None, d_out=None):
         self.accountant = accountant
-        self.queryable = accountant(data)
+        self.queryable = queryable
         self.d_in = d_in
+        self.d_mids = d_mids
+        self.d_out = d_out
 
     @staticmethod
-    def sequential_composition(
-        data, unit_of_privacy, privacy_budget, weights, domain=None
-    ):
-        input_metric, d_in = unit_of_privacy
-        output_measure, d_out = privacy_budget
-
+    def sequential_composition(data, privacy_unit, privacy_loss, weights, domain=None):
         if domain is None:
             # from https://github.com/opendp/opendp/pull/749
             domain = domain_of(data, infer=True)
 
-        if isinstance(weights, int):
-            weights = [d_out] * weights
+        accountant, d_mids = _sequential_composition_accountant(
+            domain, privacy_unit, privacy_loss, weights
+        )
 
-        def mul(dist, scale):
-            if isinstance(dist, tuple):
-                return dist[0] * scale, dist[1] * scale
-            else:
-                return dist * scale
-            
-        def scale_weights(scale, weights):
-            return [mul(w, scale) for w in weights]
-
-        def make_zcdp_sc(scale):
-            return dp.c.make_sequential_composition(
-                input_domain=domain,
-                input_metric=input_metric,
-                output_measure=output_measure,
-                d_in=d_in,
-                d_mids=scale_weights(scale, weights),
-            )
-
-        scale = dp.binary_search_param(make_zcdp_sc, d_in=d_in, d_out=d_out, T=float)
-        accountant = make_zcdp_sc(scale)
-        accountant.d_mids = scale_weights(scale, weights)
-
-        return Analysis(accountant=accountant, data=data, d_in=d_in)
+        return Analysis(
+            accountant=accountant,
+            queryable=accountant(data),
+            d_in=privacy_unit[1],
+            d_mids=d_mids,
+        )
 
     def __call__(self, query):
         if isinstance(query, Query):
             query = query.resolve()
         answer = self.queryable(query)
-        if hasattr(self.accountant, "d_mids"):
-            self.accountant.d_mids.pop(0)
+        if self.d_mids is not None:
+            self.d_mids.pop(0)
         return answer
 
     def query(self, eager=True, **kwargs) -> Query:
-        if hasattr(self.accountant, "d_mids"):
+        if self.d_mids is not None:
             if kwargs:
                 raise ValueError(f"Expected no privacy arguments, but got {kwargs}.")
-            if not self.accountant.d_mids:
+            if not self.d_mids:
                 raise ValueError("Privacy allowance has been exhausted.")
-            d_query = self.accountant.d_mids[0]
+            d_query = self.d_mids[0]
         else:
             measure, d_query = privacy_of(**kwargs)
             if measure != self.output_measure:
@@ -299,3 +332,34 @@ class Analysis(object):
             analysis=self,
             eager=eager,
         )
+
+
+def _sequential_composition_accountant(domain, privacy_unit, privacy_loss, weights):
+    input_metric, d_in = privacy_unit
+    output_measure, d_out = privacy_loss
+
+    if isinstance(weights, int):
+        weights = [d_out] * weights
+
+    def mul(dist, scale):
+        if isinstance(dist, tuple):
+            return dist[0] * scale, dist[1] * scale
+        else:
+            return dist * scale
+
+    def scale_weights(scale, weights):
+        return [mul(w, scale) for w in weights]
+
+    def scale_sc(scale):
+        return dp.c.make_sequential_composition(
+            input_domain=domain,
+            input_metric=input_metric,
+            output_measure=output_measure,
+            d_in=d_in,
+            d_mids=scale_weights(scale, weights),
+        )
+
+    scale = dp.binary_search_param(scale_sc, d_in=d_in, d_out=d_out, T=float)
+
+    # return the accountant and d_mids
+    return scale_sc(scale), scale_weights(scale, weights)

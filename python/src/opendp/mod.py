@@ -386,8 +386,12 @@ class Function(ctypes.POINTER(AnyFunction)):
         setattr(self, "_dependencies", args)
     
     def __del__(self):
-        from opendp.core import _function_free
-        _function_free(self)
+        try:
+            from opendp.core import _function_free
+            _function_free(self)
+        except (ImportError, TypeError):
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
 
 
 class Domain(ctypes.POINTER(AnyDomain)):
@@ -413,8 +417,12 @@ class Domain(ctypes.POINTER(AnyDomain)):
         return domain_debug(self)
     
     def __del__(self):
-        from opendp.domains import _domain_free
-        _domain_free(self)
+        try:
+            from opendp.domains import _domain_free
+            _domain_free(self)
+        except (ImportError, TypeError):
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
 
     def __repr__(self) -> str:
         return str(self)
@@ -443,17 +451,18 @@ class Metric(ctypes.POINTER(AnyMetric)):
         return metric_debug(self)
     
     def __del__(self):
-        from opendp.metrics import _metric_free
-        _metric_free(self)
-    
+        try:
+            from opendp.metrics import _metric_free
+            _metric_free(self)
+        except (ImportError, TypeError):
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
+
     def __repr__(self) -> str:
         return str(self)
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
-        return str(self) == str(other)
-
-    def __eq__(self, other):
         return str(self) == str(other)
 
 
@@ -477,8 +486,12 @@ class Measure(ctypes.POINTER(AnyMeasure)):
         return measure_debug(self)
     
     def __del__(self):
-        from opendp.measures import _measure_free
-        _measure_free(self)
+        try:
+            from opendp.measures import _measure_free
+            _measure_free(self)
+        except (ImportError, TypeError):
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
 
     def __eq__(self, other):
         return str(self) == str(other)
