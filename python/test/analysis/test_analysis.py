@@ -7,8 +7,8 @@ dp.enable_features("contrib")
 def test_analysis_init():
     analysis = Analysis.sequential_composition(
         data=[1, 2, 3],
-        unit_of_privacy=distance_of(contributions=3),
-        privacy_budget=privacy_of(epsilon=3.0),
+        privacy_unit=distance_of(contributions=3),
+        privacy_loss=privacy_of(epsilon=3.0),
         weights=3,
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
@@ -31,8 +31,8 @@ def test_analysis_init():
 def test_analysis_zCDP():
     analysis = Analysis.sequential_composition(
         data=[1, 2, 3],
-        unit_of_privacy=distance_of(contributions=1),
-        privacy_budget=privacy_of(epsilon=3.0, delta=1e-6),
+        privacy_unit=distance_of(contributions=1),
+        privacy_loss=privacy_of(epsilon=3.0, delta=1e-6),
         weights=2,
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
@@ -49,11 +49,34 @@ def test_analysis_zCDP():
     dp_sum = (
         analysis.query()
         .clamp((1, 10))
-        .zCDP_to_approxDP(
-            lambda x: x.bounded_sum((1, 10)).base_discrete_gaussian()
-        )
+        .zCDP_to_approxDP(lambda x: x.bounded_sum((1, 10)).base_discrete_gaussian())
     )
     print(dp_sum)
+
+
+def test_sc_query():
+    analysis = Analysis.sequential_composition(
+        data=[1, 2, 3],
+        privacy_unit=distance_of(contributions=1),
+        privacy_loss=privacy_of(epsilon=3.0, delta=1e-6),
+        weights=2,
+        domain=dp.vector_domain(dp.atom_domain(T=int)),
+    )
+
+    sub_analysis = analysis.query().clamp((1, 10)).sequential_composition(weights=3)
+
+    dp_sum = sub_analysis.query().pureDP_to_fixed_approxDP(
+        lambda q: q.bounded_sum((1, 10)).base_discrete_laplace()
+    )
+
+
+    # sub_analysis = analysis.query().zCDP_to_approxDP(lambda q: q.sequential_composition(weights=3))
+    # dp_sum = sub_analysis.query().clamp((1, 10)).bounded_sum((1, 10)).base_discrete_gaussian()
+
+    print(dp_sum)
+
+
+test_sc_query()
 
 
 def test_distance_of():
