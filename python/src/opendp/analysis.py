@@ -169,18 +169,18 @@ class Query(object):
 
         zCDP_chain = map_query(zCDP_query)._chain
         if isinstance(zCDP_chain, PartialChain):
-            zCDP_chain = PartialChain(
+            approxDP_chain = PartialChain(
                 lambda x: dp.c.make_fix_delta(
                     dp.c.make_zCDP_to_approxDP(zCDP_chain(x)), delta=self._d_out[1]
                 )
             )
         else:
-            zCDP_chain = dp.c.make_fix_delta(
+            approxDP_chain = dp.c.make_fix_delta(
                 dp.c.make_zCDP_to_approxDP(zCDP_chain), delta=self._d_out[1]
             )
 
         new_query = Query(
-            input_space=zCDP_chain,
+            input_space=approxDP_chain,
             output_measure=self._output_measure,
             d_in=self._d_in,
             d_out=self._d_out,
