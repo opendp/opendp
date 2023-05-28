@@ -46,6 +46,15 @@ def test_analysis_zCDP():
     )
     print(dp_sum)
 
+    dp_sum = (
+        analysis.query()
+        .clamp((1, 10))
+        .zCDP_to_approxDP(
+            lambda x: x.bounded_sum((1, 10)).base_discrete_gaussian()
+        )
+    )
+    print(dp_sum)
+
 
 def test_distance_of():
     assert distance_of(contributions=3) == (dp.symmetric_distance(), 3)
