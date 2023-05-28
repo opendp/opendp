@@ -463,7 +463,8 @@ class Measure(ctypes.POINTER(AnyMeasure)):
     @property
     def type(self):
         from opendp.measures import measure_type
-        return measure_type(self)
+        from opendp.typing import RuntimeType
+        return RuntimeType.parse(measure_type(self))
     
     @property
     def distance_type(self):
@@ -883,13 +884,11 @@ def exponential_bounds_search(
             return False
     exception_bounds = exponential_bounds_search(exception_predicate, T=T)
     if exception_bounds is None:
-        error = ""
         try:
             predicate(center)
-        except Exception as err:
-            error = f". Error at center: {err}"
-        
-        raise ValueError(f"predicate always fails{error}")
+        except Exception:
+            raise ValueError(f"predicate always fails. An example traceback is shown above at {center}.")
+    
 
     center, sign = binary_search(exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
     at_center = predicate(center)
