@@ -63,20 +63,39 @@ def test_sc_query():
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
 
-    sub_analysis = analysis.query().clamp((1, 10)).sequential_composition(weights=3)
-
-    dp_sum = sub_analysis.query().pureDP_to_fixed_approxDP(
+    # build a child sequential compositor, and then use it to release a laplace sum
+    sub_analysis = analysis.query().sequential_composition(weights=3)
+    dp_sum = sub_analysis.query().clamp((1, 10)).pureDP_to_fixed_approxDP(
         lambda q: q.bounded_sum((1, 10)).base_discrete_laplace()
     )
+    print("laplace dp_sum", dp_sum)
 
+    # build a child sequential compositor in zCDP, and then use it to release some gaussian queries
+    sub_analysis = (
+        analysis.query()
+        .zCDP_to_approxDP(lambda q: q.sequential_composition(weights=2))
+    )
+    dp_sum = (
+        sub_analysis.query()
+        .clamp((1, 10))
+        .bounded_sum((1, 10))
+        .base_discrete_gaussian()
+    )
+    # with partials, fusing, and measure convention, would shorten to 
+    # dp_sum = sub_analysis.query().dp_sum((1, 10))
+    print("gaussian dp_sum", dp_sum)
 
-    # sub_analysis = analysis.query().zCDP_to_approxDP(lambda q: q.sequential_composition(weights=3))
-    # dp_sum = sub_analysis.query().clamp((1, 10)).bounded_sum((1, 10)).base_discrete_gaussian()
-
-    print(dp_sum)
-
-
-test_sc_query()
+    dp_mean = (
+        sub_analysis.query()
+        .cast_default(int, float)
+        .clamp((1., 10.))
+        .resize(3, dp.atom_domain((1., 10.)), constant=5.)
+        .sized_bounded_mean(3, (1., 10.))
+        .base_gaussian()
+    )
+    # with partials, fusing, and measure convention, would shorten to 
+    # dp_mean = sub_analysis.query().cast(float).dp_mean((1., 10.))
+    print("gaussian dp_mean", dp_mean)
 
 
 def test_distance_of():
