@@ -79,7 +79,14 @@ class Query(object):
     _eager: bool
 
     def __init__(
-        self, input_space, output_measure, d_in, d_out=None, analysis=None, eager=True
+        self,
+        input_space,
+        output_measure,
+        d_in,
+        d_out=None,
+        analysis=None,
+        eager=True,
+        wrap_release=None,
     ) -> None:
         self._chain = input_space
         self._output_measure = output_measure
@@ -87,6 +94,7 @@ class Query(object):
         self._d_out = d_out
         self._analysis = analysis
         self._eager = eager
+        self._wrap_release = wrap_release
 
     def __getattr__(self, name: str) -> Callable[[Any], "Query"]:
         if name not in constructors:
@@ -116,20 +124,26 @@ class Query(object):
             if is_partial or not isinstance(self._chain, tuple):
                 new_chain = self._chain >> new_chain
 
-            new_query = Query(
-                input_space=new_chain,
-                output_measure=self._output_measure,
-                d_in=self._d_in,
-                d_out=self._d_out,
-                analysis=self._analysis,
-                eager=self._eager,
-            )
+            new_query = self.new_with(chain=new_chain)
             if self._eager and is_measurement:
                 return new_query.release()
 
             return new_query
 
         return make
+
+    def new_with(
+        self, *, chain: Union[dp.Transformation, "PartialChain"], wrap_release=None
+    ) -> "Query":
+        return Query(
+            input_space=chain,
+            output_measure=self._output_measure,
+            d_in=self._d_in,
+            d_out=self._d_out,
+            analysis=self._analysis,
+            eager=self._eager,
+            wrap_release=wrap_release or self._wrap_release,
+        )
 
     def __dir__(self):
         return super().__dir__() + list(constructors.keys())
@@ -146,7 +160,10 @@ class Query(object):
         raise ValueError("Query is not yet a measurement.")
 
     def release(self) -> Any:
-        return self._analysis(self.resolve())
+        answer = self._analysis(self.resolve())
+        if self._wrap_release:
+            answer = self._wrap_release(answer)
+        return answer
 
     def param(self):
         """returns the discovered parameter, if there is one"""
@@ -161,8 +178,18 @@ class Query(object):
             return dp.c.make_fix_delta(
                 dp.c.make_zCDP_to_approxDP(measurement), delta=self._d_out[1]
             )
-
-        return self._cast_measure(new_measure, caster, map_query)
+        
+        # TODO: add a library utility for this
+        # need to convert from (eps, del) to rho
+        scale = dp.binary_search_param(
+            lambda scale: caster(dp.m.make_base_gaussian(scale)),
+            d_in=1.,
+            d_out=self._d_out,
+            T=float,
+        )
+        d_out_rho = dp.m.make_base_gaussian(scale).map(1.)
+        
+        return self._cast_measure(new_measure, d_out=d_out_rho, caster=caster, map_query=map_query)
 
     def pureDP_to_fixed_approxDP(
         self, map_query: Callable[["Query"], "Query"]
@@ -174,7 +201,10 @@ class Query(object):
         def caster(measurement):
             return dp.c.make_pureDP_to_fixed_approxDP(measurement)
 
-        return self._cast_measure(new_measure, caster, map_query)
+        d_out_epsdel = (self._d_out, 0.0)
+        return self._cast_measure(
+            new_measure, d_out=d_out_epsdel, caster=caster, map_query=map_query
+        )
 
     def pureDP_to_zCDP(self, map_query: Callable[["Query"], "Query"]) -> "Query":
         new_measure = dp.zero_concentrated_divergence(
@@ -184,10 +214,73 @@ class Query(object):
         def caster(measurement):
             return dp.c.make_pureDP_to_zCDP(measurement)
 
-        return self._cast_measure(new_measure, caster, map_query)
+        # TODO: add a library utility for this
+        # need to convert from rho to epsilon
+        scale = dp.binary_search_scale(
+            lambda eps: caster(dp.m.make_base_laplace(eps)),
+            d_in=1.,
+            d_out=self._d_out,
+            T=float,
+        )
+        d_out_epsilon = dp.m.make_base_laplace(scale).map(1.)
+        
+        return self._cast_measure(
+            new_measure, d_out=d_out_epsilon, caster=caster, map_query=map_query
+        )
+
+    def _cast_measure(self, measure, d_out, caster, map_query):
+        inner_seed_query = Query(
+            input_space=self._chain,
+            output_measure=measure,
+            d_in=self._d_in,
+            d_out=d_out,
+            eager=False,
+        )
+        inner_query = map_query(inner_seed_query)
+        inner_chain = inner_query._chain
+
+        if isinstance(inner_chain, PartialChain):
+            casted_chain = PartialChain(lambda x: caster(inner_chain(x)))
+        else:
+            casted_chain = caster(inner_chain)
+
+        inner_seed_query = self.new_with(chain=casted_chain, wrap_release=inner_query._wrap_release)
+        if self._eager:
+            return inner_seed_query.release()
+
+        return inner_seed_query
 
     def sequential_composition(self, weights) -> "Analysis":
-        # TODO: when partial chaining merged, only need to rshift into part_sequential_composition
+        def compositor(input_domain, input_metric, chain, d_sc_in):
+            privacy_unit = input_metric, d_sc_in
+            privacy_loss = self._output_measure, self._d_out
+
+            accountant, d_mids = _sequential_composition_accountant(
+                input_domain, privacy_unit, privacy_loss, weights
+            )
+            if isinstance(chain, dp.Transformation):
+                accountant = chain >> accountant
+
+            def wrap_release(queryable):
+                return Analysis(
+                    accountant=accountant,
+                    queryable=queryable,
+                    d_in=d_sc_in,
+                    d_mids=d_mids,
+                )
+
+            return self.new_with(chain=accountant, wrap_release=wrap_release)
+
+        if isinstance(self._chain, PartialChain):
+            def make(x):
+                chain = self._chain(x)
+                input_domain = self._chain.output_domain
+                input_metric = self._chain.output_metric
+                d_sc_in = self._chain.map(self._d_in)
+                return compositor(input_domain, input_metric, chain, d_sc_in)
+
+            return PartialChain(make)
+
         if isinstance(self._chain, tuple):
             input_domain, input_metric = self._chain
             d_sc_in = self._d_in
@@ -195,53 +288,10 @@ class Query(object):
             input_domain = self._chain.output_domain
             input_metric = self._chain.output_metric
             d_sc_in = self._chain.map(self._d_in)
-        else:
-            raise ValueError(
-                "Sequential composition requires a metric space or transformation."
-            )
 
-        if not self._eager:
-            raise ValueError("Sequential composition requires eager=True.")
-
-        privacy_unit = input_metric, d_sc_in
-        privacy_loss = self._output_measure, self._d_out
-
-        accountant, d_mids = _sequential_composition_accountant(
-            input_domain, privacy_unit, privacy_loss, weights
-        )
-        if isinstance(self._chain, dp.Transformation):
-            accountant = self._chain >> accountant
-        queryable = self._analysis(accountant)
-
-        return Analysis(accountant=accountant, queryable=queryable, d_in=d_sc_in, d_mids=d_mids)
-
-    def _cast_measure(self, measure, caster, map_query):
-        new_query = Query(
-            input_space=self._chain,
-            output_measure=measure,
-            # these can be None because eager=False
-            d_in=None,
-            d_out=None,
-            eager=False,
-        )
-
-        inner_chain = map_query(new_query)._chain
-        if isinstance(inner_chain, PartialChain):
-            casted_chain = PartialChain(lambda x: caster(inner_chain(x)))
-        else:
-            casted_chain = caster(inner_chain)
-
-        new_query = Query(
-            input_space=casted_chain,
-            output_measure=self._output_measure,
-            d_in=self._d_in,
-            d_out=self._d_out,
-            analysis=self._analysis,
-            eager=self._eager,
-        )
+        new_query = compositor(input_domain, input_metric, self._chain, d_sc_in)
         if self._eager:
             return new_query.release()
-
         return new_query
 
 
