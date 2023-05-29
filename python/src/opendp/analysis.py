@@ -123,13 +123,13 @@ class Analysis(object):
         If the domain is not specified, it will be inferred from the data.
         This makes the assumption that the structure of the data is public information.
 
-        The weights may be a list of numerics, corresponding to the importance of each query.
+        The weights may be a list of numerics, corresponding to how `privacy_loss` should be distributed to each query.
         Alternatively, pass a single integer to distribute the loss evenly.
 
         :param data: The data to be analyzed.
         :param privacy_unit: The privacy unit of the analysis.
         :param privacy_loss: The privacy loss of the analysis.
-        :param weights: The weights to use for the sequential composition.
+        :param weights: How to distribute `privacy_loss` among the queries.
         :param domain: The domain of the data."""
         # TODO: uncomment after https://github.com/opendp/opendp/pull/749
         # if domain is None:
@@ -200,19 +200,18 @@ class Query(object):
     _output_measure: dp.Measure
     """The output measure of the query."""
     _analysis: Optional["Analysis"]
-    """The analysis that the query is part of. When the query is released, the _chain is submitted to the _analysis."""
+    """The analysis that the query is part of. `query.release()` submits `_chain` to `_analysis`."""
     _eager: bool
-    """Whether to release the query eagerly or lazily. 
-    If eager, the query is released as soon as a measurement is constructed. 
-    If lazy, explicitly call release() to release the query."""
+    """If eager, the query is released as soon as a measurement is constructed. 
+    Otherwise, explicitly call release() to release the query."""
     _wrap_release: Optional[Callable[[Any], Any]]
-    """A function that wraps the release of the query. 
-    Used to wrap the response of compositor queries in an Analysis class."""
+    """For internal use. A function that wraps the release of the query. 
+    Used to wrap the response of compositor/odometer queries in another `Analysis`."""
 
     def __init__(
         self,
         chain: Chain,
-        output_measure: dp.Measure,
+        output_measure: dp.Measure = None,
         d_in=None,
         d_out=None,
         analysis: "Analysis" = None,
@@ -221,11 +220,11 @@ class Query(object):
     ) -> None:
         """Initializes the query with the given chain and output measure.
 
-        It is more convenient to use the `analysis.query()` constructor instead of this one.
-        This can be used to construct a transformation/measurement that is not part of an analysis, via `query.resolve()`.
+        It is more convenient to use the `analysis.query()` constructor than this one.
+        However, this can be used stand-alone to help build a transformation/measurement that is not part of an analysis.
 
-        :param chain: a metric space (tuple of domain and metric), transformation, or measurement
-        :param output_measure: the output measure of the query
+        :param chain: an initial metric space (tuple of domain and metric) or transformation
+        :param output_measure: how privacy will be measured on the output of the query
         :param d_in: an upper bound on the distance between adjacent datasets
         :param d_out: an upper bound on the overall privacy loss
         :param analysis: if specified, then when the query is released, the chain will be submitted to this analysis
@@ -307,17 +306,18 @@ class Query(object):
         if isinstance(self._chain, PartialChain):
             chain = self._chain.fix(self._d_in, self._d_out)
             if chain.output_measure != self._output_measure:
-                raise ValueError("Output measure does not match.")
+                raise ValueError("Output measure does not match")
         else:
             chain = self._chain
 
         if not allow_transformations and isinstance(chain, dp.Transformation):
-            raise ValueError("Query is not yet a measurement.")
+            raise ValueError("Query is not yet a measurement")
 
         return chain
 
     def release(self) -> Any:
-        """Release the query. If the query is eager, this is called automatically."""
+        """Release the query. The query must be part of an analysis."""
+        # TODO: consider adding an optional `data` parameter for when _analysis is None
         answer = self._analysis(self.resolve())
         if self._wrap_release:
             answer = self._wrap_release(answer)
