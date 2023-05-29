@@ -1,5 +1,5 @@
 import opendp.prelude as dp
-from opendp.analysis import Analysis, distance_of, privacy_of
+from opendp.analysis import Analysis, unit_of, loss_of
 
 dp.enable_features("contrib")
 
@@ -7,8 +7,8 @@ dp.enable_features("contrib")
 def test_analysis_init():
     analysis = Analysis.sequential_composition(
         data=[1, 2, 3],
-        privacy_unit=distance_of(contributions=3),
-        privacy_loss=privacy_of(epsilon=3.0),
+        privacy_unit=unit_of(contributions=3),
+        privacy_loss=loss_of(epsilon=3.0),
         weights=3,
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
@@ -31,8 +31,8 @@ def test_analysis_init():
 def test_analysis_zCDP():
     analysis = Analysis.sequential_composition(
         data=[1, 2, 3],
-        privacy_unit=distance_of(contributions=1),
-        privacy_loss=privacy_of(epsilon=3.0, delta=1e-6),
+        privacy_unit=unit_of(contributions=1),
+        privacy_loss=loss_of(epsilon=3.0, delta=1e-6),
         weights=2,
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
@@ -57,8 +57,8 @@ def test_analysis_zCDP():
 def test_sc_query():
     analysis = Analysis.sequential_composition(
         data=[1, 2, 3],
-        privacy_unit=distance_of(contributions=1),
-        privacy_loss=privacy_of(epsilon=3.0, delta=1e-6),
+        privacy_unit=unit_of(contributions=1),
+        privacy_loss=loss_of(epsilon=3.0, delta=1e-6),
         weights=2,
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
@@ -99,14 +99,14 @@ def test_sc_query():
 
 
 def test_distance_of():
-    assert distance_of(contributions=3) == (dp.symmetric_distance(), 3)
-    assert distance_of(l1=2.0) == (dp.l1_distance(T=float), 2.0)
+    assert unit_of(contributions=3) == (dp.symmetric_distance(), 3)
+    assert unit_of(l1=2.0) == (dp.l1_distance(T=float), 2.0)
 
 
 def test_privacy_loss_of():
-    assert privacy_of(epsilon=3.0) == (dp.max_divergence(T=float), 3.0)
-    assert privacy_of(rho=2.0) == (dp.zero_concentrated_divergence(T=float), 2.0)
-    assert privacy_of(epsilon=2.0, delta=1e-6) == (
+    assert loss_of(epsilon=3.0) == (dp.max_divergence(T=float), 3.0)
+    assert loss_of(rho=2.0) == (dp.zero_concentrated_divergence(T=float), 2.0)
+    assert loss_of(epsilon=2.0, delta=1e-6) == (
         dp.fixed_smoothed_max_divergence(T=float),
         (2.0, 1e-6),
     )
