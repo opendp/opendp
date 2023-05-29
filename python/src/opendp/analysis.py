@@ -1,4 +1,4 @@
-from typing import Any, Callable, Optional, Tuple, Union, get_type_hints
+from typing import Any, Callable, List, Optional, Tuple, Union, get_type_hints
 import opendp.prelude as dp
 import importlib
 from inspect import signature
@@ -17,13 +17,15 @@ for module_name in ["transformations", "measurements"]:
             constructors[name[5:]] = getattr(module, name), False
 
 
-def privacy_of(*, epsilon=None, delta=None, rho=None, U=None):
-    """Standardize privacy loss parameters to (measure, distance)
+def loss_of(*, epsilon=None, delta=None, rho=None, U=None) -> Tuple[dp.Measure, float]:
+    """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
-    >>> from opendp.analysis import privacy_loss_of
-    >>> measure, distance = privacy_loss_of(epsilon=1.0)
-    >>> measure, distance = privacy_loss_of(epsilon=1.0, delta=1e-9)
-    >>> measure, distance = privacy_loss_of(rho=1.0)
+    :param U: The type of the privacy parameter.
+
+    >>> from opendp.analysis import loss_of
+    >>> measure, distance = loss_of(epsilon=1.0)
+    >>> measure, distance = loss_of(epsilon=1.0, delta=1e-9)
+    >>> measure, distance = loss_of(rho=1.0)
     """
     if epsilon is None and rho is None:
         raise ValueError("Either epsilon or rho must be specified.")
@@ -39,7 +41,7 @@ def privacy_of(*, epsilon=None, delta=None, rho=None, U=None):
         return dp.fixed_smoothed_max_divergence(T=U), (epsilon, delta)
 
 
-def distance_of(
+def unit_of(
     *,
     contributions=None,
     changes=None,
@@ -48,7 +50,12 @@ def distance_of(
     l2=None,
     ordered=False,
     U=None,
-):
+) -> Tuple[dp.Metric, float]:
+    """Constructs a unit of privacy, consisting of a metric and a dataset distance.
+
+    :param ordered: Set to true to use InsertDeleteDistance instead of SymmetricDistance, or HammingDistance instead of ChangeOneDistance.
+    :param U: The type of the dataset distance."""
+
     def _is_distance(p, v):
         return p not in ["ordered", "U", "_is_distance"] and v is not None
 
@@ -72,23 +79,39 @@ def distance_of(
         return metric, l2
 
 
+Chain = Union[
+    Tuple[dp.Domain, dp.Metric], dp.Transformation, dp.Measurement, "PartialChain"
+]
+
+
 class Query(object):
-    _chain: Union[Tuple[dp.Domain, dp.Metric], dp.Transformation, "PartialChain"]
+    """A helper to build a chain of transformations and measurements."""
+
+    _chain: Chain
+    """The current chain of transformations and measurements."""
     _output_measure: dp.Measure
+    """The output measure of the query."""
     _analysis: Optional["Analysis"]
+    """The analysis that the query is part of. When the query is released, the _chain is submitted to the _analysis."""
     _eager: bool
+    """Whether to release the query eagerly or lazily. 
+    If eager, the query is released as soon as a measurement is constructed. 
+    If lazy, explicitly call release() to release the query."""
+    _wrap_release: Optional[Callable[[Any], Any]]
+    """A function that wraps the release of the query. 
+    Used to wrap the response of compositor queries in an Analysis class."""
 
     def __init__(
         self,
-        input_space,
-        output_measure,
+        chain: Chain,
+        output_measure: dp.Measure,
         d_in,
         d_out=None,
-        analysis=None,
-        eager=True,
+        analysis: "Analysis" = None,
+        eager: bool = True,
         wrap_release=None,
     ) -> None:
-        self._chain = input_space
+        self._chain = chain
         self._output_measure = output_measure
         self._d_in = d_in
         self._d_out = d_out
@@ -97,12 +120,18 @@ class Query(object):
         self._wrap_release = wrap_release
 
     def __getattr__(self, name: str) -> Callable[[Any], "Query"]:
+        """Creates a new query by applying a transformation or measurement to the current chain."""
         if name not in constructors:
-            raise AttributeError(f"Unrecognized constructor {name}")
+            raise AttributeError(f"Unrecognized constructor: '{name}'")
         constructor, is_partial = constructors[name]
         is_measurement = get_type_hints(constructor)["return"] == dp.Measurement
 
         def make(*args, **kwargs):
+            """Wraps the `make_{name}` constructor to allow one optional parameter and chains it to the current query.
+
+            This function will be called when the user calls `query.{name}(...)`.
+            If eager=True, and `name` comes from the measurements module, the query will be released immediately.
+            """
             nonlocal constructor, is_partial
             # determine how many parameters are missing
             param_diff = len(args)
@@ -132,11 +161,10 @@ class Query(object):
 
         return make
 
-    def new_with(
-        self, *, chain: Union[dp.Transformation, "PartialChain"], wrap_release=None
-    ) -> "Query":
+    def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":
+        """Convenience constructor that creates a new query with a different chain."""
         return Query(
-            input_space=chain,
+            chain=chain,
             output_measure=self._output_measure,
             d_in=self._d_in,
             d_out=self._d_out,
@@ -146,30 +174,42 @@ class Query(object):
         )
 
     def __dir__(self):
+        """Returns the list of available constructors. Used by Python's error suggestion mechanism."""
         return super().__dir__() + list(constructors.keys())
 
-    def resolve(self):
-        """Resolve the query into a transformation or measurement."""
+    def resolve(self, allow_transformations=False):
+        """Resolve the query into a measurement."
+
+        :param allow_transformations: If true, allow the response to be a transformation instead of a measurement.
+        """
+        # resolve a partial chain into a measurement, by fixing the input and output distances
         if isinstance(self._chain, PartialChain):
             chain = self._chain.fix(self._d_in, self._d_out)
             if chain.output_measure != self._output_measure:
                 raise ValueError("Output measure does not match.")
-            return chain
-        if isinstance(self._chain, dp.Measurement):
-            return self._chain
-        raise ValueError("Query is not yet a measurement.")
+        else:
+            chain = self._chain
+
+        if not allow_transformations and isinstance(chain, dp.Transformation):
+            raise ValueError("Query is not yet a measurement.")
+
+        return chain
 
     def release(self) -> Any:
+        """Release the query. If the query is eager, this is called automatically."""
         answer = self._analysis(self.resolve())
         if self._wrap_release:
             answer = self._wrap_release(answer)
         return answer
 
     def param(self):
-        """returns the discovered parameter, if there is one"""
+        """Returns the discovered parameter, if there is one"""
         return getattr(self.resolve(), "param", None)
 
     def zCDP_to_approxDP(self, map_query: Callable[["Query"], "Query"]) -> "Query":
+        """Converts a zCDP query to an approximate DP query.
+
+        :param map_query: A function for constructing a zCDP query."""
         new_measure = dp.zero_concentrated_divergence(
             T=self._output_measure.type.args[0]
         )
@@ -178,22 +218,26 @@ class Query(object):
             return dp.c.make_fix_delta(
                 dp.c.make_zCDP_to_approxDP(measurement), delta=self._d_out[1]
             )
-        
-        # TODO: add a library utility for this
-        # need to convert from (eps, del) to rho
+
+        # convert from (eps, del) to rho
         scale = dp.binary_search_param(
             lambda scale: caster(dp.m.make_base_gaussian(scale)),
-            d_in=1.,
+            d_in=1.0,  # the choice of constant doesn't matter, so long as it is the same as below
             d_out=self._d_out,
             T=float,
         )
-        d_out_rho = dp.m.make_base_gaussian(scale).map(1.)
-        
-        return self._cast_measure(new_measure, d_out=d_out_rho, caster=caster, map_query=map_query)
+        d_out_rho = dp.m.make_base_gaussian(scale).map(1.0)
+
+        return self._cast_measure(
+            new_measure, d_out=d_out_rho, caster=caster, map_query=map_query
+        )
 
     def pureDP_to_fixed_approxDP(
         self, map_query: Callable[["Query"], "Query"]
     ) -> "Query":
+        """Converts a pure DP query to an approximate DP query.
+
+        :param map_query: A function for constructing a pure DP query."""
         new_measure = dp.fixed_smoothed_max_divergence(
             T=self._output_measure.type.args[0]
         )
@@ -207,6 +251,9 @@ class Query(object):
         )
 
     def pureDP_to_zCDP(self, map_query: Callable[["Query"], "Query"]) -> "Query":
+        """Converts a pure DP query to a zCDP query.
+
+        :param map_query: A function for constructing a pure DP query."""
         new_measure = dp.zero_concentrated_divergence(
             T=self._output_measure.type.args[0]
         )
@@ -214,48 +261,61 @@ class Query(object):
         def caster(measurement):
             return dp.c.make_pureDP_to_zCDP(measurement)
 
-        # TODO: add a library utility for this
-        # need to convert from rho to epsilon
+        # convert from rho to epsilon
         scale = dp.binary_search_scale(
             lambda eps: caster(dp.m.make_base_laplace(eps)),
-            d_in=1.,
+            d_in=1.0,
             d_out=self._d_out,
             T=float,
         )
-        d_out_epsilon = dp.m.make_base_laplace(scale).map(1.)
-        
+        d_out_epsilon = dp.m.make_base_laplace(scale).map(1.0)
+
         return self._cast_measure(
             new_measure, d_out=d_out_epsilon, caster=caster, map_query=map_query
         )
 
     def _cast_measure(self, measure, d_out, caster, map_query):
+        """Helper function for casting a measure."""
         inner_seed_query = Query(
-            input_space=self._chain,
+            chain=self._chain,
             output_measure=measure,
             d_in=self._d_in,
             d_out=d_out,
-            eager=False,
+            eager=False,  # this query is run inside a map function, should not execute
         )
         inner_query = map_query(inner_seed_query)
         inner_chain = inner_query._chain
 
+        # wrap the inner chain in the caster (leaving it partial if it was partial)
         if isinstance(inner_chain, PartialChain):
             casted_chain = PartialChain(lambda x: caster(inner_chain(x)))
         else:
             casted_chain = caster(inner_chain)
 
-        inner_seed_query = self.new_with(chain=casted_chain, wrap_release=inner_query._wrap_release)
+        new_query = self.new_with(
+            chain=casted_chain, wrap_release=inner_query._wrap_release
+        )
         if self._eager:
-            return inner_seed_query.release()
+            return new_query.release()
 
-        return inner_seed_query
+        return new_query
 
     def sequential_composition(self, weights) -> "Analysis":
-        def compositor(input_domain, input_metric, chain, d_sc_in):
-            privacy_unit = input_metric, d_sc_in
+        """Constructs a new analysis containing a sequential compositor with the given weights."""
+
+        def compositor(
+            chain: Union[Tuple[dp.Domain, dp.Metric], dp.Transformation], d_in
+        ):
+            if isinstance(chain, tuple):
+                input_domain, input_metric = chain
+            elif isinstance(chain, dp.Transformation):
+                input_domain, input_metric = chain.output_domain, chain.output_metric
+                d_in = chain.map(d_in)
+
+            privacy_unit = input_metric, d_in
             privacy_loss = self._output_measure, self._d_out
 
-            accountant, d_mids = _sequential_composition_accountant(
+            accountant, d_mids = _sequential_composition_by_weights(
                 input_domain, privacy_unit, privacy_loss, weights
             )
             if isinstance(chain, dp.Transformation):
@@ -265,59 +325,64 @@ class Query(object):
                 return Analysis(
                     accountant=accountant,
                     queryable=queryable,
-                    d_in=d_sc_in,
+                    d_in=d_in,
                     d_mids=d_mids,
                 )
 
             return self.new_with(chain=accountant, wrap_release=wrap_release)
 
+        return self._compose_analysis(compositor)
+
+    def _compose_analysis(self, compositor):
+        """Helper function for composing an analysis."""
         if isinstance(self._chain, PartialChain):
-            def make(x):
-                chain = self._chain(x)
-                input_domain = self._chain.output_domain
-                input_metric = self._chain.output_metric
-                d_sc_in = self._chain.map(self._d_in)
-                return compositor(input_domain, input_metric, chain, d_sc_in)
+            new_query = PartialChain(lambda x: compositor(self._chain(x), self._d_in))
+        else:
+            new_query = compositor(self._chain, self._d_in)
 
-            return PartialChain(make)
-
-        if isinstance(self._chain, tuple):
-            input_domain, input_metric = self._chain
-            d_sc_in = self._d_in
-        elif isinstance(self._chain, dp.Transformation):
-            input_domain = self._chain.output_domain
-            input_metric = self._chain.output_metric
-            d_sc_in = self._chain.map(self._d_in)
-
-        new_query = compositor(input_domain, input_metric, self._chain, d_sc_in)
         if self._eager:
             return new_query.release()
         return new_query
 
 
 class PartialChain(object):
-    partial: Callable[[Any], dp.Measurement]
+    """A partial chain is a transformation or measurement that is missing one numeric parameter.
+
+    The parameter can be solved for by calling the fix method,
+    which returns the closest transformation or measurement that satisfies the given stability or privacy constraint.
+    """
+
+    partial: Callable[[float], Union[dp.Transformation, dp.Measurement]]
+    """The partial transformation or measurement."""
 
     def __init__(self, f, *args, **kwargs):
         self.partial = partial(f, *args, **kwargs)
 
     def __call__(self, v):
+        """Returns the transformation or measurement with the given parameter."""
         return self.partial(v)
 
     def fix(self, d_in, d_out, T=None):
+        """Returns the closest transformation or measurement that satisfies the given stability or privacy constraint.
+
+        The discovered parameter is assigned to the param attribute of the returned transformation or measurement.
+        """
         param = dp.binary_search(lambda x: self.partial(x).check(d_in, d_out), T=T)
         chain = self.partial(param)
         chain.param = param
         return chain
 
     def __rshift__(self, other):
+        # partials may be chained with other transformations or measurements to form a new partial
         if isinstance(other, (dp.Transformation, dp.Measurement)):
             return PartialChain(lambda x: self.partial(x) >> other)
 
-        raise ValueError("other must be a Transformation or Measurement")
+        raise ValueError("At most one parameter may be missing at a time")
 
     @classmethod
     def wrap(cls, f):
+        """Wraps a constructor for a transformation or measurement to return a partial chain instead."""
+
         def inner(*args, **kwargs):
             return cls(f, *args, **kwargs)
 
@@ -325,10 +390,30 @@ class PartialChain(object):
 
 
 class Analysis(object):
-    compositor: dp.Measurement  # union dp.Odometer once merged
-    queryable: dp.Queryable
+    """An Analysis coordinates queries to an instance of a privacy `accountant`."""
 
-    def __init__(self, accountant, queryable, d_in, d_mids=None, d_out=None):
+    accountant: dp.Measurement  # union dp.Odometer once merged
+    """The accountant is the measurement used to spawn the queryable.
+    It contains information about the queryable, 
+    such as the input domain, input metric, and output measure expected of measurement queries sent to the queryable."""
+    queryable: dp.Queryable
+    """The queryable executes the queries and tracks the privacy expenditure."""
+
+    def __init__(
+        self,
+        accountant: dp.Measurement,
+        queryable: dp.Queryable,
+        d_in,
+        d_mids=None,
+        d_out=None,
+    ):
+        """Initializes the analysis with the given accountant and queryable.
+
+        It is recommended to use the `sequential_composition` constructor instead of this one.
+
+        :param d_in: An upper bound on the distance between adjacent datasets.
+        :param d_mids: A sequence of privacy losses for each query to be sent to the queryable. Used for compositors.
+        :param d_out: An upper bound on the overall privacy loss. Used for filters."""
         self.accountant = accountant
         self.queryable = queryable
         self.d_in = d_in
@@ -336,12 +421,31 @@ class Analysis(object):
         self.d_out = d_out
 
     @staticmethod
-    def sequential_composition(data, privacy_unit, privacy_loss, weights, domain=None):
+    def sequential_composition(
+        data: Any,
+        privacy_unit: Tuple[dp.Metric, float],
+        privacy_loss: Tuple[dp.Measure, Any],
+        weights: Union[int, List[float]],
+        domain: Optional[dp.Domain] = None,
+    ) -> "Analysis":
+        """Constructs a new analysis containing a sequential compositor with the given weights.
+
+        If the domain is not specified, it will be inferred from the data.
+        This makes the assumption that the structure of the data is public information.
+
+        The weights may be a list of numerics, corresponding to the importance of each query.
+        Alternatively, pass a single integer to distribute the loss evenly.
+
+        :param data: The data to be analyzed.
+        :param privacy_unit: The privacy unit of the analysis.
+        :param privacy_loss: The privacy loss of the analysis.
+        :param weights: The weights to use for the sequential composition.
+        :param domain: The domain of the data."""
         # TODO: uncomment after https://github.com/opendp/opendp/pull/749
         # if domain is None:
         #     domain = domain_of(data, infer=True)
 
-        accountant, d_mids = _sequential_composition_accountant(
+        accountant, d_mids = _sequential_composition_by_weights(
             domain, privacy_unit, privacy_loss, weights
         )
 
@@ -352,7 +456,8 @@ class Analysis(object):
             d_mids=d_mids,
         )
 
-    def __call__(self, query):
+    def __call__(self, query: Union[Query, dp.Measurement]):
+        """Executes the given query on the analysis."""
         if isinstance(query, Query):
             query = query.resolve()
         answer = self.queryable(query)
@@ -361,21 +466,29 @@ class Analysis(object):
         return answer
 
     def query(self, eager=True, **kwargs) -> Query:
+        """Constructs a new Query for the analysis.
+
+        If the analysis has been constructed with a sequence of privacy losses,
+        the next loss will be used. Otherwise, the loss will be computed from the kwargs.
+
+        :param eager: Whether to release the query as soon as a measurement is applied.
+        :param kwargs: The privacy loss to use for the query. Passed directly into `loss_of`.
+        """
         if self.d_mids is not None:
             if kwargs:
-                raise ValueError(f"Expected no privacy arguments, but got {kwargs}.")
+                raise ValueError(f"Expected no privacy arguments but got {kwargs}")
             if not self.d_mids:
-                raise ValueError("Privacy allowance has been exhausted.")
+                raise ValueError("Privacy allowance has been exhausted")
             d_query = self.d_mids[0]
         else:
-            measure, d_query = privacy_of(**kwargs)
+            measure, d_query = loss_of(**kwargs)
             if measure != self.output_measure:
                 raise ValueError(
                     f"Expected output measure {self.output_measure} but got {measure}"
                 )
 
         return Query(
-            input_space=(self.accountant.input_domain, self.accountant.input_metric),
+            chain=(self.accountant.input_domain, self.accountant.input_metric),
             output_measure=self.accountant.output_measure,
             d_in=self.d_in,
             d_out=d_query,
@@ -384,7 +497,20 @@ class Analysis(object):
         )
 
 
-def _sequential_composition_accountant(domain, privacy_unit, privacy_loss, weights):
+def _sequential_composition_by_weights(
+    domain: dp.Domain,
+    privacy_unit: Tuple[dp.Metric, float],
+    privacy_loss: Tuple[dp.Measure, float],
+    weights: Union[int, List[float]],
+) -> Tuple[dp.Measurement, List[Any]]:
+    """constructs a sequential composition measurement
+    where the d_mids are proportional to the weights
+
+    :param domain: the domain of the data
+    :param privacy_unit: a tuple of the input metric and the data distance (d_in)
+    :param privacy_loss: a tuple of the output measure and the privacy loss (d_out)
+    :param weights: either a list of weights for each intermediate privacy loss, or the number of ways to evenly distribute the privacy loss
+    """
     input_metric, d_in = privacy_unit
     output_measure, d_out = privacy_loss
 
