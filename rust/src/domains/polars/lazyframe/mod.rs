@@ -186,8 +186,8 @@ impl Domain for LazyFrameDomain {
 /// Otherwise, counts are stored in the `counts_index` column of the `data`.
 #[derive(Clone)]
 pub struct Margin {
-    data: LazyFrame,
-    counts_index: Option<usize>,
+    pub data: LazyFrame,
+    pub counts_index: Option<usize>,
 }
 
 impl Margin {
@@ -215,7 +215,7 @@ impl Margin {
         Ok(margin)
     }
 
-    fn get_count_column_name(&self) -> Fallible<String> {
+    pub fn get_count_column_name(&self) -> Fallible<String> {
         let count_index = self
             .counts_index
             .ok_or_else(|| err!(FailedFunction, "counts do not exist"))?;

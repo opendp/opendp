@@ -1,16 +1,17 @@
-/* //use opendp_derive::bootstrap;
+//use opendp_derive::bootstrap;
 
-use std::collections::HashMap;
+//use az::UnwrappedAs;
 use polars::prelude::*;
+//use std::collections::{BTreeSet};
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
     error::Fallible,
-    metrics::{SymmetricDistance, IntDistance},
-    traits::{Hashable, ExactIntCast},
-    //transformations::{SizedDataFrame},
+    metrics::{SymmetricDistance, AbsoluteDistance, IntDistance},
+    traits::{Hashable, ExactIntCast, Float},
+    domains::{AtomDomain, SeriesDomain, LazyFrameDomain},
+    //domains::polars::lazyframe::IntoColumnIndex;
 };
-use crate::domains::{VectorDomain};
 
 // #[cfg(feature = "ffi")]
 // mod ffi;
@@ -30,109 +31,141 @@ use crate::domains::{VectorDomain};
 /// 
 /// # Generics
 /// * `TC` - Type of column names.
-pub fn make_sized_partitioned_sum<TC: Hashable>(
-    input_domain: SizedDataFrameDomain,
+pub fn make_sized_partitioned_sum<TC: Hashable, T: Float>(
+    input_domain: LazyFrameDomain,
     partition_column: &str,
     sum_column: &str,
-    _bounds: (f64, f64), // TO BE CHECKED
+    bounds: (T,T),
     null_partition: bool,
 ) -> Fallible<
     Transformation<
-    SizedDataFrameDomain,
-    VectorDomain<AllDomain<f64>>,
-        SymmetricDistance,
-        ProductMetric<SymmetricDistance>,
+        LazyFrameDomain,
+        LazyFrameDomain,
+        SymmetricDistance, 
+        SymmetricDistance, // @MIKE: Difficulty here to compute the bouded sum sensititivity
     >,
 > {
-    if !input_domain.categories_counts.contains_key(&partition_column){
-        return fallible!(FailedFunction, "Data frame domain does not list the desired colunm as categorical variable.")
+
+    // Check if partition column is in domain and get partition_column ref
+    let partition_id = (input_domain.series_domains.iter()).position(|s| s.field.name == partition_column).ok_or_else(|| err!(FailedFunction, "Desired partition column not in domain."))?;
+    
+    // Check if sum column is in domain and get sum_col_id
+    let sum_id = (input_domain.series_domains.iter()).position(|s| s.field.name == sum_column).ok_or_else(|| err!(FailedFunction, "Desired column to be summed not in domain."))?;
+    
+    // Get margins keys
+    let margins_key = input_domain.margins.keys().into_iter().find(|k| k.contains(&partition_id)).unwrap();
+
+    // Get partition margin
+    let counts = input_domain.margins.get(margins_key).unwrap();
+    
+    // Check if margins include counts
+    if counts.counts_index.is_none() {
+        return fallible!(FailedFunction, "Dataframe domain does not includes counts for the selected partition colunm.")
     }
 
-    let partition_column_name = partition_column.to_string();
-    let sum_column_name = sum_column.to_string();
+    // Get categories index
+    let categories = counts.data.select(&[col(partition_column)]).collect()?.column(partition_column)?;
 
-    //Retreive series index
-    let cat_column_index = input_domain.categories_keys.iter().position(|s| s.name() == partition_column_name).expect("Domain does not contain partion keys").clone();
-
-    // Create vector of partition keys
-    let partion_keys: Vec<&str> = input_domain.categories_keys[cat_column_index].utf8().unwrap().into_no_null_iter().collect();
-    
     // Defined output sizes 
-    let partion_size = partion_keys.len();
+    let partion_size = categories.len();
     let output_partitions = partion_size + if null_partition { 1 } else { 0 };
-    let d_output_partitions = IntDistance::exact_int_cast(output_partitions)?;
+    let d_output_partitions = IntDistance::exact_int_cast(output_partitions)?; //What is this doing?
 
-    // Create Product<SizedDataFrameDomain>
-    // let mut vector_partition_domains = vec![SizedDataFrameDomain::Default(); output_partitions];
-    // for i in 0..output_partitions {
-    //     let mut partition_counts: Vec<usize> = vec![0; partion_size];
-    //     if i < partion_size {
-    //     partition_counts[i] = input_domain.categories_counts.get(&partition_column_name).unwrap()[i].clone();
-    //     }
-    //     vector_partition_domains[i].add_categorical_colunm(&input_domain.categories_keys[cat_column_index].clone(), partition_counts).unwrap();
-    // }
-    //let product_df_domain = ProductDomain::new(vector_partition_domains);
+    // Create output col name
+    let sum_column_name = "Bounded sums of ".to_string() + sum_column;
 
-    Ok(Transformation::new(
+    // Type of categorical column
+    let cat_type = input_domain.column(partition_column).unwrap().field.dtype;
+
+    // Create output domain
+    let output_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new(partition_column, AtomDomain::<DataType>::default()), // @MIKE: possible or runtime?
+        SeriesDomain::new(&sum_column_name, AtomDomain::<f64>::default()),
+    ])?;
+    let output_domain = output_domain.with_counts(counts.data)?;
+
+    // Compute max partition size
+    let counts_col_name = counts.get_count_column_name()?;
+    // MIKE: Compute max and cast it to usize for input into openDP's type (carefully check that step!!!)
+    let size: usize = counts.data.collect()?.column(&counts_col_name)?.max().unwrap().try_into().unwrap();
+
+    // Compute ideal sensitivity
+    let (lower, upper) = bounds;
+    let ideal_sensitivity = upper.inf_sub(&lower)?;
+    
+    // Compute sensitivity correction for bit approximation
+    let size_exact = T::exact_int_cast(size)?;
+    let mantissa_bits = T::exact_int_cast(T::MANTISSA_BITS)?;
+    let _2 = T::exact_int_cast(2)?;
+
+    //Formula is: n^2 / 2^(k - 1) max(|L|, U)
+    let error = size.inf_mul(&size)?
+                    .inf_div(&_2.inf_pow(&mantissa_bits)?)?
+                    .inf_mul(&lower.alerting_abs()?.total_max(upper)?)?;
+
+    let relaxation = error.inf_add(&error)?;
+
+    Transformation::new(
         input_domain,
-        VectorDomain::new(AllDomain::new()),
-        Function::new_fallible(move |data: &DataFrame| {
+        output_domain,
+        Function::new_fallible(move |data: &LazyFrame| {
             
             // Check if col names exists
-            if !data.get_column_names().contains(&partition_column_name.as_str()) {
+            if !data.collect()?.get_column_names().contains(&partition_column) {
                 return fallible!(FailedFunction, "Dataframe does not contains the desired partition colunm.")
             }
-            if !data.get_column_names().contains(&sum_column_name.as_str()) {
+            if !data.collect()?.get_column_names().contains(&sum_column) {
                 return fallible!(FailedFunction, "Dataframe does not contains the column to be summed.")
             }
 
-            // Create partition
+            // Create partitioned bounded sums
             let mut cat_sums = data.clone()
-                        .lazy()
-                        .groupby([partition_column_name.as_str()])
-                        .agg([sum(&sum_column_name.as_str())])
+                        .groupby([partition_column])
+                        .agg([col(sum_column).sum()])
                         .collect()
                         .unwrap();
 
+            cat_sums.columns([partition_column, &counts_col_name]);
+
+            // Known / unknwon categories
+            let mask_known_cat = &cat_sums
+                        .column(partition_column)
+                        .unwrap()
+                        .is_in(counts.data.collect()?.column(partition_column)?)
+                        .unwrap();
 
             // Remove unknown classes
             let sums = cat_sums.filter(
-                &cat_sums
-                .column(&partition_column_name.as_str())
-                .unwrap()
-                .is_in(&input_domain.categories_keys[cat_column_index])
-                .unwrap())
+                &mask_known_cat)
                 .unwrap();
 
+            // Compute and concatenate unkown categories aggregation
             if null_partition {
-                let mask = &cat_sums
-                .column(&partition_column_name.as_str())
-                .unwrap()
-                .is_in(&input_domain.categories_keys[cat_column_index])
-                .unwrap();
                 let unknown_sum: f64 = cat_sums
-                                                .filter(&!mask)
+                                                .filter(&!mask_known_cat)
                                                 .unwrap()
                                                 .column("sum")
                                                 .unwrap()
                                                 .sum()
                                                 .unwrap();
 
-                let df_unkown = df!(&partition_column_name.as_str() => &["unknown"],
-                                                "sum" => &[unknown_sum]).unwrap();
+                let df_unkown = df!(partition_column => &["Unknown"], // check if type conversion is needed
+                                                &counts_col_name => &[unknown_sum]).unwrap();
 
                 let sums = sums.vstack(&df_unkown).unwrap();
-
             } 
 
-            let vec_sums: Vec<f64> = sums.column("sum").unwrap().f64().unwrap().into_no_null_iter().collect();
+            //let vec_sums: Vec<f64> = sums.column("counts_col_name").unwrap().f64().unwrap().into_no_null_iter().collect();
 
-            Ok(vec_sums)
+            Ok(sums.lazy())
         }),
         SymmetricDistance::default(),
-        ProductMetric::new(SymmetricDistance::default()), // TO DO !!!
-        StabilityMap::new(move |d_in: &IntDistance| (*d_in, *d_in.min(&d_output_partitions))), // TO DO !!!
-    ))
+        AbsoluteDistance::default(), //@MIKE: Not ok as we have vector of sums whose sensitivity / distance is not Float
+        StabilityMap::new(move |d_in: &IntDistance|
+            T::inf_cast(d_in / 2)?
+                .inf_mul(&ideal_sensitivity)?
+                .inf_add(&relaxation)) // @MIKE: how to handle sensititivity with a dataframe and a vector.
+    )
 }
 
 
@@ -167,4 +200,4 @@ mod test {
         //println!("{:?}", partition);
         Ok(())
     }
-} */
+}
