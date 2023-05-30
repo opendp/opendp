@@ -4,6 +4,9 @@ import importlib
 from inspect import signature
 from functools import partial
 
+# a dictionary of "constructor name" -> (constructor_function, is_partial)
+# "constructor name" is the name of the constructor without the "make_" prefix
+# constructor_function is the partial version if is_partial is True
 constructors = {}
 for module_name in ["transformations", "measurements"]:
     module = importlib.import_module(f"opendp.{module_name}")
