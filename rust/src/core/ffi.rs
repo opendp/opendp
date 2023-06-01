@@ -740,7 +740,7 @@ pub extern "C" fn opendp_core__queryable_query_type(
 #[cfg(test)]
 mod tests {
     use crate::combinators::tests::{make_test_measurement, make_test_transformation};
-    use crate::ffi::any::{Downcast, IntoAnyTransformationExt};
+    use crate::ffi::any::Downcast;
     use crate::ffi::util::ToCharP;
 
     use super::*;

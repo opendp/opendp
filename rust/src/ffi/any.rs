@@ -480,6 +480,7 @@ pub trait IntoAnyMeasurementExt {
     fn into_any(self) -> AnyMeasurement;
 }
 
+/// Turn a Measurement into an AnyMeasurement.
 impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
     IntoAnyMeasurementExt for Measurement<DI, TO, MI, MO>
 where
@@ -551,6 +552,72 @@ where
         .expect("AnyDomain is not checked")
     }
 }
+
+#[cfg(feature = "partials")]
+mod partials {
+    use crate::core::{PartialMeasurement, PartialTransformation};
+
+    pub use super::*;
+
+    pub type AnyPartialTransformation =
+        PartialTransformation<AnyDomain, AnyDomain, AnyMetric, AnyMetric>;
+
+    impl<
+            DI: 'static + Domain,
+            DO: 'static + Domain,
+            MI: 'static + Metric,
+            MO: 'static + Metric,
+        > PartialTransformation<DI, DO, MI, MO>
+    where
+        DI::Carrier: 'static,
+        DO::Carrier: 'static,
+        MI::Distance: 'static,
+        MO::Distance: 'static,
+        (DI, MI): MetricSpace,
+        (DO, MO): MetricSpace,
+    {
+        pub fn into_any(self) -> AnyPartialTransformation {
+            AnyPartialTransformation::new(move |input_domain, input_metric| {
+                Ok(self
+                    .fix(
+                        input_domain.downcast::<DI>()?,
+                        input_metric.downcast::<MI>()?,
+                    )?
+                    .into_any())
+            })
+        }
+    }
+
+
+    pub type AnyPartialMeasurement =
+        PartialMeasurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>;
+
+    impl<
+            DI: 'static + Domain,
+            TO: 'static,
+            MI: 'static + Metric,
+            MO: 'static + Measure,
+        > PartialMeasurement<DI, TO, MI, MO>
+    where
+        DI::Carrier: 'static,
+        MI::Distance: 'static,
+        MO::Distance: 'static,
+        (DI, MI): MetricSpace,
+    {
+        pub fn into_any(self) -> AnyPartialMeasurement {
+            AnyPartialMeasurement::new(move |input_domain, input_metric| {
+                Ok(self
+                    .fix(
+                        input_domain.downcast::<DI>()?,
+                        input_metric.downcast::<MI>()?,
+                    )?
+                    .into_any())
+            })
+        }
+    }
+}
+#[cfg(feature = "partials")]
+pub use partials::*;
 
 /// A Queryable with all generic types filled by Any types.
 /// This is the type of Queryables passed back and forth over FFI.

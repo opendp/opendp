@@ -348,6 +348,7 @@ mod test_checks {
         Ok(())
     }
 
+    // feature-gated because non-mpfr InfCast errors on numbers greater than 2^52
     #[cfg(feature = "use-mpfr")]
     #[test]
     fn test_float_sum_overflows_sequential() -> Fallible<()> {
@@ -369,6 +370,7 @@ mod test_checks {
         Ok(())
     }
 
+    // feature-gated because non-mpfr InfCast errors on numbers greater than 2^52
     #[cfg(feature = "use-mpfr")]
     #[test]
     fn test_float_sum_overflows_pairwise() -> Fallible<()> {

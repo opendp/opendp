@@ -4,7 +4,10 @@ use syn::{parse_macro_input, AttributeArgs, Item, ItemFn};
 use proc_macro::TokenStream;
 
 use opendp_tooling::{
-    bootstrap::docstring::{get_proof_path, insert_proof_attribute},
+    bootstrap::{
+        docstring::{get_proof_path, insert_proof_attribute},
+        partial::generate_partial,
+    },
     proven::{filesystem::load_proof_paths, Proven},
     Function,
 };
@@ -59,6 +62,13 @@ pub(crate) fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStre
         .for_each(|feat| output.extend(TokenStream::from(quote::quote!(#[cfg(feature = #feat)]))));
 
     output.extend(TokenStream::from(item_fn.to_token_stream()));
+
+    if cfg!(feature = "partials") {
+        // write a partial function if the constructor adheres to the partial function pattern
+        if let Some(partial_fn) = generate_partial(item_fn.clone()) {
+            output.extend(TokenStream::from(partial_fn.to_token_stream()));
+        };
+    }
     output
 }
 

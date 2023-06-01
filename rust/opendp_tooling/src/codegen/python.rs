@@ -43,6 +43,12 @@ fn generate_module(
     let all = module
         .iter()
         .map(|func| format!("    \"{}\"", func.name))
+        .chain(
+            module
+                .iter()
+                .filter(|func| func.supports_partial)
+                .map(|func| format!("    \"{}\"", func.name.replacen("make_", "part_", 1))),
+        )
         .collect::<Vec<_>>()
         .join(",\n");
     let functions = module
@@ -89,17 +95,46 @@ fn generate_function(
         .map(|arg| generate_input_argument(arg, func, hierarchy))
         .collect::<Vec<_>>();
     args.sort_by(|(_, l_is_default), (_, r_is_default)| l_is_default.cmp(r_is_default));
-    let args = args
-        .into_iter()
-        .map(|v| v.0)
-        .collect::<Vec<_>>()
-        .join(",\n");
+    let args = args.into_iter().map(|v| v.0).collect::<Vec<_>>();
 
     let sig_return = func
         .ret
         .python_type_hint(hierarchy)
         .map(|v| format!(" -> {}", v))
         .unwrap_or_else(String::new);
+
+    let docstring = indent(generate_docstring(func, hierarchy));
+    let body = indent(generate_body(module_name, func, typemap));
+
+    let partial_func = if func.supports_partial {
+        format!(
+            r#"
+
+def {partial_name}(
+{partial_args}
+):
+    return PartialConstructor(lambda {dom_met}: {name}(
+{args}))
+"#,
+            partial_name = func.name.replacen("make_", "part_", 1),
+            partial_args = indent(args[2..].join(",\n")),
+            dom_met = func.args[..2]
+                .iter()
+                .map(|arg| arg.name())
+                .collect::<Vec<_>>()
+                .join(", "),
+            name = func.name,
+            args = indent(indent(
+                func.args
+                    .iter()
+                    .map(|arg| format!("{name}={name}", name = arg.name()))
+                    .collect::<Vec<_>>()
+                    .join(",\n")
+            ))
+        )
+    } else {
+        String::new()
+    };
 
     format!(
         r#"
@@ -108,13 +143,10 @@ def {func_name}(
 {args}
 ){sig_return}:
 {docstring}
-{body}
+{body}{partial_func}
 "#,
         func_name = func.name,
-        args = indent(args),
-        sig_return = sig_return,
-        docstring = indent(generate_docstring(func, hierarchy)),
-        body = indent(generate_body(module_name, func, typemap))
+        args = indent(args.join(",\n"))
     )
 }
 

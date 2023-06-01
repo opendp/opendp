@@ -22,3 +22,4 @@ opendp_tooling = { path = "../opendp_tooling", optional = true }
 
 [features]
 full = ["syn", "quote", "opendp_tooling"]
+partials = ["full"]
