@@ -164,12 +164,12 @@ def test_split_dataframe():
 
 
 def test_clamp():
-    from opendp.transformations import partial_clamp, make_clamp
+    from opendp.transformations import part_clamp, make_clamp
     from opendp.domains import vector_domain, atom_domain
     from opendp.metrics import symmetric_distance
     input_domain = vector_domain(atom_domain(T=int))
     input_metric = symmetric_distance()
-    query = (input_domain, input_metric) >> partial_clamp(bounds=(-1, 1))
+    query = (input_domain, input_metric) >> part_clamp(bounds=(-1, 1))
     assert query([-10, 0, 10]) == [-1, 0, 1]
     assert query.check(1, 1)
 

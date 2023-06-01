@@ -53,9 +53,9 @@ where
     )
 }
 
-#[cfg(all(test, feature = "derive"))]
+#[cfg(all(test, feature = "partials"))]
 mod tests {
-    use crate::{error::Fallible, metrics::SymmetricDistance, transformations::partial_clamp};
+    use crate::{error::Fallible, metrics::SymmetricDistance, transformations::part_clamp};
 
     use super::*;
 
@@ -65,7 +65,7 @@ mod tests {
             VectorDomain::new(AtomDomain::default()),
             SymmetricDistance::default(),
         );
-        let transformation = (input_space >> partial_clamp((0, 10)))?;
+        let transformation = (input_space >> part_clamp((0, 10)))?;
         let arg = vec![-10, -5, 0, 5, 10, 20];
         let ret = transformation.invoke(&arg)?;
         let expected = vec![0, 0, 0, 5, 10, 10];

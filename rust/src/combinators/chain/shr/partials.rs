@@ -287,11 +287,11 @@ where
     }
 }
 
-#[cfg(all(test, feature = "derive"))]
+#[cfg(all(test, feature = "partials"))]
 mod tests_shr {
     use crate::measurements::make_base_discrete_laplace;
     use crate::transformations::{
-        make_bounded_sum, make_cast_default, make_split_lines, partial_clamp,
+        make_bounded_sum, make_cast_default, make_split_lines, part_clamp,
     };
 
     use super::*;
@@ -300,7 +300,7 @@ mod tests_shr {
     fn test_shr() -> Fallible<()> {
         (make_split_lines()?
             >> make_cast_default()?
-            >> partial_clamp((0, 1))
+            >> part_clamp((0, 1))
             >> make_bounded_sum((0, 1))?
             >> make_base_discrete_laplace(1.)?)
         .map(|_| ())

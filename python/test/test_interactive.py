@@ -50,5 +50,5 @@ def test_sequential_composition_approxdp():
     gauss_meas = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_base_discrete_gaussian(100.)), 1e-6)
 
     input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
-    sum_meas = input_space >> dp.t.partial_clamp((0, 10)) >> dp.t.make_bounded_sum((0, 10)) >> gauss_meas
+    sum_meas = input_space >> dp.t.part_clamp((0, 10)) >> dp.t.make_bounded_sum((0, 10)) >> gauss_meas
     sc_qbl(sum_meas)

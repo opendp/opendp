@@ -58,10 +58,14 @@ __all__ = [
     "make_subset_by",
     "make_unordered",
 <<<<<<< HEAD
+<<<<<<< HEAD
     "part_clamp"
 =======
     "partial_clamp"
 >>>>>>> f6415b02 (debug python)
+=======
+    "part_clamp"
+>>>>>>> 68fadb9a (partial -> part)
 ]
 
 
@@ -771,12 +775,16 @@ def make_clamp(
     return output
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 def part_clamp(
     bounds: Tuple[Any, Any],
     M: RuntimeTypeDescriptor,
     TA: RuntimeTypeDescriptor = None
 =======
 def partial_clamp(
+=======
+def part_clamp(
+>>>>>>> 68fadb9a (partial -> part)
     bounds: Tuple[Any, Any]
 >>>>>>> 623185bb (fix doctests)
 ):

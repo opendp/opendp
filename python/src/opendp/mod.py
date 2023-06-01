@@ -569,7 +569,7 @@ def binary_search_chain(
     Find a base_laplace measurement with the smallest noise scale that is still (d_in, d_out)-close.
 
     >>> from opendp.mod import binary_search_chain, enable_features
-    >>> from opendp.transformations import partial_clamp, make_resize, make_sized_bounded_mean
+    >>> from opendp.transformations import part_clamp, make_resize, make_sized_bounded_mean
     >>> from opendp.measurements import make_base_laplace
     >>> from opendp.domains import vector_domain, atom_domain
     >>> from opendp.metrics import symmetric_distance
@@ -578,7 +578,7 @@ def binary_search_chain(
     >>> # The majority of the chain only needs to be defined once.
     >>> pre = (
     ...     (vector_domain(atom_domain(T=float)), symmetric_distance()) >>
-    ...     partial_clamp(bounds=(0., 1.)) >>
+    ...     part_clamp(bounds=(0., 1.)) >>
     ...     make_resize(size=10, atom_domain=atom_domain((0., 1.)), constant=0.) >>
     ...     make_sized_bounded_mean(size=10, bounds=(0., 1.))
     ... )
