@@ -10,6 +10,7 @@ __all__ = [
     "domain_carrier_type",
     "domain_debug",
     "domain_type",
+    "map_domain",
     "member",
     "option_domain",
     "vector_domain"
@@ -161,6 +162,36 @@ def domain_type(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+    
+    return output
+
+
+@versioned
+def map_domain(
+    key_domain,
+    value_domain
+):
+    """Construct an instance of `MapDomain`.
+    
+    [map_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.map_domain.html)
+    
+    :param key_domain: domain of keys in the hashmap
+    :param value_domain: domain of values in the hashmap
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_key_domain = py_to_c(key_domain, c_type=Domain, type_name=AnyDomain)
+    c_value_domain = py_to_c(value_domain, c_type=Domain, type_name=AnyDomain)
+    
+    # Call library function.
+    lib_function = lib.opendp_domains__map_domain
+    lib_function.argtypes = [Domain, Domain]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_key_domain, c_value_domain), Domain))
     
     return output
 

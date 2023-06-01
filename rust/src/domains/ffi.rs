@@ -4,13 +4,13 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{Domain, FfiResult},
-    domains::{type_name, AtomDomain, VectorDomain},
+    domains::{type_name, AtomDomain, MapDomain, VectorDomain},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyObject, Downcast},
         util::{self, c_bool, into_c_char_p, Type, TypeContents},
     },
-    traits::{CheckAtom, Float, Integer},
+    traits::{CheckAtom, Float, Hashable, Integer, Primitive},
 };
 
 use super::{Bounds, Null, OptionDomain};
@@ -228,6 +228,7 @@ pub extern "C" fn opendp_domains__option_domain(
     returns(c_type = "FfiResult<AnyDomain *>")
 )]
 /// Construct an instance of `VectorDomain`.
+/// 
 /// # Arguments
 /// * `atom_domain` - The inner domain.
 #[no_mangle]
@@ -252,5 +253,35 @@ pub extern "C" fn opendp_domains__vector_domain(
         TypeContents::GENERIC { name: "AtomDomain", .. } => 
             dispatch!(monomorphize_all, [(atom_domain.carrier_type, @primitives)], (atom_domain, size)),
         _ => fallible!(FFI, "VectorDomain constructors only support AtomDomain inner domains")
+    }.into()
+}
+
+#[bootstrap(name = "map_domain", returns(c_type = "FfiResult<AnyDomain *>"))]
+/// Construct an instance of `MapDomain`.
+/// 
+/// # Arguments
+/// * `key_domain` - domain of keys in the hashmap
+/// * `value_domain` - domain of values in the hashmap
+#[no_mangle]
+pub extern "C" fn opendp_domains__map_domain(
+    key_domain: *const AnyDomain,
+    value_domain: *const AnyDomain,
+) -> FfiResult<*mut AnyDomain> {
+    fn monomorphize<K: Hashable, V: Primitive>(
+        key_domain: &AnyDomain,
+        value_domain: &AnyDomain,
+    ) -> Fallible<AnyDomain> {
+        let key_domain = key_domain.downcast_ref::<AtomDomain<K>>()?.clone();
+        let value_domain = value_domain.downcast_ref::<AtomDomain<V>>()?.clone();
+        let map_domain = MapDomain::new(key_domain, value_domain);
+        Ok(AnyDomain::new(map_domain))
+    }
+    let key_domain = try_as_ref!(key_domain);
+    let value_domain = try_as_ref!(value_domain);
+
+    match (&key_domain.type_.contents, &value_domain.type_.contents) {
+        (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::GENERIC { name: "AtomDomain", .. }) => 
+            dispatch!(monomorphize, [(key_domain.carrier_type, @hashable), (value_domain.carrier_type, @primitives)], (key_domain, value_domain)),
+        _ => fallible!(FFI, "MapDomain constructors only support AtomDomain inner domains")
     }.into()
 }
