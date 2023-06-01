@@ -1,4 +1,3 @@
-#[cfg(feature = "partials")]
 use crate::core::{PartialMeasurement, PartialTransformation};
 
 use crate::{
@@ -9,58 +8,11 @@ use std::ops::Shr;
 
 use super::{make_chain_mt, make_chain_pm, make_chain_tt};
 
+
+
 // CHAINING TRANSFORMATION WITH TRANSFORMATION
-// There are seven impls:
-// 6 for the combinations of
-//   {Transformation, Fallible<Transformation>, PartialTransformation} and
-//   {Transformation, PartialTransformation}
-// Partials are never wrapped in Fallible, so Fallible<PartialTransformation> are not included in the impls.
-// On the RHS, Fallible<Transformation> is not included, because it is trivial to ?-unwrap.
-// The seventh impl is for (MI, MO) >> PartialTransformation chaining.
-
-// Transformation >> Transformation
-impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, DO, MX, MO>> for Transformation<DI, DX, MI, MX>
-where
-    DI: 'static + Domain,
-    DX: 'static + Domain,
-    DO: 'static + Domain,
-    MI: 'static + Metric,
-    MX: 'static + Metric,
-    MO: 'static + Metric,
-    (DI, MI): MetricSpace,
-    (DX, MX): MetricSpace,
-    (DO, MO): MetricSpace,
-{
-    type Output = Fallible<Transformation<DI, DO, MI, MO>>;
-
-    fn shr(self, rhs: Transformation<DX, DO, MX, MO>) -> Self::Output {
-        make_chain_tt(&rhs, &self)
-    }
-}
-
-// Fallible<Transformation> >> Transformation
-impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, DO, MX, MO>>
-    for Fallible<Transformation<DI, DX, MI, MX>>
-where
-    DI: 'static + Domain,
-    DX: 'static + Domain,
-    DO: 'static + Domain,
-    MI: 'static + Metric,
-    MX: 'static + Metric,
-    MO: 'static + Metric,
-    (DI, MI): MetricSpace,
-    (DX, MX): MetricSpace,
-    (DO, MO): MetricSpace,
-{
-    type Output = Fallible<Transformation<DI, DO, MI, MO>>;
-
-    fn shr(self, rhs: Transformation<DX, DO, MX, MO>) -> Self::Output {
-        make_chain_tt(&rhs, &self?)
-    }
-}
 
 // PartialTransformation >> Transformation
-#[cfg(feature = "partials")]
 impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, DO, MX, MO>>
     for PartialTransformation<DI, DX, MI, MX>
 where
@@ -85,7 +37,6 @@ where
 }
 
 // Transformation >> PartialTransformation
-#[cfg(feature = "partials")]
 impl<DI, DX, DO, MI, MX, MO> Shr<PartialTransformation<DX, DO, MX, MO>>
     for Transformation<DI, DX, MI, MX>
 where
@@ -108,7 +59,6 @@ where
 }
 
 // Fallible<Transformation> >> PartialTransformation
-#[cfg(feature = "partials")]
 impl<DI, DX, DO, MI, MX, MO> Shr<PartialTransformation<DX, DO, MX, MO>>
     for Fallible<Transformation<DI, DX, MI, MX>>
 where
@@ -132,7 +82,6 @@ where
 }
 
 // PartialTransformation >> PartialTransformation
-#[cfg(feature = "partials")]
 impl<DI, DX, DO, MI, MX, MO> Shr<PartialTransformation<DX, DO, MX, MO>>
     for PartialTransformation<DI, DX, MI, MX>
 where
@@ -158,7 +107,6 @@ where
 }
 
 // (DI, MI) >> PartialTransformation
-#[cfg(feature = "partials")]
 impl<DI, DO, MI, MO> Shr<PartialTransformation<DI, DO, MI, MO>> for (DI, MI)
 where
     DI: 'static + Domain,
@@ -176,55 +124,9 @@ where
 }
 
 // CHAINING TRANSFORMATION WITH MEASUREMENT
-// There are seven impls:
-// 6 for the combinations of
-//   {Transformation, Fallible<Transformation>, PartialTransformation} and
-//   {Measurement, PartialMeasurement}
-// Partials are never wrapped in Fallible, so Fallible<PartialTransformation> are not included in the impls.
-// On the RHS, Fallible<Measurement> is not included, because it is trivial to ?-unwrap.
-// The seventh impl is for (MI, MO) >> PartialMeasurement chaining.
-
-// Transformation >> Measurement
-impl<DI, DX, TO, MI, MX, MO> Shr<Measurement<DX, TO, MX, MO>> for Transformation<DI, DX, MI, MX>
-where
-    DI: 'static + Domain,
-    DX: 'static + Domain,
-    TO: 'static,
-    MI: 'static + Metric,
-    MX: 'static + Metric,
-    MO: 'static + Measure,
-    (DI, MI): MetricSpace,
-    (DX, MX): MetricSpace,
-{
-    type Output = Fallible<Measurement<DI, TO, MI, MO>>;
-
-    fn shr(self, rhs: Measurement<DX, TO, MX, MO>) -> Self::Output {
-        make_chain_mt(&rhs, &self)
-    }
-}
-
-// Fallible<Transformation> >> Measurement
-impl<DI, DX, TO, MI, MX, MO> Shr<Measurement<DX, TO, MX, MO>>
-    for Fallible<Transformation<DI, DX, MI, MX>>
-where
-    DI: 'static + Domain,
-    DX: 'static + Domain,
-    TO: 'static,
-    MI: 'static + Metric,
-    MX: 'static + Metric,
-    MO: 'static + Measure,
-    (DI, MI): MetricSpace,
-    (DX, MX): MetricSpace,
-{
-    type Output = Fallible<Measurement<DI, TO, MI, MO>>;
-
-    fn shr(self, rhs: Measurement<DX, TO, MX, MO>) -> Self::Output {
-        make_chain_mt(&rhs, &self?)
-    }
-}
-
 // PartialTransformation >> Measurement
-#[cfg(feature = "partials")]
+
+
 impl<DI, DX, TO, MI, MX, MO> Shr<Measurement<DX, TO, MX, MO>>
     for PartialTransformation<DI, DX, MI, MX>
 where
@@ -248,7 +150,6 @@ where
 }
 
 // Transformation >> PartialMeasurement
-#[cfg(feature = "partials")]
 impl<DI, DX, TO, MI, MX, MO> Shr<PartialMeasurement<DX, TO, MX, MO>>
     for Transformation<DI, DX, MI, MX>
 where
@@ -270,7 +171,6 @@ where
 }
 
 // Fallible<Transformation> >> PartialMeasurement
-#[cfg(feature = "partials")]
 impl<DI, DX, TO, MI, MX, MO> Shr<PartialMeasurement<DX, TO, MX, MO>>
     for Fallible<Transformation<DI, DX, MI, MX>>
 where
@@ -293,7 +193,6 @@ where
 }
 
 // PartialTransformation >> PartialMeasurement
-#[cfg(feature = "partials")]
 impl<DI, DX, TO, MI, MX, MO> Shr<PartialMeasurement<DX, TO, MX, MO>>
     for PartialTransformation<DI, DX, MI, MX>
 where
@@ -317,7 +216,6 @@ where
 }
 
 // (DI, MI) >> PartialMeasurement
-#[cfg(feature = "partials")]
 impl<DI, TO, MI, MO> Shr<PartialMeasurement<DI, TO, MI, MO>> for (DI, MI)
 where
     DI: 'static + Domain,
@@ -333,50 +231,9 @@ where
 }
 
 // CHAINING POSTPROCESS WITH MEASUREMENT
-// There are seven impls:
-// 6 for the combinations of
-//   {Measurement, Fallible<Measurement>, PartialMeasurement} and
-//   {Function, Transformation}
-// Partials are never wrapped in Fallible, so Fallible<PartialTransformation> are not included in the impls.
-// On the RHS, Fallible<Measurement> is not included, because it is trivial to ?-unwrap.
-// The seventh impl is for Function >> Function chaining.
 
-// Measurement >> Function
-impl<DI, TX, TO, MI, MO> Shr<Function<TX, TO>> for Measurement<DI, TX, MI, MO>
-where
-    DI: 'static + Domain,
-    TX: 'static,
-    TO: 'static,
-    MI: 'static + Metric,
-    MO: 'static + Measure,
-    (DI, MI): MetricSpace,
-{
-    type Output = Fallible<Measurement<DI, TO, MI, MO>>;
-
-    fn shr(self, rhs: Function<TX, TO>) -> Self::Output {
-        make_chain_pm(&rhs, &self)
-    }
-}
-
-// Fallible<Measurement> >> Function
-impl<DI, TX, TO, MI, MO> Shr<Function<TX, TO>> for Fallible<Measurement<DI, TX, MI, MO>>
-where
-    DI: 'static + Domain,
-    TX: 'static,
-    TO: 'static,
-    MI: 'static + Metric,
-    MO: 'static + Measure,
-    (DI, MI): MetricSpace,
-{
-    type Output = Fallible<Measurement<DI, TO, MI, MO>>;
-
-    fn shr(self, rhs: Function<TX, TO>) -> Self::Output {
-        make_chain_pm(&rhs, &self?)
-    }
-}
 
 // PartialMeasurement >> Function
-#[cfg(feature = "partials")]
 impl<DI, TX, TO, MI, MO> Shr<Function<TX, TO>> for PartialMeasurement<DI, TX, MI, MO>
 where
     DI: 'static + Domain,
@@ -396,51 +253,6 @@ where
     }
 }
 
-// Measurement >> Transformation
-impl<DI, DX, DO, MI, MO, MTI, MTO> Shr<Transformation<DX, DO, MTI, MTO>>
-    for Measurement<DI, DX::Carrier, MI, MO>
-where
-    DI: 'static + Domain,
-    DX: 'static + Domain,
-    DO: 'static + Domain,
-    MI: 'static + Metric,
-    MO: 'static + Measure,
-    MTI: 'static + Metric,
-    MTO: 'static + Metric,
-    (DI, MI): MetricSpace,
-    (DX, MTI): MetricSpace,
-    (DO, MTO): MetricSpace,
-{
-    type Output = Fallible<Measurement<DI, DO::Carrier, MI, MO>>;
-
-    fn shr(self, rhs: Transformation<DX, DO, MTI, MTO>) -> Self::Output {
-        make_chain_pm(&rhs.function, &self)
-    }
-}
-
-// Fallible<Measurement> >> Transformation
-impl<DI, DX, DO, MI, MO, MTI, MTO> Shr<Transformation<DX, DO, MTI, MTO>>
-    for Fallible<Measurement<DI, DX::Carrier, MI, MO>>
-where
-    DI: 'static + Domain,
-    DX: 'static + Domain,
-    DO: 'static + Domain,
-    MI: 'static + Metric,
-    MO: 'static + Measure,
-    MTI: 'static + Metric,
-    MTO: 'static + Metric,
-    (DI, MI): MetricSpace,
-    (DX, MTI): MetricSpace,
-    (DO, MTO): MetricSpace,
-{
-    type Output = Fallible<Measurement<DI, DO::Carrier, MI, MO>>;
-
-    fn shr(self, rhs: Transformation<DX, DO, MTI, MTO>) -> Self::Output {
-        make_chain_pm(&rhs.function, &self?)
-    }
-}
-
-#[cfg(feature = "partials")]
 impl<DI, DX, DO, MI, MO, MTI, MTO> Shr<Transformation<DX, DO, MTI, MTO>>
     for PartialMeasurement<DI, DX::Carrier, MI, MO>
 where
@@ -462,39 +274,5 @@ where
             let lhs = self.fix(input_domain, input_metric)?;
             make_chain_pm(&rhs.function, &lhs)
         })
-    }
-}
-
-// Function >> Function
-impl<TI, TX, TO> Shr<Function<TX, TO>> for Function<TI, TX>
-where
-    TI: 'static,
-    TX: 'static,
-    TO: 'static,
-{
-    type Output = Function<TI, TO>;
-
-    fn shr(self, rhs: Function<TX, TO>) -> Self::Output {
-        Function::make_chain(&rhs, &self)
-    }
-}
-
-#[cfg(test)]
-mod tests_shr {
-    use crate::measurements::make_base_discrete_laplace;
-    use crate::transformations::{
-        make_bounded_sum, make_cast_default, make_clamp, make_split_lines,
-    };
-
-    use super::*;
-
-    #[test]
-    fn test_shr() -> Fallible<()> {
-        (make_split_lines()?
-            >> make_cast_default()?
-            >> make_clamp((0, 1))?
-            >> make_bounded_sum((0, 1))?
-            >> make_base_discrete_laplace(1.)?)
-        .map(|_| ())
     }
 }
