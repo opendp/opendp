@@ -1,8 +1,8 @@
+#[cfg(feature = "partials")]
+use crate::core::{PartialMeasurement, PartialTransformation};
+
 use crate::{
-    core::{
-        Domain, Function, Measure, Measurement, Metric, MetricSpace, PartialMeasurement,
-        PartialTransformation, Transformation,
-    },
+    core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, Transformation},
     error::Fallible,
 };
 use std::ops::Shr;
@@ -60,6 +60,7 @@ where
 }
 
 // PartialTransformation >> Transformation
+#[cfg(feature = "partials")]
 impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, DO, MX, MO>>
     for PartialTransformation<DI, DX, MI, MX>
 where
@@ -84,6 +85,7 @@ where
 }
 
 // Transformation >> PartialTransformation
+#[cfg(feature = "partials")]
 impl<DI, DX, DO, MI, MX, MO> Shr<PartialTransformation<DX, DO, MX, MO>>
     for Transformation<DI, DX, MI, MX>
 where
@@ -106,6 +108,7 @@ where
 }
 
 // Fallible<Transformation> >> PartialTransformation
+#[cfg(feature = "partials")]
 impl<DI, DX, DO, MI, MX, MO> Shr<PartialTransformation<DX, DO, MX, MO>>
     for Fallible<Transformation<DI, DX, MI, MX>>
 where
@@ -129,6 +132,7 @@ where
 }
 
 // PartialTransformation >> PartialTransformation
+#[cfg(feature = "partials")]
 impl<DI, DX, DO, MI, MX, MO> Shr<PartialTransformation<DX, DO, MX, MO>>
     for PartialTransformation<DI, DX, MI, MX>
 where
@@ -154,6 +158,7 @@ where
 }
 
 // (DI, MI) >> PartialTransformation
+#[cfg(feature = "partials")]
 impl<DI, DO, MI, MO> Shr<PartialTransformation<DI, DO, MI, MO>> for (DI, MI)
 where
     DI: 'static + Domain,
@@ -219,6 +224,7 @@ where
 }
 
 // PartialTransformation >> Measurement
+#[cfg(feature = "partials")]
 impl<DI, DX, TO, MI, MX, MO> Shr<Measurement<DX, TO, MX, MO>>
     for PartialTransformation<DI, DX, MI, MX>
 where
@@ -242,6 +248,7 @@ where
 }
 
 // Transformation >> PartialMeasurement
+#[cfg(feature = "partials")]
 impl<DI, DX, TO, MI, MX, MO> Shr<PartialMeasurement<DX, TO, MX, MO>>
     for Transformation<DI, DX, MI, MX>
 where
@@ -263,6 +270,7 @@ where
 }
 
 // Fallible<Transformation> >> PartialMeasurement
+#[cfg(feature = "partials")]
 impl<DI, DX, TO, MI, MX, MO> Shr<PartialMeasurement<DX, TO, MX, MO>>
     for Fallible<Transformation<DI, DX, MI, MX>>
 where
@@ -285,6 +293,7 @@ where
 }
 
 // PartialTransformation >> PartialMeasurement
+#[cfg(feature = "partials")]
 impl<DI, DX, TO, MI, MX, MO> Shr<PartialMeasurement<DX, TO, MX, MO>>
     for PartialTransformation<DI, DX, MI, MX>
 where
@@ -308,6 +317,7 @@ where
 }
 
 // (DI, MI) >> PartialMeasurement
+#[cfg(feature = "partials")]
 impl<DI, TO, MI, MO> Shr<PartialMeasurement<DI, TO, MI, MO>> for (DI, MI)
 where
     DI: 'static + Domain,
@@ -366,6 +376,7 @@ where
 }
 
 // PartialMeasurement >> Function
+#[cfg(feature = "partials")]
 impl<DI, TX, TO, MI, MO> Shr<Function<TX, TO>> for PartialMeasurement<DI, TX, MI, MO>
 where
     DI: 'static + Domain,
@@ -429,6 +440,7 @@ where
     }
 }
 
+#[cfg(feature = "partials")]
 impl<DI, DX, DO, MI, MO, MTI, MTO> Shr<Transformation<DX, DO, MTI, MTO>>
     for PartialMeasurement<DI, DX::Carrier, MI, MO>
 where

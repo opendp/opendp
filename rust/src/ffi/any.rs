@@ -10,7 +10,7 @@ use std::any::Any;
 use std::fmt::{Debug, Formatter};
 
 use crate::core::{
-    Domain, Function, Measure, Measurement, Metric, MetricSpace, PartialTransformation, PrivacyMap,
+    Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap,
     StabilityMap, Transformation,
 };
 use crate::error::*;
@@ -550,31 +550,6 @@ where
             self.stability_map.clone().into_any(),
         )
         .expect("AnyDomain is not checked")
-    }
-}
-
-pub type AnyPartialTransformation =
-    PartialTransformation<AnyDomain, AnyDomain, AnyMetric, AnyMetric>;
-
-impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
-    PartialTransformation<DI, DO, MI, MO>
-where
-    DI::Carrier: 'static,
-    DO::Carrier: 'static,
-    MI::Distance: 'static,
-    MO::Distance: 'static,
-    (DI, MI): MetricSpace,
-    (DO, MO): MetricSpace,
-{
-    pub fn into_any(self) -> AnyPartialTransformation {
-        AnyPartialTransformation::new(move |input_domain, input_metric| {
-            Ok(self
-                .fix(
-                    input_domain.downcast::<DI>()?,
-                    input_metric.downcast::<MI>()?,
-                )?
-                .into_any())
-        })
     }
 }
 

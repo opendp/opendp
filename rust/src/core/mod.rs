@@ -307,12 +307,12 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
     }
 }
 
+#[cfg(feature = "partials")]
 pub struct PartialMeasurement<DI: Domain, TO, MI: Metric, MO: Measure>(
     Box<dyn FnOnce(DI, MI) -> Fallible<Measurement<DI, TO, MI, MO>>>,
-)
-where
-    (DI, MI): MetricSpace;
+);
 
+#[cfg(feature = "partials")]
 impl<DI: Domain, TO, MI: Metric, MO: Measure> PartialMeasurement<DI, TO, MI, MO>
 where
     (DI, MI): MetricSpace,
@@ -423,13 +423,12 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
     }
 }
 
+#[cfg(feature = "partials")]
 pub struct PartialTransformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric>(
     Box<dyn FnOnce(DI, MI) -> Fallible<Transformation<DI, DO, MI, MO>>>,
-)
-where
-    (DI, MI): MetricSpace,
-    (DO, MO): MetricSpace;
+);
 
+#[cfg(feature = "partials")]
 impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> PartialTransformation<DI, DO, MI, MO>
 where
     (DI, MI): MetricSpace,
