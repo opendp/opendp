@@ -588,16 +588,11 @@ mod partials {
         }
     }
 
-
     pub type AnyPartialMeasurement =
         PartialMeasurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>;
 
-    impl<
-            DI: 'static + Domain,
-            TO: 'static,
-            MI: 'static + Metric,
-            MO: 'static + Measure,
-        > PartialMeasurement<DI, TO, MI, MO>
+    impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
+        PartialMeasurement<DI, TO, MI, MO>
     where
         DI::Carrier: 'static,
         MI::Distance: 'static,

@@ -122,8 +122,8 @@ where
 }
 
 // CHAINING TRANSFORMATION WITH MEASUREMENT
-// PartialTransformation >> Measurement
 
+// PartialTransformation >> Measurement
 impl<DI, DX, TO, MI, MX, MO> Shr<Measurement<DX, TO, MX, MO>>
     for PartialTransformation<DI, DX, MI, MX>
 where
