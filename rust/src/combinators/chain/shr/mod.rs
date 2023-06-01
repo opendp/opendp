@@ -199,20 +199,6 @@ where
     }
 }
 
-// Function >> Function
-impl<TI, TX, TO> Shr<Function<TX, TO>> for Function<TI, TX>
-where
-    TI: 'static,
-    TX: 'static,
-    TO: 'static,
-{
-    type Output = Function<TI, TO>;
-
-    fn shr(self, rhs: Function<TX, TO>) -> Self::Output {
-        Function::make_chain(&rhs, &self)
-    }
-}
-
 #[cfg(test)]
 mod tests_shr {
     use crate::measurements::make_base_discrete_laplace;

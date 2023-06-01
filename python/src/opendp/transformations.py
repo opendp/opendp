@@ -57,15 +57,7 @@ __all__ = [
     "make_split_records",
     "make_subset_by",
     "make_unordered",
-<<<<<<< HEAD
-<<<<<<< HEAD
     "part_clamp"
-=======
-    "partial_clamp"
->>>>>>> f6415b02 (debug python)
-=======
-    "part_clamp"
->>>>>>> 68fadb9a (partial -> part)
 ]
 
 
@@ -694,20 +686,9 @@ def make_cdf(
 
 @versioned
 def make_clamp(
-<<<<<<< HEAD
-    input_domain,
-    input_metric,
-=======
     input_domain: Domain,
     input_metric: Metric,
-<<<<<<< HEAD
->>>>>>> f6415b02 (debug python)
-    bounds: Tuple[Any, Any],
-    M: RuntimeTypeDescriptor,
-    TA: RuntimeTypeDescriptor = None
-=======
     bounds: Tuple[Any, Any]
->>>>>>> 623185bb (fix doctests)
 ) -> Transformation:
     """Make a Transformation that clamps numeric data in `Vec<TA>` to `bounds`.
     
@@ -726,10 +707,7 @@ def make_clamp(
     :param input_domain: Domain of input data.
     :type input_domain: Domain
     :param input_metric: Metric on input domain.
-<<<<<<< HEAD
-=======
     :type input_metric: Metric
->>>>>>> f6415b02 (debug python)
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
     :rtype: Transformation
@@ -740,29 +718,11 @@ def make_clamp(
     assert_features("contrib")
     
     # Standardize type arguments.
-<<<<<<< HEAD
-<<<<<<< HEAD
-    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
-    M = RuntimeType.parse(type_name=M)
-    
-    # Convert arguments to c types.
-    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
-    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
-=======
-    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_atom(get_type(input_domain)))
-    M = RuntimeType.parse_or_infer(type_name=M, public_example=input_metric)
-    
-    # Convert arguments to c types.
-    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=RuntimeType(origin='VectorDomain', args=[RuntimeType(origin='AtomDomain', args=[TA])]))
-    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=M)
->>>>>>> f6415b02 (debug python)
-=======
     TA = get_atom(get_type(input_domain))
     
     # Convert arguments to c types.
     c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
     c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
->>>>>>> 623185bb (fix doctests)
     c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
     
     # Call library function.
@@ -774,19 +734,8 @@ def make_clamp(
     
     return output
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 def part_clamp(
-    bounds: Tuple[Any, Any],
-    M: RuntimeTypeDescriptor,
-    TA: RuntimeTypeDescriptor = None
-=======
-def partial_clamp(
-=======
-def part_clamp(
->>>>>>> 68fadb9a (partial -> part)
     bounds: Tuple[Any, Any]
->>>>>>> 623185bb (fix doctests)
 ):
     return PartialConstructor(lambda input_domain, input_metric: make_clamp(
         input_domain=input_domain,
