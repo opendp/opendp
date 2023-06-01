@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 CARGO         = cargo
 SPHINXAPIDOC  = sphinx-apidoc
-SPHINXOPTS    = -W
+SPHINXOPTS    = -W --keep-going
 SPHINXBUILD   = sphinx-build
 SPHINXMULTI   = sphinx-multiversion
 PAPER         =
@@ -27,6 +27,7 @@ clean:
 	rm -rf $(BUILDDIR)/* source/api/python source/api/rust
 
 html:
+	@set -e
 	$(SPHINXAPIDOC) -f -F -e -H "OpenDP" -A "The OpenDP Project" -V $(VERSION) -o source/api/python ../python/src/opendp --templatedir source/_templates
 	# TODO: Figure out how to link locally generated Rust docs into sphinx structure.
 	# 	cd ../rust && $(CARGO) doc --no-deps --target-dir ../docs/source/api/rust

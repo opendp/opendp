@@ -91,7 +91,7 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
             raise TypeError(f"no default metric for domain {D}. Please set `M`")
 
     # choose a distance type if not set
-    if isinstance(M, ty.RuntimeType) and M.args is None:
+    if isinstance(M, ty.RuntimeType) and not M.args:
         M = M[ty.get_atom(D)]
 
     return domain, metric_of(M)

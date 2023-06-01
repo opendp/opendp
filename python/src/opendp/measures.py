@@ -21,11 +21,12 @@ __all__ = [
 def _measure_free(
     this
 ):
-    """Internal function. Free the memory associated with `this`.
+    r"""Internal function. Free the memory associated with `this`.
     
     [_measure_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn._measure_free.html)
     
     :param this: 
+    :type this: Measure
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -47,13 +48,14 @@ def _measure_free(
 @versioned
 def fixed_smoothed_max_divergence(
     T: RuntimeTypeDescriptor
-):
-    """Construct an instance of the `FixedSmoothedMaxDivergence` measure.
+) -> Measure:
+    r"""Construct an instance of the `FixedSmoothedMaxDivergence` measure.
     
     [fixed_smoothed_max_divergence in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.fixed_smoothed_max_divergence.html)
     
     :param T: 
     :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measure
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -77,13 +79,14 @@ def fixed_smoothed_max_divergence(
 @versioned
 def max_divergence(
     T: RuntimeTypeDescriptor
-):
-    """Construct an instance of the `MaxDivergence` measure.
+) -> Measure:
+    r"""Construct an instance of the `MaxDivergence` measure.
     
     [max_divergence in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.max_divergence.html)
     
     :param T: 
     :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measure
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -106,13 +109,14 @@ def max_divergence(
 
 @versioned
 def measure_debug(
-    this
+    this: Measure
 ) -> str:
-    """Debug a `measure`.
+    r"""Debug a `measure`.
     
     [measure_debug in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.measure_debug.html)
     
     :param this: The measure to debug (stringify).
+    :type this: Measure
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -134,13 +138,14 @@ def measure_debug(
 
 @versioned
 def measure_distance_type(
-    this
+    this: Measure
 ) -> str:
-    """Get the distance type of a `measure`.
+    r"""Get the distance type of a `measure`.
     
     [measure_distance_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.measure_distance_type.html)
     
     :param this: The measure to retrieve the distance type from.
+    :type this: Measure
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -162,13 +167,14 @@ def measure_distance_type(
 
 @versioned
 def measure_type(
-    this
+    this: Measure
 ) -> str:
-    """Get the type of a `measure`.
+    r"""Get the type of a `measure`.
     
     [measure_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.measure_type.html)
     
     :param this: The measure to retrieve the type from.
+    :type this: Measure
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -191,13 +197,14 @@ def measure_type(
 @versioned
 def smoothed_max_divergence(
     T: RuntimeTypeDescriptor
-):
-    """Construct an instance of the `SmoothedMaxDivergence` measure.
+) -> Measure:
+    r"""Construct an instance of the `SmoothedMaxDivergence` measure.
     
     [smoothed_max_divergence in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.smoothed_max_divergence.html)
     
     :param T: 
     :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measure
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -221,14 +228,15 @@ def smoothed_max_divergence(
 @versioned
 def user_divergence(
     descriptor: str
-):
-    """Construct a new UserDivergence.
+) -> Measure:
+    r"""Construct a new UserDivergence.
     Any two instances of an UserDivergence are equal if their string descriptors are equal.
     
     [user_divergence in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.user_divergence.html)
     
     :param descriptor: A string description of the privacy measure.
     :type descriptor: str
+    :rtype: Measure
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -252,13 +260,14 @@ def user_divergence(
 @versioned
 def zero_concentrated_divergence(
     T: RuntimeTypeDescriptor
-):
-    """Construct an instance of the `ZeroConcentratedDivergence` measure.
+) -> Measure:
+    r"""Construct an instance of the `ZeroConcentratedDivergence` measure.
     
     [zero_concentrated_divergence in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.zero_concentrated_divergence.html)
     
     :param T: 
     :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measure
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library

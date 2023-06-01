@@ -4,3 +4,7 @@ requires = [
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.pyright]
+include = ["src", "test", "../docs/source"]
+reportWildcardImportFromLibrary = false

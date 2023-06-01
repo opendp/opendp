@@ -205,7 +205,7 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                 i if i == "AnyTransformation" => "AnyTransformation *".to_string(),
                 i if i == "AnyMeasurement" => "AnyMeasurement *".to_string(),
                 i if i == "AnyQueryable" => "AnyQueryable *".to_string(),
-                i if i == "AnyDomain" => "AnyDomain *".to_string(),
+                i if i.ends_with("Domain") => "AnyDomain *".to_string(),
                 i if i == "AnyMetric" => "AnyMetric *".to_string(),
                 i if i == "AnyMeasure" => "AnyMeasure *".to_string(),
                 i if i == "CallbackFn" => "CallbackFn".to_string(),

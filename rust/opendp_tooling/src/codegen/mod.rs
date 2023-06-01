@@ -94,6 +94,15 @@ impl Argument {
             if c_type.ends_with("AnyFunction *") {
                 return Some("Function".to_string());
             }
+            if c_type.ends_with("AnyDomain *") {
+                return Some("Domain".to_string());
+            }
+            if c_type.ends_with("Metric *") {
+                return Some("Metric".to_string());
+            }
+            if c_type.ends_with("AnyMeasure *") {
+                return Some("Measure".to_string());
+            }
             if c_type.ends_with("AnyObject *") {
                 // py_to_object converts Any to AnyObjectPtr
                 return Some("Any".to_string());
