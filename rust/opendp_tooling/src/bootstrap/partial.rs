@@ -11,11 +11,7 @@ pub fn generate_partial(mut item_fn: ItemFn) -> Option<ItemFn> {
 
     // update function name
     item_fn.sig.ident = syn::Ident::new(
-        &item_fn
-            .sig
-            .ident
-            .to_string()
-            .replacen("make_", "part_", 1),
+        &item_fn.sig.ident.to_string().replacen("make_", "part_", 1),
         item_fn.sig.ident.span(),
     );
 

@@ -1,4 +1,3 @@
-
 #[cfg(feature = "partials")]
 mod partials;
 
@@ -15,7 +14,7 @@ use super::{make_chain_mt, make_chain_pm, make_chain_tt};
 // 6 for the combinations of
 //   {Transformation, Fallible<Transformation>, PartialTransformation} and
 //   {Transformation, PartialTransformation}
-// 
+//
 // Partial impls are in the partials.rs module.
 // Partials are never wrapped in Fallible, so Fallible<PartialTransformation> are not included in the impls.
 // On the RHS, Fallible<Transformation> is not included, because it is trivial to ?-unwrap.
@@ -67,7 +66,7 @@ where
 // 6 for the combinations of
 //   {Transformation, Fallible<Transformation>, PartialTransformation} and
 //   {Measurement, PartialMeasurement}
-// 
+//
 // Partial impls are in the partials.rs module.
 // Partials are never wrapped in Fallible, so Fallible<PartialTransformation> are not included in the impls.
 // On the RHS, Fallible<Measurement> is not included, because it is trivial to ?-unwrap.
@@ -116,7 +115,7 @@ where
 // 6 for the combinations of
 //   {Measurement, Fallible<Measurement>, PartialMeasurement} and
 //   {Function, Transformation}
-// 
+//
 // Partial impls are in the partials.rs module.
 // Partials are never wrapped in Fallible, so Fallible<PartialTransformation> are not included in the impls.
 // On the RHS, Fallible<Measurement> is not included, because it is trivial to ?-unwrap.

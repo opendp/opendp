@@ -8,8 +8,6 @@ use std::ops::Shr;
 
 use super::{make_chain_mt, make_chain_pm, make_chain_tt};
 
-
-
 // CHAINING TRANSFORMATION WITH TRANSFORMATION
 
 // PartialTransformation >> Transformation
@@ -126,7 +124,6 @@ where
 // CHAINING TRANSFORMATION WITH MEASUREMENT
 // PartialTransformation >> Measurement
 
-
 impl<DI, DX, TO, MI, MX, MO> Shr<Measurement<DX, TO, MX, MO>>
     for PartialTransformation<DI, DX, MI, MX>
 where
@@ -231,7 +228,6 @@ where
 }
 
 // CHAINING POSTPROCESS WITH MEASUREMENT
-
 
 // PartialMeasurement >> Function
 impl<DI, TX, TO, MI, MO> Shr<Function<TX, TO>> for PartialMeasurement<DI, TX, MI, MO>

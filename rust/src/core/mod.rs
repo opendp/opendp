@@ -307,7 +307,6 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
     }
 }
 
-
 pub trait MetricSpace {
     fn check(&self) -> bool;
     fn assert_compatible(&self) -> Fallible<()> {
@@ -438,11 +437,10 @@ mod tests {
 mod partials {
     pub use super::*;
 
-
     pub struct PartialTransformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric>(
         Box<dyn FnOnce(DI, MI) -> Fallible<Transformation<DI, DO, MI, MO>>>,
     );
-    
+
     impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> PartialTransformation<DI, DO, MI, MO>
     where
         (DI, MI): MetricSpace,
@@ -475,7 +473,11 @@ mod partials {
         ) -> Self {
             Self(Box::new(partial))
         }
-        pub fn fix(self, input_domain: DI, input_metric: MI) -> Fallible<Measurement<DI, TO, MI, MO>> {
+        pub fn fix(
+            self,
+            input_domain: DI,
+            input_metric: MI,
+        ) -> Fallible<Measurement<DI, TO, MI, MO>> {
             (self.0)(input_domain, input_metric)
         }
     }
