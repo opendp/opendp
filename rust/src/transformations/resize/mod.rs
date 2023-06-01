@@ -88,7 +88,7 @@ where
                     if !MI::ORDERED {
                         data.shuffle()?;
                     }
-                    arg[..size].to_vec()
+                    data[..size].to_vec()
                 }
             })
         }),

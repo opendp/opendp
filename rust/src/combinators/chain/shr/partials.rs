@@ -122,8 +122,8 @@ where
 }
 
 // CHAINING TRANSFORMATION WITH MEASUREMENT
-// PartialTransformation >> Measurement
 
+// PartialTransformation >> Measurement
 impl<DI, DX, TO, MI, MX, MO> Shr<Measurement<DX, TO, MX, MO>>
     for PartialTransformation<DI, DX, MI, MX>
 where
@@ -270,5 +270,25 @@ where
             let lhs = self.fix(input_domain, input_metric)?;
             make_chain_pm(&rhs.function, &lhs)
         })
+    }
+}
+
+#[cfg(all(test, feature = "partials"))]
+mod tests_shr {
+    use crate::measurements::make_base_discrete_laplace;
+    use crate::transformations::{
+        make_bounded_sum, make_cast_default, make_split_lines, part_clamp,
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_shr() -> Fallible<()> {
+        (make_split_lines()?
+            >> make_cast_default()?
+            >> part_clamp((0, 1))
+            >> make_bounded_sum((0, 1))?
+            >> make_base_discrete_laplace(1.)?)
+        .map(|_| ())
     }
 }

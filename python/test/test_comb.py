@@ -27,9 +27,9 @@ def test_make_basic_composition():
         dp.t.make_count(TIA=int, TO=int) >> dp.c.make_basic_composition([
             dp.m.make_base_discrete_laplace(scale=2.), 
             dp.m.make_base_discrete_laplace(scale=200.)
-        ]), 
+        ]),
         dp.t.make_cast_default(int, bool) >> dp.t.make_cast_default(bool, int) >> dp.t.make_count(TIA=int, TO=int) >> dp.m.make_base_discrete_laplace(scale=2.), 
-        dp.t.make_cast_default(int, float) >> dp.t.make_clamp((0., 10.)) >> dp.t.make_bounded_sum((0., 10.)) >> dp.m.make_base_laplace(scale=2.), 
+        dp.t.make_cast_default(int, float) >> dp.t.part_clamp((0., 10.)) >> dp.t.make_bounded_sum((0., 10.)) >> dp.m.make_base_laplace(scale=2.), 
 
         dp.c.make_basic_composition([
             dp.t.make_count(TIA=int, TO=int) >> dp.m.make_base_discrete_laplace(scale=2.), 

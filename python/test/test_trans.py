@@ -164,10 +164,18 @@ def test_split_dataframe():
 
 
 def test_clamp():
-    from opendp.transformations import make_clamp
-    query = make_clamp(bounds=(-1, 1))
+    from opendp.transformations import part_clamp, make_clamp
+    from opendp.domains import vector_domain, atom_domain
+    from opendp.metrics import symmetric_distance
+    input_domain = vector_domain(atom_domain(T=int))
+    input_metric = symmetric_distance()
+    query = (input_domain, input_metric) >> part_clamp(bounds=(-1, 1))
     assert query([-10, 0, 10]) == [-1, 0, 1]
     assert query.check(1, 1)
+
+    query2 = make_clamp(input_domain, input_metric, bounds=(-1, 1))
+    assert query2([-10, 0, 10]) == [-1, 0, 1]
+    assert query2.check(1, 1)
 
 
 def test_bounded_mean():

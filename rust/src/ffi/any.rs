@@ -588,16 +588,11 @@ mod partials {
         }
     }
 
-
     pub type AnyPartialMeasurement =
         PartialMeasurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>;
 
-    impl<
-            DI: 'static + Domain,
-            TO: 'static,
-            MI: 'static + Metric,
-            MO: 'static + Measure,
-        > PartialMeasurement<DI, TO, MI, MO>
+    impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
+        PartialMeasurement<DI, TO, MI, MO>
     where
         DI::Carrier: 'static,
         MI::Distance: 'static,
@@ -628,10 +623,8 @@ mod tests {
 
     use crate::domains::AtomDomain;
     use crate::error::*;
-    use crate::measurements;
     use crate::measures::{MaxDivergence, SmoothedMaxDivergence};
     use crate::metrics::{ChangeOneDistance, SymmetricDistance};
-    use crate::transformations;
 
     use super::*;
 
@@ -698,14 +691,15 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(feature = "use-mpfr")]
+    #[cfg(all(feature = "use-mpfr", feature = "partials"))]
     #[test]
     fn test_any_chain() -> Fallible<()> {
+        use crate::{transformations, measurements};
         let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?
             .into_any();
         let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
         let t3 = transformations::make_cast_default::<String, f64>()?.into_any();
-        let t4 = transformations::make_clamp((0.0, 10.0))?.into_any();
+        let t4 = transformations::part_clamp::<_, SymmetricDistance>((0.0, 10.0)).into_any();
         let t5 = transformations::make_bounded_sum::<SymmetricDistance, _>((0.0, 10.0))?.into_any();
         let m1 = measurements::make_base_laplace::<AtomDomain<_>>(0.0, None)?.into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
