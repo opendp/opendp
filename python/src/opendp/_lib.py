@@ -1,12 +1,12 @@
 import ctypes
 import os
 import sys
-from typing import Optional, Any
+from typing import Dict, List, Optional, Any
 import re
 
 
 # list all acceptable alternative types for each default type
-ATOM_EQUIVALENCE_CLASSES = {
+ATOM_EQUIVALENCE_CLASSES: Dict[str, List[str]] = {
     'i32': ['u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64', 'usize'],
     'f64': ['f32', 'f64'],
     'bool': ['bool'],
@@ -30,10 +30,10 @@ if os.path.exists(lib_dir):
         raise Exception("Platform not supported", sys.platform)
     lib_name = platform_to_name[sys.platform]
 
-    lib = ctypes.cdll.LoadLibrary(os.path.join(lib_dir, lib_name))
+    lib: Any = ctypes.cdll.LoadLibrary(os.path.join(lib_dir, lib_name))
 
 elif os.environ.get('OPENDP_HEADLESS', "false") != "false":
-    lib = None
+    lib: Any = None
 
 else:
     raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
@@ -135,7 +135,8 @@ class FfiResult(ctypes.Structure):
 # def _str_to_c_char_p(s: Optional[str]) -> Optional[bytes]:
 #     return s and s.encode("utf-8")
 def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
-    return s and s.decode("utf-8")
+    if s is not None:
+        return s.decode("utf-8")
 
 
 def unwrap(result, type_) -> Any:
@@ -150,7 +151,7 @@ def unwrap(result, type_) -> Any:
 
     err = result.payload.Err
     err_contents = err.contents
-    variant = _c_char_p_to_str(err_contents.variant)
+    variant = _c_char_p_to_str(err_contents.variant) or "Core"
     message = _c_char_p_to_str(err_contents.message)
     backtrace = _c_char_p_to_str(err_contents.backtrace)
 

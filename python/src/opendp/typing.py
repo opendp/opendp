@@ -1,12 +1,13 @@
 import sys
 import typing
 from collections.abc import Hashable
-from typing import Union, Any, Type, List
+from typing import Dict, Optional, Union, Any, Type, List
 
-from opendp.mod import UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
+from opendp.mod import Function, UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES
 
-ELEMENTARY_TYPES = {
+
+ELEMENTARY_TYPES: Dict[Any, str] = {
     int: 'i32',
     float: 'f64',
     str: 'String',
@@ -50,8 +51,8 @@ PRIMITIVE_TYPES = NUMERIC_TYPES | {"bool", "String"}
 RuntimeTypeDescriptor = Union[
     "RuntimeType",  # as the normalized type -- ChangeOneDistance; RuntimeType.parse("i32")
     str,  # plaintext string in terms of Rust types -- "Vec<i32>"
-    Type[Union[typing.List, typing.Tuple, int, float, str, bool]],  # using the Python type class itself -- int, float
-    tuple,  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, List[int])
+    Type[Union[typing.List[Any], typing.Tuple[Any, Any], int, float, str, bool]],  # using the Python type class itself -- int, float
+    typing.Tuple["RuntimeTypeDescriptor", ...],  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, List[int])
 ]
 
 if sys.version_info >= (3, 8):
@@ -65,7 +66,7 @@ if sys.version_info >= (3, 9):
     RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (GenericAlias,)
 
 
-def set_default_int_type(T: RuntimeTypeDescriptor):
+def set_default_int_type(T: RuntimeTypeDescriptor) -> None:
     """Set the default integer type throughout the library.
     This function is particularly useful when building computation chains with constructors.
     When you build a computation chain, any unspecified integer types default to this int type.
@@ -76,13 +77,14 @@ def set_default_int_type(T: RuntimeTypeDescriptor):
     :type T: :ref:`RuntimeTypeDescriptor`
     """
     equivalence_class = ATOM_EQUIVALENCE_CLASSES[ELEMENTARY_TYPES[int]]
+    T = RuntimeType.parse(T)
     assert T in equivalence_class, f"T must be one of {equivalence_class}"
 
     ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(ELEMENTARY_TYPES[int])
     ELEMENTARY_TYPES[int] = T
 
 
-def set_default_float_type(T: RuntimeTypeDescriptor):
+def set_default_float_type(T: RuntimeTypeDescriptor) -> None:
     """Set the default float type throughout the library.
     This function is particularly useful when building computation chains with constructors.
     When you build a computation chain, any unspecified float types default to this float type.
@@ -94,6 +96,7 @@ def set_default_float_type(T: RuntimeTypeDescriptor):
     """
 
     equivalence_class = ATOM_EQUIVALENCE_CLASSES[ELEMENTARY_TYPES[float]]
+    T = RuntimeType.parse(T)
     assert T in equivalence_class, f"T must be a float type in {equivalence_class}"
 
     ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(ELEMENTARY_TYPES[float])
@@ -103,12 +106,14 @@ def set_default_float_type(T: RuntimeTypeDescriptor):
 class RuntimeType(object):
     """Utility for validating, manipulating, inferring and parsing/normalizing type information.
     """
+    origin: str
+    args: List[Union["RuntimeType", str]]
 
     def __init__(self, origin, args=None):
         if not isinstance(origin, str):
             raise ValueError("origin must be a string", origin)
         self.origin = origin
-        self.args = args
+        self.args = args or []
 
     def __eq__(self, other):
         if isinstance(other, str):
@@ -126,7 +131,7 @@ class RuntimeType(object):
         return result
 
     @classmethod
-    def parse(cls, type_name: RuntimeTypeDescriptor, generics: List[str] = None) -> Union["RuntimeType", str]:
+    def parse(cls, type_name: RuntimeTypeDescriptor, generics: Optional[List[str]] = None) -> Union["RuntimeType", str]:
         """Parse type descriptor into a normalized Rust type.
 
         Type descriptor may be expressed as:
@@ -240,7 +245,7 @@ class RuntimeType(object):
         raise UnknownTypeException(f"unable to parse type: {type_name}")
 
     @classmethod
-    def _parse_args(cls, args, generics=None):
+    def _parse_args(cls, args, generics: Optional[List[str]] = None):
         import re
         return [cls.parse(v, generics=generics) for v in re.split(r",\s*(?![^()<>]*\))", args)]
 
@@ -319,7 +324,7 @@ class RuntimeType(object):
             cls,
             type_name: RuntimeTypeDescriptor = None,
             public_example: Any = None,
-            generics: List[str] = None
+            generics: Optional[List[str]] = None
     ) -> Union["RuntimeType", str]:
         """If type_name is supplied, normalize it. Otherwise, infer the normalized type from a public example.
 
@@ -383,7 +388,7 @@ class RuntimeType(object):
             # inferred type differs in structure
             raise TypeError(f"inferred type is {inferred}, expected {expected}. See {ERROR_URL_298}")
 
-    def substitute(self, **kwargs):
+    def substitute(self: Union["RuntimeType", str], **kwargs):
         if isinstance(self, GenericType):
             return kwargs.get(self.origin, self)
         if isinstance(self, RuntimeType):
@@ -400,9 +405,12 @@ class UnknownType(RuntimeType):
     """Indicator for a type that cannot be inferred. Typically the atomic type of an empty list.
     RuntimeTypes containing UnknownType cannot be used in FFI, but still pass RuntimeType.assert_is_similar
     """
+    origin: None
+    args: None
+
     def __init__(self, reason):
         self.origin = None
-        self.args = []
+        self.args = None
         self.reason = reason
 
     def __str__(self):
@@ -425,9 +433,9 @@ class SensitivityMetric(RuntimeType):
         return SensitivityMetric(self.origin, [self.parse(type_name=associated_type)])
 
 
-AbsoluteDistance = SensitivityMetric('AbsoluteDistance')
-L1Distance = SensitivityMetric('L1Distance')
-L2Distance = SensitivityMetric('L2Distance')
+AbsoluteDistance: SensitivityMetric = SensitivityMetric('AbsoluteDistance')
+L1Distance: SensitivityMetric = SensitivityMetric('L1Distance')
+L2Distance: SensitivityMetric = SensitivityMetric('L2Distance')
 
 
 class PrivacyMeasure(RuntimeType):
@@ -438,10 +446,10 @@ class PrivacyMeasure(RuntimeType):
         return PrivacyMeasure(self.origin, [self.parse(type_name=associated_type)])
 
 
-MaxDivergence = PrivacyMeasure('MaxDivergence')
-SmoothedMaxDivergence = PrivacyMeasure('SmoothedMaxDivergence')
-FixedSmoothedMaxDivergence = PrivacyMeasure('FixedSmoothedMaxDivergence')
-ZeroConcentratedDivergence = PrivacyMeasure('ZeroConcentratedDivergence')
+MaxDivergence: PrivacyMeasure = PrivacyMeasure('MaxDivergence')
+SmoothedMaxDivergence: PrivacyMeasure = PrivacyMeasure('SmoothedMaxDivergence')
+FixedSmoothedMaxDivergence: PrivacyMeasure = PrivacyMeasure('FixedSmoothedMaxDivergence')
+ZeroConcentratedDivergence: PrivacyMeasure = PrivacyMeasure('ZeroConcentratedDivergence')
 
 class Carrier(RuntimeType):
     def __getitem__(self, subdomains):
@@ -450,25 +458,25 @@ class Carrier(RuntimeType):
         return Carrier(self.origin, [self.parse(type_name=subdomain) for subdomain in subdomains])
 
 
-Vec = Carrier('Vec')
-HashMap = Carrier('HashMap')
-i8 = 'i8'
-i16 = 'i16'
-i32 = 'i32'
-i64 = 'i64'
-i128 = 'i128'
-isize = 'isize'
-u8 = 'u8'
-u16 = 'u16'
-u32 = 'u32'
-u64 = 'u64'
-u128 = 'u128'
-usize = 'usize'
-f32 = 'f32'
-f64 = 'f64'
-String = 'String'
-AnyMeasurementPtr = "AnyMeasurementPtr"
-AnyTransformationPtr = "AnyTransformationPtr"
+Vec: Carrier = Carrier('Vec')
+HashMap: Carrier = Carrier('HashMap')
+i8: str = 'i8'
+i16: str = 'i16'
+i32: str = 'i32'
+i64: str = 'i64'
+i128: str = 'i128'
+isize: str = 'isize'
+u8: str = 'u8'
+u16: str = 'u16'
+u32: str = 'u32'
+u64: str = 'u64'
+u128: str = 'u128'
+usize: str = 'usize'
+f32: str = 'f32'
+f64: str = 'f64'
+String: str = 'String'
+AnyMeasurementPtr: str = "AnyMeasurementPtr"
+AnyTransformationPtr: str = "AnyTransformationPtr"
 
 
 class DomainDescriptor(RuntimeType):
@@ -478,10 +486,11 @@ class DomainDescriptor(RuntimeType):
         return DomainDescriptor(self.origin, [self.parse(type_name=sub_i) for sub_i in subdomain])    
 
 
-AtomDomain = DomainDescriptor('AtomDomain')
-VectorDomain = DomainDescriptor('VectorDomain')
-MapDomain = DomainDescriptor('MapDomain')
-OptionDomain = DomainDescriptor('OptionDomain')
+AtomDomain: DomainDescriptor = DomainDescriptor('AtomDomain')
+VectorDomain: DomainDescriptor = DomainDescriptor('VectorDomain')
+OptionDomain: DomainDescriptor = DomainDescriptor('OptionDomain')
+SizedDomain: DomainDescriptor = DomainDescriptor('SizedDomain')
+MapDomain: DomainDescriptor = DomainDescriptor('MapDomain')
 
 
 def get_atom(type_name):
@@ -493,7 +502,7 @@ def get_atom(type_name):
     return type_name
 
 
-def get_atom_or_infer(type_name: RuntimeType, example):
+def get_atom_or_infer(type_name: Union[RuntimeType, str], example):
     return get_atom(type_name) or RuntimeType.infer(example)
 
 
@@ -502,23 +511,24 @@ def get_first(value):
         return None
     return next(iter(value))
 
-def parse_or_infer(type_name: RuntimeType, example):
+def parse_or_infer(type_name: RuntimeTypeDescriptor, example) -> Union[RuntimeType, str]:
     return RuntimeType.parse_or_infer(type_name, example)
 
-def pass_through(value):
+def pass_through(value: Any) -> Any:
     return value
 
-def get_dependencies(value):
+def get_dependencies(value: Union[Measurement, Transformation, Function]) -> Any:
     return getattr(value, "_dependencies", None)
 
-def get_dependencies_iterable(value):
+def get_dependencies_iterable(value: List[Union[Measurement, Transformation, Function]]) -> List[Any]:
     return list(map(get_dependencies, value))
 
-def get_carrier_type(value):
+def get_carrier_type(value: Domain) -> Union[RuntimeType, str]:
     return value.carrier_type
 
-def get_distance_type(value):
-    return value.distance_type
 
 def get_type(value):
     return value.type
+
+def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
+    return value.distance_type

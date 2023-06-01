@@ -175,6 +175,14 @@ fn generate_input_argument(
             name = arg.name(),
             hint = arg
                 .python_type_hint(hierarchy)
+                // make argument optional if there is a default
+                .map(|hint| if default.is_some() {
+                    format!("Optional[{}]", hint)
+                } else {
+                    hint
+                })
+                // don't hint for args that are not converted
+                .filter(|_| !arg.do_not_convert)
                 .map(|hint| format!(": {}", hint))
                 .unwrap_or_else(String::new),
             default = default
@@ -211,7 +219,7 @@ fn generate_docstring(func: &Function, hierarchy: &HashMap<String, Vec<String>>)
     );
 
     format!(
-        r#""""{description}
+        r#"r"""{description}
 {doc_args}{ret_arg}
 {raises}
 """"#,
@@ -219,7 +227,7 @@ fn generate_docstring(func: &Function, hierarchy: &HashMap<String, Vec<String>>)
         doc_args = doc_args,
         ret_arg = generate_docstring_return_arg(&func.ret, hierarchy),
         raises = raises
-    )
+    ).replace("|", "\\|")
 }
 
 /// generate the part of a docstring corresponding to an argument
@@ -365,13 +373,13 @@ fn generate_type_arg_formatter(func: &Function) -> String {
         // additional types that are constructed by introspecting existing types
         .chain(func.derived_types.iter()
             .map(|type_spec|
-                format!("{name} = {derivation}",
+                format!("{name} = {derivation} # type: ignore",
                         name = type_spec.name(),
                         derivation = type_spec.rust_type.as_ref().unwrap().to_python())))
         .chain(func.args.iter()
             .filter(|arg| !arg.generics.is_empty())
             .map(|arg|
-                format!("{name} = {name}.substitute({args})",
+                format!("{name} = {name}.substitute({args}) # type: ignore",
                         name=arg.name.as_ref().unwrap(),
                         args=arg.generics.iter()
                             .map(|generic| format!("{generic}={generic}", generic = generic))

@@ -65,7 +65,7 @@ __all__ = [
 def choose_branching_factor(
     size_guess: int
 ) -> int:
-    """Returns an approximation to the ideal `branching_factor` for a dataset of a given size,
+    r"""Returns an approximation to the ideal `branching_factor` for a dataset of a given size,
     that minimizes error in cdf and quantile estimates based on b-ary trees.
     
     [choose_branching_factor in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.choose_branching_factor.html)
@@ -101,9 +101,9 @@ def make_b_ary_tree(
     leaf_count: int,
     branching_factor: int,
     M: RuntimeTypeDescriptor,
-    TA: RuntimeTypeDescriptor = "int"
+    TA: Optional[RuntimeTypeDescriptor] = "int"
 ) -> Transformation:
-    """Expand a vector of counts into a b-ary tree of counts,
+    r"""Expand a vector of counts into a b-ary tree of counts,
     where each branch is the sum of its `b` immediate children.
     
     [make_b_ary_tree in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_b_ary_tree.html)
@@ -154,17 +154,17 @@ def make_b_ary_tree(
 def make_bounded_float_checked_sum(
     size_limit: int,
     bounds: Tuple[Any, Any],
-    S: RuntimeTypeDescriptor = "Pairwise<T>"
+    S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded data with known dataset size.
+    r"""Make a Transformation that computes the sum of bounded data with known dataset size.
     
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     Use `make_clamp` to bound data and `make_resize` to establish dataset size.
     
-    | S (summation algorithm) | input type     |
-    | ----------------------- | -------------- |
-    | `Sequential<S::Item>`   | `Vec<S::Item>` |
-    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+    \| S (summation algorithm) \| input type     \|
+    \| ----------------------- \| -------------- \|
+    \| `Sequential<S::Item>`   \| `Vec<S::Item>` \|
+    \| `Pairwise<S::Item>`     \| `Vec<S::Item>` \|
     
     `S::Item` is the type of all of the following:
     each bound, each element in the input data, the output data, and the output sensitivity.
@@ -201,8 +201,8 @@ def make_bounded_float_checked_sum(
     
     # Standardize type arguments.
     S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_atom_or_infer(S, get_first(bounds))
-    S = S.substitute(T=T)
+    T = get_atom_or_infer(S, get_first(bounds)) # type: ignore
+    S = S.substitute(T=T) # type: ignore
     
     # Convert arguments to c types.
     c_size_limit = py_to_c(size_limit, c_type=ctypes.c_size_t, type_name=usize)
@@ -223,18 +223,18 @@ def make_bounded_float_checked_sum(
 def make_bounded_float_ordered_sum(
     size_limit: int,
     bounds: Tuple[Any, Any],
-    S: RuntimeTypeDescriptor = "Pairwise<T>"
+    S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded floats with known ordering.
+    r"""Make a Transformation that computes the sum of bounded floats with known ordering.
     
     Only useful when `make_bounded_float_checked_sum` returns an error due to potential for overflow.
     You may need to use `make_ordered_random` to impose an ordering on the data.
     The utility loss from overestimating the `size_limit` is small.
     
-    | S (summation algorithm) | input type     |
-    | ----------------------- | -------------- |
-    | `Sequential<S::Item>`   | `Vec<S::Item>` |
-    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+    \| S (summation algorithm) \| input type     \|
+    \| ----------------------- \| -------------- \|
+    \| `Sequential<S::Item>`   \| `Vec<S::Item>` \|
+    \| `Pairwise<S::Item>`     \| `Vec<S::Item>` \|
     
     `S::Item` is the type of all of the following:
     each bound, each element in the input data, the output data, and the output sensitivity.
@@ -271,8 +271,8 @@ def make_bounded_float_ordered_sum(
     
     # Standardize type arguments.
     S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_atom_or_infer(S, get_first(bounds))
-    S = S.substitute(T=T)
+    T = get_atom_or_infer(S, get_first(bounds)) # type: ignore
+    S = S.substitute(T=T) # type: ignore
     
     # Convert arguments to c types.
     c_size_limit = py_to_c(size_limit, c_type=ctypes.c_size_t, type_name=usize)
@@ -292,9 +292,9 @@ def make_bounded_float_ordered_sum(
 @versioned
 def make_bounded_int_monotonic_sum(
     bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints,
+    r"""Make a Transformation that computes the sum of bounded ints,
     where all values share the same sign.
     
     [make_bounded_int_monotonic_sum in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_bounded_int_monotonic_sum.html)
@@ -342,9 +342,9 @@ def make_bounded_int_monotonic_sum(
 @versioned
 def make_bounded_int_ordered_sum(
     bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints.
+    r"""Make a Transformation that computes the sum of bounded ints.
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
     [make_bounded_int_ordered_sum in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_bounded_int_ordered_sum.html)
@@ -392,9 +392,9 @@ def make_bounded_int_ordered_sum(
 @versioned
 def make_bounded_int_split_sum(
     bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints.
+    r"""Make a Transformation that computes the sum of bounded ints.
     Adds the saturating sum of the positives to the saturating sum of the negatives.
     
     [make_bounded_int_split_sum in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_bounded_int_split_sum.html)
@@ -442,10 +442,10 @@ def make_bounded_int_split_sum(
 @versioned
 def make_bounded_sum(
     bounds: Tuple[Any, Any],
-    MI: RuntimeTypeDescriptor = "SymmetricDistance",
-    T: RuntimeTypeDescriptor = None
+    MI: Optional[RuntimeTypeDescriptor] = "SymmetricDistance",
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded data.
+    r"""Make a Transformation that computes the sum of bounded data.
     Use `make_clamp` to bound data.
     
     [make_bounded_sum in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_bounded_sum.html)
@@ -499,7 +499,7 @@ def make_cast(
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
 ) -> Transformation:
-    """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
+    r"""Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
     For each element, failure to parse results in `None`, else `Some(out)`.
     
     Can be chained with `make_impute_constant` or `make_drop_null` to handle nullity.
@@ -547,16 +547,16 @@ def make_cast_default(
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
 ) -> Transformation:
-    """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
+    r"""Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
     Any element that fails to cast is filled with default.
     
     
-    | `TIA`  | `TIA::default()` |
-    | ------ | ---------------- |
-    | float  | `0.`             |
-    | int    | `0`              |
-    | string | `""`             |
-    | bool   | `false`          |
+    \| `TIA`  \| `TIA::default()` \|
+    \| ------ \| ---------------- \|
+    \| float  \| `0.`             \|
+    \| int    \| `0`              \|
+    \| string \| `""`             \|
+    \| bool   \| `false`          \|
     
     [make_cast_default in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_cast_default.html)
     
@@ -601,12 +601,12 @@ def make_cast_inherent(
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
 ) -> Transformation:
-    """Make a Transformation that casts a vector of data from type `TIA` to a type that can represent nullity `TOA`.
+    r"""Make a Transformation that casts a vector of data from type `TIA` to a type that can represent nullity `TOA`.
     If cast fails, fill with `TOA`'s null value.
     
-    | `TIA`  | `TIA::default()` |
-    | ------ | ---------------- |
-    | float  | NaN              |
+    \| `TIA`  \| `TIA::default()` \|
+    \| ------ \| ---------------- \|
+    \| float  \| NaN              \|
     
     [make_cast_inherent in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_cast_inherent.html)
     
@@ -648,9 +648,9 @@ def make_cast_inherent(
 
 @versioned
 def make_cdf(
-    TA: RuntimeTypeDescriptor = "float"
+    TA: Optional[RuntimeTypeDescriptor] = "float"
 ) -> Function:
-    """Postprocess a noisy array of float summary counts into a cumulative distribution.
+    r"""Postprocess a noisy array of float summary counts into a cumulative distribution.
     
     [make_cdf in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_cdf.html)
     
@@ -690,7 +690,7 @@ def make_clamp(
     input_metric: Metric,
     bounds: Tuple[Any, Any]
 ) -> Transformation:
-    """Make a Transformation that clamps numeric data in `Vec<TA>` to `bounds`.
+    r"""Make a Transformation that clamps numeric data in `Vec<TA>` to `bounds`.
     
     If datum is less than lower, let datum be lower.
     If datum is greater than upper, let datum be upper.
@@ -722,7 +722,7 @@ def make_clamp(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TA = get_atom(get_type(input_domain))
+    TA = get_atom(get_type(input_domain)) # type: ignore
     
     # Convert arguments to c types.
     c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
@@ -751,10 +751,10 @@ def part_clamp(
 @versioned
 def make_consistent_b_ary_tree(
     branching_factor: int,
-    TIA: RuntimeTypeDescriptor = "int",
-    TOA: RuntimeTypeDescriptor = "float"
+    TIA: Optional[RuntimeTypeDescriptor] = "int",
+    TOA: Optional[RuntimeTypeDescriptor] = "float"
 ) -> Function:
-    """Postprocessor that makes a noisy b-ary tree internally consistent, and returns the leaf layer.
+    r"""Postprocessor that makes a noisy b-ary tree internally consistent, and returns the leaf layer.
     
     The input argument of the function is a balanced `b`-ary tree implicitly stored in breadth-first order
     Tree is assumed to be complete, as in, all leaves on the last layer are on the left.
@@ -809,9 +809,9 @@ def make_consistent_b_ary_tree(
 @versioned
 def make_count(
     TIA: RuntimeTypeDescriptor,
-    TO: RuntimeTypeDescriptor = "int"
+    TO: Optional[RuntimeTypeDescriptor] = "int"
 ) -> Transformation:
-    """Make a Transformation that computes a count of the number of records in data.
+    r"""Make a Transformation that computes a count of the number of records in data.
     
     [make_count in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_count.html)
     
@@ -861,11 +861,11 @@ def make_count(
 
 @versioned
 def make_count_by(
-    MO: SensitivityMetric,
+    MO: RuntimeTypeDescriptor,
     TK: RuntimeTypeDescriptor,
-    TV: RuntimeTypeDescriptor = "int"
+    TV: Optional[RuntimeTypeDescriptor] = "int"
 ) -> Transformation:
-    """Make a Transformation that computes the count of each unique value in data.
+    r"""Make a Transformation that computes the count of each unique value in data.
     This assumes that the category set is unknown.
     
     [make_count_by in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_count_by.html)
@@ -882,7 +882,7 @@ def make_count_by(
     * Output Metric:  `MO`
     
     :param MO: Output Metric.
-    :type MO: SensitivityMetric
+    :type MO: :py:ref:`RuntimeTypeDescriptor`
     :param TK: Type of Key. Categorical/hashable input data type. Input data must be `Vec<TK>`.
     :type TK: :py:ref:`RuntimeTypeDescriptor`
     :param TV: Type of Value. Express counts in terms of this integral type.
@@ -918,12 +918,12 @@ def make_count_by(
 @versioned
 def make_count_by_categories(
     categories: Any,
-    null_category: bool = True,
-    MO: SensitivityMetric = "L1Distance<int>",
-    TIA: RuntimeTypeDescriptor = None,
-    TOA: RuntimeTypeDescriptor = "int"
+    null_category: Optional[bool] = True,
+    MO: Optional[RuntimeTypeDescriptor] = "L1Distance<int>",
+    TIA: Optional[RuntimeTypeDescriptor] = None,
+    TOA: Optional[RuntimeTypeDescriptor] = "int"
 ) -> Transformation:
-    """Make a Transformation that computes the number of times each category appears in the data.
+    r"""Make a Transformation that computes the number of times each category appears in the data.
     This assumes that the category set is known.
     
     [make_count_by_categories in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_count_by_categories.html)
@@ -945,7 +945,7 @@ def make_count_by_categories(
     :param null_category: Include a count of the number of elements that were not in the category set at the end of the vector.
     :type null_category: bool
     :param MO: Output Metric.
-    :type MO: SensitivityMetric
+    :type MO: :py:ref:`RuntimeTypeDescriptor`
     :param TIA: Atomic Input Type that is categorical/hashable. Input data must be `Vec<TIA>`
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic Output Type that is numeric.
@@ -983,9 +983,9 @@ def make_count_by_categories(
 @versioned
 def make_count_distinct(
     TIA: RuntimeTypeDescriptor,
-    TO: RuntimeTypeDescriptor = "int"
+    TO: Optional[RuntimeTypeDescriptor] = "int"
 ) -> Transformation:
-    """Make a Transformation that computes a count of the number of unique, distinct records in data.
+    r"""Make a Transformation that computes a count of the number of unique, distinct records in data.
     
     [make_count_distinct in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_count_distinct.html)
     
@@ -1032,9 +1032,9 @@ def make_count_distinct(
 @versioned
 def make_create_dataframe(
     col_names: Any,
-    K: RuntimeTypeDescriptor = None
+    K: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that constructs a dataframe from a `Vec<Vec<String>>` (a vector of records).
+    r"""Make a Transformation that constructs a dataframe from a `Vec<Vec<String>>` (a vector of records).
     
     [make_create_dataframe in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_create_dataframe.html)
     
@@ -1078,18 +1078,18 @@ def make_df_cast_default(
     column_name: Any,
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor,
-    TK: RuntimeTypeDescriptor = None
+    TK: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`.
+    r"""Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`.
     If cast fails, fill with default.
     
     
-    | `TIA`  | `TIA::default()` |
-    | ------ | ---------------- |
-    | float  | `0.`             |
-    | int    | `0`              |
-    | string | `""`             |
-    | bool   | `false`          |
+    \| `TIA`  \| `TIA::default()` \|
+    \| ------ \| ---------------- \|
+    \| float  \| `0.`             \|
+    \| int    \| `0`              \|
+    \| string \| `""`             \|
+    \| bool   \| `false`          \|
     
     [make_df_cast_default in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_df_cast_default.html)
     
@@ -1140,10 +1140,10 @@ def make_df_cast_default(
 def make_df_is_equal(
     column_name: Any,
     value: Any,
-    TK: RuntimeTypeDescriptor = None,
-    TIA: RuntimeTypeDescriptor = None
+    TK: Optional[RuntimeTypeDescriptor] = None,
+    TIA: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`.
+    r"""Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`.
     
     [make_df_is_equal in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_df_is_equal.html)
     
@@ -1191,16 +1191,16 @@ def make_df_is_equal(
 
 @versioned
 def make_drop_null(
-    atom_domain,
-    DA: RuntimeTypeDescriptor = None
+    atom_domain: Domain,
+    DA: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that drops null values.
+    r"""Make a Transformation that drops null values.
     
     
-    | `DA`                                | `DA::Imputed` |
-    | ----------------------------------- | ------------- |
-    | `OptionDomain<AtomDomain<TA>>`      | `TA`          |
-    | `AtomDomain<TA>`                    | `TA`          |
+    \| `DA`                                \| `DA::Imputed` \|
+    \| ----------------------------------- \| ------------- \|
+    \| `OptionDomain<AtomDomain<TA>>`      \| `TA`          \|
+    \| `AtomDomain<TA>`                    \| `TA`          \|
     
     [make_drop_null in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_drop_null.html)
     
@@ -1212,6 +1212,7 @@ def make_drop_null(
     * Output Metric:  `SymmetricDistance`
     
     :param atom_domain: 
+    :type atom_domain: Domain
     :param DA: atomic domain of input data that contains nulls.
     :type DA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -1241,9 +1242,9 @@ def make_drop_null(
 @versioned
 def make_find(
     categories: Any,
-    TIA: RuntimeTypeDescriptor = None
+    TIA: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Find the index of a data value in a set of categories.
+    r"""Find the index of a data value in a set of categories.
     
     For each value in the input vector, finds the index of the value in `categories`.
     If an index is found, returns `Some(index)`, else `None`.
@@ -1289,9 +1290,9 @@ def make_find(
 @versioned
 def make_find_bin(
     edges: Any,
-    TIA: RuntimeTypeDescriptor = None
+    TIA: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a transformation that finds the bin index in a monotonically increasing vector of edges.
+    r"""Make a transformation that finds the bin index in a monotonically increasing vector of edges.
     
     For each value in the input vector, finds the index of the bin the value falls into.
     `edges` splits the entire range of `TIA` into bins.
@@ -1343,7 +1344,7 @@ def make_identity(
     D: RuntimeTypeDescriptor,
     M: RuntimeTypeDescriptor
 ) -> Transformation:
-    """Make a Transformation representing the identity function.
+    r"""Make a Transformation representing the identity function.
     
     [make_identity in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_identity.html)
     
@@ -1385,20 +1386,20 @@ def make_identity(
 
 @versioned
 def make_impute_constant(
-    atom_domain,
+    atom_domain: Domain,
     constant: Any,
-    DIA: RuntimeTypeDescriptor = None
+    DIA: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that replaces null/None data with `constant`.
+    r"""Make a Transformation that replaces null/None data with `constant`.
     
     By default, the input type is `Vec<Option<TA>>`, as emitted by make_cast.
     Set `DA` to `AtomDomain<TA>` for imputing on types
     that have an inherent representation of nullity, like floats.
     
-    | Atom Input Domain `DIA`             |  Input Type       | `DIA::Imputed` |
-    | ----------------------------------- | ----------------- | -------------- |
-    | `OptionDomain<AtomDomain<TA>>`      | `Vec<Option<TA>>` | `TA`           |
-    | `AtomDomain<TA>`                    | `Vec<TA>`         | `TA`           |
+    \| Atom Input Domain `DIA`             \|  Input Type       \| `DIA::Imputed` \|
+    \| ----------------------------------- \| ----------------- \| -------------- \|
+    \| `OptionDomain<AtomDomain<TA>>`      \| `Vec<Option<TA>>` \| `TA`           \|
+    \| `AtomDomain<TA>`                    \| `Vec<TA>`         \| `TA`           \|
     
     [make_impute_constant in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_impute_constant.html)
     
@@ -1410,6 +1411,7 @@ def make_impute_constant(
     * Output Metric:  `SymmetricDistance`
     
     :param atom_domain: 
+    :type atom_domain: Domain
     :param constant: Value to replace nulls with.
     :type constant: Any
     :param DIA: Atomic Input Domain of data being imputed.
@@ -1442,9 +1444,9 @@ def make_impute_constant(
 @versioned
 def make_impute_uniform_float(
     bounds: Tuple[Any, Any],
-    TA: RuntimeTypeDescriptor = None
+    TA: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that replaces NaN values in `Vec<TA>` with uniformly distributed floats within `bounds`.
+    r"""Make a Transformation that replaces NaN values in `Vec<TA>` with uniformly distributed floats within `bounds`.
     
     [make_impute_uniform_float in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_impute_uniform_float.html)
     
@@ -1487,9 +1489,9 @@ def make_impute_uniform_float(
 def make_index(
     categories: Any,
     null: Any,
-    TOA: RuntimeTypeDescriptor = None
+    TOA: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a transformation that treats each element as an index into a vector of categories.
+    r"""Make a transformation that treats each element as an index into a vector of categories.
     
     [make_index in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_index.html)
     
@@ -1534,9 +1536,9 @@ def make_index(
 @versioned
 def make_is_equal(
     value: Any,
-    TIA: RuntimeTypeDescriptor = None
+    TIA: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that checks if each element is equal to `value`.
+    r"""Make a Transformation that checks if each element is equal to `value`.
     
     [make_is_equal in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_is_equal.html)
     
@@ -1577,10 +1579,10 @@ def make_is_equal(
 
 @versioned
 def make_is_null(
-    input_atom_domain,
-    DIA: RuntimeTypeDescriptor = None
+    input_atom_domain: Domain,
+    DIA: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that checks if each element in a vector is null.
+    r"""Make a Transformation that checks if each element in a vector is null.
     
     [make_is_null in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_is_null.html)
     
@@ -1592,6 +1594,7 @@ def make_is_null(
     * Output Metric:  `SymmetricDistance`
     
     :param input_atom_domain: 
+    :type input_atom_domain: Domain
     :param DIA: Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
     :type DIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -1622,10 +1625,10 @@ def make_is_null(
 def make_lipschitz_float_mul(
     constant,
     bounds: Tuple[Any, Any],
-    D: RuntimeTypeDescriptor = "AtomDomain<T>",
-    M: RuntimeTypeDescriptor = "AbsoluteDistance<T>"
+    D: Optional[RuntimeTypeDescriptor] = "AtomDomain<T>",
+    M: Optional[RuntimeTypeDescriptor] = "AbsoluteDistance<T>"
 ) -> Transformation:
-    """Make a transformation that multiplies an aggregate by a constant.
+    r"""Make a transformation that multiplies an aggregate by a constant.
     
     The bounds clamp the input, in order to bound the increase in sensitivity from float rounding.
     
@@ -1655,9 +1658,9 @@ def make_lipschitz_float_mul(
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D, generics=["T"])
     M = RuntimeType.parse(type_name=M, generics=["T"])
-    T = get_atom_or_infer(D, constant)
-    D = D.substitute(T=T)
-    M = M.substitute(T=T)
+    T = get_atom_or_infer(D, constant) # type: ignore
+    D = D.substitute(T=T) # type: ignore
+    M = M.substitute(T=T) # type: ignore
     
     # Convert arguments to c types.
     c_constant = py_to_c(constant, c_type=ctypes.c_void_p, type_name=T)
@@ -1677,20 +1680,20 @@ def make_lipschitz_float_mul(
 
 @versioned
 def make_metric_bounded(
-    domain,
-    D: RuntimeTypeDescriptor = None,
-    MI: RuntimeTypeDescriptor = "SymmetricDistance"
+    domain: Domain,
+    D: Optional[RuntimeTypeDescriptor] = None,
+    MI: Optional[RuntimeTypeDescriptor] = "SymmetricDistance"
 ) -> Transformation:
-    """Make a Transformation that converts the unbounded dataset metric `MI`
+    r"""Make a Transformation that converts the unbounded dataset metric `MI`
     to the respective bounded dataset metric with a no-op.
     
     The constructor enforces that the input domain has known size,
     because it must have known size to be valid under a bounded dataset metric.
     
-    | `MI`                 | `MI::BoundedMetric` |
-    | -------------------- | ------------------- |
-    | SymmetricDistance    | ChangeOneDistance   |
-    | InsertDeleteDistance | HammingDistance     |
+    \| `MI`                 \| `MI::BoundedMetric` \|
+    \| -------------------- \| ------------------- \|
+    \| SymmetricDistance    \| ChangeOneDistance   \|
+    \| InsertDeleteDistance \| HammingDistance     \|
     
     [make_metric_bounded in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_metric_bounded.html)
     
@@ -1702,6 +1705,7 @@ def make_metric_bounded(
     * Output Metric:  `MI::BoundedMetric`
     
     :param domain: 
+    :type domain: Domain
     :param D: Domain
     :type D: :py:ref:`RuntimeTypeDescriptor`
     :param MI: Input Metric
@@ -1734,17 +1738,17 @@ def make_metric_bounded(
 
 @versioned
 def make_metric_unbounded(
-    domain,
-    D: RuntimeTypeDescriptor = None,
-    MI: RuntimeTypeDescriptor = "ChangeOneDistance"
+    domain: Domain,
+    D: Optional[RuntimeTypeDescriptor] = None,
+    MI: Optional[RuntimeTypeDescriptor] = "ChangeOneDistance"
 ) -> Transformation:
-    """Make a Transformation that converts the bounded dataset metric `MI`
+    r"""Make a Transformation that converts the bounded dataset metric `MI`
     to the respective unbounded dataset metric with a no-op.
     
-    | `MI`              | `MI::UnboundedMetric` |
-    | ----------------- | --------------------- |
-    | ChangeOneDistance | SymmetricDistance     |
-    | HammingDistance   | InsertDeleteDistance  |
+    \| `MI`              \| `MI::UnboundedMetric` \|
+    \| ----------------- \| --------------------- \|
+    \| ChangeOneDistance \| SymmetricDistance     \|
+    \| HammingDistance   \| InsertDeleteDistance  \|
     
     [make_metric_unbounded in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_metric_unbounded.html)
     
@@ -1756,6 +1760,7 @@ def make_metric_unbounded(
     * Output Metric:  `MI::UnboundedMetric`
     
     :param domain: 
+    :type domain: Domain
     :param D: Domain. The function is a no-op so input and output domains are the same.
     :type D: :py:ref:`RuntimeTypeDescriptor`
     :param MI: Input Metric.
@@ -1788,17 +1793,17 @@ def make_metric_unbounded(
 
 @versioned
 def make_ordered_random(
-    domain,
-    D: RuntimeTypeDescriptor = None,
-    MI: RuntimeTypeDescriptor = "SymmetricDistance"
+    domain: Domain,
+    D: Optional[RuntimeTypeDescriptor] = None,
+    MI: Optional[RuntimeTypeDescriptor] = "SymmetricDistance"
 ) -> Transformation:
-    """Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
+    r"""Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
     to the respective ordered dataset metric `InsertDeleteDistance` by assigning a random permutation.
     
-    | `MI`              | `MI::OrderedMetric`  |
-    | ----------------- | -------------------- |
-    | SymmetricDistance | InsertDeleteDistance |
-    | ChangeOneDistance | HammingDistance      |
+    \| `MI`              \| `MI::OrderedMetric`  \|
+    \| ----------------- \| -------------------- \|
+    \| SymmetricDistance \| InsertDeleteDistance \|
+    \| ChangeOneDistance \| HammingDistance      \|
     
     [make_ordered_random in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_ordered_random.html)
     
@@ -1810,6 +1815,7 @@ def make_ordered_random(
     * Output Metric:  `MI::OrderedMetric`
     
     :param domain: 
+    :type domain: Domain
     :param D: Domain
     :type D: :py:ref:`RuntimeTypeDescriptor`
     :param MI: Input Metric
@@ -1844,11 +1850,11 @@ def make_ordered_random(
 def make_quantiles_from_counts(
     bin_edges: Any,
     alphas: Any,
-    interpolation: str = "linear",
-    TA: RuntimeTypeDescriptor = None,
-    F: RuntimeTypeDescriptor = "float"
+    interpolation: Optional[str] = "linear",
+    TA: Optional[RuntimeTypeDescriptor] = None,
+    F: Optional[RuntimeTypeDescriptor] = "float"
 ) -> Function:
-    """Postprocess a noisy array of summary counts into quantiles.
+    r"""Postprocess a noisy array of summary counts into quantiles.
     
     [make_quantiles_from_counts in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_quantiles_from_counts.html)
     
@@ -1900,11 +1906,11 @@ def make_resize(
     size: int,
     atom_domain: Domain,
     constant: Any,
-    DA: RuntimeTypeDescriptor = None,
-    MI: RuntimeTypeDescriptor = "SymmetricDistance",
-    MO: RuntimeTypeDescriptor = "SymmetricDistance"
+    DA: Optional[RuntimeTypeDescriptor] = None,
+    MI: Optional[RuntimeTypeDescriptor] = "SymmetricDistance",
+    MO: Optional[RuntimeTypeDescriptor] = "SymmetricDistance"
 ) -> Transformation:
-    """Make a Transformation that either truncates or imputes records
+    r"""Make a Transformation that either truncates or imputes records
     with `constant` to match a provided `size`.
     
     [make_resize in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_resize.html)
@@ -1963,9 +1969,9 @@ def make_resize(
 def make_select_column(
     key: Any,
     TOA: RuntimeTypeDescriptor,
-    K: RuntimeTypeDescriptor = None
+    K: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that retrieves the column `key` from a dataframe as `Vec<TOA>`.
+    r"""Make a Transformation that retrieves the column `key` from a dataframe as `Vec<TOA>`.
     
     [make_select_column in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_select_column.html)
     
@@ -2012,16 +2018,16 @@ def make_select_column(
 def make_sized_bounded_float_checked_sum(
     size: int,
     bounds: Tuple[Any, Any],
-    S: RuntimeTypeDescriptor = "Pairwise<T>"
+    S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded floats with known dataset size.
+    r"""Make a Transformation that computes the sum of bounded floats with known dataset size.
     
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     
-    | S (summation algorithm) | input type     |
-    | ----------------------- | -------------- |
-    | `Sequential<S::Item>`   | `Vec<S::Item>` |
-    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+    \| S (summation algorithm) \| input type     \|
+    \| ----------------------- \| -------------- \|
+    \| `Sequential<S::Item>`   \| `Vec<S::Item>` \|
+    \| `Pairwise<S::Item>`     \| `Vec<S::Item>` \|
     
     `S::Item` is the type of all of the following:
     each bound, each element in the input data, the output data, and the output sensitivity.
@@ -2058,8 +2064,8 @@ def make_sized_bounded_float_checked_sum(
     
     # Standardize type arguments.
     S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_atom_or_infer(S, get_first(bounds))
-    S = S.substitute(T=T)
+    T = get_atom_or_infer(S, get_first(bounds)) # type: ignore
+    S = S.substitute(T=T) # type: ignore
     
     # Convert arguments to c types.
     c_size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
@@ -2080,18 +2086,18 @@ def make_sized_bounded_float_checked_sum(
 def make_sized_bounded_float_ordered_sum(
     size: int,
     bounds: Tuple[Any, Any],
-    S: RuntimeTypeDescriptor = "Pairwise<T>"
+    S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded floats with known ordering and dataset size.
+    r"""Make a Transformation that computes the sum of bounded floats with known ordering and dataset size.
     
     Only useful when `make_bounded_float_checked_sum` returns an error due to potential for overflow.
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
-    | S (summation algorithm) | input type     |
-    | ----------------------- | -------------- |
-    | `Sequential<S::Item>`   | `Vec<S::Item>` |
-    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+    \| S (summation algorithm) \| input type     \|
+    \| ----------------------- \| -------------- \|
+    \| `Sequential<S::Item>`   \| `Vec<S::Item>` \|
+    \| `Pairwise<S::Item>`     \| `Vec<S::Item>` \|
     
     `S::Item` is the type of all of the following:
     each bound, each element in the input data, the output data, and the output sensitivity.
@@ -2128,8 +2134,8 @@ def make_sized_bounded_float_ordered_sum(
     
     # Standardize type arguments.
     S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_atom_or_infer(S, get_first(bounds))
-    S = S.substitute(T=T)
+    T = get_atom_or_infer(S, get_first(bounds)) # type: ignore
+    S = S.substitute(T=T) # type: ignore
     
     # Convert arguments to c types.
     c_size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
@@ -2150,9 +2156,9 @@ def make_sized_bounded_float_ordered_sum(
 def make_sized_bounded_int_checked_sum(
     size: int,
     bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints.
+    r"""Make a Transformation that computes the sum of bounded ints.
     The effective range is reduced, as (bounds * size) must not overflow.
     
     [make_sized_bounded_int_checked_sum in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sized_bounded_int_checked_sum.html)
@@ -2204,9 +2210,9 @@ def make_sized_bounded_int_checked_sum(
 def make_sized_bounded_int_monotonic_sum(
     size: int,
     bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints,
+    r"""Make a Transformation that computes the sum of bounded ints,
     where all values share the same sign.
     
     [make_sized_bounded_int_monotonic_sum in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sized_bounded_int_monotonic_sum.html)
@@ -2258,9 +2264,9 @@ def make_sized_bounded_int_monotonic_sum(
 def make_sized_bounded_int_ordered_sum(
     size: int,
     bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints with known dataset size.
+    r"""Make a Transformation that computes the sum of bounded ints with known dataset size.
     
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     You may need to use `make_ordered_random` to impose an ordering on the data.
@@ -2314,9 +2320,9 @@ def make_sized_bounded_int_ordered_sum(
 def make_sized_bounded_int_split_sum(
     size: int,
     bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints with known dataset size.
+    r"""Make a Transformation that computes the sum of bounded ints with known dataset size.
     
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     Adds the saturating sum of the positives to the saturating sum of the negatives.
@@ -2370,10 +2376,10 @@ def make_sized_bounded_int_split_sum(
 def make_sized_bounded_mean(
     size: int,
     bounds: Tuple[Any, Any],
-    MI: RuntimeTypeDescriptor = "SymmetricDistance",
-    T: RuntimeTypeDescriptor = None
+    MI: Optional[RuntimeTypeDescriptor] = "SymmetricDistance",
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that computes the mean of bounded data.
+    r"""Make a Transformation that computes the mean of bounded data.
     
     This uses a restricted-sensitivity proof that takes advantage of known dataset size.
     Use `make_clamp` to bound data and `make_resize` to establish dataset size.
@@ -2426,10 +2432,10 @@ def make_sized_bounded_mean(
 def make_sized_bounded_sum(
     size: int,
     bounds: Tuple[Any, Any],
-    MI: RuntimeTypeDescriptor = "SymmetricDistance",
-    T: RuntimeTypeDescriptor = None
+    MI: Optional[RuntimeTypeDescriptor] = "SymmetricDistance",
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded data with known dataset size.
+    r"""Make a Transformation that computes the sum of bounded data with known dataset size.
     
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     Use `make_clamp` to bound data and `make_resize` to establish dataset size.
@@ -2487,17 +2493,17 @@ def make_sized_bounded_sum(
 def make_sized_bounded_sum_of_squared_deviations(
     size: int,
     bounds: Tuple[Any, Any],
-    S: RuntimeTypeDescriptor = "Pairwise<T>"
+    S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
 ) -> Transformation:
-    """Make a Transformation that computes the sum of squared deviations of bounded data.
+    r"""Make a Transformation that computes the sum of squared deviations of bounded data.
     
     This uses a restricted-sensitivity proof that takes advantage of known dataset size.
     Use `make_clamp` to bound data and `make_resize` to establish dataset size.
     
-    | S (summation algorithm) | input type     |
-    | ----------------------- | -------------- |
-    | `Sequential<S::Item>`   | `Vec<S::Item>` |
-    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+    \| S (summation algorithm) \| input type     \|
+    \| ----------------------- \| -------------- \|
+    \| `Sequential<S::Item>`   \| `Vec<S::Item>` \|
+    \| `Pairwise<S::Item>`     \| `Vec<S::Item>` \|
     
     `S::Item` is the type of all of the following:
     each bound, each element in the input data, the output data, and the output sensitivity.
@@ -2534,8 +2540,8 @@ def make_sized_bounded_sum_of_squared_deviations(
     
     # Standardize type arguments.
     S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_atom_or_infer(S, get_first(bounds))
-    S = S.substitute(T=T)
+    T = get_atom_or_infer(S, get_first(bounds)) # type: ignore
+    S = S.substitute(T=T) # type: ignore
     
     # Convert arguments to c types.
     c_size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
@@ -2556,10 +2562,10 @@ def make_sized_bounded_sum_of_squared_deviations(
 def make_sized_bounded_variance(
     size: int,
     bounds: Tuple[Any, Any],
-    ddof: int = 1,
-    S: RuntimeTypeDescriptor = "Pairwise<T>"
+    ddof: Optional[int] = 1,
+    S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
 ) -> Transformation:
-    """Make a Transformation that computes the variance of bounded data.
+    r"""Make a Transformation that computes the variance of bounded data.
     
     This uses a restricted-sensitivity proof that takes advantage of known dataset size.
     Use `make_clamp` to bound data and `make_resize` to establish dataset size.
@@ -2594,8 +2600,8 @@ def make_sized_bounded_variance(
     
     # Standardize type arguments.
     S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_atom_or_infer(S, get_first(bounds))
-    S = S.substitute(T=T)
+    T = get_atom_or_infer(S, get_first(bounds)) # type: ignore
+    S = S.substitute(T=T) # type: ignore
     
     # Convert arguments to c types.
     c_size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
@@ -2617,9 +2623,9 @@ def make_sized_bounded_variance(
 def make_split_dataframe(
     separator: str,
     col_names: Any,
-    K: RuntimeTypeDescriptor = None
+    K: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that splits each record in a String into a `Vec<Vec<String>>`,
+    r"""Make a Transformation that splits each record in a String into a `Vec<Vec<String>>`,
     and loads the resulting table into a dataframe keyed by `col_names`.
     
     [make_split_dataframe in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_split_dataframe.html)
@@ -2666,7 +2672,7 @@ def make_split_dataframe(
 def make_split_lines(
     
 ) -> Transformation:
-    """Make a Transformation that takes a string and splits it into a `Vec<String>` of its lines.
+    r"""Make a Transformation that takes a string and splits it into a `Vec<String>` of its lines.
     
     [make_split_lines in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_split_lines.html)
     
@@ -2701,7 +2707,7 @@ def make_split_lines(
 def make_split_records(
     separator: str
 ) -> Transformation:
-    """Make a Transformation that splits each record in a `Vec<String>` into a `Vec<Vec<String>>`.
+    r"""Make a Transformation that splits each record in a `Vec<String>` into a `Vec<Vec<String>>`.
     
     [make_split_records in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_split_records.html)
     
@@ -2739,9 +2745,9 @@ def make_split_records(
 def make_subset_by(
     indicator_column: Any,
     keep_columns: Any,
-    TK: RuntimeTypeDescriptor = None
+    TK: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
-    """Make a Transformation that subsets a dataframe by a boolean column.
+    r"""Make a Transformation that subsets a dataframe by a boolean column.
     
     [make_subset_by in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_subset_by.html)
     
@@ -2785,17 +2791,17 @@ def make_subset_by(
 
 @versioned
 def make_unordered(
-    domain,
-    D: RuntimeTypeDescriptor = None,
-    MI: RuntimeTypeDescriptor = "InsertDeleteDistance"
+    domain: Domain,
+    D: Optional[RuntimeTypeDescriptor] = None,
+    MI: Optional[RuntimeTypeDescriptor] = "InsertDeleteDistance"
 ) -> Transformation:
-    """Make a Transformation that converts the ordered dataset metric `MI`
+    r"""Make a Transformation that converts the ordered dataset metric `MI`
     to the respective ordered dataset metric with a no-op.
     
-    | `MI`                 | `MI::UnorderedMetric` |
-    | -------------------- | --------------------- |
-    | InsertDeleteDistance | SymmetricDistance     |
-    | HammingDistance      | ChangeOneDistance     |
+    \| `MI`                 \| `MI::UnorderedMetric` \|
+    \| -------------------- \| --------------------- \|
+    \| InsertDeleteDistance \| SymmetricDistance     \|
+    \| HammingDistance      \| ChangeOneDistance     \|
     
     [make_unordered in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_unordered.html)
     
@@ -2807,6 +2813,7 @@ def make_unordered(
     * Output Metric:  `MI::UnorderedMetric`
     
     :param domain: 
+    :type domain: Domain
     :param D: Domain
     :type D: :py:ref:`RuntimeTypeDescriptor`
     :param MI: Input Metric

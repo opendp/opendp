@@ -72,6 +72,8 @@ def setup(app):
 # This prevents the RuntimeTypeDescriptors from expanding and making the signatures on API docs unreadable
 autodoc_typehints = "description"
 
+napoleon_preprocess_types = False
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 

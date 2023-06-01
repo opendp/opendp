@@ -24,11 +24,12 @@ __all__ = [
 def _metric_free(
     this
 ):
-    """Internal function. Free the memory associated with `this`.
+    r"""Internal function. Free the memory associated with `this`.
     
     [_metric_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn._metric_free.html)
     
     :param this: 
+    :type this: Metric
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -50,13 +51,14 @@ def _metric_free(
 @versioned
 def absolute_distance(
     T: RuntimeTypeDescriptor
-):
-    """Construct an instance of the `AbsoluteDistance` metric.
+) -> Metric:
+    r"""Construct an instance of the `AbsoluteDistance` metric.
     
     [absolute_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.absolute_distance.html)
     
     :param T: 
     :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Metric
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -80,12 +82,13 @@ def absolute_distance(
 @versioned
 def change_one_distance(
     
-):
-    """Construct an instance of the `ChangeOneDistance` metric.
+) -> Metric:
+    r"""Construct an instance of the `ChangeOneDistance` metric.
     
     [change_one_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.change_one_distance.html)
     
     
+    :rtype: Metric
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -105,12 +108,13 @@ def change_one_distance(
 @versioned
 def discrete_distance(
     
-):
-    """Construct an instance of the `DiscreteDistance` metric.
+) -> Metric:
+    r"""Construct an instance of the `DiscreteDistance` metric.
     
     [discrete_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.discrete_distance.html)
     
     
+    :rtype: Metric
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -130,12 +134,13 @@ def discrete_distance(
 @versioned
 def hamming_distance(
     
-):
-    """Construct an instance of the `HammingDistance` metric.
+) -> Metric:
+    r"""Construct an instance of the `HammingDistance` metric.
     
     [hamming_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.hamming_distance.html)
     
     
+    :rtype: Metric
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -155,12 +160,13 @@ def hamming_distance(
 @versioned
 def insert_delete_distance(
     
-):
-    """Construct an instance of the `InsertDeleteDistance` metric.
+) -> Metric:
+    r"""Construct an instance of the `InsertDeleteDistance` metric.
     
     [insert_delete_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.insert_delete_distance.html)
     
     
+    :rtype: Metric
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -180,13 +186,14 @@ def insert_delete_distance(
 @versioned
 def l1_distance(
     T: RuntimeTypeDescriptor
-):
-    """Construct an instance of the `L1Distance` metric.
+) -> Metric:
+    r"""Construct an instance of the `L1Distance` metric.
     
     [l1_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.l1_distance.html)
     
     :param T: 
     :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Metric
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -210,13 +217,14 @@ def l1_distance(
 @versioned
 def l2_distance(
     T: RuntimeTypeDescriptor
-):
-    """Construct an instance of the `L2Distance` metric.
+) -> Metric:
+    r"""Construct an instance of the `L2Distance` metric.
     
     [l2_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.l2_distance.html)
     
     :param T: 
     :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Metric
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -239,13 +247,14 @@ def l2_distance(
 
 @versioned
 def metric_debug(
-    this
+    this: Metric
 ) -> str:
-    """Debug a `metric`.
+    r"""Debug a `metric`.
     
     [metric_debug in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.metric_debug.html)
     
     :param this: The metric to debug (stringify).
+    :type this: Metric
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -267,13 +276,14 @@ def metric_debug(
 
 @versioned
 def metric_distance_type(
-    this
+    this: Metric
 ) -> str:
-    """Get the distance type of a `metric`.
+    r"""Get the distance type of a `metric`.
     
     [metric_distance_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.metric_distance_type.html)
     
     :param this: The metric to retrieve the distance type from.
+    :type this: Metric
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -295,13 +305,14 @@ def metric_distance_type(
 
 @versioned
 def metric_type(
-    this
+    this: Metric
 ) -> str:
-    """Get the type of a `metric`.
+    r"""Get the type of a `metric`.
     
     [metric_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.metric_type.html)
     
     :param this: The metric to retrieve the type from.
+    :type this: Metric
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -324,12 +335,13 @@ def metric_type(
 @versioned
 def symmetric_distance(
     
-):
-    """Construct an instance of the `SymmetricDistance` metric.
+) -> Metric:
+    r"""Construct an instance of the `SymmetricDistance` metric.
     
     [symmetric_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.symmetric_distance.html)
     
     
+    :rtype: Metric
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library

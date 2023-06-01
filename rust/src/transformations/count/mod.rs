@@ -98,10 +98,7 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
 #[bootstrap(
     features("contrib"),
     arguments(null_category(default = true)),
-    generics(
-        MO(hint = "SensitivityMetric", default = "L1Distance<int>"),
-        TOA(default = "int")
-    )
+    generics(MO(default = "L1Distance<int>"), TOA(default = "int"))
 )]
 /// Make a Transformation that computes the number of times each category appears in the data.
 /// This assumes that the category set is known.
@@ -195,10 +192,7 @@ impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
     }
 }
 
-#[bootstrap(
-    features("contrib"),
-    generics(MO(hint = "SensitivityMetric"), TV(default = "int"))
-)]
+#[bootstrap(features("contrib"), generics(TV(default = "int")))]
 /// Make a Transformation that computes the count of each unique value in data.
 /// This assumes that the category set is unknown.
 ///

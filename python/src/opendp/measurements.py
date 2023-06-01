@@ -21,18 +21,18 @@ __all__ = [
 @versioned
 def make_base_discrete_gaussian(
     scale,
-    D: RuntimeTypeDescriptor = "AtomDomain<int>",
-    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<QO>",
-    QI: RuntimeTypeDescriptor = "int"
+    D: Optional[RuntimeTypeDescriptor] = "AtomDomain<int>",
+    MO: Optional[RuntimeTypeDescriptor] = "ZeroConcentratedDivergence<QO>",
+    QI: Optional[RuntimeTypeDescriptor] = "int"
 ) -> Measurement:
-    """Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
+    r"""Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
     
     Set `D` to change the input data type and input metric:
     
-    | `D`                          | input type   | `D::InputMetric`        |
-    | ---------------------------- | ------------ | ----------------------- |
-    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<QI>`  |
-    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L2Distance<QI>`        |
+    \| `D`                          \| input type   \| `D::InputMetric`        \|
+    \| ---------------------------- \| ------------ \| ----------------------- \|
+    \| `AtomDomain<T>` (default)     \| `T`          \| `AbsoluteDistance<QI>`  \|
+    \| `VectorDomain<AtomDomain<T>>` \| `Vec<T>`     \| `L2Distance<QI>`        \|
     
     [make_base_discrete_gaussian in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_gaussian.html)
     
@@ -61,8 +61,8 @@ def make_base_discrete_gaussian(
     D = RuntimeType.parse(type_name=D)
     MO = RuntimeType.parse(type_name=MO, generics=["QO"])
     QI = RuntimeType.parse(type_name=QI)
-    QO = get_atom_or_infer(MO, scale)
-    MO = MO.substitute(QO=QO)
+    QO = get_atom_or_infer(MO, scale) # type: ignore
+    MO = MO.substitute(QO=QO) # type: ignore
     
     # Convert arguments to c types.
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
@@ -83,17 +83,17 @@ def make_base_discrete_gaussian(
 @versioned
 def make_base_discrete_laplace(
     scale,
-    D: RuntimeTypeDescriptor = "AtomDomain<int>",
-    QO: RuntimeTypeDescriptor = None
+    D: Optional[RuntimeTypeDescriptor] = "AtomDomain<int>",
+    QO: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
-    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
+    r"""Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
     
     Set `D` to change the input data type and input metric:
     
-    | `D`                          | input type   | `D::InputMetric`       |
-    | ---------------------------- | ------------ | ---------------------- |
-    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+    \| `D`                          \| input type   \| `D::InputMetric`       \|
+    \| ---------------------------- \| ------------ \| ---------------------- \|
+    \| `AtomDomain<T>` (default)     \| `T`          \| `AbsoluteDistance<T>`  \|
+    \| `VectorDomain<AtomDomain<T>>` \| `Vec<T>`     \| `L1Distance<T>`        \|
     
     This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
     
@@ -145,19 +145,19 @@ def make_base_discrete_laplace(
 @versioned
 def make_base_discrete_laplace_cks20(
     scale,
-    D: RuntimeTypeDescriptor = "AtomDomain<int>",
-    QO: RuntimeTypeDescriptor = None
+    D: Optional[RuntimeTypeDescriptor] = "AtomDomain<int>",
+    QO: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
-    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
+    r"""Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
     using an efficient algorithm on rational bignums.
     
     Set `D` to change the input data type and input metric:
     
     
-    | `D`                          | input type   | `D::InputMetric`       |
-    | ---------------------------- | ------------ | ---------------------- |
-    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+    \| `D`                          \| input type   \| `D::InputMetric`       \|
+    \| ---------------------------- \| ------------ \| ---------------------- \|
+    \| `AtomDomain<T>` (default)     \| `T`          \| `AbsoluteDistance<T>`  \|
+    \| `VectorDomain<AtomDomain<T>>` \| `Vec<T>`     \| `L1Distance<T>`        \|
     
     [make_base_discrete_laplace_cks20 in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace_cks20.html)
     
@@ -206,21 +206,21 @@ def make_base_discrete_laplace_cks20(
 @versioned
 def make_base_discrete_laplace_linear(
     scale,
-    bounds: Any = None,
-    D: RuntimeTypeDescriptor = "AtomDomain<int>",
-    QO: RuntimeTypeDescriptor = None
+    bounds: Optional[Any] = None,
+    D: Optional[RuntimeTypeDescriptor] = "AtomDomain<int>",
+    QO: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
-    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
+    r"""Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
     using a linear-time algorithm on finite data types.
     
     This algorithm can be executed in constant time if bounds are passed.
     Set `D` to change the input data type and input metric:
     
     
-    | `D`                          | input type   | `D::InputMetric`       |
-    | ---------------------------- | ------------ | ---------------------- |
-    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+    \| `D`                          \| input type   \| `D::InputMetric`       \|
+    \| ---------------------------- \| ------------ \| ---------------------- \|
+    \| `AtomDomain<T>` (default)     \| `T`          \| `AbsoluteDistance<T>`  \|
+    \| `VectorDomain<AtomDomain<T>>` \| `Vec<T>`     \| `L1Distance<T>`        \|
     
     [make_base_discrete_laplace_linear in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace_linear.html)
     
@@ -252,8 +252,8 @@ def make_base_discrete_laplace_linear(
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
-    T = get_atom(D)
-    OptionT = RuntimeType(origin='Option', args=[RuntimeType(origin='Tuple', args=[T, T])])
+    T = get_atom(D) # type: ignore
+    OptionT = RuntimeType(origin='Option', args=[RuntimeType(origin='Tuple', args=[T, T])]) # type: ignore
     
     # Convert arguments to c types.
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
@@ -274,19 +274,19 @@ def make_base_discrete_laplace_linear(
 @versioned
 def make_base_gaussian(
     scale,
-    k: int = -1074,
-    D: RuntimeTypeDescriptor = "AtomDomain<T>",
-    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<T>"
+    k: Optional[int] = -1074,
+    D: Optional[RuntimeTypeDescriptor] = "AtomDomain<T>",
+    MO: Optional[RuntimeTypeDescriptor] = "ZeroConcentratedDivergence<T>"
 ) -> Measurement:
-    """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
+    r"""Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
     
     Set `D` to change the input data type and input metric:
     
     
-    | `D`                          | input type   | `D::InputMetric`       |
-    | ---------------------------- | ------------ | ---------------------- |
-    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L2Distance<T>`        |
+    \| `D`                          \| input type   \| `D::InputMetric`       \|
+    \| ---------------------------- \| ------------ \| ---------------------- \|
+    \| `AtomDomain<T>` (default)     \| `T`          \| `AbsoluteDistance<T>`  \|
+    \| `VectorDomain<AtomDomain<T>>` \| `Vec<T>`     \| `L2Distance<T>`        \|
     
     This function takes a noise granularity in terms of 2^k.
     Larger granularities are more computationally efficient, but have a looser privacy map.
@@ -318,9 +318,9 @@ def make_base_gaussian(
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D, generics=["T"])
     MO = RuntimeType.parse(type_name=MO, generics=["T"])
-    T = get_atom_or_infer(D, scale)
-    D = D.substitute(T=T)
-    MO = MO.substitute(T=T)
+    T = get_atom_or_infer(D, scale) # type: ignore
+    D = D.substitute(T=T) # type: ignore
+    MO = MO.substitute(T=T) # type: ignore
     
     # Convert arguments to c types.
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
@@ -341,11 +341,11 @@ def make_base_gaussian(
 @versioned
 def make_base_geometric(
     scale,
-    bounds: Any = None,
-    D: RuntimeTypeDescriptor = "AtomDomain<int>",
-    QO: RuntimeTypeDescriptor = None
+    bounds: Optional[Any] = None,
+    D: Optional[RuntimeTypeDescriptor] = "AtomDomain<int>",
+    QO: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
-    """Deprecated.
+    r"""Deprecated.
     Use `make_base_discrete_laplace` instead (more efficient).
     `make_base_discrete_laplace_linear` has a similar interface with the optional constant-time bounds.
     
@@ -375,8 +375,8 @@ def make_base_geometric(
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
-    T = get_atom(D)
-    OptionT = RuntimeType(origin='Option', args=[RuntimeType(origin='Tuple', args=[T, T])])
+    T = get_atom(D) # type: ignore
+    OptionT = RuntimeType(origin='Option', args=[RuntimeType(origin='Tuple', args=[T, T])]) # type: ignore
     
     # Convert arguments to c types.
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
@@ -397,17 +397,17 @@ def make_base_geometric(
 @versioned
 def make_base_laplace(
     scale,
-    k: int = -1074,
-    D: RuntimeTypeDescriptor = "AtomDomain<T>"
+    k: Optional[int] = -1074,
+    D: Optional[RuntimeTypeDescriptor] = "AtomDomain<T>"
 ) -> Measurement:
-    """Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
+    r"""Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
     
     Set `D` to change the input data type and input metric:
     
-    | `D`                          | input type   | `D::InputMetric`       |
-    | ---------------------------- | ------------ | ---------------------- |
-    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+    \| `D`                          \| input type   \| `D::InputMetric`       \|
+    \| ---------------------------- \| ------------ \| ---------------------- \|
+    \| `AtomDomain<T>` (default)     \| `T`          \| `AbsoluteDistance<T>`  \|
+    \| `VectorDomain<AtomDomain<T>>` \| `Vec<T>`     \| `L1Distance<T>`        \|
     
     
     This function takes a noise granularity in terms of 2^k.
@@ -437,8 +437,8 @@ def make_base_laplace(
     
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D, generics=["T"])
-    T = get_atom_or_infer(D, scale)
-    D = D.substitute(T=T)
+    T = get_atom_or_infer(D, scale) # type: ignore
+    D = D.substitute(T=T) # type: ignore
     
     # Convert arguments to c types.
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
@@ -460,10 +460,10 @@ def make_base_ptr(
     scale,
     threshold,
     TK: RuntimeTypeDescriptor,
-    k: int = -1074,
-    TV: RuntimeTypeDescriptor = None
+    k: Optional[int] = -1074,
+    TV: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
-    """Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
+    r"""Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
     
     This function takes a noise granularity in terms of 2^k.
     Larger granularities are more computationally efficient, but have a looser privacy map.
@@ -518,11 +518,11 @@ def make_base_ptr(
 def make_randomized_response(
     categories: Any,
     prob,
-    constant_time: bool = False,
-    T: RuntimeTypeDescriptor = None,
-    QO: RuntimeTypeDescriptor = None
+    constant_time: Optional[bool] = False,
+    T: Optional[RuntimeTypeDescriptor] = None,
+    QO: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
-    """Make a Measurement that implements randomized response on a categorical value.
+    r"""Make a Measurement that implements randomized response on a categorical value.
     
     [make_randomized_response in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_randomized_response.html)
     
@@ -573,10 +573,10 @@ def make_randomized_response(
 @versioned
 def make_randomized_response_bool(
     prob,
-    constant_time: bool = False,
-    QO: RuntimeTypeDescriptor = None
+    constant_time: Optional[bool] = False,
+    QO: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
-    """Make a Measurement that implements randomized response on a boolean value.
+    r"""Make a Measurement that implements randomized response on a boolean value.
     
     [make_randomized_response_bool in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_randomized_response_bool.html)
     
