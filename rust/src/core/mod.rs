@@ -307,25 +307,6 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
     }
 }
 
-#[cfg(feature = "partials")]
-pub struct PartialMeasurement<DI: Domain, TO, MI: Metric, MO: Measure>(
-    Box<dyn FnOnce(DI, MI) -> Fallible<Measurement<DI, TO, MI, MO>>>,
-);
-
-#[cfg(feature = "partials")]
-impl<DI: Domain, TO, MI: Metric, MO: Measure> PartialMeasurement<DI, TO, MI, MO>
-where
-    (DI, MI): MetricSpace,
-{
-    pub fn new(
-        partial: impl FnOnce(DI, MI) -> Fallible<Measurement<DI, TO, MI, MO>> + 'static,
-    ) -> Self {
-        Self(Box::new(partial))
-    }
-    pub fn fix(self, input_domain: DI, input_metric: MI) -> Fallible<Measurement<DI, TO, MI, MO>> {
-        (self.0)(input_domain, input_metric)
-    }
-}
 
 pub trait MetricSpace {
     fn check(&self) -> bool;
@@ -423,31 +404,6 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
     }
 }
 
-#[cfg(feature = "partials")]
-pub struct PartialTransformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric>(
-    Box<dyn FnOnce(DI, MI) -> Fallible<Transformation<DI, DO, MI, MO>>>,
-);
-
-#[cfg(feature = "partials")]
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> PartialTransformation<DI, DO, MI, MO>
-where
-    (DI, MI): MetricSpace,
-    (DO, MO): MetricSpace,
-{
-    pub fn new(
-        partial: impl FnOnce(DI, MI) -> Fallible<Transformation<DI, DO, MI, MO>> + 'static,
-    ) -> Self {
-        Self(Box::new(partial))
-    }
-    pub fn fix(
-        self,
-        input_domain: DI,
-        input_metric: MI,
-    ) -> Fallible<Transformation<DI, DO, MI, MO>> {
-        (self.0)(input_domain, input_metric)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::domains::AtomDomain;
@@ -477,3 +433,53 @@ mod tests {
         Ok(())
     }
 }
+
+#[cfg(feature = "partials")]
+mod partials {
+    pub use super::*;
+
+
+    pub struct PartialTransformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric>(
+        Box<dyn FnOnce(DI, MI) -> Fallible<Transformation<DI, DO, MI, MO>>>,
+    );
+    
+    impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> PartialTransformation<DI, DO, MI, MO>
+    where
+        (DI, MI): MetricSpace,
+        (DO, MO): MetricSpace,
+    {
+        pub fn new(
+            partial: impl FnOnce(DI, MI) -> Fallible<Transformation<DI, DO, MI, MO>> + 'static,
+        ) -> Self {
+            Self(Box::new(partial))
+        }
+        pub fn fix(
+            self,
+            input_domain: DI,
+            input_metric: MI,
+        ) -> Fallible<Transformation<DI, DO, MI, MO>> {
+            (self.0)(input_domain, input_metric)
+        }
+    }
+
+    pub struct PartialMeasurement<DI: Domain, TO, MI: Metric, MO: Measure>(
+        Box<dyn FnOnce(DI, MI) -> Fallible<Measurement<DI, TO, MI, MO>>>,
+    );
+
+    impl<DI: Domain, TO, MI: Metric, MO: Measure> PartialMeasurement<DI, TO, MI, MO>
+    where
+        (DI, MI): MetricSpace,
+    {
+        pub fn new(
+            partial: impl FnOnce(DI, MI) -> Fallible<Measurement<DI, TO, MI, MO>> + 'static,
+        ) -> Self {
+            Self(Box::new(partial))
+        }
+        pub fn fix(self, input_domain: DI, input_metric: MI) -> Fallible<Measurement<DI, TO, MI, MO>> {
+            (self.0)(input_domain, input_metric)
+        }
+    }
+}
+
+#[cfg(feature = "partials")]
+pub use partials::*;
