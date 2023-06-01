@@ -15,7 +15,7 @@ pub fn generate_partial(mut item_fn: ItemFn) -> Option<ItemFn> {
             .sig
             .ident
             .to_string()
-            .replacen("make_", "partial_", 1),
+            .replacen("make_", "part_", 1),
         item_fn.sig.ident.span(),
     );
 
@@ -63,6 +63,10 @@ pub fn generate_partial(mut item_fn: ItemFn) -> Option<ItemFn> {
 
 pub fn supports_partial(sig: &Signature) -> bool {
     if sig.inputs.len() < 2 {
+        return false;
+    }
+
+    if !sig.ident.to_string().starts_with("make_") {
         return false;
     }
 

@@ -47,7 +47,7 @@ fn generate_module(
             module
                 .iter()
                 .filter(|func| func.supports_partial)
-                .map(|func| format!("    \"{}\"", func.name.replacen("make_", "partial_", 1))),
+                .map(|func| format!("    \"{}\"", func.name.replacen("make_", "part_", 1))),
         )
         .collect::<Vec<_>>()
         .join(",\n");
@@ -116,7 +116,7 @@ def {partial_name}(
     return PartialConstructor(lambda {dom_met}: {name}(
 {args}))
 "#,
-            partial_name = func.name.replacen("make_", "partial_", 1),
+            partial_name = func.name.replacen("make_", "part_", 1),
             partial_args = indent(args[2..].join(",\n")),
             dom_met = func.args[..2]
                 .iter()
