@@ -69,7 +69,7 @@
 //!     let load_and_sum = (load_and_clamp >> make_bounded_sum(bounds)?)?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
-//!     let noisy_sum = load_and_sum >> part_base_laplace(sigma, None)?;
+//!     let noisy_sum = load_and_sum >> part_base_laplace(sigma, None);
 //!
 //!     // The same measurement, written more succinctly:
 //!     let noisy_sum = (
