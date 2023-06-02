@@ -16,6 +16,11 @@ pub use discretize::*;
 mod geometric;
 pub use geometric::*;
 
+#[cfg(feature = "use-mpfr")]
+mod psrn;
+#[cfg(feature = "use-mpfr")]
+pub use psrn::*;
+
 mod uniform;
 pub use uniform::*;
 
