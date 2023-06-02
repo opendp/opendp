@@ -11,7 +11,7 @@ use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, MapDomain, VectorDomain};
 use crate::error::*;
 use crate::metrics::{AbsoluteDistance, LpDistance, SymmetricDistance};
-use crate::traits::{CollectionSize, Float, Hashable, Number, Primitive};
+use crate::traits::{CollectionSize, Hashable, Number, Primitive};
 
 #[bootstrap(features("contrib"), generics(TIA(suppress), TO(default = "int")))]
 /// Make a Transformation that computes a count of the number of records in data.
@@ -239,7 +239,7 @@ pub fn make_count_by<MO, TK, TV>(
 >
 where
     MO: CountByConstant<MO::Distance> + Metric,
-    MO::Distance: Float,
+    MO::Distance: Number,
     TK: Hashable,
     TV: Number,
     (VectorDomain<AtomDomain<TK>>, SymmetricDistance): MetricSpace,
