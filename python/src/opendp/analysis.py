@@ -13,11 +13,13 @@ for module_name in ["transformations", "measurements"]:
     for name in module.__all__:
         if not name.startswith("make_"):
             continue
-        partial_name = "partial_" + name[5:]
+        partial_name = "part_" + name[5:]
+        make_func = getattr(module, name)
+        is_measurement = get_type_hints(make_func)["return"] == dp.Measurement
         if partial_name in module.__all__:
-            constructors[name[5:]] = getattr(module, partial_name), True
+            constructors[name[5:]] = getattr(module, partial_name), True, is_measurement
         else:
-            constructors[name[5:]] = getattr(module, name), False
+            constructors[name[5:]] = getattr(module, name), False, is_measurement
 
 
 def loss_of(*, epsilon=None, delta=None, rho=None, U=None) -> Tuple[dp.Measure, float]:
@@ -246,8 +248,7 @@ class Query(object):
         """Creates a new query by applying a transformation or measurement to the current chain."""
         if name not in constructors:
             raise AttributeError(f"Unrecognized constructor: '{name}'")
-        constructor, is_partial = constructors[name]
-        is_measurement = get_type_hints(constructor)["return"] == dp.Measurement
+        constructor, is_partial, is_measurement = constructors[name]
 
         def make(*args, **kwargs):
             """Wraps the `make_{name}` constructor to allow one optional parameter and chains it to the current query.
