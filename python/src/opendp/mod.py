@@ -244,6 +244,10 @@ class Odometer(ctypes.POINTER(AnyOdometer)):
         return odometer_input_metric(self)
     
     @property
+    def input_space(self) -> Tuple["Domain", "Metric"]:
+        return self.input_domain, self.input_metric
+    
+    @property
     def output_measure(self) -> "Measure":
         from opendp.core import odometer_output_measure
         return odometer_output_measure(self)
