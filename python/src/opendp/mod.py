@@ -105,6 +105,10 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     def input_metric(self) -> "Metric":
         from opendp.core import measurement_input_metric
         return measurement_input_metric(self)
+
+    @property
+    def input_space(self) -> Tuple["Domain", "Metric"]:
+        return self.input_domain, self.input_metric
     
     @property
     def output_measure(self) -> "Measure":
@@ -280,6 +284,14 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     def output_metric(self) -> "Metric":
         from opendp.core import transformation_output_metric
         return transformation_output_metric(self)
+    
+    @property
+    def input_space(self) -> Tuple["Domain", "Metric"]:
+        return self.input_domain, self.input_metric
+    
+    @property
+    def output_space(self) -> Tuple["Domain", "Metric"]:
+        return self.output_domain, self.output_metric
     
     @property
     def function(self) -> "Function":
@@ -907,7 +919,7 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
     
     # choose a distance type if not set
     if isinstance(M, ty.RuntimeType) and M.args is None:
-        M.args = [ty.get_atom(D)]
+        M = M[ty.get_atom(D)]
 
     return domain, metric_of(M)
 

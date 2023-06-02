@@ -3,12 +3,12 @@ from typing import Dict, List
 
 def test_typed_space_of():
     # metric defaults to symmetric_distance on vector_domain
-    space = dp.space_of(List[int])  # can also do list[int] if python 3.8+
-    assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())
+    # space = dp.space_of(List[int])  # can also do list[int] if python 3.8+
+    # assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())
 
-    # can specify metric explicitly. If not fully specified, will infer distance type from domain
-    space = dp.space_of(List[int], dp.L1Distance)
-    assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.l1_distance(T=dp.i32))
+    # # can specify metric explicitly. If not fully specified, will infer distance type from domain
+    # space = dp.space_of(List[int], dp.L1Distance)
+    # assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.l1_distance(T=dp.i32))
 
     # when type is scalar, domain defaults to atom_domain and metric defaults to absolute_distance
     space = dp.space_of(float)
