@@ -270,6 +270,44 @@ impl<Q: 'static, A: 'static> Measurement<AnyDomain, Queryable<Q, A>, AnyMetric, 
 
 pub struct QueryType;
 
+impl<DI: Domain, Q: 'static, A: 'static, MI: Metric, MO: Measure>
+    Measurement<DI, Queryable<Q, A>, MI, MO>
+where
+    DI::Carrier: 'static,
+    (DI, MI): MetricSpace,
+{
+    pub fn into_any_queryable(self) -> Measurement<DI, AnyQueryable, MI, MO> {
+        let function = self.function.clone();
+        Measurement::new(
+            self.input_domain.clone(),
+            Function::new_fallible(
+                move |arg: &DI::Carrier| -> Fallible<AnyQueryable> {
+                    let mut inner_qbl = function.eval(arg)?;
+
+                    Queryable::new(move |_self, query: Query<AnyObject>| match query {
+                        Query::External(query) => inner_qbl
+                            .eval(query.downcast_ref::<Q>()?)
+                            .map(AnyObject::new)
+                            .map(Answer::External),
+                        Query::Internal(query) => {
+                            if query.downcast_ref::<QueryType>().is_some() {
+                                return Ok(Answer::internal(Type::of::<Q>()));
+                            }
+                            let Answer::Internal(a) = inner_qbl.eval_query(Query::Internal(query))?
+                            else { return fallible!(FailedFunction, "internal query returned external answer") };
+
+                            Ok(Answer::Internal(a))
+                        }
+                    })
+                },
+            ),
+            self.input_metric.clone(),
+            self.output_measure.clone(),
+            self.privacy_map.clone()
+        ).expect("compatibility check already passed")
+    }
+}
+
 #[derive(Clone, PartialEq)]
 pub struct AnyDomain {
     pub type_: Type,

@@ -195,3 +195,23 @@ def test_discrete_exponential():
     meas = (input_domain, input_metric) >> dp.m.then_base_discrete_exponential(1., "maximize")
     print(meas(list(range(10))))
     print(meas.map(2))
+
+def test_alp_histogram():
+    import opendp.prelude as dp
+
+    counter = dp.t.make_count_by(MO=dp.L1Distance[int], TK=str)
+
+    alp_meas = counter >> dp.m.make_alp_queryable(
+        counter.output_domain,
+        counter.output_metric,
+        scale=1.,
+        total_limit=24,
+        value_limit=24,
+    )
+
+    alp_qbl = alp_meas(["A"] * 20 + ["B"] * 10)
+
+    print(alp_qbl("A"))
+    print(alp_qbl("B"))
+    print(alp_qbl("C"))
+    print(alp_meas.map(1))

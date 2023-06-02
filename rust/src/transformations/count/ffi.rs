@@ -9,7 +9,7 @@ use crate::ffi::any::{AnyDomain, AnyMetric, Downcast};
 use crate::ffi::any::{AnyObject, AnyTransformation};
 use crate::ffi::util::{c_bool, to_bool, Type};
 use crate::metrics::{L1Distance, L2Distance, SymmetricDistance};
-use crate::traits::{Float, Hashable, Number, Primitive};
+use crate::traits::{Hashable, Number, Primitive};
 use crate::transformations::{
     make_count, make_count_by, make_count_by_categories, make_count_distinct,
     CountByCategoriesConstant, CountByConstant,
@@ -152,7 +152,7 @@ pub extern "C" fn opendp_transformations__make_count_by(
         TV: Type,
     ) -> FfiResult<*mut AnyTransformation>
     where
-        QO: Float,
+        QO: Number,
     {
         fn monomorphize2<MO, TK, TV>(
             input_domain: &AnyDomain,
@@ -160,7 +160,7 @@ pub extern "C" fn opendp_transformations__make_count_by(
         ) -> FfiResult<*mut AnyTransformation>
         where
             MO: 'static + Metric + CountByConstant<MO::Distance>,
-            MO::Distance: Float,
+            MO::Distance: Number,
             TK: Hashable,
             TV: Number,
             (MapDomain<AtomDomain<TK>, AtomDomain<TV>>, MO): MetricSpace,
@@ -183,5 +183,5 @@ pub extern "C" fn opendp_transformations__make_count_by(
     let TV = try_!(Type::try_from(TV));
     let QO = try_!(MO.get_atom());
 
-    dispatch!(monomorphize, [(QO, @floats)], (input_domain, input_metric, MO, TK, TV))
+    dispatch!(monomorphize, [(QO, @numbers)], (input_domain, input_metric, MO, TK, TV))
 }
