@@ -26,8 +26,8 @@ To ensure the correctness of the output, we require the following preconditions:
 \begin{itemize}
     \item Type \texttt{TIA} must have trait \texttt{PartialEq}.
     \item Type \texttt{M} must have trait \texttt{DatasetMetric}.
-    \item \rustdoc{core/trait}{MetricSpace} is implemented for \texttt{(VectorDomain<AtomDomain<TIA>>, M)}. Therefore \texttt{M} is a valid metric on \texttt{VectorDomain<AtomDomain<TIA>>}.
-    \item \rustdoc{core/trait}{MetricSpace} is implemented for \texttt{(VectorDomain<AtomDomain<bool>>, M)}.
+    \item \rustdoc{core/trait}{MetricSpace} is implemented for \texttt{(VectorDomain<AtomDomain<TIA>{}>, M)}. Therefore \texttt{M} is a valid metric on \texttt{VectorDomain<AtomDomain<TIA>{}>}.
+    \item \rustdoc{core/trait}{MetricSpace} is implemented for \texttt{(VectorDomain<AtomDomain<bool>{}>, M)}.
 \end{itemize}
 
 \subsection*{Pseudocode}
