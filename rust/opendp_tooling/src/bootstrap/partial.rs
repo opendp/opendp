@@ -38,6 +38,8 @@ pub fn generate_partial(mut item_fn: ItemFn) -> Option<ItemFn> {
         return None;
     };
 
+    let pathargs = path.path.segments.last()?.clone().arguments;
+
     let mut operator_type = path.path.segments.last()?.clone();
     operator_type.ident = syn::Ident::new(
         format!("Partial{}", operator_type.ident).as_str(),
@@ -51,7 +53,7 @@ pub fn generate_partial(mut item_fn: ItemFn) -> Option<ItemFn> {
     let old_block = item_fn.block.clone();
     // update function body
     item_fn.block = syn::parse_quote! {{
-        crate::core::#body_operator_ident::new(move |#input_domain_arg, #input_metric_arg| #old_block)
+        crate::core::#body_operator_ident::#pathargs::new(move |#input_domain_arg, #input_metric_arg| #old_block)
     }};
 
     Some(item_fn)

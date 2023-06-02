@@ -1,5 +1,7 @@
 use std::cmp::Ordering;
 
+use opendp_derive::bootstrap;
+
 use crate::{
     core::{Function, MetricSpace, StabilityMap, Transformation},
     domains::{AtomDomain, VectorDomain},
@@ -10,6 +12,14 @@ use crate::{
 
 use super::traits::UnboundedMetric;
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
+#[bootstrap(
+    features("contrib"),
+    generics(MI(suppress), TIA(suppress)),
+    derived_types(TIA = "$get_atom(get_type(input_domain))")
+)]
 /// Makes a Transformation that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
 ///
 ///

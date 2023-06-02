@@ -42,6 +42,7 @@ __all__ = [
     "make_metric_bounded",
     "make_metric_unbounded",
     "make_ordered_random",
+    "make_quantile_score_candidates",
     "make_quantiles_from_counts",
     "make_resize",
     "make_select_column",
@@ -84,6 +85,7 @@ __all__ = [
     "then_metric_bounded",
     "then_metric_unbounded",
     "then_ordered_random",
+    "then_quantile_score_candidates",
     "then_resize",
     "then_sum",
     "then_sum_of_squared_deviations",
@@ -2070,6 +2072,67 @@ def then_ordered_random(
     return PartialConstructor(lambda input_domain, input_metric: make_ordered_random(
         input_domain=input_domain,
         input_metric=input_metric))
+
+
+
+@versioned
+def make_quantile_score_candidates(
+    input_domain,
+    input_metric,
+    candidates: Any,
+    alpha: float
+) -> Transformation:
+    """Makes a Transformation that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
+    
+    [make_quantile_score_candidates in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_quantile_score_candidates.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AtomDomain<usize>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `LInfDiffDistance<usize>`
+    
+    :param input_domain: Uses a tighter sensitivity when the size of vectors in the input domain is known.
+    :param input_metric: Either SymmetricDistance or InsertDeleteDistance.
+    :param candidates: Potential quantiles to score
+    :type candidates: Any
+    :param alpha: a value in [0, 1]. Choose 0.5 for median
+    :type alpha: float
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TIA = get_atom(get_type(input_domain))
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_candidates = py_to_c(candidates, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
+    c_alpha = py_to_c(alpha, c_type=ctypes.c_double, type_name=f64)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_quantile_score_candidates
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr, ctypes.c_double]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_candidates, c_alpha), Transformation))
+    
+    return output
+
+def then_quantile_score_candidates(
+    candidates: Any,
+    alpha: float
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_quantile_score_candidates(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        candidates=candidates,
+        alpha=alpha))
 
 
 

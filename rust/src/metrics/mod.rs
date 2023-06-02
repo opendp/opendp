@@ -493,7 +493,7 @@ impl<Q> Metric for LInfDiffDistance<Q> {
     type Distance = Q;
 }
 
-impl<T: CheckAtom, Q> MetricSpace for (VectorDomain<AtomDomain<T>>, LInfDiffDistance<Q>) {
+impl<T: CheckAtom> MetricSpace for (VectorDomain<AtomDomain<T>>, LInfDiffDistance<T>) {
     fn check(&self) -> bool {
         !self.0.element_domain.nullable()
     }
