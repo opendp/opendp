@@ -37,7 +37,7 @@ fn make_concurrent_composition(
     output_measure: AnyMeasure,
     d_in: AnyObject,
     d_mids: Vec<AnyObject>,
-) -> Fallible<AnyMeasurement> {
+) -> Fallible<Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>> {
     let compositor: Measurement<_, Queryable<AnyMeasurement, AnyObject>, _, _> =
         super::make_concurrent_composition(
             input_domain,
