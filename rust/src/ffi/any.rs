@@ -31,7 +31,7 @@ pub trait Downcast {
 pub struct AnyBoxBase<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> {
     pub value: Box<dyn Any>,
     clone_glue: Option<Glue<fn(&Self) -> Self>>,
-    part_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
+    partial_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
     debug_glue: Option<Glue<fn(&Self) -> String>>,
 }
 
@@ -47,7 +47,7 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool>
         Self {
             value: Box::new(value),
             clone_glue,
-            part_eq_glue,
+            partial_eq_glue: part_eq_glue,
             debug_glue,
         }
     }
@@ -60,7 +60,7 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool>
                     .unwrap_assert("Failed downcast of AnyBox value")
                     .clone(),
                 self_.clone_glue.clone(),
-                self_.part_eq_glue.clone(),
+                self_.partial_eq_glue.clone(),
                 self_.debug_glue.clone(),
             )
         })
@@ -140,7 +140,7 @@ impl<const PARTIALEQ: bool, const DEBUG: bool> Clone for AnyBoxBase<true, PARTIA
 impl<const CLONE: bool, const DEBUG: bool> PartialEq for AnyBoxBase<CLONE, true, DEBUG> {
     fn eq(&self, other: &Self) -> bool {
         (self
-            .part_eq_glue
+            .partial_eq_glue
             .as_ref()
             .unwrap_assert("eq_glue always exists for PARTIALEQ=true AnyBoxBase"))(
             self, other

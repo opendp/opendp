@@ -179,7 +179,6 @@ mod tests {
     use crate::core;
     use crate::error::Fallible;
     use crate::ffi::any::{AnyObject, Downcast};
-    use crate::ffi::util;
     use crate::ffi::util::ToCharP;
 
     use super::*;
@@ -200,11 +199,11 @@ mod tests {
     #[test]
     fn test_make_is_equal() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_is_equal(
-            util::into_raw(AnyDomain::new(VectorDomain::new(
+            AnyDomain::new_raw(VectorDomain::new(
                 AtomDomain::<i32>::default(),
-            ))),
-            util::into_raw(AnyMetric::new(SymmetricDistance::default())),
-            util::into_raw(AnyObject::new(1)) as *const AnyObject,
+            )),
+            AnyMetric::new_raw(SymmetricDistance::default()),
+            AnyObject::new_raw(1) as *const AnyObject,
         ))?;
         let arg = AnyObject::new_raw(vec![1, 2, 3]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
