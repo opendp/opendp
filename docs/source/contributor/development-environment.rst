@@ -161,8 +161,8 @@ At this point, you should be able import OpenDP as a locally installed package:
     This can occur if you are on a Mac M1 and have an x86_64 Python install.
     
 
-Testing Python
---------------
+Python Tests
+------------
 You can test that things are working by running OpenDP's Python test suite, using ``pytest``.
 Run the tests from the ``python`` directory. 
 
@@ -181,13 +181,68 @@ If pytest is not found, don't forget to activate your virtual environment!
 This is just a quick overview of building OpenDP. 
 If you're interested in porting OpenDP to a different platform, we'd be delighted to get your help; please :doc:`contact us <../contact>`!
 
-Documentation
--------------
+Python Documentation
+--------------------
 
 This documentation website is built with Sphinx.
 The source code and developer documentation is
 `here <https://github.com/opendp/opendp/tree/main/docs#readme>`_.
 
+
+
+R Setup
+-------
+
+You can also load an R package that uses your new OpenDP binary. 
+
+Instructions to set up a development environment.
+
+First, install devtools:
+
+.. code-block:: R
+
+    install.packages("devtools")
+
+On Mac you may need to run `brew install harfbuzz fribidi libgit2` first.
+
+After each edit to the R or Rust source, run the following command in R from `R/opendpbase/` to (re)load the R package:
+
+.. code-block:: R
+
+    devtools::load_all(recompile=TRUE)
+
+.. This function...
+.. - runs `src/Makevars`
+..     - cargo builds `libopendp.a` (rust-lib) and `opendp.h` (rust-lib header file)
+..     - copies `opendp.h` into `src/`
+.. - compiles the c files in `src/`, which statically links with `libopendp.a`
+.. - outputs `src/opendp.so`, which is used by all R functions
+.. - reloads all R functions
+
+R Tests
+-------
+
+Run tests from `R/opendpbase/` (located in `R/opendpbase/tests/`):
+
+.. code-block:: R
+
+    # runs testthat tests
+    devtools::test()
+    
+
+Alternatively, 
+.. code-block:: bash
+
+    R CMD check R/opendpbase/ --as-cran
+
+
+R Documentation
+---------------
+Uses roxygen to generate `R/opendpbase/man` pages from `#'` code comments.
+
+.. code-block:: R
+
+    devtools::document()
 
 Developer Tooling
 -----------------

@@ -107,7 +107,7 @@ impl<Q> Measure for SmoothedMaxDivergence<Q> {
     type Distance = SMDCurve<Q>;
 }
 
-/// A function mapping from $\delta$ to $\epsilon$.
+/// A function mapping from $\delta$ to $\epsilon$
 ///
 /// SMD stands for "Smoothed Max Divergence".
 /// This is the distance type for [`SmoothedMaxDivergence`].

@@ -75,9 +75,6 @@ instance/
 # Sphinx documentation
 docs/_build/
 
-# PyBuilder
-target/
-
 # Jupyter Notebook
 .ipynb_checkpoints
 
@@ -139,6 +136,7 @@ dmypy.json
 # will have compiled files and executables
 debug/
 target/
+vendor/
 
 # auto-generated header file
 rust/opendp.h
@@ -172,8 +170,21 @@ Cargo.lock
 out/
 
 /python/wheelhouse
+
+# R miscellanea
+R/opendpbase/man
 .Rhistory
 .Rproj/
 .Rproj.user/
-.Rbuildignore
-opendpbase.Rproj
+*.tar.gz
+*.zip
+opendpbase.Rcheck
+..Rcheck
+*.rds
+.RData
+LICENSE.note
+AUTHORS
+Makevars
+vendor.tar.xz
+opendp.tar.xz
+R/src/.cargo

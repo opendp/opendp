@@ -6,7 +6,7 @@ homepage = "https://opendp.org/"
 repository = "https://github.com/opendp/opendp"
 authors = ["The OpenDP Project <info@opendp.org>"]
 edition = "2021"
-rust-version = "1.64.0" # MSRV via `cargo intall msrv && cargo msrv -- cargo check --features=untrusted,bindings-python`
+rust-version = "1.64.0" # MSRV via `cargo install cargo-msrv && cargo msrv --min 1.49.0 -- cargo check --features=untrusted,bindings-python`
 
 [workspace]
 members = [".", "opendp_derive", "opendp_tooling"]
@@ -68,8 +68,12 @@ test-plot = ["vega_lite_4"]
 ffi = ["lazy_static", "cbindgen"]
 # execute proc macros to insert proof links
 derive = ["opendp_tooling", "opendp_derive/full", "syn", "proc-macro2"]
-# generate python language bindings
-bindings-python = ["ffi", "derive"]
+
+# deprecated
+bindings-python = ["bindings"]
+# generate language bindings
+bindings = ["ffi", "derive", "cbindgen"]
+
 # generate "then_xxx" functions in Rust for "make_xxx" functions whose first two arguments are the metric space
 partials = ["derive", "opendp_derive/partials"]
 

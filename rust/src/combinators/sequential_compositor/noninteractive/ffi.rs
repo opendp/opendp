@@ -21,7 +21,7 @@ use super::BasicCompositionMeasure;
     arguments(measurements(rust_type = "Vec<AnyMeasurementPtr>")),
     dependencies("$get_dependencies_iterable(measurements)")
 )]
-/// Construct the DP composition [`measurement0`, `measurement1`, ...].
+/// Construct the DP composition \[`measurement0`, `measurement1`, ...\].
 /// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
 ///
 /// All metrics and domains must be equivalent.

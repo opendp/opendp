@@ -184,6 +184,7 @@ fn reconcile_derived_types(derived_types: Option<DerivedTypes>) -> Vec<Argument>
         .map(|(name, rt)| Argument {
             name: Some(name),
             rust_type: Some(rt),
+            is_type: true,
             ..Default::default()
         })
         .collect()

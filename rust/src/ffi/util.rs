@@ -342,7 +342,6 @@ lazy_static! {
 impl TryFrom<&str> for Type {
     type Error = Error;
     fn try_from(value: &str) -> Fallible<Self> {
-       // println!("type in Rust {value}.");
         let type_ = DESCRIPTOR_TO_TYPE.get(value);
         type_
             .cloned()

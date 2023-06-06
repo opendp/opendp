@@ -52,7 +52,22 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: libs
-          path: rust/target/debug/libopendp.so
+          path: |
+            rust/target/debug/libopendp.so
+            rust/target/debug/libopendp.a
+      
+      - name: Prepare vendored sources
+        run: |
+          echo "Stage R"
+          cd ..
+          cargo vendor --manifest-path rust/Cargo.toml
+          tar --create --xz --no-xattrs -f vendor.tar.xz vendor
+          
+      - name: Upload vendored sources
+        uses: actions/upload-artifact@v3
+        with:
+          name: vendor
+          path: vendor.tar.xz
 
   python-lint:
     runs-on: ubuntu-22.04
@@ -219,3 +234,84 @@ jobs:
         run: |
           shopt -s globstar
           pytest --nbmake source/**/*.ipynb -n=auto
+
+
+  R-test:
+    needs: rust-build-and-test
+    runs-on: ubuntu-22.04
+    env:
+      OPENDP_LIB_DIR: ${{ github.workspace }}/libs
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download libs
+        uses: actions/download-artifact@v3
+        with:
+          name: libs
+          path: libs/
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: R/opendpbase
+          extra-packages: devtools,testthat,roxygen2,local::.
+
+      - name: Test
+        working-directory: R/opendpbase/
+        run: Rscript -e 'devtools::test(reporter = c("summary", "fail"))'
+
+      # - uses: r-lib/actions/check-r-package@v2
+      #   with:
+      #     working-directory: R/opendpbase
+
+      # - name: Build
+      #   working-directory: ./R/opendpbase/
+      #   run: R CMD build .
+        
+      # - name: 
+      #   working-directory: ./R/opendpbase/
+      #   run: R CMD check opendpbase_*.tar.gz
+
+      - name: Clean R package
+        run: bash tools/r_stage.sh -c
+      
+      - name: Download vendor
+        uses: actions/download-artifact@v3
+        with:
+          name: vendor
+          path: ./
+  
+      - name: Stage R package sources
+        run: |
+          echo "Stage R"
+
+          # for preparing authors and license note
+          mkdir vendor
+          tar --extract --xz -f vendor.tar.xz -C ./vendor
+
+          echo "Prepare inst/AUTHORS and LICENSE.note"
+          Rscript tools/update_authors.R
+
+          echo "Tar library sources into R/opendpbase/src/rust"
+          tar --create --xz --no-xattrs --file=R/opendpbase/src/opendp.tar.xz rust
+
+          echo "Move vendor.tar.xz into R/opendpbase/src/rust"
+          mv vendor.tar.xz R/opendpbase/src
+
+      - name: Push to r-latest branch
+        run: |
+          git fetch
+          git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git config --global user.name "$GITHUB_ACTOR"
+
+          # create brand new history each time
+          git checkout --orphan r-latest
+
+          git add R/opendpbase/ --force
+          echo "Push R package to r-latest branch"
+          git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
+          git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
+          git push --force origin r-latest

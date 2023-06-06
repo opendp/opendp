@@ -1,0 +1,32 @@
+# for syntax highlighting in intellij
+# 1. install the GNU Makefile plugin
+# 2. right click on this file and associate the filetype with a Makefile
+
+# will always be located at src/libopendp.a once this script is done
+STATLIB = libopendp.a
+
+# PKG_LIBS tells R where to find the static library (libopendp.a)
+PKG_LIBS = $(STATLIB)
+
+all: rust_build
+
+rust_build:
+
+	if [ ! -z "@OPENDP_LIB_DIR@" ]; then \
+		cp @OPENDP_LIB_DIR@/libopendp.a .; \
+	else \
+		echo "* extracting opendp and vendor files"; \
+		$(TAR) --extract --xz -f ./opendp.tar.xz -C ./; \
+		$(TAR) --extract --xz -f ./vendor.tar.xz -C ./rust; \
+		echo "** setting vendor configuration"; \
+		mkdir -p ./.cargo; \
+		cp ./cargo_vendor_config.toml ./.cargo/config.toml; \
+		echo "* building static library"; \
+		@BEFORE_CARGO_BUILD@ cargo build --manifest-path rust/Cargo.toml --color always --release --jobs 2 --offline --features @RUST_FEATURES@; \
+		@AFTER_CARGO_BUILD@ \
+		cp rust/target/release/libopendp.a libopendp.a; \
+		cp rust/opendp.h .; \
+	fi
+
+clean:
+	rm -Rf $(SHLIB) $(OBJECTS) $(STATLIB)

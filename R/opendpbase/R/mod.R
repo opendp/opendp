@@ -1,280 +1,581 @@
-
-binary_search_chain <- function(make_chain, d_in, d_out, bounds=NULL, T=NULL){
-  return ( make_chain(binary_search_param(make_chain, d_in, d_out, bounds, T)) )
-}
-
-binary_search_param <- function(make_chain, d_in, d_out, bounds, T){
-  return (binary_search(function(param){ check(make_chain(param), d_in, d_out) }, bounds, T) )
-}
-
-binary_search <- function( predicate, bounds = NULL,T=NULL, return_sign=FALSE){
- 
-  if(is.null(bounds)){
-    bounds = exponential_bounds_search(predicate, T)
+assert_features <- function(...) {
+  for (feature in list(...)) {
+    if (!feature %in% getOption("opendp_features")) {
+      stop(paste0("Attempted to use function that requires ", feature, " but ", feature, " is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"", feature, "\")"))
+    }
   }
-  
-  if(is.null(bounds)){
+}
+
+#' Enable features for the opendp package.
+#'
+#' See https://github.com/opendp/opendp/discussions/304 for available features.
+#'
+#' @export
+enable_features <- function(...) {
+  options(opendp_features = union(getOption("opendp_features"), list(...)))
+}
+
+#' Disable features in the opendp package.
+#'
+#' @export
+disable_features <- function(...) {
+  features <- getOption("opendp_features")
+  options(opendp_features = features[!features %in% list(...)])
+}
+
+is_space <- function(x) {
+  inherits(x, "list") && length(x) == 2 && inherits(x[[1]], "domain") && inherits(x[[2]], "metric")
+}
+
+output_domain <- function(x) {
+  if (inherits(x, "transformation")) {
+    return(x("output_domain"))
+  }
+
+  if (is_space(x)) {
+    return(x[[1]])
+  }
+
+  stop(paste("expected a measurement, transformation, or metric space. Got", class(x)))
+}
+
+output_metric <- function(x) {
+  if (inherits(x, "transformation")) {
+    return(x("output_metric"))
+  }
+
+  if (is_space(x)) {
+    return(x[[2]])
+  }
+
+  stop("expected a measurement, transformation, or metric space")
+}
+
+make_chain_dyn <- function(rhs, lhs, log) {
+  if (is_space(lhs)) {
+    return(rhs)
+  }
+  if (inherits(rhs, "transformation")) {
+    if (inherits(lhs, "transformation")) {
+      return(new_transformation(make_chain_tt(rhs, lhs)("ptr"), log))
+    }
+    rhs <- rhs("function")
+  }
+  if (inherits(rhs, "measurement")) {
+    return(new_measurement(make_chain_mt(rhs, lhs)("ptr"), log))
+  }
+  if (inherits(rhs, "opendp_function")) {
+    return(new_measurement(make_chain_pm(rhs, lhs)("ptr"), log))
+  }
+  stop(paste("cannot chain lhs and rhs", class(lhs), class(rhs)))
+}
+
+#' new transformation
+#'
+#' @param ptr pointer to the transformation struct
+#' @param log call history
+new_transformation <- function(ptr, log) {
+  transformation <- function(attr, arg, d_in, d_out) {
+    if (missing(attr) + missing(arg) + missing(d_in) != 2) {
+      stop("expected exactly one of attr, arg or d_in")
+    }
+    if (missing(d_in)) {
+      if (!missing(d_out)) {
+        stop("expected d_in when d_out is specified")
+      }
+    } else {
+      if (missing(d_out)) {
+        return(transformation_map(ptr, d_in))
+      } else {
+        return(transformation_check(ptr, d_in, d_out))
+      }
+    }
+    if (!missing(arg)) {
+      return(transformation_invoke(ptr, arg))
+    }
+
+    switch(attr,
+      input_domain = transformation_input_domain(ptr),
+      input_metric = transformation_input_metric(ptr),
+      output_domain = transformation_output_domain(ptr),
+      output_metric = transformation_output_metric(ptr),
+      `function` = transformation_function(ptr),
+      ptr = ptr,
+      log = log,
+      stop("unrecognized attribute")
+    )
+  }
+  class(transformation) <- "transformation"
+  transformation
+}
+
+#' new measurement
+#'
+#' @param ptr pointer to the measurement struct
+#' @param log call history
+new_measurement <- function(ptr, log) {
+  measurement <- function(attr, arg, d_in, d_out) {
+    if (missing(attr) + missing(arg) + missing(d_in) != 2) {
+      stop("expected exactly one of attr, arg or d_in")
+    }
+    if (missing(d_in)) {
+      if (!missing(d_out)) {
+        stop("expected d_in when d_out is specified")
+      }
+    } else {
+      if (missing(d_out)) {
+        return(measurement_map(ptr, d_in))
+      } else {
+        return(measurement_check(ptr, d_in, d_out))
+      }
+    }
+    if (!missing(arg)) {
+      return(measurement_invoke(ptr, arg))
+    }
+    switch(attr,
+      input_domain = measurement_input_domain(ptr),
+      input_metric = measurement_input_metric(ptr),
+      output_measure = measurement_output_measure(ptr),
+      `function` = measurement_function(ptr),
+      ptr = ptr,
+      log = log,
+      stop("unrecognized attribute")
+    )
+  }
+  class(measurement) <- "measurement"
+  measurement
+}
+
+#' new domain
+#'
+#' @param ptr a pointer to a domain
+#' @param log call history
+new_domain <- function(ptr, log) {
+  domain <- function(attr, member) {
+    if (missing(attr) + missing(member) != 1) {
+      stop("expected exactly one of attr or member")
+    }
+
+    if (!missing(member)) {
+      return(member(ptr, member))
+    }
+
+    switch(attr,
+      debug = domain_debug(ptr),
+      type = domain_type(ptr),
+      carrier_type = domain_carrier_type(ptr),
+      ptr = ptr,
+      log = log,
+      stop("unrecognized attribute")
+    )
+  }
+  class(domain) <- "domain"
+  domain
+}
+
+#' new metric
+#'
+#' @param ptr a pointer to a metric
+#' @param log call history
+new_metric <- function(ptr, log) {
+  metric <- function(attr) {
+    switch(attr,
+      debug = metric_debug(ptr),
+      type = metric_type(ptr),
+      distance_type = metric_distance_type(ptr),
+      ptr = ptr,
+      log = log,
+      stop("unrecognized attribute")
+    )
+  }
+  class(metric) <- "metric"
+  metric
+}
+
+#' new measure
+#'
+#' @param ptr a pointer to a measure
+#' @param log call history
+new_measure <- function(ptr, log) {
+  measure <- function(attr) {
+    switch(attr,
+      debug = measure_debug(ptr),
+      type = measure_type(ptr),
+      distance_type = measure_distance_type(ptr),
+      ptr = ptr,
+      log = log,
+      stop("unrecognized attribute")
+    )
+  }
+  class(measure) <- "measure"
+  measure
+}
+
+#' new function
+#'
+#' @param ptr a pointer to a function
+#' @param log call history
+new_function <- function(ptr, log) {
+  opendp_function <- function(attr, arg) {
+    if (missing(attr) + missing(arg) != 1) {
+      stop("expected exactly one of attr or arg")
+    }
+
+    if (!missing(arg)) {
+      return(function_eval(ptr, arg))
+    }
+
+    switch(attr,
+      ptr = ptr,
+      log = log,
+      stop("unrecognized attribute")
+    )
+  }
+  class(opendp_function) <- "opendp_function"
+  opendp_function
+}
+
+#' new Smoothed Max Divergence curve
+#'
+#' @param ptr a pointer to a SMD curve
+new_smd_curve <- function(ptr) {
+  smd_curve <- function(attr, delta) {
+    if (missing(attr) + missing(delta) != 1) {
+      stop("expected exactly one of attr or delta")
+    }
+
+    if (!missing(delta)) {
+      return(smd_curve_epsilon(ptr, delta))
+    }
+
+    switch(attr,
+      ptr = ptr,
+      stop("unrecognized attribute")
+    )
+  }
+  class(smd_curve) <- "smd_curve"
+  smd_curve
+}
+
+#' new queryable
+#'
+#' @param ptr a pointer to a queryable
+new_queryable <- function(ptr) {
+  queryable <- function(attr, query) {
+    if (missing(attr) + missing(query) != 1) {
+      stop("expected exactly one of attr or query")
+    }
+
+    if (!missing(query)) {
+      return(queryable_eval(ptr, query))
+    }
+
+    switch(attr,
+      ptr = ptr,
+      stop("unrecognized attribute")
+    )
+  }
+  class(queryable) <- "queryable"
+  queryable
+}
+
+#' extract heterogeneously typed keys and values from a hashtab
+#'
+#' @param data a hashtab
+#' @param type_name the expected runtime_type of the hashtab
+#' @export
+hashitems <- function(data, type_name) {
+  if (!inherits(data, "hashtab")) {
+    stop("Expected hashtab data, got ", class(data))
+  }
+  if (type_name$origin != "HashMap") {
+    stop("Expected HashMap type_name, got ", type_name$origin)
+  }
+
+  keys <- vector(RUST_TO_R[[type_name$args[[1]]$origin]], utils::numhash(data))
+  vals <- vector(RUST_TO_R[[type_name$args[[2]]$origin]], utils::numhash(data))
+  idx <- 0
+  utils::maphash(data, function(k, v) {
+    idx <<- idx + 1
+    keys[idx] <<- k
+    vals[idx] <<- v
+  })
+  list(keys, vals)
+}
+
+#' @export
+new_hashtab <- function(keys, vals) {
+  if (length(keys) != length(vals)) stop("keys and vals must have the same length")
+  h <- utils::hashtab()
+  mapply(function(k, v) utils::sethash(h, k, v), keys, vals, SIMPLIFY = FALSE)
+  h
+}
+
+to_str <- function(x, depth) UseMethod("to_str")
+`to_str.default` <- function(x, depth) format(x)
+`to_str.hashtab` <- function(x, depth = 0L) {
+  spacer <- paste(rep("  ", depth), collapse = "")
+  val <- "hashtab(\n"
+  utils::maphash(x, function(k, v) {
+    val <<- c(val, paste0(spacer, "  ", k, ": ", to_str(v, depth = depth + 1), ",\n"))
+  })
+  val <- c(val, spacer, ")")
+  paste0(val, collapse = "")
+}
+`print.hashtab` <- function(x, ...) {
+  cat(to_str(x, ...))
+}
+
+CONSTRUCTOR_LOG_KEYS <- list("_type", "name", "module", "kwargs")
+new_constructor_log <- function(name, module, kwargs) {
+  new_hashtab(CONSTRUCTOR_LOG_KEYS, list(
+    unbox("constructor"),
+    unbox(name),
+    unbox(module),
+    kwargs
+  ))
+}
+
+PARTIAL_LOG_KEYS <- list("_type", "lhs", "rhs")
+new_partial_log <- function(lhs, rhs) {
+  new_hashtab(PARTIAL_LOG_KEYS, list(
+    unbox("partial_chain"),
+    lhs,
+    rhs
+  ))
+}
+
+
+#' @export
+to_ast <- function(item) {
+  if (inherits(item, "scalar")) {
+    item
+  } else if (inherits(item, c("transformation", "measurement", "domain", "metric", "measure", "function"))) {
+    to_ast(item$log)
+  } else if (inherits(item, "runtime_type")) {
+    unbox(rt_to_string(item))
+  } else if (utils::is.hashtab(item)) {
+    # TODO: can jsonlite even write non-string keys?
+    data <- list()
+    utils::maphash(item, function(k, v) {
+      data[[k]] <<- to_ast(v)
+    })
+    data
+  } else if (is.list(item)) {
+    lapply(item, to_ast)
+  } else if (inherits(item, c("numeric", "character", "integer", "logical"))) {
+    list(`_type` = "list", `_items` = item)
+  } else {
+    item
+  }
+}
+
+
+# TODO: reformat to Roxygen:
+# pre <- make_bounded_sum(bounds=c(0., 1.))
+# fun <- function(s) make_chain_mt(make_base_laplace(scale=s), pre)
+
+# chain1 = binary_search_chain(function(x) fun(x), d_in=1L, d_out=1., bounds=c(0.,100.) , T="float")
+# chain1
+
+# chain2 = binary_search_chain(function(x) fun(x), d_in=1L, d_out=1. , T="float")
+# chain2
+
+# chain3 = binary_search_chain(function(x) fun(x), d_in=1L, d_out=1. )
+# chain3
+
+# pre <- make_base_discrete_laplace(scale=1.)
+# fun <- function(s) make_chain_mt(pre, make_bounded_sum(bounds=c(0L, s)))
+
+# chain1 = binary_search_chain(function(x) fun(x), d_in=1L, d_out=1., bounds=c(0L,100L) , T="int")
+# chain1
+
+# chain2 = binary_search_chain(function(x) fun(x), d_in=1L, d_out=1. , T="int")
+# chain2
+
+# chain3 = binary_search_chain(function(x) fun(x), d_in=1L, d_out=1. )
+# chain3
+#' @export
+binary_search_chain <- function(make_chain, d_in, d_out, bounds = NULL, .T = NULL) {
+  return(make_chain(binary_search_param(make_chain, d_in, d_out, bounds, .T)))
+}
+
+#' @export
+binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NULL) {
+  return(binary_search(function(param) {
+    make_chain(param)(d_in = d_in, d_out = d_out)
+  }, bounds, .T))
+}
+
+unbox <- function(x) {
+  if (requireNamespace("jsonlite", quietly = TRUE)) {
+    jsonlite::unbox(x)
+  } else {
+    x
+  }
+}
+
+#' @export
+binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FALSE) {
+  if (is.null(bounds)) {
+    bounds <- exponential_bounds_search(predicate, .T)
+  }
+
+  if (is.null(bounds)) {
     stop("unable to infer bounds")
   }
-  
+
   # if(len(set(map(type, bounds))) != 1){
   #   stop("bounds must share the same type")
   # }
-  
- # print(str(bounds))
-   tmp <- sort(bounds)
-   lower <- tmp[1]
-   upper <- tmp[2] 
+
+  # print(str(bounds))
+  tmp <- sort(bounds)
+  lower <- tmp[1]
+  upper <- tmp[2]
 
   # print("here")
   # print(str(c(lower, upper)))
-#  print("doing maximize")
-  maximize = predicate(lower)  # if the lower bound passes, we should maximize
-#  print(str(maximize))
-#  print("doing minimize")
-  minimize = predicate(upper)  # if the upper bound passes, we should minimize
-#  print(str(minimize))
-#  print(c(maximize, minimize))
-  if(maximize == minimize){
+  #  print("doing maximize")
+  maximize <- predicate(lower) # if the lower bound passes, we should maximize
+  #  print(str(maximize))
+  #  print("doing minimize")
+  minimize <- predicate(upper) # if the upper bound passes, we should minimize
+  #  print(str(minimize))
+  #  print(c(maximize, minimize))
+  if (maximize == minimize) {
     stop("the decision boundary of the predicate is outside the bounds")
   }
 
-  if(inherits(lower,"numeric")){
-    tolerance = 0.
-    half = function(x) return(x / 2.)
+  if (inherits(lower, "numeric")) {
+    tolerance <- 0.
+    half <- function(x) {
+      return(x / 2.)
+    }
   } else {
-    if(inherits(lower,"integer")){
-      tolerance = 1L  # the lower and upper bounds never meet due to int truncation
-      half = function(x) return(x %/% 2L)
+    if (inherits(lower, "integer")) {
+      tolerance <- 1L # the lower and upper bounds never meet due to int truncation
+      half <- function(x) {
+        return(x %/% 2L)
+      }
     } else {
       stop("bounds must be either float or int")
     }
   }
 
-  mid = lower
-  while(upper - lower > tolerance){
-    new_mid = lower + half(upper - lower)  # avoid overflow
-   #cat(sprintf("\n lower=%f, upper=%f, tolerance=%f, new_mid=%f", lower, upper, tolerance, new_mid))
+  mid <- lower
+  while (upper - lower > tolerance) {
+    new_mid <- lower + half(upper - lower) # avoid overflow
+    # cat(sprintf("\n lower=%f, upper=%f, tolerance=%f, new_mid=%f", lower, upper, tolerance, new_mid))
     # avoid an infinite loop from float roundoff
-    if(new_mid == mid) break;
-    mid = new_mid
-  
-    
-    if(predicate(mid) == minimize){
-      upper = mid
+    if (new_mid == mid) break
+    mid <- new_mid
+
+
+    if (predicate(mid) == minimize) {
+      upper <- mid
     } else {
-      lower = mid
+      lower <- mid
     }
   }
-# one bound is always false, the other true. Return the truthy bound
-  value = ifelse(minimize, upper ,lower)
+  # one bound is always false, the other true. Return the truthy bound
+  value <- ifelse(minimize, upper, lower)
 
-# optionally return sign
-  if(return_sign){
-    return( c(value, ifelse(minimze,  1 , -1)) )
+  # optionally return sign
+  if (return_sign) {
+    return(c(value, ifelse(minimize, 1, -1)))
   }
-  return (value)
+  return(value)
 }
 
-exponential_bounds_search <- function(predicate, T){
-
+exponential_bounds_search <- function(predicate, .T) {
   # try to infer T
-  if(is.null(T)){
+  if (is.null(.T)) {
     check_type <- function(v) {
       f <- try(predicate(v), TRUE)
-      if(inherits(f,"try-error")){
-        #warning(attr(f,"condition")$message)
+      if (inherits(f, "try-error")) {
+        # warning(attr(f,"condition")$message)
         return(FALSE)
       } else {
         return(TRUE)
       }
     }
-  
 
-    if(check_type(0.)){
-      T = "float"
+
+    if (check_type(0.)) {
+      .T <- "float"
     } else {
-        if(check_type(0L)){
-          T = "int"
-        } else {
-          stop("unable to infer type `T`; pass the type `T` or bounds")
-        }
+      if (check_type(0L)) {
+        .T <- "int"
+      } else {
+        stop("unable to infer type `.T`; pass the type `.T` or bounds")
       }
+    }
   }
 
-# core search functionality
-  signed_band_search <- function(center, at_center, sign){
-    if(T == "int"){
-      bands = as.integer(c(center, center + 1, (center + sign * 2 ** 16 * (0:(9-1)) )))
+  # core search functionality
+  signed_band_search <- function(center, at_center, sign) {
+    if (.T == "int") {
+      bands <- as.integer(c(center, center + 1, (center + sign * 2**16 * (0:(9 - 1)))))
     }
-    if(T == "float"){
-      bands = c(center, (center + sign * 2. ** (0:(1024 %/% 32 %/% 4 -1) ) ** 2) )
+    if (.T == "float") {
+      bands <- c(center, (center + sign * 2.**(0:(1024 %/% 32 %/% 4 - 1))**2))
     }
 
-    for(i in 2:(length(bands)-1)){
-  #   looking for a change in sign that indicates the decision boundary is within this band
-      if(at_center != predicate(bands[i])){
-  # return the band
-        return( c(sort(bands[(i - 1):i ])) )
+    for (i in 2:(length(bands) - 1)) {
+      #   looking for a change in sign that indicates the decision boundary is within this band
+      if (at_center != predicate(bands[i])) {
+        # return the band
+        return(c(sort(bands[(i - 1):i])))
       }
     }
-# No band found!
+    # No band found!
     return(NULL)
   }
-  
-  if(T=="int") center = 0L
-  if(T=="float") center = 0.
-  
-  at_center = try(predicate(center), TRUE)
-# search positive bands, then negative bands
+
+  if (.T == "int") center <- 0L
+  if (.T == "float") center <- 0.
+
+  at_center <- try(predicate(center), TRUE)
+  # search positive bands, then negative bands
   ret <- try(signed_band_search(center, at_center, 1), TRUE)
- 
-  if(is.null(ret) ) {
+
+  if (is.null(ret)) {
     ret <- try(signed_band_search(center, at_center, -1), TRUE)
   }
- # print(str(ret))
-  if(!inherits(at_center,"try-error") & !inherits(ret,"try-error")){
+  # print(str(ret))
+  if (!inherits(at_center, "try-error") && !inherits(ret, "try-error")) {
     return(ret)
   }
 
-# predicate has thrown an exception
-# 1. Treat exceptions as a secondary decision boundary, and find the edge value
-# 2. Return a bound by searching from the exception edge, in the direction away from the exception
-  exception_predicate <- function(v){
+  # predicate has thrown an exception
+  # 1. Treat exceptions as a secondary decision boundary, and find the edge value
+  # 2. Return a bound by searching from the exception edge, in the direction away from the exception
+  exception_predicate <- function(v) {
     f <- try(predicate(v), TRUE)
-    if(inherits(f,"try-error")){
+    if (inherits(f, "try-error")) {
       return(FALSE)
     } else {
       return(TRUE)
     }
   }
-    
-  exception_bounds <- exponential_bounds_search(exception_predicate, T=T)
-  
-  print( exception_bounds )
 
-    
-  if(is.null(exception_bounds)){  # not sure about this code
+  exception_bounds <- exponential_bounds_search(exception_predicate, .T = .T)
+
+  if (is.null(exception_bounds)) { # not sure about this code
     f1 <- try(predicate(center), TRUE)
-    if(inherits(f1,"try-error")){
-      err = f1$message
-      error = sprintf(". Error at center: %s", err)
+    if (inherits(f1, "try-error")) {
+      err <- f1$message
+      error <- sprintf(". Error at center: %s", err)
       stop(sprintf("predicate always fails%s", err))
     }
   }
-  
-  tmp <- binary_search(exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
+
+  tmp <- binary_search(exception_predicate, bounds = exception_bounds, .T = .T, return_sign = TRUE)
   center <- tmp[1]
-  if(length(tmp)>1){
+  if (length(tmp) > 1) {
     sign <- tmp[2]
   }
-  at_center = predicate(center)
+  at_center <- predicate(center)
   return(signed_band_search(center, at_center, sign))
 }
-
-
-
-# [docs]def exponential_bounds_search(
-#   predicate: Callable[[Union[float, int]], bool], 
-#   T: Optional[type]) -> Optional[Union[Tuple[float, float], Tuple[int, int]]]:
-#   """Determine bounds for a binary search via an exponential search,
-#     in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
-#     Will attempt to recover once if `predicate` throws an exception, 
-#     by searching bands on the ok side of the exception boundary.
-#     
-# 
-#     :param predicate: a monotonic unary function from a number to a boolean
-#     :param T: type of argument to predicate, one of {float, int}
-#     :return: a tuple of float or int bounds that the decision boundary lies within
-#     :raises TypeError: if the type is not inferrable (pass T)
-#     :raises ValueError: if the predicate function is constant
-#     """
-# 
-# # try to infer T
-# if T is None:
-#   def check_type(v):
-#   try:
-#   predicate(v)
-# except TypeError as e:
-#   return False
-# except OpenDPException as e:
-#   if "No match for concrete type" in e.message:
-#   return False
-# return True
-# 
-# if check_type(0.):
-#   T = float
-# elif check_type(0):
-#   T = int
-# else:
-#   raise TypeError("unable to infer type `T`; pass the type `T` or bounds")
-# 
-# # core search functionality
-
-
-# def signed_band_search(center, at_center, sign):
-#   """identify which band (of eight) the decision boundary lies in,
-#         starting from `center` in the direction indicated by `sign`"""
-# 
-# if T == int:
-#   # searching bands of [(k - 1) * 2^16, k * 2^16].
-#   # center + 1 included because zero is prone to error
-#   bands = [center, center + 1, *(center + sign * 2 ** 16 * k for k in range(1, 9))]
-# 
-# if T == float:
-#   # searching bands of [2^((k - 1)^2), 2^(k^2)].
-#   # exponent has ten bits (2.^1024 overflows) so k must be in [0, 32).
-#   # unlikely to need numbers greater than 2**64, and to avoid overflow from shifted centers,
-#   #    only check k in [0, 8). Set your own bounds if this is not sufficient
-#   bands = [center, *(center + sign * 2. ** k ** 2 for k in range(1024 // 32 // 4))]
-# 
-# for i in range(1, len(bands)):
-#   # looking for a change in sign that indicates the decision boundary is within this band
-#   if at_center != predicate(bands[i]):
-#   # return the band
-#   return tuple(sorted(bands[i - 1:i + 1]))
-# 
-# # No band found!
-# return None
-# 
-# try:
-#   center = {int: 0, float: 0.}[T]
-# at_center = predicate(center)
-# # search positive bands, then negative bands
-# return signed_band_search(center, at_center, 1) or signed_band_search(center, at_center, -1)
-# except:
-#   pass
-# 
-# # predicate has thrown an exception
-# # 1. Treat exceptions as a secondary decision boundary, and find the edge value
-# # 2. Return a bound by searching from the exception edge, in the direction away from the exception
-# def exception_predicate(v):
-#   try:
-#   predicate(v)
-# return True
-# except:
-#   return False
-# exception_bounds = exponential_bounds_search(exception_predicate, T=T)
-# if exception_bounds is None:
-#   error = ""
-# try:
-#   predicate(center)
-# except Exception as err:
-#   error = f". Error at center: {err}"
-# 
-# raise ValueError(f"predicate always fails{error}")
-# 
-# center, sign = binary_search(exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
-# at_center = predicate(center)
-# return signed_band_search(center, at_center, sign)
-# 
-
-
-
-
-
-
-
-
-
-
