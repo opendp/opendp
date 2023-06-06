@@ -704,6 +704,10 @@ def make_clamp(
     * Input Metric:   `M`
     * Output Metric:  `M`
     
+    **Proof Definition:**
+    
+    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/clamp/make_clamp.pdf)
+    
     :param input_domain: Domain of input data.
     :type input_domain: Domain
     :param input_metric: Metric on input domain.
