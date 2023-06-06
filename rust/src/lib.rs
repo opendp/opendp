@@ -178,5 +178,6 @@ pub mod measures;
 pub mod metrics;
 pub mod traits;
 pub mod transformations;
-pub mod bcm;
-mod sarus;
+
+#[cfg(feature = "use-mpfr")]
+pub mod sarus;

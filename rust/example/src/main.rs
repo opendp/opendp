@@ -1,4 +1,4 @@
-use opendp::dom::AllDomain;
+use opendp::domains::AtomDomain;
 use opendp::sarus::{make_pld_composition, make_pld_epsilon_delta, make_pld_gaussian, make_pld_laplace};
 
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn gaussian_plot_example() -> Result<(), Box<dyn std::error::Error>> {
     println!("Plot Gaussian example");
-    let gauss_meas = make_pld_gaussian::<AllDomain<f64>>(1.0)?;
+    let gauss_meas = make_pld_gaussian::<AtomDomain<f64>>(1.0)?;
     plot_fs(vec![
         gauss_meas.output_measure.f(&1.0),
         gauss_meas.output_measure.f(&0.5),
@@ -27,7 +27,7 @@ fn gaussian_plot_example() -> Result<(), Box<dyn std::error::Error>> {
 
 fn laplace_plot_example() -> Result<(), Box<dyn std::error::Error>> {
     println!("Plot Laplace examples");
-    let lap_meas = make_pld_laplace::<AllDomain<f64>>(1.0)?;
+    let lap_meas = make_pld_laplace::<AtomDomain<f64>>(1.0)?;
     plot_fs(vec![
         lap_meas.output_measure.f(&1.0),
         lap_meas.output_measure.f(&2.0),
@@ -52,10 +52,10 @@ fn eps_delt_plot_example() -> Result<(), Box<dyn std::error::Error>> {
 
 fn laplace_comp_plot_example() -> Result<(), Box<dyn std::error::Error>> {
     println!("Laplace composition example");
-    let meas_0 = make_pld_laplace::<AllDomain<f64>>(1.0)?;
-    let meas_1 = make_pld_laplace::<AllDomain<f64>>(1.0)?;
+    let meas_0 = make_pld_laplace::<AtomDomain<f64>>(1.0)?;
+    let meas_1 = make_pld_laplace::<AtomDomain<f64>>(1.0)?;
     let comp_meas_0 = make_pld_composition(&meas_0, &meas_1)?;
-    let meas_2 = make_pld_laplace::<AllDomain<f64>>(1.0)?;
+    let meas_2 = make_pld_laplace::<AtomDomain<f64>>(1.0)?;
     let comp_meas_1 = make_pld_composition(&comp_meas_0, &meas_2)?;
     plot_fs(vec![
         comp_meas_1.output_measure.f(&1.0),

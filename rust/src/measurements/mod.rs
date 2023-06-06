@@ -36,6 +36,3 @@ pub use crate::measurements::randomized_response::*;
 mod alp;
 #[cfg(all(feature = "use-mpfr", feature = "floating-point", feature = "contrib"))]
 pub use crate::measurements::alp::*;
-
-mod privacy_loss;
-pub use privacy_loss::*;
