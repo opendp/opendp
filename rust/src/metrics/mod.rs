@@ -19,7 +19,7 @@ use std::marker::PhantomData;
 
 use crate::{
     core::{Domain, Metric, MetricSpace},
-    domains::{type_name, AtomDomain, MapDomain, VectorDomain},
+    domains::{type_name, AtomDomain, MapDomain, VectorDomain, LazyFrameDomain},
     traits::{CheckAtom, Hashable},
     transformations::DataFrameDomain,
 };
@@ -445,6 +445,53 @@ impl Metric for DiscreteDistance {
 
 impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
     fn check(&self) -> bool {
+        true
+    }
+}
+
+/// The Linfinity distance between two scalar-valued aggregates.
+///
+/// # Proof Definition
+///
+/// ### `d`-closeness
+/// For any two scalars $u, v \in \texttt{D}$ and $d$ of generic type $\texttt{Q}$,
+/// we say that $u, v$ are $d$-close under the the the absolute distance metric (abbreviated as $d_{Abs}$) whenever
+///
+/// ```math
+/// d_{infty}(u, v) = max|u - v| \leq d
+/// ```
+///
+/// # Compatible Domains
+///
+/// * `LazyFrameDomain`
+pub struct InfinityDistance<Q>(PhantomData<Q>);
+impl<Q> Default for InfinityDistance<Q> {
+    fn default() -> Self {
+        InfinityDistance(PhantomData)
+    }
+}
+
+impl<Q> Clone for InfinityDistance<Q> {
+    fn clone(&self) -> Self {
+        Self::default()
+    }
+}
+impl<Q> PartialEq for InfinityDistance<Q> {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+impl<Q> Debug for InfinityDistance<Q> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "InfinityDistance({})", type_name!(Q))
+    }
+}
+impl<Q> Metric for InfinityDistance<Q> {
+    type Distance = Q;
+}
+impl<Q> MetricSpace for (LazyFrameDomain, InfinityDistance<Q>, ) {
+    fn check(&self) -> bool {
+        // TO DO
         true
     }
 }

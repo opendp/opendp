@@ -1,16 +1,14 @@
 //use opendp_derive::bootstrap;
 
-//use az::UnwrappedAs;
 use polars::prelude::*;
-//use std::collections::{BTreeSet};
+use polars::datatypes::DataType::Utf8;
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
     error::Fallible,
-    metrics::{SymmetricDistance, AbsoluteDistance, IntDistance},
-    traits::{Hashable, ExactIntCast, Float},
+    metrics::{SymmetricDistance, InfinityDistance, IntDistance},
+    traits::{Float},
     domains::{AtomDomain, SeriesDomain, LazyFrameDomain},
-    //domains::polars::lazyframe::IntoColumnIndex;
 };
 
 // #[cfg(feature = "ffi")]
@@ -30,8 +28,8 @@ use crate::{
 /// * `null_partition` - Whether to include a trailing null partition for rows that were not in the `partition_keys`
 /// 
 /// # Generics
-/// * `TC` - Type of column names.
-pub fn make_sized_partitioned_sum<TC: Hashable, T: Float>(
+/// * `T` - Type of bounds for clamping.
+pub fn make_sized_partitioned_sum<T: Float>(
     input_domain: LazyFrameDomain,
     partition_column: &str,
     sum_column: &str,
@@ -42,59 +40,48 @@ pub fn make_sized_partitioned_sum<TC: Hashable, T: Float>(
         LazyFrameDomain,
         LazyFrameDomain,
         SymmetricDistance, 
-        SymmetricDistance, // @MIKE: Difficulty here to compute the bouded sum sensititivity
+        InfinityDistance<T>, // @RAPH: Implement check
     >,
 > {
 
-    // Check if partition column is in domain and get partition_column ref
+    // Copy parition col name and check if partition column is in domain and get partition_column ref
+    let partition_name = partition_column.to_string().clone();
     let partition_id = (input_domain.series_domains.iter()).position(|s| s.field.name == partition_column).ok_or_else(|| err!(FailedFunction, "Desired partition column not in domain."))?;
-    
-    // Check if sum column is in domain and get sum_col_id
-    let sum_id = (input_domain.series_domains.iter()).position(|s| s.field.name == sum_column).ok_or_else(|| err!(FailedFunction, "Desired column to be summed not in domain."))?;
+    // Copy name of column to be summed and and check if sum column is in domain and get sum_col_id
+    let sum_name = sum_column.to_string().clone();
+    let _sum_id = (input_domain.series_domains.iter()).position(|s| s.field.name == sum_column).ok_or_else(|| err!(FailedFunction, "Desired column to be summed not in domain."))?;
     
     // Get margins keys
     let margins_key = input_domain.margins.keys().into_iter().find(|k| k.contains(&partition_id)).unwrap();
-
     // Get partition margin
-    let counts = input_domain.margins.get(margins_key).unwrap();
+    let counts = input_domain.margins.get(margins_key).unwrap().clone();
     
     // Check if margins include counts
     if counts.counts_index.is_none() {
         return fallible!(FailedFunction, "Dataframe domain does not includes counts for the selected partition colunm.")
     }
 
-    // Get categories index
-    let categories = counts.data.select(&[col(partition_column)]).collect()?.column(partition_column)?;
-
-    // Defined output sizes 
-    let partion_size = categories.len();
-    let output_partitions = partion_size + if null_partition { 1 } else { 0 };
-    let d_output_partitions = IntDistance::exact_int_cast(output_partitions)?; //What is this doing?
-
     // Create output col name
     let sum_column_name = "Bounded sums of ".to_string() + sum_column;
 
-    // Type of categorical column
-    let cat_type = input_domain.column(partition_column).unwrap().field.dtype;
-
     // Create output domain
+    // DO IT WITH SUBSET OF VEC DOMAIN OF INPUT DOMAIN
     let output_domain = LazyFrameDomain::new(vec![
-        SeriesDomain::new(partition_column, AtomDomain::<DataType>::default()), // @MIKE: possible or runtime?
+        //SeriesDomain::new(partition_column, AtomDomain::<cat_type>::default()), // @MIKE: possible or runtime?
+        input_domain.column(partition_column).unwrap().clone(),
         SeriesDomain::new(&sum_column_name, AtomDomain::<f64>::default()),
     ])?;
-    let output_domain = output_domain.with_counts(counts.data)?;
+    let output_domain = output_domain.with_counts(counts.data.clone())?;
 
     // Compute max partition size
     let counts_col_name = counts.get_count_column_name()?;
-    // MIKE: Compute max and cast it to usize for input into openDP's type (carefully check that step!!!)
-    let size: usize = counts.data.collect()?.column(&counts_col_name)?.max().unwrap().try_into().unwrap();
+    let size = counts.data.clone().collect()?.column(&counts_col_name)?.max::<T>().unwrap();
 
     // Compute ideal sensitivity
     let (lower, upper) = bounds;
     let ideal_sensitivity = upper.inf_sub(&lower)?;
     
     // Compute sensitivity correction for bit approximation
-    let size_exact = T::exact_int_cast(size)?;
     let mantissa_bits = T::exact_int_cast(T::MANTISSA_BITS)?;
     let _2 = T::exact_int_cast(2)?;
 
@@ -111,93 +98,134 @@ pub fn make_sized_partitioned_sum<TC: Hashable, T: Float>(
         Function::new_fallible(move |data: &LazyFrame| {
             
             // Check if col names exists
-            if !data.collect()?.get_column_names().contains(&partition_column) {
+            if !data.clone().collect()?.get_column_names().contains(&partition_name.as_str()) {
                 return fallible!(FailedFunction, "Dataframe does not contains the desired partition colunm.")
             }
-            if !data.collect()?.get_column_names().contains(&sum_column) {
+            if !data.clone().collect()?.get_column_names().contains(&sum_name.as_str()) {
                 return fallible!(FailedFunction, "Dataframe does not contains the column to be summed.")
             }
 
             // Create partitioned bounded sums
-            let mut cat_sums = data.clone()
-                        .groupby([partition_column])
-                        .agg([col(sum_column).sum()])
+            let cat_sums = data.clone()
+                        .groupby_stable([col(partition_name.as_str()).alias(partition_name.clone().as_str())])
+                        .agg([col(sum_name.as_str())
+                                        .alias(sum_column_name.clone().as_str())
+                                        .clip(AnyValue::from(lower.to_f64().unwrap()),AnyValue::from(upper.to_f64().unwrap()))
+                                        .sum()])
                         .collect()
                         .unwrap();
-
-            cat_sums.columns([partition_column, &counts_col_name]);
-
+            
             // Known / unknwon categories
             let mask_known_cat = &cat_sums
-                        .column(partition_column)
+                        .column(partition_name.as_str())
                         .unwrap()
-                        .is_in(counts.data.collect()?.column(partition_column)?)
+                        .is_in(counts.data.clone().collect()?.column(partition_name.as_str())?)
                         .unwrap();
 
             // Remove unknown classes
-            let sums = cat_sums.filter(
+            let mut sums = cat_sums.filter(
                 &mask_known_cat)
                 .unwrap();
 
             // Compute and concatenate unkown categories aggregation
-            if null_partition {
-                let unknown_sum: f64 = cat_sums
-                                                .filter(&!mask_known_cat)
-                                                .unwrap()
-                                                .column("sum")
-                                                .unwrap()
-                                                .sum()
-                                                .unwrap();
+            if null_partition {    
+                //let test = mask_known_cat.clone().downcast_iter().map(|v| if v {"Known"} else {"Unknown"}).collect();
+                let mut unkowns = cat_sums.filter(
+                    &!mask_known_cat)
+                    .unwrap();
 
-                let df_unkown = df!(partition_column => &["Unknown"], // check if type conversion is needed
-                                                &counts_col_name => &[unknown_sum]).unwrap();
+                let number_of_unkonwn_cats = unkowns.height();
+                unkowns.with_column(Series::new(partition_name.as_str(), vec!["Unknown"; number_of_unkonwn_cats]))?;
 
-                let sums = sums.vstack(&df_unkown).unwrap();
-            } 
+                let unknown_sums = unkowns.lazy()
+                                        .groupby([col(partition_name.as_str())])
+                                        .agg([col(sum_column_name.as_str())
+                                        .sum()])
+                                        .collect()
+                                        .unwrap();
+                //println!("{:?}", unknown_sum.clone());
 
-            //let vec_sums: Vec<f64> = sums.column("counts_col_name").unwrap().f64().unwrap().into_no_null_iter().collect();
 
-            Ok(sums.lazy())
+                // Convert partition vector class to string to ass "unknown"
+                sums.with_column(sums.column(partition_name.as_str())?.cast(&Utf8)?)?;
+
+                // Append unknown class
+                let sums_with_unknown = sums.vstack(&unknown_sums).unwrap();
+                Ok(sums_with_unknown.lazy())
+            } else {
+                Ok(sums.lazy())
+            }
+
         }),
         SymmetricDistance::default(),
-        AbsoluteDistance::default(), //@MIKE: Not ok as we have vector of sums whose sensitivity / distance is not Float
-        StabilityMap::new(move |d_in: &IntDistance|
+        InfinityDistance::<T>::default(),
+        StabilityMap::new_fallible(move |d_in: &IntDistance|
             T::inf_cast(d_in / 2)?
                 .inf_mul(&ideal_sensitivity)?
-                .inf_add(&relaxation)) // @MIKE: how to handle sensititivity with a dataframe and a vector.
+                .inf_add(&relaxation)) 
     )
 }
 
 
 #[cfg(test)]
 mod test {
-    use crate::{transformations::make_create_dataframe, error::ExplainUnwrap};
-
     use super::*;
 
     #[test]
-    fn test_dataFrame_partition() -> Fallible<()> {
+    fn test_dataFrame_partition_known_categories() -> Fallible<()> {
 
-        let transformation = make_create_dataframe(vec!["colA", "colB"]).unwrap();
+        let data_frame_domain = LazyFrameDomain::new(vec![
+            SeriesDomain::new("Age", AtomDomain::<i32>::default()),
+            SeriesDomain::new("Country", AtomDomain::<String>::default()),
+        ])?
+        .with_counts(df!["Country" => ["CH", "US"], "count" => [3, 2]]?.lazy())?;
 
-        let data_string = vec![
-            vec!["1".to_owned(), "A".to_owned()],
-            vec!["4".to_owned(), "A".to_owned()],
-            vec!["2".to_owned(), "B".to_owned()],
-            vec!["0".to_owned(), "A".to_owned()],
-            vec!["10".to_owned(), "B".to_owned()],
-        ];
-        //let df = transformation.invoke(&data_string).unwrap();
+        let data = df!("Age" => [1, 4, 2, 8, 10], "Country" => ["CH", "CH", "US", "CH", "US"])?.lazy();
 
-        //let df_domain = SizedDataFrameDomain::create_categorical_df_domain("colB", vec!["A","B"], vec![3,2]).unwrap();
 
-        //println!("{:?}", df);
+        let bounded_partitioned_sum = make_sized_partitioned_sum(
+                                                                            data_frame_domain,
+                                                                            "Country",
+                                                                            "Age",
+                                                                            (0.,99.),
+                                                                            false).unwrap();
 
-        //let partitioner = make_sized_partition_by(df_domain, "colB", vec!["colA"], false).unwrap();
+        let result = bounded_partitioned_sum.invoke(&data).unwrap(); 
 
-        //let partition = partitioner.invoke(&df).unwrap();
+        let df_check = df!("Country" => ["CH", "US"],
+                                    "Bounded sums of Age" => [13, 12],)?;
 
-        //println!("{:?}", partition);
+        assert!(result.clone().collect()?.frame_equal(&df_check));
+
+        Ok(())
+    }
+
+    #[test] 
+    fn test_dataFrame_partition_unknown_categories() -> Fallible<()> {
+
+        let data_frame_domain = LazyFrameDomain::new(vec![
+            SeriesDomain::new("Age", AtomDomain::<i32>::default()),
+            SeriesDomain::new("Country", AtomDomain::<String>::default()),
+        ])?
+        .with_counts(df!["Country" => ["CH", "US"], "count" => [3, 2]]?.lazy())?;
+
+        let data = df!("Age" => [1., 4., 2., 8., 10., 9., 1.],
+                                    "Country" => ["CH", "CH", "US", "CH", "US", "UK", "IT"])?.lazy();
+
+        let bounded_partitioned_sum_withUnkown = make_sized_partitioned_sum(
+            data_frame_domain,
+            "Country",
+            "Age",
+            (0.,99.),
+            true).unwrap();
+
+        let result = bounded_partitioned_sum_withUnkown.invoke(&data).unwrap(); 
+        
+        let df_check = df!("Country" => ["CH", "US", "Unknown"],
+                                    "Bounded sums of Age" => [13., 12., 10.],)?;
+
+        assert!(result.clone().collect()?.frame_equal(&df_check));
+
         Ok(())
     }
 }
