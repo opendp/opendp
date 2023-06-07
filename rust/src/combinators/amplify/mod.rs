@@ -112,7 +112,7 @@ where
     )
 }
 
-#[cfg(all(test, feature = "derive"))]
+#[cfg(all(test, feature = "partials"))]
 mod test {
     use crate::combinators::make_population_amplification;
     use crate::error::Fallible;
