@@ -5,6 +5,8 @@ use std::fmt::Debug;
 
 use std::backtrace::Backtrace as _Backtrace;
 
+use polars::prelude::PolarsError;
+
 /// Create an instance of [`Fallible`]
 #[macro_export]
 macro_rules! fallible {
