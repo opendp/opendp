@@ -10,6 +10,8 @@ use polars::prelude::*;
 
 use super::{DatasetMetric, SeriesDomain};
 
+#[cfg(feature = "ffi")]
+mod ffi;
 
 // gradations of public info:
 //                | public keys | private keys

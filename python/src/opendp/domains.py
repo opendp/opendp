@@ -10,9 +10,11 @@ __all__ = [
     "domain_carrier_type",
     "domain_debug",
     "domain_type",
+    "lazy_frame_domain",
     "map_domain",
     "member",
     "option_domain",
+    "series_domain",
     "vector_domain"
 ]
 
@@ -167,6 +169,34 @@ def domain_type(
 
 
 @versioned
+def lazy_frame_domain(
+    series_domains: Any
+):
+    """Construct an instance of `LazyFrameDomain`.
+    
+    [lazy_frame_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.lazy_frame_domain.html)
+    
+    :param series_domains: Domain of each series in the lazyframe.
+    :type series_domains: Any
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_series_domains = py_to_c(series_domains, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[SeriesDomain]))
+    
+    # Call library function.
+    lib_function = lib.opendp_domains__lazy_frame_domain
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_series_domains), Domain))
+    
+    return output
+
+
+@versioned
 def map_domain(
     key_domain,
     value_domain
@@ -257,6 +287,43 @@ def option_domain(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_element_domain, c_D), Domain))
+    
+    return output
+
+
+@versioned
+def series_domain(
+    name: str,
+    element_domain,
+    DI: RuntimeTypeDescriptor = None
+):
+    """Construct an instance of `SeriesDomain`.
+    
+    [series_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.series_domain.html)
+    
+    :param name: The name of the series.
+    :type name: str
+    :param element_domain: The domain of elements in the series.
+    :param DI: 
+    :type DI: :py:ref:`RuntimeTypeDescriptor`
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # Standardize type arguments.
+    DI = RuntimeType.parse_or_infer(type_name=DI, public_example=element_domain)
+    
+    # Convert arguments to c types.
+    c_name = py_to_c(name, c_type=ctypes.c_char_p, type_name=str)
+    c_element_domain = py_to_c(element_domain, c_type=Domain, type_name=DI)
+    c_DI = py_to_c(DI, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_domains__series_domain
+    lib_function.argtypes = [ctypes.c_char_p, Domain, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_name, c_element_domain, c_DI), Domain))
     
     return output
 

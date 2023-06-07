@@ -343,7 +343,6 @@ pub fn insert_proof_attribute(attributes: &mut Vec<Attribute>, proof_path: Strin
         });
 
     attributes.insert(position, new_comment_attribute(&proof_link));
-
     Ok(())
 }
 

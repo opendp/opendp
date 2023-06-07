@@ -41,7 +41,10 @@ __all__ = [
     "make_ordered_random",
     "make_quantiles_from_counts",
     "make_resize",
+    "make_scan_csv",
+    "make_scan_parquet",
     "make_select_column",
+    "make_sink_csv",
     "make_sized_bounded_float_checked_sum",
     "make_sized_bounded_float_ordered_sum",
     "make_sized_bounded_int_checked_sum",
@@ -57,7 +60,8 @@ __all__ = [
     "make_split_records",
     "make_subset_by",
     "make_unordered",
-    "part_clamp"
+    "part_clamp",
+    "part_sink_csv"
 ]
 
 
@@ -1960,6 +1964,160 @@ def make_resize(
 
 
 @versioned
+def make_scan_csv(
+    lazy_frame_domain,
+    input_metric,
+    delimiter = ",",
+    has_header: bool = True,
+    ignore_errors: bool = False,
+    skip_rows: int = 0,
+    cache: bool = True,
+    low_memory: bool = False,
+    comment_char = None,
+    quote_char = "\"",
+    eol_char = "\n",
+    null_value: Any = None,
+    missing_is_null: bool = True,
+    rechunk: bool = True,
+    skip_rows_after_header: int = 0,
+    lossy_utf8: bool = False
+) -> Transformation:
+    """Parse a path to a CSV into a LazyFrame.
+    
+    [make_scan_csv in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_scan_csv.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `CsvDomain`
+    * Output Domain:  `LazyFrameDomain`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+    
+    :param lazy_frame_domain: The domain of the LazyFrame to be constructed
+    :param input_metric: The metric space under which neighboring LazyFrames are compared
+    :param delimiter: Set the CSV file's column delimiter as a byte character
+    :param has_header: Set whether the CSV file has headers
+    :type has_header: bool
+    :param ignore_errors: Continue with next batch when a ParserError is encountered.
+    :type ignore_errors: bool
+    :param skip_rows: Skip the first `n` rows during parsing. The header will be parsed at row `n`.
+    :type skip_rows: int
+    :param cache: Cache the DataFrame after reading.
+    :type cache: bool
+    :param low_memory: Reduce memory usage at the expense of performance
+    :type low_memory: bool
+    :param comment_char: Set the comment character. Lines starting with this character will be ignored.
+    :param quote_char: Set the `char` used as quote char. The default is `"`. If set to `[None]` quoting is disabled.
+    :param eol_char: Set the `char` used as end of line. The default is `\n`.
+    :param null_value: Set value that will be interpreted as missing/ null.
+    :type null_value: Any
+    :param missing_is_null: Treat missing fields as null.
+    :type missing_is_null: bool
+    :param rechunk: Rechunk the memory to contiguous chunks when parsing is done.
+    :type rechunk: bool
+    :param skip_rows_after_header: Skip this number of rows after the header location.
+    :type skip_rows_after_header: int
+    :param lossy_utf8: If enabled, unknown bytes in Utf8 encoding are replaced with �
+    :type lossy_utf8: bool
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_lazy_frame_domain = py_to_c(lazy_frame_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_delimiter = py_to_c(delimiter, c_type=ctypes.c_char, type_name=char)
+    c_has_header = py_to_c(has_header, c_type=ctypes.c_bool, type_name=bool)
+    c_ignore_errors = py_to_c(ignore_errors, c_type=ctypes.c_bool, type_name=bool)
+    c_skip_rows = py_to_c(skip_rows, c_type=ctypes.c_size_t, type_name=usize)
+    c_cache = py_to_c(cache, c_type=ctypes.c_bool, type_name=bool)
+    c_low_memory = py_to_c(low_memory, c_type=ctypes.c_bool, type_name=bool)
+    c_comment_char = py_to_c(comment_char, c_type=ctypes.c_void_p, type_name=RuntimeType(origin='Option', args=[char]))
+    c_quote_char = py_to_c(quote_char, c_type=ctypes.c_void_p, type_name=RuntimeType(origin='Option', args=[char]))
+    c_eol_char = py_to_c(eol_char, c_type=ctypes.c_char, type_name=char)
+    c_null_value = py_to_c(null_value, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[String]))
+    c_missing_is_null = py_to_c(missing_is_null, c_type=ctypes.c_bool, type_name=bool)
+    c_rechunk = py_to_c(rechunk, c_type=ctypes.c_bool, type_name=bool)
+    c_skip_rows_after_header = py_to_c(skip_rows_after_header, c_type=ctypes.c_size_t, type_name=usize)
+    c_lossy_utf8 = py_to_c(lossy_utf8, c_type=ctypes.c_bool, type_name=bool)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_scan_csv
+    lib_function.argtypes = [Domain, Metric, ctypes.c_char, ctypes.c_bool, ctypes.c_bool, ctypes.c_size_t, ctypes.c_bool, ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char, AnyObjectPtr, ctypes.c_bool, ctypes.c_bool, ctypes.c_size_t, ctypes.c_bool]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_lazy_frame_domain, c_input_metric, c_delimiter, c_has_header, c_ignore_errors, c_skip_rows, c_cache, c_low_memory, c_comment_char, c_quote_char, c_eol_char, c_null_value, c_missing_is_null, c_rechunk, c_skip_rows_after_header, c_lossy_utf8), Transformation))
+    
+    return output
+
+
+@versioned
+def make_scan_parquet(
+    lazy_frame_domain,
+    input_metric,
+    use_statistics: bool,
+    cache: bool = True,
+    rechunk: bool = True,
+    low_memory: bool = False,
+    M: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Parse a path to a CSV into a LazyFrame.
+    
+    [make_scan_parquet in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_scan_parquet.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `ParquetDomain`
+    * Output Domain:  `LazyFrameDomain`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+    
+    :param lazy_frame_domain: The domain of the LazyFrame to be constructed
+    :param input_metric: The metric space under which neighboring LazyFrames are compared
+    :param cache: Cache the result after reading.
+    :type cache: bool
+    :param rechunk: In case of reading multiple files via a glob pattern rechunk the final DataFrame into contiguous memory chunks.
+    :type rechunk: bool
+    :param low_memory: Reduce memory pressure at the expense of performance.
+    :type low_memory: bool
+    :param use_statistics: Use statistics from parquet to determine if pages can be skipped from reading.
+    :type use_statistics: bool
+    :param M: A dataset metric
+    :type M: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    M = RuntimeType.parse_or_infer(type_name=M, public_example=input_metric)
+    
+    # Convert arguments to c types.
+    c_lazy_frame_domain = py_to_c(lazy_frame_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=M)
+    c_cache = py_to_c(cache, c_type=ctypes.c_bool, type_name=bool)
+    c_rechunk = py_to_c(rechunk, c_type=ctypes.c_bool, type_name=bool)
+    c_low_memory = py_to_c(low_memory, c_type=ctypes.c_bool, type_name=bool)
+    c_use_statistics = py_to_c(use_statistics, c_type=ctypes.c_bool, type_name=bool)
+    c_M = py_to_c(M, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_scan_parquet
+    lib_function.argtypes = [Domain, Metric, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_lazy_frame_domain, c_input_metric, c_cache, c_rechunk, c_low_memory, c_use_statistics, c_M), Transformation))
+    
+    return output
+
+
+@versioned
 def make_select_column(
     key: Any,
     TOA: RuntimeTypeDescriptor,
@@ -2006,6 +2164,59 @@ def make_select_column(
     output = c_to_py(unwrap(lib_function(c_key, c_K, c_TOA), Transformation))
     
     return output
+
+
+@versioned
+def make_sink_csv(
+    input_domain,
+    input_metric,
+    output_path: str
+) -> Transformation:
+    """Write a `LazyFrame` to a CSV file.
+    
+    [make_sink_csv in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sink_csv.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `LazyFrameDomain`
+    * Output Domain:  `CsvDomain`
+    * Input Metric:   `MI`
+    * Output Metric:  `MI`
+    
+    :param input_domain: 
+    :param input_metric: 
+    :param output_path: 
+    :type output_path: str
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_output_path = py_to_c(output_path, c_type=ctypes.c_char_p, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_sink_csv
+    lib_function.argtypes = [Domain, Metric, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_path), Transformation))
+    
+    return output
+
+def part_sink_csv(
+    output_path: str
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_sink_csv(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        output_path=output_path))
+
 
 
 @versioned
