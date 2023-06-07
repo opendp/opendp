@@ -41,13 +41,13 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool>
     fn new_base<T: 'static>(
         value: T,
         clone_glue: Option<Glue<fn(&Self) -> Self>>,
-        part_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
+        partial_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
         debug_glue: Option<Glue<fn(&Self) -> String>>,
     ) -> Self {
         Self {
             value: Box::new(value),
             clone_glue,
-            partial_eq_glue: part_eq_glue,
+            partial_eq_glue,
             debug_glue,
         }
     }
@@ -175,7 +175,7 @@ impl AnyBox {
 pub type AnyClonePartialEqDebugBox = AnyBoxBase<true, true, true>;
 
 impl AnyClonePartialEqDebugBox {
-    pub fn new_clone_part_eq_debug<T: 'static + Clone + PartialEq + Debug>(value: T) -> Self {
+    pub fn new_clone_partial_eq_debug<T: 'static + Clone + PartialEq + Debug>(value: T) -> Self {
         Self::new_base(
             value,
             Some(Self::make_clone_glue::<T>()),
@@ -273,7 +273,7 @@ impl AnyDomain {
         Self {
             type_: Type::of::<D>(),
             carrier_type: Type::of::<D::Carrier>(),
-            domain: AnyClonePartialEqDebugBox::new_clone_part_eq_debug(domain),
+            domain: AnyClonePartialEqDebugBox::new_clone_partial_eq_debug(domain),
             member_glue: Glue::new(|self_: &Self, val: &<Self as Domain>::Carrier| {
                 let self_ = self_
                     .downcast_ref::<D>()
@@ -324,7 +324,7 @@ pub struct AnyMeasure {
 impl AnyMeasure {
     pub fn new<M: 'static + Measure>(measure: M) -> Self {
         Self {
-            measure: AnyClonePartialEqDebugBox::new_clone_part_eq_debug(measure),
+            measure: AnyClonePartialEqDebugBox::new_clone_partial_eq_debug(measure),
             type_: Type::of::<M>(),
             distance_type: Type::of::<M::Distance>(),
         }
@@ -376,7 +376,7 @@ impl AnyMetric {
         Self {
             type_: Type::of::<M>(),
             distance_type: Type::of::<M::Distance>(),
-            metric: AnyClonePartialEqDebugBox::new_clone_part_eq_debug(metric),
+            metric: AnyClonePartialEqDebugBox::new_clone_partial_eq_debug(metric),
         }
     }
 
