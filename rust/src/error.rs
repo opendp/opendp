@@ -123,6 +123,16 @@ impl<T> From<Error> for Result<T, Error> {
     }
 }
 
+impl From<PolarsError> for Error {
+    fn from(error: PolarsError) -> Self {
+        Self {
+            variant: ErrorVariant::FailedFunction,
+            message: Some(format!("{:?}", error)),
+            backtrace: std::backtrace::Backtrace::capture(),
+        }
+    }
+}
+
 pub type Fallible<T> = Result<T, Error>;
 
 /// A trait for calling unwrap with an explanation. Makes calls to unwrap() discoverable.
