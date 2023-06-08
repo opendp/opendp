@@ -16,12 +16,12 @@ __all__ = [
     "make_laplace",
     "make_randomized_response",
     "make_randomized_response_bool",
-    "part_base_discrete_laplace",
-    "part_base_discrete_laplace_cks20",
-    "part_base_discrete_laplace_linear",
-    "part_base_geometric",
-    "part_base_laplace",
-    "part_laplace"
+    "then_base_discrete_laplace",
+    "then_base_discrete_laplace_cks20",
+    "then_base_discrete_laplace_linear",
+    "then_base_geometric",
+    "then_base_laplace",
+    "then_laplace"
 ]
 
 
@@ -149,7 +149,7 @@ def make_base_discrete_laplace(
     
     return output
 
-def part_base_discrete_laplace(
+def then_base_discrete_laplace(
     scale,
     QO: RuntimeTypeDescriptor = None
 ):
@@ -221,7 +221,7 @@ def make_base_discrete_laplace_cks20(
     
     return output
 
-def part_base_discrete_laplace_cks20(
+def then_base_discrete_laplace_cks20(
     scale,
     QO: RuntimeTypeDescriptor = None
 ):
@@ -300,7 +300,7 @@ def make_base_discrete_laplace_linear(
     
     return output
 
-def part_base_discrete_laplace_linear(
+def then_base_discrete_laplace_linear(
     scale,
     bounds: Any = None,
     QO: RuntimeTypeDescriptor = None
@@ -437,7 +437,7 @@ def make_base_geometric(
     
     return output
 
-def part_base_geometric(
+def then_base_geometric(
     scale,
     bounds: Any = None,
     QO: RuntimeTypeDescriptor = None
@@ -510,7 +510,7 @@ def make_base_laplace(
     
     return output
 
-def part_base_laplace(
+def then_base_laplace(
     scale,
     k: int = -1074
 ):
@@ -627,7 +627,7 @@ def make_laplace(
     
     return output
 
-def part_laplace(
+def then_laplace(
     scale,
     QO: RuntimeTypeDescriptor = "float"
 ):

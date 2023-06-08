@@ -30,7 +30,7 @@ then invoke it on a scalar aggregate.
 .. doctest::
 
     >>> import opendp.prelude as dp
-    >>> base_laplace = dp.space_of(float) >> dp.m.part_base_laplace(scale=1.)
+    >>> base_laplace = dp.space_of(float) >> dp.m.then_base_laplace(scale=1.)
     >>> base_laplace(23.4) # doctest: +SKIP
     22.74877695423367
 
@@ -38,7 +38,7 @@ This code snip uses a number of OpenDP concepts:
 
 * Defining your metric space up-front with ``space_of``.
 * Chaining operators together with ``>>``.
-* Constructing a ``Measurement`` on your metric space with ``m.part_base_laplace``.
+* Constructing a ``Measurement`` on your metric space with ``m.then_base_laplace``.
 * Invoking the ``base_laplace`` measurement on a value to get a DP release.
 
 If you would like to skip directly to a more complete example, see :ref:`putting-together`.

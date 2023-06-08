@@ -193,10 +193,10 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     >>> assert count.check(1, 1)
     ...
     >>> # chain with more transformations from the trans module
-    >>> from opendp.transformations import make_split_lines, part_cast_default
+    >>> from opendp.transformations import make_split_lines, then_cast_default
     >>> chained = (
     ...     make_split_lines() >>
-    ...     part_cast_default(TOA=int) >>
+    ...     then_cast_default(TOA=int) >>
     ...     count
     ... )
     ...
@@ -587,7 +587,7 @@ def binary_search_chain(
     >>> # The majority of the chain only needs to be defined once.
     >>> pre = (
     ...     dp.space_of(List[float]) >>
-    ...     dp.t.part_clamp(bounds=(0., 1.)) >>
+    ...     dp.t.then_clamp(bounds=(0., 1.)) >>
     ...     dp.t.make_resize(size=10, atom_domain=dp.atom_domain((0., 1.)), constant=0.) >>
     ...     dp.t.make_sized_bounded_mean(size=10, bounds=(0., 1.))
     ... )
@@ -595,7 +595,7 @@ def binary_search_chain(
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.
     >>> # The lambda function returns the complete computation chain when given a single numeric parameter.
     >>> chain = dp.binary_search_chain(
-    ...     lambda s: pre >> dp.m.part_base_laplace(scale=s), 
+    ...     lambda s: pre >> dp.m.then_base_laplace(scale=s), 
     ...     d_in=1, d_out=1.)
     ...
     >>> # The resulting computation chain is always (`d_in`, `d_out`)-close, but we can still double-check:
@@ -606,7 +606,7 @@ def binary_search_chain(
     It should have the widest possible admissible clamping bounds (-b, b).
 
     >>> def make_sum(b):
-    ...     return dp.t.make_sized_bounded_sum(10_000, (-b, b)) >> dp.m.part_base_discrete_laplace(100.)
+    ...     return dp.t.make_sized_bounded_sum(10_000, (-b, b)) >> dp.m.then_base_discrete_laplace(100.)
     ...
     >>> # `meas` is a Measurement with the widest possible clamping bounds.
     >>> meas = dp.binary_search_chain(make_sum, d_in=2, d_out=1., bounds=(0, 10_000))
@@ -665,7 +665,7 @@ def binary_search_param(
     >>> def make_mean(data_size):
     ...    return (
     ...        dp.t.make_sized_bounded_mean(data_size, (0., 500_000.)) >> 
-    ...        dp.m.part_base_laplace(necessary_scale)
+    ...        dp.m.then_base_laplace(necessary_scale)
     ...    )
     ...
     >>> # solve for the smallest dataset size that admits a (2 neighboring, 1. epsilon)-close measurement

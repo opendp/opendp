@@ -174,12 +174,12 @@ def test_split_dataframe():
 
 
 def test_clamp():
-    from opendp.transformations import part_clamp, make_clamp
+    from opendp.transformations import then_clamp, make_clamp
     from opendp.domains import vector_domain, atom_domain
     from opendp.metrics import symmetric_distance
     input_domain = vector_domain(atom_domain(T=int))
     input_metric = symmetric_distance()
-    query = (input_domain, input_metric) >> part_clamp(bounds=(-1, 1))
+    query = (input_domain, input_metric) >> then_clamp(bounds=(-1, 1))
     assert query([-10, 0, 10]) == [-1, 0, 1]
     assert query.check(1, 1)
 
@@ -321,12 +321,12 @@ def test_lipschitz_mul_float():
 
 
 def test_df_cast_default():
-    from opendp.transformations import make_split_dataframe, part_df_cast_default, make_select_column
+    from opendp.transformations import make_split_dataframe, then_df_cast_default, make_select_column
 
     query = (
         make_split_dataframe(separator=",", col_names=["23", "17"]) >>
-        part_df_cast_default(column_name="23", TIA=str, TOA=int) >>
-        part_df_cast_default(column_name="23", TIA=int, TOA=bool) >>
+        then_df_cast_default(column_name="23", TIA=str, TOA=int) >>
+        then_df_cast_default(column_name="23", TIA=int, TOA=bool) >>
         make_select_column(key="23", TOA=bool)
     )
     assert query("0,0.\n1,1.\n2,2.\n3,3.") == [False, True, True, True]
@@ -334,11 +334,11 @@ def test_df_cast_default():
 
 
 def test_df_is_equal():
-    from opendp.transformations import make_split_dataframe, part_df_is_equal, make_select_column
+    from opendp.transformations import make_split_dataframe, then_df_is_equal, make_select_column
 
     query = (
         make_split_dataframe(separator=",", col_names=["23", "17"]) >>
-        part_df_is_equal(column_name="17", value="2.") >>
+        then_df_is_equal(column_name="17", value="2.") >>
         make_select_column(key="17", TOA=bool)
     )
     assert query("0,0.\n1,1.\n2,2.\n3,3.") == [False, False, True, False]
@@ -346,11 +346,11 @@ def test_df_is_equal():
 
 
 def test_df_subset():
-    from opendp.transformations import make_split_dataframe, part_df_is_equal, make_select_column
+    from opendp.transformations import make_split_dataframe, then_df_is_equal, make_select_column
 
     query = (
         make_split_dataframe(separator=",", col_names=["A", "B"]) >>
-        part_df_is_equal(column_name="B", value="2.") >>
+        then_df_is_equal(column_name="B", value="2.") >>
         make_subset_by(indicator_column="B", keep_columns=["A"]) >>
         make_select_column(key="A", TOA=str)
     )
@@ -359,7 +359,7 @@ def test_df_subset():
 
 def test_lipschitz_b_ary_tree():
     from opendp.transformations import make_count_by_categories, make_b_ary_tree, make_consistent_b_ary_tree, make_cdf, choose_branching_factor
-    from opendp.measurements import part_base_geometric
+    from opendp.measurements import then_base_geometric
     leaf_count = 7
     branching_factor = 2
     tree_builder = make_b_ary_tree(leaf_count, branching_factor, M=L1Distance[int])
@@ -374,7 +374,7 @@ def test_lipschitz_b_ary_tree():
     meas_base = (
         make_count_by_categories(categories=["A", "B", "C", "D", "E", "F"]) >> 
         tree_builder >> 
-        part_base_geometric(1.) >> 
+        then_base_geometric(1.) >> 
         make_consistent_b_ary_tree(branching_factor)
     )
 
