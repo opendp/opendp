@@ -273,11 +273,11 @@ where
     }
 }
 
-#[cfg(all(test, feature = "partials"))]
+#[cfg(test)]
 mod tests_shr {
-    use crate::measurements::make_base_discrete_laplace;
+    use crate::measurements::part_base_discrete_laplace;
     use crate::transformations::{
-        make_bounded_sum, make_split_lines, part_cast_default, part_clamp,
+        make_bounded_sum, part_cast_default, part_clamp, make_split_lines,
     };
 
     use super::*;
@@ -288,7 +288,7 @@ mod tests_shr {
             >> part_cast_default()
             >> part_clamp((0, 1))
             >> make_bounded_sum((0, 1))?
-            >> make_base_discrete_laplace(1.)?)
+            >> part_base_discrete_laplace(1.))
         .map(|_| ())
     }
 }

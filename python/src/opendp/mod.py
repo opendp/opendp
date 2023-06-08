@@ -12,12 +12,13 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
 
     :example:
 
-    >>> from opendp.mod import Measurement, enable_features
-    >>> enable_features("contrib")
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib")
     ...
     >>> # create an instance of Measurement using a constructor from the meas module
-    >>> from opendp.measurements import make_base_discrete_laplace
-    >>> base_dl: Measurement = make_base_discrete_laplace(scale=2.)
+    >>> base_dl: dp.Measurement = dp.m.make_base_discrete_laplace(
+    ...     dp.atom_domain(T=int), dp.absolute_distance(T=int),
+    ...     scale=2.)
     ...
     >>> # invoke the measurement (invoke and __call__ are equivalent)
     >>> base_dl.invoke(100)  # -> 101   # doctest: +SKIP
@@ -28,9 +29,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     >>> assert base_dl.check(1, 0.5)
     ...
     >>> # chain with a transformation from the trans module
-    >>> from opendp.transformations import make_count
     >>> chained = (
-    ...     make_count(TIA=int) >>
+    ...     dp.t.make_count(TIA=int) >>
     ...     base_dl
     ... )
     ...
@@ -105,6 +105,10 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     def input_metric(self) -> "Metric":
         from opendp.core import measurement_input_metric
         return measurement_input_metric(self)
+
+    @property
+    def input_space(self) -> Tuple["Domain", "Metric"]:
+        return self.input_domain, self.input_metric
     
     @property
     def output_measure(self) -> "Measure":
@@ -280,6 +284,14 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     def output_metric(self) -> "Metric":
         from opendp.core import transformation_output_metric
         return transformation_output_metric(self)
+    
+    @property
+    def input_space(self) -> Tuple["Domain", "Metric"]:
+        return self.input_domain, self.input_metric
+    
+    @property
+    def output_space(self) -> Tuple["Domain", "Metric"]:
+        return self.output_domain, self.output_metric
     
     @property
     def function(self) -> "Function":
@@ -594,7 +606,7 @@ def binary_search_chain(
     It should have the widest possible admissible clamping bounds (-b, b).
 
     >>> def make_sum(b):
-    ...     return dp.t.make_sized_bounded_sum(10_000, (-b, b)) >> dp.m.make_base_discrete_laplace(100.)
+    ...     return dp.t.make_sized_bounded_sum(10_000, (-b, b)) >> dp.m.part_base_discrete_laplace(100.)
     ...
     >>> # `meas` is a Measurement with the widest possible clamping bounds.
     >>> meas = dp.binary_search_chain(make_sum, d_in=2, d_out=1., bounds=(0, 10_000))
@@ -907,7 +919,7 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
     
     # choose a distance type if not set
     if isinstance(M, ty.RuntimeType) and M.args is None:
-        M.args = [ty.get_atom(D)]
+        M = M[ty.get_atom(D)]
 
     return domain, metric_of(M)
 

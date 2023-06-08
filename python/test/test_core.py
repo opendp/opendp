@@ -13,7 +13,9 @@ def test_type_getters():
     assert transformation.input_carrier_type == "Vec<f64>"
 
     from opendp.measurements import make_base_discrete_laplace
-    measurement = make_base_discrete_laplace(scale=1.5)
+    from opendp.domains import atom_domain
+    from opendp.metrics import absolute_distance
+    measurement = make_base_discrete_laplace(atom_domain(T=int), absolute_distance(T=int), scale=1.5)
     assert measurement.input_distance_type == "i32"
     assert measurement.output_distance_type == "f64"
     assert measurement.input_carrier_type == "i32"
@@ -21,6 +23,8 @@ def test_type_getters():
 
 def test_chain():
     from opendp.transformations import make_count
+    from opendp.domains import atom_domain
+    from opendp.metrics import absolute_distance
     from opendp.measurements import make_base_discrete_laplace
     enable_features("floating-point", "contrib")
 
@@ -28,7 +32,7 @@ def test_chain():
     count = make_count(TIA=int, TO=int)
     print("count:", count(data))
 
-    base_dl = make_base_discrete_laplace(scale=0.5)
+    base_dl = make_base_discrete_laplace(atom_domain(T=int), absolute_distance(T=int), scale=0.5)
     print("base_dl:", base_dl(1))
 
     chain = count >> base_dl

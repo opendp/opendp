@@ -44,7 +44,7 @@ In the following example we chain :py:func:`opendp.measurements.make_base_discre
     >>> # call a constructor to produce a transformation
     >>> bounded_sum = make_bounded_sum(bounds=(0, 1))
     >>> # call a constructor to produce a measurement
-    >>> base_dl = make_base_discrete_laplace(scale=1.0)
+    >>> base_dl = make_base_discrete_laplace(bounded_sum.output_domain, bounded_sum.output_metric, scale=1.0)
     >>> noisy_sum = make_chain_mt(base_dl, bounded_sum)
     ...
     >>> # investigate the privacy relation
@@ -301,14 +301,14 @@ The resulting Transformation may be used interchangeably with those constructed 
 .. doctest::
 
     >>> from opendp.transformations import *
-    >>> from opendp.measurements import make_base_discrete_laplace
+    >>> from opendp.measurements import part_base_discrete_laplace
     >>> trans = (
     ...     (vector_domain(atom_domain(T=str)), symmetric_distance())
     ...     >> part_cast_default(TOA=int)
     ...     >> make_repeat(2)  # our custom transformation
     ...     >> part_clamp((1, 2))
     ...     >> make_bounded_sum((1, 2))
-    ...     >> make_base_discrete_laplace(1.0)
+    ...     >> part_base_discrete_laplace(1.0)
     ... )
     ...
     >>> release = trans(["0", "1", "2", "3"])
