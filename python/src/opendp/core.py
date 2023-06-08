@@ -39,7 +39,9 @@ __all__ = [
     "odometer_invoke",
     "odometer_output_measure",
     "odometer_queryable_invoke",
+    "odometer_queryable_invoke_type",
     "odometer_queryable_map",
+    "odometer_queryable_map_type",
     "queryable_eval",
     "queryable_query_odometer_map_type",
     "queryable_query_type",
@@ -683,7 +685,7 @@ def odometer_queryable_invoke(
     # No type arguments to standardize.
     # Convert arguments to c types.
     c_queryable = py_to_c(queryable, c_type=AnyObjectPtr, type_name=None)
-    c_query = py_to_c(query, c_type=AnyObjectPtr, type_name=AnyObject)
+    c_query = py_to_c(query, c_type=AnyObjectPtr, type_name=odometer_queryable_invoke_type(queryable))
 
     # Call library function.
     lib_function = lib.opendp_core__odometer_queryable_invoke
@@ -691,6 +693,31 @@ def odometer_queryable_invoke(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_queryable, c_query), AnyObjectPtr))
+
+    return output
+
+
+def odometer_queryable_invoke_type(
+    this
+) -> str:
+    r"""Get the invoke query type of an odometer `queryable`.
+
+    :param this: The queryable to retrieve the query type from.
+    :rtype: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = py_to_c(this, c_type=AnyObjectPtr, type_name=None)
+
+    # Call library function.
+    lib_function = lib.opendp_core__odometer_queryable_invoke_type
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
 
     return output
 
@@ -718,6 +745,31 @@ def odometer_queryable_map(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_queryable, c_query), AnyObjectPtr))
+
+    return output
+
+
+def odometer_queryable_map_type(
+    this
+) -> str:
+    r"""Get the map query type of an odometer `queryable`.
+
+    :param this: The queryable to retrieve the query type from.
+    :rtype: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = py_to_c(this, c_type=AnyObjectPtr, type_name=None)
+
+    # Call library function.
+    lib_function = lib.opendp_core__odometer_queryable_map_type
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
 
     return output
 

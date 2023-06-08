@@ -59,29 +59,35 @@ fn make_chain_ot(
     transformation0: &AnyTransformation,
 ) -> Fallible<AnyOdometer> {
     let odometer1_function = odometer1.function.clone();
-    let odometer1 = Odometer {
-        input_domain: odometer1.input_domain.clone(),
-        function: Function::new_wrappable(move |arg: &AnyObject, wrapper| {
+    let odometer1 = Odometer::new(
+        odometer1.input_domain.clone(),
+        Function::new_interactive(move |arg: &AnyObject, wrapper| {
             let mut inner_qbl = odometer1_function.eval(arg)?.downcast::<AnyQueryable>()?;
-            Queryable::new(move |_qbl, query: Query<AnyOdometerQuery>| {
-                Ok(match query {
-                    Query::External(external, inner_wrapper) => Answer::External(
-                        inner_qbl
-                            .eval_wrap(&AnyObject::new(external.clone()), inner_wrapper)?
-                            .downcast::<AnyOdometerAnswer>()?,
-                    ),
-                    Query::Internal(internal) => {
-                        let Answer::Internal(answer) = inner_qbl.eval_query(Query::Internal(internal))?
-                        else { return fallible!(FailedCast, "return type is not d_out") };
+            Queryable::new_interactive(
+                move |_qbl, query: Query<AnyOdometerQuery>| {
+                    Ok(match query {
+                        Query::External(external, inner_wrapper) => Answer::External(
+                            inner_qbl
+                                .eval_wrap(&AnyObject::new(external.clone()), inner_wrapper)?
+                                .downcast::<AnyOdometerAnswer>()?,
+                        ),
+                        Query::Internal(internal) => {
+                            let Answer::Internal(answer) =
+                                inner_qbl.eval_query(Query::Internal(internal))?
+                            else {
+                                return fallible!(FailedCast, "return type is not d_out");
+                            };
 
-                        Answer::Internal(answer)
-                    }
-                })
-            }, wrapper)
+                            Answer::Internal(answer)
+                        }
+                    })
+                },
+                wrapper,
+            )
         }),
-        input_metric: odometer1.input_metric.clone(),
-        output_measure: odometer1.output_measure.clone(),
-    };
+        odometer1.input_metric.clone(),
+        odometer1.output_measure.clone(),
+    )?;
     Ok(super::make_chain_ot(&odometer1, transformation0)?
         .into_any_queryable()
         .into_any_out())
@@ -172,29 +178,35 @@ pub extern "C" fn opendp_combinators__make_chain_pm(
 /// * `odometer1` - inner odometer
 fn make_chain_po(function1: &AnyFunction, odometer0: &AnyOdometer) -> Fallible<AnyOdometer> {
     let odometer0_function = odometer0.function.clone();
-    let odometer0 = Odometer {
-        input_domain: odometer0.input_domain.clone(),
-        function: Function::new_wrappable(move |arg: &AnyObject, wrapper| {
+    let odometer0 = Odometer::new(
+        odometer0.input_domain.clone(),
+        Function::new_interactive(move |arg: &AnyObject, wrapper| {
             let mut inner_qbl = odometer0_function.eval(arg)?.downcast::<AnyQueryable>()?;
-            Queryable::new(move |_qbl, query: Query<AnyOdometerQuery>| {
-                Ok(match query {
-                    Query::External(external, inner_wrapper) => Answer::External(
-                        inner_qbl
-                            .eval_wrap(&AnyObject::new(external.clone()), inner_wrapper)?
-                            .downcast::<AnyOdometerAnswer>()?,
-                    ),
-                    Query::Internal(internal) => {
-                        let Answer::Internal(answer) = inner_qbl.eval_query(Query::Internal(internal))?
-                        else { return fallible!(FailedCast, "return type is not d_out") };
+            Queryable::new_interactive(
+                move |_qbl, query: Query<AnyOdometerQuery>| {
+                    Ok(match query {
+                        Query::External(external, inner_wrapper) => Answer::External(
+                            inner_qbl
+                                .eval_wrap(&AnyObject::new(external.clone()), inner_wrapper)?
+                                .downcast::<AnyOdometerAnswer>()?,
+                        ),
+                        Query::Internal(internal) => {
+                            let Answer::Internal(answer) =
+                                inner_qbl.eval_query(Query::Internal(internal))?
+                            else {
+                                return fallible!(FailedCast, "return type is not d_out");
+                            };
 
-                        Answer::Internal(answer)
-                    }
-                })
-            }, wrapper)
+                            Answer::Internal(answer)
+                        }
+                    })
+                },
+                wrapper,
+            )
         }),
-        input_metric: odometer0.input_metric.clone(),
-        output_measure: odometer0.output_measure.clone(),
-    };
+        odometer0.input_metric.clone(),
+        odometer0.output_measure.clone(),
+    )?;
     Ok(super::make_chain_po(&function1, &odometer0)?
         .into_any_queryable()
         .into_any_out())
