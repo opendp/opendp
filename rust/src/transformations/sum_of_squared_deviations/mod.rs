@@ -61,13 +61,7 @@ where
 {
     let size = (input_domain.size)
         .ok_or_else(|| err!(MakeTransformation, "dataset size must be known. Either specify size in the input domain or use make_resize"))?;
-    let bounds = (input_domain.element_domain.get_closed_bounds())
-        .ok_or_else(|| {
-            err!(
-                MakeTransformation,
-                "input domain must consist of bounded data. Either specify bounds in the input domain or use make_clamp."
-            )
-        })?;
+    let bounds = (input_domain.element_domain.get_closed_bounds())?;
 
     if size == 0 {
         return fallible!(MakeTransformation, "size must be greater than zero");
