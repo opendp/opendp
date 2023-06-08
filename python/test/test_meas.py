@@ -83,16 +83,16 @@ def test_base_vector_gaussian():
 
 
 def test_base_geometric():
-    from opendp.measurements import part_base_geometric
+    from opendp.measurements import then_base_geometric
     from opendp.domains import atom_domain
     from opendp.metrics import absolute_distance
     input_space = (atom_domain(T=int), absolute_distance(T=int))
-    meas = input_space >> part_base_geometric(scale=2., bounds=(1, 10))
+    meas = input_space >> then_base_geometric(scale=2., bounds=(1, 10))
     print("base_geometric in constant time:", meas(100))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 
-    meas = input_space >> part_base_geometric(scale=2.)
+    meas = input_space >> then_base_geometric(scale=2.)
     print("base_geometric:", meas(100))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)

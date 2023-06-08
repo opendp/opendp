@@ -24,8 +24,8 @@ def main():
     # Noisy sum, col 1
     noisy_sum_1 = (
         make_select_column(key="B", TOA=str) >>
-        part_cast_default(TOA=int) >>
-        part_clamp(bounds=(0, 10)) >>
+        then_cast_default(TOA=int) >>
+        then_clamp(bounds=(0, 10)) >>
         make_bounded_sum(bounds=(0, 10)) >>
         make_base_discrete_laplace(scale=1.0)
     )
@@ -33,7 +33,7 @@ def main():
     # Count, col 2
     noisy_count_2 = (
         make_select_column(key="C", TOA=str) >>
-        part_cast_default(TOA=float) >>
+        then_cast_default(TOA=float) >>
         make_count(TIA=float) >>
         make_base_discrete_laplace(scale=1.0)
     )

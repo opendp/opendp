@@ -126,7 +126,7 @@ mod tests {
     #[test]
     fn test_chain_laplace() -> Fallible<()> {
         let chain = (make_sized_bounded_mean::<SymmetricDistance, _>(3, (10.0, 12.0))?
-            >> part_base_laplace(1.0, None))?;
+            >> then_base_laplace(1.0, None))?;
         let _ret = chain.invoke(&vec![10.0, 11.0, 12.0])?;
         Ok(())
     }

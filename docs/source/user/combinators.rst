@@ -216,8 +216,8 @@ The resulting measurement expects the size of the input dataset to be 10.
 .. doctest::
 
     >>> from opendp.transformations import make_sized_bounded_mean
-    >>> from opendp.measurements import part_base_laplace
-    >>> meas = make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> part_base_laplace(scale=0.5)
+    >>> from opendp.measurements import then_base_laplace
+    >>> meas = make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> then_base_laplace(scale=0.5)
     >>> print("standard mean:", amplified([1.] * 10)) # -> 1.03 # doctest: +SKIP
 
 We can now use the amplification combinator to construct an amplified measurement.
@@ -301,14 +301,14 @@ The resulting Transformation may be used interchangeably with those constructed 
 .. doctest::
 
     >>> from opendp.transformations import *
-    >>> from opendp.measurements import part_base_discrete_laplace
+    >>> from opendp.measurements import then_base_discrete_laplace
     >>> trans = (
     ...     (vector_domain(atom_domain(T=str)), symmetric_distance())
-    ...     >> part_cast_default(TOA=int)
+    ...     >> then_cast_default(TOA=int)
     ...     >> make_repeat(2)  # our custom transformation
-    ...     >> part_clamp((1, 2))
+    ...     >> then_clamp((1, 2))
     ...     >> make_bounded_sum((1, 2))
-    ...     >> part_base_discrete_laplace(1.0)
+    ...     >> then_base_discrete_laplace(1.0)
     ... )
     ...
     >>> release = trans(["0", "1", "2", "3"])
