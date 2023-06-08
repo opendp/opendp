@@ -160,19 +160,19 @@ mod tests {
     }
 
     #[test]
-    fn test_make_vector_discrete_laplace_mechanism_bounded() {
+    fn test_make_vector_discrete_laplace_mechanism_bounded() -> Fallible<()> {
         let measurement = make_base_discrete_laplace_linear(
             VectorDomain::new(AtomDomain::default()),
             Default::default(),
             10.0,
             Some((200, 210)),
-        )
-        .unwrap_test();
+        )?;
         let arg = vec![1, 2, 3, 4];
-        let _ret = measurement.invoke(&arg).unwrap_test();
+        let _ret = measurement.invoke(&arg)?;
         println!("{:?}", _ret);
 
-        assert!(measurement.check(&1, &0.5).unwrap_test());
+        assert!(measurement.check(&1, &0.5)?);
+        Ok(())
     }
 
     #[test]
