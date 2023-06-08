@@ -2,7 +2,6 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
-use crate::metrics::SymmetricDistance;
 use crate::traits::{CheckAtom, TotalOrd};
 use crate::transformations::{make_clamp, DatasetMetric};
 
@@ -45,18 +44,18 @@ mod tests {
     use crate::core;
     use crate::error::Fallible;
     use crate::ffi::any::{AnyObject, Downcast};
-    use crate::ffi::util;
+    use crate::metrics::SymmetricDistance;
 
     use super::*;
 
     #[test]
     fn test_make_vector_clamp() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_clamp(
-            util::into_raw(AnyDomain::new(VectorDomain::new(
+            AnyDomain::new_raw(VectorDomain::new(
                 AtomDomain::<f64>::default(),
-            ))),
-            util::into_raw(AnyMetric::new(SymmetricDistance::default())),
-            util::into_raw(AnyObject::new((0.0, 10.0))),
+            )),
+            AnyMetric::new_raw(SymmetricDistance::default()),
+            AnyObject::new_raw((0.0, 10.0)),
         ))?;
         let arg = AnyObject::new_raw(vec![-1.0, 5.0, 11.0]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);

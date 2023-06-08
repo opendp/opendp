@@ -68,7 +68,6 @@ mod tests {
     use crate::core::opendp_core__transformation_invoke;
     use crate::error::Fallible;
     use crate::ffi::any::{AnyObject, Downcast};
-    use crate::ffi::util;
     use crate::ffi::util::ToCharP;
 
     use super::*;
@@ -77,7 +76,7 @@ mod tests {
     fn test_make_resize() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_resize(
             4 as c_uint,
-            util::into_raw(AnyDomain::new(AtomDomain::<i32>::default())),
+            AnyDomain::new_raw(AtomDomain::<i32>::default()),
             AnyObject::new_raw(0i32),
             "AtomDomain<i32>".to_char_p(),
             "SymmetricDistance".to_char_p(),
@@ -94,9 +93,9 @@ mod tests {
     fn test_make_bounded_resize() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_resize(
             4 as c_uint,
-            util::into_raw(AnyDomain::new(
+            AnyDomain::new_raw(
                 AtomDomain::<i32>::new_closed((0i32, 10)).unwrap(),
-            )),
+            ),
             AnyObject::new_raw(0i32),
             "AtomDomain<i32>".to_char_p(),
             "SymmetricDistance".to_char_p(),

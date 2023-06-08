@@ -277,7 +277,7 @@ where
 mod tests_shr {
     use crate::measurements::make_base_discrete_laplace;
     use crate::transformations::{
-        make_bounded_sum, make_cast_default, make_split_lines, part_clamp,
+        make_bounded_sum, make_split_lines, part_cast_default, part_clamp,
     };
 
     use super::*;
@@ -285,7 +285,7 @@ mod tests_shr {
     #[test]
     fn test_shr() -> Fallible<()> {
         (make_split_lines()?
-            >> make_cast_default()?
+            >> part_cast_default()
             >> part_clamp((0, 1))
             >> make_bounded_sum((0, 1))?
             >> make_base_discrete_laplace(1.)?)

@@ -106,18 +106,18 @@ fn generate_function(
     let docstring = indent(generate_docstring(func, hierarchy));
     let body = indent(generate_body(module_name, func, typemap));
 
-    let partial_func = if func.supports_partial {
+    let part_func = if func.supports_partial {
         format!(
             r#"
 
-def {partial_name}(
-{partial_args}
+def {part_name}(
+{part_args}
 ):
     return PartialConstructor(lambda {dom_met}: {name}(
 {args}))
 "#,
-            partial_name = func.name.replacen("make_", "part_", 1),
-            partial_args = indent(args[2..].join(",\n")),
+            part_name = func.name.replacen("make_", "part_", 1),
+            part_args = indent(args[2..].join(",\n")),
             dom_met = func.args[..2]
                 .iter()
                 .map(|arg| arg.name())
@@ -143,7 +143,7 @@ def {func_name}(
 {args}
 ){sig_return}:
 {docstring}
-{body}{partial_func}
+{body}{part_func}
 "#,
         func_name = func.name,
         args = indent(args.join(",\n"))

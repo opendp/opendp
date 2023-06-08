@@ -301,7 +301,8 @@ The resulting Transformation may be used interchangeably with those constructed 
     >>> from opendp.transformations import *
     >>> from opendp.measurements import make_base_discrete_laplace
     >>> trans = (
-    ...     make_cast_default(TIA=str, TOA=int)
+    ...     (vector_domain(atom_domain(T=str)), symmetric_distance())
+    ...     >> part_cast_default(TOA=int)
     ...     >> make_repeat(2)  # our custom transformation
     ...     >> part_clamp((1, 2))
     ...     >> make_bounded_sum((1, 2))
