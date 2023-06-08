@@ -133,13 +133,14 @@ def _measurement_free(
 
 @versioned
 def _odometer_free(
-    this
+    this: Odometer
 ):
     """Internal function. Free the memory associated with `this`.
     
     [_odometer_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn._odometer_free.html)
     
     :param this: 
+    :type this: Odometer
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -528,13 +529,14 @@ def measurement_output_measure(
 
 @versioned
 def odometer_function(
-    this
+    this: Odometer
 ) -> Function:
     """Get the function from a odometer.
     
     [odometer_function in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.odometer_function.html)
     
     :param this: The odometer to retrieve the value from.
+    :type this: Odometer
     :rtype: Function
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -556,13 +558,14 @@ def odometer_function(
 
 @versioned
 def odometer_input_domain(
-    this
+    this: Odometer
 ):
     """Get the input domain from a `odometer`.
     
     [odometer_input_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.odometer_input_domain.html)
     
     :param this: The odometer to retrieve the value from.
+    :type this: Odometer
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -583,13 +586,14 @@ def odometer_input_domain(
 
 @versioned
 def odometer_input_metric(
-    this
+    this: Odometer
 ):
     """Get the input domain from a `odometer`.
     
     [odometer_input_metric in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.odometer_input_metric.html)
     
     :param this: The odometer to retrieve the value from.
+    :type this: Odometer
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -610,7 +614,7 @@ def odometer_input_metric(
 
 @versioned
 def odometer_invoke(
-    this,
+    this: Odometer,
     arg: Any
 ) -> Any:
     """Invoke the `odometer` with `arg`. Returns a differentially private release.
@@ -618,6 +622,7 @@ def odometer_invoke(
     [odometer_invoke in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.odometer_invoke.html)
     
     :param this: Odometer to invoke.
+    :type this: Odometer
     :param arg: Input data to supply to the odometer. A member of the odometer's input domain.
     :type arg: Any
     :rtype: Any
@@ -642,13 +647,14 @@ def odometer_invoke(
 
 @versioned
 def odometer_output_measure(
-    this
+    this: Odometer
 ):
     """Get the output domain from a `odometer`.
     
     [odometer_output_measure in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.odometer_output_measure.html)
     
     :param this: The odometer to retrieve the value from.
+    :type this: Odometer
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library

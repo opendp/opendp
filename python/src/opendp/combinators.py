@@ -10,7 +10,9 @@ from opendp.measures import *
 __all__ = [
     "make_basic_composition",
     "make_chain_mt",
+    "make_chain_ot",
     "make_chain_pm",
+    "make_chain_po",
     "make_chain_tt",
     "make_fix_delta",
     "make_population_amplification",
@@ -96,6 +98,42 @@ def make_chain_mt(
 
 
 @versioned
+def make_chain_ot(
+    odometer1: Odometer,
+    transformation0: Transformation
+) -> Odometer:
+    """Construct the functional composition (`odometer1` ○ `transformation0`).
+    Returns a Measurement that when invoked, computes `odometer1(transformation0(x))`.
+    
+    [make_chain_ot in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_chain_ot.html)
+    
+    :param odometer1: outer odometer
+    :type odometer1: Odometer
+    :param transformation0: inner transformation
+    :type transformation0: Transformation
+    :rtype: Odometer
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_odometer1 = py_to_c(odometer1, c_type=Odometer, type_name=None)
+    c_transformation0 = py_to_c(transformation0, c_type=Transformation, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_combinators__make_chain_ot
+    lib_function.argtypes = [Odometer, Transformation]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_odometer1, c_transformation0), Odometer))
+    output._depends_on(get_dependencies(odometer1), get_dependencies(transformation0))
+    return output
+
+
+@versioned
 def make_chain_pm(
     postprocess1: Function,
     measurement0: Measurement
@@ -129,6 +167,42 @@ def make_chain_pm(
     
     output = c_to_py(unwrap(lib_function(c_postprocess1, c_measurement0), Measurement))
     output._depends_on(get_dependencies(postprocess1), get_dependencies(measurement0))
+    return output
+
+
+@versioned
+def make_chain_po(
+    function1: Function,
+    odometer0: Odometer
+) -> Odometer:
+    """Construct the functional composition (`function1` ○ `odometer0`).
+    Returns an Odometer that when invoked, computes `function1(odometer0(x))`.
+    
+    [make_chain_po in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_chain_po.html)
+    
+    :param function1: outer function
+    :type function1: Function
+    :param odometer0: 
+    :type odometer0: Odometer
+    :rtype: Odometer
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_function1 = py_to_c(function1, c_type=Function, type_name=None)
+    c_odometer0 = py_to_c(odometer0, c_type=Odometer, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_combinators__make_chain_po
+    lib_function.argtypes = [Function, Odometer]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_function1, c_odometer0), Odometer))
+    output._depends_on(get_dependencies(function1), get_dependencies(odometer0))
     return output
 
 
@@ -365,7 +439,7 @@ def make_sequential_odometer(
     input_metric,
     output_measure,
     Q: RuntimeTypeDescriptor = None
-):
+) -> Odometer:
     """Construct a sequential odometer queryable that interactively composes odometers or interactive measurements.
     
     [make_sequential_odometer in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_sequential_odometer.html)
@@ -375,6 +449,7 @@ def make_sequential_odometer(
     :param output_measure: how privacy is measured
     :param Q: either `Odometer` or `Measurement`
     :type Q: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Odometer
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library

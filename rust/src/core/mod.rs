@@ -412,6 +412,13 @@ pub struct Odometer<DI: Domain, TO, MI: Metric, MO: Measure> {
     pub output_measure: MO,
 }
 
+// pub struct Odometer<DI: Domain, Q, A, MI: Metric, MO: Measure> {
+//     pub input_domain: DI,
+//     pub function: Function<DI::Carrier, Queryable<OdometerQuery<Q, MI::Distance>, OdometerAnswer<A, MO::Distance>>>,
+//     pub input_metric: MI,
+//     pub output_measure: MO,
+// }
+
 impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Odometer<DI, TO, MI, MO> {
     fn clone(&self) -> Self {
         Self {

@@ -3,11 +3,13 @@ mod ffi;
 
 mod shr;
 
+use crate::combinators::{OdometerAnswer, OdometerQuery};
 use crate::core::{
-    Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap, StabilityMap,
-    Transformation,
+    Domain, Function, Measure, Measurement, Metric, MetricSpace, Odometer, PrivacyMap,
+    StabilityMap, Transformation,
 };
 use crate::error::{Error, ErrorVariant, Fallible};
+use crate::interactive::{Answer, Query, Queryable};
 use std::fmt::Debug;
 
 const ERROR_URL: &str = "https://github.com/opendp/opendp/discussions/297";
@@ -105,6 +107,87 @@ where
     )
 }
 
+/// Construct the functional composition (`odometer1` ○ `transformation0`).
+/// Returns an Odometer that when invoked, computes `odometer1(transformation0(x))`.
+///
+/// # Arguments
+/// * `odometer1` - outer odometer
+/// * `transformation0` - inner transformation
+///
+/// # Generics
+/// * `DI` - Input Domain.
+/// * `DX` - Intermediate Domain.
+/// * `Q` - Query Type.
+/// * `A` - Answer Type.
+/// * `MI` - Input Metric.
+/// * `MX` - Intermediate Metric.
+/// * `MO` - Output Measure.
+pub fn make_chain_ot<DI, DX, Q, A, MI, MX, MO>(
+    odometer1: &Odometer<
+        DX,
+        Queryable<OdometerQuery<Q, MX::Distance>, OdometerAnswer<A, MO::Distance>>,
+        MX,
+        MO,
+    >,
+    transformation0: &Transformation<DI, DX, MI, MX>,
+) -> Fallible<
+    Odometer<
+        DI,
+        Queryable<OdometerQuery<Q, MI::Distance>, OdometerAnswer<A, MO::Distance>>,
+        MI,
+        MO,
+    >,
+>
+where
+    DI: 'static + Domain,
+    DX: 'static + Domain,
+    Q: 'static + Clone,
+    A: 'static,
+    MI: 'static + Metric,
+    MX: 'static + Metric,
+    MO: 'static + Measure,
+    (DI, MI): MetricSpace,
+    (DX, MX): MetricSpace,
+{
+    assert_components_match!(
+        DomainMismatch,
+        transformation0.output_domain,
+        odometer1.input_domain
+    );
+    assert_components_match!(
+        MetricMismatch,
+        transformation0.output_metric,
+        odometer1.input_metric
+    );
+
+    let trans_function = transformation0.function.clone();
+    let trans_map = transformation0.stability_map.clone();
+    let odo_function = odometer1.function.clone();
+    Odometer::new(
+        transformation0.input_domain.clone(),
+        Function::new_fallible(move |arg: &DI::Carrier| {
+            let mut inner_qbl = odo_function.eval(&trans_function.eval(arg)?)?;
+            let trans_map = trans_map.clone();
+
+            Queryable::new(
+                move |_qbl, query: Query<OdometerQuery<Q, MI::Distance>>| match query {
+                    Query::External(OdometerQuery::Invoke(q)) => inner_qbl
+                        .eval_invoke(q.clone())
+                        .map(OdometerAnswer::Invoke)
+                        .map(Answer::External),
+                    Query::External(OdometerQuery::Map(d_in)) => inner_qbl
+                        .eval_map(trans_map.eval(d_in)?)
+                        .map(OdometerAnswer::Map)
+                        .map(Answer::External),
+                    Query::Internal(query) => inner_qbl.eval_query(Query::Internal(query)),
+                },
+            )
+        }),
+        transformation0.input_metric.clone(),
+        odometer1.output_measure.clone(),
+    )
+}
+
 /// Construct the functional composition (`transformation1` ○ `transformation0`).
 /// Returns a Measurement that when invoked, computes `transformation1(transformation0(x))`.
 ///
@@ -191,6 +274,79 @@ where
         measurement0.input_metric.clone(),
         measurement0.output_measure.clone(),
         measurement0.privacy_map.clone(),
+    )
+}
+
+/// Construct the functional composition (`function1` ○ `odometer0`).
+/// Returns an Odometer that when invoked, computes `function1(odometer0(x))`.
+///
+/// # Arguments
+/// * `function1` - outer function
+/// * `odometer1` - inner odometer
+///
+/// # Generics
+/// * `DI` - Input Domain.
+/// * `Q` - Query Type.
+/// * `A1` - Initial Answer Type.
+/// * `A2` - Outcome Answer Type.
+/// * `MI` - Input Metric.
+/// * `MO` - Output Measure.
+pub fn make_chain_po<DI, Q, A1, A2, MI, MO>(
+    function1: &Function<A1, A2>,
+    odometer0: &Odometer<
+        DI,
+        Queryable<OdometerQuery<Q, MI::Distance>, OdometerAnswer<A1, MO::Distance>>,
+        MI,
+        MO,
+    >,
+) -> Fallible<
+    Odometer<
+        DI,
+        Queryable<OdometerQuery<Q, MI::Distance>, OdometerAnswer<A2, MO::Distance>>,
+        MI,
+        MO,
+    >,
+>
+where
+    DI: 'static + Domain,
+    Q: 'static + Clone,
+    A1: 'static,
+    A2: 'static,
+    MI: 'static + Metric,
+    MI::Distance: Clone,
+    MO: 'static + Measure,
+    (DI, MI): MetricSpace,
+{
+    let function1 = function1.clone();
+    let odometer0_function = odometer0.function.clone();
+    Odometer::new(
+        odometer0.input_domain.clone(),
+        Function::new_fallible(move |arg: &DI::Carrier| {
+            let mut inner_qbl = odometer0_function.eval(arg)?;
+            let function1 = function1.clone();
+
+            Queryable::new(move |_qbl, query: Query<OdometerQuery<Q, MI::Distance>>| {
+                match query {
+                    Query::External(OdometerQuery::Invoke(q)) => function1
+                        .eval(&inner_qbl.eval_invoke(q.clone())?)
+                        .map(OdometerAnswer::Invoke)
+                        .map(Answer::External),
+                    Query::External(OdometerQuery::Map(d_in)) => inner_qbl
+                        .eval_map(d_in.clone())
+                        .map(OdometerAnswer::Map)
+                        .map(Answer::External),
+                    Query::Internal(query) => {
+                        // since A1 != A2, must repack into another Answer struct with a different type for A
+                        let Answer::Internal(answer) = inner_qbl.eval_query(Query::Internal(query))?
+                        else {return fallible!(FailedCast, "expected internal answer"); };
+
+                        Ok(Answer::Internal(answer))
+                    }
+                }
+            })
+        }),
+        odometer0.input_metric.clone(),
+        odometer0.output_measure.clone(),
     )
 }
 

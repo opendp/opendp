@@ -223,15 +223,15 @@ class Odometer(ctypes.POINTER(AnyOdometer)):
         from opendp.core import odometer_invoke
         return odometer_invoke(self, arg)
 
-    # def __rshift__(self, other: Union["Function", "Transformation"]):
-    #     if isinstance(other, Transformation):
-    #         other = other.function
+    def __rshift__(self, other: Union["Function", "Transformation"]):
+        if isinstance(other, Transformation):
+            other = other.function
 
-    #     if isinstance(other, Function):
-    #         from opendp.combinators import make_chain_pm
-    #         return make_chain_pm(other, self)
+        if isinstance(other, Function):
+            from opendp.combinators import make_chain_po
+            return make_chain_po(other, self)
 
-    #     raise ValueError(f"rshift expected a postprocessing transformation, got {other}")
+        raise ValueError(f"rshift expected a postprocessing transformation, got {other}")
 
     @property
     def input_domain(self) -> "Domain":
@@ -380,10 +380,14 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
                 return False
             raise
 
-    def __rshift__(self, other: Union["Measurement", "Transformation", "PartialConstructor"]):
+    def __rshift__(self, other: Union["Measurement", "Transformation", "Odometer", "PartialConstructor"]):
         if isinstance(other, Measurement):
             from opendp.combinators import make_chain_mt
             return make_chain_mt(other, self)
+        
+        if isinstance(other, Odometer):
+            from opendp.combinators import make_chain_ot
+            return make_chain_ot(other, self)
 
         if isinstance(other, Transformation):
             from opendp.combinators import make_chain_tt
@@ -392,7 +396,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         if isinstance(other, PartialConstructor):
             return self >> other(self.output_domain, self.output_metric)
 
-        raise ValueError(f"rshift expected a measurement or transformation, got {other}")
+        raise ValueError(f"rshift expected a measurement, odometer or transformation, got {other}")
 
     @property
     def input_domain(self) -> "Domain":

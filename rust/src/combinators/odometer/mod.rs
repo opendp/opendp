@@ -14,6 +14,7 @@ use crate::{
 
 pub type OdometerQueryable<Q, A, QU, AU> = Queryable<OdometerQuery<Q, QU>, OdometerAnswer<A, AU>>;
 
+#[derive(Clone)]
 pub enum OdometerQuery<Q, U> {
     Invoke(Q),
     Map(U),

@@ -1,9 +1,13 @@
 use opendp_derive::bootstrap;
 
-use crate::core::FfiResult;
+use crate::combinators::ffi::{AnyOdometerAnswer, AnyOdometerQuery};
+use crate::core::{FfiResult, Function, Odometer};
 
 use crate::error::Fallible;
-use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyTransformation};
+use crate::ffi::any::{
+    AnyFunction, AnyMeasurement, AnyObject, AnyOdometer, AnyQueryable, AnyTransformation, Downcast,
+};
+use crate::interactive::{Answer, Query, Queryable};
 
 #[bootstrap(
     features("contrib"),
@@ -37,6 +41,60 @@ pub extern "C" fn opendp_combinators__make_chain_mt(
     let transformation0 = try_as_ref!(transformation0);
     let measurement1 = try_as_ref!(measurement1);
     make_chain_mt(measurement1, transformation0).into()
+}
+
+#[bootstrap(
+    features("contrib"),
+    arguments(odometer1(rust_type = b"null"), transformation0(rust_type = b"null")),
+    dependencies("$get_dependencies(odometer1)", "$get_dependencies(transformation0)")
+)]
+/// Construct the functional composition (`odometer1` ○ `transformation0`).
+/// Returns a Measurement that when invoked, computes `odometer1(transformation0(x))`.
+///
+/// # Arguments
+/// * `odometer1` - outer odometer
+/// * `transformation0` - inner transformation
+fn make_chain_ot(
+    odometer1: &AnyOdometer,
+    transformation0: &AnyTransformation,
+) -> Fallible<AnyOdometer> {
+    let odometer1_function = odometer1.function.clone();
+    let odometer1 = Odometer {
+        input_domain: odometer1.input_domain.clone(),
+        function: Function::new_fallible(move |arg: &AnyObject| {
+            let mut inner_qbl = odometer1_function.eval(arg)?.downcast::<AnyQueryable>()?;
+            Queryable::new(move |_qbl, query: Query<AnyOdometerQuery>| {
+                Ok(match query {
+                    Query::External(external) => Answer::External(
+                        inner_qbl
+                            .eval(&AnyObject::new(external.clone()))?
+                            .downcast::<AnyOdometerAnswer>()?,
+                    ),
+                    Query::Internal(internal) => {
+                        let Answer::Internal(answer) = inner_qbl.eval_query(Query::Internal(internal))?
+                        else { return fallible!(FailedCast, "return type is not d_out") };
+
+                        Answer::Internal(answer)
+                    }
+                })
+            })
+        }),
+        input_metric: odometer1.input_metric.clone(),
+        output_measure: odometer1.output_measure.clone(),
+    };
+    Ok(super::make_chain_ot(&odometer1, transformation0)?
+        .into_any_queryable()
+        .into_any_out())
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_combinators__make_chain_ot(
+    odometer1: *const AnyOdometer,
+    transformation0: *const AnyTransformation,
+) -> FfiResult<*mut AnyOdometer> {
+    let transformation0 = try_as_ref!(transformation0);
+    let odometer1 = try_as_ref!(odometer1);
+    make_chain_ot(odometer1, transformation0).into()
 }
 
 #[bootstrap(
@@ -99,6 +157,57 @@ pub extern "C" fn opendp_combinators__make_chain_pm(
     let postprocess1 = try_as_ref!(postprocess1);
     let measurement0 = try_as_ref!(measurement0);
     make_chain_pm(postprocess1, measurement0).into()
+}
+
+#[bootstrap(
+    features("contrib"),
+    arguments(function1(rust_type = b"null"), odometer0(rust_type = b"null")),
+    dependencies("$get_dependencies(function1)", "$get_dependencies(odometer0)")
+)]
+/// Construct the functional composition (`function1` ○ `odometer0`).
+/// Returns an Odometer that when invoked, computes `function1(odometer0(x))`.
+///
+/// # Arguments
+/// * `function1` - outer function
+/// * `odometer1` - inner odometer
+fn make_chain_po(function1: &AnyFunction, odometer0: &AnyOdometer) -> Fallible<AnyOdometer> {
+    let odometer0_function = odometer0.function.clone();
+    let odometer0 = Odometer {
+        input_domain: odometer0.input_domain.clone(),
+        function: Function::new_fallible(move |arg: &AnyObject| {
+            let mut inner_qbl = odometer0_function.eval(arg)?.downcast::<AnyQueryable>()?;
+            Queryable::new(move |_qbl, query: Query<AnyOdometerQuery>| {
+                Ok(match query {
+                    Query::External(external) => Answer::External(
+                        inner_qbl
+                            .eval(&AnyObject::new(external.clone()))?
+                            .downcast::<AnyOdometerAnswer>()?,
+                    ),
+                    Query::Internal(internal) => {
+                        let Answer::Internal(answer) = inner_qbl.eval_query(Query::Internal(internal))?
+                        else { return fallible!(FailedCast, "return type is not d_out") };
+
+                        Answer::Internal(answer)
+                    }
+                })
+            })
+        }),
+        input_metric: odometer0.input_metric.clone(),
+        output_measure: odometer0.output_measure.clone(),
+    };
+    Ok(super::make_chain_po(&function1, &odometer0)?
+        .into_any_queryable()
+        .into_any_out())
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_combinators__make_chain_po(
+    function1: *const AnyFunction,
+    odometer0: *const AnyOdometer,
+) -> FfiResult<*mut AnyOdometer> {
+    let odometer0 = try_as_ref!(odometer0);
+    let function1 = try_as_ref!(function1);
+    make_chain_po(function1, odometer0).into()
 }
 
 #[cfg(test)]

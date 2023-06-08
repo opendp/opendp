@@ -1,3 +1,4 @@
+from typing import List
 import opendp.prelude as dp
 dp.enable_features("contrib")
 
@@ -87,3 +88,48 @@ def test_sequential_odometer():
     print("root release: ", sc_qbl(sum_query))
 
     print("privacy usage", sc_qbl.map(1))
+
+
+def test_odometer_chain_ot():
+    sc_odo = dp.c.make_sequential_odometer(
+        input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+        input_metric=dp.symmetric_distance(),
+        output_measure=dp.max_divergence(float),
+        Q=dp.Measurement
+    )
+
+    sc_odo2 = dp.space_of(List[str]) >> dp.t.part_cast_default(TOA=int) >> sc_odo
+
+    sc_qbl2: dp.Queryable = sc_odo2(["1"] * 200)
+
+
+    print("SeqComp IM:", sc_qbl2)
+    sum_query = sc_odo.input_space >> dp.t.part_clamp((0, 10)) >> dp.t.make_bounded_sum((0, 10)) >> dp.m.make_base_discrete_laplace(100.)
+
+    print("evaluating")
+    print(sc_qbl2(sum_query))
+
+    print("privacy usage", sc_qbl2.map(1))
+
+
+
+def test_odometer_chain_po():
+    sc_odo = dp.c.make_sequential_odometer(
+        input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+        input_metric=dp.symmetric_distance(),
+        output_measure=dp.max_divergence(float),
+        Q=dp.Measurement
+    )
+
+    sc_odo2 = sc_odo >> dp.c.make_user_postprocessor(lambda x: str(x + 10_000), str)
+
+    sc_qbl2: dp.Queryable = sc_odo2([1] * 200)
+
+    print("SeqComp IM:", sc_qbl2)
+    sum_query = sc_odo.input_space >> dp.t.part_clamp((0, 10)) >> dp.t.make_bounded_sum((0, 10)) >> dp.m.make_base_discrete_laplace(100.)
+
+    print("evaluating")
+    print(sc_qbl2(sum_query))
+
+    print("privacy usage", sc_qbl2.map(1))
+
