@@ -445,14 +445,14 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         ...
 
     @overload
-    def __rshift__(self, other: "PartialConstructor") -> "PartialConstructor":
-        ...
-
-    @overload
     def __rshift__(self, other: "Odometer") -> "Odometer":
         ...
 
-    def __rshift__(self, other: Union["Measurement", "Transformation", "Odometer", "PartialConstructor", "PartialChain"]) -> Union["Measurement", "Transformation", "Odometer", "PartialConstructor", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
+    @overload
+    def __rshift__(self, other: "PartialConstructor") -> "PartialConstructor":
+        ...
+
+    def __rshift__(self, other: Union["Measurement", "Transformation", "PartialConstructor", "Odometer", "PartialChain"]) -> Union["Measurement", "Transformation", "PartialConstructor", "Odometer", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
         if isinstance(other, Measurement):
             from opendp.combinators import make_chain_mt
             return make_chain_mt(other, self)

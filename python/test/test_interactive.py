@@ -1,4 +1,3 @@
-from opendp.mod import Queryable
 import opendp.prelude as dp
 import pytest
 
@@ -165,17 +164,17 @@ def test_odometer_chain_ot():
     sc_odo = dp.c.make_sequential_odometer(
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
         input_metric=dp.symmetric_distance(),
-        output_measure=dp.max_divergence(float),
+        output_measure=dp.max_divergence(),
         Q=dp.Measurement
     )
 
-    sc_odo2 = dp.t.make_cast_default(TIA=str, TOA=int) >> sc_odo
+    sc_odo2 = dp.space_of(list[str]) >> dp.t.then_cast_default(TOA=int) >> sc_odo
 
     sc_qbl2: dp.Queryable = sc_odo2(["1"] * 200)
 
 
     print("SeqComp IM:", sc_qbl2)
-    sum_query = sc_odo.input_space >> dp.t.part_clamp((0, 10)) >> dp.t.make_bounded_sum((0, 10)) >> dp.m.make_base_discrete_laplace(100.)
+    sum_query = sc_odo.input_space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum() >> dp.m.then_laplace(100.)
 
     print("evaluating")
     print(sc_qbl2(sum_query))
@@ -188,16 +187,16 @@ def test_odometer_chain_po():
     sc_odo = dp.c.make_sequential_odometer(
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
         input_metric=dp.symmetric_distance(),
-        output_measure=dp.max_divergence(float),
+        output_measure=dp.max_divergence(),
         Q=dp.Measurement
     )
 
-    sc_odo2 = sc_odo >> dp.c.make_user_postprocessor(lambda x: str(x + 10_000), str)
+    sc_odo2 = sc_odo >> (lambda x: str(x + 10_000))
 
     sc_qbl2: dp.Queryable = sc_odo2([1] * 200)
 
     print("SeqComp IM:", sc_qbl2)
-    sum_query = sc_odo.input_space >> dp.t.part_clamp((0, 10)) >> dp.t.make_bounded_sum((0, 10)) >> dp.m.make_base_discrete_laplace(100.)
+    sum_query = sc_odo.input_space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum() >> dp.m.then_laplace(100.)
 
     print("evaluating")
     print(sc_qbl2(sum_query))
