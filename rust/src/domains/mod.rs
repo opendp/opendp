@@ -11,6 +11,11 @@
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
+#[cfg(feature = "polars")]
+mod polars;
+#[cfg(feature = "polars")]
+pub use polars::*;
+
 // Once we have things using `Any` that are outside of `contrib`, this should specify `feature="ffi"`.
 #[cfg(feature = "contrib")]
 use std::any::Any;
@@ -135,12 +140,17 @@ impl<T: CheckAtom + ProductOrd> AtomDomain<T> {
         })
     }
 
-    pub fn get_closed_bounds(&self) -> Option<(T, T)> {
-        let bounds = self.bounds.as_ref()?;
+    pub fn get_closed_bounds(&self) -> Fallible<(T, T)> {
+        let bounds = self.bounds.as_ref().ok_or_else(|| {
+            err!(
+                MakeTransformation,
+                "input domain must consist of bounded data. Either specify bounds in the input domain or use make_clamp."
+            )
+        })?;
 
         match (&bounds.lower, &bounds.upper) {
-            (Bound::Included(l), Bound::Included(u)) => Some((l.clone(), u.clone())),
-            _ => None,
+            (Bound::Included(l), Bound::Included(u)) => Ok((l.clone(), u.clone())),
+            _ => fallible!(MakeTransformation, "bounds are not closed"),
         }
     }
 }
