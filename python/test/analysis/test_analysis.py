@@ -1,3 +1,4 @@
+from typing import List
 import opendp.prelude as dp
 from opendp.analysis import Analysis, unit_of, loss_of
 
@@ -10,7 +11,7 @@ def test_analysis_init():
         privacy_unit=unit_of(contributions=3),
         privacy_loss=loss_of(epsilon=3.0),
         weights=3,
-        domain=dp.vector_domain(dp.atom_domain(T=int)),
+        domain=dp.domain_of(List[int]),
     )
 
     dp_sum = (
@@ -34,6 +35,7 @@ def test_analysis_zCDP():
         privacy_unit=unit_of(contributions=1),
         privacy_loss=loss_of(epsilon=3.0, delta=1e-6),
         weights=2,
+        # fully-specified domain
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
 

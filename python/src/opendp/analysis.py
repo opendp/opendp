@@ -15,11 +15,12 @@ for module_name in ["transformations", "measurements"]:
             continue
         partial_name = "part_" + name[5:]
         make_func = getattr(module, name)
+
         is_measurement = get_type_hints(make_func)["return"] == dp.Measurement
-        if partial_name in module.__all__:
-            constructors[name[5:]] = getattr(module, partial_name), True, is_measurement
-        else:
-            constructors[name[5:]] = getattr(module, name), False, is_measurement
+        is_partial = partial_name in module.__all__
+        constructor = getattr(module, partial_name if is_partial else name)
+
+        constructors[name[5:]] = constructor, is_partial, is_measurement
 
 
 def loss_of(*, epsilon=None, delta=None, rho=None, U=None) -> Tuple[dp.Measure, float]:
@@ -136,9 +137,8 @@ class Analysis(object):
         :param privacy_loss: The privacy loss of the analysis.
         :param weights: How to distribute `privacy_loss` among the queries.
         :param domain: The domain of the data."""
-        # TODO: uncomment after https://github.com/opendp/opendp/pull/749
-        # if domain is None:
-        #     domain = domain_of(data, infer=True)
+        if domain is None:
+            domain = dp.domain_of(data, infer=True)
 
         accountant, d_mids = _sequential_composition_by_weights(
             domain, privacy_unit, privacy_loss, weights
