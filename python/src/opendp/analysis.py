@@ -169,13 +169,14 @@ class Analysis(object):
         :param eager: Whether to release the query as soon as a measurement is applied.
         :param kwargs: The privacy loss to use for the query. Passed directly into `loss_of`.
         """
+        d_query = None
         if self.d_mids is not None:
             if kwargs:
                 raise ValueError(f"Expected no privacy arguments but got {kwargs}")
             if not self.d_mids:
                 raise ValueError("Privacy allowance has been exhausted")
             d_query = self.d_mids[0]
-        else:
+        elif kwargs:
             measure, d_query = loss_of(**kwargs)
             if measure != self.output_measure:
                 raise ValueError(
