@@ -17,6 +17,8 @@ pub use cast::*;
 mod operations;
 pub use operations::*;
 
+use self::samplers::CastInternalRational;
+
 pub mod samplers;
 
 /// A type that can be used as a stability or privacy constant to scale a distance.
@@ -259,6 +261,7 @@ pub trait Float:
     + InfPow
     + InfSqrt
     + FloatBits
+    + CastInternalRational
     + ExactIntCast<Self::Bits>
     + RoundCast<f64>
 {
@@ -275,6 +278,7 @@ impl<T> Float for T where
         + InfPow
         + InfSqrt
         + FloatBits
+        + CastInternalRational
         + ExactIntCast<Self::Bits>
         + RoundCast<f64>
 {
