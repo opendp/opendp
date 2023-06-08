@@ -9,7 +9,7 @@ use crate::core::{
     StabilityMap, Transformation,
 };
 use crate::error::{Error, ErrorVariant, Fallible};
-use crate::interactive::{Answer, Query, Queryable, WrapFn};
+use crate::interactive::{Answer, Query, Queryable, Wrapper};
 use std::fmt::Debug;
 
 const ERROR_URL: &str = "https://github.com/opendp/opendp/discussions/297";
@@ -165,11 +165,11 @@ where
     let odo_function = odometer1.function.clone();
     Odometer::new(
         transformation0.input_domain.clone(),
-        Function::new_wrappable(move |arg: &DI::Carrier, wrapper| {
+        Function::new_interactive(move |arg: &DI::Carrier, wrapper| {
             let mut inner_qbl = odo_function.eval(&trans_function.eval(arg)?)?;
             let trans_map = trans_map.clone();
 
-            Queryable::new(
+            Queryable::new_interactive(
                 move |_qbl, query: Query<OdometerQuery<Q, MI::Distance>>| match query {
                     Query::External(OdometerQuery::Invoke(q), inner_wrapper) => inner_qbl
                         .eval_invoke_wrap(q.clone(), inner_wrapper)
@@ -180,7 +180,8 @@ where
                         .map(OdometerAnswer::Map)
                         .map(Answer::External),
                     Query::Internal(query) => inner_qbl.eval_query(Query::Internal(query)),
-                }, wrapper
+                },
+                wrapper,
             )
         }),
         transformation0.input_metric.clone(),
@@ -321,29 +322,35 @@ where
     let odometer0_function = odometer0.function.clone();
     Odometer::new(
         odometer0.input_domain.clone(),
-        Function::new_wrappable(move |arg: &DI::Carrier, wrapper: Option<WrapFn>| {
+        Function::new_interactive(move |arg: &DI::Carrier, wrapper: Option<Wrapper>| {
             let mut inner_qbl = odometer0_function.eval(arg)?;
             let function1 = function1.clone();
 
-            Queryable::new(move |_qbl, query: Query<OdometerQuery<Q, MI::Distance>>| {
-                match query {
-                    Query::External(OdometerQuery::Invoke(q), inner_wrapper) => function1
-                        .eval(&inner_qbl.eval_invoke_wrap(q.clone(), inner_wrapper)?)
-                        .map(OdometerAnswer::Invoke)
-                        .map(Answer::External),
-                    Query::External(OdometerQuery::Map(d_in), _) => inner_qbl
-                        .eval_map(d_in.clone())
-                        .map(OdometerAnswer::Map)
-                        .map(Answer::External),
-                    Query::Internal(query) => {
-                        // since A1 != A2, must repack into another Answer struct with a different type for A
-                        let Answer::Internal(answer) = inner_qbl.eval_query(Query::Internal(query))?
-                        else {return fallible!(FailedCast, "expected internal answer"); };
+            Queryable::new_interactive(
+                move |_qbl, query: Query<OdometerQuery<Q, MI::Distance>>| {
+                    match query {
+                        Query::External(OdometerQuery::Invoke(q), inner_wrapper) => function1
+                            .eval(&inner_qbl.eval_invoke_wrap(q.clone(), inner_wrapper)?)
+                            .map(OdometerAnswer::Invoke)
+                            .map(Answer::External),
+                        Query::External(OdometerQuery::Map(d_in), _) => inner_qbl
+                            .eval_map(d_in.clone())
+                            .map(OdometerAnswer::Map)
+                            .map(Answer::External),
+                        Query::Internal(query) => {
+                            // since A1 != A2, must repack into another Answer struct with a different type for A
+                            let Answer::Internal(answer) =
+                                inner_qbl.eval_query(Query::Internal(query))?
+                            else {
+                                return fallible!(FailedCast, "expected internal answer");
+                            };
 
-                        Ok(Answer::Internal(answer))
+                            Ok(Answer::Internal(answer))
+                        }
                     }
-                }
-            }, wrapper)
+                },
+                wrapper,
+            )
         }),
         odometer0.input_metric.clone(),
         odometer0.output_measure.clone(),
