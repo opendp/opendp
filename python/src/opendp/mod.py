@@ -1,7 +1,7 @@
 import ctypes
 from typing import Union, Tuple, Callable, Optional
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer
 
 
 class Measurement(ctypes.POINTER(AnyMeasurement)):
@@ -167,6 +167,137 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     
     def __str__(self) -> str:
         return f"Measurement(\n    input_domain   = {self.input_domain}, \n    input_metric   = {self.input_metric}, \n    output_measure = {self.output_measure}\n)"
+
+
+class Odometer(ctypes.POINTER(AnyOdometer)):
+    """A differentially private unit of computation with no privacy limit.
+    An odometer contains a function that returns a queryable with a function and a relation.
+    Differentially private queries may be passed to the queryable,
+    as well as queries to check the current privacy usage.
+
+    :example:
+
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib")
+    ...
+    >>> base_rr = dp.m.make_randomized_response_bool(prob=0.6)
+    ...
+    >>> # create an instance of Odometer using a sequential odometer constructor
+    >>> so_odo = dp.c.make_sequential_odometer(
+    ...     input_domain=base_rr.input_domain,
+    ...     input_metric=base_rr.input_metric,
+    ...     output_measure=base_rr.output_measure,
+    ...     Q=dp.Measurement # indicates that queries will be measurements (as opposed to odometers)
+    ... )
+    ...
+    >>> # invoke the odometer to get a queryable
+    >>> so_qbl = so_odo(True)
+    ...
+    >>> # evaluate the queryable (eval and __call__ are equivalent)
+    >>> _ = so_qbl(base_rr) # -> True wp 0.6
+    ...
+    >>> # pass a second query to the same queryable and get a second release
+    >>> _ = so_qbl(base_rr) # -> True wp 0.6
+    ...
+    >>> # determine the odometer's privacy consumption (in terms of ε)
+    >>> # when the input dataset may differ by discrete distance 1
+    >>> so_qbl.map(1)
+    0.8109302162163288
+    """
+
+    _type_ = AnyMeasurement
+
+    def __call__(self, arg):
+        from opendp.core import odometer_invoke
+        return odometer_invoke(self, arg)
+
+    def invoke(self, arg):
+        """Create a differentially-private release with `arg`.
+
+        If `self` is (d_in, d_out)-close, then each invocation of this function is a d_out-DP release. 
+        
+        :param arg: Input to the measurement.
+        :return: differentially-private release
+        :raises OpenDPException: packaged error from the core OpenDP library
+        """
+        from opendp.core import odometer_invoke
+        return odometer_invoke(self, arg)
+
+    # def __rshift__(self, other: Union["Function", "Transformation"]):
+    #     if isinstance(other, Transformation):
+    #         other = other.function
+
+    #     if isinstance(other, Function):
+    #         from opendp.combinators import make_chain_pm
+    #         return make_chain_pm(other, self)
+
+    #     raise ValueError(f"rshift expected a postprocessing transformation, got {other}")
+
+    @property
+    def input_domain(self) -> "Domain":
+        from opendp.core import odometer_input_domain
+        return odometer_input_domain(self)
+    
+    @property
+    def input_metric(self) -> "Metric":
+        from opendp.core import odometer_input_metric
+        return odometer_input_metric(self)
+    
+    @property
+    def input_space(self) -> Tuple["Domain", "Metric"]:
+        return self.input_domain, self.input_metric
+    
+    @property
+    def output_measure(self) -> "Measure":
+        from opendp.core import odometer_output_measure
+        return odometer_output_measure(self)
+    
+    @property
+    def function(self) -> "Function":
+        from opendp.core import odometer_function
+        return odometer_function(self)
+    
+    @property
+    def input_distance_type(self):
+        """Retrieve the distance type of the input metric.
+        This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
+        
+        :return: distance type
+        """
+        return self.input_metric.distance_type
+
+    @property
+    def output_distance_type(self):
+        """Retrieve the distance type of the output measure.
+        This is the type that the budget is expressed in.
+        
+        :return: distance type
+        """
+        return self.output_measure.distance_type
+
+    @property
+    def input_carrier_type(self):
+        """Retrieve the carrier type of the input domain.
+        Any member of the input domain is a member of the carrier type.
+        
+        :return: carrier type
+        """
+        self.input_domain.carrier_type
+
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
+
+    def __del__(self):
+        try:
+            from opendp.core import _odometer_free
+            _odometer_free(self)
+        except (ImportError, TypeError):
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
+    
+    def __str__(self) -> str:
+        return f"Odometer(\n    input_domain   = {self.input_domain}, \n    input_metric   = {self.input_metric}, \n    output_measure = {self.output_measure}\n)"
 
 
 class Transformation(ctypes.POINTER(AnyTransformation)):
@@ -352,12 +483,19 @@ class Queryable(object):
         self.value = value
 
     def __call__(self, query):
-        from opendp.core import queryable_eval
+        from opendp.core import queryable_eval, odometer_queryable_invoke
+        
+        if self.query_type == "AnyOdometerQuery":
+            return odometer_queryable_invoke(self.value, query)
+        
         return queryable_eval(self.value, query)
     
     def eval(self, query):
-        from opendp.core import queryable_eval
-        return queryable_eval(self.value, query)
+        return self(query)
+    
+    def map(self, d_in):
+        from opendp.core import odometer_queryable_map
+        return odometer_queryable_map(self.value, d_in)
 
     @property
     def query_type(self):

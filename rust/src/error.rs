@@ -34,11 +34,23 @@ macro_rules! err {
     (@backtrace) => (std::backtrace::Backtrace::capture());
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error)]
 pub struct Error {
     pub variant: ErrorVariant,
     pub message: Option<String>,
     pub backtrace: _Backtrace,
+}
+
+// don't derive this trait because std's backtrace.display() is much prettier than std backtrace's debug
+impl core::fmt::Debug for Error {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let message = self
+            .message
+            .as_ref()
+            .map(|v| format!("({:?})", v))
+            .unwrap_or_default();
+        write!(f, "{:?}{}\n{}", self.variant, message, self.backtrace)
+    }
 }
 
 impl PartialEq for Error {
