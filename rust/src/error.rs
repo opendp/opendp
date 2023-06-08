@@ -6,6 +6,7 @@ use std::fmt::Debug;
 use std::backtrace::Backtrace as _Backtrace;
 
 use dashu::base::ConversionError;
+use polars::prelude::PolarsError;
 
 /// Create an instance of [`Fallible`]
 #[macro_export]
@@ -36,7 +37,7 @@ macro_rules! err {
     (@backtrace) => (std::backtrace::Backtrace::capture());
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error)]
 pub struct Error {
     pub variant: ErrorVariant,
     pub message: Option<String>,
@@ -115,6 +116,18 @@ impl From<String> for Error {
     }
 }
 
+impl Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{:?}: {:?}\n{}",
+            self.variant,
+            self.message.as_ref().cloned().unwrap_or_default(),
+            self.backtrace.to_string()
+        )
+    }
+}
+
 impl From<ErrorVariant> for Error {
     fn from(variant: ErrorVariant) -> Self {
         Self {
@@ -136,6 +149,16 @@ impl From<ConversionError> for Error {
         Self {
             variant: ErrorVariant::FailedCast,
             message: Some(err.to_string()),
+            backtrace: std::backtrace::Backtrace::capture(),
+        }
+    }
+}
+
+impl From<PolarsError> for Error {
+    fn from(error: PolarsError) -> Self {
+        Self {
+            variant: ErrorVariant::FailedFunction,
+            message: Some(format!("{:?}", error)),
             backtrace: std::backtrace::Backtrace::capture(),
         }
     }
