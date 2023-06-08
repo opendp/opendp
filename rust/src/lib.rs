@@ -41,7 +41,7 @@
 //! pub fn example() -> Fallible<()> {
 //!     use opendp::transformations::{make_split_lines, part_cast_default, make_cast_default, part_clamp, make_bounded_sum};
 //!     use opendp::combinators::{make_chain_tt, make_chain_mt};
-//!     use opendp::measurements::make_base_laplace;
+//!     use opendp::measurements::part_base_laplace;
 //!
 //!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
 //!     let bounds = (0.0, 100.0);
@@ -69,8 +69,7 @@
 //!     let load_and_sum = (load_and_clamp >> make_bounded_sum(bounds)?)?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
-//!     let laplace = make_base_laplace(sigma, None)?;
-//!     let noisy_sum = make_chain_mt(&laplace, &load_and_sum)?; // or `load_and_sum >> laplace`
+//!     let noisy_sum = load_and_sum >> part_base_laplace(sigma, None);
 //!
 //!     // The same measurement, written more succinctly:
 //!     let noisy_sum = (
@@ -78,7 +77,7 @@
 //!         part_cast_default() >>
 //!         part_clamp(bounds) >>
 //!         make_bounded_sum(bounds)? >>
-//!         make_base_laplace(sigma, None)?
+//!         part_base_laplace(sigma, None)
 //!     )?;
 //!
 //!     // Check that the pipeline is (1, 1.0)-close

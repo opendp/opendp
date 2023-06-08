@@ -150,7 +150,9 @@ This is useful if you want to compose pure-DP measurements with approximate-DP m
 
     >>> from opendp.measurements import make_base_laplace
     >>> from opendp.combinators import make_pureDP_to_fixed_approxDP
-    >>> meas_pureDP = make_base_laplace(scale=10.)
+    >>> from opendp.domains import atom_domain
+    >>> from opendp.metrics import absolute_distance
+    >>> meas_pureDP = make_base_laplace(atom_domain(T=float), absolute_distance(T=float), scale=10.)
     >>> # convert the output measure to `FixedSmoothedMaxDivergence`
     >>> meas_fixed_approxDP = make_pureDP_to_fixed_approxDP(meas_pureDP)
     ...
@@ -214,8 +216,8 @@ The resulting measurement expects the size of the input dataset to be 10.
 .. doctest::
 
     >>> from opendp.transformations import make_sized_bounded_mean
-    >>> from opendp.measurements import make_base_laplace
-    >>> meas = make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> make_base_laplace(scale=0.5)
+    >>> from opendp.measurements import part_base_laplace
+    >>> meas = make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> part_base_laplace(scale=0.5)
     >>> print("standard mean:", amplified([1.] * 10)) # -> 1.03 # doctest: +SKIP
 
 We can now use the amplification combinator to construct an amplified measurement.

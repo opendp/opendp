@@ -58,10 +58,13 @@ mod tests {
     use crate::domains::AtomDomain;
     use crate::error::*;
     use crate::measurements;
+    use crate::metrics::AbsoluteDistance;
 
     #[test]
     fn test_poly_measurement() -> Fallible<()> {
-        let op_plain = measurements::make_base_laplace::<AtomDomain<_>>(0.0, None)?;
+        let input_domain = AtomDomain::default();
+        let input_metric = AbsoluteDistance::default();
+        let op_plain = measurements::make_base_laplace(input_domain, input_metric, 0.0, None)?;
         let arg = 100.;
         let res_plain = op_plain.invoke(&arg)?;
         assert_eq!(res_plain, arg);

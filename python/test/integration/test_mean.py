@@ -37,7 +37,7 @@ def test_dp_mean():
         # Aggregate with mean
         make_sized_bounded_mean(n, bounds) >>
         # Noise
-        make_base_laplace(scale)
+        part_base_laplace(scale)
     )
     res = preprocessor(data)
     assert type(res) == float

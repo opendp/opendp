@@ -568,24 +568,23 @@ def binary_search_chain(
 
     Find a base_laplace measurement with the smallest noise scale that is still (d_in, d_out)-close.
 
-    >>> from opendp.mod import binary_search_chain, enable_features
-    >>> from opendp.transformations import part_clamp, make_resize, make_sized_bounded_mean
-    >>> from opendp.measurements import make_base_laplace
-    >>> from opendp.domains import vector_domain, atom_domain
-    >>> from opendp.metrics import symmetric_distance
-    >>> enable_features("floating-point", "contrib")
+    >>> from typing import List
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("floating-point", "contrib")
     ...
     >>> # The majority of the chain only needs to be defined once.
     >>> pre = (
-    ...     (vector_domain(atom_domain(T=float)), symmetric_distance()) >>
-    ...     part_clamp(bounds=(0., 1.)) >>
-    ...     make_resize(size=10, atom_domain=atom_domain((0., 1.)), constant=0.) >>
-    ...     make_sized_bounded_mean(size=10, bounds=(0., 1.))
+    ...     dp.space_of(List[float]) >>
+    ...     dp.t.part_clamp(bounds=(0., 1.)) >>
+    ...     dp.t.make_resize(size=10, atom_domain=dp.atom_domain((0., 1.)), constant=0.) >>
+    ...     dp.t.make_sized_bounded_mean(size=10, bounds=(0., 1.))
     ... )
     ...
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.
     >>> # The lambda function returns the complete computation chain when given a single numeric parameter.
-    >>> chain = binary_search_chain(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
+    >>> chain = dp.binary_search_chain(
+    ...     lambda s: pre >> dp.m.part_base_laplace(scale=s), 
+    ...     d_in=1, d_out=1.)
     ...
     >>> # The resulting computation chain is always (`d_in`, `d_out`)-close, but we can still double-check:
     >>> assert chain.check(1, 1.)
@@ -594,14 +593,11 @@ def binary_search_chain(
     Build a (2 neighboring, 1. epsilon)-close sized bounded sum with discrete_laplace(100.) noise.
     It should have the widest possible admissible clamping bounds (-b, b).
 
-    >>> from opendp.transformations import make_sized_bounded_sum
-    >>> from opendp.measurements import make_base_discrete_laplace
-    ...
     >>> def make_sum(b):
-    ...     return make_sized_bounded_sum(10_000, (-b, b)) >> make_base_discrete_laplace(100.)
+    ...     return dp.t.make_sized_bounded_sum(10_000, (-b, b)) >> dp.m.make_base_discrete_laplace(100.)
     ...
     >>> # `meas` is a Measurement with the widest possible clamping bounds.
-    >>> meas = binary_search_chain(make_sum, d_in=2, d_out=1., bounds=(0, 10_000))
+    >>> meas = dp.binary_search_chain(make_sum, d_in=2, d_out=1., bounds=(0, 10_000))
     ...
     >>> # If you want the discovered clamping bound, use `binary_search_param` instead.
     """
@@ -629,16 +625,20 @@ def binary_search_param(
 
     :example:
 
-    >>> from opendp.mod import binary_search_param, enable_features
-    >>> from opendp.measurements import make_base_laplace
+    >>> import opendp.prelude as dp
     ...
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.
     >>> # The first argument is any function that returns your complete computation chain
     >>> #     when passed a single numeric parameter.
-    >>> scale = binary_search_param(make_base_laplace, d_in=0.1, d_out=1.)
+    ...
+    >>> def make_fixed_laplace(scale):
+    ...     # fixes the input domain and metric, but parameterizes the noise scale
+    ...     return dp.m.make_base_laplace(dp.atom_domain(T=float), dp.absolute_distance(T=float), scale)
+    ...
+    >>> scale = dp.binary_search_param(make_fixed_laplace, d_in=0.1, d_out=1.)
     >>> assert scale == 0.1
     >>> # Constructing the same chain with the discovered parameter will always be (0.1, 1.)-close.
-    >>> assert make_base_laplace(scale).check(0.1, 1.)
+    >>> assert make_fixed_laplace(scale).check(0.1, 1.)
 
     A policy research organization wants to know the smallest sample size necessary to release an "accurate" epsilon=1 DP mean income. 
     Determine the smallest dataset size such that, with 95% confidence, 
@@ -647,18 +647,17 @@ def binary_search_param(
     Also assume a clipping bound of 500,000.
 
     >>> # we first work out the necessary noise scale to satisfy the above constraints.
-    >>> from opendp.accuracy import accuracy_to_laplacian_scale
-    >>> necessary_scale = accuracy_to_laplacian_scale(accuracy=1000., alpha=.05)
+    >>> necessary_scale = dp.accuracy_to_laplacian_scale(accuracy=1000., alpha=.05)
     ...
     >>> # we then write a function that make a computation chain with a given data size
     >>> def make_mean(data_size):
     ...    return (
-    ...        make_sized_bounded_mean(data_size, (0., 500_000.)) >> 
-    ...        make_base_laplace(necessary_scale)
+    ...        dp.t.make_sized_bounded_mean(data_size, (0., 500_000.)) >> 
+    ...        dp.m.part_base_laplace(necessary_scale)
     ...    )
     ...
     >>> # solve for the smallest dataset size that admits a (2 neighboring, 1. epsilon)-close measurement
-    >>> binary_search_param(
+    >>> dp.binary_search_param(
     ...     make_mean, 
     ...     d_in=2, d_out=1.,
     ...     bounds=(1, 1000000))

@@ -5,7 +5,7 @@ dp.enable_features("floating-point", "contrib", "honest-but-curious")
 
 
 def test_amplification():
-    meas = dp.t.make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> dp.m.make_base_laplace(scale=0.5)
+    meas = dp.t.make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> dp.m.part_base_laplace(scale=0.5)
 
     amplified = dp.c.make_population_amplification(meas, population_size=100)
     print("amplified base laplace:", amplified([1.] * 10))
@@ -30,11 +30,11 @@ def test_make_basic_composition():
             dp.m.make_base_discrete_laplace(scale=200.)
         ]),
         input_pair >> dp.t.part_cast_default(bool) >> dp.t.part_cast_default(int) >> dp.t.make_count(TIA=int, TO=int) >> dp.m.make_base_discrete_laplace(scale=2.), 
-        input_pair >> dp.t.part_cast_default(float) >> dp.t.part_clamp((0., 10.)) >> dp.t.make_bounded_sum((0., 10.)) >> dp.m.make_base_laplace(scale=2.), 
+        input_pair >> dp.t.part_cast_default(float) >> dp.t.part_clamp((0., 10.)) >> dp.t.make_bounded_sum((0., 10.)) >> dp.m.part_base_laplace(scale=2.), 
 
         dp.c.make_basic_composition([
             dp.t.make_count(TIA=int, TO=int) >> dp.m.make_base_discrete_laplace(scale=2.), 
-            dp.t.make_count(TIA=int, TO=float) >> dp.m.make_base_laplace(scale=2.),
+            dp.t.make_count(TIA=int, TO=float) >> dp.m.part_base_laplace(scale=2.),
             (
                 input_pair >> dp.t.part_cast_default(str) >> 
                 dp.t.make_count_by_categories(categories=["0", "12", "22"]) >> 
@@ -84,8 +84,10 @@ def test_cast_zcdp_approxdp():
     
 
 def test_make_pureDP_to_fixed_approxDP():
+    input_domain = dp.atom_domain(T=float)
+    input_metric = dp.absolute_distance(T=float)
     meas = dp.c.make_basic_composition([
-        dp.c.make_pureDP_to_fixed_approxDP(dp.m.make_base_laplace(10.)),
+        dp.c.make_pureDP_to_fixed_approxDP(dp.m.make_base_laplace(input_domain, input_metric, 10.)),
         dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_base_gaussian(10.)), delta=1e-6)
     ])
 
@@ -93,8 +95,10 @@ def test_make_pureDP_to_fixed_approxDP():
 
 
 def test_make_pureDP_to_zCDP():
+    input_domain = dp.atom_domain(T=float)
+    input_metric = dp.absolute_distance(T=float)
     meas = dp.c.make_basic_composition([
-        dp.c.make_pureDP_to_zCDP(dp.m.make_base_laplace(10.)),
+        dp.c.make_pureDP_to_zCDP(dp.m.make_base_laplace(input_domain, input_metric, 10.)),
         dp.m.make_base_gaussian(10.)
     ])
 

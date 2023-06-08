@@ -69,16 +69,13 @@ will help us find a noise scale parameter that satisfies our given budget.
 
 .. doctest::
 
-    >>> from opendp.measurements import make_base_laplace
+    >>> from opendp.measurements import part_base_laplace
     >>> from opendp.mod import enable_features, binary_search_param
-    ...
-    >>> # Please make yourself aware of the dangers of floating point numbers
-    >>> enable_features("floating-point")
     ...
     >>> # Find the smallest noise scale for which the relation still passes
     >>> # If we didn't need a handle on scale (for accuracy later),
     >>> #     we could just use binary_search_chain and inline the lambda
-    >>> make_chain = lambda s: transformation >> make_base_laplace(s)
+    >>> make_chain = lambda s: transformation >> part_base_laplace(s)
     >>> scale = binary_search_param(make_chain, d_in=num_tests, d_out=budget) # -> 1.33
     >>> measurement = make_chain(scale)
     ...

@@ -17,7 +17,7 @@ def test_binary_search_overflow():
         dp.t.make_bounded_sum(bounds=(0.0, 1.0))
     )
     dp.binary_search_param(
-        lambda s: bounded_sum >> dp.m.make_base_laplace(scale=s),
+        lambda s: bounded_sum >> dp.m.part_base_laplace(scale=s),
         d_in=d_in,
         d_out=d_out
     )
@@ -36,7 +36,7 @@ def test_stuck():
     )
     real_v = sens / epsilon
     discovered_scale = dp.binary_search_param(
-        lambda s: bounded_sum >> dp.m.make_base_laplace(scale=s),
+        lambda s: bounded_sum >> dp.m.part_base_laplace(scale=s),
         d_in=1,
         bounds=(0.0, real_v * 2.0),
         d_out=(epsilon))

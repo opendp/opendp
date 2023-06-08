@@ -30,15 +30,18 @@ def test_base_gaussian_search():
 
 def test_base_laplace():
     from opendp.measurements import make_base_laplace
-    meas = make_base_laplace(scale=10.5)
+    from opendp.domains import atom_domain
+    from opendp.metrics import absolute_distance
+    meas = make_base_laplace(atom_domain(T=float), absolute_distance(T=float), 10.5)
     print("base laplace:", meas(100.))
     print("epsilon", meas.map(1.))
     assert meas.check(1., .096)
 
-
 def test_base_vector_laplace():
     from opendp.measurements import make_base_laplace
-    meas = make_base_laplace(scale=10.5, D="VectorDomain<AtomDomain<f64>>")
+    from opendp.domains import atom_domain, vector_domain
+    from opendp.metrics import l1_distance
+    meas = make_base_laplace(vector_domain(atom_domain(T=float)), l1_distance(T=float), scale=10.5)
     print("base laplace:", meas([80., 90., 100.]))
     assert meas.check(1., 1.3)
 

@@ -112,18 +112,18 @@ where
     )
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "partials"))]
 mod test {
     use crate::combinators::make_population_amplification;
     use crate::error::Fallible;
-    use crate::measurements::make_base_laplace;
+    use crate::measurements::part_base_laplace;
     use crate::metrics::SymmetricDistance;
     use crate::transformations::make_sized_bounded_mean;
 
     #[test]
     fn test_amplifier() -> Fallible<()> {
         let meas = (make_sized_bounded_mean::<SymmetricDistance, _>(10, (0., 10.))?
-            >> make_base_laplace(0.5, None)?)?;
+            >> part_base_laplace(0.5, None))?;
         let amp = make_population_amplification(&meas, 100)?;
         amp.function.eval(&vec![1.; 10])?;
         assert!(meas.check(&2, &(2. + 1e-6))?);
