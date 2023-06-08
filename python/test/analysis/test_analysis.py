@@ -87,7 +87,7 @@ def test_sc_query():
 
     dp_mean = (
         sub_analysis.query()
-        .cast_default(int, float)
+        .cast_default(float)
         .clamp((1., 10.))
         .resize(3, dp.atom_domain((1., 10.)), constant=5.)
         .sized_bounded_mean(3, (1., 10.))
