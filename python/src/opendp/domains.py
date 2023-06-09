@@ -25,6 +25,7 @@ __all__ = [
     "map_domain",
     "member",
     "option_domain",
+    "series_domain",
     "user_domain",
     "vector_domain"
 ]
@@ -292,6 +293,38 @@ def option_domain(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_element_domain, c_D), Domain))
+
+    return output
+
+
+def series_domain(
+    name: str,
+    element_domain: Domain
+) -> Domain:
+    r"""Construct an instance of `SeriesDomain`.
+
+    [series_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.series_domain.html)
+
+    :param name: The name of the series.
+    :type name: str
+    :param element_domain: The domain of elements in the series.
+    :type element_domain: Domain
+    :rtype: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_name = py_to_c(name, c_type=ctypes.c_char_p, type_name=str)
+    c_element_domain = py_to_c(element_domain, c_type=Domain, type_name=None)
+
+    # Call library function.
+    lib_function = lib.opendp_domains__series_domain
+    lib_function.argtypes = [ctypes.c_char_p, Domain]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_name, c_element_domain), Domain))
 
     return output
 
