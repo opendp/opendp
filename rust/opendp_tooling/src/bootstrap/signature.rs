@@ -198,6 +198,7 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                 i if i == "f32" => "float".to_string(),
                 i if i == "f64" => "double".to_string(),
                 i if i == "usize" => "size_t".to_string(),
+                i if i == "LazyFrame" => "AnyObject *".to_string(),
                 i if i == "FfiSlice" => "FfiSlice *".to_string(),
                 i if i == "Transformation" => "AnyTransformation *".to_string(),
                 i if i == "ExtrinsicObject" => "ExtrinsicObject *".to_string(),

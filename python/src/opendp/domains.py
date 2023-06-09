@@ -22,12 +22,15 @@ __all__ = [
     "domain_carrier_type",
     "domain_debug",
     "domain_type",
+    "infer_lazyframe_domain",
+    "lazyframe_domain",
     "map_domain",
     "member",
     "option_domain",
     "series_domain",
     "user_domain",
-    "vector_domain"
+    "vector_domain",
+    "with_margin"
 ]
 
 
@@ -200,6 +203,63 @@ def domain_type(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+
+    return output
+
+
+def infer_lazyframe_domain(
+    lazyframe: Any
+) -> Domain:
+    r"""Infer the lazyframe domain that a dataset is a member of.
+
+    WARNING: This function looks at the data to infer the domain,
+    and should only be used if you consider the column names and column types to be public information.
+
+    [infer_lazyframe_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.infer_lazyframe_domain.html)
+
+    :param lazyframe: The lazyframe to infer the domain from.
+    :type lazyframe: Any
+    :rtype: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_lazyframe = py_to_c(lazyframe, c_type=AnyObjectPtr, type_name=LazyFrame)
+
+    # Call library function.
+    lib_function = lib.opendp_domains__infer_lazyframe_domain
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_lazyframe), Domain))
+
+    return output
+
+
+def lazyframe_domain(
+    series_domains: Any
+) -> Domain:
+    r"""Construct an instance of `LazyFrameDomain`.
+
+    :param series_domains: Domain of each series in the lazyframe.
+    :type series_domains: Any
+    :rtype: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_series_domains = py_to_c(series_domains, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[SeriesDomain]))
+
+    # Call library function.
+    lib_function = lib.opendp_domains__lazyframe_domain
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_series_domains), Domain))
 
     return output
 
@@ -391,5 +451,55 @@ def vector_domain(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_atom_domain, c_size), Domain))
+
+    return output
+
+
+def with_margin(
+    frame_domain: Domain,
+    by: Any,
+    max_partition_length: Optional[Any] = None,
+    max_num_partitions: Optional[Any] = None,
+    max_partition_contributions: Optional[Any] = None,
+    max_influenced_partitions: Optional[Any] = None,
+    public_info: Optional[str] = None
+) -> Domain:
+    r"""
+
+    :param frame_domain: 
+    :type frame_domain: Domain
+    :param by: 
+    :type by: Any
+    :param max_partition_length: 
+    :type max_partition_length: Any
+    :param max_num_partitions: 
+    :type max_num_partitions: Any
+    :param max_partition_contributions: 
+    :type max_partition_contributions: Any
+    :param max_influenced_partitions: 
+    :type max_influenced_partitions: Any
+    :param public_info: 
+    :type public_info: str
+    :rtype: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_frame_domain = py_to_c(frame_domain, c_type=Domain, type_name=None)
+    c_by = py_to_c(by, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[String]))
+    c_max_partition_length = py_to_c(max_partition_length, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[u32]))
+    c_max_num_partitions = py_to_c(max_num_partitions, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[u32]))
+    c_max_partition_contributions = py_to_c(max_partition_contributions, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[u32]))
+    c_max_influenced_partitions = py_to_c(max_influenced_partitions, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[u32]))
+    c_public_info = py_to_c(public_info, c_type=ctypes.c_char_p, type_name=RuntimeType(origin='Option', args=[String]))
+
+    # Call library function.
+    lib_function = lib.opendp_domains__with_margin
+    lib_function.argtypes = [Domain, AnyObjectPtr, AnyObjectPtr, AnyObjectPtr, AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_frame_domain, c_by, c_max_partition_length, c_max_num_partitions, c_max_partition_contributions, c_max_influenced_partitions, c_public_info), Domain))
 
     return output
