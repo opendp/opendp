@@ -11,6 +11,9 @@ use polars::prelude::*;
 
 use crate::domains::{AtomDomain, OptionDomain};
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
 /// # Proof Definition
 /// `SeriesDomain` is the domain of polars `Series` where:
 /// * `field` - Holds Series name and type of underlying data.
