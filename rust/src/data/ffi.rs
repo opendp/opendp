@@ -12,6 +12,8 @@ use arrow::ffi::{ArrowArray, ArrowSchema};
 use polars::export::arrow;
 #[cfg(feature = "polars")]
 use polars::prelude::*;
+#[cfg(feature = "polars")]
+use serde::Deserialize;
 
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;
@@ -175,11 +177,47 @@ pub extern "C" fn opendp_data__slice_as_object(
         raw_to_concrete_series(raw).map(AnyObject::new)
     }
 
+    #[cfg(feature = "polars")]
+    pub fn raw_to_dataframe(
+        raw: &FfiSlice
+    ) -> Fallible<AnyObject> {
+        let slices = unsafe { slice::from_raw_parts(raw.ptr as *const *const FfiSlice, raw.len) };
+        let series = slices.iter().map(|&s| raw_to_concrete_series(try_as_ref!(s)))
+        .collect::<Fallible<Vec<Series>>>()?;
+        
+        Ok(AnyObject::new(DataFrame::new(series)?))
+    }
 
+    #[cfg(feature = "polars")]
+    pub fn deserialize_raw<T>(
+        raw: &FfiSlice, name: &str
+    ) -> Fallible<T> where for<'de> T: Deserialize<'de> {
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len) };
+        // Error checking based on pyo3-polars:
+        // https://github.com/pola-rs/pyo3-polars/blob/5150d4ca27c287ff4be5cafef243d9a878a8879d/pyo3-polars/src/lib.rs#L147-L153
+        // the slice is lf.__getstate__ from the python side and then deserialized here
+        ciborium::de::from_reader(slice).map_err(
+            |e| err!(FFI, "Error when deserializing {}. This may be due to mismatched polars versions. {}", name, e)
+        )
+    }
+    #[cfg(feature = "polars")]
+    fn raw_to_expr(raw: &FfiSlice) -> Fallible<AnyObject> {
+        Ok(AnyObject::new(deserialize_raw::<Expr>(raw, "Expr")?))
+    }
+    #[cfg(feature = "polars")]
+    fn raw_to_lazyframe(raw: &FfiSlice) -> Fallible<AnyObject> {
+        Ok(AnyObject::new(LazyFrame::from(deserialize_raw::<LogicalPlan>(raw, "LazyFrame")?)))
+    }
     match T.contents {
         TypeContents::PLAIN("String") => raw_to_string(raw),
         TypeContents::PLAIN("ExtrinsicObject") => raw_to_plain::<ExtrinsicObject>(raw),
 
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("LazyFrame") => raw_to_lazyframe(raw),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("Expr") => raw_to_expr(raw),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("DataFrame") => raw_to_dataframe(raw),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Series") => raw_to_series(raw),
 

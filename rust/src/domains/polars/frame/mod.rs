@@ -14,6 +14,9 @@ use crate::{
     transformations::DatasetMetric,
 };
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
 pub trait Frame: Clone + Send + Sync {
     fn new(series: Vec<Series>) -> Fallible<Self>;
     fn schema(&self) -> Fallible<Schema>;

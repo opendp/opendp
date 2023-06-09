@@ -2,7 +2,7 @@ from typing import Sequence, Tuple, List, Union, Dict, cast
 from inspect import signature
 
 from opendp._lib import *
-from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
+from opendp.mod import Domain, UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
 from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 
 ATOM_MAP = {
@@ -193,6 +193,12 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
         if type_name == "String":
             return _slice_to_string(raw)
         
+        if type_name == "LazyFrame":
+            return _slice_to_lazyframe(raw)
+        
+        if type_name == "DataFrame":
+            return _slice_to_dataframe(raw)
+            
         if type_name == "Series":
             return _slice_to_series(raw)
 
@@ -233,6 +239,12 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
         
         if type_name == "Series":
             return _series_to_slice(value)
+        
+        if type_name == "LazyFrame":
+            return _lazyframe_to_slice(value)
+        
+        if type_name == "DataFrame":
+            return _dataframe_to_slice(value)
     
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
@@ -326,6 +338,13 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         def str_to_slice(val):
             return ctypes.c_char_p(val.encode())
         array = (ctypes.c_char_p * len(val))(*map(str_to_slice, val))
+        return _wrap_in_slice(array, len(val))
+    
+    if inner_type_name == "SeriesDomain":
+        # define the ctype of an array of domains
+        domain_array_type = (Domain * len(val)) # type: ignore[operator]
+        # create an instance of a ctype array of domains
+        array = domain_array_type(*val) # type: ignore[operator]
         return _wrap_in_slice(array, len(val))
 
     if inner_type_name not in ATOM_MAP:
@@ -439,6 +458,34 @@ def _slice_to_hashmap(raw: FfiSlicePtr) -> Dict[Any, Any]:
     keys.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
     vals.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
     return result
+
+
+def _lazyframe_to_slice(val) -> FfiSlicePtr:
+    state = val.__getstate__()
+    raw = _wrap_in_slice(state, len(state))
+    raw.depends_on(state)
+    return raw
+
+
+def _slice_to_lazyframe(raw: FfiSlicePtr):
+    pl = import_optional_dependency('polars')
+    lf = pl.LazyFrame()
+    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))
+    lf.__setstate__(bytes(slice_array[0:raw.contents.len]))
+    return lf
+
+def _dataframe_to_slice(val) -> FfiSlicePtr:
+    slices = list(_series_to_slice(s) for s in val.get_columns())
+    raw = _wrap_in_slice(ctypes.pointer((FfiSlicePtr * val.width)(*slices)), val.width)
+    # extend the lifetime of each series' slice to that of the frame slice
+    raw.depends_on(slices)
+    return raw
+
+def _slice_to_dataframe(raw: FfiSlicePtr):
+    pl = import_optional_dependency('polars')
+    slice_array = ctypes.cast(raw.contents.ptr, FfiSlicePtr)
+    series = [_slice_to_series(FfiSlicePtr(ffislice)) for ffislice in slice_array[0:raw.contents.len]]
+    return pl.DataFrame(series)
 
 
 def _series_to_slice(val) -> FfiSlicePtr:
