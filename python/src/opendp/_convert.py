@@ -2,7 +2,7 @@ from typing import Sequence, Tuple, List, Union, Dict
 
 from opendp._lib import *
 
-from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
+from opendp.mod import Domain, UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
 from opendp.typing import RuntimeType, Vec
 
 try:
@@ -260,6 +260,10 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         ffislice = _wrap_in_slice(array, len(val))
         ffislice.depends_on(*c_repr)
         return ffislice
+    
+    if inner_type_name == "SeriesDomain":
+        array = (Domain * len(val))(*val)
+        return _wrap_in_slice(array, len(val))
 
     if inner_type_name not in ATOM_MAP:
         raise TypeError(f"Members must be one of {tuple(ATOM_MAP.keys())}. Found {inner_type_name}.")

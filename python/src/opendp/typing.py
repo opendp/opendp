@@ -469,6 +469,8 @@ f64 = 'f64'
 String = 'String'
 AnyMeasurementPtr = "AnyMeasurementPtr"
 AnyTransformationPtr = "AnyTransformationPtr"
+AnyDomainPtr = "AnyDomainPtr"
+SeriesDomain = "SeriesDomain"
 
 
 class DomainDescriptor(RuntimeType):
