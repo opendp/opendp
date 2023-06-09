@@ -8,6 +8,7 @@ use std::os::raw::c_char;
 use std::str::Utf8Error;
 
 use crate::domains::ffi::UserDomain;
+
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
@@ -22,7 +23,7 @@ use crate::metrics::{
 use crate::transformations::DataFrameDomain;
 use crate::{err, fallible};
 
-use super::any::{AnyMeasurement, AnyTransformation};
+use super::any::{AnyDomain, AnyMeasurement, AnyTransformation};
 
 // If untrusted is not enabled, then these structs don't exist.
 #[cfg(feature = "untrusted")]
@@ -33,6 +34,23 @@ use std::marker::PhantomData;
 pub struct Sequential<T>(PhantomData<T>);
 #[cfg(not(feature = "untrusted"))]
 pub struct Pairwise<T>(PhantomData<T>);
+
+// If polars is not enabled, then these structs don't exist.
+#[cfg(feature = "polars")]
+use crate::domains::SeriesDomain;
+#[cfg(feature = "polars")]
+use polars::prelude::{DataFrame, LazyFrame};
+#[cfg(feature = "polars")]
+use polars::series::Series;
+
+#[cfg(not(feature = "polars"))]
+struct LazyFrame;
+#[cfg(not(feature = "polars"))]
+struct DataFrame;
+#[cfg(not(feature = "polars"))]
+struct Series;
+#[cfg(not(feature = "polars"))]
+struct SeriesDomain;
 
 pub type RefCountFn = extern "C" fn(*const c_void, bool) -> bool;
 
@@ -271,6 +289,7 @@ macro_rules! type_vec {
 
 pub type AnyMeasurementPtr = *const AnyMeasurement;
 pub type AnyTransformationPtr = *const AnyTransformation;
+pub type AnyDomainPtr = *const AnyDomain;
 
 lazy_static! {
     /// The set of registered types. We don't need everything here, just the ones that will be looked up by descriptor
@@ -289,9 +308,10 @@ lazy_static! {
             // OptionDomain<AtomDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
             type_vec![Vec, <(f32, f32), (f64, f64)>],
+            type_vec![LazyFrame, DataFrame, Series],
 
             type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyQueryable, AnyMeasurement],
-            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr>],
+            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr, SeriesDomain>],
 
             // sum algorithms
             type_vec![Sequential, <f32, f64>],
@@ -302,8 +322,9 @@ lazy_static! {
             type_vec![[OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[VectorDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[VectorDomain OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
-            type_vec![DataFrameDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>],
             type_vec![UserDomain],
+            type_vec![DataFrameDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>],
+            type_vec![SeriesDomain],
 
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],
