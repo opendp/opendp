@@ -7,7 +7,7 @@ use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
-use crate::domains::{AtomDomain, OptionDomain, VectorDomain, SeriesDomain};
+use crate::domains::{AtomDomain, OptionDomain, VectorDomain, SeriesDomain, LazyFrameDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
 use crate::measures::{
@@ -277,7 +277,7 @@ lazy_static! {
             type_vec![[OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[VectorDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![DataFrameDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>],
-            type_vec![SeriesDomain],
+            type_vec![SeriesDomain, LazyFrameDomain],
 
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],

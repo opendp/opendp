@@ -10,6 +10,7 @@ __all__ = [
     "domain_carrier_type",
     "domain_debug",
     "domain_type",
+    "lazy_frame_domain",
     "map_domain",
     "member",
     "option_domain",
@@ -163,6 +164,34 @@ def domain_type(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+    
+    return output
+
+
+@versioned
+def lazy_frame_domain(
+    series_domains: Any
+):
+    """Construct an instance of `LazyFrameDomain`.
+    
+    [lazy_frame_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.lazy_frame_domain.html)
+    
+    :param series_domains: Domain of each series in the lazyframe.
+    :type series_domains: Any
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_series_domains = py_to_c(series_domains, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[SeriesDomain]))
+    
+    # Call library function.
+    lib_function = lib.opendp_domains__lazy_frame_domain
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_series_domains), Domain))
     
     return output
 
