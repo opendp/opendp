@@ -167,8 +167,30 @@ pub extern "C" fn opendp_data__slice_as_object(
     }
 
 
+    pub fn raw_to_dataframe(
+        raw: &FfiSlice
+    ) -> Fallible<AnyObject> {
+        let slices = unsafe { slice::from_raw_parts(raw.ptr as *const *const FfiSlice, raw.len) };
+        let series = slices.iter().map(|&s| _raw_to_series(try_as_ref!(s)))
+        .collect::<Fallible<Vec<Series>>>()?;
+        
+        Ok(AnyObject::new(DataFrame::new(series)?))
+    }
+    pub fn raw_to_lazyframe(
+        raw: &FfiSlice
+    ) -> Fallible<AnyObject> {
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len) };
+        
+        // https://github.com/pola-rs/pyo3-polars/blob/5150d4ca27c287ff4be5cafef243d9a878a8879d/pyo3-polars/src/lib.rs#L147-L153
+        let lp: LogicalPlan = ciborium::de::from_reader(slice).map_err(
+            |e| err!(FFI, "Error when deserializing LazyFrame. This may be due to mismatched polars versions. {}", e)
+        )?;
+        Ok(AnyObject::new(LazyFrame::from(lp)))
+    }
     match T.contents {
         TypeContents::PLAIN("String") => raw_to_string(raw),
+        TypeContents::PLAIN("LazyFrame") => raw_to_lazyframe(raw),
+        TypeContents::PLAIN("DataFrame") => raw_to_dataframe(raw),
         TypeContents::PLAIN("Series") => raw_to_series(raw),
         TypeContents::PLAIN("SeriesDomain") => raw_to_series(raw),
         TypeContents::SLICE(element_id) => {

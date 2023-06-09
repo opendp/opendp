@@ -14,6 +14,9 @@ use crate::{
     transformations::DatasetMetric,
 };
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
 // gradations of public info:
 //                | public keys | private keys
 // public counts  | Some(df+id) | x

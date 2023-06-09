@@ -4,7 +4,7 @@ import pyarrow
 
 from opendp._lib import *
 
-from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
+from opendp.mod import Domain, UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
 from opendp.typing import RuntimeType, Vec
 
 try:
@@ -172,6 +172,12 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
     if type_name == "String":
         return _slice_to_string(raw)
     
+    if type_name == "LazyFrame":
+        return _slice_to_lazyframe(raw)
+    
+    if type_name == "DataFrame":
+        return _slice_to_dataframe(raw)
+    
     if type_name == "Series":
         return _slice_to_series(raw)
 
@@ -204,6 +210,12 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 
     if type_name == "String":
         return _string_to_slice(value)
+    
+    if type_name == "LazyFrame":
+        return _lazyframe_to_slice(value)
+    
+    if type_name == "DataFrame":
+        return _dataframe_to_slice(value)
     
     if type_name == "Series":
         return _series_to_slice(value)
@@ -268,6 +280,10 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         ffislice = _wrap_in_slice(array, len(val))
         ffislice.depends_on(*c_repr)
         return ffislice
+    
+    if inner_type_name == "SeriesDomain":
+        array = (Domain * len(val))(*val)
+        return _wrap_in_slice(array, len(val))
 
     if inner_type_name not in ATOM_MAP:
         raise TypeError(f"Members must be one of {tuple(ATOM_MAP.keys())}. Found {inner_type_name}.")
@@ -380,6 +396,30 @@ def _slice_to_hashmap(raw: FfiSlicePtr) -> Dict[Any, Any]:
     keys.__class__ = ctypes.POINTER(AnyObject)
     vals.__class__ = ctypes.POINTER(AnyObject)
     return result
+
+
+def _lazyframe_to_slice(val: pl.LazyFrame) -> FfiSlicePtr:
+    state = val.__getstate__()
+    raw = _wrap_in_slice(state, len(state))
+    raw.depends_on(state)
+    return raw
+
+
+def _slice_to_lazyframe(raw: FfiSlicePtr) -> pl.LazyFrame:
+    # https://github.com/pola-rs/pyo3-polars/blob/main/pyo3-polars/src/lib.rs#L190-L197
+    lf = pl.LazyFrame()
+    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))
+    lf.__setstate__(bytes(slice_array[0:raw.contents.len]))
+    return lf
+
+def _dataframe_to_slice(val: pl.DataFrame) -> FfiSlicePtr:
+    slices = (_series_to_slice(s) for s in val.get_columns())
+    return _wrap_in_slice(ctypes.pointer((FfiSlicePtr * val.width)(*slices)), val.width)
+
+def _slice_to_dataframe(raw: FfiSlicePtr) -> pl.LazyFrame:
+    slice_array = ctypes.cast(raw.contents.ptr, FfiSlicePtr)
+    series = [_slice_to_series(ctypes.pointer(ffislice)) for ffislice in slice_array[0:raw.contents.len]]
+    return pl.DataFrame(series)
 
 
 def _series_to_slice(val: pl.Series) -> FfiSlicePtr:
