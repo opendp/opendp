@@ -12,7 +12,7 @@ use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
-use crate::ffi::util::{self, into_c_char_p};
+use crate::ffi::util::{self, into_c_char_p, AnyDomainPtr};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 use crate::measures::SMDCurve;
 use crate::traits::samplers::Shuffle;
@@ -147,6 +147,7 @@ pub extern "C" fn opendp_data__slice_as_object(
                 "AnyTransformationPtr" => raw_to_vec::<AnyTransformationPtr>(raw),
                 "(f32, f32)" => raw_to_vec_obj::<(f32, f32)>(raw),
                 "(f64, f64)" => raw_to_vec_obj::<(f64, f64)>(raw),
+                "SeriesDomain" => raw_to_vec::<AnyDomainPtr>(raw),
                 _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw)),
             }
         }
