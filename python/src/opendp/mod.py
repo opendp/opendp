@@ -1,4 +1,5 @@
 import ctypes
+import polars as pl
 from typing import Union, Tuple, Callable, Optional
 
 from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
@@ -417,6 +418,14 @@ class Domain(ctypes.POINTER(AnyDomain)):
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
         return str(self) == str(other)
+    
+    def with_counts(self, counts) -> "Domain":
+        from opendp.domains import lazyframe_domain_with_counts, dataframe_domain_with_counts
+        if isinstance(counts, pl.LazyFrame):
+            return lazyframe_domain_with_counts(self, counts)
+        if isinstance(counts, pl.DataFrame):
+            return dataframe_domain_with_counts(self, counts)
+        raise ValueError("expected counts as either a Polars LazyFrame or Polars DataFrame")
 
 
 class Metric(ctypes.POINTER(AnyMetric)):
