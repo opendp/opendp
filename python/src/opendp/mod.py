@@ -9,6 +9,7 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 from __future__ import annotations
 import ctypes
 from typing import Any, Literal, Type, TypeVar, Union, Tuple, Callable, Optional, overload, TYPE_CHECKING, cast
+import polars as pl
 
 from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
 
@@ -506,6 +507,14 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     def _depends_on(self, *args):
         """Extends the memory lifetime of args to the lifetime of self."""
         setattr(self, "_dependencies", args)
+    
+    def with_counts(self, counts) -> "Domain":
+        from opendp.domains import lazyframe_domain_with_counts, dataframe_domain_with_counts
+        if isinstance(counts, pl.LazyFrame):
+            return lazyframe_domain_with_counts(self, counts)
+        if isinstance(counts, pl.DataFrame):
+            return dataframe_domain_with_counts(self, counts)
+        raise ValueError("expected counts as either a Polars LazyFrame or Polars DataFrame")
 
 
 

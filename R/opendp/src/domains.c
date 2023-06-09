@@ -39,6 +39,49 @@ SEXP domains__atom_domain(
 }
 
 
+SEXP domains__dataframe_domain(
+    SEXP series_domains, SEXP T_series_domains, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(series_domains);
+    PROTECT(T_series_domains);
+    PROTECT(log);
+
+    AnyObject * c_series_domains = sexp_to_anyobjectptr(series_domains, T_series_domains);
+
+    // Call library function.
+    FfiResult_____AnyDomain _result = opendp_domains__dataframe_domain(c_series_domains);
+
+    UNPROTECT(3);
+    if(_result.tag == Err_____AnyDomain)
+        return(extract_error(_result.err));
+    AnyDomain* _return_value = _result.ok;
+    return(anydomainptr_to_sexp(_return_value, log));
+}
+
+
+SEXP domains__dataframe_domain_with_counts(
+    SEXP dataframe_domain, SEXP counts, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(dataframe_domain);
+    PROTECT(counts);
+    PROTECT(log);
+
+    AnyDomain * c_dataframe_domain = sexp_to_anydomainptr(dataframe_domain);
+    AnyObject * c_counts = sexp_to_anyobjectptr(counts, DataFrame);
+
+    // Call library function.
+    FfiResult_____AnyDomain _result = opendp_domains__dataframe_domain_with_counts(c_dataframe_domain, c_counts);
+
+    UNPROTECT(3);
+    if(_result.tag == Err_____AnyDomain)
+        return(extract_error(_result.err));
+    AnyDomain* _return_value = _result.ok;
+    return(anydomainptr_to_sexp(_return_value, log));
+}
+
+
 SEXP domains__domain_carrier_type(
     SEXP this, SEXP log
 ) {
@@ -96,6 +139,49 @@ SEXP domains__domain_type(
         return(extract_error(_result.err));
     c_char* _return_value = _result.ok;
     return(ScalarString(mkChar(_return_value)));
+}
+
+
+SEXP domains__lazyframe_domain(
+    SEXP series_domains, SEXP T_series_domains, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(series_domains);
+    PROTECT(T_series_domains);
+    PROTECT(log);
+
+    AnyObject * c_series_domains = sexp_to_anyobjectptr(series_domains, T_series_domains);
+
+    // Call library function.
+    FfiResult_____AnyDomain _result = opendp_domains__lazyframe_domain(c_series_domains);
+
+    UNPROTECT(3);
+    if(_result.tag == Err_____AnyDomain)
+        return(extract_error(_result.err));
+    AnyDomain* _return_value = _result.ok;
+    return(anydomainptr_to_sexp(_return_value, log));
+}
+
+
+SEXP domains__lazyframe_domain_with_counts(
+    SEXP lazyframe_domain, SEXP counts, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(lazyframe_domain);
+    PROTECT(counts);
+    PROTECT(log);
+
+    AnyDomain * c_lazyframe_domain = sexp_to_anydomainptr(lazyframe_domain);
+    AnyObject * c_counts = sexp_to_anyobjectptr(counts, LazyFrame);
+
+    // Call library function.
+    FfiResult_____AnyDomain _result = opendp_domains__lazyframe_domain_with_counts(c_lazyframe_domain, c_counts);
+
+    UNPROTECT(3);
+    if(_result.tag == Err_____AnyDomain)
+        return(extract_error(_result.err));
+    AnyDomain* _return_value = _result.ok;
+    return(anydomainptr_to_sexp(_return_value, log));
 }
 
 
