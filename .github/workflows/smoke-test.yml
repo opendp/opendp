@@ -144,7 +144,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
-          python -m pip install polars==0.18.15 pyarrow
+          python -m pip install polars==0.19.3 pyarrow
 
       - name: Lint with flake8
         run: |
@@ -221,7 +221,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install flake8 pytest nbmake pytest-xdist
           python -m pip install -r requirements_notebooks.txt
-          python -m pip install polars==0.18.15 pyarrow
+          python -m pip install polars==0.19.3 pyarrow
 
       - name: Download libs
         uses: actions/download-artifact@v3

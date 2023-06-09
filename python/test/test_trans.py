@@ -1,7 +1,7 @@
 import opendp.prelude as dp
 from opendp.mod import enable_features
 
-enable_features('contrib')
+enable_features('contrib', 'honest-but-curious')
 
 INT_DATA = list(range(1, 10))
 FLOAT_DATA = list(map(float, INT_DATA))

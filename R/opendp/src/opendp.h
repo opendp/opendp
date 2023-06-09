@@ -813,6 +813,9 @@ struct FfiResult_____AnyDomain opendp_domains__user_domain(char *identifier,
  */
 struct FfiResult_____ExtrinsicObject opendp_domains___user_domain_descriptor(struct AnyDomain *domain);
 
+struct FfiResult_____AnyDomain opendp_domains__series_domain(char *name,
+                                                             const struct AnyDomain *element_domain);
+
 struct FfiResult_____AnyMeasurement opendp_measurements__make_base_gaussian(const struct AnyDomain *input_domain,
                                                                             const struct AnyMetric *input_metric,
                                                                             const void *scale,

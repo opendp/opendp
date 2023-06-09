@@ -207,6 +207,37 @@ option_domain <- function(
 }
 
 
+#' Construct an instance of `SeriesDomain`.
+#'
+#' [series_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.series_domain.html)
+#'
+#' @concept domains
+#' @param name The name of the series.
+#' @param element_domain The domain of elements in the series.
+#' @return Domain
+#' @export
+series_domain <- function(
+    name,
+    element_domain
+) {
+    # No type arguments to standardize.
+    log <- new_constructor_log("series_domain", "domains", new_hashtab(
+        list("name", "element_domain"),
+        list(name, element_domain)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = str, inferred = rt_infer(name))
+
+    # Call wrapper function.
+    output <- .Call(
+        "domains__series_domain",
+        name, element_domain,
+        log, PACKAGE = "opendp")
+    output
+}
+
+
 #' Construct an instance of `VectorDomain`.
 #'
 #' @concept domains

@@ -14,6 +14,26 @@
 #include "opendp_extras.h"
 
 
+SEXP data__new_arrow_array(
+    SEXP name, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(name);
+    PROTECT(log);
+
+    char * c_name = (char *)CHAR(STRING_ELT(name, 0));
+
+    // Call library function.
+    FfiResult_____FfiSlice _result = opendp_data__new_arrow_array(c_name);
+
+    UNPROTECT(2);
+    if(_result.tag == Err_____FfiSlice)
+        return(extract_error(_result.err));
+    FfiSlice* _return_value = _result.ok;
+    return("UNKNOWN RET TYPE: FfiSlice *");
+}
+
+
 SEXP data__object_type(
     SEXP this, SEXP log
 ) {

@@ -57,6 +57,7 @@ SEXP core__transformation_map(SEXP transformation, SEXP distance_in, SEXP T_dist
 SEXP core__transformation_output_distance_type(SEXP this, SEXP log);
 SEXP core__transformation_output_domain(SEXP this, SEXP log);
 SEXP core__transformation_output_metric(SEXP this, SEXP log);
+SEXP data__new_arrow_array(SEXP name, SEXP log);
 SEXP data__object_type(SEXP this, SEXP log);
 SEXP data__smd_curve_epsilon(SEXP curve, SEXP delta, SEXP T_delta, SEXP log);
 SEXP data__to_string(SEXP this, SEXP log);
@@ -67,6 +68,7 @@ SEXP domains__domain_type(SEXP this, SEXP log);
 SEXP domains__map_domain(SEXP key_domain, SEXP value_domain, SEXP log);
 SEXP domains__member(SEXP this, SEXP val, SEXP T_val, SEXP log);
 SEXP domains__option_domain(SEXP element_domain, SEXP D, SEXP log);
+SEXP domains__series_domain(SEXP name, SEXP element_domain, SEXP log);
 SEXP domains__vector_domain(SEXP atom_domain, SEXP size, SEXP T_size, SEXP log);
 SEXP measurements__make_alp_queryable(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP total_limit, SEXP value_limit, SEXP size_factor, SEXP alpha, SEXP CO, SEXP CI, SEXP T_value_limit, SEXP T_size_factor, SEXP T_alpha, SEXP log);
 SEXP measurements__make_base_discrete_gaussian(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP MO, SEXP QO, SEXP log);

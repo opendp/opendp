@@ -1189,7 +1189,7 @@ def make_create_dataframe(
     **Supporting Elements:**
 
     * Input Domain:   `VectorDomain<VectorDomain<AtomDomain<String>>>`
-    * Output Domain:  `DataFrameDomain<K>`
+    * Output Domain:  `OldFrameDomain<K>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
 
@@ -1243,8 +1243,8 @@ def make_df_cast_default(
 
     **Supporting Elements:**
 
-    * Input Domain:   `DataFrameDomain<TK>`
-    * Output Domain:  `DataFrameDomain<TK>`
+    * Input Domain:   `OldFrameDomain<TK>`
+    * Output Domain:  `OldFrameDomain<TK>`
     * Input Metric:   `M`
     * Output Metric:  `M`
 
@@ -1326,8 +1326,8 @@ def make_df_is_equal(
 
     **Supporting Elements:**
 
-    * Input Domain:   `DataFrameDomain<TK>`
-    * Output Domain:  `DataFrameDomain<TK>`
+    * Input Domain:   `OldFrameDomain<TK>`
+    * Output Domain:  `OldFrameDomain<TK>`
     * Input Metric:   `M`
     * Output Metric:  `M`
 
@@ -2524,7 +2524,7 @@ def make_select_column(
 
     **Supporting Elements:**
 
-    * Input Domain:   `DataFrameDomain<K>`
+    * Input Domain:   `OldFrameDomain<K>`
     * Output Domain:  `VectorDomain<AtomDomain<TOA>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
@@ -2926,7 +2926,7 @@ def make_split_dataframe(
     **Supporting Elements:**
 
     * Input Domain:   `AtomDomain<String>`
-    * Output Domain:  `DataFrameDomain<K>`
+    * Output Domain:  `OldFrameDomain<K>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
 
@@ -3043,8 +3043,8 @@ def make_subset_by(
 
     **Supporting Elements:**
 
-    * Input Domain:   `DataFrameDomain<TK>`
-    * Output Domain:  `DataFrameDomain<TK>`
+    * Input Domain:   `OldFrameDomain<TK>`
+    * Output Domain:  `OldFrameDomain<TK>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
 

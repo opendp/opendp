@@ -4,6 +4,29 @@
 NULL
 
 
+#'
+#'
+#' @concept data
+#' @param name undocumented
+#' @return Any
+new_arrow_array <- function(
+    name
+) {
+    # No type arguments to standardize.
+    log <- new_constructor_log("new_arrow_array", "data", new_hashtab(
+        list("name"),
+        list(name)
+    ))
+
+    # Call wrapper function.
+    output <- .Call(
+        "data__new_arrow_array",
+        name,
+        log, PACKAGE = "opendp")
+    output
+}
+
+
 #' Internal function. Retrieve the type descriptor string of an AnyObject.
 #'
 #' @concept data

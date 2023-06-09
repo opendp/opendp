@@ -24,7 +24,7 @@ use crate::{
     traits::{CheckAtom, InfAdd},
 };
 #[cfg(feature = "contrib")]
-use crate::{traits::Hashable, transformations::DataFrameDomain};
+use crate::{traits::Hashable, transformations::OldFrameDomain};
 use std::fmt::{Debug, Formatter};
 
 /// The type that represents the distance between datasets.
@@ -93,7 +93,7 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, SymmetricDistance) {
 }
 
 #[cfg(feature = "contrib")]
-impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, SymmetricDistance) {
+impl<K: Hashable> MetricSpace for (OldFrameDomain<K>, SymmetricDistance) {
     fn check_space(&self) -> Fallible<()> {
         Ok(())
     }
@@ -156,7 +156,7 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, InsertDeleteDistance) {
 }
 
 #[cfg(feature = "contrib")]
-impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, InsertDeleteDistance) {
+impl<K: Hashable> MetricSpace for (OldFrameDomain<K>, InsertDeleteDistance) {
     fn check_space(&self) -> Fallible<()> {
         Ok(())
     }

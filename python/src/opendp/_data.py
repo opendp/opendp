@@ -12,6 +12,7 @@ __all__ = [
     "extrinsic_object_free",
     "ffislice_of_anyobjectptrs",
     "fill_bytes",
+    "new_arrow_array",
     "object_as_slice",
     "object_free",
     "object_type",
@@ -124,6 +125,32 @@ def fill_bytes(
     lib_function.restype = ctypes.c_bool
 
     output = c_to_py(lib_function(c_ptr, c_len))
+
+    return output
+
+
+def new_arrow_array(
+    name: str
+) -> Any:
+    r"""
+
+    :param name: 
+    :type name: str
+    :rtype: Any
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_name = py_to_c(name, c_type=ctypes.c_char_p, type_name=None)
+
+    # Call library function.
+    lib_function = lib.opendp_data__new_arrow_array
+    lib_function.argtypes = [ctypes.c_char_p]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_name), FfiSlicePtr))
 
     return output
 
