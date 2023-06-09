@@ -4,7 +4,7 @@ use std::os::raw::c_char;
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
 use crate::transformations::{
-    make_df_cast_default, make_df_is_equal, DataFrameDomain, DatasetMetric,
+    make_df_cast_default, make_df_is_equal, OldFrameDomain, DatasetMetric,
 };
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
@@ -30,11 +30,11 @@ pub extern "C" fn opendp_transformations__make_df_cast_default(
         TIA: Primitive,
         TOA: Primitive + RoundCast<TIA>,
         M: 'static + DatasetMetric + Send + Sync,
-        (DataFrameDomain<TK>, M): MetricSpace,
+        (OldFrameDomain<TK>, M): MetricSpace,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {
-        let input_domain = try_!(input_domain.downcast_ref::<DataFrameDomain<TK>>()).clone();
+        let input_domain = try_!(input_domain.downcast_ref::<OldFrameDomain<TK>>()).clone();
         let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
         let column_name: TK = try_!(try_as_ref!(column_name).downcast_ref::<TK>()).clone();
         make_df_cast_default::<TK, TIA, TOA, M>(input_domain, input_metric, column_name).into_any()
@@ -78,11 +78,11 @@ pub extern "C" fn opendp_transformations__make_df_is_equal(
         TK: Hashable,
         TIA: Primitive,
         M: 'static + DatasetMetric + Send + Sync,
-        (DataFrameDomain<TK>, M): MetricSpace,
+        (OldFrameDomain<TK>, M): MetricSpace,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
     {
-        let input_domain = try_!(input_domain.downcast_ref::<DataFrameDomain<TK>>()).clone();
+        let input_domain = try_!(input_domain.downcast_ref::<OldFrameDomain<TK>>()).clone();
         let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
         let column_name: TK = try_!(column_name.downcast_ref::<TK>()).clone();
         let value: TIA = try_!(value.downcast_ref::<TIA>()).clone();
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn test_df_cast_default() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_df_cast_default(
-            AnyDomain::new_raw(DataFrameDomain::<String>::new()),
+            AnyDomain::new_raw(OldFrameDomain::<String>::new()),
             AnyMetric::new_raw(SymmetricDistance::default()),
             AnyObject::new_raw("A".to_string()),
             "String".to_char_p(),
@@ -147,7 +147,7 @@ mod tests {
     #[test]
     fn test_df_is_equal() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_df_is_equal(
-            AnyDomain::new_raw(DataFrameDomain::<String>::new()),
+            AnyDomain::new_raw(OldFrameDomain::<String>::new()),
             AnyMetric::new_raw(SymmetricDistance::default()),
             AnyObject::new_raw("A".to_string()),
             AnyObject::new_raw("yes".to_string()),

@@ -23,35 +23,35 @@ use crate::error::Fallible;
 pub type DataFrame<K> = HashMap<K, Column>;
 
 #[derive(PartialEq)]
-pub struct DataFrameDomain<K: Hash + Eq> {
+pub struct OldFrameDomain<K: Hash + Eq> {
     pub _marker: PhantomData<K>,
 }
-impl<K: Hash + Eq> Clone for DataFrameDomain<K> {
+impl<K: Hash + Eq> Clone for OldFrameDomain<K> {
     fn clone(&self) -> Self {
         Self::new()
     }
 }
-impl<K: Hash + Eq> DataFrameDomain<K> {
+impl<K: Hash + Eq> OldFrameDomain<K> {
     pub fn new() -> Self {
-        DataFrameDomain {
+        OldFrameDomain {
             _marker: PhantomData,
         }
     }
 }
-impl<K: Hash + Eq + Send + Sync> Domain for DataFrameDomain<K> {
+impl<K: Hash + Eq + Send + Sync> Domain for OldFrameDomain<K> {
     type Carrier = HashMap<K, Column>;
     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
         Ok(true)
     }
 }
 
-impl<K: Hash + Eq> Debug for DataFrameDomain<K> {
+impl<K: Hash + Eq> Debug for OldFrameDomain<K> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "DataFrameDomain({:?})", type_name!(K))
     }
 }
 
-impl<K: Hash + Eq> Default for DataFrameDomain<K> {
+impl<K: Hash + Eq> Default for OldFrameDomain<K> {
     fn default() -> Self {
         Self::new()
     }
