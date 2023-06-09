@@ -9,6 +9,9 @@ use polars::prelude::*;
 
 use crate::domains::{AtomDomain, OptionDomain};
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
 #[derive(Clone)]
 pub struct SeriesDomain {
     pub field: Field,
