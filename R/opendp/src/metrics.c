@@ -98,6 +98,26 @@ SEXP metrics__insert_delete_distance(
 }
 
 
+SEXP metrics__l1(
+    SEXP inner_metric, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(inner_metric);
+    PROTECT(log);
+
+    AnyMetric * c_inner_metric = sexp_to_anymetricptr(inner_metric);
+
+    // Call library function.
+    FfiResult_____AnyMetric _result = opendp_metrics__l1(c_inner_metric);
+
+    UNPROTECT(2);
+    if(_result.tag == Err_____AnyMetric)
+        return(extract_error(_result.err));
+    AnyMetric* _return_value = _result.ok;
+    return(anymetricptr_to_sexp(_return_value, log));
+}
+
+
 SEXP metrics__l1_distance(
     SEXP T, SEXP log
 ) {
