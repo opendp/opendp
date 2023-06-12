@@ -317,45 +317,42 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, HammingDistance) {
 ///
 /// * `VectorDomain<D>` for any valid `D`
 /// * `MapDomain<D>` for any valid `D`
-pub struct LpDistance<const P: usize, Q>(PhantomData<fn() -> Q>);
-impl<const P: usize, Q> Default for LpDistance<P, Q> {
-    fn default() -> Self {
-        LpDistance(PhantomData)
-    }
-}
 
-impl<const P: usize, Q> Clone for LpDistance<P, Q> {
-    fn clone(&self) -> Self {
-        Self::default()
-    }
-}
-impl<const P: usize, Q> PartialEq for LpDistance<P, Q> {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-impl<const P: usize, Q> Debug for LpDistance<P, Q> {
+#[derive(Clone, Default, PartialEq)]
+pub struct Lp<const P: usize, M: Metric>(pub M);
+pub type L1<M> = Lp<1, M>;
+pub type L2<M> = Lp<2, M>;
+
+impl<const P: usize, M: Metric> Debug for Lp<P, M> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "L{}Distance({})", P, type_name!(Q))
+        write!(f, "L{}({})", P, type_name!(M))
     }
 }
-impl<const P: usize, Q> Metric for LpDistance<P, Q> {
-    type Distance = Q;
+impl<const P: usize, M: Metric> Metric for Lp<P, M> {
+    type Distance = M::Distance;
 }
 
-impl<T: CheckAtom, const P: usize, Q> MetricSpace
-    for (VectorDomain<AtomDomain<T>>, LpDistance<P, Q>)
+impl<DA: Domain, const P: usize, Q> MetricSpace for (VectorDomain<DA>, Lp<P, AbsoluteDistance<Q>>)
+where
+    (DA, AbsoluteDistance<Q>): MetricSpace,
 {
     fn check_space(&self) -> Fallible<()> {
-        if self.0.element_domain.nullable() {
-            fallible!(MetricSpace, "LpDistance requires non-nullable elements")
-        } else {
-            Ok(())
-        }
+        (self.0.element_domain.clone(), self.1 .0.clone()).check_space()
+    }
+}
+impl<DA: Domain, const P: usize> MetricSpace for (VectorDomain<DA>, Lp<P, SymmetricDistance>)
+where
+    (DA, SymmetricDistance): MetricSpace,
+{
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 impl<K: CheckAtom, V: CheckAtom, const P: usize, Q> MetricSpace
-    for (MapDomain<AtomDomain<K>, AtomDomain<V>>, LpDistance<P, Q>)
+    for (
+        MapDomain<AtomDomain<K>, AtomDomain<V>>,
+        Lp<P, AbsoluteDistance<Q>>,
+    )
 where
     K: Eq + Hash,
 {
@@ -369,14 +366,13 @@ where
 }
 
 /// The $L_1$ distance between two vector-valued aggregates.
-///
-/// Refer to [`LpDistance`] for details.
-pub type L1Distance<Q> = LpDistance<1, Q>;
+pub type L1Distance<Q> = Lp<1, AbsoluteDistance<Q>>;
 
 /// The $L_2$ distance between two vector-valued aggregates.
-///
-/// Refer to [`LpDistance`] for details.
-pub type L2Distance<Q> = LpDistance<2, Q>;
+pub type L2Distance<Q> = Lp<2, AbsoluteDistance<Q>>;
+
+/// The $L_p$ distance between two vector-valued aggregates.
+pub type LpDistance<const P: usize, Q> = Lp<P, AbsoluteDistance<Q>>;
 
 /// The absolute distance between two scalar-valued aggregates.
 ///

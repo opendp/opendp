@@ -124,6 +124,33 @@ insert_delete_distance <- function(
 }
 
 
+#' Construct an instance of an `L1` metric from another metric.
+#'
+#' @concept metrics
+#' @param inner_metric The inner metric.
+#' @return Metric
+#' @export
+l1 <- function(
+  inner_metric
+) {
+  # No type arguments to standardize.
+  log <- new_constructor_log("l1", "metrics", new_hashtab(
+    list("inner_metric"),
+    list(inner_metric)
+  ))
+
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = AnyMetric, inferred = rt_infer(inner_metric))
+
+  # Call wrapper function.
+  output <- .Call(
+    "metrics__l1",
+    inner_metric,
+    log, PACKAGE = "opendp")
+  output
+}
+
+
 #' Construct an instance of the `L1Distance` metric.
 #'
 #' [l1_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.l1_distance.html)

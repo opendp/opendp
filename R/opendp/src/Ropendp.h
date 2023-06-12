@@ -89,6 +89,7 @@ SEXP metrics__change_one_distance(SEXP log);
 SEXP metrics__discrete_distance(SEXP log);
 SEXP metrics__hamming_distance(SEXP log);
 SEXP metrics__insert_delete_distance(SEXP log);
+SEXP metrics__l1(SEXP inner_metric, SEXP log);
 SEXP metrics__l1_distance(SEXP T, SEXP log);
 SEXP metrics__l2_distance(SEXP T, SEXP log);
 SEXP metrics__linf_distance(SEXP monotonic, SEXP T, SEXP log);

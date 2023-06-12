@@ -1016,6 +1016,14 @@ struct FfiResult_____AnyMetric opendp_metrics__hamming_distance(void);
 
 struct FfiResult_____AnyMetric opendp_metrics__absolute_distance(const char *T);
 
+/**
+ * Construct an instance of an `L1` metric from another metric.
+ *
+ * # Arguments
+ * * `inner_metric` - The inner metric.
+ */
+struct FfiResult_____AnyMetric opendp_metrics__l1(const struct AnyMetric *inner_metric);
+
 struct FfiResult_____AnyMetric opendp_metrics__l1_distance(const char *T);
 
 struct FfiResult_____AnyMetric opendp_metrics__l2_distance(const char *T);

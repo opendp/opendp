@@ -9,7 +9,7 @@ use crate::{
         any::{AnyMetric, Downcast},
         util::{self, c_bool, into_c_char_p, to_str, ExtrinsicObject, Type},
     },
-    metrics::{AbsoluteDistance, L1Distance, L2Distance},
+    metrics::{AbsoluteDistance, L1Distance, L2Distance, Lp},
     traits::InfAdd,
 };
 
@@ -132,6 +132,25 @@ pub extern "C" fn opendp_metrics__absolute_distance(T: *const c_char) -> FfiResu
     }
     let T = try_!(Type::try_from(T));
     dispatch!(monomorphize, [(T, @numbers)], ())
+}
+
+#[bootstrap(name = "l1", returns(c_type = "FfiResult<AnyMetric *>"))]
+/// Construct an instance of an `L1` metric from another metric.
+///
+/// # Arguments
+/// * `inner_metric` - The inner metric.
+#[no_mangle]
+pub extern "C" fn opendp_metrics__l1(inner_metric: *const AnyMetric) -> FfiResult<*mut AnyMetric> {
+    fn monomorphize_dataset<M: 'static + Metric + Sync + Send>(
+        inner_metric: &AnyMetric,
+    ) -> Fallible<AnyMetric> {
+        let inner_metric = inner_metric.downcast_ref::<M>()?.clone();
+        let l1_metric = Lp::<1, _>(inner_metric);
+        Ok(AnyMetric::new(l1_metric))
+    }
+    let inner_metric = try_as_ref!(inner_metric);
+
+    dispatch!(monomorphize_dataset, [(inner_metric.type_, @dataset_metrics)], (inner_metric)).into()
 }
 
 #[bootstrap(returns(c_type = "FfiResult<AnyMetric *>"))]

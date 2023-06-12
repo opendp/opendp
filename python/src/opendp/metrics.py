@@ -22,6 +22,7 @@ __all__ = [
     "discrete_distance",
     "hamming_distance",
     "insert_delete_distance",
+    "l1",
     "l1_distance",
     "l2_distance",
     "linf_distance",
@@ -177,6 +178,32 @@ def insert_delete_distance(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(), Metric))
+
+    return output
+
+
+def l1(
+    inner_metric: Metric
+) -> Metric:
+    r"""Construct an instance of an `L1` metric from another metric.
+
+    :param inner_metric: The inner metric.
+    :type inner_metric: Metric
+    :rtype: Metric
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_inner_metric = py_to_c(inner_metric, c_type=Metric, type_name=AnyMetric)
+
+    # Call library function.
+    lib_function = lib.opendp_metrics__l1
+    lib_function.argtypes = [Metric]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_inner_metric), Metric))
 
     return output
 

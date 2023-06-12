@@ -93,6 +93,7 @@ static R_CMethodDef R_CDef[] = {
     {"metrics__discrete_distance", (DL_FUNC) &metrics__discrete_distance, 1},
     {"metrics__hamming_distance", (DL_FUNC) &metrics__hamming_distance, 1},
     {"metrics__insert_delete_distance", (DL_FUNC) &metrics__insert_delete_distance, 1},
+    {"metrics__l1", (DL_FUNC) &metrics__l1, 2},
     {"metrics__l1_distance", (DL_FUNC) &metrics__l1_distance, 2},
     {"metrics__l2_distance", (DL_FUNC) &metrics__l2_distance, 2},
     {"metrics__linf_distance", (DL_FUNC) &metrics__linf_distance, 3},
