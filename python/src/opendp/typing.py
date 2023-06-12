@@ -463,6 +463,7 @@ u128: str = 'u128'
 usize: str = 'usize'
 f32: str = 'f32'
 f64: str = 'f64'
+char: str = 'char'
 String: str = 'String'
 LazyFrame: str = 'LazyFrame'
 DataFrame: str = 'DataFrame'
@@ -471,6 +472,7 @@ AnyMeasurementPtr: str = "AnyMeasurementPtr"
 AnyTransformationPtr: str = "AnyTransformationPtr"
 AnyDomainPtr: str = "AnyDomainPtr"
 SeriesDomain: str = "SeriesDomain"
+
 
 class DomainDescriptor(RuntimeType):
     def __getitem__(self, subdomain):

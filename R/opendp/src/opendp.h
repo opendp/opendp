@@ -813,6 +813,24 @@ struct FfiResult_____AnyDomain opendp_domains__user_domain(char *identifier,
  */
 struct FfiResult_____ExtrinsicObject opendp_domains___user_domain_descriptor(struct AnyDomain *domain);
 
+/**
+ * Parse a path to a CSV into a LazyFrame.
+ *
+ * # Arguments
+ * * `lazyframe_domain` - The domain of the LazyFrame to be constructed
+ * * `delimiter` - Set the CSV file's column delimiter as a byte character
+ * * `has_header` - Set whether the CSV file has headers
+ * * `skip_rows` - Skip the first `n` rows during parsing. The header will be parsed at row `n`.
+ * * `quote_char` - Set the `char` used as quote char. The default is `"`. If set to `[None]` quoting is disabled.
+ * * `eol_char` - Set the `char` used as end of line. The default is `\\n`.
+ */
+struct FfiResult_____AnyDomain opendp_domains__csv_domain(const struct AnyDomain *lazyframe_domain,
+                                                          unsigned char separator,
+                                                          c_bool has_header,
+                                                          unsigned int skip_rows,
+                                                          const unsigned char *quote_char,
+                                                          unsigned char eol_char);
+
 struct FfiResult_____AnyDomain opendp_domains__lazyframe_domain(struct AnyObject *series_domains);
 
 struct FfiResult_____AnyDomain opendp_domains__dataframe_domain(struct AnyObject *series_domains);
@@ -1170,6 +1188,12 @@ struct FfiResult_____AnyFunction opendp_transformations__make_quantiles_from_cou
 
 struct FfiResult_____AnyTransformation opendp_transformations__make_mean(const struct AnyDomain *input_domain,
                                                                          const struct AnyMetric *input_metric);
+
+struct FfiResult_____AnyTransformation opendp_transformations__make_scan_csv(const struct AnyDomain *input_domain,
+                                                                             const struct AnyMetric *input_metric,
+                                                                             c_bool cache,
+                                                                             c_bool low_memory,
+                                                                             c_bool rechunk);
 
 struct FfiResult_____AnyTransformation opendp_transformations__make_variance(const struct AnyDomain *input_domain,
                                                                              const struct AnyMetric *input_metric,

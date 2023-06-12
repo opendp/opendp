@@ -938,6 +938,34 @@ SEXP transformations__make_resize(
 }
 
 
+SEXP transformations__make_scan_csv(
+    SEXP input_domain, SEXP input_metric, SEXP cache, SEXP low_memory, SEXP rechunk, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(cache);
+    PROTECT(low_memory);
+    PROTECT(rechunk);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    bool c_cache = asLogical(cache);
+    bool c_low_memory = asLogical(low_memory);
+    bool c_rechunk = asLogical(rechunk);
+
+    // Call library function.
+    FfiResult_____AnyTransformation _result = opendp_transformations__make_scan_csv(c_input_domain, c_input_metric, c_cache, c_low_memory, c_rechunk);
+
+    UNPROTECT(6);
+    if(_result.tag == Err_____AnyTransformation)
+        return(extract_error(_result.err));
+    AnyTransformation* _return_value = _result.ok;
+    return(anytransformationptr_to_sexp(_return_value, log));
+}
+
+
 SEXP transformations__make_select_column(
     SEXP key, SEXP K, SEXP TOA, SEXP log
 ) {

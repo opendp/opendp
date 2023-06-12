@@ -11,6 +11,7 @@ __all__ = [
     "_domain_free",
     "_user_domain_descriptor",
     "atom_domain",
+    "csv_domain",
     "dataframe_domain",
     "dataframe_domain_with_counts",
     "domain_carrier_type",
@@ -111,6 +112,53 @@ def atom_domain(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_bounds, c_nullable, c_T), Domain))
+
+    return output
+
+
+def csv_domain(
+    lazyframe_domain: Domain,
+    separator: str,
+    has_header: bool = True,
+    skip_rows: int = 0,
+    quote_char: str = "\"",
+    eol_char = "\n"
+) -> Domain:
+    r"""Parse a path to a CSV into a LazyFrame.
+
+    :param lazyframe_domain: The domain of the LazyFrame to be constructed
+    :type lazyframe_domain: Domain
+    :param separator: 
+    :type separator: str
+    :param has_header: Set whether the CSV file has headers
+    :type has_header: bool
+    :param skip_rows: Skip the first `n` rows during parsing. The header will be parsed at row `n`.
+    :type skip_rows: int
+    :param quote_char: Set the `char` used as quote char. The default is `"`. If set to `[None]` quoting is disabled.
+    :type quote_char: str
+    :param eol_char: Set the `char` used as end of line. The default is `\\n`.
+    :rtype: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_lazyframe_domain = py_to_c(lazyframe_domain, c_type=Domain, type_name=None)
+    c_separator = py_to_c(separator, c_type=ctypes.c_char_p, type_name=c_uchar)
+    c_has_header = py_to_c(has_header, c_type=ctypes.c_bool, type_name=bool)
+    c_skip_rows = py_to_c(skip_rows, c_type=ctypes.c_uint, type_name=usize)
+    c_quote_char = py_to_c(quote_char, c_type=ctypes.c_char_p, type_name=RuntimeType(origin='Option', args=[char]))
+    c_eol_char = py_to_c(eol_char, c_type=ctypes.c_char, type_name=char)
+
+    # Call library function.
+    lib_function = lib.opendp_domains__csv_domain
+    lib_function.argtypes = [Domain, ctypes.c_char_p, ctypes.c_bool, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_lazyframe_domain, c_separator, c_has_header, c_skip_rows, c_quote_char, c_eol_char), Domain))
 
     return output
 

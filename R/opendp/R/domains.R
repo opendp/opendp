@@ -41,6 +41,51 @@ atom_domain <- function(
 }
 
 
+#' Parse a path to a CSV into a LazyFrame.
+#'
+#' @concept domains
+#' @param lazyframe_domain The domain of the LazyFrame to be constructed
+#' @param separator undocumented
+#' @param has_header Set whether the CSV file has headers
+#' @param skip_rows Skip the first `n` rows during parsing. The header will be parsed at row `n`.
+#' @param quote_char Set the `char` used as quote char. The default is `"`. If set to `[None]` quoting is disabled.
+#' @param eol_char Set the `char` used as end of line. The default is `\\n`.
+#' @return Domain
+#' @export
+csv_domain <- function(
+    lazyframe_domain,
+    separator,
+    has_header = TRUE,
+    skip_rows = 0L,
+    quote_char = "\"",
+    eol_char = "\n"
+) {
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    .T.quote_char <- new_runtime_type(origin = "Option", args = list(char))
+
+    log <- new_constructor_log("csv_domain", "domains", new_hashtab(
+        list("lazyframe_domain", "separator", "has_header", "skip_rows", "quote_char", "eol_char"),
+        list(lazyframe_domain, separator, unbox2(has_header), unbox2(skip_rows), quote_char, eol_char)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = c_uchar, inferred = rt_infer(separator))
+    rt_assert_is_similar(expected = bool, inferred = rt_infer(has_header))
+    rt_assert_is_similar(expected = usize, inferred = rt_infer(skip_rows))
+    rt_assert_is_similar(expected = .T.quote_char, inferred = rt_infer(quote_char))
+    rt_assert_is_similar(expected = char, inferred = rt_infer(eol_char))
+
+    # Call wrapper function.
+    output <- .Call(
+        "domains__csv_domain",
+        lazyframe_domain, separator, has_header, skip_rows, quote_char, eol_char, rt_parse(.T.quote_char),
+        log, PACKAGE = "opendp")
+    output
+}
+
+
 #' Construct an instance of `DataFrameDomain`.
 #'
 #' [dataframe_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.dataframe_domain.html)

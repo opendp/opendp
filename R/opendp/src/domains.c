@@ -39,6 +39,37 @@ SEXP domains__atom_domain(
 }
 
 
+SEXP domains__csv_domain(
+    SEXP lazyframe_domain, SEXP separator, SEXP has_header, SEXP skip_rows, SEXP quote_char, SEXP eol_char, SEXP T_quote_char, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(lazyframe_domain);
+    PROTECT(separator);
+    PROTECT(has_header);
+    PROTECT(skip_rows);
+    PROTECT(quote_char);
+    PROTECT(eol_char);
+    PROTECT(T_quote_char);
+    PROTECT(log);
+
+    AnyDomain * c_lazyframe_domain = sexp_to_anydomainptr(lazyframe_domain);
+    char * c_separator = (char *)CHAR(STRING_ELT(separator, 0));
+    bool c_has_header = asLogical(has_header);
+    unsigned int c_skip_rows = "UNKNOWN TYPE: unsigned int";
+    char * c_quote_char = (char *)CHAR(STRING_ELT(quote_char, 0));
+    char c_eol_char = "UNKNOWN TYPE: char";
+
+    // Call library function.
+    FfiResult_____AnyDomain _result = opendp_domains__csv_domain(c_lazyframe_domain, c_separator, c_has_header, c_skip_rows, c_quote_char, c_eol_char);
+
+    UNPROTECT(8);
+    if(_result.tag == Err_____AnyDomain)
+        return(extract_error(_result.err));
+    AnyDomain* _return_value = _result.ok;
+    return(anydomainptr_to_sexp(_return_value, log));
+}
+
+
 SEXP domains__dataframe_domain(
     SEXP series_domains, SEXP T_series_domains, SEXP log
 ) {

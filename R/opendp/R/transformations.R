@@ -2947,6 +2947,90 @@ then_resize <- function(
 }
 
 
+#' scan csv constructor
+#'
+#' Parse a path to a CSV into a LazyFrame.
+#'
+#' [make_scan_csv in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_scan_csv.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `CsvDomain`
+#' * Output Domain:  `LazyFrameDomain`
+#' * Input Metric:   `M`
+#' * Output Metric:  `M`
+#'
+#' @concept transformations
+#' @param input_domain CsvDomain(LazyFrame)
+#' @param input_metric The metric under which neighboring LazyFrames are compared
+#' @param cache Cache the DataFrame after reading.
+#' @param low_memory Reduce memory usage at the expense of performance
+#' @param rechunk Rechunk the memory to contiguous chunks when parsing is done.
+#' @return Transformation
+#' @export
+make_scan_csv <- function(
+    input_domain,
+    input_metric,
+    cache = TRUE,
+    low_memory = FALSE,
+    rechunk = TRUE
+) {
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    log <- new_constructor_log("make_scan_csv", "transformations", new_hashtab(
+        list("input_domain", "input_metric", "cache", "low_memory", "rechunk"),
+        list(input_domain, input_metric, unbox2(cache), unbox2(low_memory), unbox2(rechunk))
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = bool, inferred = rt_infer(cache))
+    rt_assert_is_similar(expected = bool, inferred = rt_infer(low_memory))
+    rt_assert_is_similar(expected = bool, inferred = rt_infer(rechunk))
+
+    # Call wrapper function.
+    output <- .Call(
+        "transformations__make_scan_csv",
+        input_domain, input_metric, cache, low_memory, rechunk,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial scan csv constructor
+#'
+#' See documentation for [make_scan_csv()] for details.
+#'
+#' @concept transformations
+#' @param lhs The prior transformation or metric space.
+#' @param cache Cache the DataFrame after reading.
+#' @param low_memory Reduce memory usage at the expense of performance
+#' @param rechunk Rechunk the memory to contiguous chunks when parsing is done.
+#' @return Transformation
+#' @export
+then_scan_csv <- function(
+    lhs,
+    cache = TRUE,
+    low_memory = FALSE,
+    rechunk = TRUE
+) {
+
+    log <- new_constructor_log("then_scan_csv", "transformations", new_hashtab(
+        list("cache", "low_memory", "rechunk"),
+        list(unbox2(cache), unbox2(low_memory), unbox2(rechunk))
+    ))
+
+    make_chain_dyn(
+        make_scan_csv(
+            output_domain(lhs),
+            output_metric(lhs),
+            cache = cache,
+            low_memory = low_memory,
+            rechunk = rechunk),
+        lhs,
+        log)
+}
+
+
 #' select column constructor
 #'
 #' Make a Transformation that retrieves the column `key` from a dataframe as `Vec<TOA>`.
