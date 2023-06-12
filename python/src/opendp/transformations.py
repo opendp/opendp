@@ -2214,8 +2214,8 @@ def make_scan_csv(
     * Input Metric:   `M`
     * Output Metric:  `M`
     
-    :param input_domain: CSV domain
-    :param input_metric: The metric space under which neighboring LazyFrames are compared
+    :param input_domain: CsvDomain(LazyFrame)
+    :param input_metric: The metric under which neighboring LazyFrames are compared
     :param cache: Cache the DataFrame after reading.
     :type cache: bool
     :param low_memory: Reduce memory usage at the expense of performance
