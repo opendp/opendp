@@ -10,7 +10,7 @@ def test_analysis_init():
         data=[1, 2, 3],
         privacy_unit=unit_of(contributions=3),
         privacy_loss=loss_of(epsilon=3.0),
-        weights=3,
+        split_evenly_over=3,
         domain=dp.domain_of(List[int]),
     )
 
@@ -34,7 +34,7 @@ def test_analysis_zCDP():
         data=[1, 2, 3],
         privacy_unit=unit_of(contributions=1),
         privacy_loss=loss_of(epsilon=3.0, delta=1e-6),
-        weights=2,
+        split_evenly_over=2,
         # fully-specified domain
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
@@ -61,7 +61,7 @@ def test_sc_query():
         data=[1, 2, 3],
         privacy_unit=unit_of(contributions=1),
         privacy_loss=loss_of(epsilon=3.0, delta=1e-6),
-        weights=2,
+        split_evenly_over=2,
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
 
@@ -112,3 +112,28 @@ def test_privacy_loss_of():
         dp.fixed_smoothed_max_divergence(T=float),
         (2.0, 1e-6),
     )
+
+
+def test_split_evenly_over():
+    analysis = Analysis.sequential_composition(
+        data=[1, 2, 3],
+        privacy_unit=unit_of(contributions=3),
+        privacy_loss=loss_of(epsilon=3.0),
+        split_evenly_over=3,
+        domain=dp.domain_of(List[int]),
+    )
+    assert analysis.d_mids == [1.0, 1.0, 1.0]
+
+
+def test_split_by_weights():
+    analysis = Analysis.sequential_composition(
+        data=[1, 2, 3],
+        privacy_unit=unit_of(contributions=1),
+        privacy_loss=loss_of(epsilon=1.0),
+        split_by_weights=[1, 2, 3, 4],
+        domain=dp.domain_of(List[int]),
+    )
+    #  assert analysis.d_mids == [0.1, 0.2, 0.3, 0.4]
+
+
+

@@ -121,7 +121,8 @@ class Analysis(object):
         data: Any,
         privacy_unit: Tuple[dp.Metric, float],
         privacy_loss: Tuple[dp.Measure, Any],
-        weights: Union[int, List[float]],
+        split_evenly_over: Optional[int] = None,
+        split_by_weights: Optional[List[float]] = None,
         domain: Optional[dp.Domain] = None,
     ) -> "Analysis":
         """Constructs a new analysis containing a sequential compositor with the given weights.
@@ -129,19 +130,19 @@ class Analysis(object):
         If the domain is not specified, it will be inferred from the data.
         This makes the assumption that the structure of the data is public information.
 
-        The weights may be a list of numerics, corresponding to how `privacy_loss` should be distributed to each query.
-        Alternatively, pass a single integer to distribute the loss evenly.
+        Either the split_evenly_over parameter or the split_by_weights parameter must be specified.
 
         :param data: The data to be analyzed.
         :param privacy_unit: The privacy unit of the analysis.
         :param privacy_loss: The privacy loss of the analysis.
-        :param weights: How to distribute `privacy_loss` among the queries.
+        :param split_evenly_over: The number of queries to split the privacy loss evenly over.
+        :param split_by_weights: How to distribute `privacy_loss` among the queries.
         :param domain: The domain of the data."""
         if domain is None:
             domain = dp.domain_of(data, infer=True)
 
         accountant, d_mids = _sequential_composition_by_weights(
-            domain, privacy_unit, privacy_loss, weights
+            domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights
         )
 
         return Analysis(
@@ -466,7 +467,7 @@ class Query(object):
             privacy_loss = self._output_measure, d_out
 
             accountant, d_mids = _sequential_composition_by_weights(
-                input_domain, privacy_unit, privacy_loss, weights
+                input_domain, privacy_unit, privacy_loss, split_by_weights=weights
             )
             if isinstance(chain, dp.Transformation):
                 accountant = chain >> accountant
@@ -543,7 +544,8 @@ def _sequential_composition_by_weights(
     domain: dp.Domain,
     privacy_unit: Tuple[dp.Metric, float],
     privacy_loss: Tuple[dp.Measure, float],
-    weights: Union[int, List[float]],
+    split_evenly_over: Optional[int] = None,
+    split_by_weights: Optional[List[float]] = None,
 ) -> Tuple[dp.Measurement, List[Any]]:
     """constructs a sequential composition measurement
     where the d_mids are proportional to the weights
@@ -551,13 +553,20 @@ def _sequential_composition_by_weights(
     :param domain: the domain of the data
     :param privacy_unit: a tuple of the input metric and the data distance (d_in)
     :param privacy_loss: a tuple of the output measure and the privacy loss (d_out)
-    :param weights: either a list of weights for each intermediate privacy loss, or the number of ways to evenly distribute the privacy loss
+    :param split_evenly_over: The number of queries to split the privacy loss evenly over.
+    :param split_by_weights: How to distribute `privacy_loss` among the queries.
     """
     input_metric, d_in = privacy_unit
     output_measure, d_out = privacy_loss
 
-    if isinstance(weights, int):
-        weights = [d_out] * weights
+    if split_evenly_over is None and split_by_weights is None:
+        raise ValueError("Either the split_evenly_over parameter or the split_by_weights parameter must be specified")
+    if None not in (split_evenly_over, split_by_weights):
+        raise ValueError("Both the split_evenly_over and split_by_weights parameters were specified. Please specify "
+                         "only one of the parameters.")
+
+    if split_by_weights is None:
+        split_by_weights = [d_out] * split_evenly_over
 
     def mul(dist, scale):
         if isinstance(dist, tuple):
@@ -574,10 +583,11 @@ def _sequential_composition_by_weights(
             input_metric=input_metric,
             output_measure=output_measure,
             d_in=d_in,
-            d_mids=scale_weights(scale, weights),
+            d_mids=scale_weights(scale, split_by_weights),
         )
 
     scale = dp.binary_search_param(scale_sc, d_in=d_in, d_out=d_out, T=float)
 
     # return the accountant and d_mids
-    return scale_sc(scale), scale_weights(scale, weights)
+    print(scale_sc(scale))
+    return scale_sc(scale), scale_weights(scale, split_by_weights)
