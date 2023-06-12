@@ -466,6 +466,7 @@ u128 = 'u128'
 usize = 'usize'
 f32 = 'f32'
 f64 = 'f64'
+char = 'char'
 String = 'String'
 AnyMeasurementPtr = "AnyMeasurementPtr"
 AnyTransformationPtr = "AnyTransformationPtr"
