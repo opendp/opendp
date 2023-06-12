@@ -44,6 +44,10 @@ impl LazyFrameDomain {
         })
     }
 
+    pub fn schema(&self) -> Schema {
+        Schema::from_iter(self.series_domains.iter().map(|sd| sd.field.clone()))
+    }
+
     pub fn new_from_schema(schema: Schema) -> Fallible<Self> {
         let series_domains = (schema.iter_fields())
             .map(|field| {

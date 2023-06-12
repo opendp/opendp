@@ -41,6 +41,7 @@ __all__ = [
     "make_ordered_random",
     "make_quantiles_from_counts",
     "make_resize",
+    "make_scan_csv",
     "make_select_column",
     "make_sized_bounded_float_checked_sum",
     "make_sized_bounded_float_ordered_sum",
@@ -61,7 +62,8 @@ __all__ = [
     "part_clamp",
     "part_df_cast_default",
     "part_df_is_equal",
-    "part_is_equal"
+    "part_is_equal",
+    "part_scan_csv"
 ]
 
 
@@ -2017,6 +2019,71 @@ def make_resize(
     output = c_to_py(unwrap(lib_function(c_size, c_atom_domain, c_constant, c_DA, c_MI, c_MO), Transformation))
     
     return output
+
+
+@versioned
+def make_scan_csv(
+    input_domain,
+    input_metric,
+    cache: bool = True,
+    low_memory: bool = False,
+    rechunk: bool = True
+) -> Transformation:
+    """Parse a path to a CSV into a LazyFrame.
+    
+    [make_scan_csv in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_scan_csv.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `CsvDomain`
+    * Output Domain:  `LazyFrameDomain`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+    
+    :param input_domain: CSV domain
+    :param input_metric: The metric space under which neighboring LazyFrames are compared
+    :param cache: Cache the DataFrame after reading.
+    :type cache: bool
+    :param low_memory: Reduce memory usage at the expense of performance
+    :type low_memory: bool
+    :param rechunk: Rechunk the memory to contiguous chunks when parsing is done.
+    :type rechunk: bool
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_cache = py_to_c(cache, c_type=ctypes.c_bool, type_name=bool)
+    c_low_memory = py_to_c(low_memory, c_type=ctypes.c_bool, type_name=bool)
+    c_rechunk = py_to_c(rechunk, c_type=ctypes.c_bool, type_name=bool)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_scan_csv
+    lib_function.argtypes = [Domain, Metric, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_cache, c_low_memory, c_rechunk), Transformation))
+    
+    return output
+
+def part_scan_csv(
+    cache: bool = True,
+    low_memory: bool = False,
+    rechunk: bool = True
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_scan_csv(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        cache=cache,
+        low_memory=low_memory,
+        rechunk=rechunk))
+
 
 
 @versioned

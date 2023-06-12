@@ -1,3 +1,6 @@
+mod csv;
+pub use csv::*;
+
 mod lazyframe;
 pub use lazyframe::*;
 

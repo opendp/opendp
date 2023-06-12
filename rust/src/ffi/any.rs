@@ -283,7 +283,6 @@ impl AnyDomain {
         }
     }
 
-    #[cfg(test)]
     pub fn new_raw<D: 'static + Domain>(value: D) -> *mut Self {
         crate::ffi::util::into_raw(Self::new(value))
     }
