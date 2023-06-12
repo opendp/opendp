@@ -25,6 +25,7 @@ ATOM_MAP = {
     'i64': ctypes.c_int64,
     'usize': ctypes.c_size_t,
     'bool': ctypes.c_bool,
+    'char': ctypes.c_char,
     'AnyMeasurementPtr': Measurement,
     'AnyTransformationPtr': Transformation,
 }
@@ -81,6 +82,10 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
 
         rust_type = str(type_name)
         if rust_type in ATOM_MAP:
+
+            if rust_type == "char":
+                value = value.encode()
+            
             if rust_type in INT_SIZES:
                 check_c_int_cast(value, rust_type)
             return ctypes.byref(ATOM_MAP[rust_type](value))
@@ -208,7 +213,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
     if type_name == "AnyMeasurement":
         return _wrap_in_slice(value, 1)
 
-    if type_name == "String":
+    if type_name in ATOM_EQUIVALENCE_CLASSES["String"]:
         return _string_to_slice(value)
     
     if type_name == "LazyFrame":
