@@ -939,6 +939,83 @@ then_clamp <- function(
 }
 
 
+#' col constructor
+#'
+#' Make a Transformation that returns a `col(column_name)` expression for a Lazy Frame.
+#'
+#' | input_metric               | input_domain                     |
+#' | -------------------------- | -------------------------------- |
+#' | `SymmetricDistance`        | `ExprDomain<LazyFrameContext>`   |
+#' | `InsertDeleteDistance`     | `ExprDomain<LazyFrameContext>`   |
+#' | `L1<SymmetricDistance>`    | `ExprDomain<LazyGroupByContext>` |
+#' | `L1<InsertDeleteDistance>` | `ExprDomain<LazyGroupByContext>` |
+#'
+#' [make_col in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_col.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `ExprDomain<M::LazyDomain>`
+#' * Output Domain:  `ExprDomain<M::LazyDomain>`
+#' * Input Metric:   `M`
+#' * Output Metric:  `M`
+#'
+#' @concept transformations
+#' @param input_domain Domain of the expression to be applied.
+#' @param input_metric The metric under which neighboring LazyFrames are compared.
+#' @param col_name undocumented
+#' @return Transformation
+#' @export
+make_col <- function(
+    input_domain,
+    input_metric,
+    col_name
+) {
+    # No type arguments to standardize.
+    log <- new_constructor_log("make_col", "transformations", new_hashtab(
+        list("input_domain", "input_metric", "col_name"),
+        list(input_domain, input_metric, unbox2(col_name))
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = String, inferred = rt_infer(col_name))
+
+    # Call wrapper function.
+    output <- .Call(
+        "transformations__make_col",
+        input_domain, input_metric, col_name,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial col constructor
+#'
+#' See documentation for [make_col()] for details.
+#'
+#' @concept transformations
+#' @param lhs The prior transformation or metric space.
+#' @param col_name undocumented
+#' @return Transformation
+#' @export
+then_col <- function(
+    lhs,
+    col_name
+) {
+
+    log <- new_constructor_log("then_col", "transformations", new_hashtab(
+        list("col_name"),
+        list(unbox2(col_name))
+    ))
+
+    make_chain_dyn(
+        make_col(
+            output_domain(lhs),
+            output_metric(lhs),
+            col_name = col_name),
+        lhs,
+        log)
+}
+
+
 #' collect constructor
 #'
 #' Converts a LazyFrame to a DataFrame

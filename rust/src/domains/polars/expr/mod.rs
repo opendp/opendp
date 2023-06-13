@@ -142,12 +142,10 @@ impl<D: LazyDomain> ExprDomain<D> {
     }
 
     pub fn active_column(&self) -> Fallible<String> {
-        return self.active_column.clone().ok_or_else(|| {
-            err!(
-                FailedFunction,
-                "active column not set. Use `make_col(col_name)` first."
-            )
-        });
+        return self
+            .active_column
+            .clone()
+            .ok_or_else(|| err!(FailedFunction, "active column not set. Use `make_col(col_name)` first."))
     }
 }
 

@@ -23,6 +23,7 @@ __all__ = [
     "make_cast_inherent",
     "make_cdf",
     "make_clamp",
+    "make_col",
     "make_collect",
     "make_column",
     "make_consistent_b_ary_tree",
@@ -77,6 +78,7 @@ __all__ = [
     "then_cast_default",
     "then_cast_inherent",
     "then_clamp",
+    "then_col",
     "then_collect",
     "then_column",
     "then_count",
@@ -818,6 +820,73 @@ def then_clamp(
         input_domain=input_domain,
         input_metric=input_metric,
         bounds=bounds))
+
+
+
+def make_col(
+    input_domain: Domain,
+    input_metric: Metric,
+    col_name: Any
+) -> Transformation:
+    r"""Make a Transformation that returns a `col(column_name)` expression for a Lazy Frame.
+
+    | input_metric               | input_domain                     |
+    | -------------------------- | -------------------------------- |
+    | `SymmetricDistance`        | `ExprDomain<LazyFrameContext>`   |
+    | `InsertDeleteDistance`     | `ExprDomain<LazyFrameContext>`   |
+    | `L1<SymmetricDistance>`    | `ExprDomain<LazyGroupByContext>` |
+    | `L1<InsertDeleteDistance>` | `ExprDomain<LazyGroupByContext>` |
+
+    [make_col in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_col.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `ExprDomain<M::LazyDomain>`
+    * Output Domain:  `ExprDomain<M::LazyDomain>`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+
+    :param input_domain: Domain of the expression to be applied.
+    :type input_domain: Domain
+    :param input_metric: The metric under which neighboring LazyFrames are compared.
+    :type input_metric: Metric
+    :param col_name: 
+    :type col_name: Any
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_col_name = py_to_c(col_name, c_type=AnyObjectPtr, type_name=String)
+
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_col
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_col_name), Transformation))
+
+    return output
+
+def then_col(
+    col_name: Any
+):  
+    r"""partial constructor of make_col
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_col`
+
+    :param col_name: 
+    :type col_name: Any
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_col(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        col_name=col_name))
 
 
 

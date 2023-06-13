@@ -124,6 +124,7 @@ SEXP transformations__make_cast_default(SEXP input_domain, SEXP input_metric, SE
 SEXP transformations__make_cast_inherent(SEXP input_domain, SEXP input_metric, SEXP TOA, SEXP log);
 SEXP transformations__make_cdf(SEXP TA, SEXP log);
 SEXP transformations__make_clamp(SEXP input_domain, SEXP input_metric, SEXP bounds, SEXP TA, SEXP T_bounds, SEXP log);
+SEXP transformations__make_col(SEXP input_domain, SEXP input_metric, SEXP col_name, SEXP log);
 SEXP transformations__make_collect(SEXP input_domain, SEXP input_metric, SEXP log);
 SEXP transformations__make_column(SEXP input_domain, SEXP input_metric, SEXP column_name, SEXP log);
 SEXP transformations__make_consistent_b_ary_tree(SEXP branching_factor, SEXP TIA, SEXP TOA, SEXP log);
