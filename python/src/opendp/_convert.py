@@ -201,6 +201,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
             
         if type_name == "Series":
             return _slice_to_series(raw)
+        
+        if type_name == "Expr":
+            return _slice_to_expr(raw)
 
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
@@ -245,6 +248,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
         
         if type_name == "DataFrame":
             return _dataframe_to_slice(value)
+            
+        if type_name == "Expr":
+            return _expr_to_slice(value)
     
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
@@ -391,6 +397,14 @@ def _tuple_to_slice(val: Tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
     if len(inner_type_names) != len(val):
         raise TypeError("type_name members must have same length as tuple")
 
+    if inner_type_names == ['LogicalPlan', 'Expr']:
+        lf_slice = _lazyframe_to_slice(val[0])
+        expr_slice = _expr_to_slice(val[1])
+        array = (ctypes.c_void_p * len(val))(ctypes.cast(lf_slice, ctypes.c_void_p), ctypes.cast(expr_slice, ctypes.c_void_p))
+        out = _wrap_in_slice(ctypes.pointer(array), 2)
+        out.depends_on(lf_slice, expr_slice)
+        return out
+
     for t in inner_type_names:
         if t not in ATOM_MAP:
             raise TypeError(f"Tuple members must be one of {ATOM_MAP.keys()}. Got {t}")
@@ -414,6 +428,12 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> Tuple[Any, ...]
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
     # list of void*
     ptr_data = void_array_ptr[0:raw.contents.len]
+
+    if inner_type_names == ['LogicalPlan', 'Expr']:
+        lp_slice = ctypes.cast(ptr_data[0], FfiSlicePtr)
+        expr_slice = ctypes.cast(ptr_data[1], FfiSlicePtr)
+        return _slice_to_lazyframe(lp_slice), _slice_to_expr(expr_slice)
+    
     # tuple of instances of Python types
     return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value # type: ignore
                  for void_p, name in zip(ptr_data, inner_type_names))
@@ -467,6 +487,21 @@ def _slice_to_lazyframe(raw: FfiSlicePtr):
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))
     lf.__setstate__(bytes(slice_array[0:raw.contents.len]))
     return lf
+
+
+def _expr_to_slice(val) -> FfiSlicePtr:
+    state = val.__getstate__()
+    raw = _wrap_in_slice(state, len(state))
+    raw.depends_on(state)
+    return raw
+
+
+def _slice_to_expr(raw: FfiSlicePtr):
+    pl = import_optional_dependency('polars')
+    expr = pl.all()
+    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))
+    expr.__setstate__(bytes(slice_array[0:raw.contents.len]))
+    return expr
 
 def _dataframe_to_slice(val) -> FfiSlicePtr:
     slices = list(_series_to_slice(s) for s in val.get_columns())

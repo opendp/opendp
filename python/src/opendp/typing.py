@@ -312,6 +312,9 @@ class RuntimeType(object):
             
             if isinstance(public_example, pl.Series):
                 return Series
+            
+            if isinstance(public_example, pl.Expr):
+                return Expr
 
         if isinstance(public_example, tuple):
             return RuntimeType('Tuple', [cls.infer(e, py_object) for e in public_example])
@@ -478,6 +481,7 @@ String: str = 'String'
 LazyFrame: str = 'LazyFrame'
 DataFrame: str = 'DataFrame'
 Series: str = 'Series'
+Expr: str = 'Expr'
 AnyMeasurementPtr: str = 'AnyMeasurementPtr'
 AnyTransformationPtr: str = 'AnyTransformationPtr'
 SeriesDomain: str = 'SeriesDomain'

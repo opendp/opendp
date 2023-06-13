@@ -6,13 +6,16 @@ use polars::lazy::dsl::{col, len};
 use polars::prelude::*;
 
 use crate::core::Domain;
-use crate::metrics::LInfDistance;
+use crate::metrics::{LInfDistance, LpDistance};
+use crate::traits::ProductOrd;
 use crate::{
     core::MetricSpace,
     domains::{AtomDomain, OptionDomain, SeriesDomain},
     error::Fallible,
     transformations::DatasetMetric,
 };
+
+use super::NumericDataType;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -114,6 +117,7 @@ impl<F: Frame> PartialEq for FrameDomain<F> {
 }
 
 pub type LazyFrameDomain = FrameDomain<LazyFrame>;
+pub(crate) type LogicalPlanDomain = FrameDomain<LogicalPlan>;
 
 impl<F: Frame, M: DatasetMetric> MetricSpace for (FrameDomain<F>, M) {
     fn check_space(&self) -> Fallible<()> {
@@ -125,6 +129,26 @@ impl<F: Frame, M: DatasetMetric> MetricSpace for (FrameDomain<F>, M) {
                 .all(|m| m.public_info != Some(MarginPub::Lengths))
         {
             return fallible!(MetricSpace, "bounded dataset metric must have known size");
+        }
+        Ok(())
+    }
+}
+
+impl<F: Frame, const P: usize, T: ProductOrd + NumericDataType> MetricSpace
+    for (FrameDomain<F>, LpDistance<P, T>)
+{
+    fn check_space(&self) -> Fallible<()> {
+        if self
+            .0
+            .series_domains
+            .iter()
+            .any(|s| s.field.dtype != T::dtype())
+        {
+            return fallible!(
+                MetricSpace,
+                "LpDistance requires columns of type {}",
+                T::dtype()
+            );
         }
         Ok(())
     }
@@ -183,6 +207,14 @@ impl<F: Frame> FrameDomain<F> {
             })
             .collect::<Fallible<_>>()?;
         FrameDomain::new(series_domains)
+    }
+
+    pub(crate) fn cast_carrier<FO: Frame>(&self) -> FrameDomain<FO> {
+        FrameDomain {
+            series_domains: self.series_domains.clone(),
+            margins: self.margins.clone(),
+            _marker: PhantomData,
+        }
     }
 
     #[must_use]
