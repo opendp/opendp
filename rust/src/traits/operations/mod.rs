@@ -7,6 +7,8 @@ use dashu::integer::IBig;
 use dashu::rational::RBig;
 use num::{One, Zero};
 
+#[cfg(feature = "polars")]
+use crate::core::Scalar;
 use crate::domains::Bounds;
 use crate::error::Fallible;
 #[cfg(feature = "contrib")]
@@ -358,6 +360,21 @@ impl<T1: ProductOrd, T2: ProductOrd> ProductOrd for (T1, T2) {
             self.1.total_cmp(&other.1)
         } else {
             Ok(cmp)
+        }
+    }
+}
+
+#[cfg(feature = "polars")]
+impl ProductOrd for Scalar {
+    fn total_cmp(&self, other: &Self) -> Fallible<std::cmp::Ordering> {
+        match (self, other) {
+            (Scalar::I32(l), Scalar::I32(r)) => l.total_cmp(r),
+            (Scalar::I64(l), Scalar::I64(r)) => l.total_cmp(r),
+            (Scalar::U32(l), Scalar::U32(r)) => l.total_cmp(r),
+            (Scalar::U64(l), Scalar::U64(r)) => l.total_cmp(r),
+            (Scalar::F32(l), Scalar::F32(r)) => ProductOrd::total_cmp(l, r),
+            (Scalar::F64(l), Scalar::F64(r)) => ProductOrd::total_cmp(l, r),
+            _ => fallible!(MakeTransformation, "incomparable scalars"),
         }
     }
 }

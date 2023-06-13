@@ -58,6 +58,16 @@ impl ExprContext {
             }
         }
     }
+
+    pub fn break_alignment(&self) -> Fallible<()> {
+        if !matches!(self, ExprContext::Aggregate { .. }) {
+            return fallible!(
+                MakeMeasurement,
+                "record alignment can only be broken in a selection or aggregation"
+            );
+        }
+        Ok(())
+    }
 }
 
 /// # Proof Definition

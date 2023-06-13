@@ -1,14 +1,14 @@
 use opendp_derive::bootstrap;
-use polars_plan::dsl::{Expr, FunctionExpr};
+use polars_plan::dsl::{AggExpr, Expr, FunctionExpr};
 
 use crate::{
-    core::{Metric, MetricSpace, Transformation},
+    core::{Metric, MetricSpace, Scalar, Transformation},
     domains::{ExprDomain, OuterMetric},
     error::Fallible,
-    metrics::{InsertDeleteDistance, PartitionDistance, SymmetricDistance},
+    metrics::{InsertDeleteDistance, LpDistance, PartitionDistance, SymmetricDistance},
 };
 
-use super::DatasetMetric;
+use super::{traits::UnboundedMetric, DatasetMetric};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -18,6 +18,9 @@ mod expr_col;
 
 #[cfg(feature = "contrib")]
 mod expr_clip;
+
+#[cfg(feature = "contrib")]
+mod expr_sum;
 
 #[bootstrap(
     features("contrib"),
@@ -88,6 +91,35 @@ where
     }
 }
 
+impl<MI: 'static + UnboundedMetric + DatasetOuterMetric, const P: usize>
+    StableExpr<PartitionDistance<MI>, LpDistance<P, Scalar>> for Expr
+where
+    Expr: StableExpr<PartitionDistance<MI>, PartitionDistance<MI>>,
+    (ExprDomain, PartitionDistance<MI>): MetricSpace,
+{
+    fn make_stable(
+        self,
+        input_domain: ExprDomain,
+        input_metric: PartitionDistance<MI>,
+    ) -> Fallible<
+        Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, LpDistance<P, Scalar>>,
+    > {
+        use Expr::*;
+        match self {
+            #[cfg(feature = "contrib")]
+            Agg(AggExpr::Sum(_)) => {
+                expr_sum::make_expr_sum::<_, _, P>(input_domain, input_metric, self)
+            }
+
+            expr => fallible!(
+                MakeTransformation,
+                "Expr is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
+                expr
+            )
+        }
+    }
+}
+
 #[cfg(test)]
 pub mod polars_test {
 
@@ -96,15 +128,18 @@ pub mod polars_test {
     use polars::prelude::*;
 
     pub fn get_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
+        let pub_key_margin = Margin::new()
+            .with_max_partition_length(3u32)
+            .with_public_keys();
         let lf_domain = LazyFrameDomain::new(vec![
             SeriesDomain::new("A", AtomDomain::<i32>::default()),
             SeriesDomain::new("B", AtomDomain::<f64>::new_closed((0.5, 2.5))?),
             SeriesDomain::new("C", AtomDomain::<i32>::default()),
         ])?
-        .with_margin::<&str>(&[], Margin::new().with_max_partition_length(3u32))?
+        .with_margin::<&str>(&[], pub_key_margin.clone())?
         .with_margin(&["A"], Margin::new().with_max_partition_length(2u32))?
         .with_margin(&["B"], Margin::new().with_max_partition_length(2u32))?
-        .with_margin(&["C"], Margin::new().with_max_partition_length(1u32))?;
+        .with_margin(&["C"], pub_key_margin.with_max_num_partitions(4))?;
 
         let lf = df!(
             "A" => &[1, 2, 2],
