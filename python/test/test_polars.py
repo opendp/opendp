@@ -30,6 +30,7 @@ def test_infer():
     assert dp.RuntimeType.infer(series) == "Series"
     assert dp.RuntimeType.infer(pl.DataFrame(series)) == "DataFrame"
     assert dp.RuntimeType.infer(pl.LazyFrame(series)) == "LazyFrame"
+    assert dp.RuntimeType.infer(pl.col("A")) == "Expr"
 
 
 def example_lf(margin=None, **kwargs):
@@ -71,3 +72,11 @@ def test_lazyframe_ffi():
     lf_domain, lf = example_lf()
     t_ident = (lf_domain, dp.symmetric_distance()) >> dp.t.then_identity()
     assert t_ident(lf).collect().equals(lf.collect())
+
+def test_expr_ffi():
+    """ensure that lazyframes can be passed to/from Rust"""
+    pl = pytest.importorskip("polars")
+    lf_domain, lf = example_lf()
+    expr_domain = dp.expr_domain(lf_domain, "select")
+    t_ident = (expr_domain, dp.symmetric_distance()) >> dp.t.then_identity()
+    assert str(t_ident((lf, pl.col("A")))[1]) == str(pl.col("A"))
