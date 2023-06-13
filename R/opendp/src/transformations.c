@@ -1490,6 +1490,32 @@ SEXP transformations__make_sum(
 }
 
 
+SEXP transformations__make_sum_expr(
+    SEXP input_domain, SEXP input_metric, SEXP MI, SEXP TI, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(MI);
+    PROTECT(TI);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    char * c_MI = rt_to_string(MI);
+    char * c_TI = rt_to_string(TI);
+
+    // Call library function.
+    FfiResult_____AnyTransformation _result = opendp_transformations__make_sum_expr(c_input_domain, c_input_metric, c_MI, c_TI);
+
+    UNPROTECT(5);
+    if(_result.tag == Err_____AnyTransformation)
+        return(extract_error(_result.err));
+    AnyTransformation* _return_value = _result.ok;
+    return(anytransformationptr_to_sexp(_return_value, log));
+}
+
+
 SEXP transformations__make_sum_of_squared_deviations(
     SEXP input_domain, SEXP input_metric, SEXP S, SEXP T, SEXP log
 ) {

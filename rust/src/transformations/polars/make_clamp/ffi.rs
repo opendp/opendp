@@ -1,8 +1,7 @@
 use polars::prelude::NumericNative;
 
-use crate::core::IntoAnyTransformationFfiResultExt;
 use crate::{
-    core::{Domain, FfiResult, MetricSpace},
+    core::{Domain, FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace},
     domains::{ExprDomain, NumericDataType, OuterMetric},
     error::Fallible,
     ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast},
