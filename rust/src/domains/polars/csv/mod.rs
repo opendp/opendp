@@ -16,11 +16,21 @@ use crate::{
 #[cfg(feature = "ffi")]
 mod ffi;
 
-pub trait DatasetMetric: Metric<Distance = IntDistance> {}
-impl DatasetMetric for SymmetricDistance {}
-impl DatasetMetric for InsertDeleteDistance {}
-impl DatasetMetric for ChangeOneDistance {}
-impl DatasetMetric for HammingDistance {}
+pub trait DatasetMetric: Metric<Distance = IntDistance> {
+    const BOUNDED: bool;
+}
+impl DatasetMetric for SymmetricDistance {
+    const BOUNDED: bool = false;
+}
+impl DatasetMetric for InsertDeleteDistance {
+    const BOUNDED: bool = false;
+}
+impl DatasetMetric for ChangeOneDistance {
+    const BOUNDED: bool = true;
+}
+impl DatasetMetric for HammingDistance {
+    const BOUNDED: bool = true;
+}
 
 #[derive(Clone)]
 pub struct CsvDomain<F: Frame> {

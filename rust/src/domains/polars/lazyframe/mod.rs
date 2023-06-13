@@ -285,7 +285,7 @@ impl<F: Frame> Margin<F> {
         Ok(margin)
     }
 
-    fn get_count_column_name(&self) -> Fallible<String> {
+    pub fn get_count_column_name(&self) -> Fallible<String> {
         let count_index = self
             .counts_index
             .ok_or_else(|| err!(FailedFunction, "counts do not exist"))?;
