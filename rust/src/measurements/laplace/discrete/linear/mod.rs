@@ -3,13 +3,14 @@ mod ffi;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Measurement, MetricSpace, PrivacyMap};
-use crate::error::*;
-use crate::measures::MaxDivergence;
-use crate::traits::samplers::SampleDiscreteLaplaceLinear;
-use crate::traits::{Float, InfCast, Integer};
+use crate::{
+    core::{Measurement, MetricSpace, PrivacyMap},
+    error::Fallible,
+    measures::MaxDivergence,
+    traits::{samplers::SampleDiscreteLaplaceLinear, Float, InfCast, Integer},
+};
 
-use super::DiscreteLaplaceDomain;
+use super::BaseDiscreteLaplaceDomain;
 
 #[bootstrap(
     features("contrib"),
@@ -54,7 +55,7 @@ pub fn make_base_discrete_laplace_linear<D, QO>(
     bounds: Option<(D::Atom, D::Atom)>,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
-    D: DiscreteLaplaceDomain,
+    D: BaseDiscreteLaplaceDomain,
     (D, D::InputMetric): MetricSpace,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
@@ -126,7 +127,7 @@ pub fn make_base_geometric<D, QO>(
     bounds: Option<(D::Atom, D::Atom)>,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
-    D: DiscreteLaplaceDomain,
+    D: BaseDiscreteLaplaceDomain,
     (D, D::InputMetric): MetricSpace,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,

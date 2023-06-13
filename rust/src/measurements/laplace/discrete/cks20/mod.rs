@@ -11,7 +11,7 @@ use crate::{
     traits::{samplers::sample_discrete_laplace, InfCast},
 };
 
-use super::DiscreteLaplaceDomain;
+use super::BaseDiscreteLaplaceDomain;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -46,7 +46,7 @@ pub fn make_base_discrete_laplace_cks20<D, QO>(
     scale: QO,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
-    D: DiscreteLaplaceDomain,
+    D: BaseDiscreteLaplaceDomain,
     D::Atom: crate::traits::Integer,
     (D, D::InputMetric): MetricSpace,
     QO: crate::traits::Float + InfCast<D::Atom>,
@@ -111,7 +111,7 @@ pub fn make_base_discrete_laplace_cks20_rug<D>(
     scale: Rational,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<Rational>>>
 where
-    D: DiscreteLaplaceDomain<Atom = Integer>,
+    D: BaseDiscreteLaplaceDomain<Atom = Integer>,
     (D, D::InputMetric): MetricSpace,
 {
     if scale <= 0 {
