@@ -9,3 +9,7 @@ pub use series::*;
 
 mod parquet;
 pub use parquet::*;
+
+mod expr;
+pub use expr::*;
+
