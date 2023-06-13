@@ -7,7 +7,7 @@ def test_sized_bounded_float_sum():
     from opendp.transformations import make_split_dataframe, make_select_column, \
         make_cast, make_impute_constant, \
         then_clamp, make_resize, make_sized_bounded_sum
-    from opendp.measurements import then_base_laplace, make_base_gaussian
+    from opendp.measurements import then_base_laplace, then_base_gaussian
     from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP
     from opendp.mod import binary_search_chain
     from opendp.domains import atom_domain, option_domain
@@ -38,7 +38,7 @@ def test_sized_bounded_float_sum():
         d_in=1, d_out=1.)
 
     gaussian_known_n_sum_from_dataframe = binary_search_chain(
-        lambda s: make_fix_delta(make_zCDP_to_approxDP(preprocess >> make_base_gaussian(s)), 1e-5),
+        lambda s: make_fix_delta(make_zCDP_to_approxDP(preprocess >> then_base_gaussian(s)), 1e-5),
         d_in=1, d_out=(1., 1e-5))
 
     assert laplace_known_n_sum_from_dataframe.check(1, 1.)
@@ -94,7 +94,7 @@ def test_bounded_float_sum():
     from opendp.transformations import make_split_dataframe, make_select_column, \
         make_cast, make_impute_constant, \
         then_clamp, make_bounded_sum
-    from opendp.measurements import then_base_laplace, make_base_gaussian
+    from opendp.measurements import then_base_laplace, then_base_gaussian
     from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP
     from opendp.mod import binary_search_chain
     from opendp.domains import option_domain, atom_domain
@@ -121,7 +121,7 @@ def test_bounded_float_sum():
         d_in=1, d_out=1.)
 
     gaussian_sum_from_dataframe = binary_search_chain(
-        lambda s: make_fix_delta(preprocess >> make_zCDP_to_approxDP(make_base_gaussian(s)), 1e-5),
+        lambda s: make_fix_delta(make_zCDP_to_approxDP(preprocess >> then_base_gaussian(s)), 1e-5),
         d_in=1, d_out=(1., 1e-5))
 
     assert laplace_sum_from_dataframe.check(1, 1.)

@@ -29,8 +29,8 @@ def test_count_by_categories():
 def test_count_by_categories_float():
     """Compute histogram with known category set"""
     from opendp.transformations import make_count_by_categories, make_split_dataframe, make_select_column
-    from opendp.measurements import then_base_laplace, make_base_gaussian
-    from opendp.typing import L1Distance, L2Distance, VectorDomain, AtomDomain
+    from opendp.measurements import then_base_laplace, then_base_gaussian
+    from opendp.typing import L1Distance, L2Distance
     from opendp.mod import enable_features
     enable_features("floating-point")
     noisy_float_histogram = (
@@ -45,7 +45,7 @@ def test_count_by_categories_float():
             make_split_dataframe(",", ['A', 'B']) >>
             make_select_column("A", TOA=str) >>
             make_count_by_categories(categories=["a", "b", "c"], MO=L2Distance[float], TIA=str, TOA=float) >>
-            make_base_gaussian(scale=1., D=VectorDomain[AtomDomain[float]])
+            then_base_gaussian(scale=1.)
     )
     print(noisy_float_histogram("\n".join(["a"] * 5 + ["b"] * 20 + ["c"] * 10 + ["z"] * 5)))
 
