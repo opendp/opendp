@@ -72,7 +72,7 @@ impl<C: Context> ExprDomain<C> {
             None => fallible!(FailedFunction, "no active column"),
         }
     }
-
+    
     pub fn active_column(&self) -> Fallible<String> {
         return self
             .active_column

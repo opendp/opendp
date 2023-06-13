@@ -5,9 +5,11 @@ mod lazyframe;
 pub use lazyframe::*;
 
 mod series;
-mod expr;
-
 pub use series::*;
 
 mod parquet;
 pub use parquet::*;
+
+mod expr;
+pub use expr::*;
+
