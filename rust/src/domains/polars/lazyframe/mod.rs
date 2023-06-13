@@ -5,12 +5,14 @@ use polars::lazy::dsl::{col, cols, count};
 use polars::prelude::*;
 
 use crate::core::Domain;
-use crate::domains::DatasetMetric;
+use crate::transformations::ToVec;
 use crate::{
     core::MetricSpace,
-    domains::{AtomDomain, OptionDomain, SeriesDomain},
+    domains::{AtomDomain, DatasetMetric, OptionDomain, SeriesDomain},
     error::Fallible,
 };
+
+use super::DataTypeFrom;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -204,7 +206,7 @@ impl<F: Frame> FrameDomain<F> {
         Ok(self)
     }
 
-    fn column_index<I: AsRef<str>>(&self, name: I) -> Option<usize> {
+    pub fn column_index<I: AsRef<str>>(&self, name: I) -> Option<usize> {
         self.series_domains
             .iter()
             .position(|s| s.field.name() == name.as_ref())
@@ -291,6 +293,17 @@ pub struct Margin<F: Frame> {
     pub counts_index: Option<usize>,
 }
 
+pub fn item<T: 'static + DataTypeFrom>(f: LazyFrame) -> Fallible<T>
+where
+    ChunkedArray<T::Polars>: ToVec<T>, {
+    f.collect()?.get_columns()[0]
+        .unpack::<T::Polars>()?
+        .to_vec()?
+        .into_iter()
+        .next()
+        .ok_or_else(|| err!(FailedFunction, "expected one item"))
+}
+
 impl<F: Frame> Margin<F> {
     pub fn new_from_categories(series: Series) -> Fallible<Self> {
         if series.n_unique()? != series.len() {
@@ -323,6 +336,21 @@ impl<F: Frame> Margin<F> {
         Ok((self.data.schema()?.get_at_index(count_index).unwrap().0).to_string())
     }
 
+    pub fn get_max_size(&self) -> Fallible<u32> {
+        let count_col_name = self.get_count_column_name()?;
+        let max_df = self
+            .data
+            .clone()
+            .lazyframe()
+            .select([col(count_col_name.as_str()).max()])
+            .collect()?;
+        let max_size = max_df.get_columns()[0]
+            .u32()?
+            .get(0)
+            .ok_or_else(|| err!(FailedFunction, "expected one value"));
+        max_size
+    }
+
     fn get_join_column_names(&self) -> Fallible<Vec<String>> {
         Ok((self.data.schema()?.iter_names().enumerate())
             .filter(|(i, _)| Some(*i) != self.counts_index)
@@ -333,21 +361,10 @@ impl<F: Frame> Margin<F> {
     fn member(&self, value: &F) -> Fallible<bool> {
         let col_names = self.get_join_column_names()?;
 
-        // retrieves the first row/first column from $tgt as type $ty
-        macro_rules! item {
-            ($tgt:expr, $ty:ident) => {
-                ($tgt.collect()?.get_columns()[0].$ty()?.get(0))
-                    .ok_or_else(|| err!(FailedFunction))?
-            };
-        }
-
         // 1. count number of unique combinations of col_names in actual data
-        let actual_n_unique = item!(
-            (value.clone().lazyframe())
-                // .drop_nulls(Some(vec![cols(&col_names)])) // commented because counts for null values are permitted
-                .select([as_struct(&[cols(&col_names)]).n_unique()]),
-            u32
-        );
+        let actual_n_unique = item::<u32>(value.clone().lazyframe()
+            // .drop_nulls(Some(vec![cols(&col_names)])) // commented because counts for null values are permitted
+            .select([as_struct(&[cols(&col_names)]).n_unique()]))?;
         // println!("actual n unique, {}", actual_n_unique);
 
         // 2. count number of unique combinations after an outer join with metadata
@@ -364,7 +381,7 @@ impl<F: Frame> Margin<F> {
         // println!("joined {}", joined.clone().collect()?);
 
         // 3. to check that categories match, ensure that 1 and 2 are same length
-        let joined_n_unique = item!(joined.clone().select([count()]), u32);
+        let joined_n_unique = item::<u32>(joined.clone().select([count()]))?;
 
         // if the join reduced the number of records,
         // then the actual data has values not in the category set
@@ -381,7 +398,7 @@ impl<F: Frame> Margin<F> {
                 .eq(col(count_colname_right.as_str()))
                 .all();
 
-            if !item!(joined.clone().select([eq_expr]), bool) {
+            if !item::<bool>(joined.clone().select([eq_expr]))? {
                 return Ok(false);
             }
         }
