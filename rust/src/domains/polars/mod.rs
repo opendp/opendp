@@ -12,3 +12,7 @@ pub use parquet::*;
 
 mod lazygroupby;
 pub use lazygroupby::*;
+
+mod expr;
+pub use expr::*;
+
