@@ -13,6 +13,9 @@ use super::DatasetMetric;
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[cfg(feature = "contrib")]
+mod expr_col;
+
 #[bootstrap(
     features("contrib"),
     arguments(output_metric(c_type = "AnyMetric *", rust_type = b"null")),
@@ -58,15 +61,45 @@ where
 {
     fn make_stable(
         self,
-        _input_domain: ExprDomain,
-        _input_metric: M,
+        input_domain: ExprDomain,
+        input_metric: M,
     ) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>> {
         match self {
+            #[cfg(feature = "contrib")]
+            Expr::Column(_) => expr_col::make_expr_col(input_domain, input_metric, self),
             expr => fallible!(
                 MakeTransformation,
                 "Expr is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
                 expr
             )
         }
+    }
+}
+
+#[cfg(test)]
+pub mod polars_test {
+
+    use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
+    use crate::error::*;
+    use polars::prelude::*;
+
+    pub fn get_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
+        let lf_domain = LazyFrameDomain::new(vec![
+            SeriesDomain::new("A", AtomDomain::<i32>::default()),
+            SeriesDomain::new("B", AtomDomain::<f64>::new_closed((0.5, 2.5))?),
+            SeriesDomain::new("C", AtomDomain::<i32>::default()),
+        ])?
+        .with_margin::<&str>(&[], Margin::new().with_max_partition_length(3u32))?
+        .with_margin(&["A"], Margin::new().with_max_partition_length(2u32))?
+        .with_margin(&["B"], Margin::new().with_max_partition_length(2u32))?
+        .with_margin(&["C"], Margin::new().with_max_partition_length(1u32))?;
+
+        let lf = df!(
+            "A" => &[1, 2, 2],
+            "B" => &[1.0, 1.0, 2.0],
+            "C" => &[8, 9, 10],)?
+        .lazy();
+
+        Ok((lf_domain, lf))
     }
 }

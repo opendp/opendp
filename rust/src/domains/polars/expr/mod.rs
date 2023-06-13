@@ -101,7 +101,7 @@ impl ExprDomain {
         Ok(&mut self.frame_domain.series_domains[0])
     }
 
-    fn check_one_column(&self) -> Fallible<()> {
+    pub fn check_one_column(&self) -> Fallible<()> {
         let series_domains = &self.frame_domain.series_domains;
         if series_domains.len() != 1 {
             return fallible!(
@@ -111,6 +111,25 @@ impl ExprDomain {
             );
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+impl<F: Frame> FrameDomain<F> {
+    pub fn row_by_row(&self) -> ExprDomain {
+        ExprDomain::new(self.clone(), ExprContext::RowByRow)
+    }
+    pub fn aggregate<E: AsRef<[IE]>, IE: AsRef<str>>(&self, by: E) -> ExprDomain {
+        let by = BTreeSet::from_iter(by.as_ref().iter().map(|s| s.as_ref().to_string()));
+        ExprDomain::new(
+            self.clone(),
+            ExprContext::Aggregate {
+                grouping_columns: by,
+            },
+        )
+    }
+    pub fn select(&self) -> ExprDomain {
+        self.aggregate::<_, &str>([])
     }
 }
 
