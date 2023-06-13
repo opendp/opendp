@@ -629,6 +629,30 @@ where
     }
 }
 
+
+impl<DI: 'static + Domain + Send + Sync, DO: 'static + Domain + Send + Sync, MI: 'static + Metric + Send + Sync, MO: 'static + Metric + Send + Sync>
+    Transformation<DI, DO, MI, MO>
+where
+    DI::Carrier: 'static + Send + Sync,
+    DO::Carrier: 'static + Send + Sync,
+    MI::Distance: 'static + Send + Sync,
+    MO::Distance: 'static + Send + Sync,
+    (DI, MI): MetricSpace,
+    (DO, MO): MetricSpace,
+{
+    pub fn into_any2(self) -> AnyTransformation {
+        AnyTransformation::new(
+            AnyDomain::new(self.input_domain.clone()),
+            AnyDomain::new(self.output_domain.clone()),
+            self.function.clone().into_any(),
+            AnyMetric::new(self.input_metric.clone()),
+            AnyMetric::new(self.output_metric.clone()),
+            self.stability_map.clone().into_any(),
+        )
+        .expect("AnyDomain is not checked")
+    }
+}
+
 #[cfg(feature = "partials")]
 mod partials {
     use crate::core::{PartialMeasurement, PartialTransformation};
@@ -694,6 +718,7 @@ mod partials {
 #[cfg(feature = "partials")]
 pub use partials::*;
 use polars::prelude::DataType;
+
 
 /// A Queryable with all generic types filled by Any types.
 /// This is the type of Queryables passed back and forth over FFI.
