@@ -103,7 +103,6 @@ where
     D::make_laplace(input_domain, input_metric, scale)
 }
 
-
 #[cfg(test)]
 mod test {
 

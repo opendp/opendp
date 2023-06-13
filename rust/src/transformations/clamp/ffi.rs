@@ -51,9 +51,7 @@ mod tests {
     #[test]
     fn test_make_vector_clamp() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_clamp(
-            AnyDomain::new_raw(VectorDomain::new(
-                AtomDomain::<f64>::default(),
-            )),
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<f64>::default())),
             AnyMetric::new_raw(SymmetricDistance::default()),
             AnyObject::new_raw((0.0, 10.0)),
         ))?;

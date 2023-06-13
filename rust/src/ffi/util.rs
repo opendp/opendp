@@ -15,8 +15,8 @@ use crate::measures::{
     ZeroConcentratedDivergence,
 };
 use crate::metrics::{
-    AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, L1Distance,
-    L2Distance, SymmetricDistance, DiscreteDistance,
+    AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
+    L1Distance, L2Distance, SymmetricDistance,
 };
 use crate::transformations::DataFrameDomain;
 use crate::{err, fallible};
