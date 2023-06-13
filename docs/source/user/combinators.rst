@@ -148,11 +148,12 @@ This is useful if you want to compose pure-DP measurements with approximate-DP m
 
 .. doctest::
 
-    >>> from opendp.measurements import make_base_laplace
+    >>> from opendp.measurements import then_base_laplace
     >>> from opendp.combinators import make_pureDP_to_fixed_approxDP
     >>> from opendp.domains import atom_domain
     >>> from opendp.metrics import absolute_distance
-    >>> meas_pureDP = make_base_laplace(atom_domain(T=float), absolute_distance(T=float), scale=10.)
+    >>> input_space = atom_domain(T=float), absolute_distance(T=float)
+    >>> meas_pureDP = input_space >> then_base_laplace(scale=10.)
     >>> # convert the output measure to `FixedSmoothedMaxDivergence`
     >>> meas_fixed_approxDP = make_pureDP_to_fixed_approxDP(meas_pureDP)
     ...
@@ -167,9 +168,9 @@ Similarly, :func:`opendp.combinators.make_pureDP_to_zCDP` is used for casting an
 
 .. doctest::
 
-    >>> from opendp.measurements import make_base_gaussian
+    >>> from opendp.measurements import then_base_gaussian
     >>> from opendp.combinators import make_zCDP_to_approxDP
-    >>> meas_zCDP = make_base_gaussian(scale=0.5)
+    >>> meas_zCDP = input_space >> then_base_gaussian(scale=0.5)
     >>> # convert the output measure to `SmoothedMaxDivergence`
     >>> meas_approxDP = make_zCDP_to_approxDP(meas_zCDP)
     ...
@@ -216,7 +217,6 @@ The resulting measurement expects the size of the input dataset to be 10.
 .. doctest::
 
     >>> from opendp.transformations import make_sized_bounded_mean
-    >>> from opendp.measurements import then_base_laplace
     >>> meas = make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> then_base_laplace(scale=0.5)
     >>> print("standard mean:", amplified([1.] * 10)) # -> 1.03 # doctest: +SKIP
 

@@ -3,7 +3,7 @@ use std::os::raw::{c_char, c_long, c_void};
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
-use crate::ffi::any::AnyMeasurement;
+use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::Type;
 use crate::measurements::{make_base_gaussian, GaussianDomain, GaussianMeasure};
 use crate::measures::ZeroConcentratedDivergence;
@@ -13,12 +13,15 @@ use crate::{err, try_, try_as_ref};
 
 #[no_mangle]
 pub extern "C" fn opendp_measurements__make_base_gaussian(
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
     scale: *const c_void,
     k: c_long,
-    D: *const c_char,
     MO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize1<T>(
+        input_domain: &AnyDomain,
+        input_metric: &AnyMetric,
         scale: *const c_void,
         k: i32,
         D: Type,
@@ -30,7 +33,12 @@ pub extern "C" fn opendp_measurements__make_base_gaussian(
         rug::Rational: TryFrom<T>,
     {
         let scale = *try_as_ref!(scale as *const T);
-        fn monomorphize2<D, MO>(scale: D::Atom, k: i32) -> FfiResult<*mut AnyMeasurement>
+        fn monomorphize2<D, MO>(
+            input_domain: &AnyDomain,
+            input_metric: &AnyMetric,
+            scale: D::Atom,
+            k: i32,
+        ) -> FfiResult<*mut AnyMeasurement>
         where
             D: 'static + GaussianDomain,
             (D, D::InputMetric): MetricSpace,
@@ -38,21 +46,25 @@ pub extern "C" fn opendp_measurements__make_base_gaussian(
             MO: 'static + GaussianMeasure<D>,
             i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
         {
-            make_base_gaussian::<D, MO>(scale, Some(k)).into_any()
+            let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();
+            let input_metric = try_!(input_metric.downcast_ref::<D::InputMetric>()).clone();
+            make_base_gaussian::<D, MO>(input_domain, input_metric, scale, Some(k)).into_any()
         }
 
         dispatch!(monomorphize2, [
             (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
             (MO, [ZeroConcentratedDivergence<T>])
-        ], (scale, k))
+        ], (input_domain, input_metric, scale, k))
     }
+    let input_domain = try_as_ref!(input_domain);
+    let input_metric = try_as_ref!(input_metric);
     let k = k as i32;
-    let D = try_!(Type::try_from(D));
+    let D = input_domain.type_.clone();
     let MO = try_!(Type::try_from(MO));
     let T = try_!(D.get_atom());
     dispatch!(monomorphize1, [
         (T, @floats)
-    ], (scale, k, D, MO))
+    ], (input_domain, input_metric, scale, k, D, MO))
 }
 
 #[cfg(test)]
@@ -62,15 +74,17 @@ mod tests {
     use crate::ffi::any::{AnyObject, Downcast};
     use crate::ffi::util;
     use crate::ffi::util::ToCharP;
+    use crate::metrics::{L2Distance, AbsoluteDistance};
 
     use super::*;
 
     #[test]
     fn test_make_base_gaussian_vec() -> Fallible<()> {
         let measurement = Result::from(opendp_measurements__make_base_gaussian(
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<f64>::default())),
+            AnyMetric::new_raw(L2Distance::<f64>::default()),
             util::into_raw(0.0) as *const c_void,
             -1078,
-            "VectorDomain<AtomDomain<f64>>".to_char_p(),
             "ZeroConcentratedDivergence<f64>".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);
@@ -83,9 +97,10 @@ mod tests {
     #[test]
     fn test_make_base_gaussian_zcdp() -> Fallible<()> {
         let measurement = Result::from(opendp_measurements__make_base_gaussian(
+            AnyDomain::new_raw(AtomDomain::<f64>::default()),
+            AnyMetric::new_raw(AbsoluteDistance::<f64>::default()),
             util::into_raw(0.0) as *const c_void,
             -1078,
-            "AtomDomain<f64>".to_char_p(),
             "ZeroConcentratedDivergence<f64>".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(1.0);

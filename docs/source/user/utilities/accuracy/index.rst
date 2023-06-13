@@ -37,7 +37,7 @@ The library provides the following functions for converting between noise scale 
 * :func:`opendp.accuracy.accuracy_to_gaussian_scale`
 
 To demonstrate, the following snippet finds the necessary gaussian scale such that the input to 
-:code:`make_base_gaussian(scale=1.)` differs from the release by no more than 2 with 95% confidence.
+:code:`make_base_gaussian(input_domain, input_metric, scale=1.)` differs from the release by no more than 2 with 95% confidence.
 
 .. doctest::
 

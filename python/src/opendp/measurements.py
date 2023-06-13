@@ -19,6 +19,7 @@ __all__ = [
     "then_base_discrete_laplace",
     "then_base_discrete_laplace_cks20",
     "then_base_discrete_laplace_linear",
+    "then_base_gaussian",
     "then_base_geometric",
     "then_base_laplace",
     "then_laplace"
@@ -316,20 +317,20 @@ def then_base_discrete_laplace_linear(
 
 @versioned
 def make_base_gaussian(
+    input_domain,
+    input_metric,
     scale,
     k: int = -1074,
-    D: RuntimeTypeDescriptor = "AtomDomain<T>",
     MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
     
-    Set `D` to change the input data type and input metric:
+    Valid inputs for `input_domain` and `input_metric` are:
     
-    
-    | `D`                          | input type   | `D::InputMetric`       |
-    | ---------------------------- | ------------ | ---------------------- |
-    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L2Distance<T>`        |
+    | `input_domain`                  | input type   | `input_metric`         |
+    | ------------------------------- | ------------ | ---------------------- |
+    | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
+    | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l2_distance(T)`       |
     
     This function takes a noise granularity in terms of 2^k.
     Larger granularities are more computationally efficient, but have a looser privacy map.
@@ -344,11 +345,11 @@ def make_base_gaussian(
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MO`
     
+    :param input_domain: Domain of the data type to be privatized.
+    :param input_metric: Metric of the data type to be privatized.
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
     :param k: The noise granularity in terms of 2^k.
     :type k: int
-    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
-    :type D: :py:ref:`RuntimeTypeDescriptor`
     :param MO: Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
@@ -359,26 +360,38 @@ def make_base_gaussian(
     assert_features("contrib")
     
     # Standardize type arguments.
-    D = RuntimeType.parse(type_name=D, generics=["T"])
     MO = RuntimeType.parse(type_name=MO, generics=["T"])
-    T = get_atom_or_infer(D, scale)
-    D = D.substitute(T=T)
+    T = get_atom_or_infer(get_carrier_type(input_domain), scale)
     MO = MO.substitute(T=T)
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
     c_k = py_to_c(k, c_type=ctypes.c_uint32, type_name=i32)
-    c_D = py_to_c(D, c_type=ctypes.c_char_p)
     c_MO = py_to_c(MO, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_measurements__make_base_gaussian
-    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_uint32, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_scale, c_k, c_D, c_MO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_k, c_MO), Measurement))
     
     return output
+
+def then_base_gaussian(
+    scale,
+    k: int = -1074,
+    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<T>"
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_base_gaussian(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        k=k,
+        MO=MO))
+
 
 
 @versioned
