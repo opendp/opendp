@@ -709,8 +709,8 @@ mod tests {
     #[cfg(all(feature = "use-mpfr", feature = "partials"))]
     #[test]
     fn test_any_chain() -> Fallible<()> {
-        use crate::{transformations, measurements};
         use crate::metrics::AbsoluteDistance;
+        use crate::{measurements, transformations};
 
         let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?
             .into_any();
