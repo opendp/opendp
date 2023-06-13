@@ -24,6 +24,7 @@
 mod ffi;
 #[cfg(feature = "ffi")]
 pub use ffi::*;
+use polars::lazy::dsl::Expr;
 
 use std::sync::Arc;
 
@@ -92,6 +93,22 @@ impl<TI, TO> Function<TI, TO> {
 
     pub fn eval(&self, arg: &TI) -> Fallible<TO> {
         (self.function)(arg)
+    }
+}
+
+
+pub trait ExprFunction {
+    fn new_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self;
+}
+
+impl<F: Clone> ExprFunction for Function<(F, Expr), (F, Expr)> {
+    fn new_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
+        Self::new(move |arg: &(F, Expr)| (arg.0.clone(), function(arg.1.clone())))
+    }
+}
+impl<F: Clone> ExprFunction for Function<(F, Expr), Expr> {
+    fn new_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
+        Self::new(move |arg: &(F, Expr)| function(arg.1.clone()))
     }
 }
 
