@@ -5,10 +5,9 @@ use polars::lazy::dsl::{col, cols, count};
 use polars::prelude::*;
 
 use crate::core::Domain;
-use crate::domains::DatasetMetric;
 use crate::{
     core::MetricSpace,
-    domains::{AtomDomain, OptionDomain, SeriesDomain},
+    domains::{AtomDomain, DatasetMetric, OptionDomain, SeriesDomain},
     error::Fallible,
 };
 
@@ -173,7 +172,7 @@ impl<F: Frame> FrameDomain<F> {
         Ok(self)
     }
 
-    fn column_index<I: AsRef<str>>(&self, name: I) -> Option<usize> {
+    pub fn column_index<I: AsRef<str>>(&self, name: I) -> Option<usize> {
         self.series_domains
             .iter()
             .position(|s| s.field.name() == name.as_ref())
@@ -290,6 +289,21 @@ impl<F: Frame> Margin<F> {
             .counts_index
             .ok_or_else(|| err!(FailedFunction, "counts do not exist"))?;
         Ok((self.data.schema()?.get_at_index(count_index).unwrap().0).to_string())
+    }
+
+    pub fn get_max_size(&self) -> Fallible<u32> {
+        let count_col_name = self.get_count_column_name()?;
+        let max_df = self
+            .data
+            .clone()
+            .lazyframe()
+            .select([col(count_col_name.as_str()).max()])
+            .collect()?;
+        let max_size = max_df.get_columns()[0]
+            .u32()?
+            .get(0)
+            .ok_or_else(|| err!(FailedFunction, "expected one value"));
+        max_size
     }
 
     fn get_join_column_names(&self) -> Fallible<Vec<String>> {

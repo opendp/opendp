@@ -32,6 +32,11 @@ impl DatasetMetric for HammingDistance {
     const BOUNDED: bool = true;
 }
 
+// Implemented `LpDistance<1, f64>` for the trait `domains::polars::csv::DatasetMetric`
+//impl<const P: usize> DatasetMetric for LpDistance<P, f64> {}
+// impl<const P: usize, Q> DatasetMetric for LpDistance<P, Q> {}
+// we have floats but it but expects u32 ??
+
 #[derive(Clone)]
 pub struct CsvDomain<F: Frame> {
     pub frame_domain: FrameDomain<F>,
