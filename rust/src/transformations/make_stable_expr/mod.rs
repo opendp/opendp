@@ -1,13 +1,14 @@
 use opendp_derive::bootstrap;
-use polars_plan::dsl::{Expr, FunctionExpr};
+use polars_plan::dsl::{AggExpr, Expr, FunctionExpr};
 
 use crate::{
     core::{Metric, MetricSpace, Transformation},
     domains::{ExprDomain, OuterMetric},
     error::Fallible,
+    metrics::{LpDistance, PartitionDistance},
 };
 
-use super::DatasetMetric;
+use super::{traits::UnboundedMetric, DatasetMetric};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -17,6 +18,9 @@ mod expr_clip;
 
 #[cfg(feature = "contrib")]
 mod expr_col;
+
+#[cfg(feature = "contrib")]
+mod expr_sum;
 
 #[bootstrap(
     features("contrib"),
@@ -73,6 +77,32 @@ where
 
             #[cfg(feature = "contrib")]
             Column(_) => expr_col::make_expr_col(input_domain, input_metric, self),
+
+            expr => fallible!(
+                MakeTransformation,
+                "Expr is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
+                expr
+            )
+        }
+    }
+}
+
+impl<MI, const P: usize> StableExpr<PartitionDistance<MI>, LpDistance<P, f64>> for Expr
+where
+    MI: 'static + UnboundedMetric,
+{
+    fn make_stable(
+        self,
+        input_domain: ExprDomain,
+        input_metric: PartitionDistance<MI>,
+    ) -> Fallible<Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, LpDistance<P, f64>>>
+    {
+        use Expr::*;
+        match self {
+            #[cfg(feature = "contrib")]
+            Agg(AggExpr::Sum(_)) => {
+                expr_sum::make_expr_sum(input_domain, input_metric, self)
+            }
 
             expr => fallible!(
                 MakeTransformation,
