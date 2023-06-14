@@ -9,7 +9,7 @@ use crate::{
     core::MetricSpace,
     domains::{AtomDomain, OptionDomain, SeriesDomain},
     error::Fallible,
-    transformations::DatasetMetric,
+    domains::DatasetMetric,
 };
 
 #[cfg(feature = "ffi")]
