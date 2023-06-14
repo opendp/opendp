@@ -6,7 +6,7 @@ use polars::datatypes::DataType::Utf8;
 use crate::{
     core::{Function, StabilityMap, Transformation},
     error::Fallible,
-    metrics::{SymmetricDistance, InfinityDistance, IntDistance},
+    metrics::{InsertDeleteDistance, InfinityDistance, IntDistance},
     traits::{Float},
     domains::{AtomDomain, SeriesDomain, LazyFrameDomain},
 };
@@ -39,7 +39,7 @@ pub fn make_sized_partitioned_sum<T: Float>(
     Transformation<
         LazyFrameDomain,
         LazyFrameDomain,
-        SymmetricDistance, 
+        InsertDeleteDistance, 
         InfinityDistance<T>, // @RAPH: Implement check
     >,
 > {
@@ -157,7 +157,7 @@ pub fn make_sized_partitioned_sum<T: Float>(
             }
 
         }),
-        SymmetricDistance::default(),
+        InsertDeleteDistance::default(),
         InfinityDistance::<T>::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance|
             T::inf_cast(d_in / 2)?

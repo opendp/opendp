@@ -449,13 +449,13 @@ impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
     }
 }
 
-/// The Linfinity distance between two scalar-valued aggregates.
+/// The Linfinity distance between two vector-valued aggregates.
 ///
 /// # Proof Definition
 ///
 /// ### `d`-closeness
-/// For any two scalars $u, v \in \texttt{D}$ and $d$ of generic type $\texttt{Q}$,
-/// we say that $u, v$ are $d$-close under the the the absolute distance metric (abbreviated as $d_{Abs}$) whenever
+/// For any two scalars $u, v \in \texttt{D}^n$ and $d$ of generic type $\texttt{Q}$,
+/// we say that $u, v$ are $d$-close under the the the infinity distance metric (abbreviated as $d_{Inf}$) whenever
 ///
 /// ```math
 /// d_{infty}(u, v) = max|u - v| \leq d
