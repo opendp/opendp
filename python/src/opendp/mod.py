@@ -717,14 +717,14 @@ def binary_search(
 
         from opendp.typing import L2Distance, VectorDomain, AtomDomain
         from opendp.transformations import make_sized_bounded_mean
-        from opendp.measurements import make_base_gaussian
+        from opendp.measurements import then_base_gaussian
         from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP
         from opendp.mod import enable_features
         enable_features("contrib", "floating-point")
 
     >>> # build a histogram that emits float counts
     >>> dp_mean = make_fix_delta(make_zCDP_to_approxDP(
-    ...     make_sized_bounded_mean(1000, bounds=(0., 100.)) >> make_base_gaussian(1.)), 
+    ...     make_sized_bounded_mean(1000, bounds=(0., 100.)) >> then_base_gaussian(1.)), 
     ...     1e-8
     ... )
     ...

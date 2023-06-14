@@ -15,7 +15,8 @@ def test_amplification():
     assert not amplified.check(2, .494)
 
 def test_fix_delta():
-    base_gaussian = dp.c.make_zCDP_to_approxDP(dp.m.make_base_gaussian(10.))
+    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    base_gaussian = dp.c.make_zCDP_to_approxDP(dp.m.make_base_gaussian(*input_space, 10.))
     print(base_gaussian.map(1.).epsilon(1e-6))
     fixed_base_gaussian = dp.c.make_fix_delta(base_gaussian, 1e-6)
 
@@ -67,14 +68,16 @@ def test_make_basic_composition_leak():
     
 
 def test_make_basic_composition_approx():
+    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
     composed_fixed = dp.c.make_basic_composition([
-        dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_base_gaussian(1.)), 1e-7)
+        dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_base_gaussian(*input_space, 1.)), 1e-7)
     ] * 2)
     print(composed_fixed.map(1.))
 
 
 def test_cast_zcdp_approxdp():
-    base_gaussian = dp.m.make_base_gaussian(10., MO=dp.ZeroConcentratedDivergence[float])
+    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    base_gaussian = input_space >> dp.m.then_base_gaussian(10., MO=dp.ZeroConcentratedDivergence[float])
 
     print(base_gaussian.map(1.))
 
@@ -84,22 +87,21 @@ def test_cast_zcdp_approxdp():
     
 
 def test_make_pureDP_to_fixed_approxDP():
-    input_domain = dp.atom_domain(T=float)
-    input_metric = dp.absolute_distance(T=float)
+    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+
     meas = dp.c.make_basic_composition([
-        dp.c.make_pureDP_to_fixed_approxDP(dp.m.make_base_laplace(input_domain, input_metric, 10.)),
-        dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_base_gaussian(10.)), delta=1e-6)
+        dp.c.make_pureDP_to_fixed_approxDP(dp.m.make_base_laplace(*input_space, 10.)),
+        dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_base_gaussian(*input_space, 10.)), delta=1e-6)
     ])
 
     print(meas.map(1.))
 
 
 def test_make_pureDP_to_zCDP():
-    input_domain = dp.atom_domain(T=float)
-    input_metric = dp.absolute_distance(T=float)
+    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
     meas = dp.c.make_basic_composition([
-        dp.c.make_pureDP_to_zCDP(dp.m.make_base_laplace(input_domain, input_metric, 10.)),
-        dp.m.make_base_gaussian(10.)
+        dp.c.make_pureDP_to_zCDP(dp.m.make_base_laplace(*input_space, 10.)),
+        dp.m.make_base_gaussian(*input_space, 10.)
     ])
 
     print(meas.map(1.))
