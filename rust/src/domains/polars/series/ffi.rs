@@ -38,21 +38,13 @@ fn series_domain<DI: 'static + SeriesAtomDomain>(name: &str, element_domain: DI)
 pub extern "C" fn opendp_domains__series_domain(
     name: *mut c_char,
     element_domain: *const AnyDomain,
-<<<<<<< HEAD
-    _DI: *const c_char, // TODO: drop this once "suppress" in bootstrap is merged
-=======
->>>>>>> remotes/origin/773-sum-metrics
 ) -> FfiResult<*mut AnyDomain> {
     let name = try_!(util::to_str(name));
     let element_domain = try_as_ref!(element_domain);
     let DA = element_domain.type_.clone();
     let T = try_!(DA.get_atom());
 
-<<<<<<< HEAD
-    if DA.descriptor == "OptionDomain" {
-=======
     if DA.descriptor.starts_with("OptionDomain") {
->>>>>>> remotes/origin/773-sum-metrics
         fn monomorphize_option<T: 'static + CheckAtom + DataTypeFrom>(
             name: &str,
             element_domain: &AnyDomain,

@@ -19,14 +19,8 @@ use std::marker::PhantomData;
 
 use crate::{
     core::{Domain, Metric, MetricSpace},
-<<<<<<< HEAD
-    domains::{type_name, AtomDomain, MapDomain, VectorDomain, LazyFrameDomain},
-    traits::{CheckAtom, Hashable},
-    transformations::DataFrameDomain,
-=======
     domains::{type_name, AtomDomain, MapDomain, VectorDomain},
     traits::CheckAtom,
->>>>>>> remotes/origin/773-sum-metrics
 };
 #[cfg(feature = "contrib")]
 use crate::{traits::Hashable, transformations::DataFrameDomain};
