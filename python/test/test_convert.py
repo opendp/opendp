@@ -122,10 +122,12 @@ def test_numpy_data():
 @pytest.mark.skipif('numpy' not in sys.modules,
                     reason="requires the Numpy library")
 def test_numpy_trans():
-    from opendp.transformations import make_bounded_sum
-    from opendp.mod import enable_features
-    enable_features("contrib")
-    assert make_bounded_sum(bounds=(0, 10))(np.array([1, 2, 3], dtype=np.int32)) == 6
+    import opendp.prelude as dp
+    dp.enable_features("contrib")
+    assert dp.t.make_sum(
+        dp.vector_domain(dp.atom_domain(bounds=(0, 10))), 
+        dp.symmetric_distance(),
+    )(np.array([1, 2, 3], dtype=np.int32)) == 6
 
 
 def test_overflow():

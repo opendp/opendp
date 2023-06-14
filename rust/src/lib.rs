@@ -39,7 +39,7 @@
 //!
 //! #[cfg(all(feature = "untrusted", feature = "partials"))]
 //! pub fn example() -> Fallible<()> {
-//!     use opendp::transformations::{make_split_lines, then_cast_default, make_cast_default, then_clamp, make_bounded_sum};
+//!     use opendp::transformations::{make_split_lines, then_cast_default, make_cast_default, then_clamp, then_sum};
 //!     use opendp::combinators::{make_chain_tt, make_chain_mt};
 //!     use opendp::measurements::then_base_laplace;
 //!
@@ -66,7 +66,7 @@
 //!     let load_and_clamp = load_numbers >> then_clamp(bounds);
 //!     
 //!     // After chaining, the resulting transformation is wrapped in a `Result`.
-//!     let load_and_sum = (load_and_clamp >> make_bounded_sum(bounds)?)?;
+//!     let load_and_sum = (load_and_clamp >> then_sum())?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
 //!     let noisy_sum = load_and_sum >> then_base_laplace(sigma, None);
@@ -76,7 +76,7 @@
 //!         make_split_lines()? >>
 //!         then_cast_default() >>
 //!         then_clamp(bounds) >>
-//!         make_bounded_sum(bounds)? >>
+//!         then_sum() >>
 //!         then_base_laplace(sigma, None)
 //!     )?;
 //!

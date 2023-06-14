@@ -32,8 +32,8 @@ This is extremely powerful!
 
     from opendp.measurements import *
     from opendp.transformations import *
-    from opendp.domains import atom_domain
-    from opendp.metrics import absolute_distance
+    from opendp.domains import atom_domain, vector_domain
+    from opendp.metrics import absolute_distance, symmetric_distance
     from opendp.mod import *
     from opendp.mod import enable_features
     enable_features('contrib', 'floating-point')
@@ -85,7 +85,9 @@ This is extremely powerful!
 
     >>> # finds the largest clipping bounds
     >>> binary_search_param(
-    ...     lambda c: make_bounded_sum((-c, c)) >> then_base_gaussian(scale=1.), 
+    ...     lambda c: make_sum(
+    ...         vector_domain(atom_domain(bounds=(-c, c))), 
+    ...         symmetric_distance()) >> then_base_gaussian(scale=1.), 
     ...     d_in=2, d_out=1.)
     0.3535533897700931
 

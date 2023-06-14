@@ -196,13 +196,13 @@ def test_bounded_mean():
 
 
 def test_bounded_sum():
-    from opendp.transformations import make_bounded_sum
-    query = make_bounded_sum(bounds=(0., 10.))
+    import opendp.prelude as dp
+    query = dp.t.make_sum(dp.vector_domain(dp.atom_domain(bounds=(0., 10.))), dp.symmetric_distance())
     assert query(FLOAT_DATA) == 45.
     # TODO: tighten the check
     assert query.check(1, 20.)
 
-    query = make_bounded_sum(bounds=(0, 10))
+    query = dp.t.make_sum(dp.vector_domain(dp.atom_domain(bounds=(0, 10))), dp.symmetric_distance())
     assert query(INT_DATA) == 45
     # TODO: tighten the check
     assert query.check(1, 20)
@@ -215,21 +215,28 @@ def test_bounded_sum():
 
 
 def test_sized_bounded_sum():
-    from opendp.transformations import make_sized_bounded_sum
-    query = make_sized_bounded_sum(size=9, bounds=(0., 10.))
+    import opendp.prelude as dp
+
+    domain = dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=9)
+    metric = dp.symmetric_distance()
+    query = (domain, metric) >> dp.t.then_sum()
     assert query(FLOAT_DATA) == 45.
     assert query.check(1, 10. + 1e-12)
 
-    query = make_sized_bounded_sum(size=10_000, bounds=(0., 10.))
+    domain = dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=10_000)
+    query = (domain, metric) >> dp.t.then_sum()
     assert query.check(1, 10. + 1e-9)
 
-    query = make_sized_bounded_sum(size=100_000, bounds=(0., 10.))
+    domain = dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=100_000)
+    query = (domain, metric) >> dp.t.then_sum()
     assert query.check(1, 10. + 1e-8)
 
-    query = make_sized_bounded_sum(size=1_000_000, bounds=(0., 10.))
+    domain = dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=1_000_000)
+    query = (domain, metric) >> dp.t.then_sum()
     assert query.check(1, 10. + 1e-7)
 
-    query = make_sized_bounded_sum(size=10_000_000, bounds=(0., 10.))
+    domain = dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=10_000_000)
+    query = (domain, metric) >> dp.t.then_sum()
     assert query.check(1, 10. + 1e-5)
 
 

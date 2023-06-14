@@ -19,7 +19,7 @@ def test_sequential_composition():
     sum_query = (
         sc_meas.input_space
         >> dp.t.then_clamp((0, 10))
-        >> dp.t.make_bounded_sum((0, 10))
+        >> dp.t.then_sum()
         >> dp.m.then_base_discrete_laplace(100.0)
     )
 
@@ -29,7 +29,7 @@ def test_sequential_composition():
     exact_sum = (
         sc_meas.input_space
         >> dp.t.then_clamp((0, 10))
-        >> dp.t.make_bounded_sum((0, 10))
+        >> dp.t.then_sum()
     )
     print("exact sum:", exact_sum)
     exact_sum_sc_qbl = sc_qbl(
@@ -66,7 +66,7 @@ def test_sequential_composition_approxdp():
     sum_meas = (
         input_space
         >> dp.t.then_clamp((0, 10))
-        >> dp.t.make_bounded_sum((0, 10))
+        >> dp.t.then_sum()
         >> dp.m.then_base_discrete_gaussian(100.0)
     )
     sum_meas = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(sum_meas), 1e-6)

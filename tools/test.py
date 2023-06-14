@@ -26,7 +26,7 @@ def main():
         make_select_column(key="B", TOA=str) >>
         then_cast_default(TOA=int) >>
         then_clamp(bounds=(0, 10)) >>
-        make_bounded_sum(bounds=(0, 10)) >>
+        then_sum() >>
         make_base_discrete_laplace(scale=1.0)
     )
 

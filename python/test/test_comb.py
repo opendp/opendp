@@ -31,7 +31,7 @@ def test_make_basic_composition():
             dp.space_of(int) >> dp.m.then_laplace(scale=200.)
         ]),
         input_pair >> dp.t.then_cast_default(bool) >> dp.t.then_cast_default(int) >> dp.t.make_count(TIA=int, TO=int) >> dp.m.then_laplace(scale=2.), 
-        input_pair >> dp.t.then_cast_default(float) >> dp.t.then_clamp((0., 10.)) >> dp.t.make_bounded_sum((0., 10.)) >> dp.m.then_laplace(scale=2.), 
+        input_pair >> dp.t.then_cast_default(float) >> dp.t.then_clamp((0., 10.)) >> dp.t.then_sum() >> dp.m.then_laplace(scale=2.), 
 
         dp.c.make_basic_composition([
             dp.t.make_count(TIA=int, TO=int) >> dp.m.then_laplace(scale=2.), 

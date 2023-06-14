@@ -31,21 +31,21 @@ Postprocessing functionality is provided by the :py:func:`opendp.combinators.mak
 Since the outer Transformation is postprocessing, the metrics and stability map of the outer Transformation are ignored.
 In this case, it is only necessary for the types to conform.
 
-In the following example we chain :py:func:`opendp.measurements.make_base_discrete_laplace` with :py:func:`opendp.transformations.make_bounded_sum`.
+In the following example we chain :py:func:`opendp.measurements.make_base_discrete_laplace` with :py:func:`opendp.transformations.make_sum`.
 
 .. doctest::
 
-    >>> from opendp.transformations import make_bounded_sum
-    >>> from opendp.measurements import make_base_discrete_laplace
-    >>> from opendp.combinators import make_chain_mt
-    >>> from opendp.mod import enable_features
-    >>> enable_features("contrib", "floating-point")
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib", "floating-point")
     ...
     >>> # call a constructor to produce a transformation
-    >>> bounded_sum = make_bounded_sum(bounds=(0, 1))
+    >>> sum_trans = dp.t.make_sum(
+    ...     dp.vector_domain(dp.atom_domain(bounds=(0, 1))), 
+    ...     dp.symmetric_distance()
+    ... )
     >>> # call a constructor to produce a measurement
-    >>> base_dl = make_base_discrete_laplace(bounded_sum.output_domain, bounded_sum.output_metric, scale=1.0)
-    >>> noisy_sum = make_chain_mt(base_dl, bounded_sum)
+    >>> lap_meas = dp.m.make_laplace(sum_trans.output_domain, sum_trans.output_metric, scale=1.0)
+    >>> noisy_sum = dp.c.make_chain_mt(lap_meas, sum_trans)
     ...
     >>> # investigate the privacy relation
     >>> symmetric_distance = 1
@@ -63,7 +63,7 @@ and :func:`make_chain_tm <opendp.combinators.make_chain_tm>`.
 
 .. doctest::
 
-    >>> noisy_sum = bounded_sum >> base_dl
+    >>> noisy_sum_meas = sum_trans >> lap_meas
 
 .. _chaining-mismatch:
 
@@ -74,21 +74,26 @@ In this example the chaining was successful because:
 
 Chaining fails if we were to adjust the domains such that they won't match.
 In the below example, the adjustment is subtle, but the bounds were adjusted to floats.
-``make_bounded_sum`` is equally capable of summing floats,
-but the chaining fails because the sum emits floats and the discrete laplace mechanism expects integers.
+``make_sum`` is equally capable of summing floats,
+but the chaining fails because the sum emits floats and the discrete Laplace mechanism expects integers.
 
 .. doctest::
 
     >>> from opendp.mod import OpenDPException
+    >>> # call a constructor to produce a transformation, but this time with float bounds
+    >>> sum_trans = dp.t.make_sum(
+    ...     dp.vector_domain(dp.atom_domain(bounds=(0., 1.))), 
+    ...     dp.symmetric_distance()
+    ... )
     >>> try:
-    ...     make_bounded_sum(bounds=(0., 1.)) >> base_dl
+    ...     sum_trans >> lap_meas
     ... except OpenDPException as err:
     ...     print(err.message[:-1])
     Intermediate domains don't match. See https://github.com/opendp/opendp/discussions/297
         output_domain: AtomDomain(T=f64)
         input_domain:  AtomDomain(T=i32)
 
-Note that ``noisy_sum``'s input domain and input metric come from ``bounded_sum``'s input domain and input metric.
+Note that ``noisy_sum_trans``'s input domain and input metric come from ``sum_trans``'s input domain and input metric.
 This is intended to enable further chaining with preprocessors like :py:func:`make_cast <opendp.transformations.make_cast>`, :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`, :py:func:`make_clamp <opendp.transformations.make_clamp>` and :py:func:`make_resize <opendp.transformations.make_resize>`.
 See the section on :ref:`transformation-constructors` for more information on how to preprocess data in OpenDP.
 
@@ -307,7 +312,7 @@ The resulting Transformation may be used interchangeably with those constructed 
     ...     >> then_cast_default(TOA=int)
     ...     >> make_repeat(2)  # our custom transformation
     ...     >> then_clamp((1, 2))
-    ...     >> make_bounded_sum((1, 2))
+    ...     >> then_sum()
     ...     >> then_base_discrete_laplace(1.0)
     ... )
     ...

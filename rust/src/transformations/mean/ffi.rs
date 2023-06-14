@@ -11,7 +11,7 @@ use crate::ffi::util::Type;
 use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
 use crate::traits::{ExactIntCast, InfMul};
 use crate::transformations::{
-    make_sized_bounded_mean, LipschitzMulFloatDomain, LipschitzMulFloatMetric, MakeSizedBoundedSum,
+    make_sized_bounded_mean, LipschitzMulFloatDomain, LipschitzMulFloatMetric, MakeSum,
 };
 
 #[no_mangle]
@@ -27,7 +27,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_mean(
     ) -> FfiResult<*mut AnyTransformation>
     where
         MI: 'static + Metric,
-        T: 'static + MakeSizedBoundedSum<MI> + ExactIntCast<usize> + Float + InfMul,
+        T: 'static + MakeSum<MI> + ExactIntCast<usize> + Float + InfMul,
         AtomDomain<T>: LipschitzMulFloatDomain<Atom = T>,
         AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
         (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
