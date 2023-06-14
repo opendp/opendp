@@ -65,8 +65,8 @@ pub(crate) fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStre
 
     if cfg!(feature = "partials") {
         // write a partial function if the constructor adheres to the partial function pattern
-        if let Some(part_fn) = generate_partial(item_fn.clone()) {
-            output.extend(TokenStream::from(part_fn.to_token_stream()));
+        if let Some(then_fn) = generate_partial(item_fn.clone()) {
+            output.extend(TokenStream::from(then_fn.to_token_stream()));
         };
     }
     output

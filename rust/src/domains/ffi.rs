@@ -228,7 +228,7 @@ pub extern "C" fn opendp_domains__option_domain(
     returns(c_type = "FfiResult<AnyDomain *>")
 )]
 /// Construct an instance of `VectorDomain`.
-/// 
+///
 /// # Arguments
 /// * `atom_domain` - The inner domain.
 #[no_mangle]
@@ -258,7 +258,7 @@ pub extern "C" fn opendp_domains__vector_domain(
 
 #[bootstrap(name = "map_domain", returns(c_type = "FfiResult<AnyDomain *>"))]
 /// Construct an instance of `MapDomain`.
-/// 
+///
 /// # Arguments
 /// * `key_domain` - domain of keys in the hashmap
 /// * `value_domain` - domain of values in the hashmap

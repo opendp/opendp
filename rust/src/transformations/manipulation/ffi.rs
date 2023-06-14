@@ -199,9 +199,7 @@ mod tests {
     #[test]
     fn test_make_is_equal() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_is_equal(
-            AnyDomain::new_raw(VectorDomain::new(
-                AtomDomain::<i32>::default(),
-            )),
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<i32>::default())),
             AnyMetric::new_raw(SymmetricDistance::default()),
             AnyObject::new_raw(1) as *const AnyObject,
         ))?;

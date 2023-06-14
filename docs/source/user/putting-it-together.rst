@@ -43,7 +43,7 @@ Our transformation will
     ...     make_select_column(key='Score', TOA=str) >>
     ...     make_cast(TIA=str, TOA=float) >>
     ...     make_impute_constant(option_domain(atom_domain(T=float)), constant=constant) >>
-    ...     part_clamp(bounds) >>
+    ...     then_clamp(bounds) >>
     ...     make_resize(size, atom_domain(bounds), constant=constant) >>
     ...     make_sized_bounded_mean(size, bounds)
     ... )
@@ -69,13 +69,13 @@ will help us find a noise scale parameter that satisfies our given budget.
 
 .. doctest::
 
-    >>> from opendp.measurements import part_base_laplace
+    >>> from opendp.measurements import then_base_laplace
     >>> from opendp.mod import enable_features, binary_search_param
     ...
     >>> # Find the smallest noise scale for which the relation still passes
     >>> # If we didn't need a handle on scale (for accuracy later),
     >>> #     we could just use binary_search_chain and inline the lambda
-    >>> make_chain = lambda s: transformation >> part_base_laplace(s)
+    >>> make_chain = lambda s: transformation >> then_base_laplace(s)
     >>> scale = binary_search_param(make_chain, d_in=num_tests, d_out=budget) # -> 1.33
     >>> measurement = make_chain(scale)
     ...

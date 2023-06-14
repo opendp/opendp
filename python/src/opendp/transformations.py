@@ -57,11 +57,11 @@ __all__ = [
     "make_split_records",
     "make_subset_by",
     "make_unordered",
-    "part_cast_default",
-    "part_clamp",
-    "part_df_cast_default",
-    "part_df_is_equal",
-    "part_is_equal"
+    "then_cast_default",
+    "then_clamp",
+    "then_df_cast_default",
+    "then_df_is_equal",
+    "then_is_equal"
 ]
 
 
@@ -602,7 +602,7 @@ def make_cast_default(
     
     return output
 
-def part_cast_default(
+def then_cast_default(
     TOA: RuntimeTypeDescriptor
 ):
     return PartialConstructor(lambda input_domain, input_metric: make_cast_default(
@@ -754,7 +754,7 @@ def make_clamp(
     
     return output
 
-def part_clamp(
+def then_clamp(
     bounds: Tuple[Any, Any]
 ):
     return PartialConstructor(lambda input_domain, input_metric: make_clamp(
@@ -1154,7 +1154,7 @@ def make_df_cast_default(
     
     return output
 
-def part_df_cast_default(
+def then_df_cast_default(
     column_name: Any,
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
@@ -1223,7 +1223,7 @@ def make_df_is_equal(
     
     return output
 
-def part_df_is_equal(
+def then_df_is_equal(
     column_name: Any,
     value: Any,
     TIA: RuntimeTypeDescriptor = None
@@ -1625,7 +1625,7 @@ def make_is_equal(
     
     return output
 
-def part_is_equal(
+def then_is_equal(
     value: Any
 ):
     return PartialConstructor(lambda input_domain, input_metric: make_is_equal(
