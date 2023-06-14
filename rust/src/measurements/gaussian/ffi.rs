@@ -144,7 +144,7 @@ mod tests {
             util::into_raw(AnyDomain::new(AtomDomain::<i32>::default())),
             util::into_raw(AnyMetric::new(AbsoluteDistance::<i32>::default())),
             util::into_raw(0.0) as *const c_void,
-            "f64".to_char_p(),
+            "ZeroConcentratedDivergence<f64>".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(99);
         let res = core::opendp_core__measurement_invoke(&measurement, arg);
