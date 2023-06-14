@@ -2,11 +2,7 @@ from typing import Sequence, Tuple, List, Union, Dict
 
 from opendp._lib import *
 
-<<<<<<< HEAD
-from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable, Domain
-=======
 from opendp.mod import Domain, UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
->>>>>>> remotes/origin/773-sum-metrics
 from opendp.typing import RuntimeType, Vec
 
 try:
