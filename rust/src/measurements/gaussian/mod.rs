@@ -71,7 +71,7 @@ where
 ///
 /// | `input_domain`                  | input type   | `input_metric`         |
 /// | ------------------------------- | ------------ | ---------------------- |
-/// | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
+/// | `atom_domain(T)`                | `T`          | `absolute_distance(T)` |
 /// | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l2_distance(T)`       |
 ///
 /// This function takes a noise granularity in terms of 2^k.
@@ -79,13 +79,15 @@ where
 /// If k is not set, k defaults to the smallest granularity.
 ///
 /// # Arguments
-/// * `input_domain` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
-/// * `input_metric` - Metric of the data type to be privatized. Valid values are `AbsoluteDistance<T>` or `L2Distance<T>`.
+/// * `input_domain` - Domain of the data type to be privatized.
+/// * `input_metric` - Metric of the data type to be privatized.
 /// * `scale` - Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
 /// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
+/// * `QI` - Input distance. The type of sensitivities. Can be any integer or float.
 pub fn make_base_gaussian<D, MO>(
     input_domain: D,
     input_metric: D::InputMetric,

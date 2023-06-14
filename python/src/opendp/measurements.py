@@ -36,12 +36,12 @@ def make_base_discrete_gaussian(
 ) -> Measurement:
     """Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
     
-    Set `D` to change the input data type and input metric:
+    Valid inputs for `input_domain` and `input_metric` are:
     
-    | `D`                          | input type   | `D::InputMetric`        |
-    | ---------------------------- | ------------ | ----------------------- |
-    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<QI>`  |
-    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L2Distance<QI>`        |
+    | `input_domain`                  | input type   | `input_metric`         |
+    | ------------------------------- | ------------ | ---------------------- |
+    | `atom_domain(T)`                | `T`          | `absolute_distance(QI)` |
+    | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l2_distance(QI)`       |
     
     [make_base_discrete_gaussian in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_gaussian.html)
     
@@ -52,8 +52,8 @@ def make_base_discrete_gaussian(
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MO`
     
-    :param input_domain: Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
-    :param input_metric: Metric of the data type to be privatized. Valid values are `AbsoluteDistance<T>` or `L2Distance<T>`.
+    :param input_domain: Domain of the data type to be privatized.
+    :param input_metric: Metric of the data type to be privatized.
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
     :param MO: Output measure. The only valid measure is `ZeroConcentratedDivergence<QO>`, but QO can be any float.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
@@ -337,7 +337,7 @@ def make_base_gaussian(
     
     | `input_domain`                  | input type   | `input_metric`         |
     | ------------------------------- | ------------ | ---------------------- |
-    | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
+    | `atom_domain(T)`                | `T`          | `absolute_distance(T)` |
     | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l2_distance(T)`       |
     
     This function takes a noise granularity in terms of 2^k.
@@ -353,8 +353,8 @@ def make_base_gaussian(
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MO`
     
-    :param input_domain: Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
-    :param input_metric: Metric of the data type to be privatized. Valid values are `AbsoluteDistance<T>` or `L2Distance<T>`.
+    :param input_domain: Domain of the data type to be privatized.
+    :param input_metric: Metric of the data type to be privatized.
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
     :param k: The noise granularity in terms of 2^k.
     :type k: int

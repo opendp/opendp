@@ -82,16 +82,16 @@ where
 )]
 /// Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
 ///
-/// Set `D` to change the input data type and input metric:
+/// Valid inputs for `input_domain` and `input_metric` are:
 ///
-/// | `D`                          | input type   | `D::InputMetric`        |
-/// | ---------------------------- | ------------ | ----------------------- |
-/// | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<QI>`  |
-/// | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L2Distance<QI>`        |
+/// | `input_domain`                  | input type   | `input_metric`         |
+/// | ------------------------------- | ------------ | ---------------------- |
+/// | `atom_domain(T)`                | `T`          | `absolute_distance(QI)` |
+/// | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l2_distance(QI)`       |
 ///
 /// # Arguments
-/// * `input_domain` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
-/// * `input_metric` - Metric of the data type to be privatized. Valid values are `AbsoluteDistance<T>` or `L2Distance<T>`.
+/// * `input_domain` - Domain of the data type to be privatized.
+/// * `input_metric` - Metric of the data type to be privatized.
 /// * `scale` - Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
 /// * `k` - The noise granularity in terms of 2^k.
 ///
