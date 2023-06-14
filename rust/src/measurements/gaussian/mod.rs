@@ -79,13 +79,12 @@ where
 /// If k is not set, k defaults to the smallest granularity.
 ///
 /// # Arguments
-/// * `input_domain` - Domain of the data type to be privatized.
-/// * `input_metric` - Metric of the data type to be privatized.
+/// * `input_domain` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
+/// * `input_metric` - Metric of the data type to be privatized. Valid values are `AbsoluteDistance<T>` or `L2Distance<T>`.
 /// * `scale` - Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
-/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
 /// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
 pub fn make_base_gaussian<D, MO>(
     input_domain: D,

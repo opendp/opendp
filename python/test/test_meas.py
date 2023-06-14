@@ -119,35 +119,30 @@ def test_base_vector_discrete_laplace():
     assert not meas.check(1, 0.49999)
 
 def test_base_discrete_gaussian():
-    meas = dp.m.make_base_discrete_gaussian(scale=2.)
+    input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
+    meas = dp.m.make_base_discrete_gaussian(*input_space, scale=2.)
     print("base_discrete_gaussian:", meas(100))
     assert meas.check(1, 0.5)
     assert meas.check(1, 0.125)
 
 def test_base_vector_discrete_gaussian():
-    from opendp.measurements import make_base_discrete_gaussian
-    meas = make_base_discrete_gaussian(scale=2., D="VectorDomain<AtomDomain<i32>>", QI=float)
+    input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.l2_distance(T=float)
+    meas = dp.m.make_base_discrete_gaussian(*input_space, scale=2.)
     print("vector base_dl:", meas([100, 10, 12]))
     assert meas.check(1., 0.125)
     assert not meas.check(1., 0.124)
 
 def test_make_count_by_ptr():
-    from opendp.transformations import make_count_by
-    from opendp.measurements import make_base_ptr
-    from opendp.combinators import make_fix_delta
-    from opendp.typing import L1Distance
-
-    meas = make_count_by(MO=L1Distance[float], TK=str, TV=float) \
-           >> make_base_ptr(scale=2., threshold=28., TK=str)
-    fixed_meas = make_fix_delta(meas, 1e-6)
+    meas = dp.t.make_count_by(MO=dp.L1Distance[float], TK=str, TV=float) \
+           >> dp.m.make_base_ptr(scale=2., threshold=28., TK=str)
+    fixed_meas = dp.c.make_fix_delta(meas, 1e-6)
     print("stability histogram:", fixed_meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
 
     print(meas.map(1).epsilon(1e-6))
     assert fixed_meas.check(1, (1.0, 1e-6))
 
 def test_randomized_response():
-    from opendp.measurements import make_randomized_response
-    meas = make_randomized_response(categories=["A", "B", "C", "D"], prob=0.75)
+    meas = dp.m.make_randomized_response(categories=["A", "B", "C", "D"], prob=0.75)
     print("randomized response:", meas("A"))
     import math
     assert meas.check(1, math.log(9.))
@@ -155,8 +150,7 @@ def test_randomized_response():
 
 
 def test_randomized_response_bool():
-    from opendp.measurements import make_randomized_response_bool
-    meas = make_randomized_response_bool(prob=0.75)
+    meas = dp.m.make_randomized_response_bool(prob=0.75)
     print("randomized response:", meas(True))
     import math
     assert meas.check(1, math.log(3.))
