@@ -34,7 +34,7 @@ use super::get_discretization_consts;
 /// If k is not set, k defaults to the smallest granularity.
 ///
 /// # Arguments
-/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 /// * `threshold` - Exclude counts that are less than this minimum value.
 /// * `k` - The noise granularity in terms of 2^k.
 ///

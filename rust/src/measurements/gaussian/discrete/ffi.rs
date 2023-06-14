@@ -9,7 +9,7 @@ use crate::domains::{AtomDomain, VectorDomain};
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::Type;
 use crate::measurements::{
-    make_base_discrete_gaussian, DiscreteGaussianDomain, DiscreteGaussianMeasure,
+    make_base_discrete_gaussian, BaseDiscreteGaussianDomain, DiscreteGaussianMeasure,
 };
 use crate::measures::ZeroConcentratedDivergence;
 use crate::traits::{CheckAtom, Float, InfCast, Number};
@@ -43,7 +43,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
             scale: MO::Atom,
         ) -> FfiResult<*mut AnyMeasurement>
         where
-            D: 'static + DiscreteGaussianDomain<QI>,
+            D: 'static + BaseDiscreteGaussianDomain<QI>,
             (D, D::InputMetric): MetricSpace,
             Integer: From<D::Atom> + SaturatingCast<D::Atom>,
 

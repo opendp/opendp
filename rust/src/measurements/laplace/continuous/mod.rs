@@ -49,7 +49,7 @@ impl<T: Clone + CheckAtom> BaseLaplaceDomain for VectorDomain<AtomDomain<T>> {
 /// # Arguments
 /// * `input_domain` - Domain of the data type to be privatized.
 /// * `input_metric` - Metric of the data type to be privatized.
-/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 /// * `k` - The noise granularity in terms of 2^k.
 pub fn make_base_laplace<D>(
     input_domain: D,

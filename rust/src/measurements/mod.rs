@@ -2,18 +2,13 @@
 //!
 //! The different [`crate::core::Measurement`] implementations in this module are accessed by calling the appropriate constructor function.
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Measurement` does.
-#[cfg(all(feature = "use-mpfr", feature = "contrib"))]
-mod discrete_gaussian;
-#[cfg(all(feature = "use-mpfr", feature = "contrib"))]
-pub use crate::measurements::discrete_gaussian::*;
-
-mod laplace;
-pub use crate::measurements::laplace::*;
-
 #[cfg(all(feature = "floating-point", feature = "contrib", feature = "use-mpfr"))]
 mod gaussian;
 #[cfg(all(feature = "floating-point", feature = "contrib", feature = "use-mpfr"))]
 pub use crate::measurements::gaussian::*;
+
+mod laplace;
+pub use crate::measurements::laplace::*;
 
 #[cfg(all(feature = "floating-point", feature = "contrib"))]
 mod ptr;

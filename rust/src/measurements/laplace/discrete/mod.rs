@@ -93,7 +93,7 @@ impl<T: Clone + CheckAtom> BaseDiscreteLaplaceDomain for VectorDomain<AtomDomain
 /// # Arguments
 /// * `input_domain` - Domain of the data type to be privatized.
 /// * `input_metric` - Metric of the data type to be privatized.
-/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 ///
 /// # Generics
 /// * `QO` - Data type of the output distance and scale. `f32` or `f64`.
