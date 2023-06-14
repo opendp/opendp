@@ -42,10 +42,8 @@ __all__ = [
     "make_quantiles_from_counts",
     "make_resize",
     "make_scan_csv",
-<<<<<<< HEAD
+    "make_scan_csv",
     "make_scan_parquet",
-=======
->>>>>>> remotes/origin/773-sum-metrics
     "make_select_column",
     "make_sink_csv",
     "make_sized_bounded_float_checked_sum",
@@ -68,7 +66,8 @@ __all__ = [
     "part_df_cast_default",
     "part_df_is_equal",
     "part_is_equal",
-    "part_scan_csv"
+    "part_scan_csv",
+    "part_sink_csv"
 ]
 
 
@@ -2028,7 +2027,6 @@ def make_resize(
 
 @versioned
 def make_scan_csv(
-<<<<<<< HEAD
     lazy_frame_domain,
     input_metric,
     delimiter = ",",
@@ -2046,13 +2044,6 @@ def make_scan_csv(
     skip_rows_after_header: int = 0,
     lossy_utf8: bool = False,
     M: RuntimeTypeDescriptor = None
-=======
-    input_domain,
-    input_metric,
-    cache: bool = True,
-    low_memory: bool = False,
-    rechunk: bool = True
->>>>>>> remotes/origin/773-sum-metrics
 ) -> Transformation:
     """Parse a path to a CSV into a LazyFrame.
     
@@ -2065,7 +2056,6 @@ def make_scan_csv(
     * Input Metric:   `M`
     * Output Metric:  `M`
     
-<<<<<<< HEAD
     :param lazy_frame_domain: The domain of the LazyFrame to be constructed
     :param input_metric: The metric space under which neighboring LazyFrames are compared
     :param delimiter: Set the CSV file's column delimiter as a byte character
@@ -2075,15 +2065,10 @@ def make_scan_csv(
     :type ignore_errors: bool
     :param skip_rows: Skip the first `n` rows during parsing. The header will be parsed at row `n`.
     :type skip_rows: int
-=======
-    :param input_domain: CSV domain
-    :param input_metric: The metric space under which neighboring LazyFrames are compared
->>>>>>> remotes/origin/773-sum-metrics
     :param cache: Cache the DataFrame after reading.
     :type cache: bool
     :param low_memory: Reduce memory usage at the expense of performance
     :type low_memory: bool
-<<<<<<< HEAD
     :param comment_char: Set the comment character. Lines starting with this character will be ignored.
     :param quote_char: Set the `char` used as quote char. The default is `"`. If set to `[None]` quoting is disabled.
     :param eol_char: Set the `char` used as end of line. The default is `\n`.
@@ -2099,10 +2084,6 @@ def make_scan_csv(
     :type lossy_utf8: bool
     :param M: One of the dataset metrics
     :type M: :py:ref:`RuntimeTypeDescriptor`
-=======
-    :param rechunk: Rechunk the memory to contiguous chunks when parsing is done.
-    :type rechunk: bool
->>>>>>> remotes/origin/773-sum-metrics
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -2110,7 +2091,6 @@ def make_scan_csv(
     """
     assert_features("contrib")
     
-<<<<<<< HEAD
     # Standardize type arguments.
     M = RuntimeType.parse_or_infer(type_name=M, public_example=input_metric)
     
@@ -2141,6 +2121,71 @@ def make_scan_csv(
     output = c_to_py(unwrap(lib_function(c_lazy_frame_domain, c_input_metric, c_delimiter, c_has_header, c_ignore_errors, c_skip_rows, c_cache, c_low_memory, c_comment_char, c_quote_char, c_eol_char, c_null_value, c_missing_is_null, c_rechunk, c_skip_rows_after_header, c_lossy_utf8, c_M), Transformation))
     
     return output
+
+
+@versioned
+def make_scan_csv(
+    input_domain,
+    input_metric,
+    cache: bool = True,
+    low_memory: bool = False,
+    rechunk: bool = True
+) -> Transformation:
+    """Parse a path to a CSV into a LazyFrame.
+    
+    [make_scan_csv in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_scan_csv.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `CsvDomain`
+    * Output Domain:  `LazyFrameDomain`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+    
+    :param input_domain: CSV domain
+    :param input_metric: The metric space under which neighboring LazyFrames are compared
+    :param cache: Cache the DataFrame after reading.
+    :type cache: bool
+    :param low_memory: Reduce memory usage at the expense of performance
+    :type low_memory: bool
+    :param rechunk: Rechunk the memory to contiguous chunks when parsing is done.
+    :type rechunk: bool
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_cache = py_to_c(cache, c_type=ctypes.c_bool, type_name=bool)
+    c_low_memory = py_to_c(low_memory, c_type=ctypes.c_bool, type_name=bool)
+    c_rechunk = py_to_c(rechunk, c_type=ctypes.c_bool, type_name=bool)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_scan_csv
+    lib_function.argtypes = [Domain, Metric, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_cache, c_low_memory, c_rechunk), Transformation))
+    
+    return output
+
+def part_scan_csv(
+    cache: bool = True,
+    low_memory: bool = False,
+    rechunk: bool = True
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_scan_csv(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        cache=cache,
+        low_memory=low_memory,
+        rechunk=rechunk))
+
 
 
 @versioned
@@ -2203,37 +2248,6 @@ def make_scan_parquet(
     output = c_to_py(unwrap(lib_function(c_lazy_frame_domain, c_input_metric, c_cache, c_rechunk, c_low_memory, c_use_statistics, c_M), Transformation))
     
     return output
-=======
-    # No type arguments to standardize.
-    # Convert arguments to c types.
-    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
-    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
-    c_cache = py_to_c(cache, c_type=ctypes.c_bool, type_name=bool)
-    c_low_memory = py_to_c(low_memory, c_type=ctypes.c_bool, type_name=bool)
-    c_rechunk = py_to_c(rechunk, c_type=ctypes.c_bool, type_name=bool)
-    
-    # Call library function.
-    lib_function = lib.opendp_transformations__make_scan_csv
-    lib_function.argtypes = [Domain, Metric, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool]
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_cache, c_low_memory, c_rechunk), Transformation))
-    
-    return output
-
-def part_scan_csv(
-    cache: bool = True,
-    low_memory: bool = False,
-    rechunk: bool = True
-):
-    return PartialConstructor(lambda input_domain, input_metric: make_scan_csv(
-        input_domain=input_domain,
-        input_metric=input_metric,
-        cache=cache,
-        low_memory=low_memory,
-        rechunk=rechunk))
-
->>>>>>> remotes/origin/773-sum-metrics
 
 
 @versioned
@@ -2290,7 +2304,7 @@ def make_sink_csv(
     input_domain,
     input_metric,
     output_path: str,
-    MI: RuntimeTypeDescriptor = None
+    MI: RuntimeTypeDescriptor
 ) -> Transformation:
     """Write a `LazyFrame` to a CSV file.
     
@@ -2317,11 +2331,11 @@ def make_sink_csv(
     assert_features("contrib")
     
     # Standardize type arguments.
-    MI = RuntimeType.parse_or_infer(type_name=MI, public_example=input_metric)
+    MI = RuntimeType.parse(type_name=MI)
     
     # Convert arguments to c types.
     c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
-    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=MI)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_output_path = py_to_c(output_path, c_type=ctypes.c_char_p, type_name=None)
     c_MI = py_to_c(MI, c_type=ctypes.c_char_p)
     
@@ -2333,6 +2347,17 @@ def make_sink_csv(
     output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_path, c_MI), Transformation))
     
     return output
+
+def part_sink_csv(
+    output_path: str,
+    MI: RuntimeTypeDescriptor
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_sink_csv(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        output_path=output_path,
+        MI=MI))
+
 
 
 @versioned

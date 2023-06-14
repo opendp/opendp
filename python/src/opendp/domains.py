@@ -12,10 +12,7 @@ __all__ = [
     "domain_debug",
     "domain_type",
     "lazy_frame_domain",
-<<<<<<< HEAD
-=======
     "map_domain",
->>>>>>> remotes/origin/773-sum-metrics
     "member",
     "option_domain",
     "series_domain",
@@ -252,8 +249,6 @@ def lazy_frame_domain(
 
 
 @versioned
-<<<<<<< HEAD
-=======
 def map_domain(
     key_domain,
     value_domain
@@ -284,7 +279,6 @@ def map_domain(
 
 
 @versioned
->>>>>>> remotes/origin/773-sum-metrics
 def member(
     this: Domain,
     val: Any
@@ -352,12 +346,7 @@ def option_domain(
 @versioned
 def series_domain(
     name: str,
-<<<<<<< HEAD
-    element_domain,
-    DI: RuntimeTypeDescriptor = None
-=======
     element_domain
->>>>>>> remotes/origin/773-sum-metrics
 ):
     """Construct an instance of `SeriesDomain`.
     
@@ -366,31 +355,10 @@ def series_domain(
     :param name: The name of the series.
     :type name: str
     :param element_domain: The domain of elements in the series.
-<<<<<<< HEAD
-    :param DI: 
-    :type DI: :py:ref:`RuntimeTypeDescriptor`
-=======
->>>>>>> remotes/origin/773-sum-metrics
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
-<<<<<<< HEAD
-    # Standardize type arguments.
-    DI = RuntimeType.parse_or_infer(type_name=DI, public_example=element_domain)
-    
-    # Convert arguments to c types.
-    c_name = py_to_c(name, c_type=ctypes.c_char_p, type_name=str)
-    c_element_domain = py_to_c(element_domain, c_type=Domain, type_name=DI)
-    c_DI = py_to_c(DI, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    lib_function = lib.opendp_domains__series_domain
-    lib_function.argtypes = [ctypes.c_char_p, Domain, ctypes.c_char_p]
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(c_name, c_element_domain, c_DI), Domain))
-=======
     # No type arguments to standardize.
     # Convert arguments to c types.
     c_name = py_to_c(name, c_type=ctypes.c_char_p, type_name=str)
@@ -402,7 +370,6 @@ def series_domain(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_name, c_element_domain), Domain))
->>>>>>> remotes/origin/773-sum-metrics
     
     return output
 

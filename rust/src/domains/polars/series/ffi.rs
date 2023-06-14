@@ -16,13 +16,8 @@ use crate::{
 use super::{SeriesAtomDomain, SeriesDomain};
 
 #[bootstrap(
-<<<<<<< HEAD
-    arguments(element_domain(c_type = "AnyDomain *")),
-    generics(DI(example = "element_domain")),
-=======
     arguments(element_domain(c_type = "AnyDomain *", rust_type = b"null")),
     generics(DI(suppress)),
->>>>>>> remotes/origin/773-sum-metrics
     returns(c_type = "FfiResult<AnyDomain *>")
 )]
 /// Construct an instance of `SeriesDomain`.

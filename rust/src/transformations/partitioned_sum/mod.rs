@@ -6,7 +6,7 @@ use polars::datatypes::DataType::Utf8;
 use crate::{
     core::{Function, StabilityMap, Transformation},
     error::Fallible,
-    metrics::{InsertDeleteDistance, InfinityDistance, IntDistance},
+    metrics::{InsertDeleteDistance, L1Distance, IntDistance},
     traits::{Float},
     domains::{AtomDomain, SeriesDomain, LazyFrameDomain},
 };
@@ -40,19 +40,20 @@ pub fn make_sized_partitioned_sum<T: Float>(
         LazyFrameDomain,
         LazyFrameDomain,
         InsertDeleteDistance, 
-        InfinityDistance<T>, // @RAPH: Implement check
+        L1Distance<T>, // @RAPH: Implement check
     >,
 > {
 
     // Copy parition col name and check if partition column is in domain and get partition_column ref
     let partition_name = partition_column.to_string().clone();
-    let partition_id = (input_domain.series_domains.iter()).position(|s| s.field.name == partition_column).ok_or_else(|| err!(FailedFunction, "Desired partition column not in domain."))?;
+    //let partition_id = (input_domain.series_domains.iter()).position(|s| s.field.name == partition_column).ok_or_else(|| err!(FailedFunction, "Desired partition column not in domain."))?;
+    
     // Copy name of column to be summed and and check if sum column is in domain and get sum_col_id
     let sum_name = sum_column.to_string().clone();
     let _sum_id = (input_domain.series_domains.iter()).position(|s| s.field.name == sum_column).ok_or_else(|| err!(FailedFunction, "Desired column to be summed not in domain."))?;
     
     // Get margins keys
-    let margins_key = input_domain.margins.keys().into_iter().find(|k| k.contains(&partition_id)).unwrap();
+    let margins_key = input_domain.margins.keys().into_iter().find(|k| k.contains(&partition_name)).unwrap();
     // Get partition margin
     let counts = input_domain.margins.get(margins_key).unwrap().clone();
     
@@ -158,7 +159,7 @@ pub fn make_sized_partitioned_sum<T: Float>(
 
         }),
         InsertDeleteDistance::default(),
-        InfinityDistance::<T>::default(),
+        L1Distance::<T>::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance|
             T::inf_cast(d_in / 2)?
                 .inf_mul(&ideal_sensitivity)?

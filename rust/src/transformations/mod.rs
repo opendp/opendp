@@ -49,20 +49,16 @@ mod mean;
 pub use crate::transformations::mean::*;
 
 #[cfg(feature = "contrib")]
+mod partitioned_sum;
+#[cfg(feature = "contrib")]
+pub use crate::transformations::partitioned_sum::*;
+
+#[cfg(feature = "contrib")]
 mod polars;
 #[cfg(feature = "contrib")]
 pub use crate::transformations::polars::*;
 
-<<<<<<< HEAD
-#[cfg(feature="contrib")]
-pub mod partitioned_sum;
-#[cfg(feature="contrib")]
-pub use crate::transformations::partitioned_sum::*;
-
-#[cfg(feature="contrib")]
-=======
 #[cfg(feature = "contrib")]
->>>>>>> remotes/origin/773-sum-metrics
 mod variance;
 #[cfg(feature = "contrib")]
 pub use crate::transformations::variance::*;

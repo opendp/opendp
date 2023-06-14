@@ -49,9 +49,6 @@ impl<K: Hash + Eq> Debug for DataFrameDomain<K> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "DataFrameDomain({:?})", type_name!(K))
     }
-<<<<<<< HEAD
-}
-=======
 }
 
 impl<K: Hash + Eq> Default for DataFrameDomain<K> {
@@ -59,4 +56,3 @@ impl<K: Hash + Eq> Default for DataFrameDomain<K> {
         Self::new()
     }
 }
->>>>>>> remotes/origin/773-sum-metrics
