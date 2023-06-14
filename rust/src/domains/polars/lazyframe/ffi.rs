@@ -42,4 +42,8 @@ pub extern "C" fn opendp_domains__lazy_frame_domain(
         .ok_or_else(|| err!(FailedCast, "domain downcast failed")));
 
     Ok(AnyDomain::new(try_!(LazyFrameDomain::new(series_domains)))).into()
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> remotes/origin/773-sum-metrics

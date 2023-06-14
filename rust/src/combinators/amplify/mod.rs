@@ -92,7 +92,6 @@ where
     MO: 'static + AmplifiableMeasure,
     (DI, MI): MetricSpace,
 {
-    let mut measurement = measurement.clone();
     let sample_size = measurement.input_domain.get_size()?;
     if population_size < sample_size {
         return fallible!(
@@ -101,28 +100,30 @@ where
         );
     }
 
-    let privacy_map = measurement.privacy_map;
+    let privacy_map = measurement.privacy_map.clone();
     let output_measure: MO = measurement.output_measure.clone();
 
-    measurement.privacy_map = PrivacyMap::new_fallible(move |d_in| {
-        output_measure.amplify(&privacy_map.eval(d_in)?, population_size, sample_size)
-    });
-
-    Ok(measurement)
+    measurement.with_map(
+        measurement.input_metric.clone(),
+        measurement.output_measure.clone(),
+        PrivacyMap::new_fallible(move |d_in| {
+            output_measure.amplify(&privacy_map.eval(d_in)?, population_size, sample_size)
+        }),
+    )
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "partials"))]
 mod test {
     use crate::combinators::make_population_amplification;
     use crate::error::Fallible;
-    use crate::measurements::make_base_laplace;
+    use crate::measurements::part_base_laplace;
     use crate::metrics::SymmetricDistance;
     use crate::transformations::make_sized_bounded_mean;
 
     #[test]
     fn test_amplifier() -> Fallible<()> {
         let meas = (make_sized_bounded_mean::<SymmetricDistance, _>(10, (0., 10.))?
-            >> make_base_laplace(0.5, None)?)?;
+            >> part_base_laplace(0.5, None))?;
         let amp = make_population_amplification(&meas, 100)?;
         amp.function.eval(&vec![1.; 10])?;
         assert!(meas.check(&2, &(2. + 1e-6))?);

@@ -10,7 +10,7 @@ use opendp_derive::bootstrap;
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, MapDomain, VectorDomain};
 use crate::error::*;
-use crate::metrics::{AbsoluteDistance, LpDistance, SymmetricDistance};
+use crate::metrics::{AbsoluteDistance, SymmetricDistance, Lp};
 use crate::traits::{CollectionSize, Float, Hashable, Number, Primitive};
 
 #[bootstrap(features("contrib"), generics(TO(default = "int")))]
@@ -58,7 +58,7 @@ where
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 ///
 /// # Generics
-/// * `TIA` - Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
+/// * `TIA` - Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
 /// * `TO` - Output Type. Must be numeric.
 pub fn make_count_distinct<TIA, TO>() -> Fallible<
     Transformation<
@@ -89,7 +89,7 @@ where
 pub trait CountByCategoriesConstant<QO> {
     fn get_stability_constant() -> QO;
 }
-impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
+impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for Lp<P, AbsoluteDistance<Q>> {
     fn get_stability_constant() -> Q {
         Q::one()
     }
@@ -186,7 +186,7 @@ where
 pub trait CountByConstant<QO> {
     fn get_stability_constant() -> Fallible<QO>;
 }
-impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
+impl<const P: usize, Q: One> CountByConstant<Q> for Lp<P, AbsoluteDistance<Q>> {
     fn get_stability_constant() -> Fallible<Q> {
         if P == 0 {
             return fallible!(MakeTransformation, "P must be positive");

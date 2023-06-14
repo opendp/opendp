@@ -6,11 +6,6 @@ from typing import Union, Any, Type, List
 from opendp.mod import UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES
 
-if sys.version_info >= (3, 7):
-    from typing import _GenericAlias
-else:
-    from typing import GenericMeta as _GenericAlias
-
 ELEMENTARY_TYPES = {
     int: 'i32',
     float: 'f64',
@@ -25,7 +20,7 @@ try:
     ELEMENTARY_TYPES.update({
         # np.bytes_: '&[u8]',  # np.string_ # not used in OpenDP
         np.str_: 'String',  # np.unicode_
-        np.bool8: 'bool',  # np.bool_
+        np.bool_: 'bool',  # np.bool_
         np.int8: 'i8',  # np.byte
         np.int16: 'i16',  # np.short
         np.int32: 'i32',  # np.intc
@@ -45,14 +40,29 @@ try:
 except ImportError:
     np = None
 
+INTEGER_TYPES = {"i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "usize"}
+NUMERIC_TYPES = INTEGER_TYPES | {"f32", "f64"}
+HASHABLE_TYPES = INTEGER_TYPES | {"bool", "String"}
+PRIMITIVE_TYPES = NUMERIC_TYPES | {"bool", "String"}
+
+
 # all ways of providing type information
 RuntimeTypeDescriptor = Union[
     "RuntimeType",  # as the normalized type -- ChangeOneDistance; RuntimeType.parse("i32")
-    _GenericAlias,  # a Python type hint from the std typing module -- List[int]
     str,  # plaintext string in terms of Rust types -- "Vec<i32>"
     Type[Union[typing.List, typing.Tuple, int, float, str, bool]],  # using the Python type class itself -- int, float
     tuple,  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, List[int])
 ]
+
+if sys.version_info >= (3, 8):
+    from typing import _GenericAlias
+    # a Python type hint from the std typing module -- List[int]
+    RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (_GenericAlias,)
+
+if sys.version_info >= (3, 9):
+    from types import GenericAlias
+    # a Python type hint from the std types module -- list[int]
+    RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (GenericAlias,)
 
 
 def set_default_int_type(T: RuntimeTypeDescriptor):
@@ -146,16 +156,26 @@ class RuntimeType(object):
             return type_name
 
         # parse type hints from the typing module
-        if isinstance(type_name, _GenericAlias):
-            if sys.version_info < (3, 8):
-                raise NotImplementedError("parsing type hint annotations are only supported in Python 3.8 and above")
-
-            origin = typing.get_origin(type_name)
-            args = [RuntimeType.parse(v, generics=generics) for v in typing.get_args(type_name)] or None
+        hinted_type = None
+        if sys.version_info >= (3, 8):
+            from typing import _GenericAlias
+            if isinstance(type_name, _GenericAlias):
+                hinted_type = typing.get_origin(type_name), typing.get_args(type_name)
+        if sys.version_info >= (3, 9):
+            from types import GenericAlias
+            if isinstance(type_name, GenericAlias):
+                hinted_type = type_name.__origin__, type_name.__args__
+    
+        if hinted_type:
+            origin, args = hinted_type
+            args = [RuntimeType.parse(v, generics=generics) for v in args] or None
             if origin == tuple:
                 origin = 'Tuple'
-            if origin == list:
+            elif origin == list:
                 origin = 'Vec'
+            elif origin == dict:
+                origin = 'HashMap'
+            
             return RuntimeType(RuntimeType.parse(origin, generics=generics), args)
 
         # parse a tuple of types-- (int, "f64"); (List[int], (int, bool))
@@ -196,8 +216,8 @@ class RuntimeType(object):
             domain = {
                 'AtomDomain': AtomDomain,
                 'VectorDomain': VectorDomain,
+                'MapDomain': MapDomain,
                 'OptionDomain': OptionDomain,
-                'SizedDomain': SizedDomain
             }.get(origin)
             if domain is not None:
                 return domain[cls._parse_args(type_name[start + 1: end], generics=generics)[0]]
@@ -369,7 +389,7 @@ class RuntimeType(object):
         if isinstance(self, RuntimeType):
             return RuntimeType(self.origin, self.args and [RuntimeType.substitute(arg, **kwargs) for arg in self.args])
         return self
-
+    
 
 class GenericType(RuntimeType):
     def __str__(self):
@@ -389,18 +409,12 @@ class UnknownType(RuntimeType):
         raise UnknownTypeException(f"attempted to create a type_name with an unknown type: {self.reason}")
 
 
-class DatasetMetric(RuntimeType):
-    """All dataset metric RuntimeTypes inherit from DatasetMetric.
-    Provides static type checking in user-code for dataset metrics.
-    """
-    pass
+SymmetricDistance = 'SymmetricDistance'
+InsertDeleteDistance = 'InsertDeleteDistance'
+ChangeOneDistance = 'ChangeOneDistance'
+HammingDistance = 'HammingDistance'
 
-
-SymmetricDistance = DatasetMetric('SymmetricDistance')
-InsertDeleteDistance = DatasetMetric('InsertDeleteDistance')
-
-ChangeOneDistance = DatasetMetric('ChangeOneDistance')
-HammingDistance = DatasetMetric('HammingDistance')
+DiscreteDistance = 'DiscreteDistance'
 
 
 class SensitivityMetric(RuntimeType):
@@ -452,6 +466,7 @@ u128 = 'u128'
 usize = 'usize'
 f32 = 'f32'
 f64 = 'f64'
+char = 'char'
 String = 'String'
 char = 'char'
 AnyMeasurementPtr = "AnyMeasurementPtr"
@@ -462,13 +477,15 @@ SeriesDomain = "SeriesDomain"
 
 class DomainDescriptor(RuntimeType):
     def __getitem__(self, subdomain):
-        return DomainDescriptor(self.origin, [self.parse(type_name=subdomain)])
+        if not isinstance(subdomain, tuple):
+            subdomain = (subdomain,)
+        return DomainDescriptor(self.origin, [self.parse(type_name=sub_i) for sub_i in subdomain])    
 
 
 AtomDomain = DomainDescriptor('AtomDomain')
 VectorDomain = DomainDescriptor('VectorDomain')
+MapDomain = DomainDescriptor('MapDomain')
 OptionDomain = DomainDescriptor('OptionDomain')
-SizedDomain = DomainDescriptor('SizedDomain')
 
 
 def get_atom(type_name):
@@ -506,3 +523,6 @@ def get_carrier_type(value):
 
 def get_distance_type(value):
     return value.distance_type
+
+def get_type(value):
+    return value.type

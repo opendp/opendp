@@ -2,7 +2,7 @@ use crate::{
     core::{Function, Metric, MetricSpace, StabilityMap, Transformation},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    metrics::LpDistance,
+    metrics::{Lp, AbsoluteDistance},
     traits::{InfCast, Integer, Number},
 };
 
@@ -111,7 +111,7 @@ fn num_nodes_from_num_layers(num_layers: usize, b: usize) -> usize {
 }
 
 pub trait BAryTreeMetric: Metric {}
-impl<const P: usize, T> BAryTreeMetric for LpDistance<P, T> {}
+impl<const P: usize, T> BAryTreeMetric for Lp<P, AbsoluteDistance<T>> {}
 
 #[bootstrap(features("contrib"))]
 /// Returns an approximation to the ideal `branching_factor` for a dataset of a given size,
@@ -137,9 +137,9 @@ pub fn choose_branching_factor(size_guess: usize) -> usize {
         .unwrap_or(size_guess)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "use-mpfr", feature = "derive"))]
 pub mod test_b_trees {
-    use crate::{measurements::make_base_discrete_laplace, metrics::L1Distance};
+    use crate::{measurements::part_base_discrete_laplace, metrics::L1Distance};
 
     use super::*;
 
@@ -225,7 +225,7 @@ pub mod test_b_trees {
     #[test]
     fn test_noise_b_ary_tree() -> Fallible<()> {
         let meas =
-            (make_b_ary_tree::<L1Distance<i32>, i32>(10, 2)? >> make_base_discrete_laplace(1.)?)?;
+            (make_b_ary_tree::<L1Distance<i32>, i32>(10, 2)? >> part_base_discrete_laplace(1.))?;
         println!("noised {:?}", meas.invoke(&vec![1; 10])?);
 
         Ok(())
@@ -235,7 +235,7 @@ pub mod test_b_trees {
     fn test_identity() -> Fallible<()> {
         let b = 2;
         let trans = make_b_ary_tree::<L1Distance<i32>, i32>(10, b)?;
-        let meas = (trans.clone() >> make_base_discrete_laplace(0.)?)?;
+        let meas = (trans.clone() >> part_base_discrete_laplace(0.))?;
         let post = make_consistent_b_ary_tree::<i32, f64>(b)?;
 
         let noisy_tree = meas.invoke(&vec![1; 10])?;

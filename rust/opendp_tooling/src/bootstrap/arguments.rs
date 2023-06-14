@@ -110,6 +110,8 @@ pub struct BootType {
     #[darling(default)]
     pub do_not_convert: bool,
     pub example: Option<TypeRecipe>,
+    #[darling(default)]
+    pub suppress: bool,
 }
 
 impl FromMeta for Value {

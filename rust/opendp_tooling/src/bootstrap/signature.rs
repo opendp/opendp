@@ -8,6 +8,8 @@ use syn::{
 
 use crate::TypeRecipe;
 
+use super::partial::supports_partial;
+
 // try to keep syn parsing insanity contained in this file
 // extract what we need out of the syn signature into parsimonious OpenDP structures.
 
@@ -16,6 +18,7 @@ pub struct BootstrapSignature {
     pub arguments: Vec<(String, BootSigArgType)>,
     pub generics: Vec<String>,
     pub output_c_type: Result<String>,
+    pub supports_partial: bool,
 }
 
 pub struct BootSigArgType {
@@ -25,12 +28,15 @@ pub struct BootSigArgType {
 
 impl BootstrapSignature {
     pub fn from_syn(sig: Signature) -> Result<Self> {
+        let supports_partial = supports_partial(&sig);
+
         let generics = sig
             .generics
             .params
             .into_iter()
             .map(|generic| syn_generic_to_syn_type_param(&generic).map(|v| v.ident.to_string()))
             .collect::<Result<Vec<_>>>()?;
+
         Ok(BootstrapSignature {
             name: sig.ident.to_string(),
             arguments: sig
@@ -61,6 +67,7 @@ impl BootstrapSignature {
                 },
                 &HashSet::from_iter(generics),
             ),
+            supports_partial,
         })
     }
 }
@@ -243,7 +250,7 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
     })
 }
 
-fn syn_fnarg_to_syn_pattype(v: FnArg) -> Result<(Pat, Type)> {
+pub fn syn_fnarg_to_syn_pattype(v: FnArg) -> Result<(Pat, Type)> {
     match v {
         FnArg::Receiver(r) => {
             let msg = "bootstrapped functions don't support receiver (self) args";

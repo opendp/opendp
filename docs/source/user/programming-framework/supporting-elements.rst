@@ -69,18 +69,17 @@ Let's look at the Transformation returned from :py:func:`make_bounded_sum(bounds
   >>> enable_features('contrib')
   >>> from opendp.transformations import make_bounded_sum
   >>> bounded_sum = make_bounded_sum(bounds=(0, 1))
-  >>> bounded_sum.input_domain.type
-  'VectorDomain<AtomDomain<i32>>'
+  >>> bounded_sum.input_domain
+  VectorDomain(AtomDomain(bounds=[0, 1], T=i32))
 
-The input domain is ``VectorDomain<AtomDomain<i32>>``, or "the set of all vectors of 32-bit signed integers bounded between 0 and 1."
+We see that the input domain is "the set of all vectors of 32-bit signed integers bounded between 0 and 1."
 
 .. doctest::
 
-  >>> bounded_sum.output_domain.type
-  'AtomDomain<i32>'
+  >>> bounded_sum.output_domain
+  AtomDomain(T=i32)
 
-
-The output domain is simply ``AtomDomain<i32>``, or "the set of all 32-bit signed integers."
+The output domain is "the set of all 32-bit signed integers."
 
 These domains serve two purposes:
 
@@ -171,12 +170,15 @@ Putting this to practice, the following example invokes the stability map on a c
 .. doctest::
 
     >>> from opendp.transformations import make_clamp
-    >>> clamp = make_clamp(bounds=(1, 10))
+    >>> from opendp.domains import vector_domain, atom_domain
+    >>> from opendp.metrics import symmetric_distance
+    ...
+    >>> clamper = make_clamp(vector_domain(atom_domain(T=int)), symmetric_distance(), bounds=(1, 10))
     ...
     >>> # The maximum number of records that any one individual may influence in your dataset
     >>> in_symmetric_distance = 3
     >>> # clamp is a 1-stable transformation, so this should pass for any symmetric_distance >= 3
-    >>> clamp.map(d_in=in_symmetric_distance)
+    >>> clamper.map(d_in=in_symmetric_distance)
     3
 
 There is also a relation check predicate function that simply compares the output of the map with ``d_out`` as follows: ``d_out >= map(d_in)``.
@@ -184,7 +186,7 @@ There is also a relation check predicate function that simply compares the outpu
 .. doctest::
 
     >>> # reusing the prior clamp transformation
-    >>> assert clamp.check(d_in=3, d_out=3)
+    >>> assert clamper.check(d_in=3, d_out=3)
 
 This should be sufficient to make use of the library, but a more mathematical treatment may help give a more thorough understanding.
 Consider ``d_X`` the input metric, ``d_Y`` the output metric or measure,

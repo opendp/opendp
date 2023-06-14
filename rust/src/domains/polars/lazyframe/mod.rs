@@ -1,6 +1,7 @@
 use std::collections::{BTreeSet, HashMap};
 use std::fmt::Debug;
 
+<<<<<<< HEAD
 use crate::core::{Domain, MetricSpace};
 use crate::domains::{AtomDomain, OptionDomain};
 use crate::error::Fallible;
@@ -9,6 +10,18 @@ use polars::lazy::dsl::{col, cols, count};
 use polars::prelude::*;
 
 use super::{SeriesDomain, DatasetMetric};
+=======
+use polars::lazy::dsl::{col, cols, count};
+use polars::prelude::*;
+
+use crate::core::Domain;
+use crate::{
+    core::MetricSpace,
+    domains::{AtomDomain, OptionDomain, SeriesDomain},
+    error::Fallible,
+    transformations::DatasetMetric,
+};
+>>>>>>> remotes/origin/773-sum-metrics
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -21,8 +34,12 @@ mod ffi;
 #[derive(Clone, PartialEq)]
 pub struct LazyFrameDomain {
     pub series_domains: Vec<SeriesDomain>,
+<<<<<<< HEAD
     pub margins: HashMap<BTreeSet<usize>, Margin>,
     pub user_id: Option<usize>,
+=======
+    pub margins: HashMap<BTreeSet<String>, Margin>,
+>>>>>>> remotes/origin/773-sum-metrics
 }
 
 impl<D: DatasetMetric> MetricSpace for (LazyFrameDomain, D) {
@@ -33,16 +50,31 @@ impl<D: DatasetMetric> MetricSpace for (LazyFrameDomain, D) {
 
 impl LazyFrameDomain {
     pub fn new(series_domains: Vec<SeriesDomain>) -> Fallible<Self> {
+<<<<<<< HEAD
         if BTreeSet::from_iter(series_domains.iter().map(|s| s.field.name.clone())).len() != series_domains.len() {
+=======
+        let num_unique = BTreeSet::from_iter(series_domains.iter().map(|s| &s.field.name)).len();
+        if num_unique != series_domains.len() {
+>>>>>>> remotes/origin/773-sum-metrics
             return fallible!(MakeDomain, "column names must be distinct");
         }
         Ok(LazyFrameDomain {
             series_domains,
             margins: HashMap::new(),
+<<<<<<< HEAD
             user_id: None,
         })
     }
 
+=======
+        })
+    }
+
+    pub fn schema(&self) -> Schema {
+        Schema::from_iter(self.series_domains.iter().map(|sd| sd.field.clone()))
+    }
+
+>>>>>>> remotes/origin/773-sum-metrics
     pub fn new_from_schema(schema: Schema) -> Fallible<Self> {
         let series_domains = (schema.iter_fields())
             .map(|field| {
@@ -82,7 +114,11 @@ impl LazyFrameDomain {
         // make sure the dtype matches
         self.check_dtype_matches(count_col_name, categories.dtype())?;
 
+<<<<<<< HEAD
         let margin_id = BTreeSet::from_iter([count_col_name.try_column_index(&self)?]);
+=======
+        let margin_id = BTreeSet::from_iter([categories.name().to_string()]);
+>>>>>>> remotes/origin/773-sum-metrics
         let margin = Margin::new_from_categories(categories)?;
         self.with_margin(margin_id, margin)
     }
@@ -100,6 +136,7 @@ impl LazyFrameDomain {
 
         // check that all dtypes in id columns match
         let id_names = margin.get_join_column_names()?;
+<<<<<<< HEAD
         for id_name in id_names.iter() {
             self.check_dtype_matches(id_name, &counts_schema.get_field(&id_name).unwrap().dtype)?;
         }
@@ -107,11 +144,22 @@ impl LazyFrameDomain {
         let margin_id: BTreeSet<_> = (id_names.into_iter())
             .map(|id| id.as_str().try_column_index(&self))
             .collect::<Fallible<_>>()?;
+=======
+        for id_name in &id_names {
+            self.check_dtype_matches(id_name, &counts_schema.try_get_field(id_name)?.dtype)?;
+        }
+
+        let margin_id = BTreeSet::from_iter(id_names);
+>>>>>>> remotes/origin/773-sum-metrics
         self.with_margin(margin_id, margin)
     }
 
     #[must_use]
+<<<<<<< HEAD
     fn with_margin(mut self, margin_id: BTreeSet<usize>, margin: Margin) -> Fallible<Self> {
+=======
+    fn with_margin(mut self, margin_id: BTreeSet<String>, margin: Margin) -> Fallible<Self> {
+>>>>>>> remotes/origin/773-sum-metrics
         if self.margins.contains_key(&margin_id) {
             return fallible!(MakeDomain, "margin already exists");
         }
@@ -119,6 +167,7 @@ impl LazyFrameDomain {
         Ok(self)
     }
 
+<<<<<<< HEAD
     #[must_use]
     pub fn with_user_id<I: IntoColumnIndex>(mut self, user_id_column: I) -> Fallible<Self> {
         self.user_id = Some(user_id_column.try_column_index(&self)?);
@@ -127,6 +176,15 @@ impl LazyFrameDomain {
 
     pub fn column<I: AsRef<str>>(&self, name: I) -> Option<&SeriesDomain> {
         Some(&self.series_domains[name.as_ref().column_index(self)?])
+=======
+    fn column_index<I: AsRef<str>>(&self, name: I) -> Option<usize> {
+        self.series_domains
+            .iter()
+            .position(|s| s.field.name() == name.as_ref())
+    }
+    pub fn column<I: AsRef<str>>(&self, name: I) -> Option<&SeriesDomain> {
+        self.column_index(name).map(|i| &self.series_domains[i])
+>>>>>>> remotes/origin/773-sum-metrics
     }
     pub fn try_column<I: AsRef<str>>(&self, name: I) -> Fallible<&SeriesDomain> {
         self.column(&name)
@@ -150,7 +208,19 @@ impl LazyFrameDomain {
 
 impl Debug for LazyFrameDomain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+<<<<<<< HEAD
         write!(f, "LazyFrameDomain({})", self.series_domains.iter().map(|s| format!("{}: {}", s.field.name, s.field.dtype)).collect::<Vec<_>>().join(", "))
+=======
+        write!(
+            f,
+            "LazyFrameDomain({})",
+            self.series_domains
+                .iter()
+                .map(|s| format!("{}: {}", s.field.name, s.field.dtype))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+>>>>>>> remotes/origin/773-sum-metrics
     }
 }
 
@@ -159,16 +229,28 @@ impl Domain for LazyFrameDomain {
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         let val_df = val.clone().collect()?;
 
+<<<<<<< HEAD
+=======
+        // if df has different number of columns as domain
+>>>>>>> remotes/origin/773-sum-metrics
         if val_df.schema().len() != self.series_domains.len() {
             return Ok(false);
         }
 
+<<<<<<< HEAD
+=======
+        // check if each column is a member of the series domain
+>>>>>>> remotes/origin/773-sum-metrics
         for (s, dom) in val_df.get_columns().iter().zip(self.series_domains.iter()) {
             if !dom.member(s)? {
                 return Ok(false);
             }
         }
 
+<<<<<<< HEAD
+=======
+        // check that margins are satisfied
+>>>>>>> remotes/origin/773-sum-metrics
         for margin in self.margins.values() {
             if !margin.member(val)? {
                 return Ok(false);
@@ -186,8 +268,13 @@ impl Domain for LazyFrameDomain {
 /// Otherwise, counts are stored in the `counts_index` column of the `data`.
 #[derive(Clone)]
 pub struct Margin {
+<<<<<<< HEAD
     pub data: LazyFrame,
     pub counts_index: Option<usize>,
+=======
+    data: LazyFrame,
+    counts_index: Option<usize>,
+>>>>>>> remotes/origin/773-sum-metrics
 }
 
 impl Margin {
@@ -215,7 +302,11 @@ impl Margin {
         Ok(margin)
     }
 
+<<<<<<< HEAD
     pub fn get_count_column_name(&self) -> Fallible<String> {
+=======
+    fn get_count_column_name(&self) -> Fallible<String> {
+>>>>>>> remotes/origin/773-sum-metrics
         let count_index = self
             .counts_index
             .ok_or_else(|| err!(FailedFunction, "counts do not exist"))?;
@@ -300,6 +391,7 @@ impl PartialEq for Margin {
     }
 }
 
+<<<<<<< HEAD
 /// Convert from either a usize (index) or &str (name) to a column index.
 ///
 /// The return is always either an error, or a valid index wrt `domain`.
@@ -327,6 +419,8 @@ impl IntoColumnIndex for &str {
     }
 }
 
+=======
+>>>>>>> remotes/origin/773-sum-metrics
 #[cfg(test)]
 mod test_lazyframe {
     use crate::domains::{AtomDomain, OptionDomain};

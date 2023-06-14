@@ -1,11 +1,13 @@
 use std::collections::HashMap;
 use syn::{AttributeArgs, ItemFn};
 
-use crate::{Argument, Function};
+use crate::{Argument, Function, TypeRecipe};
 
 pub mod arguments;
 pub mod docstring;
 pub mod signature;
+
+pub mod partial;
 
 use darling::{Error, Result};
 
@@ -56,6 +58,7 @@ pub fn reconcile_function(
             &mut bootstrap.arguments.0,
             &mut doc_comments.arguments,
             signature.arguments,
+            signature.supports_partial,
         )?
         .into_iter()
         .chain(reconcile_generics(
@@ -71,6 +74,7 @@ pub fn reconcile_function(
         )?,
         derived_types: reconcile_derived_types(bootstrap.derived_types),
         dependencies: bootstrap.dependencies.0,
+        supports_partial: signature.supports_partial,
     })
 }
 
@@ -78,9 +82,10 @@ fn reconcile_arguments(
     bootstrap_args: &mut HashMap<String, BootType>,
     doc_comments: &mut HashMap<String, String>,
     arguments: Vec<(String, BootSigArgType)>,
+    supports_partial: bool,
 ) -> Result<Vec<Argument>> {
-    (arguments.into_iter())
-        .map(|(name, arg_type)| {
+    (arguments.into_iter().enumerate())
+        .map(|(i, (name, arg_type))| {
             // struct of additional metadata for this argument supplied by bootstrap macro
             let boot_type = bootstrap_args.remove(&name).unwrap_or_default();
 
@@ -89,12 +94,26 @@ fn reconcile_arguments(
                 // if C type is given in boot_type, use it. Otherwise use the rust type on the function
                 c_type: Some(match boot_type.c_type {
                     Some(v) => v,
-                    None => arg_type.c_type?,
+                    None => {
+                        // if supports_partial, then the first two c types are AnyDomain and AnyMetric
+                        if supports_partial && i < 2 {
+                            if i == 0 { "AnyDomain *" } else { "AnyMetric *" }.to_string()
+                        } else {
+                            arg_type.c_type?
+                        }
+                    }
                 }),
                 // if Rust type is given, use it. Otherwise parse the rust type on the function
                 rust_type: Some(match boot_type.rust_type {
                     Some(v) => v,
-                    None => arg_type.rust_type?,
+                    None => {
+                        // if supports_partial, then the first two rust types are un-set
+                        if supports_partial && i < 2 {
+                            TypeRecipe::None
+                        } else {
+                            arg_type.rust_type?
+                        }
+                    }
                 }),
                 generics: Vec::new(),
                 description: doc_comments.remove(&name),
@@ -114,12 +133,17 @@ fn reconcile_generics(
     generics: Vec<String>,
 ) -> Result<Vec<Argument>> {
     (generics.into_iter())
-        .map(|name| {
+        .filter_map(|name| {
             let boot_type = bootstrap_args.remove(&name).unwrap_or_default();
-            if boot_type.c_type.is_some() {
-                return Err(Error::custom("c_type should not be specified on generics"));
+            if boot_type.suppress {
+                return None;
             }
-            Ok(Argument {
+            if boot_type.c_type.is_some() {
+                return Some(Err(Error::custom(
+                    "c_type should not be specified on generics",
+                )));
+            }
+            Some(Ok(Argument {
                 name: Some(name.clone()),
                 description: doc_comments.remove(&name),
                 hint: boot_type.hint,
@@ -128,7 +152,7 @@ fn reconcile_generics(
                 is_type: true,
                 example: boot_type.example,
                 ..Default::default()
-            })
+            }))
         })
         .collect()
 }

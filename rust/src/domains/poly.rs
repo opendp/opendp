@@ -42,13 +42,14 @@ where
     /// Converts this Measurement into one with polymorphic output. This is useful for composition
     /// of heterogeneous Measurements.
     pub fn into_poly(self) -> Measurement<DI, Box<dyn Any>, MI, MO> {
-        Measurement {
-            input_domain: self.input_domain,
-            function: self.function.into_poly(),
-            input_metric: self.input_metric,
-            output_measure: self.output_measure,
-            privacy_map: self.privacy_map,
-        }
+        Measurement::new(
+            self.input_domain.clone(),
+            self.function.clone().into_poly(),
+            self.input_metric.clone(),
+            self.output_measure.clone(),
+            self.privacy_map.clone(),
+        )
+        .expect("compatibility check already passed")
     }
 }
 
@@ -57,10 +58,13 @@ mod tests {
     use crate::domains::AtomDomain;
     use crate::error::*;
     use crate::measurements;
+    use crate::metrics::AbsoluteDistance;
 
     #[test]
     fn test_poly_measurement() -> Fallible<()> {
-        let op_plain = measurements::make_base_laplace::<AtomDomain<_>>(0.0, None)?;
+        let input_domain = AtomDomain::default();
+        let input_metric = AbsoluteDistance::default();
+        let op_plain = measurements::make_base_laplace(input_domain, input_metric, 0.0, None)?;
         let arg = 100.;
         let res_plain = op_plain.invoke(&arg)?;
         assert_eq!(res_plain, arg);

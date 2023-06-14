@@ -31,30 +31,30 @@ impl<T: Clone + CheckAtom> LaplaceDomain for VectorDomain<AtomDomain<T>> {
         scale(rust_type = "T", c_type = "void *"),
         k(default = -1074, rust_type = "i32", c_type = "uint32_t")),
     generics(
-        D(default = "AtomDomain<T>", generics = "T")),
-    derived_types(T = "$get_atom_or_infer(D, scale)")
+        D(suppress)),
+    derived_types(T = "$get_atom_or_infer(get_carrier_type(input_domain), scale)")
 )]
-/// Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
+/// Make a Measurement that adds noise from the Laplace(`scale`) distribution to a scalar value.
 ///
-/// Set `D` to change the input data type and input metric:
+/// Valid inputs for `input_domain` and `input_metric` are:
 ///
-/// | `D`                          | input type   | `D::InputMetric`       |
-/// | ---------------------------- | ------------ | ---------------------- |
-/// | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-/// | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
-///
+/// | `input_domain`                  | input type   | `input_metric`         |
+/// | ------------------------------- | ------------ | ---------------------- |
+/// | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
+/// | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |
 ///
 /// This function takes a noise granularity in terms of 2^k.
 /// Larger granularities are more computationally efficient, but have a looser privacy map.
 /// If k is not set, k defaults to the smallest granularity.
 ///
 /// # Arguments
+/// * `input_domain` - Domain of the data type to be privatized.
+/// * `input_metric` - Metric of the data type to be privatized.
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
 /// * `k` - The noise granularity in terms of 2^k.
-///
-/// # Generics
-/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 pub fn make_base_laplace<D>(
+    input_domain: D,
+    input_metric: D::InputMetric,
     scale: D::Atom,
     k: Option<i32>,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<D::Atom>>>
@@ -71,11 +71,11 @@ where
     let (k, relaxation) = get_discretization_consts(k)?;
 
     Measurement::new(
-        D::default(),
+        input_domain,
         D::new_map_function(move |arg: &D::Atom| {
             D::Atom::sample_discrete_laplace_Z2k(*arg, scale, k)
         }),
-        D::InputMetric::default(),
+        input_metric,
         MaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &D::Atom| {
             if d_in.is_sign_negative() {
@@ -119,7 +119,7 @@ where
     Ok((k, relaxation))
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "partials"))]
 mod tests {
     use super::*;
     use crate::{metrics::SymmetricDistance, transformations::make_sized_bounded_mean};
@@ -127,21 +127,31 @@ mod tests {
     #[test]
     fn test_chain_laplace() -> Fallible<()> {
         let chain = (make_sized_bounded_mean::<SymmetricDistance, _>(3, (10.0, 12.0))?
-            >> make_base_laplace(1.0, None)?)?;
+            >> part_base_laplace(1.0, None))?;
         let _ret = chain.invoke(&vec![10.0, 11.0, 12.0])?;
         Ok(())
     }
 
     #[test]
     fn test_big_laplace() -> Fallible<()> {
-        let chain = make_base_laplace::<AtomDomain<f64>>(f64::MAX, None)?;
+        let chain = make_base_laplace(
+            AtomDomain::default(),
+            AbsoluteDistance::default(),
+            f64::MAX,
+            None,
+        )?;
         println!("{:?}", chain.invoke(&f64::MAX)?);
         Ok(())
     }
 
     #[test]
     fn test_make_laplace_mechanism() -> Fallible<()> {
-        let measurement = make_base_laplace::<AtomDomain<_>>(1.0, None)?;
+        let measurement = make_base_laplace(
+            AtomDomain::default(),
+            AbsoluteDistance::default(),
+            1.0,
+            None,
+        )?;
         let _ret = measurement.invoke(&0.0)?;
 
         assert!(measurement.check(&1., &1.)?);
@@ -150,7 +160,12 @@ mod tests {
 
     #[test]
     fn test_make_vector_laplace_mechanism() -> Fallible<()> {
-        let measurement = make_base_laplace::<VectorDomain<_>>(1.0, None)?;
+        let measurement = make_base_laplace(
+            VectorDomain::new(AtomDomain::default()),
+            L1Distance::default(),
+            1.0,
+            None,
+        )?;
         let arg = vec![1.0, 2.0, 3.0];
         let _ret = measurement.invoke(&arg)?;
 

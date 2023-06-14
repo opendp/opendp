@@ -45,7 +45,8 @@ where
     let scale = upper - lower;
 
     make_row_by_row_fallible(
-        AtomDomain::new_nullable(),
+        VectorDomain::new(AtomDomain::new_nullable()),
+        SymmetricDistance::default(),
         AtomDomain::default(),
         move |v| {
             if v.is_null() {
@@ -81,7 +82,7 @@ pub trait ImputeConstantDomain: Domain {
         constant: &'a Self::Imputed,
     ) -> &'a Self::Imputed;
 }
-// how to impute, when null represented as Option<T>
+// how to impute, when null represented as `Option<T>`
 impl<T: CheckAtom> ImputeConstantDomain for OptionDomain<AtomDomain<T>> {
     type Imputed = T;
     fn impute_constant<'a>(
@@ -152,9 +153,12 @@ where
         return fallible!(MakeTransformation, "Constant may not be null.");
     }
 
-    make_row_by_row(atom_domain, AtomDomain::default(), move |v| {
-        DIA::impute_constant(v, &constant).clone()
-    })
+    make_row_by_row(
+        VectorDomain::new(atom_domain),
+        SymmetricDistance::default(),
+        AtomDomain::default(),
+        move |v| DIA::impute_constant(v, &constant).clone(),
+    )
 }
 
 /// Utility trait to drop null values from a dataset, regardless of the representation of nullity.
@@ -175,7 +179,7 @@ pub trait DropNullDomain: Domain {
     fn option(value: &Self::Carrier) -> Option<Self::Imputed>;
 }
 
-/// how to standardize into an option, when null represented as Option<T>
+/// how to standardize into an option, when null represented as `Option<T>`
 impl<T: CheckAtom + Clone> DropNullDomain for OptionDomain<AtomDomain<T>> {
     type Imputed = T;
     fn option(value: &Self::Carrier) -> Option<T> {

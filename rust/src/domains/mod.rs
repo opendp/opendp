@@ -81,7 +81,7 @@ pub use poly::*;
 /// ```
 #[derive(Clone, PartialEq)]
 pub struct AtomDomain<T: CheckAtom> {
-    bounds: Option<Bounds<T>>,
+    pub bounds: Option<Bounds<T>>,
     nullable: bool,
 }
 
@@ -113,6 +113,12 @@ impl<T: CheckAtom> AtomDomain<T> {
     }
     pub fn nullable(&self) -> bool {
         self.nullable
+    }
+    pub fn assert_non_null(&self) -> Fallible<()> {
+        if self.nullable() {
+            return fallible!(FailedFunction, "Domain has null values");
+        }
+        Ok(())
     }
 }
 impl<T: CheckAtom + InherentNull> AtomDomain<T> {

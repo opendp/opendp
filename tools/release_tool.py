@@ -73,8 +73,8 @@ def get_cached_version():
     return cached_version
 
 
-def get_branch(version):
-    branch = f"release/{version.major}.{version.minor}.x"
+def get_branch(prefix, version):
+    branch = f"{prefix}{version.major}.{version.minor}.x"
     return branch
 
 
@@ -106,6 +106,7 @@ def read_conf(args):
 
 def create_branch(type, branch, ref, force=False):
     create_arg = "-C" if force else "-c"
+    run_command(f"Fetching ref {ref}", f"git fetch origin {ref}:{ref}")
     run_command(f"Creating {type} branch {branch} -> {ref}", f"git switch {create_arg} {branch} {ref}")
 
 
@@ -114,7 +115,7 @@ def switch_branch(type, branch):
 
 
 def commit(what, files, message=None):
-    message = message or f"Updated {what}."
+    message = message or f"Update {what}."
     run_command(f"Committing {what}", f"git add {' '.join(files)} && git commit -m '{message}'")
 
 
@@ -131,7 +132,7 @@ def init(args):
         fetch_repo(args.repo_dir)
     base_version = get_base_version(args.base_version)
     target_version = get_target_version(base_version, args.type)
-    branch = get_branch(target_version)
+    branch = get_branch(args.branch_prefix, target_version)
     tag = get_tag(target_version)
     args.ref = args.ref or "main"
     write_conf(args.type, base_version, target_version, branch, tag, args.ref)
@@ -173,7 +174,7 @@ def changelog(args):
     substitution_arg = f"-e 's|{heading_regex}|{replacement}|'"
     inplace_arg = "-i ''" if platform.system() == "Darwin" else "-i"
     run_command("Updating CHANGELOG", f"sed {inplace_arg} {substitution_arg} CHANGELOG.md")
-    commit("CHANGELOG", ["CHANGELOG.md"], f"RELEASE_TOOL: Updated CHANGELOG.md for {conf.target_version}.")
+    commit("CHANGELOG", ["CHANGELOG.md"], f"RELEASE_TOOL: Update CHANGELOG.md for {conf.target_version}.")
 
 
 def version(args):
@@ -238,7 +239,8 @@ def create(args):
     # Just in case, clear out any existing tag, so a new one will be created by GitHub.
     run_command("Clearing tag", f"git push origin :refs/tags/{resolved_tag}")
     title = f"OpenDP {cached_version}"
-    notes = f"[Changelog](https://github.com/opendp/opendp/blob/main/CHANGELOG.md#{conf.target_version}---{conf.date})"
+    stripped_target_version = str(conf.target_version).replace(".", "")
+    notes = f"[CHANGELOG](https://github.com/opendp/opendp/blob/main/CHANGELOG.md#{stripped_target_version}---{conf.date})"
     prerelease_arg = " -p" if cached_version.prerelease else ""
     draft_arg = " -d" if args.draft else ""
     run_command("Creating GitHub Release", f"gh release create {resolved_tag} --target {conf.branch} -t '{title}' -n '{notes}'{prerelease_arg}{draft_arg}")
@@ -271,7 +273,7 @@ def reconcile(args):
     reconciled_files = ["CHANGELOG.md"]
     create_branch("reconciliation", reconciliation_branch, "main", args.force)
     run_command("Copying reconciled files from release branch", f"git restore -s {conf.branch} -- {' '.join(reconciled_files)}")
-    commit("reconciled files", reconciled_files, f"RELEASE_TOOL: Reconciled files from {conf.target_version}.")
+    commit("reconciled files", reconciled_files, f"RELEASE_TOOL: Reconcile files from {conf.target_version}.")
     push("reconciled files", args.force)
     draft_arg = " -d" if args.draft else ""
     run_command("Creating reconciliation PR", f"gh pr create -B main -f{draft_arg}")
@@ -312,6 +314,7 @@ def _main(argv):
     subparser.add_argument("-nc", "--no-clone", dest="clone", action="store_false")
     subparser.add_argument("-b", "--base-version")
     subparser.add_argument("-t", "--type", choices=["major", "minor", "patch"], required=True)
+    subparser.add_argument("-i", "--branch-prefix", default="release/", help="Release branch prefix")
     subparser.add_argument("-r", "--ref")
     subparser.add_argument("-f", "--force", dest="force", action="store_true", default=False)
     subparser.add_argument("-nf", "--no-force", dest="force", action="store_false")

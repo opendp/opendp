@@ -12,12 +12,13 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
 
     :example:
 
-    >>> from opendp.mod import Measurement, enable_features
-    >>> enable_features("contrib")
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib")
     ...
     >>> # create an instance of Measurement using a constructor from the meas module
-    >>> from opendp.measurements import make_base_discrete_laplace
-    >>> base_dl: Measurement = make_base_discrete_laplace(scale=2.)
+    >>> base_dl: dp.Measurement = dp.m.make_base_discrete_laplace(
+    ...     dp.atom_domain(T=int), dp.absolute_distance(T=int),
+    ...     scale=2.)
     ...
     >>> # invoke the measurement (invoke and __call__ are equivalent)
     >>> base_dl.invoke(100)  # -> 101   # doctest: +SKIP
@@ -28,9 +29,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     >>> assert base_dl.check(1, 0.5)
     ...
     >>> # chain with a transformation from the trans module
-    >>> from opendp.transformations import make_count
     >>> chained = (
-    ...     make_count(TIA=int) >>
+    ...     dp.t.make_count(TIA=int) >>
     ...     base_dl
     ... )
     ...
@@ -105,6 +105,10 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     def input_metric(self) -> "Metric":
         from opendp.core import measurement_input_metric
         return measurement_input_metric(self)
+
+    @property
+    def input_space(self) -> Tuple["Domain", "Metric"]:
+        return self.input_domain, self.input_metric
     
     @property
     def output_measure(self) -> "Measure":
@@ -189,10 +193,10 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     >>> assert count.check(1, 1)
     ...
     >>> # chain with more transformations from the trans module
-    >>> from opendp.transformations import make_split_lines, make_cast_default
+    >>> from opendp.transformations import make_split_lines, part_cast_default
     >>> chained = (
     ...     make_split_lines() >>
-    ...     make_cast_default(TIA=str, TOA=int) >>
+    ...     part_cast_default(TOA=int) >>
     ...     count
     ... )
     ...
@@ -245,7 +249,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
                 return False
             raise
 
-    def __rshift__(self, other: Union["Measurement", "Transformation"]):
+    def __rshift__(self, other: Union["Measurement", "Transformation", "PartialConstructor"]):
         if isinstance(other, Measurement):
             from opendp.combinators import make_chain_mt
             return make_chain_mt(other, self)
@@ -253,6 +257,9 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         if isinstance(other, Transformation):
             from opendp.combinators import make_chain_tt
             return make_chain_tt(other, self)
+        
+        if isinstance(other, PartialConstructor):
+            return self >> other(self.output_domain, self.output_metric)
 
         raise ValueError(f"rshift expected a measurement or transformation, got {other}")
 
@@ -277,6 +284,14 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     def output_metric(self) -> "Metric":
         from opendp.core import transformation_output_metric
         return transformation_output_metric(self)
+    
+    @property
+    def input_space(self) -> Tuple["Domain", "Metric"]:
+        return self.input_domain, self.input_metric
+    
+    @property
+    def output_space(self) -> Tuple["Domain", "Metric"]:
+        return self.output_domain, self.output_metric
     
     @property
     def function(self) -> "Function":
@@ -380,7 +395,8 @@ class Domain(ctypes.POINTER(AnyDomain)):
     @property
     def type(self):
         from opendp.domains import domain_type
-        return domain_type(self)
+        from opendp.typing import RuntimeType
+        return RuntimeType.parse(domain_type(self))
     
     @property
     def carrier_type(self):
@@ -395,6 +411,13 @@ class Domain(ctypes.POINTER(AnyDomain)):
         from opendp.domains import _domain_free
         _domain_free(self)
 
+    def __repr__(self) -> str:
+        return str(self)
+    
+    def __eq__(self, other) -> bool:
+        # TODO: consider adding ffi equality
+        return str(self) == str(other)
+
 
 class Metric(ctypes.POINTER(AnyMetric)):
     _type_ = AnyMetric
@@ -407,7 +430,8 @@ class Metric(ctypes.POINTER(AnyMetric)):
     @property
     def distance_type(self):
         from opendp.metrics import metric_distance_type
-        return metric_distance_type(self)
+        from opendp.typing import RuntimeType
+        return RuntimeType.parse(metric_distance_type(self))
 
     def __str__(self):
         from opendp.metrics import metric_debug
@@ -416,6 +440,13 @@ class Metric(ctypes.POINTER(AnyMetric)):
     def __del__(self):
         from opendp.metrics import _metric_free
         _metric_free(self)
+    
+    def __repr__(self) -> str:
+        return str(self)
+    
+    def __eq__(self, other) -> bool:
+        # TODO: consider adding ffi equality
+        return str(self) == str(other)
 
 
 class Measure(ctypes.POINTER(AnyMeasure)):
@@ -429,7 +460,8 @@ class Measure(ctypes.POINTER(AnyMeasure)):
     @property
     def distance_type(self):
         from opendp.measures import measure_distance_type
-        return measure_distance_type(self)
+        from opendp.typing import RuntimeType
+        return RuntimeType.parse(measure_distance_type(self))
 
     def __str__(self):
         from opendp.measures import measure_debug
@@ -447,6 +479,22 @@ class SMDCurve(object):
     def epsilon(self, delta):
         from opendp._data import smd_curve_epsilon
         return smd_curve_epsilon(self.curve, delta)
+
+
+class PartialConstructor(object):
+    def __init__(self, constructor):
+        self.constructor = constructor
+    
+    def __call__(self, input_domain: Domain, input_metric: Metric):
+        return self.constructor(input_domain, input_metric)
+    
+    def __rshift__(self, other):
+        return PartialConstructor(lambda input_domain, input_metric: self(input_domain, input_metric) >> other)
+
+    def __rrshift__(self, other):
+        if isinstance(other, tuple) and list(map(type, other)) == [Domain, Metric]:
+            return self(other[0], other[1])
+        raise TypeError(f"Cannot chain {type(self)} with {type(other)}")
 
 
 class UnknownTypeException(Exception):
@@ -532,22 +580,23 @@ def binary_search_chain(
 
     Find a base_laplace measurement with the smallest noise scale that is still (d_in, d_out)-close.
 
-    >>> from opendp.mod import binary_search_chain, enable_features
-    >>> from opendp.transformations import make_clamp, make_resize, make_sized_bounded_mean
-    >>> from opendp.measurements import make_base_laplace
-    >>> from opendp.domains import atom_domain
-    >>> enable_features("floating-point", "contrib")
+    >>> from typing import List
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("floating-point", "contrib")
     ...
     >>> # The majority of the chain only needs to be defined once.
     >>> pre = (
-    ...     make_clamp(bounds=(0., 1.)) >>
-    ...     make_resize(size=10, atom_domain=atom_domain((0., 1.)), constant=0.) >>
-    ...     make_sized_bounded_mean(size=10, bounds=(0., 1.))
+    ...     dp.space_of(List[float]) >>
+    ...     dp.t.part_clamp(bounds=(0., 1.)) >>
+    ...     dp.t.make_resize(size=10, atom_domain=dp.atom_domain((0., 1.)), constant=0.) >>
+    ...     dp.t.make_sized_bounded_mean(size=10, bounds=(0., 1.))
     ... )
     ...
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.
     >>> # The lambda function returns the complete computation chain when given a single numeric parameter.
-    >>> chain = binary_search_chain(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
+    >>> chain = dp.binary_search_chain(
+    ...     lambda s: pre >> dp.m.part_base_laplace(scale=s), 
+    ...     d_in=1, d_out=1.)
     ...
     >>> # The resulting computation chain is always (`d_in`, `d_out`)-close, but we can still double-check:
     >>> assert chain.check(1, 1.)
@@ -556,14 +605,11 @@ def binary_search_chain(
     Build a (2 neighboring, 1. epsilon)-close sized bounded sum with discrete_laplace(100.) noise.
     It should have the widest possible admissible clamping bounds (-b, b).
 
-    >>> from opendp.transformations import make_sized_bounded_sum
-    >>> from opendp.measurements import make_base_discrete_laplace
-    ...
     >>> def make_sum(b):
-    ...     return make_sized_bounded_sum(10_000, (-b, b)) >> make_base_discrete_laplace(100.)
+    ...     return dp.t.make_sized_bounded_sum(10_000, (-b, b)) >> dp.m.part_base_discrete_laplace(100.)
     ...
     >>> # `meas` is a Measurement with the widest possible clamping bounds.
-    >>> meas = binary_search_chain(make_sum, d_in=2, d_out=1., bounds=(0, 10_000))
+    >>> meas = dp.binary_search_chain(make_sum, d_in=2, d_out=1., bounds=(0, 10_000))
     ...
     >>> # If you want the discovered clamping bound, use `binary_search_param` instead.
     """
@@ -591,16 +637,20 @@ def binary_search_param(
 
     :example:
 
-    >>> from opendp.mod import binary_search_param, enable_features
-    >>> from opendp.measurements import make_base_laplace
+    >>> import opendp.prelude as dp
     ...
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.
     >>> # The first argument is any function that returns your complete computation chain
     >>> #     when passed a single numeric parameter.
-    >>> scale = binary_search_param(make_base_laplace, d_in=0.1, d_out=1.)
+    ...
+    >>> def make_fixed_laplace(scale):
+    ...     # fixes the input domain and metric, but parameterizes the noise scale
+    ...     return dp.m.make_base_laplace(dp.atom_domain(T=float), dp.absolute_distance(T=float), scale)
+    ...
+    >>> scale = dp.binary_search_param(make_fixed_laplace, d_in=0.1, d_out=1.)
     >>> assert scale == 0.1
     >>> # Constructing the same chain with the discovered parameter will always be (0.1, 1.)-close.
-    >>> assert make_base_laplace(scale).check(0.1, 1.)
+    >>> assert make_fixed_laplace(scale).check(0.1, 1.)
 
     A policy research organization wants to know the smallest sample size necessary to release an "accurate" epsilon=1 DP mean income. 
     Determine the smallest dataset size such that, with 95% confidence, 
@@ -609,18 +659,17 @@ def binary_search_param(
     Also assume a clipping bound of 500,000.
 
     >>> # we first work out the necessary noise scale to satisfy the above constraints.
-    >>> from opendp.accuracy import accuracy_to_laplacian_scale
-    >>> necessary_scale = accuracy_to_laplacian_scale(accuracy=1000., alpha=.05)
+    >>> necessary_scale = dp.accuracy_to_laplacian_scale(accuracy=1000., alpha=.05)
     ...
     >>> # we then write a function that make a computation chain with a given data size
     >>> def make_mean(data_size):
     ...    return (
-    ...        make_sized_bounded_mean(data_size, (0., 500_000.)) >> 
-    ...        make_base_laplace(necessary_scale)
+    ...        dp.t.make_sized_bounded_mean(data_size, (0., 500_000.)) >> 
+    ...        dp.m.part_base_laplace(necessary_scale)
     ...    )
     ...
     >>> # solve for the smallest dataset size that admits a (2 neighboring, 1. epsilon)-close measurement
-    >>> binary_search_param(
+    >>> dp.binary_search_param(
     ...     make_mean, 
     ...     d_in=2, d_out=1.,
     ...     bounds=(1, 1000000))
@@ -834,3 +883,103 @@ def exponential_bounds_search(
     at_center = predicate(center)
     return signed_band_search(center, at_center, sign)
 
+
+def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
+    """A shorthand for building a metric space.
+     
+    A metric space consists of a domain and a metric.
+
+    :example:
+
+    >>> import opendp.prelude as dp
+    >>> from typing import List # in Python 3.9, can just write list[int] below
+    ...
+    >>> dp.space_of(List[int])
+    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
+    >>> # the verbose form allows greater control:
+    >>> (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())
+    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
+    
+    :param T: carrier type (the type of members in the domain)
+    :param M: metric type
+    :param infer: if True, `T` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
+    """
+    import opendp.typing as ty
+    domain = domain_of(T, infer=infer)
+    D = domain.type
+
+    # choose a metric type if not set
+    if M is None:
+        if D.origin == "VectorDomain":
+            M = ty.SymmetricDistance
+        elif D.origin == "AtomDomain" and ty.get_atom(D) in ty.NUMERIC_TYPES:
+            M = ty.AbsoluteDistance
+        else:
+            raise TypeError(f"no default metric for domain {D}. Please set `M`")
+    
+    # choose a distance type if not set
+    if isinstance(M, ty.RuntimeType) and M.args is None:
+        M = M[ty.get_atom(D)]
+
+    return domain, metric_of(M)
+
+
+def domain_of(T, infer=False) -> Domain:
+    """Constructs an instance of a domain from carrier type `T`.
+
+    :param T: carrier type
+    :param infer: if True, `T` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
+    """
+    import opendp.typing as ty
+    from opendp.domains import vector_domain, atom_domain, option_domain, map_domain
+
+    # normalize to a type descriptor
+    if infer:
+        T = ty.RuntimeType.infer(T)
+    else:
+        T = ty.RuntimeType.parse(T)
+    
+    # construct the domain
+    if isinstance(T, ty.RuntimeType):
+        if T.origin == "Vec":
+            return vector_domain(domain_of(T.args[0]))
+        if T.origin == "HashMap":
+            return map_domain(domain_of(T.args[0]), domain_of(T.args[1]))
+        if T.origin == "Option":
+            return option_domain(domain_of(T.args[0]))
+
+    if T in ty.PRIMITIVE_TYPES:
+        return atom_domain(T=T)
+    
+    raise TypeError(f"unrecognized carrier type: {T}")
+    
+        
+def metric_of(M) -> Metric:
+    """Constructs an instance of a metric from metric type `M`."""
+    import opendp.typing as ty
+    import opendp.metrics as metrics
+
+    if isinstance(M, Metric):
+        return M
+    M = ty.RuntimeType.parse(M)
+
+    if isinstance(M, ty.RuntimeType):
+        if M.origin == "AbsoluteDistance":
+            return metrics.absolute_distance(T=M.args[0])
+        if M.origin == "L1Distance":
+            return metrics.l1_distance(T=M.args[0])
+        if M.origin == "L2Distance":
+            return metrics.l2_distance(T=M.args[0])
+        
+    if M == ty.HammingDistance:
+        return metrics.hamming_distance()
+    if M == ty.SymmetricDistance:
+        return metrics.symmetric_distance()
+    if M == ty.InsertDeleteDistance:
+        return metrics.insert_delete_distance()
+    if M == ty.ChangeOneDistance:
+        return metrics.change_one_distance()
+    if M == ty.DiscreteDistance:
+        return metrics.discrete_distance()
+
+    raise TypeError(f"unrecognized metric: {M}")

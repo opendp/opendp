@@ -7,7 +7,7 @@ If you are writing code, the first task to tackle is setting up the development 
 Follow the steps below to set up an OpenDP Library development environment, including the ability to run tests in both Rust and Python.
 
 * Install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
-* Install `Python version 3.7 or higher <https://www.python.org>`_.
+* Install `Python version 3.8 or higher <https://www.python.org>`_.
 
 
 Clone the OpenDP Repo

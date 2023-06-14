@@ -7,55 +7,107 @@ use opendp_derive::bootstrap;
 use crate::core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::*;
-use crate::metrics::{IntDistance, SymmetricDistance};
+use crate::metrics::{
+    ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance, SymmetricDistance,
+};
 use crate::traits::{CheckAtom, CheckNull, DistanceConstant};
 
-/// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
-pub(crate) fn make_row_by_row<DIA, DOA, M>(
-    atom_input_domain: DIA,
-    atom_output_domain: DOA,
-    atom_function: impl 'static + Fn(&DIA::Carrier) -> DOA::Carrier,
-) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<DOA>, M, M>>
-where
-    DIA: Domain,
-    DOA: Domain,
-    DIA::Carrier: 'static,
-    M: Metric<Distance = IntDistance>,
-    (VectorDomain<DIA>, M): MetricSpace,
-    (VectorDomain<DOA>, M): MetricSpace,
-{
-    Transformation::new(
-        VectorDomain::new(atom_input_domain),
-        VectorDomain::new(atom_output_domain),
-        Function::new(move |arg: &Vec<DIA::Carrier>| arg.iter().map(&atom_function).collect()),
-        M::default(),
-        M::default(),
-        StabilityMap::new_from_constant(1),
-    )
+/// A [`Domain`] representing a dataset.
+///
+/// This is distinguished from other domains
+/// because each element in the dataset corresponds to an individual.
+pub trait DatasetDomain: Domain {
+    /// The domain of each element in the dataset.
+    ///
+    /// For vectors, this is the domain of the vector elements,
+    /// for dataframes, this is the domain of the dataframe rows,
+    /// and so on.
+    type ElementDomain: Domain;
+}
+
+impl<D: Domain> DatasetDomain for VectorDomain<D> {
+    type ElementDomain = D;
+}
+
+pub trait DatasetMetric: Metric<Distance = IntDistance> {}
+
+impl DatasetMetric for SymmetricDistance {}
+impl DatasetMetric for InsertDeleteDistance {}
+impl DatasetMetric for ChangeOneDistance {}
+impl DatasetMetric for HammingDistance {}
+
+pub trait RowByRowDomain<DO: DatasetDomain>: DatasetDomain {
+    fn translate(&self, output_row_domain: DO::ElementDomain) -> DO;
+    fn apply_rows(
+        value: &Self::Carrier,
+        row_function: &impl Fn(
+            &<Self::ElementDomain as Domain>::Carrier,
+        ) -> Fallible<<DO::ElementDomain as Domain>::Carrier>,
+    ) -> Fallible<DO::Carrier>;
+}
+
+impl<DIA: Domain, DOA: Domain> RowByRowDomain<VectorDomain<DOA>> for VectorDomain<DIA> {
+    fn translate(
+        &self,
+        output_row_domain: <VectorDomain<DOA> as DatasetDomain>::ElementDomain,
+    ) -> VectorDomain<DOA> {
+        VectorDomain {
+            element_domain: output_row_domain,
+            size: self.size,
+        }
+    }
+
+    fn apply_rows(
+        value: &Self::Carrier,
+        row_function: &impl Fn(&DIA::Carrier) -> Fallible<DOA::Carrier>,
+    ) -> Fallible<Vec<DOA::Carrier>> {
+        value.iter().map(row_function).collect()
+    }
 }
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
-pub(crate) fn make_row_by_row_fallible<DIA, DOA, M>(
-    atom_input_domain: DIA,
-    atom_output_domain: DOA,
-    atom_function: impl 'static + Fn(&DIA::Carrier) -> Fallible<DOA::Carrier>,
-) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<DOA>, M, M>>
+pub(crate) fn make_row_by_row<DI, DO, M>(
+    input_domain: DI,
+    input_metric: M,
+    output_row_domain: DO::ElementDomain,
+    row_function: impl 'static
+        + Fn(&<DI::ElementDomain as Domain>::Carrier) -> <DO::ElementDomain as Domain>::Carrier,
+) -> Fallible<Transformation<DI, DO, M, M>>
 where
-    DIA: Domain,
-    DOA: Domain,
-    DIA::Carrier: 'static,
-    M: Metric<Distance = IntDistance>,
-    (VectorDomain<DIA>, M): MetricSpace,
-    (VectorDomain<DOA>, M): MetricSpace,
+    DI: RowByRowDomain<DO>,
+    DO: DatasetDomain,
+    M: DatasetMetric<Distance = IntDistance>,
+    (DI, M): MetricSpace,
+    (DO, M): MetricSpace,
 {
+    let row_function = move |arg: &<DI::ElementDomain as Domain>::Carrier| Ok(row_function(arg));
+    make_row_by_row_fallible(input_domain, input_metric, output_row_domain, row_function)
+}
+
+/// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
+pub(crate) fn make_row_by_row_fallible<DI, DO, M>(
+    input_domain: DI,
+    input_metric: M,
+    output_row_domain: DO::ElementDomain,
+    row_function: impl 'static
+        + Fn(
+            &<DI::ElementDomain as Domain>::Carrier,
+        ) -> Fallible<<DO::ElementDomain as Domain>::Carrier>,
+) -> Fallible<Transformation<DI, DO, M, M>>
+where
+    DI: RowByRowDomain<DO>,
+    DO: DatasetDomain,
+    M: DatasetMetric<Distance = IntDistance>,
+    (DI, M): MetricSpace,
+    (DO, M): MetricSpace,
+{
+    let output_domain = input_domain.translate(output_row_domain);
     Transformation::new(
-        VectorDomain::new(atom_input_domain),
-        VectorDomain::new(atom_output_domain),
-        Function::new_fallible(move |arg: &Vec<DIA::Carrier>| {
-            arg.iter().map(&atom_function).collect()
-        }),
-        M::default(),
-        M::default(),
+        input_domain,
+        output_domain,
+        Function::new_fallible(move |arg: &DI::Carrier| DI::apply_rows(arg, &row_function)),
+        input_metric.clone(),
+        input_metric,
         StabilityMap::new_from_constant(1),
     )
 }
@@ -79,7 +131,18 @@ where
     )
 }
 
-#[bootstrap(features("contrib"))]
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        input_domain(c_type = "AnyDomain *"),
+        input_metric(c_type = "AnyMetric *")
+    ),
+    generics(TIA(suppress), M(suppress)),
+    derived_types(
+        TIA = "$get_atom(get_type(input_domain))",
+        M = "$get_type(input_metric)"
+    )
+)]
 /// Make a Transformation that checks if each element is equal to `value`.
 ///
 /// # Arguments
@@ -87,22 +150,23 @@ where
 ///
 /// # Generics
 /// * `TIA` - Atomic Input Type. Type of elements in the input vector
-pub fn make_is_equal<TIA>(
+pub fn make_is_equal<TIA, M>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: M,
     value: TIA,
-) -> Fallible<
-    Transformation<
-        VectorDomain<AtomDomain<TIA>>,
-        VectorDomain<AtomDomain<bool>>,
-        SymmetricDistance,
-        SymmetricDistance,
-    >,
->
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, VectorDomain<AtomDomain<bool>>, M, M>>
 where
     TIA: 'static + PartialEq + CheckAtom,
+    M: DatasetMetric,
+    (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
+    (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
 {
-    make_row_by_row(AtomDomain::default(), AtomDomain::default(), move |v| {
-        v == &value
-    })
+    make_row_by_row(
+        input_domain,
+        input_metric,
+        AtomDomain::default(),
+        move |v| v == &value,
+    )
 }
 
 #[bootstrap(
@@ -127,7 +191,12 @@ where
     DIA: Domain + Default,
     DIA::Carrier: 'static + CheckNull,
 {
-    make_row_by_row(input_atom_domain, AtomDomain::default(), |v| v.is_null())
+    make_row_by_row(
+        VectorDomain::new(input_atom_domain),
+        SymmetricDistance::default(),
+        AtomDomain::default(),
+        |v| v.is_null(),
+    )
 }
 
 #[cfg(test)]
@@ -147,7 +216,9 @@ mod tests {
 
     #[test]
     fn test_is_equal() -> Fallible<()> {
-        let is_equal = make_is_equal("alpha".to_string())?;
+        let input_domain = VectorDomain::new(AtomDomain::default());
+        let input_metric = SymmetricDistance;
+        let is_equal = make_is_equal(input_domain, input_metric, "alpha".to_string())?;
         let arg = vec!["alpha".to_string(), "beta".to_string(), "gamma".to_string()];
         let ret = is_equal.invoke(&arg)?;
 

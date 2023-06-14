@@ -227,11 +227,11 @@ impl<Q: 'static, A: 'static> Measurement<AnyDomain, Queryable<Q, A>, AnyMetric, 
     pub fn into_any_Q(
         self,
     ) -> Measurement<AnyDomain, Queryable<AnyObject, A>, AnyMetric, AnyMeasure> {
-        let function = self.function;
+        let function = self.function.clone();
 
-        Measurement {
-            input_domain: self.input_domain,
-            function: Function::new_fallible(
+        Measurement::new(
+            self.input_domain.clone(),
+            Function::new_fallible(
                 move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, A>> {
                     let mut inner_qbl = function.eval(arg)?;
 
@@ -251,10 +251,10 @@ impl<Q: 'static, A: 'static> Measurement<AnyDomain, Queryable<Q, A>, AnyMetric, 
                     })
                 },
             ),
-            input_metric: self.input_metric,
-            output_measure: self.output_measure,
-            privacy_map: self.privacy_map,
-        }
+            self.input_metric.clone(),
+            self.output_measure.clone(),
+            self.privacy_map.clone(),
+        ).expect("AnyDomain is not checked for compatibility")
     }
 }
 
@@ -281,6 +281,10 @@ impl AnyDomain {
                 self_.member(val.downcast_ref::<D::Carrier>()?)
             }),
         }
+    }
+
+    pub fn new_raw<D: 'static + Domain>(value: D) -> *mut Self {
+        crate::ffi::util::into_raw(Self::new(value))
     }
 }
 
@@ -323,6 +327,11 @@ impl AnyMeasure {
             type_: Type::of::<M>(),
             distance_type: Type::of::<M::Distance>(),
         }
+    }
+
+    #[cfg(test)]
+    pub fn new_raw<D: 'static + Measure>(value: D) -> *mut Self {
+        crate::ffi::util::into_raw(Self::new(value))
     }
 }
 
@@ -368,6 +377,11 @@ impl AnyMetric {
             distance_type: Type::of::<M::Distance>(),
             metric: AnyClonePartialEqDebugBox::new_clone_partial_eq_debug(metric),
         }
+    }
+
+    #[cfg(test)]
+    pub fn new_raw<D: 'static + Metric>(value: D) -> *mut Self {
+        crate::ffi::util::into_raw(Self::new(value))
     }
 }
 
@@ -480,6 +494,7 @@ pub trait IntoAnyMeasurementExt {
     fn into_any(self) -> AnyMeasurement;
 }
 
+/// Turn a Measurement into an AnyMeasurement.
 impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
     IntoAnyMeasurementExt for Measurement<DI, TO, MI, MO>
 where
@@ -489,13 +504,14 @@ where
     (DI, MI): MetricSpace,
 {
     fn into_any(self) -> AnyMeasurement {
-        AnyMeasurement {
-            input_domain: AnyDomain::new(self.input_domain),
-            function: self.function.into_any(),
-            input_metric: AnyMetric::new(self.input_metric),
-            output_measure: AnyMeasure::new(self.output_measure),
-            privacy_map: self.privacy_map.into_any(),
-        }
+        AnyMeasurement::new(
+            AnyDomain::new(self.input_domain.clone()),
+            self.function.clone().into_any(),
+            AnyMetric::new(self.input_metric.clone()),
+            AnyMeasure::new(self.output_measure.clone()),
+            self.privacy_map.clone().into_any(),
+        )
+        .expect("AnyDomain is not checked for compatibility")
     }
 }
 
@@ -507,13 +523,14 @@ pub trait IntoAnyMeasurementOutExt {
 
 impl<TO: 'static> IntoAnyMeasurementOutExt for Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
     fn into_any_out(self) -> AnyMeasurement {
-        AnyMeasurement {
-            input_domain: self.input_domain,
-            function: self.function.into_any_out(),
-            input_metric: self.input_metric,
-            output_measure: self.output_measure,
-            privacy_map: self.privacy_map,
-        }
+        Measurement::new(
+            self.input_domain.clone(),
+            self.function.clone().into_any_out(),
+            self.input_metric.clone(),
+            self.output_measure.clone(),
+            self.privacy_map.clone(),
+        )
+        .expect("AnyDomain is not checked for compatibility")
     }
 }
 
@@ -538,16 +555,78 @@ where
     (DO, MO): MetricSpace,
 {
     fn into_any(self) -> AnyTransformation {
-        AnyTransformation {
-            input_domain: AnyDomain::new(self.input_domain),
-            output_domain: AnyDomain::new(self.output_domain),
-            function: self.function.into_any(),
-            input_metric: AnyMetric::new(self.input_metric),
-            output_metric: AnyMetric::new(self.output_metric),
-            stability_map: self.stability_map.into_any(),
+        AnyTransformation::new(
+            AnyDomain::new(self.input_domain.clone()),
+            AnyDomain::new(self.output_domain.clone()),
+            self.function.clone().into_any(),
+            AnyMetric::new(self.input_metric.clone()),
+            AnyMetric::new(self.output_metric.clone()),
+            self.stability_map.clone().into_any(),
+        )
+        .expect("AnyDomain is not checked")
+    }
+}
+
+#[cfg(feature = "partials")]
+mod partials {
+    use crate::core::{PartialMeasurement, PartialTransformation};
+
+    pub use super::*;
+
+    pub type AnyPartialTransformation =
+        PartialTransformation<AnyDomain, AnyDomain, AnyMetric, AnyMetric>;
+
+    impl<
+            DI: 'static + Domain,
+            DO: 'static + Domain,
+            MI: 'static + Metric,
+            MO: 'static + Metric,
+        > PartialTransformation<DI, DO, MI, MO>
+    where
+        DI::Carrier: 'static,
+        DO::Carrier: 'static,
+        MI::Distance: 'static,
+        MO::Distance: 'static,
+        (DI, MI): MetricSpace,
+        (DO, MO): MetricSpace,
+    {
+        pub fn into_any(self) -> AnyPartialTransformation {
+            AnyPartialTransformation::new(move |input_domain, input_metric| {
+                Ok(self
+                    .fix(
+                        input_domain.downcast::<DI>()?,
+                        input_metric.downcast::<MI>()?,
+                    )?
+                    .into_any())
+            })
+        }
+    }
+
+    pub type AnyPartialMeasurement =
+        PartialMeasurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>;
+
+    impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
+        PartialMeasurement<DI, TO, MI, MO>
+    where
+        DI::Carrier: 'static,
+        MI::Distance: 'static,
+        MO::Distance: 'static,
+        (DI, MI): MetricSpace,
+    {
+        pub fn into_any(self) -> AnyPartialMeasurement {
+            AnyPartialMeasurement::new(move |input_domain, input_metric| {
+                Ok(self
+                    .fix(
+                        input_domain.downcast::<DI>()?,
+                        input_metric.downcast::<MI>()?,
+                    )?
+                    .into_any())
+            })
         }
     }
 }
+#[cfg(feature = "partials")]
+pub use partials::*;
 
 /// A Queryable with all generic types filled by Any types.
 /// This is the type of Queryables passed back and forth over FFI.
@@ -558,10 +637,8 @@ mod tests {
 
     use crate::domains::AtomDomain;
     use crate::error::*;
-    use crate::measurements;
     use crate::measures::{MaxDivergence, SmoothedMaxDivergence};
     use crate::metrics::{ChangeOneDistance, SymmetricDistance};
-    use crate::transformations;
 
     use super::*;
 
@@ -628,16 +705,25 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(feature = "use-mpfr")]
+    #[cfg(all(feature = "use-mpfr", feature = "partials"))]
     #[test]
     fn test_any_chain() -> Fallible<()> {
+        use crate::{transformations, measurements};
+        use crate::metrics::AbsoluteDistance;
+
         let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?
             .into_any();
         let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
-        let t3 = transformations::make_cast_default::<String, f64>()?.into_any();
-        let t4 = transformations::make_clamp((0.0, 10.0))?.into_any();
+        let t3 = transformations::part_cast_default::<String, f64, SymmetricDistance>().into_any();
+        let t4 = transformations::part_clamp::<_, SymmetricDistance>((0.0, 10.0)).into_any();
         let t5 = transformations::make_bounded_sum::<SymmetricDistance, _>((0.0, 10.0))?.into_any();
-        let m1 = measurements::make_base_laplace::<AtomDomain<_>>(0.0, None)?.into_any();
+        let m1 = measurements::make_base_laplace(
+            AtomDomain::default(),
+            AbsoluteDistance::default(),
+            0.0,
+            None,
+        )?
+        .into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
         let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
         let res = chain.invoke(&arg)?;

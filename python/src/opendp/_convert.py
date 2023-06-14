@@ -2,7 +2,11 @@ from typing import Sequence, Tuple, List, Union, Dict
 
 from opendp._lib import *
 
+<<<<<<< HEAD
 from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable, Domain
+=======
+from opendp.mod import Domain, UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
+>>>>>>> remotes/origin/773-sum-metrics
 from opendp.typing import RuntimeType, Vec
 
 try:
@@ -109,6 +113,10 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
         value = value.encode()
 
     if not isinstance(value, c_type):
+        # throw an error if the value is already a c_type, but the wrong one
+        # (like passing a Metric into an argument expecting a Domain)
+        if hasattr(value, "_type_"):
+            raise ValueError(f"Cannot convert {value} to {c_type}")
         value = c_type(value)
 
     return value

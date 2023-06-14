@@ -1,19 +1,13 @@
-from opendp.combinators import *
+import opendp.prelude as dp
 import pytest
-from opendp.mod import enable_features
-from opendp.measurements import *
-from opendp.transformations import *
-from opendp.typing import AtomDomain, VectorDomain, ZeroConcentratedDivergence
 
-enable_features("floating-point", "contrib", "honest-but-curious")
+dp.enable_features("floating-point", "contrib", "honest-but-curious")
 
 
 def test_amplification():
-    from opendp.transformations import make_sized_bounded_mean
+    meas = dp.t.make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> dp.m.part_base_laplace(scale=0.5)
 
-    meas = make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> make_base_laplace(scale=0.5)
-
-    amplified = make_population_amplification(meas, population_size=100)
+    amplified = dp.c.make_population_amplification(meas, population_size=100)
     print("amplified base laplace:", amplified([1.] * 10))
     assert meas.check(2, 2. + 1e-6)
     assert not meas.check(2, 2.)
@@ -21,29 +15,30 @@ def test_amplification():
     assert not amplified.check(2, .494)
 
 def test_fix_delta():
-    base_gaussian = make_zCDP_to_approxDP(make_base_gaussian(10.))
+    base_gaussian = dp.c.make_zCDP_to_approxDP(dp.m.make_base_gaussian(10.))
     print(base_gaussian.map(1.).epsilon(1e-6))
-    fixed_base_gaussian = make_fix_delta(base_gaussian, 1e-6)
+    fixed_base_gaussian = dp.c.make_fix_delta(base_gaussian, 1e-6)
 
     print(fixed_base_gaussian.map(1.))
 
 
 def test_make_basic_composition():
-    composed = make_basic_composition([
-        make_count(TIA=int, TO=int) >> make_basic_composition([
-            make_base_discrete_laplace(scale=2.), 
-            make_base_discrete_laplace(scale=200.)
-        ]), 
-        make_cast_default(int, bool) >> make_cast_default(bool, int) >> make_count(TIA=int, TO=int) >> make_base_discrete_laplace(scale=2.), 
-        make_cast_default(int, float) >> make_clamp((0., 10.)) >> make_bounded_sum((0., 10.)) >> make_base_laplace(scale=2.), 
+    input_pair = (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
+    composed = dp.c.make_basic_composition([
+        dp.t.make_count(TIA=int, TO=int) >> dp.c.make_basic_composition([
+            dp.space_of(int) >> dp.m.part_base_discrete_laplace(scale=2.), 
+            dp.space_of(int) >> dp.m.part_base_discrete_laplace(scale=200.)
+        ]),
+        input_pair >> dp.t.part_cast_default(bool) >> dp.t.part_cast_default(int) >> dp.t.make_count(TIA=int, TO=int) >> dp.m.part_base_discrete_laplace(scale=2.), 
+        input_pair >> dp.t.part_cast_default(float) >> dp.t.part_clamp((0., 10.)) >> dp.t.make_bounded_sum((0., 10.)) >> dp.m.part_base_laplace(scale=2.), 
 
-        make_basic_composition([
-            make_count(TIA=int, TO=int) >> make_base_discrete_laplace(scale=2.), 
-            make_count(TIA=int, TO=float) >> make_base_laplace(scale=2.),
+        dp.c.make_basic_composition([
+            dp.t.make_count(TIA=int, TO=int) >> dp.m.part_base_discrete_laplace(scale=2.), 
+            dp.t.make_count(TIA=int, TO=float) >> dp.m.part_base_laplace(scale=2.),
             (
-                make_cast_default(int, str) >> 
-                make_count_by_categories(categories=["0", "12", "22"]) >> 
-                make_base_discrete_laplace(scale=2., D=VectorDomain[AtomDomain[int]])
+                input_pair >> dp.t.part_cast_default(str) >> 
+                dp.t.make_count_by_categories(categories=["0", "12", "22"]) >> 
+                dp.m.part_base_discrete_laplace(scale=2.)
             )
         ])
     ])
@@ -58,11 +53,11 @@ def test_make_basic_composition_leak():
 
     # choose a vector-valued mechanism that should run quickly for large inputs
     # we want to add as little noise as possible, so that execution time is small
-    meas = make_base_discrete_laplace(scale=1e-6, D=VectorDomain[AtomDomain[int]])
+    meas = dp.m.make_base_discrete_laplace(scale=1e-6, D=dp.VectorDomain[dp.AtomDomain[int]])
 
     # memory usage remains the same when this line is commented,
     # supporting that AnyObject's free recursively frees children
-    meas = make_basic_composition([meas])
+    meas = dp.c.make_basic_composition([meas])
 
     # watch for leaked AnyObjects with 1 million i32 values
     # memory would jump by ~40mb every iteration
@@ -72,35 +67,39 @@ def test_make_basic_composition_leak():
     
 
 def test_make_basic_composition_approx():
-    composed_fixed = make_basic_composition([
-        make_fix_delta(make_zCDP_to_approxDP(make_base_gaussian(1.)), 1e-7)
+    composed_fixed = dp.c.make_basic_composition([
+        dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_base_gaussian(1.)), 1e-7)
     ] * 2)
     print(composed_fixed.map(1.))
 
 
 def test_cast_zcdp_approxdp():
-    base_gaussian = make_base_gaussian(10., MO=ZeroConcentratedDivergence[float])
+    base_gaussian = dp.m.make_base_gaussian(10., MO=dp.ZeroConcentratedDivergence[float])
 
     print(base_gaussian.map(1.))
 
-    smd_gaussian = make_zCDP_to_approxDP(base_gaussian)
+    smd_gaussian = dp.c.make_zCDP_to_approxDP(base_gaussian)
 
     print(smd_gaussian.map(1.).epsilon(1e-6))
     
 
 def test_make_pureDP_to_fixed_approxDP():
-    meas = make_basic_composition([
-        make_pureDP_to_fixed_approxDP(make_base_laplace(10.)),
-        make_fix_delta(make_zCDP_to_approxDP(make_base_gaussian(10.)), delta=1e-6)
+    input_domain = dp.atom_domain(T=float)
+    input_metric = dp.absolute_distance(T=float)
+    meas = dp.c.make_basic_composition([
+        dp.c.make_pureDP_to_fixed_approxDP(dp.m.make_base_laplace(input_domain, input_metric, 10.)),
+        dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_base_gaussian(10.)), delta=1e-6)
     ])
 
     print(meas.map(1.))
 
 
 def test_make_pureDP_to_zCDP():
-    meas = make_basic_composition([
-        make_pureDP_to_zCDP(make_base_laplace(10.)),
-        make_base_gaussian(10.)
+    input_domain = dp.atom_domain(T=float)
+    input_metric = dp.absolute_distance(T=float)
+    meas = dp.c.make_basic_composition([
+        dp.c.make_pureDP_to_zCDP(dp.m.make_base_laplace(input_domain, input_metric, 10.)),
+        dp.m.make_base_gaussian(10.)
     ])
 
     print(meas.map(1.))

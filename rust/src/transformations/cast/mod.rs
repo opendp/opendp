@@ -3,12 +3,14 @@ mod ffi;
 
 use opendp_derive::bootstrap;
 
-use crate::core::Transformation;
+use crate::core::{MetricSpace, Transformation};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::SymmetricDistance;
 use crate::traits::{CheckAtom, InherentNull, RoundCast};
 use crate::transformations::make_row_by_row;
+
+use super::DatasetMetric;
 
 #[bootstrap(features("contrib"))]
 /// Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
@@ -32,7 +34,8 @@ where
     TOA: 'static + RoundCast<TIA> + CheckAtom,
 {
     make_row_by_row(
-        AtomDomain::default(),
+        VectorDomain::new(AtomDomain::default()),
+        SymmetricDistance::default(),
         OptionDomain::new(AtomDomain::default()),
         |v| {
             TOA::round_cast(v.clone())
@@ -42,7 +45,18 @@ where
     )
 }
 
-#[bootstrap(features("contrib"))]
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        input_domain(c_type = "AnyDomain *"),
+        input_metric(c_type = "AnyMetric *")
+    ),
+    generics(TIA(suppress), M(suppress)),
+    derived_types(
+        TIA = "$get_atom(get_type(input_domain))",
+        M = "$get_type(input_metric)"
+    )
+)]
 /// Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
 /// Any element that fails to cast is filled with default.
 ///
@@ -57,19 +71,18 @@ where
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into
-pub fn make_cast_default<TIA, TOA>() -> Fallible<
-    Transformation<
-        VectorDomain<AtomDomain<TIA>>,
-        VectorDomain<AtomDomain<TOA>>,
-        SymmetricDistance,
-        SymmetricDistance,
-    >,
->
+pub fn make_cast_default<TIA, TOA, M>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: M,
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, VectorDomain<AtomDomain<TOA>>, M, M>>
 where
     TIA: 'static + Clone + CheckAtom,
     TOA: 'static + RoundCast<TIA> + Default + CheckAtom,
+    M: DatasetMetric,
+    (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
+    (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
 {
-    make_row_by_row(AtomDomain::default(), AtomDomain::default(), |v| {
+    make_row_by_row(input_domain, input_metric, AtomDomain::default(), |v| {
         TOA::round_cast(v.clone()).unwrap_or_default()
     })
 }
@@ -97,9 +110,12 @@ where
     TIA: 'static + Clone + CheckAtom,
     TOA: 'static + RoundCast<TIA> + InherentNull + CheckAtom,
 {
-    make_row_by_row(AtomDomain::default(), AtomDomain::new_nullable(), |v| {
-        TOA::round_cast(v.clone()).unwrap_or(TOA::NULL)
-    })
+    make_row_by_row(
+        VectorDomain::new(AtomDomain::default()),
+        SymmetricDistance::default(),
+        AtomDomain::new_nullable(),
+        |v| TOA::round_cast(v.clone()).unwrap_or(TOA::NULL),
+    )
 }
 
 #[cfg(test)]
@@ -159,7 +175,8 @@ mod tests {
 
     #[test]
     fn test_cast_default_unsigned() -> Fallible<()> {
-        let caster = make_cast_default::<f64, u8>()?;
+        let caster =
+            make_cast_default::<f64, u8, _>(Default::default(), SymmetricDistance::default())?;
         assert_eq!(caster.invoke(&vec![-1.])?, vec![u8::default()]);
         Ok(())
     }
@@ -173,13 +190,15 @@ mod tests {
             "".to_string(),
         ];
 
-        let caster = make_cast_default::<String, u8>()?;
+        let caster =
+            make_cast_default::<String, u8, _>(Default::default(), SymmetricDistance::default())?;
         assert_eq!(
             caster.invoke(&data)?,
             vec![2, 3, u8::default(), u8::default()]
         );
 
-        let caster = make_cast_default::<String, f64>()?;
+        let caster =
+            make_cast_default::<String, f64, _>(Default::default(), SymmetricDistance::default())?;
         assert_eq!(
             caster.invoke(&data)?,
             vec![2., 3., f64::default(), f64::default()]
@@ -190,13 +209,15 @@ mod tests {
     #[test]
     fn test_cast_default_floats() -> Fallible<()> {
         let data = vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY];
-        let caster = make_cast_default::<f64, String>()?;
+        let caster =
+            make_cast_default::<f64, String, _>(Default::default(), SymmetricDistance::default())?;
         assert_eq!(
             caster.invoke(&data)?,
             vec!["NaN".to_string(), "-inf".to_string(), "inf".to_string()]
         );
 
-        let caster = make_cast_default::<f64, u8>()?;
+        let caster =
+            make_cast_default::<f64, u8, _>(Default::default(), SymmetricDistance::default())?;
         assert_eq!(
             caster.invoke(&vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY])?,
             vec![u8::default(), u8::default(), u8::default()]
@@ -215,7 +236,8 @@ mod tests {
         .into_iter()
         .map(|v| v.to_string())
         .collect();
-        let caster = make_cast_default::<String, f64>()?;
+        let caster =
+            make_cast_default::<String, f64, _>(Default::default(), SymmetricDistance::default())?;
         assert!(caster.invoke(&data)?.into_iter().all(|v| v == 100.));
         Ok(())
     }

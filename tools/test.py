@@ -2,7 +2,7 @@ from opendp.transformations import *
 from opendp.measurements import *
 from opendp.combinators import *
 
-from opendp.typing import ChangeOneDistance, VectorDomain, AtomDomain
+from opendp.typing import SymmetricDistance, VectorDomain, AtomDomain
 from opendp.mod import enable_features
 enable_features("contrib")
 
@@ -12,7 +12,7 @@ enable_features("contrib")
 def main():
 
     # HELLO WORLD
-    identity = make_identity(D=VectorDomain[AtomDomain[str]], M=ChangeOneDistance)
+    identity = make_identity(D=VectorDomain[AtomDomain[str]], M=SymmetricDistance)
     arg = ["hello, world!"]
     res = identity(arg)
     print(res)
@@ -24,8 +24,8 @@ def main():
     # Noisy sum, col 1
     noisy_sum_1 = (
         make_select_column(key="B", TOA=str) >>
-        make_cast_default(TIA=str, TOA=int) >>
-        make_clamp(bounds=(0, 10)) >>
+        part_cast_default(TOA=int) >>
+        part_clamp(bounds=(0, 10)) >>
         make_bounded_sum(bounds=(0, 10)) >>
         make_base_discrete_laplace(scale=1.0)
     )
@@ -33,7 +33,7 @@ def main():
     # Count, col 2
     noisy_count_2 = (
         make_select_column(key="C", TOA=str) >>
-        make_cast_default(TIA=str, TOA=float) >>
+        part_cast_default(TOA=float) >>
         make_count(TIA=float) >>
         make_base_discrete_laplace(scale=1.0)
     )

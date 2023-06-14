@@ -46,7 +46,13 @@ def test_impute_constant_inherent():
 
 def test_cast_default():
     from opendp.transformations import make_cast_default
-    caster = make_cast_default(TIA=float, TOA=int)
+    from opendp.domains import vector_domain, atom_domain
+    from opendp.metrics import symmetric_distance
+
+    input_domain = vector_domain(atom_domain(T=float))
+    input_metric = symmetric_distance()
+    caster = make_cast_default(
+        input_domain, input_metric, TOA=int)
     assert caster([float('nan'), 2.]) == [0, 2]
 
 
@@ -83,7 +89,11 @@ def test_identity():
 
 def test_is_equal():
     from opendp.transformations import make_is_equal
-    tester = make_is_equal(3)
+    from opendp.domains import vector_domain, atom_domain
+    from opendp.metrics import symmetric_distance
+    input_domain = vector_domain(atom_domain(T=int))
+    input_metric = symmetric_distance()
+    tester = make_is_equal(input_domain, input_metric, 3)
     assert tester([1, 2, 3]) == [False, False, True]
 
 
@@ -164,10 +174,18 @@ def test_split_dataframe():
 
 
 def test_clamp():
-    from opendp.transformations import make_clamp
-    query = make_clamp(bounds=(-1, 1))
+    from opendp.transformations import part_clamp, make_clamp
+    from opendp.domains import vector_domain, atom_domain
+    from opendp.metrics import symmetric_distance
+    input_domain = vector_domain(atom_domain(T=int))
+    input_metric = symmetric_distance()
+    query = (input_domain, input_metric) >> part_clamp(bounds=(-1, 1))
     assert query([-10, 0, 10]) == [-1, 0, 1]
     assert query.check(1, 1)
+
+    query2 = make_clamp(input_domain, input_metric, bounds=(-1, 1))
+    assert query2([-10, 0, 10]) == [-1, 0, 1]
+    assert query2.check(1, 1)
 
 
 def test_bounded_mean():
@@ -303,12 +321,12 @@ def test_lipschitz_mul_float():
 
 
 def test_df_cast_default():
-    from opendp.transformations import make_split_dataframe, make_df_cast_default, make_select_column
+    from opendp.transformations import make_split_dataframe, part_df_cast_default, make_select_column
 
     query = (
         make_split_dataframe(separator=",", col_names=["23", "17"]) >>
-        make_df_cast_default(column_name="23", TIA=str, TOA=int) >>
-        make_df_cast_default(column_name="23", TIA=int, TOA=bool) >>
+        part_df_cast_default(column_name="23", TIA=str, TOA=int) >>
+        part_df_cast_default(column_name="23", TIA=int, TOA=bool) >>
         make_select_column(key="23", TOA=bool)
     )
     assert query("0,0.\n1,1.\n2,2.\n3,3.") == [False, True, True, True]
@@ -316,11 +334,11 @@ def test_df_cast_default():
 
 
 def test_df_is_equal():
-    from opendp.transformations import make_split_dataframe, make_df_is_equal, make_select_column
+    from opendp.transformations import make_split_dataframe, part_df_is_equal, make_select_column
 
     query = (
         make_split_dataframe(separator=",", col_names=["23", "17"]) >>
-        make_df_is_equal(column_name="17", value="2.") >>
+        part_df_is_equal(column_name="17", value="2.") >>
         make_select_column(key="17", TOA=bool)
     )
     assert query("0,0.\n1,1.\n2,2.\n3,3.") == [False, False, True, False]
@@ -328,11 +346,11 @@ def test_df_is_equal():
 
 
 def test_df_subset():
-    from opendp.transformations import make_split_dataframe, make_df_is_equal, make_select_column
+    from opendp.transformations import make_split_dataframe, part_df_is_equal, make_select_column
 
     query = (
         make_split_dataframe(separator=",", col_names=["A", "B"]) >>
-        make_df_is_equal(column_name="B", value="2.") >>
+        part_df_is_equal(column_name="B", value="2.") >>
         make_subset_by(indicator_column="B", keep_columns=["A"]) >>
         make_select_column(key="A", TOA=str)
     )
@@ -341,7 +359,7 @@ def test_df_subset():
 
 def test_lipschitz_b_ary_tree():
     from opendp.transformations import make_count_by_categories, make_b_ary_tree, make_consistent_b_ary_tree, make_cdf, choose_branching_factor
-    from opendp.measurements import make_base_geometric
+    from opendp.measurements import part_base_geometric
     leaf_count = 7
     branching_factor = 2
     tree_builder = make_b_ary_tree(leaf_count, branching_factor, M=L1Distance[int])
@@ -356,7 +374,7 @@ def test_lipschitz_b_ary_tree():
     meas_base = (
         make_count_by_categories(categories=["A", "B", "C", "D", "E", "F"]) >> 
         tree_builder >> 
-        make_base_geometric(1., D=VectorDomain[AtomDomain[int]]) >> 
+        part_base_geometric(1.) >> 
         make_consistent_b_ary_tree(branching_factor)
     )
 

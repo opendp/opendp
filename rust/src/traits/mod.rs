@@ -29,9 +29,9 @@ pub mod samplers;
 /// ```
 /// (where d_out and c are of type TO, which implements DistanceConstant)
 ///
-/// - InfCast<TI> is for casting where the distance after the cast is gte the distance before the cast
-/// - InfMul is to multiply with the constant `c` in a way that doesn't round down
-/// - TotalOrd is now only for convenience
+/// - `InfCast<TI>` is for casting where the distance after the cast is gte the distance before the cast
+/// - `InfMul` is to multiply with the constant `c` in a way that doesn't round down
+/// - `TotalOrd` is now only for convenience
 ///
 /// # Example
 /// ```

@@ -168,7 +168,9 @@ mod tests {
 
     #[test]
     fn test_make_basic_composition_2() -> Fallible<()> {
-        let laplace = make_base_laplace::<AtomDomain<_>>(1.0f64, None)?;
+        let input_domain = AtomDomain::default();
+        let input_metric = AbsoluteDistance::default();
+        let laplace = make_base_laplace(input_domain, input_metric, 1.0f64, None)?;
         let measurements = vec![&laplace; 2];
         let composition = make_basic_composition(measurements)?;
         let arg = 99.;

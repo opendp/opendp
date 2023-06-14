@@ -86,7 +86,15 @@ impl SeriesDomain {
 
 impl Debug for SeriesDomain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+<<<<<<< HEAD
         write!(f, "SeriesDomain(\"{}\", {})", self.field.name, self.field.dtype)
+=======
+        write!(
+            f,
+            "SeriesDomain(\"{}\", {})",
+            self.field.name, self.field.dtype
+        )
+>>>>>>> remotes/origin/773-sum-metrics
     }
 }
 
@@ -164,8 +172,11 @@ impl_dtype_from!(f64, DataType::Float64);
 impl_dtype_from!(bool, DataType::Boolean);
 impl_dtype_from!(String, DataType::Utf8);
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> remotes/origin/773-sum-metrics
 #[cfg(test)]
 mod test_series {
     use crate::domains::OptionDomain;

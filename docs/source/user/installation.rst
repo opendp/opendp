@@ -12,7 +12,7 @@ Platforms
 
 OpenDP is built for the following platforms:
 
-* Python 3.7-3.10
+* Python 3.8-3.11
 * Linux, x86 64-bit, versions compatible with `manylinux <https://github.com/pypa/manylinux>`_ (others may work)
 * macOS, x86 64-bit, version 10.13 or later
 * Windows, x86 64-bit, version 7 or later

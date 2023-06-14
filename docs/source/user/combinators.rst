@@ -44,7 +44,7 @@ In the following example we chain :py:func:`opendp.measurements.make_base_discre
     >>> # call a constructor to produce a transformation
     >>> bounded_sum = make_bounded_sum(bounds=(0, 1))
     >>> # call a constructor to produce a measurement
-    >>> base_dl = make_base_discrete_laplace(scale=1.0)
+    >>> base_dl = make_base_discrete_laplace(bounded_sum.output_domain, bounded_sum.output_metric, scale=1.0)
     >>> noisy_sum = make_chain_mt(base_dl, bounded_sum)
     ...
     >>> # investigate the privacy relation
@@ -95,25 +95,28 @@ See the section on :ref:`transformation-constructors` for more information on ho
 Composition
 -----------
 
-OpenDP has a basic composition combinator for composing a list of measurements into a new measurement:
-:func:`opendp.combinators.make_basic_composition`.
+OpenDP has several compositors for making multiple releases on the same dataset:
 
-.. doctest::
+.. list-table::
+   :header-rows: 1
 
-    >>> from opendp.combinators import make_basic_composition
-    >>> noisy_sum_pair = make_basic_composition([noisy_sum, noisy_sum])
-    >>> release_1, release_2 = noisy_sum_pair(dataset)
+   * - Function
+     - Description
+   * - :func:`make_basic_composition <opendp.combinators.make_basic_composition>`
+     - Non-interactive
+   * - :func:`make_sequential_composition <opendp.combinators.make_sequential_composition>`
+     - Interactive
 
-This kind of composition primitive gives a structural guarantee that all statistics are computed together in a batch.
-Thus the privacy map simply sums the constituent output distances.
+Composition combinators can compose Measurements with ``ZeroConcentratedDivergence``, ``MaxDivergence`` and ``FixedSmoothedMaxDivergence`` output measures,
+and arbitrary input metrics and domains.
 
-.. doctest::
+See the notebook for code examples and more thorough explanations:
 
-    >>> noisy_sum_pair.map(1)
-    2.0
+.. toctree::
+   :glob:
+   :titlesonly:
 
-This combinator can compose Measurements with ``ZeroConcentratedDivergence``, ``MaxDivergence`` and ``FixedSmoothedMaxDivergence`` output measures.
-More sophisticated and adaptive composition will come with interactive measurements, which are underway.
+   combinators/compositors
 
 .. _measure-casting:
 
@@ -147,7 +150,9 @@ This is useful if you want to compose pure-DP measurements with approximate-DP m
 
     >>> from opendp.measurements import make_base_laplace
     >>> from opendp.combinators import make_pureDP_to_fixed_approxDP
-    >>> meas_pureDP = make_base_laplace(scale=10.)
+    >>> from opendp.domains import atom_domain
+    >>> from opendp.metrics import absolute_distance
+    >>> meas_pureDP = make_base_laplace(atom_domain(T=float), absolute_distance(T=float), scale=10.)
     >>> # convert the output measure to `FixedSmoothedMaxDivergence`
     >>> meas_fixed_approxDP = make_pureDP_to_fixed_approxDP(meas_pureDP)
     ...
@@ -211,8 +216,8 @@ The resulting measurement expects the size of the input dataset to be 10.
 .. doctest::
 
     >>> from opendp.transformations import make_sized_bounded_mean
-    >>> from opendp.measurements import make_base_laplace
-    >>> meas = make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> make_base_laplace(scale=0.5)
+    >>> from opendp.measurements import part_base_laplace
+    >>> meas = make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> part_base_laplace(scale=0.5)
     >>> print("standard mean:", amplified([1.] * 10)) # -> 1.03 # doctest: +SKIP
 
 We can now use the amplification combinator to construct an amplified measurement.
@@ -296,13 +301,14 @@ The resulting Transformation may be used interchangeably with those constructed 
 .. doctest::
 
     >>> from opendp.transformations import *
-    >>> from opendp.measurements import make_base_discrete_laplace
+    >>> from opendp.measurements import part_base_discrete_laplace
     >>> trans = (
-    ...     make_cast_default(TIA=str, TOA=int)
+    ...     (vector_domain(atom_domain(T=str)), symmetric_distance())
+    ...     >> part_cast_default(TOA=int)
     ...     >> make_repeat(2)  # our custom transformation
-    ...     >> make_clamp((1, 2))
+    ...     >> part_clamp((1, 2))
     ...     >> make_bounded_sum((1, 2))
-    ...     >> make_base_discrete_laplace(1.0)
+    ...     >> part_base_discrete_laplace(1.0)
     ... )
     ...
     >>> release = trans(["0", "1", "2", "3"])

@@ -31,13 +31,13 @@ def test_dp_mean():
         # Impute missing values to 0 Vec<Float>
         make_impute_constant(option_domain(atom_domain(T=float)), impute_constant) >>
         # Clamp values
-        make_clamp(bounds) >>
+        part_clamp(bounds) >>
         # Resize dataset length
         make_resize(n, atom_domain(bounds), impute_constant) >>
         # Aggregate with mean
         make_sized_bounded_mean(n, bounds) >>
         # Noise
-        make_base_laplace(scale)
+        part_base_laplace(scale)
     )
     res = preprocessor(data)
     assert type(res) == float

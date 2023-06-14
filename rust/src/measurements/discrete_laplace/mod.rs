@@ -73,16 +73,16 @@ impl<T: Clone + CheckAtom> DiscreteLaplaceDomain for VectorDomain<AtomDomain<T>>
 #[bootstrap(
     features("contrib"),
     arguments(scale(c_type = "void *")),
-    generics(D(default = "AtomDomain<int>"))
+    generics(D(suppress))
 )]
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
 ///
-/// Set `D` to change the input data type and input metric:
+/// Valid inputs for `input_domain` and `input_metric` are:
 ///
-/// | `D`                          | input type   | `D::InputMetric`       |
-/// | ---------------------------- | ------------ | ---------------------- |
-/// | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-/// | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+/// | `input_domain`                  | input type   | `input_metric`         |
+/// | ------------------------------- | ------------ | ---------------------- |
+/// | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
+/// | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |
 ///
 /// This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
 ///
@@ -91,13 +91,16 @@ impl<T: Clone + CheckAtom> DiscreteLaplaceDomain for VectorDomain<AtomDomain<T>>
 /// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
 ///
 /// # Arguments
+/// * `input_domain` - Domain of the data type to be privatized.
+/// * `input_metric` - Metric of the data type to be privatized.
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
 ///
 /// # Generics
-/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `QO` - Data type of the output distance and scale. `f32` or `f64`.
 #[cfg(feature = "use-mpfr")]
 pub fn make_base_discrete_laplace<D, QO>(
+    input_domain: D,
+    input_metric: D::InputMetric,
     scale: QO,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
@@ -136,14 +139,16 @@ where
     // 19 20.777 12.977
 
     if scale > QO::exact_int_cast(10)? {
-        make_base_discrete_laplace_cks20(scale)
+        make_base_discrete_laplace_cks20(input_domain, input_metric, scale)
     } else {
-        make_base_discrete_laplace_linear(scale, None)
+        make_base_discrete_laplace_linear(input_domain, input_metric, scale, None)
     }
 }
 
 #[cfg(not(feature = "use-mpfr"))]
 pub fn make_base_discrete_laplace<D, QO>(
+    input_domain: D,
+    input_metric: D::InputMetric,
     scale: QO,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
@@ -152,7 +157,7 @@ where
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {
-    make_base_discrete_laplace_linear(scale, None)
+    make_base_discrete_laplace_linear(input_domain, input_metric, scale, None)
 }
 
 #[cfg(test)]
@@ -164,7 +169,7 @@ mod test {
 
     #[test]
     fn test_make_base_discrete_laplace() -> Fallible<()> {
-        let meas = make_base_discrete_laplace::<AtomDomain<_>, _>(1f64)?;
+        let meas = make_base_discrete_laplace(AtomDomain::default(), Default::default(), 1f64)?;
         println!("{:?}", meas.invoke(&0)?);
         assert!(meas.check(&1, &1.)?);
         Ok(())

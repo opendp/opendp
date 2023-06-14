@@ -37,11 +37,11 @@
 //! ```
 //! use opendp::error::Fallible;
 //!
-//! #[cfg(feature = "untrusted")]
+//! #[cfg(all(feature = "untrusted", feature = "partials"))]
 //! pub fn example() -> Fallible<()> {
-//!     use opendp::transformations::{make_split_lines, make_cast_default, make_clamp, make_bounded_sum};
+//!     use opendp::transformations::{make_split_lines, part_cast_default, make_cast_default, part_clamp, make_bounded_sum};
 //!     use opendp::combinators::{make_chain_tt, make_chain_mt};
-//!     use opendp::measurements::make_base_laplace;
+//!     use opendp::measurements::part_base_laplace;
 //!
 //!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
 //!     let bounds = (0.0, 100.0);
@@ -49,39 +49,46 @@
 //!     // remove some epsilon to account for floating-point error
 //!     let sigma = (bounds.1 - bounds.0) / (epsilon - 0.0001);
 //!
-//!     // Construct a Transformation to load the numbers.
+//!     // Construct a Transformation to parse a csv string.
 //!     let split_lines = make_split_lines()?;
-//!     let cast = make_cast_default::<String, f64>()?;
+//!
+//!     // The next transformation wants to conform with the output domain and metric from `split_lines`.
+//!     let cast = make_cast_default::<String, f64, _>(
+//!         split_lines.output_domain.clone(),
+//!         split_lines.output_metric.clone())?;
+//!
+//!     // Since the domain and metric conforms, these two transformations may be chained.
 //!     let load_numbers = make_chain_tt(&cast, &split_lines)?;
+//!      
+//!     // You can use the more convenient `>>` notation to chain instead.
+//!     // When you use the `part_` version of the constructor,
+//!     //     the `>>` operator will automatically fill the input domain and metric from the previous transformation.
+//!     let load_and_clamp = load_numbers >> part_clamp(bounds);
+//!     
+//!     // After chaining, the resulting transformation is wrapped in a `Result`.
+//!     let load_and_sum = (load_and_clamp >> make_bounded_sum(bounds)?)?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
-//!     let clamp = make_clamp(bounds)?;
-//!     let bounded_sum = make_bounded_sum(bounds)?;
-//!     let laplace = make_base_laplace(sigma, None)?;
-//!     let intermediate = make_chain_tt(&bounded_sum, &clamp)?;
-//!     let noisy_sum = make_chain_mt(&laplace, &intermediate)?;
+//!     let noisy_sum = load_and_sum >> part_base_laplace(sigma, None);
 //!
-//!     // Put it all together.
-//!     let pipeline = make_chain_mt(&noisy_sum, &load_numbers)?;
-//!
-//!     // Notice that you can write the same pipeline more succinctly with `>>`.
-//!     let pipeline = (
+//!     // The same measurement, written more succinctly:
+//!     let noisy_sum = (
 //!         make_split_lines()? >>
-//!         make_cast_default::<String, f64>()? >>
-//!         make_clamp(bounds)? >>
+//!         part_cast_default() >>
+//!         part_clamp(bounds) >>
 //!         make_bounded_sum(bounds)? >>
-//!         make_base_laplace(sigma, None)?
+//!         part_base_laplace(sigma, None)
 //!     )?;
 //!
 //!     // Check that the pipeline is (1, 1.0)-close
-//!     assert!(pipeline.check(&1, &epsilon)?);
+//!     assert!(noisy_sum.check(&1, &epsilon)?);
 //!
 //!     // Make a 1.0-epsilon-DP release
-//!     let release = pipeline.invoke(&data)?;
+//!     let release = noisy_sum.invoke(&data)?;
 //!     println!("release = {}", release);
 //!     Ok(())
 //! }
-//! #[cfg(feature = "untrusted")]
+//! #[cfg(all(feature = "untrusted", feature = "partials"))]
 //! example().unwrap();
 //! ```
 //!

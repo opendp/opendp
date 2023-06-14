@@ -42,7 +42,10 @@ __all__ = [
     "make_quantiles_from_counts",
     "make_resize",
     "make_scan_csv",
+<<<<<<< HEAD
     "make_scan_parquet",
+=======
+>>>>>>> remotes/origin/773-sum-metrics
     "make_select_column",
     "make_sink_csv",
     "make_sized_bounded_float_checked_sum",
@@ -59,7 +62,13 @@ __all__ = [
     "make_split_lines",
     "make_split_records",
     "make_subset_by",
-    "make_unordered"
+    "make_unordered",
+    "part_cast_default",
+    "part_clamp",
+    "part_df_cast_default",
+    "part_df_is_equal",
+    "part_is_equal",
+    "part_scan_csv"
 ]
 
 
@@ -546,7 +555,8 @@ def make_cast(
 
 @versioned
 def make_cast_default(
-    TIA: RuntimeTypeDescriptor,
+    input_domain,
+    input_metric,
     TOA: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
@@ -566,11 +576,11 @@ def make_cast_default(
     
     * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
     * Output Domain:  `VectorDomain<AtomDomain<TOA>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
-    :param TIA: Atomic Input Type to cast from
-    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param input_domain: 
+    :param input_metric: 
     :param TOA: Atomic Output Type to cast into
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -581,21 +591,32 @@ def make_cast_default(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TIA = RuntimeType.parse(type_name=TIA)
     TOA = RuntimeType.parse(type_name=TOA)
+    TIA = get_atom(get_type(input_domain))
+    M = get_type(input_metric)
     
     # Convert arguments to c types.
-    c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_cast_default
-    lib_function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_TIA, c_TOA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_TOA), Transformation))
     
     return output
+
+def part_cast_default(
+    TOA: RuntimeTypeDescriptor
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_cast_default(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        TOA=TOA))
+
 
 
 @versioned
@@ -688,8 +709,9 @@ def make_cdf(
 
 @versioned
 def make_clamp(
-    bounds: Tuple[Any, Any],
-    TA: RuntimeTypeDescriptor = None
+    input_domain: Domain,
+    input_metric: Metric,
+    bounds: Tuple[Any, Any]
 ) -> Transformation:
     """Make a Transformation that clamps numeric data in `Vec<TA>` to `bounds`.
     
@@ -702,13 +724,19 @@ def make_clamp(
     
     * Input Domain:   `VectorDomain<AtomDomain<TA>>`
     * Output Domain:  `VectorDomain<AtomDomain<TA>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
+    **Proof Definition:**
+    
+    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/clamp/make_clamp.pdf)
+    
+    :param input_domain: Domain of input data.
+    :type input_domain: Domain
+    :param input_metric: Metric on input domain.
+    :type input_metric: Metric
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
-    :param TA: Atomic Type
-    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -717,20 +745,30 @@ def make_clamp(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
+    TA = get_atom(get_type(input_domain))
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
-    c_TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_clamp
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_bounds, c_TA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_bounds), Transformation))
     
     return output
+
+def part_clamp(
+    bounds: Tuple[Any, Any]
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_clamp(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        bounds=bounds))
+
 
 
 @versioned
@@ -985,7 +1023,7 @@ def make_count_distinct(
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<TO>`
     
-    :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
+    :param TIA: Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TO: Output Type. Must be numeric.
     :type TO: :py:ref:`RuntimeTypeDescriptor`
@@ -1060,10 +1098,11 @@ def make_create_dataframe(
 
 @versioned
 def make_df_cast_default(
+    input_domain,
+    input_metric,
     column_name: Any,
     TIA: RuntimeTypeDescriptor,
-    TOA: RuntimeTypeDescriptor,
-    TK: RuntimeTypeDescriptor = None
+    TOA: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`.
     If cast fails, fill with default.
@@ -1082,13 +1121,13 @@ def make_df_cast_default(
     
     * Input Domain:   `DataFrameDomain<TK>`
     * Output Domain:  `DataFrameDomain<TK>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
+    :param input_domain: 
+    :param input_metric: 
     :param column_name: column name to be transformed
     :type column_name: Any
-    :param TK: Type of the column name
-    :type TK: :py:ref:`RuntimeTypeDescriptor`
     :param TIA: Atomic Input Type to cast from
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic Output Type to cast into
@@ -1101,31 +1140,47 @@ def make_df_cast_default(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=column_name)
     TIA = RuntimeType.parse(type_name=TIA)
     TOA = RuntimeType.parse(type_name=TOA)
+    TK = get_atom(get_type(input_domain))
+    M = get_type(input_metric)
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_column_name = py_to_c(column_name, c_type=AnyObjectPtr, type_name=TK)
-    c_TK = py_to_c(TK, c_type=ctypes.c_char_p)
     c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
     c_TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_df_cast_default
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_column_name, c_TK, c_TIA, c_TOA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_column_name, c_TIA, c_TOA), Transformation))
     
     return output
+
+def part_df_cast_default(
+    column_name: Any,
+    TIA: RuntimeTypeDescriptor,
+    TOA: RuntimeTypeDescriptor
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_df_cast_default(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        column_name=column_name,
+        TIA=TIA,
+        TOA=TOA))
+
 
 
 @versioned
 def make_df_is_equal(
+    input_domain,
+    input_metric,
     column_name: Any,
     value: Any,
-    TK: RuntimeTypeDescriptor = None,
     TIA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`.
@@ -1136,15 +1191,15 @@ def make_df_is_equal(
     
     * Input Domain:   `DataFrameDomain<TK>`
     * Output Domain:  `DataFrameDomain<TK>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
+    :param input_domain: 
+    :param input_metric: 
     :param column_name: Column name to be transformed
     :type column_name: Any
     :param value: Value to check for equality
     :type value: Any
-    :param TK: Type of the column name
-    :type TK: :py:ref:`RuntimeTypeDescriptor`
     :param TIA: Atomic Input Type to cast from
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -1155,23 +1210,38 @@ def make_df_is_equal(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=column_name)
     TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=value)
+    TK = get_atom(get_type(input_domain))
+    M = get_type(input_metric)
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_column_name = py_to_c(column_name, c_type=AnyObjectPtr, type_name=TK)
     c_value = py_to_c(value, c_type=AnyObjectPtr, type_name=TIA)
-    c_TK = py_to_c(TK, c_type=ctypes.c_char_p)
     c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_df_is_equal
-    lib_function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_column_name, c_value, c_TK, c_TIA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_column_name, c_value, c_TIA), Transformation))
     
     return output
+
+def part_df_is_equal(
+    column_name: Any,
+    value: Any,
+    TIA: RuntimeTypeDescriptor = None
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_df_is_equal(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        column_name=column_name,
+        value=value,
+        TIA=TIA))
+
 
 
 @versioned
@@ -1518,8 +1588,9 @@ def make_index(
 
 @versioned
 def make_is_equal(
-    value: Any,
-    TIA: RuntimeTypeDescriptor = None
+    input_domain,
+    input_metric,
+    value: Any
 ) -> Transformation:
     """Make a Transformation that checks if each element is equal to `value`.
     
@@ -1529,13 +1600,13 @@ def make_is_equal(
     
     * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
     * Output Domain:  `VectorDomain<AtomDomain<bool>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
+    :param input_domain: 
+    :param input_metric: 
     :param value: value to check against
     :type value: Any
-    :param TIA: Atomic Input Type. Type of elements in the input vector
-    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -1544,20 +1615,31 @@ def make_is_equal(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=value)
+    TIA = get_atom(get_type(input_domain))
+    M = get_type(input_metric)
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_value = py_to_c(value, c_type=AnyObjectPtr, type_name=TIA)
-    c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_is_equal
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_value, c_TIA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_value), Transformation))
     
     return output
+
+def part_is_equal(
+    value: Any
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_is_equal(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        value=value))
+
 
 
 @versioned
@@ -1946,6 +2028,7 @@ def make_resize(
 
 @versioned
 def make_scan_csv(
+<<<<<<< HEAD
     lazy_frame_domain,
     input_metric,
     delimiter = ",",
@@ -1963,6 +2046,13 @@ def make_scan_csv(
     skip_rows_after_header: int = 0,
     lossy_utf8: bool = False,
     M: RuntimeTypeDescriptor = None
+=======
+    input_domain,
+    input_metric,
+    cache: bool = True,
+    low_memory: bool = False,
+    rechunk: bool = True
+>>>>>>> remotes/origin/773-sum-metrics
 ) -> Transformation:
     """Parse a path to a CSV into a LazyFrame.
     
@@ -1975,6 +2065,7 @@ def make_scan_csv(
     * Input Metric:   `M`
     * Output Metric:  `M`
     
+<<<<<<< HEAD
     :param lazy_frame_domain: The domain of the LazyFrame to be constructed
     :param input_metric: The metric space under which neighboring LazyFrames are compared
     :param delimiter: Set the CSV file's column delimiter as a byte character
@@ -1984,10 +2075,15 @@ def make_scan_csv(
     :type ignore_errors: bool
     :param skip_rows: Skip the first `n` rows during parsing. The header will be parsed at row `n`.
     :type skip_rows: int
+=======
+    :param input_domain: CSV domain
+    :param input_metric: The metric space under which neighboring LazyFrames are compared
+>>>>>>> remotes/origin/773-sum-metrics
     :param cache: Cache the DataFrame after reading.
     :type cache: bool
     :param low_memory: Reduce memory usage at the expense of performance
     :type low_memory: bool
+<<<<<<< HEAD
     :param comment_char: Set the comment character. Lines starting with this character will be ignored.
     :param quote_char: Set the `char` used as quote char. The default is `"`. If set to `[None]` quoting is disabled.
     :param eol_char: Set the `char` used as end of line. The default is `\n`.
@@ -2003,6 +2099,10 @@ def make_scan_csv(
     :type lossy_utf8: bool
     :param M: One of the dataset metrics
     :type M: :py:ref:`RuntimeTypeDescriptor`
+=======
+    :param rechunk: Rechunk the memory to contiguous chunks when parsing is done.
+    :type rechunk: bool
+>>>>>>> remotes/origin/773-sum-metrics
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -2010,6 +2110,7 @@ def make_scan_csv(
     """
     assert_features("contrib")
     
+<<<<<<< HEAD
     # Standardize type arguments.
     M = RuntimeType.parse_or_infer(type_name=M, public_example=input_metric)
     
@@ -2102,6 +2203,37 @@ def make_scan_parquet(
     output = c_to_py(unwrap(lib_function(c_lazy_frame_domain, c_input_metric, c_cache, c_rechunk, c_low_memory, c_use_statistics, c_M), Transformation))
     
     return output
+=======
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_cache = py_to_c(cache, c_type=ctypes.c_bool, type_name=bool)
+    c_low_memory = py_to_c(low_memory, c_type=ctypes.c_bool, type_name=bool)
+    c_rechunk = py_to_c(rechunk, c_type=ctypes.c_bool, type_name=bool)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_scan_csv
+    lib_function.argtypes = [Domain, Metric, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_cache, c_low_memory, c_rechunk), Transformation))
+    
+    return output
+
+def part_scan_csv(
+    cache: bool = True,
+    low_memory: bool = False,
+    rechunk: bool = True
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_scan_csv(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        cache=cache,
+        low_memory=low_memory,
+        rechunk=rechunk))
+
+>>>>>>> remotes/origin/773-sum-metrics
 
 
 @versioned
