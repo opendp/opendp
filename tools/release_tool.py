@@ -1,12 +1,14 @@
 import argparse
 import datetime
+import io
 import json
 import os
 import platform
 import subprocess
 import sys
-import types
 import time
+import tomlkit
+import types
 
 import semver
 
@@ -122,6 +124,88 @@ def commit(what, files, message=None):
 def push(what, force=False):
     force_arg = " --force-with-lease" if force else ""
     run_command(f"Pushing {what}", f"git push{force_arg} origin HEAD")
+
+
+def get_version(version_str=None):
+    if not version_str:
+        with open("VERSION") as f:
+            version_str = f.read().strip()
+    return semver.Version.parse(version_str)
+
+
+def update_file(path, load, munge, dump, binary=False):
+    log(f"Updating {path}")
+    b = "b" if binary else ""
+    with open(path, f"r{b}") as f:
+        data = load(f)
+    new_data = munge(data)
+    with open(path, f"w{b}") as f:
+        dump(new_data, f)
+
+
+def update_version(version):
+    log(f"Updating version references to {version}")
+    # cargo doesn't like build metadata in dependency references, so we have separate versions.
+    full_version_str = str(version)
+    stripped_version_str = str(version.replace(build=None))
+    with open("VERSION", "w") as f:
+        print(full_version_str, file=f)
+    def munge_cargo_root(toml):
+        toml["workspace"]["package"]["version"] = full_version_str
+        toml["dependencies"]["opendp_derive"]["version"] = stripped_version_str
+        toml["dependencies"]["opendp_tooling"]["version"] = stripped_version_str
+        return toml
+    update_file("rust/Cargo.toml", tomlkit.load, munge_cargo_root, tomlkit.dump)
+    def munge_cargo_opendp_derive(toml):
+        toml["dependencies"]["opendp_tooling"]["version"] = stripped_version_str
+        return toml
+    update_file("rust/opendp_derive/Cargo.toml", tomlkit.load, munge_cargo_opendp_derive, tomlkit.dump)
+    def munge_setup(lines):
+        version_line = f"version = {full_version_str}\n"
+        return [version_line if line.startswith("version = ") else line for line in lines]
+    update_file("python/setup.cfg", io.IOBase.readlines, munge_setup, lambda data, f: f.writelines(data))
+
+
+def configure(args):
+    log(f"*** CONFIGURING RELEASE TRAIN ***")
+    version = get_version()
+    print("init", version)
+    if args.train == "dev":
+        version = version.replace(prerelease="dev", build=None)
+    elif args.train in ["nightly", "beta"]:
+        date = datetime.date.today().strftime("%Y%m%d")
+        prerelease = f"{args.train}.{date}"
+        version = version.replace(prerelease=prerelease, build="1")
+    elif args.train == "stable":
+        version = version.replace(prerelease=None, build=None)
+    else:
+        raise Exception(f"Unknown train {args.train}")
+    update_version(version)
+
+
+def bump_version(args):
+    log(f"*** BUMPING VERSION NUMBER ***")
+    if args.set_version:
+        version = get_version(args.set_version)
+    else:
+        version = get_version()
+        if args.position == "major":
+            version = version.bump_major()
+        elif args.position == "minor":
+            version = version.bump_minor()
+        elif args.position == "patch":
+            version = version.bump_patch()
+        else:
+            raise Exception(f"Unknown position {args.position}")
+        version = version.replace(prerelease="dev")
+    update_version(version)
+
+
+def bump_build(_args):
+    log(f"*** BUMPING BUILD NUMBER ***")
+    version = get_version()
+    version = version.bump_build("")
+    update_version(version)
 
 
 def init(args):
@@ -307,6 +391,18 @@ def _main(argv):
     parser.add_argument("-d", "--repo-dir", default="/tmp/opendp-release", help="Local repo directory")
     subparsers = parser.add_subparsers(dest="COMMAND", help="Command to run")
     subparsers.required = True
+
+    subparser = subparsers.add_parser("configure", help="Configure the release train")
+    subparser.set_defaults(func=configure)
+    subparser.add_argument("-t", "--train", choices=["dev", "nightly", "beta", "stable"], default="dev", help="Which train to target")
+
+    subparser = subparsers.add_parser("bump_version", help="Bump the version number (assumes dev train)")
+    subparser.set_defaults(func=bump_version)
+    subparser.add_argument("-p", "--position", choices=["major", "minor", "patch"], default="patch")
+    subparser.add_argument("-s", "--set-version", help="Set the version to a specific value")
+
+    subparser = subparsers.add_parser("bump_build", help="Bump the build number")
+    subparser.set_defaults(func=bump_build)
 
     subparser = subparsers.add_parser("init", help="Initialize the release process")
     subparser.set_defaults(func=init)
