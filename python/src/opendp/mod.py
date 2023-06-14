@@ -30,7 +30,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     ...
     >>> # chain with a transformation from the trans module
     >>> chained = (
-    ...     dp.t.make_count(TIA=int) >>
+    ...     (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()) >>
+    ...     dp.t.then_count() >>
     ...     base_dl
     ... )
     ...
@@ -177,12 +178,12 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
 
     :example:
 
-    >>> from opendp.mod import Transformation, enable_features
-    >>> enable_features("contrib")
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib")
     ...
     >>> # create an instance of Transformation using a constructor from the trans module
-    >>> from opendp.transformations import make_count
-    >>> count: Transformation = make_count(TIA=int)
+    >>> input_space = (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
+    >>> count: dp.Transformation = input_space >> dp.t.then_count()
     ...
     >>> # invoke the transformation (invoke and __call__ are equivalent)
     >>> count.invoke([1, 2, 3])  # -> 3  # doctest: +SKIP
@@ -193,10 +194,9 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     >>> assert count.check(1, 1)
     ...
     >>> # chain with more transformations from the trans module
-    >>> from opendp.transformations import make_split_lines, then_cast_default
     >>> chained = (
-    ...     make_split_lines() >>
-    ...     then_cast_default(TOA=int) >>
+    ...     dp.t.make_split_lines() >>
+    ...     dp.t.then_cast_default(TOA=int) >>
     ...     count
     ... )
     ...

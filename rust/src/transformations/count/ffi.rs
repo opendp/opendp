@@ -5,10 +5,10 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::core::{Metric, MetricSpace};
 use crate::domains::{AtomDomain, MapDomain, VectorDomain};
 use crate::err;
-use crate::ffi::any::Downcast;
+use crate::ffi::any::{Downcast, AnyDomain, AnyMetric};
 use crate::ffi::any::{AnyObject, AnyTransformation};
 use crate::ffi::util::{c_bool, to_bool, Type};
-use crate::metrics::{L1Distance, L2Distance};
+use crate::metrics::{L1Distance, L2Distance, SymmetricDistance};
 use crate::traits::{Float, Hashable, Number, Primitive};
 use crate::transformations::{
     make_count, make_count_by, make_count_by_categories, make_count_distinct,
@@ -17,22 +17,30 @@ use crate::transformations::{
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_count(
-    TIA: *const c_char,
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
     TO: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<TIA, TO>() -> FfiResult<*mut AnyTransformation>
+    fn monomorphize<TIA, TO>(
+        input_domain: &AnyDomain,
+        input_metric: &AnyMetric,
+    ) -> FfiResult<*mut AnyTransformation>
     where
         TIA: Primitive,
         TO: Number,
     {
-        make_count::<TIA, TO>().into_any()
+        let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
+        let input_metric = try_!(input_metric.downcast_ref::<SymmetricDistance>()).clone();
+        make_count::<TIA, TO>(input_domain, input_metric).into_any()
     }
-    let TIA = try_!(Type::try_from(TIA));
+    let input_domain = try_as_ref!(input_domain);
+    let input_metric = try_as_ref!(input_metric);
+    let TIA = try_!(input_domain.type_.get_atom());
     let TO = try_!(Type::try_from(TO));
     dispatch!(monomorphize, [
         (TIA, @primitives),
         (TO, @numbers)
-    ], ())
+    ], (input_domain, input_metric))
 }
 
 #[no_mangle]

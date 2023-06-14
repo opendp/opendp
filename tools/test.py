@@ -34,7 +34,7 @@ def main():
     noisy_count_2 = (
         make_select_column(key="C", TOA=str) >>
         then_cast_default(TOA=float) >>
-        make_count(TIA=float) >>
+        then_count() >>
         make_base_discrete_laplace(scale=1.0)
     )
 

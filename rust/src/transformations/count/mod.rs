@@ -13,16 +13,23 @@ use crate::error::*;
 use crate::metrics::{AbsoluteDistance, LpDistance, SymmetricDistance};
 use crate::traits::{CollectionSize, Float, Hashable, Number, Primitive};
 
-#[bootstrap(features("contrib"), generics(TO(default = "int")))]
+#[bootstrap(features("contrib"), generics(TIA(suppress), TO(default = "int")))]
 /// Make a Transformation that computes a count of the number of records in data.
 ///
 /// # Citations
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 ///
+/// # Arguments
+/// * `input_domain` - Domain of the data type to be privatized.
+/// * `input_metric` - Metric of the data type to be privatized.
+/// 
 /// # Generics
 /// * `TIA` - Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
 /// * `TO` - Output Type. Must be numeric.
-pub fn make_count<TIA, TO>() -> Fallible<
+pub fn make_count<TIA, TO>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: SymmetricDistance,
+) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TIA>>,
         AtomDomain<TO>,
@@ -35,7 +42,7 @@ where
     TO: Number,
 {
     Transformation::new(
-        VectorDomain::new(AtomDomain::default()),
+        input_domain,
         AtomDomain::default(),
         // think of this as: min(arg.len(), TO::max_value())
         Function::new(move |arg: &Vec<TIA>| {
@@ -45,7 +52,7 @@ where
             // cast to TO, and if cast fails (due to overflow) fill with largest value
             TO::exact_int_cast(size).unwrap_or(TO::MAX_CONSECUTIVE)
         }),
-        SymmetricDistance::default(),
+        input_metric,
         AbsoluteDistance::default(),
         StabilityMap::new_from_constant(TO::one()),
     )

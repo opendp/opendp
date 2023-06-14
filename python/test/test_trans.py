@@ -1,3 +1,4 @@
+import opendp.prelude as dp
 from opendp.transformations import make_subset_by, make_quantiles_from_counts
 from opendp.domains import atom_domain, option_domain
 from opendp.typing import *
@@ -249,7 +250,7 @@ def test_bounded_variance():
 
 def test_count():
     from opendp.transformations import make_count
-    transformation = make_count(TIA=int, TO=int)
+    transformation = make_count(dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
     arg = [1, 2, 3]
     ret = transformation(arg)
     assert ret == 3
