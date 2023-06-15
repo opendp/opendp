@@ -13,6 +13,7 @@ __all__ = [
     "make_base_geometric",
     "make_base_laplace",
     "make_base_ptr",
+    "make_gaussian",
     "make_laplace",
     "make_randomized_response",
     "make_randomized_response_bool",
@@ -23,6 +24,7 @@ __all__ = [
     "then_base_gaussian",
     "then_base_geometric",
     "then_base_laplace",
+    "then_gaussian",
     "then_laplace"
 ]
 
@@ -130,7 +132,7 @@ def make_base_discrete_laplace(
     
     :param input_domain: Domain of the data type to be privatized.
     :param input_metric: Metric of the data type to be privatized.
-    :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+    :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
     :param QO: Data type of the output distance and scale. `f32` or `f64`.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
@@ -202,7 +204,7 @@ def make_base_discrete_laplace_cks20(
     
     :param input_domain: 
     :param input_metric: 
-    :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+    :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
     :param QO: Data type of the output distance and scale.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
@@ -276,7 +278,7 @@ def make_base_discrete_laplace_linear(
     
     :param input_domain: Domain of the data type to be privatized.
     :param input_metric: Metric of the data type to be privatized.
-    :param scale: Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
+    :param scale: Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
     :param bounds: Set bounds on the count to make the algorithm run in constant-time.
     :type bounds: Any
     :param QO: Data type of the scale and output distance.
@@ -337,7 +339,7 @@ def make_base_gaussian(
     
     | `input_domain`                  | input type   | `input_metric`         |
     | ------------------------------- | ------------ | ---------------------- |
-    | `atom_domain(T)`                | `T`          | `absolute_distance(T)` |
+    | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
     | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l2_distance(T)`       |
     
     This function takes a noise granularity in terms of 2^k.
@@ -353,8 +355,8 @@ def make_base_gaussian(
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MO`
     
-    :param input_domain: Domain of the data type to be privatized.
-    :param input_metric: Metric of the data type to be privatized.
+    :param input_domain: Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
+    :param input_metric: Metric of the data type to be privatized. Valid values are `AbsoluteDistance<T>` or `L2Distance<T>`.
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
     :param k: The noise granularity in terms of 2^k.
     :type k: int
@@ -503,7 +505,7 @@ def make_base_laplace(
     
     :param input_domain: Domain of the data type to be privatized.
     :param input_metric: Metric of the data type to be privatized.
-    :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+    :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
     :param k: The noise granularity in terms of 2^k.
     :type k: int
     :rtype: Measurement
@@ -566,7 +568,7 @@ def make_base_ptr(
     * Input Metric:   `L1Distance<TV>`
     * Output Measure: `SmoothedMaxDivergence<TV>`
     
-    :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+    :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
     :param threshold: Exclude counts that are less than this minimum value.
     :param k: The noise granularity in terms of 2^k.
     :type k: int
@@ -603,13 +605,98 @@ def make_base_ptr(
 
 
 @versioned
+def make_gaussian(
+    input_domain,
+    input_metric,
+    scale,
+    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<QO>"
+) -> Measurement:
+    """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
+    
+    Valid inputs for `input_domain` and `input_metric` are:
+    
+    | `input_domain`                  | input type   | `input_metric`          |
+    | ------------------------------- | ------------ | ----------------------- |
+    | `atom_domain(T)`                | `T`          | `absolute_distance(QI)` |
+    | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l2_distance(QI)`       |
+    
+    [make_gaussian in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_gaussian.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `D`
+    * Output Type:    `D::Carrier`
+    * Input Metric:   `D::InputMetric`
+    * Output Measure: `MO`
+    
+    :param input_domain: Domain of the data type to be privatized.
+    :param input_metric: Metric of the data type to be privatized.
+    :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
+    :param MO: Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
+    :type MO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    MO = RuntimeType.parse(type_name=MO, generics=["QO"])
+    QO = get_atom_or_infer(MO, scale)
+    MO = MO.substitute(QO=QO)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=get_atom(MO))
+    c_MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_gaussian
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_MO), Measurement))
+    
+    return output
+
+def then_gaussian(
+    scale,
+    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<QO>"
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_gaussian(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        MO=MO))
+
+
+
+@versioned
 def make_laplace(
     input_domain,
     input_metric,
     scale,
     QO: RuntimeTypeDescriptor = "float"
 ) -> Measurement:
-    """[make_laplace in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_laplace.html)
+    """Make a Measurement that adds noise from the laplace(`scale`) distribution to the input.
+    
+    Valid inputs for `input_domain` and `input_metric` are:
+    
+    | `input_domain`                  | input type   | `input_metric`         |
+    | ------------------------------- | ------------ | ---------------------- |
+    | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
+    | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |
+    
+    This uses `make_base_laplace` if `T` is float, otherwise it uses `make_base_discrete_laplace`.
+    
+    [make_laplace in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_laplace.html)
+    
+    **Citations:**
+    
+    * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
+    * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
     
     **Supporting Elements:**
     
@@ -618,10 +705,10 @@ def make_laplace(
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MaxDivergence<QO>`
     
-    :param input_domain: 
-    :param input_metric: 
-    :param scale: 
-    :param QO: 
+    :param input_domain: Domain of the data type to be privatized.
+    :param input_metric: Metric of the data type to be privatized.
+    :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+    :param QO: Data type of the output distance and scale. `f32` or `f64`.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
@@ -631,12 +718,12 @@ def make_laplace(
     assert_features("contrib")
     
     # Standardize type arguments.
-    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
+    QO = RuntimeType.parse(type_name=QO)
     
     # Convert arguments to c types.
     c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
     c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
-    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=get_atom(QO))
     c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.

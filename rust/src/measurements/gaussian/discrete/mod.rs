@@ -9,6 +9,7 @@ use crate::{
     core::{Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
+    measurements::MappableDomain,
     measures::ZeroConcentratedDivergence,
     metrics::{AbsoluteDistance, L2Distance},
     traits::{samplers::sample_discrete_gaussian, CheckAtom, Float, InfCast, Number},
@@ -17,23 +18,21 @@ use crate::{
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use super::MappableDomain;
-
 #[doc(hidden)]
-pub trait DiscreteGaussianDomain<QI>: MappableDomain + Default {
+pub trait BaseDiscreteGaussianDomain<QI>: MappableDomain + Default {
     type InputMetric: Metric<Distance = QI> + Default;
 }
-impl<T: Clone + CheckAtom, QI> DiscreteGaussianDomain<QI> for AtomDomain<T> {
+impl<T: Clone + CheckAtom, QI> BaseDiscreteGaussianDomain<QI> for AtomDomain<T> {
     type InputMetric = AbsoluteDistance<QI>;
 }
-impl<T: Clone + CheckAtom, QI> DiscreteGaussianDomain<QI> for VectorDomain<AtomDomain<T>> {
+impl<T: Clone + CheckAtom, QI> BaseDiscreteGaussianDomain<QI> for VectorDomain<AtomDomain<T>> {
     type InputMetric = L2Distance<QI>;
 }
 
 #[doc(hidden)]
 pub trait DiscreteGaussianMeasure<DI, QI>: Measure + Default
 where
-    DI: DiscreteGaussianDomain<QI>,
+    DI: BaseDiscreteGaussianDomain<QI>,
 {
     type Atom: Float;
     fn new_forward_map(scale: Self::Atom) -> Fallible<PrivacyMap<DI::InputMetric, Self>>;
@@ -41,7 +40,7 @@ where
 
 impl<DI, QI, QO> DiscreteGaussianMeasure<DI, QI> for ZeroConcentratedDivergence<QO>
 where
-    DI: DiscreteGaussianDomain<QI>,
+    DI: BaseDiscreteGaussianDomain<QI>,
     QI: Number,
     QO: Float + InfCast<QI>,
     Rational: TryFrom<QO>,
@@ -105,7 +104,7 @@ pub fn make_base_discrete_gaussian<D, MO, QI>(
     scale: MO::Atom,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MO>>
 where
-    D: DiscreteGaussianDomain<QI>,
+    D: BaseDiscreteGaussianDomain<QI>,
     (D, D::InputMetric): MetricSpace,
     Integer: From<D::Atom> + SaturatingCast<D::Atom>,
 
@@ -145,7 +144,7 @@ pub fn make_base_discrete_gaussian_rug<D>(
     scale: Rational,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, ZeroConcentratedDivergence<Rational>>>
 where
-    D: DiscreteGaussianDomain<Rational, Atom = Integer>,
+    D: BaseDiscreteGaussianDomain<Rational, Atom = Integer>,
     (D, D::InputMetric): MetricSpace,
 {
     if scale <= 0 {

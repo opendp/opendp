@@ -155,3 +155,17 @@ def test_randomized_response_bool():
     import math
     assert meas.check(1, math.log(3.))
     assert not meas.check(1, math.log(2.999))
+
+
+def test_gaussian():
+    input_space = dp.atom_domain(T=int), dp.absolute_distance(T=float)
+    (input_space >> dp.m.then_gaussian(1.))(1)
+
+    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    (input_space >> dp.m.then_gaussian(1.))(1.)
+
+    input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.l2_distance(T=float)
+    (input_space >> dp.m.then_gaussian(1.))([1, 2, 3])
+
+    input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.l2_distance(T=float)
+    (input_space >> dp.m.then_gaussian(1.))([1., 2., 3.])

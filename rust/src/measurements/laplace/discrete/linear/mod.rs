@@ -42,7 +42,7 @@ use super::BaseDiscreteLaplaceDomain;
 /// # Arguments
 /// * `input_domain` - Domain of the data type to be privatized.
 /// * `input_metric` - Metric of the data type to be privatized.
-/// * `scale` - Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
+/// * `scale` - Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
 /// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
 ///
 /// # Generics
@@ -114,7 +114,7 @@ where
 /// # Arguments
 /// * `input_domain` - Domain of the data type to be privatized.
 /// * `input_metric` - Metric of the data type to be privatized.
-/// * `scale` - Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
+/// * `scale` - Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
 /// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
 ///
 /// # Arguments
