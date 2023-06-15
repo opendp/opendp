@@ -47,7 +47,7 @@ def test_make_basic_composition():
     print("Check:", composed.check(1, 2.))
     print("Forward map:", composed.map(3))
     print("Invocation:", composed.invoke([22, 12]))
-test_make_basic_composition()
+
 
 @pytest.mark.skip(reason="long-running process to detect potential memory leaks")
 def test_make_basic_composition_leak():
