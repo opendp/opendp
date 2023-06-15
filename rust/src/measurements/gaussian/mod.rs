@@ -87,7 +87,6 @@ where
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
 /// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
-/// * `QI` - Input distance. The type of sensitivities. Can be any integer or float.
 pub fn make_base_gaussian<D, MO>(
     input_domain: D,
     input_metric: D::InputMetric,
