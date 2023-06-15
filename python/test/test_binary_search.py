@@ -5,16 +5,14 @@ dp.enable_features('floating-point', 'contrib')
 
 def test_binary_search_overflow():
 
-    from opendp.domains import atom_domain, vector_domain
-    from opendp.metrics import symmetric_distance
-    input_domain = vector_domain(atom_domain(T=float))
-    input_metric = symmetric_distance()
+    input_domain = dp.vector_domain(dp.atom_domain(T=float))
+    input_metric = dp.symmetric_distance()
 
     d_in = 1
     d_out = 1.01
     bounded_sum = (
         dp.t.make_clamp(input_domain, input_metric, bounds=(0.0, 1.0)) >>
-        dp.t.make_bounded_sum(bounds=(0.0, 1.0))
+        dp.t.then_sum()
     )
     dp.binary_search_param(
         lambda s: bounded_sum >> dp.m.then_base_laplace(scale=s),
@@ -23,23 +21,21 @@ def test_binary_search_overflow():
     )
 
 def test_stuck():
-    from opendp.domains import atom_domain, vector_domain
-    from opendp.metrics import symmetric_distance
-    input_domain = vector_domain(atom_domain(T=float))
-    input_metric = symmetric_distance()
+    input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance()
 
     epsilon = 1.3
     sens = 500_000.0 * 500_000.0
     bounded_sum = (
-        dp.t.make_clamp(input_domain, input_metric, bounds=(0.0, sens)) >>
-        dp.t.make_bounded_sum(bounds=(0.0, sens))
+        input_space >>
+        dp.t.then_clamp(bounds=(0.0, sens)) >>
+        dp.t.then_sum()
     )
     real_v = sens / epsilon
     discovered_scale = dp.binary_search_param(
         lambda s: bounded_sum >> dp.m.then_base_laplace(scale=s),
         d_in=1,
         bounds=(0.0, real_v * 2.0),
-        d_out=(epsilon))
+        d_out=epsilon)
     print(discovered_scale)
     
 def test_binary_search():
@@ -51,7 +47,9 @@ def test_binary_search():
 
 def test_type_inference():
     def chainer(b):
-        return dp.t.make_sized_bounded_sum(1000, (-b, b))
+        input_domain = dp.vector_domain(dp.atom_domain(bounds=(-b, b)), size=1000)
+        input_metric = dp.symmetric_distance()
+        return (input_domain, input_metric) >>  dp.t.then_sum()
     assert dp.binary_search_param(chainer, 2, 100) == 50
 
     def mean_chainer_n(n):

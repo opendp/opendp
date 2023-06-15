@@ -251,7 +251,7 @@ You can use combinations of the indicial transformers to map hashable data to in
 Clamping
 --------
 Many aggregators depend on bounded data to limit the influence that perturbing an individual may have on a query.
-For example, the relation downstream for the :func:`opendp.transformations.make_bounded_sum` aggregator is ``d_out >= d_in * max(|L|, |U|)``.
+For example, the stability map for the :func:`opendp.transformations.make_sum` aggregator is ``d_out = d_in * max(|L|, U)``.
 This relation states that adding or removing ``d_in`` records may influence the sum by ``d_in`` * the greatest magnitude of a record.
 
 Any aggregator that needs bounded data will indicate it in the function name.
@@ -426,13 +426,8 @@ See the notebooks for code examples and deeper explanations:
      - ``MapDomain<AtomDomain<TI>, AtomDomain<TO>>``
      - ``SymmetricDistance``
      - ``L1Distance<TO>``
-   * - :func:`opendp.transformations.make_bounded_sum`
-     - ``VectorDomain<AtomDomain<T>>`` (with bounds)
-     - ``AtomDomain<T>``
-     - ``SymmetricDistance/InsertDeleteDistance``
-     - ``AbsoluteDistance<TO>``
-   * - :func:`opendp.transformations.make_sized_bounded_sum`
-     - ``VectorDomain<AtomDomain<T>>>`` (with size and bounds)
+   * - :func:`opendp.transformations.make_sum`
+     - ``VectorDomain<AtomDomain<T>>`` (with bounds and optionally size)
      - ``AtomDomain<T>``
      - ``SymmetricDistance/InsertDeleteDistance``
      - ``AbsoluteDistance<TO>``
@@ -453,7 +448,7 @@ See the notebooks for code examples and deeper explanations:
      - ``AbsoluteDistance<TO>``
 
 
-:func:`opendp.transformations.make_bounded_sum` and :func:`opendp.transformations.make_sized_bounded_sum` make a best guess as to which summation strategy to use.
+:func:`opendp.transformations.make_sum` makes a best guess as to which summation strategy to use based on the input space.
 Should you need it, the following constructors give greater control over the sum.
 
 .. raw:: html

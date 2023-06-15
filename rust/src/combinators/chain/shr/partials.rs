@@ -276,9 +276,7 @@ where
 #[cfg(test)]
 mod tests_shr {
     use crate::measurements::then_base_discrete_laplace;
-    use crate::transformations::{
-        make_bounded_sum, make_split_lines, then_cast_default, then_clamp,
-    };
+    use crate::transformations::{make_split_lines, then_cast_default, then_clamp, then_sum};
 
     use super::*;
 
@@ -287,7 +285,7 @@ mod tests_shr {
         (make_split_lines()?
             >> then_cast_default()
             >> then_clamp((0, 1))
-            >> make_bounded_sum((0, 1))?
+            >> then_sum()
             >> then_base_discrete_laplace(1.))
         .map(|_| ())
     }

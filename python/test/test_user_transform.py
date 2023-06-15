@@ -1,4 +1,4 @@
-from opendp.transformations import then_cast_default, then_clamp, make_bounded_sum
+from opendp.transformations import then_cast_default, then_clamp, then_sum
 from opendp.measurements import then_base_discrete_laplace
 from opendp.combinators import *
 from opendp.mod import enable_features
@@ -38,7 +38,7 @@ def test_make_user_transformation():
         >> then_cast_default(TOA=int)
         >> make_duplicate(2)
         >> then_clamp((1, 2))
-        >> make_bounded_sum((1, 2))
+        >> then_sum()
         >> then_base_discrete_laplace(1.0)
     )
 

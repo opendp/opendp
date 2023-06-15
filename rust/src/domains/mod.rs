@@ -226,6 +226,14 @@ impl<T: TotalOrd> Bounds<T> {
         Ok(Bounds { lower, upper })
     }
 }
+impl<T: Clone> Bounds<T> {
+    pub fn get_closed(&self) -> Fallible<(T, T)> {
+        match (&self.lower, &self.upper) {
+            (Bound::Included(lower), Bound::Included(upper)) => Ok((lower.clone(), upper.clone())),
+            _ => fallible!(MakeDomain, "Bounds are not closed"),
+        }
+    }
+}
 impl<T: Debug> Debug for Bounds<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         let lower = match &self.lower {

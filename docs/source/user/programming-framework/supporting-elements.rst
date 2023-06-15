@@ -26,8 +26,8 @@ and checks that 1.0 is a member of the domain, but NaN is not.
 
 .. doctest::
 
-  >>> from opendp.domains import atom_domain
-  >>> f64_atom_domain = atom_domain(T=float)  # float defaults to f64, a double-precision 64-bit float
+  >>> import opendp.prelude as dp
+  >>> f64_atom_domain = dp.atom_domain(T=float)  # float defaults to f64, a double-precision 64-bit float
   >>> assert f64_atom_domain.member(1.0)
   >>> assert not f64_atom_domain.member(float('nan'))
 
@@ -36,8 +36,7 @@ and ``atom_domain(bounds=(-2, 2))`` consists of all possible 32-bit signed integ
 
 .. doctest::
 
-  >>> from opendp.domains import atom_domain
-  >>> i32_bounded_domain = atom_domain(bounds=(-2, 2))  # int defaults to i32, a 32-bit signed integer
+  >>> i32_bounded_domain = dp.atom_domain(bounds=(-2, 2))  # int defaults to i32, a 32-bit signed integer
   >>> assert i32_bounded_domain.member(-2)
   >>> assert not i32_bounded_domain.member(3)
 
@@ -46,8 +45,7 @@ For instance, ``vector_domain(atom_domain(T=bool))`` describes the set of all bo
 
 .. doctest::
 
-  >>> from opendp.domains import vector_domain
-  >>> bool_vector_domain = vector_domain(atom_domain(T=bool))
+  >>> bool_vector_domain = dp.vector_domain(dp.atom_domain(T=bool))
   >>> assert bool_vector_domain.member([])
   >>> assert bool_vector_domain.member([True, False])
 
@@ -55,24 +53,24 @@ For instance, ``vector_domain(atom_domain(T=bool))`` describes the set of all bo
 
 .. doctest::
 
-  >>> bool_vector_2_domain = vector_domain(atom_domain(T=bool), size=2)
+  >>> bool_vector_2_domain = dp.vector_domain(dp.atom_domain(T=bool), size=2)
   >>> assert bool_vector_2_domain.member([True, True])
   >>> assert not bool_vector_2_domain.member([True, True, True])
 
-In most cases, the constructors in the OpenDP Library build the domains for you.
-
-Let's look at the Transformation returned from :py:func:`make_bounded_sum(bounds=(0, 1)) <opendp.transformations.make_bounded_sum>`.
+Let's look at the Transformation returned from :py:func:`make_sum() <opendp.transformations.make_sum>`.
 
 .. doctest::
 
-  >>> from opendp.mod import enable_features
-  >>> enable_features('contrib')
-  >>> from opendp.transformations import make_bounded_sum
-  >>> bounded_sum = make_bounded_sum(bounds=(0, 1))
+  >>> dp.enable_features('contrib')
+  >>> bounded_sum = dp.t.make_sum(
+  ...     input_domain=dp.vector_domain(dp.atom_domain(bounds=(0, 1))), 
+  ...     input_metric=dp.symmetric_distance(),
+  ... )
   >>> bounded_sum.input_domain
   VectorDomain(AtomDomain(bounds=[0, 1], T=i32))
 
-We see that the input domain is "the set of all vectors of 32-bit signed integers bounded between 0 and 1."
+We see that the input domain is the same as we passed in: 
+"the set of all vectors of 32-bit signed integers bounded between 0 and 1."
 
 .. doctest::
 
@@ -84,8 +82,8 @@ The output domain is "the set of all 32-bit signed integers."
 These domains serve two purposes:
 
 #. The stability map or privacy map depends on the input domain in its proof to restrict the set of neighboring datasets or distributions.
-   An example is the relation for :py:func:`opendp.transformations.make_sized_bounded_sum`,
-   which makes use of a ``SizedDomain`` domain descriptor to more tightly bound the sensitivity.
+   An example is the relation for :py:func:`opendp.transformations.make_sum`,
+   which may make use of a size descriptor in the vector domain to more tightly bound the sensitivity.
 #. Combinators also use domains to ensure that the output is well-defined.
    For instance, chainer constructors check that intermediate domains are equivalent
    to guarantee that the output of the first function is always a valid input to the second function.

@@ -11,8 +11,7 @@ use crate::metrics::AbsoluteDistance;
 use crate::traits::{ExactIntCast, InfMul};
 
 use super::{
-    make_lipschitz_float_mul, make_sized_bounded_sum, LipschitzMulFloatDomain,
-    LipschitzMulFloatMetric, MakeSizedBoundedSum,
+    make_lipschitz_float_mul, make_sum, LipschitzMulFloatDomain, LipschitzMulFloatMetric, MakeSum,
 };
 
 #[bootstrap(
@@ -37,7 +36,7 @@ pub fn make_sized_bounded_mean<MI, T>(
 ) -> Fallible<Transformation<VectorDomain<AtomDomain<T>>, AtomDomain<T>, MI, AbsoluteDistance<T>>>
 where
     MI: 'static + Metric,
-    T: 'static + MakeSizedBoundedSum<MI> + ExactIntCast<usize> + Float + InfMul,
+    T: 'static + MakeSum<MI> + ExactIntCast<usize> + Float + InfMul,
     AtomDomain<T>: LipschitzMulFloatDomain<Atom = T>,
     AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
     (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
@@ -48,8 +47,10 @@ where
     let size_ = T::exact_int_cast(size)?;
     // don't loosen the bounds by the relaxation term because any value greater than nU is pure error
     let sum_bounds = (size_.neg_inf_mul(&bounds.0)?, size_.inf_mul(&bounds.1)?);
-    make_sized_bounded_sum::<MI, T>(size, bounds)?
-        >> make_lipschitz_float_mul::<AtomDomain<T>, _>(size_.recip(), sum_bounds)?
+    make_sum::<MI, T>(
+        VectorDomain::new(AtomDomain::new_closed(bounds.clone())?).with_size(size),
+        MI::default(),
+    )? >> make_lipschitz_float_mul::<AtomDomain<T>, _>(size_.recip(), sum_bounds)?
 }
 
 #[cfg(test)]

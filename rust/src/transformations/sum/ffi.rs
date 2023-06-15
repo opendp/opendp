@@ -1,65 +1,38 @@
-use std::convert::TryFrom;
-use std::os::raw::{c_char, c_uint};
-
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSpace};
 
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
-use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
-use crate::ffi::util::Type;
+use crate::ffi::any::{AnyTransformation, Downcast, AnyDomain, AnyMetric};
 use crate::metrics::{InsertDeleteDistance, SymmetricDistance};
-use crate::transformations::sum::{MakeBoundedSum, MakeSizedBoundedSum};
-use crate::transformations::{make_bounded_sum, make_sized_bounded_sum};
+use crate::transformations::sum::MakeSum;
+use crate::transformations::make_sum;
 
 #[no_mangle]
-pub extern "C" fn opendp_transformations__make_bounded_sum(
-    bounds: *const AnyObject,
-    MI: *const c_char,
-    T: *const c_char,
-) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<MI, T>(bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-    where
-        MI: 'static + Metric,
-        T: 'static + MakeBoundedSum<MI>,
-        (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
-    {
-        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
-        make_bounded_sum::<MI, T>(bounds).into_any()
-    }
-    let MI = try_!(Type::try_from(MI));
-    let T = try_!(Type::try_from(T));
-    dispatch!(monomorphize, [
-        (MI, [SymmetricDistance, InsertDeleteDistance]),
-        (T, @numbers)
-    ], (bounds))
-}
-
-#[no_mangle]
-pub extern "C" fn opendp_transformations__make_sized_bounded_sum(
-    size: c_uint,
-    bounds: *const AnyObject,
-    MI: *const c_char,
-    T: *const c_char,
+pub extern "C" fn opendp_transformations__make_sum(
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<MI, T>(
-        size: usize,
-        bounds: *const AnyObject,
+        input_domain: &AnyDomain,
+        input_metric: &AnyMetric,
     ) -> FfiResult<*mut AnyTransformation>
     where
         MI: 'static + Metric,
-        T: 'static + MakeSizedBoundedSum<MI>,
+        T: 'static + MakeSum<MI>,
         (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
     {
-        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
-        make_sized_bounded_sum::<MI, T>(size, bounds).into_any()
+        let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<T>>>()).clone();
+        let input_metric = try_!(input_metric.downcast_ref::<MI>()).clone();
+        make_sum::<MI, T>(input_domain, input_metric).into_any()
     }
-    let size = size as usize;
-    let MI = try_!(Type::try_from(MI));
-    let T = try_!(Type::try_from(T));
+    let input_domain = try_as_ref!(input_domain);
+    let input_metric = try_as_ref!(input_metric);
+    let MI = input_metric.type_.clone();
+    let T = try_!(input_domain.type_.get_atom());
     dispatch!(monomorphize, [
         (MI, [SymmetricDistance, InsertDeleteDistance]),
         (T, @numbers)
-    ], (size, bounds))
+    ], (input_domain, input_metric))
 }
 
 #[cfg(test)]
@@ -67,17 +40,14 @@ mod tests {
     use crate::core;
     use crate::error::Fallible;
     use crate::ffi::any::{AnyObject, Downcast};
-    use crate::ffi::util;
-    use crate::ffi::util::ToCharP;
 
     use super::*;
 
     #[test]
-    fn test_make_bounded_sum_ffi() -> Fallible<()> {
-        let transformation = Result::from(opendp_transformations__make_bounded_sum(
-            util::into_raw(AnyObject::new((0., 10.))),
-            "SymmetricDistance".to_char_p(),
-            "f64".to_char_p(),
+    fn test_make_sum_ffi() -> Fallible<()> {
+        let transformation = Result::from(opendp_transformations__make_sum(
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::new_closed((0., 10.))?)),
+            AnyMetric::new_raw(SymmetricDistance::default()),
         ))?;
         let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
@@ -87,12 +57,10 @@ mod tests {
     }
 
     #[test]
-    fn test_make_sized_bounded_sum_ffi() -> Fallible<()> {
-        let transformation = Result::from(opendp_transformations__make_sized_bounded_sum(
-            3 as c_uint,
-            util::into_raw(AnyObject::new((0., 10.))),
-            "SymmetricDistance".to_char_p(),
-            "f64".to_char_p(),
+    fn test_make_sized_sum_ffi() -> Fallible<()> {
+        let transformation = Result::from(opendp_transformations__make_sum(
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::new_closed((0., 10.))?).with_size(3)),
+            AnyMetric::new_raw(SymmetricDistance::default()),
         ))?;
         let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
