@@ -716,20 +716,16 @@ def binary_search(
 
     .. testsetup:: *
 
-        from opendp.typing import L2Distance, VectorDomain, AtomDomain
-        from opendp.transformations import make_sized_bounded_mean
-        from opendp.measurements import then_base_gaussian
-        from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP
-        from opendp.mod import enable_features
-        enable_features("contrib", "floating-point")
+        import opendp.prelude as dp
+        dp.enable_features("contrib", "floating-point")
 
     >>> # build a histogram that emits float counts
-    >>> dp_mean = make_fix_delta(make_zCDP_to_approxDP(
-    ...     make_sized_bounded_mean(1000, bounds=(0., 100.)) >> then_base_gaussian(1.)), 
+    >>> dp_mean = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(
+    ...     dp.t.make_sized_bounded_mean(1000, bounds=(0., 100.)) >> dp.m.then_base_gaussian(1.)), 
     ...     1e-8
     ... )
     ...
-    >>> binary_search(
+    >>> dp.binary_search(
     ...     lambda d_out: dp_mean.check(3, (d_out, 1e-8)), 
     ...     bounds = (0., 1.))
     0.5235561269546629
@@ -737,9 +733,11 @@ def binary_search(
     Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.
 
     >>> from opendp.transformations import make_count_by_categories
-    >>> histogram = make_count_by_categories(categories=["a"], MO=L2Distance[int])
+    >>> histogram = dp.t.make_count_by_categories(
+    ...     dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance(),
+    ...     categories=["a"], MO=dp.L2Distance[int])
     ...
-    >>> binary_search(
+    >>> dp.binary_search(
     ...     lambda d_out: histogram.check(3, d_out), 
     ...     bounds = (0, 100))
     3

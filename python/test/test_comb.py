@@ -38,7 +38,7 @@ def test_make_basic_composition():
             input_space >> dp.t.then_count(TO=float) >> dp.m.then_laplace(scale=2.),
             (
                 input_space >> dp.t.then_cast_default(str) >> 
-                dp.t.make_count_by_categories(categories=["0", "12", "22"]) >> 
+                dp.t.then_count_by_categories(categories=["0", "12", "22"]) >> 
                 dp.m.then_base_discrete_laplace(scale=2.)
             )
         ])

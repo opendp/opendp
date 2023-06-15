@@ -274,8 +274,8 @@ def test_count_by():
 
 
 def test_count_by_categories():
-    from opendp.transformations import make_count_by_categories
-    query = make_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[int])
+    input_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
+    query = dp.t.make_count_by_categories(*input_space, categories=["1", "3", "4"], MO=L1Distance[int])
     assert query(STR_DATA) == [1, 1, 1, 6]
     assert query.check(1, 1)
 
@@ -298,8 +298,8 @@ def test_resize():
 
 
 def test_count_by_categories_str():
-    from opendp.transformations import make_count_by_categories
-    query = make_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[int])
+    input_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
+    query = input_space >> dp.t.then_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[int])
     assert query(STR_DATA) == [1, 1, 1, 6]
     assert query.check(1, 1)
 
@@ -367,7 +367,7 @@ def test_df_subset():
     assert query.check(1, 1)
 
 def test_lipschitz_b_ary_tree():
-    from opendp.transformations import make_count_by_categories, make_b_ary_tree, make_consistent_b_ary_tree, make_cdf, choose_branching_factor
+    from opendp.transformations import then_count_by_categories, make_b_ary_tree, make_consistent_b_ary_tree, make_cdf, choose_branching_factor
     from opendp.measurements import then_base_geometric
     leaf_count = 7
     branching_factor = 2
@@ -381,7 +381,8 @@ def test_lipschitz_b_ary_tree():
 
     # the categories are bin names!
     meas_base = (
-        make_count_by_categories(categories=["A", "B", "C", "D", "E", "F"]) >> 
+        (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()) >>
+        then_count_by_categories(categories=["A", "B", "C", "D", "E", "F"]) >> 
         tree_builder >> 
         then_base_geometric(1.) >> 
         make_consistent_b_ary_tree(branching_factor)
