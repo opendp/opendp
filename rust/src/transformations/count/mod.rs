@@ -260,21 +260,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_count_l1() {
-        let transformation = make_count::<i64, u32>().unwrap_test();
+    fn test_make_count() -> Fallible<()> {
+        let input_domain = VectorDomain::new(AtomDomain::default());
+        let input_metric = SymmetricDistance::default();
+        let transformation = make_count::<_, i32>(input_domain, input_metric)?;
         let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.invoke(&arg).unwrap_test();
+        let ret = transformation.invoke(&arg)?;
         let expected = 5;
         assert_eq!(ret, expected);
-    }
-
-    #[test]
-    fn test_make_count_l2() {
-        let transformation = make_count::<u32, i32>().unwrap_test();
-        let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.invoke(&arg).unwrap_test();
-        let expected = 5;
-        assert_eq!(ret, expected);
+        Ok(())
     }
 
     #[test]
