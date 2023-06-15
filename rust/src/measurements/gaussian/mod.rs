@@ -132,7 +132,8 @@ cartesian! {[i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, usize], [f32, f64
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
-/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
+/// * `D` - Domain of the data to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
+/// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
 /// * `QI` - Input distance. The type of sensitivities. Can be any integer or float.
 pub fn make_gaussian<D: MakeGaussian<MO, QI>, MO: 'static + Measure, QI: 'static>(
     input_domain: D,

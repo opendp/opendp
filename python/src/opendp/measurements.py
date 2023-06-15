@@ -632,7 +632,7 @@ def make_gaussian(
     :param input_domain: Domain of the data type to be privatized.
     :param input_metric: Metric of the data type to be privatized.
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
-    :param MO: 
+    :param MO: Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type

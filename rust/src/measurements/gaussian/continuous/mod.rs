@@ -84,6 +84,7 @@ where
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
+/// * `D` - Domain of the data to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
 /// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
 pub fn make_base_gaussian<D, MO>(
     input_domain: D,
