@@ -6,13 +6,12 @@ use opendp_derive::bootstrap;
 use crate::core::{MetricSpace, Transformation};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::metrics::SymmetricDistance;
 use crate::traits::{CheckAtom, InherentNull, RoundCast};
 use crate::transformations::make_row_by_row;
 
 use super::DatasetMetric;
 
-#[bootstrap(features("contrib"))]
+#[bootstrap(features("contrib"), generics(M(suppress), TIA(suppress)))]
 /// Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
 /// For each element, failure to parse results in `None`, else `Some(out)`.
 ///
@@ -21,21 +20,27 @@ use super::DatasetMetric;
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into
-pub fn make_cast<TIA, TOA>() -> Fallible<
+pub fn make_cast<M, TIA, TOA>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: M,
+) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TIA>>,
         VectorDomain<OptionDomain<AtomDomain<TOA>>>,
-        SymmetricDistance,
-        SymmetricDistance,
+        M,
+        M,
     >,
 >
 where
+    M: DatasetMetric,
     TIA: 'static + Clone + CheckAtom,
     TOA: 'static + RoundCast<TIA> + CheckAtom,
+    (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
+    (VectorDomain<OptionDomain<AtomDomain<TOA>>>, M): MetricSpace,
 {
     make_row_by_row(
-        VectorDomain::new(AtomDomain::default()),
-        SymmetricDistance::default(),
+        input_domain,
+        input_metric,
         OptionDomain::new(AtomDomain::default()),
         |v| {
             TOA::round_cast(v.clone())
@@ -87,7 +92,7 @@ where
     })
 }
 
-#[bootstrap(features("contrib"))]
+#[bootstrap(features("contrib"), generics(M(suppress), TIA(suppress)))]
 /// Make a Transformation that casts a vector of data from type `TIA` to a type that can represent nullity `TOA`.
 /// If cast fails, fill with `TOA`'s null value.
 ///
@@ -98,21 +103,20 @@ where
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into
-pub fn make_cast_inherent<TIA, TOA>() -> Fallible<
-    Transformation<
-        VectorDomain<AtomDomain<TIA>>,
-        VectorDomain<AtomDomain<TOA>>,
-        SymmetricDistance,
-        SymmetricDistance,
-    >,
->
+pub fn make_cast_inherent<M, TIA, TOA>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: M,
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, VectorDomain<AtomDomain<TOA>>, M, M>>
 where
+    M: DatasetMetric,
     TIA: 'static + Clone + CheckAtom,
     TOA: 'static + RoundCast<TIA> + InherentNull + CheckAtom,
+    (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
+    (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
 {
     make_row_by_row(
-        VectorDomain::new(AtomDomain::default()),
-        SymmetricDistance::default(),
+        input_domain,
+        input_metric,
         AtomDomain::new_nullable(),
         |v| TOA::round_cast(v.clone()).unwrap_or(TOA::NULL),
     )
@@ -120,20 +124,26 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::error::ExplainUnwrap;
+    use crate::metrics::{InsertDeleteDistance, HammingDistance};
 
     use super::*;
 
     #[test]
     fn test_cast() -> Fallible<()> {
         let data = vec![1., 1e10, 0.5, f64::NAN, f64::NEG_INFINITY, f64::INFINITY];
-        let caster = make_cast::<f64, i64>()?;
+        let caster = make_cast::<_, f64, i64>(
+            VectorDomain::new(AtomDomain::default()),
+            InsertDeleteDistance::default(),
+        )?;
         assert_eq!(
             caster.invoke(&data)?,
             vec![Some(1), Some(10000000000), Some(0), None, None, None]
         );
 
-        let caster = make_cast::<f64, u8>()?;
+        let caster = make_cast::<_, f64, u8>(
+            VectorDomain::new(AtomDomain::default()),
+            HammingDistance::default(),
+        )?;
         assert_eq!(
             caster.invoke(&vec![-1., f64::NAN, f64::NEG_INFINITY, f64::INFINITY])?,
             vec![None; 4]
@@ -142,13 +152,19 @@ mod tests {
     }
 
     #[test]
-    fn test_cast_combinations() {
+    fn test_cast_combinations() -> Fallible<()> {
         macro_rules! test_pair {
             ($from:ty, $to:ty) => {
-                let caster = make_cast::<$from, $to>().unwrap_test();
-                caster.invoke(&vec![<$from>::default()]).unwrap_test();
-                let caster = make_cast::<$from, $to>().unwrap_test();
-                caster.invoke(&vec![<$from>::default()]).unwrap_test();
+                let caster = make_cast::<_, $from, $to>(
+                    VectorDomain::new(AtomDomain::default()),
+                    SymmetricDistance::default(),
+                )?;
+                caster.invoke(&vec![<$from>::default()])?;
+                let caster = make_cast::<_, $from, $to>(
+                    VectorDomain::new(AtomDomain::default()),
+                    SymmetricDistance::default(),
+                )?;
+                caster.invoke(&vec![<$from>::default()])?;
             };
         }
         macro_rules! test_cartesian {
@@ -171,6 +187,7 @@ mod tests {
             };
         }
         test_cartesian! {[];[u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, bool]}
+        Ok(())
     }
 
     #[test]
@@ -245,7 +262,10 @@ mod tests {
     #[test]
     fn test_cast_inherent() -> Fallible<()> {
         let data = vec!["abc".to_string(), "1".to_string(), "1.".to_string()];
-        let caster = make_cast_inherent::<String, f64>()?;
+        let caster = make_cast_inherent::<_, String, f64>(
+            VectorDomain::default(),
+            SymmetricDistance::default(),
+        )?;
         let res = caster.invoke(&data)?;
         assert!(res[0].is_nan());
         assert_eq!(res[1..], vec![1., 1.]);

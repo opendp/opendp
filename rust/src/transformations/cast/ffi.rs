@@ -2,29 +2,47 @@ use std::convert::TryFrom;
 use std::os::raw::c_char;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
-use crate::domains::{AtomDomain, VectorDomain};
+use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::err;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
+use crate::metrics::IntDistance;
 use crate::traits::{CheckAtom, InherentNull, RoundCast};
 use crate::transformations::{make_cast, make_cast_default, make_cast_inherent, DatasetMetric};
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_cast(
-    TIA: *const c_char,
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
     TOA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    let TIA = try_!(Type::try_from(TIA));
+    let input_domain = try_as_ref!(input_domain);
+    let input_metric = try_as_ref!(input_metric);
+    let M = input_metric.type_.clone();
+    let TIA = try_!(input_domain.type_.get_atom());
     let TOA = try_!(Type::try_from(TOA));
 
-    fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
+    fn monomorphize<M, TIA, TOA>(
+        input_domain: &AnyDomain,
+        input_metric: &AnyMetric,
+    ) -> FfiResult<*mut AnyTransformation>
     where
+        M: 'static + DatasetMetric<Distance = IntDistance>,
         TIA: 'static + Clone + CheckAtom,
         TOA: 'static + RoundCast<TIA> + CheckAtom,
+        (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
+        (VectorDomain<OptionDomain<AtomDomain<TOA>>>, M): MetricSpace,
     {
-        make_cast::<TIA, TOA>().into_any()
+        let input_domain =
+            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
+        let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
+        make_cast::<M, TIA, TOA>(input_domain, input_metric).into_any()
     }
-    dispatch!(monomorphize, [(TIA, @primitives), (TOA, @primitives)], ())
+    dispatch!(monomorphize, [
+        (M, @dataset_metrics),
+        (TIA, @primitives), 
+        (TOA, @primitives)
+    ], (input_domain, input_metric))
 }
 
 #[no_mangle]
@@ -64,20 +82,37 @@ pub extern "C" fn opendp_transformations__make_cast_default(
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_cast_inherent(
-    TIA: *const c_char,
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
     TOA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    let TIA = try_!(Type::try_from(TIA));
+    let input_domain = try_as_ref!(input_domain);
+    let input_metric = try_as_ref!(input_metric);
+    let M = input_metric.type_.clone();
+    let TIA = try_!(input_domain.type_.get_atom());
     let TOA = try_!(Type::try_from(TOA));
 
-    fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
+    fn monomorphize<M, TIA, TOA>(
+        input_domain: &AnyDomain,
+        input_metric: &AnyMetric,
+    ) -> FfiResult<*mut AnyTransformation>
     where
         TIA: 'static + Clone + CheckAtom,
         TOA: 'static + RoundCast<TIA> + InherentNull + CheckAtom,
+        M: 'static + DatasetMetric,
+        (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
+        (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {
-        make_cast_inherent::<TIA, TOA>().into_any()
+        let input_domain =
+            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
+        let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
+        make_cast_inherent::<M, TIA, TOA>(input_domain, input_metric).into_any()
     }
-    dispatch!(monomorphize, [(TIA, @primitives), (TOA, @floats)], ())
+    dispatch!(monomorphize, [
+        (M, @dataset_metrics),
+        (TIA, @primitives), 
+        (TOA, @floats)
+    ], (input_domain, input_metric))
 }
 
 #[cfg(test)]
@@ -93,7 +128,8 @@ mod tests {
     #[test]
     fn test_make_cast() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_cast(
-            "i32".to_char_p(),
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<i32>::default())),
+            AnyMetric::new_raw(SymmetricDistance::default()),
             "f64".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1, 2, 3]);
@@ -120,7 +156,8 @@ mod tests {
     #[test]
     fn test_make_cast_inherent() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_cast_inherent(
-            "String".to_char_p(),
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<String>::default())),
+            AnyMetric::new_raw(SymmetricDistance::default()),
             "f64".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec!["a".to_string(), "1".to_string()]);

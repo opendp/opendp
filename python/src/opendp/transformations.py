@@ -56,7 +56,9 @@ __all__ = [
     "make_sum_of_squared_deviations",
     "make_unordered",
     "make_variance",
+    "then_cast",
     "then_cast_default",
+    "then_cast_inherent",
     "then_clamp",
     "then_count",
     "then_count_by",
@@ -457,7 +459,8 @@ def make_bounded_int_split_sum(
 
 @versioned
 def make_cast(
-    TIA: RuntimeTypeDescriptor,
+    input_domain,
+    input_metric,
     TOA: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
@@ -471,11 +474,11 @@ def make_cast(
     
     * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
     * Output Domain:  `VectorDomain<OptionDomain<AtomDomain<TOA>>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
-    :param TIA: Atomic Input Type to cast from
-    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param input_domain: 
+    :param input_metric: 
     :param TOA: Atomic Output Type to cast into
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -486,21 +489,30 @@ def make_cast(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TIA = RuntimeType.parse(type_name=TIA)
     TOA = RuntimeType.parse(type_name=TOA)
     
     # Convert arguments to c types.
-    c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_cast
-    lib_function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_TIA, c_TOA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_TOA), Transformation))
     
     return output
+
+def then_cast(
+    TOA: RuntimeTypeDescriptor
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_cast(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        TOA=TOA))
+
 
 
 @versioned
@@ -571,7 +583,8 @@ def then_cast_default(
 
 @versioned
 def make_cast_inherent(
-    TIA: RuntimeTypeDescriptor,
+    input_domain,
+    input_metric,
     TOA: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation that casts a vector of data from type `TIA` to a type that can represent nullity `TOA`.
@@ -587,11 +600,11 @@ def make_cast_inherent(
     
     * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
     * Output Domain:  `VectorDomain<AtomDomain<TOA>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
-    :param TIA: Atomic Input Type to cast from
-    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param input_domain: 
+    :param input_metric: 
     :param TOA: Atomic Output Type to cast into
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -602,21 +615,30 @@ def make_cast_inherent(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TIA = RuntimeType.parse(type_name=TIA)
     TOA = RuntimeType.parse(type_name=TOA)
     
     # Convert arguments to c types.
-    c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_cast_inherent
-    lib_function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_TIA, c_TOA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_TOA), Transformation))
     
     return output
+
+def then_cast_inherent(
+    TOA: RuntimeTypeDescriptor
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_cast_inherent(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        TOA=TOA))
+
 
 
 @versioned

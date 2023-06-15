@@ -13,7 +13,7 @@ def test_sized_bounded_variance():
         # Selects a column of df, Vec<str>
         dp.t.make_select_column("A", TOA=str) >>
         # Cast the column as Vec<Optional<Float>>
-        dp.t.make_cast(TIA=str, TOA=float) >>
+        dp.t.then_cast(TOA=float) >>
         # Impute missing values to 0, emit Vec<Float>
         dp.t.make_impute_constant(dp.option_domain(dp.atom_domain(T=float)), constant=0.) >>
         # Clamp values

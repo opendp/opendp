@@ -12,36 +12,36 @@ STR_DATA = list(map(str, INT_DATA))
 
 
 def test_cast_impute():
-    from opendp.transformations import make_cast, make_impute_constant
-    caster = make_cast(TIA=float, TOA=int) >> make_impute_constant(option_domain(atom_domain(T=int)), -1)
+    input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance()
+    caster = dp.t.make_cast(*input_space, TOA=int) >> dp.t.make_impute_constant(dp.option_domain(dp.atom_domain(T=int)), -1)
     assert caster([1., 2., 3.]) == [1, 2, 3]
 
-    caster = make_cast(TIA=float, TOA=int) >> make_impute_constant(option_domain(atom_domain(T=int)), 1)
+    caster = dp.t.make_cast(*input_space, TOA=int) >> dp.t.make_impute_constant(dp.option_domain(dp.atom_domain(T=int)), 1)
     assert caster([float('nan'), 2.]) == [1, 2]
 
 
 def test_cast_drop_null():
-    from opendp.transformations import make_cast, make_drop_null, make_cast_inherent
-    caster = make_cast(TIA=str, TOA=int) >> make_drop_null(option_domain(atom_domain(T=int)))
+    input_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
+    caster = dp.t.make_cast(*input_space, TOA=int) >> dp.t.make_drop_null(dp.option_domain(dp.atom_domain(T=int)))
     assert caster(["A", "2", "3"]) == [2, 3]
 
-    caster = make_cast(TIA=float, TOA=int) >> make_drop_null(option_domain(atom_domain(T=int)))
+    caster = dp.t.make_cast_inherent(*input_space, TOA=float) >> dp.t.make_drop_null(dp.atom_domain(nullable=True, T=float))
+    assert caster(["a", "2."]) == [2]
+
+    input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance()
+    caster = dp.t.make_cast(*input_space, TOA=int) >> dp.t.make_drop_null(dp.option_domain(dp.atom_domain(T=int)))
     assert caster([float('nan'), 2.]) == [2]
 
-    caster = make_cast_inherent(TIA=str, TOA=float) >> make_drop_null(atom_domain(nullable=True, T=float))
-    assert caster(["a", "2."]) == [2]
-    
 
 def test_cast_inherent():
-    from opendp.transformations import make_cast_inherent
-    caster = make_cast_inherent(TIA=int, TOA=float)
+    input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
+    caster = dp.t.make_cast_inherent(*input_space, TOA=float)
 
     assert caster([1, 2]) == [1., 2.]
 
 
 def test_impute_constant_inherent():
-    from opendp.transformations import make_split_lines, make_cast_inherent, make_impute_constant
-    tester = make_split_lines() >> make_cast_inherent(TIA=str, TOA=float) >> make_impute_constant(atom_domain(nullable=True, T=float), -1.)
+    tester = dp.t.make_split_lines() >> dp.t.then_cast_inherent(TOA=float) >> dp.t.make_impute_constant(dp.atom_domain(nullable=True, T=float), -1.)
     assert tester("nan\n1.") == [-1., 1.]
 
 
@@ -99,30 +99,27 @@ def test_is_equal():
 
 
 def test_is_null():
-    from opendp.transformations import make_split_lines, make_cast_inherent, make_is_null
     tester = (
-        make_split_lines() >>
-        make_cast_inherent(TIA=str, TOA=float) >>
-        make_is_null(atom_domain(nullable=True, T=float))
+        dp.t.make_split_lines() >>
+        dp.t.then_cast_inherent(TOA=float) >>
+        dp.t.make_is_null(atom_domain(nullable=True, T=float))
     )
     assert tester("nan\n1.\ninf") == [True, False, False]
 
-    from opendp.transformations import make_split_lines, make_cast, make_is_null
     tester = (
-        make_split_lines() >>
-        make_cast(TIA=str, TOA=float) >>
-        make_is_null(option_domain(atom_domain(T=float)))
+        dp.t.make_split_lines() >>
+        dp.t.then_cast(TOA=float) >>
+        dp.t.make_is_null(option_domain(atom_domain(T=float)))
     )
     assert tester("nan\n1.\ninf") == [True, False, False]
 
 
 def test_split_lines__cast__impute():
-    from opendp.transformations import make_split_lines, make_cast, make_impute_constant
-    assert make_split_lines()("1\n2\n3") == ["1", "2", "3"]
+    assert dp.t.make_split_lines()("1\n2\n3") == ["1", "2", "3"]
     query = (
-        make_split_lines() >>
-        make_cast(TIA=str, TOA=int) >>
-        make_impute_constant(option_domain(atom_domain(T=int)), constant=2)
+        dp.t.make_split_lines() >>
+        dp.t.then_cast(TOA=int) >>
+        dp.t.make_impute_constant(dp.option_domain(dp.atom_domain(T=int)), constant=2)
     )
 
     assert query("1\n2\n3") == [1, 2, 3]
@@ -131,17 +128,15 @@ def test_split_lines__cast__impute():
 
 
 def test_inherent_cast__impute():
-    from opendp.transformations import make_split_lines, make_cast_inherent, make_impute_constant
-    cast = make_split_lines() >> make_cast_inherent(TIA=str, TOA=float)
-    constant = cast >> make_impute_constant(atom_domain(nullable=True, T=float), constant=9.)
+    cast = dp.t.make_split_lines() >> dp.t.then_cast_inherent(TOA=float)
+    constant = cast >> dp.t.make_impute_constant(dp.atom_domain(nullable=True, T=float), constant=9.)
 
     assert constant("a\n23.23\n12") == [9., 23.23, 12.]
     assert constant.check(1, 1)
 
 def test_inherent_cast__impute_uniform():
-    from opendp.transformations import make_split_lines, make_cast_inherent, make_impute_uniform_float
-    cast = make_split_lines() >> make_cast_inherent(TIA=str, TOA=float)
-    constant = cast >> make_impute_uniform_float(bounds=(23., 32.5))
+    cast = dp.t.make_split_lines() >> dp.t.then_cast_inherent(TOA=float)
+    constant = cast >> dp.t.make_impute_uniform_float(bounds=(23., 32.5))
 
     res = constant("a\n23.23\n12")
     assert res[1:] == [23.23, 12.]
