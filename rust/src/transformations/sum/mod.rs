@@ -223,30 +223,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_sum_l1() -> Fallible<()> {
-        let input_space = (
-            VectorDomain::new(AtomDomain::new_closed((0, 10))?),
-            SymmetricDistance::default(),
-        );
-        let transformation = (input_space >> then_sum())?;
-        let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.invoke(&arg).unwrap_test();
-        let expected = 15;
-        assert_eq!(ret, expected);
-        Ok(())
-    }
+    fn test_make_sum() -> Fallible<()> {
 
-    #[test]
-    fn test_make_sized_bounded_sum() -> Fallible<()> {
-        let input_space = (
-            VectorDomain::new(AtomDomain::new_closed((0, 10))?).with_size(5),
-            SymmetricDistance::default(),
-        );
-        let transformation = (input_space >> then_sum())?;
-        let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.invoke(&arg).unwrap_test();
-        let expected = 15;
-        assert_eq!(ret, expected);
+        macro_rules! test_sum {
+            ($bounds:expr, $data:expr, $expected:expr, $metric:expr) => {{
+                let input_space = (
+                    VectorDomain::new(AtomDomain::new_closed($bounds)?),
+                    SymmetricDistance::default(),
+                );
+                let transformation = (input_space >> then_sum())?;
+                let ret = transformation.invoke(&$data)?;
+                assert_eq!(ret, $expected);
+            }};
+        }
+        test_sum!((0, 10), vec![1, 2, 3, 4, 5], 15, SymmetricDistance::default());
+        test_sum!((0, 10), vec![1, 2, 3, 4, 5], 15, InsertDeleteDistance::default());
+        test_sum!((0., 10.), vec![1., 2., 3., 4., 5.], 15., SymmetricDistance::default());
+        test_sum!((0., 10.), vec![1., 2., 3., 4., 5.], 15., InsertDeleteDistance::default());
         Ok(())
     }
 }
