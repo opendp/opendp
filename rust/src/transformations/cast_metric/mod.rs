@@ -14,11 +14,7 @@ use self::traits::{BoundedMetric, OrderedMetric, UnboundedMetric, UnorderedMetri
 mod ffi;
 mod traits;
 
-#[bootstrap(
-    features("contrib"),
-    arguments(domain(c_type = "AnyDomain *")),
-    generics(D(example = "domain"), MI(default = "SymmetricDistance"))
-)]
+#[bootstrap(features("contrib"), generics(D(suppress), MI(suppress)))]
 /// Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
 /// to the respective ordered dataset metric `InsertDeleteDistance` by assigning a random permutation.
 ///
@@ -31,7 +27,8 @@ mod traits;
 /// * `D` - Domain
 /// * `MI` - Input Metric
 pub fn make_ordered_random<D, MI>(
-    domain: D,
+    input_domain: D,
+    input_metric: MI,
 ) -> Fallible<Transformation<D, D, MI, MI::OrderedMetric>>
 where
     D: Domain,
@@ -41,24 +38,20 @@ where
     (D, MI::OrderedMetric): MetricSpace,
 {
     Transformation::new(
-        domain.clone(),
-        domain,
+        input_domain.clone(),
+        input_domain,
         Function::new_fallible(|arg: &D::Carrier| {
             let mut data = arg.clone();
             data.shuffle()?;
             Ok(data)
         }),
-        MI::default(),
+        input_metric,
         MI::OrderedMetric::default(),
         StabilityMap::new_from_constant(1),
     )
 }
 
-#[bootstrap(
-    features("contrib"),
-    arguments(domain(c_type = "AnyDomain *")),
-    generics(D(example = "domain"), MI(default = "InsertDeleteDistance"))
-)]
+#[bootstrap(features("contrib"), generics(D(suppress), MI(suppress)))]
 /// Make a Transformation that converts the ordered dataset metric `MI`
 /// to the respective ordered dataset metric with a no-op.
 ///
@@ -70,7 +63,10 @@ where
 /// # Generics
 /// * `D` - Domain
 /// * `MI` - Input Metric
-pub fn make_unordered<D, MI>(domain: D) -> Fallible<Transformation<D, D, MI, MI::UnorderedMetric>>
+pub fn make_unordered<D, MI>(
+    input_domain: D,
+    input_metric: MI,
+) -> Fallible<Transformation<D, D, MI, MI::UnorderedMetric>>
 where
     D: Domain,
     D::Carrier: Clone,
@@ -79,10 +75,10 @@ where
     (D, MI::UnorderedMetric): MetricSpace,
 {
     Transformation::new(
-        domain.clone(),
-        domain,
+        input_domain.clone(),
+        input_domain,
         Function::new(|val: &D::Carrier| val.clone()),
-        MI::default(),
+        input_metric,
         MI::UnorderedMetric::default(),
         StabilityMap::new_from_constant(1),
     )
@@ -90,8 +86,7 @@ where
 
 #[bootstrap(
     features("contrib"),
-    arguments(domain(c_type = "AnyDomain *")),
-    generics(D(example = "domain"), MI(default = "ChangeOneDistance"))
+    generics(D(suppress), MI(suppress))
 )]
 /// Make a Transformation that converts the bounded dataset metric `MI`
 /// to the respective unbounded dataset metric with a no-op.
@@ -108,7 +103,8 @@ where
 /// * `D` - Domain. The function is a no-op so input and output domains are the same.
 /// * `MI` - Input Metric.
 pub fn make_metric_unbounded<D, MI>(
-    domain: D,
+    input_domain: D,
+    input_metric: MI,
 ) -> Fallible<Transformation<D, D, MI, MI::UnboundedMetric>>
 where
     D: IsSizedDomain,
@@ -117,12 +113,12 @@ where
     (D, MI): MetricSpace,
     (D, MI::UnboundedMetric): MetricSpace,
 {
-    domain.get_size()?;
+    input_domain.get_size()?;
     Transformation::new(
-        domain.clone(),
-        domain,
+        input_domain.clone(),
+        input_domain,
         Function::new(|arg: &D::Carrier| arg.clone()),
-        MI::default(),
+        input_metric,
         MI::UnboundedMetric::default(),
         StabilityMap::new(|d_in| d_in * 2),
     )
@@ -131,7 +127,7 @@ where
 #[bootstrap(
     features("contrib"),
     arguments(domain(c_type = "AnyDomain *")),
-    generics(D(example = "domain"), MI(default = "SymmetricDistance"))
+    generics(D(suppress), MI(suppress))
 )]
 /// Make a Transformation that converts the unbounded dataset metric `MI`
 /// to the respective bounded dataset metric with a no-op.
@@ -151,7 +147,8 @@ where
 /// * `D` - Domain
 /// * `MI` - Input Metric
 pub fn make_metric_bounded<D, MI>(
-    domain: D,
+    input_domain: D,
+    input_metric: MI,
 ) -> Fallible<Transformation<D, D, MI, MI::BoundedMetric>>
 where
     D: IsSizedDomain,
@@ -160,12 +157,12 @@ where
     (D, MI): MetricSpace,
     (D, MI::BoundedMetric): MetricSpace,
 {
-    domain.get_size()?;
+    input_domain.get_size()?;
     Transformation::new(
-        domain.clone(),
-        domain,
+        input_domain.clone(),
+        input_domain,
         Function::new(|arg: &D::Carrier| arg.clone()),
-        MI::default(),
+        input_metric,
         MI::BoundedMetric::default(),
         StabilityMap::new(|d_in| d_in / 2),
     )
@@ -174,30 +171,30 @@ where
 #[cfg(test)]
 mod test {
     use crate::domains::{AtomDomain, VectorDomain};
-    use crate::metrics::SymmetricDistance;
+    use crate::metrics::{SymmetricDistance, ChangeOneDistance, InsertDeleteDistance};
 
     use super::*;
 
     #[test]
     fn test_ordering() -> Fallible<()> {
         let domain = VectorDomain::new(AtomDomain::default());
-        let ord_trans = make_ordered_random::<_, SymmetricDistance>(domain.clone())?;
+        let ord_trans = make_ordered_random(domain.clone(), SymmetricDistance::default())?;
         let data = vec![1i32, 2, 3];
         assert_eq!(ord_trans.invoke(&data)?.len(), 3);
 
-        let ident_trans = (ord_trans >> make_unordered(domain)?)?;
+        let ident_trans = (ord_trans >> make_unordered(domain, InsertDeleteDistance::default())?)?;
         assert_eq!(ident_trans.invoke(&data)?.len(), 3);
         Ok(())
     }
 
     #[test]
     fn test_bounded() -> Fallible<()> {
-        let domain = VectorDomain::new(AtomDomain::default()).with_size(3);
-        let bdd_trans = make_metric_bounded::<_, SymmetricDistance>(domain.clone())?;
+        let input_domain = VectorDomain::new(AtomDomain::default()).with_size(3);
+        let bdd_trans = make_metric_bounded(input_domain.clone(), SymmetricDistance::default())?;
         let data = vec![1i32, 2, 3];
         assert_eq!(bdd_trans.invoke(&data)?.len(), 3);
 
-        let ident_trans = (bdd_trans >> make_metric_unbounded(domain)?)?;
+        let ident_trans = (bdd_trans >> make_metric_unbounded(input_domain, ChangeOneDistance::default())?)?;
         assert_eq!(ident_trans.invoke(&data)?.len(), 3);
         Ok(())
     }

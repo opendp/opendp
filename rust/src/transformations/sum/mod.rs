@@ -111,7 +111,7 @@ macro_rules! impl_make_sum_int {
         $(impl MakeSum<InsertDeleteDistance> for $ty {
             fn make_sum(
                 input_domain: VectorDomain<AtomDomain<Self>>,
-                _input_metric: InsertDeleteDistance,
+                input_metric: InsertDeleteDistance,
             ) -> Fallible<Transformation<VectorDomain<AtomDomain<Self>>, AtomDomain<Self>, InsertDeleteDistance, AbsoluteDistance<Self>>> {
                 let bounds = input_domain.element_domain.bounds
                     .ok_or_else(|| err!(MakeTransformation, "`input_domain` must be bounded. Use `make_clamp` to bound data."))?
@@ -122,7 +122,7 @@ macro_rules! impl_make_sum_int {
                         // 1. if the sum can't overflow,
                         //    then do a no-op unordering and use a more computationally efficient sum without saturation arithmetic
                         let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?).with_size(size);
-                        make_unordered(domain)? >> make_sized_bounded_int_checked_sum(size, bounds)?
+                        make_unordered(domain, input_metric)? >> make_sized_bounded_int_checked_sum(size, bounds)?
 
                     } else {
                         // when input metric is ordered, ordered sum doesn't need a shuffle, making it comparatively cheaper
@@ -150,9 +150,9 @@ macro_rules! impl_make_sum_float {
         $(impl MakeSum<SymmetricDistance> for $ty {
             fn make_sum(
                 input_domain: VectorDomain<AtomDomain<Self>>,
-                _input_metric: SymmetricDistance,
+                input_metric: SymmetricDistance,
             ) -> Fallible<Transformation<VectorDomain<AtomDomain<Self>>, AtomDomain<Self>, SymmetricDistance, AbsoluteDistance<Self>>> {
-                let bounds = input_domain.element_domain.bounds
+                let bounds = input_domain.element_domain.bounds.as_ref()
                     .ok_or_else(|| err!(MakeTransformation, "`input_domain` must be bounded. Use `make_clamp` to bound data."))?
                     .get_closed()?;
 
@@ -163,8 +163,7 @@ macro_rules! impl_make_sum_float {
 
                     } else {
                         // 2. fall back to ordered summation
-                        let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?).with_size(size);
-                        make_ordered_random(domain)? >> make_sized_bounded_float_ordered_sum::<Pairwise<_>>(size, bounds)?
+                        make_ordered_random(input_domain, input_metric)? >> make_sized_bounded_float_ordered_sum::<Pairwise<_>>(size, bounds)?
                     }
                 } else {
                     if !Pairwise::<Self>::float_sum_can_overflow(DEFAULT_SIZE_LIMIT, bounds)? {
@@ -173,8 +172,7 @@ macro_rules! impl_make_sum_float {
 
                     } else {
                         // 2. sum can overflow, so shuffle and use an ordered sum
-                        let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?);
-                        make_ordered_random(domain)? >> make_bounded_float_ordered_sum::<Pairwise<_>>(DEFAULT_SIZE_LIMIT, bounds)?
+                        make_ordered_random(input_domain, input_metric)? >> make_bounded_float_ordered_sum::<Pairwise<_>>(DEFAULT_SIZE_LIMIT, bounds)?
                     }
                 }
             }
@@ -183,9 +181,9 @@ macro_rules! impl_make_sum_float {
         $(impl MakeSum<InsertDeleteDistance> for $ty {
             fn make_sum(
                 input_domain: VectorDomain<AtomDomain<Self>>,
-                _input_metric: InsertDeleteDistance,
+                input_metric: InsertDeleteDistance,
             ) -> Fallible<Transformation<VectorDomain<AtomDomain<Self>>, AtomDomain<Self>, InsertDeleteDistance, AbsoluteDistance<Self>>> {
-                let bounds = input_domain.element_domain.bounds
+                let bounds = input_domain.element_domain.bounds.as_ref()
                     .ok_or_else(|| err!(MakeTransformation, "`input_domain` must be bounded. Use `make_clamp` to bound data."))?
                     .get_closed()?;
 
@@ -193,8 +191,7 @@ macro_rules! impl_make_sum_float {
                     if !Pairwise::<Self>::float_sum_can_overflow(size, bounds)? {
                         // 1. if the sum can't overflow,
                         //    then do a no-op unordering and use a more computationally efficient sum without saturation arithmetic
-                        let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?).with_size(size);
-                        make_unordered(domain)? >> make_sized_bounded_float_checked_sum::<Pairwise<_>>(size, bounds)?
+                        make_unordered(input_domain, input_metric)? >> make_sized_bounded_float_checked_sum::<Pairwise<_>>(size, bounds)?
 
                     } else {
                         // 2. fall back to ordered summation
@@ -204,8 +201,7 @@ macro_rules! impl_make_sum_float {
                     if !Pairwise::<Self>::float_sum_can_overflow(DEFAULT_SIZE_LIMIT, bounds)? {
                         // 1. if the sum can't overflow,
                         //    then do a no-op unordering and use a more computationally efficient sum without saturation arithmetic
-                        let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?);
-                        make_unordered(domain)? >> make_bounded_float_checked_sum::<Pairwise<_>>(DEFAULT_SIZE_LIMIT, bounds)?
+                        make_unordered(input_domain, input_metric)? >> make_bounded_float_checked_sum::<Pairwise<_>>(DEFAULT_SIZE_LIMIT, bounds)?
 
                     } else {
                         // 2. sum can overflow, but data is already sorted, so use a saturating sum
