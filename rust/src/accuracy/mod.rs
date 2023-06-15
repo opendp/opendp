@@ -574,7 +574,9 @@ pub mod test {
 
         println!("scale: {}", scale);
         let base_dg =
-            make_base_discrete_gaussian::<AtomDomain<i8>, ZeroConcentratedDivergence<f64>, i32>(
+            make_base_discrete_gaussian::<_, ZeroConcentratedDivergence<f64>, i32>(
+                AtomDomain::<i8>::default(),
+                AbsoluteDistance::default(),  
                 scale,
             )?;
         let n = 50_000;

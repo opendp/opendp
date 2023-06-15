@@ -16,6 +16,7 @@ __all__ = [
     "make_laplace",
     "make_randomized_response",
     "make_randomized_response_bool",
+    "then_base_discrete_gaussian",
     "then_base_discrete_laplace",
     "then_base_discrete_laplace_cks20",
     "then_base_discrete_laplace_linear",
@@ -28,19 +29,19 @@ __all__ = [
 
 @versioned
 def make_base_discrete_gaussian(
+    input_domain,
+    input_metric,
     scale,
-    D: RuntimeTypeDescriptor = "AtomDomain<int>",
-    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<QO>",
-    QI: RuntimeTypeDescriptor = "int"
+    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<QO>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
     
-    Set `D` to change the input data type and input metric:
+    Valid inputs for `input_domain` and `input_metric` are:
     
-    | `D`                          | input type   | `D::InputMetric`        |
-    | ---------------------------- | ------------ | ----------------------- |
-    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<QI>`  |
-    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L2Distance<QI>`        |
+    | `input_domain`                  | input type   | `input_metric`         |
+    | ------------------------------- | ------------ | ---------------------- |
+    | `atom_domain(T)`                | `T`          | `absolute_distance(QI)` |
+    | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l2_distance(QI)`       |
     
     [make_base_discrete_gaussian in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_gaussian.html)
     
@@ -51,13 +52,11 @@ def make_base_discrete_gaussian(
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MO`
     
+    :param input_domain: Domain of the data type to be privatized.
+    :param input_metric: Metric of the data type to be privatized.
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
-    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
-    :type D: :py:ref:`RuntimeTypeDescriptor`
     :param MO: Output measure. The only valid measure is `ZeroConcentratedDivergence<QO>`, but QO can be any float.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
-    :param QI: Input distance. The type of sensitivities. Can be any integer or float.
-    :type QI: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -66,26 +65,35 @@ def make_base_discrete_gaussian(
     assert_features("contrib")
     
     # Standardize type arguments.
-    D = RuntimeType.parse(type_name=D)
     MO = RuntimeType.parse(type_name=MO, generics=["QO"])
-    QI = RuntimeType.parse(type_name=QI)
     QO = get_atom_or_infer(MO, scale)
     MO = MO.substitute(QO=QO)
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
-    c_D = py_to_c(D, c_type=ctypes.c_char_p)
     c_MO = py_to_c(MO, c_type=ctypes.c_char_p)
-    c_QI = py_to_c(QI, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_measurements__make_base_discrete_gaussian
-    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_scale, c_D, c_MO, c_QI), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_MO), Measurement))
     
     return output
+
+def then_base_discrete_gaussian(
+    scale,
+    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<QO>"
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_base_discrete_gaussian(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        MO=MO))
+
 
 
 @versioned
@@ -329,7 +337,7 @@ def make_base_gaussian(
     
     | `input_domain`                  | input type   | `input_metric`         |
     | ------------------------------- | ------------ | ---------------------- |
-    | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
+    | `atom_domain(T)`                | `T`          | `absolute_distance(T)` |
     | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l2_distance(T)`       |
     
     This function takes a noise granularity in terms of 2^k.

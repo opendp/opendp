@@ -71,7 +71,7 @@ where
 ///
 /// | `input_domain`                  | input type   | `input_metric`         |
 /// | ------------------------------- | ------------ | ---------------------- |
-/// | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
+/// | `atom_domain(T)`                | `T`          | `absolute_distance(T)` |
 /// | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l2_distance(T)`       |
 ///
 /// This function takes a noise granularity in terms of 2^k.
