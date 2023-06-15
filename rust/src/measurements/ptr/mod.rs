@@ -99,7 +99,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transformations::make_count_by;
+    use crate::{
+        domains::VectorDomain, metrics::SymmetricDistance, transformations::make_count_by,
+    };
 
     #[test]
     fn test_count_by_ptr() -> Fallible<()> {
@@ -111,8 +113,10 @@ mod tests {
         let threshold = (max_influence as f64 / (2. * delta)).ln() * scale + max_influence as f64;
         println!("{:?}", threshold);
 
-        let measurement =
-            (make_count_by()? >> make_base_ptr::<char, f64>(scale, threshold, None)?)?;
+        let measurement = (make_count_by(
+            VectorDomain::new(AtomDomain::default()),
+            SymmetricDistance::default(),
+        )? >> make_base_ptr::<char, f64>(scale, threshold, None)?)?;
         let ret =
             measurement.invoke(&vec!['a', 'b', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'])?;
         println!("stability eval: {:?}", ret);

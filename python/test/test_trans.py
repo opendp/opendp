@@ -266,10 +266,10 @@ def test_count_distinct():
 
 
 def test_count_by():
-    from opendp.transformations import make_count_by
-    query = make_count_by(MO=L1Distance[float], TK=str, TV=float)
+    from opendp.transformations import then_count_by
+    input_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
+    query = input_space >> then_count_by(MO=L1Distance[float], TV=float)
     assert query(STR_DATA) == {str(i + 1): 1 for i in range(9)}
-    print('first')
     assert query.check(1, 2.)
 
 

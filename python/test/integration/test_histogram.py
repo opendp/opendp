@@ -52,7 +52,7 @@ def test_count_by_categories_float():
 
 def test_count_by_ptr():
     """Compute histogram with unknown category set"""
-    from opendp.transformations import make_split_dataframe, make_select_column, make_count_by
+    from opendp.transformations import make_split_dataframe, make_select_column, then_count_by
     from opendp.measurements import make_base_ptr
     from opendp.combinators import make_fix_delta
     from opendp.typing import L1Distance
@@ -62,7 +62,7 @@ def test_count_by_ptr():
     preprocess = (
         make_split_dataframe(",", ['A', 'B']) >>
         make_select_column("A", TOA=str) >>
-        make_count_by(MO=L1Distance[float], TK=str, TV=float)
+        then_count_by(MO=L1Distance[float], TV=float)
     )
     budget = (1., 1e-8)
     scale = binary_search_param(

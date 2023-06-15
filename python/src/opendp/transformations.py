@@ -59,6 +59,7 @@ __all__ = [
     "then_cast_default",
     "then_clamp",
     "then_count",
+    "then_count_by",
     "then_count_by_categories",
     "then_count_distinct",
     "then_df_cast_default",
@@ -836,8 +837,9 @@ def then_count(
 
 @versioned
 def make_count_by(
+    input_domain,
+    input_metric,
     MO: SensitivityMetric,
-    TK: RuntimeTypeDescriptor,
     TV: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
     """Make a Transformation that computes the count of each unique value in data.
@@ -856,10 +858,10 @@ def make_count_by(
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `MO`
     
+    :param input_domain: 
+    :param input_metric: 
     :param MO: Output Metric.
     :type MO: SensitivityMetric
-    :param TK: Type of Key. Categorical/hashable input data type. Input data must be `Vec<TK>`.
-    :type TK: :py:ref:`RuntimeTypeDescriptor`
     :param TV: Type of Value. Express counts in terms of this integral type.
     :type TV: :py:ref:`RuntimeTypeDescriptor`
     :return: The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
@@ -872,22 +874,33 @@ def make_count_by(
     
     # Standardize type arguments.
     MO = RuntimeType.parse(type_name=MO)
-    TK = RuntimeType.parse(type_name=TK)
     TV = RuntimeType.parse(type_name=TV)
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_MO = py_to_c(MO, c_type=ctypes.c_char_p)
-    c_TK = py_to_c(TK, c_type=ctypes.c_char_p)
     c_TV = py_to_c(TV, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_count_by
-    lib_function.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_char_p, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_MO, c_TK, c_TV), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_MO, c_TV), Transformation))
     
     return output
+
+def then_count_by(
+    MO: SensitivityMetric,
+    TV: RuntimeTypeDescriptor = "int"
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_count_by(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        MO=MO,
+        TV=TV))
+
 
 
 @versioned
