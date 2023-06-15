@@ -248,6 +248,13 @@ def test_bounded_variance():
     assert query(FLOAT_DATA) == 7.5
     assert query.check(2, 11.111111 + 1e-6)
 
+def test_sum_of_squared_deviances():
+    query = dp.t.make_sum_of_squared_deviations(
+        dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=9),
+        dp.symmetric_distance())
+    assert query(FLOAT_DATA) == 60.0
+    assert query.check(2, 88.888888 + 1e-4)
+
 def test_count():
     transformation = dp.t.make_count(dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
     arg = [1, 2, 3]

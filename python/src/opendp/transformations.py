@@ -2759,7 +2759,7 @@ def make_sum_of_squared_deviations(
     
     # Standardize type arguments.
     S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_atom_or_infer(S, get_first(bounds))
+    T = get_atom(get_type(input_domain))
     S = S.substitute(T=T)
     
     # Convert arguments to c types.
