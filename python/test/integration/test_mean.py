@@ -35,7 +35,7 @@ def test_dp_mean():
         # Resize dataset length
         then_resize(n, impute_constant) >>
         # Aggregate with mean
-        make_sized_bounded_mean(n, bounds) >>
+        then_mean() >>
         # Noise
         then_base_laplace(scale)
     )

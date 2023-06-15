@@ -21,7 +21,7 @@ Our transformation will
 :func:`impute <opendp.transformations.make_impute_constant>`,
 :func:`clamp <opendp.transformations.make_clamp>`,
 :func:`resize <opendp.transformations.make_resize>` and then aggregate with the
-:func:`mean <opendp.transformations.make_sized_bounded_mean>`.
+:func:`mean <opendp.transformations.make_mean>`.
 
 .. doctest::
 
@@ -45,7 +45,7 @@ Our transformation will
     ...     make_impute_constant(option_domain(atom_domain(T=float)), constant=constant) >>
     ...     then_clamp(bounds) >>
     ...     then_resize(size, constant=constant) >>
-    ...     make_sized_bounded_mean(size, bounds)
+    ...     then_mean()
     ... )
 
 

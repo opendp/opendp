@@ -74,7 +74,9 @@ This is extremely powerful!
 
     >>> # finds the smallest n
     >>> binary_search_param(
-    ...     lambda n: make_sized_bounded_mean(n, (0., 10.)) >> then_base_gaussian(scale=1.), 
+    ...     lambda n: make_mean(
+    ...         vector_domain(atom_domain((0., 10.)), n), 
+    ...         symmetric_distance()) >> then_gaussian(scale=1.), 
     ...     d_in=2, d_out=1.)
     8
 

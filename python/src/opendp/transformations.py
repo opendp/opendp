@@ -35,6 +35,7 @@ __all__ = [
     "make_is_equal",
     "make_is_null",
     "make_lipschitz_float_mul",
+    "make_mean",
     "make_metric_bounded",
     "make_metric_unbounded",
     "make_ordered_random",
@@ -47,7 +48,6 @@ __all__ = [
     "make_sized_bounded_int_monotonic_sum",
     "make_sized_bounded_int_ordered_sum",
     "make_sized_bounded_int_split_sum",
-    "make_sized_bounded_mean",
     "make_sized_bounded_sum_of_squared_deviations",
     "make_sized_bounded_variance",
     "make_split_dataframe",
@@ -65,6 +65,7 @@ __all__ = [
     "then_df_cast_default",
     "then_df_is_equal",
     "then_is_equal",
+    "then_mean",
     "then_resize",
     "then_sum"
 ]
@@ -1735,6 +1736,57 @@ def make_lipschitz_float_mul(
 
 
 @versioned
+def make_mean(
+    input_domain,
+    input_metric
+) -> Transformation:
+    """Make a Transformation that computes the mean of bounded data.
+    
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size.
+    Use `make_clamp` to bound data and `make_resize` to establish dataset size.
+    
+    [make_mean in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_mean.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AtomDomain<T>>`
+    * Output Domain:  `AtomDomain<T>`
+    * Input Metric:   `MI`
+    * Output Metric:  `AbsoluteDistance<T>`
+    
+    :param input_domain: 
+    :param input_metric: 
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_mean
+    lib_function.argtypes = [Domain, Metric]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric), Transformation))
+    
+    return output
+
+def then_mean(
+    
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_mean(
+        input_domain=input_domain,
+        input_metric=input_metric))
+
+
+
+@versioned
 def make_metric_bounded(
     domain,
     D: RuntimeTypeDescriptor = None,
@@ -2426,62 +2478,6 @@ def make_sized_bounded_int_split_sum(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_size, c_bounds, c_T), Transformation))
-    
-    return output
-
-
-@versioned
-def make_sized_bounded_mean(
-    size: int,
-    bounds: Tuple[Any, Any],
-    MI: RuntimeTypeDescriptor = "SymmetricDistance",
-    T: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that computes the mean of bounded data.
-    
-    This uses a restricted-sensitivity proof that takes advantage of known dataset size.
-    Use `make_clamp` to bound data and `make_resize` to establish dataset size.
-    
-    [make_sized_bounded_mean in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sized_bounded_mean.html)
-    
-    **Supporting Elements:**
-    
-    * Input Domain:   `VectorDomain<AtomDomain<T>>`
-    * Output Domain:  `AtomDomain<T>`
-    * Input Metric:   `MI`
-    * Output Metric:  `AbsoluteDistance<T>`
-    
-    :param size: Number of records in input data.
-    :type size: int
-    :param bounds: Tuple of inclusive lower and upper bounds.
-    :type bounds: Tuple[Any, Any]
-    :param MI: Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`
-    :type MI: :py:ref:`RuntimeTypeDescriptor`
-    :param T: Atomic Input Type and Output Type.
-    :type T: :py:ref:`RuntimeTypeDescriptor`
-    :rtype: Transformation
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    MI = RuntimeType.parse(type_name=MI)
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
-    
-    # Convert arguments to c types.
-    c_size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
-    c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    c_MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    c_T = py_to_c(T, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    lib_function = lib.opendp_transformations__make_sized_bounded_mean
-    lib_function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(c_size, c_bounds, c_MI, c_T), Transformation))
     
     return output
 

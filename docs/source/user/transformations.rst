@@ -344,7 +344,7 @@ the resulting dataset distance is 2.
 Therefore, the resize transformation is 2-stable: `map(d_in) = 2 * d_in`.
 
 Similarly to data bounds, many aggregators calibrate their stability map based on knowledge of a known dataset size.
-For example, the relation downstream for the :func:`opendp.transformations.make_sized_bounded_mean` aggregator is ``map(d_in) = d_in // 2 * (U - L) / n``.
+For example, the relation downstream for the :func:`opendp.transformations.make_mean` aggregator is ``map(d_in) = d_in // 2 * (U - L) / n``.
 Notice that any addition and removal may, in the worst case, change a record from ``L`` to ``U``.
 Such a substitution would influence the mean by ``(U - L) / n``.
 
@@ -431,7 +431,7 @@ See the notebooks for code examples and deeper explanations:
      - ``AtomDomain<T>``
      - ``SymmetricDistance/InsertDeleteDistance``
      - ``AbsoluteDistance<TO>``
-   * - :func:`opendp.transformations.make_sized_bounded_mean`
+   * - :func:`opendp.transformations.make_mean`
      - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
      - ``AtomDomain<T>``
      - ``SymmetricDistance``

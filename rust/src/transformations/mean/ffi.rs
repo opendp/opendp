@@ -1,29 +1,23 @@
-use std::convert::TryFrom;
-use std::os::raw::{c_char, c_uint};
-
 use num::Float;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
-use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
-use crate::ffi::util::Type;
+use crate::ffi::any::{AnyTransformation, Downcast, AnyDomain, AnyMetric};
 use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
 use crate::traits::{ExactIntCast, InfMul};
 use crate::transformations::{
-    make_sized_bounded_mean, LipschitzMulFloatDomain, LipschitzMulFloatMetric, MakeSum,
+    make_mean, LipschitzMulFloatDomain, LipschitzMulFloatMetric, MakeSum,
 };
 
 #[no_mangle]
-pub extern "C" fn opendp_transformations__make_sized_bounded_mean(
-    size: c_uint,
-    bounds: *const AnyObject,
-    MI: *const c_char,
-    T: *const c_char,
+pub extern "C" fn opendp_transformations__make_mean(
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<MI, T>(
-        size: usize,
-        bounds: *const AnyObject,
+        input_domain: &AnyDomain,
+        input_metric: &AnyMetric,
     ) -> FfiResult<*mut AnyTransformation>
     where
         MI: 'static + Metric,
@@ -32,16 +26,19 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_mean(
         AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
         (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
     {
-        let bounds = *try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>());
-        make_sized_bounded_mean::<MI, T>(size, bounds).into_any()
+        let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<T>>>()).clone();
+        let input_metric = try_!(input_metric.downcast_ref::<MI>()).clone();
+        make_mean::<MI, T>(input_domain, input_metric).into_any()
     }
-    let size = size as usize;
-    let MI = try_!(Type::try_from(MI));
-    let T = try_!(Type::try_from(T));
+    let input_domain = try_as_ref!(input_domain);
+    let input_metric = try_as_ref!(input_metric);
+    let MI = input_metric.type_.clone();
+    let T = try_!(input_domain.type_.get_atom());
+
     dispatch!(monomorphize, [
         (MI, [SymmetricDistance, InsertDeleteDistance]),
         (T, @floats)
-    ], (size, bounds))
+    ], (input_domain, input_metric))
 }
 
 #[cfg(test)]
@@ -49,18 +46,14 @@ mod tests {
     use crate::core;
     use crate::error::Fallible;
     use crate::ffi::any::{AnyObject, Downcast};
-    use crate::ffi::util;
-    use crate::ffi::util::ToCharP;
 
     use super::*;
 
     #[test]
-    fn test_make_sized_bounded_mean() -> Fallible<()> {
-        let transformation = Result::from(opendp_transformations__make_sized_bounded_mean(
-            3 as c_uint,
-            util::into_raw(AnyObject::new((0., 10.))),
-            "InsertDeleteDistance".to_char_p(),
-            "f64".to_char_p(),
+    fn test_make_mean() -> Fallible<()> {
+        let transformation = Result::from(opendp_transformations__make_mean(
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::new_closed((0., 10.))?).with_size(3)),
+            AnyMetric::new_raw(InsertDeleteDistance::default()),
         ))?;
         let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);

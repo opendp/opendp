@@ -121,12 +121,14 @@ where
 #[cfg(all(test, feature = "partials"))]
 mod tests {
     use super::*;
-    use crate::{metrics::SymmetricDistance, transformations::make_sized_bounded_mean};
+    use crate::{metrics::SymmetricDistance, transformations::make_mean};
 
     #[test]
     fn test_chain_laplace() -> Fallible<()> {
-        let chain = (make_sized_bounded_mean::<SymmetricDistance, _>(3, (10.0, 12.0))?
-            >> then_base_laplace(1.0, None))?;
+        let chain = (make_mean(
+            VectorDomain::new(AtomDomain::new_closed((10., 12.))?).with_size(3),
+            SymmetricDistance::default(),
+        )? >> then_base_laplace(1.0, None))?;
         let _ret = chain.invoke(&vec![10.0, 11.0, 12.0])?;
         Ok(())
     }

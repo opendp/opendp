@@ -133,6 +133,15 @@ impl<T: CheckAtom + TotalOrd> AtomDomain<T> {
             nullable: false,
         })
     }
+    
+    pub fn get_closed_bounds(&self) -> Option<(T, T)> {
+        let bounds = self.bounds.as_ref()?;
+
+        match (&bounds.lower, &bounds.upper) {
+            (Bound::Included(l), Bound::Included(u)) => Some((l.clone(), u.clone())),
+            _ => None
+        }
+    }
 }
 
 impl<T: CheckAtom> Domain for AtomDomain<T> {

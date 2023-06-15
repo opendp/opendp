@@ -5,7 +5,8 @@ dp.enable_features("floating-point", "contrib", "honest-but-curious")
 
 
 def test_amplification():
-    meas = dp.t.make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> dp.m.then_base_laplace(scale=0.5)
+    input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=10), dp.symmetric_distance()
+    meas = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
 
     amplified = dp.c.make_population_amplification(meas, population_size=100)
     print("amplified base laplace:", amplified([1.] * 10))

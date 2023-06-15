@@ -589,7 +589,7 @@ def binary_search_chain(
     ...     dp.space_of(List[float]) >>
     ...     dp.t.then_clamp(bounds=(0., 1.)) >>
     ...     dp.t.then_resize(size=10, constant=0.) >>
-    ...     dp.t.make_sized_bounded_mean(size=10, bounds=(0., 1.))
+    ...     dp.t.then_mean()
     ... )
     ...
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.
@@ -665,7 +665,8 @@ def binary_search_param(
     >>> # we then write a function that make a computation chain with a given data size
     >>> def make_mean(data_size):
     ...    return (
-    ...        dp.t.make_sized_bounded_mean(data_size, (0., 500_000.)) >> 
+    ...        (dp.vector_domain(dp.atom_domain(bounds=(0., 500_000.)), data_size), dp.symmetric_distance()) >>
+    ...        dp.t.then_mean() >> 
     ...        dp.m.then_base_laplace(necessary_scale)
     ...    )
     ...
@@ -720,8 +721,9 @@ def binary_search(
         dp.enable_features("contrib", "floating-point")
 
     >>> # build a histogram that emits float counts
+    >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 100.)), 1000), dp.symmetric_distance()
     >>> dp_mean = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(
-    ...     dp.t.make_sized_bounded_mean(1000, bounds=(0., 100.)) >> dp.m.then_base_gaussian(1.)), 
+    ...     input_space >> dp.t.then_mean() >> dp.m.then_gaussian(1.)), 
     ...     1e-8
     ... )
     ...

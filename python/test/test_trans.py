@@ -190,8 +190,7 @@ def test_clamp():
 
 
 def test_bounded_mean():
-    from opendp.transformations import make_sized_bounded_mean
-    query = make_sized_bounded_mean(size=9, bounds=(0., 10.))
+    query = dp.t.make_mean(dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=9), dp.symmetric_distance())
     assert query(FLOAT_DATA) == 5.
     assert query.check(2, 10. / 9. + 1e-6)
 
