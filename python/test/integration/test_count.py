@@ -27,13 +27,13 @@ def test_count():
 
 
 def test_count_distinct():
-    from opendp.transformations import make_count_distinct, make_split_dataframe, make_select_column
+    from opendp.transformations import then_count_distinct, make_split_dataframe, make_select_column
     from opendp.measurements import then_base_discrete_laplace
     from opendp.mod import binary_search_chain
     preprocess = (
         make_split_dataframe(",", ['A', 'B']) >>
         make_select_column("A", TOA=str) >>
-        make_count_distinct(TIA=str)
+        then_count_distinct()
     )
 
     noisy_count_from_dataframe = binary_search_chain(

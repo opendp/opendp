@@ -258,7 +258,7 @@ def test_count():
 
 def test_count_distinct():
     from opendp.transformations import make_count_distinct
-    transformation = make_count_distinct(str, int)
+    transformation = make_count_distinct(dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance())
     arg = list(map(str, [1, 2, 3, 2, 7, 3, 4]))
     ret = transformation(arg)
     assert ret == 5

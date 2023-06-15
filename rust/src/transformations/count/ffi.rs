@@ -45,22 +45,30 @@ pub extern "C" fn opendp_transformations__make_count(
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_count_distinct(
-    TIA: *const c_char,
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
     TO: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<TIA, TO: 'static>() -> FfiResult<*mut AnyTransformation>
+    fn monomorphize<TIA, TO: 'static>(
+        input_domain: &AnyDomain,
+        input_metric: &AnyMetric,
+    ) -> FfiResult<*mut AnyTransformation>
     where
         TIA: Hashable,
         TO: Number,
     {
-        make_count_distinct::<TIA, TO>().into_any()
+        let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
+        let input_metric = try_!(input_metric.downcast_ref::<SymmetricDistance>()).clone();
+        make_count_distinct::<TIA, TO>(input_domain, input_metric).into_any()
     }
-    let TIA = try_!(Type::try_from(TIA));
+    let input_domain = try_as_ref!(input_domain);
+    let input_metric = try_as_ref!(input_metric);
+    let TIA = try_!(input_domain.type_.get_atom());
     let TO = try_!(Type::try_from(TO));
     dispatch!(monomorphize, [
         (TIA, @hashable),
         (TO, @numbers)
-    ], ())
+    ], (input_domain, input_metric))
 }
 
 #[no_mangle]

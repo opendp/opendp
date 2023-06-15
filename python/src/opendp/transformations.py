@@ -59,6 +59,7 @@ __all__ = [
     "then_cast_default",
     "then_clamp",
     "then_count",
+    "then_count_distinct",
     "then_df_cast_default",
     "then_df_is_equal",
     "then_is_equal",
@@ -954,7 +955,8 @@ def make_count_by_categories(
 
 @versioned
 def make_count_distinct(
-    TIA: RuntimeTypeDescriptor,
+    input_domain,
+    input_metric,
     TO: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of unique, distinct records in data.
@@ -972,8 +974,8 @@ def make_count_distinct(
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<TO>`
     
-    :param TIA: Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
-    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param input_domain: 
+    :param input_metric: 
     :param TO: Output Type. Must be numeric.
     :type TO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -984,21 +986,30 @@ def make_count_distinct(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TIA = RuntimeType.parse(type_name=TIA)
     TO = RuntimeType.parse(type_name=TO)
     
     # Convert arguments to c types.
-    c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_TO = py_to_c(TO, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_count_distinct
-    lib_function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_TIA, c_TO), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_TO), Transformation))
     
     return output
+
+def then_count_distinct(
+    TO: RuntimeTypeDescriptor = "int"
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_count_distinct(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        TO=TO))
+
 
 
 @versioned

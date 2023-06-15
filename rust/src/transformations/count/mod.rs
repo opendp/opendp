@@ -58,7 +58,7 @@ where
     )
 }
 
-#[bootstrap(features("contrib"), generics(TO(default = "int")))]
+#[bootstrap(features("contrib"), generics(TIA(suppress), TO(default = "int")))]
 /// Make a Transformation that computes a count of the number of unique, distinct records in data.
 ///
 /// # Citations
@@ -67,7 +67,10 @@ where
 /// # Generics
 /// * `TIA` - Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
 /// * `TO` - Output Type. Must be numeric.
-pub fn make_count_distinct<TIA, TO>() -> Fallible<
+pub fn make_count_distinct<TIA, TO>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: SymmetricDistance,
+) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TIA>>,
         AtomDomain<TO>,
@@ -80,13 +83,13 @@ where
     TO: Number,
 {
     Transformation::new(
-        VectorDomain::new(AtomDomain::default()),
+        input_domain,
         AtomDomain::default(),
         Function::new(move |arg: &Vec<TIA>| {
             let len = arg.iter().collect::<HashSet<_>>().len();
             TO::exact_int_cast(len).unwrap_or(TO::MAX_CONSECUTIVE)
         }),
-        SymmetricDistance::default(),
+        input_metric,
         AbsoluteDistance::default(),
         StabilityMap::new_from_constant(TO::one()),
     )
@@ -272,12 +275,15 @@ mod tests {
     }
 
     #[test]
-    fn test_make_count_distinct() {
-        let transformation = make_count_distinct::<_, i32>().unwrap_test();
+    fn test_make_count_distinct() -> Fallible<()> {
+        let transformation = make_count_distinct::<_, i32>(
+            VectorDomain::new(AtomDomain::default()), SymmetricDistance::default(),
+        )?;
         let arg = vec![1, 1, 3, 4, 4];
-        let ret = transformation.invoke(&arg).unwrap_test();
+        let ret = transformation.invoke(&arg)?;
         let expected = 3;
         assert_eq!(ret, expected);
+        Ok(())
     }
 
     #[test]
