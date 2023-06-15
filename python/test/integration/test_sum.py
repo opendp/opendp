@@ -6,7 +6,7 @@ def test_sized_bounded_float_sum():
     """known-n bounded float sum (assuming n is public)"""
     from opendp.transformations import make_split_dataframe, make_select_column, \
         make_cast, make_impute_constant, \
-        then_clamp, make_resize, then_sum
+        then_clamp, then_resize, then_sum
     from opendp.measurements import then_base_laplace, then_base_gaussian
     from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP
     from opendp.mod import binary_search_chain
@@ -27,7 +27,7 @@ def test_sized_bounded_float_sum():
         # Clamp values
         then_clamp(bounds=bounds) >>
         # Resize dataset length
-        make_resize(size=size, atom_domain=atom_domain(bounds), constant=0.) >>
+        then_resize(size=size, constant=0.) >>
         # Aggregate with sum
         then_sum()
     )
@@ -53,7 +53,7 @@ def test_sized_bounded_int_sum():
     """known-n bounded int sum (assuming n is public)"""
     from opendp.transformations import make_split_dataframe, make_select_column, \
         make_cast, make_impute_constant, \
-        then_clamp, make_resize, then_sum
+        then_clamp, then_resize, then_sum
     from opendp.measurements import then_base_discrete_laplace
     from opendp.mod import binary_search_chain
     from opendp.domains import atom_domain, option_domain
@@ -73,7 +73,7 @@ def test_sized_bounded_int_sum():
         # Clamp values
         then_clamp(bounds=bounds) >>
         # Resize dataset length
-        make_resize(size=size, atom_domain=atom_domain(bounds), constant=0) >>
+        then_resize(size=size, constant=0) >>
         # Aggregate with sum
         then_sum()
     )

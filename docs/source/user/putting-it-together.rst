@@ -44,7 +44,7 @@ Our transformation will
     ...     make_cast(TIA=str, TOA=float) >>
     ...     make_impute_constant(option_domain(atom_domain(T=float)), constant=constant) >>
     ...     then_clamp(bounds) >>
-    ...     make_resize(size, atom_domain(bounds), constant=constant) >>
+    ...     then_resize(size, constant=constant) >>
     ...     make_sized_bounded_mean(size, bounds)
     ... )
 

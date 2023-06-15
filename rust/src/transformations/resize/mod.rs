@@ -4,11 +4,11 @@ mod ffi;
 use opendp_derive::bootstrap;
 
 use crate::core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation};
-use crate::domains::VectorDomain;
+use crate::domains::{VectorDomain, AtomDomain};
 use crate::error::Fallible;
 use crate::metrics::{InsertDeleteDistance, IntDistance, SymmetricDistance};
 use crate::traits::samplers::Shuffle;
-use crate::traits::CheckNull;
+use crate::traits::CheckAtom;
 use std::cmp::Ordering;
 
 #[doc(hidden)]
@@ -25,40 +25,40 @@ impl IsMetricOrdered for InsertDeleteDistance {
 #[bootstrap(
     features("contrib"),
     arguments(
-        atom_domain(c_type = "AnyDomain *", hint = "Domain"),
-        constant(c_type = "AnyObject *", rust_type = "$get_atom(DA)")
+        constant(rust_type = "$get_atom(get_type(input_domain))")
     ),
-    generics(MI(default = "SymmetricDistance"), MO(default = "SymmetricDistance"))
+    generics(TA(suppress), MI(suppress), MO(default = "SymmetricDistance"))
 )]
 /// Make a Transformation that either truncates or imputes records
 /// with `constant` to match a provided `size`.
 ///
 /// # Arguments
+/// * `input_domain` - Domain of input data.
+/// * `input_metric` - Metric of input data.
 /// * `size` - Number of records in output data.
-/// * `atom_domain` - Domain of elements.
 /// * `constant` - Value to impute with.
 ///
 /// # Generics
-/// * `DA` - Atomic Domain.
+/// * `TA` - Atomic Type.
 /// * `MI` - Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
 /// * `MO` - Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
 ///
 /// # Returns
 /// A vector of the same type `TA`, but with the provided `size`.
-pub fn make_resize<DA, MI, MO>(
+pub fn make_resize<TA, MI, MO>(
+    input_domain: VectorDomain<AtomDomain<TA>>,
+    input_metric: MI,
     size: usize,
-    atom_domain: DA,
-    constant: DA::Carrier,
-) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<DA>, MI, MO>>
+    constant: TA,
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, VectorDomain<AtomDomain<TA>>, MI, MO>>
 where
-    DA: 'static + Clone + Domain,
-    DA::Carrier: 'static + Clone + CheckNull,
+    TA: 'static + Clone + CheckAtom,
     MI: IsMetricOrdered<Distance = IntDistance>,
     MO: IsMetricOrdered<Distance = IntDistance>,
-    (VectorDomain<DA>, MI): MetricSpace,
-    (VectorDomain<DA>, MO): MetricSpace,
+    (VectorDomain<AtomDomain<TA>>, MI): MetricSpace,
+    (VectorDomain<AtomDomain<TA>>, MO): MetricSpace,
 {
-    if !atom_domain.member(&constant)? {
+    if !input_domain.element_domain.member(&constant)? {
         return fallible!(MakeTransformation, "constant must be a member of DA");
     }
     if size == 0 {
@@ -66,16 +66,16 @@ where
     }
 
     Transformation::new(
-        VectorDomain::new(atom_domain.clone()),
-        VectorDomain::new(atom_domain).with_size(size),
-        Function::new_fallible(move |arg: &Vec<DA::Carrier>| {
+        input_domain.clone(),
+        input_domain.with_size(size),
+        Function::new_fallible(move |arg: &Vec<TA>| {
             Ok(match arg.len().cmp(&size) {
                 Ordering::Less | Ordering::Equal => {
                     let mut data = arg
                         .iter()
                         .chain(vec![&constant; size - arg.len()])
                         .cloned()
-                        .collect::<Vec<DA::Carrier>>();
+                        .collect::<Vec<TA>>();
                     // if output metric is ordered, then shuffle the imputed values into the data
                     if MO::ORDERED {
                         data.shuffle()?;
@@ -92,7 +92,7 @@ where
                 }
             })
         }),
-        MI::default(),
+        input_metric,
         MO::default(),
         // Consider when a dataset has zero records and is resized to length 1.
         // The resulting dataset will be `vec![constant]`
@@ -111,8 +111,9 @@ mod test {
 
     #[test]
     fn test() -> Fallible<()> {
+        let (input_domain, input_metric) = (VectorDomain::new(AtomDomain::default()), SymmetricDistance::default());
         let trans =
-            make_resize::<_, SymmetricDistance, SymmetricDistance>(3, AtomDomain::default(), "x")?;
+            make_resize::<_, SymmetricDistance, SymmetricDistance>(input_domain, input_metric, 3, "x")?;
         assert_eq!(trans.invoke(&vec!["A"; 2])?, vec!["A", "A", "x"]);
         assert_eq!(trans.invoke(&vec!["A"; 3])?, vec!["A"; 3]);
         assert_eq!(trans.invoke(&vec!["A"; 4])?, vec!["A", "A", "A"]);

@@ -588,7 +588,7 @@ def binary_search_chain(
     >>> pre = (
     ...     dp.space_of(List[float]) >>
     ...     dp.t.then_clamp(bounds=(0., 1.)) >>
-    ...     dp.t.make_resize(size=10, atom_domain=dp.atom_domain((0., 1.)), constant=0.) >>
+    ...     dp.t.then_resize(size=10, constant=0.) >>
     ...     dp.t.make_sized_bounded_mean(size=10, bounds=(0., 1.))
     ... )
     ...
