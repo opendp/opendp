@@ -282,14 +282,15 @@ def test_count_by_categories():
 
 def test_resize():
     from opendp.transformations import make_resize
-    query = make_resize(size=4, atom_domain=atom_domain((0, 10)), constant=0)
+    input_space = dp.vector_domain(dp.atom_domain(bounds=(0, 10))), dp.symmetric_distance()
+    query = make_resize(*input_space, size=4, constant=0)
     assert sorted(query([-1, 2, 5])) == [-1, 0, 2, 5]
     assert not query.check(1, 1)
     assert query.check(1, 2)
     assert query.check(2, 4)
 
-    from opendp.transformations import make_resize
-    query = make_resize(size=4, atom_domain=atom_domain(T=int), constant=0)
+    input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
+    query = make_resize(*input_space, size=4, constant=0)
     assert sorted(query([-1, 2, 5])) == [-1, 0, 2, 5]
     assert not query.check(1, 1)
     assert query.check(1, 2)

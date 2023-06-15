@@ -4,7 +4,7 @@ def test_sized_bounded_variance():
     """known-n bounded float sum (assuming n is public)"""
     from opendp.transformations import make_split_dataframe, make_select_column, \
         make_cast, make_impute_constant, \
-        then_clamp, make_resize, make_sized_bounded_variance
+        then_clamp, then_resize, make_sized_bounded_variance
     from opendp.domains import atom_domain
     from opendp.measurements import then_base_laplace
     from opendp.mod import binary_search_chain, enable_features
@@ -27,7 +27,7 @@ def test_sized_bounded_variance():
         # Clamp values
         then_clamp(bounds=bounds) >>
         # Resize dataset length
-        make_resize(size=size, atom_domain=atom_domain(bounds), constant=0.) >>
+        then_resize(size=size, constant=0.) >>
         # Aggregate with variance
         make_sized_bounded_variance(size=size, bounds=bounds)
     )

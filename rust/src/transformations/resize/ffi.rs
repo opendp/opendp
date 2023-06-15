@@ -4,63 +4,52 @@ use std::os::raw::{c_char, c_uint};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
-use crate::ffi::any::Downcast;
+use crate::ffi::any::{Downcast, AnyMetric};
 use crate::ffi::any::{AnyDomain, AnyObject, AnyTransformation};
-use crate::ffi::util::{Type, TypeContents};
+use crate::ffi::util::Type;
 use crate::metrics::{InsertDeleteDistance, IntDistance, SymmetricDistance};
 use crate::traits::CheckAtom;
 use crate::transformations::resize::IsMetricOrdered;
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_resize(
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
     size: c_uint,
-    atom_domain: *const AnyDomain,
     constant: *const AnyObject,
-    DA: *const c_char,
-    MI: *const c_char,
     MO: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     let size = size as usize;
-    let atom_domain = try_as_ref!(atom_domain);
+    let input_domain = try_as_ref!(input_domain);
+    let input_metric = try_as_ref!(input_metric);
     let constant = try_as_ref!(constant);
-    let DA = try_!(Type::try_from(DA));
-    let MI = try_!(Type::try_from(MI));
+    let T = try_!(input_domain.type_.get_atom());
+    let MI = input_metric.type_.clone();
     let MO = try_!(Type::try_from(MO));
 
-    if DA != atom_domain.type_ {
-        return err!(FFI, "DA must match atom_domain's type").into();
-    }
-
-    fn monomorphize_all<MI, MO, T: 'static + CheckAtom + Clone>(
+    fn monomorphize_all<MI, MO, TA: 'static + CheckAtom + Clone>(
+        input_domain: &AnyDomain,
+        input_metric: &AnyMetric,
         size: usize,
-        atom_domain: &AnyDomain,
         constant: &AnyObject,
     ) -> FfiResult<*mut AnyTransformation>
     where
         MI: 'static + IsMetricOrdered<Distance = IntDistance>,
         MO: 'static + IsMetricOrdered<Distance = IntDistance>,
-        (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
-        (VectorDomain<AtomDomain<T>>, MO): MetricSpace,
+        (VectorDomain<AtomDomain<TA>>, MI): MetricSpace,
+        (VectorDomain<AtomDomain<TA>>, MO): MetricSpace,
     {
-        let atom_domain = try_!(atom_domain.downcast_ref::<AtomDomain<T>>()).clone();
-        let constant = try_!(constant.downcast_ref::<T>()).clone();
-        super::make_resize::<_, MI, MO>(size, atom_domain, constant).into_any()
+        let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
+        let input_metric = try_!(input_metric.downcast_ref::<MI>()).clone();
+        let constant = try_!(constant.downcast_ref::<TA>()).clone();
+        super::make_resize::<_, MI, MO>(input_domain, input_metric, size, constant).into_any()
     }
 
-    match atom_domain.type_.contents {
-        TypeContents::GENERIC {
-            name: "AtomDomain", ..
-        } => dispatch!(monomorphize_all, [
-                (MI, [SymmetricDistance, InsertDeleteDistance]),
-                (MO, [SymmetricDistance, InsertDeleteDistance]),
-                (atom_domain.carrier_type, @primitives)
-            ], (size, atom_domain, constant)),
-        _ => err!(
-            FFI,
-            "VectorDomain constructors only supports the AtomDomain inner domain"
-        )
-        .into(),
-    }
+    dispatch!(monomorphize_all, [
+        (MI, [SymmetricDistance, InsertDeleteDistance]),
+        (MO, [SymmetricDistance, InsertDeleteDistance]),
+        (T, @primitives)
+    ], (input_domain, input_metric, size, constant))
 }
 
 #[cfg(test)]
@@ -75,11 +64,10 @@ mod tests {
     #[test]
     fn test_make_resize() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_resize(
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<i32>::default())),
+            AnyMetric::new_raw(SymmetricDistance::default()),
             4 as c_uint,
-            AnyDomain::new_raw(AtomDomain::<i32>::default()),
             AnyObject::new_raw(0i32),
-            "AtomDomain<i32>".to_char_p(),
-            "SymmetricDistance".to_char_p(),
             "SymmetricDistance".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1, 2, 3]);
@@ -92,11 +80,10 @@ mod tests {
     #[test]
     fn test_make_bounded_resize() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_resize(
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<i32>::new_closed((0i32, 10))?)),
+            AnyMetric::new_raw(SymmetricDistance::default()),
             4 as c_uint,
-            AnyDomain::new_raw(AtomDomain::<i32>::new_closed((0i32, 10)).unwrap()),
             AnyObject::new_raw(0i32),
-            "AtomDomain<i32>".to_char_p(),
-            "SymmetricDistance".to_char_p(),
             "SymmetricDistance".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1, 2, 3]);

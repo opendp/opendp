@@ -63,6 +63,7 @@ __all__ = [
     "then_df_cast_default",
     "then_df_is_equal",
     "then_is_equal",
+    "then_resize",
     "then_sum"
 ]
 
@@ -1924,11 +1925,10 @@ def make_quantiles_from_counts(
 
 @versioned
 def make_resize(
+    input_domain,
+    input_metric,
     size: int,
-    atom_domain: Domain,
     constant: Any,
-    DA: RuntimeTypeDescriptor = None,
-    MI: RuntimeTypeDescriptor = "SymmetricDistance",
     MO: RuntimeTypeDescriptor = "SymmetricDistance"
 ) -> Transformation:
     """Make a Transformation that either truncates or imputes records
@@ -1938,21 +1938,17 @@ def make_resize(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<DA>`
-    * Output Domain:  `VectorDomain<DA>`
+    * Input Domain:   `VectorDomain<AtomDomain<TA>>`
+    * Output Domain:  `VectorDomain<AtomDomain<TA>>`
     * Input Metric:   `MI`
     * Output Metric:  `MO`
     
+    :param input_domain: Domain of input data.
+    :param input_metric: Metric of input data.
     :param size: Number of records in output data.
     :type size: int
-    :param atom_domain: Domain of elements.
-    :type atom_domain: Domain
     :param constant: Value to impute with.
     :type constant: Any
-    :param DA: Atomic Domain.
-    :type DA: :py:ref:`RuntimeTypeDescriptor`
-    :param MI: Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-    :type MI: :py:ref:`RuntimeTypeDescriptor`
     :param MO: Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
     :type MO: :py:ref:`RuntimeTypeDescriptor`
     :return: A vector of the same type `TA`, but with the provided `size`.
@@ -1964,26 +1960,36 @@ def make_resize(
     assert_features("contrib")
     
     # Standardize type arguments.
-    DA = RuntimeType.parse_or_infer(type_name=DA, public_example=atom_domain)
-    MI = RuntimeType.parse(type_name=MI)
     MO = RuntimeType.parse(type_name=MO)
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
-    c_atom_domain = py_to_c(atom_domain, c_type=Domain, type_name=DA)
-    c_constant = py_to_c(constant, c_type=AnyObjectPtr, type_name=get_atom(DA))
-    c_DA = py_to_c(DA, c_type=ctypes.c_char_p)
-    c_MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    c_constant = py_to_c(constant, c_type=AnyObjectPtr, type_name=get_atom(get_type(input_domain)))
     c_MO = py_to_c(MO, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_resize
-    lib_function.argtypes = [ctypes.c_size_t, Domain, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_size, c_atom_domain, c_constant, c_DA, c_MI, c_MO), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_size, c_constant, c_MO), Transformation))
     
     return output
+
+def then_resize(
+    size: int,
+    constant: Any,
+    MO: RuntimeTypeDescriptor = "SymmetricDistance"
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_resize(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        size=size,
+        constant=constant,
+        MO=MO))
+
 
 
 @versioned
