@@ -24,20 +24,20 @@ def test_fix_delta():
 
 
 def test_make_basic_composition():
-    input_pair = (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
+    input_space = (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
     composed = dp.c.make_basic_composition([
-        dp.t.make_count(TIA=int, TO=int) >> dp.c.make_basic_composition([
+        input_space >> dp.t.then_count() >> dp.c.make_basic_composition([
             dp.space_of(int) >> dp.m.then_laplace(scale=2.), 
             dp.space_of(int) >> dp.m.then_laplace(scale=200.)
         ]),
-        input_pair >> dp.t.then_cast_default(bool) >> dp.t.then_cast_default(int) >> dp.t.make_count(TIA=int, TO=int) >> dp.m.then_laplace(scale=2.), 
-        input_pair >> dp.t.then_cast_default(float) >> dp.t.then_clamp((0., 10.)) >> dp.t.then_sum() >> dp.m.then_laplace(scale=2.), 
+        input_space >> dp.t.then_cast_default(bool) >> dp.t.then_cast_default(int) >> dp.t.then_count() >> dp.m.then_laplace(scale=2.), 
+        input_space >> dp.t.then_cast_default(float) >> dp.t.then_clamp((0., 10.)) >> dp.t.then_sum() >> dp.m.then_laplace(scale=2.), 
 
         dp.c.make_basic_composition([
-            dp.t.make_count(TIA=int, TO=int) >> dp.m.then_laplace(scale=2.), 
-            dp.t.make_count(TIA=int, TO=float) >> dp.m.then_laplace(scale=2.),
+            input_space >> dp.t.then_count() >> dp.m.then_laplace(scale=2.), 
+            input_space >> dp.t.then_count(TO=float) >> dp.m.then_laplace(scale=2.),
             (
-                input_pair >> dp.t.then_cast_default(str) >> 
+                input_space >> dp.t.then_cast_default(str) >> 
                 dp.t.make_count_by_categories(categories=["0", "12", "22"]) >> 
                 dp.m.then_base_discrete_laplace(scale=2.)
             )

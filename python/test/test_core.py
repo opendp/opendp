@@ -22,17 +22,14 @@ def test_type_getters():
 
 
 def test_chain():
-    from opendp.transformations import make_count
-    from opendp.domains import atom_domain
-    from opendp.metrics import absolute_distance
-    from opendp.measurements import make_base_discrete_laplace
+    import opendp.prelude as dp
     enable_features("floating-point", "contrib")
 
     data = [1, 2, 3, 4, 5]
-    count = make_count(TIA=int, TO=int)
+    count = dp.t.make_count(dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
     print("count:", count(data))
 
-    base_dl = make_base_discrete_laplace(atom_domain(T=int), absolute_distance(T=int), scale=0.5)
+    base_dl = count.output_space >> dp.m.then_laplace(scale=0.5)
     print("base_dl:", base_dl(1))
 
     chain = count >> base_dl
