@@ -93,14 +93,14 @@ def test_is_null():
     tester = (
         dp.t.make_split_lines() >>
         dp.t.then_cast_inherent(TOA=float) >>
-        dp.t.make_is_null(dp.atom_domain(nullable=True, T=float))
+        dp.t.then_is_null()
     )
     assert tester("nan\n1.\ninf") == [True, False, False]
 
     tester = (
         dp.t.make_split_lines() >>
         dp.t.then_cast(TOA=float) >>
-        dp.t.make_is_null(dp.option_domain(dp.atom_domain(T=float)))
+        dp.t.then_is_null()
     )
     assert tester("nan\n1.\ninf") == [True, False, False]
 
@@ -342,11 +342,12 @@ def test_df_subset():
 def test_lipschitz_b_ary_tree():
     leaf_count = 7
     branching_factor = 2
-    tree_builder = dp.t.make_b_ary_tree(leaf_count, branching_factor, M=dp.L1Distance[int])
+    input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.l1_distance(T=int)
+    tree_builder = input_space >> dp.t.then_b_ary_tree(leaf_count, branching_factor)
     assert tree_builder([1] * leaf_count) == [7, 4, 3, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1]
     #                                  level: 1  2     3           4
     # top of tree is at level 1
-
+    
     suggested_factor = dp.t.choose_branching_factor(size_guess=10_000)
     print("suggested_factor", suggested_factor)
 
@@ -369,3 +370,5 @@ def test_lipschitz_b_ary_tree():
     print(meas_quantiles(data))
 
     assert meas_cdf.map(1) == 4.
+
+test_lipschitz_b_ary_tree()
