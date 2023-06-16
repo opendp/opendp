@@ -3,34 +3,46 @@ mod ffi;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Domain, Function, StabilityMap, Transformation};
+use crate::core::{Domain, Function, StabilityMap, Transformation, MetricSpace};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::metrics::SymmetricDistance;
 use crate::traits::samplers::SampleUniform;
 use crate::traits::{CheckAtom, CheckNull, Float, InherentNull};
 use crate::transformations::{make_row_by_row, make_row_by_row_fallible};
 
-#[bootstrap(features("contrib"), generics(TA(example = "$get_first(bounds)")))]
+use super::DatasetMetric;
+
+#[bootstrap(
+    features("contrib"), 
+    generics(M(suppress), TA(suppress)),
+    derived_types(TA = "$get_atom(get_type(input_domain))")
+)]
 /// Make a Transformation that replaces NaN values in `Vec<TA>` with uniformly distributed floats within `bounds`.
 ///
 /// # Arguments
+/// * `input_domain` - Domain of the input.
+/// * `input_metric` - Metric of the input.
 /// * `bounds` - Tuple of inclusive lower and upper bounds.
 ///
 /// # Generics
+/// * `M` - Metric Type. A dataset metric.
 /// * `TA` - Atomic Type of data being imputed. One of `f32` or `f64`
-pub fn make_impute_uniform_float<TA>(
+pub fn make_impute_uniform_float<M, TA>(
+    input_domain: VectorDomain<AtomDomain<TA>>,
+    input_metric: M,
     bounds: (TA, TA),
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TA>>,
         VectorDomain<AtomDomain<TA>>,
-        SymmetricDistance,
-        SymmetricDistance,
+        M,
+        M,
     >,
 >
 where
     TA: Float + SampleUniform,
+    M: DatasetMetric,
+    (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
 {
     let (lower, upper) = bounds;
     if lower.is_nan() {
@@ -45,8 +57,8 @@ where
     let scale = upper - lower;
 
     make_row_by_row_fallible(
-        VectorDomain::new(AtomDomain::new_nullable()),
-        SymmetricDistance::default(),
+        input_domain,
+        input_metric,
         AtomDomain::default(),
         move |v| {
             if v.is_null() {
@@ -110,53 +122,53 @@ impl<T: CheckAtom + InherentNull> ImputeConstantDomain for AtomDomain<T> {
 #[bootstrap(
     features("contrib"),
     arguments(
-        atom_domain(c_type = "AnyDomain *"),
         constant(
-            rust_type = "$get_atom(get_carrier_type(atom_domain))",
+            rust_type = "$get_atom(get_type(input_domain))",
             c_type = "AnyObject *"
         )
-    )
+    ),
+    generics(DIA(suppress), M(suppress))
 )]
 /// Make a Transformation that replaces null/None data with `constant`.
 ///
-/// By default, the input type is `Vec<Option<TA>>`, as emitted by make_cast.
-/// Set `DA` to `AtomDomain<TA>` for imputing on types
-/// that have an inherent representation of nullity, like floats.
+/// If chaining after a `make_cast`, the input type is `Option<Vec<TA>>`.
+/// If chaining after a `make_cast_inherent`, the input type is `Vec<TA>`, where `TA` may take on float NaNs.
 ///
-/// | Atom Input Domain `DIA`             |  Input Type       | `DIA::Imputed` |
-/// | ----------------------------------- | ----------------- | -------------- |
-/// | `OptionDomain<AtomDomain<TA>>`      | `Vec<Option<TA>>` | `TA`           |
-/// | `AtomDomain<TA>`                    | `Vec<TA>`         | `TA`           |
+/// | input_domain                                    |  Input Data Type  |
+/// | ----------------------------------------------- | ----------------- |
+/// | `vector_domain(option_domain(atom_domain(TA)))` | `Vec<Option<TA>>` |
+/// | `vector_domain(atom_domain(TA))`                | `Vec<TA>`         |
 ///
 /// # Arguments
+/// * `input_domain` - Domain of the input data. See table above.
+/// * `input_metric` - Metric of the input data. A dataset metric.
 /// * `constant` - Value to replace nulls with.
 ///
 /// # Generics
 /// * `DIA` - Atomic Input Domain of data being imputed.
-pub fn make_impute_constant<DIA>(
-    atom_domain: DIA,
+/// * `M` - Dataset Metric.
+pub fn make_impute_constant<DIA, M>(
+    input_domain: VectorDomain<DIA>,
+    input_metric: M,
     constant: DIA::Imputed,
-) -> Fallible<
-    Transformation<
-        VectorDomain<DIA>,
-        VectorDomain<AtomDomain<DIA::Imputed>>,
-        SymmetricDistance,
-        SymmetricDistance,
-    >,
->
+) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<AtomDomain<DIA::Imputed>>, M, M>>
 where
     DIA: ImputeConstantDomain + Default,
     DIA::Imputed: 'static + Clone + CheckAtom,
     DIA::Carrier: 'static,
+    M: DatasetMetric,
+    (VectorDomain<DIA>, M): MetricSpace,
+    (VectorDomain<AtomDomain<DIA::Imputed>>, M): MetricSpace
 {
-    if constant.is_null() {
+    let output_atom_domain = AtomDomain::default();
+    if !output_atom_domain.member(&constant)? {
         return fallible!(MakeTransformation, "Constant may not be null.");
     }
 
     make_row_by_row(
-        VectorDomain::new(atom_domain),
-        SymmetricDistance::default(),
-        AtomDomain::default(),
+        input_domain,
+        input_metric,
+        output_atom_domain,
         move |v| DIA::impute_constant(v, &constant).clone(),
     )
 }
@@ -202,48 +214,59 @@ impl<T: CheckAtom + InherentNull + Clone> DropNullDomain for AtomDomain<T> {
     }
 }
 
-#[bootstrap(features("contrib"), arguments(atom_domain(c_type = "AnyDomain *")))]
+#[bootstrap(features("contrib"),
+    generics(DIA(suppress), M(suppress)))]
 /// Make a Transformation that drops null values.
 ///
 ///
-/// | `DA`                                | `DA::Imputed` |
-/// | ----------------------------------- | ------------- |
-/// | `OptionDomain<AtomDomain<TA>>`      | `TA`          |
-/// | `AtomDomain<TA>`                    | `TA`          |
+/// | input_domain                     |
+/// | -------------------------------- |
+/// | `option_domain(atom_domain(TA))` |
+/// | `atom_domain(TA)`                |
 ///
 /// # Generics
-/// * `DA` - atomic domain of input data that contains nulls.
-pub fn make_drop_null<DA>(
-    atom_domain: DA,
+/// * `M` - Dataset Metric.
+/// * `DIA` - atomic domain of input data that contains nulls.
+pub fn make_drop_null<M, DIA>(
+    input_domain: VectorDomain<DIA>,
+    input_metric: M,
 ) -> Fallible<
     Transformation<
-        VectorDomain<DA>,
-        VectorDomain<AtomDomain<DA::Imputed>>,
-        SymmetricDistance,
-        SymmetricDistance,
+        VectorDomain<DIA>,
+        VectorDomain<AtomDomain<DIA::Imputed>>,
+        M,
+        M,
     >,
 >
 where
-    DA: DropNullDomain + Default,
-    DA::Imputed: CheckAtom,
+    DIA: DropNullDomain + Default,
+    DIA::Imputed: CheckAtom,
+    M: DatasetMetric,
+    (VectorDomain<DIA>, M): MetricSpace,
+    (VectorDomain<AtomDomain<DIA::Imputed>>, M): MetricSpace,
 {
     Transformation::new(
-        VectorDomain::new(atom_domain),
+        input_domain,
         VectorDomain::new(AtomDomain::default()),
-        Function::new(|arg: &Vec<DA::Carrier>| arg.iter().filter_map(DA::option).collect()),
-        SymmetricDistance::default(),
-        SymmetricDistance::default(),
+        Function::new(|arg: &Vec<DIA::Carrier>| arg.iter().filter_map(DIA::option).collect()),
+        input_metric.clone(),
+        input_metric,
         StabilityMap::new_from_constant(1),
     )
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::metrics::SymmetricDistance;
+
     use super::*;
 
     #[test]
     fn test_impute_uniform() -> Fallible<()> {
-        let imputer = make_impute_uniform_float::<f64>((2.0, 2.0))?;
+        let imputer = make_impute_uniform_float(
+            VectorDomain::new(AtomDomain::default()),
+            SymmetricDistance::default(),
+            (2.0, 2.0))?;
 
         let result = imputer.invoke(&vec![1.0, f64::NAN])?;
 
@@ -254,8 +277,11 @@ mod tests {
 
     #[test]
     fn test_impute_constant_option() -> Fallible<()> {
-        let imputer =
-            make_impute_constant::<OptionDomain<_>>(Default::default(), "IMPUTED".to_string())?;
+        let imputer = make_impute_constant(
+            VectorDomain::new(OptionDomain::new(AtomDomain::default())),
+            SymmetricDistance::default(),
+            "IMPUTED".to_string(),
+        )?;
 
         let result = imputer.invoke(&vec![Some("A".to_string()), None])?;
 
@@ -266,7 +292,10 @@ mod tests {
 
     #[test]
     fn test_impute_constant_inherent() -> Fallible<()> {
-        let imputer = make_impute_constant::<AtomDomain<_>>(AtomDomain::new_nullable(), 12.)?;
+        let imputer = make_impute_constant(
+            VectorDomain::new(AtomDomain::new_nullable()), 
+            SymmetricDistance::default(),
+            12.)?;
 
         let result = imputer.invoke(&vec![f64::NAN, 23.])?;
 
@@ -277,7 +306,7 @@ mod tests {
 
     #[test]
     fn test_impute_drop_option() -> Fallible<()> {
-        let imputer = make_drop_null(OptionDomain::default())?;
+        let imputer = make_drop_null(VectorDomain::new(OptionDomain::default()), SymmetricDistance::default())?;
 
         let result = imputer.invoke(&vec![Some(f64::NAN), Some(23.), None])?;
 
@@ -287,7 +316,7 @@ mod tests {
     }
     #[test]
     fn test_impute_drop_inherent() -> Fallible<()> {
-        let imputer = make_drop_null(AtomDomain::new_nullable())?;
+        let imputer = make_drop_null(VectorDomain::new(AtomDomain::new_nullable()), SymmetricDistance::default())?;
 
         let result = imputer.invoke(&vec![f64::NAN, 23.])?;
 

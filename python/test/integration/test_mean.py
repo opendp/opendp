@@ -29,7 +29,7 @@ def test_dp_mean():
         # Cast the column as Vec<Optional<Float>>
         then_cast(TOA=float) >>
         # Impute missing values to 0 Vec<Float>
-        make_impute_constant(option_domain(atom_domain(T=float)), impute_constant) >>
+        then_impute_constant(impute_constant) >>
         # Clamp values
         then_clamp(bounds) >>
         # Resize dataset length

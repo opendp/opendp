@@ -193,7 +193,7 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
 .. testsetup::
 
-    from opendp.transformations import make_find, make_impute_constant, make_find_bin, make_index
+    from opendp.transformations import make_find, then_impute_constant, make_find_bin, make_index
     from opendp.typing import *
     from opendp.mod import enable_features
     enable_features('contrib')
@@ -204,7 +204,7 @@ In other words, it transforms a categorical data vector to a vector of numeric i
     >>> finder = (
     ...     make_find(categories=["A", "B", "C"]) >>
     ...     # impute any input datum that are not a part of the categories list as 3
-    ...     make_impute_constant(option_domain(atom_domain(T=usize)), 3)
+    ...     then_impute_constant(3)
     ... )
     >>> finder(["A", "B", "C", "A", "D"])
     [0, 1, 2, 0, 3]

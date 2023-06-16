@@ -13,23 +13,23 @@ STR_DATA = list(map(str, INT_DATA))
 
 def test_cast_impute():
     input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance()
-    caster = dp.t.make_cast(*input_space, TOA=int) >> dp.t.make_impute_constant(dp.option_domain(dp.atom_domain(T=int)), -1)
+    caster = dp.t.make_cast(*input_space, TOA=int) >> dp.t.then_impute_constant(-1)
     assert caster([1., 2., 3.]) == [1, 2, 3]
 
-    caster = dp.t.make_cast(*input_space, TOA=int) >> dp.t.make_impute_constant(dp.option_domain(dp.atom_domain(T=int)), 1)
+    caster = dp.t.make_cast(*input_space, TOA=int) >> dp.t.then_impute_constant(1)
     assert caster([float('nan'), 2.]) == [1, 2]
 
 
 def test_cast_drop_null():
     input_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
-    caster = dp.t.make_cast(*input_space, TOA=int) >> dp.t.make_drop_null(dp.option_domain(dp.atom_domain(T=int)))
+    caster = dp.t.make_cast(*input_space, TOA=int) >> dp.t.then_drop_null()
     assert caster(["A", "2", "3"]) == [2, 3]
 
-    caster = dp.t.make_cast_inherent(*input_space, TOA=float) >> dp.t.make_drop_null(dp.atom_domain(nullable=True, T=float))
+    caster = dp.t.make_cast_inherent(*input_space, TOA=float) >> dp.t.then_drop_null()
     assert caster(["a", "2."]) == [2]
 
     input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance()
-    caster = dp.t.make_cast(*input_space, TOA=int) >> dp.t.make_drop_null(dp.option_domain(dp.atom_domain(T=int)))
+    caster = dp.t.make_cast(*input_space, TOA=int) >> dp.t.then_drop_null()
     assert caster([float('nan'), 2.]) == [2]
 
 
@@ -41,25 +41,22 @@ def test_cast_inherent():
 
 
 def test_impute_constant_inherent():
-    tester = dp.t.make_split_lines() >> dp.t.then_cast_inherent(TOA=float) >> dp.t.make_impute_constant(dp.atom_domain(nullable=True, T=float), -1.)
+    tester = dp.t.make_split_lines() >> dp.t.then_cast_inherent(TOA=float) >> dp.t.then_impute_constant(-1.)
     assert tester("nan\n1.") == [-1., 1.]
 
 
 def test_cast_default():
-    from opendp.transformations import make_cast_default
-    from opendp.domains import vector_domain, atom_domain
-    from opendp.metrics import symmetric_distance
-
-    input_domain = vector_domain(atom_domain(T=float))
-    input_metric = symmetric_distance()
-    caster = make_cast_default(
-        input_domain, input_metric, TOA=int)
+    caster = dp.t.make_cast_default(
+        dp.vector_domain(dp.atom_domain(T=float)), 
+        dp.symmetric_distance(), TOA=int)
     assert caster([float('nan'), 2.]) == [0, 2]
 
 
 def test_impute_uniform():
-    from opendp.transformations import make_impute_uniform_float
-    caster = make_impute_uniform_float(bounds=(-1., 2.))
+    caster = dp.t.make_impute_uniform_float(
+        dp.vector_domain(dp.atom_domain(T=float, nullable=True)),
+        dp.symmetric_distance(),
+        bounds=(-1., 2.))
     assert -1. <= caster([float('nan')])[0] <= 2.
 
 
@@ -119,7 +116,7 @@ def test_split_lines__cast__impute():
     query = (
         dp.t.make_split_lines() >>
         dp.t.then_cast(TOA=int) >>
-        dp.t.make_impute_constant(dp.option_domain(dp.atom_domain(T=int)), constant=2)
+        dp.t.then_impute_constant(constant=2)
     )
 
     assert query("1\n2\n3") == [1, 2, 3]
@@ -128,20 +125,18 @@ def test_split_lines__cast__impute():
 
 
 def test_inherent_cast__impute():
-    cast = dp.t.make_split_lines() >> dp.t.then_cast_inherent(TOA=float)
-    constant = cast >> dp.t.make_impute_constant(dp.atom_domain(nullable=True, T=float), constant=9.)
+    casted = dp.t.make_split_lines() >> dp.t.then_cast_inherent(TOA=float) >> dp.t.then_impute_constant(constant=9.)
 
-    assert constant("a\n23.23\n12") == [9., 23.23, 12.]
-    assert constant.check(1, 1)
+    assert casted("a\n23.23\n12") == [9., 23.23, 12.]
+    assert casted.check(1, 1)
 
 def test_inherent_cast__impute_uniform():
-    cast = dp.t.make_split_lines() >> dp.t.then_cast_inherent(TOA=float)
-    constant = cast >> dp.t.make_impute_uniform_float(bounds=(23., 32.5))
+    casted = dp.t.make_split_lines() >> dp.t.then_cast_inherent(TOA=float) >> dp.t.then_impute_uniform_float(bounds=(23., 32.5))
 
-    res = constant("a\n23.23\n12")
+    res = casted("a\n23.23\n12")
     assert res[1:] == [23.23, 12.]
     assert 23. <= res[0] <= 32.5
-    assert constant.check(1, 1)
+    assert casted.check(1, 1)
 
 
 def test_dataframe_pipeline():
@@ -296,16 +291,14 @@ def test_resize():
 
 
 def test_indexing():
-    from opendp.transformations import make_find, make_impute_constant, make_find_bin, make_index
-
-    find = make_find(categories=["1", "3", "4"]) >> make_impute_constant(option_domain(atom_domain(T=usize)), 3)
+    find = dp.t.make_find(categories=["1", "3", "4"]) >> dp.t.then_impute_constant(3)
     assert find(STR_DATA) == [0, 3, 1, 2, 3, 3, 3, 3, 3]
     assert find.check(1, 1)
 
-    binner = make_find_bin(edges=[2, 3, 5])
+    binner = dp.t.make_find_bin(edges=[2, 3, 5])
     assert binner(INT_DATA) == [0, 1, 2, 2, 3, 3, 3, 3, 3]
 
-    indexer = make_index(categories=["A", "B", "C"], null="NA")
+    indexer = dp.t.make_index(categories=["A", "B", "C"], null="NA")
     assert indexer([0, 1, 3, 1, 5]) == ['A', 'B', 'NA', 'B', 'NA']
 
     assert (find >> indexer)(STR_DATA) == ['A', 'NA', 'B', 'C', 'NA', 'NA', 'NA', 'NA', 'NA']
@@ -313,74 +306,65 @@ def test_indexing():
 
 
 def test_lipschitz_mul_float():
-    from opendp.transformations import make_lipschitz_float_mul, make_sized_bounded_float_ordered_sum
-    trans = make_sized_bounded_float_ordered_sum(10, (0., 10.)) >> make_lipschitz_float_mul(1 / 10, (-3., 4.))
+    trans = dp.t.make_sized_bounded_float_ordered_sum(10, (0., 10.)) >> dp.t.make_lipschitz_float_mul(1 / 10, (-3., 4.))
 
     print(trans([3.] * 10))
     print(trans.map(2))
 
 
 def test_df_cast_default():
-    from opendp.transformations import make_split_dataframe, then_df_cast_default, make_select_column
-
     query = (
-        make_split_dataframe(separator=",", col_names=["23", "17"]) >>
-        then_df_cast_default(column_name="23", TIA=str, TOA=int) >>
-        then_df_cast_default(column_name="23", TIA=int, TOA=bool) >>
-        make_select_column(key="23", TOA=bool)
+        dp.t.make_split_dataframe(separator=",", col_names=["23", "17"]) >>
+        dp.t.then_df_cast_default(column_name="23", TIA=str, TOA=int) >>
+        dp.t.then_df_cast_default(column_name="23", TIA=int, TOA=bool) >>
+        dp.t.make_select_column(key="23", TOA=bool)
     )
     assert query("0,0.\n1,1.\n2,2.\n3,3.") == [False, True, True, True]
     assert query.check(1, 1)
 
 
 def test_df_is_equal():
-    from opendp.transformations import make_split_dataframe, then_df_is_equal, make_select_column
-
     query = (
-        make_split_dataframe(separator=",", col_names=["23", "17"]) >>
-        then_df_is_equal(column_name="17", value="2.") >>
-        make_select_column(key="17", TOA=bool)
+        dp.t.make_split_dataframe(separator=",", col_names=["23", "17"]) >>
+        dp.t.then_df_is_equal(column_name="17", value="2.") >>
+        dp.t.make_select_column(key="17", TOA=bool)
     )
     assert query("0,0.\n1,1.\n2,2.\n3,3.") == [False, False, True, False]
     assert query.check(1, 1)
 
 
 def test_df_subset():
-    from opendp.transformations import make_split_dataframe, then_df_is_equal, make_select_column
-
     query = (
-        make_split_dataframe(separator=",", col_names=["A", "B"]) >>
-        then_df_is_equal(column_name="B", value="2.") >>
-        make_subset_by(indicator_column="B", keep_columns=["A"]) >>
-        make_select_column(key="A", TOA=str)
+        dp.t.make_split_dataframe(separator=",", col_names=["A", "B"]) >>
+        dp.t.then_df_is_equal(column_name="B", value="2.") >>
+        dp.t.make_subset_by(indicator_column="B", keep_columns=["A"]) >>
+        dp.t.make_select_column(key="A", TOA=str)
     )
     assert query("0,0.\n1,1.\n2,2.\n3,3.") == ["2"]
     assert query.check(1, 1)
 
 def test_lipschitz_b_ary_tree():
-    from opendp.transformations import then_count_by_categories, make_b_ary_tree, make_consistent_b_ary_tree, make_cdf, choose_branching_factor
-    from opendp.measurements import then_base_geometric
     leaf_count = 7
     branching_factor = 2
-    tree_builder = make_b_ary_tree(leaf_count, branching_factor, M=L1Distance[int])
+    tree_builder = dp.t.make_b_ary_tree(leaf_count, branching_factor, M=L1Distance[int])
     assert tree_builder([1] * leaf_count) == [7, 4, 3, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1]
     #                                  level: 1  2     3           4
     # top of tree is at level 1
 
-    suggested_factor = choose_branching_factor(size_guess=10_000)
+    suggested_factor = dp.t.choose_branching_factor(size_guess=10_000)
     print("suggested_factor", suggested_factor)
 
     # the categories are bin names!
     meas_base = (
         (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()) >>
-        then_count_by_categories(categories=["A", "B", "C", "D", "E", "F"]) >> 
+        dp.t.then_count_by_categories(categories=["A", "B", "C", "D", "E", "F"]) >> 
         tree_builder >> 
-        then_base_geometric(1.) >> 
-        make_consistent_b_ary_tree(branching_factor)
+        dp.m.then_base_geometric(1.) >> 
+        dp.t.make_consistent_b_ary_tree(branching_factor)
     )
 
-    meas_cdf = meas_base >> make_cdf()
-    meas_quantiles = meas_base >> make_quantiles_from_counts(
+    meas_cdf = meas_base >> dp.t.make_cdf()
+    meas_quantiles = meas_base >> dp.t.make_quantiles_from_counts(
         bin_edges=[0., 10., 13., 17., 26., 70., 84., 100.],
         alphas=[0., .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.])
 
