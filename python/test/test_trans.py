@@ -93,7 +93,7 @@ def test_is_null():
     tester = (
         dp.t.make_split_lines() >>
         dp.t.then_cast_inherent(TOA=float) >>
-        dp.t.make_is_null(atom_domain(nullable=True, T=float))
+        dp.t.make_is_null(dp.atom_domain(nullable=True, T=float))
     )
     assert tester("nan\n1.\ninf") == [True, False, False]
 
@@ -256,14 +256,14 @@ def test_count_distinct():
 
 def test_count_by():
     input_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
-    query = input_space >> dp.t.then_count_by(MO=L1Distance[float], TV=float)
+    query = input_space >> dp.t.then_count_by(MO=dp.L1Distance[float], TV=float)
     assert query(STR_DATA) == {str(i + 1): 1 for i in range(9)}
     assert query.check(1, 2.)
 
 
 def test_count_by_categories():
     input_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
-    query = dp.t.make_count_by_categories(*input_space, categories=["1", "3", "4"], MO=L1Distance[int])
+    query = dp.t.make_count_by_categories(*input_space, categories=["1", "3", "4"], MO=dp.L1Distance[int])
     assert query(STR_DATA) == [1, 1, 1, 6]
     assert query.check(1, 1)
 
@@ -340,7 +340,7 @@ def test_df_subset():
 def test_lipschitz_b_ary_tree():
     leaf_count = 7
     branching_factor = 2
-    tree_builder = dp.t.make_b_ary_tree(leaf_count, branching_factor, M=L1Distance[int])
+    tree_builder = dp.t.make_b_ary_tree(leaf_count, branching_factor, M=dp.L1Distance[int])
     assert tree_builder([1] * leaf_count) == [7, 4, 3, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1]
     #                                  level: 1  2     3           4
     # top of tree is at level 1
