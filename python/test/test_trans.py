@@ -100,7 +100,7 @@ def test_is_null():
     tester = (
         dp.t.make_split_lines() >>
         dp.t.then_cast(TOA=float) >>
-        dp.t.make_is_null(option_domain(atom_domain(T=float)))
+        dp.t.make_is_null(dp.option_domain(dp.atom_domain(T=float)))
     )
     assert tester("nan\n1.\ninf") == [True, False, False]
 
