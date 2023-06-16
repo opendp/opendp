@@ -290,6 +290,7 @@ def test_indexing():
     assert find(STR_DATA) == [0, 3, 1, 2, 3, 3, 3, 3, 3]
     assert find.check(1, 1)
 
+    input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
     binner = input_space >> dp.t.then_find_bin(edges=[2, 3, 5])
     assert binner(INT_DATA) == [0, 1, 2, 2, 3, 3, 3, 3, 3]
 
