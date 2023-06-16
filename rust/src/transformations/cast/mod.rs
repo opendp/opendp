@@ -141,7 +141,7 @@ mod tests {
         );
 
         let caster = make_cast::<_, f64, u8>(
-            VectorDomain::new(AtomDomain::default()),
+            VectorDomain::new(AtomDomain::default()).with_size(4),
             HammingDistance::default(),
         )?;
         assert_eq!(
