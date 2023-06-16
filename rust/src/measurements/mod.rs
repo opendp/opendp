@@ -36,3 +36,8 @@ pub use crate::measurements::randomized_response::*;
 mod alp;
 #[cfg(all(feature = "use-mpfr", feature = "floating-point", feature = "contrib"))]
 pub use crate::measurements::alp::*;
+
+#[cfg(all(feature = "use-mpfr", feature = "floating-point", feature = "contrib"))]
+mod dataframe_measurements;
+#[cfg(all(feature = "use-mpfr", feature = "floating-point", feature = "contrib"))]
+pub use crate::measurements::dataframe_measurements::*;

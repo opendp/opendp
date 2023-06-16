@@ -81,7 +81,7 @@ impl SeriesDomain {
             element_domain: Rc::new(element_domain.atom_domain()),
             nullable: DA::NULLABLE,
         }
-    }
+    } 
 }
 
 impl Debug for SeriesDomain {

@@ -1,7 +1,7 @@
 //use opendp_derive::bootstrap;
 
 use polars::prelude::*;
-use polars::datatypes::DataType::Utf8;
+use polars::datatypes::DataType::{Utf8, Float64};
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
@@ -40,13 +40,12 @@ pub fn make_sized_partitioned_sum<T: Float>(
         LazyFrameDomain,
         LazyFrameDomain,
         InsertDeleteDistance, 
-        L1Distance<T>, // @RAPH: Implement check
+        L1Distance<T>, // @RAPH: Change to SUM?
     >,
 > {
 
     // Copy parition col name and check if partition column is in domain and get partition_column ref
     let partition_name = partition_column.to_string().clone();
-    //let partition_id = (input_domain.series_domains.iter()).position(|s| s.field.name == partition_column).ok_or_else(|| err!(FailedFunction, "Desired partition column not in domain."))?;
     
     // Copy name of column to be summed and and check if sum column is in domain and get sum_col_id
     let sum_name = sum_column.to_string().clone();
@@ -66,10 +65,9 @@ pub fn make_sized_partitioned_sum<T: Float>(
     let sum_column_name = "Bounded sums of ".to_string() + sum_column;
 
     // Create output domain
-    // DO IT WITH SUBSET OF VEC DOMAIN OF INPUT DOMAIN
+    //  @RAPH: DO IT WITH SUBSET OF VEC DOMAIN OF INPUT DOMAIN !!! TO DO !!!!
     let output_domain = LazyFrameDomain::new(vec![
-        //SeriesDomain::new(partition_column, AtomDomain::<cat_type>::default()), // @MIKE: possible or runtime?
-        input_domain.column(partition_column).unwrap().clone(),
+        input_domain.column(partition_column.clone()).unwrap().clone(),
         SeriesDomain::new(&sum_column_name, AtomDomain::<f64>::default()),
     ])?;
     let output_domain = output_domain.with_counts(counts.data.clone())?;
@@ -130,7 +128,6 @@ pub fn make_sized_partitioned_sum<T: Float>(
 
             // Compute and concatenate unkown categories aggregation
             if null_partition {    
-                //let test = mask_known_cat.clone().downcast_iter().map(|v| if v {"Known"} else {"Unknown"}).collect();
                 let mut unkowns = cat_sums.filter(
                     &!mask_known_cat)
                     .unwrap();
@@ -144,16 +141,18 @@ pub fn make_sized_partitioned_sum<T: Float>(
                                         .sum()])
                                         .collect()
                                         .unwrap();
-                //println!("{:?}", unknown_sum.clone());
 
 
                 // Convert partition vector class to string to ass "unknown"
                 sums.with_column(sums.column(partition_name.as_str())?.cast(&Utf8)?)?;
 
                 // Append unknown class
-                let sums_with_unknown = sums.vstack(&unknown_sums).unwrap();
+                let mut sums_with_unknown = sums.vstack(&unknown_sums).unwrap();
+                sums_with_unknown.with_column(sums_with_unknown.column(sum_column_name.as_str())?.cast(&Float64)?)?;
+
                 Ok(sums_with_unknown.lazy())
             } else {
+                sums.with_column(sums.column(sum_column_name.as_str())?.cast(&Float64)?)?;
                 Ok(sums.lazy())
             }
 
@@ -194,7 +193,7 @@ mod test {
         let result = bounded_partitioned_sum.invoke(&data).unwrap(); 
 
         let df_check = df!("Country" => ["CH", "US"],
-                                    "Bounded sums of Age" => [13, 12],)?;
+                                    "Bounded sums of Age" => [13., 12.],)?;
 
         assert!(result.clone().collect()?.frame_equal(&df_check));
 
