@@ -162,7 +162,7 @@ mod tests {
                                                                             false).unwrap();
 
         let laplace_mechanism = make_polarsDF_laplace(
-            data_frame_domain,
+            bounded_partitioned_sum.output_domain.clone(),
             L1Distance::<f64>::default(),
             1.0,
             None
@@ -176,9 +176,11 @@ mod tests {
 
         println!("{} days", noised_result.clone().collect()?);
 
-        let df_check = df!("Country" => ["CH", "US"],
-                                    "Bounded sums of Age" => [13., 12.],)?;
+        let pipeline = (bounded_partitioned_sum >> laplace_mechanism)?;
 
+        let noised_result_pipeline = pipeline.invoke(&data).unwrap();
+
+        println!("{} days", noised_result_pipeline.clone().collect()?);
         //assert!(result.clone().collect()?.frame_equal(&df_check));
 
         Ok(())
