@@ -1,6 +1,3 @@
-use std::convert::TryFrom;
-use std::os::raw::c_char;
-
 use crate::core::MetricSpace;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
@@ -60,40 +57,55 @@ pub extern "C" fn opendp_transformations__make_is_equal(
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_is_null(
-    input_atom_domain: *const AnyDomain,
-    DIA: *const c_char,
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
 ) -> FfiResult<*mut AnyTransformation> {
-    let DIA = try_!(Type::try_from(DIA));
+    let input_domain = try_as_ref!(input_domain);
+    let input_metric = try_as_ref!(input_metric);
+    let M = input_metric.type_.clone();
+    let DI = input_domain.type_.clone();
+    let DIA = if let TypeContents::GENERIC { name: "VectorDomain", args } = DI.contents {
+        try_!(Type::of_id(try_!(args.get(0)
+            .ok_or_else(|| err!(FFI, "Vec must have one type argument.")))))
+    } else {
+        return err!(FFI, "Invalid type name.").into();
+    };
     let TIA = try_!(DIA.get_atom());
 
     match &DIA.contents {
         TypeContents::GENERIC { name, .. } if name == &"OptionDomain" => {
-            fn monomorphize<TIA>(
-                input_atom_domain: *const AnyDomain,
+            fn monomorphize<M, TIA>(
+                input_domain: &AnyDomain,
+                input_metric: &AnyMetric,
             ) -> FfiResult<*mut AnyTransformation>
             where
                 TIA: 'static + CheckAtom,
+                M: 'static + DatasetMetric,
+                (VectorDomain<OptionDomain<AtomDomain<TIA>>>, M): MetricSpace,
+                (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
             {
-                let input_atom_domain =
-                    try_!(try_as_ref!(input_atom_domain)
-                        .downcast_ref::<OptionDomain<AtomDomain<TIA>>>())
-                    .clone();
-                make_is_null(input_atom_domain).into_any()
+                let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<OptionDomain<AtomDomain<TIA>>>>()).clone();
+                let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
+                make_is_null(input_domain, input_metric).into_any()
             }
-            dispatch!(monomorphize, [(TIA, @primitives)], (input_atom_domain))
+            dispatch!(monomorphize, [(M, @dataset_metrics), (TIA, @primitives)], (input_domain, input_metric))
         }
         TypeContents::GENERIC { name, .. } if name == &"AtomDomain" => {
-            fn monomorphize<TIA>(
-                input_atom_domain: *const AnyDomain,
+            fn monomorphize<M, TIA>(
+                input_domain: &AnyDomain,
+                input_metric: &AnyMetric,
             ) -> FfiResult<*mut AnyTransformation>
             where
                 TIA: 'static + CheckAtom + InherentNull,
+                M: 'static + DatasetMetric,
+                (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
+                (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
             {
-                let input_atom_domain =
-                    try_!(try_as_ref!(input_atom_domain).downcast_ref::<AtomDomain<TIA>>()).clone();
-                make_is_null::<AtomDomain<TIA>>(input_atom_domain).into_any()
+                let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
+                let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
+                make_is_null(input_domain, input_metric).into_any()
             }
-            dispatch!(monomorphize, [(TIA, [f64, f32])], (input_atom_domain))
+            dispatch!(monomorphize, [(M, @dataset_metrics), (TIA, [f64, f32])], (input_domain, input_metric))
         }
         _ => err!(
             TypeParse,

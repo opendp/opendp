@@ -56,6 +56,7 @@ __all__ = [
     "make_sum_of_squared_deviations",
     "make_unordered",
     "make_variance",
+    "then_b_ary_tree",
     "then_cast",
     "then_cast_default",
     "then_cast_inherent",
@@ -74,6 +75,7 @@ __all__ = [
     "then_impute_uniform_float",
     "then_index",
     "then_is_equal",
+    "then_is_null",
     "then_mean",
     "then_metric_bounded",
     "then_metric_unbounded",
@@ -123,10 +125,10 @@ def choose_branching_factor(
 
 @versioned
 def make_b_ary_tree(
+    input_domain,
+    input_metric,
     leaf_count: int,
-    branching_factor: int,
-    M: RuntimeTypeDescriptor,
-    TA: RuntimeTypeDescriptor = "int"
+    branching_factor: int
 ) -> Transformation:
     """Expand a vector of counts into a b-ary tree of counts,
     where each branch is the sum of its `b` immediate children.
@@ -140,14 +142,12 @@ def make_b_ary_tree(
     * Input Metric:   `M`
     * Output Metric:  `M`
     
+    :param input_domain: 
+    :param input_metric: 
     :param leaf_count: The number of leaf nodes in the b-ary tree.
     :type leaf_count: int
     :param branching_factor: The number of children on each branch of the resulting tree. Larger branching factors result in shallower trees.
     :type branching_factor: int
-    :param M: Metric. Must be `L1Distance<Q>` or `L2Distance<Q>`
-    :type M: :py:ref:`RuntimeTypeDescriptor`
-    :param TA: Atomic Type of the input data.
-    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -155,24 +155,32 @@ def make_b_ary_tree(
     """
     assert_features("contrib")
     
-    # Standardize type arguments.
-    M = RuntimeType.parse(type_name=M)
-    TA = RuntimeType.parse(type_name=TA)
-    
+    # No type arguments to standardize.
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_leaf_count = py_to_c(leaf_count, c_type=ctypes.c_size_t, type_name=usize)
     c_branching_factor = py_to_c(branching_factor, c_type=ctypes.c_size_t, type_name=usize)
-    c_M = py_to_c(M, c_type=ctypes.c_char_p)
-    c_TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_b_ary_tree
-    lib_function.argtypes = [ctypes.c_size_t, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_size_t, ctypes.c_size_t]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_leaf_count, c_branching_factor, c_M, c_TA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_leaf_count, c_branching_factor), Transformation))
     
     return output
+
+def then_b_ary_tree(
+    leaf_count: int,
+    branching_factor: int
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_b_ary_tree(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        leaf_count=leaf_count,
+        branching_factor=branching_factor))
+
 
 
 @versioned
@@ -1456,7 +1464,7 @@ def make_identity(
     """Make a Transformation representing the identity function.
     
     WARNING: In Python, this function does not ensure that the domain and metric form a valid metric space.
-    However, if the domain and metric do not form a valid metric space, 
+    However, if the domain and metric do not form a valid metric space,
     then the resulting Transformation won't be chainable with any valid Transformation,
     so it cannot be used to introduce an invalid metric space into a chain of valid Transformations.
     
@@ -1742,8 +1750,8 @@ def then_is_equal(
 
 @versioned
 def make_is_null(
-    input_atom_domain,
-    DIA: RuntimeTypeDescriptor = None
+    input_domain,
+    input_metric
 ) -> Transformation:
     """Make a Transformation that checks if each element in a vector is null.
     
@@ -1753,12 +1761,11 @@ def make_is_null(
     
     * Input Domain:   `VectorDomain<DIA>`
     * Output Domain:  `VectorDomain<AtomDomain<bool>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
-    :param input_atom_domain: 
-    :param DIA: Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
-    :type DIA: :py:ref:`RuntimeTypeDescriptor`
+    :param input_domain: 
+    :param input_metric: 
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -1766,21 +1773,27 @@ def make_is_null(
     """
     assert_features("contrib")
     
-    # Standardize type arguments.
-    DIA = RuntimeType.parse_or_infer(type_name=DIA, public_example=input_atom_domain)
-    
+    # No type arguments to standardize.
     # Convert arguments to c types.
-    c_input_atom_domain = py_to_c(input_atom_domain, c_type=Domain, type_name=DIA)
-    c_DIA = py_to_c(DIA, c_type=ctypes.c_char_p)
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_is_null
-    lib_function.argtypes = [Domain, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_input_atom_domain, c_DIA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric), Transformation))
     
     return output
+
+def then_is_null(
+    
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_is_null(
+        input_domain=input_domain,
+        input_metric=input_metric))
+
 
 
 @versioned

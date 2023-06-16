@@ -13,7 +13,7 @@ mod consistency_postprocessor;
 pub use consistency_postprocessor::*;
 use opendp_derive::bootstrap;
 
-#[bootstrap(features("contrib"), generics(TA(default = "int")))]
+#[bootstrap(features("contrib"), generics(TA(suppress), M(suppress)))]
 /// Expand a vector of counts into a b-ary tree of counts,
 /// where each branch is the sum of its `b` immediate children.
 ///
@@ -25,6 +25,8 @@ use opendp_derive::bootstrap;
 /// * `M` - Metric. Must be `L1Distance<Q>` or `L2Distance<Q>`
 /// * `TA` - Atomic Type of the input data.
 pub fn make_b_ary_tree<M, TA>(
+    input_domain: VectorDomain<AtomDomain<TA>>,
+    input_metric: M,
     leaf_count: usize,
     branching_factor: usize,
 ) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, VectorDomain<AtomDomain<TA>>, M, M>>
@@ -47,8 +49,8 @@ where
     // leaf_count is the number of leaves in the final layer of a complete tree
 
     Transformation::new(
-        VectorDomain::new(AtomDomain::default()),
-        VectorDomain::new(AtomDomain::default()),
+        input_domain.clone(),
+        input_domain.without_size(),
         Function::new(move |arg: &Vec<TA>| {
             // if arg.len() != num_bins, then user has a bug that will affect utility, but cannot alert
             //    if less data is passed than num_bins, then pad with extra zeros
@@ -78,8 +80,8 @@ where
                 .take(tree_length)
                 .collect()
         }),
-        M::default(),
-        M::default(),
+        input_metric.clone(),
+        input_metric,
         StabilityMap::new_from_constant(M::Distance::inf_cast(num_layers)?),
     )
 }
@@ -139,7 +141,10 @@ pub fn choose_branching_factor(size_guess: usize) -> usize {
 
 #[cfg(all(test, feature = "use-mpfr", feature = "derive"))]
 pub mod test_b_trees {
-    use crate::{measurements::then_base_discrete_laplace, metrics::L1Distance};
+    use crate::{
+        measurements::then_base_discrete_laplace,
+        metrics::{L1Distance},
+    };
 
     use super::*;
 
@@ -205,7 +210,12 @@ pub mod test_b_trees {
 
     #[test]
     fn test_make_b_ary_tree() -> Fallible<()> {
-        let trans = make_b_ary_tree::<L1Distance<i32>, i32>(10, 2)?;
+        let trans = make_b_ary_tree::<L1Distance<i32>, i32>(
+            Default::default(),
+            L1Distance::default(),
+            10,
+            2,
+        )?;
         let actual = trans.invoke(&vec![1; 10])?;
         let expect = vec![
             vec![10],
@@ -224,8 +234,8 @@ pub mod test_b_trees {
 
     #[test]
     fn test_noise_b_ary_tree() -> Fallible<()> {
-        let meas =
-            (make_b_ary_tree::<L1Distance<i32>, i32>(10, 2)? >> then_base_discrete_laplace(1.))?;
+        let meas = (make_b_ary_tree::<_, i32>(Default::default(), L1Distance::default(), 10, 2)?
+            >> then_base_discrete_laplace(1.))?;
         println!("noised {:?}", meas.invoke(&vec![1; 10])?);
 
         Ok(())
@@ -234,7 +244,7 @@ pub mod test_b_trees {
     #[test]
     fn test_identity() -> Fallible<()> {
         let b = 2;
-        let trans = make_b_ary_tree::<L1Distance<i32>, i32>(10, b)?;
+        let trans = make_b_ary_tree::<_, i32>(Default::default(), L1Distance::default(), 10, b)?;
         let meas = (trans.clone() >> then_base_discrete_laplace(0.))?;
         let post = make_consistent_b_ary_tree::<i32, f64>(b)?;
 
@@ -245,7 +255,9 @@ pub mod test_b_trees {
             .into_iter()
             .map(|v| v as i32)
             .collect();
-        let consi_tree = make_b_ary_tree::<L1Distance<f64>, i32>(10, b)?.invoke(&consi_leaves)?;
+        let consi_tree =
+            make_b_ary_tree::<_, i32>(Default::default(), L1Distance::<f64>::default(), 10, b)?
+                .invoke(&consi_leaves)?;
 
         println!("noisy      leaves {:?}", noisy_tree[15..].to_vec());
         println!("consistent leaves {:?}", consi_leaves);
