@@ -19,12 +19,13 @@ use crate::{
 //     arguments(null_partition(default = false)),
 //     generics(TC(default = "String")) // NEED TO ADD GENERIC FOR SizedDataFrameDomain<TC>?
 // )]
-/// Make a Transformation that partitions a dataframe by a given column.
+/// Make a Transformation that partitions a dataframe by a given column and compute bounded sums.
 /// 
 /// # Arguments
-/// * `input_domain` - SizedDataFrameDomain with relevant categories and counts metadata.
-/// * `identifier_column` - Name of column to split dataframe by.
-/// * `keep_columns` - Columns to keep in the partitioned dataframes.
+/// * `input_domain` - LazyFrameDomain with relevant categories and counts metadata.
+/// * `partition_column` - Name of column to split dataframe by.
+/// * `sum_column` -  Name of column to sum.
+/// * `bound` -  Bounds for the DP sum.
 /// * `null_partition` - Whether to include a trailing null partition for rows that were not in the `partition_keys`
 /// 
 /// # Generics

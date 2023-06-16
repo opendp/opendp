@@ -1,25 +1,21 @@
 use num::Float as _;
 use opendp_derive::bootstrap;
 
-use rug::{Rational};
 use polars::prelude::*;
 //use polars::datatypes::DataType::Utf8;
 
 use crate::{
-    core::{Function, Measurement, Metric, MetricSpace, PrivacyMap},
+    core::{Function, Measurement, PrivacyMap},
     domains::{AtomDomain, LazyFrameDomain},
     measurements::{make_base_laplace, get_discretization_consts},
     error::Fallible,
     measures::MaxDivergence,
     metrics::{AbsoluteDistance, L1Distance},
-    traits::{samplers::{SampleDiscreteLaplaceZ2k,CastInternalRational}, CheckAtom, ExactIntCast, Float, FloatBits, InfAdd, InfDiv},
+    traits::{ExactIntCast, FloatBits, InfAdd, InfDiv},
 };
 
-use super::{MappableDomain};
-
-
-//#[cfg(feature = "ffi")]
-//mod ffi;
+#[cfg(feature = "ffi")]
+mod ffi;
 
 /*#[bootstrap(
     features("contrib"),
