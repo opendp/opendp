@@ -107,15 +107,15 @@ mod tests {
     use crate::core;
     use crate::error::Fallible;
     use crate::ffi::any::{AnyObject, Downcast};
-    use crate::ffi::util::ToCharP;
+    use crate::metrics::SymmetricDistance;
 
     use super::*;
 
     #[test]
     fn test_make_identity() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_identity(
-            "VectorDomain<AtomDomain<i32>>".to_char_p(),
-            "SymmetricDistance".to_char_p(),
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<i32>::default())),
+            AnyMetric::new_raw(SymmetricDistance::default()),
         ))?;
         let arg = AnyObject::new_raw(vec![123]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
