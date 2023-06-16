@@ -1,7 +1,6 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use num::One;
 use opendp_derive::bootstrap;
 
 use crate::core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation};
@@ -10,7 +9,7 @@ use crate::error::*;
 use crate::metrics::{
     ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance, SymmetricDistance,
 };
-use crate::traits::{CheckAtom, CheckNull, DistanceConstant};
+use crate::traits::{CheckAtom, CheckNull};
 
 /// A [`Domain`] representing a dataset.
 ///
@@ -112,13 +111,23 @@ where
     )
 }
 
-/// Constructs a [`Transformation`] representing the identity function.
+#[bootstrap(features("contrib"), generics(D(suppress), M(suppress)))]
+/// Make a Transformation representing the identity function.
+///
+/// WARNING: In Python, this function does not ensure that the domain and metric form a valid metric space.
+/// However, if the domain and metric do not form a valid metric space, 
+/// then the resulting Transformation won't be chainable with any valid Transformation,
+/// so it cannot be used to introduce an invalid metric space into a chain of valid Transformations.
+/// 
+/// # Generics
+/// * `D` - Domain of the identity function. Must be `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
+/// * `M` - Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AtomDomain
 pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D, M, M>>
 where
     D: Domain,
     D::Carrier: Clone,
     M: Metric,
-    M::Distance: DistanceConstant<M::Distance> + One + Clone,
+    M::Distance: Clone,
     (D, M): MetricSpace,
 {
     Transformation::new(
@@ -127,7 +136,7 @@ where
         Function::new(|arg: &D::Carrier| arg.clone()),
         metric.clone(),
         metric,
-        StabilityMap::new_from_constant(M::Distance::one()),
+        StabilityMap::new(|d_in: &M::Distance| d_in.clone()),
     )
 }
 

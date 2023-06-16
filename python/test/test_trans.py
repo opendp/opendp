@@ -1,7 +1,4 @@
 import opendp.prelude as dp
-from opendp.transformations import make_subset_by, make_quantiles_from_counts
-from opendp.domains import atom_domain, option_domain
-from opendp.typing import *
 from opendp.mod import enable_features
 
 enable_features('contrib')
@@ -61,26 +58,23 @@ def test_impute_uniform():
 
 
 def test_identity():
-    from opendp.transformations import make_identity
-    from opendp.typing import VectorDomain, AtomDomain
     # test int
-    transformation = make_identity(VectorDomain[AtomDomain[int]], SymmetricDistance)
+    space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
+    transformation = dp.t.make_identity(*space)
     arg = [123]
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity(VectorDomain[AtomDomain[float]], SymmetricDistance)
+    space = dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance()
+    transformation = dp.t.make_identity(*space)
     arg = [123.123]
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity(VectorDomain[AtomDomain[str]], SymmetricDistance)
-    arg = ["hello, world"]
-    ret = transformation(arg)
-    assert ret == arg
-
-    transformation = make_identity("VectorDomain<AtomDomain<i32>>", SymmetricDistance)
-    arg = [1, 2, 3]
+    # doesn't care about invalid domains
+    space = dp.atom_domain(T=str), dp.absolute_distance(T=int)
+    transformation = dp.t.make_identity(*space)
+    arg = "hello, world"
     ret = transformation(arg)
     assert ret == arg
 

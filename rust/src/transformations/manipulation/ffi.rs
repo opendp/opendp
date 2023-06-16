@@ -1,95 +1,23 @@
 use std::convert::TryFrom;
 use std::os::raw::c_char;
 
-use num::One;
-use opendp_derive::bootstrap;
-
-use crate::core::{Domain, Metric, MetricSpace, Transformation};
+use crate::core::MetricSpace;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::err;
-use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
-use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, IntDistance, SymmetricDistance};
-use crate::traits::{CheckAtom, DistanceConstant, InherentNull, Primitive};
+use crate::traits::{CheckAtom, InherentNull, Primitive};
 use crate::transformations::{make_is_equal, make_is_null, DatasetMetric};
-
-#[bootstrap(features("contrib"))]
-/// Make a Transformation representing the identity function.
-///
-/// # Generics
-/// * `D` - Domain of the identity function. Must be `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
-/// * `M` - Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AtomDomain
-fn make_identity<D, M>() -> Fallible<Transformation<D, D, M, M>>
-where
-    D: Domain + Default,
-    D::Carrier: Clone,
-    M: Metric,
-    M::Distance: DistanceConstant<M::Distance> + One + Clone,
-    (D, M): MetricSpace,
-{
-    super::make_identity(Default::default(), Default::default())
-}
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_identity(
-    D: *const c_char,
-    M: *const c_char,
+    domain: *const AnyDomain,
+    metric: *const AnyMetric,
 ) -> FfiResult<*mut AnyTransformation> {
-    let M = try_!(Type::try_from(M));
-    let D = try_!(Type::try_from(D));
-
-    match &D.contents {
-        TypeContents::GENERIC { name, args } if name == &"VectorDomain" => {
-            if args.len() != 1 {
-                return err!(FFI, "VectorDomain only accepts one argument.").into();
-            }
-            let atomic_domain = try_!(Type::of_id(&args[0]));
-            let T = match atomic_domain.contents {
-                TypeContents::GENERIC { name, args } if name == "AtomDomain" => {
-                    if args.len() != 1 {
-                        return err!(FFI, "AtomDomain only accepts one argument.").into();
-                    }
-                    try_!(Type::of_id(&args[0]))
-                }
-                _ => return err!(FFI, "In FFI, make_identity's VectorDomain may only contain AtomDomain<_>").into()
-            };
-            fn monomorphize<M, T>() -> FfiResult<*mut AnyTransformation>
-                where M: 'static + Metric<Distance=IntDistance>,
-                      T: 'static + Clone + CheckAtom,
-                      (VectorDomain<AtomDomain<T>>, M): MetricSpace {
-                make_identity::<VectorDomain<AtomDomain<T>>, M>().into_any()
-            }
-            dispatch!(monomorphize, [
-                (M, [InsertDeleteDistance, SymmetricDistance]),
-                (T, @primitives)
-            ], ())
-        }
-        TypeContents::GENERIC { name, args } if name == &"AtomDomain" => {
-            if args.len() != 1 {
-                return err!(FFI, "AtomDomain only accepts one argument.").into();
-            }
-            let T = try_!(Type::of_id(&args[0]));
-
-            fn monomorphize<T>(M: Type) -> FfiResult<*mut AnyTransformation>
-                where T: 'static + DistanceConstant<T> + CheckAtom + One + Clone {
-                fn monomorphize<M>() -> FfiResult<*mut AnyTransformation>
-                    where M: 'static + Metric,
-                          M::Distance: CheckAtom + DistanceConstant<M::Distance> + One + Clone,
-                          (AtomDomain<M::Distance>, M): MetricSpace {
-                    make_identity::<AtomDomain<M::Distance>, M>().into_any()
-                }
-                dispatch!(monomorphize, [
-                    (M, [AbsoluteDistance<T>])
-                ], ())
-            }
-            dispatch!(monomorphize, [
-                (T, @numbers)
-            ], (M))
-        }
-        _ => err!(FFI, "Monomorphizations for the identity function are only available for VectorDomain<AtomDomain<_>> and AtomDomain<_>").into()
-    }
+    let domain = try_as_ref!(domain).clone();
+    let metric = try_as_ref!(metric).clone();
+    super::make_identity(domain, metric).into()
 }
 
 #[no_mangle]

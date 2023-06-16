@@ -67,6 +67,7 @@ __all__ = [
     "then_df_cast_default",
     "then_df_is_equal",
     "then_drop_null",
+    "then_identity",
     "then_impute_constant",
     "then_impute_uniform_float",
     "then_is_equal",
@@ -1424,10 +1425,15 @@ def make_find_bin(
 
 @versioned
 def make_identity(
-    D: RuntimeTypeDescriptor,
-    M: RuntimeTypeDescriptor
+    domain,
+    metric
 ) -> Transformation:
     """Make a Transformation representing the identity function.
+    
+    WARNING: In Python, this function does not ensure that the domain and metric form a valid metric space.
+    However, if the domain and metric do not form a valid metric space, 
+    then the resulting Transformation won't be chainable with any valid Transformation,
+    so it cannot be used to introduce an invalid metric space into a chain of valid Transformations.
     
     [make_identity in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_identity.html)
     
@@ -1438,10 +1444,8 @@ def make_identity(
     * Input Metric:   `M`
     * Output Metric:  `M`
     
-    :param D: Domain of the identity function. Must be `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
-    :type D: :py:ref:`RuntimeTypeDescriptor`
-    :param M: Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AtomDomain
-    :type M: :py:ref:`RuntimeTypeDescriptor`
+    :param domain: 
+    :param metric: 
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -1449,22 +1453,27 @@ def make_identity(
     """
     assert_features("contrib")
     
-    # Standardize type arguments.
-    D = RuntimeType.parse(type_name=D)
-    M = RuntimeType.parse(type_name=M)
-    
+    # No type arguments to standardize.
     # Convert arguments to c types.
-    c_D = py_to_c(D, c_type=ctypes.c_char_p)
-    c_M = py_to_c(M, c_type=ctypes.c_char_p)
+    c_domain = py_to_c(domain, c_type=Domain, type_name=None)
+    c_metric = py_to_c(metric, c_type=Metric, type_name=None)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_identity
-    lib_function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_D, c_M), Transformation))
+    output = c_to_py(unwrap(lib_function(c_domain, c_metric), Transformation))
     
     return output
+
+def then_identity(
+    
+):
+    return PartialConstructor(lambda domain, metric: make_identity(
+        domain=domain,
+        metric=metric))
+
 
 
 @versioned
