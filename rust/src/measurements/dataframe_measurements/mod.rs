@@ -34,20 +34,11 @@ use super::{MappableDomain};
 
 /// Make a Measurement that adds noise from the Laplace(`scale`) distribution to the last column of a polars dataframe.
 ///
-/// Valid inputs for `input_domain` and `input_metric` are:
-///
-/// | `input_domain`                  | input type   | `input_metric`         |
-/// | ------------------------------- | ------------ | ---------------------- |
-/// | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
-/// | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |
-///
-/// This function takes a noise granularity in terms of 2^k.
-/// Larger granularities are more computationally efficient, but have a looser privacy map.
-/// If k is not set, k defaults to the smallest granularity.
+/// Valid inputs for `input_domain` and `input_metric` are: LazyFrameDomain and DistanceL1<f64>
 ///
 /// # Arguments
-/// * `input_domain` - Domain of the data type to be privatized.
-/// * `input_metric` - Metric of the data type to be privatized.
+/// * `input_domain` - Domain of the LazyFrame to be privatized.
+/// * `input_metric` - Metric of the LazyFrame to be privatized.
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
 /// * `k` - The noise granularity in terms of 2^k.
 pub fn make_polarsDF_laplace(
@@ -87,14 +78,6 @@ pub fn make_polarsDF_laplace(
             let last_column_id = number_columns.clone() - 1;
             let last_column_name = data.clone().collect()?;
             let last_column_name = last_column_name.get_column_names()[last_column_id].clone();
-
-
-            // Retrieve AtomDomain
-            //let sum_series_domain = input_domain.column(sum_name.clone().as_str()).unwrap().clone();
-            //let sumAtomDomain = sum_series_domain.element_domain.atom_domain()
-            //let series_type = data.clone().collect()?.column(last_column_name)?.dtype().clone();
-            //let test = Rational::from_f64(scale.clone().to_f64().unwrap()).unwrap() ;
-            //let scale_test = CastInternalRational::from_rational(test);
 
             // Retreive series of last column
             let s = data
