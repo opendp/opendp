@@ -110,8 +110,10 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
     arguments(null_category(default = true)),
     generics(
         MO(hint = "SensitivityMetric", default = "L1Distance<int>"),
+        TIA(suppress),
         TOA(default = "int")
-    )
+    ),
+    derived_types(TIA = "$get_atom(get_type(input_domain))")
 )]
 /// Make a Transformation that computes the number of times each category appears in the data.
 /// This assumes that the category set is known.
@@ -130,8 +132,10 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
 /// * `TOA` - Atomic Output Type that is numeric.
 ///
 /// # Returns
-/// The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
+/// The carrier type is `Vec<TOA>`, a vector of the counts (`TOA`).
 pub fn make_count_by_categories<MO, TIA, TOA>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: SymmetricDistance,
     categories: Vec<TIA>,
     null_category: bool,
 ) -> Fallible<
@@ -155,7 +159,7 @@ where
         return fallible!(MakeTransformation, "categories must be distinct");
     }
     Transformation::new(
-        VectorDomain::new(AtomDomain::default()),
+        input_domain,
         VectorDomain::new(AtomDomain::default()),
         Function::new(move |data: &Vec<TIA>| {
             let mut counts = categories
@@ -186,7 +190,7 @@ where
                 })
                 .collect()
         }),
-        SymmetricDistance::default(),
+        input_metric,
         MO::default(),
         StabilityMap::new_from_constant(MO::get_stability_constant()),
     )
@@ -207,7 +211,7 @@ impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
 
 #[bootstrap(
     features("contrib"),
-    generics(MO(hint = "SensitivityMetric"), TV(default = "int"))
+    generics(MO(hint = "SensitivityMetric"), TK(suppress), TV(default = "int"))
 )]
 /// Make a Transformation that computes the count of each unique value in data.
 /// This assumes that the category set is unknown.
@@ -222,7 +226,10 @@ impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
 ///
 /// # Returns
 /// The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
-pub fn make_count_by<MO, TK, TV>() -> Fallible<
+pub fn make_count_by<MO, TK, TV>(
+    input_domain: VectorDomain<AtomDomain<TK>>,
+    input_metric: SymmetricDistance,
+) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TK>>,
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
@@ -239,8 +246,8 @@ where
     (MapDomain<AtomDomain<TK>, AtomDomain<TV>>, MO): MetricSpace,
 {
     Transformation::new(
-        VectorDomain::new(AtomDomain::default()),
-        MapDomain::new(AtomDomain::default(), AtomDomain::default()),
+        input_domain.clone(),
+        MapDomain::new(input_domain.element_domain, AtomDomain::default()),
         Function::new(move |data: &Vec<TK>| {
             let mut counts = HashMap::new();
             data.iter().for_each(|v| {
@@ -249,7 +256,7 @@ where
             });
             counts
         }),
-        SymmetricDistance::default(),
+        input_metric,
         MO::default(),
         StabilityMap::new_from_constant(MO::get_stability_constant()?),
     )
@@ -289,7 +296,10 @@ mod tests {
     #[test]
     fn test_make_count_by_categories() {
         let transformation =
-            make_count_by_categories::<L2Distance<f64>, i64, i8>(vec![2, 1, 3], true).unwrap_test();
+            make_count_by_categories::<L2Distance<f64>, i64, i8>(
+                VectorDomain::new(AtomDomain::default()),
+                SymmetricDistance::default(),
+                vec![2, 1, 3], true).unwrap_test();
         let arg = vec![1, 2, 3, 4, 5, 1, 1, 1, 2];
         let ret = transformation.invoke(&arg).unwrap_test();
         let expected = vec![2, 4, 1, 2];
@@ -304,7 +314,10 @@ mod tests {
         let arg = vec![
             true, true, true, false, true, false, false, false, true, true,
         ];
-        let transformation = make_count_by::<L2Distance<f64>, bool, i8>()?;
+        let transformation = make_count_by::<L2Distance<f64>, bool, i8>(
+            VectorDomain::new(AtomDomain::default()),
+            SymmetricDistance::default(),
+        )?;
         let ret = transformation.invoke(&arg)?;
         let mut expected = HashMap::new();
         expected.insert(true, 6);

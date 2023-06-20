@@ -133,8 +133,12 @@ def test_base_vector_discrete_gaussian():
     assert not meas.check(1., 0.124)
 
 def test_make_count_by_ptr():
-    meas = dp.t.make_count_by(MO=dp.L1Distance[float], TK=str, TV=float) \
-           >> dp.m.make_base_ptr(scale=2., threshold=28., TK=str)
+    input_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
+    meas = (
+        input_space >>
+        dp.t.then_count_by(MO=dp.L1Distance[float], TV=float) >> 
+        dp.m.make_base_ptr(scale=2., threshold=28., TK=str)
+    )
     fixed_meas = dp.c.make_fix_delta(meas, 1e-6)
     print("stability histogram:", fixed_meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
 
