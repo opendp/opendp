@@ -15,7 +15,7 @@ def test_sized_bounded_variance():
         # Cast the column as Vec<Optional<Float>>
         dp.t.then_cast(TOA=float) >>
         # Impute missing values to 0, emit Vec<Float>
-        dp.t.make_impute_constant(dp.option_domain(dp.atom_domain(T=float)), constant=0.) >>
+        dp.t.then_impute_constant(constant=0.) >>
         # Clamp values
         dp.t.then_clamp(bounds=bounds) >>
         # Resize dataset length

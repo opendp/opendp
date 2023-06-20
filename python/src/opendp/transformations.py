@@ -66,6 +66,9 @@ __all__ = [
     "then_count_distinct",
     "then_df_cast_default",
     "then_df_is_equal",
+    "then_drop_null",
+    "then_impute_constant",
+    "then_impute_uniform_float",
     "then_is_equal",
     "then_mean",
     "then_metric_bounded",
@@ -1267,29 +1270,28 @@ def then_df_is_equal(
 
 @versioned
 def make_drop_null(
-    atom_domain,
-    DA: RuntimeTypeDescriptor = None
+    input_domain,
+    input_metric
 ) -> Transformation:
     """Make a Transformation that drops null values.
     
     
-    | `DA`                                | `DA::Imputed` |
-    | ----------------------------------- | ------------- |
-    | `OptionDomain<AtomDomain<TA>>`      | `TA`          |
-    | `AtomDomain<TA>`                    | `TA`          |
+    | input_domain                                    |
+    | ----------------------------------------------- |
+    | `vector_domain(option_domain(atom_domain(TA)))` |
+    | `vector_domain(atom_domain(TA))`                |
     
     [make_drop_null in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_drop_null.html)
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<DA>`
-    * Output Domain:  `VectorDomain<AtomDomain<DA::Imputed>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Domain:   `VectorDomain<DIA>`
+    * Output Domain:  `VectorDomain<AtomDomain<DIA::Imputed>>`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
-    :param atom_domain: 
-    :param DA: atomic domain of input data that contains nulls.
-    :type DA: :py:ref:`RuntimeTypeDescriptor`
+    :param input_domain: 
+    :param input_metric: 
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -1297,21 +1299,27 @@ def make_drop_null(
     """
     assert_features("contrib")
     
-    # Standardize type arguments.
-    DA = RuntimeType.parse_or_infer(type_name=DA, public_example=atom_domain)
-    
+    # No type arguments to standardize.
     # Convert arguments to c types.
-    c_atom_domain = py_to_c(atom_domain, c_type=Domain, type_name=DA)
-    c_DA = py_to_c(DA, c_type=ctypes.c_char_p)
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_drop_null
-    lib_function.argtypes = [Domain, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_atom_domain, c_DA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric), Transformation))
     
     return output
+
+def then_drop_null(
+    
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_drop_null(
+        input_domain=input_domain,
+        input_metric=input_metric))
+
 
 
 @versioned
@@ -1461,20 +1469,19 @@ def make_identity(
 
 @versioned
 def make_impute_constant(
-    atom_domain,
-    constant: Any,
-    DIA: RuntimeTypeDescriptor = None
+    input_domain,
+    input_metric,
+    constant: Any
 ) -> Transformation:
     """Make a Transformation that replaces null/None data with `constant`.
     
-    By default, the input type is `Vec<Option<TA>>`, as emitted by make_cast.
-    Set `DA` to `AtomDomain<TA>` for imputing on types
-    that have an inherent representation of nullity, like floats.
+    If chaining after a `make_cast`, the input type is `Option<Vec<TA>>`.
+    If chaining after a `make_cast_inherent`, the input type is `Vec<TA>`, where `TA` may take on float NaNs.
     
-    | Atom Input Domain `DIA`             |  Input Type       | `DIA::Imputed` |
-    | ----------------------------------- | ----------------- | -------------- |
-    | `OptionDomain<AtomDomain<TA>>`      | `Vec<Option<TA>>` | `TA`           |
-    | `AtomDomain<TA>`                    | `Vec<TA>`         | `TA`           |
+    | input_domain                                    |  Input Data Type  |
+    | ----------------------------------------------- | ----------------- |
+    | `vector_domain(option_domain(atom_domain(TA)))` | `Vec<Option<TA>>` |
+    | `vector_domain(atom_domain(TA))`                | `Vec<TA>`         |
     
     [make_impute_constant in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_impute_constant.html)
     
@@ -1482,14 +1489,13 @@ def make_impute_constant(
     
     * Input Domain:   `VectorDomain<DIA>`
     * Output Domain:  `VectorDomain<AtomDomain<DIA::Imputed>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
-    :param atom_domain: 
+    :param input_domain: Domain of the input data. See table above.
+    :param input_metric: Metric of the input data. A dataset metric.
     :param constant: Value to replace nulls with.
     :type constant: Any
-    :param DIA: Atomic Input Domain of data being imputed.
-    :type DIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -1497,28 +1503,36 @@ def make_impute_constant(
     """
     assert_features("contrib")
     
-    # Standardize type arguments.
-    DIA = RuntimeType.parse_or_infer(type_name=DIA, public_example=atom_domain)
-    
+    # No type arguments to standardize.
     # Convert arguments to c types.
-    c_atom_domain = py_to_c(atom_domain, c_type=Domain, type_name=DIA)
-    c_constant = py_to_c(constant, c_type=AnyObjectPtr, type_name=get_atom(get_carrier_type(atom_domain)))
-    c_DIA = py_to_c(DIA, c_type=ctypes.c_char_p)
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_constant = py_to_c(constant, c_type=AnyObjectPtr, type_name=get_atom(get_type(input_domain)))
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_impute_constant
-    lib_function.argtypes = [Domain, AnyObjectPtr, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_atom_domain, c_constant, c_DIA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_constant), Transformation))
     
     return output
+
+def then_impute_constant(
+    constant: Any
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_impute_constant(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        constant=constant))
+
 
 
 @versioned
 def make_impute_uniform_float(
-    bounds: Tuple[Any, Any],
-    TA: RuntimeTypeDescriptor = None
+    input_domain,
+    input_metric,
+    bounds: Tuple[Any, Any]
 ) -> Transformation:
     """Make a Transformation that replaces NaN values in `Vec<TA>` with uniformly distributed floats within `bounds`.
     
@@ -1528,13 +1542,13 @@ def make_impute_uniform_float(
     
     * Input Domain:   `VectorDomain<AtomDomain<TA>>`
     * Output Domain:  `VectorDomain<AtomDomain<TA>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
+    :param input_domain: Domain of the input.
+    :param input_metric: Metric of the input.
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
-    :param TA: Atomic Type of data being imputed. One of `f32` or `f64`
-    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -1543,20 +1557,30 @@ def make_impute_uniform_float(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
+    TA = get_atom(get_type(input_domain))
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
-    c_TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_impute_uniform_float
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_bounds, c_TA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_bounds), Transformation))
     
     return output
+
+def then_impute_uniform_float(
+    bounds: Tuple[Any, Any]
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_impute_uniform_float(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        bounds=bounds))
+
 
 
 @versioned
