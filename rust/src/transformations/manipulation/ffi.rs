@@ -10,6 +10,7 @@ use crate::ffi::util::{Type, TypeContents};
 use crate::traits::{CheckAtom, InherentNull, Primitive};
 use crate::transformations::{make_is_equal, make_is_null, DatasetMetric};
 
+#[cfg(feature = "honest-but-curious")]
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_identity(
     domain: *const AnyDomain,
@@ -111,6 +112,7 @@ mod tests {
 
     use super::*;
 
+    #[cfg(feature = "honest-but-curious")]
     #[test]
     fn test_make_identity() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_identity(

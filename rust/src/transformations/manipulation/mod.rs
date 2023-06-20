@@ -111,7 +111,7 @@ where
     )
 }
 
-#[bootstrap(features("contrib"), generics(D(suppress), M(suppress)))]
+#[bootstrap(features("contrib", "honest-but-curious"), generics(D(suppress), M(suppress)))]
 /// Make a Transformation representing the identity function.
 ///
 /// WARNING: In Python, this function does not ensure that the domain and metric form a valid metric space.
@@ -214,6 +214,7 @@ mod tests {
     use super::*;
     use crate::domains::AtomDomain;
 
+    #[cfg(feature = "honest-but-curious")]
     #[test]
     fn test_identity() {
         let identity = make_identity(VectorDomain::new(AtomDomain::default()), SymmetricDistance)
