@@ -193,7 +193,7 @@ mod tests {
     #[test]
     fn test_cast_default_unsigned() -> Fallible<()> {
         let caster =
-            make_cast_default::<f64, u8, _>(Default::default(), SymmetricDistance::default())?;
+            make_cast_default::<_, f64, u8>(Default::default(), SymmetricDistance::default())?;
         assert_eq!(caster.invoke(&vec![-1.])?, vec![u8::default()]);
         Ok(())
     }
@@ -208,14 +208,14 @@ mod tests {
         ];
 
         let caster =
-            make_cast_default::<String, u8, _>(Default::default(), SymmetricDistance::default())?;
+            make_cast_default::<_, String, u8>(Default::default(), SymmetricDistance::default())?;
         assert_eq!(
             caster.invoke(&data)?,
             vec![2, 3, u8::default(), u8::default()]
         );
 
         let caster =
-            make_cast_default::<String, f64, _>(Default::default(), SymmetricDistance::default())?;
+            make_cast_default::<_, String, f64>(Default::default(), SymmetricDistance::default())?;
         assert_eq!(
             caster.invoke(&data)?,
             vec![2., 3., f64::default(), f64::default()]
@@ -227,14 +227,14 @@ mod tests {
     fn test_cast_default_floats() -> Fallible<()> {
         let data = vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY];
         let caster =
-            make_cast_default::<f64, String, _>(Default::default(), SymmetricDistance::default())?;
+            make_cast_default::<_, f64, String>(Default::default(), SymmetricDistance::default())?;
         assert_eq!(
             caster.invoke(&data)?,
             vec!["NaN".to_string(), "-inf".to_string(), "inf".to_string()]
         );
 
         let caster =
-            make_cast_default::<f64, u8, _>(Default::default(), SymmetricDistance::default())?;
+            make_cast_default::<_, f64, u8>(Default::default(), SymmetricDistance::default())?;
         assert_eq!(
             caster.invoke(&vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY])?,
             vec![u8::default(), u8::default(), u8::default()]
@@ -254,7 +254,7 @@ mod tests {
         .map(|v| v.to_string())
         .collect();
         let caster =
-            make_cast_default::<String, f64, _>(Default::default(), SymmetricDistance::default())?;
+            make_cast_default::<_, String, f64>(Default::default(), SymmetricDistance::default())?;
         assert!(caster.invoke(&data)?.into_iter().all(|v| v == 100.));
         Ok(())
     }
