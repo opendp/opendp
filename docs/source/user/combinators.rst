@@ -221,8 +221,8 @@ The resulting measurement expects the size of the input dataset to be 10.
 
 .. doctest::
 
-    >>> from opendp.transformations import make_sized_bounded_mean
-    >>> meas = make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> then_base_laplace(scale=0.5)
+    >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=10), dp.symmetric_distance()
+    >>> meas = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
     >>> print("standard mean:", amplified([1.] * 10)) # -> 1.03 # doctest: +SKIP
 
 We can now use the amplification combinator to construct an amplified measurement.

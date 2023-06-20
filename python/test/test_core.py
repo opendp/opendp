@@ -1,30 +1,24 @@
 import pytest
 
-from opendp.typing import *
-from opendp.mod import enable_features
-enable_features('floating-point', 'contrib')
+import opendp.prelude as dp
+dp.enable_features('floating-point', 'contrib')
 
 
 def test_type_getters():
-    from opendp.transformations import make_sized_bounded_mean
-    transformation = make_sized_bounded_mean(size=9, bounds=(0., 10.), T=float)
+    transformation = dp.t.make_mean(
+        dp.vector_domain(dp.atom_domain((0., 10.)), 9), 
+        dp.symmetric_distance())
     assert transformation.input_distance_type == "u32"
     assert transformation.output_distance_type == "f64"
     assert transformation.input_carrier_type == "Vec<f64>"
 
-    from opendp.measurements import make_base_discrete_laplace
-    from opendp.domains import atom_domain
-    from opendp.metrics import absolute_distance
-    measurement = make_base_discrete_laplace(atom_domain(T=int), absolute_distance(T=int), scale=1.5)
+    measurement = dp.m.make_laplace(dp.atom_domain(T=int), dp.absolute_distance(T=int), scale=1.5)
     assert measurement.input_distance_type == "i32"
     assert measurement.output_distance_type == "f64"
     assert measurement.input_carrier_type == "i32"
 
 
 def test_chain():
-    import opendp.prelude as dp
-    enable_features("floating-point", "contrib")
-
     data = [1, 2, 3, 4, 5]
     count = dp.t.make_count(dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
     print("count:", count(data))
@@ -64,26 +58,16 @@ def test_bisect_edge():
 
 
 def test_bisect_chain():
-    from opendp.mod import binary_search_chain, binary_search_param, enable_features
-    from opendp.transformations import then_clamp, then_resize, make_sized_bounded_mean
-    from opendp.domains import atom_domain, vector_domain
-    from opendp.metrics import symmetric_distance
-    from opendp.measurements import then_base_laplace
-    enable_features("contrib")
-
-    input_domain = vector_domain(atom_domain(T=float))
-    input_metric = symmetric_distance()
-
     pre = (
-        (input_domain, input_metric) >>
-        then_clamp(bounds=(0., 1.)) >>
-        then_resize(size=10, constant=0.) >>
-        make_sized_bounded_mean(size=10, bounds=(0., 1.))
+        (dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance()) >>
+        dp.t.then_clamp(bounds=(0., 1.)) >>
+        dp.t.then_resize(size=10, constant=0.) >>
+        dp.t.then_mean()
     )
-    chain = binary_search_chain(lambda s: pre >> then_base_laplace(scale=s), d_in=1, d_out=1.)
+    chain = dp.binary_search_chain(lambda s: pre >> dp.m.then_laplace(scale=s), d_in=1, d_out=1.)
     assert chain.check(1, 1.)
 
-    scale = binary_search_param(lambda s: pre >> then_base_laplace(scale=s), d_in=1, d_out=1.)
+    scale = dp.binary_search_param(lambda s: pre >> dp.m.then_laplace(scale=s), d_in=1, d_out=1.)
     assert scale - 0.1 < 1e-8
 
 
@@ -148,9 +132,9 @@ def test_member():
 
 def test_new_domain():
     from opendp.domains import atom_domain, vector_domain
-    domain = atom_domain(T=i32)
+    domain = atom_domain(T=dp.i32)
     assert domain.member(3)
-    domain = atom_domain(T=f64)
+    domain = atom_domain(T=dp.f64)
     assert not domain.member(float("nan"))
 
     domain = atom_domain((1, 2))
@@ -158,7 +142,7 @@ def test_new_domain():
     assert not domain.member(3)
     print(domain)
 
-    domain = vector_domain(atom_domain(T=i32))
+    domain = vector_domain(atom_domain(T=dp.i32))
     assert domain.member([2])
     print(domain)
     domain = vector_domain(atom_domain((2, 3)))
@@ -166,7 +150,7 @@ def test_new_domain():
     assert not domain.member([2, 4])
     print(domain)
     
-    domain = vector_domain(atom_domain(T=i32), 10)
+    domain = vector_domain(atom_domain(T=dp.i32), 10)
     assert domain.member([1] * 10)
     print(domain)
     domain = vector_domain(atom_domain((2., 7.)), 10)
