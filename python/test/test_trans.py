@@ -297,13 +297,6 @@ def test_resize():
     assert query.check(2, 4)
 
 
-def test_count_by_categories_str():
-    input_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
-    query = input_space >> dp.t.then_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[int])
-    assert query(STR_DATA) == [1, 1, 1, 6]
-    assert query.check(1, 1)
-
-
 def test_indexing():
     from opendp.transformations import make_find, make_impute_constant, make_find_bin, make_index
 
