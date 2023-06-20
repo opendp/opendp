@@ -56,6 +56,7 @@ __all__ = [
     "make_sized_bounded_sum",
     "make_sized_bounded_sum_of_squared_deviations",
     "make_sized_bounded_variance",
+    "make_sized_partitioned_sum",
     "make_split_dataframe",
     "make_split_lines",
     "make_split_records",
@@ -2961,6 +2962,63 @@ def make_sized_bounded_variance(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_size, c_bounds, c_ddof, c_S), Transformation))
+    
+    return output
+
+
+@versioned
+def make_sized_partitioned_sum(
+    input_domain,
+    partition_column,
+    sum_column,
+    bounds: Tuple[Any, Any],
+    null_partition: bool = "false",
+    T: RuntimeTypeDescriptor = "??"
+) -> Transformation:
+    """Make a Transformation that partitions a dataframe by a given column and compute bounded sums.
+    
+    [make_sized_partitioned_sum in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sized_partitioned_sum.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `LazyFrameDomain`
+    * Output Domain:  `LazyFrameDomain`
+    * Input Metric:   `InsertDeleteDistance`
+    * Output Metric:  `L1Distance<T>`
+    
+    :param input_domain: LazyFrameDomain with relevant categories and counts metadata.
+    :param partition_column: Name of column to split dataframe by.
+    :param sum_column: Name of column to sum.
+    :param bounds: 
+    :type bounds: Tuple[Any, Any]
+    :param null_partition: Whether to include a trailing null partition for rows that were not in the `partition_keys`
+    :type null_partition: bool
+    :param T: Type of bounds for clamping.
+    :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    T = RuntimeType.parse(type_name=T)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=ctypes.c_void_p, type_name=LazyFrameDomain)
+    c_partition_column = py_to_c(partition_column, c_type=ctypes.c_void_p, type_name=strOrString)
+    c_sum_column = py_to_c(sum_column, c_type=ctypes.c_void_p, type_name=strOrString)
+    c_bounds = py_to_c(bounds, c_type=ctypes.c_void_p, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    c_null_partition = py_to_c(null_partition, c_type=ctypes.c_bool, type_name=bool)
+    c_T = py_to_c(T, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_sized_partitioned_sum
+    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_partition_column, c_sum_column, c_bounds, c_null_partition, c_T), Transformation))
     
     return output
 

@@ -1,4 +1,4 @@
-//use opendp_derive::bootstrap;
+use opendp_derive::bootstrap;
 
 use polars::prelude::*;
 use polars::datatypes::DataType::{Utf8, Float64};
@@ -11,14 +11,19 @@ use crate::{
     domains::{AtomDomain, SeriesDomain, LazyFrameDomain},
 };
 
-// #[cfg(feature = "ffi")]
-// mod ffi;
+ #[cfg(feature = "ffi")]
+mod ffi;
 
-// #[bootstrap(
-//     features("contrib"),
-//     arguments(null_partition(default = false)),
-//     generics(TC(default = "String")) // NEED TO ADD GENERIC FOR SizedDataFrameDomain<TC>?
-// )]
+#[bootstrap(
+    features("contrib"),
+    arguments(
+           //input_domain(rust_type = "LazyFrameDomain", c_type = "void *"),
+           //partition_column(rust_type = "&strOrString", c_type = "void *"),
+           //sum_column(rust_type = "&strOrString", c_type = "void *"),
+           bounds(rust_type = "(T, T)", c_type = "void *"),
+           null_partition(default = "false")),
+    generics(T(default = "??")) 
+)]
 /// Make a Transformation that partitions a dataframe by a given column and compute bounded sums.
 /// 
 /// # Arguments
@@ -66,7 +71,6 @@ pub fn make_sized_partitioned_sum<T: Float>(
     let sum_column_name = "Bounded sums of ".to_string() + sum_column;
 
     // Create output domain
-    //  @RAPH: DO IT WITH SUBSET OF VEC DOMAIN OF INPUT DOMAIN !!! TO DO !!!!
     let output_domain = LazyFrameDomain::new(vec![
         input_domain.column(partition_column.clone()).unwrap().clone(),
         SeriesDomain::new(&sum_column_name, AtomDomain::<f64>::default()),

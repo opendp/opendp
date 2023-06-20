@@ -2,7 +2,6 @@ use num::Float as _;
 use opendp_derive::bootstrap;
 
 use polars::prelude::*;
-//use polars::datatypes::DataType::Utf8;
 
 use crate::{
     core::{Function, Measurement, PrivacyMap},
@@ -14,20 +13,18 @@ use crate::{
     traits::{ExactIntCast, FloatBits, InfAdd, InfDiv},
 };
 
-#[cfg(feature = "ffi")]
+/* #[cfg(feature = "ffi")]
 mod ffi;
 
-/*#[bootstrap(
+#[bootstrap(
     features("contrib"),
     arguments(
-        scale(rust_type = "T", c_type = "void *"),
-        k(default = -1074, rust_type = "i32", c_type = "uint32_t")),
-    generics(
-        D(default = "AtomDomain<T>", generics = "T"),
-        MO(default = "ZeroConcentratedDivergence<T>", generics = "T")),
-    derived_types(T = "$get_atom_or_infer(D, scale)")
-)]*/
-
+        input_domain(rust_type = "LazyFrameDomain"),
+        input_metric(rust_type = "L1Distance<f64>"),
+        scale(rust_type = "f64", c_type = "void *"),
+        k(default = -1074, rust_type = "i32", c_type = "uint32_t"))
+)]
+ */
 /// Make a Measurement that adds noise from the Laplace(`scale`) distribution to the last column of a polars dataframe.
 ///
 /// Valid inputs for `input_domain` and `input_metric` are: LazyFrameDomain and DistanceL1<f64>
