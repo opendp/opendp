@@ -13,13 +13,15 @@ __all__ = [
     "make_base_geometric",
     "make_base_laplace",
     "make_base_ptr",
+    "make_polarsDF_laplace",
     "make_randomized_response",
     "make_randomized_response_bool",
     "part_base_discrete_laplace",
     "part_base_discrete_laplace_cks20",
     "part_base_discrete_laplace_linear",
     "part_base_geometric",
-    "part_base_laplace"
+    "part_base_laplace",
+    "part_polarsDF_laplace"
 ]
 
 
@@ -577,6 +579,67 @@ def make_base_ptr(
     output = c_to_py(unwrap(lib_function(c_scale, c_threshold, c_k, c_TK, c_TV), Measurement))
     
     return output
+
+
+@versioned
+def make_polarsDF_laplace(
+    input_domain,
+    input_metric,
+    scale: float,
+    k: int = -1074
+) -> Measurement:
+    """Make a Measurement that adds noise from the Laplace(`scale`) distribution to the last column of a polars dataframe.
+    
+    Valid inputs for `input_domain` and `input_metric` are: LazyFrameDomain and DistanceL1<f64>
+    
+    [make_polarsDF_laplace in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_polarsDF_laplace.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `LazyFrameDomain`
+    * Output Type:    `LazyFrame`
+    * Input Metric:   `L1Distance<f64>`
+    * Output Measure: `MaxDivergence<f64>`
+    
+    :param input_domain: Domain of the LazyFrame to be privatized.
+    :param input_metric: Metric of the LazyFrame to be privatized.
+    :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+    :type scale: float
+    :param k: The noise granularity in terms of 2^k.
+    :type k: int
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_scale = py_to_c(scale, c_type=ctypes.c_double, type_name=f64)
+    c_k = py_to_c(k, c_type=ctypes.c_uint32, type_name=i32)
+    
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_polarsDF_laplace
+    lib_function.argtypes = [Domain, Metric, ctypes.c_double, ctypes.c_uint32]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_k), Measurement))
+    
+    return output
+
+def part_polarsDF_laplace(
+    scale: float,
+    k: int = -1074
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_polarsDF_laplace(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        k=k))
+
 
 
 @versioned

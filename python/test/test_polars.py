@@ -18,3 +18,32 @@ def test_lazy_frame_domain():
         dp.series_domain("B", dp.atom_domain(T=int)),
         dp.series_domain("C", dp.atom_domain(T=str))
     ]))
+
+def test_make_partitioned_sum():
+    input_domain = dp.lazy_frame_domain([
+    dp.series_domain("A", dp.atom_domain(T=float)),
+    dp.series_domain("B", dp.atom_domain(T=int)),
+    dp.series_domain("C", dp.atom_domain(T=str))
+    ])
+     
+    partition_column = "C"
+    sum_column = "A"
+    bounds = (0.0,1.0)
+    null_partition = False
+
+    dp.t.make_sized_partitioned_sum(input_domain, partition_column, sum_column, bounds, null_partition)
+
+def test_make_polarsDF_laplace():
+    input_domain = dp.lazy_frame_domain([
+    dp.series_domain("A", dp.atom_domain(T=float)),
+    dp.series_domain("B", dp.atom_domain(T=int)),
+    dp.series_domain("C", dp.atom_domain(T=str))
+    ])
+    input_metric = dp.l1_distance(T = float)
+    scale = 1.0
+
+    dp.m.make_polarsDF_laplace(input_domain, input_metric, scale)
+
+test_make_polarsDF_laplace()  
+
+    

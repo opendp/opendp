@@ -17,12 +17,10 @@ mod ffi;
 #[bootstrap(
     features("contrib"),
     arguments(
-           //input_domain(rust_type = "LazyFrameDomain", c_type = "void *"),
-           //partition_column(rust_type = "&strOrString", c_type = "void *"),
-           //sum_column(rust_type = "&strOrString", c_type = "void *"),
-           bounds(rust_type = "(T, T)", c_type = "void *"),
-           null_partition(default = "false")),
-    generics(T(default = "??")) 
+           input_domain(rust_type= b"null", c_type = "AnyDomain *"),
+           bounds(rust_type = "(T, T)"),
+           null_partition(default = false)),
+    generics(T(example = "$get_first(bounds)"))
 )]
 /// Make a Transformation that partitions a dataframe by a given column and compute bounded sums.
 /// 
@@ -46,7 +44,7 @@ pub fn make_sized_partitioned_sum<T: Float>(
         LazyFrameDomain,
         LazyFrameDomain,
         InsertDeleteDistance, 
-        L1Distance<T>, // @RAPH: Change to SUM?
+        L1Distance<T>,
     >,
 > {
 
@@ -58,6 +56,7 @@ pub fn make_sized_partitioned_sum<T: Float>(
     let _sum_id = (input_domain.series_domains.iter()).position(|s| s.field.name == sum_column).ok_or_else(|| err!(FailedFunction, "Desired column to be summed not in domain."))?;
     
     // Get margins keys
+    // TO DO: Check if margins exists!!!!!
     let margins_key = input_domain.margins.keys().into_iter().find(|k| k.contains(&partition_name)).unwrap();
     // Get partition margin
     let counts = input_domain.margins.get(margins_key).unwrap().clone();

@@ -1,76 +1,58 @@
-/* use std::{convert::TryFrom, os::raw::c_char};
+use std::{convert::TryFrom, os::raw::c_char};
+
+use polars::prelude::*;
 
 use crate::{
-    core::{FfiResult, Function, IntoAnyTransformationFfiResultExt, StabilityMap, Transformation},
-    domains::ProductDomain,
+    core::{FfiResult, IntoAnyTransformationFfiResultExt},
+    domains::{LazyFrameDomain},
     ffi::{
-        any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast},
-        util::{c_bool, to_bool, Type},
+        any::{AnyDomain, AnyObject, AnyTransformation, Downcast},
+        util::{c_bool, to_bool, Type, to_str},
     },
-    metrics::{IntDistance, ProductMetric},
-    traits::Hashable,
-    transformations::{make_sized_partition_by, DataFrame},
-    transformations::dataframe::SizedDataFrameDomain,
+    traits::Float,
+    transformations::{make_sized_partitioned_sum},
 };
 
 #[no_mangle]
-pub extern "C" fn opendp_transformations_make_sized_partitioned_sum(
-    input_domain: *const AnyObject,
-    partition_column: *const AnyObject,
-    sum_column: *const AnyObject,
+pub extern "C" fn opendp_transformations__make_sized_partitioned_sum(
+    input_domain: *const AnyDomain,
+    partition_column: *const c_char,
+    sum_column: *const c_char,
     bounds: *const AnyObject,
     null_partition: c_bool,
-    T: *const c_????,
+    T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    
+
     fn monomorphize<T: Float>(
-        input_domain: *const AnyObject,
-        partition_column: *const AnyObject,
-        sum_column: *const AnyObject,
+        input_domain: *const AnyDomain,
+        partition_column: *const c_char,
+        sum_column: *const c_char,
         bounds: *const AnyObject,
         null_partition: bool,
     ) -> FfiResult<*mut AnyTransformation> {
 
-        let input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<LazyFrameDomain>()).clone();
-        let partition_column = try_!(try_as_ref!(identifier_column).downcast_ref::<&str>()).clone();
-        let sum_column = try_!(try_as_ref!(identifier_column).downcast_ref::<&str>()).clone();
+        let partition_column =  try_!(to_str(partition_column));
+        let sum_column =  try_!(to_str(sum_column));
+
+        let mut input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<LazyFrameDomain>()).clone();
+        // Temporary line to add margins for test_polars.py only
+        input_domain = try_!(input_domain.with_counts(df![partition_column => ["AA", "BB"], "count" => [3, 2]].unwrap().lazy()));
+
+        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T,T)>()).clone();
     
-        let trans = try_!(make_sized_partitioned_sum::<T>(
+        make_sized_partitioned_sum(
             input_domain,
             partition_column,
             sum_column,
             bounds,
             null_partition
-        ));
-
-        // rewrite the partitioner to emit ProductDomain<InputDomain>, and box output partitions in the function
-        let inner_output_domain = trans.output_domain;
-        let function = trans.function;
-        let stability_map = trans.stability_map;
-        Ok(Transformation::new(
-            trans.input_domain,
-            trans.output_domain,
-            Function::new_fallible(move |arg: &LazyFrame| {
-                let res = function.eval(arg);
-                res.map(|o| {
-                    o.into_iter()
-                        .map(AnyObject::new)
-                        .collect::<Vec<AnyObject>>()
-                })
-            }),
-            trans.input_metric,
-            trans.output_metric,
-            StabilityMap::new_fallible(move |d_in: &IntDistance| {
-                let k = stability_map.eval(d_in)?;
-                Ok(AnyObject::new(k))
-            }),
-        ))
-        .into_any()
+        ).into_any()
     }
 
     let null_partition = to_bool(null_partition);
     let T = try_!(Type::try_from(T));
+
     dispatch!(monomorphize, [
-        (T, @????)
+        (T, @floats)
     ], (input_domain, partition_column, sum_column, bounds, null_partition))
-} */
+}

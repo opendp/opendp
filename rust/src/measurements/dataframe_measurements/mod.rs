@@ -13,18 +13,15 @@ use crate::{
     traits::{ExactIntCast, FloatBits, InfAdd, InfDiv},
 };
 
-/* #[cfg(feature = "ffi")]
+#[cfg(feature = "ffi")]
 mod ffi;
 
 #[bootstrap(
     features("contrib"),
     arguments(
-        input_domain(rust_type = "LazyFrameDomain"),
-        input_metric(rust_type = "L1Distance<f64>"),
-        scale(rust_type = "f64", c_type = "void *"),
+        scale(rust_type = "f64", c_type = "double"),
         k(default = -1074, rust_type = "i32", c_type = "uint32_t"))
 )]
- */
 /// Make a Measurement that adds noise from the Laplace(`scale`) distribution to the last column of a polars dataframe.
 ///
 /// Valid inputs for `input_domain` and `input_metric` are: LazyFrameDomain and DistanceL1<f64>
