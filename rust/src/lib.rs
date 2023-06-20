@@ -53,7 +53,7 @@
 //!     let split_lines = make_split_lines()?;
 //!
 //!     // The next transformation wants to conform with the output domain and metric from `split_lines`.
-//!     let cast = make_cast_default::<String, f64, _>(
+//!     let cast = make_cast_default::<_, String, f64>(
 //!         split_lines.output_domain.clone(),
 //!         split_lines.output_metric.clone())?;
 //!
