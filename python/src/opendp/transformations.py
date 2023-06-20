@@ -1276,10 +1276,10 @@ def make_drop_null(
     """Make a Transformation that drops null values.
     
     
-    | input_domain                     |
-    | -------------------------------- |
-    | `option_domain(atom_domain(TA))` |
-    | `atom_domain(TA)`                |
+    | input_domain                                    |
+    | ----------------------------------------------- |
+    | `vector_domain(option_domain(atom_domain(TA)))` |
+    | `vector_domain(atom_domain(TA))`                |
     
     [make_drop_null in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_drop_null.html)
     

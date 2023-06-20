@@ -219,10 +219,10 @@ impl<T: CheckAtom + InherentNull + Clone> DropNullDomain for AtomDomain<T> {
 /// Make a Transformation that drops null values.
 ///
 ///
-/// | input_domain                     |
-/// | -------------------------------- |
-/// | `option_domain(atom_domain(TA))` |
-/// | `atom_domain(TA)`                |
+/// | input_domain                                    |
+/// | ----------------------------------------------- |
+/// | `vector_domain(option_domain(atom_domain(TA)))` |
+/// | `vector_domain(atom_domain(TA))`                |
 ///
 /// # Generics
 /// * `M` - Dataset Metric.

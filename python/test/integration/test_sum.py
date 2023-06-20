@@ -40,7 +40,7 @@ def test_sized_bounded_float_sum():
 
     print(laplace_known_n_sum_from_dataframe(data))
     print(gaussian_known_n_sum_from_dataframe(data))
-test_sized_bounded_float_sum()
+
 
 def test_sized_bounded_int_sum():
     """known-n bounded int sum (assuming n is public)"""
