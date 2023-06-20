@@ -51,7 +51,7 @@ where
         .ok_or_else(|| {
             err!(
                 MakeTransformation,
-                "input domain must consist of bounded data. Use specify bounds in the input domain or use make_clamp."
+                "input domain must consist of bounded data. Either specify bounds in the input domain or use make_clamp."
             )
         })?;
     if size == 0 {
