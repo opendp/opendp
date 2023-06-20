@@ -6,6 +6,11 @@ use crate::domains::{Context, DatasetMetric, ExprDomain, LazyFrameDomain};
 use crate::error::*;
 use crate::metrics::SymmetricDistance;
 
+/// Make a Transformation that returns a col(<column_name>) expression for a Lazy Frame.
+///
+/// # Generics
+/// * `M` - Dataset Metric type.
+///
 pub fn make_col<M>(
     input_domain: ExprDomain,
     input_metric: M,
@@ -58,14 +63,14 @@ where
         input_domain.clone(),
         output_domain,
         Function::new_fallible(
-            move |(expr, lazyframe): &(Expr, LazyFrame)| -> Fallible<(Expr, LazyFrame)> {
+            move |(lazy_frame, expr): &(LazyFrame, Expr)| -> Fallible<(LazyFrame, Expr)> {
                 if expr != &Expr::Wildcard {
                     return fallible!(
                         FailedFunction,
                         "make_col has to be the first expression in the expression chain"
                     );
                 }
-                Ok((col(&*column_name), lazyframe.clone()))
+                Ok((lazy_frame.clone(), col(&*column_name)))
             },
         ),
         input_metric.clone(),
@@ -87,11 +92,11 @@ mod test_make_col {
             SeriesDomain::new("C", AtomDomain::<i32>::default()),
         ])
         .unwrap_test()
-        .with_counts(df!["A" => [1, 2], "count" => [1, 2]].unwrap().lazy())
+        .with_counts(df!["A" => [1, 2], "count" => [1, 2]].unwrap_test().lazy())
         .unwrap_test()
-        .with_counts(df!["B" => [1.0, 2.0], "count" => [2, 1]].unwrap().lazy())
+        .with_counts(df!["B" => [1.0, 2.0], "count" => [2, 1]].unwrap_test().lazy())
         .unwrap_test()
-        .with_counts(df!["C" => [8, 9, 10], "count" => [1, 1, 1]].unwrap().lazy())
+        .with_counts(df!["C" => [8, 9, 10], "count" => [1, 1, 1]].unwrap_test().lazy())
         .unwrap_test();
 
         let expr_domain = ExprDomain {
@@ -119,7 +124,7 @@ mod test_make_col {
         let transformation =
             make_col(expr_domain, SymmetricDistance::default(), selected_col).unwrap_test();
 
-        let expr_res = transformation.invoke(&(all(), lazy_frame)).unwrap_test().0;
+        let expr_res = transformation.invoke(&(lazy_frame, all())).unwrap_test().1;
         let expr_exp = col(selected_col);
 
         assert_eq!(expr_res, expr_exp);
@@ -171,8 +176,8 @@ mod test_make_col {
         let transformation =
             make_col(expr_domain, SymmetricDistance::default(), selected_col).unwrap_test();
         let error_res = transformation
-            .invoke(&(col(selected_col), lazy_frame))
-            .map(|v| v.0)
+            .invoke(&(lazy_frame, col(selected_col)))
+            .map(|v| v.1)
             .unwrap_err()
             .variant;
         let expected_error_kind = ErrorVariant::FailedFunction;
