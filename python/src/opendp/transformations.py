@@ -66,9 +66,13 @@ __all__ = [
     "then_df_is_equal",
     "then_is_equal",
     "then_mean",
+    "then_metric_bounded",
+    "then_metric_unbounded",
+    "then_ordered_random",
     "then_resize",
     "then_sum",
     "then_sum_of_squared_deviations",
+    "then_unordered",
     "then_variance"
 ]
 
@@ -1790,9 +1794,8 @@ def then_mean(
 
 @versioned
 def make_metric_bounded(
-    domain,
-    D: RuntimeTypeDescriptor = None,
-    MI: RuntimeTypeDescriptor = "SymmetricDistance"
+    input_domain,
+    input_metric
 ) -> Transformation:
     """Make a Transformation that converts the unbounded dataset metric `MI`
     to the respective bounded dataset metric with a no-op.
@@ -1814,11 +1817,8 @@ def make_metric_bounded(
     * Input Metric:   `MI`
     * Output Metric:  `MI::BoundedMetric`
     
-    :param domain: 
-    :param D: Domain
-    :type D: :py:ref:`RuntimeTypeDescriptor`
-    :param MI: Input Metric
-    :type MI: :py:ref:`RuntimeTypeDescriptor`
+    :param input_domain: 
+    :param input_metric: 
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -1826,30 +1826,33 @@ def make_metric_bounded(
     """
     assert_features("contrib")
     
-    # Standardize type arguments.
-    D = RuntimeType.parse_or_infer(type_name=D, public_example=domain)
-    MI = RuntimeType.parse(type_name=MI)
-    
+    # No type arguments to standardize.
     # Convert arguments to c types.
-    c_domain = py_to_c(domain, c_type=Domain, type_name=D)
-    c_D = py_to_c(D, c_type=ctypes.c_char_p)
-    c_MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_metric_bounded
-    lib_function.argtypes = [Domain, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_domain, c_D, c_MI), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric), Transformation))
     
     return output
+
+def then_metric_bounded(
+    
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_metric_bounded(
+        input_domain=input_domain,
+        input_metric=input_metric))
+
 
 
 @versioned
 def make_metric_unbounded(
-    domain,
-    D: RuntimeTypeDescriptor = None,
-    MI: RuntimeTypeDescriptor = "ChangeOneDistance"
+    input_domain,
+    input_metric
 ) -> Transformation:
     """Make a Transformation that converts the bounded dataset metric `MI`
     to the respective unbounded dataset metric with a no-op.
@@ -1868,11 +1871,8 @@ def make_metric_unbounded(
     * Input Metric:   `MI`
     * Output Metric:  `MI::UnboundedMetric`
     
-    :param domain: 
-    :param D: Domain. The function is a no-op so input and output domains are the same.
-    :type D: :py:ref:`RuntimeTypeDescriptor`
-    :param MI: Input Metric.
-    :type MI: :py:ref:`RuntimeTypeDescriptor`
+    :param input_domain: 
+    :param input_metric: 
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -1880,30 +1880,33 @@ def make_metric_unbounded(
     """
     assert_features("contrib")
     
-    # Standardize type arguments.
-    D = RuntimeType.parse_or_infer(type_name=D, public_example=domain)
-    MI = RuntimeType.parse(type_name=MI)
-    
+    # No type arguments to standardize.
     # Convert arguments to c types.
-    c_domain = py_to_c(domain, c_type=Domain, type_name=D)
-    c_D = py_to_c(D, c_type=ctypes.c_char_p)
-    c_MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_metric_unbounded
-    lib_function.argtypes = [Domain, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_domain, c_D, c_MI), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric), Transformation))
     
     return output
+
+def then_metric_unbounded(
+    
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_metric_unbounded(
+        input_domain=input_domain,
+        input_metric=input_metric))
+
 
 
 @versioned
 def make_ordered_random(
-    domain,
-    D: RuntimeTypeDescriptor = None,
-    MI: RuntimeTypeDescriptor = "SymmetricDistance"
+    input_domain,
+    input_metric
 ) -> Transformation:
     """Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
     to the respective ordered dataset metric `InsertDeleteDistance` by assigning a random permutation.
@@ -1922,11 +1925,8 @@ def make_ordered_random(
     * Input Metric:   `MI`
     * Output Metric:  `MI::OrderedMetric`
     
-    :param domain: 
-    :param D: Domain
-    :type D: :py:ref:`RuntimeTypeDescriptor`
-    :param MI: Input Metric
-    :type MI: :py:ref:`RuntimeTypeDescriptor`
+    :param input_domain: 
+    :param input_metric: 
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -1934,23 +1934,27 @@ def make_ordered_random(
     """
     assert_features("contrib")
     
-    # Standardize type arguments.
-    D = RuntimeType.parse_or_infer(type_name=D, public_example=domain)
-    MI = RuntimeType.parse(type_name=MI)
-    
+    # No type arguments to standardize.
     # Convert arguments to c types.
-    c_domain = py_to_c(domain, c_type=Domain, type_name=D)
-    c_D = py_to_c(D, c_type=ctypes.c_char_p)
-    c_MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_ordered_random
-    lib_function.argtypes = [Domain, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_domain, c_D, c_MI), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric), Transformation))
     
     return output
+
+def then_ordered_random(
+    
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_ordered_random(
+        input_domain=input_domain,
+        input_metric=input_metric))
+
 
 
 @versioned
@@ -2788,9 +2792,8 @@ def then_sum_of_squared_deviations(
 
 @versioned
 def make_unordered(
-    domain,
-    D: RuntimeTypeDescriptor = None,
-    MI: RuntimeTypeDescriptor = "InsertDeleteDistance"
+    input_domain,
+    input_metric
 ) -> Transformation:
     """Make a Transformation that converts the ordered dataset metric `MI`
     to the respective ordered dataset metric with a no-op.
@@ -2809,11 +2812,8 @@ def make_unordered(
     * Input Metric:   `MI`
     * Output Metric:  `MI::UnorderedMetric`
     
-    :param domain: 
-    :param D: Domain
-    :type D: :py:ref:`RuntimeTypeDescriptor`
-    :param MI: Input Metric
-    :type MI: :py:ref:`RuntimeTypeDescriptor`
+    :param input_domain: 
+    :param input_metric: 
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -2821,23 +2821,27 @@ def make_unordered(
     """
     assert_features("contrib")
     
-    # Standardize type arguments.
-    D = RuntimeType.parse_or_infer(type_name=D, public_example=domain)
-    MI = RuntimeType.parse(type_name=MI)
-    
+    # No type arguments to standardize.
     # Convert arguments to c types.
-    c_domain = py_to_c(domain, c_type=Domain, type_name=D)
-    c_D = py_to_c(D, c_type=ctypes.c_char_p)
-    c_MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_unordered
-    lib_function.argtypes = [Domain, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_domain, c_D, c_MI), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric), Transformation))
     
     return output
+
+def then_unordered(
+    
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_unordered(
+        input_domain=input_domain,
+        input_metric=input_metric))
+
 
 
 @versioned
