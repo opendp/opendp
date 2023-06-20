@@ -27,7 +27,7 @@ def test_dp_mean():
         # Selects a column of df, Vec<str>
         make_select_column(key=index, TOA=str) >>
         # Cast the column as Vec<Optional<Float>>
-        make_cast(TIA=str, TOA=float) >>
+        then_cast(TOA=float) >>
         # Impute missing values to 0 Vec<Float>
         make_impute_constant(option_domain(atom_domain(T=float)), impute_constant) >>
         # Clamp values

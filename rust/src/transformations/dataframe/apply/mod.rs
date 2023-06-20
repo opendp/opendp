@@ -103,7 +103,7 @@ where
         input_domain,
         input_metric.clone(),
         column_name,
-        make_cast_default::<TIA, TOA, _>(Default::default(), input_metric)?,
+        make_cast_default::<M, TIA, TOA>(Default::default(), input_metric)?,
     )
 }
 

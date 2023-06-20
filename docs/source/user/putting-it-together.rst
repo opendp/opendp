@@ -41,7 +41,7 @@ Our transformation will
     >>> transformation = (
     ...     make_split_dataframe(',', col_names=['Student', 'Score']) >>
     ...     make_select_column(key='Score', TOA=str) >>
-    ...     make_cast(TIA=str, TOA=float) >>
+    ...     then_cast(TOA=float) >>
     ...     make_impute_constant(option_domain(atom_domain(T=float)), constant=constant) >>
     ...     then_clamp(bounds) >>
     ...     then_resize(size, constant=constant) >>
