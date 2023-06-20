@@ -21,22 +21,17 @@ pub struct ExprDomain {
 }
 
 impl Domain for ExprDomain {
-    type Carrier = (Expr, LazyFrame);
+    type Carrier = (LazyFrame, Expr);
 
-    fn member(&self, (val_expr, val_lazy_frame): &Self::Carrier) -> Fallible<bool> {
+    fn member(&self, (val_lazy_frame, val_expr): &Self::Carrier) -> Fallible<bool> {
         let expr = val_expr.clone();
         let lazy_frame = val_lazy_frame.clone();
 
         let result_frame = match self.context {
             Context::Select => lazy_frame.select([expr]),
             Context::Agg { ref columns } => {
-                let column_expr: Vec<_> = columns
-                    .clone()
-                    .into_iter()
-                    .map(move |c| col(c.as_str()))
-                    .collect();
-
-                lazy_frame.groupby_stable(column_expr).agg([expr])
+                let column_exprs: Vec<_> = columns.iter().map(|c| col(c.as_ref())).collect();
+                lazy_frame.groupby_stable(column_exprs).agg([expr])
             }
             Context::Filter => lazy_frame.filter(expr),
             Context::WithColumns => lazy_frame.with_columns([expr]),
@@ -55,6 +50,18 @@ impl std::fmt::Debug for ExprDomain {
 
 impl<D: DatasetMetric> MetricSpace for (ExprDomain, D) {
     fn check(&self) -> bool {
-        true
+        if D::BOUNDED {
+            let margins = self.0.lazy_frame_domain.margins.clone();
+            return if margins.is_empty() {
+                false
+            } else {
+                let margins_with_counts: Vec<_> = margins
+                    .iter()
+                    .filter(|(_, margin)| margin.get_count_column_name().is_ok())
+                    .collect();
+                !margins_with_counts.is_empty()
+            };
+        }
+        return true;
     }
 }
