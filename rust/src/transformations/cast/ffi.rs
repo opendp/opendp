@@ -57,26 +57,26 @@ pub extern "C" fn opendp_transformations__make_cast_default(
     let TOA = try_!(Type::try_from(TOA));
     let M = input_metric.type_.clone();
 
-    fn monomorphize<TIA, TOA, M>(
+    fn monomorphize<M, TIA, TOA>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
     ) -> FfiResult<*mut AnyTransformation>
     where
+        M: 'static + DatasetMetric,
         TIA: 'static + Clone + CheckAtom,
         TOA: 'static + RoundCast<TIA> + Default + CheckAtom,
-        M: 'static + DatasetMetric,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {
         let input_domain =
             try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
         let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
-        make_cast_default::<TIA, TOA, _>(input_domain, input_metric).into_any()
+        make_cast_default::<M, TIA, TOA>(input_domain, input_metric).into_any()
     }
     dispatch!(monomorphize, [
+        (M, @dataset_metrics),
         (TIA, @primitives), 
-        (TOA, @primitives), 
-        (M, @dataset_metrics)
+        (TOA, @primitives)
     ], (input_domain, input_metric))
 }
 
@@ -97,9 +97,9 @@ pub extern "C" fn opendp_transformations__make_cast_inherent(
         input_metric: &AnyMetric,
     ) -> FfiResult<*mut AnyTransformation>
     where
+        M: 'static + DatasetMetric,
         TIA: 'static + Clone + CheckAtom,
         TOA: 'static + RoundCast<TIA> + InherentNull + CheckAtom,
-        M: 'static + DatasetMetric,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {

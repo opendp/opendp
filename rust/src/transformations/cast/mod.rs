@@ -76,14 +76,14 @@ where
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into
-pub fn make_cast_default<TIA, TOA, M>(
+pub fn make_cast_default<M, TIA, TOA>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
     input_metric: M,
 ) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, VectorDomain<AtomDomain<TOA>>, M, M>>
 where
+    M: DatasetMetric,
     TIA: 'static + Clone + CheckAtom,
     TOA: 'static + RoundCast<TIA> + Default + CheckAtom,
-    M: DatasetMetric,
     (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
     (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
 {
