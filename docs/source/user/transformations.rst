@@ -436,7 +436,7 @@ See the notebooks for code examples and deeper explanations:
      - ``AtomDomain<T>``
      - ``SymmetricDistance``
      - ``AbsoluteDistance<TO>``
-   * - :func:`opendp.transformations.make_sized_bounded_variance`
+   * - :func:`opendp.transformations.make_variance`
      - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
      - ``AtomDomain<T>``
      - ``SymmetricDistance``

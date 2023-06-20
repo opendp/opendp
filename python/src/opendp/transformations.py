@@ -48,14 +48,14 @@ __all__ = [
     "make_sized_bounded_int_monotonic_sum",
     "make_sized_bounded_int_ordered_sum",
     "make_sized_bounded_int_split_sum",
-    "make_sized_bounded_sum_of_squared_deviations",
-    "make_sized_bounded_variance",
     "make_split_dataframe",
     "make_split_lines",
     "make_split_records",
     "make_subset_by",
     "make_sum",
+    "make_sum_of_squared_deviations",
     "make_unordered",
+    "make_variance",
     "then_cast_default",
     "then_clamp",
     "then_count",
@@ -67,7 +67,9 @@ __all__ = [
     "then_is_equal",
     "then_mean",
     "then_resize",
-    "then_sum"
+    "then_sum",
+    "then_sum_of_squared_deviations",
+    "then_variance"
 ]
 
 
@@ -2483,136 +2485,6 @@ def make_sized_bounded_int_split_sum(
 
 
 @versioned
-def make_sized_bounded_sum_of_squared_deviations(
-    size: int,
-    bounds: Tuple[Any, Any],
-    S: RuntimeTypeDescriptor = "Pairwise<T>"
-) -> Transformation:
-    """Make a Transformation that computes the sum of squared deviations of bounded data.
-    
-    This uses a restricted-sensitivity proof that takes advantage of known dataset size.
-    Use `make_clamp` to bound data and `make_resize` to establish dataset size.
-    
-    | S (summation algorithm) | input type     |
-    | ----------------------- | -------------- |
-    | `Sequential<S::Item>`   | `Vec<S::Item>` |
-    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
-    
-    `S::Item` is the type of all of the following:
-    each bound, each element in the input data, the output data, and the output sensitivity.
-    
-    For example, to construct a transformation that computes the SSD of `f32` half-precision floats,
-    set `S` to `Pairwise<f32>`.
-    
-    [make_sized_bounded_sum_of_squared_deviations in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sized_bounded_sum_of_squared_deviations.html)
-    
-    **Citations:**
-    
-    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
-    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-    
-    **Supporting Elements:**
-    
-    * Input Domain:   `VectorDomain<AtomDomain<S::Item>>`
-    * Output Domain:  `AtomDomain<S::Item>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `AbsoluteDistance<S::Item>`
-    
-    :param size: Number of records in input data.
-    :type size: int
-    :param bounds: Tuple of lower and upper bounds for data in the input domain.
-    :type bounds: Tuple[Any, Any]
-    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
-    :type S: :py:ref:`RuntimeTypeDescriptor`
-    :rtype: Transformation
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_atom_or_infer(S, get_first(bounds))
-    S = S.substitute(T=T)
-    
-    # Convert arguments to c types.
-    c_size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
-    c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    c_S = py_to_c(S, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    lib_function = lib.opendp_transformations__make_sized_bounded_sum_of_squared_deviations
-    lib_function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p]
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(c_size, c_bounds, c_S), Transformation))
-    
-    return output
-
-
-@versioned
-def make_sized_bounded_variance(
-    size: int,
-    bounds: Tuple[Any, Any],
-    ddof: int = 1,
-    S: RuntimeTypeDescriptor = "Pairwise<T>"
-) -> Transformation:
-    """Make a Transformation that computes the variance of bounded data.
-    
-    This uses a restricted-sensitivity proof that takes advantage of known dataset size.
-    Use `make_clamp` to bound data and `make_resize` to establish dataset size.
-    
-    [make_sized_bounded_variance in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sized_bounded_variance.html)
-    
-    **Citations:**
-    
-    * [DHK15 Differential Privacy for Social Science Inference](http://hona.kr/papers/files/DOrazioHonakerKingPrivacy.pdf)
-    
-    **Supporting Elements:**
-    
-    * Input Domain:   `VectorDomain<AtomDomain<S::Item>>`
-    * Output Domain:  `AtomDomain<S::Item>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `AbsoluteDistance<S::Item>`
-    
-    :param size: Number of records in input data.
-    :type size: int
-    :param bounds: Tuple of lower and upper bounds for data in the input domain.
-    :type bounds: Tuple[Any, Any]
-    :param ddof: Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.
-    :type ddof: int
-    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
-    :type S: :py:ref:`RuntimeTypeDescriptor`
-    :rtype: Transformation
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_atom_or_infer(S, get_first(bounds))
-    S = S.substitute(T=T)
-    
-    # Convert arguments to c types.
-    c_size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
-    c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    c_ddof = py_to_c(ddof, c_type=ctypes.c_size_t, type_name=usize)
-    c_S = py_to_c(S, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    lib_function = lib.opendp_transformations__make_sized_bounded_variance
-    lib_function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_size_t, ctypes.c_char_p]
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(c_size, c_bounds, c_ddof, c_S), Transformation))
-    
-    return output
-
-
-@versioned
 def make_split_dataframe(
     separator: str,
     col_names: Any,
@@ -2839,6 +2711,82 @@ def then_sum(
 
 
 @versioned
+def make_sum_of_squared_deviations(
+    input_domain,
+    input_metric,
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
+) -> Transformation:
+    """Make a Transformation that computes the sum of squared deviations of bounded data.
+    
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size.
+    Use `make_clamp` to bound data and `make_resize` to establish dataset size.
+    
+    | S (summation algorithm) | input type     |
+    | ----------------------- | -------------- |
+    | `Sequential<S::Item>`   | `Vec<S::Item>` |
+    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+    
+    `S::Item` is the type of all of the following:
+    each bound, each element in the input data, the output data, and the output sensitivity.
+    
+    For example, to construct a transformation that computes the SSD of `f32` half-precision floats,
+    set `S` to `Pairwise<f32>`.
+    
+    [make_sum_of_squared_deviations in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sum_of_squared_deviations.html)
+    
+    **Citations:**
+    
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AtomDomain<S::Item>>`
+    * Output Domain:  `AtomDomain<S::Item>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<S::Item>`
+    
+    :param input_domain: 
+    :param input_metric: 
+    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :type S: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    S = RuntimeType.parse(type_name=S, generics=["T"])
+    T = get_atom(get_type(input_domain))
+    S = S.substitute(T=T)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_S = py_to_c(S, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_sum_of_squared_deviations
+    lib_function.argtypes = [Domain, Metric, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_S), Transformation))
+    
+    return output
+
+def then_sum_of_squared_deviations(
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_sum_of_squared_deviations(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        S=S))
+
+
+
+@versioned
 def make_unordered(
     domain,
     D: RuntimeTypeDescriptor = None,
@@ -2890,3 +2838,73 @@ def make_unordered(
     output = c_to_py(unwrap(lib_function(c_domain, c_D, c_MI), Transformation))
     
     return output
+
+
+@versioned
+def make_variance(
+    input_domain,
+    input_metric,
+    ddof: int = 1,
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
+) -> Transformation:
+    """Make a Transformation that computes the variance of bounded data.
+    
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size.
+    Use `make_clamp` to bound data and `make_resize` to establish dataset size.
+    
+    [make_variance in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_variance.html)
+    
+    **Citations:**
+    
+    * [DHK15 Differential Privacy for Social Science Inference](http://hona.kr/papers/files/DOrazioHonakerKingPrivacy.pdf)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AtomDomain<S::Item>>`
+    * Output Domain:  `AtomDomain<S::Item>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<S::Item>`
+    
+    :param input_domain: 
+    :param input_metric: 
+    :param ddof: Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.
+    :type ddof: int
+    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :type S: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    S = RuntimeType.parse(type_name=S, generics=["T"])
+    T = get_atom(get_type(input_domain))
+    S = S.substitute(T=T)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_ddof = py_to_c(ddof, c_type=ctypes.c_size_t, type_name=usize)
+    c_S = py_to_c(S, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_variance
+    lib_function.argtypes = [Domain, Metric, ctypes.c_size_t, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_ddof, c_S), Transformation))
+    
+    return output
+
+def then_variance(
+    ddof: int = 1,
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_variance(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        ddof=ddof,
+        S=S))
+

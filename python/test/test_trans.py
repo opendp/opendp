@@ -241,23 +241,29 @@ def test_sized_bounded_sum():
 
 
 def test_bounded_variance():
-    from opendp.transformations import make_sized_bounded_variance
-    query = make_sized_bounded_variance(size=9, bounds=(0., 10.))
+    query = dp.t.make_variance(
+        dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=9),
+        dp.symmetric_distance())
     print(query(FLOAT_DATA))
     assert query(FLOAT_DATA) == 7.5
     assert query.check(2, 11.111111 + 1e-6)
 
+def test_sum_of_squared_deviances():
+    query = dp.t.make_sum_of_squared_deviations(
+        dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=9),
+        dp.symmetric_distance())
+    assert query(FLOAT_DATA) == 60.0
+    assert query.check(2, 88.888888 + 1e-4)
+
 def test_count():
-    from opendp.transformations import make_count
-    transformation = make_count(dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
+    transformation = dp.t.make_count(dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
     arg = [1, 2, 3]
     ret = transformation(arg)
     assert ret == 3
     assert transformation.check(1, 1)
 
 def test_count_distinct():
-    from opendp.transformations import make_count_distinct
-    transformation = make_count_distinct(dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance())
+    transformation = dp.t.make_count_distinct(dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance())
     arg = list(map(str, [1, 2, 3, 2, 7, 3, 4]))
     ret = transformation(arg)
     assert ret == 5
@@ -265,9 +271,8 @@ def test_count_distinct():
 
 
 def test_count_by():
-    from opendp.transformations import then_count_by
     input_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
-    query = input_space >> then_count_by(MO=L1Distance[float], TV=float)
+    query = input_space >> dp.t.then_count_by(MO=L1Distance[float], TV=float)
     assert query(STR_DATA) == {str(i + 1): 1 for i in range(9)}
     assert query.check(1, 2.)
 
@@ -280,16 +285,15 @@ def test_count_by_categories():
 
 
 def test_resize():
-    from opendp.transformations import make_resize
     input_space = dp.vector_domain(dp.atom_domain(bounds=(0, 10))), dp.symmetric_distance()
-    query = make_resize(*input_space, size=4, constant=0)
+    query = dp.t.make_resize(*input_space, size=4, constant=0)
     assert sorted(query([-1, 2, 5])) == [-1, 0, 2, 5]
     assert not query.check(1, 1)
     assert query.check(1, 2)
     assert query.check(2, 4)
 
     input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
-    query = make_resize(*input_space, size=4, constant=0)
+    query = dp.t.make_resize(*input_space, size=4, constant=0)
     assert sorted(query([-1, 2, 5])) == [-1, 0, 2, 5]
     assert not query.check(1, 1)
     assert query.check(1, 2)

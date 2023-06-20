@@ -16,7 +16,7 @@ use super::UncheckedSum;
     features("contrib"),
     arguments(bounds(rust_type = "(T, T)")),
     generics(S(default = "Pairwise<T>", generics = "T")),
-    derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
+    derived_types(T = "$get_atom(get_type(input_domain))")
 )]
 /// Make a Transformation that computes the sum of squared deviations of bounded data.
 ///
@@ -44,9 +44,9 @@ use super::UncheckedSum;
 ///
 /// # Generics
 /// * `S` - Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
-pub fn make_sized_bounded_sum_of_squared_deviations<S>(
-    size: usize,
-    bounds: (S::Item, S::Item),
+pub fn make_sum_of_squared_deviations<S>(
+    input_domain: VectorDomain<AtomDomain<S::Item>>,
+    input_metric: SymmetricDistance,
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<S::Item>>,
@@ -59,6 +59,16 @@ where
     S: UncheckedSum,
     S::Item: 'static + Float,
 {
+    let size = (input_domain.size)
+        .ok_or_else(|| err!(MakeTransformation, "dataset size must be known. Either specify size in the input domain or use make_resize"))?;
+    let bounds = (input_domain.element_domain.get_closed_bounds())
+        .ok_or_else(|| {
+            err!(
+                MakeTransformation,
+                "input domain must consist of bounded data. Either specify bounds in the input domain or use make_clamp."
+            )
+        })?;
+
     if size == 0 {
         return fallible!(MakeTransformation, "size must be greater than zero");
     }
@@ -94,7 +104,7 @@ where
     range.inf_mul(&range)?.inf_mul(&size_)?;
 
     Transformation::new(
-        VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
+        input_domain,
         AtomDomain::default(),
         Function::new(move |arg: &Vec<S::Item>| {
             let mean = S::unchecked_sum(arg) / size_;
@@ -104,7 +114,7 @@ where
                     .collect::<Vec<S::Item>>(),
             )
         }),
-        SymmetricDistance::default(),
+        input_metric,
         AbsoluteDistance::default(),
         // d_in / 2 * sensitivity + relaxation
         StabilityMap::new_fallible(move |d_in| {
@@ -117,28 +127,30 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{error::ExplainUnwrap, transformations::Pairwise};
+    use crate::transformations::Pairwise;
 
     use super::*;
 
     #[test]
-    fn test_make_bounded_deviations() {
+    fn test_make_bounded_deviations() -> Fallible<()> {
         let arg = vec![1., 2., 3., 4., 5.];
 
+        let input_domain = VectorDomain::new(AtomDomain::new_closed((0., 10.))?).with_size(5);
+        let input_metric = SymmetricDistance::default();
         let transformation_sample =
-            make_sized_bounded_sum_of_squared_deviations::<Pairwise<_>>(5, (0., 10.)).unwrap_test();
-        let ret = transformation_sample.invoke(&arg).unwrap_test();
+            make_sum_of_squared_deviations::<Pairwise<_>>(input_domain.clone(), input_metric.clone())?;
+        let ret = transformation_sample.invoke(&arg)?;
         let expected = 10.;
         assert_eq!(ret, expected);
-        assert!(transformation_sample.check(&1, &(100. / 5.)).unwrap_test());
+        assert!(transformation_sample.check(&1, &(100. / 5.))?);
 
         let transformation_pop =
-            make_sized_bounded_sum_of_squared_deviations::<Pairwise<_>>(5, (0., 10.)).unwrap_test();
-        let ret = transformation_pop.invoke(&arg).unwrap_test();
+            make_sum_of_squared_deviations::<Pairwise<_>>(input_domain, input_metric)?;
+        let ret = transformation_pop.invoke(&arg)?;
         let expected = 10.0;
         assert_eq!(ret, expected);
-        assert!(transformation_pop
-            .check(&1, &(100. * 4. / 25.))
-            .unwrap_test());
+        assert!(transformation_pop.check(&1, &(100. * 4. / 25.))?);
+
+        Ok(())
     }
 }
