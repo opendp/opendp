@@ -1,17 +1,21 @@
 use polars::prelude::*;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeSet;
 
-use crate::core::{Function, StabilityMap, Transformation};
-use crate::domains::{Context, ExprDomain, LazyFrameDomain, Margin};
+use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
+use crate::domains::{Context, DatasetMetric, ExprDomain, LazyFrameDomain};
 use crate::error::*;
 use crate::metrics::SymmetricDistance;
 
-pub fn make_col(
+pub fn make_col<M>(
     input_domain: ExprDomain,
-    input_metric: SymmetricDistance,
+    input_metric: M,
     col_name: &str,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, SymmetricDistance, SymmetricDistance>> where {
-    if !input_domain.lazy_frame_domain.column(col_name).is_some() {
+) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
+where
+    M: DatasetMetric,
+    (ExprDomain, M): MetricSpace,
+{
+    if input_domain.lazy_frame_domain.column(col_name).is_none() {
         return fallible!(MakeTransformation, "{} is not in dataframe", col_name);
     }
 
@@ -31,16 +35,12 @@ pub fn make_col(
         .filter(|s| columns_to_keep.contains(&s.field.name.to_string()))
         .collect();
 
-    let margins: HashMap<_, Margin> = input_domain
+    let margins = input_domain
         .clone()
         .lazy_frame_domain
         .margins
         .into_iter()
-        .filter(|(s, _)| {
-            s.difference(&columns_to_keep)
-                .collect::<Vec<_>>()
-                .is_empty()
-        })
+        .filter(|(s, _)| s.is_subset(&columns_to_keep))
         .collect();
 
     let output_domain = ExprDomain {
@@ -49,10 +49,10 @@ pub fn make_col(
             margins,
         },
         context: input_domain.context.clone(),
-        active_column: Option::from(String::from(col_name)),
+        active_column: Some(col_name.to_string()),
     };
 
-    let column_name = col_name.to_owned();
+    let column_name = col_name.to_string();
 
     Transformation::new(
         input_domain.clone(),
@@ -68,8 +68,8 @@ pub fn make_col(
                 Ok((col(&*column_name), lazyframe.clone()))
             },
         ),
-        input_metric,
-        SymmetricDistance::default(),
+        input_metric.clone(),
+        input_metric.clone(),
         StabilityMap::new_from_constant(1),
     )
 }
@@ -86,13 +86,13 @@ mod test_make_col {
             SeriesDomain::new("B", AtomDomain::<f64>::default()),
             SeriesDomain::new("C", AtomDomain::<i32>::default()),
         ])
-        .unwrap()
+        .unwrap_test()
         .with_counts(df!["A" => [1, 2], "count" => [1, 2]].unwrap().lazy())
-        .unwrap()
+        .unwrap_test()
         .with_counts(df!["B" => [1.0, 2.0], "count" => [2, 1]].unwrap().lazy())
-        .unwrap()
+        .unwrap_test()
         .with_counts(df!["C" => [8, 9, 10], "count" => [1, 1, 1]].unwrap().lazy())
-        .unwrap();
+        .unwrap_test();
 
         let expr_domain = ExprDomain {
             lazy_frame_domain: frame_domain,
@@ -106,7 +106,7 @@ mod test_make_col {
             "A" => &[1, 2, 2],
             "B" => &[1.0, 1.0, 2.0],
             "C" => &[8, 9, 10],)
-        .unwrap()
+        .unwrap_test()
         .lazy();
 
         (expr_domain, lazy_frame)
@@ -116,9 +116,10 @@ mod test_make_col {
     fn test_make_col_expr() -> Fallible<()> {
         let (expr_domain, lazy_frame) = get_test_data();
         let selected_col = "B";
-        let expression = make_col(expr_domain, SymmetricDistance::default(), selected_col)?;
+        let transformation =
+            make_col(expr_domain, SymmetricDistance::default(), selected_col).unwrap_test();
 
-        let expr_res = expression.invoke(&(all(), lazy_frame)).unwrap_test().0;
+        let expr_res = transformation.invoke(&(all(), lazy_frame)).unwrap_test().0;
         let expr_exp = col(selected_col);
 
         assert_eq!(expr_res, expr_exp);
@@ -132,21 +133,29 @@ mod test_make_col {
         let expr_domain_context_exp = expr_domain.context.clone();
 
         let selected_col = "B";
-        let expression = make_col(expr_domain, SymmetricDistance::default(), selected_col)?;
+        let transformation =
+            make_col(expr_domain, SymmetricDistance::default(), selected_col).unwrap_test();
 
-        let expr_domain_res = expression.output_domain.clone();
+        let expr_domain_res = transformation.output_domain.clone();
 
         let lf_domain_exp = LazyFrameDomain::new(vec![
             SeriesDomain::new("A", AtomDomain::<i32>::default()),
             SeriesDomain::new("B", AtomDomain::<f64>::default()),
-        ])?
-        .with_counts(df!["A" => [1, 2], "count" => [1, 2]]?.lazy())?
-        .with_counts(df!["B" => [1.0, 2.0], "count" => [2, 1]]?.lazy())?;
+        ])
+        .unwrap_test()
+        .with_counts(df!["A" => [1, 2], "count" => [1, 2]].unwrap_test().lazy())
+        .unwrap_test()
+        .with_counts(
+            df!["B" => [1.0, 2.0], "count" => [2, 1]]
+                .unwrap_test()
+                .lazy(),
+        )
+        .unwrap_test();
 
         let expr_domain_exp = ExprDomain {
             lazy_frame_domain: lf_domain_exp,
             context: expr_domain_context_exp,
-            active_column: Option::from(String::from(selected_col)),
+            active_column: Some(selected_col.to_string()),
         };
 
         assert_eq!(expr_domain_res, expr_domain_exp);
@@ -159,8 +168,9 @@ mod test_make_col {
         let (expr_domain, lazy_frame) = get_test_data();
         let selected_col = "B";
 
-        let expression = make_col(expr_domain, SymmetricDistance::default(), selected_col)?;
-        let error_res = expression
+        let transformation =
+            make_col(expr_domain, SymmetricDistance::default(), selected_col).unwrap_test();
+        let error_res = transformation
             .invoke(&(col(selected_col), lazy_frame))
             .map(|v| v.0)
             .unwrap_err()
