@@ -35,6 +35,11 @@ mod make_col;
 #[cfg(feature = "contrib")]
 pub use make_col::*;
 
+#[cfg(feature = "contrib")]
+mod make_with_columns;
+#[cfg(feature = "contrib")]
+pub use make_with_columns::*;
+
 #[cfg(test)]
 pub mod polars_test {
     use crate::domains::{AtomDomain, ExprDomain, LazyFrameContext, LazyFrameDomain, SeriesDomain, LazyGroupByContext, LazyGroupByDomain};
