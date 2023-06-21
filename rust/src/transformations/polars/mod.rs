@@ -32,6 +32,11 @@ mod make_col;
 #[cfg(feature = "contrib")]
 pub use make_col::*;
 
+#[cfg(feature = "contrib")]
+mod make_select_trans;
+#[cfg(feature = "contrib")]
+pub use make_select_trans::*;
+
 #[cfg(test)]
 mod test {
     use crate::domains::{AtomDomain, ExprDomain, LazyFrameDomain, SeriesDomain, LazyFrameContext};
