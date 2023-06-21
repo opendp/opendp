@@ -1,7 +1,9 @@
 use crate::core::{Function, StabilityMap, Transformation};
-use crate::domains::{DatasetMetric, LazyFrameDomain};
+use crate::domains::{ExprDomain, LazyFrameDomain};
+use crate::error::*;
 use crate::metrics::{IntDistance, L1Distance, SymmetricDistance};
 use polars::prelude::*;
+use std::collections::HashMap;
 
 /// Polars operator to compute sum of a serie in a LazyFrame
 ///
@@ -12,54 +14,46 @@ pub fn make_sum_expr(
     input_domain: ExprDomain,
     input_metric: SymmetricDistance,
 ) -> Fallible<Transformation<ExprDomain, ExprDomain, SymmetricDistance, L1Distance<f64>>> {
-    // Output domain has the same series as input domain but QUESTION maybe lose margins ?
-    let output_domain = input_domain.clone();
+    // Verify that the sum of ative_column can by computed //
+    let active_column = input_domain.active_column.clone().unwrap_or_default();
 
-    // VERIFY: active_column is the column that was selected with make_col ?
-    let active_column = input_domain.clone().active_column;
-
-    // Verify active_column in dataframe (maybe not relevant as already done on make_col)
-    if input_domain
-        .lazy_frame_domain
-        .column(active_column.clone())
-        .is_none()
-    {
-        return fallible!(MakeTransformation, "{} is not in dataframe", col_name);
+    // Verify active_column in dataframe
+    if let Some(series_domain) = input_domain.lazy_frame_domain.column(&active_column) {
+        let active_column_type: DataType = series_domain.field.dtype.clone();
+        if active_column_type == DataType::Utf8 {
+            return fallible!(
+                FailedFunction,
+                "{} is of String type, can not compute sum",
+                active_column
+            );
+        }
+    } else {
+        // maybe not relevant as already done on make_col
+        return fallible!(MakeTransformation, "{} is not in dataframe", active_column);
     }
 
-    // For StabilityMap: Compute ideal_sensitivity and relaxation //
-    // Verify active_column has margin with counts (to compute size for stability map)
-    let active_column_margin = input_domain
-        .clone()
-        .lazy_frame_domain
-        .margins
-        .into_iter()
-        .filter(|(s, _)| s.contains(active_column.clone()))
-        .collect();
-    let lazy_frame_size = active_column_margin.sum(); // get size of df
+    // For output domain (or do as in make_col for the case with Agg context ?)
+    let series_domain = input_domain.clone().lazy_frame_domain.series_domains;
+    let output_domain = ExprDomain {
+        lazy_frame_domain: LazyFrameDomain {
+            series_domains: series_domain,
+            margins: HashMap::new(), // VERIFY: no more margin
+        },
+        context: input_domain.context.clone(),
+        active_column: input_domain.active_column.clone(),
+    };
 
-    // TODO: get bounds from dataframe SeriesDomain of active_column
+    // For StabilityMap: Compute range //
+    // Get bounds from dataframe SeriesDomain of active_column
     // ASK: Otherwise are the bounds given as argument of the transformation ?
-    let bounds = input_domain
-        .lazy_frame_domain
-        .col(active_column.clone())
-        .bounds();
+    let bounds = (1, 4); // TODO: get it
+    let size_limit = 100; // TODO: get it
 
-    // Compute ideal sensitivity
-    let lower = bounds.clone().lower();
-    let upper = bounds.clone().upper();
-    let ideal_sensitivity = upper.inf_sub(&lower)?;
-
-    // Compute sensitivity correction for bit approximation
-    let mantissa_bits = T::exact_int_cast(T::MANTISSA_BITS)?;
-    let _2 = T::exact_int_cast(2)?;
-
-    // Formula is: n^2 / 2^(k - 1) max(|L|, U)
-    let error = lazy_frame_size
-        .inf_mul(&lazy_frame_size)?
-        .inf_div(&_2.inf_pow(&mantissa_bits)?)?
-        .inf_mul(&lower.alerting_abs()?.total_max(upper)?)?;
-    let relaxation = error.inf_add(&error)?;
+    let (lower, upper) = bounds;
+    let ideal_sensitivity = upper
+        .inf_sub(&lower)?
+        .total_max(lower.alerting_abs()?.total_max(upper)?)?;
+    let relaxation = S::relaxation(size_limit, lower, upper)?;
 
     Transformation::new(
         input_domain.clone(),
@@ -72,8 +66,8 @@ pub fn make_sum_expr(
         input_metric,
         L1Distance::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
-            T::inf_cast(d_in / 2)?
-                .inf_mul(&ideal_sensitivity)?
+            S::inf_cast(d_in / 2)?
+                .inf_mul(&ideal_sensitivity)
                 .inf_add(&relaxation)
         }),
     )
