@@ -5,6 +5,8 @@ use crate::domains::{Context, ExprDomain, LazyFrameDomain};
 use crate::error::*;
 use crate::metrics::{IntDistance, SymmetricDistance};
 
+/// Make a Transformation that applies list of transformations to a Lazy Frame.
+///
 pub fn make_select_trans(
     input_domain: LazyFrameDomain,
     input_metric: SymmetricDistance,
@@ -69,10 +71,10 @@ pub fn make_select_trans(
         Function::new_fallible(move |lazy_frame: &LazyFrame| -> Fallible<LazyFrame> {
             let trans_outputs = transformations
                 .iter()
-                .map(|t| t.invoke(&(all(), lazy_frame.clone())))
-                .collect::<Fallible<Vec<(Expr, LazyFrame)>>>()?;
+                .map(|t| t.invoke(&(lazy_frame.clone(), all())))
+                .collect::<Fallible<Vec<(LazyFrame, Expr)>>>()?;
 
-            let exprs: Vec<Expr> = trans_outputs.iter().map(|(expr, _)| expr.clone()).collect();
+            let exprs: Vec<Expr> = trans_outputs.iter().map(|(_, expr)| expr.clone()).collect();
 
             Ok(lazy_frame.clone().select(&exprs))
         }),
