@@ -180,7 +180,7 @@ impl<M: DatasetMetric, const P: usize> MetricSpace for (ExprDomain<LazyGroupByCo
     }
 }
 
-impl<Q> MetricSpace for (ExprDomain<LazyFrameContext>, AbsoluteDistance<Q>) {
+impl<Q: TotalOrd> MetricSpace for (ExprDomain<LazyFrameContext>, AbsoluteDistance<Q>) {
     fn check(&self) -> bool {
         (self.0.lazy_frame_domain.clone(), self.1.clone()).check()
     }
