@@ -15,7 +15,47 @@ pub extern "C" fn opendp_measurements__make_laplace(
     scale: *const c_void,
     QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize<T: 'static + CheckAtom, QO: 'static + Copy>(
+    fn monomorphize_float<T: 'static + CheckAtom + Copy>(
+        input_domain: &AnyDomain,
+        input_metric: &AnyMetric,
+        scale: *const c_void,
+        Q: Type,
+    ) -> FfiResult<*mut AnyMeasurement>
+    where
+        AtomDomain<T>: MakeLaplace<T>,
+        VectorDomain<AtomDomain<T>>: MakeLaplace<T>,
+        (
+            AtomDomain<T>,
+            <AtomDomain<T> as BaseLaplaceDomain>::InputMetric,
+        ): MetricSpace,
+        (
+            VectorDomain<AtomDomain<T>>,
+            <VectorDomain<AtomDomain<T>> as BaseLaplaceDomain>::InputMetric,
+        ): MetricSpace,
+    {
+        fn monomorphize2<D: 'static + MakeLaplace<Q>, Q: 'static>(
+            input_domain: &AnyDomain,
+            input_metric: &AnyMetric,
+            scale: Q,
+        ) -> FfiResult<*mut AnyMeasurement>
+        where
+            (D, D::InputMetric): MetricSpace,
+        {
+            let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();
+            let input_metric = try_!(input_metric.downcast_ref::<D::InputMetric>()).clone();
+            make_laplace::<D, Q>(input_domain, input_metric, scale).into_any()
+        }
+        let D = input_domain.type_.clone();
+        let scale = *try_as_ref!(scale as *const T);
+        dispatch!(monomorphize2, [
+            (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
+            (Q, [T])
+        ], (input_domain, input_metric, scale))
+    }
+    fn monomorphize_integer<
+        T: 'static + CheckAtom,
+        QO: 'static + Copy,
+    >(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
         scale: *const c_void,
@@ -33,7 +73,10 @@ pub extern "C" fn opendp_measurements__make_laplace(
             <VectorDomain<AtomDomain<T>> as BaseLaplaceDomain>::InputMetric,
         ): MetricSpace,
     {
-        fn monomorphize2<D: 'static + MakeLaplace<QO>, QO: 'static + Copy>(
+        fn monomorphize2<
+            D: 'static + MakeLaplace<QO>,
+            QO: 'static + Copy,
+        >(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
             scale: QO,
@@ -56,10 +99,23 @@ pub extern "C" fn opendp_measurements__make_laplace(
     let input_metric = try_as_ref!(input_metric);
     let T = try_!(input_domain.type_.get_atom());
     let QO = try_!(Type::try_from(QO));
-    dispatch!(monomorphize, [
-        (T, @numbers),
-        (QO, @floats)
-    ], (input_domain, input_metric, scale, QO))
+
+    // This is used to check if the type is in a dispatch set,
+    // without constructing an expensive backtrace upon failed match
+    fn in_set<T>() -> Option<()> {
+        Some(())
+    }
+
+    if let Some(_) = dispatch!(in_set, [(T, @floats)]) {
+        dispatch!(monomorphize_float, [
+            (T, @floats)
+        ], (input_domain, input_metric, scale, QO))
+    } else {
+        dispatch!(monomorphize_integer, [
+            (T, @integers),
+            (QO, @floats)
+        ], (input_domain, input_metric, scale, QO))
+    }
 }
 
 #[cfg(test)]
