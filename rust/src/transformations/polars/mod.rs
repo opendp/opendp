@@ -2,6 +2,7 @@
 mod scan_csv;
 #[cfg(feature = "contrib")]
 pub use scan_csv::*;
+
 #[cfg(feature = "contrib")]
 mod make_sum;
 #[cfg(feature = "contrib")]

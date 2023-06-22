@@ -1,9 +1,11 @@
 use crate::core::{Function, StabilityMap, Transformation};
-use crate::domains::{ExprDomain, LazyFrameDomain};
+use crate::domains::{AtomDomain, Context, ExprDomain, LazyGroupByContext, GroupingColumns};
 use crate::error::*;
-use crate::metrics::{IntDistance, L1Distance, SymmetricDistance};
+use crate::metrics::{InsertDeleteDistance, IntDistance, L1Distance, L1};
+use crate::traits::{AlertingAbs, InfAdd, InfCast, InfMul, InfSub, TotalOrd};
+use crate::transformations::{Sequential, SumRelaxation};
 use polars::prelude::*;
-use std::collections::HashMap;
+use std::collections::BTreeSet;
 
 /// Polars operator to compute sum of a serie in a LazyFrame
 ///
@@ -11,128 +13,125 @@ use std::collections::HashMap;
 /// * `input_domain` - ExprDomain
 /// * `input_metric` - The metric space under which neighboring LazyFrames are compared
 pub fn make_sum_expr(
-    input_domain: ExprDomain,
-    input_metric: SymmetricDistance,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, SymmetricDistance, L1Distance<f64>>> {
+    input_domain: ExprDomain<LazyGroupByContext>,
+    input_metric: L1<InsertDeleteDistance>,
+) -> Fallible<Transformation<ExprDomain<LazyGroupByContext>, ExprDomain<LazyGroupByContext>, L1<InsertDeleteDistance>, L1Distance<f64>>> {
     // Verify that the sum of ative_column can by computed //
-    let active_column = input_domain.active_column.clone().unwrap_or_default();
+    let active_column = input_domain.active_column.clone()
+        .ok_or_else(|| err!(MakeTransformation, "No active column"))?;
 
-    // Verify active_column in dataframe
-    if let Some(series_domain) = input_domain.lazy_frame_domain.column(&active_column) {
-        let active_column_type: DataType = series_domain.field.dtype.clone();
-        if active_column_type == DataType::Utf8 {
-            return fallible!(
-                FailedFunction,
-                "{} is of String type, can not compute sum",
-                active_column
-            );
-        }
-    } else {
-        // maybe not relevant as already done on make_col
-        return fallible!(MakeTransformation, "{} is not in dataframe", active_column);
-    }
-
-    // For output domain (or do as in make_col for the case with Agg context ?)
-    let series_domain = input_domain.clone().lazy_frame_domain.series_domains;
-    let output_domain = ExprDomain {
-        lazy_frame_domain: LazyFrameDomain {
-            series_domains: series_domain,
-            margins: HashMap::new(), // VERIFY: no more margin
-        },
-        context: input_domain.context.clone(),
-        active_column: input_domain.active_column.clone(),
-    };
-
-    // For StabilityMap: Compute range //
-    // Get bounds from dataframe SeriesDomain of active_column
-    // ASK: Otherwise are the bounds given as argument of the transformation ?
-    let bounds = (1, 4); // TODO: get it
-    let size_limit = 100; // TODO: get it
-
+    // Output domain -- TODO: this could probably be written cleaner
+    let mut output_domain = input_domain.clone();
+    let active_column_index = output_domain.lazy_frame_domain.column_index(&active_column)
+        .ok_or_else(|| err!(MakeTransformation, "could not find index"))?;
+    let mut series_domains = output_domain.lazy_frame_domain.series_domains;
+    series_domains[active_column_index] = series_domains[active_column_index].clone().drop_bounds()?;
+    output_domain.lazy_frame_domain.series_domains = series_domains;
+    
+    // For StabilityMap
+    let bounds = input_domain
+        .lazy_frame_domain
+        .try_column(&active_column)?
+        .element_domain
+        .as_any()
+        .downcast_ref::<AtomDomain<f64>>()
+        .ok_or_else(|| err!(MakeTransformation, "Failed to downcast: {}", &active_column))?
+        .get_closed_bounds()
+        .ok_or_else(|| err!(MakeTransformation, "Bounds must be set"))?;
     let (lower, upper) = bounds;
+
     let ideal_sensitivity = upper
         .inf_sub(&lower)?
         .total_max(lower.alerting_abs()?.total_max(upper)?)?;
-    let relaxation = S::relaxation(size_limit, lower, upper)?;
+
+    let grouping_columns = input_domain.context.grouping_columns();
+    
+    let margin = input_domain
+        .lazy_frame_domain
+        .margins
+        .get(&BTreeSet::from_iter(grouping_columns.clone()))
+        .ok_or_else(|| err!(MakeTransformation, "Failed to find margin"))?;
+
+    let max_size = margin.get_max_size()?;
+    let relaxation = Sequential::<f64>::relaxation(max_size as usize, lower, upper)?;
 
     Transformation::new(
         input_domain.clone(),
         output_domain,
         Function::new_fallible(
-            move |(expr, lf): &(Expr, LazyFrame)| -> Fallible<(Expr, LazyFrame)> {
-                Ok((expr.sum(), lf.clone()))
+            move |(expr, lf): &(Expr, LazyGroupBy)| -> Fallible<(Expr, LazyGroupBy)> {
+                Ok((expr.clone().sum(), lf.clone()))
             },
         ),
         input_metric,
         L1Distance::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
-            S::inf_cast(d_in / 2)?
-                .inf_mul(&ideal_sensitivity)
-                .inf_add(&relaxation)
+            f64::inf_cast(d_in / 2)?
+                .inf_mul(&ideal_sensitivity)?
+                .inf_add(&f64::inf_cast(*d_in)?.inf_mul(&relaxation)?)
         }),
     )
 }
 
 #[cfg(test)]
 mod test_make_col {
-    use crate::domains::{AtomDomain, SeriesDomain};
+    use crate::domains::{AtomDomain, SeriesDomain, LazyFrameDomain};
 
     use super::*;
 
-    fn get_test_data() -> (ExprDomain, LazyFrame) {
+    fn get_test_data() -> Fallible<(ExprDomain<LazyGroupByContext>, LazyGroupBy)> {
         let frame_domain = LazyFrameDomain::new(vec![
             SeriesDomain::new("A", AtomDomain::<i32>::new_closed((1, 4))?),
             SeriesDomain::new("B", AtomDomain::<f64>::new_closed((0.5, 5.5))?),
-        ])
-        .unwrap()
-        .with_counts(df!["A" => [1, 2], "count" => [1, 2]].unwrap().lazy())
-        .unwrap()
-        .with_counts(df!["B" => [1.0, 2.0], "count" => [2, 1]].unwrap().lazy())
-        .unwrap();
+        ])?
+        .with_counts(df!["A" => [1, 2], "count" => [1, 2]]?.lazy())?
+        .with_counts(df!["B" => [1.0, 2.0], "count" => [2, 1]]?.lazy())?;
 
         let expr_domain = ExprDomain {
             lazy_frame_domain: frame_domain,
-            context: Context::Select, // QUESTION: should implement for all Context ?
-            active_column: "A",       // because col("") operator already called
+            context: LazyGroupByContext {
+                columns: vec!["A".to_string()],
+            }, 
+            active_column: Some("B".to_string()),
         };
 
         let lazy_frame = df!(
             "A" => &[1, 2, 2],
-            "B" => &[1.0, 1.0, 2.0],)
-        .unwrap()
-        .lazy();
+            "B" => &[1.0, 1.0, 2.0],)?.lazy();
 
-        (expr_domain, lazy_frame)
+        Ok((expr_domain, lazy_frame.groupby([col("A")])))
     }
 
     #[test]
     fn test_make_sum_expr() -> Fallible<()> {
-        let (expr_domain, lazy_frame) = get_test_data();
+        let (expr_domain, lazy_frame) = get_test_data()?;
 
         // Get resulting sum (expression result)
-        let expression = make_sum(expr_domain, SymmetricDistance::default())?;
-        let expr_res = expression.invoke(&(all(), lazy_frame)).unwrap_test().0;
+        let trans = make_sum_expr(expr_domain, InsertDeleteDistance::default())?;
+        let expr_res = trans.invoke(&(col("B"), lazy_frame.clone()))?.0;
+        let frame_actual = lazy_frame.clone().groupby([col("A")]).agg([expr_res]).collect()?;
 
         // Get expected sum
-        let expr_exp = lazy_frame.select(pl.col("A").sum());
+        let frame_expected = lazy_frame.groupby([col("A")]).agg([col("B").sum()]).collect()?;
 
-        assert_eq!(expr_res, expr_exp);
+        assert_eq!(frame_actual, frame_expected);
 
         Ok(())
     }
 
     #[test]
-    fn test_make_sum_expr_domain() -> Fallible<()> {
-        let (expr_domain, _) = get_test_data();
+    fn test_fail_if_no_bounds() -> Fallible<()> {
+        let (expr_domain, lazy_frame) = get_test_data()?;
 
-        // Get resulting ExpressionDomain
-        let expression = make_sum(expr_domain, SymmetricDistance::default())?;
-        let expr_domain_res = expression.output_domain.clone();
+        // Get resulting sum (expression result)
+        let trans = make_sum_expr(expr_domain, InsertDeleteDistance::default())?;
+        let expr_res = trans.invoke(&(col("B"), lazy_frame.clone()))?.0;
+        let frame_actual = lazy_frame.clone().groupby([col("A")]).agg([expr_res]).collect()?;
 
-        // Get expected ExpressionDomain (output domain = input domain, no?)
-        let expr_domain_exp = expr_domain.context.clone();
+        // Get expected sum
+        let frame_expected = lazy_frame.groupby([col("A")]).agg([col("B").sum()]).collect()?;
 
-        assert_eq!(expr_domain_res, expr_domain_exp);
+        assert_eq!(frame_actual, frame_expected);
 
         Ok(())
     }
@@ -140,10 +139,10 @@ mod test_make_col {
     #[test]
     fn test_make_sum_expr_no_active_column() -> Fallible<()> {
         // copied from make_col
-        let (expr_domain, _) = get_test_data();
+        let (expr_domain, _) = get_test_data()?;
 
         // Get resulting ExpressionDomain
-        let error_res = make_sum(expr_domain, SymmetricDistance::default())
+        let error_res = make_sum_expr(expr_domain, InsertDeleteDistance::default())
             .map(|v| v.input_domain.clone())
             .unwrap_err()
             .variant;

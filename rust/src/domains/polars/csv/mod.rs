@@ -6,7 +6,8 @@ use crate::{
     core::{Domain, Metric, MetricSpace},
     error::Fallible,
     metrics::{
-        ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance, SymmetricDistance,
+        ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance,
+        SymmetricDistance,
     },
 };
 
@@ -30,6 +31,11 @@ impl DatasetMetric for ChangeOneDistance {
 impl DatasetMetric for HammingDistance {
     const BOUNDED: bool = true;
 }
+
+// Implemented `LpDistance<1, f64>` for the trait `domains::polars::csv::DatasetMetric`
+//impl<const P: usize> DatasetMetric for LpDistance<P, f64> {}
+// impl<const P: usize, Q> DatasetMetric for LpDistance<P, Q> {}
+// we have floats but it but expects u32 ??
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct CsvDomain {
