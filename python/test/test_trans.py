@@ -370,5 +370,3 @@ def test_lipschitz_b_ary_tree():
     print(meas_quantiles(data))
 
     assert meas_cdf.map(1) == 4.
-
-test_lipschitz_b_ary_tree()

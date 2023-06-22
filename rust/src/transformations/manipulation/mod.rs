@@ -203,7 +203,7 @@ where
 mod tests {
 
     use super::*;
-    use crate::domains::AtomDomain;
+    use crate::domains::{AtomDomain, OptionDomain};
 
     #[cfg(feature = "honest-but-curious")]
     #[test]
@@ -224,6 +224,32 @@ mod tests {
         let ret = is_equal.invoke(&arg)?;
 
         assert_eq!(ret, vec![true, false, false]);
+        assert!(is_equal.check(&1, &1)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_null_inherent() -> Fallible<()> {
+        let input_domain = VectorDomain::new(AtomDomain::new_nullable());
+        let input_metric = SymmetricDistance;
+        let is_equal = make_is_null(input_domain, input_metric)?;
+        let arg = vec![1., 2., f64::NAN];
+        let ret = is_equal.invoke(&arg)?;
+
+        assert_eq!(ret, vec![false, false, true]);
+        assert!(is_equal.check(&1, &1)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_null_option() -> Fallible<()> {
+        let input_domain = VectorDomain::new(OptionDomain::new(AtomDomain::new_nullable()));
+        let input_metric = SymmetricDistance;
+        let is_equal = make_is_null(input_domain, input_metric)?;
+        let arg = vec![Some(1.), None, Some(f64::NAN)];
+        let ret = is_equal.invoke(&arg)?;
+
+        assert_eq!(ret, vec![false, true, true]);
         assert!(is_equal.check(&1, &1)?);
         Ok(())
     }

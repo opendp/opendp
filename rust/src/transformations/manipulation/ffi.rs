@@ -151,4 +151,18 @@ mod tests {
         assert_eq!(res, vec![true, false, false]);
         Ok(())
     }
+
+
+    #[test]
+    fn test_make_is_null() -> Fallible<()> {
+        let transformation = Result::from(opendp_transformations__make_is_null(
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<f64>::new_nullable())),
+            AnyMetric::new_raw(SymmetricDistance::default()),
+        ))?;
+        let arg = AnyObject::new_raw(vec![1., 2., f64::NAN]);
+        let res = core::opendp_core__transformation_invoke(&transformation, arg);
+        let res: Vec<bool> = Fallible::from(res)?.downcast()?;
+        assert_eq!(res, vec![false, false, true]);
+        Ok(())
+    }
 }
