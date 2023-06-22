@@ -193,18 +193,18 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
 .. testsetup::
 
-    from opendp.transformations import make_find, then_impute_constant, make_find_bin, make_index
-    from opendp.typing import *
-    from opendp.mod import enable_features
-    enable_features('contrib')
+    import opendp.prelude as dp
+    dp.enable_features('contrib')
 
 .. doctest::
 
-    >>> from opendp.domains import option_domain, atom_domain
     >>> finder = (
-    ...     make_find(categories=["A", "B", "C"]) >>
+    ...     # define the input space
+    ...     (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()) >>
+    ...     # find the index of each input datum in the categories list
+    ...     dp.t.then_find(categories=["A", "B", "C"]) >>
     ...     # impute any input datum that are not a part of the categories list as 3
-    ...     then_impute_constant(3)
+    ...     dp.t.then_impute_constant(3)
     ... )
     >>> finder(["A", "B", "C", "A", "D"])
     [0, 1, 2, 0, 3]
@@ -213,7 +213,9 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
 .. doctest::
 
-    >>> binner = make_find_bin(edges=[1., 2., 10.])
+    >>> binner = dp.t.make_find_bin(
+    ...     dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance(),
+    ...     edges=[1., 2., 10.])
     >>> binner([0., 1., 3., 15.])
     [0, 1, 2, 3]
 
@@ -221,7 +223,9 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
 .. doctest::
 
-    >>> indexer = make_index(categories=["A", "B", "C"], null="D")
+    >>> indexer = dp.t.make_index(
+    ...     dp.vector_domain(dp.atom_domain(T=dp.usize)), dp.symmetric_distance(),
+    ...     categories=["A", "B", "C"], null="D")
     >>> indexer([0, 1, 2, 3, 2342])
     ['A', 'B', 'C', 'D', 'D']
 

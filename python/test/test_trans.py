@@ -285,14 +285,16 @@ def test_resize():
 
 
 def test_indexing():
-    find = dp.t.make_find(categories=["1", "3", "4"]) >> dp.t.then_impute_constant(3)
+    input_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
+    find = input_space >> dp.t.then_find(categories=["1", "3", "4"]) >> dp.t.then_impute_constant(3)
     assert find(STR_DATA) == [0, 3, 1, 2, 3, 3, 3, 3, 3]
     assert find.check(1, 1)
 
-    binner = dp.t.make_find_bin(edges=[2, 3, 5])
+    input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
+    binner = input_space >> dp.t.then_find_bin(edges=[2, 3, 5])
     assert binner(INT_DATA) == [0, 1, 2, 2, 3, 3, 3, 3, 3]
 
-    indexer = dp.t.make_index(categories=["A", "B", "C"], null="NA")
+    indexer = find.output_space >> dp.t.then_index(categories=["A", "B", "C"], null="NA")
     assert indexer([0, 1, 3, 1, 5]) == ['A', 'B', 'NA', 'B', 'NA']
 
     assert (find >> indexer)(STR_DATA) == ['A', 'NA', 'B', 'C', 'NA', 'NA', 'NA', 'NA', 'NA']

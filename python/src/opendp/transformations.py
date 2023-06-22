@@ -67,9 +67,12 @@ __all__ = [
     "then_df_cast_default",
     "then_df_is_equal",
     "then_drop_null",
+    "then_find",
+    "then_find_bin",
     "then_identity",
     "then_impute_constant",
     "then_impute_uniform_float",
+    "then_index",
     "then_is_equal",
     "then_mean",
     "then_metric_bounded",
@@ -1325,8 +1328,9 @@ def then_drop_null(
 
 @versioned
 def make_find(
-    categories: Any,
-    TIA: RuntimeTypeDescriptor = None
+    input_domain,
+    input_metric,
+    categories: Any
 ) -> Transformation:
     """Find the index of a data value in a set of categories.
     
@@ -1340,13 +1344,13 @@ def make_find(
     
     * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
     * Output Domain:  `VectorDomain<OptionDomain<AtomDomain<usize>>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
+    :param input_domain: The domain of the input vector.
+    :param input_metric: The metric of the input vector.
     :param categories: The set of categories to find indexes from.
     :type categories: Any
-    :param TIA: Atomic Input Type that is categorical/hashable
-    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -1355,26 +1359,37 @@ def make_find(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=get_first(categories))
+    TIA = get_atom(get_type(input_domain))
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
-    c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_find
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_categories, c_TIA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_categories), Transformation))
     
     return output
+
+def then_find(
+    categories: Any
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_find(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        categories=categories))
+
 
 
 @versioned
 def make_find_bin(
-    edges: Any,
-    TIA: RuntimeTypeDescriptor = None
+    input_domain,
+    input_metric,
+    edges: Any
 ) -> Transformation:
     """Make a transformation that finds the bin index in a monotonically increasing vector of edges.
     
@@ -1392,13 +1407,13 @@ def make_find_bin(
     
     * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
     * Output Domain:  `VectorDomain<AtomDomain<usize>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
+    :param input_domain: The domain of the input vector.
+    :param input_metric: The metric of the input vector.
     :param edges: The set of edges to split bins by.
     :type edges: Any
-    :param TIA: Atomic Input Type that is numeric
-    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -1407,20 +1422,30 @@ def make_find_bin(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=get_first(edges))
+    TIA = get_atom(get_type(input_domain))
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_edges = py_to_c(edges, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
-    c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_find_bin
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_edges, c_TIA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_edges), Transformation))
     
     return output
+
+def then_find_bin(
+    edges: Any
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_find_bin(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        edges=edges))
+
 
 
 @versioned
@@ -1594,6 +1619,8 @@ def then_impute_uniform_float(
 
 @versioned
 def make_index(
+    input_domain,
+    input_metric,
     categories: Any,
     null: Any,
     TOA: RuntimeTypeDescriptor = None
@@ -1606,9 +1633,11 @@ def make_index(
     
     * Input Domain:   `VectorDomain<AtomDomain<usize>>`
     * Output Domain:  `VectorDomain<AtomDomain<TOA>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
+    :param input_domain: The domain of the input vector.
+    :param input_metric: The metric of the input vector.
     :param categories: The set of categories to index into.
     :type categories: Any
     :param null: Category to return if the index is out-of-range of the category set.
@@ -1626,18 +1655,33 @@ def make_index(
     TOA = RuntimeType.parse_or_infer(type_name=TOA, public_example=get_first(categories))
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TOA]))
     c_null = py_to_c(null, c_type=AnyObjectPtr, type_name=TOA)
     c_TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_index
-    lib_function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_categories, c_null, c_TOA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_categories, c_null, c_TOA), Transformation))
     
     return output
+
+def then_index(
+    categories: Any,
+    null: Any,
+    TOA: RuntimeTypeDescriptor = None
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_index(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        categories=categories,
+        null=null,
+        TOA=TOA))
+
 
 
 @versioned
