@@ -244,7 +244,7 @@ impl<F: Frame> FrameDomain<F> {
         Ok(self)
     }
 
-    pub fn column_index<I: AsRef<str>>(&self, name: I) -> Option<usize> {
+    fn column_index<I: AsRef<str>>(&self, name: I) -> Option<usize> {
         self.series_domains
             .iter()
             .position(|s| s.field.name() == name.as_ref())

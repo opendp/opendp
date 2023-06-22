@@ -207,31 +207,23 @@ impl<M: 'static + Metric + Send + Sync> OuterMetric for Lp<1, M> {
 
 impl<M: DatasetMetric> MetricSpace for (ExprDomain<LazyFrameDomain>, M) {
     fn check_space(&self) -> Fallible<()> {
-        if M::SIZED {
-            return (self.0.lazy_frame_domain.margins.iter())
-                .find(|(_, margin)| margin.counts.is_some())
-                .map(|_| ())
-                .ok_or_else(|| {
-                    err!(
-                        MetricSpace,
-                        "dataset size must be known via margin to use this metric"
-                    )
-                });
-        };
-
-        Ok(())
-    }
-}
-
-impl<M: DatasetMetric> MetricSpace for (ExprDomain<LazyGroupByDomain>, Lp<1, M>) {
-    fn check_space(&self) -> Fallible<()> {
-        (self.0.lazy_frame_domain.clone(), self.1 .0.clone()).check_space()
+        (self.0.lazy_frame_domain.clone(), self.1.clone()).check_space()
     }
 }
 
 impl<Q: TotalOrd> MetricSpace for (ExprDomain<LazyFrameDomain>, AbsoluteDistance<Q>) {
     fn check_space(&self) -> Fallible<()> {
         (self.0.lazy_frame_domain.clone(), self.1.clone()).check_space()
+    }
+}
+
+impl<M: DatasetMetric> MetricSpace for (ExprDomain<LazyGroupByDomain>, Lp<1, M>) {
+    fn check_space(&self) -> Fallible<()> {
+        let lgb_domain = LazyGroupByDomain {
+            lazy_frame_domain: self.0.lazy_frame_domain.clone(),
+            grouping_columns: self.0.context.columns.clone(),
+        };
+        (lgb_domain, self.1.clone()).check_space()
     }
 }
 

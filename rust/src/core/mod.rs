@@ -297,6 +297,16 @@ where
         })
     }
 
+    pub fn decompose(self) -> (DI, Function<DI::Carrier, TO>, MI, MO, PrivacyMap<MI, MO>) {
+        (
+            self.input_domain,
+            self.function,
+            self.input_metric,
+            self.output_measure,
+            self.privacy_map,
+        )
+    }
+
     #[allow(dead_code)]
     pub(crate) fn with_map<MI2: Metric, MO2: Measure>(
         &self,
