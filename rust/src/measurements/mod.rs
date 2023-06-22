@@ -26,3 +26,8 @@ pub use randomized_response::*;
 mod alp;
 #[cfg(all(feature = "use-mpfr", feature = "floating-point", feature = "contrib"))]
 pub use alp::*;
+
+#[cfg(feature = "contrib")]
+mod polars;
+#[cfg(feature = "contrib")]
+pub use crate::measurements::polars::*;

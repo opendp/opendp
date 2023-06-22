@@ -3,8 +3,8 @@ use polars::prelude::*;
 use std::fmt::{Debug, Formatter};
 
 use crate::core::{Metric, MetricSpace};
-use crate::domains::{DatasetMetric, LazyFrameDomain};
-use crate::metrics::{L1Distance, Lp, AbsoluteDistance};
+use crate::domains::{DataTypeFrom, DatasetMetric, LazyFrameDomain};
+use crate::metrics::{AbsoluteDistance, L1Distance, Lp};
 use crate::traits::TotalOrd;
 use crate::{core::Domain, error::Fallible};
 
@@ -180,9 +180,29 @@ impl<M: DatasetMetric, const P: usize> MetricSpace for (ExprDomain<LazyGroupByCo
     }
 }
 
-impl<T: TotalOrd> MetricSpace for (ExprDomain<LazyGroupByContext>, L1Distance<T>) {
+impl<Q> MetricSpace for (ExprDomain<LazyFrameContext>, AbsoluteDistance<Q>) {
     fn check(&self) -> bool {
-        true
+        (self.0.lazy_frame_domain.clone(), self.1.clone()).check()
+    }
+}
+
+// it is valid to pair L1Distance with ExprDomain when the selected column is the same type as T
+impl<T: TotalOrd + DataTypeFrom, C: Context> MetricSpace for (ExprDomain<C>, L1Distance<T>) {
+    fn check(&self) -> bool {
+        let active_column = if let Some(active_column) = &self.0.active_column {
+            active_column
+        } else {
+            return true;
+        };
+
+        let series_domain =
+            if let Some(series_domain) = self.0.lazy_frame_domain.column(active_column) {
+                series_domain
+            } else {
+                return false;
+            };
+
+        series_domain.field.dtype == T::dtype()
     }
 }
 

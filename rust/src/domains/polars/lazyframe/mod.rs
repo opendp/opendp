@@ -6,9 +6,10 @@ use polars::prelude::*;
 
 use crate::core::Domain;
 use crate::transformations::ToVec;
+use crate::domains::DatasetMetric;
 use crate::{
     core::MetricSpace,
-    domains::{AtomDomain, DatasetMetric, OptionDomain, SeriesDomain},
+    domains::{AtomDomain, OptionDomain, SeriesDomain},
     error::Fallible,
 };
 
@@ -206,7 +207,7 @@ impl<F: Frame> FrameDomain<F> {
         Ok(self)
     }
 
-    pub fn column_index<I: AsRef<str>>(&self, name: I) -> Option<usize> {
+    fn column_index<I: AsRef<str>>(&self, name: I) -> Option<usize> {
         self.series_domains
             .iter()
             .position(|s| s.field.name() == name.as_ref())
@@ -423,8 +424,12 @@ impl<F: Frame> PartialEq for Margin<F> {
             return false;
         }
 
-        let Ok(self_margins) = self.data.clone().dataframe() else {return false};
-        let Ok(other_margins) = self.data.clone().dataframe() else {return false};
+        let Ok(self_margins) = self.data.clone().dataframe() else {
+            return false;
+        };
+        let Ok(other_margins) = self.data.clone().dataframe() else {
+            return false;
+        };
         if self_margins != other_margins {
             return false;
         }
