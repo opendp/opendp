@@ -7,7 +7,9 @@ mod gaussian;
 #[cfg(all(feature = "floating-point", feature = "contrib", feature = "use-mpfr"))]
 pub use crate::measurements::gaussian::*;
 
+#[cfg(feature = "contrib")]
 mod laplace;
+#[cfg(feature = "contrib")]
 pub use crate::measurements::laplace::*;
 
 #[cfg(all(feature = "floating-point", feature = "contrib"))]
