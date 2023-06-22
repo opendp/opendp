@@ -115,10 +115,10 @@ where
 /// Make a Transformation representing the identity function.
 ///
 /// WARNING: In Python, this function does not ensure that the domain and metric form a valid metric space.
-/// However, if the domain and metric do not form a valid metric space, 
+/// However, if the domain and metric do not form a valid metric space,
 /// then the resulting Transformation won't be chainable with any valid Transformation,
 /// so it cannot be used to introduce an invalid metric space into a chain of valid Transformations.
-/// 
+///
 /// # Generics
 /// * `D` - Domain of the identity function. Must be `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `M` - Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AtomDomain
@@ -178,41 +178,32 @@ where
     )
 }
 
-#[bootstrap(
-    features("contrib"),
-    arguments(input_atom_domain(c_type = "AnyDomain *"))
-)]
+#[bootstrap(features("contrib"), generics(DIA(suppress), M(suppress)))]
 /// Make a Transformation that checks if each element in a vector is null.
 ///
 /// # Generics
 /// * `DIA` - Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
-pub fn make_is_null<DIA>(
-    input_atom_domain: DIA,
-) -> Fallible<
-    Transformation<
-        VectorDomain<DIA>,
-        VectorDomain<AtomDomain<bool>>,
-        SymmetricDistance,
-        SymmetricDistance,
-    >,
->
+pub fn make_is_null<M, DIA>(
+    input_domain: VectorDomain<DIA>,
+    input_metric: M,
+) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<AtomDomain<bool>>, M, M>>
 where
     DIA: Domain + Default,
     DIA::Carrier: 'static + CheckNull,
+    M: DatasetMetric,
+    (VectorDomain<DIA>, M): MetricSpace,
+    (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
 {
-    make_row_by_row(
-        VectorDomain::new(input_atom_domain),
-        SymmetricDistance::default(),
-        AtomDomain::default(),
-        |v| v.is_null(),
-    )
+    make_row_by_row(input_domain, input_metric, AtomDomain::default(), |v| {
+        v.is_null()
+    })
 }
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
-    use crate::domains::AtomDomain;
+    use crate::domains::{AtomDomain, OptionDomain};
 
     #[cfg(feature = "honest-but-curious")]
     #[test]
@@ -233,6 +224,32 @@ mod tests {
         let ret = is_equal.invoke(&arg)?;
 
         assert_eq!(ret, vec![true, false, false]);
+        assert!(is_equal.check(&1, &1)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_null_inherent() -> Fallible<()> {
+        let input_domain = VectorDomain::new(AtomDomain::new_nullable());
+        let input_metric = SymmetricDistance;
+        let is_equal = make_is_null(input_domain, input_metric)?;
+        let arg = vec![1., 2., f64::NAN];
+        let ret = is_equal.invoke(&arg)?;
+
+        assert_eq!(ret, vec![false, false, true]);
+        assert!(is_equal.check(&1, &1)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_null_option() -> Fallible<()> {
+        let input_domain = VectorDomain::new(OptionDomain::new(AtomDomain::new_nullable()));
+        let input_metric = SymmetricDistance;
+        let is_equal = make_is_null(input_domain, input_metric)?;
+        let arg = vec![Some(1.), None, Some(f64::NAN)];
+        let ret = is_equal.invoke(&arg)?;
+
+        assert_eq!(ret, vec![false, true, true]);
         assert!(is_equal.check(&1, &1)?);
         Ok(())
     }
