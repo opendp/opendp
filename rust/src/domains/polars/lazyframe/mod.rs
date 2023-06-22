@@ -5,8 +5,6 @@ use polars::lazy::dsl::{col, cols, count};
 use polars::prelude::*;
 
 use crate::core::Domain;
-use crate::metrics::AbsoluteDistance;
-use crate::traits::TotalOrd;
 use crate::transformations::item;
 use crate::domains::DatasetMetric;
 use crate::{
@@ -14,6 +12,7 @@ use crate::{
     domains::{AtomDomain, OptionDomain, SeriesDomain},
     error::Fallible,
 };
+
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -118,13 +117,6 @@ impl<F: Frame, D: DatasetMetric> MetricSpace for (FrameDomain<F>, D) {
     }
 }
 
-impl<F: Frame, Q: TotalOrd> MetricSpace for (FrameDomain<F>, AbsoluteDistance<Q>) {
-    fn check(&self) -> bool {
-        // TODO: tighten this check
-        true
-    }
-}
-
 impl<F: Frame> FrameDomain<F> {
     pub fn new(series_domains: Vec<SeriesDomain>) -> Fallible<Self> {
         let num_unique = BTreeSet::from_iter(series_domains.iter().map(|s| &s.field.name)).len();
@@ -215,7 +207,7 @@ impl<F: Frame> FrameDomain<F> {
         Ok(self)
     }
 
-    pub fn column_index<I: AsRef<str>>(&self, name: I) -> Option<usize> {
+    fn column_index<I: AsRef<str>>(&self, name: I) -> Option<usize> {
         self.series_domains
             .iter()
             .position(|s| s.field.name() == name.as_ref())
@@ -430,8 +422,12 @@ impl<F: Frame> PartialEq for Margin<F> {
             return false;
         }
 
-        let Ok(self_margins) = self.data.clone().dataframe() else {return false};
-        let Ok(other_margins) = self.data.clone().dataframe() else {return false};
+        let Ok(self_margins) = self.data.clone().dataframe() else {
+            return false;
+        };
+        let Ok(other_margins) = self.data.clone().dataframe() else {
+            return false;
+        };
         if self_margins != other_margins {
             return false;
         }
