@@ -98,6 +98,7 @@ pub extern "C" fn opendp_measurements__make_laplace(
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
     let T = try_!(input_domain.type_.get_atom());
+    let QI = try_!(input_metric.distance_type.get_atom());
     let QO = try_!(Type::try_from(QO));
 
     // This is used to check if the type is in a dispatch set,
@@ -106,7 +107,14 @@ pub extern "C" fn opendp_measurements__make_laplace(
         Some(())
     }
 
+    if T != QI {
+        return err!(FFI, "input distance type ({}) must match data type ({})", QI.descriptor, T.descriptor).into();
+    }
+
     if let Some(_) = dispatch!(in_set, [(T, @floats)]) {
+        if T != QO {
+            return err!(FFI, "since data type is float, output distance type ({}) must match data type ({})", QO.descriptor, T.descriptor).into();
+        }
         dispatch!(monomorphize_float, [
             (T, @floats)
         ], (input_domain, input_metric, scale, QO))
