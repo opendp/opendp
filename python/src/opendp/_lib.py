@@ -61,18 +61,19 @@ def _load_library():
             lib_path = get_lib_path(name_template, None)
 
         try:
-            return ctypes.cdll.LoadLibrary(lib_path)
+            return ctypes.cdll.LoadLibrary(lib_path), lib_path
         except Exception as e:
             raise Exception("Unable to load OpenDP shared library", lib_path, e)
+        
 
     elif os.environ.get('OPENDP_HEADLESS', "false") != "false":
         return None
 
     else:
         raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
+    
 
-
-lib = _load_library()
+lib, lib_path = _load_library()
 
 
 install_names = {
@@ -121,6 +122,30 @@ try:
 
     np_csprng = np.random.Generator(bit_generator=randomgen.UserBitGenerator(next_raw)) # type:ignore
 
+except ImportError:  # pragma: no cover
+    pass
+
+try:
+    pl = import_optional_dependency("polars")
+    from polars.plugins import register_plugin_function
+
+    @pl.api.register_expr_namespace("dp")
+    class DPNamespace(object):
+        def __init__(self, expr):
+            self._expr = expr
+
+        def laplace(self, scale=float("nan")):
+            return pl.plugins.register_plugin_function(
+                plugin_path=lib_path,
+                function_name="laplace",
+                kwargs={"scale": scale},
+                args=self._expr,
+                is_elementwise=True,
+            )
+
+        def sum(self, bounds, scale=float("nan")):
+            return self._expr.clip(*bounds).sum().dp.laplace(scale)
+        
 except ImportError:  # pragma: no cover
     pass
 

@@ -7,7 +7,7 @@ dp.enable_features("contrib", "honest-but-curious")
 
 def seed(schema):
     pl = pytest.importorskip("polars")
-    return pl.DataFrame(None, schema, orient="row").lazy() # type: ignore[attr-defined]
+    return pl.DataFrame(None, schema, orient="row").lazy()  # type: ignore[attr-defined]
 
 
 def example_series():
@@ -23,6 +23,7 @@ def example_series():
         pl.Series("C", ["1"] * 49 + [None], dtype=pl.String),
         pl.Series("D", [2] * 50, dtype=pl.Int32),
     ]
+
 
 def test_infer():
     pl = pytest.importorskip("polars")
@@ -88,18 +89,23 @@ def test_expr_ffi():
     assert str(t_ident((lf, pl.col("A")))[1]) == str(pl.col("A"))
 
 
-def test_private_lazyframe():
+def test_private_lazyframe_sum():
     pl = pytest.importorskip("polars")
-    lf_domain, lf = example_lf()
+    lf_domain, lf = example_lf(margin=["B"], public_info="keys", max_partition_length=50)
 
-    with pytest.raises(dp.OpenDPException):
-        dp.m.make_private_lazyframe(
-            lf_domain, 
-            dp.symmetric_distance(),
-            dp.max_divergence(T=float),
-            lf.select(pl.col("A").cast(int).sum()),
-            1.
-        )
+    expr = pl.col("A").clip(0.0, 1.0).sum().dp.laplace(1.0)
+    plan = seed(lf.schema).group_by("B").agg(expr)
+    dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 1.0
+    )
+
+    expr = pl.col("A").dp.sum((1.0, 2.0), scale=1.0)
+    plan = seed(lf.schema).group_by("B").agg(expr)
+    dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 1.0
+    )
+
+    print(lf.select(expr).collect())
 
 
 def test_stable_lazyframe():

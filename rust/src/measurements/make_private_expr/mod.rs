@@ -13,6 +13,9 @@ use crate::{
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[cfg(feature = "contrib")]
+pub(crate) mod expr_laplace;
+
 #[bootstrap(
     features("contrib"),
     arguments(
@@ -62,11 +65,15 @@ where
 {
     fn make_private(
         self,
-        _input_domain: ExprDomain,
-        _input_metric: PartitionDistance<M>,
+        input_domain: ExprDomain,
+        input_metric: PartitionDistance<M>,
         _output_measure: MaxDivergence<f64>,
-        _param: f64,
+        param: f64,
     ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, MaxDivergence<f64>>> {
+        if expr_laplace::match_laplace(&self)?.is_some() {
+            return expr_laplace::make_expr_laplace(input_domain, input_metric, self, param);
+        }
+
         match self {
             expr => fallible!(
                 MakeMeasurement,

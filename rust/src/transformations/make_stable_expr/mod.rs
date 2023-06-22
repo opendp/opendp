@@ -108,7 +108,7 @@ where
         match self {
             #[cfg(feature = "contrib")]
             Agg(AggExpr::Sum(_)) => {
-                expr_sum::make_expr_sum::<_, _, P>(input_domain, input_metric, self)
+                expr_sum::make_expr_sum::<_, _, P>(input_domain, input_metric, self.clone())
             }
 
             expr => fallible!(
@@ -137,7 +137,12 @@ pub mod polars_test {
             SeriesDomain::new("C", AtomDomain::<i32>::default()),
         ])?
         .with_margin::<&str>(&[], pub_key_margin.clone())?
-        .with_margin(&["A"], Margin::new().with_max_partition_length(2u32))?
+        .with_margin(
+            &["A"],
+            Margin::new()
+                .with_public_keys()
+                .with_max_partition_length(2u32),
+        )?
         .with_margin(&["B"], Margin::new().with_max_partition_length(2u32))?
         .with_margin(&["C"], pub_key_margin.with_max_num_partitions(4))?;
 

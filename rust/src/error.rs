@@ -117,6 +117,13 @@ impl From<String> for Error {
     }
 }
 
+#[cfg(feature = "polars")]
+impl From<Error> for PolarsError {
+    fn from(value: Error) -> Self {
+        PolarsError::ComputeError(value.to_string().into())
+    }
+}
+
 impl Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(

@@ -23,7 +23,7 @@
 #[cfg(feature = "polars")]
 mod polars;
 #[cfg(feature = "polars")]
-pub(crate) use polars::*;
+pub use polars::*;
 
 #[cfg(feature = "ffi")]
 mod ffi;
