@@ -242,11 +242,14 @@ impl Margin {
     pub fn get_max_size(&self) -> Fallible<u32> {
         let count_col_name = self.get_count_column_name()?;
         let max_df = self
-            .data.clone()
+            .data
+            .clone()
             .select([col(count_col_name.as_str()).max()])
             .collect()?;
-        // let max_size = item!(max_df, u32);
-        let max_size = max_df.get_columns()[0].u32()?.get(0).ok_or_else(|| err!(FailedFunction, "expected one value"));
+        let max_size = max_df.get_columns()[0]
+            .u32()?
+            .get(0)
+            .ok_or_else(|| err!(FailedFunction, "expected one value"));
         max_size
     }
 

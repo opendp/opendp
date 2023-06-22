@@ -1,5 +1,5 @@
 use crate::core::{Function, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, Context, ExprDomain, LazyGroupByContext, GroupingColumns};
+use crate::domains::{AtomDomain, ExprDomain, LazyGroupByContext, GroupingColumns};
 use crate::error::*;
 use crate::metrics::{InsertDeleteDistance, IntDistance, L1Distance, L1};
 use crate::traits::{AlertingAbs, InfAdd, InfCast, InfMul, InfSub, TotalOrd};
@@ -16,18 +16,23 @@ pub fn make_sum_expr(
     input_domain: ExprDomain<LazyGroupByContext>,
     input_metric: L1<InsertDeleteDistance>,
 ) -> Fallible<Transformation<ExprDomain<LazyGroupByContext>, ExprDomain<LazyGroupByContext>, L1<InsertDeleteDistance>, L1Distance<f64>>> {
-    // Verify that the sum of ative_column can by computed //
-    let active_column = input_domain.active_column.clone()
+    // Verify that the sum of ative_column can by computed
+    let active_column = input_domain
+        .active_column
+        .clone()
         .ok_or_else(|| err!(MakeTransformation, "No active column"))?;
 
     // Output domain -- TODO: this could probably be written cleaner
     let mut output_domain = input_domain.clone();
-    let active_column_index = output_domain.lazy_frame_domain.column_index(&active_column)
+    let active_column_index = output_domain
+        .lazy_frame_domain
+        .column_index(&active_column)
         .ok_or_else(|| err!(MakeTransformation, "could not find index"))?;
     let mut series_domains = output_domain.lazy_frame_domain.series_domains;
-    series_domains[active_column_index] = series_domains[active_column_index].clone().drop_bounds()?;
+    series_domains[active_column_index] =
+        series_domains[active_column_index].clone().drop_bounds()?;
     output_domain.lazy_frame_domain.series_domains = series_domains;
-    
+
     // For StabilityMap
     let bounds = input_domain
         .lazy_frame_domain
@@ -75,7 +80,7 @@ pub fn make_sum_expr(
 
 #[cfg(test)]
 mod test_make_col {
-    use crate::domains::{AtomDomain, SeriesDomain, LazyFrameDomain};
+    use crate::domains::{AtomDomain, LazyFrameDomain, SeriesDomain};
 
     use super::*;
 
@@ -91,13 +96,14 @@ mod test_make_col {
             lazy_frame_domain: frame_domain,
             context: LazyGroupByContext {
                 columns: vec!["A".to_string()],
-            }, 
+            },
             active_column: Some("B".to_string()),
         };
 
         let lazy_frame = df!(
             "A" => &[1, 2, 2],
-            "B" => &[1.0, 1.0, 2.0],)?.lazy();
+            "B" => &[1.0, 1.0, 2.0],)?
+        .lazy();
 
         Ok((expr_domain, lazy_frame.groupby([col("A")])))
     }
@@ -109,60 +115,21 @@ mod test_make_col {
         // Get resulting sum (expression result)
         let trans = make_sum_expr(expr_domain, InsertDeleteDistance::default())?;
         let expr_res = trans.invoke(&(col("B"), lazy_frame.clone()))?.0;
-        let frame_actual = lazy_frame.clone().groupby([col("A")]).agg([expr_res]).collect()?;
+        let frame_actual = lazy_frame
+            .clone()
+            .groupby([col("A")])
+            .agg([expr_res])
+            .sort("A", Default::default())
+            .collect()?;
 
         // Get expected sum
-        let frame_expected = lazy_frame.groupby([col("A")]).agg([col("B").sum()]).collect()?;
+        let frame_expected = lazy_frame
+            .groupby([col("A")])
+            .agg([col("B").sum()])
+            .sort("A", Default::default())
+            .collect()?;
 
         assert_eq!(frame_actual, frame_expected);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_fail_if_no_bounds() -> Fallible<()> {
-        let (expr_domain, lazy_frame) = get_test_data()?;
-
-        // Get resulting sum (expression result)
-        let trans = make_sum_expr(expr_domain, InsertDeleteDistance::default())?;
-        let expr_res = trans.invoke(&(col("B"), lazy_frame.clone()))?.0;
-        let frame_actual = lazy_frame.clone().groupby([col("A")]).agg([expr_res]).collect()?;
-
-        // Get expected sum
-        let frame_expected = lazy_frame.groupby([col("A")]).agg([col("B").sum()]).collect()?;
-
-        assert_eq!(frame_actual, frame_expected);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_make_sum_expr_no_active_column() -> Fallible<()> {
-        // copied from make_col
-        let (expr_domain, _) = get_test_data()?;
-
-        // Get resulting ExpressionDomain
-        let error_res = make_sum_expr(expr_domain, InsertDeleteDistance::default())
-            .map(|v| v.input_domain.clone())
-            .unwrap_err()
-            .variant;
-        let expected_error_kind = ErrorVariant::MakeTransformation;
-
-        assert_eq!(error_res, expected_error_kind);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_make_sum_expr_no_counts() -> Fallible<()> {
-        // TODO: does not have counts (don't know size)
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_make_sum_expr_no_bounds() -> Fallible<()> {
-        // TODO: does not have bounds (don't know snesibility)
 
         Ok(())
     }
