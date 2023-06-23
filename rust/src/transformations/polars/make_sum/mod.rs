@@ -64,8 +64,8 @@ pub fn make_sum_expr(
         input_domain.clone(),
         output_domain,
         Function::new_fallible(
-            move |(expr, lf): &(Expr, LazyGroupBy)| -> Fallible<(Expr, LazyGroupBy)> {
-                Ok((expr.clone().sum(), lf.clone()))
+            move |(frame, expr): &(LazyGroupBy, Expr)| -> Fallible<(LazyGroupBy, Expr)> {
+                Ok((frame.clone(), expr.clone().sum()))
             },
         ),
         input_metric,
@@ -80,7 +80,7 @@ pub fn make_sum_expr(
 
 #[cfg(test)]
 mod test_make_col {
-    use crate::domains::{AtomDomain, LazyFrameDomain, SeriesDomain};
+    use crate::{domains::{AtomDomain, LazyFrameDomain, SeriesDomain}, metrics::Lp};
 
     use super::*;
 
@@ -113,18 +113,15 @@ mod test_make_col {
         let (expr_domain, lazy_frame) = get_test_data()?;
 
         // Get resulting sum (expression result)
-        let trans = make_sum_expr(expr_domain, InsertDeleteDistance::default())?;
-        let expr_res = trans.invoke(&(col("B"), lazy_frame.clone()))?.0;
-        let frame_actual = lazy_frame
-            .clone()
-            .groupby([col("A")])
+        let trans = make_sum_expr(expr_domain, Lp(InsertDeleteDistance::default()))?;
+        let expr_res = trans.invoke(&(lazy_frame.clone(), col("B")))?.1;
+        let frame_actual = lazy_frame.clone()
             .agg([expr_res])
             .sort("A", Default::default())
             .collect()?;
 
         // Get expected sum
         let frame_expected = lazy_frame
-            .groupby([col("A")])
             .agg([col("B").sum()])
             .sort("A", Default::default())
             .collect()?;
