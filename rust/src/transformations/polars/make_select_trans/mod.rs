@@ -90,6 +90,7 @@ mod test_make_select_trans {
 
     use crate::domains::{AtomDomain, ExprDomain, LazyFrameDomain, SeriesDomain};
     use crate::transformations::make_col;
+    use crate::transformations::polars::test::get_test_data;
 
     use super::*;
 
