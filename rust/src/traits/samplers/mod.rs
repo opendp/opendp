@@ -23,32 +23,28 @@ use rand::prelude::SliceRandom;
 
 use crate::error::Fallible;
 
+use chacha20::{XChaCha20, cipher::{KeyIvInit, StreamCipher}};
+
+thread_local! {
+    static CIPHER: std::cell::RefCell<XChaCha20>  = {
+        // key length is 256 bits. Must be filled with cryptographically secure unbiased random bits.
+        let mut key = [0; 32];
+        getrandom::getrandom(&mut key).expect("insufficient system entropy");
+        // nonce length is 192 bits. This algorithm is still secure if nonce is left constant.
+        let mut nonce = [0; 24];
+        getrandom::getrandom(&mut nonce).expect("insufficient system entropy");
+        std::cell::RefCell::new(XChaCha20::new(&key.into(), &nonce.into()))
+    };
+}
+
 /// Fill a byte buffer with random bits.
 ///
 /// # Proof Definition
 /// For any input `buffer`, fill the `buffer` with random bits, where each bit is an iid draw from Bernoulli(p=0.5).
 /// Return `Err(e)` if there is insufficient system entropy, otherwise return `Ok(())`.
-#[cfg(feature = "use-openssl")]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
-    use openssl::rand::rand_bytes;
-    if let Err(e) = rand_bytes(buffer) {
-        fallible!(FailedFunction, "OpenSSL error: {:?}", e)
-    } else {
-        Ok(())
-    }
-}
-
-/// Non-securely fill a byte buffer with random bits.
-///
-/// Enable `use-openssl` for a secure implementation.
-#[cfg(not(feature = "use-openssl"))]
-pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
-    use rand::Rng;
-    if let Err(e) = rand::thread_rng().try_fill(buffer) {
-        fallible!(FailedFunction, "Rand error: {:?}", e)
-    } else {
-        Ok(())
-    }
+    CIPHER.with(|v| v.borrow_mut().try_apply_keystream(buffer))
+        .map_err(|e| err!(FailedFunction, "failed to sample bits: {:?}", e))
 }
 
 /// An OpenDP random number generator that implements [`rand::RngCore`].
