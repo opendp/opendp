@@ -1,7 +1,6 @@
 use polars::{
-    lazy::dsl::Expr,
-    prelude::{Float64Type, LazyFrame},
-    series::Series,
+    lazy::dsl::{col, Expr, GetOutput},
+    prelude::{DataType, Float64Type, LazyFrame},
 };
 
 use crate::{
@@ -40,24 +39,42 @@ pub fn make_laplace_expr(
     //let laplace_measurement_privacy_map = scalar_laplace_measurement.privacy_map;
     Measurement::new(
         input_domain.clone(),
-        Function::new_fallible(move |(expr, lf): &(Expr, LazyFrame)| -> Fallible<Expr> {
+        Function::new_fallible(move |(lf, expr): &(LazyFrame, Expr)| -> Fallible<Expr> {
             let active_column = input_domain
                 .active_column
                 .clone()
                 .ok_or_else(|| err!(MakeTransformation, "No active column"))?;
 
-            // Retreive series of active_column
-            let s = lf.clone().collect()?.column(&active_column)?.clone();
+            // let expr = col(&active_column);
+            // // Retreive series of active_column
+            // let active_serie = lf.clone().collect()?.column(&active_column)?.clone();
 
-            // Add noise to series
-            let mut s_with_noise = Series::from_iter(
-                s.unpack::<Float64Type>()?
-                    .into_iter()
-                    .map(|v| v.map(|v| scalar_laplace_measurement.invoke(&v).unwrap())),
+            // // Add noise to series
+            // let mut active_serie_with_noise = Series::from_iter(
+            //     active_serie
+            //         .unpack::<Float64Type>()?
+            //         .into_iter()
+            //         .map(|v| v.map(|v| scalar_laplace_measurement.invoke(&v).unwrap())),
+            // );
+            // active_serie_with_noise.rename(active_serie.name());
+
+            // let exprs: Vec<Expr> = trans_outputs.iter().map(|(_, expr)| expr.clone()).collect();
+            let output_type = GetOutput::from_type(DataType::Float64);
+
+            // Create an expression to add noise to the series
+            let noisy_expr = expr.map(
+                |s| {
+                    Ok(s.unpack::<Float64Type>()?
+                        .into_iter()
+                        .map(|v| v.map(|v| scalar_laplace_measurement.invoke(&v).unwrap())))
+                },
+                output_type,
             );
-            s_with_noise.rename(s.name());
 
-            Ok(expr.clone()) // TODO: placeholder
+            // Rename the resulting noisy series expression
+            let noisy_expr = noisy_expr.alias(&active_column);
+
+            Ok(noisy_expr.clone())
         }),
         input_metric,
         MaxDivergence::default(),
