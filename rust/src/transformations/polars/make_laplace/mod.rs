@@ -1,6 +1,6 @@
 use polars::{
     lazy::dsl::Expr,
-    prelude::{Float64Type, IntoLazy, LazyFrame},
+    prelude::{Float64Type, LazyFrame},
     series::Series,
 };
 
@@ -14,6 +14,12 @@ use crate::{
     traits::{InfAdd, InfDiv},
 };
 
+/// Polars operator to make the Laplace noise measurement
+///
+/// # Arguments
+/// * `input_domain` - ExprDomain
+/// * `input_metric` - The metric space under which neighboring LazyFrames are compared
+/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
 pub fn make_laplace_expr(
     input_domain: ExprDomain,
     input_metric: L1Distance<f64>,
@@ -23,7 +29,7 @@ pub fn make_laplace_expr(
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
     // Create Laplace measurement
-    let k = Some(4); // TODO The noise granularity in terms of 2^k
+    let k = None; // TODO: ask do I need to set it
     let scalar_laplace_measurement = make_base_laplace(
         AtomDomain::default(),
         AbsoluteDistance::default(),
@@ -31,16 +37,17 @@ pub fn make_laplace_expr(
         k.clone(),
     )?;
     let (_k, relaxation): (i32, f64) = get_discretization_consts(k.clone())?;
+    //let laplace_measurement_privacy_map = scalar_laplace_measurement.privacy_map;
     Measurement::new(
         input_domain.clone(),
         Function::new_fallible(move |(expr, lf): &(Expr, LazyFrame)| -> Fallible<Expr> {
-            // Get last column name and position
-            let last_column_id = input_domain.lazy_frame_domain.series_domains.len() - 1;
-            let last_column_name = lf.clone().collect()?;
-            let last_column_name = last_column_name.get_column_names()[last_column_id].clone();
+            let active_column = input_domain
+                .active_column
+                .clone()
+                .ok_or_else(|| err!(MakeTransformation, "No active column"))?;
 
-            // Retreive series of last column
-            let s = lf.clone().collect()?.column(last_column_name)?.clone();
+            // Retreive series of active_column
+            let s = lf.clone().collect()?.column(&active_column)?.clone();
 
             // Add noise to series
             let mut s_with_noise = Series::from_iter(
@@ -54,6 +61,9 @@ pub fn make_laplace_expr(
         }),
         input_metric,
         MaxDivergence::default(),
+        //laplace_measurement_privacy_map,
+        // bug because expected struct `PrivacyMap<LpDistance<1, f64>, _>` found struct `PrivacyMap<AbsoluteDistance<f64>, _>`
+        // but make_base_laplace only accepts AbsoluteDistance::default(),
         PrivacyMap::new_fallible(move |d_in: &f64| {
             if d_in.is_sign_negative() {
                 return fallible!(InvalidDistance, "sensitivity must be non-negative");
@@ -61,7 +71,6 @@ pub fn make_laplace_expr(
             if scale == 0.0 {
                 return Ok(f64::INFINITY);
             }
-
             // increase d_in by the worst-case rounding of the discretization
             let d_in = d_in.inf_add(&relaxation)?;
 
