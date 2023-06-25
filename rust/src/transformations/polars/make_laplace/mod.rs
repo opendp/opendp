@@ -1,8 +1,3 @@
-use polars::{
-    lazy::dsl::{col, Expr, GetOutput},
-    prelude::{DataType, Float64Type, LazyFrame},
-};
-
 use crate::{
     core::{Function, Measurement, PrivacyMap},
     domains::{AtomDomain, ExprDomain},
@@ -12,6 +7,8 @@ use crate::{
     metrics::{AbsoluteDistance, L1Distance},
     traits::{InfAdd, InfDiv},
 };
+use polars::prelude::*;
+use polars::{lazy::dsl::Expr, prelude::LazyFrame};
 
 /// Polars operator to make the Laplace noise measurement
 ///
@@ -45,36 +42,25 @@ pub fn make_laplace_expr(
                 .clone()
                 .ok_or_else(|| err!(MakeTransformation, "No active column"))?;
 
-            // let expr = col(&active_column);
-            // // Retreive series of active_column
-            // let active_serie = lf.clone().collect()?.column(&active_column)?.clone();
-
-            // // Add noise to series
-            // let mut active_serie_with_noise = Series::from_iter(
-            //     active_serie
-            //         .unpack::<Float64Type>()?
-            //         .into_iter()
-            //         .map(|v| v.map(|v| scalar_laplace_measurement.invoke(&v).unwrap())),
-            // );
-            // active_serie_with_noise.rename(active_serie.name());
-
-            // let exprs: Vec<Expr> = trans_outputs.iter().map(|(_, expr)| expr.clone()).collect();
-            let output_type = GetOutput::from_type(DataType::Float64);
-
-            // Create an expression to add noise to the series
-            let noisy_expr = expr.map(
-                |s| {
-                    Ok(s.unpack::<Float64Type>()?
+            let expr = expr.clone().map(
+                |value: Series| -> Result<Series> {
+                    let mapped = value
+                        .unpack::<Float64Type>()?
                         .into_iter()
-                        .map(|v| v.map(|v| scalar_laplace_measurement.invoke(&v).unwrap())))
+                        .map(|v| v.and_then(|v| scalar_laplace_measurement.invoke(&v).ok()))
+                        .collect::<Float64Chunked>()
+                        .into_series();
+                    if(mapped.is_none()) {
+                        Ok(mapped)
+                    } else{
+                        Err(err!(MakeTransformation, "No active column"))
+                    }
+                    
                 },
-                output_type,
+                GetOutput::default(),
             );
 
-            // Rename the resulting noisy series expression
-            let noisy_expr = noisy_expr.alias(&active_column);
-
-            Ok(noisy_expr.clone())
+            Ok(expr)
         }),
         input_metric,
         MaxDivergence::default(),
@@ -95,4 +81,38 @@ pub fn make_laplace_expr(
             d_in.inf_div(&scale)
         }),
     )
+}
+
+#[cfg(test)]
+mod test_make_laplace_expr {
+    use super::*;
+    fn test_make_sum_expr() -> Fallible<()> {
+        // let expr: Vec<Option<f64>> = lf
+        //     .clone()
+        //     .collect()?
+        //     .column(&active_column)?
+        //     .f64()?
+        //     .into_iter()
+        //     //.apply(|value| scalar_laplace_measurement.invoke(&value))
+        //     .map(|v| v.map(|v| scalar_laplace_measurement.invoke(&v).unwrap()))
+        //     .collect();
+
+        // let active_column = input_domain
+        //     .active_column
+        //     .clone()
+        //     .ok_or_else(|| err!(MakeTransformation, "No active column"))?;
+
+        // let res: Vec<Option<f64>> = lf
+        //     .clone()
+        //     .collect()?
+        //     .column(&active_column)?
+        //     .f64()?
+        //     .into_iter()
+        //     .map(|v| v.map(|v| scalar_laplace_measurement.invoke(&v).unwrap()))
+        //     .collect();
+
+        // let output_type = GetOutput::from_type(DataType::Float64);
+
+        Ok(())
+    }
 }
