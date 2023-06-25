@@ -41,23 +41,29 @@ pub fn make_laplace_expr(
                 .active_column
                 .clone()
                 .ok_or_else(|| err!(MakeTransformation, "No active column"))?;
+            
+            let output_type = GetOutput::from_type(DataType::Float64);
+        
+            // let expr = expr.clone().map(
+            //     |value: Series| 
+            //         Ok(Some(value
+            //             .unpack::<Float64Type>()?
+            //             .into_iter()
+            //             .map(|v| v.and_then(|v| scalar_laplace_measurement.invoke(&v).ok()))
+            //             .collect::<Float64Chunked>()
+            //             .into_series())),
+            //         output_type,
+            // );
 
             let expr = expr.clone().map(
-                |value: Series| -> Result<Series> {
-                    let mapped = value
+                move |value: Series|
+                    Ok(Some(value
                         .unpack::<Float64Type>()?
                         .into_iter()
                         .map(|v| v.and_then(|v| scalar_laplace_measurement.invoke(&v).ok()))
                         .collect::<Float64Chunked>()
-                        .into_series();
-                    if(mapped.is_none()) {
-                        Ok(mapped)
-                    } else{
-                        Err(err!(MakeTransformation, "No active column"))
-                    }
-                    
-                },
-                GetOutput::default(),
+                        .into_series())),
+                    output_type,
             );
 
             Ok(expr)
@@ -112,6 +118,19 @@ mod test_make_laplace_expr {
         //     .collect();
 
         // let output_type = GetOutput::from_type(DataType::Float64);
+
+        // let expr = expr.clone().map(
+        //     |value: Series| -> Result<Series> {
+        //         let mapped = value
+        //             .unpack::<Float64Type>()?
+        //             .into_iter()
+        //             .map(|v| v.and_then(|v| scalar_laplace_measurement.invoke(&v).ok()))
+        //             .collect::<Float64Chunked>()
+        //             .into_series();
+        //         Ok(mapped)
+        //     },
+        //     GetOutput::default(),
+        // );
 
         Ok(())
     }
