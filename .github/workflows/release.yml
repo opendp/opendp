@@ -173,17 +173,18 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Create Rust build for linux
-        env:
-          # Only run tests for native compile
-          FLAGS: ${{ matrix.architecture == 'x86_64' && '-i -r -t' || '-i -r' }}
-        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh $FLAGS -g $TARGET -f \"$FEATURES\""
+        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -t -g $TARGET -f \"$FEATURES\""
+
+      - name: Retrieve architecture library
+        run: |
+          mkdir -p rust/target/release
+          mv rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB
 
       - name: Upload .so
         uses: actions/upload-artifact@v3
         with:
-          name: libs
-          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
-          path: rust/target*/${{ env.TARGET }}/release/libopendp.so
+          name: lib_so
+          path: rust/target/release/$ARCH_LIB
 
 
   python-publish:
@@ -226,7 +227,7 @@ jobs:
           DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
-          python tools/publish_tool.py python $DRY_RUN_FLAG
+#          python tools/publish_tool.py python $DRY_RUN_FLAG
 
 
   rust-publish:
