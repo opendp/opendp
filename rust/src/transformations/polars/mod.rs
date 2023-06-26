@@ -31,6 +31,8 @@ pub use sink_parquet::*;
 mod make_groupby;
 #[cfg(feature = "contrib")]
 pub use make_groupby::*;
+
+#[cfg(feature = "contrib")]
 mod make_col;
 #[cfg(feature = "contrib")]
 pub use make_col::*;
@@ -39,6 +41,12 @@ pub use make_col::*;
 mod make_with_columns;
 #[cfg(feature = "contrib")]
 pub use make_with_columns::*;
+
+
+#[cfg(feature = "contrib")]
+mod make_agg_trans;
+#[cfg(feature = "contrib")]
+pub use make_agg_trans::*;
 
 #[cfg(test)]
 pub mod polars_test {
