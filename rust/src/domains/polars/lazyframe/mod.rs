@@ -11,6 +11,7 @@ use crate::{
     domains::{AtomDomain, OptionDomain, SeriesDomain},
     error::Fallible,
 };
+use crate::domains::DatasetMetric;
 
 #[cfg(feature = "ffi")]
 mod ffi;
