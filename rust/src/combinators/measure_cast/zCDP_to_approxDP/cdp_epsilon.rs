@@ -13,7 +13,7 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
         return Ok(Q::infinity());
     }
 
-    if delta < Q::zero() {
+    if delta.is_sign_negative() {
         return fallible!(FailedRelation, "delta must be non-negative");
     }
 
