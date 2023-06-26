@@ -1,8 +1,9 @@
 import ctypes
 import os
+import platform
+import re
 import sys
 from typing import Optional, Any
-import re
 
 
 # list all acceptable alternative types for each default type
@@ -14,30 +15,62 @@ ATOM_EQUIVALENCE_CLASSES = {
     'AnyTransformationPtr': ['AnyTransformationPtr'],
 }
 
-lib_dir = os.environ.get("OPENDP_LIB_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
-if not os.path.exists(lib_dir):
-    # fall back to default location of binaries in a developer install
-    build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
-    lib_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'rust', 'target', build_dir)
 
-if os.path.exists(lib_dir):
-    platform_to_name = {
-        "darwin": "libopendp.dylib",
-        "linux": "libopendp.so",
-        "win32": "opendp.dll",
-    }
-    if sys.platform not in platform_to_name:
-        raise Exception("Platform not supported", sys.platform)
-    lib_name = platform_to_name[sys.platform]
+def _load_library():
+    lib_dir = os.environ.get("OPENDP_LIB_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
+    if not os.path.exists(lib_dir):
+        # fall back to default location of binaries in a developer install
+        build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
+        lib_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'rust', 'target', build_dir)
 
-    lib = ctypes.cdll.LoadLibrary(os.path.join(lib_dir, lib_name))
+    if os.path.exists(lib_dir):
+        # Mapping of Python platform to library name format
+        platform_to_name_template = {
+            "darwin": "libopendp{}.dylib",
+            "linux": "libopendp{}.so",
+            "win32": "opendp{}.dll",
+        }
+        # Mapping of Python platform/machine to Rust architecture.
+        platform_machine_to_architecture = {
+            ("win32", "AMD64"): "x86_64",
+            # No way to build this yet ("win32", "ARM64"): "aarch64",
+            ("darwin", "x86_64"): "x86_64",
+            ("darwin", "arm64"): "aarch64",
+            ("linux", "x86_64"): "x86_64",
+            ("linux", "aarch64"): "aarch64",
+        }
 
-elif os.environ.get('OPENDP_HEADLESS', "false") != "false":
-    lib = None
+        name_template = platform_to_name_template.get(sys.platform)
+        if name_template is None:
+            raise Exception("Platform not supported", sys.platform)
+        architecture = platform_machine_to_architecture.get((sys.platform, platform.machine()))
+        if architecture is None:
+            raise Exception("Machine not supported", sys.platform, platform.machine())
 
-else:
-    raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
+        def get_lib_path(name_template, architecture):
+            suffix = f"-{architecture}" if architecture is not None else ""
+            name = name_template.format(suffix)
+            return os.path.join(lib_dir, name)
 
+        # First try name with architecture
+        lib_path = get_lib_path(name_template, architecture)
+        if not os.path.exists(lib_path):
+            # Fall back to name without architecture (happens on darwin, which has fat binaries, and developer installs)
+            lib_path = get_lib_path(name_template, None)
+
+        try:
+            return ctypes.cdll.LoadLibrary(lib_path)
+        except Exception as e:
+            raise Exception("Unable to load OpenDP shared library", lib_path, e)
+
+    elif os.environ.get('OPENDP_HEADLESS', "false") != "false":
+        return None
+
+    else:
+        raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
+
+
+lib = _load_library()
 
 # This enables backtraces in Rust by default.
 # It can be disabled by setting RUST_BACKTRACE=0.

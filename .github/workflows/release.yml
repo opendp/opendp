@@ -32,10 +32,10 @@ jobs:
         run: if [[ $BRANCH_DRY_RUN_OK == true ]]; then echo OK; else echo 'Disabled dry run on non-release branch!'; exit 1; fi
 
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: 3.8
           cache: pip
@@ -62,10 +62,10 @@ jobs:
           install: m4
 
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~\.cargo\bin
@@ -92,10 +92,10 @@ jobs:
     needs: credential-check
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/bin
@@ -144,14 +144,21 @@ jobs:
   python-pre-publish-linux:
     runs-on: ubuntu-20.04
     needs: credential-check
+    strategy:
+      matrix:
+        architecture: [x86_64, aarch64]
     env:
-      DOCKER_IMAGE: quay.io/pypa/manylinux2014_x86_64
+      # This image is important. The default manylinux2014 images are problematic to configure for cross-compilation
+      # in a way that will satisfy the gmp configure script.
+      DOCKER_IMAGE: messense/manylinux2014-cross:${{ matrix.architecture }}
+      TARGET: ${{ matrix.architecture }}-unknown-linux-gnu
+      ARCH_LIB: libopendp-${{ matrix.architecture }}.so
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/bin
@@ -164,13 +171,18 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Create Rust build for linux
-        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -t -f \"$FEATURES\""
+        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -t -g $TARGET -f \"$FEATURES\""
+
+      - name: Retrieve architecture library
+        run: |
+          mkdir -p rust/target/release
+          mv rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB
 
       - name: Upload .so
         uses: actions/upload-artifact@v3
         with:
           name: lib_so
-          path: rust/target/release/libopendp.so
+          path: rust/target/release/$ARCH_LIB
 
 
   python-publish:
@@ -180,10 +192,10 @@ jobs:
       PYPI_API_TOKEN: ${{ inputs.dry_run && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_API_TOKEN }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: 3.8
           cache: pip
@@ -223,20 +235,20 @@ jobs:
           DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
-          python tools/publish_tool.py python $DRY_RUN_FLAG
+#          python tools/publish_tool.py python $DRY_RUN_FLAG
 
 
   rust-publish:
     runs-on: ubuntu-20.04
-    needs: credential-check
+    needs: python-publish
     env:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: 3.8
           cache: pip
