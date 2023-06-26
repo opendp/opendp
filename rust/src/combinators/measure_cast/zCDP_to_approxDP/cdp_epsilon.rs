@@ -5,16 +5,24 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
         return fallible!(FailedRelation, "rho must be non-negative");
     }
 
-    if !delta.is_sign_positive() {
-        return fallible!(FailedRelation, "delta must be positive");
-    }
-
     if rho.is_zero() {
         return Ok(Q::zero());
     }
 
     if rho.is_infinite() {
         return Ok(Q::infinity());
+    }
+
+    if delta < Q::zero() {
+        return fallible!(FailedRelation, "delta must be non-negative");
+    }
+
+    if delta.is_zero() {
+        return Ok(Q::infinity());
+    }
+
+    if delta > Q::one() {
+        return fallible!(FailedRelation, "delta must not be greater than one");
     }
 
     let _1 = Q::one();
