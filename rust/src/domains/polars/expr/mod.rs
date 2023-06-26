@@ -100,14 +100,23 @@ impl<C: Context> Debug for ExprDomain<C> {
 
 pub trait ExprMetric<C>: Metric {
     type InnerMetric: Metric<Distance = Self::Distance>;
+    fn inner_metric(&self) -> Self::InnerMetric;
 }
 
 impl<M: Metric> ExprMetric<LazyFrameContext> for M {
     type InnerMetric = Self;
+
+    fn inner_metric(&self) -> Self::InnerMetric {
+        self.clone()
+    }
 }
 
 impl<M: Metric> ExprMetric<LazyGroupByContext> for Lp<1, M> {
     type InnerMetric = M;
+
+    fn inner_metric(&self) -> Self::InnerMetric {
+        self.0.clone()
+    }
 }
 
 impl<M: DatasetMetric> MetricSpace for (ExprDomain<LazyFrameContext>, M) {
