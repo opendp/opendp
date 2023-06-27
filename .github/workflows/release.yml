@@ -172,14 +172,11 @@ jobs:
 
       - name: Create Rust build for linux x86_64
         if: matrix.architecture == 'x86_64'
-        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -t -g $TARGET -f \"$FEATURES\""
+        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -t -g $TARGET -f \"$FEATURES\" && cp rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB"
 
       - name: Create Rust build for linux non-x86_64 (no tests)
         if: matrix.architecture != 'x86_64'
-        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\""
-
-      - name: Retrieve architecture library
-        run: cp rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB
+        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\" && cp rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB"
 
       - name: Upload .so
         uses: actions/upload-artifact@v3
