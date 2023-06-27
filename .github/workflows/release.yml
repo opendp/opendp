@@ -80,8 +80,8 @@ jobs:
       - name: Create Rust build for windows
 #        run: bash tools/rust_build.sh -i -r -t -f "$FEATURES"
         run: |
-          bash mkdir -p rust/target/release
-          bash echo opendp.dll >rust/target/release/opendp.dll
+          mkdir -p rust/target/release
+          echo opendp.dll >rust/target/release/opendp.dll
 
       - name: Upload .dll
         uses: actions/upload-artifact@v3
@@ -187,7 +187,7 @@ jobs:
         if: matrix.architecture != 'x86_64'
 #        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\" && cp rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB"
         run: |
-          bash mkdir -p rust/target/release
+          mkdir -p rust/target/release
           echo $ARCH_LIB >rust/target/release/$ARCH_LIB
 
       - name: Upload .so
