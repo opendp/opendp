@@ -98,3 +98,22 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
 
     Ok(epsilon.max(Q::zero()))
 }
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    #[test]
+    fn test_edge_cases() -> Fallible<()> {
+        assert!(cdp_epsilon(-0., 0.).is_err());
+        assert!(cdp_epsilon(0., -0.).is_err());
+        assert_eq!(cdp_epsilon(0., 0.)?, 0.);
+        assert_eq!(cdp_epsilon(0.1, 0.)?, f64::INFINITY);
+        assert!(cdp_epsilon(0.1, 0.1)? > 0.);
+        assert_eq!(cdp_epsilon(0.1, 1.)?, 0.);
+        assert!(cdp_epsilon(0.1, 1.01).is_err());
+        assert_eq!(cdp_epsilon(f64::INFINITY, 1.)?, f64::INFINITY);
+
+        Ok(())
+    }
+}
