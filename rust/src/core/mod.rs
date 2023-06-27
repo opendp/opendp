@@ -155,7 +155,7 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     {
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             if c < MO::Distance::zero() {
-                return fallible!(MakeMeasurement, "constant must be non-negative");
+                return fallible!(FailedMap, "constant must be non-negative");
             }
             MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
         })
@@ -203,6 +203,9 @@ impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
         MO::Distance: DistanceConstant<MI::Distance>,
     {
         StabilityMap::new_fallible(move |d_in: &MI::Distance| {
+            if c < MO::Distance::zero() {
+                return fallible!(FailedMap, "constant must be non-negative");
+            }
             MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
         })
     }

@@ -180,7 +180,7 @@ impl From<FfiError> for Error {
             "FFI" => ErrorVariant::FFI,
             "TypeParse" => ErrorVariant::TypeParse,
             "FailedFunction" => ErrorVariant::FailedFunction,
-            "FailedRelation" => ErrorVariant::FailedRelation,
+            "FailedMap" => ErrorVariant::FailedMap,
             "RelationDebug" => ErrorVariant::RelationDebug,
             "FailedCast" => ErrorVariant::FailedCast,
             "DomainMismatch" => ErrorVariant::DomainMismatch,

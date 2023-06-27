@@ -78,15 +78,15 @@ where
         PrivacyMap::new_fallible(move |&d_in: &TV| {
             Ok(SMDCurve::new(move |&del: &TV| {
                 if del.is_sign_negative() || del.is_zero() {
-                    return fallible!(FailedRelation, "delta must be positive");
+                    return fallible!(FailedMap, "delta must be positive");
                 }
 
                 if del > TV::one() {
-                    return fallible!(FailedRelation, "delta must not be greater than 1");
+                    return fallible!(FailedMap, "delta must not be greater than 1");
                 }
 
                 if d_in.is_sign_negative() {
-                    return fallible!(FailedRelation, "d_in must be not be negative");
+                    return fallible!(FailedMap, "d_in must be not be negative");
                 }
                 if d_in.is_zero() {
                     return Ok(TV::zero());

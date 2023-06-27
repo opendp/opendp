@@ -2,11 +2,11 @@ use crate::{error::Fallible, traits::Float};
 
 pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
     if rho.is_sign_negative() {
-        return fallible!(FailedRelation, "rho must be non-negative");
+        return fallible!(FailedMap, "rho must be non-negative");
     }
 
     if delta.is_sign_negative() {
-        return fallible!(FailedRelation, "delta must be non-negative");
+        return fallible!(FailedMap, "delta must be non-negative");
     }
 
     if rho.is_zero() {
@@ -22,7 +22,7 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
     }
 
     if delta > Q::one() {
-        return fallible!(FailedRelation, "delta must not be greater than one");
+        return fallible!(FailedMap, "delta must not be greater than one");
     }
 
     let _1 = Q::one();
