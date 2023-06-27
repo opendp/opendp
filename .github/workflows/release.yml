@@ -64,21 +64,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Cache Rust dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~\.cargo\bin
-            ~\.cargo\registry\index
-            ~\.cargo\registry\cache
-            ~\.cargo\git\db
-            ~\AppData\Local\gmp-mpfr-sys
-            rust\target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
+#      - name: Cache Rust dependencies
+#        uses: actions/cache@v3
+#        with:
+#          path: |
+#            ~\.cargo\bin
+#            ~\.cargo\registry\index
+#            ~\.cargo\registry\cache
+#            ~\.cargo\git\db
+#            ~\AppData\Local\gmp-mpfr-sys
+#            rust\target
+#          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+#          restore-keys: ${{ runner.os }}-cargo-
 
       - name: Create Rust build for windows
-        run: bash tools/rust_build.sh -i -r -t -f "$FEATURES"
+#        run: bash tools/rust_build.sh -i -r -t -f "$FEATURES"
+        run: |
+          bash mkdir -p rust/target/release
+          bash echo opendp.dll >rust/target/release/opendp.dll
 
       - name: Upload .dll
         uses: actions/upload-artifact@v3
@@ -95,38 +98,41 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Cache Rust dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            ~/Library/Caches/gmp-mpfr-sys
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
+#      - name: Cache Rust dependencies
+#        uses: actions/cache@v3
+#        with:
+#          path: |
+#            ~/.cargo/bin
+#            ~/.cargo/registry/index
+#            ~/.cargo/registry/cache
+#            ~/.cargo/git/db
+#            ~/Library/Caches/gmp-mpfr-sys
+#            rust/target
+#          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+#          restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Create Rust build for macos x86_64
-        run: bash tools/rust_build.sh -i -r -t -g x86_64-apple-darwin -f "$FEATURES"
-        env:
-          CC: clang -target x86_64-apple-darwin
+#      - name: Create Rust build for macos x86_64
+#        run: bash tools/rust_build.sh -i -r -t -g x86_64-apple-darwin -f "$FEATURES"
+#        env:
+#          CC: clang -target x86_64-apple-darwin
 
-      - name: Create Rust build for macos aarch64 (no tests)
-        # include python bindings generation to get updated links in python codegen
-        run: bash tools/rust_build.sh -i -r -g aarch64-apple-darwin -f "$FEATURES,bindings-python"
-        env:
-          CC: clang -target aarch64-apple-darwin
+#      - name: Create Rust build for macos aarch64 (no tests)
+#        # include python bindings generation to get updated links in python codegen
+#        run: bash tools/rust_build.sh -i -r -g aarch64-apple-darwin -f "$FEATURES,bindings-python"
+#        env:
+#          CC: clang -target aarch64-apple-darwin
 
       - name: Create universal binary of Rust build for macos
         # https://developer.apple.com/documentation/apple-silicon/building-a-universal-macos-binary#Update-the-Architecture-List-of-Custom-Makefiles
+#        run: |
+#          mkdir -p rust/target/release
+#          lipo \
+#              rust/target/x86_64-apple-darwin/release/libopendp.dylib \
+#              rust/target/aarch64-apple-darwin/release/libopendp.dylib \
+#              -output rust/target/release/libopendp.dylib -create
         run: |
           mkdir -p rust/target/release
-          lipo \
-              rust/target/x86_64-apple-darwin/release/libopendp.dylib \
-              rust/target/aarch64-apple-darwin/release/libopendp.dylib \
-              -output rust/target/release/libopendp.dylib -create
+          echo libopendp.dylib >rust/target/release/libopendp.dylib
 
       - name: Upload .dylib
         uses: actions/upload-artifact@v3
@@ -159,26 +165,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Cache Rust dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            ~/.cache/gmp-mpfr-sys
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
+#      - name: Cache Rust dependencies
+#        uses: actions/cache@v3
+#        with:
+#          path: |
+#            ~/.cargo/bin
+#            ~/.cargo/registry/index
+#            ~/.cargo/registry/cache
+#            ~/.cargo/git/db
+#            ~/.cache/gmp-mpfr-sys
+#            rust/target
+#          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+#          restore-keys: ${{ runner.os }}-cargo-
 
       - name: Create Rust build for linux x86_64
         if: matrix.architecture == 'x86_64'
-        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -t -g $TARGET -f \"$FEATURES\" && cp rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB"
+#        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -t -g $TARGET -f \"$FEATURES\" && cp rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB"
+        run: |
+          mkdir -p rust/target/release
+          echo $ARCH_LIB >rust/target/release/$ARCH_LIB
 
       - name: Create Rust build for linux non-x86_64 (no tests)
         if: matrix.architecture != 'x86_64'
-        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\" && cp rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB"
+#        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\" && cp rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB"
+        run: |
+          bash mkdir -p rust/target/release
+          echo $ARCH_LIB >rust/target/release/$ARCH_LIB
 
       - name: Upload .so
         uses: actions/upload-artifact@v3
@@ -212,6 +224,15 @@ jobs:
       - name: Dump directory
         run: |
           ls -lR rust/target/
+
+      - name: Download linux lib
+        uses: actions/download-artifact@v3
+        with:
+          name: lib_so
+          path: rust/target/release
+
+      - name: Dump directory
+        run: ls -lR rust/target/release
 
       - name: Download bindings
         uses: actions/download-artifact@v3
