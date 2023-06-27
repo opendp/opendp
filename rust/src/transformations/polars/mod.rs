@@ -27,3 +27,7 @@ pub use scan_parquet::*;
 mod sink_parquet;
 #[cfg(feature = "contrib")]
 pub use sink_parquet::*;
+#[cfg(feature = "contrib")]
+mod make_groupby;
+#[cfg(feature = "contrib")]
+pub use make_groupby::*;
