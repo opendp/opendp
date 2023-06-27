@@ -139,7 +139,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: lib
-          path: '*/target/release/libopendp.dylib'
+          path: 'rust/*/release/libopendp.dylib'
 
       # need to upload at least one set up updated bindings
       - name: Upload bindings
@@ -197,7 +197,7 @@ jobs:
         with:
           name: lib
 #          path: rust/target/release/${{ env.ARCH_LIB }}
-          path: rust*/target/${{ env.TARGET }}/release/libopendp.so
+          path: rust/target*/${{ env.TARGET }}/release/libopendp.so
 
 
   python-publish:
