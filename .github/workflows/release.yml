@@ -216,7 +216,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: libs
-          path: rust/target/
+          path: rust/
 
       - name: Dump directory
         run: |
