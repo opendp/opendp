@@ -36,10 +36,16 @@ pub use make_col::*;
 mod make_select_trans;
 #[cfg(feature = "contrib")]
 pub use make_select_trans::*;
+#[cfg(feature = "contrib")]
+mod make_groupby;
+#[cfg(feature = "contrib")]
+pub use make_groupby::*;
 
 #[cfg(test)]
 mod test {
-    use crate::domains::{AtomDomain, ExprDomain, LazyFrameDomain, SeriesDomain, LazyFrameContext};
+    use crate::domains::{
+        AtomDomain, ExprDomain, LazyFrameContext, LazyFrameDomain, SeriesDomain,
+    };
     use crate::error::*;
     use polars::prelude::*;
 
