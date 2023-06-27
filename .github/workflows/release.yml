@@ -181,9 +181,7 @@ jobs:
         run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\""
 
       - name: Retrieve architecture library
-        run: |
-          mkdir -p rust/target/release
-          mv rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB
+        run: cp rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB
 
       - name: Upload .so
         uses: actions/upload-artifact@v3
