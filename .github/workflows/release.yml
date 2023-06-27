@@ -182,14 +182,14 @@ jobs:
         if: matrix.architecture == 'x86_64'
 #        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -t -g $TARGET -f \"$FEATURES\" && cp rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB"
         run: |
-          mkdir -p rust/target/release
+          mkdir -p rust/target/$TARGET/release
           echo $ARCH_LIB >rust/target/$TARGET/release/libopendp.so
 
       - name: Create Rust build for linux non-x86_64 (no tests)
         if: matrix.architecture != 'x86_64'
 #        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\" && cp rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB"
         run: |
-          mkdir -p rust/target/release
+          mkdir -p rust/target/$TARGET/release
           echo $ARCH_LIB >rust/target/$TARGET/release/libopendp.so
 
       - name: Upload .so
