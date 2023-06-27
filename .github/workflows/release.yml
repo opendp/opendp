@@ -86,8 +86,10 @@ jobs:
       - name: Upload .dll
         uses: actions/upload-artifact@v3
         with:
-          name: lib_dll
-          path: rust/target/release/opendp.dll
+          name: lib
+          path: |
+            rust/target/release/opendp.dll
+            rust/INTENTIONALLY_BOGUS
 
 
   python-pre-publish-mac:
@@ -136,8 +138,8 @@ jobs:
       - name: Upload .dylib
         uses: actions/upload-artifact@v3
         with:
-          name: lib_dylib
-          path: rust/target/release/libopendp.dylib
+          name: lib
+          path: '*/target/release/libopendp.dylib'
 
       # need to upload at least one set up updated bindings
       - name: Upload bindings
@@ -180,21 +182,23 @@ jobs:
         if: matrix.architecture == 'x86_64'
 #        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -t -g $TARGET -f \"$FEATURES\" && cp rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB"
         run: |
-          mkdir -p rust/target/release
-          echo $ARCH_LIB >rust/target/release/$ARCH_LIB
+#          mkdir -p rust/target/release
+#          echo $ARCH_LIB >rust/target/release/$ARCH_LIB
+          echo $ARCH_LIB >rust/target/$TARGET/release/libopendp.so
 
       - name: Create Rust build for linux non-x86_64 (no tests)
         if: matrix.architecture != 'x86_64'
 #        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\" && cp rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB"
         run: |
-          mkdir -p rust/target/release
-          echo $ARCH_LIB >rust/target/release/$ARCH_LIB
+#          mkdir -p rust/target/release
+          echo $ARCH_LIB >rust/target/$TARGET/release/libopendp.so
 
       - name: Upload .so
         uses: actions/upload-artifact@v3
         with:
-          name: lib_so
-          path: rust/target/release/${{ env.ARCH_LIB }}
+          name: lib
+#          path: rust/target/release/${{ env.ARCH_LIB }}
+          path: rust*/target/${{ env.TARGET }}/release/libopendp.so
 
 
   python-publish:
@@ -212,29 +216,35 @@ jobs:
           python-version: 3.8
           cache: pip
 
-      - name: Prepare for libs
-        run: mkdir -p rust/target/release
+#      - name: Prepare for libs
+#        run: mkdir -p rust/target/release
+#
+#      - name: Download windows lib
+#        uses: actions/download-artifact@v3
+#        with:
+#          name: lib_dll
+#          path: rust/target/release
+#
+#      - name: Download macos lib
+#        uses: actions/download-artifact@v3
+#        with:
+#          name: lib_dylib
+#          path: rust/target/release
+#
+#      - name: Download linux lib
+#        uses: actions/download-artifact@v3
+#        with:
+#          name: lib_so
+#          path: rust/target/release
 
-      - name: Download windows lib
+      - name: Download libs
         uses: actions/download-artifact@v3
         with:
-          name: lib_dll
-          path: rust/target/release
-
-      - name: Download macos lib
-        uses: actions/download-artifact@v3
-        with:
-          name: lib_dylib
-          path: rust/target/release
-
-      - name: Download linux lib
-        uses: actions/download-artifact@v3
-        with:
-          name: lib_so
-          path: rust/target/release
+          name: lib
+          path: rust
 
       - name: Dump directory
-        run: ls -lR rust/target/release
+        run: ls -lR rust/target
 
       - name: Download bindings
         uses: actions/download-artifact@v3
