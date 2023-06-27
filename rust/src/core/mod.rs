@@ -30,6 +30,7 @@ use std::rc::Rc;
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
 use std::fmt::Debug;
+use num::Zero;
 
 /// A set which constrains the input or output of a [`Function`].
 ///
@@ -153,6 +154,9 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
         MO::Distance: DistanceConstant<MI::Distance>,
     {
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
+            if c < MO::Distance::zero() {
+                return fallible!(FailedMap, "constant must be non-negative");
+            }
             MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
         })
     }
@@ -199,6 +203,9 @@ impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
         MO::Distance: DistanceConstant<MI::Distance>,
     {
         StabilityMap::new_fallible(move |d_in: &MI::Distance| {
+            if c < MO::Distance::zero() {
+                return fallible!(FailedMap, "constant must be non-negative");
+            }
             MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
         })
     }

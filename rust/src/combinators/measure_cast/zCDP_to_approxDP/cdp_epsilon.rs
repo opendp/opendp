@@ -2,19 +2,27 @@ use crate::{error::Fallible, traits::Float};
 
 pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
     if rho.is_sign_negative() {
-        return fallible!(FailedRelation, "rho must be non-negative");
+        return fallible!(FailedMap, "rho must be non-negative");
     }
 
-    if !delta.is_sign_positive() {
-        return fallible!(FailedRelation, "delta must be positive");
+    if delta.is_sign_negative() {
+        return fallible!(FailedMap, "delta must be non-negative");
     }
 
     if rho.is_zero() {
         return Ok(Q::zero());
     }
 
+    if delta.is_zero() {
+        return Ok(Q::infinity());
+    }
+
     if rho.is_infinite() {
         return Ok(Q::infinity());
+    }
+
+    if delta > Q::one() {
+        return fallible!(FailedMap, "delta must not be greater than one");
     }
 
     let _1 = Q::one();
@@ -89,4 +97,23 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
     let epsilon = a_max.inf_mul(&rho)?.inf_add(&numer.inf_div(&denom)?)?;
 
     Ok(epsilon.max(Q::zero()))
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    #[test]
+    fn test_edge_cases() -> Fallible<()> {
+        assert!(cdp_epsilon(-0., 0.).is_err());
+        assert!(cdp_epsilon(0., -0.).is_err());
+        assert_eq!(cdp_epsilon(0., 0.)?, 0.);
+        assert_eq!(cdp_epsilon(0.1, 0.)?, f64::INFINITY);
+        assert!(cdp_epsilon(0.1, 0.1)? > 0.);
+        assert_eq!(cdp_epsilon(0.1, 1.)?, 0.);
+        assert!(cdp_epsilon(0.1, 1.01).is_err());
+        assert_eq!(cdp_epsilon(f64::INFINITY, 1.)?, f64::INFINITY);
+
+        Ok(())
+    }
 }
