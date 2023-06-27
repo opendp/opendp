@@ -5,19 +5,19 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
         return fallible!(FailedRelation, "rho must be non-negative");
     }
 
-    if rho.is_zero() {
-        return Ok(Q::zero());
-    }
-
-    if rho.is_infinite() {
-        return Ok(Q::infinity());
-    }
-
     if delta.is_sign_negative() {
         return fallible!(FailedRelation, "delta must be non-negative");
     }
 
+    if rho.is_zero() {
+        return Ok(Q::zero());
+    }
+
     if delta.is_zero() {
+        return Ok(Q::infinity());
+    }
+
+    if rho.is_infinite() {
         return Ok(Q::infinity());
     }
 

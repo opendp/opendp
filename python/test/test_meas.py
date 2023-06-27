@@ -1,3 +1,4 @@
+import pytest
 import opendp.prelude as dp
 
 dp.enable_features('floating-point', 'contrib')
@@ -6,8 +7,24 @@ def test_base_gaussian_curve():
     from opendp.measurements import make_base_gaussian
     from opendp.combinators import make_zCDP_to_approxDP
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    curve = make_zCDP_to_approxDP(make_base_gaussian(*input_space, 4.)).map(1.)
-    print(curve.epsilon(1e-3))
+    meas = make_zCDP_to_approxDP(make_base_gaussian(*input_space, 4.))
+    curve = meas.map(d_in=1.)
+    assert curve.epsilon(delta=0.) == float('inf')
+    assert curve.epsilon(delta=1e-3) == 0.6880024554878086
+    assert curve.epsilon(delta=1.) == 0.
+
+    curve = make_zCDP_to_approxDP(make_base_gaussian(*input_space, 4.)).map(d_in=0.0)
+    assert curve.epsilon(0.0) == 0.0
+    with pytest.raises(Exception):
+        curve.epsilon(delta=-0.0)
+
+    curve = make_zCDP_to_approxDP(make_base_gaussian(*input_space, 0.)).map(d_in=1.0)
+    assert curve.epsilon(delta=0.0) == float('inf')
+    assert curve.epsilon(delta=0.1) == float('inf')
+
+    curve = make_zCDP_to_approxDP(make_base_gaussian(*input_space, 0.)).map(d_in=0.0)
+    assert curve.epsilon(delta=0.0) == 0.0
+    assert curve.epsilon(delta=0.1) == 0.0
 
 
 def test_base_gaussian_search():

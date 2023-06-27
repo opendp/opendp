@@ -80,6 +80,18 @@ where
                 if del.is_sign_negative() || del.is_zero() {
                     return fallible!(FailedRelation, "delta must be positive");
                 }
+
+                if del > TV::one() {
+                    return fallible!(FailedRelation, "delta must not be greater than 1");
+                }
+
+                if d_in.is_sign_negative() {
+                    return fallible!(FailedRelation, "d_in must be not be negative");
+                }
+                if d_in.is_zero() {
+                    return Ok(TV::zero());
+                }
+
                 let d_in = d_in.inf_add(&relaxation)?;
                 let min_eps = d_in / scale;
                 let min_threshold = (d_in / (_2 * del)).ln() * scale + d_in;

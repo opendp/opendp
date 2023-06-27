@@ -41,6 +41,11 @@ where
             if d_in.is_sign_negative() {
                 return fallible!(InvalidDistance, "sensitivity must be non-negative");
             }
+
+            if d_in.is_zero() {
+                return Ok(Q::zero());
+            }
+
             if scale.is_zero() {
                 return Ok(Q::infinity());
             }
