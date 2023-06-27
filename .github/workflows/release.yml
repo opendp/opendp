@@ -64,79 +64,75 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-#      - name: Cache Rust dependencies
-#        uses: actions/cache@v3
-#        with:
-#          path: |
-#            ~\.cargo\bin
-#            ~\.cargo\registry\index
-#            ~\.cargo\registry\cache
-#            ~\.cargo\git\db
-#            ~\AppData\Local\gmp-mpfr-sys
-#            rust\target
-#          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-#          restore-keys: ${{ runner.os }}-cargo-
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~\.cargo\bin
+            ~\.cargo\registry\index
+            ~\.cargo\registry\cache
+            ~\.cargo\git\db
+            ~\AppData\Local\gmp-mpfr-sys
+            rust\target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
 
       - name: Create Rust build for windows
-#        run: bash tools/rust_build.sh -i -r -t -f "$FEATURES"
-        run: |
-          mkdir -p rust/target/release
-          echo opendp.dll >rust/target/release/opendp.dll
+        run: bash tools/rust_build.sh -i -r -t -f "$FEATURES"
 
       - name: Upload .dll
         uses: actions/upload-artifact@v3
         with:
           name: libs
+          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: rust/target*/release/opendp.dll
 
 
-  python-pre-publish-mac:
+  python-pre-publish-macos:
     runs-on: macos-11
     needs: credential-check
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-#      - name: Cache Rust dependencies
-#        uses: actions/cache@v3
-#        with:
-#          path: |
-#            ~/.cargo/bin
-#            ~/.cargo/registry/index
-#            ~/.cargo/registry/cache
-#            ~/.cargo/git/db
-#            ~/Library/Caches/gmp-mpfr-sys
-#            rust/target
-#          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-#          restore-keys: ${{ runner.os }}-cargo-
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ~/Library/Caches/gmp-mpfr-sys
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
 
-#      - name: Create Rust build for macos x86_64
-#        run: bash tools/rust_build.sh -i -r -t -g x86_64-apple-darwin -f "$FEATURES"
-#        env:
-#          CC: clang -target x86_64-apple-darwin
+      - name: Create Rust build for macos x86_64
+        run: bash tools/rust_build.sh -i -r -t -g x86_64-apple-darwin -f "$FEATURES"
+        env:
+          CC: clang -target x86_64-apple-darwin
 
-#      - name: Create Rust build for macos aarch64 (no tests)
-#        # include python bindings generation to get updated links in python codegen
-#        run: bash tools/rust_build.sh -i -r -g aarch64-apple-darwin -f "$FEATURES,bindings-python"
-#        env:
-#          CC: clang -target aarch64-apple-darwin
+      - name: Create Rust build for macos aarch64 (no tests)
+        # include python bindings generation to get updated links in python codegen
+        run: bash tools/rust_build.sh -i -r -g aarch64-apple-darwin -f "$FEATURES,bindings-python"
+        env:
+          CC: clang -target aarch64-apple-darwin
 
       - name: Create universal binary of Rust build for macos
         # https://developer.apple.com/documentation/apple-silicon/building-a-universal-macos-binary#Update-the-Architecture-List-of-Custom-Makefiles
-#        run: |
-#          mkdir -p rust/target/release
-#          lipo \
-#              rust/target/x86_64-apple-darwin/release/libopendp.dylib \
-#              rust/target/aarch64-apple-darwin/release/libopendp.dylib \
-#              -output rust/target/release/libopendp.dylib -create
         run: |
           mkdir -p rust/target/release
-          echo libopendp.dylib >rust/target/release/libopendp.dylib
+          lipo \
+              rust/target/x86_64-apple-darwin/release/libopendp.dylib \
+              rust/target/aarch64-apple-darwin/release/libopendp.dylib \
+              -output rust/target/release/libopendp.dylib -create
 
       - name: Upload .dylib
         uses: actions/upload-artifact@v3
         with:
           name: libs
+          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: rust/target*/release/libopendp.dylib
 
       # need to upload at least one set up updated bindings
@@ -163,43 +159,36 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-#      - name: Cache Rust dependencies
-#        uses: actions/cache@v3
-#        with:
-#          path: |
-#            ~/.cargo/bin
-#            ~/.cargo/registry/index
-#            ~/.cargo/registry/cache
-#            ~/.cargo/git/db
-#            ~/.cache/gmp-mpfr-sys
-#            rust/target
-#          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-#          restore-keys: ${{ runner.os }}-cargo-
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ~/.cache/gmp-mpfr-sys
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Create Rust build for linux x86_64
-        if: matrix.architecture == 'x86_64'
-#        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -t -g $TARGET -f \"$FEATURES\" && cp rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB"
-        run: |
-          mkdir -p rust/target/$TARGET/release
-          echo $ARCH_LIB >rust/target/$TARGET/release/libopendp.so
-
-      - name: Create Rust build for linux non-x86_64 (no tests)
-        if: matrix.architecture != 'x86_64'
-#        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\" && cp rust/target/$TARGET/release/libopendp.so rust/target/release/$ARCH_LIB"
-        run: |
-          mkdir -p rust/target/$TARGET/release
-          echo $ARCH_LIB >rust/target/$TARGET/release/libopendp.so
+      - name: Create Rust build for linux
+        env:
+          # Only run tests for native compile
+          FLAGS: ${{ matrix.architecture == 'x86_64 && '-i -r -t' || '-i -r' }}
+        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh $FLAGS -g $TARGET -f \"$FEATURES\""
 
       - name: Upload .so
         uses: actions/upload-artifact@v3
         with:
           name: libs
+          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: rust/target*/${{ env.TARGET }}/release/libopendp.so
 
 
   python-publish:
     runs-on: ubuntu-20.04
-    needs: [ python-pre-publish-windows, python-pre-publish-mac, python-pre-publish-linux ]
+    needs: [ python-pre-publish-windows, python-pre-publish-macos, python-pre-publish-linux ]
     env:
       PYPI_API_TOKEN: ${{ inputs.dry_run && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_API_TOKEN }}
     steps:
@@ -216,6 +205,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: libs
+          # Artifact contains all libs with leading paths starting at target
           path: rust/
 
       - name: Dump directory
@@ -236,7 +226,7 @@ jobs:
           DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
-#          python tools/publish_tool.py python $DRY_RUN_FLAG
+          python tools/publish_tool.py python $DRY_RUN_FLAG
 
 
   rust-publish:
