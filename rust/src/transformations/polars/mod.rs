@@ -36,6 +36,10 @@ pub use make_col::*;
 mod make_with_columns;
 #[cfg(feature = "contrib")]
 pub use make_with_columns::*;
+#[cfg(feature = "contrib")]
+mod make_groupby;
+#[cfg(feature = "contrib")]
+pub use make_groupby::*;
 
 #[cfg(test)]
 pub mod polars_test {
