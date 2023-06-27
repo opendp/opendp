@@ -175,7 +175,7 @@ jobs:
       - name: Create Rust build for linux
         env:
           # Only run tests for native compile
-          FLAGS: ${{ matrix.architecture == 'x86_64 && '-i -r -t' || '-i -r' }}
+          FLAGS: ${{ matrix.architecture == 'x86_64' && '-i -r -t' || '-i -r' }}
         run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh $FLAGS -g $TARGET -f \"$FEATURES\""
 
       - name: Upload .so
