@@ -87,9 +87,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: lib
-          path: |
-            rust/target/release/opendp.dll
-            rust/INTENTIONALLY_BOGUS
+          path: rust/target/release*/opendp.dll
 
 
   python-pre-publish-mac:
@@ -139,7 +137,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: lib
-          path: 'rust/*/release/libopendp.dylib'
+          path: rust/target/release*/libopendp.dylib
 
       # need to upload at least one set up updated bindings
       - name: Upload bindings
@@ -196,8 +194,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: lib
-#          path: rust/target/release/${{ env.ARCH_LIB }}
-          path: rust/target*/${{ env.TARGET }}/release/libopendp.so
+          path: rust/target/${{ env.TARGET }}*/release/libopendp.so
 
 
   python-publish:
@@ -240,10 +237,12 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: lib
-          path: rust
+          path: rust/target/
 
       - name: Dump directory
-        run: ls -lR rust/target
+        run: |
+          ls -l rust/
+          ls -lR rust/target
 
       - name: Download bindings
         uses: actions/download-artifact@v3
