@@ -10,7 +10,7 @@ from opendp.combinators import (
     make_zCDP_to_approxDP,
 )
 from opendp.domains import atom_domain
-from opendp.measurements import make_base_gaussian, make_base_laplace, make_gaussian
+from opendp.measurements import make_base_laplace, make_gaussian
 from opendp.measures import (
     fixed_smoothed_max_divergence,
     max_divergence,
@@ -35,7 +35,6 @@ from opendp.mod import (
     Measure,
     binary_search,
     binary_search_param,
-    domain_of,
 )
 from opendp.typing import RuntimeType
 
@@ -55,6 +54,107 @@ for module_name in ["transformations", "measurements"]:
         constructor = getattr(module, partial_name if is_partial else name)
 
         constructors[name[5:]] = constructor, is_partial
+
+
+def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
+    """A shorthand for building a metric space.
+     
+    A metric space consists of a domain and a metric.
+
+    :example:
+
+    >>> import opendp.prelude as dp
+    >>> from typing import List # in Python 3.9, can just write list[int] below
+    ...
+    >>> dp.space_of(List[int])
+    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
+    >>> # the verbose form allows greater control:
+    >>> (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())
+    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
+    
+    :param T: carrier type (the type of members in the domain)
+    :param M: metric type
+    :param infer: if True, `T` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
+    """
+    import opendp.typing as ty
+    domain = domain_of(T, infer=infer)
+    D = domain.type
+
+    # choose a metric type if not set
+    if M is None:
+        if D.origin == "VectorDomain":
+            M = ty.SymmetricDistance
+        elif D.origin == "AtomDomain" and ty.get_atom(D) in ty.NUMERIC_TYPES:
+            M = ty.AbsoluteDistance
+        else:
+            raise TypeError(f"no default metric for domain {D}. Please set `M`")
+    
+    # choose a distance type if not set
+    if isinstance(M, ty.RuntimeType) and M.args is None:
+        M = M[ty.get_atom(D)]
+
+    return domain, metric_of(M)
+
+
+def domain_of(T, infer=False) -> Domain:
+    """Constructs an instance of a domain from carrier type `T`.
+
+    :param T: carrier type
+    :param infer: if True, `T` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
+    """
+    import opendp.typing as ty
+    from opendp.domains import vector_domain, atom_domain, option_domain, map_domain
+
+    # normalize to a type descriptor
+    if infer:
+        T = ty.RuntimeType.infer(T)
+    else:
+        T = ty.RuntimeType.parse(T)
+    
+    # construct the domain
+    if isinstance(T, ty.RuntimeType):
+        if T.origin == "Vec":
+            return vector_domain(domain_of(T.args[0]))
+        if T.origin == "HashMap":
+            return map_domain(domain_of(T.args[0]), domain_of(T.args[1]))
+        if T.origin == "Option":
+            return option_domain(domain_of(T.args[0]))
+
+    if T in ty.PRIMITIVE_TYPES:
+        return atom_domain(T=T)
+    
+    raise TypeError(f"unrecognized carrier type: {T}")
+    
+        
+def metric_of(M) -> Metric:
+    """Constructs an instance of a metric from metric type `M`."""
+    import opendp.typing as ty
+    import opendp.metrics as metrics
+
+    if isinstance(M, Metric):
+        return M
+    M = ty.RuntimeType.parse(M)
+
+    if isinstance(M, ty.RuntimeType):
+        if M.origin == "AbsoluteDistance":
+            return metrics.absolute_distance(T=M.args[0])
+        if M.origin == "L1Distance":
+            return metrics.l1_distance(T=M.args[0])
+        if M.origin == "L2Distance":
+            return metrics.l2_distance(T=M.args[0])
+        
+    if M == ty.HammingDistance:
+        return metrics.hamming_distance()
+    if M == ty.SymmetricDistance:
+        return metrics.symmetric_distance()
+    if M == ty.InsertDeleteDistance:
+        return metrics.insert_delete_distance()
+    if M == ty.ChangeOneDistance:
+        return metrics.change_one_distance()
+    if M == ty.DiscreteDistance:
+        return metrics.discrete_distance()
+
+    raise TypeError(f"unrecognized metric: {M}")
 
 
 def loss_of(*, epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]:
