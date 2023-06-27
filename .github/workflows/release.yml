@@ -184,7 +184,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: lib_so
-          path: rust/target/release/$ARCH_LIB
+          path: rust/target/release/${{ env.ARCH_LIB }}
 
 
   python-publish:
