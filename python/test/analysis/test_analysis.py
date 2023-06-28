@@ -4,6 +4,20 @@ import opendp.prelude as dp
 dp.enable_features("contrib")
 
 
+def test_distance_of():
+    assert dp.unit_of(contributions=3) == (dp.symmetric_distance(), 3)
+    assert dp.unit_of(l1=2.0) == (dp.l1_distance(T=float), 2.0)
+
+
+def test_privacy_loss_of():
+    assert dp.loss_of(epsilon=3.0) == (dp.max_divergence(T=float), 3.0)
+    assert dp.loss_of(rho=2.0) == (dp.zero_concentrated_divergence(T=float), 2.0)
+    assert dp.loss_of(epsilon=2.0, delta=1e-6) == (
+        dp.fixed_smoothed_max_divergence(T=float),
+        (2.0, 1e-6),
+    )
+
+
 def test_analysis_init():
     analysis = dp.Analysis.sequential_composition(
         data=[1, 2, 3],
@@ -74,15 +88,14 @@ def test_sc_query():
     print("gaussian dp_mean", dp_mean.release())
 
 
-def test_distance_of():
-    assert dp.unit_of(contributions=3) == (dp.symmetric_distance(), 3)
-    assert dp.unit_of(l1=2.0) == (dp.l1_distance(T=float), 2.0)
-
-
-def test_privacy_loss_of():
-    assert dp.loss_of(epsilon=3.0) == (dp.max_divergence(T=float), 3.0)
-    assert dp.loss_of(rho=2.0) == (dp.zero_concentrated_divergence(T=float), 2.0)
-    assert dp.loss_of(epsilon=2.0, delta=1e-6) == (
-        dp.fixed_smoothed_max_divergence(T=float),
-        (2.0, 1e-6),
+def test_rho_to_eps():
+    analysis = dp.Analysis.sequential_composition(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(rho=3.0),
+        split_evenly_over=1,
     )
+
+    dp_sum = analysis.query().clamp((1, 10)).sum().laplace()
+
+    print(dp_sum.release())

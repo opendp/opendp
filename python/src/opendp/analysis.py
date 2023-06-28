@@ -58,7 +58,7 @@ for module_name in ["transformations", "measurements"]:
 
 def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
     """A shorthand for building a metric space.
-     
+
     A metric space consists of a domain and a metric.
 
     :example:
@@ -71,12 +71,13 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
     >>> # the verbose form allows greater control:
     >>> (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())
     (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
-    
+
     :param T: carrier type (the type of members in the domain)
     :param M: metric type
     :param infer: if True, `T` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
     """
     import opendp.typing as ty
+
     domain = domain_of(T, infer=infer)
     D = domain.type
 
@@ -88,7 +89,7 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
             M = ty.AbsoluteDistance
         else:
             raise TypeError(f"no default metric for domain {D}. Please set `M`")
-    
+
     # choose a distance type if not set
     if isinstance(M, ty.RuntimeType) and M.args is None:
         M = M[ty.get_atom(D)]
@@ -110,7 +111,7 @@ def domain_of(T, infer=False) -> Domain:
         T = ty.RuntimeType.infer(T)
     else:
         T = ty.RuntimeType.parse(T)
-    
+
     # construct the domain
     if isinstance(T, ty.RuntimeType):
         if T.origin == "Vec":
@@ -122,10 +123,10 @@ def domain_of(T, infer=False) -> Domain:
 
     if T in ty.PRIMITIVE_TYPES:
         return atom_domain(T=T)
-    
+
     raise TypeError(f"unrecognized carrier type: {T}")
-    
-        
+
+
 def metric_of(M) -> Metric:
     """Constructs an instance of a metric from metric type `M`."""
     import opendp.typing as ty
@@ -142,7 +143,7 @@ def metric_of(M) -> Metric:
             return metrics.l1_distance(T=M.args[0])
         if M.origin == "L2Distance":
             return metrics.l2_distance(T=M.args[0])
-        
+
     if M == ty.HammingDistance:
         return metrics.hamming_distance()
     if M == ty.SymmetricDistance:
@@ -469,11 +470,13 @@ class Query(object):
 
         return self.new_with(chain=casted_chain, wrap_release=inner_query._wrap_release)
 
-    def sequential_composition(self, 
+    def sequential_composition(
+        self,
         split_evenly_over: Optional[int] = None,
         split_by_weights: Optional[List[float]] = None,
         d_out=None,
-        output_measure=None) -> "Analysis":
+        output_measure=None,
+    ) -> "Analysis":
         """Constructs a new analysis containing a sequential compositor with the given weights.
 
         :param weights: A list of weights corresponding to the privacy budget allocated to a sequence of queries.
@@ -486,7 +489,9 @@ class Query(object):
         d_out = d_out or self._d_out
 
         if output_measure is not None:
-            d_out = _translate_measure_distance(d_out, self._output_measure, output_measure)
+            d_out = _translate_measure_distance(
+                d_out, self._output_measure, output_measure
+            )
 
         def compositor(chain: Union[Tuple[Domain, Metric], Transformation], d_in):
             if isinstance(chain, tuple):
@@ -499,7 +504,11 @@ class Query(object):
             privacy_loss = output_measure or self._output_measure, d_out
 
             accountant, d_mids = _sequential_composition_by_weights(
-                input_domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights
+                input_domain,
+                privacy_unit,
+                privacy_loss,
+                split_evenly_over,
+                split_by_weights,
             )
             if isinstance(chain, Transformation):
                 accountant = chain >> accountant
@@ -546,7 +555,12 @@ class PartialChain(object):
 
         The discovered parameter is assigned to the param attribute of the returned transformation or measurement.
         """
-        param = binary_search(lambda x: _cast_measure(self.partial(x), output_measure, d_out).check(d_in, d_out), T=T)
+        param = binary_search(
+            lambda x: _cast_measure(self.partial(x), output_measure, d_out).check(
+                d_in, d_out
+            ),
+            T=T,
+        )
         chain = self.partial(param)
         chain.param = param
         return chain
@@ -587,14 +601,18 @@ def _sequential_composition_by_weights(
     output_measure, d_out = privacy_loss
 
     if split_evenly_over is not None and split_by_weights is not None:
-        raise ValueError("Cannot specify both `split_evenly_over` and `split_by_weights`")
+        raise ValueError(
+            "Cannot specify both `split_evenly_over` and `split_by_weights`"
+        )
 
     if split_evenly_over is not None:
         weights = [d_out] * split_evenly_over
     elif split_by_weights is not None:
         weights = split_by_weights
     else:
-        raise ValueError("Must specify either `split_evenly_over` or `split_by_weights`")
+        raise ValueError(
+            "Must specify either `split_evenly_over` or `split_by_weights`"
+        )
 
     def mul(dist, scale):
         if isinstance(dist, tuple):
@@ -619,68 +637,71 @@ def _sequential_composition_by_weights(
     # return the accountant and d_mids
     return scale_sc(scale), scale_weights(scale, weights)
 
-def _cast_measure(chain, output_measure=None, d_out=None):
-    if output_measure is not None and chain.output_measure != output_measure:
-        current_measure_name = chain.output_measure.type.origin
-        target_measure_name = output_measure.type.origin
 
-        if current_measure_name == "MaxDivergence" and target_measure_name == "ZeroConcentratedDivergence":
-            return make_pureDP_to_zCDP(chain)
-        elif current_measure_name == "ZeroConcentratedDivergence" and target_measure_name == "FixedSmoothedMaxDivergence":
-            return make_fix_delta(make_zCDP_to_approxDP(chain), d_out[1])
-        elif current_measure_name == "MaxDivergence" and target_measure_name == "FixedSmoothedMaxDivergence":
-            return make_pureDP_to_fixed_approxDP(chain)
-        else:
-            raise ValueError("Output measure does not match")
-    
-    return chain
+def _cast_measure(chain, to_measure=None, d_to=None):
+    """Casts the output measure of a given `chain` to `to_measure`.
 
-
-def _translate_measure_distance(d_in, input_measure, output_measure):
-    if input_measure != output_measure:
-        current_measure_name = input_measure.type.origin
-        target_measure_name = output_measure.type.origin
-        T = output_measure.type.args[0]
-
-        if current_measure_name == "ZeroConcentratedDivergence" and target_measure_name == "MaxDivergence":
-            return _rho_to_eps(d_in, T)
-        elif current_measure_name == "FixedSmoothedMaxDivergence" and target_measure_name == "ZeroConcentratedDivergence":
-            return _epsdel_to_rho(d_in, T)
-        elif current_measure_name == "MaxDivergence" and target_measure_name == "FixedSmoothedMaxDivergence":
-            return (d_in, 0.)
-        else:
-            raise ValueError("Output measure does not match")
-    
-    return d_in
-
-def _epsdel_to_rho(
-    d_in, T
-) -> "Query":
-    """Converts (ε, δ) to ρ
-
-    :param d_in: (ε, δ)
+    If provided, `d_to` is the privacy loss wrt the new measure.
     """
-    def caster(measurement):
-        return make_fix_delta(make_zCDP_to_approxDP(measurement), delta=d_in[1])
-    space = atom_domain(T=int), absolute_distance(T=float)
-    scale = binary_search_param(
-        lambda scale: caster(make_gaussian(*space, scale)),
-        d_in=1.0,  # the choice of constant doesn't matter, so long as it is the same as below
-        d_out=d_in,
-        T=float,
-    )
-    return make_gaussian(*space, scale).map(1.0)
+    if to_measure is None or chain.output_measure == to_measure:
+        return chain
+
+    from_to = chain.output_measure.type.origin, to_measure.type.origin
+
+    if from_to == ("MaxDivergence", "FixedSmoothedMaxDivergence"):
+        return make_pureDP_to_fixed_approxDP(chain)
+
+    if from_to == ("MaxDivergence", "ZeroConcentratedDivergence"):
+        return make_pureDP_to_zCDP(chain)
+
+    if from_to == (
+        "ZeroConcentratedDivergence",
+        "FixedSmoothedMaxDivergence",
+    ):
+        return make_fix_delta(make_zCDP_to_approxDP(chain), d_to[1])
+
+    raise ValueError(f"Unable to cast measure from {from_to[0]} to {from_to[1]}")
 
 
-def _rho_to_eps(d_in, T) -> "Query":
-    """Converts a pure DP query to a zCDP query.
+def _translate_measure_distance(d_from, from_measure, to_measure):
+    """Translate a privacy loss `d_from` from `from_measure` to `to_measure`.
+    """
+    if from_measure == to_measure:
+        return d_from
 
-    :param map_query: A function for constructing a pure DP query."""
-    # convert from rho to epsilon
-    scale = binary_search_param(
-        lambda eps: make_pureDP_to_zCDP(make_base_laplace(eps)),
-        d_in=1.0,
-        d_out=d_in,
-        T=float,
-    )
-    return make_base_laplace(scale).map(1.0)
+    from_to = from_measure.type.origin, to_measure.type.origin
+    T = to_measure.type.args[0]
+
+    constant = 1.0  # the choice of constant doesn't matter
+
+    if from_to == ("MaxDivergence", "FixedSmoothedMaxDivergence"):
+        return (d_from, 0.0)
+
+    if from_to == ("ZeroConcentratedDivergence", "MaxDivergence"):
+        space = atom_domain(T=T), absolute_distance(T=T)
+        scale = binary_search_param(
+            lambda eps: make_pureDP_to_zCDP(make_base_laplace(*space, eps)),
+            d_in=constant,
+            d_out=d_from,
+            T=float,
+        )
+        return make_base_laplace(scale).map(constant)
+
+    if from_to == (
+        "FixedSmoothedMaxDivergence",
+        "ZeroConcentratedDivergence",
+    ):
+        def caster(measurement):
+            return make_fix_delta(make_zCDP_to_approxDP(measurement), delta=d_from[1])
+
+        space = atom_domain(T=int), absolute_distance(T=T)
+        scale = binary_search_param(
+            lambda scale: caster(make_gaussian(*space, scale)),
+            d_in=constant,
+            d_out=d_from,
+            T=float,
+        )
+        return make_gaussian(*space, scale).map(constant)
+        
+
+    raise ValueError(f"Unable to translate distance from {from_to[0]} to {from_to[1]}")
