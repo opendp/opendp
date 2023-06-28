@@ -33,7 +33,7 @@ where
     DI: 'static + Domain,
     TO: 'static,
     MI: 'static + Metric,
-    MO: 'static + BasicCompositionMeasure,
+    MO: 'static + BasicCompositionMeasure + Send + Sync,
     (DI, MI): MetricSpace,
 {
     if measurements.is_empty() {

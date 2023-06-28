@@ -12,10 +12,10 @@ mod ffi;
 use super::BasicCompositionMeasure;
 
 pub fn make_sequential_composition<
-    DI: Domain + 'static,
+    DI: 'static + Domain + Send + Sync,
     TO: 'static,
-    MI: Metric + 'static,
-    MO: BasicCompositionMeasure + 'static,
+    MI: 'static + Metric + Send + Sync,
+    MO: 'static + BasicCompositionMeasure + Send + Sync,
 >(
     input_domain: DI,
     input_metric: MI,
@@ -24,9 +24,9 @@ pub fn make_sequential_composition<
     mut d_mids: Vec<MO::Distance>,
 ) -> Fallible<Measurement<DI, Queryable<Measurement<DI, TO, MI, MO>, TO>, MI, MO>>
 where
-    DI::Carrier: 'static + Clone,
-    MI::Distance: 'static + TotalOrd + Clone,
-    MO::Distance: 'static + TotalOrd + Clone,
+    DI::Carrier: 'static + Clone + Send + Sync,
+    MI::Distance: 'static + TotalOrd + Clone + Send + Sync,
+    MO::Distance: 'static + TotalOrd + Clone + Send + Sync,
     (DI, MI): MetricSpace,
 {
     if d_mids.len() == 0 {

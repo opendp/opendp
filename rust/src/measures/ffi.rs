@@ -83,7 +83,7 @@ fn max_divergence<T>() -> MaxDivergence<T> {
 }
 #[no_mangle]
 pub extern "C" fn opendp_measures__max_divergence(T: *const c_char) -> FfiResult<*mut AnyMeasure> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMeasure> {
+    fn monomorphize<T: 'static + Send + Sync>() -> FfiResult<*mut AnyMeasure> {
         Ok(AnyMeasure::new(max_divergence::<T>())).into()
     }
     let T = try_!(Type::try_from(T));
@@ -102,7 +102,7 @@ fn smoothed_max_divergence<T>() -> SmoothedMaxDivergence<T> {
 pub extern "C" fn opendp_measures__smoothed_max_divergence(
     T: *const c_char,
 ) -> FfiResult<*mut AnyMeasure> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMeasure> {
+    fn monomorphize<T: 'static + Send + Sync>() -> FfiResult<*mut AnyMeasure> {
         Ok(AnyMeasure::new(smoothed_max_divergence::<T>())).into()
     }
     let T = try_!(Type::try_from(T));
@@ -122,7 +122,7 @@ fn fixed_smoothed_max_divergence<T>() -> FixedSmoothedMaxDivergence<T> {
 pub extern "C" fn opendp_measures__fixed_smoothed_max_divergence(
     T: *const c_char,
 ) -> FfiResult<*mut AnyMeasure> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMeasure> {
+    fn monomorphize<T: 'static + Send + Sync>() -> FfiResult<*mut AnyMeasure> {
         Ok(AnyMeasure::new(fixed_smoothed_max_divergence::<T>())).into()
     }
     let T = try_!(Type::try_from(T));
@@ -142,7 +142,7 @@ fn zero_concentrated_divergence<T>() -> ZeroConcentratedDivergence<T> {
 pub extern "C" fn opendp_measures__zero_concentrated_divergence(
     T: *const c_char,
 ) -> FfiResult<*mut AnyMeasure> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMeasure> {
+    fn monomorphize<T: 'static + Send + Sync>() -> FfiResult<*mut AnyMeasure> {
         Ok(AnyMeasure::new(zero_concentrated_divergence::<T>())).into()
     }
     let T = try_!(Type::try_from(T));

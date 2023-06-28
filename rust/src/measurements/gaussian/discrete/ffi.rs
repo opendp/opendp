@@ -43,11 +43,14 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
             scale: MO::Atom,
         ) -> FfiResult<*mut AnyMeasurement>
         where
-            D: 'static + BaseDiscreteGaussianDomain<QI>,
+            D: 'static + BaseDiscreteGaussianDomain<QI> + Send + Sync,
+            D::Carrier: Send + Sync,
+            D::InputMetric: Send + Sync,
             (D, D::InputMetric): MetricSpace,
             Integer: From<D::Atom> + SaturatingCast<D::Atom>,
 
-            MO: 'static + DiscreteGaussianMeasure<D, QI>,
+            MO: 'static + DiscreteGaussianMeasure<D, QI> + Send + Sync,
+            MO::Distance: Send + Sync,
             Rational: TryFrom<MO::Atom>,
 
             QI: Number,

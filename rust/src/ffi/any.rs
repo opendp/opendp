@@ -39,7 +39,7 @@ pub trait Downcast {
 
 /// A struct wrapping a Box<dyn Any>, optionally implementing Clone and/or PartialEq.
 pub struct AnyBoxBase<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> {
-    pub value: Box<dyn Any>,
+    pub value: Box<dyn Any + Send + Sync>,
     clone_glue: Option<Glue<fn(&Self) -> Self>>,
     partial_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
     debug_glue: Option<Glue<fn(&Self) -> String>>,
@@ -48,7 +48,7 @@ pub struct AnyBoxBase<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: boo
 impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool>
     AnyBoxBase<CLONE, PARTIALEQ, DEBUG>
 {
-    fn new_base<T: 'static>(
+    fn new_base<T: 'static + Send + Sync>(
         value: T,
         clone_glue: Option<Glue<fn(&Self) -> Self>>,
         partial_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
@@ -61,7 +61,7 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool>
             debug_glue,
         }
     }
-    fn make_clone_glue<T: 'static + Clone>() -> Glue<fn(&Self) -> Self> {
+    fn make_clone_glue<T: 'static + Clone + Send + Sync>() -> Glue<fn(&Self) -> Self> {
         Glue::new(|self_: &Self| {
             Self::new_base(
                 self_
@@ -177,7 +177,7 @@ impl<const CLONE: bool, const PARTIALEQ: bool> Debug for AnyBoxBase<CLONE, PARTI
 pub type AnyBox = AnyBoxBase<false, false, false>;
 
 impl AnyBox {
-    pub fn new<T: 'static>(value: T) -> Self {
+    pub fn new<T: 'static + Send + Sync>(value: T) -> Self {
         Self::new_base(value, None, None, None)
     }
 }
@@ -185,7 +185,7 @@ impl AnyBox {
 pub type AnyClonePartialEqDebugBox = AnyBoxBase<true, true, true>;
 
 impl AnyClonePartialEqDebugBox {
-    pub fn new_clone_partial_eq_debug<T: 'static + Clone + PartialEq + Debug>(value: T) -> Self {
+    pub fn new_clone_partial_eq_debug<T: 'static + Clone + PartialEq + Debug + Send + Sync>(value: T) -> Self {
         Self::new_base(
             value,
             Some(Self::make_clone_glue::<T>()),
@@ -202,7 +202,7 @@ pub struct AnyObject {
 }
 
 impl AnyObject {
-    pub fn new<T: 'static>(value: T) -> Self {
+    pub fn new<T: 'static + Send + Sync>(value: T) -> Self {
         AnyObject {
             type_: Type::of::<T>(),
             value: AnyBox::new(value),
@@ -210,7 +210,7 @@ impl AnyObject {
     }
 
     #[cfg(test)]
-    pub fn new_raw<T: 'static>(value: T) -> *mut Self {
+    pub fn new_raw<T: 'static + Send + Sync>(value: T) -> *mut Self {
         crate::ffi::util::into_raw(Self::new(value))
     }
 }
@@ -279,7 +279,7 @@ pub struct AnyDomain {
 }
 
 impl AnyDomain {
-    pub fn new<D: 'static + Domain>(domain: D) -> Self {
+    pub fn new<D: 'static + Domain + Send + Sync>(domain: D) -> Self {
         Self {
             type_: Type::of::<D>(),
             carrier_type: Type::of::<D::Carrier>(),
@@ -293,8 +293,7 @@ impl AnyDomain {
         }
     }
 
-    #[cfg(test)]
-    pub fn new_raw<D: 'static + Domain>(value: D) -> *mut Self {
+    pub fn new_raw<D: 'static + Domain + Send + Sync>(value: D) -> *mut Self {
         crate::ffi::util::into_raw(Self::new(value))
     }
 }
@@ -332,7 +331,7 @@ pub struct AnyMeasure {
 }
 
 impl AnyMeasure {
-    pub fn new<M: 'static + Measure>(measure: M) -> Self {
+    pub fn new<M: 'static + Measure + Send + Sync>(measure: M) -> Self {
         Self {
             measure: AnyClonePartialEqDebugBox::new_clone_partial_eq_debug(measure),
             type_: Type::of::<M>(),
@@ -341,7 +340,7 @@ impl AnyMeasure {
     }
 
     #[cfg(test)]
-    pub fn new_raw<D: 'static + Measure>(value: D) -> *mut Self {
+    pub fn new_raw<D: 'static + Measure + Send + Sync>(value: D) -> *mut Self {
         crate::ffi::util::into_raw(Self::new(value))
     }
 }
@@ -382,7 +381,7 @@ pub struct AnyMetric {
 }
 
 impl AnyMetric {
-    pub fn new<M: 'static + Metric>(metric: M) -> Self {
+    pub fn new<M: 'static + Metric + Send + Sync>(metric: M) -> Self {
         Self {
             type_: Type::of::<M>(),
             distance_type: Type::of::<M::Distance>(),
@@ -391,7 +390,7 @@ impl AnyMetric {
     }
 
     #[cfg(test)]
-    pub fn new_raw<D: 'static + Metric>(value: D) -> *mut Self {
+    pub fn new_raw<D: 'static + Metric + Send + Sync>(value: D) -> *mut Self {
         crate::ffi::util::into_raw(Self::new(value))
     }
 }
@@ -437,7 +436,7 @@ pub trait IntoAnyFunctionExt {
     fn into_any(self) -> AnyFunction;
 }
 
-impl<TI: 'static, TO: 'static> IntoAnyFunctionExt for Function<TI, TO> {
+impl<TI: 'static + Send + Sync, TO: 'static + Send + Sync> IntoAnyFunctionExt for Function<TI, TO> {
     fn into_any(self) -> AnyFunction {
         Function::new_fallible(move |arg: &AnyObject| -> Fallible<AnyObject> {
             let arg = arg.downcast_ref()?;
@@ -451,7 +450,7 @@ pub trait IntoAnyFunctionOutExt {
     fn into_any_out(self) -> AnyFunction;
 }
 
-impl<TO: 'static> IntoAnyFunctionOutExt for Function<AnyObject, TO> {
+impl<TO: 'static + Send + Sync> IntoAnyFunctionOutExt for Function<AnyObject, TO> {
     fn into_any_out(self) -> AnyFunction {
         let function = move |arg: &AnyObject| -> Fallible<AnyObject> {
             let res = self.eval(arg);
@@ -470,7 +469,7 @@ pub trait IntoAnyPrivacyMapExt {
 impl<MI: Metric, MO: Measure> IntoAnyPrivacyMapExt for PrivacyMap<MI, MO>
 where
     MI::Distance: 'static,
-    MO::Distance: 'static,
+    MO::Distance: 'static + Send + Sync,
 {
     fn into_any(self) -> AnyPrivacyMap {
         let map = self.0;
@@ -487,7 +486,7 @@ pub trait IntoAnyStabilityMapExt {
 impl<MI: Metric, MO: Metric> IntoAnyStabilityMapExt for StabilityMap<MI, MO>
 where
     MI::Distance: 'static,
-    MO::Distance: 'static,
+    MO::Distance: 'static + Send + Sync,
 {
     fn into_any(self) -> AnyStabilityMap {
         let map = self.0;
@@ -506,12 +505,13 @@ pub trait IntoAnyMeasurementExt {
 }
 
 /// Turn a Measurement into an AnyMeasurement.
-impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
+impl<DI: 'static + Domain + Send + Sync, TO, MI: 'static + Metric + Send + Sync, MO: 'static + Measure + Send + Sync>
     IntoAnyMeasurementExt for Measurement<DI, TO, MI, MO>
 where
-    DI::Carrier: 'static,
+    DI::Carrier: 'static + Send + Sync,
+    TO: 'static + Send + Sync,
     MI::Distance: 'static,
-    MO::Distance: 'static,
+    MO::Distance: 'static + Send + Sync,
     (DI, MI): MetricSpace,
 {
     fn into_any(self) -> AnyMeasurement {
@@ -532,7 +532,7 @@ pub trait IntoAnyMeasurementOutExt {
     fn into_any_out(self) -> AnyMeasurement;
 }
 
-impl<TO: 'static> IntoAnyMeasurementOutExt for Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
+impl<TO: 'static + Send + Sync> IntoAnyMeasurementOutExt for Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
     fn into_any_out(self) -> AnyMeasurement {
         Measurement::new(
             self.input_domain.clone(),
@@ -555,13 +555,13 @@ pub trait IntoAnyTransformationExt {
     fn into_any(self) -> AnyTransformation;
 }
 
-impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
+impl<DI: 'static + Domain + Send + Sync, DO: 'static + Domain + Send + Sync, MI: 'static + Metric + Send + Sync, MO: 'static + Metric + Send + Sync>
     IntoAnyTransformationExt for Transformation<DI, DO, MI, MO>
 where
-    DI::Carrier: 'static,
-    DO::Carrier: 'static,
-    MI::Distance: 'static,
-    MO::Distance: 'static,
+    DI::Carrier: 'static + Send + Sync,
+    DO::Carrier: 'static + Send + Sync,
+    MI::Distance: 'static + Send + Sync,
+    MO::Distance: 'static + Send + Sync,
     (DI, MI): MetricSpace,
     (DO, MO): MetricSpace,
 {
@@ -588,16 +588,16 @@ mod partials {
         PartialTransformation<AnyDomain, AnyDomain, AnyMetric, AnyMetric>;
 
     impl<
-            DI: 'static + Domain,
-            DO: 'static + Domain,
-            MI: 'static + Metric,
-            MO: 'static + Metric,
+            DI: 'static + Domain + Send + Sync,
+            DO: 'static + Domain + Send + Sync,
+            MI: 'static + Metric + Send + Sync,
+            MO: 'static + Metric + Send + Sync,
         > PartialTransformation<DI, DO, MI, MO>
     where
-        DI::Carrier: 'static,
-        DO::Carrier: 'static,
-        MI::Distance: 'static,
-        MO::Distance: 'static,
+        DI::Carrier: 'static + Send + Sync,
+        DO::Carrier: 'static + Send + Sync,
+        MI::Distance: 'static + Send + Sync,
+        MO::Distance: 'static + Send + Sync,
         (DI, MI): MetricSpace,
         (DO, MO): MetricSpace,
     {
@@ -616,12 +616,12 @@ mod partials {
     pub type AnyPartialMeasurement =
         PartialMeasurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>;
 
-    impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
+    impl<DI: 'static + Domain + Send + Sync, TO: 'static + Send + Sync, MI: 'static + Metric + Send + Sync, MO: 'static + Measure + Send + Sync>
         PartialMeasurement<DI, TO, MI, MO>
     where
-        DI::Carrier: 'static,
-        MI::Distance: 'static,
-        MO::Distance: 'static,
+        DI::Carrier: 'static + Send + Sync,
+        MI::Distance: 'static + Send + Sync,
+        MO::Distance: 'static + Send + Sync,
         (DI, MI): MetricSpace,
     {
         pub fn into_any(self) -> AnyPartialMeasurement {

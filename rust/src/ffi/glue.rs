@@ -3,8 +3,7 @@
 //! It might make sense to move this down into the opendp crate, and use it for Function and
 //! PrivacyMap/StabilityMap, but that can be done later if this works out.
 
-use std::ops::Deref;
-use std::rc::Rc;
+use std::{ops::Deref, sync::Arc};
 
 /// A wrapper for some type-erasing glue. The typical use is to capture a closure that binds over
 /// the concrete type of an inner value, and can downcast correctly to work with the value. It works
@@ -18,16 +17,16 @@ use std::rc::Rc;
 ///
 /// (AV Note: I tried to implement type aliases for different function arities, but the compiler
 /// didn't seem to recognize it as a callable then.)
-pub struct Glue<T: ?Sized>(Rc<T>);
+pub struct Glue<T: ?Sized>(Arc<T>);
 
 impl<T> Glue<T> {
     pub fn new(val: T) -> Self {
-        Self::new_rc(Rc::new(val))
+        Self::new_rc(Arc::new(val))
     }
 }
 
 impl<T: ?Sized> Glue<T> {
-    pub fn new_rc(val: Rc<T>) -> Self {
+    pub fn new_rc(val: Arc<T>) -> Self {
         Self(val)
     }
 }
@@ -89,7 +88,7 @@ mod tests {
             pub fn new(val: i32) -> Self {
                 Self {
                     val,
-                    add_glue: Glue::new_rc(Rc::new(|self_: &Foo, other: &Foo| {
+                    add_glue: Glue::new_rc(Arc::new(|self_: &Foo, other: &Foo| {
                         self_.val + other.val
                     })),
                 }

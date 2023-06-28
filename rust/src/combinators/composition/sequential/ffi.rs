@@ -60,7 +60,7 @@ pub extern "C" fn opendp_combinators__make_sequential_composition(
     let d_in = try_as_ref!(d_in).clone();
     let d_mids = try_as_ref!(d_mids);
 
-    fn repack_vec<T: 'static + Clone>(obj: &AnyObject) -> Fallible<Vec<AnyObject>> {
+    fn repack_vec<T: 'static + Clone + Send + Sync>(obj: &AnyObject) -> Fallible<Vec<AnyObject>> {
         Ok(obj
             .downcast_ref::<Vec<T>>()?
             .iter()

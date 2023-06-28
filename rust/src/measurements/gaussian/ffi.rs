@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure, MetricSpace};
+use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure, MetricSpace, Domain};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::Type;
@@ -33,13 +33,23 @@ pub extern "C" fn opendp_measurements__make_gaussian(
             VectorDomain<AtomDomain<T>>,
             <VectorDomain<AtomDomain<T>> as BaseDiscreteGaussianDomain<T>>::InputMetric,
         ): MetricSpace,
+        // send/sync bounds
+        <AtomDomain<T> as BaseDiscreteGaussianDomain<T>>::InputMetric: Send + Sync,
+        <AtomDomain<T> as Domain>::Carrier: Send + Sync,
+        <VectorDomain<AtomDomain<T>> as BaseDiscreteGaussianDomain<T>>::InputMetric: Send + Sync,
+        <VectorDomain<AtomDomain<T>> as Domain>::Carrier: Send + Sync,
     {
         fn monomorphize2<D: 'static + MakeGaussian<MO, MO::Distance>, MO: 'static + Measure>(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
             scale: MO::Distance,
         ) -> FfiResult<*mut AnyMeasurement>
-        where
+        where   
+            D: Send + Sync,
+            D::InputMetric: Send + Sync,
+            D::Carrier: Send + Sync,
+            MO: Send + Sync,
+            MO::Distance: Send + Sync,
             (D, D::InputMetric): MetricSpace,
         {
             let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();
@@ -75,6 +85,11 @@ pub extern "C" fn opendp_measurements__make_gaussian(
             VectorDomain<AtomDomain<T>>,
             <VectorDomain<AtomDomain<T>> as BaseDiscreteGaussianDomain<QI>>::InputMetric,
         ): MetricSpace,
+        // send/sync bounds
+        <AtomDomain<T> as BaseDiscreteGaussianDomain<QI>>::InputMetric: Send + Sync,
+        <AtomDomain<T> as Domain>::Carrier: Send + Sync,
+        <VectorDomain<AtomDomain<T>> as BaseDiscreteGaussianDomain<QI>>::InputMetric: Send + Sync,
+        <VectorDomain<AtomDomain<T>> as Domain>::Carrier: Send + Sync,
     {
         fn monomorphize2<
             D: 'static + MakeGaussian<MO, QI>,
@@ -86,6 +101,11 @@ pub extern "C" fn opendp_measurements__make_gaussian(
             scale: MO::Distance,
         ) -> FfiResult<*mut AnyMeasurement>
         where
+            D: Send + Sync,
+            D::InputMetric: Send + Sync,
+            D::Carrier: Send + Sync,
+            MO: Send + Sync,
+            MO::Distance: Send + Sync,
             MO::Distance: Number + InfCast<QI>,
             (D, D::InputMetric): MetricSpace,
         {

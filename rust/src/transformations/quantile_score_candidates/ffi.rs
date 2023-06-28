@@ -35,7 +35,7 @@ pub extern "C" fn opendp_transformations__make_quantile_score_candidates(
     where
         TIA: 'static + Number,
         F: 'static + IntoFrac + Clone,
-        M: 'static + ARDatasetMetric,
+        M: 'static + ARDatasetMetric + Send + Sync,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
     {
         let input_domain =

@@ -34,7 +34,7 @@ pub trait MappableDomain: Domain {
     ) -> Fallible<Self::Carrier>;
 
     fn new_map_function(
-        func: impl Fn(&Self::Atom) -> Fallible<Self::Atom> + 'static,
+        func: impl Fn(&Self::Atom) -> Fallible<Self::Atom> + 'static + Send + Sync,
     ) -> Function<Self::Carrier, Self::Carrier> {
         Function::new_fallible(move |arg: &Self::Carrier| Self::map_over(arg, &func))
     }

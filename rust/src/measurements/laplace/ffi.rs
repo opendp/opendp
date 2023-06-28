@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
+use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace, Domain};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::Type;
@@ -15,7 +15,7 @@ pub extern "C" fn opendp_measurements__make_laplace(
     scale: *const c_void,
     QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize_float<T: 'static + CheckAtom + Copy>(
+    fn monomorphize_float<T: 'static + CheckAtom + Copy + Send + Sync>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
         scale: *const c_void,
@@ -32,13 +32,20 @@ pub extern "C" fn opendp_measurements__make_laplace(
             VectorDomain<AtomDomain<T>>,
             <VectorDomain<AtomDomain<T>> as BaseLaplaceDomain>::InputMetric,
         ): MetricSpace,
+        // send/sync bounds        
+        <AtomDomain<T> as BaseLaplaceDomain>::InputMetric: Send + Sync,
+        <AtomDomain<T> as Domain>::Carrier: Send + Sync,
+        <VectorDomain<AtomDomain<T>> as BaseLaplaceDomain>::InputMetric: Send + Sync,
+        <VectorDomain<AtomDomain<T>> as Domain>::Carrier: Send + Sync,
     {
-        fn monomorphize2<D: 'static + MakeLaplace<Q>, Q: 'static>(
+        fn monomorphize2<D: 'static + MakeLaplace<Q> + Send + Sync, Q: 'static + Send + Sync>(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
             scale: Q,
         ) -> FfiResult<*mut AnyMeasurement>
         where
+            D::InputMetric: Send + Sync,
+            D::Carrier: Send + Sync,
             (D, D::InputMetric): MetricSpace,
         {
             let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();
@@ -52,7 +59,10 @@ pub extern "C" fn opendp_measurements__make_laplace(
             (Q, [T])
         ], (input_domain, input_metric, scale))
     }
-    fn monomorphize_integer<T: 'static + CheckAtom, QO: 'static + Copy>(
+    fn monomorphize_integer<
+        T: 'static + CheckAtom,
+        QO: 'static + Copy + Send + Sync,
+    >(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
         scale: *const c_void,
@@ -69,13 +79,23 @@ pub extern "C" fn opendp_measurements__make_laplace(
             VectorDomain<AtomDomain<T>>,
             <VectorDomain<AtomDomain<T>> as BaseLaplaceDomain>::InputMetric,
         ): MetricSpace,
+        // send/sync bounds        
+        <AtomDomain<T> as BaseLaplaceDomain>::InputMetric: Send + Sync,
+        <AtomDomain<T> as Domain>::Carrier: Send + Sync,
+        <VectorDomain<AtomDomain<T>> as BaseLaplaceDomain>::InputMetric: Send + Sync,
+        <VectorDomain<AtomDomain<T>> as Domain>::Carrier: Send + Sync,
     {
-        fn monomorphize2<D: 'static + MakeLaplace<QO>, QO: 'static + Copy>(
+        fn monomorphize2<
+            D: 'static + MakeLaplace<QO> + Send + Sync,
+            QO: 'static + Copy + Send + Sync,
+        >(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
             scale: QO,
         ) -> FfiResult<*mut AnyMeasurement>
         where
+            D::InputMetric: Send + Sync,
+            D::Carrier: Send + Sync,
             (D, D::InputMetric): MetricSpace,
         {
             let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();

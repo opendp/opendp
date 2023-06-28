@@ -38,7 +38,7 @@ impl<K: Hash + Eq> DataFrameDomain<K> {
         }
     }
 }
-impl<K: Hash + Eq> Domain for DataFrameDomain<K> {
+impl<K: Hash + Eq + Send + Sync> Domain for DataFrameDomain<K> {
     type Carrier = HashMap<K, Column>;
     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
         Ok(true)

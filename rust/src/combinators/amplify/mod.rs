@@ -89,7 +89,7 @@ pub fn make_population_amplification<DI, TO, MI, MO>(
 where
     DI: IsSizedDomain,
     MI: 'static + Metric,
-    MO: 'static + AmplifiableMeasure,
+    MO: 'static + AmplifiableMeasure + Send + Sync,
     (DI, MI): MetricSpace,
 {
     let sample_size = measurement.input_domain.get_size()?;

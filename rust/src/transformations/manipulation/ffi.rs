@@ -38,7 +38,7 @@ pub extern "C" fn opendp_transformations__make_is_equal(
     ) -> FfiResult<*mut AnyTransformation>
     where
         TIA: Primitive,
-        M: 'static + DatasetMetric,
+        M: 'static + DatasetMetric + Send + Sync,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
     {
@@ -86,7 +86,7 @@ pub extern "C" fn opendp_transformations__make_is_null(
             ) -> FfiResult<*mut AnyTransformation>
             where
                 TIA: 'static + CheckAtom,
-                M: 'static + DatasetMetric,
+                M: 'static + DatasetMetric + Send + Sync,
                 (VectorDomain<OptionDomain<AtomDomain<TIA>>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
             {
@@ -106,7 +106,7 @@ pub extern "C" fn opendp_transformations__make_is_null(
             ) -> FfiResult<*mut AnyTransformation>
             where
                 TIA: 'static + CheckAtom + InherentNull,
-                M: 'static + DatasetMetric,
+                M: 'static + DatasetMetric + Send + Sync,
                 (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
             {

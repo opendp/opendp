@@ -17,7 +17,8 @@ pub extern "C" fn opendp_transformations__make_sum(
         input_metric: &AnyMetric,
     ) -> FfiResult<*mut AnyTransformation>
     where
-        MI: 'static + Metric,
+        MI: 'static + Metric + Send + Sync,
+        MI::Distance: Send + Sync,
         T: 'static + MakeSum<MI>,
         (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
     {

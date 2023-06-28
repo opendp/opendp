@@ -1,6 +1,6 @@
 use num::Float;
 
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSpace};
+use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSpace, Domain};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
@@ -20,10 +20,12 @@ pub extern "C" fn opendp_transformations__make_mean(
         input_metric: &AnyMetric,
     ) -> FfiResult<*mut AnyTransformation>
     where
-        MI: 'static + Metric,
+        MI: 'static + Metric + Send + Sync,
+        MI::Distance: Send + Sync,
         T: 'static + MakeSum<MI> + ExactIntCast<usize> + Float + InfMul,
         AtomDomain<T>: LipschitzMulFloatDomain<Atom = T>,
         AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
+        <AtomDomain<T> as Domain>::Carrier: Send + Sync,
         (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
     {
         let input_domain =
