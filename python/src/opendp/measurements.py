@@ -552,6 +552,7 @@ def make_base_laplace_threshold(
     input_metric,
     scale,
     threshold,
+    other: Any = None,
     k: int = -1074
 ) -> Measurement:
     """Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
@@ -573,6 +574,8 @@ def make_base_laplace_threshold(
     :param input_metric: Metric for the input domain.
     :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
     :param threshold: Exclude counts that are less than this minimum value.
+    :param other: Optionally provide a bin name for the sum of all other bins that didn't meet the threshold.
+    :type other: Any
     :param k: The noise granularity in terms of 2^k.
     :type k: int
     :rtype: Measurement
@@ -583,6 +586,7 @@ def make_base_laplace_threshold(
     assert_features("contrib", "floating-point")
     
     # Standardize type arguments.
+    TK = get_arg0(get_carrier_type(input_domain))
     TV = get_distance_type(input_metric)
     
     # Convert arguments to c types.
@@ -590,20 +594,22 @@ def make_base_laplace_threshold(
     c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=TV)
     c_threshold = py_to_c(threshold, c_type=ctypes.c_void_p, type_name=TV)
+    c_other = py_to_c(other, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[TK]))
     c_k = py_to_c(k, c_type=ctypes.c_uint32, type_name=i32)
     
     # Call library function.
     lib_function = lib.opendp_measurements__make_base_laplace_threshold
-    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_void_p, AnyObjectPtr, ctypes.c_uint32]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_threshold, c_k), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_threshold, c_other, c_k), Measurement))
     
     return output
 
 def then_base_laplace_threshold(
     scale,
     threshold,
+    other: Any = None,
     k: int = -1074
 ):
     return PartialConstructor(lambda input_domain, input_metric: make_base_laplace_threshold(
@@ -611,6 +617,7 @@ def then_base_laplace_threshold(
         input_metric=input_metric,
         scale=scale,
         threshold=threshold,
+        other=other,
         k=k))
 
 

@@ -3,8 +3,8 @@ use std::os::raw::{c_long, c_void};
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::domains::{MapDomain, AtomDomain};
 use crate::err;
-use crate::ffi::any::{AnyMeasurement, AnyMetric, AnyDomain, Downcast};
-use crate::ffi::util::{Type, TypeContents};
+use crate::ffi::any::{AnyMeasurement, AnyMetric, AnyDomain, Downcast, AnyObject};
+use crate::ffi::util::{Type, TypeContents, self};
 use crate::measurements::make_base_laplace_threshold;
 use crate::metrics::L1Distance;
 use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
@@ -16,6 +16,7 @@ pub extern "C" fn opendp_measurements__make_base_laplace_threshold(
     input_metric: *const AnyMetric,
     scale: *const c_void,
     threshold: *const c_void,
+    other: *const AnyObject,
     k: c_long,
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<TK, TV>(
@@ -23,6 +24,7 @@ pub extern "C" fn opendp_measurements__make_base_laplace_threshold(
         input_metric: &AnyMetric,
         scale: *const c_void,
         threshold: *const c_void,
+        other: *const AnyObject,
         k: i32,
     ) -> FfiResult<*mut AnyMeasurement>
     where
@@ -34,7 +36,12 @@ pub extern "C" fn opendp_measurements__make_base_laplace_threshold(
         let input_metric = try_!(input_metric.downcast_ref::<L1Distance<TV>>()).clone();
         let scale = *try_as_ref!(scale as *const TV);
         let threshold = *try_as_ref!(threshold as *const TV);
-        make_base_laplace_threshold::<TK, TV>(input_domain, input_metric, scale, threshold, Some(k)).into_any()
+        let other = if let Some(other) = util::as_ref(other) {
+            Some(try_!(other.downcast_ref::<TK>()).clone())
+        } else {
+            None
+        };
+        make_base_laplace_threshold::<TK, TV>(input_domain, input_metric, scale, threshold, other, Some(k)).into_any()
     }
     let k = k as i32;
 
@@ -57,5 +64,5 @@ pub extern "C" fn opendp_measurements__make_base_laplace_threshold(
     dispatch!(monomorphize, [
         (TK, @hashable),
         (TV, @floats)
-    ], (input_domain, input_metric, scale, threshold, k))
+    ], (input_domain, input_metric, scale, threshold, other, k))
 }

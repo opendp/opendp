@@ -520,5 +520,8 @@ def get_carrier_type(value):
 def get_distance_type(value):
     return value.distance_type
 
+def get_arg0(value):
+    return value.args[0]
+
 def get_type(value):
     return value.type

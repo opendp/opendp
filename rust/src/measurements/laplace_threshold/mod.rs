@@ -21,9 +21,13 @@ use super::get_discretization_consts;
     arguments(
         scale(c_type = "void *"),
         threshold(c_type = "void *"),
+        other(default = b"null"),
         k(default = -1074, rust_type = "i32", c_type = "uint32_t")),
     generics(TK(suppress), TV(suppress)),
-    derived_types(TV = "$get_distance_type(input_metric)")
+    derived_types(
+        TK = "$get_arg0(get_carrier_type(input_domain))",
+        TV = "$get_distance_type(input_metric)"
+    )
 )]
 /// Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
 ///
@@ -36,6 +40,7 @@ use super::get_discretization_consts;
 /// * `input_metric` - Metric for the input domain.
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 /// * `threshold` - Exclude counts that are less than this minimum value.
+/// * `other` - Optionally provide a bin name for the sum of all other bins that didn't meet the threshold.
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
@@ -46,6 +51,7 @@ pub fn make_base_laplace_threshold<TK, TV>(
     input_metric: L1Distance<TV>,
     scale: TV,
     threshold: TV,
+    other: Option<TK>,
     k: Option<i32>,
 ) -> Fallible<
     Measurement<
@@ -81,14 +87,32 @@ where
     Measurement::new(
         input_domain,
         Function::new_fallible(move |data: &HashMap<TK, TV>| {
-            data.clone()
+            let mut other_count = TV::zero();
+            let mut output = data.clone()
                 .into_iter()
                 // noise output count
                 .map(|(key, v)| TV::sample_discrete_laplace_Z2k(v, scale, k).map(|v| (key, v)))
                 // only keep keys with values gte threshold
-                .filter(|res| res.as_ref().map(|(_k, v)| v >= &true_threshold).unwrap_or(true))
+                .filter(|res| res.as_ref().map(|(_k, v)| {
+                    if v < &true_threshold {
+                        // TODO: this adds more noise than needed
+                        other_count += *v;
+                        false
+                    } else {
+                        true
+                    }
+                }).unwrap_or(true))
                 // fail the whole computation if any cast or noise addition failed
-                .collect()
+                .collect::<Fallible<HashMap<TK, TV>>>()?;
+
+            // TODO: is it necessary to threshold this as well?
+            // add the "other" category if it exists
+            if let Some(other) = &other {
+                if other_count >= true_threshold {
+                    output.insert(other.clone(), other_count);
+                }
+            }
+            Ok(output)
         }),
         input_metric,
         FixedSmoothedMaxDivergence::default(),
@@ -141,7 +165,7 @@ mod tests {
         let measurement = (make_count_by(
             VectorDomain::new(AtomDomain::default()),
             SymmetricDistance::default(),
-        )? >> then_base_laplace_threshold(scale, threshold, None))?;
+        )? >> then_base_laplace_threshold(scale, threshold, None, None))?;
         let ret =
             measurement.invoke(&vec!['a', 'b', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'])?;
         println!("stability eval: {:?}", ret);
