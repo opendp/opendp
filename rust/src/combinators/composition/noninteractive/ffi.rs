@@ -8,7 +8,7 @@ use crate::{
         any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast, IntoAnyMeasurementOutExt},
         util::AnyMeasurementPtr,
     },
-    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence, ffi::TypedMeasure},
     traits::InfAdd,
 };
 
@@ -73,6 +73,15 @@ impl BasicCompositionMeasure for AnyMeasure {
         dispatch!(monomorphize1, [(Q_Atom, @floats)], (self, d_i))
     }
 }
+
+impl<Q: 'static> BasicCompositionMeasure for TypedMeasure<Q> {
+    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        self.measure
+            .compose(d_i.into_iter().map(AnyObject::new).collect())?
+            .downcast()
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

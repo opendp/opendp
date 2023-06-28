@@ -43,7 +43,7 @@ where
 }
 
 pub trait FixDeltaMeasure: Measure {
-    type Atom;
+    type Atom: Send + Sync;
     type FixedMeasure: Measure;
 
     // This fn is used for FFI support
@@ -56,7 +56,7 @@ pub trait FixDeltaMeasure: Measure {
     ) -> Fallible<<Self::FixedMeasure as Measure>::Distance>;
 }
 
-impl<Q: Clone> FixDeltaMeasure for SmoothedMaxDivergence<Q> {
+impl<Q: Clone + Send + Sync> FixDeltaMeasure for SmoothedMaxDivergence<Q> {
     type Atom = Q;
     type FixedMeasure = FixedSmoothedMaxDivergence<Q>;
 
