@@ -12,7 +12,6 @@ __all__ = [
     "make_bounded_int_monotonic_sum",
     "make_bounded_int_ordered_sum",
     "make_bounded_int_split_sum",
-    "make_bounded_sum",
     "make_cast",
     "make_cast_default",
     "make_cast_inherent",
@@ -36,6 +35,7 @@ __all__ = [
     "make_is_equal",
     "make_is_null",
     "make_lipschitz_float_mul",
+    "make_mean",
     "make_metric_bounded",
     "make_metric_unbounded",
     "make_ordered_random",
@@ -49,21 +49,44 @@ __all__ = [
     "make_sized_bounded_int_monotonic_sum",
     "make_sized_bounded_int_ordered_sum",
     "make_sized_bounded_int_split_sum",
-    "make_sized_bounded_mean",
-    "make_sized_bounded_sum",
-    "make_sized_bounded_sum_of_squared_deviations",
-    "make_sized_bounded_variance",
     "make_split_dataframe",
     "make_split_lines",
     "make_split_records",
     "make_subset_by",
+    "make_sum",
+    "make_sum_of_squared_deviations",
     "make_unordered",
-    "part_cast_default",
-    "part_clamp",
-    "part_df_cast_default",
-    "part_df_is_equal",
-    "part_is_equal",
-    "part_scan_csv"
+    "make_variance",
+    "then_b_ary_tree",
+    "then_cast",
+    "then_cast_default",
+    "then_cast_inherent",
+    "then_clamp",
+    "then_count",
+    "then_count_by",
+    "then_count_by_categories",
+    "then_count_distinct",
+    "then_df_cast_default",
+    "then_df_is_equal",
+    "then_drop_null",
+    "then_find",
+    "then_find_bin",
+    "then_identity",
+    "then_impute_constant",
+    "then_impute_uniform_float",
+    "then_index",
+    "then_is_equal",
+    "then_is_null",
+    "then_mean",
+    "then_metric_bounded",
+    "then_metric_unbounded",
+    "then_ordered_random",
+    "then_resize",
+    "then_scan_csv",
+    "then_sum",
+    "then_sum_of_squared_deviations",
+    "then_unordered",
+    "then_variance"
 ]
 
 
@@ -991,6 +1014,21 @@ def make_count_by_categories(
     output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_categories, c_null_category, c_MO, c_TOA), Transformation))
     
     return output
+
+def then_count_by_categories(
+    categories: Any,
+    null_category: bool = True,
+    MO: SensitivityMetric = "L1Distance<int>",
+    TOA: RuntimeTypeDescriptor = "int"
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_count_by_categories(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        categories=categories,
+        null_category=null_category,
+        MO=MO,
+        TOA=TOA))
+
 
 
 @versioned
