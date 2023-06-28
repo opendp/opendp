@@ -17,12 +17,13 @@ pub extern "C" fn opendp_transformations__make_ordered_random(
     let input_metric = try_as_ref!(input_metric);
     let MI = input_metric.type_.clone();
 
-    fn monomorphize<MI: 'static + UnorderedMetric<Distance = IntDistance>>(
+    fn monomorphize<MI: 'static + UnorderedMetric<Distance = IntDistance> + Send + Sync>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
     ) -> FfiResult<*mut AnyTransformation>
     where
         MI::Distance: 'static,
+        MI::OrderedMetric: Send + Sync,
         <MI::OrderedMetric as Metric>::Distance: 'static,
         (AnyDomain, MI): MetricSpace,
         (AnyDomain, MI::OrderedMetric): MetricSpace,
@@ -55,12 +56,13 @@ pub extern "C" fn opendp_transformations__make_unordered(
     let input_metric = try_as_ref!(input_metric);
     let MI = input_metric.type_.clone();
 
-    fn monomorphize<MI: 'static + OrderedMetric<Distance = IntDistance>>(
+    fn monomorphize<MI: 'static + OrderedMetric<Distance = IntDistance> + Send + Sync>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
     ) -> FfiResult<*mut AnyTransformation>
     where
         MI::Distance: 'static,
+        MI::UnorderedMetric: Send + Sync,
         <MI::UnorderedMetric as Metric>::Distance: 'static,
         (AnyDomain, MI): MetricSpace,
         (AnyDomain, MI::UnorderedMetric): MetricSpace,
@@ -93,12 +95,13 @@ pub extern "C" fn opendp_transformations__make_metric_bounded(
     let input_metric = try_as_ref!(input_metric);
     let MI = input_metric.type_.clone();
 
-    fn monomorphize<MI: 'static + UnboundedMetric<Distance = IntDistance>>(
+    fn monomorphize<MI: 'static + UnboundedMetric<Distance = IntDistance> + Send + Sync>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
     ) -> FfiResult<*mut AnyTransformation>
     where
         MI::Distance: 'static,
+        MI::BoundedMetric: Send + Sync,
         <MI::BoundedMetric as Metric>::Distance: 'static,
         (AnyDomain, MI): MetricSpace,
         (AnyDomain, MI::BoundedMetric): MetricSpace,
@@ -130,12 +133,13 @@ pub extern "C" fn opendp_transformations__make_metric_unbounded(
     let input_metric = try_as_ref!(input_metric);
     let MI = input_metric.type_.clone();
 
-    fn monomorphize<MI: 'static + BoundedMetric<Distance = IntDistance>>(
+    fn monomorphize<MI: 'static + BoundedMetric<Distance = IntDistance> + Send + Sync>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
     ) -> FfiResult<*mut AnyTransformation>
     where
         MI::Distance: 'static,
+        MI::UnboundedMetric: Send + Sync,
         <MI::UnboundedMetric as Metric>::Distance: 'static,
         (AnyDomain, MI): MetricSpace,
         (AnyDomain, MI::UnboundedMetric): MetricSpace,

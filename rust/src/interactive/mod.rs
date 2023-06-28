@@ -1,7 +1,7 @@
 use crate::core::{Domain, Measure, Measurement, Metric, MetricSpace};
 use std::any::{type_name, Any};
+use std::sync::{Arc, Mutex};
 use std::cell::RefCell;
-use std::rc::Rc;
 
 use crate::error::*;
 
@@ -9,7 +9,7 @@ use crate::error::*;
 /// 1. it takes an input of type `Query<Q>`,
 /// 2. updates its internal state,
 /// 3. and emits an answer of type `Answer<A>`
-pub struct Queryable<Q: ?Sized, A>(Rc<RefCell<dyn FnMut(&Self, Query<Q>) -> Fallible<Answer<A>>>>);
+pub struct Queryable<Q: ?Sized, A>(Arc<Mutex<dyn FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + Send + Sync>>);
 
 impl<Q: ?Sized, A> Queryable<Q, A> {
     pub fn eval(&mut self, query: &Q) -> Fallible<A> {
@@ -48,7 +48,7 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
 
     #[inline]
     pub(crate) fn eval_query(&mut self, query: Query<Q>) -> Fallible<Answer<A>> {
-        return (self.0.as_ref().borrow_mut())(self, query);
+        return (self.0.as_ref().lock().map_err(|_| err!(FailedFunction, "lock is poisoned!"))?)(self, query);
     }
 }
 
@@ -70,7 +70,7 @@ impl<A> Answer<A> {
 }
 
 thread_local! {
-    static WRAPPER: RefCell<Option<Rc<dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>>>> = RefCell::new(None);
+    static WRAPPER: RefCell<Option<Arc<dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>>>> = RefCell::new(None);
 }
 
 pub(crate) fn wrap<T, F: FnOnce() -> T>(
@@ -80,9 +80,9 @@ pub(crate) fn wrap<T, F: FnOnce() -> T>(
     let prev_wrapper = WRAPPER.with(|w| w.borrow_mut().take());
 
     let new_wrapper = Some(if let Some(prev) = prev_wrapper.clone() {
-        Rc::new(move |qbl| (wrapper)((prev)(qbl)?)) as Rc<_>
+        Arc::new(move |qbl| (wrapper)((prev)(qbl)?)) as Arc<_>
     } else {
-        Rc::new(wrapper) as Rc<_>
+        Arc::new(wrapper) as Arc<_>
     });
 
     WRAPPER.with(|w| *w.borrow_mut() = new_wrapper);
@@ -110,7 +110,7 @@ where
 /// The use of a struct avoids an infinite recursion in the type system,
 /// as the first argument to the closure is the same type as the closure itself.
 #[derive(Clone)]
-pub(crate) struct WrapFn(pub Rc<dyn Fn(WrapFn, PolyQueryable) -> Fallible<PolyQueryable>>);
+pub(crate) struct WrapFn(pub Arc<dyn Fn(WrapFn, PolyQueryable) -> Fallible<PolyQueryable> + Send + Sync>);
 impl WrapFn {
     // constructs a closure that wraps a PolyQueryable
     pub(crate) fn as_map(&self) -> impl Fn(PolyQueryable) -> Fallible<PolyQueryable> {
@@ -119,19 +119,19 @@ impl WrapFn {
     }
 
     pub(crate) fn new(
-        logic: impl Fn(WrapFn, PolyQueryable) -> Fallible<PolyQueryable> + 'static,
+        logic: impl Fn(WrapFn, PolyQueryable) -> Fallible<PolyQueryable> + 'static + Send + Sync,
     ) -> Self {
-        WrapFn(Rc::new(logic))
+        WrapFn(Arc::new(logic))
     }
 
-    pub(crate) fn new_pre_hook(pre_hook: impl FnMut() -> Fallible<()> + 'static) -> Self {
-        let pre_hook = Rc::new(RefCell::new(pre_hook));
+    pub(crate) fn new_pre_hook(pre_hook: impl FnMut() -> Fallible<()> + 'static + Send + Sync) -> Self {
+        let pre_hook = Arc::new(Mutex::new(pre_hook));
         WrapFn::new(move |wrap_logic, mut inner_qbl| {
             let pre_hook = pre_hook.clone();
             Ok(Queryable::new_raw(
                 move |_wrapper_qbl, query: Query<dyn Any>| {
                     // check the pre_hook for permission to execute
-                    (pre_hook.as_ref().borrow_mut())()?;
+                    (pre_hook.as_ref().lock().map_err(|_| err!(FailedFunction, "lock is poisoned!"))?)()?;
 
                     // evaluate the query and wrap the answer
                     wrap(wrap_logic.as_map(), || inner_qbl.eval_query(query))
@@ -146,7 +146,7 @@ where
     Self: IntoPolyQueryable + FromPolyQueryable,
 {
     pub(crate) fn new(
-        transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + 'static,
+        transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + 'static + Send + Sync,
     ) -> Fallible<Self> {
         let queryable = Queryable::new_raw(transition);
         let wrapper = WRAPPER.with(|w| w.borrow().clone());
@@ -157,14 +157,14 @@ where
     }
 
     pub(crate) fn new_raw(
-        transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + 'static,
+        transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + 'static + Send + Sync,
     ) -> Self {
-        Queryable(Rc::new(RefCell::new(transition)))
+        Queryable(Arc::new(Mutex::new(transition)))
     }
 
     #[allow(dead_code)]
     pub(crate) fn new_external(
-        mut transition: impl FnMut(&Q) -> Fallible<A> + 'static,
+        mut transition: impl FnMut(&Q) -> Fallible<A> + 'static + Send + Sync,
     ) -> Fallible<Self> {
         Queryable::new(
             move |_self: &Self, query: Query<Q>| -> Fallible<Answer<A>> {

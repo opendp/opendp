@@ -23,7 +23,7 @@ macro_rules! build_extern_accuracy {
             fn monomorphize<T>(
                 $arg: *const c_void, alpha: *const c_void
             ) -> FfiResult<*mut AnyObject> where
-                T: 'static + Float + One + Zero + Debug + InfCast<f64>,
+                T: 'static + Float + One + Zero + Debug + InfCast<f64> + Send + Sync,
                 f64: InfCast<T> {
                 let $arg = *try_as_ref!($arg as *const T);
                 let alpha = *try_as_ref!(alpha as *const T);

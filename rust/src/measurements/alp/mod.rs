@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use std::rc::Rc;
+use std::sync::Arc;
 
 use num::{Integer, ToPrimitive};
 use rug::{float::Round, ops::AddAssignRound, ops::DivAssignRound, Float};
@@ -30,7 +30,7 @@ type SparseDomain<K, C> = MapDomain<AtomDomain<K>, AtomDomain<C>>;
 
 // Types used to store the DP projection.
 type BitVector = Vec<bool>;
-type HashFunctions<K> = Vec<Rc<dyn Fn(&K) -> usize>>;
+type HashFunctions<K> = Vec<Arc<dyn Fn(&K) -> usize + Send + Sync>>;
 #[derive(Clone)]
 #[doc(hidden)]
 pub struct AlpState<K, T> {
@@ -56,7 +56,7 @@ fn pre_hash<K: Hash>(x: K) -> u64 {
     hasher.finish()
 }
 
-fn sample_hash_function<K>(l: u32) -> Fallible<Rc<dyn Fn(&K) -> usize>>
+fn sample_hash_function<K>(l: u32) -> Fallible<Arc<dyn Fn(&K) -> usize + Send + Sync>>
 where
     K: Clone + Hash,
 {
@@ -65,7 +65,7 @@ where
     let a = u64::from_ne_bytes(buf) | 1u64;
     fill_bytes(&mut buf)?;
     let b = u64::from_ne_bytes(buf);
-    Ok(Rc::new(move |x: &K| hash(pre_hash(x), a, b, l)))
+    Ok(Arc::new(move |x: &K| hash(pre_hash(x), a, b, l)))
 }
 
 // Returns ceil(log_2(x))
@@ -345,8 +345,8 @@ where
 mod tests {
     use super::*;
 
-    fn idx<T>(i: usize) -> Rc<dyn Fn(&T) -> usize> {
-        Rc::new(move |_| i)
+    fn idx<T>(i: usize) -> Arc<dyn Fn(&T) -> usize + Send + Sync> {
+        Arc::new(move |_| i)
     }
 
     // Functions that always return its index

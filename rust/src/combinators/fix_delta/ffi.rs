@@ -36,7 +36,7 @@ pub extern "C" fn opendp_combinators__make_fix_delta(
 ) -> FfiResult<*mut AnyMeasurement> {
     // CLONE DELTA (anyobjects can't be cloned)
     let delta = try_as_ref!(delta);
-    fn try_clone<T: 'static + Clone>(value: &AnyObject) -> Fallible<AnyObject> {
+    fn try_clone<T: 'static + Clone + Send + Sync>(value: &AnyObject) -> Fallible<AnyObject> {
         value.downcast_ref::<T>().map(|v| AnyObject::new(v.clone()))
     }
     let Q = delta.type_.clone();
@@ -53,7 +53,7 @@ impl FixDeltaMeasure for AnyMeasure {
     type FixedMeasure = AnyMeasure;
 
     fn new_fixed_measure(&self) -> Fallible<AnyMeasure> {
-        fn monomorphize<Q: 'static + Clone>() -> Fallible<AnyMeasure> {
+        fn monomorphize<Q: 'static + Clone + Send + Sync>() -> Fallible<AnyMeasure> {
             Ok(AnyMeasure::new(FixedSmoothedMaxDivergence::<Q>::default()))
         }
 
@@ -61,7 +61,7 @@ impl FixDeltaMeasure for AnyMeasure {
         dispatch!(monomorphize, [(Q, @floats)], ())
     }
     fn fix_delta(&self, curve: &Self::Distance, delta: &AnyObject) -> Fallible<AnyObject> {
-        fn monomorphize<Q: 'static + Clone>(
+        fn monomorphize<Q: 'static + Clone + Send + Sync>(
             measure: &AnyMeasure,
             curve: &AnyObject,
             delta: &AnyObject,

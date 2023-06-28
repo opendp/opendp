@@ -34,9 +34,10 @@ pub extern "C" fn opendp_transformations__make_lipschitz_float_mul(
             bounds: (D::Atom, D::Atom),
         ) -> FfiResult<*mut AnyTransformation>
         where
-            D: 'static + LipschitzMulFloatDomain,
+            D: 'static + LipschitzMulFloatDomain + Send + Sync,
+            D::Carrier: Send + Sync,
             D::Atom: Float + SaturatingMul,
-            M: 'static + LipschitzMulFloatMetric<Distance = D::Atom>,
+            M: 'static + LipschitzMulFloatMetric<Distance = D::Atom> + Send + Sync,
             (D, M): MetricSpace,
         {
             make_lipschitz_float_mul::<D, M>(constant, bounds).into_any()

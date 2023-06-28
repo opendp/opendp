@@ -41,7 +41,7 @@ pub extern "C" fn opendp_transformations__make_b_ary_tree(
         where
             TA: Integer,
             (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
-            M: 'static + BAryTreeMetric,
+            M: 'static + BAryTreeMetric + Send + Sync,
             M::Distance: Number,
         {
             let input_domain =

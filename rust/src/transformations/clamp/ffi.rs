@@ -24,7 +24,7 @@ pub extern "C" fn opendp_transformations__make_clamp(
     ) -> FfiResult<*mut AnyTransformation>
     where
         TA: 'static + Clone + TotalOrd + CheckAtom,
-        M: 'static + DatasetMetric,
+        M: 'static + DatasetMetric + Send + Sync,
         (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
     {
         let input_domain =

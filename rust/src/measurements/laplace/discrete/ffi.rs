@@ -36,7 +36,9 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace(
             scale: QO,
         ) -> FfiResult<*mut AnyMeasurement>
         where
-            D: 'static + BaseDiscreteLaplaceDomain,
+            D: 'static + BaseDiscreteLaplaceDomain + Send + Sync,
+            D::InputMetric: Send + Sync,
+            D::Carrier: Send + Sync,
             (D, D::InputMetric): MetricSpace,
             D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
             QO: Float + InfCast<D::Atom> + InfCast<D::Atom>,
@@ -71,7 +73,9 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace(
             scale: QO,
         ) -> FfiResult<*mut AnyMeasurement>
         where
-            D: 'static + BaseDiscreteLaplaceDomain,
+            D: 'static + BaseDiscreteLaplaceDomain + Send + Sync,
+            D::Carrier: Send + Sync,
+            D::InputMetric: Send + Sync,
             (D, D::InputMetric): MetricSpace,
             D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
             QO: Float + InfCast<D::Atom>,

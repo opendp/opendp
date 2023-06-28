@@ -27,7 +27,7 @@ pub extern "C" fn opendp_transformations__make_cast(
         input_metric: &AnyMetric,
     ) -> FfiResult<*mut AnyTransformation>
     where
-        M: 'static + DatasetMetric<Distance = IntDistance>,
+        M: 'static + DatasetMetric<Distance = IntDistance> + Send + Sync,
         TIA: 'static + Clone + CheckAtom,
         TOA: 'static + RoundCast<TIA> + CheckAtom,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
@@ -62,7 +62,7 @@ pub extern "C" fn opendp_transformations__make_cast_default(
         input_metric: &AnyMetric,
     ) -> FfiResult<*mut AnyTransformation>
     where
-        M: 'static + DatasetMetric,
+        M: 'static + DatasetMetric + Send + Sync,
         TIA: 'static + Clone + CheckAtom,
         TOA: 'static + RoundCast<TIA> + Default + CheckAtom,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
@@ -97,7 +97,7 @@ pub extern "C" fn opendp_transformations__make_cast_inherent(
         input_metric: &AnyMetric,
     ) -> FfiResult<*mut AnyTransformation>
     where
-        M: 'static + DatasetMetric,
+        M: 'static + DatasetMetric + Send + Sync,
         TIA: 'static + Clone + CheckAtom,
         TOA: 'static + RoundCast<TIA> + InherentNull + CheckAtom,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,

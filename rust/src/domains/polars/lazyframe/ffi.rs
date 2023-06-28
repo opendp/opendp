@@ -66,7 +66,7 @@ fn unpack_series_domains(series_domains: *mut AnyObject) -> Fallible<Vec<SeriesD
     vec_any
         .iter()
         .map(|x| {
-            util::as_ref(x.clone())
+            util::as_ref(x.clone().0)
                 .and_then(|ad| ad.downcast_ref::<SeriesDomain>().ok())
                 .cloned()
         })

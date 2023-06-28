@@ -37,14 +37,14 @@ pub extern "C" fn opendp_combinators__make_basic_composition(
     let meas_ptrs = try_!(try_as_ref!(measurements).downcast_ref::<Vec<AnyMeasurementPtr>>());
 
     let measurements: Vec<&AnyMeasurement> =
-        try_!(meas_ptrs.iter().map(|ptr| Ok(try_as_ref!(*ptr))).collect());
+        try_!(meas_ptrs.iter().map(|ptr| Ok(try_as_ref!(ptr.0))).collect());
 
     make_basic_composition(measurements).into()
 }
 
 impl BasicCompositionMeasure for AnyMeasure {
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        fn monomorphize1<Q: 'static + Clone + InfAdd + Zero>(
+        fn monomorphize1<Q: 'static + Clone + InfAdd + Zero + Send + Sync>(
             self_: &AnyMeasure,
             d_i: Vec<AnyObject>,
         ) -> Fallible<AnyObject> {
@@ -53,7 +53,7 @@ impl BasicCompositionMeasure for AnyMeasure {
                 d_i: Vec<AnyObject>,
             ) -> Fallible<AnyObject>
             where
-                M::Distance: Clone,
+                M::Distance: Clone + Send + Sync,
             {
                 self_
                     .downcast_ref::<M>()?
@@ -86,10 +86,10 @@ mod tests {
 
     #[test]
     fn test_make_basic_composition_ffi() -> Fallible<()> {
-        let measurement0 =
-            util::into_raw(make_test_measurement::<i32>()?.into_any()) as AnyMeasurementPtr;
-        let measurement1 =
-            util::into_raw(make_test_measurement::<i32>()?.into_any()) as AnyMeasurementPtr;
+        let measurement0: AnyMeasurementPtr =
+            util::into_raw(make_test_measurement::<i32>()?.into_any()).into();
+        let measurement1: AnyMeasurementPtr =
+            util::into_raw(make_test_measurement::<i32>()?.into_any()).into();
         let measurements = vec![measurement0, measurement1];
         let basic_composition = Result::from(opendp_combinators__make_basic_composition(
             AnyObject::new_raw(measurements),

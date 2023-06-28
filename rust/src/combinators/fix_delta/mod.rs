@@ -25,7 +25,8 @@ pub fn make_fix_delta<DI, TO, MI, MO>(
 where
     DI: Domain,
     MI: 'static + Metric,
-    MO: 'static + FixDeltaMeasure,
+    MO: 'static + FixDeltaMeasure + Send + Sync,
+    MO::Atom: Send + Sync,
     (DI, MI): MetricSpace,
 {
     let privacy_map = m.privacy_map.clone();

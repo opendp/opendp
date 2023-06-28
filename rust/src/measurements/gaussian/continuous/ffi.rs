@@ -40,10 +40,13 @@ pub extern "C" fn opendp_measurements__make_base_gaussian(
             k: i32,
         ) -> FfiResult<*mut AnyMeasurement>
         where
-            D: 'static + BaseGaussianDomain,
+            D: 'static + BaseGaussianDomain + Send + Sync,
+            D::Carrier: Send + Sync,
+            MO::Distance: Send + Sync,
+            D::InputMetric: Send + Sync,
             (D, D::InputMetric): MetricSpace,
             D::Atom: Float + SampleDiscreteGaussianZ2k,
-            MO: 'static + GaussianMeasure<D>,
+            MO: 'static + GaussianMeasure<D> + Send + Sync,
             i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
         {
             let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();

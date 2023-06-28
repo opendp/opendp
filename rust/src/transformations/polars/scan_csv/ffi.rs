@@ -28,7 +28,7 @@ pub extern "C" fn opendp_transformations__make_scan_csv(
     
     let M = input_metric.type_.clone();
 
-    fn monomorphize<M: 'static + DatasetMetric>(
+    fn monomorphize<M: 'static + DatasetMetric + Send + Sync>(
         input_domain: CsvDomain<LazyFrame>,
         input_metric: &AnyMetric,
         cache: bool,

@@ -101,7 +101,7 @@ pub extern "C" fn opendp_transformations__make_count_by_categories(
             null_category: bool,
         ) -> FfiResult<*mut AnyTransformation>
         where
-            MO: 'static + Metric + CountByCategoriesConstant<MO::Distance>,
+            MO: 'static + Metric + CountByCategoriesConstant<MO::Distance> + Send + Sync,
             MO::Distance: Number,
             TI: Hashable,
             TO: Number,
@@ -159,7 +159,7 @@ pub extern "C" fn opendp_transformations__make_count_by(
             input_metric: &AnyMetric,
         ) -> FfiResult<*mut AnyTransformation>
         where
-            MO: 'static + Metric + CountByConstant<MO::Distance>,
+            MO: 'static + Metric + CountByConstant<MO::Distance> + Send + Sync,
             MO::Distance: Float,
             TK: Hashable,
             TV: Number,
