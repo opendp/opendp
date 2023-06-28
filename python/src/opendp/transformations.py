@@ -56,7 +56,6 @@ __all__ = [
     "make_sum",
     "make_sum_of_squared_deviations",
     "make_unordered",
-<<<<<<< HEAD
     "make_variance",
     "then_b_ary_tree",
     "then_cast",
@@ -83,18 +82,11 @@ __all__ = [
     "then_metric_unbounded",
     "then_ordered_random",
     "then_resize",
+    "then_scan_csv",
     "then_sum",
     "then_sum_of_squared_deviations",
     "then_unordered",
     "then_variance"
-=======
-    "part_cast_default",
-    "part_clamp",
-    "part_df_cast_default",
-    "part_df_is_equal",
-    "part_is_equal",
-    "part_scan_csv"
->>>>>>> 7e97cb28 (csv scanner)
 ]
 
 
@@ -2254,7 +2246,7 @@ def make_scan_csv(
     
     return output
 
-def part_scan_csv(
+def then_scan_csv(
     cache: bool = True,
     low_memory: bool = False,
     rechunk: bool = True
