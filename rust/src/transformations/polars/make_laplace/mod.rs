@@ -44,14 +44,18 @@ pub fn make_laplace_expr(
 
             let expr = expr.clone().map(
                 move |s: Series| {
-                    let vec: Vec<f64> = s
-                        .unpack::<Float64Type>()?
-                        .into_iter()
-                        .filter_map(|opt_value| opt_value)
-                        .collect();
-                    let noisy_vec = scalar_laplace_measurement.invoke(&vec).unwrap();
-                    let noisy_serie = Series::new(&active_column, noisy_vec);
-                    Ok(Some(noisy_serie))
+                    if s.name() == active_column {
+                        let vec: Vec<f64> = s
+                            .unpack::<Float64Type>()?
+                            .into_iter()
+                            .filter_map(|opt_value| opt_value)
+                            .collect();
+                        let noisy_vec = scalar_laplace_measurement.invoke(&vec).unwrap();
+                        let noisy_serie = Series::new(&active_column, noisy_vec);
+                        Ok(Some(noisy_serie))
+                    } else {
+                        Ok(Some(s))
+                    }
                 },
                 output_type,
             );
