@@ -9,23 +9,21 @@ use opendp_derive::bootstrap;
 use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
 use crate::domains::{AtomDomain, MapDomain};
 use crate::error::Fallible;
-use crate::measures::{SMDCurve, SmoothedMaxDivergence};
+use crate::measures::FixedSmoothedMaxDivergence;
 use crate::metrics::L1Distance;
 use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
 use crate::traits::{ExactIntCast, Float, Hashable};
 
 use super::get_discretization_consts;
 
-// propose-test-release count grouped by unknown categories,
-// IMPORTANT: Assumes that dataset distance is bounded above by d_in.
-//  This assumption holds for count queries in L1-space.
-
 #[bootstrap(
     features("contrib", "floating-point"),
     arguments(
         scale(c_type = "void *"),
         threshold(c_type = "void *"),
-        k(default = -1074, rust_type = "i32", c_type = "uint32_t"))
+        k(default = -1074, rust_type = "i32", c_type = "uint32_t")),
+    generics(TK(suppress), TV(suppress)),
+    derived_types(TV = "$get_distance_type(input_metric)")
 )]
 /// Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
 ///
@@ -34,6 +32,8 @@ use super::get_discretization_consts;
 /// If k is not set, k defaults to the smallest granularity.
 ///
 /// # Arguments
+/// * `input_domain` - Domain of the input.
+/// * `input_metric` - Metric for the input domain.
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 /// * `threshold` - Exclude counts that are less than this minimum value.
 /// * `k` - The noise granularity in terms of 2^k.
@@ -41,7 +41,9 @@ use super::get_discretization_consts;
 /// # Generics
 /// * `TK` - Type of Key. Must be hashable/categorical.
 /// * `TV` - Type of Value. Must be float.
-pub fn make_base_ptr<TK, TV>(
+pub fn make_base_laplace_threshold<TK, TV>(
+    input_domain: MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
+    input_metric: L1Distance<TV>,
     scale: TV,
     threshold: TV,
     k: Option<i32>,
@@ -50,7 +52,7 @@ pub fn make_base_ptr<TK, TV>(
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
         HashMap<TK, TV>,
         L1Distance<TV>,
-        SmoothedMaxDivergence<TV>,
+        FixedSmoothedMaxDivergence<TV>,
     >,
 >
 where
@@ -59,51 +61,62 @@ where
     i32: ExactIntCast<TV::Bits>,
     (MapDomain<AtomDomain<TK>, AtomDomain<TV>>, L1Distance<TV>): MetricSpace,
 {
+    if input_domain.value_domain.nullable() {
+        return fallible!(FailedFunction, "values must be non-null");
+    }
+
+    if threshold < TV::zero() {
+        return fallible!(FailedFunction, "threshold must be non-negative");
+    }
+
+    if scale < TV::zero() {
+        return fallible!(FailedFunction, "scale must be non-negative");
+    }
+
     let _2 = TV::exact_int_cast(2)?;
     let (k, relaxation) = get_discretization_consts(k)?;
+
+    // actually reject noisy values below threshold + relaxation, to account for discretization
+    let true_threshold = threshold.inf_add(&relaxation)?;
     Measurement::new(
-        MapDomain::new(AtomDomain::default(), AtomDomain::default()),
+        input_domain,
         Function::new_fallible(move |data: &HashMap<TK, TV>| {
             data.clone()
                 .into_iter()
                 // noise output count
                 .map(|(key, v)| TV::sample_discrete_laplace_Z2k(v, scale, k).map(|v| (key, v)))
-                // remove counts that fall below threshold
-                .filter(|res| res.as_ref().map(|(_k, c)| c >= &threshold).unwrap_or(true))
+                // only keep keys with values gte threshold
+                .filter(|res| res.as_ref().map(|(_k, v)| v >= &true_threshold).unwrap_or(true))
                 // fail the whole computation if any cast or noise addition failed
                 .collect()
         }),
-        L1Distance::default(),
-        SmoothedMaxDivergence::default(),
-        PrivacyMap::new_fallible(move |&d_in: &TV| {
-            Ok(SMDCurve::new(move |&del: &TV| {
-                if del.is_sign_negative() || del.is_zero() {
-                    return fallible!(FailedMap, "delta must be positive");
-                }
+        input_metric,
+        FixedSmoothedMaxDivergence::default(),
+        PrivacyMap::new_fallible(move |d_in: &TV| {
+            if d_in.is_sign_negative() {
+                return fallible!(FailedMap, "d_in must be not be negative");
+            }
 
-                if del > TV::one() {
-                    return fallible!(FailedMap, "delta must not be greater than 1");
-                }
+            if d_in.is_zero() {
+                return Ok((TV::zero(), TV::zero()));
+            }
 
-                if d_in.is_sign_negative() {
-                    return fallible!(FailedMap, "d_in must be not be negative");
-                }
-                if d_in.is_zero() {
-                    return Ok(TV::zero());
-                }
+            if d_in > &threshold {
+                return fallible!(FailedMap, "d_in must not be greater than threshold");
+            }
 
-                let d_in = d_in.inf_add(&relaxation)?;
-                let min_eps = d_in / scale;
-                let min_threshold = (d_in / (_2 * del)).ln() * scale + d_in;
-                if threshold < min_threshold {
-                    return fallible!(
-                        RelationDebug,
-                        "threshold must be at least {:?}",
-                        min_threshold
-                    );
-                }
-                Ok(min_eps)
-            }))
+            let d_in = d_in.inf_add(&relaxation)?;
+            let epsilon = d_in.inf_div(&scale)?;
+
+            // compute the distance to instability, conservatively rounding down
+            // dist = (threshold - d_in) / scale
+            let dist = threshold.neg_inf_sub(&d_in)?.neg_inf_div(&scale)?;
+
+            // delta based on the probability that noise will push the count beyond the threshold
+            // δ = d_in / exp(norm) / 2
+            let delta = d_in.inf_div(&dist.neg_inf_exp()?)?.inf_div(&_2)?;
+
+            Ok((epsilon, delta))
         }),
     )
 }
@@ -128,12 +141,12 @@ mod tests {
         let measurement = (make_count_by(
             VectorDomain::new(AtomDomain::default()),
             SymmetricDistance::default(),
-        )? >> make_base_ptr::<char, f64>(scale, threshold, None)?)?;
+        )? >> then_base_laplace_threshold(scale, threshold, None))?;
         let ret =
             measurement.invoke(&vec!['a', 'b', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'])?;
         println!("stability eval: {:?}", ret);
 
-        let epsilon_p = measurement.map(&max_influence)?.epsilon(&delta)?;
+        let epsilon_p = measurement.map(&max_influence)?.0;
         assert_eq!(epsilon_p, epsilon);
         Ok(())
     }
