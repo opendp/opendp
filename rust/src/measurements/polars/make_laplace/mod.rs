@@ -25,12 +25,11 @@ pub fn make_laplace_expr(
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
     // Create Laplace measurement
-    let k = None; // TODO: ask do I need to set it
     let scalar_laplace_measurement = make_base_laplace(
         VectorDomain::default(),
         LpDistance::default(),
         scale.clone(),
-        k.clone(),
+        None,
     )?;
     let output_type = GetOutput::from_type(DataType::Float64);
     let laplace_measurement_privacy_map = &scalar_laplace_measurement.privacy_map;
@@ -104,8 +103,27 @@ mod test_make_laplace_expr {
 
         // Get the measurement 
         let meas = make_laplace_expr(
-            expr_domain, LpDistance<1, f64>, scale
-        );
+            expr_domain, LpDistance::default(), scale
+        )?;
+        // Get actual measurement result
+        let meas_res = meas.invoke(&(lazy_frame.clone(), col("B")))?;
+        let serie_actual = lazy_frame
+            .select([meas_res])
+            .collect()?
+            .column("B")?
+            .clone();
+
+        // Get expected measurement result
+        let chain = make_base_laplace(
+            VectorDomain::default(),
+            LpDistance::default(),
+            scale,
+            None,
+        )?;
+        let result = chain.invoke(&vec![1.0, 1.0, 2.0])?;
+        let result_serie = Series::new("B", result);
+
+        assert!(serie_actual == result_serie);
         Ok(())
     }
 }
