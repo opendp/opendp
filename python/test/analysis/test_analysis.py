@@ -30,16 +30,10 @@ def test_analysis_zCDP():
         split_evenly_over=2,
     )
 
-    dp_sum = (
-        analysis.query()
-        .clamp((1, 10))
-        .zCDP_to_approxDP(lambda x: x.sum().gaussian(100.0))
-    )
+    dp_sum = analysis.query().clamp((1, 10)).sum().gaussian(100.0)
     print(dp_sum.release())
 
-    dp_sum = (
-        analysis.query().clamp((1, 10)).zCDP_to_approxDP(lambda x: x.sum().gaussian())
-    )
+    dp_sum = analysis.query().clamp((1, 10)).sum().gaussian()
     print(dp_sum.release())
 
 
@@ -54,16 +48,13 @@ def test_sc_query():
 
     # build a child sequential compositor, and then use it to release a laplace sum
     sub_analysis = analysis.query().sequential_composition(split_evenly_over=3).release()
-    dp_sum = (
-        sub_analysis.query()
-        .clamp((1, 10))
-        .pureDP_to_fixed_approxDP(lambda q: q.sum().laplace())
-    )
+    dp_sum = sub_analysis.query().clamp((1, 10)).sum().laplace()
     print("laplace dp_sum", dp_sum.release())
 
     # build a child sequential compositor in zCDP, and then use it to release some gaussian queries
-    sub_analysis = analysis.query().zCDP_to_approxDP(
-        lambda q: q.sequential_composition(split_evenly_over=2)
+    sub_analysis = analysis.query().sequential_composition(
+        split_evenly_over=2, 
+        output_measure=dp.zero_concentrated_divergence(T=float)
     ).release()
     dp_sum = sub_analysis.query().clamp((1, 10)).sum().gaussian()
     # with partials, fusing, and measure convention, would shorten to
@@ -95,4 +86,3 @@ def test_privacy_loss_of():
         dp.fixed_smoothed_max_divergence(T=float),
         (2.0, 1e-6),
     )
-test_privacy_loss_of()
