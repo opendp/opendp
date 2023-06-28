@@ -22,7 +22,7 @@ pub extern "C" fn opendp_transformations__make_find(
         categories: &AnyObject
     ) -> FfiResult<*mut AnyTransformation>
     where
-        M: 'static + DatasetMetric,
+        M: 'static + DatasetMetric + Send + Sync,
         TIA: 'static + Hashable,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<OptionDomain<AtomDomain<usize>>>, M): MetricSpace,
@@ -55,7 +55,7 @@ pub extern "C" fn opendp_transformations__make_find_bin(
         edges: &AnyObject) -> FfiResult<*mut AnyTransformation>
     where
         TIA: 'static + Number,
-        M: 'static + DatasetMetric,
+        M: 'static + DatasetMetric + Send + Sync,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<usize>>, M): MetricSpace,
     {
@@ -91,7 +91,7 @@ pub extern "C" fn opendp_transformations__make_index(
     ) -> FfiResult<*mut AnyTransformation>
     where
         TOA: Primitive,
-        M: 'static + DatasetMetric,
+        M: 'static + DatasetMetric + Send + Sync,
         (VectorDomain<AtomDomain<usize>>, M): MetricSpace,
         (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {

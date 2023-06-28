@@ -34,8 +34,8 @@ pub extern "C" fn opendp_transformations__make_resize(
         constant: &AnyObject,
     ) -> FfiResult<*mut AnyTransformation>
     where
-        MI: 'static + IsMetricOrdered<Distance = IntDistance>,
-        MO: 'static + IsMetricOrdered<Distance = IntDistance>,
+        MI: 'static + IsMetricOrdered<Distance = IntDistance> + Send + Sync,
+        MO: 'static + IsMetricOrdered<Distance = IntDistance> + Send + Sync,
         (VectorDomain<AtomDomain<TA>>, MI): MetricSpace,
         (VectorDomain<AtomDomain<TA>>, MO): MetricSpace,
     {

@@ -14,7 +14,7 @@ mod ffi;
 use std::{
     fmt::{Debug, Formatter},
     marker::PhantomData,
-    rc::Rc,
+    sync::Arc,
 };
 
 use crate::{core::Measure, domains::type_name, error::Fallible};
@@ -111,7 +111,7 @@ impl<Q> Measure for SmoothedMaxDivergence<Q> {
 ///
 /// SMD stands for "Smoothed Max Divergence".
 /// This is the distance type for [`SmoothedMaxDivergence`].
-pub struct SMDCurve<Q>(Rc<dyn Fn(&Q) -> Fallible<Q>>);
+pub struct SMDCurve<Q>(Arc<dyn Fn(&Q) -> Fallible<Q> + Send + Sync>);
 
 impl<Q> Clone for SMDCurve<Q> {
     fn clone(&self) -> Self {
@@ -120,8 +120,8 @@ impl<Q> Clone for SMDCurve<Q> {
 }
 
 impl<Q> SMDCurve<Q> {
-    pub fn new(epsilon: impl Fn(&Q) -> Fallible<Q> + 'static) -> Self {
-        SMDCurve(Rc::new(epsilon))
+    pub fn new(epsilon: impl Fn(&Q) -> Fallible<Q> + 'static + Send + Sync) -> Self {
+        SMDCurve(Arc::new(epsilon))
     }
 
     // these functions allow direct invocation as a method, making parens unnecessary

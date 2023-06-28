@@ -1,6 +1,5 @@
 use std::any::Any;
 use std::fmt::Debug;
-use std::rc::Rc;
 
 use crate::core::MetricSpace;
 use crate::error::Fallible;
@@ -32,7 +31,7 @@ mod ffi;
 #[derive(Clone)]
 pub struct SeriesDomain {
     pub field: Field,
-    pub element_domain: Rc<dyn DynSeriesAtomDomain>,
+    pub element_domain: Arc<dyn DynSeriesAtomDomain>,
     pub nullable: bool,
 }
 
@@ -91,7 +90,7 @@ impl SeriesDomain {
     pub fn new<DA: 'static + SeriesAtomDomain>(name: &str, element_domain: DA) -> Self {
         SeriesDomain {
             field: Field::new(name, DA::Atom::dtype()),
-            element_domain: Rc::new(element_domain.atom_domain()),
+            element_domain: Arc::new(element_domain.atom_domain()),
             nullable: DA::NULLABLE,
         }
     }
@@ -102,7 +101,7 @@ impl SeriesDomain {
             .ok_or_else(|| err!(FailedFunction, "unrecognized element domain"))?
             .clone();
         element_domain.bounds = None;
-        self.element_domain = Rc::new(element_domain) as Rc<dyn DynSeriesAtomDomain>;
+        self.element_domain = Arc::new(element_domain) as Arc<dyn DynSeriesAtomDomain>;
         Ok(())
     }
 
@@ -157,11 +156,11 @@ impl<T: CheckAtom + DataTypeFrom> SeriesAtomDomain for OptionDomain<AtomDomain<T
 }
 
 /// Object-safe version of SeriesAtomDomain.
-pub trait DynSeriesAtomDomain {
+pub trait DynSeriesAtomDomain: Send + Sync {
     fn as_any(&self) -> &dyn Any;
     fn dyn_partial_eq(&self, other: &dyn DynSeriesAtomDomain) -> bool;
 }
-impl<D: 'static + SeriesAtomDomain> DynSeriesAtomDomain for D {
+impl<D: 'static + SeriesAtomDomain + Send + Sync> DynSeriesAtomDomain for D {
     fn as_any(&self) -> &dyn Any {
         self
     }

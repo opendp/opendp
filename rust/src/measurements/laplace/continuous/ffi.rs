@@ -22,7 +22,9 @@ pub extern "C" fn opendp_measurements__make_base_laplace(
         k: i32,
     ) -> FfiResult<*mut AnyMeasurement>
     where
-        D: 'static + BaseLaplaceDomain,
+        D: 'static + BaseLaplaceDomain + Send + Sync,
+        D::Carrier: Send + Sync,
+        D::InputMetric: Send + Sync,
         (D, D::InputMetric): MetricSpace,
         D::Atom: Float + SampleDiscreteLaplaceZ2k,
         i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,

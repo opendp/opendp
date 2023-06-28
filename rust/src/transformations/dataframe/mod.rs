@@ -38,7 +38,7 @@ impl<K: Hash + Eq> OldFrameDomain<K> {
         }
     }
 }
-impl<K: Hash + Eq> Domain for OldFrameDomain<K> {
+impl<K: Hash + Eq + Send + Sync> Domain for OldFrameDomain<K> {
     type Carrier = HashMap<K, Column>;
     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
         Ok(true)

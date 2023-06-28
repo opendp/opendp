@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use std::rc::Rc;
+use std::sync::Arc;
 
 use num::ToPrimitive;
 use rug::{float::Round, ops::AddAssignRound, ops::DivAssignRound, Float as RugFloat};
@@ -30,7 +30,7 @@ type SparseDomain<K, C> = MapDomain<AtomDomain<K>, AtomDomain<C>>;
 
 // Types used to store the DP projection.
 type BitVector = Vec<bool>;
-type HashFunction<K> = Rc<dyn Fn(&K) -> usize>;
+type HashFunction<K> = Arc<dyn Fn(&K) -> usize + Send + Sync>;
 
 #[derive(Clone)]
 #[doc(hidden)]
@@ -64,13 +64,13 @@ fn hash(x: u64, a: u64, b: u64, l: u32) -> usize {
 
 /// Samples a random hash function with type: K -> [2^l]
 /// * where l must be lt 64
-fn sample_hash_function<K: Hash>(l: u32) -> Fallible<Rc<dyn Fn(&K) -> usize>> {
+fn sample_hash_function<K: Hash>(l: u32) -> Fallible<Arc<dyn Fn(&K) -> usize + Send + Sync>> {
     let mut buf = [0u8; 8];
     fill_bytes(&mut buf)?;
     let a = u64::from_ne_bytes(buf) | 1u64;
     fill_bytes(&mut buf)?;
     let b = u64::from_ne_bytes(buf);
-    Ok(Rc::new(move |x: &K| hash(pre_hash(x), a, b, l)))
+    Ok(Arc::new(move |x: &K| hash(pre_hash(x), a, b, l)))
 }
 
 /// Computes ceil(log_2(x))
@@ -394,8 +394,8 @@ where
 mod tests {
     use super::*;
 
-    fn idx<T>(i: usize) -> Rc<dyn Fn(&T) -> usize> {
-        Rc::new(move |_| i)
+    fn idx<T>(i: usize) -> Arc<dyn Fn(&T) -> usize + Send + Sync> {
+        Arc::new(move |_| i)
     }
 
     // Functions that always return its index

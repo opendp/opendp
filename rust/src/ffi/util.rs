@@ -248,10 +248,35 @@ macro_rules! type_vec {
     ($($names:ty),*) => { vec![$(t!($names)),*] };
 }
 
-pub type AnyMeasurementPtr = *const AnyMeasurement;
-pub type AnyTransformationPtr = *const AnyTransformation;
-pub type AnyDomainPtr = *const AnyDomain;
+#[derive(Clone)]
+pub struct AnyMeasurementPtr(pub *const AnyMeasurement);
+unsafe impl Send for AnyMeasurementPtr {}
+unsafe impl Sync for AnyMeasurementPtr {}
+impl<T> From<*mut T> for AnyMeasurementPtr {
+    fn from(value: *mut T) -> Self {
+        AnyMeasurementPtr(value as *const AnyMeasurement)
+    }
+}
 
+#[derive(Clone)]
+pub struct AnyTransformationPtr(pub *const AnyTransformation);
+unsafe impl Send for AnyTransformationPtr {}
+unsafe impl Sync for AnyTransformationPtr {}
+impl<T> From<*mut T> for AnyTransformationPtr {
+    fn from(value: *mut T) -> Self {
+        AnyTransformationPtr(value as *const AnyTransformation)
+    }
+}
+
+#[derive(Clone)]
+pub struct AnyDomainPtr(pub *const AnyDomain);
+unsafe impl Send for AnyDomainPtr {}
+unsafe impl Sync for AnyDomainPtr {}
+impl<T> From<*mut T> for AnyDomainPtr {
+    fn from(value: *mut T) -> Self {
+        AnyDomainPtr(value as *const AnyDomain)
+    }
+}
 lazy_static! {
     /// The set of registered types. We don't need everything here, just the ones that will be looked up by descriptor
     /// (i.e., the ones that appear in FFI function generic args).

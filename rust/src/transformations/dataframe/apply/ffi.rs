@@ -29,7 +29,7 @@ pub extern "C" fn opendp_transformations__make_df_cast_default(
         TK: Hashable,
         TIA: Primitive,
         TOA: Primitive + RoundCast<TIA>,
-        M: 'static + DatasetMetric,
+        M: 'static + DatasetMetric + Send + Sync,
         (OldFrameDomain<TK>, M): MetricSpace,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
@@ -77,7 +77,7 @@ pub extern "C" fn opendp_transformations__make_df_is_equal(
     where
         TK: Hashable,
         TIA: Primitive,
-        M: 'static + DatasetMetric,
+        M: 'static + DatasetMetric + Send + Sync,
         (OldFrameDomain<TK>, M): MetricSpace,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<bool>>, M): MetricSpace,

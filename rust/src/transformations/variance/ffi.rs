@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_uint};
 
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
+use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Domain};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::ffi::any::{AnyTransformation, Downcast, AnyMetric, AnyDomain};
 use crate::ffi::util::Type;
@@ -34,9 +34,10 @@ pub extern "C" fn opendp_transformations__make_variance(
             ddof: usize,
         ) -> FfiResult<*mut AnyTransformation>
         where
-            S: UncheckedSum,
+            S: UncheckedSum + Send + Sync,
             S::Item: 'static + Float,
             AtomDomain<S::Item>: LipschitzMulFloatDomain<Atom = S::Item>,
+            <AtomDomain<S::Item> as Domain>::Carrier: Send + Sync,
             AbsoluteDistance<S::Item>: LipschitzMulFloatMetric<Distance = S::Item>,
         {
             let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<S::Item>>>()).clone();

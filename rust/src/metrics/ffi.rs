@@ -124,7 +124,7 @@ fn absolute_distance<T>() -> AbsoluteDistance<T> {
 
 #[no_mangle]
 pub extern "C" fn opendp_metrics__absolute_distance(T: *const c_char) -> FfiResult<*mut AnyMetric> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
+    fn monomorphize<T: 'static + Send + Sync>() -> FfiResult<*mut AnyMetric> {
         Ok(AnyMetric::new(absolute_distance::<T>())).into()
     }
     let T = try_!(Type::try_from(T));
@@ -141,7 +141,7 @@ fn l1_distance<T>() -> L1Distance<T> {
 }
 #[no_mangle]
 pub extern "C" fn opendp_metrics__l1_distance(T: *const c_char) -> FfiResult<*mut AnyMetric> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
+    fn monomorphize<T: 'static + Send + Sync>() -> FfiResult<*mut AnyMetric> {
         Ok(AnyMetric::new(l1_distance::<T>())).into()
     }
     let T = try_!(Type::try_from(T));
@@ -158,7 +158,7 @@ fn l2_distance<T>() -> L2Distance<T> {
 }
 #[no_mangle]
 pub extern "C" fn opendp_metrics__l2_distance(T: *const c_char) -> FfiResult<*mut AnyMetric> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
+    fn monomorphize<T: 'static + Send + Sync>() -> FfiResult<*mut AnyMetric> {
         Ok(AnyMetric::new(l2_distance::<T>())).into()
     }
     let T = try_!(Type::try_from(T));

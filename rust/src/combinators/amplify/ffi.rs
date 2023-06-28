@@ -19,7 +19,7 @@ impl AmplifiableMeasure for AnyMeasure {
         sample_size: usize,
     ) -> Fallible<AnyObject> {
         fn monomorphize1<
-            QO: 'static + ExactIntCast<usize> + InfMul + InfExpM1 + InfLn1P + InfDiv + Clone,
+            QO: 'static + ExactIntCast<usize> + InfMul + InfExpM1 + InfLn1P + InfDiv + Clone + Send + Sync,
         >(
             measure: &AnyMeasure,
             budget: &AnyObject,
@@ -31,7 +31,8 @@ impl AmplifiableMeasure for AnyMeasure {
                 budget: &AnyObject,
                 population_size: usize,
                 sample_size: usize,
-            ) -> Fallible<AnyObject> {
+            ) -> Fallible<AnyObject>
+                where M::Distance: Send + Sync {
                 let measure = measure.downcast_ref::<M>()?;
                 let budget = budget.downcast_ref::<M::Distance>()?;
                 measure

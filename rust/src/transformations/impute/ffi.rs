@@ -1,4 +1,4 @@
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
+use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace, Domain};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::err;
 use crate::ffi::any::{AnyDomain, AnyObject, AnyTransformation, Downcast, AnyMetric};
@@ -29,7 +29,7 @@ pub extern "C" fn opendp_transformations__make_impute_uniform_float(
     ) -> FfiResult<*mut AnyTransformation>
     where
         TA: Float + SampleUniform,
-        M: 'static + DatasetMetric,
+        M: 'static + DatasetMetric + Send + Sync,
         (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
     {
         let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
@@ -70,8 +70,9 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
             ) -> FfiResult<*mut AnyTransformation>
             where
                 OptionDomain<AtomDomain<TA>>: ImputeConstantDomain<Imputed = TA>,
+                <OptionDomain<AtomDomain<TA>> as Domain>::Carrier: Send + Sync,
                 TA: 'static + Clone + CheckAtom,
-                M: 'static + DatasetMetric,
+                M: 'static + DatasetMetric + Send + Sync,
                 (VectorDomain<OptionDomain<AtomDomain<TA>>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace
             {
@@ -91,8 +92,9 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
             ) -> FfiResult<*mut AnyTransformation>
             where
                 AtomDomain<TA>: ImputeConstantDomain<Imputed = TA>,
+                <AtomDomain<TA> as Domain>::Carrier: Send + Sync,
                 TA: 'static + InherentNull + Clone + CheckAtom,
-                M: 'static + DatasetMetric,
+                M: 'static + DatasetMetric + Send + Sync,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace
             {
                 let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
@@ -140,8 +142,9 @@ pub extern "C" fn opendp_transformations__make_drop_null(
             ) -> FfiResult<*mut AnyTransformation>
             where
                 OptionDomain<AtomDomain<TA>>: ImputeConstantDomain<Imputed = TA>,
+                <OptionDomain<AtomDomain<TA>> as Domain>::Carrier: Send + Sync,
                 TA: 'static + Clone + CheckAtom,
-                M: 'static + DatasetMetric,
+                M: 'static + DatasetMetric + Send + Sync,
                 (VectorDomain<OptionDomain<AtomDomain<TA>>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace
             {
@@ -159,8 +162,9 @@ pub extern "C" fn opendp_transformations__make_drop_null(
             ) -> FfiResult<*mut AnyTransformation>
             where
                 AtomDomain<TA>: ImputeConstantDomain<Imputed = TA>,
+                <AtomDomain<TA> as Domain>::Carrier: Send + Sync,
                 TA: 'static + InherentNull + Clone + CheckAtom,
-                M: 'static + DatasetMetric,
+                M: 'static + DatasetMetric + Send + Sync,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace
             {
                 let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();

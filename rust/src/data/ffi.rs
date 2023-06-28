@@ -44,7 +44,7 @@ pub extern "C" fn opendp_data__slice_as_object(
 ) -> FfiResult<*mut AnyObject> {
     let raw = try_as_ref!(raw);
     let T = try_!(Type::try_from(T));
-    fn raw_to_plain<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+    fn raw_to_plain<T: 'static + Clone + Send + Sync>(raw: &FfiSlice) -> Fallible<AnyObject> {
         if raw.len != 1 {
             return fallible!(
                 FFI,
@@ -82,12 +82,12 @@ pub extern "C" fn opendp_data__slice_as_object(
         unimplemented!()
     }
     #[allow(clippy::unnecessary_wraps)]
-    fn raw_to_vec<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+    fn raw_to_vec<T: 'static + Clone + Send + Sync>(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const T, raw.len) };
         let vec = slice.to_vec();
         Ok(AnyObject::new(vec))
     }
-    fn raw_to_vec_obj<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+    fn raw_to_vec_obj<T: 'static + Clone + Send + Sync>(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const AnyObject, raw.len) };
         let vec = slice.iter()
             .map(|v| util::as_ref(*v)
@@ -97,7 +97,7 @@ pub extern "C" fn opendp_data__slice_as_object(
             .collect::<Fallible<Vec<T>>>()?;
         Ok(AnyObject::new(vec))
     }
-    fn raw_to_tuple<T0: 'static + Clone, T1: 'static + Clone>(
+    fn raw_to_tuple<T0: 'static + Clone + Send + Sync, T1: 'static + Clone + Send + Sync>(
         raw: &FfiSlice,
     ) -> Fallible<AnyObject> {
         if raw.len != 2 {
@@ -114,7 +114,7 @@ pub extern "C" fn opendp_data__slice_as_object(
             .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a tuple"))?;
         Ok(AnyObject::new(tuple))
     }
-    fn raw_to_hashmap<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
+    fn raw_to_hashmap<K: 'static + Clone + Hash + Eq + Send + Sync, V: 'static + Clone + Send + Sync>(
         raw: &FfiSlice,
     ) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const AnyObject, raw.len) };
@@ -322,7 +322,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             2,
         ))
     }
-    fn hashmap_to_raw<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
+    fn hashmap_to_raw<K: 'static + Clone + Hash + Eq + Send + Sync, V: 'static + Clone + Send + Sync>(
         obj: &AnyObject,
     ) -> Fallible<FfiSlice> {
         let data: &HashMap<K, V> = obj.downcast_ref()?;
@@ -612,22 +612,22 @@ impl TotalOrd for AnyObject {
 
 impl Clone for AnyObject {
     fn clone(&self) -> Self {
-        fn clone_plain<T: 'static + Clone>(obj: &AnyObject) -> Fallible<AnyObject> {
+        fn clone_plain<T: 'static + Clone + Send + Sync>(obj: &AnyObject) -> Fallible<AnyObject> {
             Ok(AnyObject::new(obj.downcast_ref::<T>()?.clone()))
         }
-        fn clone_tuple2<T0: 'static + Clone, T1: 'static + Clone>(
+        fn clone_tuple2<T0: 'static + Clone + Send + Sync, T1: 'static + Clone + Send + Sync>(
             obj: &AnyObject,
         ) -> Fallible<AnyObject> {
             Ok(AnyObject::new(obj.downcast_ref::<(T0, T1)>()?.clone()))
         }
-        fn clone_hashmap<T0: 'static + Clone, T1: 'static + Clone>(
+        fn clone_hashmap<T0: 'static + Clone + Send + Sync, T1: 'static + Clone + Send + Sync>(
             obj: &AnyObject,
         ) -> Fallible<AnyObject> {
             Ok(AnyObject::new(
                 obj.downcast_ref::<HashMap<T0, T1>>()?.clone(),
             ))
         }
-        fn clone_vec<T: 'static + Clone>(obj: &AnyObject) -> Fallible<AnyObject> {
+        fn clone_vec<T: 'static + Clone + Send + Sync>(obj: &AnyObject) -> Fallible<AnyObject> {
             Ok(AnyObject::new(obj.downcast_ref::<Vec<T>>()?.clone()))
         }
 
@@ -714,7 +714,7 @@ pub extern "C" fn opendp_data__smd_curve_epsilon(
     curve: *const AnyObject,
     delta: *const AnyObject,
 ) -> FfiResult<*mut AnyObject> {
-    fn monomorphize<T: 'static>(curve: &AnyObject, delta: &AnyObject) -> Fallible<AnyObject> {
+    fn monomorphize<T: 'static + Send + Sync>(curve: &AnyObject, delta: &AnyObject) -> Fallible<AnyObject> {
         let delta = delta.downcast_ref::<T>()?;
         curve
             .downcast_ref::<SMDCurve<T>>()?

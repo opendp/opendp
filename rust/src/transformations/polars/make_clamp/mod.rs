@@ -1,6 +1,5 @@
 use num::One;
 use polars::prelude::*;
-use std::rc::Rc;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Bounds, Context, DataTypeFrom, DynSeriesAtomDomain, ExprDomain, ExprMetric};
@@ -41,7 +40,7 @@ where
     atom_domain.bounds = Some(Bounds::new_closed(bounds)?);
 
     // update element domain in active series
-    active_series.element_domain = Rc::new(atom_domain) as Rc<dyn DynSeriesAtomDomain>;
+    active_series.element_domain = Arc::new(atom_domain) as Arc<dyn DynSeriesAtomDomain>;
 
     // Margins on the active_column could be preserved but this functionality has not been implemented yet
     let margins = output_domain
