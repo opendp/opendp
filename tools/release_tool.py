@@ -1,4 +1,5 @@
 import argparse
+import configparser
 import datetime
 import io
 import json
@@ -143,51 +144,82 @@ def update_file(path, load, munge, dump, binary=False):
         dump(new_data, f)
 
 
+def sync_train(args):
+    log(f"*** SYNCING RELEASE TRAIN FROM UPSTREAM ***")
+    train_to_upstream = {"nightly": "main", "beta": "nightly", "stable": "beta"}
+    if args.train not in train_to_upstream:
+        raise Exception(f"Unknown train {args.train}")
+    upstream = train_to_upstream[args.train] if args.upstream is None else args.upstream
+    log(f"Syncing {args.train} <= {upstream}")
+    if args.train == "nightly":
+        # For nightly, we don't care about history, so we just reset the branch.
+        run_command(f"Resetting train to upstream", f"git branch -f {args.train} {upstream}")
+    else:
+        # For beta & stable, we want to preserve history, so we merge.
+        # git doesn't have a "theirs" merge strategy, so we have to simulate it.
+        # Technique from https://stackoverflow.com/a/4912267
+        run_command(f"Creating temporary branch based on upstream", f"git switch -c tmp {upstream}")
+        run_command(f"Merging train (keeping all upstream)", f"git merge -s ours {args.train}")
+        run_command(f"Switching to train", f"git switch {args.train}")
+        run_command(f"Merging temporary branch", f"git merge tmp")
+        run_command(f"Deleting temporary branch", f"git branch -D tmp")
+
+
 def update_version(version):
     log(f"Updating version references to {version}")
-    # cargo doesn't like build metadata in dependency references, so we have separate versions.
-    full_version_str = str(version)
-    stripped_version_str = str(version.replace(build=None))
+
+    # Main version file
     with open("VERSION", "w") as f:
-        print(full_version_str, file=f)
+        print(version, file=f)
+
+    # cargo versions
+    # cargo doesn't like build metadata in dependency references, so we strip that for those.
+    stripped_version = version.replace(build=None)
     def munge_cargo_root(toml):
-        toml["workspace"]["package"]["version"] = full_version_str
-        toml["dependencies"]["opendp_derive"]["version"] = stripped_version_str
-        toml["dependencies"]["opendp_tooling"]["version"] = stripped_version_str
+        toml["workspace"]["package"]["version"] = str(version)
+        toml["dependencies"]["opendp_derive"]["version"] = str(stripped_version)
+        toml["build-dependencies"]["opendp_tooling"]["version"] = str(stripped_version)
         return toml
     update_file("rust/Cargo.toml", tomlkit.load, munge_cargo_root, tomlkit.dump)
     def munge_cargo_opendp_derive(toml):
-        toml["dependencies"]["opendp_tooling"]["version"] = stripped_version_str
+        toml["dependencies"]["opendp_tooling"]["version"] = str(stripped_version)
         return toml
     update_file("rust/opendp_derive/Cargo.toml", tomlkit.load, munge_cargo_opendp_derive, tomlkit.dump)
+
+    # Python version
+    # Python doesn't allow arbitrary prerelease tags, supporting only (a|b|rc) or synonyms (alpha|beta|c|pre|preview),
+    # so we map nightly -> alpha.
+    is_nightly = version.prerelease is not None and version.prerelease.startswith("nightly.")
+    python_version = version.replace(prerelease=f"alpha.{version.prerelease[8:]}") if is_nightly else version
     def munge_setup(lines):
-        version_line = f"version = {full_version_str}\n"
+        version_line = f"version = {python_version}\n"
         return [version_line if line.startswith("version = ") else line for line in lines]
     update_file("python/setup.cfg", io.IOBase.readlines, munge_setup, lambda data, f: f.writelines(data))
 
 
-def configure(args):
+def configure_train(args):
     log(f"*** CONFIGURING RELEASE TRAIN ***")
+    if args.train not in ("dev", "nightly", "beta", "stable"):
+        raise Exception(f"Unknown train {args.train}")
     version = get_version()
-    print("init", version)
     if args.train == "dev":
         version = version.replace(prerelease="dev", build=None)
     elif args.train in ["nightly", "beta"]:
         date = datetime.date.today().strftime("%Y%m%d")
-        prerelease = f"{args.train}.{date}"
-        version = version.replace(prerelease=prerelease, build="1")
+        prerelease = f"{args.train}.{date}001"
+        version = version.replace(prerelease=prerelease, build=None)
     elif args.train == "stable":
         version = version.replace(prerelease=None, build=None)
-    else:
-        raise Exception(f"Unknown train {args.train}")
     update_version(version)
 
 
 def bump_version(args):
     log(f"*** BUMPING VERSION NUMBER ***")
-    if args.set_version:
-        version = get_version(args.set_version)
+    if args.set:
+        version = get_version(args.set)
     else:
+        if args.position not in ("major", "minor", "patch"):
+            raise Exception(f"Unknown position {args.position}")
         version = get_version()
         if args.position == "major":
             version = version.bump_major()
@@ -195,16 +227,7 @@ def bump_version(args):
             version = version.bump_minor()
         elif args.position == "patch":
             version = version.bump_patch()
-        else:
-            raise Exception(f"Unknown position {args.position}")
-        version = version.replace(prerelease="dev")
-    update_version(version)
-
-
-def bump_build(_args):
-    log(f"*** BUMPING BUILD NUMBER ***")
-    version = get_version()
-    version = version.bump_build("")
+        version = version.replace(prerelease="dev", build=None)
     update_version(version)
 
 
@@ -392,17 +415,19 @@ def _main(argv):
     subparsers = parser.add_subparsers(dest="COMMAND", help="Command to run")
     subparsers.required = True
 
+    subparser = subparsers.add_parser("sync", help="Sync release train from upstream")
+    subparser.set_defaults(func=sync_train)
+    subparser.add_argument("-t", "--train", choices=["nightly", "beta", "stable"], default="nightly", help="Which train to target")
+    subparser.add_argument("-u", "--upstream", help="Upstream ref")
+
     subparser = subparsers.add_parser("configure", help="Configure the release train")
-    subparser.set_defaults(func=configure)
+    subparser.set_defaults(func=configure_train)
     subparser.add_argument("-t", "--train", choices=["dev", "nightly", "beta", "stable"], default="dev", help="Which train to target")
 
     subparser = subparsers.add_parser("bump_version", help="Bump the version number (assumes dev train)")
     subparser.set_defaults(func=bump_version)
     subparser.add_argument("-p", "--position", choices=["major", "minor", "patch"], default="patch")
-    subparser.add_argument("-s", "--set-version", help="Set the version to a specific value")
-
-    subparser = subparsers.add_parser("bump_build", help="Bump the build number")
-    subparser.set_defaults(func=bump_build)
+    subparser.add_argument("-s", "--set", help="Set the version to a specific value")
 
     subparser = subparsers.add_parser("init", help="Initialize the release process")
     subparser.set_defaults(func=init)

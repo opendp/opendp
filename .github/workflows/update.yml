@@ -1,0 +1,58 @@
+name: Update Train
+
+on:
+  workflow-call:
+    inputs:
+      train:
+        description: 'Train'
+        required: true
+        type: choice
+        options:
+          - nightly
+          - beta
+          - stable
+        default: 'nightly'
+  workflow-dispatch:
+    inputs:
+      train:
+        description: 'Train'
+        required: true
+        type: choice
+        options:
+          - nightly
+          - beta
+          - stable
+        default: 'nightly'
+
+
+jobs:
+  update-branch:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Configure git user
+        run: |
+          git config --global user.name "$GITHUB_ACTOR"
+          git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+          cache: pip
+
+      - name: Install requirements
+        run: pip install -r tools/requirements-release_tool.txt
+
+      - name: Sync train
+        run: python tools/release_tool.py sync -t ${{ inputs.train }}
+
+      - name: Configure train
+        run: python tools/release_tool.py configure -t ${{ inputs.train }}
+
+      - name: Push changes
+        run: |
+          echo git commit -m "Sync and configure train"
+          echo git push --force-with-lease origin ${{ inputs.train }}
