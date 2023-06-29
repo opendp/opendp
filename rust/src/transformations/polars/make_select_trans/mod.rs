@@ -2,14 +2,43 @@ use crate::combinators::assert_components_match;
 use num::Zero;
 use polars::prelude::*;
 
-use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
+use crate::core::{
+    Function, Metric, MetricSpace, PartialTransformation, StabilityMap, Transformation,
+};
 use crate::domains::{ExprDomain, LazyFrameContext, LazyFrameDomain, SeriesDomain};
 use crate::error::*;
 use crate::traits::TotalOrd;
 
 /// Make a Transformation that applies list of transformations in the select context to a Lazy Frame.
 ///
-pub fn make_select_trans<MI, MO>(
+pub fn make_select_trans_partial<MI, MO>(
+    input_domain: LazyFrameDomain,
+    input_metric: MI,
+    transformations: Vec<
+        PartialTransformation<ExprDomain<LazyFrameContext>, ExprDomain<LazyFrameContext>, MI, MO>,
+    >,
+) -> Fallible<Transformation<LazyFrameDomain, LazyFrameDomain, MI, MO>>
+where
+    MI: Metric + 'static,
+    MO: Metric + 'static,
+    MO::Distance: TotalOrd + Zero,
+    (LazyFrameDomain, MI): MetricSpace,
+    (LazyFrameDomain, MO): MetricSpace,
+    (ExprDomain<LazyFrameContext>, MI): MetricSpace,
+    (ExprDomain<LazyFrameContext>, MO): MetricSpace,
+{
+    let expr_domain = ExprDomain {
+        lazy_frame_domain: input_domain.clone(),
+        context: LazyFrameContext::Select,
+        active_column: None,
+    };
+    let transformations = (transformations.into_iter())
+        .map(|t| t.fix(expr_domain.clone(), input_metric.clone()))
+        .collect::<Fallible<Vec<_>>>()?;
+
+    make_select_trans(input_domain, input_metric, transformations)
+}
+fn make_select_trans<MI, MO>(
     input_domain: LazyFrameDomain,
     input_metric: MI,
     transformations: Vec<
@@ -103,31 +132,22 @@ mod test_make_select_trans {
 
     use crate::error::ErrorVariant::DomainMismatch;
     use crate::metrics::SymmetricDistance;
-    use crate::transformations::make_col;
     use crate::transformations::polars::test::get_test_data;
+    use crate::transformations::then_col;
 
     use super::*;
 
     #[test]
     fn test_make_select_trans_output_lazy_frame() -> Fallible<()> {
-        let (expr_domain, lazy_frame, lf_domain) = get_test_data()?;
-        let select_trans = make_select_trans(
+        let (_expr_domain, lazy_frame, lf_domain) = get_test_data()?;
+        let select_trans = make_select_trans_partial(
             lf_domain,
-            SymmetricDistance::default(),
-            vec![
-                make_col(expr_domain, Default::default(), "B".to_string())?,
-            ],
+            SymmetricDistance,
+            vec![then_col("B".to_string())],
         );
 
-        let lf_res = select_trans
-            .unwrap_test()
-            .invoke(&lazy_frame)
-            .unwrap_test()
-            .collect()
-            .unwrap_test();
-        let lf_exp = df!(
-            "B" => &[1.0, 1.0, 2.0],)
-        .unwrap_test();
+        let lf_res = select_trans?.invoke(&lazy_frame)?.collect()?;
+        let lf_exp = df!("B" => &[1.0, 1.0, 2.0],)?;
 
         assert!(lf_exp.frame_equal(&lf_res));
 
@@ -139,21 +159,10 @@ mod test_make_select_trans {
         let (mut expr_domain, _, lf_domain) = get_test_data()?;
         expr_domain.context = LazyFrameContext::Filter;
 
-        let error_variant_res = make_select_trans::<SymmetricDistance, SymmetricDistance>(
+        let error_variant_res = make_select_trans_partial(
             lf_domain,
             SymmetricDistance::default(),
-            vec![
-                make_col::<SymmetricDistance, _>(
-                    expr_domain.clone(),
-                    SymmetricDistance::default(),
-                    "B".to_string(),
-                )?,
-                make_col::<SymmetricDistance, _>(
-                    expr_domain.clone(),
-                    SymmetricDistance::default(),
-                    "A".to_string(),
-                )?,
-            ],
+            vec![then_col("B".to_string()), then_col("A".to_string())],
         )
         .map(|v| v.input_domain.clone())
         .unwrap_err()
@@ -168,14 +177,11 @@ mod test_make_select_trans {
     #[test]
     fn test_make_select_trans_empty_list() -> Fallible<()> {
         let (_, _, lf_domain) = get_test_data()?;
-        let error_msg_res = make_select_trans::<_, SymmetricDistance>(
-            lf_domain,
-            SymmetricDistance::default(),
-            vec![],
-        )
-        .map(|v| v.input_domain.clone())
-        .unwrap_err()
-        .message;
+        let error_msg_res =
+            make_select_trans_partial::<_, SymmetricDistance>(lf_domain, SymmetricDistance, vec![])
+                .map(|v| v.input_domain.clone())
+                .unwrap_err()
+                .message;
         let error_msg_exp = Some("transformation list cannot be empty".to_string());
 
         assert_eq!(error_msg_res, error_msg_exp);
