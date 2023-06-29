@@ -32,23 +32,27 @@ impl GroupingColumns for LazyGroupByContext {
 ///
 pub fn make_col<M, C: Context>(
     input_domain: ExprDomain<C>,
-    input_metric: M::OuterMetric,
-    col_name: &str,
-) -> Fallible<Transformation<ExprDomain<C>, ExprDomain<C>, M::OuterMetric, M::OuterMetric>>
+    input_metric: M,
+    col_name: String,
+) -> Fallible<Transformation<ExprDomain<C>, ExprDomain<C>, M, M>>
 where
     M: ExprMetric<C>,
     M::Distance: DistanceConstant<M::Distance> + One + Clone,
     C: GroupingColumns,
-    (ExprDomain<C>, M::OuterMetric): MetricSpace,
+    (ExprDomain<C>, M): MetricSpace,
 {
-    if input_domain.lazy_frame_domain.column(col_name).is_none() {
+    if input_domain
+        .lazy_frame_domain
+        .column(col_name.as_str())
+        .is_none()
+    {
         return fallible!(MakeTransformation, "{} is not in dataframe", col_name);
     }
 
     let context_columns = input_domain.context.grouping_columns();
 
     let mut columns_to_keep = BTreeSet::from_iter(context_columns);
-    columns_to_keep.insert(String::from(col_name));
+    columns_to_keep.insert(col_name.clone());
 
     let series_domains = input_domain
         .clone()
@@ -72,10 +76,8 @@ where
             margins,
         },
         context: input_domain.context.clone(),
-        active_column: Some(col_name.to_string()),
+        active_column: Some(col_name.clone()),
     };
-
-    let column_name = col_name.to_string();
 
     Transformation::new(
         input_domain.clone(),
@@ -88,7 +90,7 @@ where
                         "make_col has to be the first expression in the expression chain"
                     );
                 }
-                Ok((frame.clone(), col(&*column_name)))
+                Ok((frame.clone(), col(&*col_name)))
             },
         ),
         input_metric.clone(),
@@ -99,60 +101,18 @@ where
 
 #[cfg(test)]
 mod test_make_col {
-    use crate::{
-        domains::{AtomDomain, SeriesDomain},
-        metrics::SymmetricDistance,
-    };
+    use crate::domains::{AtomDomain, SeriesDomain};
+    use crate::metrics::{Lp, SymmetricDistance};
+    use crate::transformations::polars::test::get_test_data;
 
     use super::*;
 
-    fn get_test_data() -> (ExprDomain<LazyGroupByContext>, LazyGroupBy) {
-        let frame_domain = LazyFrameDomain::new(vec![
-            SeriesDomain::new("A", AtomDomain::<i32>::default()),
-            SeriesDomain::new("B", AtomDomain::<f64>::default()),
-            SeriesDomain::new("C", AtomDomain::<i32>::default()),
-        ])
-        .unwrap_test()
-        .with_counts(df!["A" => [1, 2], "count" => [1, 2]].unwrap_test().lazy())
-        .unwrap_test()
-        .with_counts(
-            df!["B" => [1.0, 2.0], "count" => [2, 1]]
-                .unwrap_test()
-                .lazy(),
-        )
-        .unwrap_test()
-        .with_counts(
-            df!["C" => [8, 9, 10], "count" => [1, 1, 1]]
-                .unwrap_test()
-                .lazy(),
-        )
-        .unwrap_test();
-
-        let expr_domain = ExprDomain {
-            lazy_frame_domain: frame_domain,
-            context: LazyGroupByContext {
-                columns: vec![String::from("A")],
-            },
-            active_column: None,
-        };
-
-        let lazy_frame = df!(
-            "A" => &[1, 2, 2],
-            "B" => &[1.0, 1.0, 2.0],
-            "C" => &[8, 9, 10],)
-        .unwrap_test()
-        .lazy();
-
-        (expr_domain, lazy_frame.groupby([col("A")]))
-    }
-
     #[test]
     fn test_make_col_expr() -> Fallible<()> {
-        let (expr_domain, lazy_frame) = get_test_data();
+        let (expr_domain, lazy_frame, _) = get_test_data()?;
         let selected_col = "B";
         let transformation =
-            make_col::<SymmetricDistance, _>(expr_domain, Default::default(), selected_col)
-                .unwrap_test();
+            make_col(expr_domain, SymmetricDistance, selected_col.to_string()).unwrap_test();
 
         let expr_res = transformation.invoke(&(lazy_frame, all())).unwrap_test().1;
         let expr_exp = col(selected_col);
@@ -164,13 +124,20 @@ mod test_make_col {
 
     #[test]
     fn test_make_col_expr_domain() -> Fallible<()> {
-        let (expr_domain, _) = get_test_data();
-        let expr_domain_context_exp = expr_domain.context.clone();
+        let (expr_domain, _, _) = get_test_data()?;
+
+        let context = LazyGroupByContext {
+            columns: vec![String::from("A")],
+        };
+        let expr_domain = ExprDomain {
+            lazy_frame_domain: expr_domain.lazy_frame_domain,
+            context: context.clone(),
+            active_column: expr_domain.active_column,
+        };
 
         let selected_col = "B";
         let transformation =
-            make_col::<SymmetricDistance, _>(expr_domain, Default::default(), selected_col)
-                .unwrap_test();
+            make_col(expr_domain, Lp(SymmetricDistance), selected_col.to_string()).unwrap_test();
 
         let expr_domain_res = transformation.output_domain.clone();
 
@@ -190,7 +157,7 @@ mod test_make_col {
 
         let expr_domain_exp = ExprDomain {
             lazy_frame_domain: lf_domain_exp,
-            context: expr_domain_context_exp,
+            context,
             active_column: Some(selected_col.to_string()),
         };
 
@@ -201,14 +168,13 @@ mod test_make_col {
 
     #[test]
     fn test_make_col_expr_no_wildcard() -> Fallible<()> {
-        let (expr_domain, lazy_groupby) = get_test_data();
+        let (expr_domain, lazy_frame, _) = get_test_data()?;
         let selected_col = "B";
 
         let transformation =
-            make_col::<SymmetricDistance, _>(expr_domain, Default::default(), selected_col)
-                .unwrap_test();
+            make_col(expr_domain, SymmetricDistance, selected_col.to_string()).unwrap_test();
         let error_res = transformation
-            .invoke(&(lazy_groupby, col(selected_col)))
+            .invoke(&(lazy_frame, col(selected_col)))
             .map(|v| v.1)
             .unwrap_err()
             .variant;
@@ -221,14 +187,13 @@ mod test_make_col {
 
     #[test]
     fn test_make_col_expr_wrong_col() -> Fallible<()> {
-        let (expr_domain, _) = get_test_data();
+        let (expr_domain, _, _) = get_test_data()?;
         let selected_col = "D";
 
-        let error_res =
-            make_col::<SymmetricDistance, _>(expr_domain, Default::default(), selected_col)
-                .map(|v| v.input_domain.clone())
-                .unwrap_err()
-                .variant;
+        let error_res = make_col(expr_domain, SymmetricDistance, selected_col.to_string())
+            .map(|v| v.input_domain.clone())
+            .unwrap_err()
+            .variant;
         let expected_error_kind = ErrorVariant::MakeTransformation;
 
         assert_eq!(error_res, expected_error_kind);
