@@ -308,7 +308,9 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, HammingDistance) {
 /// * `MapDomain<D>` for any valid `D`
 
 #[derive(Clone, Default, PartialEq)]
-pub struct Lp<const P: usize, M: Metric>(M);
+pub struct Lp<const P: usize, M: Metric>(pub M);
+pub type L1<M> = Lp<1, M>;
+pub type L2<M> = Lp<2, M>;
 
 impl<const P: usize, M: Metric> Debug for Lp<P, M> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
