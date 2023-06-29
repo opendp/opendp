@@ -18,15 +18,17 @@ pub enum LazyFrameContext {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct LazyGroupByContext {
-    columns: Vec<String>,
+    pub columns: Vec<String>,
 }
 
 pub trait Context: PartialEq + Clone {
-    type Value;
+    const GROUPBY: bool;
+    type Value: Clone;
     fn get_frame(&self, val: &(Self::Value, Expr)) -> LazyFrame;
 }
 
 impl Context for LazyFrameContext {
+    const GROUPBY: bool = false;
     type Value = LazyFrame;
     fn get_frame(&self, val: &(Self::Value, Expr)) -> LazyFrame {
         let (frame, expr) = val.clone();
@@ -38,6 +40,7 @@ impl Context for LazyFrameContext {
     }
 }
 impl Context for LazyGroupByContext {
+    const GROUPBY: bool = true;
     type Value = LazyGroupBy;
     fn get_frame(&self, val: &(Self::Value, Expr)) -> LazyFrame {
         let (grouped, expr) = val.clone();
@@ -69,27 +72,33 @@ impl<C: Context> Debug for ExprDomain<C> {
     }
 }
 
-trait FrameSpace: MetricSpace {
-    type InnerMetric;
+pub trait ExprMetric<C>: Metric {
+    type OuterMetric: Metric<Distance = Self::Distance>;
 }
 
-impl<D: Metric> FrameSpace for (ExprDomain<LazyFrameContext>, D)
-where
-    Self: MetricSpace,
-{
-    type InnerMetric = D;
+impl<M: Metric> ExprMetric<LazyFrameContext> for M {
+    type OuterMetric = Self;
 }
 
-impl<D: Metric, const P: usize> FrameSpace for (ExprDomain<LazyGroupByContext>, Lp<P, D>)
-where
-    Self: MetricSpace,
-{
-    type InnerMetric = D;
+impl<M: Metric> ExprMetric<LazyGroupByContext> for M {
+    type OuterMetric = Lp<1, Self>;
 }
 
-impl<D: DatasetMetric, C: Context> MetricSpace for (ExprDomain<C>, D) {
+impl<M: DatasetMetric> MetricSpace for (ExprDomain<LazyFrameContext>, M) {
     fn check(&self) -> bool {
-        if D::BOUNDED {
+        if M::BOUNDED {
+            return (self.0.lazy_frame_domain.margins.iter())
+                .find(|(_, margin)| margin.counts_index.is_some())
+                .is_some();
+        };
+
+        true
+    }
+}
+
+impl<M: DatasetMetric, const P: usize> MetricSpace for (ExprDomain<LazyGroupByContext>, Lp<P, M>) {
+    fn check(&self) -> bool {
+        if M::BOUNDED {
             return (self.0.lazy_frame_domain.margins.iter())
                 .find(|(_, margin)| margin.counts_index.is_some())
                 .is_some();
