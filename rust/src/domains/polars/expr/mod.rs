@@ -2,8 +2,9 @@ use polars::lazy::dsl::Expr;
 use polars::prelude::*;
 use std::fmt::{Debug, Formatter};
 
-use crate::core::MetricSpace;
+use crate::core::{Metric, MetricSpace};
 use crate::domains::{DatasetMetric, LazyFrameDomain};
+use crate::metrics::Lp;
 use crate::{core::Domain, error::Fallible};
 
 // TODO: remove this allow marker later
@@ -68,14 +69,32 @@ impl<C: Context> Debug for ExprDomain<C> {
     }
 }
 
+trait FrameSpace: MetricSpace {
+    type InnerMetric;
+}
+
+impl<D: Metric> FrameSpace for (ExprDomain<LazyFrameContext>, D)
+where
+    Self: MetricSpace,
+{
+    type InnerMetric = D;
+}
+
+impl<D: Metric, const P: usize> FrameSpace for (ExprDomain<LazyGroupByContext>, Lp<P, D>)
+where
+    Self: MetricSpace,
+{
+    type InnerMetric = D;
+}
+
 impl<D: DatasetMetric, C: Context> MetricSpace for (ExprDomain<C>, D) {
     fn check(&self) -> bool {
         if D::BOUNDED {
             return (self.0.lazy_frame_domain.margins.iter())
                 .find(|(_, margin)| margin.counts_index.is_some())
-                .is_some()
+                .is_some();
         };
-        
+
         true
     }
 }
