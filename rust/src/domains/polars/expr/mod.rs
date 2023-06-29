@@ -71,17 +71,11 @@ impl<C: Context> Debug for ExprDomain<C> {
 impl<D: DatasetMetric, C: Context> MetricSpace for (ExprDomain<C>, D) {
     fn check(&self) -> bool {
         if D::BOUNDED {
-            let margins = self.0.lazy_frame_domain.margins.clone();
-            return if margins.is_empty() {
-                false
-            } else {
-                let margins_with_counts: Vec<_> = margins
-                    .iter()
-                    .filter(|(_, margin)| margin.get_count_column_name().is_ok())
-                    .collect();
-                !margins_with_counts.is_empty()
-            };
-        }
-        return true;
+            return (self.0.lazy_frame_domain.margins.iter())
+                .find(|(_, margin)| margin.counts_index.is_some())
+                .is_some()
+        };
+        
+        true
     }
 }

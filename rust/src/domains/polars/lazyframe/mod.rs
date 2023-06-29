@@ -204,8 +204,8 @@ impl Domain for LazyFrameDomain {
 /// Otherwise, counts are stored in the `counts_index` column of the `data`.
 #[derive(Clone)]
 pub struct Margin {
-    data: LazyFrame,
-    counts_index: Option<usize>,
+    pub data: LazyFrame,
+    pub counts_index: Option<usize>,
 }
 
 impl Margin {
