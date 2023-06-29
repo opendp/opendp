@@ -1,17 +1,13 @@
 import argparse
-import configparser
 import datetime
 import io
-import json
-import os
-import platform
+import re
 import subprocess
 import sys
 import time
-import tomlkit
-import types
 
 import semver
+import tomlkit
 
 
 def log(message, command=False):
@@ -19,7 +15,7 @@ def log(message, command=False):
     print(f"{prefix} {message}", file=sys.stderr)
 
 
-def run_command(description, args, capture_output=True, shell=True):
+def run_command(description, args, capture_output=False, shell=True):
     if description:
         log(description)
     printed_args = args.join(" ") if type(args) == list else args
@@ -29,7 +25,7 @@ def run_command(description, args, capture_output=True, shell=True):
     return completed_process.stdout.rstrip() if capture_output else None
 
 
-def run_command_with_retries(description, args, retries = 10, wait_time_seconds = 30):
+def run_command_with_retries(description, args, retries=10, wait_time_seconds=30):
     while retries > 0:
         try:
             return run_command(description, args)
@@ -40,91 +36,6 @@ def run_command_with_retries(description, args, retries = 10, wait_time_seconds 
             log(f"Waiting {wait_time_seconds} Seconds | Retries Left: {retries - 1}")
             time.sleep(wait_time_seconds)
         retries -= 1
-
-
-def clone_repo(url, dir):
-    run_command(f"Cloning repo {url} -> {dir}", f"git clone {url} {dir}")
-    os.chdir(dir)
-
-
-def fetch_repo(dir):
-    os.chdir(dir)
-    run_command(f"Fetching repo", f"git fetch")
-
-
-def get_base_version(base_version):
-    base_version = base_version or run_command("Getting base version", f"git show origin/stable:./VERSION")
-    base_version = semver.VersionInfo.parse(base_version)
-    return base_version
-
-
-def get_target_version(base_version, release_type):
-    target_version = base_version.next_version(release_type)
-    return target_version
-
-
-def resolve_target_version(target_version, prerelease_number):
-    for _ in range(prerelease_number or 0):
-        target_version = target_version.bump_prerelease()
-    return target_version
-
-
-def get_cached_version():
-    with open("VERSION") as f:
-        cached_version = f.read().strip()
-    cached_version = semver.VersionInfo.parse(cached_version)
-    return cached_version
-
-
-def get_branch(prefix, version):
-    branch = f"{prefix}{version.major}.{version.minor}.x"
-    return branch
-
-
-def get_tag(version):
-    tag = f"v{version}"
-    return tag
-
-
-def write_conf(type, base_version, target_version, branch, tag, ref):
-    # To keep links in sync, we need a consistent date. If it takes a long time to get through the process,
-    # there's a chance that the date the release finally gets published will be later than the date we cache here,
-    # but it's not a huge deal.
-    date = datetime.date.today().isoformat()
-    conf = dict(type=type, base_version=str(base_version), target_version=str(target_version), branch=branch, tag=tag, ref=ref, date=date)
-    log(f"conf = {conf}")
-    with open(".release_conf.json", "w") as f:
-        json.dump(conf, f)
-    return conf
-
-
-def read_conf(args):
-    os.chdir(args.repo_dir)
-    with open(".release_conf.json", "r") as f:
-        conf = types.SimpleNamespace(**json.load(f))
-    conf.base_version = semver.VersionInfo.parse(conf.base_version)
-    conf.target_version = semver.VersionInfo.parse(conf.target_version)
-    return conf
-
-
-def create_branch(type, branch, ref, force=False):
-    create_arg = "-C" if force else "-c"
-    run_command(f"Fetching ref {ref}", f"git fetch origin {ref}:{ref}")
-    run_command(f"Creating {type} branch {branch} -> {ref}", f"git switch {create_arg} {branch} {ref}")
-
-
-def switch_branch(type, branch):
-    run_command(f"Switching to {type} branch {branch}", f"git switch {branch}")
-
-
-def commit(what, files, message=None):
-    message = message or f"Update {what}."
-    run_command(f"Committing {what}", f"git add {' '.join(files)} && git commit -m '{message}'")
-
-
-def push(what, force=False):
-    force_arg = " --force-with-lease" if force else ""
-    run_command(f"Pushing {what}", f"git push{force_arg} origin HEAD")
 
 
 def get_version(version_str=None):
@@ -231,82 +142,42 @@ def bump_version(args):
     update_version(version)
 
 
-def init(args):
-    log(f"*** INITIALIZING RELEASE ***")
-    if args.clone:
-        clone_repo(args.repo_url, args.repo_dir)
-    else:
-        fetch_repo(args.repo_dir)
-    base_version = get_base_version(args.base_version)
-    target_version = get_target_version(base_version, args.type)
-    branch = get_branch(args.branch_prefix, target_version)
-    tag = get_tag(target_version)
-    args.ref = args.ref or "main"
-    write_conf(args.type, base_version, target_version, branch, tag, args.ref)
-    if args.type == "patch":
-        switch_branch("release", branch)
-    else:
-        create_branch("release", branch, args.ref, force=args.force)
-
-
-def cherry(args):
-    log(f"*** CHERRY PICKING COMMITS ***")
-    conf = read_conf(args)
-    if args.commit:
-        run_command("Cherry picking commits", f"git cherry-pick -x {' '.join(args.commit)}")
+def first_match(lines, pattern):
+    matcher = re.compile(pattern)
+    for i, line in enumerate(lines):
+        match = matcher.match(line)
+        if match is not None:
+            return i, match
+    raise Exception
 
 
 def changelog(args):
     log(f"*** UPDATING CHANGELOG ***")
-    conf = read_conf(args)
-    # There are two possibilities for changelog items:
-    # * All unreleased items are going in this release (more common, when the release contains the current main branch).
-    #   In this case, we expect a single heading "Unreleased", containing all unreleased items, which will be promoted
-    #   to a versioned section; for future items, a new "Unreleased" section will be generated.
-    # * A subset of unreleased items are going in this release (less common, when the release omits some changes).
-    #   In this case, we expect a heading "Unreleased (<VERSION>)", containing the subset of unreleased items going in
-    #   this release, which will be promoted to a versioned section, and another "Unreleased" section containing the
-    #   remaining unreleased items, which will be left as is (for future items).
-    full_heading_regex = "^## \\[Unreleased\\](.*)$"
-    escaped_target_version = str(conf.target_version).replace(".", "\\.")
-    subset_heading_regex = f"^## \\[Unreleased ({escaped_target_version})\\](.*)$"
-    subset = run_command("Looking for subset heading", f"grep -q '{subset_heading_regex}' CHANGELOG.md && echo True || echo False") == "True"
-    heading_regex = subset_heading_regex if subset else full_heading_regex
-    base_tag = get_tag(conf.base_version)
-    diff_url = f"https://github.com/opendp/opendp/compare/{base_tag}...{conf.tag}"
-    replacement = f"## [{conf.target_version}] - {conf.date}\\n[{conf.target_version}]: {diff_url}"
-    # If this isn't a subset, prepend a new unreleased section.
-    if not subset:
-        replacement = "## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)\\n\\n\\n" + replacement
-    substitution_arg = f"-e 's|{heading_regex}|{replacement}|'"
-    inplace_arg = "-i ''" if platform.system() == "Darwin" else "-i"
-    run_command("Updating CHANGELOG", f"sed {inplace_arg} {substitution_arg} CHANGELOG.md")
-    commit("CHANGELOG", ["CHANGELOG.md"], f"RELEASE_TOOL: Update CHANGELOG.md for {conf.target_version}.")
+    if args.from_stable:
+        # Pull the CHANGELOG from stable, then insert a new Upcoming Release section at top.
+        changelog = run_command("Getting CHANGELOG from stable", f"git show origin/stable:CHANGELOG.md", capture_output=True)
+        lines = io.StringIO(changelog).readlines()
+        # This tells us where to insert.
+        i, _match = first_match(lines, r"^## \[(\d+\.\d+\.\d+)].*$")
+        log(f"Inserting new Upcoming Release section")
+        lines[i:i] = [f"## [Upcoming Release](https://github.com/opendp/opendp/compare/stable...HEAD) - TBD\n", "\n", "\n"]
+    else:
+        version = get_version()
+        # Load the CHANGELOG from local, then replace the UNRELEASED heading with the current version.
+        log(f"Reading CHANGELOG")
+        with open("CHANGELOG.md") as f:
+            lines = f.readlines()
+        # This tells us the previous released version.
+        _i, match = first_match(lines, r"^## \[(\d+\.\d+\.\d+)].*$")
+        previous_version = match.group(1)
+        # This tells us where to replace.
+        i, _match = first_match(lines, r"^## \[Upcoming Release\].*$")
+        date = datetime.date.today().isoformat()
+        log(f"Updating Upcoming Release heading to {version}")
+        lines[i] = f"## [{version}](https://github.com/opendp/opendp/compare/v{previous_version}...v{version}) - {date}\n"
 
-
-def version(args):
-    log(f"*** UPDATING VERSION ***")
-    conf = read_conf(args)
-    cached_version = get_cached_version()
-    # Resolve the target version with the prerelease number.
-    resolved_target_version = resolve_target_version(conf.target_version, args.prerelease_number)
-    log(f"Updating version -> {resolved_target_version}")
-    versioned_files = [
-        "VERSION",
-        "rust/Cargo.toml",
-        "rust/opendp_derive/Cargo.toml",
-        "python/setup.cfg",
-    ]
-    log(f"Updating versioned files")
-    inplace_arg = "-i ''" if platform.system() == "Darwin" else "-i"
-    run_command(None, f"echo {resolved_target_version} >VERSION")
-    run_command(None, f"sed {inplace_arg} 's/^version = \"{cached_version}\"$/version = \"{resolved_target_version}\"/' rust/Cargo.toml")
-    # Update the dependency versions, so that crate publishing will work.
-    # It's a little janky to do this with sed, rather than with toml, but this way we retain our formatting.
-    run_command(None, f"sed {inplace_arg} 's/^\\(opendp_.* = {{.*\\) }}/\\1, version = \"{resolved_target_version}\" }}/' rust/Cargo.toml")
-    run_command(None, f"sed {inplace_arg} 's/^\\(opendp_.* = {{.*\\) }}/\\1, version = \"{resolved_target_version}\" }}/' rust/opendp_derive/Cargo.toml")
-    run_command(None, f"sed {inplace_arg} 's/^version = {cached_version}$/version = {resolved_target_version}/' python/setup.cfg")
-    commit("versioned files", versioned_files, f"RELEASE_TOOL: Set version to {resolved_target_version}.")
+    with open("CHANGELOG.md", "w") as f:
+        f.writelines(lines)
 
 
 def format_python_version(version):
@@ -319,103 +190,22 @@ def format_python_version(version):
     return version
 
 
-def sanity(venv, version, published=False):
+def sanity(args):
+    log(f"*** RUNNING SANITY TEST ***")
+    version = get_version()
     version = format_python_version(version)
-    run_command("Creating venv", f"rm -rf {venv} && python -m venv {venv}")
-    package = f"opendp=={version}" if published else f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
-    run_command_with_retries(f"Installing opendp {version}", f"source {venv}/bin/activate && pip install {package}")
-    run_command("Running test script", f"source {venv}/bin/activate && python tools/test.py")
-
-
-def preflight(args):
-    log(f"*** RUNNING PREFLIGHT TEST ***")
-    conf = read_conf(args)
-    # We may be doing a prerelease, so use the version that was cached in the VERSION file.
-    cached_version = get_cached_version()
-    run_command(f"Building locally", "python tools/build_tool.py all")
-    sanity(args.venv, cached_version, published=False)
-
-
-def create(args):
-    log(f"*** CREATING RELEASE ***")
-    conf = read_conf(args)
-    push("release", args.force)
-    # We may be doing a prerelease, so use the version that was cached in the VERSION file.
-    cached_version = get_cached_version()
-    resolved_tag = get_tag(cached_version)
-    # Just in case, clear out any existing tag, so a new one will be created by GitHub.
-    run_command("Clearing tag", f"git push origin :refs/tags/{resolved_tag}")
-    title = f"OpenDP {cached_version}"
-    stripped_target_version = str(conf.target_version).replace(".", "")
-    notes = f"[CHANGELOG](https://github.com/opendp/opendp/blob/main/CHANGELOG.md#{stripped_target_version}---{conf.date})"
-    prerelease_arg = " -p" if cached_version.prerelease else ""
-    draft_arg = " -d" if args.draft else ""
-    run_command("Creating GitHub Release", f"gh release create {resolved_tag} --target {conf.branch} -t '{title}' -n '{notes}'{prerelease_arg}{draft_arg}")
-
-
-def watch(args):
-    log(f"*** WATCHING RELEASE ***")
-    conf = read_conf(args)
-    # Assumes most recent workflow is ours!
-    line = run_command("Listing workflows", f"gh run list -w Release | head -n 1")
-    descriptor = line.split("\t")
-    if len(descriptor) != 9:
-        raise Exception("Couldn't parse workflow descriptor", line)
-    id = descriptor[6]
-    run_command(f"Watching workflow {line.strip()}", f"gh run watch {id} --exit-status", capture_output=False)
-
-
-def postflight(args):
-    log(f"*** RUNNING TEST ***")
-    conf = read_conf(args)
-    # We may be doing a prerelease, so use the version that was cached in the VERSION file.
-    cached_version = get_cached_version()
-    sanity(args.venv, cached_version, published=True)
-
-
-def reconcile(args):
-    log(f"*** RECONCILING ***")
-    conf = read_conf(args)
-    reconciliation_branch = f"{conf.target_version}-reconciliation"
-    reconciled_files = ["CHANGELOG.md"]
-    create_branch("reconciliation", reconciliation_branch, "main", args.force)
-    run_command("Copying reconciled files from release branch", f"git restore -s {conf.branch} -- {' '.join(reconciled_files)}")
-    commit("reconciled files", reconciled_files, f"RELEASE_TOOL: Reconcile files from {conf.target_version}.")
-    push("reconciled files", args.force)
-    draft_arg = " -d" if args.draft else ""
-    run_command("Creating reconciliation PR", f"gh pr create -B main -f{draft_arg}")
-
-
-def meta(args):
-    init_args = [f"init -t {args.command}"]
-    cherry_args = [f"cherry {' '.join(args.commit)}"] if args.command == "patch" else []
-    body_args = [
-        "changelog",
-        "version -p 1",
-        "preflight",
-        "create",
-        "watch",
-        "postflight",
-        "version",
-        "preflight",
-        "create",
-        "watch",
-        "postflight",
-    ]
-    reconcile_args = [] if args.command == "patch" else []
-    meta_args = init_args + cherry_args + body_args + reconcile_args
-    for args in meta_args:
-        _main(f"meta {args}".split())
+    run_command("Creating venv", f"rm -rf {args.venv} && python -m venv {args.venv}")
+    package = f"opendp=={version}" if args.published else f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
+    run_command_with_retries(f"Installing opendp {version}", f"source {args.venv}/bin/activate && pip install {package}")
+    run_command("Running test script", f"source {args.venv}/bin/activate && python tools/test.py")
 
 
 def _main(argv):
     parser = argparse.ArgumentParser(description="OpenDP release tool")
-    parser.add_argument("-u", "--repo-url", default="git@github.com:opendp/opendp.git", help="Remote repo URL")
-    parser.add_argument("-d", "--repo-dir", default="/tmp/opendp-release", help="Local repo directory")
     subparsers = parser.add_subparsers(dest="COMMAND", help="Command to run")
     subparsers.required = True
 
-    subparser = subparsers.add_parser("sync", help="Sync release train from upstream")
+    subparser = subparsers.add_parser("sync", help="Sync the release train")
     subparser.set_defaults(func=sync_train)
     subparser.add_argument("-t", "--train", choices=["nightly", "beta", "stable"], default="nightly", help="Which train to target")
     subparser.add_argument("-u", "--upstream", help="Upstream ref")
@@ -424,65 +214,21 @@ def _main(argv):
     subparser.set_defaults(func=configure_train)
     subparser.add_argument("-t", "--train", choices=["dev", "nightly", "beta", "stable"], default="dev", help="Which train to target")
 
+    subparser = subparsers.add_parser("changelog", help="Update CHANGELOG file")
+    subparser.set_defaults(func=changelog)
+    subparser.add_argument("-s", "--from-stable", dest="from_stable", action="store_true", default=False)
+    subparser.add_argument("-ns", "--no-from-stable", dest="from_stable", action="store_false")
+
+    subparser = subparsers.add_parser("sanity", help="Run sanity test")
+    subparser.set_defaults(func=sanity)
+    subparser.add_argument("-e", "--venv", default="sanity-venv", help="Virtual environment directory")
+    subparser.add_argument("-p", "--published", dest="published", action="store_true", default=False)
+    subparser.add_argument("-np", "--no-published", dest="published", action="store_false")
+
     subparser = subparsers.add_parser("bump_version", help="Bump the version number (assumes dev train)")
     subparser.set_defaults(func=bump_version)
     subparser.add_argument("-p", "--position", choices=["major", "minor", "patch"], default="patch")
     subparser.add_argument("-s", "--set", help="Set the version to a specific value")
-
-    subparser = subparsers.add_parser("init", help="Initialize the release process")
-    subparser.set_defaults(func=init)
-    subparser.add_argument("-c", "--clone", dest="clone", action="store_true", default=True)
-    subparser.add_argument("-nc", "--no-clone", dest="clone", action="store_false")
-    subparser.add_argument("-b", "--base-version")
-    subparser.add_argument("-t", "--type", choices=["major", "minor", "patch"], required=True)
-    subparser.add_argument("-i", "--branch-prefix", default="release/", help="Release branch prefix")
-    subparser.add_argument("-r", "--ref")
-    subparser.add_argument("-f", "--force", dest="force", action="store_true", default=False)
-    subparser.add_argument("-nf", "--no-force", dest="force", action="store_false")
-
-    subparser = subparsers.add_parser("cherry", help="Cherry pick commits")
-    subparser.set_defaults(func=cherry)
-    subparser.add_argument("commit", nargs="+")
-
-    subparser = subparsers.add_parser("changelog", help="Update CHANGELOG file")
-    subparser.set_defaults(func=changelog)
-
-    subparser = subparsers.add_parser("version", help="Update versioned files")
-    subparser.set_defaults(func=version)
-    subparser.add_argument("-p", "--prerelease-number", type=int)
-
-    subparser = subparsers.add_parser("preflight", help="Run preflight test")
-    subparser.set_defaults(func=preflight)
-    subparser.add_argument("-e", "--venv", default="preflight-venv", help="Virtual environment directory")
-
-    subparser = subparsers.add_parser("create", help="Create a release")
-    subparser.set_defaults(func=create)
-    subparser.add_argument("-f", "--force", dest="force", action="store_true", default=False)
-    subparser.add_argument("-nf", "--no-force", dest="force", action="store_false")
-    subparser.add_argument("-n", "--draft", dest="draft", action="store_true", default=False)
-    subparser.add_argument("-nn", "--no-draft", dest="draft", action="store_false")
-
-    subparser = subparsers.add_parser("watch", help="Watch release progress")
-    subparser.set_defaults(func=watch)
-
-    subparser = subparsers.add_parser("postflight", help="Run postflight test")
-    subparser.set_defaults(func=postflight)
-    subparser.add_argument("-e", "--venv", default="postflight-venv", help="Virtual environment directory")
-
-    subparser = subparsers.add_parser("reconcile", help="Reconcile after the final release")
-    subparser.set_defaults(func=reconcile)
-    subparser.add_argument("-f", "--force", dest="force", action="store_true", default=False)
-    subparser.add_argument("-nf", "--no-force", dest="force", action="store_false")
-    subparser.add_argument("-n", "--draft", dest="draft", action="store_true", default=False)
-    subparser.add_argument("-nn", "--no-draft", dest="draft", action="store_false")
-
-    subparser = subparsers.add_parser("major", help="Execute a typical major release")
-    subparser.set_defaults(func=meta, command="major")
-    subparser = subparsers.add_parser("minor", help="Execute a typical minor release")
-    subparser.set_defaults(func=meta, command="minor")
-    subparser = subparsers.add_parser("patch", help="Execute a typical patch release")
-    subparser.set_defaults(func=meta, command="patch")
-    subparser.add_argument("commit", nargs="+")
 
     args = parser.parse_args(argv[1:])
     args.func(args)

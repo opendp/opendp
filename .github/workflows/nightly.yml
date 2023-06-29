@@ -1,10 +1,11 @@
 name: Nightly
 
 on:
-  schedule:
-    cron:
-      # 05:05 UTC = 00:05 EST (01:05 EDT)
-      - 5 5 * * *
+#  schedule:
+#    cron:
+#      # 05:05 UTC = 00:05 EST (01:05 EDT)
+#      - 5 5 * * *
+  workflow-dispatch:
 
 
 jobs:
@@ -19,4 +20,3 @@ jobs:
     with:
       train: nightly
     secrets: inherit
-
