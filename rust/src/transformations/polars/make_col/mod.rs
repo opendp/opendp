@@ -1,4 +1,5 @@
 use num::One;
+use opendp_derive::bootstrap;
 use polars::prelude::*;
 use std::collections::BTreeSet;
 
@@ -25,6 +26,7 @@ impl GroupingColumns for LazyGroupByContext {
     }
 }
 
+#[bootstrap(ffi = false)]
 /// Make a Transformation that returns a col(<column_name>) expression for a Lazy Frame.
 ///
 /// # Generics
