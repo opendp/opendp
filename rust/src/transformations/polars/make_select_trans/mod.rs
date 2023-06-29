@@ -1,54 +1,69 @@
+use crate::combinators::assert_components_match;
+use num::Zero;
 use polars::prelude::*;
 
-use crate::core::{Function, StabilityMap, Transformation};
-use crate::domains::{Context, ExprDomain, LazyFrameDomain};
+use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
+use crate::domains::{ExprDomain, LazyFrameContext, LazyFrameDomain, SeriesDomain};
 use crate::error::*;
-use crate::metrics::{IntDistance, SymmetricDistance};
+use crate::traits::TotalOrd;
 
-/// Make a Transformation that applies list of transformations to a Lazy Frame.
+/// Make a Transformation that applies list of transformations in the select context to a Lazy Frame.
 ///
-pub fn make_select_trans(
+pub fn make_select_trans<MI, MO>(
     input_domain: LazyFrameDomain,
-    input_metric: SymmetricDistance,
+    input_metric: MI,
     transformations: Vec<
-        Transformation<ExprDomain, ExprDomain, SymmetricDistance, SymmetricDistance>,
+        Transformation<ExprDomain<LazyFrameContext>, ExprDomain<LazyFrameContext>, MI, MO>,
     >,
-) -> Fallible<Transformation<LazyFrameDomain, LazyFrameDomain, SymmetricDistance, SymmetricDistance>> where
+) -> Fallible<Transformation<LazyFrameDomain, LazyFrameDomain, MI, MO>>
+where
+    MI: Metric + 'static,
+    MO: Metric + 'static,
+    MO::Distance: TotalOrd + Zero,
+    (LazyFrameDomain, MI): MetricSpace,
+    (LazyFrameDomain, MO): MetricSpace,
 {
-    let fist_transformation = transformations
+    let expr_input_domain = ExprDomain {
+        lazy_frame_domain: input_domain.clone(),
+        context: LazyFrameContext::Select,
+        active_column: None,
+    };
+
+    transformations.iter().try_for_each(|t| {
+        Ok(assert_components_match!(
+            DomainMismatch,
+            t.input_domain,
+            expr_input_domain
+        ))
+    })?;
+
+    let output_metric = transformations
         .first()
-        .ok_or_else(|| err!(MakeTransformation, "transformation list cannot be empty"))?;
-
-    let output_domain = fist_transformation.output_domain.lazy_frame_domain.clone();
-
-    let output_metric = fist_transformation.output_metric.clone();
+        .map(|t| &t.output_metric)
+        .ok_or_else(|| err!(MakeTransformation, "transformation list cannot be empty"))?
+        .clone();
 
     if transformations
         .iter()
-        .any(|t| t.input_domain.lazy_frame_domain != input_domain)
-    {
-        return fallible!(MakeTransformation, "input domains do not match");
-    }
-
-    if transformations
-        .iter()
-        .any(|t| t.output_domain.context != Context::Select)
+        .any(|t| t.output_metric != output_metric)
     {
         return fallible!(
             MakeTransformation,
-            "transformation is not in select context"
+            "transformations' output metrics do not match"
         );
     }
 
-    if transformations
-        .iter()
-        .any(|t| t.output_domain.lazy_frame_domain != output_domain)
-    {
-        return fallible!(
-            MakeTransformation,
-            "transformations' output domains do not match"
-        );
-    }
+    let output_domain = LazyFrameDomain::new(
+        transformations
+            .iter()
+            .map(|t| &t.output_domain)
+            .map(|d| {
+                d.lazy_frame_domain
+                    .try_column(d.active_column()?)
+                    .map(Clone::clone)
+            })
+            .collect::<Fallible<Vec<SeriesDomain>>>()?,
+    )?;
 
     let stability_maps: Vec<_> = transformations
         .iter()
@@ -57,29 +72,27 @@ pub fn make_select_trans(
         .collect();
 
     let stability_map = StabilityMap::new_fallible(move |d_in| {
-        let distances = stability_maps
+        stability_maps
             .iter()
-            .map(|map| map.eval(d_in))
-            .collect::<Fallible<Vec<IntDistance>>>()?;
-
-        Ok(*distances.iter().max().expect("distances cannot be empty"))
+            .try_fold(MO::Distance::zero(), |acc, map| {
+                acc.total_max(map.eval(d_in)?)
+            })
     });
 
     Transformation::new(
-        input_domain.clone(),
+        input_domain,
         output_domain,
         Function::new_fallible(move |lazy_frame: &LazyFrame| -> Fallible<LazyFrame> {
-            let trans_outputs = transformations
+            let exprs = transformations
                 .iter()
                 .map(|t| t.invoke(&(lazy_frame.clone(), all())))
-                .collect::<Fallible<Vec<(LazyFrame, Expr)>>>()?;
-
-            let exprs: Vec<Expr> = trans_outputs.iter().map(|(_, expr)| expr.clone()).collect();
+                .map(|res| Ok(res?.1))
+                .collect::<Fallible<Vec<Expr>>>()?;
 
             Ok(lazy_frame.clone().select(&exprs))
         }),
-        input_metric.clone(),
-        output_metric,
+        input_metric,
+        output_metric.clone(),
         stability_map,
     )
 }
@@ -88,87 +101,22 @@ pub fn make_select_trans(
 mod test_make_select_trans {
     use polars::prelude::*;
 
-    use crate::domains::{AtomDomain, ExprDomain, LazyFrameDomain, SeriesDomain};
+    use crate::error::ErrorVariant::DomainMismatch;
+    use crate::metrics::SymmetricDistance;
     use crate::transformations::make_col;
     use crate::transformations::polars::test::get_test_data;
 
     use super::*;
 
-    fn get_3_row_test_data() -> (LazyFrameDomain, LazyFrame, ExprDomain) {
-        let lf_domain = LazyFrameDomain::new(vec![
-            SeriesDomain::new("A", AtomDomain::<i32>::default()),
-            SeriesDomain::new("B", AtomDomain::<f64>::default()),
-            SeriesDomain::new("C", AtomDomain::<i32>::default()),
-        ])
-        .unwrap_test()
-        .with_counts(df!["A" => [1, 2], "count" => [1, 2]].unwrap_test().lazy())
-        .unwrap_test()
-        .with_counts(
-            df!["B" => [1.0, 2.0], "count" => [2, 1]]
-                .unwrap_test()
-                .lazy(),
-        )
-        .unwrap_test()
-        .with_counts(
-            df!["C" => [8, 9, 10], "count" => [1, 1, 1]]
-                .unwrap_test()
-                .lazy(),
-        )
-        .unwrap_test();
-
-        let lazy_frame = df!(
-            "A" => &[1, 2, 2,],
-            "B" => &[1.0, 1.0, 2.0],
-            "C" => &[8, 9, 10],)
-        .unwrap_test()
-        .lazy();
-
-        let expr_domain = ExprDomain {
-            lazy_frame_domain: lf_domain.clone(),
-            context: Context::Select,
-            active_column: None,
-        };
-
-        (lf_domain.clone(), lazy_frame, expr_domain)
-    }
-
-    fn get_2_row_test_data() -> (LazyFrameDomain, LazyFrame, ExprDomain) {
-        let lf_domain = LazyFrameDomain::new(vec![
-            SeriesDomain::new("A", AtomDomain::<i32>::default()),
-            SeriesDomain::new("B", AtomDomain::<f64>::default()),
-        ])
-        .unwrap_test()
-        .with_counts(df!["A" => [1, 2], "count" => [1, 2]].unwrap_test().lazy())
-        .unwrap_test()
-        .with_counts(
-            df!["B" => [1.0, 2.0], "count" => [2, 1]]
-                .unwrap_test()
-                .lazy(),
-        )
-        .unwrap_test();
-
-        let lazy_frame = df!(
-            "A" => &[1, 2, 2,],
-            "B" => &[1.0, 1.0, 2.0],)
-        .unwrap_test()
-        .lazy();
-
-        let expr_domain = ExprDomain {
-            lazy_frame_domain: lf_domain.clone(),
-            context: Context::Select,
-            active_column: None,
-        };
-
-        (lf_domain.clone(), lazy_frame, expr_domain)
-    }
-
     #[test]
-    fn test_make_select_trans_lazy_frame() -> Fallible<()> {
-        let (lf_domain, lazy_frame, expr_domain) = get_3_row_test_data();
+    fn test_make_select_trans_output_lazy_frame() -> Fallible<()> {
+        let (expr_domain, lazy_frame, lf_domain) = get_test_data()?;
         let select_trans = make_select_trans(
             lf_domain,
             SymmetricDistance::default(),
-            vec![make_col(expr_domain, SymmetricDistance::default(), "B").unwrap_test()],
+            vec![
+                make_col(expr_domain, Default::default(), "B".to_string())?,
+            ],
         );
 
         let lf_res = select_trans
@@ -187,84 +135,47 @@ mod test_make_select_trans {
     }
 
     #[test]
-    fn test_make_select_trans_output_domain() -> Fallible<()> {
-        let (lf_domain, _, expr_domain) = get_3_row_test_data();
-        let select_trans = make_select_trans(
-            lf_domain,
-            SymmetricDistance::default(),
-            vec![make_col(expr_domain, SymmetricDistance::default(), "B").unwrap_test()],
-        )
-        .unwrap_test();
+    fn test_make_select_trans_domain_missmatch() -> Fallible<()> {
+        let (mut expr_domain, _, lf_domain) = get_test_data()?;
+        expr_domain.context = LazyFrameContext::Filter;
 
-        let output_domain_res = &select_trans.output_domain;
-
-        let output_domain_exp =
-            LazyFrameDomain::new(vec![SeriesDomain::new("B", AtomDomain::<f64>::default())])
-                .unwrap_test()
-                .with_counts(
-                    df!["B" => [1.0, 2.0], "count" => [2, 1]]
-                        .unwrap_test()
-                        .lazy(),
-                )
-                .unwrap_test();
-
-        assert_eq!(output_domain_res, &output_domain_exp);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_make_select_trans_wrong_input_domain() -> Fallible<()> {
-        let (lf_domain, _, expr_domain) = get_3_row_test_data();
-        let (_, _, expr_domain_2_row) = get_2_row_test_data();
-        let error_msg_res = make_select_trans(
+        let error_variant_res = make_select_trans::<SymmetricDistance, SymmetricDistance>(
             lf_domain,
             SymmetricDistance::default(),
             vec![
-                make_col(expr_domain, SymmetricDistance::default(), "B").unwrap_test(),
-                make_col(expr_domain_2_row, SymmetricDistance::default(), "A").unwrap_test(),
+                make_col::<SymmetricDistance, _>(
+                    expr_domain.clone(),
+                    SymmetricDistance::default(),
+                    "B".to_string(),
+                )?,
+                make_col::<SymmetricDistance, _>(
+                    expr_domain.clone(),
+                    SymmetricDistance::default(),
+                    "A".to_string(),
+                )?,
             ],
         )
         .map(|v| v.input_domain.clone())
         .unwrap_err()
-        .message;
-        let error_msg_exp = Some("input domains do not match".to_string());
+        .variant;
+        let error_variant_exp = DomainMismatch;
 
-        assert_eq!(error_msg_res, error_msg_exp);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_make_select_trans_wrong_context() -> Fallible<()> {
-        let (lf_domain, _, mut expr_domain) = get_3_row_test_data();
-        expr_domain.context = Context::Filter;
-
-        let error_msg_res = make_select_trans(
-            lf_domain,
-            SymmetricDistance::default(),
-            vec![
-                make_col(expr_domain.clone(), SymmetricDistance::default(), "B").unwrap_test(),
-                make_col(expr_domain.clone(), SymmetricDistance::default(), "A").unwrap_test(),
-            ],
-        )
-        .map(|v| v.input_domain.clone())
-        .unwrap_err()
-        .message;
-        let error_msg_exp = Some("transformation is not in select context".to_string());
-
-        assert_eq!(error_msg_res, error_msg_exp);
+        assert_eq!(error_variant_res, error_variant_exp);
 
         Ok(())
     }
 
     #[test]
     fn test_make_select_trans_empty_list() -> Fallible<()> {
-        let (lf_domain, _, _) = get_3_row_test_data();
-        let error_msg_res = make_select_trans(lf_domain, SymmetricDistance::default(), vec![])
-            .map(|v| v.input_domain.clone())
-            .unwrap_err()
-            .message;
+        let (_, _, lf_domain) = get_test_data()?;
+        let error_msg_res = make_select_trans::<_, SymmetricDistance>(
+            lf_domain,
+            SymmetricDistance::default(),
+            vec![],
+        )
+        .map(|v| v.input_domain.clone())
+        .unwrap_err()
+        .message;
         let error_msg_exp = Some("transformation list cannot be empty".to_string());
 
         assert_eq!(error_msg_res, error_msg_exp);
