@@ -1,7 +1,6 @@
 use polars::lazy::dsl::Expr;
 use polars::prelude::*;
 use std::fmt::{Debug, Formatter};
-use std::marker::PhantomData;
 
 use crate::core::MetricSpace;
 use crate::domains::{DatasetMetric, LazyFrameDomain};
@@ -47,7 +46,7 @@ impl Domain for ExprDomain<LazyGroupByContext> {
 
     fn member(&self, (val_lazy_groupby, val_expr): &Self::Carrier) -> Fallible<bool> {
         let expr = val_expr.clone();
-        let result_frame = val_lazy_groupby.agg([expr]);
+        let result_frame = val_lazy_groupby.clone().agg([expr]);
         self.lazy_frame_domain.member(&result_frame)
     }
 }
@@ -57,14 +56,6 @@ impl<T> Debug for ExprDomain<T> {
         f.debug_struct("ExprDomain")
             .field("lazy_frame_domain", &self.lazy_frame_domain)
             .finish()
-    }
-}
-
-impl<T> PartialEq for ExprDomain<T> {
-    fn eq(&self, other: &Self) -> bool {
-        return self.lazy_frame_domain == other.lazy_frame_domain
-            && self.context == other.context
-            && self.active_column == other.active_column;
     }
 }
 
