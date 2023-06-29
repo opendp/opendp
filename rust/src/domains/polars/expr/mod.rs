@@ -73,15 +73,15 @@ impl<C: Context> Debug for ExprDomain<C> {
 }
 
 pub trait ExprMetric<C>: Metric {
-    type OuterMetric: Metric<Distance = Self::Distance>;
+    type InnerMetric: Metric<Distance = Self::Distance>;
 }
 
 impl<M: Metric> ExprMetric<LazyFrameContext> for M {
-    type OuterMetric = Self;
+    type InnerMetric = Self;
 }
 
-impl<M: Metric> ExprMetric<LazyGroupByContext> for M {
-    type OuterMetric = Lp<1, Self>;
+impl<M: Metric> ExprMetric<LazyGroupByContext> for Lp<1, M> {
+    type InnerMetric = M;
 }
 
 impl<M: DatasetMetric> MetricSpace for (ExprDomain<LazyFrameContext>, M) {
@@ -105,5 +105,14 @@ impl<M: DatasetMetric, const P: usize> MetricSpace for (ExprDomain<LazyGroupByCo
         };
 
         true
+    }
+}
+
+impl<C: Context> ExprDomain<C> {
+    pub fn active_column(&self) -> Fallible<String> {
+        return self
+            .active_column
+            .clone()
+            .ok_or_else(|| err!(FailedFunction, "active column not set"));
     }
 }
