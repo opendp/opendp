@@ -1,26 +1,32 @@
 use polars::lazy::dsl::Expr;
-use polars::prelude::{col, LazyFrame};
+use polars::prelude::*;
+use std::fmt::{Debug, Formatter};
+use std::marker::PhantomData;
 
 use crate::core::MetricSpace;
 use crate::domains::{DatasetMetric, LazyFrameDomain};
 use crate::{core::Domain, error::Fallible};
 
 #[derive(Clone, PartialEq)]
-pub enum Context {
+pub enum LazyFrameContext {
     Select,
-    Agg { columns: Vec<String> },
     Filter,
     WithColumns,
 }
 
 #[derive(Clone, PartialEq)]
-pub struct ExprDomain {
+pub struct LazyGroupByContext {
+    columns: Vec<String>,
+}
+
+#[derive(Clone, PartialEq)]
+pub struct ExprDomain<T> {
     pub lazy_frame_domain: LazyFrameDomain,
-    pub context: Context,
+    pub context: T,
     pub active_column: Option<String>,
 }
 
-impl Domain for ExprDomain {
+impl Domain for ExprDomain<LazyFrameContext> {
     type Carrier = (LazyFrame, Expr);
 
     fn member(&self, (val_lazy_frame, val_expr): &Self::Carrier) -> Fallible<bool> {
@@ -28,27 +34,41 @@ impl Domain for ExprDomain {
         let lazy_frame = val_lazy_frame.clone();
 
         let result_frame = match self.context {
-            Context::Select => lazy_frame.select([expr]),
-            Context::Agg { ref columns } => {
-                let column_exprs: Vec<_> = columns.iter().map(|c| col(c.as_ref())).collect();
-                lazy_frame.groupby_stable(column_exprs).agg([expr])
-            }
-            Context::Filter => lazy_frame.filter(expr),
-            Context::WithColumns => lazy_frame.with_columns([expr]),
+            LazyFrameContext::Select => lazy_frame.select([expr]),
+            LazyFrameContext::Filter => lazy_frame.filter(expr),
+            LazyFrameContext::WithColumns => lazy_frame.with_columns([expr]),
         };
         self.lazy_frame_domain.member(&result_frame)
     }
 }
 
-impl std::fmt::Debug for ExprDomain {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Domain for ExprDomain<LazyGroupByContext> {
+    type Carrier = (LazyGroupBy, Expr);
+
+    fn member(&self, (val_lazy_groupby, val_expr): &Self::Carrier) -> Fallible<bool> {
+        let expr = val_expr.clone();
+        let result_frame = val_lazy_groupby.agg([expr]);
+        self.lazy_frame_domain.member(&result_frame)
+    }
+}
+
+impl<T> Debug for ExprDomain<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ExprDomain")
             .field("lazy_frame_domain", &self.lazy_frame_domain)
             .finish()
     }
 }
 
-impl<D: DatasetMetric> MetricSpace for (ExprDomain, D) {
+impl<T> PartialEq for ExprDomain<T> {
+    fn eq(&self, other: &Self) -> bool {
+        return self.lazy_frame_domain == other.lazy_frame_domain
+            && self.context == other.context
+            && self.active_column == other.active_column;
+    }
+}
+
+impl<D: DatasetMetric, T> MetricSpace for (ExprDomain<T>, D) {
     fn check(&self) -> bool {
         if D::BOUNDED {
             let margins = self.0.lazy_frame_domain.margins.clone();
