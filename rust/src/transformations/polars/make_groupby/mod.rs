@@ -1,18 +1,23 @@
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{DatasetMetric, LazyFrameDomain, LazyGroupByDomain};
 use crate::error::*;
+use crate::metrics::{Lp, L1};
 use polars::prelude::*;
 
 pub fn make_groupby<M>(
     input_domain: LazyFrameDomain,
     input_metric: M,
     grouping_columns: Vec<String>,
-) -> Fallible<Transformation<LazyFrameDomain, LazyGroupByDomain, M, M>>
+) -> Fallible<Transformation<LazyFrameDomain, LazyGroupByDomain, M, L1<M>>>
 where
     M: DatasetMetric + 'static,
     (LazyFrameDomain, M): MetricSpace,
-    (LazyGroupByDomain, M): MetricSpace,
+    (LazyGroupByDomain, L1<M>): MetricSpace,
 {
+    if M::BOUNDED {
+        return fallible!(MakeTransformation, "Metric cannot be bounded");
+    }
+
     for col in &grouping_columns {
         let mut found = false;
         for (keys, _) in &input_domain.margins {
@@ -41,7 +46,7 @@ where
         output_domain,
         function,
         input_metric.clone(),
-        input_metric,
+        Lp(input_metric),
         StabilityMap::new_from_constant(1),
     )
 }

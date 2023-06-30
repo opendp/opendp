@@ -3,6 +3,7 @@ use crate::core::{Domain, MetricSpace};
 use crate::domains::{DatasetMetric, LazyFrameDomain};
 use polars::prelude::*;
 use crate::error::Fallible;
+use crate::metrics::L1;
 
 #[derive(Clone, PartialEq)]
 pub struct LazyGroupByDomain {
@@ -10,7 +11,7 @@ pub struct LazyGroupByDomain {
     pub grouping_columns: Vec<String>,
 }
 
-impl<D: DatasetMetric> MetricSpace for (LazyGroupByDomain, D) {
+impl<D: DatasetMetric> MetricSpace for (LazyGroupByDomain, L1<D>) {
     fn check(&self) -> bool {
         true
     }
