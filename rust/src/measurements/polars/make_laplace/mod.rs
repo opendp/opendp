@@ -1,13 +1,12 @@
 use crate::{
-    core::{Function, Measurement, MetricSpace, PrivacyMap},
-    domains::{Context, ExprDomain},
+    core::{Function, Measurement, MetricSpace},
+    domains::{AtomDomain, Context, ExprDomain, VectorDomain},
     error::Fallible,
-    measurements::get_discretization_consts,
+    measurements::{get_discretization_consts, make_base_laplace},
     measures::MaxDivergence,
     metrics::L1Distance,
-    traits::{samplers::SampleDiscreteLaplaceZ2k, InfAdd, InfDiv},
+    traits::samplers::SampleDiscreteLaplaceZ2k,
 };
-use num::{Float, Zero};
 use polars::prelude::*;
 
 /// Polars operator to make the Laplace noise measurement
@@ -28,18 +27,21 @@ where
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
-    // Create Laplace measurement
-    // let _scalar_laplace_measurement = make_base_laplace(
-    //     VectorDomain::new(AtomDomain::<f64>::default()),
-    //     L1Distance::<f64>::default(),
-    //     scale.clone(),
-    //     k,
-    // )?;
+
+    if input_domain.active_series()?.field.dtype != DataType::Float64 {
+        return fallible!(MakeMeasurement, "input must be f64");
+    }
+
+    // Create Laplace measurement (needs explicit type annotation)
+    let lap_meas = make_base_laplace::<VectorDomain<AtomDomain<f64>>>(
+        Default::default(),
+        Default::default(),
+        scale.clone(),
+        k,
+    )?;
 
     // TODO: delete when threading supported
-    let (k, relaxation) = get_discretization_consts::<f64>(k)?;
-
-    // let laplace_measurement_privacy_map = &scalar_laplace_measurement.privacy_map;
+    let k = get_discretization_consts::<f64>(k)?.0;
 
     Measurement::new(
         input_domain.clone(),
@@ -51,22 +53,22 @@ where
 
             let expr = expr.clone().map(
                 move |s: Series| {
-                    if s.name() == active_column {
-                        let noisy_vec: Vec<f64> = s
-                            .unpack::<Float64Type>()?
-                            .into_iter()
-                            .filter_map(|opt_value| opt_value)
-                            .map(|value| f64::sample_discrete_laplace_Z2k(scale.clone(), value, k))
-                            .collect::<Fallible<Vec<_>>>()
-                            .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
-
-                        // TODO: use this when threading supported
-                        // let noisy_vec = scalar_laplace_measurement.invoke(&vec).unwrap();
-                        let noisy_serie = Series::new(&active_column, noisy_vec);
-                        Ok(Some(noisy_serie))
-                    } else {
-                        Ok(Some(s))
+                    if s.name() != active_column {
+                        return Err(PolarsError::ComputeError(
+                            "series name does not match active column".into(),
+                        ));
                     }
+
+                    let noisy_vec: Vec<f64> = s
+                        .unpack::<Float64Type>()?
+                        .into_no_null_iter()
+                        .map(|value| f64::sample_discrete_laplace_Z2k(scale.clone(), value, k))
+                        .collect::<Fallible<Vec<_>>>()
+                        .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
+
+                    // TODO: use this when threading supported
+                    // let noisy_vec = lap_meas.invoke(&vec).unwrap();
+                    Ok(Some(Series::new(&active_column, noisy_vec)))
                 },
                 GetOutput::from_type(DataType::Float64),
             );
@@ -75,25 +77,7 @@ where
         }),
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(move |d_in: &f64| {
-            if d_in.is_sign_negative() {
-                return fallible!(InvalidDistance, "sensitivity must be non-negative");
-            }
-
-            if d_in.is_zero() {
-                return Ok(f64::zero());
-            }
-
-            if scale.is_zero() {
-                return Ok(f64::infinity());
-            }
-
-            // increase d_in by the worst-case rounding of the discretization
-            let d_in = d_in.inf_add(&relaxation)?;
-
-            // d_in / scale
-            d_in.inf_div(&scale)
-        }), // laplace_measurement_privacy_map.clone(),
+        lap_meas.privacy_map.clone(),
     )
 }
 
