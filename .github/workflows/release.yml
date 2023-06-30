@@ -4,11 +4,7 @@ on:
     train:
       description: 'Train'
       required: true
-      type: choice
-      options:
-        - nightly
-        - beta
-        - stable
+      type: string
       default: 'nightly'
     inputs:
       dry_run:
