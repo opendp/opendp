@@ -1,4 +1,5 @@
 import argparse
+import configparser
 import datetime
 import io
 import re
@@ -45,16 +46,6 @@ def get_version(version_str=None):
     return semver.Version.parse(version_str)
 
 
-def update_file(path, load, munge, dump, binary=False):
-    log(f"Updating {path}")
-    b = "b" if binary else ""
-    with open(path, f"r{b}") as f:
-        data = load(f)
-    new_data = munge(data)
-    with open(path, f"w{b}") as f:
-        dump(new_data, f)
-
-
 def sync_channel(args):
     log(f"*** SYNCING CHANNEL FROM UPSTREAM ***")
     channel_to_upstream = {"nightly": "origin/main", "beta": "origin/nightly", "stable": "origin/beta"}
@@ -75,6 +66,16 @@ def sync_channel(args):
     else:
         # We're not preserving channel history, so we can just reset the branch.
         run_command(f"Resetting channel to upstream", f"git switch -C {args.channel} {upstream}")
+
+
+def update_file(path, load, munge, dump, binary=False):
+    log(f"Updating {path}")
+    b = "b" if binary else ""
+    with open(path, f"r{b}") as f:
+        data = load(f)
+    new_data = munge(data)
+    with open(path, f"w{b}") as f:
+        dump(new_data, f)
 
 
 def update_version(version):
@@ -103,10 +104,15 @@ def update_version(version):
     # so we map nightly -> alpha.
     is_nightly = version.prerelease is not None and version.prerelease.startswith("nightly.")
     python_version = version.replace(prerelease=f"alpha.{version.prerelease[8:]}") if is_nightly else version
-    def munge_setup(lines):
-        version_line = f"version = {python_version}\n"
-        return [version_line if line.startswith("version = ") else line for line in lines]
-    update_file("python/setup.cfg", io.IOBase.readlines, munge_setup, lambda data, f: f.writelines(data))
+    def load_config(f):
+        config = configparser.RawConfigParser()
+        config.read_file(f)
+        return config
+    def munge_config(config):
+        print(python_version)
+        config.set("metadata", "version", str(python_version))
+        return config
+    update_file("python/setup.cfg", load_config, munge_config, lambda data, f: data.write(f))
 
 
 def configure_channel(args):
