@@ -24,8 +24,13 @@ where
     (LazyFrameDomain, T::OutputMetric): MetricSpace,
 {
     // resolve transformations
+    let expr_input_domain = ExprDomain {
+        lazy_frame_domain: input_domain.clone(),
+        context: LazyFrameContext::Select,
+        active_column: None,
+    };
     let transformations = (transformations.into_iter())
-        .map(|t| t.fix(&input_domain, &input_metric))
+        .map(|t| t.fix(&expr_input_domain, &input_metric))
         .collect::<Fallible<Vec<_>>>()?;
 
     // output domain
@@ -91,7 +96,7 @@ pub trait SelectTransformation: 'static {
     type OutputMetric: 'static + Metric;
     fn fix(
         self,
-        input_domain: &LazyFrameDomain,
+        input_domain: &ExprDomain<LazyFrameContext>,
         input_metric: &Self::InputMetric,
     ) -> Fallible<
         Transformation<
@@ -111,14 +116,8 @@ where
 {
     type InputMetric = MI;
     type OutputMetric = MO;
-    fn fix(self, input_domain: &LazyFrameDomain, input_metric: &MI) -> Fallible<Self> {
-        let input_domain = ExprDomain {
-            lazy_frame_domain: input_domain.clone(),
-            context: LazyFrameContext::Select,
-            active_column: None,
-        };
-
-        assert_components_match!(DomainMismatch, self.input_domain, input_domain);
+    fn fix(self, input_domain: &ExprDomain<LazyFrameContext>, input_metric: &MI) -> Fallible<Self> {
+        assert_components_match!(DomainMismatch, &self.input_domain, input_domain);
         assert_components_match!(MetricMismatch, &self.input_metric, input_metric);
 
         Ok(self)
@@ -136,18 +135,11 @@ where
     type OutputMetric = MO;
     fn fix(
         self,
-        input_domain: &LazyFrameDomain,
+        input_domain: &ExprDomain<LazyFrameContext>,
         input_metric: &MI,
     ) -> Fallible<Transformation<ExprDomain<LazyFrameContext>, ExprDomain<LazyFrameContext>, MI, MO>>
     {
-        self.fix(
-            ExprDomain {
-                lazy_frame_domain: input_domain.clone(),
-                context: LazyFrameContext::Select,
-                active_column: None,
-            },
-            input_metric.clone(),
-        )
+        self.fix(input_domain.clone(), input_metric.clone())
     }
 }
 
@@ -165,7 +157,7 @@ mod test_make_select_trans {
     fn test_make_select_trans_output_lazy_frame() -> Fallible<()> {
         let (_, lazy_frame, lf_domain) = get_test_data()?;
         let space = (lf_domain, SymmetricDistance);
-        
+
         // demonstrates how you can pass partial constructors
         let select_trans = (space >> then_select_trans(vec![then_col("B".to_string())]))?;
 
