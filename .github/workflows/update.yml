@@ -53,4 +53,4 @@ jobs:
       - name: Push changes
         run: |
           git commit -a -m "Sync and configure channel"
-          git push --force-with-lease origin ${{ inputs.channel }}
+          git push --force origin ${{ inputs.channel }}
