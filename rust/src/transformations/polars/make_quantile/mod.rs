@@ -6,7 +6,7 @@ use crate::{
     metrics::{SymmetricDistance, LInfDiffDistance, IntDistance}, 
     core::{Transformation, Function, StabilityMap}, 
     error::Fallible,
-
+    traits::{AlertingMul, ExactIntCast},
 };
 
 /// Polars operator to compute quantile of a serie in a LazyFrame
@@ -27,6 +27,7 @@ pub fn make_quantile_expr(
         LInfDiffDistance<f64>,
     >,
 > {
+    let alpha_den = 1.0;
 
     Transformation::new(
         input_domain.clone(),
@@ -39,7 +40,9 @@ pub fn make_quantile_expr(
         input_metric,
         LInfDiffDistance::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
-            unimplemented!();
+            f64::exact_int_cast(d_in / 2)?
+                .alerting_mul(&4.0)?
+                .alerting_mul(&alpha_den)
         }),
     )
 }
@@ -54,7 +57,7 @@ fn make_score_elts_expr(expr: Expr, alpha: f64) -> Expr {
 }
 
 #[cfg(test)]
-mod test_make_col {
+mod test_make_score_elts_expr_quantile {
 
     use super::*;
     use crate::domains::{
@@ -146,29 +149,44 @@ mod test_make_col {
         //                         Series::new("list", &[0.4, 0.4, 0.4])]); //without slice
         let b = Series::new(
             "B",
-            &[
-                Series::new("list", &[0.4, 1.4]),
-                Series::new("list", &[0.4, 1.4]),
-                Series::new("list", &[0.4, 0.4]),
+            [
+                [0.4, 1.4].iter().collect::<Series>(), 
+                [0.4, 1.4].iter().collect::<Series>(), 
+                [0.4, 0.4].iter().collect::<Series>(),
             ],
         );
-
         let frame_expected = DataFrame::new(vec![a.clone(), b.clone()])?;
+
+        // Test same schemas
+        assert_eq!(frame_actual.schema(), frame_expected.schema());
+
+        // Test same types
+        assert_eq!(frame_actual.dtypes(), frame_expected.dtypes());
 
         // print to understand why not equal
         println!("Frame actual {}", frame_actual);
         println!("Frame expected {}", frame_expected);
-        println!("Type of column actual: {:?}", frame_actual.dtypes());
-        println!("Type of column expected: {:?}", frame_expected.dtypes());
-        if let Ok(first_element) = frame_actual.column("B").unwrap().get(0) {
-            println!("First element of Series B actual: {}", first_element);
-        }
-        if let Ok(first_element) = frame_expected.column("B").unwrap().get(0) {
-            println!("First element of Series B expected: {}", first_element);
-        }
+        
+        
+        println!("Run 1st test");
+        assert_eq!(frame_actual[0], frame_expected[0]);
 
-        assert_eq!(frame_actual[0], a);
-        assert_eq!(frame_actual[1], b);
+        println!("Column actual:   {:?}", frame_actual.column("B").unwrap());
+        println!("Column expected: {:?}", frame_expected.column("B").unwrap());
+        if let Ok(first_element_a) = frame_actual.column("B").unwrap().get(0) {
+            println!("First element of Series B actual:   {}", first_element_a);
+            if let Ok(first_element_b) = frame_expected.column("B").unwrap().get(0) {
+                println!("First element of Series B expected: {}", first_element_b);
+                println!("Run 2nd test a");
+                assert_eq!(first_element_a, first_element_b);
+            }
+        }
+        println!("Run 2nd test b");
+        assert_eq!(frame_actual.column("B").unwrap(), frame_expected.column("B").unwrap());
+        println!("Run 2nd test c");
+        assert_eq!(frame_actual[1], frame_expected[1]);
+
+        println!("Run 3rd test");
         assert_eq!(frame_actual, frame_expected);
         Ok(())
     }
