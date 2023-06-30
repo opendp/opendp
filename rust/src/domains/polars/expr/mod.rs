@@ -4,7 +4,7 @@ use std::fmt::{Debug, Formatter};
 
 use crate::core::{Metric, MetricSpace};
 use crate::domains::{DatasetMetric, LazyFrameDomain, DataTypeFrom};
-use crate::metrics::{Lp, L1Distance};
+use crate::metrics::{Lp, L1Distance, SymmetricDistance, LInfDiffDistance};
 use crate::traits::TotalOrd;
 use crate::{core::Domain, error::Fallible};
 
@@ -130,6 +130,18 @@ impl<M: DatasetMetric, const P: usize> MetricSpace for (ExprDomain<LazyGroupByCo
                 .is_some();
         };
 
+        true
+    }
+}
+
+impl MetricSpace for (ExprDomain<LazyGroupByContext>, SymmetricDistance) {
+    fn check(&self) -> bool {
+        true
+    }
+}
+
+impl <Q> MetricSpace for (ExprDomain<LazyGroupByContext>, LInfDiffDistance<Q>) {
+    fn check(&self) -> bool {
         true
     }
 }
