@@ -62,6 +62,7 @@ def sync_train(args):
         raise Exception(f"Unknown train {args.train}")
     upstream = train_to_upstream[args.train] if args.upstream is None else args.upstream
     log(f"Syncing {args.train} <= {upstream}")
+    run_command(f"Fetching upstream", f"git fetch origin {upstream}:{upstream}")
     if args.train == "nightly":
         # For nightly, we don't care about history, so we just reset the branch.
         run_command(f"Resetting train to upstream", f"git switch -C {args.train} {upstream}")
@@ -69,6 +70,7 @@ def sync_train(args):
         # For beta & stable, we want to preserve history, so we merge.
         # git doesn't have a "theirs" merge strategy, so we have to simulate it.
         # Technique from https://stackoverflow.com/a/4912267
+        run_command(f"Fetching train", f"git fetch origin {args.train}:{args.train}")
         run_command(f"Creating temporary branch based on upstream", f"git switch -c tmp {upstream}")
         run_command(f"Merging train (keeping all upstream)", f"git merge -s ours {args.train}")
         run_command(f"Switching to train", f"git switch {args.train}")
