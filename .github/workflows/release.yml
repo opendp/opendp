@@ -45,7 +45,8 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v3
-        ref: ${{ inputs.train }}
+        with:
+          ref: ${{ inputs.train }}
 
       - name: Set up Python
         uses: actions/setup-python@v3
