@@ -9,7 +9,6 @@ on:
         default: 'nightly'
       dry_run:
         description: Dry run (DISABLE WITH CARE)
-        required: true
         type: boolean
         default: true
   workflow_dispatch:
