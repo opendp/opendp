@@ -12,7 +12,7 @@ on:
           - beta
           - stable
         default: 'nightly'
-  workflow-dispatch:
+  workflow_dispatch:
     inputs:
       train:
         description: 'Train'
