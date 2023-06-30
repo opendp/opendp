@@ -31,11 +31,7 @@ impl Domain for SeriesDomain {
 
         macro_rules! atom_member {
             ($ty:ty, $polars_ty:ty) => {{
-                let atom_domain = self
-                    .element_domain
-                    .as_any()
-                    .downcast_ref::<AtomDomain<<$ty as ToOwned>::Owned>>()
-                    .ok_or_else(|| err!(FailedCast, "domain downcast failed"))?;
+                let atom_domain = self.atom_domain::<<$ty as ToOwned>::Owned>()?;
 
                 let chunked = value.0.unpack::<$polars_ty>()?;
                 if !self.nullable && chunked.null_count() > 0 {
@@ -78,6 +74,22 @@ impl SeriesDomain {
             element_domain: Rc::new(element_domain.atom_domain()),
             nullable: DA::NULLABLE,
         }
+    }
+
+    pub fn drop_bounds(&mut self) -> Fallible<()> {
+        let mut element_domain = (self.element_domain.as_any())
+            .downcast_ref::<AtomDomain<f64>>()
+            .ok_or_else(|| err!(FailedFunction, "unrecognized element domain"))?
+            .clone();
+        element_domain.bounds = None;
+        self.element_domain = Rc::new(element_domain) as Rc<dyn DynSeriesAtomDomain>;
+        Ok(())
+    }
+
+    pub fn atom_domain<T: 'static + CheckAtom>(&self) -> Fallible<&AtomDomain<T>> {
+        (self.element_domain.as_any())
+            .downcast_ref::<AtomDomain<T>>()
+            .ok_or_else(|| err!(FailedCast, "domain downcast failed"))
     }
 }
 
