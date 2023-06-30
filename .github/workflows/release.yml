@@ -1,9 +1,9 @@
-name: Release Train
+name: Release Channel
 on:
   workflow_call:
     inputs:
-      train:
-        description: 'Train'
+      channel:
+        description: 'Channel'
         required: true
         type: string
         default: 'nightly'
@@ -13,8 +13,8 @@ on:
         default: true
   workflow_dispatch:
     inputs:
-      train:
-        description: 'Train'
+      channel:
+        description: 'channel'
         required: true
         type: choice
         options:
@@ -45,7 +45,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.train }}
+          ref: ${{ inputs.channel }}
 
       - name: Set up Python
         uses: actions/setup-python@v3
@@ -77,7 +77,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.train }}
+          ref: ${{ inputs.channel }}
 
       - name: Cache Rust dependencies
         uses: actions/cache@v3
@@ -110,7 +110,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.train }}
+          ref: ${{ inputs.channel }}
 
       - name: Cache Rust dependencies
         uses: actions/cache@v3
@@ -176,7 +176,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.train }}
+          ref: ${{ inputs.channel }}
 
       - name: Cache Rust dependencies
         uses: actions/cache@v3
@@ -214,7 +214,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.train }}
+          ref: ${{ inputs.channel }}
 
       - name: Set up Python
         uses: actions/setup-python@v3
@@ -259,7 +259,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.train }}
+          ref: ${{ inputs.channel }}
 
       - name: Set up Python
         uses: actions/setup-python@v3

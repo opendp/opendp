@@ -55,27 +55,26 @@ def update_file(path, load, munge, dump, binary=False):
         dump(new_data, f)
 
 
-def sync_train(args):
-    log(f"*** SYNCING RELEASE TRAIN FROM UPSTREAM ***")
-    train_to_upstream = {"nightly": "main", "beta": "nightly", "stable": "beta"}
-    if args.train not in train_to_upstream:
-        raise Exception(f"Unknown train {args.train}")
-    upstream = train_to_upstream[args.train] if args.upstream is None else args.upstream
-    log(f"Syncing {args.train} <= {upstream}")
-    run_command(f"Fetching upstream", f"git fetch origin {upstream}:{upstream}")
-    if args.train == "nightly":
-        # For nightly, we don't care about history, so we just reset the branch.
-        run_command(f"Resetting train to upstream", f"git switch -C {args.train} {upstream}")
-    else:
-        # For beta & stable, we want to preserve history, so we merge.
+def sync_channel(args):
+    log(f"*** SYNCING CHANNEL FROM UPSTREAM ***")
+    channel_to_upstream = {"nightly": "origin/main", "beta": "origin/nightly", "stable": "origin/beta"}
+    if args.channel not in channel_to_upstream:
+        raise Exception(f"Unknown channel {args.channel}")
+    upstream = channel_to_upstream[args.channel] if args.upstream is None else args.upstream
+    log(f"Syncing {args.channel} <= {upstream}")
+    if args.preserve:
+        # We're preserving channel history, so we need to do a merge.
         # git doesn't have a "theirs" merge strategy, so we have to simulate it.
         # Technique from https://stackoverflow.com/a/4912267
-        run_command(f"Fetching train", f"git fetch origin {args.train}:{args.train}")
+        run_command(f"Fetching channel", f"git fetch origin {args.channel}:{args.channel}")
         run_command(f"Creating temporary branch based on upstream", f"git switch -c tmp {upstream}")
-        run_command(f"Merging train (keeping all upstream)", f"git merge -s ours {args.train}")
-        run_command(f"Switching to train", f"git switch {args.train}")
+        run_command(f"Merging channel (keeping all upstream)", f"git merge -s ours {args.channel}")
+        run_command(f"Switching to channel", f"git switch {args.channel}")
         run_command(f"Merging temporary branch", f"git merge tmp")
         run_command(f"Deleting temporary branch", f"git branch -D tmp")
+    else:
+        # We're not preserving channel history, so we can just reset the branch.
+        run_command(f"Resetting channel to upstream", f"git switch -C {args.channel} {upstream}")
 
 
 def update_version(version):
@@ -110,18 +109,18 @@ def update_version(version):
     update_file("python/setup.cfg", io.IOBase.readlines, munge_setup, lambda data, f: f.writelines(data))
 
 
-def configure_train(args):
-    log(f"*** CONFIGURING RELEASE TRAIN ***")
-    if args.train not in ("dev", "nightly", "beta", "stable"):
-        raise Exception(f"Unknown train {args.train}")
+def configure_channel(args):
+    log(f"*** CONFIGURING CHANNEL ***")
+    if args.channel not in ("dev", "nightly", "beta", "stable"):
+        raise Exception(f"Unknown channel {args.channel}")
     version = get_version()
-    if args.train == "dev":
+    if args.channel == "dev":
         version = version.replace(prerelease="dev", build=None)
-    elif args.train in ["nightly", "beta"]:
+    elif args.channel in ["nightly", "beta"]:
         date = datetime.date.today().strftime("%Y%m%d")
-        prerelease = f"{args.train}.{date}001"
+        prerelease = f"{args.channel}.{date}001"
         version = version.replace(prerelease=prerelease, build=None)
-    elif args.train == "stable":
+    elif args.channel == "stable":
         version = version.replace(prerelease=None, build=None)
     update_version(version)
 
@@ -147,7 +146,7 @@ def changelog(args):
         lines[i:i] = [f"## [Upcoming Release](https://github.com/opendp/opendp/compare/stable...HEAD) - TBD\n", "\n", "\n"]
     else:
         version = get_version()
-        # Load the CHANGELOG from local, then replace the UNRELEASED heading with the current version.
+        # Load the CHANGELOG from local, then replace the Upcoming Release heading with the current version.
         log(f"Reading CHANGELOG")
         with open("CHANGELOG.md") as f:
             lines = f.readlines()
@@ -207,14 +206,16 @@ def _main(argv):
     subparsers = parser.add_subparsers(dest="COMMAND", help="Command to run")
     subparsers.required = True
 
-    subparser = subparsers.add_parser("sync", help="Sync the release train")
-    subparser.set_defaults(func=sync_train)
-    subparser.add_argument("-t", "--train", choices=["nightly", "beta", "stable"], default="nightly", help="Which train to target")
+    subparser = subparsers.add_parser("sync", help="Sync the channel")
+    subparser.set_defaults(func=sync_channel)
+    subparser.add_argument("-c", "--channel", choices=["nightly", "beta", "stable"], default="nightly", help="Which channel to target")
     subparser.add_argument("-u", "--upstream", help="Upstream ref")
+    subparser.add_argument("-p", "--preserve", dest="preserve", action="store_true", default=False)
+    subparser.add_argument("-np", "--no-preserve", dest="preserve", action="store_false")
 
-    subparser = subparsers.add_parser("configure", help="Configure the release train")
-    subparser.set_defaults(func=configure_train)
-    subparser.add_argument("-t", "--train", choices=["dev", "nightly", "beta", "stable"], default="dev", help="Which train to target")
+    subparser = subparsers.add_parser("configure", help="Configure the channel")
+    subparser.set_defaults(func=configure_channel)
+    subparser.add_argument("-c", "--channel", choices=["dev", "nightly", "beta", "stable"], default="dev", help="Which channel to target")
 
     subparser = subparsers.add_parser("changelog", help="Update CHANGELOG file")
     subparser.set_defaults(func=changelog)
@@ -227,7 +228,7 @@ def _main(argv):
     subparser.add_argument("-p", "--published", dest="published", action="store_true", default=False)
     subparser.add_argument("-np", "--no-published", dest="published", action="store_false")
 
-    subparser = subparsers.add_parser("bump_version", help="Bump the version number (assumes dev train)")
+    subparser = subparsers.add_parser("bump_version", help="Bump the version number (assumes dev channel)")
     subparser.set_defaults(func=bump_version)
     subparser.add_argument("-p", "--position", choices=["major", "minor", "patch"], default="patch")
     subparser.add_argument("-s", "--set", help="Set the version to a specific value")

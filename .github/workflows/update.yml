@@ -1,16 +1,16 @@
-name: Update Train
+name: Update Channel
 on:
   workflow_call:
     inputs:
-      train:
-        description: 'Train'
+      channel:
+        description: 'Channel'
         required: true
         type: string
         default: 'nightly'
   workflow_dispatch:
     inputs:
-      train:
-        description: 'Train'
+      channel:
+        description: 'Channel'
         required: true
         type: choice
         options:
@@ -41,14 +41,14 @@ jobs:
       - name: Install requirements
         run: pip install -r tools/requirements-release_tool.txt
 
-      - name: Sync train
-        run: python tools/release_tool.py sync -t ${{ inputs.train }} -u 714-nightly-build
+      - name: Sync channel
+        run: python tools/release_tool.py sync -c ${{ inputs.channel }} -u 714-nightly-build
 
-      - name: Configure train
-        run: python tools/release_tool.py configure -t ${{ inputs.train }}
+      - name: Configure channel
+        run: python tools/release_tool.py configure -c ${{ inputs.channel }}
 
       - name: Push changes
         run: |
           git diff
-          echo git commit -m "Sync and configure train"
-          echo git push --force-with-lease origin ${{ inputs.train }}
+          echo git commit -m "Sync and configure channel"
+          echo git push --force-with-lease origin ${{ inputs.channel }}
