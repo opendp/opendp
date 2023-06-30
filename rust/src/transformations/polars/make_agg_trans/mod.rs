@@ -1,12 +1,10 @@
 use num::Zero;
-use polars::export::regex::internal::InputAt;
 use polars::prelude::*;
 use crate::combinators::assert_components_match;
 
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{Context, ExprDomain, LazyFrameContext, LazyFrameDomain, LazyGroupByContext, LazyGroupByDomain};
+use crate::domains::{ExprDomain, LazyFrameDomain, LazyGroupByContext, LazyGroupByDomain};
 use crate::error::*;
-use crate::metrics::L1;
 use crate::traits::TotalOrd;
 
 pub fn make_agg_trans<T: AggTransformation>(
@@ -16,7 +14,7 @@ pub fn make_agg_trans<T: AggTransformation>(
 ) -> Fallible<Transformation<LazyGroupByDomain, LazyFrameDomain, T::InputMetric, T::OutputMetric>>
 where
     <T::OutputMetric as Metric>::Distance: TotalOrd + Zero,
-    (LazyFrameDomain, T::InputMetric): MetricSpace,
+    (LazyGroupByDomain, T::InputMetric): MetricSpace,
     (LazyFrameDomain, T::OutputMetric): MetricSpace,
 {
     // resolve transformations
@@ -30,14 +28,17 @@ where
         .map(|t| t.fix(&expr_input_domain, &input_metric))
         .collect::<Fallible<Vec<_>>>()?;
 
-    let function = Function::new_fallible(move |lazy_frame: &LazyGroupBy| -> Fallible<LazyFrame> {
-        let exprs = transformations
-            .iter()
-            .map(|t| t.invoke(&(lazy_frame.clone(), all())))
+    let functions: Vec<_> = (transformations.iter())
+        .map(|t| t.function.clone())
+        .collect();
+
+    let function = Function::new_fallible(move |lazy_group: &LazyGroupBy| -> Fallible<LazyFrame> {
+        let exprs = (functions.iter())
+            .map(|t| t.eval(&(lazy_group.clone(), all())))
             .map(|res| Ok(res?.1))
             .collect::<Fallible<Vec<Expr>>>()?;
 
-        Ok(lazy_frame.agg(&exprs))
+        Ok(lazy_group.clone().agg(&exprs))
     });
 
 
@@ -68,14 +69,13 @@ where
     });
 
     Transformation::new(
-        input_domain,
+        input_domain.clone(),
         input_domain.lazy_frame_domain.clone(),
         function,
         input_metric,
         output_metric,
         stability_map,
     )
-
 }
 
 /// Either a `Transformation` or a `PartialTransformation` that can be used in the select context.
