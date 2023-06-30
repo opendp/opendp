@@ -47,8 +47,10 @@ jobs:
       - name: Configure channel
         run: python tools/release_tool.py configure -c ${{ inputs.channel }}
 
+      - name: Show changes
+        run: git diff
+
       - name: Push changes
         run: |
-          git diff
           git commit -a -m "Sync and configure channel"
           git push --force-with-lease origin ${{ inputs.channel }}
