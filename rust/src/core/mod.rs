@@ -374,9 +374,9 @@ pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
 }
 
 impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, MO>
-where
-    (DI, MI): MetricSpace,
-    (DO, MO): MetricSpace,
+// where
+//     (DI, MI): MetricSpace,
+//     (DO, MO): MetricSpace,
 {
     pub fn new(
         input_domain: DI,
@@ -386,8 +386,8 @@ where
         output_metric: MO,
         stability_map: StabilityMap<MI, MO>,
     ) -> Fallible<Self> {
-        (input_domain.clone(), input_metric.clone()).assert_compatible()?;
-        (output_domain.clone(), output_metric.clone()).assert_compatible()?;
+        // (input_domain.clone(), input_metric.clone()).assert_compatible()?;
+        // (output_domain.clone(), output_metric.clone()).assert_compatible()?;
         Ok(Self {
             input_domain,
             output_domain,

@@ -23,7 +23,7 @@ use rug::ops::NegAssign;
 #[cfg(not(feature = "use-mpfr"))]
 use crate::traits::{samplers::SampleUniform, CheckNull, InfCast, RoundCast};
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Optimize {
     Max,
     Min,
@@ -71,20 +71,7 @@ where
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &Vec<TIA>| {
-            (arg.iter().cloned().enumerate())
-                .map(|(i, v)| {
-                    let mut shift = v.into_rational()? / &temp_frac;
-                    if optimize == Optimize::Min {
-                        shift.neg_assign();
-                    }
-                    Ok((i, GumbelPSRN::new(shift)))
-                })
-                .reduce(|l, r| {
-                    let (mut l, mut r) = (l?, r?);
-                    Ok(if l.1.greater_than(&mut r.1)? { l } else { r })
-                })
-                .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
-                .map(|v| v.0)
+            select_score(arg, optimize.clone(), temp_frac.clone())
         }),
         input_metric,
         MaxDivergence::default(),
@@ -100,6 +87,24 @@ where
             d_in.inf_div(&temperature)
         }),
     )
+}
+
+#[cfg(feature = "use-mpfr")]
+pub fn select_score<TIA>(arg: &Vec<TIA>, optimize: Optimize, temperature: rug::Rational) -> Fallible<usize> where TIA: Number + CastInternalRational {
+    (arg.iter().cloned().enumerate())
+        .map(|(i, v)| {
+            let mut shift = v.into_rational()? / &temperature;
+            if optimize == Optimize::Min {
+                shift.neg_assign();
+            }
+            Ok((i, GumbelPSRN::new(shift)))
+        })
+        .reduce(|l, r| {
+            let (mut l, mut r) = (l?, r?);
+            Ok(if l.1.greater_than(&mut r.1)? { l } else { r })
+        })
+        .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
+        .map(|v| v.0)
 }
 
 #[cfg(not(feature = "use-mpfr"))]

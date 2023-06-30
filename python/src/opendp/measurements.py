@@ -17,10 +17,12 @@ __all__ = [
     "make_base_geometric",
     "make_base_laplace",
     "make_base_laplace_threshold",
+    "make_discrete_exponential_expr",
     "make_gaussian",
     "make_laplace",
     "make_private_agg",
     "make_private_mean_expr",
+    "make_private_quantile",
     "make_randomized_response",
     "make_randomized_response_bool",
     "make_user_measurement",
@@ -33,10 +35,12 @@ __all__ = [
     "then_base_geometric",
     "then_base_laplace",
     "then_base_laplace_threshold",
+    "then_discrete_exponential_expr",
     "then_gaussian",
     "then_laplace",
     "then_private_agg",
     "then_private_mean_expr",
+    "then_private_quantile",
     "then_user_measurement"
 ]
 
@@ -698,6 +702,81 @@ def then_base_laplace_threshold(
 
 
 @versioned
+def make_discrete_exponential_expr(
+    input_domain,
+    input_metric,
+    temperature: Any,
+    optimize: str,
+    MI: RuntimeTypeDescriptor,
+    QO: RuntimeTypeDescriptor = None
+) -> Measurement:
+    """Makes a Measurement to implement the discrete exponential mechanism with Polars.
+    Takes a series of scores and privately selects the index of the highest score.
+    
+    [make_discrete_exponential_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_discrete_exponential_expr.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `ExprDomain<MI::LazyDomain>`
+    * Output Type:    `Expr`
+    * Input Metric:   `MI`
+    * Output Measure: `MaxDivergence<QO>`
+    
+    :param input_domain: ExprDomain
+    :param input_metric: The metric space under which neighboring LazyFrames are compared
+    :param temperature: Higher temperatures are more private.
+    :type temperature: Any
+    :param optimize: Indicate whether to privately return the "Max" or "Min"
+    :type optimize: str
+    :param MI: Input Metric.
+    :type MI: :py:ref:`RuntimeTypeDescriptor`
+    :param QO: Output Distance Type.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
+    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=temperature)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_temperature = py_to_c(temperature, c_type=AnyObjectPtr, type_name=QO)
+    c_optimize = py_to_c(optimize, c_type=ctypes.c_char_p, type_name=Optimize)
+    c_MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_discrete_exponential_expr
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_temperature, c_optimize, c_MI, c_QO), Measurement))
+    
+    return output
+
+def then_discrete_exponential_expr(
+    temperature: Any,
+    optimize: str,
+    MI: RuntimeTypeDescriptor,
+    QO: RuntimeTypeDescriptor = None
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_discrete_exponential_expr(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        temperature=temperature,
+        optimize=optimize,
+        MI=MI,
+        QO=QO))
+
+
+
+@versioned
 def make_gaussian(
     input_domain,
     input_metric,
@@ -958,6 +1037,88 @@ def then_private_mean_expr(
         input_metric=input_metric,
         scale=scale,
         QO=QO))
+
+
+
+@versioned
+def make_private_quantile(
+    input_domain,
+    input_metric,
+    candidates: Any,
+    temperature,
+    alpha: Any,
+    QO: RuntimeTypeDescriptor = "float",
+    A: RuntimeTypeDescriptor = "float"
+) -> Measurement:
+    """Makes a Measurement to compute DP quantiles with Polars.
+    Based on a list of candidates, first compute scores, then use exponential mechanism
+    to get the maximum index of the quantile.
+    
+    [make_private_quantile in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_private_quantile.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `ExprDomain<MI::LazyDomain>`
+    * Output Type:    `Expr`
+    * Input Metric:   `MI`
+    * Output Measure: `MaxDivergence<QO>`
+    
+    :param input_domain: ExprDomain
+    :param input_metric: The metric space under which neighboring LazyFrames are compared
+    :param candidates: Potential quantile to score
+    :type candidates: Any
+    :param temperature: Higher temperatures are more private.
+    :param alpha: Quantile value in [0, 1]. Choose 0.5 for median
+    :type alpha: Any
+    :param QO: Output Distance Type.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
+    :param A: Alpha type. Can be a (numer, denom) tuple, or float.
+    :type A: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=temperature)
+    A = RuntimeType.parse_or_infer(type_name=A, public_example=alpha)
+    TIA = get_active_column_type(input_domain)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_candidates = py_to_c(candidates, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
+    c_temperature = py_to_c(temperature, c_type=ctypes.c_void_p, type_name=QO)
+    c_alpha = py_to_c(alpha, c_type=AnyObjectPtr, type_name=A)
+    c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
+    c_A = py_to_c(A, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_private_quantile
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr, ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_candidates, c_temperature, c_alpha, c_QO, c_A), Measurement))
+    
+    return output
+
+def then_private_quantile(
+    candidates: Any,
+    temperature,
+    alpha: Any,
+    QO: RuntimeTypeDescriptor = "float",
+    A: RuntimeTypeDescriptor = "float"
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_private_quantile(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        candidates=candidates,
+        temperature=temperature,
+        alpha=alpha,
+        QO=QO,
+        A=A))
 
 
 

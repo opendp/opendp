@@ -13,9 +13,9 @@ def test_quantile_score_candidates():
 
     print(quant_trans(list(range(100))))
 
-    expo_meas = dp.m.then_base_discrete_exponential(1000., "min")
+    expr_meas = dp.m.then_base_discrete_exponential(1000., "min")
 
-    quantile_meas = quant_trans >> expo_meas
+    quantile_meas = quant_trans >> expr_meas
     idx = quantile_meas(list(range(100)))
     print(candidates[idx])
 

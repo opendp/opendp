@@ -12,3 +12,18 @@ pub use make_mean::*;
 mod make_private_agg;
 #[cfg(feature = "contrib")]
 pub use make_private_agg::*;
+
+// #[cfg(feature = "contrib")]
+// mod make_continuous_quantile_expr;
+// #[cfg(feature = "contrib")]
+// pub use make_continuous_quantile_expr::*;
+
+#[cfg(feature = "contrib")]
+mod make_discrete_exponential_expr;
+#[cfg(feature = "contrib")]
+pub use make_discrete_exponential_expr::*;
+
+#[cfg(feature = "contrib")]
+mod make_private_quantile;
+#[cfg(feature = "contrib")]
+pub use make_private_quantile::*;

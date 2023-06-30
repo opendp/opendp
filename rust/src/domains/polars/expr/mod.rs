@@ -6,7 +6,7 @@ use crate::core::{Metric, MetricSpace};
 use crate::domains::{DatasetMetric, LazyFrameDomain, NumericDataType};
 use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, L1Distance, Lp,
-    SymmetricDistance,
+    SymmetricDistance, LInfDiffDistance, L1,
 };
 use crate::traits::TotalOrd;
 use crate::{core::Domain, error::Fallible};
@@ -188,15 +188,22 @@ impl_expr_metric_select!(InsertDeleteDistance SymmetricDistance HammingDistance 
 impl<Q: 'static + Send + Sync> OuterMetric for AbsoluteDistance<Q> {
     type InnerMetric = Self;
     type LazyDomain = LazyFrameDomain;
-
     fn inner_metric(&self) -> Self::InnerMetric {
         self.clone()
     }
 }
+
+impl<Q: 'static + Send + Sync> OuterMetric for LInfDiffDistance<Q> {
+    type InnerMetric = Self;
+    type LazyDomain = LazyFrameDomain;
+    fn inner_metric(&self) -> Self::InnerMetric {
+        self.clone()
+    }
+}
+
 impl<M: 'static + Metric + Send + Sync> OuterMetric for Lp<1, M> {
     type InnerMetric = M;
     type LazyDomain = LazyGroupByDomain;
-
     fn inner_metric(&self) -> Self::InnerMetric {
         self.0.clone()
     }
@@ -226,9 +233,40 @@ impl<M: DatasetMetric, const P: usize> MetricSpace for (ExprDomain<LazyGroupByDo
     }
 }
 
+
 impl<Q: TotalOrd> MetricSpace for (ExprDomain<LazyFrameDomain>, AbsoluteDistance<Q>) {
     fn check(&self) -> bool {
         (self.0.lazy_frame_domain.clone(), self.1.clone()).check()
+    }
+}
+impl<Q> MetricSpace for (ExprDomain<LazyGroupByDomain>, L1<LInfDiffDistance<Q>>) 
+    where (LazyGroupByDomain, L1<LInfDiffDistance<Q>>): MetricSpace {
+    fn check(&self) -> bool {
+        let lgb_domain = LazyGroupByDomain {
+            lazy_frame_domain: self.0.lazy_frame_domain.clone(),
+            grouping_columns: self.0.context.columns.clone()
+        };
+
+        (lgb_domain, self.1.clone()).check()
+    }
+}
+
+impl<Q> MetricSpace for (ExprDomain<LazyFrameDomain>, LInfDiffDistance<Q>)
+    where (LazyFrameDomain, LInfDiffDistance<Q>): MetricSpace {
+    fn check(&self) -> bool {
+        (self.0.lazy_frame_domain.clone(), self.1.clone()).check()
+    }
+}
+
+impl<Q> MetricSpace for (LazyFrameDomain, LInfDiffDistance<Q>) {
+    fn check(&self) -> bool {
+        true
+    }
+}
+
+impl<Q> MetricSpace for (LazyGroupByDomain, L1<LInfDiffDistance<Q>>) {
+    fn check(&self) -> bool {
+        true
     }
 }
 

@@ -155,7 +155,7 @@ where
 /// * `alpha_numer` - numerator of alpha fraction
 /// * `alpha_denom` - alpha is parameter for quantile. {0: min, 0.5: median, 1: max, ...}
 /// * `size_limit` - maximum size of `x`. If `x` is larger than `size_limit`, scores are truncated
-fn compute_score<TIA: PartialOrd>(
+pub fn compute_score<TIA: PartialOrd>(
     mut x: Vec<TIA>,
     candidates: &Vec<TIA>,
     alpha_num: usize,
@@ -184,6 +184,7 @@ fn compute_score<TIA: PartialOrd>(
         //     lt <= size_limit, so 0 <= alpha_denom * lt <= usize::MAX
         //     n - eq <= size_limit, so 0 <= size_limit - eq
         .map(|(lt, eq)| {
+            // |α_{den} * #(X < c) - α_{num} * N - #(X == c)|
             (alpha_den * lt.min(size_limit)).abs_diff(alpha_num * (x.len() - eq).min(size_limit))
         })
         .collect()
