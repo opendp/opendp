@@ -40,6 +40,10 @@ pub use make_select_trans::*;
 mod make_groupby;
 #[cfg(feature = "contrib")]
 pub use make_groupby::*;
+#[cfg(feature = "contrib")]
+mod make_agg_trans;
+#[cfg(feature = "contrib")]
+pub use make_agg_trans::*;
 
 #[cfg(test)]
 mod test {
