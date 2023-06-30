@@ -7,6 +7,8 @@ use crate::domains::{DatasetMetric, LazyFrameDomain};
 use crate::metrics::Lp;
 use crate::{core::Domain, error::Fallible};
 
+use super::SeriesDomain;
+
 // TODO: remove this allow marker later
 #[allow(dead_code)]
 #[derive(Clone, PartialEq, Debug)]
@@ -53,6 +55,22 @@ pub struct ExprDomain<C: Context> {
     pub lazy_frame_domain: LazyFrameDomain,
     pub context: C,
     pub active_column: Option<String>,
+}
+
+impl<C: Context> ExprDomain<C> {
+    pub fn active_series(&self) -> Fallible<&SeriesDomain> {
+        match &self.active_column {
+            Some(column) => self.lazy_frame_domain.try_column(column),
+            None => fallible!(FailedFunction, "no active column"),
+        }
+    }
+
+    pub fn active_column(&self) -> Fallible<String> {
+        return self
+            .active_column
+            .clone()
+            .ok_or_else(|| err!(FailedFunction, "active column not set"));
+    }
 }
 
 impl<C: Context> Domain for ExprDomain<C> {
@@ -105,14 +123,5 @@ impl<M: DatasetMetric, const P: usize> MetricSpace for (ExprDomain<LazyGroupByCo
         };
 
         true
-    }
-}
-
-impl<C: Context> ExprDomain<C> {
-    pub fn active_column(&self) -> Fallible<String> {
-        return self
-            .active_column
-            .clone()
-            .ok_or_else(|| err!(FailedFunction, "active column not set"));
     }
 }
