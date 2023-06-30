@@ -1,5 +1,4 @@
 name: Update Train
-
 on:
   workflow_call:
     inputs:

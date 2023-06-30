@@ -1,12 +1,12 @@
 name: Release Train
 on:
   workflow_call:
-    train:
-      description: 'Train'
-      required: true
-      type: string
-      default: 'nightly'
     inputs:
+      train:
+        description: 'Train'
+        required: true
+        type: string
+        default: 'nightly'
       dry_run:
         description: Dry run (DISABLE WITH CARE)
         required: true
