@@ -1,86 +1,82 @@
-use crate::core::{Function, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprDomain, LazyGroupByContext, GroupingColumns};
+use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
+use crate::domains::{Context, ExprDomain, ExprMetric};
 use crate::error::*;
-use crate::metrics::{InsertDeleteDistance, IntDistance, L1Distance, L1};
+use crate::metrics::{InsertDeleteDistance, IntDistance, L1Distance};
 use crate::traits::{AlertingAbs, InfAdd, InfCast, InfMul, InfSub, TotalOrd};
 use crate::transformations::{Sequential, SumRelaxation};
 use polars::prelude::*;
 use std::collections::BTreeSet;
 
-/// Polars operator to compute sum of a serie in a LazyFrame
+/// Polars operator to compute sum of a series in a LazyFrame
 ///
 /// # Arguments
 /// * `input_domain` - ExprDomain
 /// * `input_metric` - The metric space under which neighboring LazyFrames are compared
-pub fn make_sum_expr(
-    input_domain: ExprDomain<LazyGroupByContext>,
-    input_metric: L1<InsertDeleteDistance>,
-) -> Fallible<Transformation<ExprDomain<LazyGroupByContext>, ExprDomain<LazyGroupByContext>, L1<InsertDeleteDistance>, L1Distance<f64>>> {
-    // Verify that the sum of ative_column can by computed
-    let active_column = input_domain
-        .active_column
-        .clone()
-        .ok_or_else(|| err!(MakeTransformation, "No active column"))?;
-
-    // Output domain -- TODO: this could probably be written cleaner
+pub fn make_sum_expr<MI, C: Context>(
+    input_domain: ExprDomain<C>,
+    input_metric: MI,
+) -> Fallible<Transformation<ExprDomain<C>, ExprDomain<C>, MI, L1Distance<f64>>>
+where
+    MI: ExprMetric<C, InnerMetric = InsertDeleteDistance, Distance = IntDistance>,
+    (ExprDomain<C>, MI): MetricSpace,
+    (ExprDomain<C>, L1Distance<f64>): MetricSpace,
+{
+    // output domain
     let mut output_domain = input_domain.clone();
-    let active_column_index = output_domain
-        .lazy_frame_domain
-        .column_index(&active_column)
-        .ok_or_else(|| err!(MakeTransformation, "could not find index"))?;
-    let mut series_domains = output_domain.lazy_frame_domain.series_domains;
-    series_domains[active_column_index] =
-        series_domains[active_column_index].clone().drop_bounds()?;
-    output_domain.lazy_frame_domain.series_domains = series_domains;
+    (output_domain.lazy_frame_domain)
+        .try_column_mut(input_domain.active_column()?)?
+        .drop_bounds()?;
 
-    // For StabilityMap
-    let bounds = input_domain
-        .lazy_frame_domain
-        .try_column(&active_column)?
-        .element_domain
-        .as_any()
-        .downcast_ref::<AtomDomain<f64>>()
-        .ok_or_else(|| err!(MakeTransformation, "Failed to downcast: {}", &active_column))?
-        .get_closed_bounds()
-        .ok_or_else(|| err!(MakeTransformation, "Bounds must be set"))?;
-    let (lower, upper) = bounds;
+    // stability map
+    let (lower, upper) = input_domain
+        .active_series()?
+        .atom_domain::<f64>()?
+        .get_closed_bounds()?;
 
     let ideal_sensitivity = upper
         .inf_sub(&lower)?
         .total_max(lower.alerting_abs()?.total_max(upper)?)?;
 
-    let grouping_columns = input_domain.context.grouping_columns();
-    
     let margin = input_domain
         .lazy_frame_domain
         .margins
-        .get(&BTreeSet::from_iter(grouping_columns.clone()))
-        .ok_or_else(|| err!(MakeTransformation, "Failed to find margin"))?;
+        .get(&BTreeSet::from_iter(
+            input_domain.context.grouping_columns(),
+        ))
+        .ok_or_else(|| err!(MakeTransformation, "failed to find margin"))?;
 
-    let max_size = margin.get_max_size()?;
-    let relaxation = Sequential::<f64>::relaxation(max_size as usize, lower, upper)?;
+    let relaxation = Sequential::<f64>::relaxation(margin.get_max_size()? as usize, lower, upper)?;
 
     Transformation::new(
         input_domain.clone(),
         output_domain,
-        Function::new_fallible(
-            move |(frame, expr): &(LazyGroupBy, Expr)| -> Fallible<(LazyGroupBy, Expr)> {
-                Ok((frame.clone(), expr.clone().sum()))
+        Function::new(
+            move |(frame, expr): &(C::Value, Expr)| -> (C::Value, Expr) {
+                (frame.clone(), expr.clone().sum())
             },
         ),
         input_metric,
         L1Distance::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
+            // TODO: in the future, incorporate bounds on the number of partitions from the metric
+            let max_changed_partitions = if C::GROUPBY {
+                f64::inf_cast(*d_in)?
+            } else {
+                1.0
+            };
             f64::inf_cast(d_in / 2)?
                 .inf_mul(&ideal_sensitivity)?
-                .inf_add(&f64::inf_cast(*d_in)?.inf_mul(&relaxation)?)
+                .inf_add(&max_changed_partitions.inf_mul(&relaxation)?)
         }),
     )
 }
 
 #[cfg(test)]
-mod test_make_col {
-    use crate::{domains::{AtomDomain, LazyFrameDomain, SeriesDomain}, metrics::Lp};
+mod test_make_sum_expr {
+    use crate::{
+        domains::{AtomDomain, LazyFrameDomain, LazyGroupByContext, SeriesDomain},
+        metrics::Lp,
+    };
 
     use super::*;
 
@@ -113,9 +109,10 @@ mod test_make_col {
         let (expr_domain, lazy_frame) = get_test_data()?;
 
         // Get resulting sum (expression result)
-        let trans = make_sum_expr(expr_domain, Lp(InsertDeleteDistance::default()))?;
+        let trans = make_sum_expr(expr_domain, Lp(InsertDeleteDistance))?;
         let expr_res = trans.invoke(&(lazy_frame.clone(), col("B")))?.1;
-        let frame_actual = lazy_frame.clone()
+        let frame_actual = lazy_frame
+            .clone()
             .agg([expr_res])
             .sort("A", Default::default())
             .collect()?;
