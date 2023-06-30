@@ -4,7 +4,8 @@ use std::fmt::{Debug, Formatter};
 
 use crate::core::{Metric, MetricSpace};
 use crate::domains::{DatasetMetric, LazyFrameDomain};
-use crate::metrics::Lp;
+use crate::metrics::{Lp, L1Distance};
+use crate::traits::TotalOrd;
 use crate::{core::Domain, error::Fallible};
 
 use super::SeriesDomain;
@@ -27,6 +28,7 @@ pub trait Context: PartialEq + Clone {
     const GROUPBY: bool;
     type Value: Clone;
     fn get_frame(&self, val: &(Self::Value, Expr)) -> LazyFrame;
+    fn grouping_columns(&self) -> Vec<String>;
 }
 
 impl Context for LazyFrameContext {
@@ -40,6 +42,9 @@ impl Context for LazyFrameContext {
             LazyFrameContext::WithColumns => frame.with_columns([expr]),
         }
     }
+    fn grouping_columns(&self) -> Vec<String> {
+        vec![]
+    }
 }
 impl Context for LazyGroupByContext {
     const GROUPBY: bool = true;
@@ -47,6 +52,9 @@ impl Context for LazyGroupByContext {
     fn get_frame(&self, val: &(Self::Value, Expr)) -> LazyFrame {
         let (grouped, expr) = val.clone();
         grouped.agg([expr])
+    }
+    fn grouping_columns(&self) -> Vec<String> {
+        self.columns.clone()
     }
 }
 
@@ -125,3 +133,10 @@ impl<M: DatasetMetric, const P: usize> MetricSpace for (ExprDomain<LazyGroupByCo
         true
     }
 }
+
+impl<T: TotalOrd> MetricSpace for (ExprDomain<LazyGroupByContext>, L1Distance<T>) {
+    fn check(&self) -> bool {
+        true
+    }
+}
+
