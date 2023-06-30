@@ -42,12 +42,13 @@ jobs:
         run: pip install -r tools/requirements-release_tool.txt
 
       - name: Sync train
-        run: python tools/release_tool.py sync -t ${{ inputs.train }}
+        run: python tools/release_tool.py sync -t ${{ inputs.train }} -u 714-nightly-build
 
       - name: Configure train
         run: python tools/release_tool.py configure -t ${{ inputs.train }}
 
       - name: Push changes
         run: |
+          git diff
           echo git commit -m "Sync and configure train"
           echo git push --force-with-lease origin ${{ inputs.train }}
