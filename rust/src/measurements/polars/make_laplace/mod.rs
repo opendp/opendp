@@ -44,21 +44,10 @@ where
     let k = get_discretization_consts::<f64>(k)?.0;
 
     Measurement::new(
-        input_domain.clone(),
+        input_domain,
         Function::new_fallible(move |(_frame, expr): &(C::Value, Expr)| -> Fallible<Expr> {
-            let active_column = input_domain
-                .active_column
-                .clone()
-                .ok_or_else(|| err!(MakeTransformation, "No active column"))?;
-
-            let expr = expr.clone().map(
+            Ok(expr.clone().map(
                 move |s: Series| {
-                    if s.name() != active_column {
-                        return Err(PolarsError::ComputeError(
-                            "series name does not match active column".into(),
-                        ));
-                    }
-
                     let noisy_vec: Vec<f64> = s
                         .unpack::<Float64Type>()?
                         .into_no_null_iter()
@@ -68,12 +57,10 @@ where
 
                     // TODO: use this when threading supported
                     // let noisy_vec = lap_meas.invoke(&vec).unwrap();
-                    Ok(Some(Series::new(&active_column, noisy_vec)))
+                    Ok(Some(Series::new(&s.name(), noisy_vec)))
                 },
-                GetOutput::from_type(DataType::Float64),
-            );
-
-            Ok(expr)
+                GetOutput::same_type(),
+            ))
         }),
         input_metric,
         MaxDivergence::default(),
