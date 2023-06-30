@@ -1,7 +1,7 @@
 name: Update Train
 
 on:
-  workflow-call:
+  workflow_call:
     inputs:
       train:
         description: 'Train'
