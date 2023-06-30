@@ -2,8 +2,8 @@ use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, ExprDomain, ExprMetric};
 use crate::error::*;
 use crate::metrics::{InsertDeleteDistance, IntDistance, L1Distance};
-use crate::traits::{AlertingAbs, InfAdd, InfCast, InfMul, InfSub, TotalOrd};
-use crate::transformations::{Sequential, SumRelaxation};
+use crate::traits::{InfAdd, InfCast, InfMul, InfSub};
+use crate::transformations::{Sequential, SumRelaxation, CanFloatSumOverflow};
 use polars::prelude::*;
 use std::collections::BTreeSet;
 
@@ -28,14 +28,13 @@ where
         .drop_bounds()?;
 
     // stability map
-    let (lower, upper) = input_domain
+    let bounds = input_domain
         .active_series()?
         .atom_domain::<f64>()?
         .get_closed_bounds()?;
+    let (upper, lower) = bounds;
 
-    let ideal_sensitivity = upper
-        .inf_sub(&lower)?
-        .total_max(lower.alerting_abs()?.total_max(upper)?)?;
+    let ideal_sensitivity = upper.inf_sub(&lower)?;
 
     let margin = input_domain
         .lazy_frame_domain
@@ -44,8 +43,16 @@ where
             input_domain.context.grouping_columns(),
         ))
         .ok_or_else(|| err!(MakeTransformation, "failed to find margin"))?;
+    let max_size = margin.get_max_size()? as usize;
 
-    let relaxation = Sequential::<f64>::relaxation(margin.get_max_size()? as usize, lower, upper)?;
+    if Sequential::<f64>::float_sum_can_overflow(max_size, (lower, upper))? {
+        return fallible!(
+            MakeTransformation,
+            "potential for overflow when computing function"
+        );
+    }
+
+    let relaxation = Sequential::<f64>::relaxation(max_size, lower, upper)?;
 
     Transformation::new(
         input_domain.clone(),
