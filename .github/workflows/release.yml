@@ -76,7 +76,8 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v3
-        ref: ${{ inputs.train }}
+        with:
+          ref: ${{ inputs.train }}
 
       - name: Cache Rust dependencies
         uses: actions/cache@v3
@@ -108,7 +109,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        ref: ${{ inputs.train }}
+        with:
+          ref: ${{ inputs.train }}
 
       - name: Cache Rust dependencies
         uses: actions/cache@v3
@@ -173,7 +175,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        ref: ${{ inputs.train }}
+        with:
+          ref: ${{ inputs.train }}
 
       - name: Cache Rust dependencies
         uses: actions/cache@v3
@@ -210,7 +213,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        ref: ${{ inputs.train }}
+        with:
+          ref: ${{ inputs.train }}
 
       - name: Set up Python
         uses: actions/setup-python@v3
@@ -254,7 +258,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        ref: ${{ inputs.train }}
+        with:
+          ref: ${{ inputs.train }}
 
       - name: Set up Python
         uses: actions/setup-python@v3
