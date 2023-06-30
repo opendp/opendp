@@ -127,6 +127,11 @@ impl LazyFrameDomain {
         self.column(&name)
             .ok_or_else(|| err!(FailedFunction, "{} is not in dataframe", name.as_ref()))
     }
+    pub fn try_column_mut<I: AsRef<str>>(&mut self, name: I) -> Fallible<&mut SeriesDomain> {
+        let series_index = self.column_index(name.as_ref())
+            .ok_or_else(|| err!(FailedFunction, "{} is not in dataframe", name.as_ref()))?;
+        Ok(&mut self.series_domains[series_index])
+    }
 
     fn check_dtype_matches<I: AsRef<str>>(&self, name: I, dtype: &DataType) -> Fallible<()> {
         let domain_dtype = &self.try_column(&name)?.field.dtype;
