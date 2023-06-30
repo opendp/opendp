@@ -50,5 +50,5 @@ jobs:
       - name: Push changes
         run: |
           git diff
-          echo git commit -m "Sync and configure channel"
-          echo git push --force-with-lease origin ${{ inputs.channel }}
+          git commit -m "Sync and configure channel"
+          git push --force-with-lease origin ${{ inputs.channel }}
