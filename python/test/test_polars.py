@@ -29,10 +29,23 @@ def lazyframe_domain_with_counts():
     domain, data = lazyframe_domain()
     return domain.with_counts(counts), data
 
+
 def dataframe_domain_with_counts():
     counts = pl.DataFrame({"B": [1], "counts": [50]}, schema_overrides={"B": pl.Int32, "counts": pl.UInt32})
     domain, data = dataframe_domain()
     return domain.with_counts(counts), data
+
+def lazyframe_domain_with_many_counts():
+    a_counts = pl.LazyFrame(
+        {"A": [1.0], "counts": [50]},
+        schema_overrides={"A": pl.Float64, "counts": pl.UInt32},
+    )
+    b_counts = pl.LazyFrame(
+        {"B": [1], "counts": [50]}, 
+        schema_overrides={"B": pl.Int32, "counts": pl.UInt32}
+    )
+    domain, data = lazyframe_domain()
+    return domain.with_counts(a_counts).with_counts(b_counts), data
 
 def expr_domain():
     lf_domain = lazyframe_domain()[0]
@@ -133,6 +146,37 @@ def test_private_mean_expr():
                     >> dp.t.then_col("B")
                     >> dp.t.then_clamp_expr((2, 3))
                     >> dp.m.then_private_mean_expr(0.5)
+                ]
+            )
+        )
+        >> dp.t.make_collect(domain, metric)
+    )
+
+    print(meas_lazy(data))
+
+
+def test_private_quantile_expr():
+    domain, data = lazyframe_domain_with_many_counts()
+    metric = dp.symmetric_distance()
+
+    expr_metric = dp.l1(dp.symmetric_distance())
+    expr_domain = dp.expr_domain(domain, grouping_columns=["A"])
+
+    clamp_bounds = (0, 1)
+    candidates = [20, 33, 40, 50, 72, 100]
+    temperature = 1.0
+    alpha = 0.5
+
+    meas_lazy = (
+        (domain, metric)
+        >> dp.t.then_group_by_stable(["A"])
+        >> dp.m.then_private_agg(
+            dp.c.make_basic_composition(
+                [
+                    (expr_domain, expr_metric)
+                    >> dp.t.then_col("B")
+                    >> dp.t.then_clamp_expr(clamp_bounds)
+                    >> dp.m.then_private_quantile_expr(candidates, temperature, alpha)
                 ]
             )
         )

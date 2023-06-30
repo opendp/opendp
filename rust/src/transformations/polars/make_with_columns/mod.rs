@@ -199,12 +199,14 @@ mod test_make_with_columns {
     use crate::core::Domain;
     use crate::error::ErrorVariant::DomainMismatch;
     use crate::metrics::SymmetricDistance;
+    use crate::transformations::make_col;
     use crate::transformations::polars_test::get_select_test_data;
-    use crate::transformations::{make_col, then_col};
 
     #[test]
     #[cfg(feature = "partials")]
     fn test_make_with_columns_output_lazy_frame() -> Fallible<()> {
+        use crate::transformations::then_col;
+
         let (expr_domain, lazy_frame) = get_select_test_data()?;
         let space = (expr_domain.clone().lazy_frame_domain, SymmetricDistance);
 

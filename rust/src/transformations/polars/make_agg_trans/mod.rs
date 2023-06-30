@@ -164,8 +164,8 @@ mod test_make_agg_trans {
 
     use super::*;
     use crate::metrics::{Lp, SymmetricDistance};
+    use crate::transformations::make_col;
     use crate::transformations::polars_test::get_select_test_data;
-    use crate::transformations::{make_col, then_col};
 
     #[test]
     fn test_make_agg_trans_output_lazy_frame() -> Fallible<()> {
@@ -211,6 +211,8 @@ mod test_make_agg_trans {
     #[test]
     #[cfg(feature = "partials")]
     fn test_make_agg_trans_output_partial() -> Fallible<()> {
+        use crate::transformations::then_col;
+
         let (expr_domain, lazy_frame) = get_select_test_data()?;
         let grouping_columns = vec!["A".to_string()];
         let lazy_gb_domain = LazyGroupByDomain {

@@ -1,7 +1,7 @@
 use crate::core::{Domain, MetricSpace};
 use crate::domains::LazyFrameDomain;
 use crate::error::Fallible;
-use crate::metrics::{L1Distance, L1};
+use crate::metrics::{L1Distance, LInfDistance, L1};
 use crate::traits::TotalOrd;
 use crate::transformations::{item, DatasetMetric};
 use polars::prelude::*;
@@ -39,6 +39,12 @@ impl<Q: TotalOrd> MetricSpace for (LazyGroupByDomain, L1Distance<Q>) {
             return fallible!(MetricSpace, "all groups must be of size 1");
         }
 
+        Ok(())
+    }
+}
+
+impl<Q> MetricSpace for (LazyGroupByDomain, L1<LInfDistance<Q>>) {
+    fn check_space(&self) -> Fallible<()> {
         Ok(())
     }
 }

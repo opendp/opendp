@@ -127,7 +127,7 @@ where
 /// * `alpha_num` - numerator of alpha fraction
 /// * `alpha_den` - denominator of alpha fraction. alpha fraction is {0: min, 0.5: median, 1: max, ...}
 /// * `size_limit` - maximum size of `x`. If `x` is larger than `size_limit`, scores are truncated
-fn compute_score<TIA: PartialOrd>(
+pub fn compute_score<TIA: PartialOrd>(
     mut x: Vec<TIA>,
     candidates: &Vec<TIA>,
     alpha_num: usize,

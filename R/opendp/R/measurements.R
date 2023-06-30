@@ -1284,6 +1284,101 @@ then_private_mean_expr <- function(
 }
 
 
+#' private quantile expr constructor
+#'
+#' Makes a Measurement to compute DP quantiles with Polars.
+#' Based on a list of candidates, first compute scores, then use exponential mechanism
+#' to get the maximum index of the quantile.
+#'
+#' [make_private_quantile_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_private_quantile_expr.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `ExprDomain<MI::LazyDomain>`
+#' * Output Type:    `Expr`
+#' * Input Metric:   `MI`
+#' * Output Measure: `MaxDivergence<QO>`
+#'
+#' @concept measurements
+#' @param input_domain ExprDomain
+#' @param input_metric The metric space under which neighboring LazyFrames are compared
+#' @param candidates Potential quantile to score
+#' @param temperature Higher temperatures are more private.
+#' @param alpha Quantile value in [0, 1]. Choose 0.5 for median
+#' @param .QO Output Distance Type.
+#' @return Measurement
+#' @export
+make_private_quantile_expr <- function(
+    input_domain,
+    input_metric,
+    candidates,
+    temperature,
+    alpha,
+    .QO = "float"
+) {
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    .QO <- parse_or_infer(type_name = .QO, public_example = temperature)
+    .TIA <- get_active_column_type(input_domain)
+    .T.candidates <- new_runtime_type(origin = "Vec", args = list(.TIA))
+
+    log <- new_constructor_log("make_private_quantile_expr", "measurements", new_hashtab(
+        list("input_domain", "input_metric", "candidates", "temperature", "alpha", "QO"),
+        list(input_domain, input_metric, candidates, temperature, unbox2(alpha), .QO)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = .T.candidates, inferred = rt_infer(candidates))
+    rt_assert_is_similar(expected = .QO, inferred = rt_infer(temperature))
+    rt_assert_is_similar(expected = f64, inferred = rt_infer(alpha))
+
+    # Call wrapper function.
+    output <- .Call(
+        "measurements__make_private_quantile_expr",
+        input_domain, input_metric, candidates, temperature, alpha, .QO, .TIA, rt_parse(.T.candidates),
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial private quantile expr constructor
+#'
+#' See documentation for [make_private_quantile_expr()] for details.
+#'
+#' @concept measurements
+#' @param lhs The prior transformation or metric space.
+#' @param candidates Potential quantile to score
+#' @param temperature Higher temperatures are more private.
+#' @param alpha Quantile value in [0, 1]. Choose 0.5 for median
+#' @param .QO Output Distance Type.
+#' @return Measurement
+#' @export
+then_private_quantile_expr <- function(
+    lhs,
+    candidates,
+    temperature,
+    alpha,
+    .QO = "float"
+) {
+
+    log <- new_constructor_log("then_private_quantile_expr", "measurements", new_hashtab(
+        list("candidates", "temperature", "alpha", "QO"),
+        list(candidates, temperature, unbox2(alpha), .QO)
+    ))
+
+    make_chain_dyn(
+        make_private_quantile_expr(
+            output_domain(lhs),
+            output_metric(lhs),
+            candidates = candidates,
+            temperature = temperature,
+            alpha = alpha,
+            .QO = .QO),
+        lhs,
+        log)
+}
+
+
 #' randomized response constructor
 #'
 #' Make a Measurement that implements randomized response on a categorical value.
@@ -1542,6 +1637,103 @@ then_report_noisy_max_gumbel <- function(
             output_metric(lhs),
             scale = scale,
             optimize = optimize,
+            .QO = .QO),
+        lhs,
+        log)
+}
+
+
+#' report noisy max gumbel expr constructor
+#'
+#' Makes a Measurement to implement the discrete exponential mechanism with Polars.
+#' Takes a series of scores and privately selects the index of the highest score.
+#'
+#' [make_report_noisy_max_gumbel_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_report_noisy_max_gumbel_expr.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `ExprDomain<MI::LazyDomain>`
+#' * Output Type:    `Expr`
+#' * Input Metric:   `MI`
+#' * Output Measure: `MaxDivergence<QO>`
+#'
+#' @concept measurements
+#' @param input_domain ExprDomain
+#' @param input_metric The metric space under which neighboring LazyFrames are compared
+#' @param scale undocumented
+#' @param optimize Indicate whether to privately return the "Max" or "Min"
+#' @param .MI Input Metric.
+#' @param .QI undocumented
+#' @param .QO Output Distance Type.
+#' @return Measurement
+#' @export
+make_report_noisy_max_gumbel_expr <- function(
+    input_domain,
+    input_metric,
+    scale,
+    optimize,
+    .MI,
+    .QI,
+    .QO = NULL
+) {
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    .MI <- rt_parse(type_name = .MI)
+    .QI <- rt_parse(type_name = .QI)
+    .QO <- parse_or_infer(type_name = .QO, public_example = scale)
+
+    log <- new_constructor_log("make_report_noisy_max_gumbel_expr", "measurements", new_hashtab(
+        list("input_domain", "input_metric", "scale", "optimize", "MI", "QI", "QO"),
+        list(input_domain, input_metric, scale, optimize, .MI, .QI, .QO)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
+
+    # Call wrapper function.
+    output <- .Call(
+        "measurements__make_report_noisy_max_gumbel_expr",
+        input_domain, input_metric, scale, optimize, .MI, .QI, .QO,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial report noisy max gumbel expr constructor
+#'
+#' See documentation for [make_report_noisy_max_gumbel_expr()] for details.
+#'
+#' @concept measurements
+#' @param lhs The prior transformation or metric space.
+#' @param scale undocumented
+#' @param optimize Indicate whether to privately return the "Max" or "Min"
+#' @param .MI Input Metric.
+#' @param .QI undocumented
+#' @param .QO Output Distance Type.
+#' @return Measurement
+#' @export
+then_report_noisy_max_gumbel_expr <- function(
+    lhs,
+    scale,
+    optimize,
+    .MI,
+    .QI,
+    .QO = NULL
+) {
+
+    log <- new_constructor_log("then_report_noisy_max_gumbel_expr", "measurements", new_hashtab(
+        list("scale", "optimize", "MI", "QI", "QO"),
+        list(scale, optimize, .MI, .QI, .QO)
+    ))
+
+    make_chain_dyn(
+        make_report_noisy_max_gumbel_expr(
+            output_domain(lhs),
+            output_metric(lhs),
+            scale = scale,
+            optimize = optimize,
+            .MI = .MI,
+            .QI = .QI,
             .QO = .QO),
         lhs,
         log)

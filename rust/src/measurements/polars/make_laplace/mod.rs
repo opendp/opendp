@@ -131,6 +131,7 @@ where
     move |expr| expr.map(closure.clone(), GetOutput::same_type())
 }
 
+#[cfg(feature = "partials")]
 #[cfg(test)]
 mod test_make_laplace_expr {
     use super::*;
@@ -141,7 +142,6 @@ mod test_make_laplace_expr {
     use crate::{domains::VectorDomain, measurements::make_base_laplace};
 
     #[test]
-    #[cfg(feature = "partials")]
     fn test_make_laplace_expr() -> Fallible<()> {
         let (expr_domain, lazy_frame) = get_select_test_data()?;
         let space = (expr_domain, InsertDeleteDistance);

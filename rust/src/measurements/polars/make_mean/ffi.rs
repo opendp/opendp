@@ -4,6 +4,7 @@ use crate::core::IntoAnyMeasurementFfiResultExt;
 use crate::{
     core::{Domain, FfiResult, MetricSpace},
     domains::ExprDomain,
+    error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast},
         util::Type,
@@ -12,7 +13,6 @@ use crate::{
     metrics::{InsertDeleteDistance, SymmetricDistance, L1},
     traits::{Float, InfCast},
     transformations::{traits::UnboundedMetric, SumOuterMetric, Summand},
-    error::Fallible,
 };
 
 #[no_mangle]
