@@ -78,6 +78,45 @@ def update_file(path, load, munge, dump, binary=False):
         dump(new_data, f)
 
 
+def get_python_version(version):
+    # Python (PEP 440) has several annoying quirks that make it not quite compatible with semantic versioning:
+    # 1. Python doesn't allow arbitrary tags, only (a|b|rc|post|dev). (You can use (alpha|beta|c|pre|preview|rev|r),
+    #    but they'll be mapped to (a|b|rc|rc|rc|post|post) respectively.)
+    #    So "1.2.3-nightly.456" will fail, and "1.2.3-alpha.456" gets mapped to "1.2.3a456" (see #2).
+    # 2. Python doesn't allow separators between the main version and the tag, nor within the tag.
+    #    So "1.2.3-a.456" gets mapped to "1.2.3a456"
+    # 3. HOWEVER, Python treats tags "post" and "dev" differently, and in these cases uses a "." separator between
+    #    the main version and the tag (but still doesn't allow separators within the tag).
+    #    So "1.2.3-dev.456" gets mapped to "1.2.3.dev456".
+    # 4. Python requires that all tags have a numeric suffix, and will assume 0 if none is present.
+    #    So "1.2.3-dev" gets mapped to "1.2.3.dev0" (by #3 & #4).
+    # We don't use all these variations, only (dev|nightly|beta), but if that ever changes, hopefully we won't
+    # have to look at this whole mess again.
+    tag_to_py_tag = {
+        "nightly": "a",
+        "beta": "b",
+        "c": "rc",
+        "pre": "rc",
+        "preview": "rc",
+        "rev": "post",
+        "r": "post",
+    }
+    if version.prerelease is not None:
+        tag = version.prerelease.split(".", 1)[0] if "." in version.prerelease else version.prerelease
+        py_tag = tag_to_py_tag.get(tag, tag)
+        py_n = version.prerelease.split(".", 1)[1] if "." in version.prerelease else "0"
+        py_separator = "." if py_tag in ("post", "dev") else ""
+    else:
+        py_tag = None
+        py_n = None
+        py_separator = None
+    # semver can't represent the rendered Python version, so we generate a string.
+    if py_tag is not None:
+        return f"{version.major}.{version.minor}.{version.patch}{py_separator}{py_tag}{py_n}"
+    else:
+        return str(version)
+
+
 def update_version(version):
     log(f"Updating version references to {version}")
 
@@ -99,11 +138,7 @@ def update_version(version):
         return toml
     update_file("rust/opendp_derive/Cargo.toml", tomlkit.load, munge_cargo_opendp_derive, tomlkit.dump)
 
-    # Python version
-    # Python doesn't allow arbitrary prerelease tags, supporting only (a|b|rc) or synonyms (alpha|beta|c|pre|preview),
-    # so we map nightly -> alpha.
-    is_nightly = version.prerelease is not None and version.prerelease.startswith("nightly.")
-    python_version = version.replace(prerelease=f"alpha.{version.prerelease[8:]}") if is_nightly else version
+    python_version = get_python_version(version)
     def load_config(f):
         config = configparser.RawConfigParser()
         config.read_file(f)
@@ -169,20 +204,10 @@ def changelog(args):
         f.writelines(lines)
 
 
-def format_python_version(version):
-    # Python doesn't like versions of the form "X.Y.Z-rc.N" (even though they're correct), and collapses them
-    # to "X.Y.ZrcN", but semver can't handle those, so we map to strings.
-    if version.prerelease:
-        version = f"{version.major}.{version.minor}.{version.patch}rc{version.prerelease.split('.')[1]}"
-    else:
-        version = str(version)
-    return version
-
-
 def sanity(args):
     log(f"*** RUNNING SANITY TEST ***")
     version = get_version()
-    version = format_python_version(version)
+    version = get_python_version(version)
     run_command("Creating venv", f"rm -rf {args.venv} && python -m venv {args.venv}")
     package = f"opendp=={version}" if args.published else f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
     run_command_with_retries(f"Installing opendp {version}", f"source {args.venv}/bin/activate && pip install {package}")
