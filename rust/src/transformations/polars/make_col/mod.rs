@@ -4,27 +4,9 @@ use polars::prelude::*;
 use std::collections::BTreeSet;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{
-    Context, ExprDomain, ExprMetric, LazyFrameContext, LazyFrameDomain, LazyGroupByContext,
-};
+use crate::domains::{Context, ExprDomain, ExprMetric, LazyFrameDomain};
 use crate::error::*;
 use crate::traits::DistanceConstant;
-
-pub trait GroupingColumns {
-    fn grouping_columns(&self) -> Vec<String>;
-}
-
-impl GroupingColumns for LazyFrameContext {
-    fn grouping_columns(&self) -> Vec<String> {
-        vec![]
-    }
-}
-
-impl GroupingColumns for LazyGroupByContext {
-    fn grouping_columns(&self) -> Vec<String> {
-        self.columns.clone()
-    }
-}
 
 #[bootstrap(ffi = false)]
 /// Make a Transformation that returns a col(<column_name>) expression for a Lazy Frame.
@@ -40,7 +22,6 @@ pub fn make_col<M, C: Context>(
 where
     M: ExprMetric<C>,
     M::Distance: DistanceConstant<M::Distance> + One + Clone,
-    C: GroupingColumns,
     (ExprDomain<C>, M): MetricSpace,
 {
     if input_domain
@@ -103,7 +84,7 @@ where
 
 #[cfg(test)]
 mod test_make_col {
-    use crate::domains::{AtomDomain, SeriesDomain};
+    use crate::domains::{AtomDomain, SeriesDomain, LazyGroupByContext};
     use crate::metrics::{Lp, SymmetricDistance};
     use crate::transformations::polars::test::get_test_data;
 
