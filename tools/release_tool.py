@@ -64,7 +64,7 @@ def sync_train(args):
     log(f"Syncing {args.train} <= {upstream}")
     if args.train == "nightly":
         # For nightly, we don't care about history, so we just reset the branch.
-        run_command(f"Resetting train to upstream", f"git branch -f {args.train} {upstream}")
+        run_command(f"Resetting train to upstream", f"git switch -C {args.train} {upstream}")
     else:
         # For beta & stable, we want to preserve history, so we merge.
         # git doesn't have a "theirs" merge strategy, so we have to simulate it.
@@ -124,24 +124,6 @@ def configure_train(args):
     update_version(version)
 
 
-def bump_version(args):
-    log(f"*** BUMPING VERSION NUMBER ***")
-    if args.set:
-        version = get_version(args.set)
-    else:
-        if args.position not in ("major", "minor", "patch"):
-            raise Exception(f"Unknown position {args.position}")
-        version = get_version()
-        if args.position == "major":
-            version = version.bump_major()
-        elif args.position == "minor":
-            version = version.bump_minor()
-        elif args.position == "patch":
-            version = version.bump_patch()
-        version = version.replace(prerelease="dev", build=None)
-    update_version(version)
-
-
 def first_match(lines, pattern):
     matcher = re.compile(pattern)
     for i, line in enumerate(lines):
@@ -198,6 +180,24 @@ def sanity(args):
     package = f"opendp=={version}" if args.published else f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
     run_command_with_retries(f"Installing opendp {version}", f"source {args.venv}/bin/activate && pip install {package}")
     run_command("Running test script", f"source {args.venv}/bin/activate && python tools/test.py")
+
+
+def bump_version(args):
+    log(f"*** BUMPING VERSION NUMBER ***")
+    if args.set:
+        version = get_version(args.set)
+    else:
+        if args.position not in ("major", "minor", "patch"):
+            raise Exception(f"Unknown position {args.position}")
+        version = get_version()
+        if args.position == "major":
+            version = version.bump_major()
+        elif args.position == "minor":
+            version = version.bump_minor()
+        elif args.position == "patch":
+            version = version.bump_patch()
+        version = version.replace(prerelease="dev", build=None)
+    update_version(version)
 
 
 def _main(argv):
