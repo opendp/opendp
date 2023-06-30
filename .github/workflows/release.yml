@@ -261,11 +261,11 @@ jobs:
         run: |
           ls -lR rust/target/
 
-      - name: Download bindings
-        uses: actions/download-artifact@v3
-        with:
-          name: python_bindings
-          path: python/src/opendp/
+#      - name: Download bindings
+#        uses: actions/download-artifact@v3
+#        with:
+#          name: python_bindings
+#          path: python/src/opendp/
 
       - name: Create Python package
         run: bash tools/python_build.sh -i
