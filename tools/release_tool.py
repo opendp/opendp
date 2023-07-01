@@ -225,7 +225,7 @@ def sanity(args):
     else:
         index_url = "https://test.pypi.org/simple" if args.package_index == "TestPyPI" else "https://pypi.org/simple"
         package = f"opendp=={version}"
-        run_command(f"Installing opendp {version}", f"source {args.venv}/bin/activate && pip install -i {index_url} {package}")
+        run_command(f"Installing opendp {version}", f". {args.venv}/bin/activate && pip install -i {index_url} {package}")
     run_command("Running test script", f". {args.venv}/bin/activate && python tools/test.py")
 
 
