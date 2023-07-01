@@ -226,6 +226,11 @@ jobs:
     runs-on: ubuntu-20.04
     needs: credential-check
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.channel }}
+
       - name: Create fake libs
         run: |
           mkdir -p rust/target/release/
