@@ -261,7 +261,7 @@ jobs:
 
       - name: Create Python bindings (FAKE)
         if: ${{ inputs.fake }}
-        run: touch >python/src/opendp/fake.py
+        run: touch python/src/opendp/fake.py
 
       - name: Upload bindings
         uses: actions/upload-artifact@v3
