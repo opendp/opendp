@@ -1,0 +1,56 @@
+name: Sanity Test Channel
+on:
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        required: true
+      package_index:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Release Channel
+        type: choice
+        options:
+          - nightly
+          - beta
+          - stable
+        required: true
+        default: nightly
+      package_index:
+        description: Package Index
+        type: choice
+        options:
+          - PyPI
+          - TestPyPI
+          - local
+        required: true
+        default: PyPI
+
+jobs:
+  sanity-test:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download Python wheel
+        if: ${{ inputs.index == 'local' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: python_wheel
+          path: python/wheelhouse
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+          cache: pip
+
+      - name: Install requirements
+        run: pip install -r tools/requirements-release_tool.txt
+
+      - name: Run sanity test
+        run: python tools/release_tool.py sanity -i ${{ inputs.package_index }}

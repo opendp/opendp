@@ -61,7 +61,7 @@ jobs:
           python tools/assert_version.py
 
 
-  python-publish:
+  publish-python:
     runs-on: ubuntu-20.04
     needs: credential-check
     env:
@@ -92,9 +92,9 @@ jobs:
           python tools/publish_tool.py python $DRY_RUN_FLAG
 
 
-  rust-publish:
+  publish-rust:
     runs-on: ubuntu-20.04
-    needs: python-publish
+    needs: publish-python
     env:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
     steps:

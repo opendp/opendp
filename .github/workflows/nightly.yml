@@ -41,9 +41,23 @@ jobs:
       channel: ${{ inputs.channel }}
       fake: ${{ inputs.fake }}
 
+  sanity-test-pre:
+    needs: build
+    uses: opendp/opendp/.github/workflows/sanity-test.yml@714-nightly-build
+    with:
+      channel: ${{ inputs.channel }}
+      package_index: local
+
   publish:
     needs: build
     uses: opendp/opendp/.github/workflows/publish.yml@714-nightly-build
     with:
       channel: ${{ inputs.channel }}
     secrets: inherit
+
+  sanity-test-post:
+    needs: publish
+    uses: opendp/opendp/.github/workflows/sanity-test.yml@714-nightly-build
+    with:
+      channel: ${{ inputs.channel }}
+      package_index: TestPyPI
