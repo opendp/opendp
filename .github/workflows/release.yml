@@ -9,6 +9,9 @@ on:
       dry_run:
         type: boolean
         default: true
+      fake:
+        type: boolean
+        default: true
     secrets:
       TEST_PYPI_API_TOKEN:
         required: true
@@ -28,7 +31,12 @@ on:
         required: true
         default: nightly
       dry_run:
-        description: Dry run (DISABLE WITH CARE)
+        description: Dry Run (DISABLE WITH CARE)
+        type: boolean
+        required: true
+        default: true
+      fake:
+        description: Fake Build
         type: boolean
         required: true
         default: true
@@ -65,7 +73,7 @@ jobs:
 
 
   python-pre-publish-windows:
-    if: false
+    if: ${{ !inputs.fake }}
     runs-on: windows-latest
     needs: credential-check
     env:
@@ -110,7 +118,7 @@ jobs:
 
 
   python-pre-publish-macos:
-    if: false
+    if: ${{ !inputs.fake }}
     runs-on: macos-11
     needs: credential-check
     steps:
@@ -168,7 +176,7 @@ jobs:
 
 
   python-pre-publish-linux:
-    if: false
+    if: ${{ !inputs.fake }}
     runs-on: ubuntu-20.04
     needs: credential-check
     strategy:
@@ -214,6 +222,7 @@ jobs:
 
 
   python-pre-publish-fake:
+    if: ${{ inputs.fake }}
     runs-on: ubuntu-20.04
     needs: credential-check
     steps:
@@ -239,8 +248,11 @@ jobs:
 
   python-publish:
     runs-on: ubuntu-20.04
-#    needs: [ python-pre-publish-windows, python-pre-publish-macos, python-pre-publish-linux ]
-    needs: python-pre-publish-fake
+    needs: [ python-pre-publish-windows, python-pre-publish-macos, python-pre-publish-linux, python-pre-publish-fake ]
+    if: |
+      always() &&
+      ((inputs.fake && needs.python-pre-publish-fake.result == 'success') ||
+       (!inputs.fake && needs.python-pre-publish-windows.result == 'success' && needs.python-pre-publish-macos.result == 'success' && needs.python-pre-publish-linux.result == 'success'))
     env:
       PYPI_API_TOKEN: ${{ inputs.dry_run && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_API_TOKEN }}
     steps:
