@@ -6,6 +6,7 @@ import re
 import subprocess
 import sys
 import time
+import zoneinfo
 
 import semver
 import tomlkit
@@ -149,6 +150,14 @@ def update_version(version):
     update_file("python/setup.cfg", load_config, munge_config, lambda data, f: data.write(f))
 
 
+def today(args):
+    if args.time_zone is not None:
+        tz = zoneinfo.ZoneInfo(args.time_zone)
+        return datetime.datetime.now(tz).date()
+    else:
+        return datetime.date.today()
+
+
 def configure_channel(args):
     log(f"*** CONFIGURING CHANNEL ***")
     if args.channel not in ("dev", "nightly", "beta", "stable"):
@@ -157,7 +166,7 @@ def configure_channel(args):
     if args.channel == "dev":
         version = version.replace(prerelease="dev", build=None)
     elif args.channel in ("nightly", "beta"):
-        date = datetime.date.today().strftime("%Y%m%d")
+        date = today(args).strftime("%Y%m%d")
         prerelease = f"{args.channel}.{date}{args.counter:03}"
         version = version.replace(prerelease=prerelease, build=None)
     elif args.channel == "stable":
@@ -195,7 +204,7 @@ def changelog(args):
         previous_version = match.group(1)
         # This tells us where to replace.
         i, _match = first_match(lines, r"^## \[Upcoming Release\].*$")
-        date = datetime.date.today().isoformat()
+        date = today(args).isoformat()
         log(f"Updating Upcoming Release heading to {version}")
         lines[i] = f"## [{version}](https://github.com/opendp/opendp/compare/v{previous_version}...v{version}) - {date}\n"
 
@@ -246,10 +255,12 @@ def _main(argv):
     subparser = subparsers.add_parser("configure", help="Configure the channel")
     subparser.set_defaults(func=configure_channel)
     subparser.add_argument("-c", "--channel", choices=["dev", "nightly", "beta", "stable"], default="dev", help="Which channel to target")
+    subparser.add_argument("-z", "--time-zone", help="Time zone for dates")
     subparser.add_argument("-i", "--counter", type=int, default=1, help="Intra-date version counter")
 
     subparser = subparsers.add_parser("changelog", help="Update CHANGELOG file")
     subparser.set_defaults(func=changelog)
+    subparser.add_argument("-z", "--time-zone", help="Time zone for dates")
     subparser.add_argument("-s", "--from-stable", dest="from_stable", action="store_true", default=False)
     subparser.add_argument("-ns", "--no-from-stable", dest="from_stable", action="store_false")
 

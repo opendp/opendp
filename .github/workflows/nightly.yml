@@ -2,8 +2,8 @@ name: Nightly
 on:
 #  schedule:
 #    cron:
-#      # 05:05 UTC = 00:05 EST (01:05 EDT)
-#      - 5 5 * * *
+#      # 03:55 UTC = 22:55 EST/23:55 EDT (i.e. always before midnight), so nightlies will have a sensible date
+#      - 3 55 * * *
   workflow_dispatch:
     inputs:
       channel:

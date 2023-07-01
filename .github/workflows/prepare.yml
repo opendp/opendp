@@ -26,7 +26,9 @@ on:
         type: number
         required: false
         default: 1
-
+env:
+  # Base dates on Harvard time
+  TIME_ZONE: "America/New_York"
 
 jobs:
   prepare-channel:
@@ -53,7 +55,7 @@ jobs:
         run: python tools/release_tool.py sync -c ${{ inputs.channel }} -u 714-nightly-build
 
       - name: Configure channel
-        run: python tools/release_tool.py configure -c ${{ inputs.channel }} -i ${{ inputs.counter }}
+        run: python tools/release_tool.py configure -c ${{ inputs.channel }} -z "$TIME_ZONE" -i ${{ inputs.counter }}
 
       - name: Show changes
         run: git diff
