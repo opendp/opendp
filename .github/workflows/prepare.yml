@@ -7,7 +7,7 @@ on:
         required: true
         default: nightly
       counter:
-        type: number
+        type: string
         required: false
         default: 1
   workflow_dispatch:
