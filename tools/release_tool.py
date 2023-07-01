@@ -214,11 +214,18 @@ def changelog(args):
 
 def sanity(args):
     log(f"*** RUNNING SANITY TEST ***")
+    if args.package_index not in ("PyPI", "TestPyPI", "local"):
+        raise Exception(f"Unknown package index {args.package_index}")
     version = get_version()
     version = get_python_version(version)
     run_command("Creating venv", f"rm -rf {args.venv} && python -m venv {args.venv}")
-    package = f"opendp=={version}" if args.published else f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
-    run_command_with_retries(f"Installing opendp {version}", f"source {args.venv}/bin/activate && pip install {package}")
+    if args.package_index == "local":
+        package = f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
+        run_command(f"Installing opendp {version}", f"source {args.venv}/bin/activate && pip install {package}")
+    else:
+        index_url = "https://test.pypi.org/simple" if args.package_index == "TestPyPI" else "https://pypi.org/simple"
+        package = f"opendp=={version}"
+        run_command(f"Installing opendp {version}", f"source {args.venv}/bin/activate && pip install -i {index_url} {package}")
     run_command("Running test script", f"source {args.venv}/bin/activate && python tools/test.py")
 
 
@@ -267,8 +274,7 @@ def _main(argv):
     subparser = subparsers.add_parser("sanity", help="Run sanity test")
     subparser.set_defaults(func=sanity)
     subparser.add_argument("-e", "--venv", default="sanity-venv", help="Virtual environment directory")
-    subparser.add_argument("-p", "--published", dest="published", action="store_true", default=False)
-    subparser.add_argument("-np", "--no-published", dest="published", action="store_false")
+    subparser.add_argument("-i", "--package-index", choices=["PyPI", "TestPyPI", "local"], default="PyPI", help="Package index")
 
     subparser = subparsers.add_parser("bump_version", help="Bump the version number (assumes dev channel)")
     subparser.set_defaults(func=bump_version)
