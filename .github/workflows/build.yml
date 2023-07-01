@@ -252,6 +252,7 @@ jobs:
        (!inputs.fake && needs.libs-build-windows.result == 'success' && needs.libs-build-macos.result == 'success' && needs.libs-build-linux.result == 'success'))
     steps:
       - name: Collect libs
+        run: true
 
 
   python-build:
