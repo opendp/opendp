@@ -256,7 +256,7 @@ jobs:
 
       - name: Create Python bindings
         if: ${{ !inputs.fake }}
-        run: bash tools/rust_build.sh -i -r -g aarch64-apple-darwin -f "$FEATURES,bindings-python"
+        run: bash tools/rust_build.sh -r -f "$FEATURES,bindings-python"
 
       - name: Upload bindings
         uses: actions/upload-artifact@v3
