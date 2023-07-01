@@ -27,7 +27,7 @@ jobs:
     uses: opendp/opendp/.github/workflows/prepare.yml@714-nightly-build
     with:
       channel: ${{ inputs.channel }}
-      counter: ${{ format('{}', inputs.counter) }}
+      counter: ${{ format('{0}', inputs.counter) }}
 
   release-nightly:
     needs: prepare-nightly
