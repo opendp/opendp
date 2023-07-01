@@ -1,4 +1,4 @@
-name: Release Channel
+name: Build Channel
 on:
   workflow_call:
     inputs:
@@ -6,19 +6,9 @@ on:
         type: string
         required: true
         default: nightly
-      dry_run:
-        type: boolean
-        default: true
       fake:
         type: boolean
         default: false
-    secrets:
-      TEST_PYPI_API_TOKEN:
-        required: true
-      PYPI_API_TOKEN:
-        required: true
-      CRATES_IO_API_TOKEN:
-        required: true
   workflow_dispatch:
     inputs:
       channel:
@@ -30,11 +20,6 @@ on:
           - stable
         required: true
         default: nightly
-      dry_run:
-        description: Dry Run (DISABLE WITH CARE)
-        type: boolean
-        required: true
-        default: true
       fake:
         description: Fake Build
         type: boolean
@@ -72,7 +57,7 @@ jobs:
           python tools/assert_version.py
 
 
-  python-pre-publish-windows:
+  libs-build-windows:
     if: ${{ !inputs.fake }}
     runs-on: windows-latest
     needs: credential-check
@@ -117,7 +102,7 @@ jobs:
           path: rust/target*/release/opendp.dll
 
 
-  python-pre-publish-macos:
+  libs-build-macos:
     if: ${{ !inputs.fake }}
     runs-on: macos-11
     needs: credential-check
@@ -175,7 +160,7 @@ jobs:
           path: python/src/opendp/
 
 
-  python-pre-publish-linux:
+  libs-build-linux:
     if: ${{ !inputs.fake }}
     runs-on: ubuntu-20.04
     needs: credential-check
@@ -221,7 +206,7 @@ jobs:
           path: rust/target*/${{ env.TARGET }}/release/libopendp.so
 
 
-  python-pre-publish-fake:
+  libs-build-fake:
     if: ${{ inputs.fake }}
     runs-on: ubuntu-20.04
     needs: credential-check
@@ -258,13 +243,13 @@ jobs:
           path: python/src/opendp/
 
 
-  python-publish:
+  python-build:
     runs-on: ubuntu-20.04
-    needs: [ python-pre-publish-windows, python-pre-publish-macos, python-pre-publish-linux, python-pre-publish-fake ]
+    needs: [ python-pre-build-windows, python-pre-build-macos, python-pre-build-linux, python-pre-build-fake ]
     if: |
       always() &&
-      ((inputs.fake && needs.python-pre-publish-fake.result == 'success') ||
-       (!inputs.fake && needs.python-pre-publish-windows.result == 'success' && needs.python-pre-publish-macos.result == 'success' && needs.python-pre-publish-linux.result == 'success'))
+      ((inputs.fake && needs.python-pre-build-fake.result == 'success') ||
+       (!inputs.fake && needs.python-pre-build-windows.result == 'success' && needs.python-pre-build-macos.result == 'success' && needs.python-pre-build-linux.result == 'success'))
     env:
       PYPI_API_TOKEN: ${{ inputs.dry_run && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_API_TOKEN }}
     steps:
@@ -299,34 +284,8 @@ jobs:
       - name: Create Python package
         run: bash tools/python_build.sh -i
 
-      - name: Publish Python package
-        env:
-          DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
-        run: |
-          pip install -r tools/requirements-publish_tool.txt
-          python tools/publish_tool.py python $DRY_RUN_FLAG
-
-
-  rust-publish:
-    runs-on: ubuntu-20.04
-    needs: python-publish
-    env:
-      CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Upload Python wheel
+        uses: actions/upload-artifact@v3
         with:
-          ref: ${{ inputs.channel }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: 3.8
-          cache: pip
-
-      - name: Publish Rust crate
-        env:
-          DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
-        run: |
-          pip install -r tools/requirements-publish_tool.txt
-          python tools/publish_tool.py rust $DRY_RUN_FLAG
+          name: python_wheel
+          path: python/wheelhouse/opendp-*-py3-none-any.whl

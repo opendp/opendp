@@ -1,0 +1,118 @@
+name: Publish Channel
+on:
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        required: true
+        default: nightly
+      dry_run:
+        type: boolean
+        default: true
+    secrets:
+      TEST_PYPI_API_TOKEN:
+        required: true
+      PYPI_API_TOKEN:
+        required: true
+      CRATES_IO_API_TOKEN:
+        required: true
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Release Channel
+        type: choice
+        options:
+          - nightly
+          - beta
+          - stable
+        required: true
+        default: nightly
+      dry_run:
+        description: Dry Run (DISABLE WITH CARE)
+        type: boolean
+        required: true
+        default: true
+
+
+jobs:
+  credential-check:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check if user is an administrator
+        uses: lannonbr/repo-permission-check-action@2.0.0
+        with:
+          permission: admin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+          cache: pip
+
+      - name: Assert version
+        run: |
+          pip install -r tools/requirements-assert_version.txt
+          python tools/assert_version.py
+
+
+  python-publish:
+    runs-on: ubuntu-20.04
+    needs: credential-check
+    env:
+      PYPI_API_TOKEN: ${{ inputs.dry_run && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_API_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+          cache: pip
+
+      - name: Download Python wheel
+        uses: actions/download-artifact@v3
+        with:
+          name: python_wheel
+          path: python/wheelhouse
+
+      - name: Publish Python package
+        env:
+          DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
+        run: |
+          pip install -r tools/requirements-publish_tool.txt
+          python tools/publish_tool.py python $DRY_RUN_FLAG
+
+
+  rust-publish:
+    runs-on: ubuntu-20.04
+    needs: python-publish
+    env:
+      CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+          cache: pip
+
+      - name: Publish Rust crate
+        env:
+          DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
+        run: |
+          pip install -r tools/requirements-publish_tool.txt
+          python tools/publish_tool.py rust $DRY_RUN_FLAG

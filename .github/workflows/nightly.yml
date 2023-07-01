@@ -28,16 +28,22 @@ on:
 
 
 jobs:
-  prepare-nightly:
+  prepare:
     uses: opendp/opendp/.github/workflows/prepare.yml@714-nightly-build
     with:
       channel: ${{ inputs.channel }}
       counter: ${{ fromJSON(inputs.counter) }}
 
-  release-nightly:
-    needs: prepare-nightly
-    uses: opendp/opendp/.github/workflows/release.yml@714-nightly-build
+  build:
+    needs: prepare
+    uses: opendp/opendp/.github/workflows/build.yml@714-nightly-build
     with:
       channel: ${{ inputs.channel }}
       fake: ${{ inputs.fake }}
+
+  publish:
+    needs: build
+    uses: opendp/opendp/.github/workflows/publish.yml@714-nightly-build
+    with:
+      channel: ${{ inputs.channel }}
     secrets: inherit
