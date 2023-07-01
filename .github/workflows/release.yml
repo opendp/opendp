@@ -11,7 +11,7 @@ on:
         default: true
       fake:
         type: boolean
-        default: true
+        default: false
     secrets:
       TEST_PYPI_API_TOKEN:
         required: true
@@ -39,7 +39,7 @@ on:
         description: Fake Build
         type: boolean
         required: true
-        default: true
+        default: false
 env:
   FEATURES: untrusted,ffi
 
