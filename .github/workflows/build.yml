@@ -5,7 +5,6 @@ on:
       channel:
         type: string
         required: true
-        default: nightly
       fake:
         type: boolean
         default: false
@@ -259,10 +258,6 @@ jobs:
         if: ${{ !inputs.fake }}
         run: bash tools/rust_build.sh -i -r -g aarch64-apple-darwin -f "$FEATURES,bindings-python"
 
-      - name: Create Python bindings (FAKE)
-        if: ${{ inputs.fake }}
-        run: touch python/src/opendp/fake.py
-
       - name: Upload bindings
         uses: actions/upload-artifact@v3
         with:
@@ -291,10 +286,6 @@ jobs:
           name: libs
           # Artifact contains all libs with leading paths starting at target
           path: rust/
-
-      - name: Dump directory
-        run: |
-          ls -lR rust/target/
 
       - name: Download Python bindings
         uses: actions/download-artifact@v3

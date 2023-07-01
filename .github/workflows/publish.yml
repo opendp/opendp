@@ -5,7 +5,6 @@ on:
       channel:
         type: string
         required: true
-        default: nightly
       dry_run:
         type: boolean
         default: true
