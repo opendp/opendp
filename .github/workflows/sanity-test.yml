@@ -35,6 +35,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.channel }}
 
       - name: Download Python wheel
         if: ${{ inputs.index == 'local' }}
