@@ -246,6 +246,13 @@ jobs:
             rust/target*/x86_64-unknown-linux-gnu/release/libopendp.so
             rust/target*/aarch64-unknown-linux-gnu/release/libopendp.so
 
+      - name: Upload bindings
+        uses: actions/upload-artifact@v3
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+
+
   python-publish:
     runs-on: ubuntu-20.04
     needs: [ python-pre-publish-windows, python-pre-publish-macos, python-pre-publish-linux, python-pre-publish-fake ]
@@ -278,11 +285,11 @@ jobs:
         run: |
           ls -lR rust/target/
 
-#      - name: Download bindings
-#        uses: actions/download-artifact@v3
-#        with:
-#          name: python_bindings
-#          path: python/src/opendp/
+      - name: Download bindings
+        uses: actions/download-artifact@v3
+        with:
+          name: python_bindings
+          path: python/src/opendp/
 
       - name: Create Python package
         run: bash tools/python_build.sh -i
