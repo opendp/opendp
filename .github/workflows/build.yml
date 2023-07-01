@@ -237,7 +237,6 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout repository
-        if: ${{ !inputs.fake }}
         uses: actions/checkout@v3
         with:
           ref: ${{ inputs.channel }}
@@ -262,7 +261,7 @@ jobs:
 
       - name: Create Python bindings (FAKE)
         if: ${{ inputs.fake }}
-        run: mkdir -p python/src/opendp/
+        run: touch >python/src/opendp/fake.py
 
       - name: Upload bindings
         uses: actions/upload-artifact@v3
