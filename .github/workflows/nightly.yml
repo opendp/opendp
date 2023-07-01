@@ -49,6 +49,7 @@ jobs:
       package_index: local
 
   publish:
+#    needs: sanity-test-pre
     needs: build
     uses: opendp/opendp/.github/workflows/publish.yml@714-nightly-build
     with:
