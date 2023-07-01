@@ -5,14 +5,28 @@ on:
 #      # 05:05 UTC = 00:05 EST (01:05 EDT)
 #      - 5 5 * * *
   workflow_dispatch:
+    inputs:
+      channel:
+        description: Release Channel
+        type: choice
+        options:
+          - nightly
+          - beta
+          - stable
+        required: true
+        default: nightly
+      counter:
+        description: Version Counter
+        type: number
+        required: false
+        default: 1
 
 
 jobs:
-  update-nightly:
-    uses: opendp/opendp/.github/workflows/update.yml@714-nightly-build
+  prepare-nightly:
+    uses: opendp/opendp/.github/workflows/prepare.yml@714-nightly-build
     with:
       channel: nightly
-#    secrets: inherit
 
   release-nightly:
     needs: update-nightly

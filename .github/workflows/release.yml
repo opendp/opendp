@@ -3,12 +3,10 @@ on:
   workflow_call:
     inputs:
       channel:
-        description: 'Channel'
-        required: true
         type: string
-        default: 'nightly'
+        required: true
+        default: nightly
       dry_run:
-        description: Dry run (DISABLE WITH CARE)
         type: boolean
         default: true
     secrets:
@@ -18,23 +16,21 @@ on:
         required: true
       CRATES_IO_API_TOKEN:
         required: true
-
-
   workflow_dispatch:
     inputs:
       channel:
-        description: 'channel'
-        required: true
+        description: Release Channel
         type: choice
         options:
           - nightly
           - beta
           - stable
-        default: 'nightly'
+        required: true
+        default: nightly
       dry_run:
         description: Dry run (DISABLE WITH CARE)
-        required: true
         type: boolean
+        required: true
         default: true
 env:
   FEATURES: untrusted,ffi

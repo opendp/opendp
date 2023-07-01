@@ -1,27 +1,35 @@
-name: Update Channel
+name: Prepare Channel
 on:
   workflow_call:
     inputs:
       channel:
-        description: 'Channel'
-        required: true
         type: string
-        default: 'nightly'
+        required: true
+        default: nightly
+      counter:
+        type: number
+        required: false
+        default: 1
   workflow_dispatch:
     inputs:
       channel:
-        description: 'Channel'
-        required: true
+        description: Release Channel
         type: choice
         options:
           - nightly
           - beta
           - stable
-        default: 'nightly'
+        required: true
+        default: nightly
+      counter:
+        description: Version Counter
+        type: number
+        required: false
+        default: 1
 
 
 jobs:
-  update-branch:
+  prepare-channel:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
@@ -45,7 +53,7 @@ jobs:
         run: python tools/release_tool.py sync -c ${{ inputs.channel }} -u 714-nightly-build
 
       - name: Configure channel
-        run: python tools/release_tool.py configure -c ${{ inputs.channel }}
+        run: python tools/release_tool.py configure -c ${{ inputs.channel }} -i ${{ inputs.counter }}
 
       - name: Show changes
         run: git diff

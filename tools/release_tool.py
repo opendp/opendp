@@ -144,7 +144,6 @@ def update_version(version):
         config.read_file(f)
         return config
     def munge_config(config):
-        print(python_version)
         config.set("metadata", "version", str(python_version))
         return config
     update_file("python/setup.cfg", load_config, munge_config, lambda data, f: data.write(f))
@@ -157,9 +156,9 @@ def configure_channel(args):
     version = get_version()
     if args.channel == "dev":
         version = version.replace(prerelease="dev", build=None)
-    elif args.channel in ["nightly", "beta"]:
+    elif args.channel in ("nightly", "beta"):
         date = datetime.date.today().strftime("%Y%m%d")
-        prerelease = f"{args.channel}.{date}001"
+        prerelease = f"{args.channel}.{date}{args.counter:03}"
         version = version.replace(prerelease=prerelease, build=None)
     elif args.channel == "stable":
         version = version.replace(prerelease=None, build=None)
@@ -247,6 +246,7 @@ def _main(argv):
     subparser = subparsers.add_parser("configure", help="Configure the channel")
     subparser.set_defaults(func=configure_channel)
     subparser.add_argument("-c", "--channel", choices=["dev", "nightly", "beta", "stable"], default="dev", help="Which channel to target")
+    subparser.add_argument("-i", "--counter", type=int, default=1, help="Intra-date version counter")
 
     subparser = subparsers.add_parser("changelog", help="Update CHANGELOG file")
     subparser.set_defaults(func=changelog)
