@@ -17,7 +17,7 @@ on:
         default: nightly
       counter:
         description: Version Counter
-        type: string
+        type: number
         required: false
         default: 1
 
@@ -27,7 +27,7 @@ jobs:
     uses: opendp/opendp/.github/workflows/prepare.yml@714-nightly-build
     with:
       channel: ${{ inputs.channel }}
-      counter: ${{ inputs.counter }}
+      counter: ${{ fromJSON(inputs.counter) }}
 
   release-nightly:
     needs: prepare-nightly
