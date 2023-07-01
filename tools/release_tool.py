@@ -221,12 +221,12 @@ def sanity(args):
     run_command("Creating venv", f"rm -rf {args.venv} && python -m venv {args.venv}")
     if args.package_index == "local":
         package = f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
-        run_command(f"Installing opendp {version}", f"source {args.venv}/bin/activate && pip install {package}")
+        run_command(f"Installing opendp {version}", f". {args.venv}/bin/activate && pip install {package}")
     else:
         index_url = "https://test.pypi.org/simple" if args.package_index == "TestPyPI" else "https://pypi.org/simple"
         package = f"opendp=={version}"
         run_command(f"Installing opendp {version}", f"source {args.venv}/bin/activate && pip install -i {index_url} {package}")
-    run_command("Running test script", f"source {args.venv}/bin/activate && python tools/test.py")
+    run_command("Running test script", f". {args.venv}/bin/activate && python tools/test.py")
 
 
 def bump_version(args):
