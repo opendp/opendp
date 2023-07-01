@@ -40,7 +40,7 @@ def python(args):
     os.environ["TWINE_USERNAME"] = "__token__"
     os.environ["TWINE_PASSWORD"] = os.environ["PYPI_API_TOKEN"]
     config = configparser.RawConfigParser()
-    config.read_file("python/setup.cfg")
+    config.read("python/setup.cfg")
     version = config["metadata"]["version"]
     wheel = f"opendp-{version}-py3-none-any.whl"
     dry_run_arg = " --repository testpypi" if args.dry_run else ""
