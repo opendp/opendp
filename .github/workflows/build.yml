@@ -243,15 +243,18 @@ jobs:
           path: python/src/opendp/
 
 
-  python-build:
+  libs-build:
     runs-on: ubuntu-20.04
-    needs: [ python-pre-build-windows, python-pre-build-macos, python-pre-build-linux, python-pre-build-fake ]
+    needs: [ libs-build-windows, libs-build-macos, libs-build-linux, libs-build-fake ]
     if: |
       always() &&
-      ((inputs.fake && needs.python-pre-build-fake.result == 'success') ||
-       (!inputs.fake && needs.python-pre-build-windows.result == 'success' && needs.python-pre-build-macos.result == 'success' && needs.python-pre-build-linux.result == 'success'))
-    env:
-      PYPI_API_TOKEN: ${{ inputs.dry_run && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_API_TOKEN }}
+      ((inputs.fake && needs.libs-build-fake.result == 'success') ||
+       (!inputs.fake && needs.libs-build-windows.result == 'success' && needs.libs-build-macos.result == 'success' && needs.libs-build-linux.result == 'success'))
+
+
+  python-build:
+    runs-on: ubuntu-20.04
+    needs: libs-build
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
