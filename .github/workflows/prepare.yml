@@ -23,7 +23,7 @@ on:
         default: nightly
       counter:
         description: Version Counter
-        type: number
+        type: string
         required: false
         default: 1
 
