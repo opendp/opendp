@@ -11,6 +11,15 @@ on:
         description: Dry run (DISABLE WITH CARE)
         type: boolean
         default: true
+    secrets:
+      TEST_PYPI_API_TOKEN:
+        required: true
+      PYPI_API_TOKEN:
+        required: true
+      CRATES_IO_API_TOKEN:
+        required: true
+
+
   workflow_dispatch:
     inputs:
       channel:

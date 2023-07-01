@@ -19,4 +19,4 @@ jobs:
     uses: opendp/opendp/.github/workflows/release.yml@714-nightly-build
     with:
       channel: nightly
-#    secrets: inherit
+    secrets: inherit
