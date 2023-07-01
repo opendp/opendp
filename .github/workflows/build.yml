@@ -250,6 +250,7 @@ jobs:
       always() &&
       ((inputs.fake && needs.libs-build-fake.result == 'success') ||
        (!inputs.fake && needs.libs-build-windows.result == 'success' && needs.libs-build-macos.result == 'success' && needs.libs-build-linux.result == 'success'))
+    steps:
 
 
   python-build:
