@@ -1,4 +1,5 @@
 import argparse
+import configparser
 import os
 import subprocess
 import sys
@@ -38,8 +39,12 @@ def python(args):
     # https://pypi.org/help/#apitoken
     os.environ["TWINE_USERNAME"] = "__token__"
     os.environ["TWINE_PASSWORD"] = os.environ["PYPI_API_TOKEN"]
+    config = configparser.RawConfigParser()
+    config.read_file("python/setup.cfg")
+    version = config["metadata"]["version"]
+    wheel = f"opendp-{version}-py3-none-any.whl"
     dry_run_arg = " --repository testpypi" if args.dry_run else ""
-    run_command("Publishing opendp package", f"python3 -m twine upload{dry_run_arg} --verbose --skip-existing python/wheelhouse/*", capture_output=False)
+    run_command("Publishing opendp package", f"python3 -m twine upload{dry_run_arg} --verbose python/wheelhouse/{wheel}", capture_output=False)
 
 
 def meta(args):
