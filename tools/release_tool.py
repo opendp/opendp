@@ -38,7 +38,7 @@ def run_command_with_retries(description, args, timeout, backoff, capture_output
             if elapsed >= timeout:
                 raise e
         w = min(wait, timeout - elapsed)
-        log(f"Retrying in {w} seconds")
+        log(f"Retrying in {w:.1f} seconds")
         time.sleep(w)
         wait *= backoff
 
@@ -282,7 +282,7 @@ def _main(argv):
     subparser.set_defaults(func=sanity)
     subparser.add_argument("-e", "--venv", default="/tmp/sanity-venv", help="Virtual environment directory")
     subparser.add_argument("-r", "--python-repository", choices=["pypi", "testpypi", "local"], default="pypi", help="Python package repository")
-    subparser.add_argument("-t", "--package-timeout", type=int, default=300, help="How long to perform package installation attempts")
+    subparser.add_argument("-t", "--package-timeout", type=int, default=0, help="How long to retry package installation attempts (0 = no retries)")
     subparser.add_argument("-b", "--package-backoff", type=float, default=2.0, help="How much to back off between package installation attempts")
 
     subparser = subparsers.add_parser("bump_version", help="Bump the version number (assumes dev channel)")

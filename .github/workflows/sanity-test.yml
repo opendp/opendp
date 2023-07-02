@@ -49,10 +49,10 @@ jobs:
         uses: actions/setup-python@v3
         with:
           python-version: 3.9
-#          cache: pip
+          cache: pip
 
       - name: Install requirements
         run: pip install -r tools/requirements-release_tool.txt
 
       - name: Run sanity test
-        run: python tools/release_tool.py sanity -r ${{ inputs.python_repository }}
+        run: python tools/release_tool.py sanity -r ${{ inputs.python_repository }} -t 300
