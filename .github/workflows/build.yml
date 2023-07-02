@@ -223,14 +223,6 @@ jobs:
           path: rust/target*/${{ env.TARGET }}/release/libopendp.so
 
 
-  libs:
-    needs: [ libs-windows, libs-macos, libs-linux ]
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Collect libs
-        run: true
-
-
   python-bindings:
     needs: credential-check
     runs-on: ubuntu-20.04
@@ -266,7 +258,7 @@ jobs:
 
 
   python:
-    needs: [ libs, python-bindings ]
+    needs: [ libs-windows, libs-macos, libs-linux, python-bindings ]
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout repository

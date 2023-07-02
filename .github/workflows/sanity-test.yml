@@ -39,7 +39,7 @@ jobs:
           ref: ${{ inputs.channel }}
 
       - name: Download Python wheel
-        if: ${{ inputs.package_index == 'local' }}
+        if: ${{ inputs.python_repository == 'local' }}
         uses: actions/download-artifact@v3
         with:
           name: python_wheel
