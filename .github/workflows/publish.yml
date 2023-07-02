@@ -92,26 +92,26 @@ jobs:
           python tools/publish_tool.py python -r $REPOSITORY
 
 
-  publish-rust:
-    runs-on: ubuntu-20.04
-    needs: publish-python
-    env:
-      CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ inputs.channel }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: 3.8
-          cache: pip
-
-      - name: Publish Rust crate
-        env:
-          DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
-        run: |
-          pip install -r tools/requirements-publish_tool.txt
-          python tools/publish_tool.py rust $DRY_RUN_FLAG
+#  publish-rust:
+#    runs-on: ubuntu-20.04
+#    needs: publish-python
+#    env:
+#      CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v3
+#        with:
+#          ref: ${{ inputs.channel }}
+#
+#      - name: Set up Python
+#        uses: actions/setup-python@v3
+#        with:
+#          python-version: 3.8
+#          cache: pip
+#
+#      - name: Publish Rust crate
+#        env:
+#          DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
+#        run: |
+#          pip install -r tools/requirements-publish_tool.txt
+#          python tools/publish_tool.py rust $DRY_RUN_FLAG
