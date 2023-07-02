@@ -22,26 +22,6 @@ def run_command(description, args, capture_output=False, shell=True):
     return completed_process.stdout.rstrip() if capture_output else None
 
 
-def check_index(url, pattern, args):
-    if args.index_check_timeout <= 0:
-        return
-    start = time.time()
-    wait = 1.0
-    while True:
-        output = run_command("Checking index for opendp entry", f"curl -s {url}", capture_output=True)
-        if re.search(pattern, output):
-            log(f"Found opendp entry")
-            print(pattern, output)
-            return
-        elapsed = time.time() - start
-        if elapsed >= args.index_check_timeout:
-            raise Exception("Index check exceeded timeout")
-        w = min(wait, args.index_check_timeout - elapsed)
-        log(f"Waiting {w} seconds")
-        time.sleep(w)
-        wait *= args.index_check_backoff
-
-
 def rust(args):
     log(f"*** PUBLISHING RUST CRATE ***")
     os.environ["CARGO_REGISTRY_TOKEN"] = os.environ["CRATES_IO_API_TOKEN"]
@@ -54,13 +34,10 @@ def rust(args):
     dry_run_arg = " --dry-run" if args.dry_run else ""
     run_command("Publishing opendp_tooling crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp_tooling/Cargo.toml")
     if not args.dry_run:
-        check_index("https://index.crates.io/op/en/opendp_tooling", pattern, args)
-
+        # As of https://github.com/rust-lang/cargo/pull/11062, cargo publish blocks until the index is propagated,
+        # so we don't have to wait here anymore.
         run_command("Publishing opendp_derive crate", f"cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml")
-        check_index("https://index.crates.io/op/en/opendp_derive", pattern, args)
-
         run_command("Publishing opendp crate", f"cargo publish --verbose --manifest-path=rust/Cargo.toml")
-        check_index("https://index.crates.io/op/en/opendp", pattern, args)
 
 
 def python(args):
@@ -72,11 +49,10 @@ def python(args):
     config.read("python/setup.cfg")
     version = config["metadata"]["version"]
     wheel = f"opendp-{version}-py3-none-any.whl"
-
     run_command("Publishing opendp package", f"python -m twine upload -r {args.repository} --verbose python/wheelhouse/{wheel}")
-    index_url = "https://test.pypi.org/simple/opendp/" if args.repository == "testpypi" else "https://pypi.org/simple/opendp/"
-    pattern = re.escape(wheel)
-    check_index(index_url, pattern, args)
+    # Unfortunately, twine doesn't have an option to block until the index is propagated. Polling the index is unreliable,
+    # because often the new item will appear, but installs will still fail (probably because of stale caches).
+    # So downstream things like in release_tool.py sanity will have to retry.
 
 
 def _main(argv):

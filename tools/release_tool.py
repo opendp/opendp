@@ -27,6 +27,22 @@ def run_command(description, args, capture_output=False, shell=True):
     return completed_process.stdout.rstrip() if capture_output else None
 
 
+def run_command_with_retries(description, args, timeout, backoff, capture_output=False, shell=True):
+    start = time.time()
+    wait = 1.0
+    while True:
+        try:
+            return run_command(description, args, capture_output=capture_output, shell=shell)
+        except Exception as e:
+            elapsed = time.time() - start
+            if elapsed >= timeout:
+                raise e
+        w = min(wait, timeout - elapsed)
+        log(f"Retrying in {w} seconds")
+        time.sleep(w)
+        wait *= backoff
+
+
 def get_version(version_str=None):
     if not version_str:
         with open("VERSION") as f:
@@ -208,11 +224,15 @@ def sanity(args):
     run_command("Creating venv", f"rm -rf {args.venv} && python -m venv {args.venv}")
     if args.python_repository == "local":
         package = f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
-        run_command(f"Installing opendp {version}", f". {args.venv}/bin/activate && pip -v -v -v install {package}")
+        run_command(f"Installing opendp {version}", f". {args.venv}/bin/activate && pip install {package}")
     else:
         index_url = "https://test.pypi.org/simple" if args.python_repository == "testpypi" else "https://pypi.org/simple"
         package = f"opendp=={version}"
-        run_command(f"Installing opendp {version}", f". {args.venv}/bin/activate && pip -v -v -v install -i {index_url} {package}")
+        run_command_with_retries(
+            f"Installing opendp {version}", f". {args.venv}/bin/activate && pip install -i {index_url} {package}",
+            args.package_timeout,
+            args.package_backoff
+        )
     run_command("Running test script", f". {args.venv}/bin/activate && echo python tools/test.py")
 
 
@@ -262,6 +282,8 @@ def _main(argv):
     subparser.set_defaults(func=sanity)
     subparser.add_argument("-e", "--venv", default="/tmp/sanity-venv", help="Virtual environment directory")
     subparser.add_argument("-r", "--python-repository", choices=["pypi", "testpypi", "local"], default="pypi", help="Python package repository")
+    subparser.add_argument("-t", "--package-timeout", type=int, default=300, help="How long to perform package installation attempts")
+    subparser.add_argument("-b", "--package-backoff", type=float, default=2.0, help="How much to back off between package installation attempts")
 
     subparser = subparsers.add_parser("bump_version", help="Bump the version number (assumes dev channel)")
     subparser.set_defaults(func=bump_version)
