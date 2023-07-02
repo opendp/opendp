@@ -201,16 +201,16 @@ def changelog(args):
 
 def sanity(args):
     log(f"*** RUNNING SANITY TEST ***")
-    if args.package_index not in ("pypi", "testpypi", "local"):
-        raise Exception(f"Unknown package index {args.package_index}")
+    if args.python_repository not in ("pypi", "testpypi", "local"):
+        raise Exception(f"Unknown Python repository {args.python_repository}")
     version = get_version()
     version = get_python_version(version)
     run_command("Creating venv", f"rm -rf {args.venv} && python -m venv {args.venv}")
-    if args.package_index == "local":
+    if args.python_repository == "local":
         package = f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
         run_command(f"Installing opendp {version}", f". {args.venv}/bin/activate && pip install {package}")
     else:
-        index_url = "https://test.pypi.org/simple" if args.package_index == "testpypi" else "https://pypi.org/simple"
+        index_url = "https://test.pypi.org/simple" if args.python_repository == "testpypi" else "https://pypi.org/simple"
         package = f"opendp=={version}"
         run_command(f"Installing opendp {version}", f". {args.venv}/bin/activate && pip install -i {index_url} {package}")
     run_command("Running test script", f". {args.venv}/bin/activate && python tools/test.py")
