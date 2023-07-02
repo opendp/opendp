@@ -27,19 +27,6 @@ def run_command(description, args, capture_output=False, shell=True):
     return completed_process.stdout.rstrip() if capture_output else None
 
 
-def run_command_with_retries(description, args, retries=10, wait_time_seconds=30):
-    while retries > 0:
-        try:
-            return run_command(description, args)
-        except Exception as e:
-            was_final_attempt = retries == 1
-            if was_final_attempt:
-                raise e
-            log(f"Waiting {wait_time_seconds} Seconds | Retries Left: {retries - 1}")
-            time.sleep(wait_time_seconds)
-        retries -= 1
-
-
 def get_version(version_str=None):
     if not version_str:
         with open("VERSION") as f:
@@ -214,7 +201,7 @@ def changelog(args):
 
 def sanity(args):
     log(f"*** RUNNING SANITY TEST ***")
-    if args.package_index not in ("PyPI", "TestPyPI", "local"):
+    if args.package_index not in ("pypi", "testpypi", "local"):
         raise Exception(f"Unknown package index {args.package_index}")
     version = get_version()
     version = get_python_version(version)
@@ -223,7 +210,7 @@ def sanity(args):
         package = f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
         run_command(f"Installing opendp {version}", f". {args.venv}/bin/activate && pip install {package}")
     else:
-        index_url = "https://test.pypi.org/simple" if args.package_index == "TestPyPI" else "https://pypi.org/simple"
+        index_url = "https://test.pypi.org/simple" if args.package_index == "testpypi" else "https://pypi.org/simple"
         package = f"opendp=={version}"
         run_command(f"Installing opendp {version}", f". {args.venv}/bin/activate && pip install -i {index_url} {package}")
     run_command("Running test script", f". {args.venv}/bin/activate && python tools/test.py")
@@ -274,7 +261,7 @@ def _main(argv):
     subparser = subparsers.add_parser("sanity", help="Run sanity test")
     subparser.set_defaults(func=sanity)
     subparser.add_argument("-e", "--venv", default="sanity-venv", help="Virtual environment directory")
-    subparser.add_argument("-i", "--package-index", choices=["PyPI", "TestPyPI", "local"], default="PyPI", help="Package index")
+    subparser.add_argument("-r", "--python-repository", choices=["pypi", "testpypi", "local"], default="pypi", help="Python package repository")
 
     subparser = subparsers.add_parser("bump_version", help="Bump the version number (assumes dev channel)")
     subparser.set_defaults(func=bump_version)

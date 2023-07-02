@@ -86,10 +86,10 @@ jobs:
 
       - name: Publish Python package
         env:
-          DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
+          REPOSITORY: ${{ inputs.dry_run && 'testpypi' || 'pypi' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
-          python tools/publish_tool.py python $DRY_RUN_FLAG
+          python tools/publish_tool.py python -r $REPOSITORY
 
 
   publish-rust:

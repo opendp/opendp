@@ -46,7 +46,7 @@ jobs:
     uses: opendp/opendp/.github/workflows/sanity-test.yml@714-nightly-build
     with:
       channel: ${{ inputs.channel }}
-      package_index: local
+      python_repository: local
 
   publish:
 #    needs: sanity-test-pre
@@ -54,6 +54,7 @@ jobs:
     uses: opendp/opendp/.github/workflows/publish.yml@714-nightly-build
     with:
       channel: ${{ inputs.channel }}
+      dry_run: true
     secrets: inherit
 
   sanity-test-post:
@@ -61,4 +62,4 @@ jobs:
     uses: opendp/opendp/.github/workflows/sanity-test.yml@714-nightly-build
     with:
       channel: ${{ inputs.channel }}
-      package_index: TestPyPI
+      python_repository: testpypi
