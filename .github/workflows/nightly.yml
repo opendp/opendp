@@ -47,6 +47,7 @@ jobs:
     with:
       channel: ${{ inputs.channel }}
       python_repository: local
+      fake: ${{ inputs.fake }}
 
   publish:
     needs: sanity-test-pre
@@ -62,3 +63,4 @@ jobs:
     with:
       channel: ${{ inputs.channel }}
       python_repository: testpypi
+      fake: ${{ inputs.fake }}

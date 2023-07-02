@@ -233,7 +233,10 @@ def sanity(args):
             args.package_timeout,
             args.package_backoff
         )
-    run_command("Running test script", f". {args.venv}/bin/activate && echo python tools/test.py")
+    if args.fake:
+        run_command("Running test script", f". {args.venv}/bin/activate && echo FAKE TEST!!!")
+    else:
+        run_command("Running test script", f". {args.venv}/bin/activate && python tools/test.py")
 
 
 def bump_version(args):
@@ -284,6 +287,8 @@ def _main(argv):
     subparser.add_argument("-r", "--python-repository", choices=["pypi", "testpypi", "local"], default="pypi", help="Python package repository")
     subparser.add_argument("-t", "--package-timeout", type=int, default=0, help="How long to retry package installation attempts (0 = no retries)")
     subparser.add_argument("-b", "--package-backoff", type=float, default=2.0, help="How much to back off between package installation attempts")
+    subparser.add_argument("-f", "--fake", dest="fake", action="store_true", default=False)
+    subparser.add_argument("-nf", "--no-fake", dest="fake", action="store_false")
 
     subparser = subparsers.add_parser("bump_version", help="Bump the version number (assumes dev channel)")
     subparser.set_defaults(func=bump_version)
