@@ -31,6 +31,7 @@ def check_index(url, pattern, args):
         output = run_command("Checking index for opendp entry", f"curl -s {url}", capture_output=True)
         if re.search(pattern, output):
             log(f"Found opendp entry")
+            print(pattern, output)
             return
         elapsed = time.time() - start
         if elapsed >= args.index_check_timeout:
