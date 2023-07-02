@@ -49,8 +49,7 @@ jobs:
       python_repository: local
 
   publish:
-#    needs: sanity-test-pre
-    needs: build
+    needs: sanity-test-pre
     uses: opendp/opendp/.github/workflows/publish.yml@714-nightly-build
     with:
       channel: ${{ inputs.channel }}

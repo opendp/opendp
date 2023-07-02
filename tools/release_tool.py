@@ -260,7 +260,7 @@ def _main(argv):
 
     subparser = subparsers.add_parser("sanity", help="Run sanity test")
     subparser.set_defaults(func=sanity)
-    subparser.add_argument("-e", "--venv", default="sanity-venv", help="Virtual environment directory")
+    subparser.add_argument("-e", "--venv", default="/tmp/sanity-venv", help="Virtual environment directory")
     subparser.add_argument("-r", "--python-repository", choices=["pypi", "testpypi", "local"], default="pypi", help="Python package repository")
 
     subparser = subparsers.add_parser("bump_version", help="Bump the version number (assumes dev channel)")
