@@ -4,32 +4,55 @@ use std::ops::Mul;
 
 use crate::{
     domains::{ExprDomain, Context}, 
-    metrics::L1Distance, 
-    core::{Measurement, Function, PrivacyMap}, 
+    metrics::LInfDiffDistance, 
+    core::{Measurement, Function, PrivacyMap, MetricSpace}, 
     error::Fallible,
-    measures::MaxDivergence,
+    measures::MaxDivergence, transformations::make_score_elts_expr, traits::{DistanceConstant, Float, Number},
 };
 
-/// Polars operator to make the Laplace noise measurement
+use crate::traits::samplers::CastInternalRational;
+
+/// Polars operator to compute quantiles.
+/// Measurement for gumbel_max_expr and continuous_quantile_expr
 ///
 /// # Arguments
 /// * `input_domain` - ExprDomain
 /// * `input_metric` - The metric space under which neighboring LazyFrames are compared
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
-pub fn make_continous_quantile_expr<C: Context>(
+/// * `alpha` - a value in [0, 1]. Choose 0.5 for median
+/// * `temperature` - Higher temperatures are more private.
+/// 
+/// # Generics
+/// * `C` - Context of the LazyFrame
+pub fn make_continous_quantile_expr<C: Context, QO, TIA>(
     input_domain: ExprDomain<C>,
-    input_metric: L1Distance<f64>,
+    input_metric: LInfDiffDistance<TIA>,
     scale: f64,
-) -> Fallible<Measurement<ExprDomain<C>, Expr, L1Distance<f64>, MaxDivergence<f64>>>{
+    alpha: f64,
+    temperature: QO
+) -> Fallible<Measurement<ExprDomain<C>, Expr, LInfDiffDistance<TIA>, MaxDivergence<QO>>>
+where
+    (ExprDomain<C>, LInfDiffDistance<TIA>): MetricSpace,
+    TIA: Number + CastInternalRational,
+    QO: CastInternalRational + DistanceConstant<TIA> + Float,
+{
 
     let epsilon = scale; // placeholder TODO: get epsilon based on scale
+
+    if temperature.is_sign_negative() || temperature.is_zero() {
+        return fallible!(FailedFunction, "temperature must be positive");
+    }
+
+    let temp_frac = temperature.clone().into_rational()?;
+
     Measurement::new(
         input_domain,
         Function::new_fallible(move |(_frame, expr): &(C::Value, Expr)| -> Fallible<Expr> {
-            // Incoming expr = make_score_elts_expr(expr.clone(), alpha) = |rank - alpha*N|
-            
             // exp(-epsilon*|rank - alpha*N|)
-            let exp_expr = expr.clone().mul(lit(-epsilon)).exp(); 
+            let exp_expr = make_score_elts_expr(expr.clone(), alpha)
+                .clone()
+                .mul(lit(-epsilon))
+                .exp(); 
 
             // Z_{i+1} - Z_{i}
             let sorted_expr = expr.clone().sort(false);
@@ -39,13 +62,34 @@ pub fn make_continous_quantile_expr<C: Context>(
             // (Z_{i+1} - Z_{i}) * exp(-eps*|rank - alpha*N|)
             let full_expr = exp_expr.mul(shifted_expr);
 
-            // TODO here ? gumpel max expr to sample an i
+            // TODO here: gumpel max expr to sample an i
+
+
+            // TODO here: get associated bounds of frame
+            // frame sort and then get i and i+1 
+            //let i = frame.select(expr.clone().sort(false));
+            // let index = if C::GROUPBY {
+            //     2.0
+            // } else {
+            //     1.0
+            // };
+
+            // TODO here: uniform draw in-between
+
             Ok(full_expr)
         }),
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(move |d_in: &f64| {
-            Ok(d_in.clone()) //placeholder TODO privacy map 
+        PrivacyMap::new_fallible(move |d_in: &TIA| {
+            let d_in = QO::inf_cast(d_in.clone())?;
+            if d_in.is_sign_negative() {
+                return fallible!(InvalidDistance, "sensitivity must be non-negative");
+            }
+            if temperature.is_zero() {
+                return Ok(QO::infinity());
+            }
+            // d_out >= d_in / temperature
+            d_in.inf_div(&temperature)
         })
     )
 }

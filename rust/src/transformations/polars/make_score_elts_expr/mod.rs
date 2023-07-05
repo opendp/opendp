@@ -2,11 +2,11 @@ use polars::prelude::*;
 use std::ops::{Mul, Sub};
 
 use crate::{
-    domains::{ExprDomain, LazyGroupByContext}, 
+    domains::{ExprDomain, Context}, 
     metrics::{SymmetricDistance, LInfDiffDistance, IntDistance}, 
-    core::{Transformation, Function, StabilityMap}, 
+    core::{Transformation, Function, StabilityMap, MetricSpace}, 
     error::Fallible,
-    traits::{AlertingMul, ExactIntCast},
+    traits::ExactIntCast,
 };
 
 /// Polars operator to compute quantile of a serie in a LazyFrame
@@ -15,42 +15,44 @@ use crate::{
 /// * `input_domain` - ExprDomain
 /// * `input_metric` - The metric space under which neighboring LazyFrames are compared
 /// * `alpha` - a value in [0, 1]. Choose 0.5 for median
-pub fn make_quantile_expr(
-    input_domain: ExprDomain<LazyGroupByContext>,
+/// 
+/// # Generics
+/// * `C` - Context of the LazyFrame
+pub fn make_quantile_scores_expr<C: Context>(
+    input_domain: ExprDomain<C>,
     input_metric: SymmetricDistance,
     alpha: f64
 ) -> Fallible<
     Transformation<
-        ExprDomain<LazyGroupByContext>,
-        ExprDomain<LazyGroupByContext>,
+        ExprDomain<C>,
+        ExprDomain<C>,
         SymmetricDistance,
         LInfDiffDistance<f64>,
-    >,
-> {
-    let alpha_den = 1.0;
-
+    >> 
+where
+    (ExprDomain<C>, SymmetricDistance): MetricSpace,
+    (ExprDomain<C>, LInfDiffDistance<f64>): MetricSpace,
+{
     Transformation::new(
         input_domain.clone(),
         input_domain.clone(),
         Function::new_fallible(
-            move |(frame, expr): &(LazyGroupBy, Expr)| -> Fallible<(LazyGroupBy, Expr)> {
+            move |(frame, expr): &(C::Value, Expr)| -> Fallible<(C::Value, Expr)> {
                 Ok((frame.clone(), make_score_elts_expr(expr.clone(), alpha))) // add exp mechanism
             },
         ),
         input_metric,
         LInfDiffDistance::default(),
-        StabilityMap::new_fallible(move |d_in: &IntDistance| { // TODO: how to know
-            f64::exact_int_cast(d_in / 2)?
-                .alerting_mul(&4.0)?
-                .alerting_mul(&alpha_den)
+        StabilityMap::new_fallible(move |d_in: &IntDistance| {
+            f64::exact_int_cast(d_in / 2) // TO CHECK: only count so 1.0*d_in (?)
         }),
     )
 }
 
-fn make_score_elts_expr(expr: Expr, alpha: f64) -> Expr {
+pub fn make_score_elts_expr(expr: Expr, alpha: f64) -> Expr {
     expr.sort(false)
         .rank(RankOptions::default(), None)                    // i
-        .slice(lit(1), lit(NULL))    // why not put 0 at the beginning instead ?                        // should slice after ranking
+        .slice(lit(1), lit(NULL))                              // rm first row
         .cast(DataType::Float64)
         .sub(count().cast(DataType::Float64).mul(lit(alpha))) //  i - N*alpha
         .abs()                                                // |i - N*alpha|
@@ -62,7 +64,7 @@ mod test_make_score_elts_expr_quantile {
 
     use super::*;
     use crate::domains::{
-        AtomDomain, LazyFrameContext, LazyFrameDomain, SeriesDomain,
+        AtomDomain, LazyFrameContext, LazyFrameDomain, LazyGroupByContext, SeriesDomain,
     };
     use crate::error::Fallible;
 
