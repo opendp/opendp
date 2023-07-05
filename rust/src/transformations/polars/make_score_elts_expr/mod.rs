@@ -39,7 +39,7 @@ pub fn make_quantile_expr(
         ),
         input_metric,
         LInfDiffDistance::default(),
-        StabilityMap::new_fallible(move |d_in: &IntDistance| {
+        StabilityMap::new_fallible(move |d_in: &IntDistance| { // TODO: how to know
             f64::exact_int_cast(d_in / 2)?
                 .alerting_mul(&4.0)?
                 .alerting_mul(&alpha_den)
@@ -49,12 +49,13 @@ pub fn make_quantile_expr(
 
 fn make_score_elts_expr(expr: Expr, alpha: f64) -> Expr {
     expr.sort(false)
-        .slice(lit(1), lit(NULL)) // but it removes the last value
-        .rank(RankOptions::default(), None)
+        .rank(RankOptions::default(), None)                    // i
+        .slice(lit(1), lit(NULL))    // why not put 0 at the beginning instead ?                        // should slice after ranking
         .cast(DataType::Float64)
-        .sub(count().cast(DataType::Float64).mul(lit(alpha)))
-        .abs()
+        .sub(count().cast(DataType::Float64).mul(lit(alpha))) //  i - N*alpha
+        .abs()                                                // |i - N*alpha|
 }
+
 
 #[cfg(test)]
 mod test_make_score_elts_expr_quantile {
@@ -99,7 +100,7 @@ mod test_make_score_elts_expr_quantile {
 
         // Get expected scoring
         let frame_expected = df!(
-            "B" => &[1.5, 0.5, 0.5, 1.5], // "B" => &[1.5, 0.5, 0.5, 1.5, 2.5], without slice
+            "B" => &[1.5, 0.5, 0.5, 1.5],
         )?;
 
         assert_eq!(frame_actual, frame_expected);
@@ -144,49 +145,41 @@ mod test_make_score_elts_expr_quantile {
 
         // Get expected scoring
         let a = Series::new("A", &[1, 2, 3]);
-        // let b = Series::new("B", &[Series::new("list", &[0.4, 1.4, 2.4]),
-        //                         Series::new("list", &[2.4, 1.4, 0.4]),
-        //                         Series::new("list", &[0.4, 0.4, 0.4])]); //without slice
         let b = Series::new(
             "B",
             [
-                [0.4, 1.4].iter().collect::<Series>(), 
-                [0.4, 1.4].iter().collect::<Series>(), 
-                [0.4, 0.4].iter().collect::<Series>(),
+                [0.4, 1.4].iter().collect::<Series>(), //2.4
+                [0.4, 1.4].iter().collect::<Series>(), //2.4
+                [0.4, 0.4].iter().collect::<Series>(), //0.4
             ],
         );
         let frame_expected = DataFrame::new(vec![a.clone(), b.clone()])?;
 
-        // Test same schemas
         assert_eq!(frame_actual.schema(), frame_expected.schema());
-
-        // Test same types
         assert_eq!(frame_actual.dtypes(), frame_expected.dtypes());
-
-        // print to understand why not equal
-        println!("Frame actual {}", frame_actual);
-        println!("Frame expected {}", frame_expected);
-        
-        
-        println!("Run 1st test");
         assert_eq!(frame_actual[0], frame_expected[0]);
 
-        println!("Column actual:   {:?}", frame_actual.column("B").unwrap());
-        println!("Column expected: {:?}", frame_expected.column("B").unwrap());
-        if let Ok(first_element_a) = frame_actual.column("B").unwrap().get(0) {
-            println!("First element of Series B actual:   {}", first_element_a);
-            if let Ok(first_element_b) = frame_expected.column("B").unwrap().get(0) {
-                println!("First element of Series B expected: {}", first_element_b);
-                println!("Run 2nd test a");
-                assert_eq!(first_element_a, first_element_b);
-            }
-        }
-        println!("Run 2nd test b");
-        assert_eq!(frame_actual.column("B").unwrap(), frame_expected.column("B").unwrap());
-        println!("Run 2nd test c");
-        assert_eq!(frame_actual[1], frame_expected[1]);
+        // println!("Frame actual   {:?}", frame_actual);
+        // println!("Frame expected {:?}", frame_expected);
 
-        println!("Run 3rd test");
+        // if let Ok(first_element_a) = frame_actual.column("B").unwrap().get(0) {
+        //     println!("First element of Series B actual:   {}", first_element_a);
+        //     if let Ok(first_element_b) = frame_expected.column("B").unwrap().get(0) {
+        //         println!("First element of Series B expected: {}", first_element_b);
+        //         println!("Run test first elements");
+        //         assert_eq!(first_element_a.clone(), first_element_b.clone());
+        //     }
+        // }
+        // println!("Run test column b");
+        // println!("Column actual:   {:?}", frame_actual.column("B").unwrap());
+        // println!("Column expected: {:?}", frame_expected.column("B").unwrap());
+        // assert_eq!(frame_actual.column("B").unwrap(), frame_expected.column("B").unwrap());
+        // println!("Run test column b again");
+        // assert_eq!(frame_actual[1], frame_expected[1]);
+
+        println!("Run test dataframes");
+        println!("Frame actual {:?}", frame_actual);
+        println!("Frame expected {:?}", frame_expected);
         assert_eq!(frame_actual, frame_expected);
         Ok(())
     }

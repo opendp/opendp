@@ -9,6 +9,6 @@ mod make_sum;
 pub use make_sum::*;
 
 #[cfg(feature = "contrib")]
-mod make_quantile;
+mod make_score_elts_expr;
 #[cfg(feature = "contrib")]
-pub use make_quantile::*;
+pub use make_score_elts_expr::*;
