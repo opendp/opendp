@@ -202,7 +202,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
     if type_name == "AnyMeasurement":
         return _wrap_in_slice(value, 1)
 
-    if type_name == "String":
+    if type_name in ATOM_EQUIVALENCE_CLASSES["String"]:
         return _string_to_slice(value)
 
     if type_name.origin == "Vec":

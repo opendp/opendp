@@ -5,6 +5,7 @@ use std::convert::TryFrom;
 use std::ffi::CString;
 use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
+use std::path::PathBuf;
 use std::str::Utf8Error;
 
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain, SeriesDomain, LazyFrameDomain};
@@ -255,7 +256,7 @@ lazy_static! {
         let types: Vec<Type> = vec![
             // data types
             vec![t!(())],
-            type_vec![bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject],
+            type_vec![bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject, PathBuf],
             type_vec![(bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject)],
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject]],
