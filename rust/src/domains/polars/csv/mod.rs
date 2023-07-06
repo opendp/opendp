@@ -12,6 +12,7 @@ use crate::{
         ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance, SymmetricDistance,
     },
 };
+use crate::metrics::Lp;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -20,6 +21,9 @@ pub trait DatasetMetric: Metric<Distance = IntDistance> {
     const BOUNDED: bool;
 }
 impl DatasetMetric for SymmetricDistance {
+    const BOUNDED: bool = false;
+}
+impl DatasetMetric for Lp<1, SymmetricDistance> {
     const BOUNDED: bool = false;
 }
 impl DatasetMetric for InsertDeleteDistance {
