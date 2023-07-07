@@ -19,6 +19,7 @@ __all__ = [
     "make_base_laplace_threshold",
     "make_gaussian",
     "make_laplace",
+    "make_private_agg",
     "make_private_mean_expr",
     "make_randomized_response",
     "make_randomized_response_bool",
@@ -34,6 +35,7 @@ __all__ = [
     "then_base_laplace_threshold",
     "then_gaussian",
     "then_laplace",
+    "then_private_agg",
     "then_private_mean_expr",
     "then_user_measurement"
 ]
@@ -839,11 +841,71 @@ def then_laplace(
 
 
 @versioned
+def make_private_agg(
+    input_domain,
+    input_metric,
+    measurement: Measurement
+) -> Measurement:
+    """Make a Transformation that returns a Measurement in agg context.
+    
+    Valid inputs for `input_domain` and `input_metric` are:
+    
+    | `input_domain`                  | `input_metric`                             |
+    | ------------------------------- | ------------------------------------------ |
+    | `LazyGroupByDomain`             | `SymmetricDistance`                        |
+    | `LazyGroupByDomain`             | `InsertDeleteDistance`                     |
+    | `LazyGroupByDomain`             | `ChangeOneDistance` if Margins provided    |
+    | `LazyGroupByDomain`             | `HammingDistance` if Margins provided      |
+    | `LazyGroupByDomain`             | `Lp<p, AbsoluteDistance>`                  |
+    
+    [make_private_agg in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_private_agg.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `LazyGroupByDomain`
+    * Output Type:    `LazyFrame`
+    * Input Metric:   `T::InputMetric`
+    * Output Measure: `T::OutputMeasure`
+    
+    :param input_domain: LazyGroupByDomain.
+    :param input_metric: The metric space under which neighboring LazyGroupBy frames are compared.
+    :param measurement: 
+    :type measurement: Measurement
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_measurement = py_to_c(measurement, c_type=Measurement, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_private_agg
+    lib_function.argtypes = [Domain, Metric, Measurement]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_measurement), Measurement))
+    
+    return output
+
+def then_private_agg(
+    measurement: Measurement
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_private_agg(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        measurement=measurement))
+
+
+
+@versioned
 def make_private_mean_expr(
     input_domain,
     input_metric,
     scale,
-    TI: RuntimeTypeDescriptor,
     QO: RuntimeTypeDescriptor = "float"
 ) -> Measurement:
     """Polars operator to compute the private mean of a column in a LazyFrame or LazyGroupBy
@@ -860,8 +922,6 @@ def make_private_mean_expr(
     :param input_domain: ExprDomain
     :param input_metric: The metric under which neighboring LazyFrames are compared
     :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-    :param TI: Data type of the input data
-    :type TI: :py:ref:`RuntimeTypeDescriptor`
     :param QO: Output data type of the scale and epsilon
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
@@ -872,35 +932,31 @@ def make_private_mean_expr(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TI = RuntimeType.parse(type_name=TI)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
     
     # Convert arguments to c types.
     c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
     c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
-    c_TI = py_to_c(TI, c_type=ctypes.c_char_p)
     c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_measurements__make_private_mean_expr
-    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_TI, c_QO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_QO), Measurement))
     
     return output
 
 def then_private_mean_expr(
     scale,
-    TI: RuntimeTypeDescriptor,
     QO: RuntimeTypeDescriptor = "float"
 ):
     return PartialConstructor(lambda input_domain, input_metric: make_private_mean_expr(
         input_domain=input_domain,
         input_metric=input_metric,
         scale=scale,
-        TI=TI,
         QO=QO))
 
 
