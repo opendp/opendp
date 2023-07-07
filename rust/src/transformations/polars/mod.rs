@@ -57,6 +57,13 @@ pub use make_agg_trans::*;
 mod make_clamp;
 #[cfg(feature = "contrib")]
 pub use make_clamp::*;
+#[cfg(feature = "contrib")]
+mod make_cut;
+#[cfg(feature = "contrib")]
+pub use make_cut::*;
+
+#[cfg(feature = "contrib")]
+pub use make_clamp::*;
 
 #[cfg(feature = "contrib")]
 mod make_quantile_score_candidates_expr;
