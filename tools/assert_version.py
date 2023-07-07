@@ -33,9 +33,12 @@ def get_python_version(version):
         "r": "post",
     }
     if version.prerelease is not None:
-        tag = version.prerelease.split(".", 1)[0] if "." in version.prerelease else version.prerelease
+        split = version.prerelease.split(".", 2)
+        tag = split[0]
         py_tag = tag_to_py_tag.get(tag, tag)
-        py_n = version.prerelease.split(".", 1)[1] if "." in version.prerelease else "0"
+        date = split[1] if len(split) >= 2 else None
+        counter = split[2] if len(split) >= 3 else None
+        py_n = f"{date}{counter:>03}" if date and counter else (date if date else "0")
         py_separator = "." if py_tag in ("post", "dev") else ""
     else:
         py_tag = None
