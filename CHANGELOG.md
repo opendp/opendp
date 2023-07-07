@@ -4,7 +4,7 @@ This file documents the version history of OpenDP. The links on each version num
 showing the source changes from the previous version.
 
 
-## [Upcoming Release](https://github.com/opendp/opendp/compare/stable...HEAD) - TBD
+## [0.8.0-dev](https://github.com/opendp/opendp/compare/v0.7.0...HEAD) - TBD
 
 
 ## [0.7.0] - 2023-05-18
