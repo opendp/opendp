@@ -4,6 +4,7 @@ use std::ffi::{c_void, CString};
 use std::fmt::Formatter;
 use std::hash::Hash;
 use std::os::raw::c_char;
+use std::path::PathBuf;
 use std::slice;
 
 use opendp_derive::bootstrap;
@@ -61,6 +62,10 @@ pub extern "C" fn opendp_data__slice_as_object(
     fn raw_to_string(raw: &FfiSlice) -> Fallible<AnyObject> {
         let string = util::to_str(raw.ptr as *const c_char)?.to_owned();
         Ok(AnyObject::new(string))
+    }
+    fn raw_to_pathbuf(raw: &FfiSlice) -> Fallible<AnyObject> {
+        let string = util::to_str(raw.ptr as *const c_char)?.to_owned();
+        Ok(AnyObject::new(PathBuf::from(string)))
     }
     fn raw_to_vec_string(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_char, raw.len) };
@@ -135,6 +140,7 @@ pub extern "C" fn opendp_data__slice_as_object(
     }
     match T.contents {
         TypeContents::PLAIN("String") => raw_to_string(raw),
+        TypeContents::PLAIN("PathBuf") => raw_to_pathbuf(raw),
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(&element_id));
             dispatch!(raw_to_slice, [(element, @primitives)], (raw))
@@ -483,7 +489,7 @@ impl Clone for AnyObject {
                 clone_plain,
                 [(
                     self.type_,
-                    [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool]
+                    [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, String]
                 )],
                 (self)
             ),

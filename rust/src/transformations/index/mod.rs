@@ -6,14 +6,19 @@ use std::iter::FromIterator;
 
 use opendp_derive::bootstrap;
 
-use crate::core::Transformation;
+use crate::core::{Transformation, MetricSpace};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::metrics::SymmetricDistance;
 use crate::traits::{Hashable, Number, Primitive};
 use crate::transformations::make_row_by_row;
 
-#[bootstrap(features("contrib"))]
+use super::DatasetMetric;
+
+#[bootstrap(
+    features("contrib"), 
+    generics(TIA(suppress), M(suppress)),
+    derived_types(TIA = "$get_atom(get_type(input_domain))")
+)]
 /// Find the index of a data value in a set of categories.
 ///
 /// For each value in the input vector, finds the index of the value in `categories`.
@@ -21,22 +26,30 @@ use crate::transformations::make_row_by_row;
 /// Chain with `make_impute_constant` or `make_drop_null` to handle nullity.
 ///
 /// # Arguments
+/// * `input_domain` - The domain of the input vector.
+/// * `input_metric` - The metric of the input vector.
 /// * `categories` - The set of categories to find indexes from.
 ///
 /// # Generics
+/// * `M` - Metric Type
 /// * `TIA` - Atomic Input Type that is categorical/hashable
-pub fn make_find<TIA>(
+pub fn make_find<M, TIA>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: M,
     categories: Vec<TIA>,
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TIA>>,
         VectorDomain<OptionDomain<AtomDomain<usize>>>,
-        SymmetricDistance,
-        SymmetricDistance,
+        M,
+        M,
     >,
 >
 where
     TIA: Hashable,
+    M: DatasetMetric,
+    (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
+    (VectorDomain<OptionDomain<AtomDomain<usize>>>, M): MetricSpace,
 {
     let categories_len = categories.len();
     let indexes =
@@ -47,14 +60,18 @@ where
     }
 
     make_row_by_row(
-        VectorDomain::new(AtomDomain::default()),
-        SymmetricDistance::default(),
+        input_domain,
+        input_metric,
         OptionDomain::new(AtomDomain::default()),
         move |v| indexes.get(v).cloned(),
     )
 }
 
-#[bootstrap(features("contrib"))]
+#[bootstrap(
+    features("contrib"), 
+    generics(TIA(suppress), M(suppress)),
+    derived_types(TIA = "$get_atom(get_type(input_domain))")
+)]
 /// Make a transformation that finds the bin index in a monotonically increasing vector of edges.
 ///
 /// For each value in the input vector, finds the index of the bin the value falls into.
@@ -66,29 +83,37 @@ where
 /// `edges` are left inclusive, right exclusive.
 ///
 /// # Arguments
+/// * `input_domain` - The domain of the input vector.
+/// * `input_metric` - The metric of the input vector.
 /// * `edges` - The set of edges to split bins by.
 ///
 /// # Generics
+/// * `M` - Metric Type
 /// * `TIA` - Atomic Input Type that is numeric
-pub fn make_find_bin<TIA>(
+pub fn make_find_bin<M, TIA>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: M,
     edges: Vec<TIA>,
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TIA>>,
         VectorDomain<AtomDomain<usize>>,
-        SymmetricDistance,
-        SymmetricDistance,
+        M,
+        M,
     >,
 >
 where
     TIA: Number,
+    M: DatasetMetric,
+    (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
+    (VectorDomain<AtomDomain<usize>>, M): MetricSpace,
 {
     if !edges.windows(2).all(|pair| pair[0] < pair[1]) {
         return fallible!(MakeTransformation, "edges must be unique and ordered");
     }
     make_row_by_row(
-        VectorDomain::new(AtomDomain::default()),
-        SymmetricDistance::default(),
+        input_domain,
+        input_metric,
         AtomDomain::default(),
         move |v| {
             edges
@@ -101,32 +126,40 @@ where
     )
 }
 
-#[bootstrap(features("contrib"))]
+#[bootstrap(features("contrib"), generics(M(suppress)))]
 /// Make a transformation that treats each element as an index into a vector of categories.
 ///
 /// # Arguments
+/// * `input_domain` - The domain of the input vector.
+/// * `input_metric` - The metric of the input vector.
 /// * `categories` - The set of categories to index into.
 /// * `null` - Category to return if the index is out-of-range of the category set.
 ///
 /// # Generics
+/// * `M` - Metric Type
 /// * `TOA` - Atomic Output Type. Output data will be `Vec<TOA>`.
-pub fn make_index<TOA>(
+pub fn make_index<M, TOA>(
+    input_domain: VectorDomain<AtomDomain<usize>>,
+    input_metric: M,
     categories: Vec<TOA>,
     null: TOA,
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<usize>>,
         VectorDomain<AtomDomain<TOA>>,
-        SymmetricDistance,
-        SymmetricDistance,
+        M,
+        M,
     >,
 >
 where
     TOA: Primitive,
+    M: DatasetMetric,
+    (VectorDomain<AtomDomain<usize>>, M): MetricSpace,
+    (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
 {
     make_row_by_row(
-        VectorDomain::new(AtomDomain::default()),
-        SymmetricDistance::default(),
+        input_domain,
+        input_metric,
         AtomDomain::default(),
         move |v| categories.get(*v).unwrap_or(&null).clone(),
     )
@@ -135,10 +168,11 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::metrics::SymmetricDistance;
 
     #[test]
     fn test_find() -> Fallible<()> {
-        let find = make_find(vec!["1", "3", "4"])?;
+        let find = make_find(VectorDomain::default(), SymmetricDistance::default(), vec!["1", "3", "4"])?;
         assert_eq!(
             find.invoke(&vec!["1", "2", "3", "4", "5"])?,
             vec![Some(0), None, Some(1), Some(2), None]
@@ -148,7 +182,7 @@ mod test {
 
     #[test]
     fn test_bin() -> Fallible<()> {
-        let bin = make_find_bin(vec![2, 3, 5])?;
+        let bin = make_find_bin(Default::default(), SymmetricDistance::default(), vec![2, 3, 5])?;
         assert_eq!(
             bin.invoke(&(1..10).collect())?,
             vec![0, 1, 2, 2, 3, 3, 3, 3, 3]
@@ -158,7 +192,10 @@ mod test {
 
     #[test]
     fn test_index() -> Fallible<()> {
-        let index = make_index(vec!["A", "B", "C"], "NA")?;
+        let index = make_index(
+            VectorDomain::default(),
+            SymmetricDistance::default(),
+            vec!["A", "B", "C"], "NA")?;
         assert_eq!(
             index.invoke(&vec![0, 1, 3, 1, 5])?,
             vec!["A", "B", "NA", "B", "NA"]

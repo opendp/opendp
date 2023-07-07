@@ -154,6 +154,13 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, InsertDeleteDistance) {
     }
 }
 
+#[cfg(feature = "contrib")]
+impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, InsertDeleteDistance) {
+    fn check(&self) -> bool {
+        true
+    }
+}
+
 /// The smallest number of changes to make two equal-length datasets equivalent.
 ///
 /// This metric is not sensitive to data ordering.

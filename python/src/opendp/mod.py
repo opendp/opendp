@@ -30,7 +30,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     ...
     >>> # chain with a transformation from the trans module
     >>> chained = (
-    ...     dp.t.make_count(TIA=int) >>
+    ...     (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()) >>
+    ...     dp.t.then_count() >>
     ...     base_dl
     ... )
     ...
@@ -177,12 +178,12 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
 
     :example:
 
-    >>> from opendp.mod import Transformation, enable_features
-    >>> enable_features("contrib")
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib")
     ...
     >>> # create an instance of Transformation using a constructor from the trans module
-    >>> from opendp.transformations import make_count
-    >>> count: Transformation = make_count(TIA=int)
+    >>> input_space = (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
+    >>> count: dp.Transformation = input_space >> dp.t.then_count()
     ...
     >>> # invoke the transformation (invoke and __call__ are equivalent)
     >>> count.invoke([1, 2, 3])  # -> 3  # doctest: +SKIP
@@ -193,10 +194,9 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     >>> assert count.check(1, 1)
     ...
     >>> # chain with more transformations from the trans module
-    >>> from opendp.transformations import make_split_lines, part_cast_default
     >>> chained = (
-    ...     make_split_lines() >>
-    ...     part_cast_default(TOA=int) >>
+    ...     dp.t.make_split_lines() >>
+    ...     dp.t.then_cast_default(TOA=int) >>
     ...     count
     ... )
     ...
@@ -587,15 +587,15 @@ def binary_search_chain(
     >>> # The majority of the chain only needs to be defined once.
     >>> pre = (
     ...     dp.space_of(List[float]) >>
-    ...     dp.t.part_clamp(bounds=(0., 1.)) >>
-    ...     dp.t.make_resize(size=10, atom_domain=dp.atom_domain((0., 1.)), constant=0.) >>
-    ...     dp.t.make_sized_bounded_mean(size=10, bounds=(0., 1.))
+    ...     dp.t.then_clamp(bounds=(0., 1.)) >>
+    ...     dp.t.then_resize(size=10, constant=0.) >>
+    ...     dp.t.then_mean()
     ... )
     ...
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.
     >>> # The lambda function returns the complete computation chain when given a single numeric parameter.
     >>> chain = dp.binary_search_chain(
-    ...     lambda s: pre >> dp.m.part_base_laplace(scale=s), 
+    ...     lambda s: pre >> dp.m.then_base_laplace(scale=s), 
     ...     d_in=1, d_out=1.)
     ...
     >>> # The resulting computation chain is always (`d_in`, `d_out`)-close, but we can still double-check:
@@ -606,7 +606,8 @@ def binary_search_chain(
     It should have the widest possible admissible clamping bounds (-b, b).
 
     >>> def make_sum(b):
-    ...     return dp.t.make_sized_bounded_sum(10_000, (-b, b)) >> dp.m.part_base_discrete_laplace(100.)
+    ...     space = dp.vector_domain(dp.atom_domain((-b, b)), 10_000), dp.symmetric_distance()
+    ...     return space >> dp.t.then_sum() >> dp.m.then_laplace(100.)
     ...
     >>> # `meas` is a Measurement with the widest possible clamping bounds.
     >>> meas = dp.binary_search_chain(make_sum, d_in=2, d_out=1., bounds=(0, 10_000))
@@ -664,8 +665,9 @@ def binary_search_param(
     >>> # we then write a function that make a computation chain with a given data size
     >>> def make_mean(data_size):
     ...    return (
-    ...        dp.t.make_sized_bounded_mean(data_size, (0., 500_000.)) >> 
-    ...        dp.m.part_base_laplace(necessary_scale)
+    ...        (dp.vector_domain(dp.atom_domain(bounds=(0., 500_000.)), data_size), dp.symmetric_distance()) >>
+    ...        dp.t.then_mean() >> 
+    ...        dp.m.then_base_laplace(necessary_scale)
     ...    )
     ...
     >>> # solve for the smallest dataset size that admits a (2 neighboring, 1. epsilon)-close measurement
@@ -715,20 +717,17 @@ def binary_search(
 
     .. testsetup:: *
 
-        from opendp.typing import L2Distance, VectorDomain, AtomDomain
-        from opendp.transformations import make_sized_bounded_mean
-        from opendp.measurements import make_base_gaussian
-        from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP
-        from opendp.mod import enable_features
-        enable_features("contrib", "floating-point")
+        import opendp.prelude as dp
+        dp.enable_features("contrib", "floating-point")
 
     >>> # build a histogram that emits float counts
-    >>> dp_mean = make_fix_delta(make_zCDP_to_approxDP(
-    ...     make_sized_bounded_mean(1000, bounds=(0., 100.)) >> make_base_gaussian(1.)), 
+    >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 100.)), 1000), dp.symmetric_distance()
+    >>> dp_mean = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(
+    ...     input_space >> dp.t.then_mean() >> dp.m.then_gaussian(1.)), 
     ...     1e-8
     ... )
     ...
-    >>> binary_search(
+    >>> dp.binary_search(
     ...     lambda d_out: dp_mean.check(3, (d_out, 1e-8)), 
     ...     bounds = (0., 1.))
     0.5235561269546629
@@ -736,9 +735,11 @@ def binary_search(
     Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.
 
     >>> from opendp.transformations import make_count_by_categories
-    >>> histogram = make_count_by_categories(categories=["a"], MO=L2Distance[int])
+    >>> histogram = dp.t.make_count_by_categories(
+    ...     dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance(),
+    ...     categories=["a"], MO=dp.L2Distance[int])
     ...
-    >>> binary_search(
+    >>> dp.binary_search(
     ...     lambda d_out: histogram.check(3, d_out), 
     ...     bounds = (0, 100))
     3

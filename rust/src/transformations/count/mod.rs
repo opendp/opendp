@@ -13,16 +13,23 @@ use crate::error::*;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance, Lp};
 use crate::traits::{CollectionSize, Float, Hashable, Number, Primitive};
 
-#[bootstrap(features("contrib"), generics(TO(default = "int")))]
+#[bootstrap(features("contrib"), generics(TIA(suppress), TO(default = "int")))]
 /// Make a Transformation that computes a count of the number of records in data.
 ///
 /// # Citations
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 ///
+/// # Arguments
+/// * `input_domain` - Domain of the data type to be privatized.
+/// * `input_metric` - Metric of the data type to be privatized.
+/// 
 /// # Generics
 /// * `TIA` - Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
 /// * `TO` - Output Type. Must be numeric.
-pub fn make_count<TIA, TO>() -> Fallible<
+pub fn make_count<TIA, TO>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: SymmetricDistance,
+) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TIA>>,
         AtomDomain<TO>,
@@ -35,7 +42,7 @@ where
     TO: Number,
 {
     Transformation::new(
-        VectorDomain::new(AtomDomain::default()),
+        input_domain,
         AtomDomain::default(),
         // think of this as: min(arg.len(), TO::max_value())
         Function::new(move |arg: &Vec<TIA>| {
@@ -45,13 +52,13 @@ where
             // cast to TO, and if cast fails (due to overflow) fill with largest value
             TO::exact_int_cast(size).unwrap_or(TO::MAX_CONSECUTIVE)
         }),
-        SymmetricDistance::default(),
+        input_metric,
         AbsoluteDistance::default(),
         StabilityMap::new_from_constant(TO::one()),
     )
 }
 
-#[bootstrap(features("contrib"), generics(TO(default = "int")))]
+#[bootstrap(features("contrib"), generics(TIA(suppress), TO(default = "int")))]
 /// Make a Transformation that computes a count of the number of unique, distinct records in data.
 ///
 /// # Citations
@@ -60,7 +67,10 @@ where
 /// # Generics
 /// * `TIA` - Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
 /// * `TO` - Output Type. Must be numeric.
-pub fn make_count_distinct<TIA, TO>() -> Fallible<
+pub fn make_count_distinct<TIA, TO>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: SymmetricDistance,
+) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TIA>>,
         AtomDomain<TO>,
@@ -73,13 +83,13 @@ where
     TO: Number,
 {
     Transformation::new(
-        VectorDomain::new(AtomDomain::default()),
+        input_domain,
         AtomDomain::default(),
         Function::new(move |arg: &Vec<TIA>| {
             let len = arg.iter().collect::<HashSet<_>>().len();
             TO::exact_int_cast(len).unwrap_or(TO::MAX_CONSECUTIVE)
         }),
-        SymmetricDistance::default(),
+        input_metric,
         AbsoluteDistance::default(),
         StabilityMap::new_from_constant(TO::one()),
     )
@@ -100,8 +110,10 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for Lp<P, AbsoluteDist
     arguments(null_category(default = true)),
     generics(
         MO(hint = "SensitivityMetric", default = "L1Distance<int>"),
+        TIA(suppress),
         TOA(default = "int")
-    )
+    ),
+    derived_types(TIA = "$get_atom(get_type(input_domain))")
 )]
 /// Make a Transformation that computes the number of times each category appears in the data.
 /// This assumes that the category set is known.
@@ -120,8 +132,10 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for Lp<P, AbsoluteDist
 /// * `TOA` - Atomic Output Type that is numeric.
 ///
 /// # Returns
-/// The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
+/// The carrier type is `Vec<TOA>`, a vector of the counts (`TOA`).
 pub fn make_count_by_categories<MO, TIA, TOA>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: SymmetricDistance,
     categories: Vec<TIA>,
     null_category: bool,
 ) -> Fallible<
@@ -145,7 +159,7 @@ where
         return fallible!(MakeTransformation, "categories must be distinct");
     }
     Transformation::new(
-        VectorDomain::new(AtomDomain::default()),
+        input_domain,
         VectorDomain::new(AtomDomain::default()),
         Function::new(move |data: &Vec<TIA>| {
             let mut counts = categories
@@ -176,7 +190,7 @@ where
                 })
                 .collect()
         }),
-        SymmetricDistance::default(),
+        input_metric,
         MO::default(),
         StabilityMap::new_from_constant(MO::get_stability_constant()),
     )
@@ -197,7 +211,7 @@ impl<const P: usize, Q: One> CountByConstant<Q> for Lp<P, AbsoluteDistance<Q>> {
 
 #[bootstrap(
     features("contrib"),
-    generics(MO(hint = "SensitivityMetric"), TV(default = "int"))
+    generics(MO(hint = "SensitivityMetric"), TK(suppress), TV(default = "int"))
 )]
 /// Make a Transformation that computes the count of each unique value in data.
 /// This assumes that the category set is unknown.
@@ -212,7 +226,10 @@ impl<const P: usize, Q: One> CountByConstant<Q> for Lp<P, AbsoluteDistance<Q>> {
 ///
 /// # Returns
 /// The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
-pub fn make_count_by<MO, TK, TV>() -> Fallible<
+pub fn make_count_by<MO, TK, TV>(
+    input_domain: VectorDomain<AtomDomain<TK>>,
+    input_metric: SymmetricDistance,
+) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TK>>,
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
@@ -229,8 +246,8 @@ where
     (MapDomain<AtomDomain<TK>, AtomDomain<TV>>, MO): MetricSpace,
 {
     Transformation::new(
-        VectorDomain::new(AtomDomain::default()),
-        MapDomain::new(AtomDomain::default(), AtomDomain::default()),
+        input_domain.clone(),
+        MapDomain::new(input_domain.element_domain, AtomDomain::default()),
         Function::new(move |data: &Vec<TK>| {
             let mut counts = HashMap::new();
             data.iter().for_each(|v| {
@@ -239,7 +256,7 @@ where
             });
             counts
         }),
-        SymmetricDistance::default(),
+        input_metric,
         MO::default(),
         StabilityMap::new_from_constant(MO::get_stability_constant()?),
     )
@@ -253,36 +270,36 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_count_l1() {
-        let transformation = make_count::<i64, u32>().unwrap_test();
+    fn test_make_count() -> Fallible<()> {
+        let input_domain = VectorDomain::new(AtomDomain::default());
+        let input_metric = SymmetricDistance::default();
+        let transformation = make_count::<_, i32>(input_domain, input_metric)?;
         let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.invoke(&arg).unwrap_test();
+        let ret = transformation.invoke(&arg)?;
         let expected = 5;
         assert_eq!(ret, expected);
+        Ok(())
     }
 
     #[test]
-    fn test_make_count_l2() {
-        let transformation = make_count::<u32, i32>().unwrap_test();
-        let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.invoke(&arg).unwrap_test();
-        let expected = 5;
-        assert_eq!(ret, expected);
-    }
-
-    #[test]
-    fn test_make_count_distinct() {
-        let transformation = make_count_distinct::<_, i32>().unwrap_test();
+    fn test_make_count_distinct() -> Fallible<()> {
+        let transformation = make_count_distinct::<_, i32>(
+            VectorDomain::new(AtomDomain::default()), SymmetricDistance::default(),
+        )?;
         let arg = vec![1, 1, 3, 4, 4];
-        let ret = transformation.invoke(&arg).unwrap_test();
+        let ret = transformation.invoke(&arg)?;
         let expected = 3;
         assert_eq!(ret, expected);
+        Ok(())
     }
 
     #[test]
     fn test_make_count_by_categories() {
         let transformation =
-            make_count_by_categories::<L2Distance<f64>, i64, i8>(vec![2, 1, 3], true).unwrap_test();
+            make_count_by_categories::<L2Distance<f64>, i64, i8>(
+                VectorDomain::new(AtomDomain::default()),
+                SymmetricDistance::default(),
+                vec![2, 1, 3], true).unwrap_test();
         let arg = vec![1, 2, 3, 4, 5, 1, 1, 1, 2];
         let ret = transformation.invoke(&arg).unwrap_test();
         let expected = vec![2, 4, 1, 2];
@@ -297,7 +314,10 @@ mod tests {
         let arg = vec![
             true, true, true, false, true, false, false, false, true, true,
         ];
-        let transformation = make_count_by::<L2Distance<f64>, bool, i8>()?;
+        let transformation = make_count_by::<L2Distance<f64>, bool, i8>(
+            VectorDomain::new(AtomDomain::default()),
+            SymmetricDistance::default(),
+        )?;
         let ret = transformation.invoke(&arg)?;
         let mut expected = HashMap::new();
         expected.insert(true, 6);

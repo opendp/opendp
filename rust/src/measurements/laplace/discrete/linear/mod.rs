@@ -3,13 +3,14 @@ mod ffi;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Measurement, MetricSpace, PrivacyMap};
-use crate::error::*;
-use crate::measures::MaxDivergence;
-use crate::traits::samplers::SampleDiscreteLaplaceLinear;
-use crate::traits::{Float, InfCast, Integer};
+use crate::{
+    core::{Measurement, MetricSpace, PrivacyMap},
+    error::Fallible,
+    measures::MaxDivergence,
+    traits::{samplers::SampleDiscreteLaplaceLinear, Float, InfCast, Integer},
+};
 
-use super::DiscreteLaplaceDomain;
+use super::BaseDiscreteLaplaceDomain;
 
 #[bootstrap(
     features("contrib"),
@@ -41,7 +42,7 @@ use super::DiscreteLaplaceDomain;
 /// # Arguments
 /// * `input_domain` - Domain of the data type to be privatized.
 /// * `input_metric` - Metric of the data type to be privatized.
-/// * `scale` - Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
+/// * `scale` - Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
 /// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
 ///
 /// # Generics
@@ -54,7 +55,7 @@ pub fn make_base_discrete_laplace_linear<D, QO>(
     bounds: Option<(D::Atom, D::Atom)>,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
-    D: DiscreteLaplaceDomain,
+    D: BaseDiscreteLaplaceDomain,
     (D, D::InputMetric): MetricSpace,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
@@ -113,7 +114,7 @@ where
 /// # Arguments
 /// * `input_domain` - Domain of the data type to be privatized.
 /// * `input_metric` - Metric of the data type to be privatized.
-/// * `scale` - Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
+/// * `scale` - Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
 /// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
 ///
 /// # Arguments
@@ -126,7 +127,7 @@ pub fn make_base_geometric<D, QO>(
     bounds: Option<(D::Atom, D::Atom)>,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
-    D: DiscreteLaplaceDomain,
+    D: BaseDiscreteLaplaceDomain,
     (D, D::InputMetric): MetricSpace,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,

@@ -45,9 +45,9 @@ pub mod samplers;
 /// // same thing, but annotate types in a different way
 /// assert_eq!(example_map::<f32, i8>(3.14159, 2).ok(), Some(8));
 /// ```
-pub trait DistanceConstant<TI>: 'static + InfCast<TI> + InfMul + TotalOrd {}
+pub trait DistanceConstant<TI>: 'static + InfCast<TI> + InfMul + TotalOrd + Zero {}
 
-impl<TI, TO> DistanceConstant<TI> for TO where TO: 'static + InfCast<TI> + InfMul + TotalOrd {}
+impl<TI, TO> DistanceConstant<TI> for TO where TO: 'static + InfCast<TI> + InfMul + TotalOrd + Zero {}
 
 /// A shorthand to indicate the set of types that implement the most common traits, like Clone and Debug.
 ///

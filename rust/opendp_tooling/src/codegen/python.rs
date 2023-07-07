@@ -42,17 +42,19 @@ fn generate_module(
 ) -> String {
     let all = module
         .iter()
+        .filter(|func| func.ffi)
         .map(|func| format!("    \"{}\"", func.name))
         .chain(
             module
                 .iter()
-                .filter(|func| func.supports_partial)
-                .map(|func| format!("    \"{}\"", func.name.replacen("make_", "part_", 1))),
+                .filter(|func| func.supports_partial && func.ffi)
+                .map(|func| format!("    \"{}\"", func.name.replacen("make_", "then_", 1))),
         )
         .collect::<Vec<_>>()
         .join(",\n");
     let functions = module
         .into_iter()
+        .filter(|func| func.ffi)
         .map(|func| generate_function(&module_name, &func, typemap, hierarchy))
         .collect::<Vec<String>>()
         .join("\n");
@@ -106,18 +108,18 @@ fn generate_function(
     let docstring = indent(generate_docstring(func, hierarchy));
     let body = indent(generate_body(module_name, func, typemap));
 
-    let part_func = if func.supports_partial {
+    let then_func = if func.supports_partial {
         format!(
             r#"
 
-def {part_name}(
-{part_args}
+def {then_name}(
+{then_args}
 ):
     return PartialConstructor(lambda {dom_met}: {name}(
 {args}))
 "#,
-            part_name = func.name.replacen("make_", "part_", 1),
-            part_args = indent(args[2..].join(",\n")),
+            then_name = func.name.replacen("make_", "then_", 1),
+            then_args = indent(args[2..].join(",\n")),
             dom_met = func.args[..2]
                 .iter()
                 .map(|arg| arg.name())
@@ -143,7 +145,7 @@ def {func_name}(
 {args}
 ){sig_return}:
 {docstring}
-{body}{part_func}
+{body}{then_func}
 "#,
         func_name = func.name,
         args = indent(args.join(",\n"))

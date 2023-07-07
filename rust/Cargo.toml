@@ -75,7 +75,7 @@ ffi = ["lazy_static"]
 derive = ["opendp_tooling", "opendp_derive/full", "syn", "proc-macro2"]
 # generate python language bindings
 bindings-python = ["ffi", "derive"]
-# generate "part_xxx" functions in Rust for "make_xxx" functions whose first two arguments are the metric space
+# generate "then_xxx" functions in Rust for "make_xxx" functions whose first two arguments are the metric space
 partials = ["derive", "opendp_derive/partials"]
 
 [dev-dependencies]

@@ -11,7 +11,7 @@ use crate::{
     traits::{samplers::sample_discrete_laplace, InfCast},
 };
 
-use super::DiscreteLaplaceDomain;
+use super::BaseDiscreteLaplaceDomain;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -35,7 +35,7 @@ mod ffi;
 /// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
 ///
 /// # Arguments
-/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 ///
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
@@ -46,7 +46,7 @@ pub fn make_base_discrete_laplace_cks20<D, QO>(
     scale: QO,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
-    D: DiscreteLaplaceDomain,
+    D: BaseDiscreteLaplaceDomain,
     D::Atom: crate::traits::Integer,
     (D, D::InputMetric): MetricSpace,
     QO: crate::traits::Float + InfCast<D::Atom>,
@@ -103,7 +103,7 @@ where
 /// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
 ///
 /// # Arguments
-/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 ///
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<Integer>>` or `AtomDomain<Integer>`
@@ -111,7 +111,7 @@ pub fn make_base_discrete_laplace_cks20_rug<D>(
     scale: Rational,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<Rational>>>
 where
-    D: DiscreteLaplaceDomain<Atom = Integer>,
+    D: BaseDiscreteLaplaceDomain<Atom = Integer>,
     (D, D::InputMetric): MetricSpace,
 {
     if scale <= 0 {

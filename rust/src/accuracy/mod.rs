@@ -524,7 +524,9 @@ pub mod test {
         let accuracy = 1.0;
         let theoretical_alpha = 0.05;
         let scale = accuracy_to_gaussian_scale(accuracy, theoretical_alpha)?;
-        let base_gaussian = make_base_gaussian::<AtomDomain<f64>, ZeroConcentratedDivergence<_>>(
+        let base_gaussian = make_base_gaussian::<_, ZeroConcentratedDivergence<_>>(
+            AtomDomain::default(),
+            AbsoluteDistance::default(),
             scale,
             Some(-100),
         )?;
@@ -572,7 +574,9 @@ pub mod test {
 
         println!("scale: {}", scale);
         let base_dg =
-            make_base_discrete_gaussian::<AtomDomain<i8>, ZeroConcentratedDivergence<f64>, i32>(
+            make_base_discrete_gaussian::<_, ZeroConcentratedDivergence<f64>, i32>(
+                AtomDomain::<i8>::default(),
+                AbsoluteDistance::default(),  
                 scale,
             )?;
         let n = 50_000;

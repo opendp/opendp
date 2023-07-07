@@ -6,22 +6,24 @@ use rug::{Integer, Rational};
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
-use crate::ffi::any::AnyMeasurement;
+use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::Type;
 use crate::measurements::{
-    make_base_discrete_gaussian, DiscreteGaussianDomain, DiscreteGaussianMeasure,
+    make_base_discrete_gaussian, BaseDiscreteGaussianDomain, DiscreteGaussianMeasure,
 };
 use crate::measures::ZeroConcentratedDivergence;
 use crate::traits::{CheckAtom, Float, InfCast, Number};
 
 #[no_mangle]
 pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
     scale: *const c_void,
-    D: *const c_char,
     MO: *const c_char,
-    QI: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<T, QI, QO>(
+        input_domain: &AnyDomain,
+        input_metric: &AnyMetric,
         scale: *const c_void,
         D: Type,
         MO: Type,
@@ -35,9 +37,13 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
         QO: Float + InfCast<QI>,
         Rational: TryFrom<QO>,
     {
-        fn monomorphize2<D, MO, QI>(scale: MO::Atom) -> FfiResult<*mut AnyMeasurement>
+        fn monomorphize2<D, MO, QI>(
+            input_domain: &AnyDomain,
+            input_metric: &AnyMetric,
+            scale: MO::Atom,
+        ) -> FfiResult<*mut AnyMeasurement>
         where
-            D: 'static + DiscreteGaussianDomain<QI>,
+            D: 'static + BaseDiscreteGaussianDomain<QI>,
             (D, D::InputMetric): MetricSpace,
             Integer: From<D::Atom> + SaturatingCast<D::Atom>,
 
@@ -46,19 +52,23 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
 
             QI: Number,
         {
-            make_base_discrete_gaussian::<D, MO, QI>(scale).into_any()
+            let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();
+            let input_metric = try_!(input_metric.downcast_ref::<D::InputMetric>()).clone();
+            make_base_discrete_gaussian::<D, MO, QI>(input_domain, input_metric, scale).into_any()
         }
         let scale = *try_as_ref!(scale as *const QO);
         dispatch!(monomorphize2, [
             (D, [VectorDomain<AtomDomain<T>>, AtomDomain<T>]),
             (MO, [ZeroConcentratedDivergence<QO>]),
             (QI, [QI])
-        ], (scale))
+        ], (input_domain, input_metric, scale))
     }
 
-    let D = try_!(Type::try_from(D));
+    let input_domain = try_as_ref!(input_domain);
+    let input_metric = try_as_ref!(input_metric);
+    let D = input_domain.type_.clone();
     let MO = try_!(Type::try_from(MO));
-    let QI = try_!(Type::try_from(QI));
+    let QI = input_metric.distance_type.clone();
     let T = try_!(D.get_atom());
     let QO = try_!(MO.get_atom());
 
@@ -66,7 +76,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
         (T, @integers),
         (QI, @numbers),
         (QO, @floats)
-    ], (scale, D, MO, QI))
+    ], (input_domain, input_metric, scale, D, MO, QI))
 }
 
 #[cfg(test)]
@@ -76,16 +86,17 @@ mod tests {
     use crate::ffi::any::{AnyObject, Downcast};
     use crate::ffi::util;
     use crate::ffi::util::ToCharP;
+    use crate::metrics::AbsoluteDistance;
 
     use super::*;
 
     #[test]
     fn test_make_base_discrete_gaussian() -> Fallible<()> {
         let measurement = Result::from(opendp_measurements__make_base_discrete_gaussian(
+            AnyDomain::new_raw(AtomDomain::<i32>::default()),
+            AnyMetric::new_raw(AbsoluteDistance::<f64>::default()),
             util::into_raw(0.0) as *const c_void,
-            "AtomDomain<i32>".to_char_p(),
             "ZeroConcentratedDivergence<f64>".to_char_p(),
-            "i32".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(99);
         let res = core::opendp_core__measurement_invoke(&measurement, arg);

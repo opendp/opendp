@@ -8,7 +8,7 @@ use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::{
     domains::{AtomDomain, VectorDomain},
     ffi::util::Type,
-    measurements::{make_base_discrete_laplace_cks20, DiscreteLaplaceDomain},
+    measurements::{make_base_discrete_laplace_cks20, BaseDiscreteLaplaceDomain},
     traits::InfCast,
 };
 
@@ -38,7 +38,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
             scale: QO,
         ) -> FfiResult<*mut AnyMeasurement>
         where
-            D: 'static + DiscreteLaplaceDomain,
+            D: 'static + BaseDiscreteLaplaceDomain,
             D::Atom: crate::traits::Integer,
             (D, D::InputMetric): MetricSpace,
             QO: crate::traits::Float + InfCast<D::Atom>,

@@ -273,22 +273,20 @@ where
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "use-mpfr"))]
 mod tests_shr {
-    use crate::measurements::part_base_discrete_laplace;
-    use crate::transformations::{
-        make_bounded_sum, part_cast_default, part_clamp, make_split_lines,
-    };
+    use crate::measurements::then_base_discrete_laplace;
+    use crate::transformations::{make_split_lines, then_cast_default, then_clamp, then_sum};
 
     use super::*;
 
     #[test]
     fn test_shr() -> Fallible<()> {
         (make_split_lines()?
-            >> part_cast_default()
-            >> part_clamp((0, 1))
-            >> make_bounded_sum((0, 1))?
-            >> part_base_discrete_laplace(1.))
+            >> then_cast_default()
+            >> then_clamp((0, 1))
+            >> then_sum()
+            >> then_base_discrete_laplace(1.))
         .map(|_| ())
     }
 }

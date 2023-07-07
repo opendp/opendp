@@ -1,10 +1,6 @@
-from opendp.transformations import *
-from opendp.measurements import *
-from opendp.combinators import *
+import opendp.prelude as dp
 
-from opendp.typing import SymmetricDistance, VectorDomain, AtomDomain
-from opendp.mod import enable_features
-enable_features("contrib")
+dp.enable_features("contrib", "honest-but-curious")
 
 # used for testing a successful release
 
@@ -12,36 +8,36 @@ enable_features("contrib")
 def main():
 
     # HELLO WORLD
-    identity = make_identity(D=VectorDomain[AtomDomain[str]], M=SymmetricDistance)
+    identity = dp.t.make_identity(domain=dp.vector_domain(dp.atom_domain(T=str)), metric=dp.symmetric_distance())
     arg = ["hello, world!"]
     res = identity(arg)
     print(res)
 
     # SUMMARY STATS
     # Parse dataframe
-    parse_dataframe = make_split_dataframe(separator=",", col_names=["A", "B", "C"])
+    parse_dataframe = dp.t.make_split_dataframe(separator=",", col_names=["A", "B", "C"])
 
     # Noisy sum, col 1
     noisy_sum_1 = (
-        make_select_column(key="B", TOA=str) >>
-        part_cast_default(TOA=int) >>
-        part_clamp(bounds=(0, 10)) >>
-        make_bounded_sum(bounds=(0, 10)) >>
-        make_base_discrete_laplace(scale=1.0)
+        dp.t.make_select_column(key="B", TOA=str) >>
+        dp.t.then_cast_default(TOA=int) >>
+        dp.t.then_clamp(bounds=(0, 10)) >>
+        dp.t.then_sum() >>
+        dp.m.then_base_discrete_laplace(scale=1.0)
     )
 
     # Count, col 2
     noisy_count_2 = (
-        make_select_column(key="C", TOA=str) >>
-        part_cast_default(TOA=float) >>
-        make_count(TIA=float) >>
-        make_base_discrete_laplace(scale=1.0)
+        dp.t.make_select_column(key="C", TOA=str) >>
+        dp.t.then_cast_default(TOA=float) >>
+        dp.t.then_count() >>
+        dp.m.then_base_discrete_laplace(scale=1.0)
     )
 
     arg = "ant, 1, 1.1\nbat, 2, 2.2\ncat, 3, 3.3"
 
     # Compose & chain
-    everything = parse_dataframe >> make_basic_composition([noisy_sum_1, noisy_count_2])
+    everything = parse_dataframe >> dp.c.make_basic_composition([noisy_sum_1, noisy_count_2])
     print(everything(arg))
 
 

@@ -5,7 +5,7 @@ use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::Type;
-use crate::measurements::{make_base_discrete_laplace, DiscreteLaplaceDomain};
+use crate::measurements::{make_base_discrete_laplace, BaseDiscreteLaplaceDomain};
 use crate::traits::samplers::SampleDiscreteLaplaceLinear;
 use crate::traits::{Float, InfCast, Integer};
 use crate::{err, try_, try_as_ref};
@@ -36,7 +36,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace(
             scale: QO,
         ) -> FfiResult<*mut AnyMeasurement>
         where
-            D: 'static + DiscreteLaplaceDomain,
+            D: 'static + BaseDiscreteLaplaceDomain,
             (D, D::InputMetric): MetricSpace,
             D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
             QO: Float + InfCast<D::Atom> + InfCast<D::Atom>,
@@ -71,7 +71,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace(
             scale: QO,
         ) -> FfiResult<*mut AnyMeasurement>
         where
-            D: 'static + DiscreteLaplaceDomain,
+            D: 'static + BaseDiscreteLaplaceDomain,
             (D, D::InputMetric): MetricSpace,
             D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
             QO: Float + InfCast<D::Atom>,

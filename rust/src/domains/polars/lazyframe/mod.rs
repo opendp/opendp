@@ -9,7 +9,7 @@ use crate::{
     core::MetricSpace,
     domains::{AtomDomain, OptionDomain, SeriesDomain},
     error::Fallible,
-    domains::DatasetMetric,
+    transformations::DatasetMetric,
 };
 
 #[cfg(feature = "ffi")]
@@ -133,6 +133,11 @@ impl LazyFrameDomain {
     pub fn try_column<I: AsRef<str>>(&self, name: I) -> Fallible<&SeriesDomain> {
         self.column(&name)
             .ok_or_else(|| err!(FailedFunction, "{} is not in dataframe", name.as_ref()))
+    }
+    pub fn try_column_mut<I: AsRef<str>>(&mut self, name: I) -> Fallible<&mut SeriesDomain> {
+        let series_index = self.column_index(name.as_ref())
+            .ok_or_else(|| err!(FailedFunction, "{} is not in dataframe", name.as_ref()))?;
+        Ok(&mut self.series_domains[series_index])
     }
 
     fn check_dtype_matches<I: AsRef<str>>(&self, name: I, dtype: &DataType) -> Fallible<()> {

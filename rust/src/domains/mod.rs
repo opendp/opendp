@@ -136,6 +136,20 @@ impl<T: CheckAtom + TotalOrd> AtomDomain<T> {
             nullable: false,
         })
     }
+
+    pub fn get_closed_bounds(&self) -> Fallible<(T, T)> {
+        let bounds = self.bounds.as_ref().ok_or_else(|| {
+            err!(
+                MakeTransformation,
+                "input domain must consist of bounded data. Either specify bounds in the input domain or use make_clamp."
+            )
+        })?;
+
+        match (&bounds.lower, &bounds.upper) {
+            (Bound::Included(l), Bound::Included(u)) => Ok((l.clone(), u.clone())),
+            _ => fallible!(MakeTransformation, "bounds are not closed"),
+        }
+    }
 }
 
 impl<T: CheckAtom> Domain for AtomDomain<T> {
@@ -227,6 +241,14 @@ impl<T: TotalOrd> Bounds<T> {
             }
         }
         Ok(Bounds { lower, upper })
+    }
+}
+impl<T: Clone> Bounds<T> {
+    pub fn get_closed(&self) -> Fallible<(T, T)> {
+        match (&self.lower, &self.upper) {
+            (Bound::Included(lower), Bound::Included(upper)) => Ok((lower.clone(), upper.clone())),
+            _ => fallible!(MakeDomain, "Bounds are not closed"),
+        }
     }
 }
 impl<T: Debug> Debug for Bounds<T> {

@@ -31,21 +31,21 @@ Postprocessing functionality is provided by the :py:func:`opendp.combinators.mak
 Since the outer Transformation is postprocessing, the metrics and stability map of the outer Transformation are ignored.
 In this case, it is only necessary for the types to conform.
 
-In the following example we chain :py:func:`opendp.measurements.make_base_discrete_laplace` with :py:func:`opendp.transformations.make_bounded_sum`.
+In the following example we chain :py:func:`opendp.measurements.make_base_discrete_laplace` with :py:func:`opendp.transformations.make_sum`.
 
 .. doctest::
 
-    >>> from opendp.transformations import make_bounded_sum
-    >>> from opendp.measurements import make_base_discrete_laplace
-    >>> from opendp.combinators import make_chain_mt
-    >>> from opendp.mod import enable_features
-    >>> enable_features("contrib", "floating-point")
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib", "floating-point")
     ...
     >>> # call a constructor to produce a transformation
-    >>> bounded_sum = make_bounded_sum(bounds=(0, 1))
+    >>> sum_trans = dp.t.make_sum(
+    ...     dp.vector_domain(dp.atom_domain(bounds=(0, 1))), 
+    ...     dp.symmetric_distance()
+    ... )
     >>> # call a constructor to produce a measurement
-    >>> base_dl = make_base_discrete_laplace(bounded_sum.output_domain, bounded_sum.output_metric, scale=1.0)
-    >>> noisy_sum = make_chain_mt(base_dl, bounded_sum)
+    >>> lap_meas = dp.m.make_laplace(sum_trans.output_domain, sum_trans.output_metric, scale=1.0)
+    >>> noisy_sum = dp.c.make_chain_mt(lap_meas, sum_trans)
     ...
     >>> # investigate the privacy relation
     >>> symmetric_distance = 1
@@ -63,7 +63,7 @@ and :func:`make_chain_tm <opendp.combinators.make_chain_tm>`.
 
 .. doctest::
 
-    >>> noisy_sum = bounded_sum >> base_dl
+    >>> noisy_sum_meas = sum_trans >> lap_meas
 
 .. _chaining-mismatch:
 
@@ -74,21 +74,26 @@ In this example the chaining was successful because:
 
 Chaining fails if we were to adjust the domains such that they won't match.
 In the below example, the adjustment is subtle, but the bounds were adjusted to floats.
-``make_bounded_sum`` is equally capable of summing floats,
-but the chaining fails because the sum emits floats and the discrete laplace mechanism expects integers.
+``make_sum`` is equally capable of summing floats,
+but the chaining fails because the sum emits floats and the discrete Laplace mechanism expects integers.
 
 .. doctest::
 
     >>> from opendp.mod import OpenDPException
+    >>> # call a constructor to produce a transformation, but this time with float bounds
+    >>> sum_trans = dp.t.make_sum(
+    ...     dp.vector_domain(dp.atom_domain(bounds=(0., 1.))), 
+    ...     dp.symmetric_distance()
+    ... )
     >>> try:
-    ...     make_bounded_sum(bounds=(0., 1.)) >> base_dl
+    ...     sum_trans >> lap_meas
     ... except OpenDPException as err:
     ...     print(err.message[:-1])
     Intermediate domains don't match. See https://github.com/opendp/opendp/discussions/297
         output_domain: AtomDomain(T=f64)
         input_domain:  AtomDomain(T=i32)
 
-Note that ``noisy_sum``'s input domain and input metric come from ``bounded_sum``'s input domain and input metric.
+Note that ``noisy_sum_trans``'s input domain and input metric come from ``sum_trans``'s input domain and input metric.
 This is intended to enable further chaining with preprocessors like :py:func:`make_cast <opendp.transformations.make_cast>`, :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`, :py:func:`make_clamp <opendp.transformations.make_clamp>` and :py:func:`make_resize <opendp.transformations.make_resize>`.
 See the section on :ref:`transformation-constructors` for more information on how to preprocess data in OpenDP.
 
@@ -148,11 +153,12 @@ This is useful if you want to compose pure-DP measurements with approximate-DP m
 
 .. doctest::
 
-    >>> from opendp.measurements import make_base_laplace
+    >>> from opendp.measurements import then_base_laplace
     >>> from opendp.combinators import make_pureDP_to_fixed_approxDP
     >>> from opendp.domains import atom_domain
     >>> from opendp.metrics import absolute_distance
-    >>> meas_pureDP = make_base_laplace(atom_domain(T=float), absolute_distance(T=float), scale=10.)
+    >>> input_space = atom_domain(T=float), absolute_distance(T=float)
+    >>> meas_pureDP = input_space >> then_base_laplace(scale=10.)
     >>> # convert the output measure to `FixedSmoothedMaxDivergence`
     >>> meas_fixed_approxDP = make_pureDP_to_fixed_approxDP(meas_pureDP)
     ...
@@ -167,9 +173,9 @@ Similarly, :func:`opendp.combinators.make_pureDP_to_zCDP` is used for casting an
 
 .. doctest::
 
-    >>> from opendp.measurements import make_base_gaussian
+    >>> from opendp.measurements import then_base_gaussian
     >>> from opendp.combinators import make_zCDP_to_approxDP
-    >>> meas_zCDP = make_base_gaussian(scale=0.5)
+    >>> meas_zCDP = input_space >> then_base_gaussian(scale=0.5)
     >>> # convert the output measure to `SmoothedMaxDivergence`
     >>> meas_approxDP = make_zCDP_to_approxDP(meas_zCDP)
     ...
@@ -215,9 +221,8 @@ The resulting measurement expects the size of the input dataset to be 10.
 
 .. doctest::
 
-    >>> from opendp.transformations import make_sized_bounded_mean
-    >>> from opendp.measurements import part_base_laplace
-    >>> meas = make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> part_base_laplace(scale=0.5)
+    >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=10), dp.symmetric_distance()
+    >>> meas = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
     >>> print("standard mean:", amplified([1.] * 10)) # -> 1.03 # doctest: +SKIP
 
 We can now use the amplification combinator to construct an amplified measurement.
@@ -301,14 +306,14 @@ The resulting Transformation may be used interchangeably with those constructed 
 .. doctest::
 
     >>> from opendp.transformations import *
-    >>> from opendp.measurements import part_base_discrete_laplace
+    >>> from opendp.measurements import then_base_discrete_laplace
     >>> trans = (
     ...     (vector_domain(atom_domain(T=str)), symmetric_distance())
-    ...     >> part_cast_default(TOA=int)
+    ...     >> then_cast_default(TOA=int)
     ...     >> make_repeat(2)  # our custom transformation
-    ...     >> part_clamp((1, 2))
-    ...     >> make_bounded_sum((1, 2))
-    ...     >> part_base_discrete_laplace(1.0)
+    ...     >> then_clamp((1, 2))
+    ...     >> then_sum()
+    ...     >> then_base_discrete_laplace(1.0)
     ... )
     ...
     >>> release = trans(["0", "1", "2", "3"])

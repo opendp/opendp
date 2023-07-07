@@ -61,8 +61,8 @@ pub enum ErrorVariant {
     #[error("FailedFunction")]
     FailedFunction,
 
-    #[error("FailedRelation")]
-    FailedRelation,
+    #[error("FailedMap")]
+    FailedMap,
 
     #[error("RelationDebug")]
     RelationDebug,

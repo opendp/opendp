@@ -21,7 +21,7 @@ Our transformation will
 :func:`impute <opendp.transformations.make_impute_constant>`,
 :func:`clamp <opendp.transformations.make_clamp>`,
 :func:`resize <opendp.transformations.make_resize>` and then aggregate with the
-:func:`mean <opendp.transformations.make_sized_bounded_mean>`.
+:func:`mean <opendp.transformations.make_mean>`.
 
 .. doctest::
 
@@ -41,11 +41,11 @@ Our transformation will
     >>> transformation = (
     ...     make_split_dataframe(',', col_names=['Student', 'Score']) >>
     ...     make_select_column(key='Score', TOA=str) >>
-    ...     make_cast(TIA=str, TOA=float) >>
-    ...     make_impute_constant(option_domain(atom_domain(T=float)), constant=constant) >>
-    ...     part_clamp(bounds) >>
-    ...     make_resize(size, atom_domain(bounds), constant=constant) >>
-    ...     make_sized_bounded_mean(size, bounds)
+    ...     then_cast(TOA=float) >>
+    ...     then_impute_constant(constant=constant) >>
+    ...     then_clamp(bounds) >>
+    ...     then_resize(size, constant=constant) >>
+    ...     then_mean()
     ... )
 
 
@@ -69,13 +69,13 @@ will help us find a noise scale parameter that satisfies our given budget.
 
 .. doctest::
 
-    >>> from opendp.measurements import part_base_laplace
+    >>> from opendp.measurements import then_base_laplace
     >>> from opendp.mod import enable_features, binary_search_param
     ...
     >>> # Find the smallest noise scale for which the relation still passes
     >>> # If we didn't need a handle on scale (for accuracy later),
     >>> #     we could just use binary_search_chain and inline the lambda
-    >>> make_chain = lambda s: transformation >> part_base_laplace(s)
+    >>> make_chain = lambda s: transformation >> then_base_laplace(s)
     >>> scale = binary_search_param(make_chain, d_in=num_tests, d_out=budget) # -> 1.33
     >>> measurement = make_chain(scale)
     ...

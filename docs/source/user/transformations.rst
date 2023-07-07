@@ -193,18 +193,18 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
 .. testsetup::
 
-    from opendp.transformations import make_find, make_impute_constant, make_find_bin, make_index
-    from opendp.typing import *
-    from opendp.mod import enable_features
-    enable_features('contrib')
+    import opendp.prelude as dp
+    dp.enable_features('contrib')
 
 .. doctest::
 
-    >>> from opendp.domains import option_domain, atom_domain
     >>> finder = (
-    ...     make_find(categories=["A", "B", "C"]) >>
+    ...     # define the input space
+    ...     (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()) >>
+    ...     # find the index of each input datum in the categories list
+    ...     dp.t.then_find(categories=["A", "B", "C"]) >>
     ...     # impute any input datum that are not a part of the categories list as 3
-    ...     make_impute_constant(option_domain(atom_domain(T=usize)), 3)
+    ...     dp.t.then_impute_constant(3)
     ... )
     >>> finder(["A", "B", "C", "A", "D"])
     [0, 1, 2, 0, 3]
@@ -213,7 +213,9 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
 .. doctest::
 
-    >>> binner = make_find_bin(edges=[1., 2., 10.])
+    >>> binner = dp.t.make_find_bin(
+    ...     dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance(),
+    ...     edges=[1., 2., 10.])
     >>> binner([0., 1., 3., 15.])
     [0, 1, 2, 3]
 
@@ -221,7 +223,9 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
 .. doctest::
 
-    >>> indexer = make_index(categories=["A", "B", "C"], null="D")
+    >>> indexer = dp.t.make_index(
+    ...     dp.vector_domain(dp.atom_domain(T=dp.usize)), dp.symmetric_distance(),
+    ...     categories=["A", "B", "C"], null="D")
     >>> indexer([0, 1, 2, 3, 2342])
     ['A', 'B', 'C', 'D', 'D']
 
@@ -251,7 +255,7 @@ You can use combinations of the indicial transformers to map hashable data to in
 Clamping
 --------
 Many aggregators depend on bounded data to limit the influence that perturbing an individual may have on a query.
-For example, the relation downstream for the :func:`opendp.transformations.make_bounded_sum` aggregator is ``d_out >= d_in * max(|L|, |U|)``.
+For example, the stability map for the :func:`opendp.transformations.make_sum` aggregator is ``d_out = d_in * max(|L|, U)``.
 This relation states that adding or removing ``d_in`` records may influence the sum by ``d_in`` * the greatest magnitude of a record.
 
 Any aggregator that needs bounded data will indicate it in the function name.
@@ -344,7 +348,7 @@ the resulting dataset distance is 2.
 Therefore, the resize transformation is 2-stable: `map(d_in) = 2 * d_in`.
 
 Similarly to data bounds, many aggregators calibrate their stability map based on knowledge of a known dataset size.
-For example, the relation downstream for the :func:`opendp.transformations.make_sized_bounded_mean` aggregator is ``map(d_in) = d_in // 2 * (U - L) / n``.
+For example, the relation downstream for the :func:`opendp.transformations.make_mean` aggregator is ``map(d_in) = d_in // 2 * (U - L) / n``.
 Notice that any addition and removal may, in the worst case, change a record from ``L`` to ``U``.
 Such a substitution would influence the mean by ``(U - L) / n``.
 
@@ -426,22 +430,17 @@ See the notebooks for code examples and deeper explanations:
      - ``MapDomain<AtomDomain<TI>, AtomDomain<TO>>``
      - ``SymmetricDistance``
      - ``L1Distance<TO>``
-   * - :func:`opendp.transformations.make_bounded_sum`
-     - ``VectorDomain<AtomDomain<T>>`` (with bounds)
+   * - :func:`opendp.transformations.make_sum`
+     - ``VectorDomain<AtomDomain<T>>`` (with bounds and optionally size)
      - ``AtomDomain<T>``
      - ``SymmetricDistance/InsertDeleteDistance``
      - ``AbsoluteDistance<TO>``
-   * - :func:`opendp.transformations.make_sized_bounded_sum`
-     - ``VectorDomain<AtomDomain<T>>>`` (with size and bounds)
-     - ``AtomDomain<T>``
-     - ``SymmetricDistance/InsertDeleteDistance``
-     - ``AbsoluteDistance<TO>``
-   * - :func:`opendp.transformations.make_sized_bounded_mean`
+   * - :func:`opendp.transformations.make_mean`
      - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
      - ``AtomDomain<T>``
      - ``SymmetricDistance``
      - ``AbsoluteDistance<TO>``
-   * - :func:`opendp.transformations.make_sized_bounded_variance`
+   * - :func:`opendp.transformations.make_variance`
      - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
      - ``AtomDomain<T>``
      - ``SymmetricDistance``
@@ -453,7 +452,7 @@ See the notebooks for code examples and deeper explanations:
      - ``AbsoluteDistance<TO>``
 
 
-:func:`opendp.transformations.make_bounded_sum` and :func:`opendp.transformations.make_sized_bounded_sum` make a best guess as to which summation strategy to use.
+:func:`opendp.transformations.make_sum` makes a best guess as to which summation strategy to use based on the input space.
 Should you need it, the following constructors give greater control over the sum.
 
 .. raw:: html

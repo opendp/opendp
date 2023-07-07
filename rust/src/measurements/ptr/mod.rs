@@ -34,7 +34,7 @@ use super::get_discretization_consts;
 /// If k is not set, k defaults to the smallest granularity.
 ///
 /// # Arguments
-/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 /// * `threshold` - Exclude counts that are less than this minimum value.
 /// * `k` - The noise granularity in terms of 2^k.
 ///
@@ -78,8 +78,20 @@ where
         PrivacyMap::new_fallible(move |&d_in: &TV| {
             Ok(SMDCurve::new(move |&del: &TV| {
                 if del.is_sign_negative() || del.is_zero() {
-                    return fallible!(FailedRelation, "delta must be positive");
+                    return fallible!(FailedMap, "delta must be positive");
                 }
+
+                if del > TV::one() {
+                    return fallible!(FailedMap, "delta must not be greater than 1");
+                }
+
+                if d_in.is_sign_negative() {
+                    return fallible!(FailedMap, "d_in must be not be negative");
+                }
+                if d_in.is_zero() {
+                    return Ok(TV::zero());
+                }
+
                 let d_in = d_in.inf_add(&relaxation)?;
                 let min_eps = d_in / scale;
                 let min_threshold = (d_in / (_2 * del)).ln() * scale + d_in;
@@ -99,7 +111,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transformations::make_count_by;
+    use crate::{
+        domains::VectorDomain, metrics::SymmetricDistance, transformations::make_count_by,
+    };
 
     #[test]
     fn test_count_by_ptr() -> Fallible<()> {
@@ -111,8 +125,10 @@ mod tests {
         let threshold = (max_influence as f64 / (2. * delta)).ln() * scale + max_influence as f64;
         println!("{:?}", threshold);
 
-        let measurement =
-            (make_count_by()? >> make_base_ptr::<char, f64>(scale, threshold, None)?)?;
+        let measurement = (make_count_by(
+            VectorDomain::new(AtomDomain::default()),
+            SymmetricDistance::default(),
+        )? >> make_base_ptr::<char, f64>(scale, threshold, None)?)?;
         let ret =
             measurement.invoke(&vec!['a', 'b', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'])?;
         println!("stability eval: {:?}", ret);

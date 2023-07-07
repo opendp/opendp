@@ -32,6 +32,8 @@ This is extremely powerful!
 
     from opendp.measurements import *
     from opendp.transformations import *
+    from opendp.domains import atom_domain, vector_domain
+    from opendp.metrics import absolute_distance, symmetric_distance
     from opendp.mod import *
     from opendp.mod import enable_features
     enable_features('contrib', 'floating-point')
@@ -42,7 +44,8 @@ This is extremely powerful!
 
   .. doctest::
 
-    >>> binary_search_param(lambda s: make_base_gaussian(scale=s), d_in=1., d_out=1.)
+    >>> input_space = atom_domain(T=float), absolute_distance(T=float)
+    >>> binary_search_param(lambda s: make_base_gaussian(*input_space, scale=s), d_in=1., d_out=1.)
     0.7071067811865477
   
 * | If you have a bound on ``d_in`` and a noise scale, you can solve for the tightest budget ``d_out`` that is still differentially private.
@@ -51,7 +54,7 @@ This is extremely powerful!
   .. doctest::
 
     >>> # in this case, a search is unnecessary. We can just use the map:
-    >>> make_base_gaussian(scale=1.).map(d_in=1.)
+    >>> make_base_gaussian(*input_space, scale=1.).map(d_in=1.)
     0.5
 
 * | If you have a noise scale and a budget ``d_out``, you can solve for the largest bound on ``d_in`` that is still differentially private.
@@ -60,7 +63,7 @@ This is extremely powerful!
   .. doctest::
 
     >>> # finds the largest permissible d_in, a sensitivity
-    >>> binary_search(lambda d_in: make_base_gaussian(scale=1.).check(d_in=d_in, d_out=1.))
+    >>> binary_search(lambda d_in: make_base_gaussian(*input_space, scale=1.).check(d_in=d_in, d_out=1.))
     1.414213562373095
 
 
@@ -71,7 +74,9 @@ This is extremely powerful!
 
     >>> # finds the smallest n
     >>> binary_search_param(
-    ...     lambda n: make_sized_bounded_mean(n, (0., 10.)) >> make_base_gaussian(scale=1.), 
+    ...     lambda n: make_mean(
+    ...         vector_domain(atom_domain((0., 10.)), n), 
+    ...         symmetric_distance()) >> then_gaussian(scale=1.), 
     ...     d_in=2, d_out=1.)
     8
 
@@ -82,7 +87,9 @@ This is extremely powerful!
 
     >>> # finds the largest clipping bounds
     >>> binary_search_param(
-    ...     lambda c: make_bounded_sum((-c, c)) >> make_base_gaussian(scale=1.), 
+    ...     lambda c: make_sum(
+    ...         vector_domain(atom_domain(bounds=(-c, c))), 
+    ...         symmetric_distance()) >> then_base_gaussian(scale=1.), 
     ...     d_in=2, d_out=1.)
     0.3535533897700931
 

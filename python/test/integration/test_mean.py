@@ -27,17 +27,17 @@ def test_dp_mean():
         # Selects a column of df, Vec<str>
         make_select_column(key=index, TOA=str) >>
         # Cast the column as Vec<Optional<Float>>
-        make_cast(TIA=str, TOA=float) >>
+        then_cast(TOA=float) >>
         # Impute missing values to 0 Vec<Float>
-        make_impute_constant(option_domain(atom_domain(T=float)), impute_constant) >>
+        then_impute_constant(impute_constant) >>
         # Clamp values
-        part_clamp(bounds) >>
+        then_clamp(bounds) >>
         # Resize dataset length
-        make_resize(n, atom_domain(bounds), impute_constant) >>
+        then_resize(n, impute_constant) >>
         # Aggregate with mean
-        make_sized_bounded_mean(n, bounds) >>
+        then_mean() >>
         # Noise
-        part_base_laplace(scale)
+        then_base_laplace(scale)
     )
     res = preprocessor(data)
     assert type(res) == float

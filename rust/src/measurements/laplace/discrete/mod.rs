@@ -60,13 +60,13 @@ impl<D: MappableDomain> MappableDomain for VectorDomain<D> {
 }
 
 #[doc(hidden)]
-pub trait DiscreteLaplaceDomain: MappableDomain + Default {
+pub trait BaseDiscreteLaplaceDomain: MappableDomain + Default {
     type InputMetric: Metric<Distance = Self::Atom> + Default;
 }
-impl<T: Clone + CheckAtom> DiscreteLaplaceDomain for AtomDomain<T> {
+impl<T: Clone + CheckAtom> BaseDiscreteLaplaceDomain for AtomDomain<T> {
     type InputMetric = AbsoluteDistance<T>;
 }
-impl<T: Clone + CheckAtom> DiscreteLaplaceDomain for VectorDomain<AtomDomain<T>> {
+impl<T: Clone + CheckAtom> BaseDiscreteLaplaceDomain for VectorDomain<AtomDomain<T>> {
     type InputMetric = L1Distance<T>;
 }
 
@@ -93,7 +93,7 @@ impl<T: Clone + CheckAtom> DiscreteLaplaceDomain for VectorDomain<AtomDomain<T>>
 /// # Arguments
 /// * `input_domain` - Domain of the data type to be privatized.
 /// * `input_metric` - Metric of the data type to be privatized.
-/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 ///
 /// # Generics
 /// * `QO` - Data type of the output distance and scale. `f32` or `f64`.
@@ -104,7 +104,7 @@ pub fn make_base_discrete_laplace<D, QO>(
     scale: QO,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
-    D: DiscreteLaplaceDomain,
+    D: BaseDiscreteLaplaceDomain,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     (D, D::InputMetric): MetricSpace,
     QO: Float + InfCast<D::Atom> + InfCast<D::Atom>,
@@ -152,7 +152,7 @@ pub fn make_base_discrete_laplace<D, QO>(
     scale: QO,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
-    D: DiscreteLaplaceDomain,
+    D: BaseDiscreteLaplaceDomain,
     (D, D::InputMetric): MetricSpace,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,

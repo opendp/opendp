@@ -39,9 +39,9 @@
 //!
 //! #[cfg(all(feature = "untrusted", feature = "partials"))]
 //! pub fn example() -> Fallible<()> {
-//!     use opendp::transformations::{make_split_lines, part_cast_default, make_cast_default, part_clamp, make_bounded_sum};
+//!     use opendp::transformations::{make_split_lines, then_cast_default, make_cast_default, then_clamp, then_sum};
 //!     use opendp::combinators::{make_chain_tt, make_chain_mt};
-//!     use opendp::measurements::part_base_laplace;
+//!     use opendp::measurements::then_base_laplace;
 //!
 //!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
 //!     let bounds = (0.0, 100.0);
@@ -53,7 +53,7 @@
 //!     let split_lines = make_split_lines()?;
 //!
 //!     // The next transformation wants to conform with the output domain and metric from `split_lines`.
-//!     let cast = make_cast_default::<String, f64, _>(
+//!     let cast = make_cast_default::<_, String, f64>(
 //!         split_lines.output_domain.clone(),
 //!         split_lines.output_metric.clone())?;
 //!
@@ -61,23 +61,23 @@
 //!     let load_numbers = make_chain_tt(&cast, &split_lines)?;
 //!      
 //!     // You can use the more convenient `>>` notation to chain instead.
-//!     // When you use the `part_` version of the constructor,
+//!     // When you use the `then_` version of the constructor,
 //!     //     the `>>` operator will automatically fill the input domain and metric from the previous transformation.
-//!     let load_and_clamp = load_numbers >> part_clamp(bounds);
+//!     let load_and_clamp = load_numbers >> then_clamp(bounds);
 //!     
 //!     // After chaining, the resulting transformation is wrapped in a `Result`.
-//!     let load_and_sum = (load_and_clamp >> make_bounded_sum(bounds)?)?;
+//!     let load_and_sum = (load_and_clamp >> then_sum())?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
-//!     let noisy_sum = load_and_sum >> part_base_laplace(sigma, None);
+//!     let noisy_sum = load_and_sum >> then_base_laplace(sigma, None);
 //!
 //!     // The same measurement, written more succinctly:
 //!     let noisy_sum = (
 //!         make_split_lines()? >>
-//!         part_cast_default() >>
-//!         part_clamp(bounds) >>
-//!         make_bounded_sum(bounds)? >>
-//!         part_base_laplace(sigma, None)
+//!         then_cast_default() >>
+//!         then_clamp(bounds) >>
+//!         then_sum() >>
+//!         then_base_laplace(sigma, None)
 //!     )?;
 //!
 //!     // Check that the pipeline is (1, 1.0)-close
