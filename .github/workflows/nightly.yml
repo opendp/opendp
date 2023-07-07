@@ -12,3 +12,4 @@ jobs:
       channel: nightly
       counter: 2
       fake: true
+    secrets: inherit
