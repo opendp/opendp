@@ -275,14 +275,16 @@ where
 
 #[cfg(all(test, feature = "use-mpfr"))]
 mod tests_shr {
+    use crate::domains::{VectorDomain, AtomDomain};
     use crate::measurements::then_base_discrete_laplace;
-    use crate::transformations::{make_split_lines, then_cast_default, then_clamp, then_sum};
+    use crate::metrics::SymmetricDistance;
+    use crate::transformations::{then_cast_default, then_clamp, then_sum};
 
     use super::*;
 
     #[test]
     fn test_shr() -> Fallible<()> {
-        (make_split_lines()?
+        ((VectorDomain::new(AtomDomain::<String>::default()), SymmetricDistance)
             >> then_cast_default()
             >> then_clamp((0, 1))
             >> then_sum()

@@ -708,15 +708,17 @@ mod tests {
     #[cfg(all(feature = "use-mpfr", feature = "partials"))]
     #[test]
     fn test_any_chain() -> Fallible<()> {
+        use crate::domains::VectorDomain;
         use crate::metrics::AbsoluteDistance;
         use crate::{measurements, transformations};
 
-        let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?
-            .into_any();
-        let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
-        let t3 = transformations::then_cast_default::<SymmetricDistance, String, f64>().into_any();
-        let t4 = transformations::then_clamp::<_, SymmetricDistance>((0.0, 10.0)).into_any();
-        let t5 = transformations::then_sum::<SymmetricDistance, f64>().into_any();
+        let s1 = (
+            AnyDomain::new(VectorDomain::new(AtomDomain::<String>::default())),
+            AnyMetric::new(SymmetricDistance),
+        );
+        let t1 = transformations::then_cast_default::<SymmetricDistance, String, f64>().into_any();
+        let t2 = transformations::then_clamp::<_, SymmetricDistance>((0.0, 10.0)).into_any();
+        let t3 = transformations::then_sum::<SymmetricDistance, f64>().into_any();
         let m1 = measurements::make_base_laplace(
             AtomDomain::default(),
             AbsoluteDistance::default(),
@@ -724,8 +726,8 @@ mod tests {
             None,
         )?
         .into_any();
-        let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
-        let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
+        let chain = (s1 >> t1 >> t2 >> t3 >> m1)?;
+        let arg = AnyObject::new(vec![1.0, 2.0, 3.0f64]);
         let res = chain.invoke(&arg)?;
         let res: f64 = res.downcast()?;
         assert_eq!(6.0, res);

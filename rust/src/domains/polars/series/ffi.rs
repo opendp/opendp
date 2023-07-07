@@ -3,14 +3,14 @@ use std::ffi::c_char;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::FfiResult,
+    core::{FfiResult, MetricSpace},
     domains::{AtomDomain, DataTypeFrom, OptionDomain},
     error::Fallible,
     ffi::{
-        any::{AnyDomain, Downcast},
+        any::{AnyDomain, Downcast, AnyMetric},
         util,
     },
-    traits::CheckAtom,
+    traits::CheckAtom, transformations::DatasetMetric,
 };
 
 use super::{SeriesAtomDomain, SeriesDomain};
@@ -69,5 +69,37 @@ pub extern "C" fn opendp_domains__series_domain(
             (name, element_domain)
         )
         .into()
+    }
+}
+
+
+impl MetricSpace for (SeriesDomain, AnyMetric) {
+    fn check(&self) -> bool {
+        let (domain, metric) = self;
+
+        fn monomorphize_dataset<M: 'static + DatasetMetric>(
+            domain: &SeriesDomain,
+            metric: &AnyMetric,
+        ) -> Fallible<bool>
+        where
+            (SeriesDomain, M): MetricSpace,
+        {
+            let metric = metric.downcast_ref::<M>()?;
+            Ok((domain.clone(), metric.clone()).check())
+        }
+        let M = metric.type_.clone();
+
+        fn in_set<T>() -> Option<()> {
+            Some(())
+        }
+
+        if let Some(_) = dispatch!(in_set, [(M, @dataset_metrics)]) {
+            return dispatch!(monomorphize_dataset, [
+                (M, @dataset_metrics)
+            ], (domain, metric))
+            .unwrap_or(false);
+        }
+
+        false
     }
 }

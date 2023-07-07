@@ -17,14 +17,13 @@ __all__ = [
     "make_cast_inherent",
     "make_cdf",
     "make_clamp",
+    "make_collect",
+    "make_column",
     "make_consistent_b_ary_tree",
     "make_count",
     "make_count_by",
     "make_count_by_categories",
     "make_count_distinct",
-    "make_create_dataframe",
-    "make_df_cast_default",
-    "make_df_is_equal",
     "make_drop_null",
     "make_find",
     "make_find_bin",
@@ -34,6 +33,7 @@ __all__ = [
     "make_index",
     "make_is_equal",
     "make_is_null",
+    "make_lazy",
     "make_lipschitz_float_mul",
     "make_mean",
     "make_metric_bounded",
@@ -42,17 +42,13 @@ __all__ = [
     "make_quantiles_from_counts",
     "make_resize",
     "make_scan_csv",
-    "make_select_column",
+    "make_series_to_option_vec",
     "make_sized_bounded_float_checked_sum",
     "make_sized_bounded_float_ordered_sum",
     "make_sized_bounded_int_checked_sum",
     "make_sized_bounded_int_monotonic_sum",
     "make_sized_bounded_int_ordered_sum",
     "make_sized_bounded_int_split_sum",
-    "make_split_dataframe",
-    "make_split_lines",
-    "make_split_records",
-    "make_subset_by",
     "make_sum",
     "make_sum_of_squared_deviations",
     "make_unordered",
@@ -62,12 +58,12 @@ __all__ = [
     "then_cast_default",
     "then_cast_inherent",
     "then_clamp",
+    "then_collect",
+    "then_column",
     "then_count",
     "then_count_by",
     "then_count_by_categories",
     "then_count_distinct",
-    "then_df_cast_default",
-    "then_df_is_equal",
     "then_drop_null",
     "then_find",
     "then_find_bin",
@@ -77,12 +73,14 @@ __all__ = [
     "then_index",
     "then_is_equal",
     "then_is_null",
+    "then_lazy",
     "then_mean",
     "then_metric_bounded",
     "then_metric_unbounded",
     "then_ordered_random",
     "then_resize",
     "then_scan_csv",
+    "then_series_to_option_vec",
     "then_sum",
     "then_sum_of_squared_deviations",
     "then_unordered",
@@ -761,6 +759,107 @@ def then_clamp(
 
 
 @versioned
+def make_collect(
+    input_domain,
+    input_metric
+) -> Transformation:
+    """Converts a LazyFrame to a DataFrame
+    
+    [make_collect in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_collect.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `LazyFrameDomain`
+    * Output Domain:  `DataFrameDomain`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+    
+    :param input_domain: 
+    :param input_metric: 
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_collect
+    lib_function.argtypes = [Domain, Metric]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric), Transformation))
+    
+    return output
+
+def then_collect(
+    
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_collect(
+        input_domain=input_domain,
+        input_metric=input_metric))
+
+
+
+@versioned
+def make_column(
+    input_domain,
+    input_metric,
+    column_name: Any
+) -> Transformation:
+    """Extract a Series from a DataFrame
+    
+    [make_column in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_column.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `DataFrameDomain`
+    * Output Domain:  `SeriesDomain`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+    
+    :param input_domain: 
+    :param input_metric: 
+    :param column_name: 
+    :type column_name: Any
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_column_name = py_to_c(column_name, c_type=AnyObjectPtr, type_name=String)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_column
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_column_name), Transformation))
+    
+    return output
+
+def then_column(
+    column_name: Any
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_column(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        column_name=column_name))
+
+
+
+@versioned
 def make_consistent_b_ary_tree(
     branching_factor: int,
     TIA: RuntimeTypeDescriptor = "int",
@@ -1087,198 +1186,6 @@ def then_count_distinct(
         input_domain=input_domain,
         input_metric=input_metric,
         TO=TO))
-
-
-
-@versioned
-def make_create_dataframe(
-    col_names: Any,
-    K: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that constructs a dataframe from a `Vec<Vec<String>>` (a vector of records).
-    
-    [make_create_dataframe in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_create_dataframe.html)
-    
-    **Supporting Elements:**
-    
-    * Input Domain:   `VectorDomain<VectorDomain<AtomDomain<String>>>`
-    * Output Domain:  `DataFrameDomain<K>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
-    
-    :param col_names: Column names for each record entry.
-    :type col_names: Any
-    :param K: categorical/hashable data type of column names
-    :type K: :py:ref:`RuntimeTypeDescriptor`
-    :rtype: Transformation
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    K = RuntimeType.parse_or_infer(type_name=K, public_example=get_first(col_names))
-    
-    # Convert arguments to c types.
-    c_col_names = py_to_c(col_names, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[K]))
-    c_K = py_to_c(K, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    lib_function = lib.opendp_transformations__make_create_dataframe
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(c_col_names, c_K), Transformation))
-    
-    return output
-
-
-@versioned
-def make_df_cast_default(
-    input_domain,
-    input_metric,
-    column_name: Any,
-    TIA: RuntimeTypeDescriptor,
-    TOA: RuntimeTypeDescriptor
-) -> Transformation:
-    """Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`.
-    If cast fails, fill with default.
-    
-    
-    | `TIA`  | `TIA::default()` |
-    | ------ | ---------------- |
-    | float  | `0.`             |
-    | int    | `0`              |
-    | string | `""`             |
-    | bool   | `false`          |
-    
-    [make_df_cast_default in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_df_cast_default.html)
-    
-    **Supporting Elements:**
-    
-    * Input Domain:   `DataFrameDomain<TK>`
-    * Output Domain:  `DataFrameDomain<TK>`
-    * Input Metric:   `M`
-    * Output Metric:  `M`
-    
-    :param input_domain: 
-    :param input_metric: 
-    :param column_name: column name to be transformed
-    :type column_name: Any
-    :param TIA: Atomic Input Type to cast from
-    :type TIA: :py:ref:`RuntimeTypeDescriptor`
-    :param TOA: Atomic Output Type to cast into
-    :type TOA: :py:ref:`RuntimeTypeDescriptor`
-    :rtype: Transformation
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    TIA = RuntimeType.parse(type_name=TIA)
-    TOA = RuntimeType.parse(type_name=TOA)
-    TK = get_atom(get_type(input_domain))
-    M = get_type(input_metric)
-    
-    # Convert arguments to c types.
-    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
-    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
-    c_column_name = py_to_c(column_name, c_type=AnyObjectPtr, type_name=TK)
-    c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
-    c_TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    lib_function = lib.opendp_transformations__make_df_cast_default
-    lib_function.argtypes = [Domain, Metric, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_column_name, c_TIA, c_TOA), Transformation))
-    
-    return output
-
-def then_df_cast_default(
-    column_name: Any,
-    TIA: RuntimeTypeDescriptor,
-    TOA: RuntimeTypeDescriptor
-):
-    return PartialConstructor(lambda input_domain, input_metric: make_df_cast_default(
-        input_domain=input_domain,
-        input_metric=input_metric,
-        column_name=column_name,
-        TIA=TIA,
-        TOA=TOA))
-
-
-
-@versioned
-def make_df_is_equal(
-    input_domain,
-    input_metric,
-    column_name: Any,
-    value: Any,
-    TIA: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`.
-    
-    [make_df_is_equal in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_df_is_equal.html)
-    
-    **Supporting Elements:**
-    
-    * Input Domain:   `DataFrameDomain<TK>`
-    * Output Domain:  `DataFrameDomain<TK>`
-    * Input Metric:   `M`
-    * Output Metric:  `M`
-    
-    :param input_domain: 
-    :param input_metric: 
-    :param column_name: Column name to be transformed
-    :type column_name: Any
-    :param value: Value to check for equality
-    :type value: Any
-    :param TIA: Atomic Input Type to cast from
-    :type TIA: :py:ref:`RuntimeTypeDescriptor`
-    :rtype: Transformation
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=value)
-    TK = get_atom(get_type(input_domain))
-    M = get_type(input_metric)
-    
-    # Convert arguments to c types.
-    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
-    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
-    c_column_name = py_to_c(column_name, c_type=AnyObjectPtr, type_name=TK)
-    c_value = py_to_c(value, c_type=AnyObjectPtr, type_name=TIA)
-    c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    lib_function = lib.opendp_transformations__make_df_is_equal
-    lib_function.argtypes = [Domain, Metric, AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p]
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_column_name, c_value, c_TIA), Transformation))
-    
-    return output
-
-def then_df_is_equal(
-    column_name: Any,
-    value: Any,
-    TIA: RuntimeTypeDescriptor = None
-):
-    return PartialConstructor(lambda input_domain, input_metric: make_df_is_equal(
-        input_domain=input_domain,
-        input_metric=input_metric,
-        column_name=column_name,
-        value=value,
-        TIA=TIA))
 
 
 
@@ -1799,6 +1706,54 @@ def then_is_null(
 
 
 @versioned
+def make_lazy(
+    input_domain,
+    input_metric
+) -> Transformation:
+    """Converts a DataFrame to a LazyFrame
+    
+    [make_lazy in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_lazy.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `DataFrameDomain`
+    * Output Domain:  `LazyFrameDomain`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+    
+    :param input_domain: 
+    :param input_metric: 
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_lazy
+    lib_function.argtypes = [Domain, Metric]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric), Transformation))
+    
+    return output
+
+def then_lazy(
+    
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_lazy(
+        input_domain=input_domain,
+        input_metric=input_metric))
+
+
+
+@versioned
 def make_lipschitz_float_mul(
     constant,
     bounds: Tuple[Any, Any],
@@ -2261,28 +2216,26 @@ def then_scan_csv(
 
 
 @versioned
-def make_select_column(
-    key: Any,
-    TOA: RuntimeTypeDescriptor,
-    K: RuntimeTypeDescriptor = None
+def make_series_to_option_vec(
+    input_domain,
+    input_metric,
+    T: RuntimeTypeDescriptor
 ) -> Transformation:
-    """Make a Transformation that retrieves the column `key` from a dataframe as `Vec<TOA>`.
+    """Unpack a Series from a DataFrame
     
-    [make_select_column in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_select_column.html)
+    [make_series_to_option_vec in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_series_to_option_vec.html)
     
     **Supporting Elements:**
     
-    * Input Domain:   `DataFrameDomain<K>`
-    * Output Domain:  `VectorDomain<AtomDomain<TOA>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Domain:   `SeriesDomain`
+    * Output Domain:  `VectorDomain<OptionDomain<AtomDomain<T>>>`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
-    :param key: categorical/hashable data type of the key/column name
-    :type key: Any
-    :param K: data type of key
-    :type K: :py:ref:`RuntimeTypeDescriptor`
-    :param TOA: Atomic Output Type to downcast vector to
-    :type TOA: :py:ref:`RuntimeTypeDescriptor`
+    :param input_domain: 
+    :param input_metric: 
+    :param T: 
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -2291,22 +2244,30 @@ def make_select_column(
     assert_features("contrib")
     
     # Standardize type arguments.
-    K = RuntimeType.parse_or_infer(type_name=K, public_example=key)
-    TOA = RuntimeType.parse(type_name=TOA)
+    T = RuntimeType.parse(type_name=T)
     
     # Convert arguments to c types.
-    c_key = py_to_c(key, c_type=AnyObjectPtr, type_name=K)
-    c_K = py_to_c(K, c_type=ctypes.c_char_p)
-    c_TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
-    lib_function = lib.opendp_transformations__make_select_column
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function = lib.opendp_transformations__make_series_to_option_vec
+    lib_function.argtypes = [Domain, Metric, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_key, c_K, c_TOA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_T), Transformation))
     
     return output
+
+def then_series_to_option_vec(
+    T: RuntimeTypeDescriptor
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_series_to_option_vec(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        T=T))
+
 
 
 @versioned
@@ -2663,176 +2624,6 @@ def make_sized_bounded_int_split_sum(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_size, c_bounds, c_T), Transformation))
-    
-    return output
-
-
-@versioned
-def make_split_dataframe(
-    separator: str,
-    col_names: Any,
-    K: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that splits each record in a String into a `Vec<Vec<String>>`,
-    and loads the resulting table into a dataframe keyed by `col_names`.
-    
-    [make_split_dataframe in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_split_dataframe.html)
-    
-    **Supporting Elements:**
-    
-    * Input Domain:   `AtomDomain<String>`
-    * Output Domain:  `DataFrameDomain<K>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
-    
-    :param separator: The token(s) that separate entries in each record.
-    :type separator: str
-    :param col_names: Column names for each record entry.
-    :type col_names: Any
-    :param K: categorical/hashable data type of column names
-    :type K: :py:ref:`RuntimeTypeDescriptor`
-    :rtype: Transformation
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    K = RuntimeType.parse_or_infer(type_name=K, public_example=get_first(col_names))
-    
-    # Convert arguments to c types.
-    c_separator = py_to_c(separator, c_type=ctypes.c_char_p, type_name=None)
-    c_col_names = py_to_c(col_names, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[K]))
-    c_K = py_to_c(K, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    lib_function = lib.opendp_transformations__make_split_dataframe
-    lib_function.argtypes = [ctypes.c_char_p, AnyObjectPtr, ctypes.c_char_p]
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(c_separator, c_col_names, c_K), Transformation))
-    
-    return output
-
-
-@versioned
-def make_split_lines(
-    
-) -> Transformation:
-    """Make a Transformation that takes a string and splits it into a `Vec<String>` of its lines.
-    
-    [make_split_lines in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_split_lines.html)
-    
-    **Supporting Elements:**
-    
-    * Input Domain:   `AtomDomain<String>`
-    * Output Domain:  `VectorDomain<AtomDomain<String>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
-    
-    
-    :rtype: Transformation
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # No type arguments to standardize.
-    # No arguments to convert to c types.
-    # Call library function.
-    lib_function = lib.opendp_transformations__make_split_lines
-    lib_function.argtypes = []
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(), Transformation))
-    
-    return output
-
-
-@versioned
-def make_split_records(
-    separator: str
-) -> Transformation:
-    """Make a Transformation that splits each record in a `Vec<String>` into a `Vec<Vec<String>>`.
-    
-    [make_split_records in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_split_records.html)
-    
-    **Supporting Elements:**
-    
-    * Input Domain:   `VectorDomain<AtomDomain<String>>`
-    * Output Domain:  `VectorDomain<VectorDomain<AtomDomain<String>>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
-    
-    :param separator: The token(s) that separate entries in each record.
-    :type separator: str
-    :rtype: Transformation
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # No type arguments to standardize.
-    # Convert arguments to c types.
-    c_separator = py_to_c(separator, c_type=ctypes.c_char_p, type_name=None)
-    
-    # Call library function.
-    lib_function = lib.opendp_transformations__make_split_records
-    lib_function.argtypes = [ctypes.c_char_p]
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(c_separator), Transformation))
-    
-    return output
-
-
-@versioned
-def make_subset_by(
-    indicator_column: Any,
-    keep_columns: Any,
-    TK: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that subsets a dataframe by a boolean column.
-    
-    [make_subset_by in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_subset_by.html)
-    
-    **Supporting Elements:**
-    
-    * Input Domain:   `DataFrameDomain<TK>`
-    * Output Domain:  `DataFrameDomain<TK>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
-    
-    :param indicator_column: name of the boolean column that indicates inclusion in the subset
-    :type indicator_column: Any
-    :param keep_columns: list of column names to apply subset to
-    :type keep_columns: Any
-    :param TK: Type of the column name
-    :type TK: :py:ref:`RuntimeTypeDescriptor`
-    :rtype: Transformation
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=indicator_column)
-    
-    # Convert arguments to c types.
-    c_indicator_column = py_to_c(indicator_column, c_type=AnyObjectPtr, type_name=TK)
-    c_keep_columns = py_to_c(keep_columns, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TK]))
-    c_TK = py_to_c(TK, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    lib_function = lib.opendp_transformations__make_subset_by
-    lib_function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p]
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(c_indicator_column, c_keep_columns, c_TK), Transformation))
     
     return output
 

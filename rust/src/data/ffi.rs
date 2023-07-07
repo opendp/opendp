@@ -7,13 +7,15 @@ use std::os::raw::c_char;
 use std::path::PathBuf;
 use std::slice;
 
+use arrow2::ffi::{ArrowArray, ArrowSchema};
 use opendp_derive::bootstrap;
+use polars::prelude::*;
 
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
-use crate::ffi::util::{self, into_c_char_p, AnyDomainPtr};
+use crate::ffi::util::{self, into_c_char_p, AnyDomainPtr, into_raw};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 use crate::measures::SMDCurve;
 use crate::traits::samplers::Shuffle;
@@ -138,9 +140,48 @@ pub extern "C" fn opendp_data__slice_as_object(
             .collect::<HashMap<K, V>>();
         Ok(AnyObject::new(map))
     }
+
+
+    pub fn raw_to_series(
+        raw: &FfiSlice
+    ) -> Fallible<AnyObject> {
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
+        if slice.len() != 2 {
+            return fallible!(FFI, "Series FfiSlice must have length 2");
+        }
+        // https://github.com/pola-rs/pyo3-polars/blob/main/pyo3-polars/src/lib.rs#L117-L126
+        // * perma: https://github.com/pola-rs/pyo3-polars/blob/5150d4ca27c287ff4be5cafef243d9a878a8879d/pyo3-polars/src/lib.rs#L117-L126
+        // https://github.com/pola-rs/pyo3-polars/blob/main/pyo3-polars/src/ffi/to_rust.rs
+        try_as_ref!(slice[0]);
+        let series = unsafe {
+            let array = *Box::from_raw(slice[0] as *mut ArrowArray);
+            let schema = try_as_ref!(slice[1] as *const ArrowSchema);
+            let field = arrow2::ffi::import_field_from_c(schema)
+                .map_err(|e| err!(FFI, "failed to import field from c: {}", e.to_string()))?;
+            let array = arrow2::ffi::import_array_from_c(array, field.data_type)
+                .map_err(|e| err!(FFI, "failed to import array from c: {}", e.to_string()))?;
+            Series::try_from((field.name.as_str(), array))
+                .map_err(|e| err!(FFI, "failed to construct Series: {}", e.to_string()))?
+        };
+        Ok(AnyObject::new(series))
+    }
+    pub fn raw_to_lazyframe(
+        raw: &FfiSlice
+    ) -> Fallible<AnyObject> {
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len) };
+        
+        // https://github.com/pola-rs/pyo3-polars/blob/5150d4ca27c287ff4be5cafef243d9a878a8879d/pyo3-polars/src/lib.rs#L147-L153
+        let lp: LogicalPlan = ciborium::de::from_reader(slice).map_err(
+            |e| err!(FFI, "Error when deserializing LazyFrame. This may be due to mismatched polars versions. {}", e)
+        )?;
+        Ok(AnyObject::new(LazyFrame::from(lp)))
+    }
     match T.contents {
         TypeContents::PLAIN("String") => raw_to_string(raw),
         TypeContents::PLAIN("PathBuf") => raw_to_pathbuf(raw),
+        TypeContents::PLAIN("LazyFrame") => raw_to_lazyframe(raw),
+        // TypeContents::PLAIN("DataFrame") => raw_to_dataframe(raw),
+        TypeContents::PLAIN("SeriesDomain") => raw_to_series(raw),
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(&element_id));
             dispatch!(raw_to_slice, [(element, @primitives)], (raw))
@@ -279,9 +320,77 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         util::into_raw(map);
         Ok(map_slice)
     }
+
+
+    fn lazyframe_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        // https://github.com/pola-rs/pyo3-polars/blob/main/pyo3-polars/src/lib.rs#L190-L197
+
+        // Rechunk aggregates all chunks to a contiguous array of memory.
+        let frame: &LazyFrame = obj.downcast_ref::<LazyFrame>()?;
+
+        let mut buffer: Vec<u8> = vec![];
+        ciborium::ser::into_writer(&frame.logical_plan, &mut buffer)
+            .map_err(|e| err!(FFI, "failed to serialize logical plan: {}", e))?;
+
+        let slice = FfiSlice {
+            ptr: buffer.as_ptr() as *mut c_void,
+            len: buffer.len(),
+        };
+        into_raw(buffer);
+        Ok(slice)
+    }
+    fn dataframe_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        // https://github.com/pola-rs/pyo3-polars/blob/main/pyo3-polars/src/lib.rs#L174-L183
+
+        let frame: &DataFrame = obj.downcast_ref::<DataFrame>()?;
+
+        let columns = frame.get_columns().iter().map(_series_to_raw).collect::<Fallible<Vec<FfiSlice>>>()?;
+        let slice = FfiSlice {
+            ptr: columns.as_ptr() as *mut c_void,
+            len: columns.len(),
+        };
+        into_raw(columns);
+        Ok(slice)
+    }
+
+    fn _series_to_raw(series: &Series) -> Fallible<FfiSlice> {
+        // Rechunk aggregates all chunks to a contiguous array of memory.
+        // since we rechunked, we can assume there is only one chunk
+        let array = series.rechunk().to_arrow(0);
+
+        let schema = arrow2::ffi::export_field_to_c(&ArrowField::new(
+            series.name(),
+            array.data_type().clone(),
+            true,
+        ));
+        let array = arrow2::ffi::export_array_to_c(array);
+
+        let buffer = vec![into_raw(array) as *const c_void, into_raw(schema) as *const c_void];
+        let slice = FfiSlice {
+            ptr: buffer.as_ptr() as *mut c_void,
+            len: 2,
+        };
+        into_raw(buffer);
+        Ok(slice)
+    }
+
+    fn series_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        // https://github.com/pola-rs/pyo3-polars/blob/main/pyo3-polars/src/lib.rs#L159-L168
+        // https://github.com/pola-rs/pyo3-polars/blob/main/pyo3-polars/src/ffi/to_py.rs
+        _series_to_raw(obj.downcast_ref::<Series>()?)
+    }
     match &obj.type_.contents {
         TypeContents::PLAIN("String") => {
             string_to_raw(obj)
+        }
+        TypeContents::PLAIN("LazyFrame") => {
+            lazyframe_to_raw(obj)
+        }
+        TypeContents::PLAIN("DataFrame") => {
+            dataframe_to_raw(obj)
+        }
+        TypeContents::PLAIN("Series") => {
+            series_to_raw(obj)
         }
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(element_id));
@@ -574,6 +683,20 @@ pub extern "C" fn opendp_data__smd_curve_epsilon(
     let curve = try_as_ref!(curve);
     let delta = try_as_ref!(delta);
     dispatch!(monomorphize, [(delta.type_, @floats)], (curve, delta)).into()
+}
+
+// need rust to own the memory for the ArrowArray and ArrowSchema
+#[bootstrap(name = "new_arrow_array")]
+#[no_mangle]
+extern "C" fn opendp_data__new_arrow_array() -> *mut FfiSlice {
+    // prepare a pointer to receive the Array struct
+    into_raw(FfiSlice {
+        ptr: util::into_raw([
+            into_raw(ArrowArray::empty()) as *const c_void,
+            into_raw(ArrowSchema::empty()) as *const c_void,
+        ]) as *mut c_void, 
+        len: 2 
+    })
 }
 
 #[bootstrap(

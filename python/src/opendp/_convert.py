@@ -1,4 +1,6 @@
 from typing import Sequence, Tuple, List, Union, Dict
+import polars as pl
+import pyarrow
 
 from opendp._lib import *
 
@@ -174,6 +176,15 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
     
     if type_name == "String":
         return _slice_to_string(raw)
+    
+    if type_name == "LazyFrame":
+        return _slice_to_lazyframe(raw)
+    
+    if type_name == "DataFrame":
+        return _slice_to_dataframe(raw)
+    
+    if type_name == "Series":
+        return _slice_to_series(raw)
 
     if type_name.origin == "Vec":
         return _slice_to_vector(raw, type_name)
@@ -204,6 +215,15 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 
     if type_name in ATOM_EQUIVALENCE_CLASSES["String"]:
         return _string_to_slice(value)
+    
+    if type_name == "LazyFrame":
+        return _lazyframe_to_slice(value)
+    
+    if type_name == "DataFrame":
+        return _dataframe_to_slice(value)
+    
+    if type_name == "Series":
+        return _series_to_slice(value)
 
     if type_name.origin == "Vec":
         return _vector_to_slice(value, type_name)
@@ -381,6 +401,53 @@ def _slice_to_hashmap(raw: FfiSlicePtr) -> Dict[Any, Any]:
     keys.__class__ = ctypes.POINTER(AnyObject)
     vals.__class__ = ctypes.POINTER(AnyObject)
     return result
+
+
+def _lazyframe_to_slice(val: pl.LazyFrame) -> FfiSlicePtr:
+    state = val.__getstate__()
+    raw = _wrap_in_slice(state, len(state))
+    raw.depends_on(state)
+    return raw
+
+
+def _slice_to_lazyframe(raw: FfiSlicePtr) -> pl.LazyFrame:
+    # https://github.com/pola-rs/pyo3-polars/blob/main/pyo3-polars/src/lib.rs#L190-L197
+    lf = pl.LazyFrame()
+    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))
+    lf.__setstate__(bytes(slice_array[0:raw.contents.len]))
+    return lf
+
+def _dataframe_to_slice(val: pl.DataFrame) -> FfiSlicePtr:
+    # TODO: haven't debugged
+    return _wrap_in_slice([_series_to_slice(s) for s in val.get_columns()], val.width)
+
+
+def _slice_to_dataframe(raw: FfiSlicePtr) -> pl.LazyFrame:
+    slice_array = ctypes.cast(raw.contents.ptr, FfiSlicePtr)
+    series = [_slice_to_series(ctypes.pointer(ffislice)) for ffislice in slice_array[0:raw.contents.len]]
+    return pl.DataFrame(series)
+
+
+def _series_to_slice(val: pl.Series) -> FfiSlicePtr:
+    from opendp._data import new_arrow_array
+
+    raw = new_arrow_array()
+    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
+    array_ptr, schema_ptr = slice_array[0:2]
+
+    # make the conversion through PyArrow's private API
+    # this changes the pointer's memory and is thus unsafe. In particular, `_export_to_c` can go out of bounds
+    val.to_arrow()._export_to_c(array_ptr, schema_ptr)
+    return raw
+
+
+def _slice_to_series(raw: FfiSlicePtr) -> pl.Series:
+    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
+    array_ptr, schema_ptr = slice_array[0:2]
+
+    arrow_array = pyarrow.Array._import_from_c(array_ptr, schema_ptr)
+    return pl.from_arrow(arrow_array)
+
 
 
 def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:

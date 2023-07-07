@@ -29,8 +29,8 @@ use std::rc::Rc;
 
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
-use std::fmt::Debug;
 use num::Zero;
+use std::fmt::Debug;
 
 /// A set which constrains the input or output of a [`Function`].
 ///
@@ -369,6 +369,26 @@ where
             output_metric,
             stability_map,
         })
+    }
+
+    pub fn decompose(
+        self,
+    ) -> (
+        DI,
+        DO,
+        Function<DI::Carrier, DO::Carrier>,
+        MI,
+        MO,
+        StabilityMap<MI, MO>,
+    ) {
+        (
+            self.input_domain,
+            self.output_domain,
+            self.function,
+            self.input_metric,
+            self.output_metric,
+            self.stability_map,
+        )
     }
 
     #[allow(dead_code)]

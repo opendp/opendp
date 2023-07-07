@@ -7,6 +7,7 @@ from opendp.typing import *
 __all__ = [
     "bool_free",
     "ffislice_of_anyobjectptrs",
+    "new_arrow_array",
     "object_as_slice",
     "object_free",
     "object_type",
@@ -71,6 +72,29 @@ def ffislice_of_anyobjectptrs(
     lib_function.restype = FfiResult
     
     output = unwrap(lib_function(c_raw), FfiSlicePtr)
+    
+    return output
+
+
+@versioned
+def new_arrow_array(
+    
+) -> Any:
+    """[new_arrow_array in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.new_arrow_array.html)
+    
+    
+    :rtype: Any
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    """
+    # No type arguments to standardize.
+    # No arguments to convert to c types.
+    # Call library function.
+    lib_function = lib.opendp_data__new_arrow_array
+    lib_function.argtypes = []
+    lib_function.restype = FfiSlicePtr
+    
+    output = c_to_py(lib_function())
     
     return output
 

@@ -14,11 +14,6 @@ mod b_ary_tree;
 pub use crate::transformations::b_ary_tree::*;
 
 #[cfg(feature = "contrib")]
-mod dataframe;
-#[cfg(feature = "contrib")]
-pub use crate::transformations::dataframe::*;
-
-#[cfg(feature = "contrib")]
 mod manipulation;
 #[cfg(feature = "contrib")]
 pub use crate::transformations::manipulation::*;
@@ -91,4 +86,4 @@ pub use crate::transformations::cast_metric::*;
 #[cfg(feature = "contrib")]
 mod resize;
 #[cfg(feature = "contrib")]
-pub use crate::transformations::resize::*;
+pub use crate::transformations::polars::*;
