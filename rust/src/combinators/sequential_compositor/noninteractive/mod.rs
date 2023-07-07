@@ -136,6 +136,27 @@ impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for ZeroConcentratedDiver
     }
 }
 
+#[cfg(feature = "partials")]
+pub fn then_basic_composition<DI, TO, MI, MO>(
+    measurements: Vec<crate::core::PartialMeasurement<DI, TO, MI, MO>>,
+) -> crate::core::PartialMeasurement<DI, Vec<TO>, MI, MO>
+where
+    DI: 'static + Domain,
+    TO: 'static,
+    MI: 'static + Metric,
+    MO: 'static + BasicCompositionMeasure + Send + Sync,
+    (DI, MI): MetricSpace,
+{
+    crate::core::PartialMeasurement::new(move |input_domain: DI, input_metric: MI| {
+        make_basic_composition(
+            measurements
+                .into_iter()
+                .map(|m| m.fix(input_domain.clone(), input_metric.clone()))
+                .collect::<Fallible<Vec<_>>>()?,
+        )
+    })
+}
+
 // UNIT TESTS
 #[cfg(test)]
 mod tests {

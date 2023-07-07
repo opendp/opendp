@@ -20,7 +20,7 @@ mod ffi;
 #[bootstrap(
     features("contrib"),
     arguments(scale(c_type = "void *")),
-    generics(MI(suppress), TA(suppress), QO(default = "float"))
+    generics(MI(suppress), TI(suppress), QO(default = "float"))
 )]
 /// Polars operator to compute the private mean of a column in a LazyFrame or LazyGroupBy
 ///

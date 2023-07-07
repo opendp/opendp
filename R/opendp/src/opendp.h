@@ -956,6 +956,10 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_private_mean_expr(
                                                                                 const void *scale,
                                                                                 const char *QO);
 
+struct FfiResult_____AnyMeasurement opendp_measurements__make_private_agg(const struct AnyDomain *input_domain,
+                                                                          const struct AnyMetric *input_metric,
+                                                                          const AnyMeasurement *measurement);
+
 /**
  * Internal function. Free the memory associated with `this`.
  */

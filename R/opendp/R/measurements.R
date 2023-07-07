@@ -1128,6 +1128,83 @@ then_laplace_expr <- function(
 }
 
 
+#' private agg constructor
+#'
+#' Make a Transformation that returns a Measurement in agg context.
+#'
+#' Valid inputs for `input_domain` and `input_metric` are:
+#'
+#' | `input_domain`                  | `input_metric`                             |
+#' | ------------------------------- | ------------------------------------------ |
+#' | `LazyGroupByDomain`             | `SymmetricDistance`                        |
+#' | `LazyGroupByDomain`             | `InsertDeleteDistance`                     |
+#' | `LazyGroupByDomain`             | `ChangeOneDistance` if Margins provided    |
+#' | `LazyGroupByDomain`             | `HammingDistance` if Margins provided      |
+#' | `LazyGroupByDomain`             | `Lp<p, AbsoluteDistance>`                  |
+#'
+#' [make_private_agg in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_private_agg.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `LazyGroupByDomain`
+#' * Output Type:    `LazyFrame`
+#' * Input Metric:   `T::InputMetric`
+#' * Output Measure: `T::OutputMeasure`
+#'
+#' @concept measurements
+#' @param input_domain LazyGroupByDomain.
+#' @param input_metric The metric space under which neighboring LazyGroupBy frames are compared.
+#' @param measurement undocumented
+#' @return Measurement
+#' @export
+make_private_agg <- function(
+    input_domain,
+    input_metric,
+    measurement
+) {
+    # No type arguments to standardize.
+    log <- new_constructor_log("make_private_agg", "measurements", new_hashtab(
+        list("input_domain", "input_metric", "measurement"),
+        list(input_domain, input_metric, measurement)
+    ))
+
+    # Call wrapper function.
+    output <- .Call(
+        "measurements__make_private_agg",
+        input_domain, input_metric, measurement,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial private agg constructor
+#'
+#' See documentation for [make_private_agg()] for details.
+#'
+#' @concept measurements
+#' @param lhs The prior transformation or metric space.
+#' @param measurement undocumented
+#' @return Measurement
+#' @export
+then_private_agg <- function(
+    lhs,
+    measurement
+) {
+
+    log <- new_constructor_log("then_private_agg", "measurements", new_hashtab(
+        list("measurement"),
+        list(measurement)
+    ))
+
+    make_chain_dyn(
+        make_private_agg(
+            output_domain(lhs),
+            output_metric(lhs),
+            measurement = measurement),
+        lhs,
+        log)
+}
+
+
 #' private mean expr constructor
 #'
 #' Polars operator to compute the private mean of a column in a LazyFrame or LazyGroupBy
@@ -1145,7 +1222,6 @@ then_laplace_expr <- function(
 #' @param input_domain ExprDomain
 #' @param input_metric The metric under which neighboring LazyFrames are compared
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-#' @param .TI Data type of the input data
 #' @param .QO Output data type of the scale and epsilon
 #' @return Measurement
 #' @export
@@ -1153,18 +1229,16 @@ make_private_mean_expr <- function(
     input_domain,
     input_metric,
     scale,
-    .TI,
     .QO = "float"
 ) {
     assert_features("contrib")
 
     # Standardize type arguments.
-    .TI <- rt_parse(type_name = .TI)
     .QO <- parse_or_infer(type_name = .QO, public_example = scale)
 
     log <- new_constructor_log("make_private_mean_expr", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "TI", "QO"),
-        list(input_domain, input_metric, scale, .TI, .QO)
+        list("input_domain", "input_metric", "scale", "QO"),
+        list(input_domain, input_metric, scale, .QO)
     ))
 
     # Assert that arguments are correctly typed.
@@ -1173,7 +1247,7 @@ make_private_mean_expr <- function(
     # Call wrapper function.
     output <- .Call(
         "measurements__make_private_mean_expr",
-        input_domain, input_metric, scale, .TI, .QO,
+        input_domain, input_metric, scale, .QO,
         log, PACKAGE = "opendp")
     output
 }
@@ -1185,20 +1259,18 @@ make_private_mean_expr <- function(
 #' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-#' @param .TI Data type of the input data
 #' @param .QO Output data type of the scale and epsilon
 #' @return Measurement
 #' @export
 then_private_mean_expr <- function(
     lhs,
     scale,
-    .TI,
     .QO = "float"
 ) {
 
     log <- new_constructor_log("then_private_mean_expr", "measurements", new_hashtab(
-        list("scale", "TI", "QO"),
-        list(scale, .TI, .QO)
+        list("scale", "QO"),
+        list(scale, .QO)
     ))
 
     make_chain_dyn(
@@ -1206,7 +1278,6 @@ then_private_mean_expr <- function(
             output_domain(lhs),
             output_metric(lhs),
             scale = scale,
-            .TI = .TI,
             .QO = .QO),
         lhs,
         log)
