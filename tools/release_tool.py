@@ -169,12 +169,21 @@ def configure_channel(args):
     if args.channel == "dev":
         version = version.replace(prerelease="dev", build=None)
     elif args.channel in ("nightly", "beta"):
-        date = today(args).strftime("%Y%m%d")
-        prerelease = f"{args.channel}.{date}{args.counter:03}"
+        date = today(args)
+        prerelease = f"{args.channel}.{date.strftime('%Y%m%d')}{args.counter:03}"
         version = version.replace(prerelease=prerelease, build=None)
     elif args.channel == "stable":
-        version = version.replace(prerelease=None, build=None)
+        version = version.finalize_version()
     update_version(version)
+
+
+def infer_channel(version):
+    if version.prerelease is None:
+        return "stable"
+    channel = version.prerelease.split(".", 1)[0]
+    if channel not in ("dev", "nightly", "beta"):
+        raise Exception(f"Unable to infer channel from version {version}")
+    return channel
 
 
 def first_match(lines, pattern):
@@ -183,33 +192,42 @@ def first_match(lines, pattern):
         match = matcher.match(line)
         if match is not None:
             return i, match
-    raise Exception
+    raise Exception("Didn't match pattern in CHANGELOG")
 
 
 def changelog(args):
     log(f"*** UPDATING CHANGELOG ***")
-    if args.from_stable:
-        # Pull the CHANGELOG from stable, then insert a new Upcoming Release section at top.
-        changelog = run_command("Getting CHANGELOG from stable", f"git show origin/stable:CHANGELOG.md", capture_output=True)
-        lines = io.StringIO(changelog).readlines()
-        # This tells us where to insert.
-        i, _match = first_match(lines, r"^## \[(\d+\.\d+\.\d+)].*$")
-        log(f"Inserting new Upcoming Release section")
-        lines[i:i] = [f"## [Upcoming Release](https://github.com/opendp/opendp/compare/stable...HEAD) - TBD\n", "\n", "\n"]
+    version = get_version()
+    channel = infer_channel(version)
+    log(f"Reading CHANGELOG")
+    with open("CHANGELOG.md") as f:
+        lines = f.readlines()
+    url_base = "https://github.com/opendp/opendp/compare/"
+    i, match = first_match(lines, fr"^## \[(\d+\.\d+\.\d+(?:-\S+)?)\]\({re.escape(url_base)}(\S+)\.\.\.\S+\) - \S+$")
+    heading_version = semver.Version.parse(match.group(1))
+    diff_source = match.group(2)
+
+    if channel == "dev":
+        # If we're on dev, we expect that the VERSION file has been bumped above the existing heading version.
+        # if version.finalize_version() <= heading_version.finalize_version():
+        #     raise Exception(f"On dev, but VERSION {version} hasn't been bumped above heading version {heading_version}")
+        new_heading_version = heading_version.finalize_version()
+        diff_target = f"v{heading_version.finalize_version()}"
     else:
-        version = get_version()
-        # Load the CHANGELOG from local, then replace the Upcoming Release heading with the current version.
-        log(f"Reading CHANGELOG")
-        with open("CHANGELOG.md") as f:
-            lines = f.readlines()
-        # This tells us the previous released version.
-        _i, match = first_match(lines, r"^## \[(\d+\.\d+\.\d+)].*$")
-        previous_version = match.group(1)
-        # This tells us where to replace.
-        i, _match = first_match(lines, r"^## \[Upcoming Release\].*$")
-        date = today(args).isoformat()
-        log(f"Updating Upcoming Release heading to {version}")
-        lines[i] = f"## [{version}](https://github.com/opendp/opendp/compare/v{previous_version}...v{version}) - {date}\n"
+        # If we're not on dev, we expect that the VERSION file matches the existing heading version.
+        if version.finalize_version() != heading_version.finalize_version():
+            raise Exception(f"Not on dev, but VERSION {version} isn't compatible with heading version {heading_version}")
+        new_heading_version = version
+        diff_target = f"v{version}" if channel == "stable" else channel
+    date = args.stable_date or today(args)
+    log(f"Updating heading to {new_heading_version}, {diff_source}...{diff_target}, {date.isoformat()}")
+    lines[i] = f"## [{new_heading_version}]({url_base}{diff_source}...{diff_target}) - {date.isoformat()}\n"
+
+    if channel == "dev":
+        # Insert a new section for the current version.
+        diff_source = diff_target
+        log(f"Inserting new section for {version}")
+        lines[i:i] = [f"## [{version}]({url_base}{diff_source}...HEAD) - TBD\n", "\n", "\n"]
 
     with open("CHANGELOG.md", "w") as f:
         f.writelines(lines)
@@ -272,14 +290,13 @@ def _main(argv):
     subparser = subparsers.add_parser("configure", help="Configure the channel")
     subparser.set_defaults(func=configure_channel)
     subparser.add_argument("-c", "--channel", choices=["dev", "nightly", "beta", "stable"], default="dev", help="Which channel to target")
-    subparser.add_argument("-z", "--time-zone", help="Time zone for dates")
+    subparser.add_argument("-z", "--time-zone", help="Time zone for release dates")
     subparser.add_argument("-i", "--counter", type=int, default=1, help="Intra-date version counter")
 
     subparser = subparsers.add_parser("changelog", help="Update CHANGELOG file")
     subparser.set_defaults(func=changelog)
-    subparser.add_argument("-z", "--time-zone", help="Time zone for dates")
-    subparser.add_argument("-s", "--from-stable", dest="from_stable", action="store_true", default=False)
-    subparser.add_argument("-ns", "--no-from-stable", dest="from_stable", action="store_false")
+    subparser.add_argument("-d", "--stable-date", type=datetime.date.fromisoformat, help="Date for next stable release")
+    subparser.add_argument("-z", "--time-zone", help="Time zone for release dates (when inferring)")
 
     subparser = subparsers.add_parser("sanity", help="Run sanity test")
     subparser.set_defaults(func=sanity)
@@ -292,7 +309,7 @@ def _main(argv):
 
     subparser = subparsers.add_parser("bump_version", help="Bump the version number (assumes dev channel)")
     subparser.set_defaults(func=bump_version)
-    subparser.add_argument("-p", "--position", choices=["major", "minor", "patch"], default="patch")
+    subparser.add_argument("-p", "--position", choices=["major", "minor", "patch"], default="minor")
     subparser.add_argument("-s", "--set", help="Set the version to a specific value")
 
     args = parser.parse_args(argv[1:])
