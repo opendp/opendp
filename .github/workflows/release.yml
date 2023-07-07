@@ -1,0 +1,73 @@
+name: Release
+on:
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        required: true
+      counter:
+        type: number
+        required: false
+        default: 1
+      fake:
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Release Channel
+        type: choice
+        options:
+          - nightly
+          - beta
+          - stable
+        required: true
+        default: nightly
+      counter:
+        description: Version Counter
+        type: number
+        required: false
+        default: 1
+      fake:
+        description: Fake Build
+        type: boolean
+        required: true
+        default: false
+
+jobs:
+  prepare:
+    uses: opendp/opendp/.github/workflows/prepare.yml@714-nightly-build
+    with:
+      channel: ${{ inputs.channel }}
+      counter: ${{ fromJSON(inputs.counter) }}
+
+  build:
+    needs: prepare
+    uses: opendp/opendp/.github/workflows/build.yml@714-nightly-build
+    with:
+      channel: ${{ inputs.channel }}
+      fake: ${{ inputs.fake }}
+
+  sanity-test-pre:
+    needs: build
+    uses: opendp/opendp/.github/workflows/sanity-test.yml@714-nightly-build
+    with:
+      channel: ${{ inputs.channel }}
+      python_repository: local
+      fake: ${{ inputs.fake }}
+
+  publish:
+    needs: sanity-test-pre
+    uses: opendp/opendp/.github/workflows/publish.yml@714-nightly-build
+    with:
+      channel: ${{ inputs.channel }}
+      dry_run: true
+    secrets: inherit
+
+  sanity-test-post:
+    needs: publish
+    uses: opendp/opendp/.github/workflows/sanity-test.yml@714-nightly-build
+    with:
+      channel: ${{ inputs.channel }}
+      python_repository: testpypi
+      fake: ${{ inputs.fake }}

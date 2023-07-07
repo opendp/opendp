@@ -1,66 +1,15 @@
 name: Nightly
 on:
-#  schedule:
-#    cron:
-#      # 03:55 UTC = 22:55 EST/23:55 EDT (i.e. always before midnight), so nightlies will have a sensible date
-#      - 3 55 * * *
+  schedule:
+    cron:
+      # 03:55 UTC = 22:55 EST/23:55 EDT (i.e., always before midnight), so nightlies will have a sensible date
+      - 3 55 * * *
   workflow_dispatch:
-    inputs:
-      channel:
-        description: Release Channel
-        type: choice
-        options:
-          - nightly
-          - beta
-          - stable
-        required: true
-        default: nightly
-      counter:
-        description: Version Counter
-        type: number
-        required: false
-        default: 1
-      fake:
-        description: Fake Build
-        type: boolean
-        required: true
-        default: false
-
 
 jobs:
-  prepare:
-    uses: opendp/opendp/.github/workflows/prepare.yml@714-nightly-build
+  release:
+    uses: opendp/opendp/.github/workflows/release.yml@714-nightly-build
     with:
-      channel: ${{ inputs.channel }}
-      counter: ${{ fromJSON(inputs.counter) }}
-
-  build:
-    needs: prepare
-    uses: opendp/opendp/.github/workflows/build.yml@714-nightly-build
-    with:
-      channel: ${{ inputs.channel }}
-      fake: ${{ inputs.fake }}
-
-  sanity-test-pre:
-    needs: build
-    uses: opendp/opendp/.github/workflows/sanity-test.yml@714-nightly-build
-    with:
-      channel: ${{ inputs.channel }}
-      python_repository: local
-      fake: ${{ inputs.fake }}
-
-  publish:
-    needs: sanity-test-pre
-    uses: opendp/opendp/.github/workflows/publish.yml@714-nightly-build
-    with:
-      channel: ${{ inputs.channel }}
-      dry_run: true
-    secrets: inherit
-
-  sanity-test-post:
-    needs: publish
-    uses: opendp/opendp/.github/workflows/sanity-test.yml@714-nightly-build
-    with:
-      channel: ${{ inputs.channel }}
-      python_repository: testpypi
-      fake: ${{ inputs.fake }}
+      channel: nightly
+      counter: 2
+      fake: true
