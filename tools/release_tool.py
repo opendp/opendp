@@ -61,7 +61,7 @@ def init_channel(args):
         # We're preserving channel history, so we need to do a merge.
         # git doesn't have a "theirs" merge strategy, so we have to simulate it.
         # Technique from https://stackoverflow.com/a/4912267
-        run_command(f"Fetching channel", f"git fetch origin {args.channel}:{args.channel}")
+#        run_command(f"Fetching channel", f"git fetch origin {args.channel}:{args.channel}")
         run_command(f"Creating temporary branch based on upstream", f"git switch -c tmp {upstream}")
         run_command(f"Merging channel (keeping all upstream)", f"git merge -s ours {args.channel}")
         run_command(f"Switching to channel", f"git switch {args.channel}")
