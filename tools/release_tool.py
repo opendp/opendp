@@ -50,6 +50,10 @@ def get_version(version_str=None):
     return semver.Version.parse(version_str)
 
 
+def get_current_branch():
+    return run_command(f"Determining current branch", "git branch --show-current", capture_output=True)
+
+
 def init_channel(args):
     log(f"*** INITIALIZING CHANNEL FROM UPSTREAM ***")
     channel_to_upstream = {"nightly": "main", "beta": "nightly", "stable": "beta"}
@@ -57,7 +61,10 @@ def init_channel(args):
         raise Exception(f"Unknown channel {args.channel}")
     upstream = channel_to_upstream[args.channel] if args.upstream is None else args.upstream
     log(f"Initializing {args.channel} <= {upstream}")
-    run_command(f"Fetching upstream", f"git fetch origin {upstream}:{upstream}")
+    if get_current_branch() != upstream:
+        # GH checkout action doesn't fetch all branches unless you force it, in which case main seems to be omitted,
+        # so we make sure upstream is present here.
+        run_command(f"Fetching upstream", f"git fetch origin {upstream}:{upstream}")
     if args.preserve:
         # We're preserving channel history, so we need to do a merge.
         # git doesn't have a "theirs" merge strategy, so we have to simulate it.
