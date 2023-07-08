@@ -5,6 +5,10 @@ on:
       channel:
         type: string
         required: true
+      init:
+        type: boolean
+        required: false
+        default: true
       counter:
         type: number
         required: false
@@ -15,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       channel:
-        description: Release Channel
+        description: Target Channel
         type: choice
         options:
           - nightly
@@ -23,13 +27,18 @@ on:
           - stable
         required: true
         default: nightly
+      init:
+        description: Initialize the Channel?
+        type: boolean
+        required: false
+        default: true
       counter:
         description: Version Counter
         type: number
         required: false
         default: 1
       fake:
-        description: Fake Build
+        description: Fake Build?
         type: boolean
         required: true
         default: false
@@ -39,6 +48,7 @@ jobs:
     uses: opendp/opendp/.github/workflows/prepare.yml@714-nightly-build
     with:
       channel: ${{ inputs.channel }}
+      init: ${{ inputs.init }}
       counter: ${{ fromJSON(inputs.counter) }}
 
   build:

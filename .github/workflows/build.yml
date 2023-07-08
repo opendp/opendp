@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       channel:
-        description: Release Channel
+        description: Target Channel
         type: choice
         options:
           - nightly
@@ -20,7 +20,7 @@ on:
         required: true
         default: nightly
       fake:
-        description: Fake Build
+        description: Fake Build?
         type: boolean
         required: true
         default: false

@@ -18,7 +18,7 @@ on:
   workflow_dispatch:
     inputs:
       channel:
-        description: Release Channel
+        description: Target Channel
         type: choice
         options:
           - nightly

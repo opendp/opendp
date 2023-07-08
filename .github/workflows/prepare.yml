@@ -5,6 +5,10 @@ on:
       channel:
         type: string
         required: true
+      init:
+        type: boolean
+        required: false
+        default: true
       counter:
         type: number
         required: false
@@ -12,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       channel:
-        description: Release Channel
+        description: Target Channel
         type: choice
         options:
           - nightly
@@ -20,6 +24,11 @@ on:
           - stable
         required: true
         default: nightly
+      init:
+        description: Initialize the Channel?
+        type: boolean
+        required: false
+        default: true
       counter:
         description: Version Counter
         type: number
@@ -51,6 +60,7 @@ jobs:
         run: pip install -r tools/requirements-release_tool.txt
 
       - name: Initialize channel
+        if: ${{ options.init }}
         run: python tools/release_tool.py init_channel -c ${{ inputs.channel }} -u 714-nightly-build
 
       - name: Configure channel

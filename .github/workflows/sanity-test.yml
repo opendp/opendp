@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       channel:
-        description: Release Channel
+        description: Target Channel
         type: choice
         options:
           - nightly
@@ -32,7 +32,7 @@ on:
         required: true
         default: PyPI
       fake:
-        description: Fake Test
+        description: Fake Test?
         type: boolean
         required: true
         default: false
