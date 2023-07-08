@@ -22,7 +22,7 @@ on:
       fake:
         description: Fake Build?
         type: boolean
-        required: true
+        required: false
         default: false
 env:
   FEATURES: untrusted,ffi

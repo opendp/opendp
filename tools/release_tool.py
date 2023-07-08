@@ -54,29 +54,37 @@ def get_current_branch():
     return run_command(f"Determining current branch", "git branch --show-current", capture_output=True)
 
 
+def ensure_branch(branch):
+    # GH checkout action doesn't fetch all branches unless you force it, in which case main seems to be omitted.
+    # So we fetch the branch from origin, but only if we're not already on it (which would cause the fetch to fail).
+    if get_current_branch() != branch:
+        run_command(f"Fetching branch {branch}", f"git fetch origin {branch}:{branch}")
+
+
 def init_channel(args):
     log(f"*** INITIALIZING CHANNEL FROM UPSTREAM ***")
-    channel_to_upstream = {"nightly": "main", "beta": "nightly", "stable": "beta"}
-    if args.channel not in channel_to_upstream:
+    if args.channel not in ("nightly", "beta", "stable"):
         raise Exception(f"Unknown channel {args.channel}")
-    upstream = channel_to_upstream[args.channel] if args.upstream is None else args.upstream
-    log(f"Initializing {args.channel} <= {upstream}")
-    if get_current_branch() != upstream:
-        # GH checkout action doesn't fetch all branches unless you force it, in which case main seems to be omitted,
-        # so we make sure upstream is present here.
-        run_command(f"Fetching upstream", f"git fetch origin {upstream}:{upstream}")
-    if args.preserve:
-        # We're preserving channel history, so we need to do a merge.
-        # git doesn't have a "theirs" merge strategy, so we have to simulate it.
-        # Technique from https://stackoverflow.com/a/4912267
-        run_command(f"Creating temporary branch based on upstream", f"git switch -c tmp {upstream}")
-        run_command(f"Merging channel (keeping all upstream)", f"git merge -s ours {args.channel}")
-        run_command(f"Switching to channel", f"git switch {args.channel}")
-        run_command(f"Merging temporary branch", f"git merge tmp")
-        run_command(f"Deleting temporary branch", f"git branch -D tmp")
+    if args.sync:
+        channel_to_upstream = {"nightly": "main", "beta": "nightly", "stable": "beta"}
+        upstream = channel_to_upstream[args.channel] if args.upstream is None else args.upstream
+        ensure_branch(upstream)
+        log(f"Syncing {args.channel} <= {upstream}")
+        if args.preserve:
+            # We're preserving channel history, so we need to do a merge.
+            # git doesn't have a "theirs" merge strategy, so we have to simulate it.
+            # Technique from https://stackoverflow.com/a/4912267
+            run_command(f"Creating temporary branch based on upstream", f"git switch -c tmp {upstream}")
+            run_command(f"Merging channel (keeping all upstream)", f"git merge -s ours {args.channel}")
+            run_command(f"Switching to channel", f"git switch {args.channel}")
+            run_command(f"Merging temporary branch", f"git merge tmp")
+            run_command(f"Deleting temporary branch", f"git branch -D tmp")
+        else:
+            # We're not preserving channel history, so we can just reset the branch.
+            run_command(f"Resetting channel to upstream", f"git switch -C {args.channel} {upstream}")
     else:
-        # We're not preserving channel history, so we can just reset the branch.
-        run_command(f"Resetting channel to upstream", f"git switch -C {args.channel} {upstream}")
+        ensure_branch(args.channel)
+        run_command(f"Switching to channel", f"git switch {args.channel}")
 
 
 def update_file(path, load, munge, dump, binary=False):
@@ -317,6 +325,8 @@ def _main(argv):
     subparser = subparsers.add_parser("init_channel", help="Initialize the channel")
     subparser.set_defaults(func=init_channel)
     subparser.add_argument("-c", "--channel", choices=["nightly", "beta", "stable"], default="nightly", help="Which channel to target")
+    subparser.add_argument("-s", "--sync", dest="sync", action="store_true", default=True, help="Sync the channel from upstream")
+    subparser.add_argument("-ns", "--no-nosync", dest="sync", action="store_false", help="Don't sync the channel from upstream")
     subparser.add_argument("-u", "--upstream", help="Upstream ref")
     subparser.add_argument("-p", "--preserve", dest="preserve", action="store_true", default=False)
     subparser.add_argument("-np", "--no-preserve", dest="preserve", action="store_false")

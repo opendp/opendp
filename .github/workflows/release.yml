@@ -5,16 +5,17 @@ on:
       channel:
         type: string
         required: true
-      init:
+      sync:
         type: boolean
         required: false
-        default: true
+        default: false
       counter:
         type: number
         required: false
         default: 0
       fake:
         type: boolean
+        required: false
         default: false
   workflow_dispatch:
     inputs:
@@ -27,11 +28,11 @@ on:
           - stable
         required: true
         default: nightly
-      init:
-        description: Initialize the Channel?
+      sync:
+        description: Sync the Channel from Upstream?
         type: boolean
         required: false
-        default: true
+        default: false
       counter:
         description: Version Counter
         type: number
@@ -40,7 +41,7 @@ on:
       fake:
         description: Fake Build?
         type: boolean
-        required: true
+        required: false
         default: false
 
 jobs:
@@ -48,7 +49,7 @@ jobs:
     uses: opendp/opendp/.github/workflows/prepare.yml@714-nightly-build
     with:
       channel: ${{ inputs.channel }}
-      init: ${{ inputs.init }}
+      sync: ${{ inputs.sync }}
       counter: ${{ fromJSON(inputs.counter) }}
 
   build:
