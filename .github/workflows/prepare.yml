@@ -44,8 +44,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          ref: ${{ inputs.channel }}
+#        with:
+#          ref: ${{ inputs.channel }}
 
       - name: Configure git user
         run: |
