@@ -52,16 +52,16 @@ def get_version(version_str=None):
 
 def init_channel(args):
     log(f"*** INITIALIZING CHANNEL FROM UPSTREAM ***")
-    channel_to_upstream = {"nightly": "origin/main", "beta": "origin/nightly", "stable": "origin/beta"}
+    channel_to_upstream = {"nightly": "main", "beta": "nightly", "stable": "beta"}
     if args.channel not in channel_to_upstream:
         raise Exception(f"Unknown channel {args.channel}")
     upstream = channel_to_upstream[args.channel] if args.upstream is None else args.upstream
     log(f"Initializing {args.channel} <= {upstream}")
+    run_command(f"Fetching upstream", f"git fetch origin {upstream}:{upstream}")
     if args.preserve:
         # We're preserving channel history, so we need to do a merge.
         # git doesn't have a "theirs" merge strategy, so we have to simulate it.
         # Technique from https://stackoverflow.com/a/4912267
-#        run_command(f"Fetching channel", f"git fetch origin {args.channel}:{args.channel}")
         run_command(f"Creating temporary branch based on upstream", f"git switch -c tmp {upstream}")
         run_command(f"Merging channel (keeping all upstream)", f"git merge -s ours {args.channel}")
         run_command(f"Switching to channel", f"git switch {args.channel}")
