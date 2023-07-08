@@ -165,7 +165,7 @@ def today(args):
 
 
 def infer_counter(version, date, args):
-    if args.counter is not None:
+    if args.counter:
         return args.counter
     if version.prerelease is None:
         return 1
@@ -318,7 +318,7 @@ def _main(argv):
     subparser.set_defaults(func=configure_channel)
     subparser.add_argument("-c", "--channel", choices=["dev", "nightly", "beta", "stable"], default="dev", help="Which channel to target")
     subparser.add_argument("-z", "--time-zone", help="Time zone for release dates")
-    subparser.add_argument("-i", "--counter", type=int, help="Intra-date version counter")
+    subparser.add_argument("-i", "--counter", type=int, default=0, help="Intra-date version counter")
 
     subparser = subparsers.add_parser("changelog", help="Update CHANGELOG file")
     subparser.set_defaults(func=changelog)

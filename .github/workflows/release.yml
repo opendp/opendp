@@ -12,7 +12,7 @@ on:
       counter:
         type: number
         required: false
-        default: 1
+        default: 0
       fake:
         type: boolean
         default: false
@@ -36,7 +36,7 @@ on:
         description: Version Counter
         type: number
         required: false
-        default: 1
+        default: 0
       fake:
         description: Fake Build?
         type: boolean
