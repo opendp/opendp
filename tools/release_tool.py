@@ -50,13 +50,13 @@ def get_version(version_str=None):
     return semver.Version.parse(version_str)
 
 
-def sync_channel(args):
-    log(f"*** SYNCING CHANNEL FROM UPSTREAM ***")
+def init_channel(args):
+    log(f"*** INITIALIZING CHANNEL FROM UPSTREAM ***")
     channel_to_upstream = {"nightly": "origin/main", "beta": "origin/nightly", "stable": "origin/beta"}
     if args.channel not in channel_to_upstream:
         raise Exception(f"Unknown channel {args.channel}")
     upstream = channel_to_upstream[args.channel] if args.upstream is None else args.upstream
-    log(f"Syncing {args.channel} <= {upstream}")
+    log(f"Initializing {args.channel} <= {upstream}")
     if args.preserve:
         # We're preserving channel history, so we need to do a merge.
         # git doesn't have a "theirs" merge strategy, so we have to simulate it.
@@ -307,14 +307,14 @@ def _main(argv):
     subparsers = parser.add_subparsers(dest="COMMAND", help="Command to run")
     subparsers.required = True
 
-    subparser = subparsers.add_parser("sync", help="Sync the channel")
-    subparser.set_defaults(func=sync_channel)
+    subparser = subparsers.add_parser("init_channel", help="Initialize the channel")
+    subparser.set_defaults(func=init_channel)
     subparser.add_argument("-c", "--channel", choices=["nightly", "beta", "stable"], default="nightly", help="Which channel to target")
     subparser.add_argument("-u", "--upstream", help="Upstream ref")
     subparser.add_argument("-p", "--preserve", dest="preserve", action="store_true", default=False)
     subparser.add_argument("-np", "--no-preserve", dest="preserve", action="store_false")
 
-    subparser = subparsers.add_parser("configure", help="Configure the channel")
+    subparser = subparsers.add_parser("config_channel", help="Configure the channel")
     subparser.set_defaults(func=configure_channel)
     subparser.add_argument("-c", "--channel", choices=["dev", "nightly", "beta", "stable"], default="dev", help="Which channel to target")
     subparser.add_argument("-z", "--time-zone", help="Time zone for release dates")
