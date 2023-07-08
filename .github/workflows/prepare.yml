@@ -60,7 +60,7 @@ jobs:
         run: pip install -r tools/requirements-release_tool.txt
 
       - name: Initialize channel
-        if: ${{ options.init }}
+        if: ${{ inputs.init }}
         run: python tools/release_tool.py init_channel -c ${{ inputs.channel }} -u 714-nightly-build
 
       - name: Configure channel
