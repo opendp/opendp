@@ -63,7 +63,7 @@ jobs:
 
       - name: Initialize channel
         if: ${{ inputs.init }}
-        run: python tools/release_tool.py init_channel -c ${{ inputs.channel }} -u 714-nightly-build
+        run: python tools/release_tool.py init_channel -c ${{ inputs.channel }} -u origin/714-nightly-build
 
       - name: Configure channel
         run: python tools/release_tool.py config_channel -c ${{ inputs.channel }} -z "$TIME_ZONE" -i ${{ inputs.counter }}
