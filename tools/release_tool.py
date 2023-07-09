@@ -1,7 +1,6 @@
 import argparse
 import configparser
 import datetime
-import io
 import re
 import subprocess
 import sys
@@ -20,7 +19,7 @@ def log(message, command=False):
 def run_command(description, args, capture_output=False, shell=True):
     if description:
         log(description)
-    printed_args = args.join(" ") if type(args) == list else args
+    printed_args = " ".join(args) if type(args) == list else args
     log(printed_args, command=True)
     stdout = subprocess.PIPE if capture_output else None
     completed_process = subprocess.run(args, stdout=stdout, shell=shell, check=True, encoding="utf-8")
@@ -87,6 +86,16 @@ def init_channel(args):
         run_command(f"Switching to channel", f"git switch {args.channel}")
 
 
+def date(args):
+    log(f"*** GENERATING RELEASE DATE ***")
+    if args.time_zone is not None:
+        tz = zoneinfo.ZoneInfo(args.time_zone)
+        date = datetime.datetime.now(tz).date()
+    else:
+        date = datetime.date.today()
+    print(date.isoformat())
+
+
 def update_file(path, load, munge, dump, binary=False):
     log(f"Updating {path}")
     b = "b" if binary else ""
@@ -95,6 +104,21 @@ def update_file(path, load, munge, dump, binary=False):
     new_data = munge(data)
     with open(path, f"w{b}") as f:
         dump(new_data, f)
+
+
+def infer_counter(version, date, args):
+    if args.counter:
+        return args.counter
+    if version.prerelease is None:
+        return 1
+    match = re.match(fr"^{args.channel}\.(\d+)\.(\d+)", version.prerelease)
+    if match is None:
+        return 1
+    version_date = match.group(1)
+    version_counter = match.group(2)
+    if not version_date == date.strftime('%Y%m%d'):
+        return 1
+    return int(version_counter) + 1
 
 
 def get_python_version(version):
@@ -171,29 +195,6 @@ def update_version(version):
     update_file("python/setup.cfg", load_config, munge_config, lambda data, f: data.write(f))
 
 
-def today(args):
-    if args.time_zone is not None:
-        tz = zoneinfo.ZoneInfo(args.time_zone)
-        return datetime.datetime.now(tz).date()
-    else:
-        return datetime.date.today()
-
-
-def infer_counter(version, date, args):
-    if args.counter:
-        return args.counter
-    if version.prerelease is None:
-        return 1
-    match = re.match(fr"^{args.channel}\.(\d+)\.(\d+)", version.prerelease)
-    if match is None:
-        return 1
-    version_date = match.group(1)
-    version_counter = match.group(2)
-    if not version_date == date.strftime('%Y%m%d'):
-        return 1
-    return int(version_counter) + 1
-
-
 def configure_channel(args):
     log(f"*** CONFIGURING CHANNEL ***")
     if args.channel not in ("dev", "nightly", "beta", "stable"):
@@ -204,7 +205,7 @@ def configure_channel(args):
         version = version.replace(prerelease="dev", build=None)
     elif args.channel in ("nightly", "beta"):
         # nightly/beta have a tag with the date and a counter
-        date = today(args)
+        date = args.date or datetime.date.today()
         counter = infer_counter(version, date, args)
         prerelease = f"{args.channel}.{date.strftime('%Y%m%d')}.{counter}"
         version = version.replace(prerelease=prerelease, build=None)
@@ -236,7 +237,7 @@ def changelog(args):
     log(f"*** UPDATING CHANGELOG ***")
     version = get_version()
     channel = infer_channel(version)
-    stable_date = args.stable_date or today(args)
+    date = args.date or datetime.date.today()
 
     log(f"Reading CHANGELOG")
     with open("CHANGELOG.md") as f:
@@ -254,14 +255,14 @@ def changelog(args):
             raise Exception(f"Prepending new heading, but VERSION {version} hasn't been bumped above heading version {heading_version}")
         new_heading_version = heading_version.finalize_version()
         diff_target = f"v{heading_version.finalize_version()}"
-        date = stable_date.isoformat()
     else:
         # Check that the VERSION file matches the existing heading version.
         if version.finalize_version() != heading_version.finalize_version():
             raise Exception(f"VERSION {version} isn't compatible with heading version {heading_version}")
         new_heading_version = version
         diff_target = f"v{version}" if channel == "stable" else (channel if channel != "dev" else "HEAD")
-        date = stable_date.isoformat() if channel != "dev" else "TBD"
+        if channel == "dev":
+            date = "TBD"
 
     log(f"Updating heading to {new_heading_version}, {diff_source}...{diff_target}, {date}")
     lines[i] = f"## [{new_heading_version}]({url_base}{diff_source}...{diff_target}) - {date}\n"
@@ -331,16 +332,19 @@ def _main(argv):
     subparser.add_argument("-p", "--preserve", dest="preserve", action="store_true", default=False)
     subparser.add_argument("-np", "--no-preserve", dest="preserve", action="store_false")
 
+    subparser = subparsers.add_parser("date", help="Generate release date")
+    subparser.set_defaults(func=date)
+    subparser.add_argument("-z", "--time-zone", help="Time zone for date resolution")
+
     subparser = subparsers.add_parser("config_channel", help="Configure the channel")
     subparser.set_defaults(func=configure_channel)
     subparser.add_argument("-c", "--channel", choices=["dev", "nightly", "beta", "stable"], default="dev", help="Which channel to target")
-    subparser.add_argument("-z", "--time-zone", help="Time zone for release dates")
+    subparser.add_argument("-d", "--date", type=datetime.date.fromisoformat, help="Release date")
     subparser.add_argument("-i", "--counter", type=int, default=0, help="Intra-date version counter")
 
     subparser = subparsers.add_parser("changelog", help="Update CHANGELOG file")
     subparser.set_defaults(func=changelog)
-    subparser.add_argument("-d", "--stable-date", type=datetime.date.fromisoformat, help="Date for next stable release")
-    subparser.add_argument("-z", "--time-zone", help="Time zone for release dates (when inferring)")
+    subparser.add_argument("-d", "--date", type=datetime.date.fromisoformat, help="Release date")
     subparser.add_argument("-p", "--prepend", dest="prepend", action="store_true", default=False, help="Prepend new empty heading (for dev only)")
     subparser.add_argument("-np", "--no-prepend", dest="prepend", action="store_false", help="Don't prepend new empty heading (for dev only)")
 

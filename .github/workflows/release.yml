@@ -68,10 +68,11 @@ jobs:
       fake: ${{ inputs.fake }}
 
   publish:
-    needs: sanity-test-pre
+    needs: [ prepare, sanity-test-pre ]
     uses: opendp/opendp/.github/workflows/publish.yml@714-nightly-build
     with:
       channel: ${{ inputs.channel }}
+      date: ${{ needs.prepare.outputs.date }}
       dry_run: true
     secrets: inherit
 
