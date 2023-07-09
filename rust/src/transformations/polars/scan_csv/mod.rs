@@ -31,19 +31,19 @@ mod ffi;
 /// * `low_memory` - Reduce memory usage at the expense of performance
 /// * `rechunk` - Rechunk the memory to contiguous chunks when parsing is done.
 pub fn make_scan_csv<M: DatasetMetric>(
-    input_domain: CsvDomain,
+    input_domain: CsvDomain<LazyFrame>,
     input_metric: M,
     cache: bool,
     low_memory: bool,
     rechunk: bool,
-) -> Fallible<Transformation<CsvDomain, LazyFrameDomain, M, M>>
+) -> Fallible<Transformation<CsvDomain<LazyFrame>, LazyFrameDomain, M, M>>
 where
-    (CsvDomain, M): MetricSpace,
+    (CsvDomain<LazyFrame>, M): MetricSpace,
     (LazyFrameDomain, M): MetricSpace,
 {
     Transformation::new(
         input_domain.clone(),
-        input_domain.lazyframe_domain.clone(),
+        input_domain.frame_domain.clone(),
         Function::new_fallible(move |path: &PathBuf| {
             Ok(input_domain
                 .new_reader(path.clone())

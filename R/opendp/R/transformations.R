@@ -3157,7 +3157,7 @@ then_resize <- function(
 #'
 #' **Supporting Elements:**
 #'
-#' * Input Domain:   `CsvDomain`
+#' * Input Domain:   `CsvDomain<LazyFrame>`
 #' * Output Domain:  `LazyFrameDomain`
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
