@@ -14,3 +14,8 @@ pub use make_lazy::*;
 
 mod make_unpack;
 pub use make_unpack::*;
+
+#[cfg(feature = "contrib")]
+mod sink_csv;
+#[cfg(feature = "contrib")]
+pub use sink_csv::*;

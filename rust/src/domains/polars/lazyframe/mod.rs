@@ -5,11 +5,11 @@ use polars::lazy::dsl::{col, cols, count};
 use polars::prelude::*;
 
 use crate::core::Domain;
+use crate::domains::DatasetMetric;
 use crate::{
     core::MetricSpace,
     domains::{AtomDomain, OptionDomain, SeriesDomain},
     error::Fallible,
-    transformations::DatasetMetric,
 };
 
 #[cfg(feature = "ffi")]

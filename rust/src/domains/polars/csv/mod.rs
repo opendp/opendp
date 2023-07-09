@@ -1,7 +1,10 @@
+use std::fmt::{Debug, Formatter};
+use std::fs::File;
 use std::path::PathBuf;
 
 use polars::prelude::*;
 
+use crate::domains::{Frame, FrameDomain};
 use crate::{
     core::{Domain, Metric, MetricSpace},
     error::Fallible,
@@ -13,17 +16,15 @@ use crate::{
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use super::LazyFrameDomain;
-
 pub trait DatasetMetric: Metric<Distance = IntDistance> {}
 impl DatasetMetric for SymmetricDistance {}
 impl DatasetMetric for InsertDeleteDistance {}
 impl DatasetMetric for ChangeOneDistance {}
 impl DatasetMetric for HammingDistance {}
 
-#[derive(Clone, PartialEq, Debug)]
-pub struct CsvDomain {
-    pub lazyframe_domain: LazyFrameDomain,
+#[derive(Clone)]
+pub struct CsvDomain<F: Frame> {
+    pub frame_domain: FrameDomain<F>,
     pub delimiter: char,
     pub has_header: bool,
     pub skip_rows: usize,
@@ -31,12 +32,13 @@ pub struct CsvDomain {
     pub quote_char: Option<char>,
     pub eol_char: char,
     pub null_values: Option<NullValues>,
+    pub null_value_repr: String,
 }
 
-impl CsvDomain {
-    pub fn new(lazyframe_domain: LazyFrameDomain) -> Self {
+impl<F: Frame> CsvDomain<F> {
+    pub fn new(frame_domain: FrameDomain<F>) -> Self {
         CsvDomain {
-            lazyframe_domain,
+            frame_domain,
             delimiter: ',',
             has_header: true,
             skip_rows: 0,
@@ -44,6 +46,7 @@ impl CsvDomain {
             quote_char: Some('"'),
             eol_char: '\n',
             null_values: None,
+            null_value_repr: "None".to_string(),
         }
     }
 
@@ -96,13 +99,19 @@ impl CsvDomain {
         self
     }
 
+    /// Set the file’s null value representation.
+    pub fn with_null_value_repr(mut self, null_value_repr: String) -> Self {
+        self.null_value_repr = null_value_repr;
+        self
+    }
+
     pub fn new_reader<'a>(&self, path: PathBuf) -> LazyCsvReader<'a> {
         LazyCsvReader::new(path)
             // parsing errors are a side-channel
             .with_ignore_errors(true)
             // fill missing columns with null
             .with_missing_is_null(true)
-            .with_schema(Arc::new(self.lazyframe_domain.schema()))
+            .with_schema(Arc::new(self.frame_domain.schema()))
             .with_delimiter(self.delimiter as u8)
             .has_header(self.has_header)
             .with_skip_rows(self.skip_rows)
@@ -111,18 +120,49 @@ impl CsvDomain {
             .with_end_of_line_char(self.eol_char as u8)
             .with_null_values(self.null_values.clone())
     }
+
+    pub fn new_writer(&self, path: PathBuf) -> CsvWriter<File> {
+        let file = File::create(path).unwrap();
+
+        CsvWriter::new(file)
+            .with_delimiter(self.delimiter as u8)
+            .has_header(self.has_header)
+            .with_quoting_char(self.quote_char.map(|v| v as u8).unwrap())
+            .with_null_value(self.null_value_repr.clone())
+    }
 }
 
-impl Domain for CsvDomain {
+impl<F: Frame> PartialEq for CsvDomain<F> {
+    fn eq(&self, other: &Self) -> bool {
+        todo!()
+    }
+}
+
+impl<F: Frame> Debug for CsvDomain<F> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+impl Domain for CsvDomain<LazyFrame> {
     type Carrier = PathBuf;
 
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        self.lazyframe_domain
+        self.frame_domain
             .member(&self.new_reader(val.clone()).finish()?)
     }
 }
 
-impl<D: DatasetMetric> MetricSpace for (CsvDomain, D) {
+impl Domain for CsvDomain<DataFrame> {
+    type Carrier = PathBuf;
+
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        self.frame_domain
+            .member(&self.new_reader(val.clone()).finish()?.collect().unwrap())
+    }
+}
+
+impl<D: DatasetMetric, F: Frame> MetricSpace for (CsvDomain<F>, D) {
     fn check(&self) -> bool {
         true
     }
