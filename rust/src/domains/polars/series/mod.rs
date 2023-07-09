@@ -3,12 +3,11 @@ use std::fmt::Debug;
 
 use crate::core::MetricSpace;
 use crate::error::Fallible;
-use crate::transformations::DatasetMetric;
 use crate::{core::Domain, traits::CheckAtom};
 
 use polars::prelude::*;
 
-use crate::domains::{AtomDomain, OptionDomain};
+use crate::domains::{AtomDomain, DatasetMetric, OptionDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;

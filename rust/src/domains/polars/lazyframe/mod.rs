@@ -8,11 +8,11 @@ use crate::core::Domain;
 use crate::metrics::AbsoluteDistance;
 use crate::traits::TotalOrd;
 use crate::transformations::item;
+use crate::domains::DatasetMetric;
 use crate::{
     core::MetricSpace,
     domains::{AtomDomain, OptionDomain, SeriesDomain},
     error::Fallible,
-    transformations::DatasetMetric,
 };
 
 #[cfg(feature = "ffi")]
