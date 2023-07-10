@@ -268,8 +268,14 @@ class RuntimeType(object):
         if isinstance(public_example, (Domain, Metric, Measure)):
             return RuntimeType.parse(public_example.type)
         
+        if isinstance(public_example, pl.LazyFrame):
+            return LazyFrame
+        
+        if isinstance(public_example, pl.DataFrame):
+            return DataFrame
+        
         if isinstance(public_example, pl.Series):
-            return "Series"
+            return Series
 
         if isinstance(public_example, tuple):
             return RuntimeType('Tuple', list(map(cls.infer, public_example)))
@@ -471,6 +477,9 @@ usize = 'usize'
 f32 = 'f32'
 f64 = 'f64'
 String = 'String'
+LazyFrame = 'LazyFrame'
+DataFrame = 'DataFrame'
+Series = 'Series'
 AnyMeasurementPtr = "AnyMeasurementPtr"
 AnyTransformationPtr = "AnyTransformationPtr"
 AnyDomainPtr = "AnyDomainPtr"
