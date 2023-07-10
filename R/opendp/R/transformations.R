@@ -3233,6 +3233,71 @@ then_scan_csv <- function(
 }
 
 
+#' scan parquet constructor
+#'
+#' Parse a path to a Parquet file into a `LazyFrame`.
+#'
+#' [make_scan_parquet in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_scan_parquet.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `ParquetDomain<LazyFrame>`
+#' * Output Domain:  `LazyFrameDomain`
+#' * Input Metric:   `M`
+#' * Output Metric:  `M`
+#'
+#' @concept transformations
+#' @param input_domain Parquet domain
+#' @param input_metric The metric space under which neighboring LazyFrames are compared
+#' @return Transformation
+#' @export
+make_scan_parquet <- function(
+    input_domain,
+    input_metric
+) {
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    log <- new_constructor_log("make_scan_parquet", "transformations", new_hashtab(
+        list("input_domain", "input_metric"),
+        list(input_domain, input_metric)
+    ))
+
+    # Call wrapper function.
+    output <- .Call(
+        "transformations__make_scan_parquet",
+        input_domain, input_metric,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial scan parquet constructor
+#'
+#' See documentation for [make_scan_parquet()] for details.
+#'
+#' @concept transformations
+#' @param lhs The prior transformation or metric space.
+#'
+#' @return Transformation
+#' @export
+then_scan_parquet <- function(
+    lhs
+) {
+
+    log <- new_constructor_log("then_scan_parquet", "transformations", new_hashtab(
+        list(),
+        list()
+    ))
+
+    make_chain_dyn(
+        make_scan_parquet(
+            output_domain(lhs),
+            output_metric(lhs)),
+        lhs,
+        log)
+}
+
+
 #' select column constructor
 #'
 #' Make a Transformation that retrieves the column `key` from a dataframe as `Vec<TOA>`.

@@ -155,6 +155,7 @@ static R_CMethodDef R_CDef[] = {
     {"transformations__make_quantiles_from_counts", (DL_FUNC) &transformations__make_quantiles_from_counts, 8},
     {"transformations__make_resize", (DL_FUNC) &transformations__make_resize, 7},
     {"transformations__make_scan_csv", (DL_FUNC) &transformations__make_scan_csv, 6},
+    {"transformations__make_scan_parquet", (DL_FUNC) &transformations__make_scan_parquet, 3},
     {"transformations__make_select_column", (DL_FUNC) &transformations__make_select_column, 4},
     {"transformations__make_series_to_option_vec", (DL_FUNC) &transformations__make_series_to_option_vec, 4},
     {"transformations__make_series_to_vec", (DL_FUNC) &transformations__make_series_to_vec, 4},

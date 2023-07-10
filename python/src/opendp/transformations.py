@@ -52,6 +52,7 @@ __all__ = [
     "make_quantiles_from_counts",
     "make_resize",
     "make_scan_csv",
+    "make_scan_parquet",
     "make_select_column",
     "make_series_to_option_vec",
     "make_series_to_vec",
@@ -100,6 +101,7 @@ __all__ = [
     "then_quantile_score_candidates",
     "then_resize",
     "then_scan_csv",
+    "then_scan_parquet",
     "then_series_to_option_vec",
     "then_series_to_vec",
     "then_sum",
@@ -2774,6 +2776,62 @@ def then_scan_csv(
         cache=cache,
         low_memory=low_memory,
         rechunk=rechunk))
+
+
+
+def make_scan_parquet(
+    input_domain: Domain,
+    input_metric: Metric
+) -> Transformation:
+    r"""Parse a path to a Parquet file into a `LazyFrame`.
+
+    [make_scan_parquet in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_scan_parquet.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `ParquetDomain<LazyFrame>`
+    * Output Domain:  `LazyFrameDomain`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+
+    :param input_domain: Parquet domain
+    :type input_domain: Domain
+    :param input_metric: The metric space under which neighboring LazyFrames are compared
+    :type input_metric: Metric
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_scan_parquet
+    lib_function.argtypes = [Domain, Metric]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric), Transformation))
+
+    return output
+
+def then_scan_parquet(
+
+):  
+    r"""partial constructor of make_scan_parquet
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_scan_parquet`
+
+
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_scan_parquet(
+        input_domain=input_domain,
+        input_metric=input_metric))
 
 
 
