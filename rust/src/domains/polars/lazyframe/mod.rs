@@ -17,25 +17,70 @@ use crate::{
 // public counts  | Some(df+id) | x
 // partial counts | Some(df)    | x
 
-#[derive(Clone, PartialEq)]
-pub struct LazyFrameDomain {
-    pub series_domains: Vec<SeriesDomain>,
-    pub margins: HashMap<BTreeSet<String>, Margin>,
+pub trait Frame: Clone {
+    fn new(series: Vec<Series>) -> Fallible<Self>;
+    fn schema(&self) -> Fallible<Schema>;
+    fn lazyframe(self) -> LazyFrame;
+    fn dataframe(self) -> Fallible<DataFrame>;
+}
+impl Frame for LazyFrame {
+    fn new(series: Vec<Series>) -> Fallible<Self> {
+        Ok(IntoLazy::lazy(DataFrame::new(series)?))
+    }
+    fn schema(&self) -> Fallible<Schema> {
+        self.schema()
+            .map(|v| v.as_ref().clone())
+            .map_err(Into::into)
+    }
+    fn lazyframe(self) -> LazyFrame {
+        self
+    }
+    fn dataframe(self) -> Fallible<DataFrame> {
+        self.collect().map_err(Into::into)
+    }
+}
+impl Frame for DataFrame {
+    fn new(series: Vec<Series>) -> Fallible<Self> {
+        Self::new(series).map_err(Into::into)
+    }
+    fn schema(&self) -> Fallible<Schema> {
+        Ok(self.schema())
+    }
+    fn lazyframe(self) -> LazyFrame {
+        IntoLazy::lazy(self)
+    }
+    fn dataframe(self) -> Fallible<DataFrame> {
+        Ok(self)
+    }
 }
 
-impl<D: DatasetMetric> MetricSpace for (LazyFrameDomain, D) {
+#[derive(Clone)]
+pub struct FrameDomain<F: Frame> {
+    pub series_domains: Vec<SeriesDomain>,
+    pub margins: HashMap<BTreeSet<String>, Margin<F>>,
+}
+
+impl<F: Frame> PartialEq for FrameDomain<F> {
+    fn eq(&self, other: &Self) -> bool {
+        self.series_domains == other.series_domains && self.margins == other.margins
+    }
+}
+pub type LazyFrameDomain = FrameDomain<LazyFrame>;
+pub type DataFrameDomain = FrameDomain<DataFrame>;
+
+impl<F: Frame, D: DatasetMetric> MetricSpace for (FrameDomain<F>, D) {
     fn check(&self) -> bool {
         true
     }
 }
 
-impl LazyFrameDomain {
+impl<F: Frame> FrameDomain<F> {
     pub fn new(series_domains: Vec<SeriesDomain>) -> Fallible<Self> {
         let num_unique = BTreeSet::from_iter(series_domains.iter().map(|s| &s.field.name)).len();
         if num_unique != series_domains.len() {
             return fallible!(MakeDomain, "column names must be distinct");
         }
-        Ok(LazyFrameDomain {
+        Ok(FrameDomain {
             series_domains,
             margins: HashMap::new(),
         })
@@ -70,7 +115,7 @@ impl LazyFrameDomain {
                 })
             })
             .collect::<Fallible<_>>()?;
-        LazyFrameDomain::new(series_domains)
+        FrameDomain::new(series_domains)
     }
 
     // add categories to the domain
@@ -86,7 +131,7 @@ impl LazyFrameDomain {
     }
 
     #[must_use]
-    pub fn with_counts(self, counts: LazyFrame) -> Fallible<Self> {
+    pub fn with_counts(self, counts: F) -> Fallible<Self> {
         let counts_schema = counts.schema()?;
 
         // determine which column is the counts column (the one not in the data)
@@ -107,7 +152,7 @@ impl LazyFrameDomain {
     }
 
     #[must_use]
-    fn with_margin(mut self, margin_id: BTreeSet<String>, margin: Margin) -> Fallible<Self> {
+    fn with_margin(mut self, margin_id: BTreeSet<String>, margin: Margin<F>) -> Fallible<Self> {
         if self.margins.contains_key(&margin_id) {
             return fallible!(MakeDomain, "margin already exists");
         }
@@ -128,7 +173,8 @@ impl LazyFrameDomain {
             .ok_or_else(|| err!(FailedFunction, "{} is not in dataframe", name.as_ref()))
     }
     pub fn try_column_mut<I: AsRef<str>>(&mut self, name: I) -> Fallible<&mut SeriesDomain> {
-        let series_index = self.column_index(name.as_ref())
+        let series_index = self
+            .column_index(name.as_ref())
             .ok_or_else(|| err!(FailedFunction, "{} is not in dataframe", name.as_ref()))?;
         Ok(&mut self.series_domains[series_index])
     }
@@ -148,7 +194,7 @@ impl LazyFrameDomain {
     }
 }
 
-impl Debug for LazyFrameDomain {
+impl<F: Frame> Debug for FrameDomain<F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -162,10 +208,10 @@ impl Debug for LazyFrameDomain {
     }
 }
 
-impl Domain for LazyFrameDomain {
-    type Carrier = LazyFrame;
+impl<F: Frame> Domain for FrameDomain<F> {
+    type Carrier = F;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        let val_df = val.clone().collect()?;
+        let val_df = val.clone().dataframe()?;
 
         // if df has different number of columns as domain
         if val_df.schema().len() != self.series_domains.len() {
@@ -196,32 +242,32 @@ impl Domain for LazyFrameDomain {
 /// If `counts_index` is not set, then `data` is the unique values in a column.
 /// Otherwise, counts are stored in the `counts_index` column of the `data`.
 #[derive(Clone)]
-pub struct Margin {
-    data: LazyFrame,
-    counts_index: Option<usize>,
+pub struct Margin<F: Frame> {
+    pub data: F,
+    pub counts_index: Option<usize>,
 }
 
-impl Margin {
+impl<F: Frame> Margin<F> {
     pub fn new_from_categories(series: Series) -> Fallible<Self> {
         if series.n_unique()? != series.len() {
             return fallible!(MakeDomain, "categories must be unique");
         }
         Ok(Self {
-            data: DataFrame::new(vec![series])?.lazy(),
+            data: F::new(vec![series])?,
             counts_index: None,
         })
     }
-    pub fn new_from_counts(data: LazyFrame, counts_index: usize) -> Fallible<Self> {
-        let mut margin = Self {
+    pub fn new_from_counts(data: F, counts_index: usize) -> Fallible<Self> {
+        let margin = Self {
             data,
             counts_index: Some(counts_index),
         };
 
         // set the data type on the counts column
         let count_col_name = margin.get_count_column_name()?;
-        margin.data = margin
-            .data
-            .with_column(col(count_col_name.as_str()).cast(DataType::UInt32));
+        if !margin.data.schema()?.try_get(&count_col_name)?.is_integer() {
+            return fallible!(MakeDomain, "expected integer counts");
+        }
 
         Ok(margin)
     }
@@ -240,7 +286,7 @@ impl Margin {
             .collect())
     }
 
-    fn member(&self, value: &LazyFrame) -> Fallible<bool> {
+    fn member(&self, value: &F) -> Fallible<bool> {
         let col_names = self.get_join_column_names()?;
 
         // retrieves the first row/first column from $tgt as type $ty
@@ -253,7 +299,7 @@ impl Margin {
 
         // 1. count number of unique combinations of col_names in actual data
         let actual_n_unique = item!(
-            (value.clone())
+            (value.clone().lazyframe())
                 // .drop_nulls(Some(vec![cols(&col_names)])) // commented because counts for null values are permitted
                 .select([as_struct(&[cols(&col_names)]).n_unique()]),
             u32
@@ -263,9 +309,13 @@ impl Margin {
         // 2. count number of unique combinations after an outer join with metadata
         let on_expr: Vec<_> = col_names.iter().map(|v| col(v.as_str())).collect();
 
-        let actual_margins = (value.clone().groupby([cols(&col_names)])).agg([count()]);
-        let joined =
-            (self.data.clone()).join(actual_margins, on_expr.clone(), on_expr, JoinType::Left);
+        let actual_margins = (value.clone().lazyframe().groupby([cols(&col_names)])).agg([count()]);
+        let joined = (self.data.clone().lazyframe()).join(
+            actual_margins,
+            on_expr.clone(),
+            on_expr,
+            JoinType::Left,
+        );
 
         // println!("joined {}", joined.clone().collect()?);
 
@@ -296,14 +346,14 @@ impl Margin {
     }
 }
 
-impl PartialEq for Margin {
+impl<F: Frame> PartialEq for Margin<F> {
     fn eq(&self, other: &Self) -> bool {
         if self.counts_index != other.counts_index {
             return false;
         }
 
-        let Ok(self_margins) = self.data.clone().collect() else {return false};
-        let Ok(other_margins) = self.data.clone().collect() else {return false};
+        let Ok(self_margins) = self.data.clone().dataframe() else {return false};
+        let Ok(other_margins) = self.data.clone().dataframe() else {return false};
         if self_margins != other_margins {
             return false;
         }
@@ -328,7 +378,7 @@ mod test_lazyframe {
             "A" => &[3, 4, 5],
             "B" => &[1., 3., 7.]
         )?
-        .lazy();
+        .lazyframe();
 
         assert!(frame_domain.member(&frame)?);
 
@@ -344,13 +394,13 @@ mod test_lazyframe {
             LazyFrameDomain::new(vec![series_domain])?.with_categories(categories.clone())?;
 
         // not a member because None is not in the category set
-        let example = df!["A" => [Some(true), None]]?.lazy();
+        let example = df!["A" => [Some(true), None]]?.lazyframe();
         assert!(!frame_domain.member(&example)?);
 
-        let example = df!["A" => [Some(true), Some(false)]]?.lazy();
+        let example = df!["A" => [Some(true), Some(false)]]?.lazyframe();
         assert!(!frame_domain.member(&example)?);
 
-        let example = df!["A" => [Some(true)]]?.lazy();
+        let example = df!["A" => [Some(true)]]?.lazyframe();
         assert!(frame_domain.member(&example)?);
 
         Ok(())
@@ -363,11 +413,11 @@ mod test_lazyframe {
         let frame_domain =
             LazyFrameDomain::new(vec![series_domain])?.with_categories(categories.clone())?;
 
-        let example = df!["A" => [Some(1.), None]]?.lazy();
+        let example = df!["A" => [Some(1.), None]]?.lazyframe();
         assert!(!frame_domain.member(&example)?);
-        let example = df!["A" => [1., 2.]]?.lazy();
+        let example = df!["A" => [1., 2.]]?.lazyframe();
         assert!(!frame_domain.member(&example)?);
-        let example = df!["A" => [1.]]?.lazy();
+        let example = df!["A" => [1.]]?.lazyframe();
         assert!(frame_domain.member(&example)?);
 
         Ok(())
@@ -379,10 +429,10 @@ mod test_lazyframe {
             SeriesDomain::new("A", AtomDomain::<i32>::default()),
             SeriesDomain::new("B", AtomDomain::<String>::default()),
         ])?
-        .with_counts(df!["A" => [1, 2], "count" => [1, 2]]?.lazy())?
-        .with_counts(df!["B" => ["1", "2"], "count" => [2, 1]]?.lazy())?;
+        .with_counts(df!["A" => [1, 2], "count" => [1, 2]]?.lazyframe())?
+        .with_counts(df!["B" => ["1", "2"], "count" => [2, 1]]?.lazyframe())?;
 
-        let frame = df!("A" => [1, 2, 2], "B" => ["1", "1", "2"])?.lazy();
+        let frame = df!("A" => [1, 2, 2], "B" => ["1", "1", "2"])?.lazyframe();
         assert!(frame_domain.member(&frame)?);
 
         Ok(())
