@@ -83,3 +83,8 @@ jobs:
       channel: ${{ inputs.channel }}
       python_repository: testpypi
       fake: ${{ inputs.fake }}
+
+  docs:
+#    needs: sanity-test-post
+    needs: prepare
+    uses: opendp/opendp/.github/workflows/docs.yml@714-nightly-build

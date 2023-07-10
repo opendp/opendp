@@ -3,6 +3,7 @@
 import sys
 import os
 from datetime import datetime
+import semver
 
 # docs should be built without needing import the library binary for the specified version
 os.environ["OPENDP_HEADLESS"] = "true"
@@ -91,7 +92,9 @@ copyright = u'%d' % datetime.now().year
 # built documents.
 #
 # The short X.Y version.
-version = open('../../VERSION').readline().strip()
+with open("VERSION") as f:
+    version_str = f.read().strip()
+version = semver.Version.parse(version_str)
 # The full version, including alpha/beta/rc tags.
 #release = ''
 
@@ -149,7 +152,7 @@ smv_tag_whitelist = r'^v.*$'
 # smv_tag_whitelist = rf'(^v\d+\.\d+\.\d+$)|(^v{re.escape(version.split("-")[0])}.+$)'
 
 # Whitelist pattern for branches (set to None to ignore all branches)
-smv_branch_whitelist = r'(stable|latest)'
+smv_branch_whitelist = r'(stable|beta|nightly)'
 
 # Whitelist pattern for remotes (set to None to use local branches only)
 smv_remote_whitelist = r'origin'
@@ -178,13 +181,15 @@ rst_prolog = """
 .. |toctitle| replace:: Contents:
 """
 
-if version == "0.0.0+development":
-    branch = "main"
+if version.prerelease is None:
+    ref = f"v{version}"
 else:
-    branch = f"release/{'.'.join(version.split('.')[:2])}.x"
+    ref = version.prerelease.split(".", 1)[0]
+    if ref not in ("beta", "nightly"):
+        print(f"Unexpected prerelease tag {version.prerelease}", file=sys.stderr)
 
-github_frag = f'/tree/{branch}'
-binder_frag = f'/{branch}'
+github_frag = f'/tree/{ref}'
+binder_frag = f'/{ref}'
 
 # insert this header on nbsphinx pages to link to binder and github:
 nbsphinx_prolog = fr"""
