@@ -45,6 +45,7 @@ __all__ = [
     "make_quantiles_from_counts",
     "make_resize",
     "make_scan_csv",
+    "make_scan_parquet",
     "make_select_column",
     "make_series_to_option_vec",
     "make_series_to_vec",
@@ -91,6 +92,7 @@ __all__ = [
     "then_ordered_random",
     "then_resize",
     "then_scan_csv",
+    "then_scan_parquet",
     "then_series_to_option_vec",
     "then_series_to_vec",
     "then_sum",
@@ -2411,6 +2413,71 @@ def then_scan_csv(
     rechunk: bool = True
 ):
     return PartialConstructor(lambda input_domain, input_metric: make_scan_csv(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        cache=cache,
+        low_memory=low_memory,
+        rechunk=rechunk))
+
+
+
+@versioned
+def make_scan_parquet(
+    input_domain,
+    input_metric,
+    cache: bool = True,
+    low_memory: bool = False,
+    rechunk: bool = True
+) -> Transformation:
+    """Parse a path to a Parquet file into a LazyFrame.
+    
+    [make_scan_parquet in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_scan_parquet.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `ParquetDomain`
+    * Output Domain:  `LazyFrameDomain`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+    
+    :param input_domain: Parquet domain
+    :param input_metric: The metric space under which neighboring LazyFrames are compared
+    :param cache: Cache the DataFrame after reading.
+    :type cache: bool
+    :param low_memory: Reduce memory usage at the expense of performance
+    :type low_memory: bool
+    :param rechunk: Rechunk the memory to contiguous chunks when parsing is done.
+    :type rechunk: bool
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_cache = py_to_c(cache, c_type=ctypes.c_bool, type_name=bool)
+    c_low_memory = py_to_c(low_memory, c_type=ctypes.c_bool, type_name=bool)
+    c_rechunk = py_to_c(rechunk, c_type=ctypes.c_bool, type_name=bool)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_scan_parquet
+    lib_function.argtypes = [Domain, Metric, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_cache, c_low_memory, c_rechunk), Transformation))
+    
+    return output
+
+def then_scan_parquet(
+    cache: bool = True,
+    low_memory: bool = False,
+    rechunk: bool = True
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_scan_parquet(
         input_domain=input_domain,
         input_metric=input_metric,
         cache=cache,
