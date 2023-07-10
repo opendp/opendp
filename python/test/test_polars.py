@@ -53,3 +53,13 @@ def test_dataframe_ffi():
     domain, data = test_dataframe_domain()
     ident_trans = (domain, dp.symmetric_distance()) >> dp.t.then_identity()
     print(ident_trans(data))
+
+# constructors
+def test_scan_csv():
+    df_domain = dp.lazyframe_domain([dp.series_domain("A", dp.atom_domain(T=float))])
+    input_space = dp.csv_domain(df_domain), dp.symmetric_distance()
+
+    scanner = input_space >> dp.t.then_scan_csv()
+    with pytest.raises(dp.OpenDPException) as err:
+        scanner("A/B.csv")
+    
