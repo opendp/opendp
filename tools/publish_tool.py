@@ -86,7 +86,7 @@ def github(args):
     stripped_version = str(version).replace(".", "")
     date = args.date or datetime.date.today()
     notes = f"[CHANGELOG](https://github.com/opendp/opendp/blob/main/CHANGELOG.md#{stripped_version}---{date})"
-    cmd = f"echo gh release create {tag} --target {channel} -t '{title}' -n '{notes}'"
+    cmd = f"gh release create {tag} --target {channel} -t '{title}' -n '{notes}'"
     if version.prerelease:
         cmd += " -p"
     if args.draft:
