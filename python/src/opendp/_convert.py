@@ -1,4 +1,6 @@
 from typing import Sequence, Tuple, List, Union, Dict
+import polars as pl
+import pyarrow
 
 from opendp._lib import *
 
@@ -169,6 +171,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
     
     if type_name == "String":
         return _slice_to_string(raw)
+    
+    if type_name == "Series":
+        return _slice_to_series(raw)
 
     if type_name.origin == "Vec":
         return _slice_to_vector(raw, type_name)
@@ -199,6 +204,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 
     if type_name == "String":
         return _string_to_slice(value)
+    
+    if type_name == "Series":
+        return _series_to_slice(value)
 
     if type_name.origin == "Vec":
         return _vector_to_slice(value, type_name)
@@ -372,6 +380,29 @@ def _slice_to_hashmap(raw: FfiSlicePtr) -> Dict[Any, Any]:
     keys.__class__ = ctypes.POINTER(AnyObject)
     vals.__class__ = ctypes.POINTER(AnyObject)
     return result
+
+
+def _series_to_slice(val: pl.Series) -> FfiSlicePtr:
+    from opendp._data import new_arrow_array, arrow_array_free
+
+    raw = new_arrow_array(val.name)
+    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
+    array_ptr, schema_ptr = slice_array[0:2]
+
+    # make the conversion through PyArrow's private API
+    # this changes the pointer's memory and is thus unsafe. In particular, `_export_to_c` can go out of bounds
+    val.to_arrow()._export_to_c(array_ptr, schema_ptr)
+    # raw.free = lambda: arrow_array_free(raw)
+    return raw
+
+
+def _slice_to_series(raw: FfiSlicePtr) -> pl.Series:
+    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
+    array_ptr, schema_ptr, name_ptr = slice_array[0:3]
+
+    arrow_array = pyarrow.Array._import_from_c(array_ptr, schema_ptr)
+    name = ctypes.cast(name_ptr, ctypes.c_char_p).value.decode()
+    return pl.from_arrow(arrow_array).rename(name)
 
 
 def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
