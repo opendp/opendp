@@ -939,6 +939,71 @@ then_clamp <- function(
 }
 
 
+#' collect constructor
+#'
+#' Converts a LazyFrame to a DataFrame
+#'
+#' [make_collect in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_collect.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `LazyFrameDomain`
+#' * Output Domain:  `DataFrameDomain`
+#' * Input Metric:   `M`
+#' * Output Metric:  `M`
+#'
+#' @concept transformations
+#' @param input_domain undocumented
+#' @param input_metric undocumented
+#' @return Transformation
+#' @export
+make_collect <- function(
+    input_domain,
+    input_metric
+) {
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    log <- new_constructor_log("make_collect", "transformations", new_hashtab(
+        list("input_domain", "input_metric"),
+        list(input_domain, input_metric)
+    ))
+
+    # Call wrapper function.
+    output <- .Call(
+        "transformations__make_collect",
+        input_domain, input_metric,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial collect constructor
+#'
+#' See documentation for [make_collect()] for details.
+#'
+#' @concept transformations
+#' @param lhs The prior transformation or metric space.
+#'
+#' @return Transformation
+#' @export
+then_collect <- function(
+    lhs
+) {
+
+    log <- new_constructor_log("then_collect", "transformations", new_hashtab(
+        list(),
+        list()
+    ))
+
+    make_chain_dyn(
+        make_collect(
+            output_domain(lhs),
+            output_metric(lhs)),
+        lhs,
+        log)
+}
+
+
 #' consistent b ary tree constructor
 #'
 #' Postprocessor that makes a noisy b-ary tree internally consistent, and returns the leaf layer.
@@ -2302,6 +2367,71 @@ then_is_null <- function(
 
     make_chain_dyn(
         make_is_null(
+            output_domain(lhs),
+            output_metric(lhs)),
+        lhs,
+        log)
+}
+
+
+#' lazy constructor
+#'
+#' Converts a DataFrame to a LazyFrame
+#'
+#' [make_lazy in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_lazy.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `DataFrameDomain`
+#' * Output Domain:  `LazyFrameDomain`
+#' * Input Metric:   `M`
+#' * Output Metric:  `M`
+#'
+#' @concept transformations
+#' @param input_domain undocumented
+#' @param input_metric undocumented
+#' @return Transformation
+#' @export
+make_lazy <- function(
+    input_domain,
+    input_metric
+) {
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    log <- new_constructor_log("make_lazy", "transformations", new_hashtab(
+        list("input_domain", "input_metric"),
+        list(input_domain, input_metric)
+    ))
+
+    # Call wrapper function.
+    output <- .Call(
+        "transformations__make_lazy",
+        input_domain, input_metric,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial lazy constructor
+#'
+#' See documentation for [make_lazy()] for details.
+#'
+#' @concept transformations
+#' @param lhs The prior transformation or metric space.
+#'
+#' @return Transformation
+#' @export
+then_lazy <- function(
+    lhs
+) {
+
+    log <- new_constructor_log("then_lazy", "transformations", new_hashtab(
+        list(),
+        list()
+    ))
+
+    make_chain_dyn(
+        make_lazy(
             output_domain(lhs),
             output_metric(lhs)),
         lhs,

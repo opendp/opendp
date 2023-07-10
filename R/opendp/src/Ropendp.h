@@ -122,6 +122,7 @@ SEXP transformations__make_cast_default(SEXP input_domain, SEXP input_metric, SE
 SEXP transformations__make_cast_inherent(SEXP input_domain, SEXP input_metric, SEXP TOA, SEXP log);
 SEXP transformations__make_cdf(SEXP TA, SEXP log);
 SEXP transformations__make_clamp(SEXP input_domain, SEXP input_metric, SEXP bounds, SEXP TA, SEXP T_bounds, SEXP log);
+SEXP transformations__make_collect(SEXP input_domain, SEXP input_metric, SEXP log);
 SEXP transformations__make_consistent_b_ary_tree(SEXP branching_factor, SEXP TIA, SEXP TOA, SEXP log);
 SEXP transformations__make_count(SEXP input_domain, SEXP input_metric, SEXP TO, SEXP log);
 SEXP transformations__make_count_by(SEXP input_domain, SEXP input_metric, SEXP MO, SEXP TV, SEXP log);
@@ -139,6 +140,7 @@ SEXP transformations__make_impute_uniform_float(SEXP input_domain, SEXP input_me
 SEXP transformations__make_index(SEXP input_domain, SEXP input_metric, SEXP categories, SEXP null, SEXP TOA, SEXP T_categories, SEXP log);
 SEXP transformations__make_is_equal(SEXP input_domain, SEXP input_metric, SEXP value, SEXP TIA, SEXP M, SEXP log);
 SEXP transformations__make_is_null(SEXP input_domain, SEXP input_metric, SEXP log);
+SEXP transformations__make_lazy(SEXP input_domain, SEXP input_metric, SEXP log);
 SEXP transformations__make_lipschitz_float_mul(SEXP constant, SEXP bounds, SEXP D, SEXP M, SEXP T, SEXP T_bounds, SEXP log);
 SEXP transformations__make_mean(SEXP input_domain, SEXP input_metric, SEXP log);
 SEXP transformations__make_metric_bounded(SEXP input_domain, SEXP input_metric, SEXP log);

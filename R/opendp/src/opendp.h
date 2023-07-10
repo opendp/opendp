@@ -1195,6 +1195,12 @@ struct FfiResult_____AnyTransformation opendp_transformations__make_scan_csv(con
                                                                              c_bool low_memory,
                                                                              c_bool rechunk);
 
+struct FfiResult_____AnyTransformation opendp_transformations__make_collect(const struct AnyDomain *input_domain,
+                                                                            const struct AnyMetric *input_metric);
+
+struct FfiResult_____AnyTransformation opendp_transformations__make_lazy(const struct AnyDomain *input_domain,
+                                                                         const struct AnyMetric *input_metric);
+
 struct FfiResult_____AnyTransformation opendp_transformations__make_variance(const struct AnyDomain *input_domain,
                                                                              const struct AnyMetric *input_metric,
                                                                              unsigned int ddof,
