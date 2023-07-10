@@ -7,6 +7,7 @@ use polars::prelude::*;
 use crate::core::Domain;
 use crate::metrics::AbsoluteDistance;
 use crate::traits::TotalOrd;
+use crate::transformations::item;
 use crate::{
     core::MetricSpace,
     domains::{AtomDomain, OptionDomain, SeriesDomain},
@@ -91,8 +92,8 @@ impl Frame for DataFrame {
 ///             SeriesDomain::new("A", AtomDomain::<i32>::default()),
 ///             SeriesDomain::new("B", AtomDomain::<String>::default()),
 ///         ])?
-///         .with_counts(df!["A" => [1, 2], "count" => [1, 2]]?.lazyframe())?
-///         .with_counts(df!["B" => ["1", "2"], "count" => [2, 1]]?.lazyframe())?;
+///         .with_counts(df!["A" => [1, 2], "count" => [1u32, 2]]?.lazyframe())?
+///         .with_counts(df!["B" => ["1", "2"], "count" => [2u32, 1]]?.lazyframe())?;
 ///
 /// # opendp::error::Fallible::Ok(())
 /// ```
@@ -329,8 +330,9 @@ impl<F: Frame> Margin<F> {
 
         // set the data type on the counts column
         let count_col_name = margin.get_count_column_name()?;
-        if !margin.data.schema()?.try_get(&count_col_name)?.is_integer() {
-            return fallible!(MakeDomain, "expected integer counts");
+        let count_col_dtype = margin.data.schema()?.try_get(&count_col_name)?.clone();
+        if count_col_dtype != DataType::UInt32 {
+            return fallible!(MakeDomain, "expected UInt32 counts, got {:?}", count_col_dtype);
         }
 
         Ok(margin)
@@ -340,7 +342,13 @@ impl<F: Frame> Margin<F> {
         let count_index = self
             .counts_index
             .ok_or_else(|| err!(FailedFunction, "counts do not exist"))?;
-        Ok((self.data.schema()?.get_at_index(count_index).unwrap().0).to_string())
+        Ok((self
+            .data
+            .schema()?
+            .get_at_index(count_index)
+            .ok_or_else(|| err!(FFI, "count index not in schema"))?
+            .0)
+            .to_string())
     }
 
     fn get_join_column_names(&self) -> Fallible<Vec<String>> {
@@ -353,21 +361,12 @@ impl<F: Frame> Margin<F> {
     fn member(&self, value: &F) -> Fallible<bool> {
         let col_names = self.get_join_column_names()?;
 
-        // retrieves the first row/first column from $tgt as type $ty
-        macro_rules! item {
-            ($tgt:expr, $ty:ident) => {
-                ($tgt.collect()?.get_columns()[0].$ty()?.get(0))
-                    .ok_or_else(|| err!(FailedFunction))?
-            };
-        }
-
         // 1. count number of unique combinations of col_names in actual data
-        let actual_n_unique = item!(
+        let actual_n_unique = item::<u32>(
             (value.clone().lazyframe())
                 // .drop_nulls(Some(vec![cols(&col_names)])) // commented because counts for null values are permitted
                 .select([as_struct(&[cols(&col_names)]).n_unique()]),
-            u32
-        );
+        )?;
         // println!("actual n unique, {}", actual_n_unique);
 
         // 2. count number of unique combinations after an outer join with metadata
@@ -384,7 +383,7 @@ impl<F: Frame> Margin<F> {
         // println!("joined {}", joined.clone().collect()?);
 
         // 3. to check that categories match, ensure that 1 and 2 are same length
-        let joined_n_unique = item!(joined.clone().select([count()]), u32);
+        let joined_n_unique = item::<u32>(joined.clone().select([count()]))?;
 
         // if the join reduced the number of records,
         // then the actual data has values not in the category set
@@ -401,7 +400,7 @@ impl<F: Frame> Margin<F> {
                 .eq(col(count_colname_right.as_str()))
                 .all();
 
-            if !item!(joined.clone().select([eq_expr]), bool) {
+            if !item::<bool>(joined.clone().select([eq_expr]))? {
                 return Ok(false);
             }
         }
@@ -493,8 +492,8 @@ mod test_lazyframe {
             SeriesDomain::new("A", AtomDomain::<i32>::default()),
             SeriesDomain::new("B", AtomDomain::<String>::default()),
         ])?
-        .with_counts(df!["A" => [1, 2], "count" => [1, 2]]?.lazyframe())?
-        .with_counts(df!["B" => ["1", "2"], "count" => [2, 1]]?.lazyframe())?;
+        .with_counts(df!["A" => [1, 2], "count" => [1u32, 2]]?.lazyframe())?
+        .with_counts(df!["B" => ["1", "2"], "count" => [2u32, 1]]?.lazyframe())?;
 
         let frame = df!("A" => [1, 2, 2], "B" => ["1", "1", "2"])?.lazyframe();
         assert!(frame_domain.member(&frame)?);
