@@ -22,8 +22,6 @@ use crate::{
     domains::{type_name, AtomDomain, MapDomain, VectorDomain},
     traits::CheckAtom,
 };
-#[cfg(feature = "contrib")]
-use crate::{traits::Hashable, transformations::OldFrameDomain};
 use std::fmt::{Debug, Formatter};
 
 /// The type that represents the distance between datasets.
@@ -91,13 +89,6 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, SymmetricDistance) {
     }
 }
 
-#[cfg(feature = "contrib")]
-impl<K: Hashable> MetricSpace for (OldFrameDomain<K>, SymmetricDistance) {
-    fn check(&self) -> bool {
-        true
-    }
-}
-
 /// The smallest number of insertions or deletions to make two datasets equivalent.
 ///
 /// An *insertion* to a dataset is an addition of an element at a specific index,
@@ -149,13 +140,6 @@ impl Metric for InsertDeleteDistance {
 }
 
 impl<D: Domain> MetricSpace for (VectorDomain<D>, InsertDeleteDistance) {
-    fn check(&self) -> bool {
-        true
-    }
-}
-
-#[cfg(feature = "contrib")]
-impl<K: Hashable> MetricSpace for (OldFrameDomain<K>, InsertDeleteDistance) {
     fn check(&self) -> bool {
         true
     }
