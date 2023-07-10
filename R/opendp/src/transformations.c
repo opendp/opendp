@@ -320,6 +320,30 @@ SEXP transformations__make_collect(
 }
 
 
+SEXP transformations__make_column(
+    SEXP input_domain, SEXP input_metric, SEXP column_name, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(column_name);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    AnyObject * c_column_name = sexp_to_anyobjectptr(column_name, String);
+
+    // Call library function.
+    FfiResult_____AnyTransformation _result = opendp_transformations__make_column(c_input_domain, c_input_metric, c_column_name);
+
+    UNPROTECT(4);
+    if(_result.tag == Err_____AnyTransformation)
+        return(extract_error(_result.err));
+    AnyTransformation* _return_value = _result.ok;
+    return(anytransformationptr_to_sexp(_return_value, log));
+}
+
+
 SEXP transformations__make_consistent_b_ary_tree(
     SEXP branching_factor, SEXP TIA, SEXP TOA, SEXP log
 ) {
@@ -1025,6 +1049,54 @@ SEXP transformations__make_select_column(
 
     // Call library function.
     FfiResult_____AnyTransformation _result = opendp_transformations__make_select_column(c_key, c_K, c_TOA);
+
+    UNPROTECT(4);
+    if(_result.tag == Err_____AnyTransformation)
+        return(extract_error(_result.err));
+    AnyTransformation* _return_value = _result.ok;
+    return(anytransformationptr_to_sexp(_return_value, log));
+}
+
+
+SEXP transformations__make_series_to_option_vec(
+    SEXP input_domain, SEXP input_metric, SEXP T, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(T);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    char * c_T = rt_to_string(T);
+
+    // Call library function.
+    FfiResult_____AnyTransformation _result = opendp_transformations__make_series_to_option_vec(c_input_domain, c_input_metric, c_T);
+
+    UNPROTECT(4);
+    if(_result.tag == Err_____AnyTransformation)
+        return(extract_error(_result.err));
+    AnyTransformation* _return_value = _result.ok;
+    return(anytransformationptr_to_sexp(_return_value, log));
+}
+
+
+SEXP transformations__make_series_to_vec(
+    SEXP input_domain, SEXP input_metric, SEXP T, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(T);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    char * c_T = rt_to_string(T);
+
+    // Call library function.
+    FfiResult_____AnyTransformation _result = opendp_transformations__make_series_to_vec(c_input_domain, c_input_metric, c_T);
 
     UNPROTECT(4);
     if(_result.tag == Err_____AnyTransformation)
