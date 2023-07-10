@@ -89,6 +89,7 @@ jobs:
     uses: opendp/opendp/.github/workflows/latex-release.yml@714-nightly-build
     with:
       channel: ${{ inputs.channel }}
+    secrets: inherit
 
   docs:
     needs: [ sanity-test-post, latex ]

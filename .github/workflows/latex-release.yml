@@ -6,6 +6,9 @@ on:
       channel:
         type: string
         required: true
+    secrets:
+      ARTIFACTS_REPO_TOKEN:
+        required: true
   workflow_dispatch:
     inputs:
       channel:
