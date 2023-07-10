@@ -2,7 +2,9 @@ use std::any::Any;
 use std::fmt::Debug;
 use std::rc::Rc;
 
+use crate::core::MetricSpace;
 use crate::error::Fallible;
+use crate::transformations::DatasetMetric;
 use crate::{core::Domain, traits::CheckAtom};
 
 use polars::prelude::*;
@@ -103,6 +105,12 @@ impl Debug for SeriesDomain {
     }
 }
 
+impl<D: DatasetMetric> MetricSpace for (SeriesDomain, D) {
+    fn check(&self) -> bool {
+        true
+    }
+}
+
 // BEGIN UTILITY TRAITS
 
 /// Common trait for domains that can be used to describe the space of typed elements within a series.
@@ -152,30 +160,31 @@ impl PartialEq for dyn DynSeriesAtomDomain + '_ {
 
 /// Utility trait to construct the Polars runtime data-type indicator from an atomic type.
 pub trait DataTypeFrom {
-    fn dtype() -> DataType;
+    type Polars: PolarsDataType;
+    fn dtype() -> DataType {
+        Self::Polars::get_dtype()
+    }
 }
 
 macro_rules! impl_dtype_from {
-    ($ty:ty, $dt:expr) => {
+    ($ty:ty, $dt:ty) => {
         impl DataTypeFrom for $ty {
-            fn dtype() -> DataType {
-                $dt
-            }
+            type Polars = $dt;
         }
     };
 }
-impl_dtype_from!(u8, DataType::UInt8);
-impl_dtype_from!(u16, DataType::UInt16);
-impl_dtype_from!(u32, DataType::UInt32);
-impl_dtype_from!(u64, DataType::UInt64);
-impl_dtype_from!(i8, DataType::Int8);
-impl_dtype_from!(i16, DataType::Int16);
-impl_dtype_from!(i32, DataType::Int32);
-impl_dtype_from!(i64, DataType::Int64);
-impl_dtype_from!(f32, DataType::Float32);
-impl_dtype_from!(f64, DataType::Float64);
-impl_dtype_from!(bool, DataType::Boolean);
-impl_dtype_from!(String, DataType::Utf8);
+impl_dtype_from!(u8, UInt8Type);
+impl_dtype_from!(u16, UInt16Type);
+impl_dtype_from!(u32, UInt32Type);
+impl_dtype_from!(u64, UInt64Type);
+impl_dtype_from!(i8, Int8Type);
+impl_dtype_from!(i16, Int16Type);
+impl_dtype_from!(i32, Int32Type);
+impl_dtype_from!(i64, Int64Type);
+impl_dtype_from!(f32, Float32Type);
+impl_dtype_from!(f64, Float64Type);
+impl_dtype_from!(bool, BooleanType);
+impl_dtype_from!(String, Utf8Type);
 
 #[cfg(test)]
 mod test_series {
