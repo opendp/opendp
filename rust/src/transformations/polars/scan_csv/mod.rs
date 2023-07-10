@@ -8,7 +8,6 @@ use crate::{
     domains::{CsvDomain, DatasetMetric, LazyFrameDomain},
     error::Fallible,
 };
-
 #[cfg(feature = "ffi")]
 mod ffi;
 
