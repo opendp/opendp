@@ -63,3 +63,9 @@ def test_scan_csv():
     with pytest.raises(dp.OpenDPException) as err:
         scanner("A/B.csv")
     
+
+def test_collect_lazy():
+    domain, data = test_lazyframe_domain()
+    space = domain, dp.symmetric_distance()
+    trans_lazy = space >> dp.t.then_collect() >> dp.t.then_lazy()
+    trans_lazy(data)
