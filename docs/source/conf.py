@@ -155,7 +155,7 @@ smv_tag_whitelist = r'^v.*$'
 smv_branch_whitelist = r'(stable|beta|nightly)'
 
 # Whitelist pattern for remotes (set to None to use local branches only)
-smv_remote_whitelist = None # r'origin'
+smv_remote_whitelist = None  # None to prevent duplicates if you have branches locally
 
 # Pattern for released versions
 smv_released_pattern = r'^tags/v\d+\.\d+\.\d+$'
@@ -181,19 +181,8 @@ rst_prolog = """
 .. |toctitle| replace:: Contents:
 """
 
-# if semver_version.prerelease is None:
-#     ref = f"v{version}"
-# else:
-#     ref = semver_version.prerelease.split(".", 1)[0]
-#     if ref not in ("beta", "nightly", "dev"):
-#         print(f"Unexpected prerelease tag {semver_version.prerelease}", file=sys.stderr)
-# print(semver_version, ref)
-# release = ref
-#
-# github_frag = f'/tree/{ref}'
-# binder_frag = f'/{ref}'
-
 # insert this header on nbsphinx pages to link to binder and github:
+# we have to resolve the link ref here, at runtime, because sphinx-multiversion mediates the reading of this config
 nbsphinx_prolog = fr"""
 {{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}}
 {{% if env.config.version.endswith('-dev') %}}
