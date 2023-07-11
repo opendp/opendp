@@ -134,13 +134,30 @@ impl<F: Frame> CsvDomain<F> {
 
 impl<F: Frame> PartialEq for CsvDomain<F> {
     fn eq(&self, other: &Self) -> bool {
-        todo!()
+        return self.frame_domain == other.frame_domain
+            && self.delimiter == other.delimiter
+            && self.has_header == other.has_header
+            && self.skip_rows == other.skip_rows
+            && self.comment_char == other.comment_char
+            && self.quote_char == other.quote_char
+            && self.eol_char == other.eol_char
+            && self.null_values == other.null_values
+            && self.null_value_repr == other.null_value_repr;
     }
 }
 
 impl<F: Frame> Debug for CsvDomain<F> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        write!(
+            f,
+            "CsvDomain({})",
+            self.frame_domain
+                .series_domains
+                .iter()
+                .map(|s| format!("{}: {}", s.field.name, s.field.dtype))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
 }
 

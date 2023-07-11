@@ -8,16 +8,22 @@ use crate::{
     error::Fallible,
 };
 
-pub fn make_sink_csv<M: DatasetMetric>(
+/// Make a Transformation that writes a DataFrame into a CSV file.
+///
+/// # Arguments
+/// * `input_domain` - DataFrameDomain of the data to be written into a file.
+/// * `input_metric` - Metric of the data type to be written into a file.
+/// * `path` - Path to the output file.
+pub fn make_write_csv<M: DatasetMetric>(
     input_domain: DataFrameDomain,
     input_metric: M,
     path: PathBuf,
 ) -> Fallible<Transformation<DataFrameDomain, CsvDomain<DataFrame>, M, M>>
 where
-    ( CsvDomain<DataFrame>, M): MetricSpace,
+    (CsvDomain<DataFrame>, M): MetricSpace,
     (DataFrameDomain, M): MetricSpace,
 {
-    let output_domain =  CsvDomain::new(input_domain.clone());
+    let output_domain = CsvDomain::new(input_domain.clone());
     Transformation::new(
         input_domain.clone(),
         output_domain.clone(),

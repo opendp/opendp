@@ -16,6 +16,6 @@ mod make_unpack;
 pub use make_unpack::*;
 
 #[cfg(feature = "contrib")]
-mod sink_csv;
+mod write_csv;
 #[cfg(feature = "contrib")]
-pub use sink_csv::*;
+pub use write_csv::*;
