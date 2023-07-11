@@ -191,8 +191,6 @@ impl<F: Frame> FrameDomain<F> {
 
                 Ok(match field.data_type() {
                     DataType::Boolean => new_series_domain!(bool, default),
-                    DataType::UInt8 => new_series_domain!(u8, default),
-                    DataType::UInt16 => new_series_domain!(u16, default),
                     DataType::UInt32 => new_series_domain!(u32, default),
                     DataType::UInt64 => new_series_domain!(u64, default),
                     DataType::Int8 => new_series_domain!(i8, default),

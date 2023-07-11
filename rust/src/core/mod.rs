@@ -20,6 +20,11 @@
 // Ordering of generic arguments
 // DI, DO, MI, MO, TI, TO, QI, QO
 
+#[cfg(feature = "polars")]
+mod polars;
+#[cfg(feature = "polars")]
+pub(crate) use polars::*;
+
 #[cfg(feature = "ffi")]
 mod ffi;
 #[cfg(feature = "ffi")]
