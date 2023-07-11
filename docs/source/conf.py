@@ -92,7 +92,7 @@ copyright = u'%d' % datetime.now().year
 # built documents.
 #
 # The short X.Y version.
-with open("VERSION") as f:
+with open("../VERSION") as f:
     version_str = f.read().strip()
 version = semver.Version.parse(version_str)
 # The full version, including alpha/beta/rc tags.
