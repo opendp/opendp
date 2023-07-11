@@ -44,6 +44,10 @@ pub use make_groupby::*;
 mod make_agg_trans;
 #[cfg(feature = "contrib")]
 pub use make_agg_trans::*;
+#[cfg(feature = "contrib")]
+mod make_clamp;
+#[cfg(feature = "contrib")]
+pub use make_clamp::*;
 
 #[cfg(test)]
 mod test {
