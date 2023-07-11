@@ -93,8 +93,8 @@ copyright = u'%d' % datetime.now().year
 #
 # The short X.Y version.
 with open("../../VERSION") as f:
-    version_str = f.read().strip()
-version = semver.Version.parse(version_str)
+    version = f.read().strip()
+semver_version = semver.Version.parse(version)
 # The full version, including alpha/beta/rc tags.
 #release = ''
 
@@ -155,7 +155,7 @@ smv_tag_whitelist = r'^v.*$'
 smv_branch_whitelist = r'(stable|beta|nightly)'
 
 # Whitelist pattern for remotes (set to None to use local branches only)
-smv_remote_whitelist = r'origin'
+smv_remote_whitelist = None # r'origin'
 
 # Pattern for released versions
 smv_released_pattern = r'^tags/v\d+\.\d+\.\d+$'
@@ -181,12 +181,13 @@ rst_prolog = """
 .. |toctitle| replace:: Contents:
 """
 
-if version.prerelease is None:
+if semver_version.prerelease is None:
     ref = f"v{version}"
 else:
-    ref = version.prerelease.split(".", 1)[0]
+    ref = semver_version.prerelease.split(".", 1)[0]
     if ref not in ("beta", "nightly"):
-        print(f"Unexpected prerelease tag {version.prerelease}", file=sys.stderr)
+        print(f"Unexpected prerelease tag {semver_version.prerelease}", file=sys.stderr)
+print(semver_version, ref)
 
 github_frag = f'/tree/{ref}'
 binder_frag = f'/{ref}'
