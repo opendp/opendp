@@ -197,7 +197,7 @@ binder_frag = f'/{ref}'
 nbsphinx_prolog = fr"""
 {{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}}
 {{% set split_version = env.config.version.split('-', 1) %}}
-{{% set frag = split_version[0] if length(split_version) == 1 else split_version[1].split(".", 1)[0] %}}
+{{% set frag = split_version[0] if split_version|length == 1 else split_version[1].split(".", 1)[0] %}}
 .. raw:: html
 
     <div class="admonition note">
