@@ -383,7 +383,7 @@ def _slice_to_hashmap(raw: FfiSlicePtr) -> Dict[Any, Any]:
 
 
 def _series_to_slice(val: pl.Series) -> FfiSlicePtr:
-    from opendp._data import new_arrow_array, arrow_array_free
+    from opendp._data import new_arrow_array
 
     raw = new_arrow_array(val.name)
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
@@ -392,7 +392,6 @@ def _series_to_slice(val: pl.Series) -> FfiSlicePtr:
     # make the conversion through PyArrow's private API
     # this changes the pointer's memory and is thus unsafe. In particular, `_export_to_c` can go out of bounds
     val.to_arrow()._export_to_c(array_ptr, schema_ptr)
-    # raw.free = lambda: arrow_array_free(raw)
     return raw
 
 
