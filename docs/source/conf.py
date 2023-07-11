@@ -87,16 +87,16 @@ project = u'OpenDP'
 html_favicon = u'favicon.ico'
 copyright = u'%d' % datetime.now().year
 
+with open("../../VERSION") as f:
+    semver_version = semver.Version.parse(f.read().strip())
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-with open("../../VERSION") as f:
-    version = f.read().strip()
-semver_version = semver.Version.parse(version)
+version = str(semver_version.replace(prerelease=None, build=None))
 # The full version, including alpha/beta/rc tags.
-#release = ''
+release = str(semver_version)
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -181,17 +181,17 @@ rst_prolog = """
 .. |toctitle| replace:: Contents:
 """
 
-if semver_version.prerelease is None:
-    ref = f"v{version}"
-else:
-    ref = semver_version.prerelease.split(".", 1)[0]
-    if ref not in ("beta", "nightly", "dev"):
-        print(f"Unexpected prerelease tag {semver_version.prerelease}", file=sys.stderr)
-print(semver_version, ref)
-release = ref
-
-github_frag = f'/tree/{ref}'
-binder_frag = f'/{ref}'
+# if semver_version.prerelease is None:
+#     ref = f"v{version}"
+# else:
+#     ref = semver_version.prerelease.split(".", 1)[0]
+#     if ref not in ("beta", "nightly", "dev"):
+#         print(f"Unexpected prerelease tag {semver_version.prerelease}", file=sys.stderr)
+# print(semver_version, ref)
+# release = ref
+#
+# github_frag = f'/tree/{ref}'
+# binder_frag = f'/{ref}'
 
 # insert this header on nbsphinx pages to link to binder and github:
 nbsphinx_prolog = fr"""
@@ -201,13 +201,13 @@ nbsphinx_prolog = fr"""
 {{% elif '-' in env.config.version %}}
     {{% set frag = env.config.version.split('-', 1)[1].split('.', 1)[0] %}}
 {{% else %}}
-    {{% set frag = 'v' ~ enf.config.version %}}
+    {{% set frag = 'v' ~ env.config.version %}}
 {{% endif %}}
 .. raw:: html
 
     <div class="admonition note">
       This page was generated from
-      <a class="reference external" href="https://github.com/opendp/opendp/tree/{{{{ env.config.version|e }}}}/{{{{ docname|e }}}}" target="_blank">{{{{ docname|e }}}}</a>.
+      <a class="reference external" href="https://github.com/opendp/opendp/tree/{{{{ frag|e }}}}/{{{{ docname|e }}}}" target="_blank">{{{{ docname|e }}}}</a>.
       Interactive online version:
       <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp/{{{{ frag|e }}}}?filepath={{{{ docname|e }}}}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
     </div>
