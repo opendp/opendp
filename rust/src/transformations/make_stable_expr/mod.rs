@@ -1,5 +1,5 @@
 use opendp_derive::bootstrap;
-use polars_plan::dsl::Expr;
+use polars_plan::dsl::{Expr, FunctionExpr};
 
 use crate::{
     core::{Metric, MetricSpace, Transformation},
@@ -11,6 +11,9 @@ use super::DatasetMetric;
 
 #[cfg(feature = "ffi")]
 mod ffi;
+
+#[cfg(feature = "contrib")]
+mod expr_clip;
 
 #[cfg(feature = "contrib")]
 mod expr_col;
@@ -59,9 +62,18 @@ where
         input_metric: M,
     ) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>> {
         use Expr::*;
+        use FunctionExpr::*;
         match self {
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: Clip { .. },
+                ..
+            } => expr_clip::make_expr_clip(input_domain, input_metric, self),
+
             #[cfg(feature = "contrib")]
             Column(_) => expr_col::make_expr_col(input_domain, input_metric, self),
+
             expr => fallible!(
                 MakeTransformation,
                 "Expr is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
