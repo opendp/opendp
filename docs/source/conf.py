@@ -195,14 +195,14 @@ binder_frag = f'/{ref}'
 
 # insert this header on nbsphinx pages to link to binder and github:
 nbsphinx_prolog = fr"""
-{{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}}\
-{{% if env.config.version.endswith('-dev') }}
-    {{% set frag = 'main' %}}\
-{{% elif '-' in env.config.version }}
-    {{% set frag = env.config.version.split('-', 1)[1].split('.', 1)[0] %}}\
-{{% else }}
+{{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}}
+{{% if env.config.version.endswith('-dev') %}}
+    {{% set frag = 'main' %}}
+{{% elif '-' in env.config.version %}}
+    {{% set frag = env.config.version.split('-', 1)[1].split('.', 1)[0] %}}
+{{% else %}}
     {{% set frag = 'v' ~ enf.config.version %}}
-{{% endif }}
+{{% endif %}}
 .. raw:: html
 
     <div class="admonition note">
