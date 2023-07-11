@@ -8,6 +8,12 @@ use crate::{
     error::Fallible,
 };
 
+/// Sink a LazyFrame into a Parquet file.
+///
+/// # Arguments
+/// * `input_domain` - LazyFrameDomain.
+/// * `input_metric` - The metric space under which neighboring LazyFrames are compared.
+/// * `path` - Path to the output Parquet file.
 pub fn make_sink_parquet<M: DatasetMetric>(
     input_domain: LazyFrameDomain,
     input_metric: M,
