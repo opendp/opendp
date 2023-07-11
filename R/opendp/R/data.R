@@ -4,6 +4,32 @@
 NULL
 
 
+#' Internal function. Retrieve the active column type of an ExprDomain.
+#'
+#' @concept data
+#' @param domain undocumented
+#' @return str
+get_active_column_type <- function(
+    domain
+) {
+    # No type arguments to standardize.
+    log <- new_constructor_log("get_active_column_type", "data", new_hashtab(
+        list("domain"),
+        list(domain)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = AnyDomain, inferred = rt_infer(domain))
+
+    # Call wrapper function.
+    output <- .Call(
+        "data__get_active_column_type",
+        domain,
+        log, PACKAGE = "opendp")
+    output
+}
+
+
 #'
 #'
 #' @concept data

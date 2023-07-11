@@ -40,6 +40,82 @@ choose_branching_factor <- function(
 }
 
 
+#' agg trans constructor
+#'
+#' [make_agg_trans in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_agg_trans.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `LazyGroupByDomain`
+#' * Output Domain:  `LazyFrameDomain`
+#' * Input Metric:   `T::InputMetric`
+#' * Output Metric:  `<T::OutputMetricasOuterMetric>::InnerMetric`
+#'
+#' @concept transformations
+#' @param input_domain undocumented
+#' @param input_metric undocumented
+#' @param transformations undocumented
+#' @param .T undocumented
+#' @return Transformation
+#' @export
+make_agg_trans <- function(
+    input_domain,
+    input_metric,
+    transformations,
+    .T = NULL
+) {
+    # Standardize type arguments.
+    .T <- parse_or_infer(type_name = .T, public_example = get_first(transformations))
+    .T.transformations <- new_runtime_type(origin = "Vec", args = list(.T))
+
+    log <- new_constructor_log("make_agg_trans", "transformations", new_hashtab(
+        list("input_domain", "input_metric", "transformations", "T"),
+        list(input_domain, input_metric, transformations, .T)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = .T.transformations, inferred = rt_infer(transformations))
+
+    # Call wrapper function.
+    output <- .Call(
+        "transformations__make_agg_trans",
+        input_domain, input_metric, transformations, .T, rt_parse(.T.transformations),
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial agg trans constructor
+#'
+#' See documentation for [make_agg_trans()] for details.
+#'
+#' @concept transformations
+#' @param lhs The prior transformation or metric space.
+#' @param transformations undocumented
+#' @param .T undocumented
+#' @return Transformation
+#' @export
+then_agg_trans <- function(
+    lhs,
+    transformations,
+    .T = NULL
+) {
+
+    log <- new_constructor_log("then_agg_trans", "transformations", new_hashtab(
+        list("transformations", "T"),
+        list(transformations, .T)
+    ))
+
+    make_chain_dyn(
+        make_agg_trans(
+            output_domain(lhs),
+            output_metric(lhs),
+            transformations = transformations,
+            .T = .T),
+        lhs,
+        log)
+}
+
+
 #' b ary tree constructor
 #'
 #' Expand a vector of counts into a b-ary tree of counts,
@@ -931,6 +1007,79 @@ then_clamp <- function(
 
     make_chain_dyn(
         make_clamp(
+            output_domain(lhs),
+            output_metric(lhs),
+            bounds = bounds),
+        lhs,
+        log)
+}
+
+
+#' clamp expr constructor
+#'
+#' Make a Transformation that returns a `clip(bounds)` expression for a LazyFrame.
+#'
+#' [make_clamp_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_clamp_expr.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `ExprDomain<M::LazyDomain>`
+#' * Output Domain:  `ExprDomain<M::LazyDomain>`
+#' * Input Metric:   `M`
+#' * Output Metric:  `M`
+#'
+#' @concept transformations
+#' @param input_domain Expr domain
+#' @param input_metric The metric under which neighboring LazyFrames are compared
+#' @param bounds bounds to be applied in clamp operation.
+#' @return Transformation
+#' @export
+make_clamp_expr <- function(
+    input_domain,
+    input_metric,
+    bounds
+) {
+    # Standardize type arguments.
+    .TA <- get_active_column_type(input_domain)
+    .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.TA, .TA))
+
+    log <- new_constructor_log("make_clamp_expr", "transformations", new_hashtab(
+        list("input_domain", "input_metric", "bounds"),
+        list(input_domain, input_metric, lapply(bounds, unbox2))
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+
+    # Call wrapper function.
+    output <- .Call(
+        "transformations__make_clamp_expr",
+        input_domain, input_metric, bounds, .TA, rt_parse(.T.bounds),
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial clamp expr constructor
+#'
+#' See documentation for [make_clamp_expr()] for details.
+#'
+#' @concept transformations
+#' @param lhs The prior transformation or metric space.
+#' @param bounds bounds to be applied in clamp operation.
+#' @return Transformation
+#' @export
+then_clamp_expr <- function(
+    lhs,
+    bounds
+) {
+
+    log <- new_constructor_log("then_clamp_expr", "transformations", new_hashtab(
+        list("bounds"),
+        list(lapply(bounds, unbox2))
+    ))
+
+    make_chain_dyn(
+        make_clamp_expr(
             output_domain(lhs),
             output_metric(lhs),
             bounds = bounds),
@@ -4819,6 +4968,89 @@ then_variance <- function(
             output_metric(lhs),
             ddof = ddof,
             .S = .S),
+        lhs,
+        log)
+}
+
+
+#' with columns constructor
+#'
+#' Make a Transformation that applies list of transformations in the `with_columns`` context to a Lazy Frame.
+#'
+#' Valid inputs for `input_domain` and `input_metric` are:
+#'
+#' | `input_domain`                  | `input_metric`                             |
+#' | ------------------------------- | ------------------------------------------ |
+#' | `LazyFrameDomain`               | `SymmetricDistance`                        |
+#' | `LazyFrameDomain`               | `InsertDeleteDistance`                     |
+#' | `LazyFrameDomain`               | `ChangeOneDistance` if Margins provided    |
+#' | `LazyFrameDomain`               | `HammingDistance` if Margins provided      |
+#'
+#' [make_with_columns in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_with_columns.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `LazyFrameDomain`
+#' * Output Domain:  `LazyFrameDomain`
+#' * Input Metric:   `T::Metric`
+#' * Output Metric:  `T::Metric`
+#'
+#' @concept transformations
+#' @param input_domain Domain of the Lazy Frame.
+#' @param input_metric DatasetMetric under which neighboring LazyFrames are compared.
+#' @param transformations undocumented
+#' @return Transformation
+#' @export
+make_with_columns <- function(
+    input_domain,
+    input_metric,
+    transformations
+) {
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    .T.transformations <- new_runtime_type(origin = "Vec", args = list(AnyTransformationPtr))
+
+    log <- new_constructor_log("make_with_columns", "transformations", new_hashtab(
+        list("input_domain", "input_metric", "transformations"),
+        list(input_domain, input_metric, transformations)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = .T.transformations, inferred = rt_infer(transformations))
+
+    # Call wrapper function.
+    output <- .Call(
+        "transformations__make_with_columns",
+        input_domain, input_metric, transformations, rt_parse(.T.transformations),
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial with columns constructor
+#'
+#' See documentation for [make_with_columns()] for details.
+#'
+#' @concept transformations
+#' @param lhs The prior transformation or metric space.
+#' @param transformations undocumented
+#' @return Transformation
+#' @export
+then_with_columns <- function(
+    lhs,
+    transformations
+) {
+
+    log <- new_constructor_log("then_with_columns", "transformations", new_hashtab(
+        list("transformations"),
+        list(transformations)
+    ))
+
+    make_chain_dyn(
+        make_with_columns(
+            output_domain(lhs),
+            output_metric(lhs),
+            transformations = transformations),
         lhs,
         log)
 }

@@ -61,6 +61,7 @@ static R_CMethodDef R_CDef[] = {
     {"core__transformation_output_distance_type", (DL_FUNC) &core__transformation_output_distance_type, 2},
     {"core__transformation_output_domain", (DL_FUNC) &core__transformation_output_domain, 2},
     {"core__transformation_output_metric", (DL_FUNC) &core__transformation_output_metric, 2},
+    {"data__get_active_column_type", (DL_FUNC) &data__get_active_column_type, 2},
     {"data__new_arrow_array", (DL_FUNC) &data__new_arrow_array, 2},
     {"data__object_type", (DL_FUNC) &data__object_type, 2},
     {"data__smd_curve_epsilon", (DL_FUNC) &data__smd_curve_epsilon, 4},
@@ -117,6 +118,7 @@ static R_CMethodDef R_CDef[] = {
     {"metrics__symmetric_distance", (DL_FUNC) &metrics__symmetric_distance, 1},
     {"metrics__user_distance", (DL_FUNC) &metrics__user_distance, 2},
     {"transformations__choose_branching_factor", (DL_FUNC) &transformations__choose_branching_factor, 2},
+    {"transformations__make_agg_trans", (DL_FUNC) &transformations__make_agg_trans, 6},
     {"transformations__make_b_ary_tree", (DL_FUNC) &transformations__make_b_ary_tree, 5},
     {"transformations__make_bounded_float_checked_sum", (DL_FUNC) &transformations__make_bounded_float_checked_sum, 6},
     {"transformations__make_bounded_float_ordered_sum", (DL_FUNC) &transformations__make_bounded_float_ordered_sum, 6},
@@ -128,6 +130,7 @@ static R_CMethodDef R_CDef[] = {
     {"transformations__make_cast_inherent", (DL_FUNC) &transformations__make_cast_inherent, 4},
     {"transformations__make_cdf", (DL_FUNC) &transformations__make_cdf, 2},
     {"transformations__make_clamp", (DL_FUNC) &transformations__make_clamp, 6},
+    {"transformations__make_clamp_expr", (DL_FUNC) &transformations__make_clamp_expr, 6},
     {"transformations__make_col", (DL_FUNC) &transformations__make_col, 4},
     {"transformations__make_collect", (DL_FUNC) &transformations__make_collect, 3},
     {"transformations__make_column", (DL_FUNC) &transformations__make_column, 4},
@@ -177,6 +180,7 @@ static R_CMethodDef R_CDef[] = {
     {"transformations__make_sum_of_squared_deviations", (DL_FUNC) &transformations__make_sum_of_squared_deviations, 5},
     {"transformations__make_unordered", (DL_FUNC) &transformations__make_unordered, 3},
     {"transformations__make_variance", (DL_FUNC) &transformations__make_variance, 6},
+    {"transformations__make_with_columns", (DL_FUNC) &transformations__make_with_columns, 5},
     {NULL, NULL, 0},
 };
 

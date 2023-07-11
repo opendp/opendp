@@ -696,6 +696,11 @@ struct FfiResult_____AnyObject opendp_data__smd_curve_epsilon(const struct AnyOb
                                                               const struct AnyObject *delta);
 
 /**
+ * Internal function. Retrieve the active column type of an ExprDomain.
+ */
+struct FfiResult_____c_char opendp_data__get_active_column_type(const struct AnyDomain *domain);
+
+/**
  * Internal function. Convert the AnyObject to a string representation.
  *
  * # Arguments
@@ -1235,7 +1240,15 @@ struct FfiResult_____AnyTransformation opendp_transformations__make_group_by_sta
 
 struct FfiResult_____AnyTransformation opendp_transformations__make_col(const struct AnyDomain *input_domain,
                                                                         const struct AnyMetric *input_metric,
-                                                                        const char *col_name);
+                                                                        const struct AnyObject *col_name);
+
+struct FfiResult_____AnyTransformation opendp_transformations__make_with_columns(const struct AnyDomain *input_domain,
+                                                                                 const struct AnyMetric *input_metric,
+                                                                                 const struct AnyObject *transformations);
+
+struct FfiResult_____AnyTransformation opendp_transformations__make_clamp_expr(const struct AnyDomain *input_domain,
+                                                                               const struct AnyMetric *input_metric,
+                                                                               const struct AnyObject *bounds);
 
 struct FfiResult_____AnyTransformation opendp_transformations__make_variance(const struct AnyDomain *input_domain,
                                                                              const struct AnyMetric *input_metric,

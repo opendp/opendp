@@ -57,6 +57,7 @@ SEXP core__transformation_map(SEXP transformation, SEXP distance_in, SEXP T_dist
 SEXP core__transformation_output_distance_type(SEXP this, SEXP log);
 SEXP core__transformation_output_domain(SEXP this, SEXP log);
 SEXP core__transformation_output_metric(SEXP this, SEXP log);
+SEXP data__get_active_column_type(SEXP domain, SEXP log);
 SEXP data__new_arrow_array(SEXP name, SEXP log);
 SEXP data__object_type(SEXP this, SEXP log);
 SEXP data__smd_curve_epsilon(SEXP curve, SEXP delta, SEXP T_delta, SEXP log);
@@ -113,6 +114,7 @@ SEXP metrics__metric_type(SEXP this, SEXP log);
 SEXP metrics__symmetric_distance(SEXP log);
 SEXP metrics__user_distance(SEXP descriptor, SEXP log);
 SEXP transformations__choose_branching_factor(SEXP size_guess, SEXP log);
+SEXP transformations__make_agg_trans(SEXP input_domain, SEXP input_metric, SEXP transformations, SEXP T, SEXP T_transformations, SEXP log);
 SEXP transformations__make_b_ary_tree(SEXP input_domain, SEXP input_metric, SEXP leaf_count, SEXP branching_factor, SEXP log);
 SEXP transformations__make_bounded_float_checked_sum(SEXP size_limit, SEXP bounds, SEXP S, SEXP T, SEXP T_bounds, SEXP log);
 SEXP transformations__make_bounded_float_ordered_sum(SEXP size_limit, SEXP bounds, SEXP S, SEXP T, SEXP T_bounds, SEXP log);
@@ -124,6 +126,7 @@ SEXP transformations__make_cast_default(SEXP input_domain, SEXP input_metric, SE
 SEXP transformations__make_cast_inherent(SEXP input_domain, SEXP input_metric, SEXP TOA, SEXP log);
 SEXP transformations__make_cdf(SEXP TA, SEXP log);
 SEXP transformations__make_clamp(SEXP input_domain, SEXP input_metric, SEXP bounds, SEXP TA, SEXP T_bounds, SEXP log);
+SEXP transformations__make_clamp_expr(SEXP input_domain, SEXP input_metric, SEXP bounds, SEXP TA, SEXP T_bounds, SEXP log);
 SEXP transformations__make_col(SEXP input_domain, SEXP input_metric, SEXP col_name, SEXP log);
 SEXP transformations__make_collect(SEXP input_domain, SEXP input_metric, SEXP log);
 SEXP transformations__make_column(SEXP input_domain, SEXP input_metric, SEXP column_name, SEXP log);
@@ -173,3 +176,4 @@ SEXP transformations__make_sum(SEXP input_domain, SEXP input_metric, SEXP log);
 SEXP transformations__make_sum_of_squared_deviations(SEXP input_domain, SEXP input_metric, SEXP S, SEXP T, SEXP log);
 SEXP transformations__make_unordered(SEXP input_domain, SEXP input_metric, SEXP log);
 SEXP transformations__make_variance(SEXP input_domain, SEXP input_metric, SEXP ddof, SEXP S, SEXP T, SEXP log);
+SEXP transformations__make_with_columns(SEXP input_domain, SEXP input_metric, SEXP transformations, SEXP T_transformations, SEXP log);

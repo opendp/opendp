@@ -12,6 +12,7 @@ __all__ = [
     "extrinsic_object_free",
     "ffislice_of_anyobjectptrs",
     "fill_bytes",
+    "get_active_column_type",
     "new_arrow_array",
     "object_as_slice",
     "object_free",
@@ -125,6 +126,32 @@ def fill_bytes(
     lib_function.restype = ctypes.c_bool
 
     output = c_to_py(lib_function(c_ptr, c_len))
+
+    return output
+
+
+def get_active_column_type(
+    domain: Domain
+) -> str:
+    r"""Internal function. Retrieve the active column type of an ExprDomain.
+
+    :param domain: 
+    :type domain: Domain
+    :rtype: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_domain = py_to_c(domain, c_type=Domain, type_name=AnyDomain)
+
+    # Call library function.
+    lib_function = lib.opendp_data__get_active_column_type
+    lib_function.argtypes = [Domain]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_domain), ctypes.c_char_p))
 
     return output
 

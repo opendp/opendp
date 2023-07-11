@@ -96,7 +96,7 @@ mod test_make_group_by {
             .agg([all()])
             .collect()?;
 
-        assert!(lf_exp.frame_equal(&lf_res));
+        assert!(lf_exp.equals(&lf_res));
 
         Ok(())
     }
