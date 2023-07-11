@@ -132,7 +132,7 @@ def dataframe_domain_with_counts(
     # No type arguments to standardize.
     # Convert arguments to c types.
     c_dataframe_domain = py_to_c(dataframe_domain, c_type=Domain, type_name=None)
-    c_counts = py_to_c(counts, c_type=AnyObjectPtr, type_name=LazyFrame)
+    c_counts = py_to_c(counts, c_type=AnyObjectPtr, type_name=DataFrame)
     
     # Call library function.
     lib_function = lib.opendp_domains__dataframe_domain_with_counts

@@ -24,9 +24,15 @@ def test_dataframe_domain():
     domains, data = test_series_domain()
     return dp.dataframe_domain(domains), pl.DataFrame(data)
 
-def test_with_counts():
-    domain = test_lazyframe_domain()[0]
-    dp.lazyframe_domain_with_counts(domain, pl.LazyFrame({"B": [1], "counts": [50]}, schema_overrides={"B": pl.Int32}))
+def test_lazyframe_domain_with_counts():
+    counts = pl.LazyFrame({"B": [1], "counts": [50]}, schema_overrides={"B": pl.Int32})
+    domain, data = test_lazyframe_domain()
+    return domain.with_counts(counts), data
+
+def test_dataframe_domain_with_counts():
+    counts = pl.DataFrame({"B": [1], "counts": [50]}, schema_overrides={"B": pl.Int32})
+    domain, data = test_dataframe_domain()
+    return domain.with_counts(counts), data
 
 # data loaders
 def test_series_ffi():

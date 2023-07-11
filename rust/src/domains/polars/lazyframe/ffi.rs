@@ -99,7 +99,7 @@ pub extern "C" fn opendp_domains__lazyframe_domain_with_counts(
     name = "dataframe_domain_with_counts",
     arguments(
         dataframe_domain(rust_type = b"null"),
-        counts(rust_type = "LazyFrame")
+        counts(rust_type = "DataFrame")
     ),
     returns(c_type = "FfiResult<AnyDomain *>")
 )]
