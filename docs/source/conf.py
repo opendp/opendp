@@ -202,7 +202,7 @@ nbsphinx_prolog = fr"""
 
     <div class="admonition note">
       This page was generated from
-      <a class="reference external" href="https://github.com/opendp/opendp/tree/{{{{ frag|e }}}}/{{{{ docname|e }}}}" target="_blank">{{{{ docname|e }}}}</a>.
+      <a class="reference external" href="https://github.com/opendp/opendp/tree/{{{{ env.config.version|e }}}}/{{{{ docname|e }}}}" target="_blank">{{{{ docname|e }}}}</a>.
       Interactive online version:
       <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp/{{{{ frag|e }}}}?filepath={{{{ docname|e }}}}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
     </div>
