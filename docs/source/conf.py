@@ -196,12 +196,14 @@ binder_frag = f'/{ref}'
 # insert this header on nbsphinx pages to link to binder and github:
 nbsphinx_prolog = fr"""
 {{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}}
+{{% set split_version = env.config.version.split('-', 1) %}}
+{{% set frag = split_version[0] if length(split_version) == 1 else split_version[1].split(".", 1)[0] %}}
 .. raw:: html
 
     <div class="admonition note">
       This page was generated from
-      <a class="reference external" href="https://github.com/opendp/opendp/tree/{{{{ env.config.release }}}}/{{{{ docname|e }}}}" target="_blank">{{{{ docname|e }}}}</a>.
+      <a class="reference external" href="https://github.com/opendp/opendp/tree/{{{{ frag|e }}}}/{{{{ docname|e }}}}" target="_blank">{{{{ docname|e }}}}</a>.
       Interactive online version:
-      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp/{{{{ env.config.ref }}}}?filepath={{{{ docname|e }}}}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
+      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp/{{{{ frag|e }}}}?filepath={{{{ docname|e }}}}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
     </div>
 """
