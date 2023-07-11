@@ -1,4 +1,5 @@
 import opendp.prelude as dp
+import pytest
 
 dp.enable_features("contrib")
 
@@ -71,3 +72,27 @@ def test_sequential_composition_approxdp():
     )
     sum_meas = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(sum_meas), 1e-6)
     sc_qbl(sum_meas)
+
+
+def test_udf_queryable():
+    def transition(query, _is_internal):
+        print("inside transition", query)
+        return query + 1
+    qbl = dp.c.new_user_queryable(transition, int, int)
+    print("after transition", qbl(2))
+
+    def transition(query, _is_internal):
+        print("inside transition", query)
+        return query[-1]
+    qbl = dp.c.new_user_queryable(transition, "Vec<i32>", int)
+    print("after transition", qbl([2, 3]))
+
+    def transition(_query, _is_internal):
+        raise ValueError("test clean stack trace")
+    qbl = dp.c.new_user_queryable(transition, "Vec<i32>", int)
+
+    with pytest.raises(dp.OpenDPException):
+        qbl([2, 3])
+
+    with pytest.raises(TypeError):
+        qbl(2)

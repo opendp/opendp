@@ -43,5 +43,6 @@
     "FfiError *": "ctypes.POINTER(FfiError)",
     "const FfiError *": "ctypes.POINTER(FfiError)",
     "FfiResult": "FfiResult",
-    "CallbackFn": "CallbackFn"
+    "CallbackFn": "CallbackFn",
+    "TransitionFn": "TransitionFn"
 }
