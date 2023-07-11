@@ -11,7 +11,7 @@ use crate::{
     traits::Hashable,
 };
 
-use super::{DataFrame, DataFrameDomain};
+use super::{DataFrame, OldFrameDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -74,7 +74,7 @@ pub fn make_create_dataframe<K>(
 ) -> Fallible<
     Transformation<
         VectorDomain<VectorDomain<AtomDomain<String>>>,
-        DataFrameDomain<K>,
+        OldFrameDomain<K>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -84,7 +84,7 @@ where
 {
     Transformation::new(
         VectorDomain::new(VectorDomain::new(AtomDomain::default())),
-        DataFrameDomain::new(),
+        OldFrameDomain::new(),
         Function::new(move |arg: &Vec<Vec<String>>| -> DataFrame<K> {
             let arg: Vec<_> = arg.iter().map(|e| vec_string_to_str(e)).collect();
             create_dataframe(col_names.clone(), &arg)
@@ -119,7 +119,7 @@ pub fn make_split_dataframe<K>(
     separator: Option<&str>,
     col_names: Vec<K>,
 ) -> Fallible<
-    Transformation<AtomDomain<String>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>,
+    Transformation<AtomDomain<String>, OldFrameDomain<K>, SymmetricDistance, SymmetricDistance>,
 >
 where
     K: Hashable,
@@ -127,7 +127,7 @@ where
     let separator = separator.unwrap_or(",").to_owned();
     Transformation::new(
         AtomDomain::default(),
-        DataFrameDomain::new(),
+        OldFrameDomain::new(),
         Function::new(move |arg: &String| split_dataframe(&separator, col_names.clone(), &arg)),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
