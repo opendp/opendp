@@ -1,7 +1,7 @@
 import opendp.prelude as dp
 from opendp.mod import enable_features
 
-enable_features('contrib')
+enable_features('contrib', 'honest-but-curious')
 
 INT_DATA = list(range(1, 10))
 FLOAT_DATA = list(map(float, INT_DATA))
@@ -317,7 +317,7 @@ def test_df_cast_default():
     )
     assert query("0,0.\n1,1.\n2,2.\n3,3.") == [False, True, True, True]
     assert query.check(1, 1)
-
+test_df_cast_default()
 
 def test_df_is_equal():
     query = (
