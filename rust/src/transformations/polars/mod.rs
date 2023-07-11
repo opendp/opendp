@@ -41,6 +41,11 @@ mod make_groupby;
 #[cfg(feature = "contrib")]
 pub use make_groupby::*;
 
+#[cfg(feature = "contrib")]
+mod make_clamp;
+#[cfg(feature = "contrib")]
+pub use make_clamp::*;
+
 #[cfg(test)]
 pub mod polars_test {
     use crate::domains::{AtomDomain, ExprDomain, LazyFrameContext, LazyFrameDomain, SeriesDomain, LazyGroupByContext};
