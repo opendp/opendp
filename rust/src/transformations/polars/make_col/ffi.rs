@@ -1,8 +1,6 @@
-use std::ffi::c_char;
-
-use crate::core::{Domain, IntoAnyTransformationFfiResultExt};
+use crate::core::{IntoAnyTransformationFfiResultExt, Domain};
 use crate::domains::OuterMetric;
-use crate::ffi::util::to_str;
+use crate::ffi::any::AnyObject;
 use crate::{
     core::{FfiResult, MetricSpace},
     domains::ExprDomain,
@@ -14,7 +12,7 @@ use crate::{
 pub extern "C" fn opendp_transformations__make_col(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
-    col_name: *const c_char,
+    col_name: *const AnyObject,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<M>(
         input_domain: &AnyDomain,
@@ -34,7 +32,7 @@ pub extern "C" fn opendp_transformations__make_col(
 
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
-    let col_name = try_!(to_str(col_name)).to_string();
+    let col_name = try_!(try_as_ref!(col_name).downcast_ref::<String>()).clone();
 
     let MI = input_metric.type_.clone();
 

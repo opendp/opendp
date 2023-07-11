@@ -101,7 +101,7 @@ impl Context for LazyGroupByContext {
 ///             SeriesDomain::new("B", AtomDomain::<f64>::default()),
 /// ])?;
 ///
-/// let expr_domain = ExprDomain::new(lazy_frame_domain, LazyFrameContext::Select, Some("A".to_string()), true);
+/// let expr_domain = ExprDomain::<LazyFrameDomain>::new(lazy_frame_domain, LazyFrameContext::Select, Some("A".to_string()));
 /// # opendp::error::Fallible::Ok(())
 /// ```
 #[derive(Clone, PartialEq)]

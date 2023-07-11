@@ -12,12 +12,13 @@ use crate::core::{
     Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap, StabilityMap,
     Transformation, FfiResult,
 };
+use crate::domains::{ExprDomain, LazyDomain, LazyGroupByDomain, LazyFrameDomain};
 use crate::error::*;
 use crate::interactive::{Answer, Query, Queryable};
 use crate::{err, fallible};
 
 use super::glue::Glue;
-use super::util::{Type, into_owned};
+use super::util::{Type, TypeContents, into_owned};
 
 
 pub type CallbackFn = extern "C" fn(*const AnyObject) -> *mut FfiResult<*mut AnyObject>;
@@ -287,6 +288,42 @@ impl AnyDomain {
 
     pub fn new_raw<D: 'static + Domain + Send + Sync>(value: D) -> *mut Self {
         crate::ffi::util::into_raw(Self::new(value))
+    }
+
+    pub fn get_context(&self) -> Fallible<Type> {
+        if let TypeContents::GENERIC { name, args } = &self.type_.contents {
+            if name != &"ExprDomain" {
+                return fallible!(FFI, "Domain must be an ExprDomain to extract context");
+            }
+            Type::of_id(&args[0])
+        } else {
+            return fallible!(FFI, "Domain must be generic");
+        }
+    }
+
+    pub fn get_active_column_type(&self) -> Fallible<Type> {
+        fn monomorphize<D: 'static + LazyDomain>(input_domain: &AnyDomain) -> Fallible<Type> {
+            let input_domain = input_domain.downcast_ref::<ExprDomain<D>>()?.clone();
+            let dtype: DataType = input_domain.active_series()?.field.dtype.clone();
+            Ok(match dtype {
+                DataType::Int8 => Type::of::<i8>(),
+                DataType::Int16 => Type::of::<i16>(),
+                DataType::Int32 => Type::of::<i32>(),
+                DataType::Int64 => Type::of::<i64>(),
+                DataType::UInt8 => Type::of::<u8>(),
+                DataType::UInt16 => Type::of::<u16>(),
+                DataType::UInt32 => Type::of::<u32>(),
+                DataType::UInt64 => Type::of::<u64>(),
+                DataType::Float32 => Type::of::<f32>(),
+                DataType::Float64 => Type::of::<f64>(),
+                DataType::Utf8 => Type::of::<String>(),
+                DataType::Boolean => Type::of::<bool>(),
+                _ => return fallible!(FFI, "Unsupported data type"),
+            })
+        }
+        dispatch!(monomorphize, [
+            (self.get_context()?, [LazyFrameDomain, LazyGroupByDomain])
+        ], (self))
     }
 }
 
@@ -656,6 +693,7 @@ mod partials {
 }
 #[cfg(feature = "partials")]
 pub use partials::*;
+use polars::prelude::DataType;
 
 /// A Queryable with all generic types filled by Any types.
 /// This is the type of Queryables passed back and forth over FFI.
