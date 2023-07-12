@@ -31,7 +31,7 @@ jobs:
           echo "LAST=$SHA CURRENT=${{ github.sha }}"
           echo "changed=${{ github.sha != env.SHA }}" >> $GITHUB_OUTPUT
     outputs:
-      changed: ${{ steps.parse_last_run.outputs.changed }}
+      changed: ${{ fromJson(steps.parse_last_run.outputs.changed) }}
 
 #  release:
 #    needs: check
