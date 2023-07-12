@@ -44,4 +44,4 @@ jobs:
 #    secrets: inherit
     steps:
       - name: Debug
-        run: echo "LAST=${{ needs.check.last_sha }} CURRENT=${{ github.sha }}"
+        run: echo "CHANGED=${{ needs.check.changed }}"
