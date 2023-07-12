@@ -31,12 +31,11 @@ jobs:
           echo "LAST=$SHA CURRENT=${{ github.sha }}"
           echo "changed=${{ github.sha != env.SHA }}" >> $GITHUB_OUTPUT
     outputs:
-#      changed: ${{ fromJson(steps.parse_last_run.outputs.changed) }}
-      changed: ${{ steps.parse_last_run.outputs.changed == 'true' }}
+      changed: ${{ steps.parse_last_run.outputs.changed }}
 
 #  release:
 #    needs: check
-#    if: ${{ needs.check.outputs.changed || github.event.name == 'workflow_dispatch' }}
+#    if: ${{ fromJson(needs.check.outputs.changed) || github.event.name == 'workflow_dispatch' }}
 #    uses: opendp/opendp/.github/workflows/release.yml@714-nightly-build
 #    env:
 #      COUNTER: ${{ inputs.counter || 0 }}
@@ -48,7 +47,7 @@ jobs:
 
   release-true:
     needs: check
-    if: ${{ needs.check.outputs.changed == 'true' }}
+    if: ${{ fromJson(needs.check.outputs.changed) }}  # Job outputs are coerced to strings
     runs-on: ubuntu-22.04
     steps:
       - name: Debug
@@ -56,7 +55,7 @@ jobs:
 
   release-false:
     needs: check
-    if: ${{ needs.check.outputs.changed != 'true' }}
+    if: ${{ !fromJson(needs.check.outputs.changed) }}  # Job outputs are coerced to strings
     runs-on: ubuntu-22.04
     steps:
       - name: Debug
