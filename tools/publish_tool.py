@@ -69,7 +69,7 @@ def python(args):
     run_command("Publishing opendp package", f"python -m twine upload -r {args.repository} --verbose python/wheelhouse/{wheel}")
     # Unfortunately, twine doesn't have an option to block until the index is propagated. Polling the index is unreliable,
     # because often the new item will appear, but installs will still fail (probably because of stale caches).
-    # So downstream things like in release_tool.py sanity will have to retry.
+    # So downstream things like sanity test will have to retry.
 
 
 def github(args):

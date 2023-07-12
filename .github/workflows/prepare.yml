@@ -60,18 +60,18 @@ jobs:
           cache: pip
 
       - name: Install requirements
-        run: pip install -r tools/requirements-release_tool.txt
+        run: pip install -r tools/requirements-channel_tool.txt
 
       - name: Initialize channel
         env:
           SYNC_FLAG: ${{ inputs.sync && '-s' || '-ns' }}
-        run: python tools/release_tool.py init_channel -c ${{ inputs.channel }} $SYNC_FLAG -u 714-nightly-build
+        run: python tools/channel_tool.py initialize -c ${{ inputs.channel }} $SYNC_FLAG -u 714-nightly-build
 
       - name: Configure channel
         id: configure
         run: |
           DATE=`python tools/release_tool.py date -z "$TIME_ZONE"`
-          python tools/release_tool.py config_channel -c ${{ inputs.channel }} -d "$DATE" -i ${{ inputs.counter }}
+          python tools/channel_tool.py configure -c ${{ inputs.channel }} -d "$DATE" -i ${{ inputs.counter }}
           echo "date=$DATE" >> $GITHUB_OUTPUT
 
       - name: Show changes

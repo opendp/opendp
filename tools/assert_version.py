@@ -8,7 +8,7 @@ version = semver.Version.parse(version)
 assert version.prerelease != "dev", "Please update the repository with the current version."
 print("Checking if all version numbers are synchronized at", version)
 
-# From release_tool.py
+# From channel_tool.py
 def get_python_version(version):
     # Python (PEP 440) has several annoying quirks that make it not quite compatible with semantic versioning:
     # 1. Python doesn't allow arbitrary tags, only (a|b|rc|post|dev). (You can use (alpha|beta|c|pre|preview|rev|r),

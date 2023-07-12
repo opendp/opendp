@@ -61,7 +61,7 @@ def ensure_branch(branch):
         run_command(f"Fetching branch {branch}", f"git fetch origin {branch}:{branch}")
 
 
-def init_channel(args):
+def initialize(args):
     log(f"*** INITIALIZING CHANNEL FROM UPSTREAM ***")
     if args.channel not in ("nightly", "beta", "stable"):
         raise Exception(f"Unknown channel {args.channel}")
@@ -205,7 +205,7 @@ def update_version(version):
     update_file(".binder/requirements.txt", io.IOBase.readlines, munge_binder_requirements, lambda data, f: f.writelines(data))
 
 
-def configure_channel(args):
+def configure(args):
     log(f"*** CONFIGURING CHANNEL ***")
     if args.channel not in ("dev", "nightly", "beta", "stable"):
         raise Exception(f"Unknown channel {args.channel}")
@@ -329,12 +329,12 @@ def bump_version(args):
 
 
 def _main(argv):
-    parser = argparse.ArgumentParser(description="OpenDP release tool")
+    parser = argparse.ArgumentParser(description="OpenDP channel tool")
     subparsers = parser.add_subparsers(dest="COMMAND", help="Command to run")
     subparsers.required = True
 
-    subparser = subparsers.add_parser("init_channel", help="Initialize the channel")
-    subparser.set_defaults(func=init_channel)
+    subparser = subparsers.add_parser("initialize", help="Initialize the channel")
+    subparser.set_defaults(func=initialize)
     subparser.add_argument("-c", "--channel", choices=["nightly", "beta", "stable"], default="nightly", help="Which channel to target")
     subparser.add_argument("-s", "--sync", dest="sync", action="store_true", default=True, help="Sync the channel from upstream")
     subparser.add_argument("-ns", "--no-nosync", dest="sync", action="store_false", help="Don't sync the channel from upstream")
@@ -346,19 +346,19 @@ def _main(argv):
     subparser.set_defaults(func=date)
     subparser.add_argument("-z", "--time-zone", help="Time zone for date resolution")
 
-    subparser = subparsers.add_parser("config_channel", help="Configure the channel")
-    subparser.set_defaults(func=configure_channel)
+    subparser = subparsers.add_parser("configure", help="Configure the channel")
+    subparser.set_defaults(func=configure)
     subparser.add_argument("-c", "--channel", choices=["dev", "nightly", "beta", "stable"], default="dev", help="Which channel to target")
     subparser.add_argument("-d", "--date", type=datetime.date.fromisoformat, help="Release date")
     subparser.add_argument("-i", "--counter", type=int, default=0, help="Intra-date version counter")
 
-    subparser = subparsers.add_parser("changelog", help="Update CHANGELOG file")
+    subparser = subparsers.add_parser("changelog", help="Update the CHANGELOG file")
     subparser.set_defaults(func=changelog)
     subparser.add_argument("-d", "--date", type=datetime.date.fromisoformat, help="Release date")
     subparser.add_argument("-p", "--prepend", dest="prepend", action="store_true", default=False, help="Prepend new empty heading (for dev only)")
     subparser.add_argument("-np", "--no-prepend", dest="prepend", action="store_false", help="Don't prepend new empty heading (for dev only)")
 
-    subparser = subparsers.add_parser("sanity", help="Run sanity test")
+    subparser = subparsers.add_parser("sanity", help="Run a sanity test")
     subparser.set_defaults(func=sanity)
     subparser.add_argument("-e", "--venv", default="/tmp/sanity-venv", help="Virtual environment directory")
     subparser.add_argument("-r", "--python-repository", choices=["pypi", "testpypi", "local"], default="pypi", help="Python package repository")
