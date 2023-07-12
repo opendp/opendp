@@ -44,8 +44,6 @@ env:
 jobs:
   prepare:
     runs-on: ubuntu-22.04
-    outputs:
-      date: ${{ steps.configure.outputs.date }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -83,3 +81,5 @@ jobs:
         run: |
           git commit -a -m "Initialize and configure channel"
           git push --force origin ${{ inputs.channel }}
+    outputs:
+      date: ${{ steps.configure.outputs.date }}

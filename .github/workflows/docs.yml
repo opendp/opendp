@@ -7,7 +7,7 @@ on:
     # Doesn't take a channel input, because we generate docs for all channels and releases.
 
 jobs:
-  build:
+  docs:
     # fixed to ubuntu-22.04, which is currently newer than ubuntu-latest, because pandoc needs at least v2.6
     # ubuntu-latest points to ubuntu-20.04, which has pandoc v2.5, which is subject to this bug: https://github.com/jgm/pandoc/issues/5128
     runs-on: ubuntu-22.04
