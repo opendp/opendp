@@ -10,8 +10,6 @@ on:
         type: number
         required: false
         default: 10  # Set counter > 1 for manual runs, so they won't block later scheduled run.
-env:
-  COUNTER: ${{ inputs.counter || 0 }}
 
 jobs:
   check:
@@ -42,5 +40,5 @@ jobs:
     with:
       channel: nightly
       sync: true
-      counter: ${{ env.COUNTER }}
+      counter: ${{ inputs.counter || 0 }}
     secrets: inherit
