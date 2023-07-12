@@ -70,7 +70,7 @@ jobs:
       - name: Configure channel
         id: configure
         run: |
-          DATE=`python tools/release_tool.py date -z "$TIME_ZONE"`
+          DATE=`python tools/channel_tool.py date -z "$TIME_ZONE"`
           python tools/channel_tool.py configure -c ${{ inputs.channel }} -d "$DATE" -i ${{ inputs.counter }}
           echo "date=$DATE" >> $GITHUB_OUTPUT
 

@@ -60,9 +60,9 @@ jobs:
           cache: pip
 
       - name: Install requirements
-        run: pip install -r tools/requirements-release_tool.txt
+        run: pip install -r tools/requirements-channel_tool.txt
 
       - name: Run sanity test
         env:
           FAKE_FLAG: ${{ inputs.fake && '-f' || '-nf' }}
-        run: python tools/release_tool.py sanity -r ${{ inputs.python_repository }} -t 300 $FAKE_FLAG
+        run: python tools/channel_tool.py sanity -r ${{ inputs.python_repository }} -t 300 $FAKE_FLAG
