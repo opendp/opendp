@@ -33,9 +33,9 @@ jobs:
     outputs:
       changed: ${{ steps.parse_last_run.outputs.changed }}
 
-  release:
-    needs: check
-#    if: ${{ needs.check.outputs.last_sha != github.sha || github.event.name == 'workflow_dispatch' }}
+#  release:
+#    needs: check
+#    if: ${{ needs.check.outputs.changed || github.event.name == 'workflow_dispatch' }}
 #    uses: opendp/opendp/.github/workflows/release.yml@714-nightly-build
 #    env:
 #      COUNTER: ${{ inputs.counter || 0 }}
@@ -44,7 +44,19 @@ jobs:
 #      sync: true
 #      counter: ${{ env.COUNTER }}
 #    secrets: inherit
+
+  release-true:
+    needs: check
+    if: ${{ needs.check.outputs.changed }}
     runs-on: ubuntu-22.04
     steps:
       - name: Debug
-        run: echo "CHANGED=${{ needs.check.outputs.changed }}"
+        run: echo "CHANGED"
+
+  release-false:
+    needs: check
+    if: ${{ !needs.check.outputs.changed }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Debug
+        run: echo "NOT CHANGED"
