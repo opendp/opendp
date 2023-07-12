@@ -42,6 +42,7 @@ jobs:
 #      sync: true
 #      counter: ${{ env.COUNTER }}
 #    secrets: inherit
+    runs-on: ubuntu-22.04
     steps:
       - name: Debug
         run: echo "CHANGED=${{ needs.check.changed }}"
