@@ -40,5 +40,5 @@ jobs:
     with:
       channel: nightly
       sync: true
-      counter: ${{ inputs.counter || 0 }}
+      counter: ${{ fromJson(inputs.counter) || 0 }}
     secrets: inherit
