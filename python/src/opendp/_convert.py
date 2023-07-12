@@ -60,6 +60,13 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
 
     if isinstance(value, c_type):
         return value
+    
+    if type_name == "PyObject":
+        from opendp._data import slice_as_object
+        ptr = ctypes.pointer(ctypes.py_object(value))
+        obj = slice_as_object(_wrap_in_slice(ptr, 1), type_name)
+        obj.depends_on(value, ptr)
+        return obj
 
     if c_type == CallbackFn:
         return _wrap_py_func(value, type_name)
@@ -172,6 +179,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
     
     if type_name == "String":
         return _slice_to_string(raw)
+    
+    if type_name == "PyObject":
+        return ctypes.cast(raw.contents.ptr, ctypes.py_object).value
 
     if type_name.origin == "Vec":
         return _slice_to_vector(raw, type_name)

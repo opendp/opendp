@@ -208,7 +208,6 @@ impl AnyObject {
         }
     }
 
-    #[cfg(test)]
     pub fn new_raw<T: 'static>(value: T) -> *mut Self {
         crate::ffi::util::into_raw(Self::new(value))
     }

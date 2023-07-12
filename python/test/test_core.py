@@ -165,3 +165,14 @@ def test_new_domain():
     not_null_domain = atom_domain(nullable=False, T=float)
     print(not_null_domain)
     assert not not_null_domain.member(float("nan"))
+
+
+def test_py_domain():
+    from datetime import datetime
+    domain = dp.py_domain("all datetimes", lambda x: isinstance(x, datetime))
+    print(domain)
+    print(domain.member(datetime.now()))
+
+    # vec_domain = dp.vector_domain(domain)
+    # vec_domain.member([datetime.now()])
+# test_py_domain()

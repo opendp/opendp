@@ -434,6 +434,10 @@ class Domain(ctypes.POINTER(AnyDomain)):
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
         return str(self) == str(other)
+    
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
 
 
 class Metric(ctypes.POINTER(AnyMetric)):

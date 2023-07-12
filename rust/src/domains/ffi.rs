@@ -1,14 +1,15 @@
-use std::ffi::c_char;
+use std::ffi::{c_char, c_void};
 
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Domain, FfiResult},
+    core::{Domain, FfiResult, Function},
     domains::{type_name, AtomDomain, MapDomain, VectorDomain},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyObject, Downcast},
-        util::{self, c_bool, into_c_char_p, Type, TypeContents},
+        udf::CallbackFn,
+        util::{self, c_bool, into_c_char_p, Type, TypeContents, to_str},
     },
     traits::{CheckAtom, Float, Hashable, Integer, Primitive},
 };
@@ -247,11 +248,23 @@ pub extern "C" fn opendp_domains__vector_domain(
         };
         Ok(AnyDomain::new(vector_domain))
     }
+    fn monomorphize_py_domain(
+        atom_domain: &AnyDomain,
+        size: *const AnyObject,
+    ) -> Fallible<AnyDomain> {
+        let atom_domain = atom_domain.downcast_ref::<PyDomain>()?.clone();
+        let mut vector_domain = VectorDomain::new(atom_domain);
+        if let Some(size) = util::as_ref(size) {
+            vector_domain = vector_domain.with_size(*try_!(size.downcast_ref::<i32>()) as usize)
+        };
+        Ok(AnyDomain::new(vector_domain))
+    }
     let atom_domain = try_as_ref!(atom_domain);
 
     match atom_domain.type_.contents {
         TypeContents::GENERIC { name: "AtomDomain", .. } => 
             dispatch!(monomorphize_all, [(atom_domain.carrier_type, @primitives)], (atom_domain, size)),
+        TypeContents::PLAIN("PyDomain") => monomorphize_py_domain(atom_domain, size),
         _ => fallible!(FFI, "VectorDomain constructors only support AtomDomain inner domains")
     }.into()
 }
@@ -284,4 +297,59 @@ pub extern "C" fn opendp_domains__map_domain(
             dispatch!(monomorphize, [(key_domain.carrier_type, @hashable), (value_domain.carrier_type, @primitives)], (key_domain, value_domain)),
         _ => fallible!(FFI, "MapDomain constructors only support AtomDomain inner domains")
     }.into()
+}
+
+pub type PyObject = *const c_void;
+
+#[derive(Clone)]
+pub struct PyDomain {
+    pub descriptor: String,
+    pub member: Function<PyObject, bool>,
+}
+
+impl std::fmt::Debug for PyDomain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "PyDomain({:?})", self.descriptor)
+    }
+}
+
+impl PartialEq for PyDomain {
+    fn eq(&self, other: &Self) -> bool {
+        self.descriptor == other.descriptor
+    }
+}
+
+impl Domain for PyDomain {
+    type Carrier = PyObject;
+
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        self.member.eval(val)
+    }
+}
+
+#[bootstrap(
+    name = "py_domain",
+    arguments(descriptor(rust_type = "String"), member(rust_type = "bool")),
+    dependencies("c_member")
+)]
+/// Construct a new PyDomain.
+///
+/// # Arguments
+/// * `descriptor` - A string description of the data domain.
+/// * `member` - A function used to test if a value is a member of the data domain.
+#[no_mangle]
+pub extern "C" fn opendp_domains__py_domain(
+    descriptor: *mut c_char,
+    member: CallbackFn,
+) -> FfiResult<*mut AnyDomain> {
+    let descriptor = try_!(to_str(descriptor)).to_string();
+    let func = move |arg: &PyObject| -> Fallible<AnyObject> {
+        let res = member(AnyObject::new_raw(*arg));
+        util::into_owned(res)?.into()
+    };
+    let member = Function::new_fallible(move |arg: &PyObject| -> Fallible<bool> {
+        (func)(arg)?.downcast::<bool>()
+    });
+
+    Ok(AnyDomain::new(PyDomain { descriptor, member })).into()
 }

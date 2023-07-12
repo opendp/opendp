@@ -10,6 +10,7 @@ use opendp_derive::bootstrap;
 
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;
+use crate::domains::ffi::PyObject;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
 use crate::ffi::util::{self, into_c_char_p};
@@ -61,6 +62,12 @@ pub extern "C" fn opendp_data__slice_as_object(
     fn raw_to_string(raw: &FfiSlice) -> Fallible<AnyObject> {
         let string = util::to_str(raw.ptr as *const c_char)?.to_owned();
         Ok(AnyObject::new(string))
+    }
+    fn raw_to_pyobject(raw: &FfiSlice) -> Fallible<AnyObject> {
+        // don't use util::into_owned, as it will free the pointer (which we don't own)
+        let pyobject = util::as_ref(raw.ptr as *mut PyObject)
+            .ok_or_else(|| err!(FFI, "attempted to consume a null pointer"))?;
+        Ok(AnyObject::new(*pyobject))
     }
     fn raw_to_vec_string(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_char, raw.len) };
@@ -135,6 +142,7 @@ pub extern "C" fn opendp_data__slice_as_object(
     }
     match T.contents {
         TypeContents::PLAIN("String") => raw_to_string(raw),
+        TypeContents::PLAIN("PyObject") => raw_to_pyobject(raw),
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(&element_id));
             dispatch!(raw_to_slice, [(element, @primitives)], (raw))
@@ -227,6 +235,10 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             string.len() + 1,
         ))
     }
+    fn pyobject_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let py_object = *obj.downcast_ref::<PyObject>()?;
+        Ok(FfiSlice::new(py_object as *mut c_void, 1))
+    }
     fn vec_string_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
         let vec_str: &Vec<String> = obj.downcast_ref()?;
         let vec = vec_str
@@ -276,6 +288,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         TypeContents::PLAIN("String") => {
             string_to_raw(obj)
         }
+        TypeContents::PLAIN("PyObject") => pyobject_to_raw(obj),
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(element_id));
             dispatch!(slice_to_raw, [(element, @primitives)], (obj))

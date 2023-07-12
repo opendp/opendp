@@ -13,6 +13,7 @@ __all__ = [
     "map_domain",
     "member",
     "option_domain",
+    "py_domain",
     "vector_domain"
 ]
 
@@ -258,6 +259,37 @@ def option_domain(
     
     output = c_to_py(unwrap(lib_function(c_element_domain, c_D), Domain))
     
+    return output
+
+
+@versioned
+def py_domain(
+    descriptor: str,
+    member
+):
+    """Construct a new PyDomain.
+    
+    [py_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.py_domain.html)
+    
+    :param descriptor: A string description of the data domain.
+    :type descriptor: str
+    :param member: A function used to test if a value is a member of the data domain.
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_descriptor = py_to_c(descriptor, c_type=ctypes.c_char_p, type_name=String)
+    c_member = py_to_c(member, c_type=CallbackFn, type_name=bool)
+    
+    # Call library function.
+    lib_function = lib.opendp_domains__py_domain
+    lib_function.argtypes = [ctypes.c_char_p, CallbackFn]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_descriptor, c_member), Domain))
+    output._depends_on(c_member)
     return output
 
 

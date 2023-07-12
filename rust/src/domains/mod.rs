@@ -9,7 +9,7 @@
 //! The [`Domain`] trait is implemented for all domains used in OpenDP.
 
 #[cfg(feature = "ffi")]
-mod ffi;
+pub(crate) mod ffi;
 
 // Once we have things using `Any` that are outside of `contrib`, this should specify `feature="ffi"`.
 #[cfg(feature = "contrib")]
