@@ -29,6 +29,7 @@ jobs:
           SHA: ${{ fromJson(steps.get_last_run.outputs.data).workflow_runs[0].head_sha }}
         run: |
           echo "LAST=$SHA CURRENT=${{ github.sha }}"
+          echo "CHANGED=${{ github.sha != env.SHA }}"
           echo "sha=$SHA" >> $GITHUB_OUTPUT
     outputs:
       changed: ${{ github.sha != steps.parse_last_run.sha }}
