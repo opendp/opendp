@@ -47,4 +47,4 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Debug
-        run: echo "CHANGED=${{ needs.check.changed }}"
+        run: echo "CHANGED=${{ needs.check.outputs.changed }}"
