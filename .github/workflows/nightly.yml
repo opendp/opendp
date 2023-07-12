@@ -3,13 +3,6 @@ on:
   schedule:
     # 03:45 UTC = 22:45 EST/23:45 EDT (i.e., always before midnight), so nightlies will have a sensible date
     - cron: '45 3 * * *'
-  workflow_dispatch:
-    inputs:
-      counter:
-        description: Version Counter
-        type: number
-        required: false
-#        default: 10  # Set counter > 1 for manual runs, so they won't block later scheduled run.
 
 jobs:
   check:
@@ -35,10 +28,9 @@ jobs:
 
   release:
     needs: check
-    if: ${{ fromJson(needs.check.outputs.changed) || github.event.name == 'workflow_dispatch' }}
+    if: ${{ fromJson(needs.check.outputs.changed) }}
     uses: opendp/opendp/.github/workflows/release.yml@714-nightly-build
     with:
       channel: nightly
       sync: true
-      counter: ${{ fromJson(inputs.counter) || 0 }}
     secrets: inherit
