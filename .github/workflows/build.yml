@@ -27,7 +27,6 @@ on:
 env:
   FEATURES: untrusted,ffi
 
-
 jobs:
   credential-check:
     runs-on: ubuntu-22.04
@@ -54,7 +53,6 @@ jobs:
         run: |
           pip install -r tools/requirements-assert_version.txt
           python tools/assert_version.py
-
 
   libs-windows:
     needs: credential-check
@@ -107,7 +105,6 @@ jobs:
           name: libs
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: rust/target*/release/opendp.dll
-
 
   libs-macos:
     needs: credential-check
@@ -168,7 +165,6 @@ jobs:
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: rust/target*/release/libopendp.dylib
 
-
   libs-linux:
     needs: credential-check
     runs-on: ubuntu-20.04
@@ -222,7 +218,6 @@ jobs:
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: rust/target*/${{ env.TARGET }}/release/libopendp.so
 
-
   python-bindings:
     needs: credential-check
     runs-on: ubuntu-20.04
@@ -255,7 +250,6 @@ jobs:
         with:
           name: python_bindings
           path: python/src/opendp/
-
 
   python:
     needs: [ libs-windows, libs-macos, libs-linux, python-bindings ]

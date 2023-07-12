@@ -1,5 +1,4 @@
 name: Latex Build (Release)
-
 on:
   workflow_call:
     inputs:

@@ -1,15 +1,17 @@
 name: Nightly
 on:
   schedule:
-    # 03:55 UTC = 22:55 EST/23:55 EDT (i.e., always before midnight), so nightlies will have a sensible date
-    - cron: '55 3 * * *'
+    # 03:45 UTC = 22:45 EST/23:45 EDT (i.e., always before midnight), so nightlies will have a sensible date
+    - cron: '45 3 * * *'
   workflow_dispatch:
     inputs:
       counter:
         description: Version Counter
         type: number
         required: false
-        default: 99
+        default: 10  # Set counter > 1 for manual runs, so they won't block later scheduled run.
+env:
+  COUNTER: ${{ inputs.counter || 0 }}
 
 jobs:
   check:
@@ -33,30 +35,12 @@ jobs:
     outputs:
       changed: ${{ steps.parse_last_run.outputs.changed }}
 
-#  release:
-#    needs: check
-#    if: ${{ fromJson(needs.check.outputs.changed) || github.event.name == 'workflow_dispatch' }}
-#    uses: opendp/opendp/.github/workflows/release.yml@714-nightly-build
-#    env:
-#      COUNTER: ${{ inputs.counter || 0 }}
-#    with:
-#      channel: nightly
-#      sync: true
-#      counter: ${{ env.COUNTER }}
-#    secrets: inherit
-
-  release-true:
+  release:
     needs: check
-    if: ${{ fromJson(needs.check.outputs.changed) }}  # Job outputs are coerced to strings
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Debug
-        run: echo "CHANGED"
-
-  release-false:
-    needs: check
-    if: ${{ !fromJson(needs.check.outputs.changed) }}  # Job outputs are coerced to strings
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Debug
-        run: echo "NOT CHANGED"
+    if: ${{ fromJson(needs.check.outputs.changed) || github.event.name == 'workflow_dispatch' }}
+    uses: opendp/opendp/.github/workflows/release.yml@714-nightly-build
+    with:
+      channel: nightly
+      sync: true
+      counter: ${{ env.COUNTER }}
+    secrets: inherit

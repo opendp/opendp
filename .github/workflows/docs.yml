@@ -1,5 +1,4 @@
 name: Documentation
-
 on:
   workflow_call:
     # Doesn't take a channel input, because we generate docs for all channels and releases.
