@@ -33,12 +33,24 @@ where
     (ExprDomain<C>, SymmetricDistance): MetricSpace,
     (ExprDomain<C>, LInfDiffDistance<f64>): MetricSpace,
 {
+    let bounds = input_domain
+        .active_series()?
+        .atom_domain::<f64>()?
+        .get_closed_bounds()?;
+    let (upper, lower) = bounds;
+
     Transformation::new(
         input_domain.clone(),
         input_domain.clone(),
         Function::new_fallible(
             move |(frame, expr): &(C::Value, Expr)| -> Fallible<(C::Value, Expr)> {
-                Ok((frame.clone(), make_score_elts_expr(expr.clone(), alpha))) // add exp mechanism
+                // let bound_frame = DataFrame::new(vec![
+                //     Series::new(input_domain.active_column()?.as_str(), &[lower, upper]),
+                // ])?.lazy();
+
+                //let concat_frame = diag_concat_lf(&[frame, bound_frame], true, true)?;
+
+                Ok((frame.clone(), make_score_elts_expr(expr.clone(), alpha)))
             },
         ),
         input_metric,
@@ -52,7 +64,7 @@ where
 pub fn make_score_elts_expr(expr: Expr, alpha: f64) -> Expr {
     expr.sort(false)
         .rank(RankOptions::default(), None)                    // i
-        .slice(lit(1), lit(NULL))                              // rm first row
+        //.slice(lit(1), lit(NULL))                              // rm first row
         .cast(DataType::Float64)
         .sub(count().cast(DataType::Float64).mul(lit(alpha))) //  i - N*alpha
         .abs()                                                // |i - N*alpha|
@@ -88,6 +100,26 @@ mod test_make_score_elts_expr_quantile {
         .lazy();
 
         Ok((expr_domain, lazy_frame))
+    }
+
+    #[test]
+    fn testing_dev() -> Fallible<()> {
+        let lf1 = DataFrame::new(
+            vec![
+                Series::new("foo", &[1, 2, 3]),
+                Series::new("bar", &[6.0, 7.0, 8.0])
+            ]
+        )?.lazy();
+    
+        // Create LazyFrame lf2
+        let lf2 = DataFrame::new(
+            vec![
+                Series::new("foo", &[0, 4]),
+            ]
+        )?.lazy();
+    
+
+        Ok(())
     }
 
     #[test]

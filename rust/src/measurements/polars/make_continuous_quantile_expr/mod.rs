@@ -7,7 +7,8 @@ use crate::{
     metrics::LInfDiffDistance, 
     core::{Measurement, Function, PrivacyMap, MetricSpace}, 
     error::Fallible,
-    measures::MaxDivergence, transformations::make_score_elts_expr, traits::{DistanceConstant, Float, Number},
+    measures::MaxDivergence, transformations::make_score_elts_expr, 
+    traits::{DistanceConstant, Float, Number, InfDiv},
 };
 
 use crate::traits::samplers::CastInternalRational;
@@ -37,13 +38,15 @@ where
     QO: CastInternalRational + DistanceConstant<TIA> + Float,
 {
 
-    let epsilon = scale; // placeholder TODO: get epsilon based on scale
+    let sensitivity: f64 = alpha.max(1.0 - alpha);
+    let epsilon = sensitivity.inf_div(&scale)?;
 
-    if temperature.is_sign_negative() || temperature.is_zero() {
-        return fallible!(FailedFunction, "temperature must be positive");
-    }
-
-    let temp_frac = temperature.clone().into_rational()?;
+    // let discrete_exponential = make_base_discrete_exponential::<TIA, QO>(
+    //     Default::default(),
+    //     Default::default(),
+    //     temperature.clone(),
+    //     Optimize::Max
+    // )?;
 
     Measurement::new(
         input_domain,
@@ -80,6 +83,7 @@ where
         }),
         input_metric,
         MaxDivergence::default(),
+        // discrete_exponential.privacy_map.clone()
         PrivacyMap::new_fallible(move |d_in: &TIA| {
             let d_in = QO::inf_cast(d_in.clone())?;
             if d_in.is_sign_negative() {
