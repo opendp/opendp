@@ -48,7 +48,7 @@ jobs:
 
   release-true:
     needs: check
-    if: ${{ needs.check.outputs.changed }}
+    if: ${{ needs.check.outputs.changed == 'true' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Debug
@@ -56,7 +56,7 @@ jobs:
 
   release-false:
     needs: check
-    if: ${{ !needs.check.outputs.changed }}
+    if: ${{ needs.check.outputs.changed != 'true' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Debug
