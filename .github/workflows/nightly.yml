@@ -18,6 +18,8 @@ jobs:
       - name: Get last run
         id: get_last_run
         uses: octokit/request-action@v2.x
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           route: GET /repos/${{ github.repository }}/actions/workflows/nightly.yml/runs?per_page=1&status=completed
 
