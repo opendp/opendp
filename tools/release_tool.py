@@ -1,6 +1,7 @@
 import argparse
 import configparser
 import datetime
+import io
 import re
 import subprocess
 import sys
@@ -165,6 +166,7 @@ def get_python_version(version):
 
 def update_version(version):
     log(f"Updating version references to {version}")
+    python_version = get_python_version(version)
 
     # Main version file
     with open("VERSION", "w") as f:
@@ -184,15 +186,23 @@ def update_version(version):
         return toml
     update_file("rust/opendp_derive/Cargo.toml", tomlkit.load, munge_cargo_opendp_derive, tomlkit.dump)
 
-    python_version = get_python_version(version)
-    def load_config(f):
+    # Python config
+    def load_python_config(f):
         config = configparser.RawConfigParser()
         config.read_file(f)
         return config
-    def munge_config(config):
+    def munge_python_config(config):
         config.set("metadata", "version", str(python_version))
         return config
-    update_file("python/setup.cfg", load_config, munge_config, lambda data, f: data.write(f))
+    def dump_python_config(config, f):
+        config.write(f)
+    update_file("python/setup.cfg", load_python_config, munge_python_config, dump_python_config)
+
+    # Binder requirements
+    def munge_binder_requirements(lines):
+        opendp_line = f"opendp=={python_version}\n"
+        return [opendp_line if line.startswith("opendp==") else line for line in lines]
+    update_file(".binder/requirements.txt", io.IOBase.readlines, munge_binder_requirements, lambda data, f: f.writelines(data))
 
 
 def configure_channel(args):
