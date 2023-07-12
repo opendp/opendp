@@ -9,7 +9,7 @@ on:
         description: Version Counter
         type: number
         required: false
-        default: 10  # Set counter > 1 for manual runs, so they won't block later scheduled run.
+#        default: 10  # Set counter > 1 for manual runs, so they won't block later scheduled run.
 
 jobs:
   check:
