@@ -6,7 +6,7 @@ use polars::prelude::*;
 use crate::core::{
     Function, Metric, MetricSpace, PartialTransformation, StabilityMap, Transformation,
 };
-use crate::domains::{ExprDomain, LazyFrameDomain, LazyGroupByContext, LazyGroupByDomain};
+use crate::domains::{ExprDomain, LazyFrameDomain, LazyGroupByContext, LazyGroupByDomain, ExprMetric};
 use crate::error::*;
 use crate::traits::TotalOrd;
 
@@ -15,11 +15,12 @@ pub fn make_agg_trans<T: AggTransformation>(
     input_domain: LazyGroupByDomain,
     input_metric: T::InputMetric,
     transformations: Vec<T>,
-) -> Fallible<Transformation<LazyGroupByDomain, LazyFrameDomain, T::InputMetric, T::OutputMetric>>
+) -> Fallible<Transformation<LazyGroupByDomain, LazyFrameDomain, T::InputMetric, <T::OutputMetric as ExprMetric<LazyGroupByContext>>::InnerMetric>>
 where
+    T::OutputMetric: ExprMetric<LazyGroupByContext>,
     <T::OutputMetric as Metric>::Distance: TotalOrd + Zero,
     (LazyGroupByDomain, T::InputMetric): MetricSpace,
-    (LazyFrameDomain, T::OutputMetric): MetricSpace,
+    (LazyFrameDomain, <T::OutputMetric as ExprMetric<LazyGroupByContext>>::InnerMetric): MetricSpace,
 {
     // resolve transformations
     let expr_input_domain = ExprDomain {
@@ -78,7 +79,7 @@ where
         input_domain.lazy_frame_domain.clone(),
         function,
         input_metric,
-        output_metric,
+        output_metric.inner_metric(),
         stability_map,
     )
 }
@@ -181,8 +182,7 @@ mod test_make_agg_trans {
                 expr_domain,
                 Lp(SymmetricDistance::default()),
                 "B".to_string(),
-            )
-            .unwrap_test()],
+            )?],
         );
 
         let lf_res = agg_trans
