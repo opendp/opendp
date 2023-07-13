@@ -22,7 +22,6 @@ use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
     L1Distance, L2Distance, SymmetricDistance,
 };
-use crate::transformations::OldFrameDomain;
 use crate::{err, fallible};
 
 use super::any::{AnyMeasurement, AnyTransformation, AnyDomain};
@@ -282,7 +281,6 @@ lazy_static! {
             type_vec![[OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[VectorDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[VectorDomain OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
-            type_vec![OldFrameDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>],
             type_vec![LazyFrameDomain, DataFrameDomain, SeriesDomain],
 
             // metrics

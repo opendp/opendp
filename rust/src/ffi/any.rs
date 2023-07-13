@@ -727,7 +727,7 @@ mod tests {
         )?
         .into_any();
         let chain = (s1 >> t1 >> t2 >> t3 >> m1)?;
-        let arg = AnyObject::new(vec![1.0, 2.0, 3.0f64]);
+        let arg = AnyObject::new(vec!["1.0".to_string(), "2.0".to_string(), "3.0".to_string()]);
         let res = chain.invoke(&arg)?;
         let res: f64 = res.downcast()?;
         assert_eq!(6.0, res);

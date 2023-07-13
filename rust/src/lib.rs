@@ -39,30 +39,35 @@
 //!
 //! #[cfg(all(feature = "untrusted", feature = "partials"))]
 //! pub fn example() -> Fallible<()> {
-//!     use opendp::transformations::{make_split_lines, then_cast_default, make_cast_default, then_clamp, then_sum};
+//!     use opendp::transformations::{make_cast, make_impute_constant, then_cast_default, then_clamp, then_sum};
 //!     use opendp::combinators::{make_chain_tt, make_chain_mt};
 //!     use opendp::measurements::then_base_laplace;
+//!     use opendp::domains::{VectorDomain, AtomDomain};
+//!     use opendp::metrics::SymmetricDistance;
 //!
-//!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
+//!     let data = vec!["56", "15", "97", "56", "6", "17", "2", "19", "16", "50"].into_iter().map(|s| s.to_string()).collect();
 //!     let bounds = (0.0, 100.0);
 //!     let epsilon = 1.0;
 //!     // remove some epsilon to account for floating-point error
 //!     let sigma = (bounds.1 - bounds.0) / (epsilon - 0.0001);
+//! 
+//!     // The input data is a member of the set of all string vectors, 
+//!     //     and the distance between any two members is wrt the symmetric distance.
+//!     let input_space = (VectorDomain::new(AtomDomain::<String>::default()), SymmetricDistance);
+//! 
+//!     // Construct a Transformation that casts a string vector to a float vector.
+//!     let cast = make_cast::<_, String, f64>(input_space.0.clone(), input_space.1.clone())?;
+//!     
+//!     // The next transformation wants to conform with the output domain and metric from `cast`.
+//!     let impute = make_impute_constant(
+//!         cast.output_domain.clone(), cast.output_metric.clone(), 0.)?;
 //!
-//!     // Construct a Transformation to parse a csv string.
-//!     let split_lines = make_split_lines()?;
-//!
-//!     // The next transformation wants to conform with the output domain and metric from `split_lines`.
-//!     let cast = make_cast_default::<_, String, f64>(
-//!         split_lines.output_domain.clone(),
-//!         split_lines.output_metric.clone())?;
-//!
-//!     // Since the domain and metric conforms, these two transformations may be chained.
-//!     let load_numbers = make_chain_tt(&cast, &split_lines)?;
+//!     // Since the domain and metric conform, these two transformations may be chained.
+//!     let load_numbers = make_chain_tt(&impute, &cast)?;
 //!      
 //!     // You can use the more convenient `>>` notation to chain instead.
 //!     // When you use the `then_` version of the constructor,
-//!     //     the `>>` operator will automatically fill the input domain and metric from the previous transformation.
+//!     //     the `>>` operator will automatically fill in the domain and metric from the previous transformation.
 //!     let load_and_clamp = load_numbers >> then_clamp(bounds);
 //!     
 //!     // After chaining, the resulting transformation is wrapped in a `Result`.
@@ -73,7 +78,7 @@
 //!
 //!     // The same measurement, written more succinctly:
 //!     let noisy_sum = (
-//!         make_split_lines()? >>
+//!         input_space >>
 //!         then_cast_default() >>
 //!         then_clamp(bounds) >>
 //!         then_sum() >>
