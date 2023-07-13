@@ -47,6 +47,7 @@ __all__ = [
     "make_scan_csv",
     "make_select_column",
     "make_series_to_option_vec",
+    "make_series_to_vec",
     "make_sized_bounded_float_checked_sum",
     "make_sized_bounded_float_ordered_sum",
     "make_sized_bounded_int_checked_sum",
@@ -91,6 +92,7 @@ __all__ = [
     "then_resize",
     "then_scan_csv",
     "then_series_to_option_vec",
+    "then_series_to_vec",
     "then_sum",
     "then_sum_of_squared_deviations",
     "then_unordered",
@@ -2515,6 +2517,61 @@ def then_series_to_option_vec(
     T: RuntimeTypeDescriptor
 ):
     return PartialConstructor(lambda input_domain, input_metric: make_series_to_option_vec(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        T=T))
+
+
+
+@versioned
+def make_series_to_vec(
+    input_domain,
+    input_metric,
+    T: RuntimeTypeDescriptor
+) -> Transformation:
+    """Unpack a Series from a DataFrame
+    
+    [make_series_to_vec in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_series_to_vec.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SeriesDomain`
+    * Output Domain:  `VectorDomain<AtomDomain<T>>`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+    
+    :param input_domain: 
+    :param input_metric: 
+    :param T: 
+    :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    T = RuntimeType.parse(type_name=T)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_T = py_to_c(T, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_series_to_vec
+    lib_function.argtypes = [Domain, Metric, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_T), Transformation))
+    
+    return output
+
+def then_series_to_vec(
+    T: RuntimeTypeDescriptor
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_series_to_vec(
         input_domain=input_domain,
         input_metric=input_metric,
         T=T))
