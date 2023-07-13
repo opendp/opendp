@@ -46,7 +46,7 @@ on:
 
 jobs:
   prepare:
-    uses: opendp/opendp/.github/workflows/prepare.yml@714-nightly-build
+    uses: ./.github/workflows/prepare.yml
     with:
       channel: ${{ inputs.channel }}
       sync: ${{ inputs.sync }}
@@ -54,14 +54,14 @@ jobs:
 
   build:
     needs: prepare
-    uses: opendp/opendp/.github/workflows/build.yml@714-nightly-build
+    uses: ./.github/workflows/build.yml
     with:
       channel: ${{ inputs.channel }}
       fake: ${{ inputs.fake }}
 
   sanity-test-pre:
     needs: build
-    uses: opendp/opendp/.github/workflows/sanity-test.yml@714-nightly-build
+    uses: ./.github/workflows/sanity-test.yml
     with:
       channel: ${{ inputs.channel }}
       python_repository: local
@@ -69,7 +69,7 @@ jobs:
 
   publish:
     needs: [ prepare, sanity-test-pre ]
-    uses: opendp/opendp/.github/workflows/publish.yml@714-nightly-build
+    uses: ./.github/workflows/publish.yml
     with:
       channel: ${{ inputs.channel }}
       date: ${{ needs.prepare.outputs.date }}
@@ -78,7 +78,7 @@ jobs:
 
   sanity-test-post:
     needs: publish
-    uses: opendp/opendp/.github/workflows/sanity-test.yml@714-nightly-build
+    uses: ./.github/workflows/sanity-test.yml
     with:
       channel: ${{ inputs.channel }}
       python_repository: testpypi
@@ -86,11 +86,11 @@ jobs:
 
   latex:
     needs: prepare
-    uses: opendp/opendp/.github/workflows/latex-release.yml@714-nightly-build
+    uses: ./.github/workflows/latex-release.yml
     with:
       channel: ${{ inputs.channel }}
     secrets: inherit
 
   docs:
     needs: [ sanity-test-post, latex ]
-    uses: opendp/opendp/.github/workflows/docs.yml@714-nightly-build
+    uses: ./.github/workflows/docs.yml

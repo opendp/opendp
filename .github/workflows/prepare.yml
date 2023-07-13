@@ -43,9 +43,8 @@ env:
 
 jobs:
   credential-check:
-    uses: opendp/opendp/.github/workflows/credential-check.yml@714-nightly-build
+    uses: ./.github/workflows/credential-check.yml
     with:
-      ref: ${{ inputs.channel }}
       assert_version: false
 
   prepare:
