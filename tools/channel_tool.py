@@ -17,30 +17,14 @@ def log(message, command=False):
     print(f"{prefix} {message}", file=sys.stderr)
 
 
-def run_command(description, args, capture_output=False, shell=True):
+def run_command(description, cmd, capture_output=False, shell=True):
     if description:
         log(description)
-    printed_args = " ".join(args) if type(args) == list else args
-    log(printed_args, command=True)
+    printed_cmd = " ".join(cmd) if type(cmd) == list else cmd
+    log(printed_cmd, command=True)
     stdout = subprocess.PIPE if capture_output else None
-    completed_process = subprocess.run(args, stdout=stdout, shell=shell, check=True, encoding="utf-8")
+    completed_process = subprocess.run(cmd, stdout=stdout, shell=shell, check=True, encoding="utf-8")
     return completed_process.stdout.rstrip() if capture_output else None
-
-
-def run_command_with_retries(description, args, timeout, backoff, capture_output=False, shell=True):
-    start = time.time()
-    wait = 1.0
-    while True:
-        try:
-            return run_command(description, args, capture_output=capture_output, shell=shell)
-        except Exception as e:
-            elapsed = time.time() - start
-            if elapsed >= timeout:
-                raise e
-        w = min(wait, timeout - elapsed)
-        log(f"Retrying in {w:.1f} seconds")
-        time.sleep(w)
-        wait *= backoff
 
 
 def get_version(version_str=None):
@@ -48,6 +32,48 @@ def get_version(version_str=None):
         with open("VERSION") as f:
             version_str = f.read().strip()
     return semver.Version.parse(version_str)
+
+
+def get_python_version(version):
+    # Python (PEP 440) has several annoying quirks that make it not quite compatible with semantic versioning:
+    # 1. Python doesn't allow arbitrary tags, only (a|b|rc|post|dev). (You can use (alpha|beta|c|pre|preview|rev|r),
+    #    but they'll be mapped to (a|b|rc|rc|rc|post|post) respectively.)
+    #    So "1.2.3-nightly.456" will fail, and "1.2.3-alpha.456" gets mapped to "1.2.3a456" (see #2).
+    # 2. Python doesn't allow separators between the main version and the tag, nor within the tag.
+    #    So "1.2.3-a.456" gets mapped to "1.2.3a456"
+    # 3. HOWEVER, Python treats tags "post" and "dev" differently, and in these cases uses a "." separator between
+    #    the main version and the tag (but still doesn't allow separators within the tag).
+    #    So "1.2.3-dev.456" gets mapped to "1.2.3.dev456".
+    # 4. Python requires that all tags have a numeric suffix, and will assume 0 if none is present.
+    #    So "1.2.3-dev" gets mapped to "1.2.3.dev0" (by #3 & #4).
+    # We don't use all these variations, only (dev|nightly|beta), but if that ever changes, hopefully we won't
+    # have to look at this whole mess again.
+    tag_to_py_tag = {
+        "nightly": "a",
+        "beta": "b",
+        "c": "rc",
+        "pre": "rc",
+        "preview": "rc",
+        "rev": "post",
+        "r": "post",
+    }
+    if version.prerelease is not None:
+        split = version.prerelease.split(".", 2)
+        tag = split[0]
+        py_tag = tag_to_py_tag.get(tag, tag)
+        date = split[1] if len(split) >= 2 else None
+        counter = split[2] if len(split) >= 3 else None
+        py_n = f"{date}{counter:>03}" if date and counter else (date if date else "0")
+        py_separator = "." if py_tag in ("post", "dev") else ""
+    else:
+        py_tag = None
+        py_n = None
+        py_separator = None
+    # semver can't represent the rendered Python version, so we generate a string.
+    if py_tag is not None:
+        return f"{version.major}.{version.minor}.{version.patch}{py_separator}{py_tag}{py_n}"
+    else:
+        return str(version)
 
 
 def get_current_branch():
@@ -120,48 +146,6 @@ def infer_counter(version, date, args):
     if not version_date == date.strftime('%Y%m%d'):
         return 1
     return int(version_counter) + 1
-
-
-def get_python_version(version):
-    # Python (PEP 440) has several annoying quirks that make it not quite compatible with semantic versioning:
-    # 1. Python doesn't allow arbitrary tags, only (a|b|rc|post|dev). (You can use (alpha|beta|c|pre|preview|rev|r),
-    #    but they'll be mapped to (a|b|rc|rc|rc|post|post) respectively.)
-    #    So "1.2.3-nightly.456" will fail, and "1.2.3-alpha.456" gets mapped to "1.2.3a456" (see #2).
-    # 2. Python doesn't allow separators between the main version and the tag, nor within the tag.
-    #    So "1.2.3-a.456" gets mapped to "1.2.3a456"
-    # 3. HOWEVER, Python treats tags "post" and "dev" differently, and in these cases uses a "." separator between
-    #    the main version and the tag (but still doesn't allow separators within the tag).
-    #    So "1.2.3-dev.456" gets mapped to "1.2.3.dev456".
-    # 4. Python requires that all tags have a numeric suffix, and will assume 0 if none is present.
-    #    So "1.2.3-dev" gets mapped to "1.2.3.dev0" (by #3 & #4).
-    # We don't use all these variations, only (dev|nightly|beta), but if that ever changes, hopefully we won't
-    # have to look at this whole mess again.
-    tag_to_py_tag = {
-        "nightly": "a",
-        "beta": "b",
-        "c": "rc",
-        "pre": "rc",
-        "preview": "rc",
-        "rev": "post",
-        "r": "post",
-    }
-    if version.prerelease is not None:
-        split = version.prerelease.split(".", 2)
-        tag = split[0]
-        py_tag = tag_to_py_tag.get(tag, tag)
-        date = split[1] if len(split) >= 2 else None
-        counter = split[2] if len(split) >= 3 else None
-        py_n = f"{date}{counter:>03}" if date and counter else (date if date else "0")
-        py_separator = "." if py_tag in ("post", "dev") else ""
-    else:
-        py_tag = None
-        py_n = None
-        py_separator = None
-    # semver can't represent the rendered Python version, so we generate a string.
-    if py_tag is not None:
-        return f"{version.major}.{version.minor}.{version.patch}{py_separator}{py_tag}{py_n}"
-    else:
-        return str(version)
 
 
 def update_version(version):
@@ -286,30 +270,6 @@ def changelog(args):
         f.writelines(lines)
 
 
-def sanity(args):
-    log(f"*** RUNNING SANITY TEST ***")
-    if args.python_repository not in ("pypi", "testpypi", "local"):
-        raise Exception(f"Unknown Python repository {args.python_repository}")
-    version = get_version()
-    version = get_python_version(version)
-    run_command("Creating venv", f"rm -rf {args.venv} && python -m venv {args.venv}")
-    if args.python_repository == "local":
-        package = f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
-        run_command(f"Installing opendp {version}", f". {args.venv}/bin/activate && pip install {package}")
-    else:
-        index_url = "https://test.pypi.org/simple" if args.python_repository == "testpypi" else "https://pypi.org/simple"
-        package = f"opendp=={version}"
-        run_command_with_retries(
-            f"Installing opendp {version}", f". {args.venv}/bin/activate && pip install -i {index_url} {package}",
-            args.package_timeout,
-            args.package_backoff
-        )
-    if args.fake:
-        run_command("Running test script", f". {args.venv}/bin/activate && echo FAKE TEST!!!")
-    else:
-        run_command("Running test script", f". {args.venv}/bin/activate && python tools/test.py")
-
-
 def bump_version(args):
     log(f"*** BUMPING VERSION NUMBER ***")
     if args.set:
@@ -357,15 +317,6 @@ def _main(argv):
     subparser.add_argument("-d", "--date", type=datetime.date.fromisoformat, help="Release date")
     subparser.add_argument("-p", "--prepend", dest="prepend", action="store_true", default=False, help="Prepend new empty heading (for dev only)")
     subparser.add_argument("-np", "--no-prepend", dest="prepend", action="store_false", help="Don't prepend new empty heading (for dev only)")
-
-    subparser = subparsers.add_parser("sanity", help="Run a sanity test")
-    subparser.set_defaults(func=sanity)
-    subparser.add_argument("-e", "--venv", default="/tmp/sanity-venv", help="Virtual environment directory")
-    subparser.add_argument("-r", "--python-repository", choices=["pypi", "testpypi", "local"], default="pypi", help="Python package repository")
-    subparser.add_argument("-t", "--package-timeout", type=int, default=0, help="How long to retry package installation attempts (0 = no retries)")
-    subparser.add_argument("-b", "--package-backoff", type=float, default=2.0, help="How much to back off between package installation attempts")
-    subparser.add_argument("-f", "--fake", dest="fake", action="store_true", default=False)
-    subparser.add_argument("-nf", "--no-fake", dest="fake", action="store_false")
 
     subparser = subparsers.add_parser("bump_version", help="Bump the version number (assumes dev channel)")
     subparser.set_defaults(func=bump_version)
