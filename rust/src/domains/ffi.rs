@@ -248,12 +248,12 @@ pub extern "C" fn opendp_domains__vector_domain(
         };
         Ok(AnyDomain::new(vector_domain))
     }
-    fn monomorphize_py_domain(
-        atom_domain: &AnyDomain,
+    fn monomorphize_extrinsic_domain(
+        extrinsic_domain: &AnyDomain,
         size: *const AnyObject,
     ) -> Fallible<AnyDomain> {
-        let atom_domain = atom_domain.downcast_ref::<PyDomain>()?.clone();
-        let mut vector_domain = VectorDomain::new(atom_domain);
+        let extrinsic_domain = extrinsic_domain.downcast_ref::<ExtrinsicDomain>()?.clone();
+        let mut vector_domain = VectorDomain::new(extrinsic_domain);
         if let Some(size) = util::as_ref(size) {
             vector_domain = vector_domain.with_size(*try_!(size.downcast_ref::<i32>()) as usize)
         };
@@ -264,8 +264,8 @@ pub extern "C" fn opendp_domains__vector_domain(
     match atom_domain.type_.contents {
         TypeContents::GENERIC { name: "AtomDomain", .. } => 
             dispatch!(monomorphize_all, [(atom_domain.carrier_type, @primitives)], (atom_domain, size)),
-        TypeContents::PLAIN("PyDomain") => monomorphize_py_domain(atom_domain, size),
-        _ => fallible!(FFI, "VectorDomain constructors only support AtomDomain inner domains")
+        TypeContents::PLAIN("ExtrinsicDomain") => monomorphize_extrinsic_domain(atom_domain, size),
+        _ => fallible!(FFI, "VectorDomain constructor only supports AtomDomain or ExtrinsicDomain inner domains")
     }.into()
 }
 
@@ -289,38 +289,49 @@ pub extern "C" fn opendp_domains__map_domain(
         let map_domain = MapDomain::new(key_domain, value_domain);
         Ok(AnyDomain::new(map_domain))
     }
+    fn monomorphize_extrinsic<K: Hashable>(
+        key_domain: &AnyDomain,
+        value_domain: &AnyDomain,
+    ) -> Fallible<AnyDomain> {
+        let key_domain = key_domain.downcast_ref::<AtomDomain<K>>()?.clone();
+        let value_domain = value_domain.downcast_ref::<ExtrinsicDomain>()?.clone();
+        let map_domain = MapDomain::new(key_domain, value_domain);
+        Ok(AnyDomain::new(map_domain))
+    }
     let key_domain = try_as_ref!(key_domain);
     let value_domain = try_as_ref!(value_domain);
 
     match (&key_domain.type_.contents, &value_domain.type_.contents) {
         (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::GENERIC { name: "AtomDomain", .. }) => 
             dispatch!(monomorphize, [(key_domain.carrier_type, @hashable), (value_domain.carrier_type, @primitives)], (key_domain, value_domain)),
-        _ => fallible!(FFI, "MapDomain constructors only support AtomDomain inner domains")
+        (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::PLAIN("ExtrinsicDomain")) => 
+            dispatch!(monomorphize_extrinsic, [(key_domain.carrier_type, @hashable)], (key_domain, value_domain)),
+        _ => fallible!(FFI, "MapDomain constructor only supports AtomDomain or ExtrinsicDomain inner domains")
     }.into()
 }
 
-pub type PyObject = *const c_void;
+pub type ExtrinsicObject = *const c_void;
 
 #[derive(Clone)]
-pub struct PyDomain {
+pub struct ExtrinsicDomain {
     pub descriptor: String,
-    pub member: Function<PyObject, bool>,
+    pub member: Function<ExtrinsicObject, bool>,
 }
 
-impl std::fmt::Debug for PyDomain {
+impl std::fmt::Debug for ExtrinsicDomain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "PyDomain({:?})", self.descriptor)
+        write!(f, "ExtrinsicDomain({:?})", self.descriptor)
     }
 }
 
-impl PartialEq for PyDomain {
+impl PartialEq for ExtrinsicDomain {
     fn eq(&self, other: &Self) -> bool {
         self.descriptor == other.descriptor
     }
 }
 
-impl Domain for PyDomain {
-    type Carrier = PyObject;
+impl Domain for ExtrinsicDomain {
+    type Carrier = ExtrinsicObject;
 
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         self.member.eval(val)
@@ -328,28 +339,28 @@ impl Domain for PyDomain {
 }
 
 #[bootstrap(
-    name = "py_domain",
+    name = "extrinsic_domain",
     arguments(descriptor(rust_type = "String"), member(rust_type = "bool")),
     dependencies("c_member")
 )]
-/// Construct a new PyDomain.
+/// Construct a new ExtrinsicDomain.
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the data domain.
 /// * `member` - A function used to test if a value is a member of the data domain.
 #[no_mangle]
-pub extern "C" fn opendp_domains__py_domain(
+pub extern "C" fn opendp_domains__extrinsic_domain(
     descriptor: *mut c_char,
     member: CallbackFn,
 ) -> FfiResult<*mut AnyDomain> {
     let descriptor = try_!(to_str(descriptor)).to_string();
-    let func = move |arg: &PyObject| -> Fallible<AnyObject> {
+    let func = move |arg: &ExtrinsicObject| -> Fallible<AnyObject> {
         let res = member(AnyObject::new_raw(*arg));
         util::into_owned(res)?.into()
     };
-    let member = Function::new_fallible(move |arg: &PyObject| -> Fallible<bool> {
+    let member = Function::new_fallible(move |arg: &ExtrinsicObject| -> Fallible<bool> {
         (func)(arg)?.downcast::<bool>()
     });
 
-    Ok(AnyDomain::new(PyDomain { descriptor, member })).into()
+    Ok(AnyDomain::new(ExtrinsicDomain { descriptor, member })).into()
 }

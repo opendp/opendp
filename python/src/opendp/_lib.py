@@ -13,6 +13,7 @@ ATOM_EQUIVALENCE_CLASSES = {
     'bool': ['bool'],
     'AnyMeasurementPtr': ['AnyMeasurementPtr', 'AnyMeasurement'],
     'AnyTransformationPtr': ['AnyTransformationPtr'],
+    'ExtrinsicObject': ['ExtrinsicObject']
 }
 
 

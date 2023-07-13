@@ -10,7 +10,7 @@ use opendp_derive::bootstrap;
 
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;
-use crate::domains::ffi::PyObject;
+use crate::domains::ffi::ExtrinsicObject;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
 use crate::ffi::util::{self, into_c_char_p};
@@ -63,11 +63,11 @@ pub extern "C" fn opendp_data__slice_as_object(
         let string = util::to_str(raw.ptr as *const c_char)?.to_owned();
         Ok(AnyObject::new(string))
     }
-    fn raw_to_pyobject(raw: &FfiSlice) -> Fallible<AnyObject> {
+    fn raw_to_extrinsic_object(raw: &FfiSlice) -> Fallible<AnyObject> {
         // don't use util::into_owned, as it will free the pointer (which we don't own)
-        let pyobject = util::as_ref(raw.ptr as *mut PyObject)
+        let extrinsic_object = util::as_ref(raw.ptr as *mut ExtrinsicObject)
             .ok_or_else(|| err!(FFI, "attempted to consume a null pointer"))?;
-        Ok(AnyObject::new(*pyobject))
+        Ok(AnyObject::new(*extrinsic_object))
     }
     fn raw_to_vec_string(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_char, raw.len) };
@@ -142,7 +142,7 @@ pub extern "C" fn opendp_data__slice_as_object(
     }
     match T.contents {
         TypeContents::PLAIN("String") => raw_to_string(raw),
-        TypeContents::PLAIN("PyObject") => raw_to_pyobject(raw),
+        TypeContents::PLAIN("ExtrinsicObject") => raw_to_extrinsic_object(raw),
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(&element_id));
             dispatch!(raw_to_slice, [(element, @primitives)], (raw))
@@ -153,6 +153,7 @@ pub extern "C" fn opendp_data__slice_as_object(
                 "String" => raw_to_vec_string(raw),
                 "AnyMeasurementPtr" => raw_to_vec::<AnyMeasurementPtr>(raw),
                 "AnyTransformationPtr" => raw_to_vec::<AnyTransformationPtr>(raw),
+                "ExtrinsicObject" => raw_to_vec::<ExtrinsicObject>(raw),
                 "(f32, f32)" => raw_to_vec_obj::<(f32, f32)>(raw),
                 "(f64, f64)" => raw_to_vec_obj::<(f64, f64)>(raw),
                 _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw)),
@@ -177,7 +178,11 @@ pub extern "C" fn opendp_data__slice_as_object(
                 }
                 let K = try_!(Type::of_id(&args[0]));
                 let V = try_!(Type::of_id(&args[1]));
-                dispatch!(raw_to_hashmap, [(K, @hashable), (V, @primitives)], (raw))
+                if matches!(V.contents, TypeContents::PLAIN("ExtrinsicObject")) {
+                    dispatch!(raw_to_hashmap, [(K, @hashable), (V, [ExtrinsicObject])], (raw))
+                } else {
+                    dispatch!(raw_to_hashmap, [(K, @hashable), (V, @primitives)], (raw))
+                }
             } else {
                 fallible!(FFI, "unrecognized generic {:?}", name)
             }
@@ -235,9 +240,9 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             string.len() + 1,
         ))
     }
-    fn pyobject_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let py_object = *obj.downcast_ref::<PyObject>()?;
-        Ok(FfiSlice::new(py_object as *mut c_void, 1))
+    fn extrinsic_object_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let py_object = *obj.downcast_ref::<ExtrinsicObject>()?;
+        Ok(FfiSlice::new(util::into_raw(py_object) as *mut c_void, 1))
     }
     fn vec_string_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
         let vec_str: &Vec<String> = obj.downcast_ref()?;
@@ -288,7 +293,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         TypeContents::PLAIN("String") => {
             string_to_raw(obj)
         }
-        TypeContents::PLAIN("PyObject") => pyobject_to_raw(obj),
+        TypeContents::PLAIN("ExtrinsicObject") => extrinsic_object_to_raw(obj),
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(element_id));
             dispatch!(slice_to_raw, [(element, @primitives)], (obj))
@@ -314,7 +319,11 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                 if args.len() != 2 { return err!(FFI, "HashMaps should have 2 type arguments").into(); }
                 let K = try_!(Type::of_id(&args[0]));
                 let V = try_!(Type::of_id(&args[1]));
-                dispatch!(hashmap_to_raw, [(K, @hashable), (V, @primitives)], (obj))
+                if matches!(V.contents, TypeContents::PLAIN("ExtrinsicObject")) {
+                    dispatch!(hashmap_to_raw, [(K, @hashable), (V, [ExtrinsicObject])], (obj))
+                } else {
+                    dispatch!(hashmap_to_raw, [(K, @hashable), (V, @primitives)], (obj))
+                }
             } else { fallible!(FFI, "unrecognized generic {:?}", name) }
         }
         // This list is explicit because it allows us to avoid including u32 in the @primitives, and queryables
@@ -495,9 +504,9 @@ impl Clone for AnyObject {
                 clone_plain,
                 [(
                     self.type_,
-                    [
-                        u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool,
-                        String
+                    [   
+                        u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, 
+                        String, ExtrinsicObject
                     ]
                 )],
                 (self)
@@ -523,13 +532,20 @@ impl Clone for AnyObject {
                     }
                     let K = Type::of_id(&args[0]).unwrap();
                     let V = Type::of_id(&args[1]).unwrap();
-                    dispatch!(clone_hashmap, [(K, @hashable), (V, @primitives)], (self))
+                    if matches!(V.contents, TypeContents::PLAIN("ExtrinsicObject")) {
+                        dispatch!(clone_hashmap, [(K, @hashable), (V, [ExtrinsicObject])], (self))
+                    } else {
+                        dispatch!(clone_hashmap, [(K, @hashable), (V, @primitives)], (self))
+                    }
                 } else {
                     unimplemented!("unrecognized generic {:?}", name)
                 }
             }
             TypeContents::VEC(type_id) => {
-                dispatch!(clone_vec, [(Type::of_id(type_id).unwrap(), @primitives)], (self))
+                dispatch!(clone_vec, [(
+                    Type::of_id(type_id).unwrap(), 
+                    [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, String, ExtrinsicObject]
+                )], (self))
             }
         }
         .expect(&format!("Clone is not implemented for {:?}", self.type_))

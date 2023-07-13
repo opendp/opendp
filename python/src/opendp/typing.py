@@ -245,10 +245,11 @@ class RuntimeType(object):
         return [cls.parse(v, generics=generics) for v in re.split(r",\s*(?![^()<>]*\))", args)]
 
     @classmethod
-    def infer(cls, public_example: Any) -> Union["RuntimeType", str]:
+    def infer(cls, public_example: Any, py_object=False) -> Union["RuntimeType", str]:
         """Infer the normalized type from a public example.
 
         :param public_example: data used to infer the type
+        :param py_object: return "ExtrinsicObject" when type not recognized, instead of error
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
         :raises UnknownTypeException: if inference fails on `public_example`
@@ -268,13 +269,15 @@ class RuntimeType(object):
             return RuntimeType.parse(public_example.type)
 
         if isinstance(public_example, tuple):
-            return RuntimeType('Tuple', list(map(cls.infer, public_example)))
+            return RuntimeType('Tuple', [cls.infer(e, py_object) for e in public_example])
 
         if isinstance(public_example, list):
             if public_example:
-                inner_type = cls.infer(public_example[0])
-                for inner in public_example[1:]:
-                    other_type = cls.infer(inner)
+                inner_type = cls.infer(public_example[0], py_object=py_object)
+                for inner in public_example:
+                    other_type = cls.infer(inner, py_object)
+                    if inner_type == "ExtrinsicObject":
+                        break
                     if other_type != inner_type:
                         raise TypeError(f"vectors must be homogeneously typed, found {inner_type} and {other_type}")
             else:
@@ -284,7 +287,7 @@ class RuntimeType(object):
 
         if np is not None and isinstance(public_example, np.ndarray):
             if public_example.ndim == 0:
-                return cls.infer(public_example.item())
+                return cls.infer(public_example.item(), py_object)
 
             if public_example.ndim == 1:
                 inner_type = ELEMENTARY_TYPES.get(public_example.dtype.type)
@@ -297,7 +300,7 @@ class RuntimeType(object):
         if isinstance(public_example, dict):
             return RuntimeType('HashMap', [
                 cls.infer(next(iter(public_example.keys()))),
-                cls.infer(next(iter(public_example.values())))
+                cls.infer(next(iter(public_example.values())), py_object=py_object)
             ])
 
         if isinstance(public_example, Measurement):
@@ -312,6 +315,8 @@ class RuntimeType(object):
         if callable(public_example):
             return "CallbackFn"
 
+        if py_object:
+            return "ExtrinsicObject"
         raise UnknownTypeException(type(public_example))
 
     @classmethod
@@ -349,6 +354,9 @@ class RuntimeType(object):
 
         ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
         if isinstance(inferred, UnknownType):
+            return
+        
+        if expected == "ExtrinsicObject":
             return
         
         # allow extra flexibility around options, as the inferred type of an Option::<T>::Some will just be T
@@ -466,9 +474,12 @@ u128 = 'u128'
 usize = 'usize'
 f32 = 'f32'
 f64 = 'f64'
+char = 'char'
 String = 'String'
 AnyMeasurementPtr = "AnyMeasurementPtr"
 AnyTransformationPtr = "AnyTransformationPtr"
+AnyDomainPtr = "AnyDomainPtr"
+SeriesDomain = "SeriesDomain"
 
 
 class DomainDescriptor(RuntimeType):

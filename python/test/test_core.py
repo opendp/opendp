@@ -1,7 +1,7 @@
 import pytest
 
 import opendp.prelude as dp
-dp.enable_features('floating-point', 'contrib')
+dp.enable_features('floating-point', 'contrib', 'honest-but-curious')
 
 
 def test_type_getters():
@@ -167,12 +167,25 @@ def test_new_domain():
     assert not not_null_domain.member(float("nan"))
 
 
-def test_py_domain():
+def test_extrinsic_domain():
     from datetime import datetime
-    domain = dp.py_domain("all datetimes", lambda x: isinstance(x, datetime))
-    print(domain)
-    print(domain.member(datetime.now()))
+    domain = dp.extrinsic_domain("all datetimes", lambda x: isinstance(x, datetime))
+    assert str(domain) == "ExtrinsicDomain(\"all datetimes\")"
+    assert domain.member(datetime.now())
+    assert not domain.member("A")
 
-    # vec_domain = dp.vector_domain(domain)
-    # vec_domain.member([datetime.now()])
-# test_py_domain()
+    # nest inside a vector domain
+    vec_domain = dp.vector_domain(domain)
+    assert vec_domain.member([datetime.now()])
+    trans = dp.t.make_identity(vec_domain, dp.symmetric_distance())
+    misc_data = [datetime.now(), "abc", 1j + 2]
+    assert trans(misc_data) == misc_data
+    assert not vec_domain.member(misc_data)
+
+    # nest inside a hashmap domain
+    map_domain = dp.map_domain(dp.atom_domain(T=str), domain)
+    assert map_domain.member({"A": datetime.now(), "B": datetime.now()})
+    trans = dp.t.make_identity(map_domain, dp.symmetric_distance())
+    misc_data = {"A": datetime.now(), "C": 1j + 2}
+    assert trans(misc_data) == misc_data
+    assert not map_domain.member(misc_data)

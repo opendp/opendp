@@ -23,6 +23,7 @@ ATOM_MAP = {
     'i64': ctypes.c_int64,
     'usize': ctypes.c_size_t,
     'bool': ctypes.c_bool,
+    'ExtrinsicObject': ctypes.py_object,
     'AnyMeasurementPtr': Measurement,
     'AnyTransformationPtr': Transformation,
 }
@@ -60,13 +61,6 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
 
     if isinstance(value, c_type):
         return value
-    
-    if type_name == "PyObject":
-        from opendp._data import slice_as_object
-        ptr = ctypes.pointer(ctypes.py_object(value))
-        obj = slice_as_object(_wrap_in_slice(ptr, 1), type_name)
-        obj.depends_on(value, ptr)
-        return obj
 
     if c_type == CallbackFn:
         return _wrap_py_func(value, type_name)
@@ -76,7 +70,7 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
 
     # check that the type name is consistent with the value
     if type_name is not None:
-        RuntimeType.assert_is_similar(RuntimeType.parse(type_name), RuntimeType.infer(value))
+        RuntimeType.assert_is_similar(RuntimeType.parse(type_name), RuntimeType.infer(value, py_object=True))
 
         # exit early with a null pointer if trying to load an Option type with a None value
         if isinstance(type_name, RuntimeType) and type_name.origin == "Option":
@@ -179,9 +173,6 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
     
     if type_name == "String":
         return _slice_to_string(raw)
-    
-    if type_name == "PyObject":
-        return ctypes.cast(raw.contents.ptr, ctypes.py_object).value
 
     if type_name.origin == "Vec":
         return _slice_to_vector(raw, type_name)
@@ -212,7 +203,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 
     if type_name == "String":
         return _string_to_slice(value)
-
+    
     if type_name.origin == "Vec":
         return _vector_to_slice(value, type_name)
 
@@ -279,7 +270,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
 
     if val:
         # check that actual type can be represented by the inner_type_name
-        equivalence_class = ATOM_EQUIVALENCE_CLASSES[str(RuntimeType.infer(val[0]))]
+        equivalence_class = ATOM_EQUIVALENCE_CLASSES[str(RuntimeType.infer(val[0], py_object=inner_type_name == "ExtrinsicObject"))]
         if inner_type_name not in equivalence_class:
             raise TypeError("Data cannot be represented by the suggested type_name")
 
