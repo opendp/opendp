@@ -21,7 +21,13 @@ on:
         default: nightly
 
 jobs:
+  credential-check:
+    uses: opendp/opendp/.github/workflows/credential-check.yml@714-nightly-build
+    with:
+      ref: ${{ inputs.channel }}
+
   latex:
+    needs: credential-check
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository

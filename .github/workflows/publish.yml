@@ -41,30 +41,9 @@ on:
 
 jobs:
   credential-check:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Check if user is an administrator
-        uses: lannonbr/repo-permission-check-action@2.0.0
-        with:
-          permission: admin
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ inputs.channel }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: 3.8
-          cache: pip
-
-      - name: Assert version
-        run: |
-          pip install -r tools/requirements-assert_version.txt
-          python tools/assert_version.py
+    uses: opendp/opendp/.github/workflows/credential-check.yml@714-nightly-build
+    with:
+      ref: ${{ inputs.channel }}
 
   publish-python:
     needs: credential-check
