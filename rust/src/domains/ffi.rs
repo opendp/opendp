@@ -7,8 +7,7 @@ use crate::{
     domains::{type_name, AtomDomain, MapDomain, VectorDomain},
     error::Fallible,
     ffi::{
-        any::{AnyDomain, AnyObject, Downcast},
-        udf::CallbackFn,
+        any::{AnyDomain, AnyObject, Downcast, CallbackFn},
         util::{self, c_bool, into_c_char_p, Type, TypeContents, to_str},
     },
     traits::{CheckAtom, Float, Hashable, Integer, Primitive},
@@ -344,6 +343,8 @@ impl Domain for ExtrinsicDomain {
     dependencies("c_member")
 )]
 /// Construct a new ExtrinsicDomain.
+/// Any two instances of an ExtrinsicDomain are equal if their string descriptors are equal.
+/// Contains a function used to check if any value is a member of the domain.
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the data domain.

@@ -173,6 +173,8 @@ def extrinsic_domain(
     member
 ):
     """Construct a new ExtrinsicDomain.
+    Any two instances of an ExtrinsicDomain are equal if their string descriptors are equal.
+    Contains a function used to check if any value is a member of the domain.
     
     [extrinsic_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.extrinsic_domain.html)
     

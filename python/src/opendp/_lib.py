@@ -126,10 +126,6 @@ class AnyObjectPtr(ctypes.POINTER(AnyObject)):
         from opendp._data import object_free
         object_free(self)
 
-    def depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        FfiSlicePtr._dependencies.setdefault(id(self), []).extend(args)
-
 
 class AnyQueryable(ctypes.Structure):
     pass  # Opaque struct

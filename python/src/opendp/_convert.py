@@ -203,7 +203,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 
     if type_name == "String":
         return _string_to_slice(value)
-    
+
     if type_name.origin == "Vec":
         return _vector_to_slice(value, type_name)
 
