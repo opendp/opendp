@@ -4,7 +4,7 @@ use opendp_derive::bootstrap;
 use polars::prelude::*;
 
 use crate::core::{
-    Function, Metric, MetricSpace, PartialTransformation, StabilityMap, Transformation,
+    Function, Metric, MetricSpace, StabilityMap, Transformation,
 };
 use crate::domains::{ExprDomain, LazyFrameDomain, LazyGroupByContext, LazyGroupByDomain, ExprMetric};
 use crate::error::*;
@@ -124,7 +124,7 @@ where
 
 #[cfg(feature = "partials")]
 impl<MI: 'static + Metric, MO: 'static + Metric> AggTransformation
-    for PartialTransformation<
+    for crate::core::PartialTransformation<
         ExprDomain<LazyGroupByContext>,
         ExprDomain<LazyGroupByContext>,
         MI,
