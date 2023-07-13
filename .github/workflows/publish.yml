@@ -10,7 +10,8 @@ on:
         required: true
       dry_run:
         type: boolean
-        default: true
+        required: false
+        default: false
     secrets:
       TEST_PYPI_API_TOKEN:
         required: true
@@ -34,10 +35,10 @@ on:
         type: string
         required: true
       dry_run:
-        description: Dry Run (DISABLE WITH CARE)
+        description: Dry Run?
         type: boolean
-        required: true
-        default: true
+        required: false
+        default: false
 
 jobs:
   credential-check:
@@ -70,6 +71,7 @@ jobs:
 
       - name: Publish Python package
         env:
+          # twine doesn't have a dry-run option, so the best we can do is use TestPyPI
           REPOSITORY: ${{ inputs.dry_run && 'testpypi' || 'pypi' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt

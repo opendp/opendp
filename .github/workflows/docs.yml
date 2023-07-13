@@ -2,8 +2,17 @@ name: Documentation
 on:
   workflow_call:
     # Doesn't take a channel input, because we generate docs for all channels and releases.
+    dry_run:
+      type: boolean
+      required: false
+      default: false
   workflow_dispatch:
     # Doesn't take a channel input, because we generate docs for all channels and releases.
+    dry_run:
+      description: Dry Run?
+      type: boolean
+      required: false
+      default: false
 
 jobs:
   credential-check:
@@ -82,7 +91,7 @@ jobs:
           rm -r artifacts
 
       - name: Push docs to gh-pages branch
-        if: false
+        if: ${{ !inputs.dry_run }}
         run: |
           git add --all --force
           echo "Push docs to gh-pages branch"

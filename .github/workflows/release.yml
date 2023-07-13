@@ -13,6 +13,10 @@ on:
         type: number
         required: false
         default: 0
+      dry_run:
+        type: boolean
+        required: false
+        default: false
       fake:
         type: boolean
         required: false
@@ -38,6 +42,11 @@ on:
         type: number
         required: false
         default: 0
+      dry_run:
+        description: Dry Run?
+        type: boolean
+        required: false
+        default: false
       fake:
         description: Fake Build?
         type: boolean
@@ -73,7 +82,7 @@ jobs:
     with:
       channel: ${{ inputs.channel }}
       date: ${{ needs.prepare.outputs.date }}
-      dry_run: true
+      dry_run: ${{ inputs.dry_run || inputs.fake }}
     secrets: inherit
 
   sanity-test-post:
@@ -94,3 +103,5 @@ jobs:
   docs:
     needs: [ sanity-test-post, latex ]
     uses: ./.github/workflows/docs.yml
+    with:
+      dry_run: ${{ inputs.dry_run || inputs.fake }}
