@@ -2,11 +2,11 @@ use polars::prelude::*;
 use std::ops::{Mul, Sub};
 
 use crate::{
-    domains::{ExprDomain, Context}, 
+    domains::{ExprDomain, Context, ExprMetric}, 
     metrics::{SymmetricDistance, LInfDiffDistance, IntDistance}, 
     core::{Transformation, Function, StabilityMap, MetricSpace}, 
     error::Fallible,
-    traits::ExactIntCast,
+    traits::{ExactIntCast, InfMul},
 };
 
 /// Polars operator to compute quantile of a serie in a LazyFrame
@@ -17,27 +17,29 @@ use crate::{
 /// * `alpha` - a value in [0, 1]. Choose 0.5 for median
 /// 
 /// # Generics
+/// * `MI` - Input Metric
 /// * `C` - Context of the LazyFrame
-pub fn make_quantile_scores_expr<C: Context>(
+pub fn make_quantile_scores_expr<MI, C: Context>(
     input_domain: ExprDomain<C>,
-    input_metric: SymmetricDistance,
+    input_metric: MI,
     alpha: f64
 ) -> Fallible<
     Transformation<
         ExprDomain<C>,
         ExprDomain<C>,
-        SymmetricDistance,
+        MI,
         LInfDiffDistance<f64>,
     >> 
 where
-    (ExprDomain<C>, SymmetricDistance): MetricSpace,
+    MI: ExprMetric<C, InnerMetric = SymmetricDistance, Distance = IntDistance>,
+    (ExprDomain<C>, MI): MetricSpace,
     (ExprDomain<C>, LInfDiffDistance<f64>): MetricSpace,
 {
     let bounds = input_domain
         .active_series()?
         .atom_domain::<f64>()?
         .get_closed_bounds()?;
-    let (upper, lower) = bounds;
+    let (_upper, _lower) = bounds;
 
     Transformation::new(
         input_domain.clone(),
@@ -56,7 +58,7 @@ where
         input_metric,
         LInfDiffDistance::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
-            f64::exact_int_cast(d_in / 2) // TO CHECK: only count so 1.0*d_in (?)
+            f64::exact_int_cast(d_in / 2)?.inf_mul(&alpha.max(1.0 - alpha))
         }),
     )
 }
@@ -64,7 +66,7 @@ where
 pub fn make_score_elts_expr(expr: Expr, alpha: f64) -> Expr {
     expr.sort(false)
         .rank(RankOptions::default(), None)                    // i
-        //.slice(lit(1), lit(NULL))                              // rm first row
+        //.slice(lit(1), lit(NULL))                            // rm first row
         .cast(DataType::Float64)
         .sub(count().cast(DataType::Float64).mul(lit(alpha))) //  i - N*alpha
         .abs()                                                // |i - N*alpha|
@@ -103,26 +105,6 @@ mod test_make_score_elts_expr_quantile {
     }
 
     #[test]
-    fn testing_dev() -> Fallible<()> {
-        let lf1 = DataFrame::new(
-            vec![
-                Series::new("foo", &[1, 2, 3]),
-                Series::new("bar", &[6.0, 7.0, 8.0])
-            ]
-        )?.lazy();
-    
-        // Create LazyFrame lf2
-        let lf2 = DataFrame::new(
-            vec![
-                Series::new("foo", &[0, 4]),
-            ]
-        )?.lazy();
-    
-
-        Ok(())
-    }
-
-    #[test]
     fn test_make_score_elts_expr_select() -> Fallible<()> {
         let (_, lazy_frame) = get_select_test_data()?;
 
@@ -134,7 +116,7 @@ mod test_make_score_elts_expr_quantile {
 
         // Get expected scoring
         let frame_expected = df!(
-            "B" => &[1.5, 0.5, 0.5, 1.5],
+            "B" => &[1.5, 0.5, 0.5, 1.5, 2.5],
         )?;
 
         assert_eq!(frame_actual, frame_expected);
@@ -182,9 +164,9 @@ mod test_make_score_elts_expr_quantile {
         let b = Series::new(
             "B",
             [
-                [0.4, 1.4].iter().collect::<Series>(), //2.4
-                [0.4, 1.4].iter().collect::<Series>(), //2.4
-                [0.4, 0.4].iter().collect::<Series>(), //0.4
+                [0.4, 1.4, 2.4].iter().collect::<Series>(),
+                [0.4, 1.4, 2.4].iter().collect::<Series>(),
+                [0.4, 0.4, 2.4].iter().collect::<Series>(),
             ],
         );
         let frame_expected = DataFrame::new(vec![a.clone(), b.clone()])?;

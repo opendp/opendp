@@ -1,14 +1,14 @@
 use polars::prelude::*;
-use rand::{prelude::*, distributions::Uniform};
 use std::ops::Mul;
 
 use crate::{
-    domains::{ExprDomain, Context}, 
-    metrics::LInfDiffDistance, 
-    core::{Measurement, Function, PrivacyMap, MetricSpace}, 
+    core::{Function, Measurement, MetricSpace, PrivacyMap},
+    domains::{Context, ExprDomain},
     error::Fallible,
-    measures::MaxDivergence, transformations::make_score_elts_expr, 
-    traits::{DistanceConstant, Float, Number, InfDiv},
+    measures::MaxDivergence,
+    metrics::LInfDiffDistance,
+    traits::{DistanceConstant, Float, InfDiv, Number}, //samplers::SampleUniform
+    transformations::make_score_elts_expr,
 };
 
 use crate::traits::samplers::CastInternalRational;
@@ -22,22 +22,22 @@ use crate::traits::samplers::CastInternalRational;
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
 /// * `alpha` - a value in [0, 1]. Choose 0.5 for median
 /// * `temperature` - Higher temperatures are more private.
-/// 
+///
 /// # Generics
 /// * `C` - Context of the LazyFrame
+/// * `TIA` - Atomic Input Type
 pub fn make_continous_quantile_expr<C: Context, QO, TIA>(
     input_domain: ExprDomain<C>,
     input_metric: LInfDiffDistance<TIA>,
     scale: f64,
     alpha: f64,
-    temperature: QO
+    temperature: QO,
 ) -> Fallible<Measurement<ExprDomain<C>, Expr, LInfDiffDistance<TIA>, MaxDivergence<QO>>>
 where
     (ExprDomain<C>, LInfDiffDistance<TIA>): MetricSpace,
     TIA: Number + CastInternalRational,
     QO: CastInternalRational + DistanceConstant<TIA> + Float,
 {
-
     let sensitivity: f64 = alpha.max(1.0 - alpha);
     let epsilon = sensitivity.inf_div(&scale)?;
 
@@ -50,35 +50,52 @@ where
 
     Measurement::new(
         input_domain,
-        Function::new_fallible(move |(_frame, expr): &(C::Value, Expr)| -> Fallible<Expr> {
+        Function::new_fallible(
+            move |(_frame, expr): &(C::Value, Expr)| -> Fallible<Expr> {
             // exp(-epsilon*|rank - alpha*N|)
             let exp_expr = make_score_elts_expr(expr.clone(), alpha)
                 .clone()
                 .mul(lit(-epsilon))
-                .exp(); 
+                .exp();
 
             // Z_{i+1} - Z_{i}
             let sorted_expr = expr.clone().sort(false);
-            let shifted_expr = (sorted_expr.clone().shift(1) - sorted_expr)
-                .slice(lit(1), lit(NULL));
+            let shifted_expr =
+                (sorted_expr.clone().shift(1) - sorted_expr).slice(lit(1), lit(NULL));
 
             // (Z_{i+1} - Z_{i}) * exp(-eps*|rank - alpha*N|)
             let full_expr = exp_expr.mul(shifted_expr);
 
             // TODO here: gumpel max expr to sample an i
-
-
             // TODO here: get associated bounds of frame
-            // frame sort and then get i and i+1 
-            //let i = frame.select(expr.clone().sort(false));
-            // let index = if C::GROUPBY {
-            //     2.0
-            // } else {
-            //     1.0
-            // };
-
             // TODO here: uniform draw in-between
-
+            // call Function of Measurement of make_base_discrete_exponential as part of expression
+            full_expr.clone().map(
+                move |s: Series| {
+                    let vec: Vec<f64> = s
+                        .unpack::<Float64Type>()?
+                        .into_no_null_iter()
+                        .collect::<Vec<_>>();
+                    // let r  = discrete_exponential.function.clone()(&vec);
+                        // .map(|value| discrete_exponential.function.clone()());
+                        //.enumerate()
+                        // .map(|(i, value)| {
+                        //     let mut shift = value.into_rational()? / &temp_frac;
+                        //     if optimize == Optimize::Min {
+                        //         shift.neg_assign();
+                        //     }
+                        //     Ok((i, GumbelPSRN::new(shift)))
+                        // })
+                        // .reduce(|l, r| {
+                        //     let (mut l, mut r) = (l?, r?);
+                        //     Ok(if l.1.greater_than(&mut r.1)? { l } else { r })
+                        // })
+                        // .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
+                        // .map(|v| v.0);
+                    Ok(Some(Series::new(&s.name(), vec)))
+                },
+                GetOutput::same_type(),
+            );
             Ok(full_expr)
         }),
         input_metric,
@@ -94,12 +111,6 @@ where
             }
             // d_out >= d_in / temperature
             d_in.inf_div(&temperature)
-        })
+        }),
     )
-}
-
-fn uniform_draw(lower_bound: f64, upper_bound: f64) -> f64 {
-    let mut rng = rand::thread_rng();
-    let sample: f64 = rng.sample(Uniform::new(lower_bound, upper_bound));
-    sample
 }
