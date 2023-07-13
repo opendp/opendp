@@ -3,10 +3,10 @@ use std::ffi::c_char;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::FfiResult,
+    core::{FfiResult, Measure},
     ffi::{
         any::AnyMeasure,
-        util::{self, into_c_char_p, Type},
+        util::{self, into_c_char_p, Type, to_str, ExtrinsicObject},
     },
     measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
 };
@@ -147,4 +147,43 @@ pub extern "C" fn opendp_measures__zero_concentrated_divergence(
     }
     let T = try_!(Type::try_from(T));
     dispatch!(monomorphize, [(T, @numbers)], ())
+}
+
+
+#[derive(Clone, Default)]
+pub struct ExtrinsicMeasure {
+    pub descriptor: String,
+}
+
+impl std::fmt::Debug for ExtrinsicMeasure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ExtrinsicMeasure({:?})", self.descriptor)
+    }
+}
+
+impl PartialEq for ExtrinsicMeasure {
+    fn eq(&self, other: &Self) -> bool {
+        self.descriptor == other.descriptor
+    }
+}
+
+impl Measure for ExtrinsicMeasure {
+    type Distance = ExtrinsicObject;
+}
+
+#[bootstrap(
+    name = "extrinsic_measure",
+    arguments(descriptor(rust_type = "String"))
+)]
+/// Construct a new ExtrinsicMeasure.
+/// Any two instances of an ExtrinsicMeasure are equal if their string descriptors are equal.
+///
+/// # Arguments
+/// * `descriptor` - A string description of the privacy measure.
+#[no_mangle]
+pub extern "C" fn opendp_measures__extrinsic_measure(
+    descriptor: *mut c_char,
+) -> FfiResult<*mut AnyMeasure> {
+    let descriptor = try_!(to_str(descriptor)).to_string();
+    Ok(AnyMeasure::new(ExtrinsicMeasure { descriptor })).into()
 }

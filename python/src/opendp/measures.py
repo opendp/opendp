@@ -6,6 +6,7 @@ from opendp.typing import *
 
 __all__ = [
     "_measure_free",
+    "extrinsic_measure",
     "fixed_smoothed_max_divergence",
     "max_divergence",
     "measure_debug",
@@ -39,6 +40,35 @@ def _measure_free(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+    
+    return output
+
+
+@versioned
+def extrinsic_measure(
+    descriptor: str
+):
+    """Construct a new ExtrinsicMeasure.
+    Any two instances of an ExtrinsicMeasure are equal if their string descriptors are equal.
+    
+    [extrinsic_measure in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.extrinsic_measure.html)
+    
+    :param descriptor: A string description of the privacy measure.
+    :type descriptor: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_descriptor = py_to_c(descriptor, c_type=ctypes.c_char_p, type_name=String)
+    
+    # Call library function.
+    lib_function = lib.opendp_measures__extrinsic_measure
+    lib_function.argtypes = [ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_descriptor), Measure))
     
     return output
 

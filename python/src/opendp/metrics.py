@@ -9,6 +9,7 @@ __all__ = [
     "absolute_distance",
     "change_one_distance",
     "discrete_distance",
+    "extrinsic_metric",
     "hamming_distance",
     "insert_delete_distance",
     "l1_distance",
@@ -124,6 +125,35 @@ def discrete_distance(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(), Metric))
+    
+    return output
+
+
+@versioned
+def extrinsic_metric(
+    descriptor: str
+):
+    """Construct a new ExtrinsicMetric.
+    Any two instances of an ExtrinsicMetric are equal if their string descriptors are equal.
+    
+    [extrinsic_metric in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.extrinsic_metric.html)
+    
+    :param descriptor: A string description of the metric.
+    :type descriptor: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_descriptor = py_to_c(descriptor, c_type=ctypes.c_char_p, type_name=String)
+    
+    # Call library function.
+    lib_function = lib.opendp_metrics__extrinsic_metric
+    lib_function.argtypes = [ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_descriptor), Metric))
     
     return output
 
