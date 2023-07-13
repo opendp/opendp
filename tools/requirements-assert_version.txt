@@ -1,2 +1,2 @@
 semver==3.0
-toml
+tomlkit==0.11.8
