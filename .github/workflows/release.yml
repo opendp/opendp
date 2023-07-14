@@ -32,10 +32,10 @@ jobs:
         run: if [[ $BRANCH_DRY_RUN_OK == true ]]; then echo OK; else echo 'Disabled dry run on non-release branch!'; exit 1; fi
 
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: 3.8
           cache: pip
@@ -62,10 +62,10 @@ jobs:
           install: m4
 
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~\.cargo\bin
@@ -83,19 +83,20 @@ jobs:
       - name: Upload .dll
         uses: actions/upload-artifact@v3
         with:
-          name: lib_dll
-          path: rust/target/release/opendp.dll
+          name: libs
+          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
+          path: rust/target*/release/opendp.dll
 
 
-  python-pre-publish-mac:
+  python-pre-publish-macos:
     runs-on: macos-11
     needs: credential-check
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/bin
@@ -130,8 +131,9 @@ jobs:
       - name: Upload .dylib
         uses: actions/upload-artifact@v3
         with:
-          name: lib_dylib
-          path: rust/target/release/libopendp.dylib
+          name: libs
+          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
+          path: rust/target*/release/libopendp.dylib
 
       # need to upload at least one set up updated bindings
       - name: Upload bindings
@@ -144,14 +146,21 @@ jobs:
   python-pre-publish-linux:
     runs-on: ubuntu-20.04
     needs: credential-check
+    strategy:
+      matrix:
+        architecture: [x86_64, aarch64]
     env:
-      DOCKER_IMAGE: quay.io/pypa/manylinux2014_x86_64
+      # This image is important. The default manylinux2014 images are problematic to configure for cross-compilation
+      # in a way that will satisfy the gmp configure script.
+      DOCKER_IMAGE: messense/manylinux2014-cross:${{ matrix.architecture }}
+      TARGET: ${{ matrix.architecture }}-unknown-linux-gnu
+      ARCH_LIB: libopendp-${{ matrix.architecture }}.so
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/bin
@@ -164,51 +173,45 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Create Rust build for linux
-        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -t -f \"$FEATURES\""
+        env:
+          # Only run tests for native compile
+          FLAGS: ${{ matrix.architecture == 'x86_64' && '-i -r -t' || '-i -r' }}
+        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh $FLAGS -g $TARGET -f \"$FEATURES\""
 
       - name: Upload .so
         uses: actions/upload-artifact@v3
         with:
-          name: lib_so
-          path: rust/target/release/libopendp.so
+          name: libs
+          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
+          path: rust/target*/${{ env.TARGET }}/release/libopendp.so
 
 
   python-publish:
     runs-on: ubuntu-20.04
-    needs: [ python-pre-publish-windows, python-pre-publish-mac, python-pre-publish-linux ]
+    needs: [ python-pre-publish-windows, python-pre-publish-macos, python-pre-publish-linux ]
     env:
       PYPI_API_TOKEN: ${{ inputs.dry_run && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_API_TOKEN }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: 3.8
           cache: pip
 
-      - name: Prepare for libs
-        run: mkdir -p rust/target/release
-
-      - name: Download windows lib
+      - name: Download libs
         uses: actions/download-artifact@v3
         with:
-          name: lib_dll
-          path: rust/target/release
+          name: libs
+          # Artifact contains all libs with leading paths starting at target
+          path: rust/
 
-      - name: Download macos lib
-        uses: actions/download-artifact@v3
-        with:
-          name: lib_dylib
-          path: rust/target/release
+      - name: Dump directory
+        run: |
+          ls -lR rust/target/
 
-      - name: Download linux lib
-        uses: actions/download-artifact@v3
-        with:
-          name: lib_so
-          path: rust/target/release
-      
       - name: Download bindings
         uses: actions/download-artifact@v3
         with:
@@ -228,15 +231,15 @@ jobs:
 
   rust-publish:
     runs-on: ubuntu-20.04
-    needs: credential-check
+    needs: python-publish
     env:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: 3.8
           cache: pip

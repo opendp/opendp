@@ -89,8 +89,9 @@ function init_linux() {
     run curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal
     source ~/.cargo/env
   fi
-  log "Install Perl IPC-CMD"
-  run yum -y install perl-IPC-Cmd
+  # We need m4 for gmp, but messense/manylinux2014-cross doesn't include it.
+  log "Install m4"
+  run apt-get -y install m4
 }
 
 function run_cargo() {
