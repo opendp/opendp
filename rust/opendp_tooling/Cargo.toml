@@ -16,3 +16,4 @@ serde_json = { version = "1.0" }
 syn = { workspace = true }
 quote = { workspace = true }
 proc-macro2 = { workspace = true }
+regex = { version = "1.9.1" }

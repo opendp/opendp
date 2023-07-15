@@ -3,10 +3,8 @@
 This file documents the version history of OpenDP. The links on each version number will take you to a comparison
 showing the source changes from the previous version.
 
-Please keep this up to date, following the [instructions](#instructions) below.
 
-
-## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
+## [0.8.0-dev](https://github.com/opendp/opendp/compare/v0.7.0...HEAD) - TBD
 
 
 ## [0.7.0] - 2023-05-18
@@ -298,7 +296,7 @@ The format of this file is based on [Keep a Changelog](https://keepachangelog.co
 scripts when generating a release, so please maintain the existing format.
 
 Whenever you're preparing a significant commit, add a bullet list entry summarizing the change under the
-[Unreleased](#unreleased) heading at the top. Entries should be grouped in sections based on the kind of change.
+[Upcoming Release](#upcoming-release---tbd) heading at the top. Entries should be grouped in sections based on the kind of change.
 Please use the following sections, maintaining the same ordering. If the appropriate section isn't present yet,
 just add it by copying from those below.
 
