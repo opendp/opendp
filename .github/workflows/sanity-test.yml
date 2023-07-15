@@ -1,0 +1,69 @@
+name: Sanity Test Channel
+on:
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        required: true
+      python_repository:
+        type: string
+        required: true
+      fake:
+        type: boolean
+        required: false
+        default: false
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Target Channel
+        type: choice
+        options:
+          - nightly
+          - beta
+          - stable
+        required: true
+        default: nightly
+      python_repository:
+        description: Python Repository
+        type: choice
+        options:
+          - PyPI
+          - TestPyPI
+          - local
+        required: true
+        default: PyPI
+      fake:
+        description: Fake Test?
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  sanity-test:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Download Python wheel
+        if: ${{ inputs.python_repository == 'local' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: python_wheel
+          path: python/wheelhouse
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.9
+          cache: pip
+
+      - name: Install requirements
+        run: pip install -r tools/requirements-publish_tool.txt
+
+      - name: Run sanity test
+        env:
+          FAKE_FLAG: ${{ inputs.fake && '-f' || '-nf' }}
+        run: python tools/publish_tool.py sanity -r ${{ inputs.python_repository }} -t 300 $FAKE_FLAG

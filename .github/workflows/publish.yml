@@ -1,0 +1,125 @@
+name: Publish Channel
+on:
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        required: true
+      date:
+        type: string
+        required: true
+      dry_run:
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      TEST_PYPI_API_TOKEN:
+        required: true
+      PYPI_API_TOKEN:
+        required: true
+      CRATES_IO_API_TOKEN:
+        required: true
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Target Channel
+        type: choice
+        options:
+          - nightly
+          - beta
+          - stable
+        required: true
+        default: nightly
+      date:
+        description: Release Date
+        type: string
+        required: true
+      dry_run:
+        description: Dry Run?
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  credential-check:
+    uses: ./.github/workflows/credential-check.yml
+    with:
+      ref: ${{ inputs.channel }}
+
+  publish-python:
+    needs: credential-check
+    runs-on: ubuntu-20.04
+    env:
+      PYPI_API_TOKEN: ${{ inputs.dry_run && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_API_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+          cache: pip
+
+      - name: Download Python wheel
+        uses: actions/download-artifact@v3
+        with:
+          name: python_wheel
+          path: python/wheelhouse
+
+      - name: Publish Python package
+        env:
+          # twine doesn't have a dry-run option, so the best we can do is use TestPyPI
+          REPOSITORY: ${{ inputs.dry_run && 'testpypi' || 'pypi' }}
+        run: |
+          pip install -r tools/requirements-publish_tool.txt
+          python tools/publish_tool.py python -r $REPOSITORY
+
+  publish-rust:
+    needs: publish-python
+    runs-on: ubuntu-20.04
+    env:
+      CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+          cache: pip
+
+      - name: Publish Rust crate
+        env:
+          DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
+        run: |
+          pip install -r tools/requirements-publish_tool.txt
+          python tools/publish_tool.py rust $DRY_RUN_FLAG
+
+  publish-github:
+    needs: publish-rust
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+          cache: pip
+
+      - name: Publish GitHub Release
+        if: ${{ inputs.channel == 'stable' }}
+        env:
+          DRAFT_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
+        run: |
+          pip install -r tools/requirements-publish_tool.txt
+          python tools/publish_tool.py github -d ${{ inputs.date }} $DRAFT_FLAG
