@@ -1,95 +1,42 @@
 name: Documentation
-
-# Controls when the action will run. 
 on:
-  # Triggers whenever latest is updated or a release is done
-  workflow_run:
-    workflows: ["Sync Branches"]
-    types: [completed]
-  # Allows us to regenerate proofs for a previous release
+  workflow_call:
+    inputs:
+      # Doesn't take a channel input, because we generate docs for all channels and releases.
+      dry_run:
+        type: boolean
+        required: false
+        default: false
   workflow_dispatch:
     inputs:
-      # We need the option of choosing a different ref, rather than just using the ref that the workflow is manually
-      # started on, because this version of the workflow may not be available on the desired branch.
-      override_ref:
-        description: Branch or tag to use as basis
-        type: string
+      # Doesn't take a channel input, because we generate docs for all channels and releases.
+      dry_run:
+        description: Dry Run?
+        type: boolean
+        required: false
+        default: false
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  credential-check:
+    uses: ./.github/workflows/credential-check.yml
+    with:
+      assert_version: false
+
+  docs:
+    needs: credential-check
     # fixed to ubuntu-22.04, which is currently newer than ubuntu-latest, because pandoc needs at least v2.6
     # ubuntu-latest points to ubuntu-20.04, which has pandoc v2.5, which is subject to this bug: https://github.com/jgm/pandoc/issues/5128
     runs-on: ubuntu-22.04
     env:
       # don't attempt to load binaries when sourcing the library
       OPENDP_HEADLESS: true
-      # Use the explicit ref if any, otherwise use the branch of the triggering workflow.
-      SOURCE_REF: ${{ inputs.override_ref || github.event.workflow_run.head_branch }}
 
-    # Run only if sync-branches workflow succeeded, or if manually launched.
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          # Point to the correct ref (for proofs only)
-          ref: ${{ env.SOURCE_REF }}
           # Make sure we get all refs needed to build docs for different versions
           fetch-depth: 0
-
-      - name: Collect file listing
-        id: "collect"
-        run: |
-          files=$(find . -type f -name "*.tex")
-
-          # using syntax from: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
-          # construct list of .tex files
-          echo "tex<<EOF" >> $GITHUB_OUTPUT
-          echo "$files" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          # construct list of .pdf files
-          echo "pdf<<EOF" >> $GITHUB_OUTPUT
-          echo "${files//$'.tex'/.pdf}" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          # name the version
-          version=$(cat VERSION)
-          if [ "$version" == "0.0.0+development" ]; then
-              version=latest
-          else
-              version="v$version"
-          fi
-          echo "version=$version" >> $GITHUB_OUTPUT
-
-      - name: Compile LaTeX documents
-        uses: xu-cheng/latex-action@v2
-        with:
-          root_file: ${{ steps.collect.outputs.tex }}
-          # so that cwd is relative to .tex file, not repository root
-          work_in_root_file_dir: true
-          # so that shell commands run in .tex files
-          latexmk_shell_escape: true
-          # git is necessary for some shell commands to run
-          extra_system_packages: git
-          # give permissions for git commands to run
-          pre_compile: git config --global --add safe.directory /github/workspace
-
-      - name: Push to artifacts repo
-        uses: opendp/pull-request-artifacts@main
-        with:
-          commit: ${{ github.sha }}
-          artifacts: ${{ steps.collect.outputs.pdf }}
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts-token: ${{ secrets.ARTIFACTS_REPO_TOKEN }}
-          artifacts-repo: opendp/artifacts
-          artifacts-dir: release/${{ steps.collect.outputs.version }}
-          inter-link: false
-          post-comment: false
 
       - name: Build docs site
         run: |
@@ -146,7 +93,7 @@ jobs:
           rm -r artifacts
 
       - name: Push docs to gh-pages branch
-        #if: success() && github.ref == 'refs/heads/main'
+        if: ${{ !inputs.dry_run }}
         run: |
           git add --all --force
           echo "Push docs to gh-pages branch"

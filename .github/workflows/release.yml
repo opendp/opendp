@@ -1,252 +1,107 @@
 name: Release
 on:
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        required: true
+      sync:
+        type: boolean
+        required: false
+        default: false
+      counter:
+        type: number
+        required: false
+        default: 0
+      dry_run:
+        type: boolean
+        required: false
+        default: false
+      fake:
+        type: boolean
+        required: false
+        default: false
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: Dry run (DISABLE WITH CARE)
+      channel:
+        description: Target Channel
+        type: choice
+        options:
+          - nightly
+          - beta
+          - stable
         required: true
+        default: nightly
+      sync:
+        description: Sync the Channel from Upstream?
         type: boolean
-        default: true
-  release:
-    types:
-      - published
-env:
-  FEATURES: untrusted,ffi
-
+        required: false
+        default: false
+      counter:
+        description: Version Counter
+        type: number
+        required: false
+        default: 0
+      dry_run:
+        description: Dry Run?
+        type: boolean
+        required: false
+        default: false
+      fake:
+        description: Fake Build?
+        type: boolean
+        required: false
+        default: false
 
 jobs:
-  credential-check:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Check if user is an administrator
-        uses: lannonbr/repo-permission-check-action@2.0.0
-        with:
-          permission: admin
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  prepare:
+    uses: ./.github/workflows/prepare.yml
+    with:
+      channel: ${{ inputs.channel }}
+      sync: ${{ inputs.sync }}
+      counter: ${{ fromJSON(inputs.counter) }}
 
-      # If we're on a test branch, make sure this is a dry run.
-      - name: Check branch / dry run compatibility
-        env:
-          BRANCH_DRY_RUN_OK: ${{ (startsWith(github.ref, 'refs/tags/v') || inputs.dry_run) && 'true' || 'false' }}
-        run: if [[ $BRANCH_DRY_RUN_OK == true ]]; then echo OK; else echo 'Disabled dry run on non-release branch!'; exit 1; fi
+  build:
+    needs: prepare
+    uses: ./.github/workflows/build.yml
+    with:
+      channel: ${{ inputs.channel }}
+      fake: ${{ inputs.fake }}
 
-      - name: Checkout repository
-        uses: actions/checkout@v3
+  sanity-test-pre:
+    needs: build
+    uses: ./.github/workflows/sanity-test.yml
+    with:
+      channel: ${{ inputs.channel }}
+      python_repository: local
+      fake: ${{ inputs.fake }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: 3.8
-          cache: pip
+  publish:
+    needs: [ prepare, sanity-test-pre ]
+    uses: ./.github/workflows/publish.yml
+    with:
+      channel: ${{ inputs.channel }}
+      date: ${{ needs.prepare.outputs.date }}
+      dry_run: ${{ inputs.dry_run || inputs.fake }}
+    secrets: inherit
 
-      - name: Assert version
-        run: |
-          pip install -r tools/requirements-assert_version.txt
-          python tools/assert_version.py
+  sanity-test-post:
+    needs: publish
+    uses: ./.github/workflows/sanity-test.yml
+    with:
+      channel: ${{ inputs.channel }}
+      python_repository: testpypi
+      fake: ${{ inputs.fake }}
 
+  latex:
+    needs: prepare
+    uses: ./.github/workflows/latex-release.yml
+    with:
+      channel: ${{ inputs.channel }}
+    secrets: inherit
 
-  python-pre-publish-windows:
-    runs-on: windows-latest
-    needs: credential-check
-    env:
-      MSYS: winsymlinks:nativestrict
-    defaults:
-      run:
-        shell: msys2 {0}
-    steps:
-      - name: Set up MSYS2
-        uses: msys2/setup-msys2@v2
-        with:
-          path-type: inherit
-          install: m4
-
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~\.cargo\bin
-            ~\.cargo\registry\index
-            ~\.cargo\registry\cache
-            ~\.cargo\git\db
-            ~\AppData\Local\gmp-mpfr-sys
-            rust\target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
-
-      - name: Create Rust build for windows
-        run: bash tools/rust_build.sh -i -r -t -f "$FEATURES"
-
-      - name: Upload .dll
-        uses: actions/upload-artifact@v3
-        with:
-          name: libs
-          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
-          path: rust/target*/release/opendp.dll
-
-
-  python-pre-publish-macos:
-    runs-on: macos-11
-    needs: credential-check
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            ~/Library/Caches/gmp-mpfr-sys
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
-
-      - name: Create Rust build for macos x86_64
-        run: bash tools/rust_build.sh -i -r -t -g x86_64-apple-darwin -f "$FEATURES"
-        env:
-          CC: clang -target x86_64-apple-darwin
-
-      - name: Create Rust build for macos aarch64 (no tests)
-        # include python bindings generation to get updated links in python codegen
-        run: bash tools/rust_build.sh -i -r -g aarch64-apple-darwin -f "$FEATURES,bindings-python"
-        env:
-          CC: clang -target aarch64-apple-darwin
-
-      - name: Create universal binary of Rust build for macos
-        # https://developer.apple.com/documentation/apple-silicon/building-a-universal-macos-binary#Update-the-Architecture-List-of-Custom-Makefiles
-        run: |
-          mkdir -p rust/target/release
-          lipo \
-              rust/target/x86_64-apple-darwin/release/libopendp.dylib \
-              rust/target/aarch64-apple-darwin/release/libopendp.dylib \
-              -output rust/target/release/libopendp.dylib -create
-
-      - name: Upload .dylib
-        uses: actions/upload-artifact@v3
-        with:
-          name: libs
-          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
-          path: rust/target*/release/libopendp.dylib
-
-      # need to upload at least one set up updated bindings
-      - name: Upload bindings
-        uses: actions/upload-artifact@v3
-        with:
-          name: python_bindings
-          path: python/src/opendp/
-
-
-  python-pre-publish-linux:
-    runs-on: ubuntu-20.04
-    needs: credential-check
-    strategy:
-      matrix:
-        architecture: [x86_64, aarch64]
-    env:
-      # This image is important. The default manylinux2014 images are problematic to configure for cross-compilation
-      # in a way that will satisfy the gmp configure script.
-      DOCKER_IMAGE: messense/manylinux2014-cross:${{ matrix.architecture }}
-      TARGET: ${{ matrix.architecture }}-unknown-linux-gnu
-      ARCH_LIB: libopendp-${{ matrix.architecture }}.so
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            ~/.cache/gmp-mpfr-sys
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
-
-      - name: Create Rust build for linux
-        env:
-          # Only run tests for native compile
-          FLAGS: ${{ matrix.architecture == 'x86_64' && '-i -r -t' || '-i -r' }}
-        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh $FLAGS -g $TARGET -f \"$FEATURES\""
-
-      - name: Upload .so
-        uses: actions/upload-artifact@v3
-        with:
-          name: libs
-          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
-          path: rust/target*/${{ env.TARGET }}/release/libopendp.so
-
-
-  python-publish:
-    runs-on: ubuntu-20.04
-    needs: [ python-pre-publish-windows, python-pre-publish-macos, python-pre-publish-linux ]
-    env:
-      PYPI_API_TOKEN: ${{ inputs.dry_run && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_API_TOKEN }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: 3.8
-          cache: pip
-
-      - name: Download libs
-        uses: actions/download-artifact@v3
-        with:
-          name: libs
-          # Artifact contains all libs with leading paths starting at target
-          path: rust/
-
-      - name: Dump directory
-        run: |
-          ls -lR rust/target/
-
-      - name: Download bindings
-        uses: actions/download-artifact@v3
-        with:
-          name: python_bindings
-          path: python/src/opendp/
-
-      - name: Create Python package
-        run: bash tools/python_build.sh -i
-
-      - name: Publish Python package
-        env:
-          DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
-        run: |
-          pip install -r tools/requirements-publish_tool.txt
-          python tools/publish_tool.py python $DRY_RUN_FLAG
-
-
-  rust-publish:
-    runs-on: ubuntu-20.04
-    needs: python-publish
-    env:
-      CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: 3.8
-          cache: pip
-
-      - name: Publish Rust crate
-        env:
-          DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
-        run: |
-          pip install -r tools/requirements-publish_tool.txt
-          python tools/publish_tool.py rust $DRY_RUN_FLAG
+  docs:
+    needs: [ sanity-test-post, latex ]
+    uses: ./.github/workflows/docs.yml
+    with:
+      dry_run: ${{ inputs.dry_run || inputs.fake }}

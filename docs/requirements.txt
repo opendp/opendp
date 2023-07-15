@@ -6,3 +6,4 @@ nbsphinx
 ipython  # for notebook syntax highlighting in docs
 pandoc
 pypandoc
+semver==3.0
