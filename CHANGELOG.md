@@ -296,7 +296,7 @@ The format of this file is based on [Keep a Changelog](https://keepachangelog.co
 scripts when generating a release, so please maintain the existing format.
 
 Whenever you're preparing a significant commit, add a bullet list entry summarizing the change under the
-[Upcoming Release](#upcoming-release---tbd) heading at the top. Entries should be grouped in sections based on the kind of change.
+X.Y.Z-dev heading at the top. Entries should be grouped in sections based on the kind of change.
 Please use the following sections, maintaining the same ordering. If the appropriate section isn't present yet,
 just add it by copying from those below.
 
