@@ -376,7 +376,7 @@ class Query(object):
         if name not in constructors:
             raise AttributeError(f"Unrecognized constructor: '{name}'")
 
-        def make(*args, **kwargs):
+        def make(*args, **kwargs) -> "Query":
             """Wraps the `make_{name}` constructor to allow one optional parameter and chains it to the current query.
 
             This function will be called when the user calls `query.{name}(...)`.
@@ -450,25 +450,6 @@ class Query(object):
     def param(self):
         """Returns the discovered parameter, if there is one"""
         return getattr(self.resolve(), "param", None)
-
-    def _cast_measure(self, measure, d_out, caster, map_query):
-        """Helper function for casting a measure."""
-        inner_seed_query = Query(
-            chain=self._chain,
-            output_measure=measure,
-            d_in=self._d_in,
-            d_out=d_out,
-        )
-        inner_query = map_query(inner_seed_query)
-        inner_chain = inner_query._chain
-
-        # wrap the inner chain in the caster (leaving it partial if it was partial)
-        if isinstance(inner_chain, PartialChain):
-            casted_chain = PartialChain(lambda x: caster(inner_chain(x)))
-        else:
-            casted_chain = caster(inner_chain)
-
-        return self.new_with(chain=casted_chain, wrap_release=inner_query._wrap_release)
 
     def sequential_composition(
         self,
