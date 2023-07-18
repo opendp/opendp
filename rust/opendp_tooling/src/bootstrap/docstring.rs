@@ -375,7 +375,7 @@ pub fn make_rustdoc_link(module: &str, name: &str) -> Result<String> {
 
         // find the version
         let mut version = env!("CARGO_PKG_VERSION");
-        if version == "0.0.0+development" {
+        if version.ends_with("-dev") {
             version = "latest";
         };
 
