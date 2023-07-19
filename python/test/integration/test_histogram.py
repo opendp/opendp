@@ -1,3 +1,4 @@
+import pytest
 import opendp.prelude as dp
 
 dp.enable_features("contrib", "floating-point")
@@ -83,3 +84,10 @@ def test_count_by_threshold():
     data = "\n".join(["a"] * 500 + ["b"] * 200 + ["what?"] * 100)
 
     print(laplace_histogram_from_dataframe(data))
+
+
+    with pytest.raises(dp.OpenDPException):
+        dp.m.make_base_laplace_threshold(
+            dp.atom_domain(T=int),
+            dp.l1_distance(T=float),
+            scale=1., threshold=1e8)

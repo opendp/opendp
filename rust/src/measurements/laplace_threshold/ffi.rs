@@ -46,7 +46,7 @@ pub extern "C" fn opendp_measurements__make_base_laplace_threshold(
     if !name.starts_with("HashMap") || args.len() != 2 {
         return err!(
             FFI,
-            "Generic type {:?} not supported",
+            "Domain not supported: {:?}. Must be MapDomain<AtomDomain<TK>, AtomDomain<TV>>",
             input_domain.carrier_type.descriptor
         )
         .into();
