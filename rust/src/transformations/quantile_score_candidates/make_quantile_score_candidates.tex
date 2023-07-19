@@ -135,9 +135,21 @@ We now make the scoring strictly non-negative.
     \textrm{score}(X, c, \alpha_{num}, \alpha_{den}) = \mathrm{abs\_diff}(\alpha_{den} \cdot \#(X < c), \alpha_{num} \cdot (|X| - \#(X = c)))
 \end{equation}
 
-To prevent a numerical overflow when computing the arguments, first add a limit on the dataset size, $l$.
-$\alpha_{den}$ is chosen sufficiently small such that $\alpha_{den} \cdot l$ is representable.
-Instead of sampling the dataset size down, limit both counts to be at most $l$ and replace $|X|$ with $l$.
+To prevent a numerical overflow when computing the arguments to \texttt{abs\_diff}, 
+first choose a data type that the scores are to be represented in.
+If the number of records is greater than can be represented in this data type, 
+then sample the dataset down to at most this number of records.
+Notice that when any given record is added or removed, 
+the counts differ by no more than they would have without this sampling down.
+In the OpenDP implementation, the dataset size may be no greater than the max value of a Rust usize, 
+because each index into the dataset maps to a distinct computer memory address.
+
+Now allocate some of the bits of the data type for the alpha denominator,
+and use the remaining bits for counts of up to $l$, where $l$ is the effective dataset size.
+From this set-up, we choose an $\alpha_{den}$ such that $\alpha_{den} \cdot l$ is representable.
+Since $\alpha_{num} \le \alpha_{den}$, $\alpha_{num} \cdot l$ is representable.
+Since the dataset size fits in the choice of data type, then $|X|$ is representable.
+Therefore, no quantity in the following equation is not representable.
 
 \begin{equation}
     \textrm{score}(X, c, \alpha_{num}, \alpha_{den}, l) = \mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(X < c), l), \alpha_{num} \cdot \min(|X| - \#(X = c), l))
@@ -240,8 +252,9 @@ Assume $X, X'$ are \din-close under \texttt{input\_metric} and that $\texttt{sta
 \begin{align*}
     \dout &= \max\limits_{X \sim X'} d_{IDD}(s, s') &&\text{where } s = \function(X)\\
     &= \max\limits_{X \sim X'} \max\limits_{ij} |(s_i - s'_i) - (s_j - s'_j)| &&\text{by definition of }\rustdoc{metrics/struct}{LInfDiffDistance} \\
-    &\leq 2 \max\limits_{X \sim X'} \max\limits_{i} |s_i - s'_i| &&\text{$s$ is not monotonic; take looser bound}\\
-    &\leq 2 \sum_j^{\din} \max\limits_{Z_{j} \sim Z_{j+1}} \max\limits_{i} |s_{i,j} - s_{i,j+1}| &&\text{by path property where } d_{Sym}(Z_i, Z_{i+1}) = 1, X = Z_0 \text{ and } Z_\din = X' \\
+    &\le \max\limits_{X \sim X'} \max\limits_{ij} |(s_i - s'_i)| + |- (s_j - s'_j)| &&\text{by triangle inequality} \\
+    &\leq 2 \max\limits_{X \sim X'} \max\limits_{i} |s_i - s'_i| &&\text{since $s$ is not monotonic, we used the looser triangle inequality}\\
+    &\leq 2 \sum_j^{\din} \max\limits_{Z_{j} \sim Z_{j+1}} \max\limits_{i} |s_{i,j} - s_{i,j+1}| &&\text{by path property where } d_{Sym}(Z_i, Z_{i+1}) = 1, X = Z_0 \text{ and } X' = Z_\din \\
     &\leq 2 \sum_j^{\din} \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) &&\text{by \ref{single-change-stab-sym}} \\
     &\leq 2 \cdot \din \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) \\
 \end{align*}
@@ -255,7 +268,7 @@ Now consider the case where the dataset size is known.
 
 \begin{lemma}
     \label{single-change-stab}
-    If $d_{CO}(X, X') \le 1$, then $d_\infty(\function(X), \function(X')) \le 2$.
+    If $d_{CO}(X, X') \le 1$, then $d_\infty(\function(X), \function(X')) \le 2 \cdot \alpha_{den}$.
 \end{lemma}
 
 \begin{proof}
@@ -265,11 +278,11 @@ Assume $d_{CO}(X, X') \le 1$.
     &d_\infty(\function(X), \function(X')) \\
     &= \max\limits_{i} |\function(X)_i - \function(X')_i| &&\text{by definition of } d_\infty \\
     &= \max\limits_{i} |\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(X < C_i), l), \alpha_{num} \cdot \min(|X| - \#(X = C_i), l)) &&\text{by definition of } \function
-        \\&\hspace{1cm}\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(X' < C_i), l), \alpha_{num} \cdot \min(|X'| - \#(X' = C_i), l))| \\
+        \\&\hspace{1cm} -\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(X' < C_i), l), \alpha_{num} \cdot \min(|X'| - \#(X' = C_i), l))| \\
     &= \alpha_{den} \cdot \max\limits_{i} ||\min(\#(X < C_i), l) - \alpha \cdot \min(|X| - \#(X = C_i), l)|
-        \\&\hspace{1cm}|\min(\#(X' < C_i), l) - \alpha \cdot \min(|X'| - \#(X' = C_i), l)|| \\
+        \\&\hspace{1cm}-|\min(\#(X' < C_i), l) - \alpha \cdot \min(|X'| - \#(X' = C_i), l)|| \\
     &= \alpha_{den} \cdot \max\limits_{i} ||\#(X < C_i) - \alpha \cdot (|X| - \#(X = C_i))|
-        \\&\hspace{1cm}|\#(X' < C_i) - \alpha \cdot (|X| - \#(X' = C_i))|| \\
+        \\&\hspace{1cm}-|\#(X' < C_i) - \alpha \cdot (|X| - \#(X' = C_i))|| \\
 \intertext{Consider each of the four cases of changing a row in X.}
 \intertext{Case 1. Assume $X'$ is equal to $X$, but with some $X_j < C_i$ replaced with $X'_j > C_i$.}
     &= 2 \cdot \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(X < C_i) - \alpha \cdot \#(X > C_i)| 
@@ -279,13 +292,17 @@ Assume $d_{CO}(X, X') \le 1$.
     &= 2 \cdot \alpha_{den} \cdot \max\limits_{i} |1| &&\text{scores cancel}\\
     &= 2 \cdot \alpha_{den}
 \intertext{Case 2. Assume $X'$ is equal to $X$, but with some $X_j > C_i$ replaced with $X'_j < C_i$.}
-    &= 2 \cdot \alpha_{den} &&\text{by symmetry, follows from Case 1.}
+    &= 2 \cdot \alpha_{den}
+    \intertext{\hspace{1cm}by symmetry, follows from Case 1.}
 \intertext{Case 3. Assume $X'$ is equal to $X$, but with some $X_j \neq C_i$ replaced with $C_i$.}
-    &\leq 2 \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) &&\text{equivalent to one removal (see \rustdoc{transformations/fn}{make\_quantile\_score\_candidates})} \\
+    &\leq 2 \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num})\\
+    \intertext{\hspace{1cm}equivalent to one removal (see \rustdoc{transformations/fn}{make\_quantile\_score\_candidates})}
 \intertext{Case 4. Assume $X'$ is equal to $X$, but with some $X_j = C_i$ replaced with $X'_j \neq C_i$.}
-    &\leq 2 \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) &&\text{equivalent to one addition (see \rustdoc{transformations/fn}{make\_quantile\_score\_candidates})} \\
+    &\leq 2 \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) \\
+\intertext{\hspace{1cm}equivalent to one addition (see \rustdoc{transformations/fn}{make\_quantile\_score\_candidates})}
 \intertext{Take the union bound over all cases.}
-    d_\infty(s_i, s'_i) &\le \max(2 \cdot \alpha_{den}, 2 \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num})) = 2 \cdot \alpha_{den} &&\text{since } \max(\alpha, 1 - \alpha) \leq 1
+    d_\infty(s_i, s'_i) &\le \max(2 \cdot \alpha_{den}, 2 \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num})) = 2 \cdot \alpha_{den}
+    \intertext{\hspace{1cm}since $\max(\alpha, 1 - \alpha) \leq 1$}
 \end{align*}
 \end{proof}
 
@@ -296,7 +313,8 @@ Assume $X, X'$ are \din-close under \texttt{input\_metric} and that $\texttt{sta
 \begin{align*}
     \dout &= \max\limits_{X \sim X'} d_{IDD}(s, s') \\
     &= \max\limits_{X \sim X'} \max\limits_{ij} |(s_i - s'_i) - (s_j - s'_j)| &&\text{by definition of }\rustdoc{metrics/struct}{LInfDiffDistance} \\
-    &\leq 2 \max\limits_{X \sim X'} \max\limits_{i} |s_i - s'_i| &&\text{$s$ is not monotonic; take looser bound}\\
+    &\le \max\limits_{X \sim X'} \max\limits_{ij} |(s_i - s'_i)| + |- (s_j - s'_j)| &&\text{by triangle inequality} \\
+    &\leq 2 \max\limits_{X \sim X'} \max\limits_{i} |s_i - s'_i| &&\text{since $s$ is not monotonic, we used the looser triangle inequality}\\
     &\leq 2 \sum_j^{\din // 2} \max\limits_{Z_{j} \sim Z_{j+1}} \max\limits_{i} |s_{i,j} - s_{i,j+1}| &&\text{by path property where } d_{CO}(Z_i, Z_{i+1}) = 1, X = Z_0 \text{ and } Z_\din = X' \\
     &\leq 2 \sum_j^{\din // 2} 2 \cdot \alpha_{den} &&\text{by \ref{single-change-stab}} \\
     &\leq 4 (\din // 2) \cdot \alpha_{den} \\
