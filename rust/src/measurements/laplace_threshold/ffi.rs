@@ -43,7 +43,7 @@ pub extern "C" fn opendp_measurements__make_base_laplace_threshold(
     let TypeContents::GENERIC {name, args} = &input_domain.carrier_type.contents else {
         return err!(FFI, "Generic type {:?} not supported", input_domain.type_.descriptor).into();
     };
-    if name.starts_with("MapDomain") || args.len() != 2 {
+    if !name.starts_with("HashMap") || args.len() != 2 {
         return err!(
             FFI,
             "Generic type {:?} not supported",
