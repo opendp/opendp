@@ -199,7 +199,10 @@ def test_discrete_exponential():
 def test_alp_histogram():
     import opendp.prelude as dp
 
-    counter = dp.t.make_count_by(MO=dp.L1Distance[int], TK=str)
+    counter = dp.t.make_count_by(
+        dp.vector_domain(dp.atom_domain(T=str)),
+        dp.symmetric_distance(),
+        MO=dp.L1Distance[int])
 
     alp_meas = counter >> dp.m.make_alp_queryable(
         counter.output_domain,
