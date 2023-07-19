@@ -190,10 +190,8 @@ def test_gaussian():
     (input_space >> dp.m.then_gaussian(1.))([1., 2., 3.])
 
 def test_discrete_exponential():
-    from opendp.measurements import part_base_discrete_exponential
-
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
     input_metric = dp.linf_diff_distance(T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.part_base_discrete_exponential(1., "maximize")
+    meas = (input_domain, input_metric) >> dp.m.then_base_discrete_exponential(1., "maximize")
     print(meas(list(range(10))))
     print(meas.map(2))
