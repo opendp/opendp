@@ -3,7 +3,10 @@ from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
-
+from opendp.core import *
+from opendp.domains import *
+from opendp.metrics import *
+from opendp.measures import *
 __all__ = [
     "make_base_discrete_gaussian",
     "make_base_discrete_laplace",
@@ -17,6 +20,7 @@ __all__ = [
     "make_laplace",
     "make_randomized_response",
     "make_randomized_response_bool",
+    "make_user_measurement",
     "then_base_discrete_gaussian",
     "then_base_discrete_laplace",
     "then_base_discrete_laplace_cks20",
@@ -26,7 +30,8 @@ __all__ = [
     "then_base_laplace",
     "then_base_laplace_threshold",
     "then_gaussian",
-    "then_laplace"
+    "then_laplace",
+    "then_user_measurement"
 ]
 
 
@@ -859,3 +864,76 @@ def make_randomized_response_bool(
     output = c_to_py(unwrap(lib_function(c_prob, c_constant_time, c_QO), Measurement))
     
     return output
+
+
+@versioned
+def make_user_measurement(
+    input_domain: Domain,
+    input_metric: Metric,
+    output_measure: Measure,
+    function,
+    privacy_map,
+    TO: RuntimeTypeDescriptor
+) -> Measurement:
+    """Construct a Measurement from user-defined callbacks.
+    
+    [make_user_measurement in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_user_measurement.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `AnyDomain`
+    * Output Type:    `AnyObject`
+    * Input Metric:   `AnyMetric`
+    * Output Measure: `AnyMeasure`
+    
+    :param input_domain: A domain describing the set of valid inputs for the function.
+    :type input_domain: Domain
+    :param input_metric: The metric from which distances between adjacent inputs are measured.
+    :type input_metric: Metric
+    :param output_measure: The measure from which distances between adjacent output distributions are measured.
+    :type output_measure: Measure
+    :param function: A function mapping data from `input_domain` to a release of type `TO`.
+    :param privacy_map: A function mapping distances from `input_metric` to `output_measure`.
+    :param TO: The data type of outputs from the function.
+    :type TO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib", "honest-but-curious")
+    
+    # Standardize type arguments.
+    TO = RuntimeType.parse(type_name=TO)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=AnyMeasure)
+    c_function = py_to_c(function, c_type=CallbackFn, type_name=pass_through(TO))
+    c_privacy_map = py_to_c(privacy_map, c_type=CallbackFn, type_name=measure_distance_type(output_measure))
+    c_TO = py_to_c(TO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_user_measurement
+    lib_function.argtypes = [Domain, Metric, Measure, CallbackFn, CallbackFn, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_function, c_privacy_map, c_TO), Measurement))
+    output._depends_on(c_function, c_privacy_map)
+    return output
+
+def then_user_measurement(
+    output_measure: Measure,
+    function,
+    privacy_map,
+    TO: RuntimeTypeDescriptor
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_user_measurement(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        output_measure=output_measure,
+        function=function,
+        privacy_map=privacy_map,
+        TO=TO))
+

@@ -68,6 +68,11 @@ mod lipschitz_mul;
 #[cfg(feature = "contrib")]
 pub use crate::transformations::lipschitz_mul::*;
 
+#[cfg(feature = "ffi")]
+mod make_user_transformation;
+#[cfg(feature = "ffi")]
+pub use crate::transformations::make_user_transformation::*;
+
 #[cfg(feature = "contrib")]
 mod clamp;
 #[cfg(feature = "contrib")]

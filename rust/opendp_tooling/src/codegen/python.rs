@@ -58,7 +58,9 @@ fn generate_module(
         .join("\n");
 
     // the comb module needs access to core functions for type introspection on measurements/transformations
-    let comb_import = if module_name == "combinators" {
+    let constructor_mods = ["combinators", "measurements", "transformations"];
+
+    let extra_imports = if constructor_mods.contains(&module_name.as_str()) {
         r#"from opendp.core import *
 from opendp.domains import *
 from opendp.metrics import *
@@ -73,7 +75,7 @@ from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
-{comb_import}
+{extra_imports}
 __all__ = [
 {all}
 ]
