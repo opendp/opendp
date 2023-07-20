@@ -1,0 +1,49 @@
+\documentclass{article} % necessary for Overleaf to recognize the file
+\input{../lib.sty} % `rust/src/lib.sty` contains boilerplate and macros
+
+% \externaldocument[trans_mod:]{../mod}
+% \ref{trans_mod:thrm:privacy-proof}
+
+\title{\texttt{fn make\_laplace\_expr}}
+\author{Michael Shoemate \and Pauline Maury Laribière}\date{}
+
+\begin{document}
+\maketitle\contrib
+Proves soundness of \rustdoc{measurement/fn}{make\_laplace\_expr} in \asOfCommit{mod.rs}{8264d10}.
+
+\subsection*{Vetting history}
+\begin{itemize}
+    \item \vettingPR{829}
+\end{itemize}
+
+% Something like-- since the preconditions on make_laplace hold, by the postcondition of the proof for make_laplace, the result is a valid measurement.
+% Then in the function, argue that the downcasting results in a vector in the input domain of the laplace measurement, where the distance between any two of these vectors is in terms of the input metric
+
+\section{Hoare Triple}
+\subsection*{Preconditions}
+\begin{itemize}
+    \item \texttt{input\_domain} (ExprDomain<C>) is an expression domain which has a context C (LazyFrame or LazyGroupBy) and has an active serie.
+    \item \texttt{input\_metric} is the L1Distance metric that implements \rustdoc{transformations/trait}{LpDistance}.
+    \item \texttt{scale} is a non-negative float number.
+    \item \texttt{k} is a parameter to set the noise granularity in terms of $2^k$.
+\end{itemize}
+
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/make_laplace_expr.py}
+
+\subsection*{Postcondition}
+For every setting of the input parameters (input\_domain, input\_metric, scale, k) to make\_laplace\_expr such that the given preconditions hold, make\_base\_laplace returns a valid measurement.
+Each element in the release corresponds to the initial value x plus some laplacian noise as a function of the scale such that: 
+$f(x) = x + Lap(0, scale)$
+with $map(\Delta) = \frac{\Delta}{scale} \leq \epsilon$
+
+
+\section{Proof}
+Since the preconditions on make\_laplace hold, by the postcondition of the proof for make\_laplace, the result is a valid measurement.
+
+The downcasting of the Serie results in a vector in the input domain of the Laplace measurement. The distance between any two of these vectors (before make\_base\_laplace) is in term of the input metric. 
+After the make\_base\_laplace function, the distance between any two vector is in term of the output meesure (MaxDivergence). The distance between two corresponding series made from these vectors is also in term of the output measure.
+Hence the make\_laplace\_epr implements the laplacian mechanism and is a valid measurement.
+
+\end{document}
