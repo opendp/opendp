@@ -89,6 +89,11 @@ jobs:
   libs-macos:
     needs: credential-check
     runs-on: macos-11
+    strategy:
+      matrix:
+        architecture: [x86_64, aarch64]
+    env:
+      TARGET: ${{ matrix.architecture }}-apple-darwin
     steps:
       - name: Checkout repository
         if: ${{ !inputs.fake }}
@@ -110,40 +115,27 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Create Rust build for macos x86_64
+      - name: Create Rust build for macos
         if: ${{ !inputs.fake }}
-        run: bash tools/rust_build.sh -i -r -t -g x86_64-apple-darwin -f "$FEATURES"
         env:
-          CC: clang -target x86_64-apple-darwin
-
-      - name: Create Rust build for macos aarch64 (no tests)
-        if: ${{ !inputs.fake }}
-        run: bash tools/rust_build.sh -i -r -g aarch64-apple-darwin -f "$FEATURES"
-        env:
-          CC: clang -target aarch64-apple-darwin
-
-      - name: Create Rust build for macos universal
-        # https://developer.apple.com/documentation/apple-silicon/building-a-universal-macos-binary#Update-the-Architecture-List-of-Custom-Makefiles
-        if: ${{ !inputs.fake }}
-        run: |
-          mkdir -p rust/target/release
-          lipo \
-              rust/target/x86_64-apple-darwin/release/libopendp.dylib \
-              rust/target/aarch64-apple-darwin/release/libopendp.dylib \
-              -output rust/target/release/libopendp.dylib -create
+          # Only run tests for native compile
+          FLAGS: ${{ matrix.architecture == 'x86_64' && '-i -r -t' || '-i -r' }}
+          # Explicit setting of clang -target is necessary for gmp-mpfr-sys
+          CC: clang -target $TARGET
+        run: bash tools/rust_build.sh $FLAGS -g $TARGET -f "$FEATURES"
 
       - name: Create Rust build for macos (FAKE)
         if: ${{ inputs.fake }}
         run: |
-          mkdir -p rust/target/release/
-          echo windows >rust/target/release/libopendp.dylib
+          mkdir -p rust/target/${{ env.TARGET }}/release/
+          echo macos >rust/target/${{ env.TARGET }}/release/libopendp.dylib
 
       - name: Upload .dylib
         uses: actions/upload-artifact@v3
         with:
           name: libs
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
-          path: rust/target*/release/libopendp.dylib
+          path: rust/target*/${{ env.TARGET }}/release/libopendp.dylib
 
   libs-linux:
     needs: credential-check
@@ -156,7 +148,6 @@ jobs:
       # in a way that will satisfy the gmp configure script.
       DOCKER_IMAGE: messense/manylinux2014-cross:${{ matrix.architecture }}
       TARGET: ${{ matrix.architecture }}-unknown-linux-gnu
-      ARCH_LIB: libopendp-${{ matrix.architecture }}.so
     steps:
       - name: Checkout repository
         if: ${{ !inputs.fake }}
