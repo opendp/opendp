@@ -1,3 +1,9 @@
+# Runs a sanity test of a Python package for a channel.
+#
+# INPUTS
+# * channel:            The release channel
+# * python_repository:  The repository to download the package from (use "local" for an unpublished artifact)
+# * fake:               Whether this was a fake build (no actual test, will just be downloaded)
 name: Sanity Test Channel
 on:
   workflow_call:

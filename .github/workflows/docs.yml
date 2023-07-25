@@ -1,3 +1,7 @@
+# Generates the documentation for all channels and historical releases, then pushes to the gh-pages branch.
+#
+# INPUTS
+# * dry_run:  Whether to do a dry-run (don't actually push to the gh-pages branch)
 name: Documentation
 on:
   workflow_call:

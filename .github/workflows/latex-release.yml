@@ -1,3 +1,8 @@
+# Generates the Latex -> PDF files for a channel, then pushes them to the opendp/artifacts repo.
+# (This should eventually be merged with latex.yml.)
+#
+# INPUTS
+# * channel:  The release channel
 name: Latex Build (Release)
 on:
   workflow_call:

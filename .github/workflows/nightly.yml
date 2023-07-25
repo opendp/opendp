@@ -1,3 +1,4 @@
+# Creates a release on the nightly channel. Intended to right every day before midnight.
 name: Nightly
 on:
   schedule:

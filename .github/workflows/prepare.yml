@@ -1,3 +1,13 @@
+# Prepares a branch for a channel:
+# * Checks out the channel branch
+# * Initializes the channel branch from its upstream branch (if indicated)
+# * Configures the channel branch with the current version number
+# * Pushes the channel branch changes to origin
+#
+# INPUTS
+# * channel:  The release channel
+# * sync:     Whether to sync the channel branch from its upstream branch
+# * counter:  A number to append to the version, to allow multiple releases per day (for nightly/beta testing only)
 name: Prepare Channel
 on:
   workflow_call:

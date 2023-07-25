@@ -1,3 +1,16 @@
+# Creates a release for a channel. Calls other workflows to do all the work.
+#
+# INPUTS
+# * channel:  The release channel
+# * sync:     Whether to sync the channel branch from its upstream branch
+# * counter:  A number to append to the version, to allow multiple releases per day (for nightly/beta testing only)
+# * dry_run:  Whether to do a dry-run (don't actually publish)
+# * fake:     Whether to do a fake build (to save time, for testing only)
+#
+# EXAMPLES
+# Fake nightly release:  gh workflow run release.yml -f channel=nightly -f sync=true counter=5 -f fake=true
+# Dry-run beta release:  gh workflow run release.yml -f channel=beta -f sync=true -f dry_run=true
+# Final stable release:  gh workflow run release.yml -f channel=stable -f sync=true
 name: Release
 on:
   workflow_call:

@@ -1,3 +1,11 @@
+# Creates a build for a channel:
+# * Compiles for all platforms, uploads to the lib artifact
+# * Creates Python bindings, uploads to the python_bindings artifact
+# * Downloads the lib and python_bindings artifacts, creates a Python wheel, uploads to the python_wheel artifact
+#
+# INPUTS
+# * channel:  The release channel
+# * fake:     Whether to do a fake build (to save time, for testing only)
 name: Build Channel
 on:
   workflow_call:
