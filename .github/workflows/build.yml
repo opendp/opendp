@@ -129,7 +129,7 @@ jobs:
           # Only run tests for native compile
           FLAGS: ${{ matrix.architecture == 'x86_64' && '-i -r -t' || '-i -r' }}
           # Explicit setting of clang -target is necessary for gmp-mpfr-sys
-          CC: clang -target $TARGET
+          CC: clang -target ${{ env.TARGET }}
         run: bash tools/rust_build.sh $FLAGS -g $TARGET -f "$FEATURES"
 
       - name: Create Rust build for macos (FAKE)
