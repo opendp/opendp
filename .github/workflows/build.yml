@@ -214,7 +214,7 @@ jobs:
 
       - name: Create Python bindings
         if: ${{ !inputs.fake }}
-        run: bash tools/rust_build.sh -r -f "$FEATURES,bindings-python"
+        run: bash tools/rust_build.sh -r -n -f "$FEATURES,bindings-python"
 
       - name: Upload bindings
         uses: actions/upload-artifact@v3
