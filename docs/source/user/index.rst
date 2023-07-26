@@ -27,3 +27,4 @@ Potential contributors to OpenDP should read the :doc:`/contributor/index`.
    combinators
    utilities/index
    putting-it-together
+   analysis-api
