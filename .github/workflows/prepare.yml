@@ -81,7 +81,7 @@ jobs:
       - name: Initialize channel
         env:
           SYNC_FLAG: ${{ inputs.sync && '-s' || '-ns' }}
-        run: python tools/channel_tool.py initialize -c ${{ inputs.channel }} $SYNC_FLAG -u 714-nightly-build-workflows
+        run: python tools/channel_tool.py initialize -c ${{ inputs.channel }} $SYNC_FLAG
 
       - name: Configure channel
         id: configure
