@@ -9,7 +9,7 @@ use crate::ffi::any::{AnyDomain, AnyMetric, Downcast};
 use crate::ffi::any::{AnyObject, AnyTransformation};
 use crate::ffi::util::{c_bool, to_bool, Type};
 use crate::metrics::{L1Distance, L2Distance, SymmetricDistance};
-use crate::traits::{Float, Hashable, Number, Primitive};
+use crate::traits::{Hashable, Number, Primitive, Float};
 use crate::transformations::{
     make_count, make_count_by, make_count_by_categories, make_count_distinct,
     CountByCategoriesConstant, CountByConstant,
