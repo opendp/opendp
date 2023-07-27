@@ -12,7 +12,7 @@ __all__ = [
     "make_base_gaussian",
     "make_base_geometric",
     "make_base_laplace",
-    "make_base_ptr",
+    "make_base_laplace_threshold",
     "make_gaussian",
     "make_laplace",
     "make_randomized_response",
@@ -24,6 +24,7 @@ __all__ = [
     "then_base_gaussian",
     "then_base_geometric",
     "then_base_laplace",
+    "then_base_laplace_threshold",
     "then_gaussian",
     "then_laplace"
 ]
@@ -546,12 +547,12 @@ def then_base_laplace(
 
 
 @versioned
-def make_base_ptr(
+def make_base_laplace_threshold(
+    input_domain,
+    input_metric,
     scale,
     threshold,
-    TK: RuntimeTypeDescriptor,
-    k: int = -1074,
-    TV: RuntimeTypeDescriptor = None
+    k: int = -1074
 ) -> Measurement:
     """Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
     
@@ -559,23 +560,21 @@ def make_base_ptr(
     Larger granularities are more computationally efficient, but have a looser privacy map.
     If k is not set, k defaults to the smallest granularity.
     
-    [make_base_ptr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_ptr.html)
+    [make_base_laplace_threshold in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_laplace_threshold.html)
     
     **Supporting Elements:**
     
     * Input Domain:   `MapDomain<AtomDomain<TK>, AtomDomain<TV>>`
     * Output Type:    `HashMap<TK, TV>`
     * Input Metric:   `L1Distance<TV>`
-    * Output Measure: `SmoothedMaxDivergence<TV>`
+    * Output Measure: `FixedSmoothedMaxDivergence<TV>`
     
+    :param input_domain: Domain of the input.
+    :param input_metric: Metric for the input domain.
     :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
     :param threshold: Exclude counts that are less than this minimum value.
     :param k: The noise granularity in terms of 2^k.
     :type k: int
-    :param TK: Type of Key. Must be hashable/categorical.
-    :type TK: :py:ref:`RuntimeTypeDescriptor`
-    :param TV: Type of Value. Must be float.
-    :type TV: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -584,24 +583,36 @@ def make_base_ptr(
     assert_features("contrib", "floating-point")
     
     # Standardize type arguments.
-    TK = RuntimeType.parse(type_name=TK)
-    TV = RuntimeType.parse_or_infer(type_name=TV, public_example=scale)
+    TV = get_distance_type(input_metric)
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=TV)
     c_threshold = py_to_c(threshold, c_type=ctypes.c_void_p, type_name=TV)
     c_k = py_to_c(k, c_type=ctypes.c_uint32, type_name=i32)
-    c_TK = py_to_c(TK, c_type=ctypes.c_char_p)
-    c_TV = py_to_c(TV, c_type=ctypes.c_char_p)
     
     # Call library function.
-    lib_function = lib.opendp_measurements__make_base_ptr
-    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function = lib.opendp_measurements__make_base_laplace_threshold
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_scale, c_threshold, c_k, c_TK, c_TV), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_threshold, c_k), Measurement))
     
     return output
+
+def then_base_laplace_threshold(
+    scale,
+    threshold,
+    k: int = -1074
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_base_laplace_threshold(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        threshold=threshold,
+        k=k))
+
 
 
 @versioned
