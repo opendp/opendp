@@ -61,10 +61,12 @@ on:
         required: false
         default: false
       fake:
-        description: Fake Build?
+        description: Fake Build (Implies Dry Run)?
         type: boolean
         required: false
         default: false
+env:
+  DRY_RUN: ${{ inputs.dry_run || inputs.fake }}
 
 jobs:
   prepare:
@@ -95,7 +97,7 @@ jobs:
     with:
       channel: ${{ inputs.channel }}
       date: ${{ needs.prepare.outputs.date }}
-      dry_run: ${{ inputs.dry_run || inputs.fake }}
+      dry_run: ${{ env.DRY_RUN }}
     secrets: inherit
 
   sanity-test-post:
@@ -103,7 +105,8 @@ jobs:
     uses: ./.github/workflows/sanity-test.yml
     with:
       channel: ${{ inputs.channel }}
-      python_repository: testpypi
+      # dry-runs go to TestPyPI instead of PyPI
+      python_repository: ${{ env.DRY_RUN && 'testpypi' || 'pypi' }}
       fake: ${{ inputs.fake }}
 
   latex:
@@ -117,4 +120,4 @@ jobs:
     needs: [ sanity-test-post, latex ]
     uses: ./.github/workflows/docs.yml
     with:
-      dry_run: ${{ inputs.dry_run || inputs.fake }}
+      dry_run: ${{ env.DRY_RUN }}
