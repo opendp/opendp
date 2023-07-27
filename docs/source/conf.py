@@ -3,6 +3,7 @@
 import sys
 import os
 from datetime import datetime
+import semver
 
 # docs should be built without needing import the library binary for the specified version
 os.environ["OPENDP_HEADLESS"] = "true"
@@ -86,14 +87,16 @@ project = u'OpenDP'
 html_favicon = u'favicon.ico'
 copyright = u'%d' % datetime.now().year
 
+with open("../../VERSION") as f:
+    semver_version = semver.Version.parse(f.read().strip())
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-version = open('../../VERSION').readline().strip()
+version = str(semver_version.replace(prerelease=None, build=None))
 # The full version, including alpha/beta/rc tags.
-#release = ''
+release = str(semver_version)
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -149,7 +152,7 @@ smv_tag_whitelist = r'^v.*$'
 # smv_tag_whitelist = rf'(^v\d+\.\d+\.\d+$)|(^v{re.escape(version.split("-")[0])}.+$)'
 
 # Whitelist pattern for branches (set to None to ignore all branches)
-smv_branch_whitelist = r'(stable|latest)'
+smv_branch_whitelist = r'(stable|beta|nightly)'
 
 # Whitelist pattern for remotes (set to None to use local branches only)
 smv_remote_whitelist = r'origin'
@@ -178,23 +181,23 @@ rst_prolog = """
 .. |toctitle| replace:: Contents:
 """
 
-if version == "0.0.0+development":
-    branch = "main"
-else:
-    branch = f"release/{'.'.join(version.split('.')[:2])}.x"
-
-github_frag = f'/tree/{branch}'
-binder_frag = f'/{branch}'
-
 # insert this header on nbsphinx pages to link to binder and github:
+# we have to resolve the link ref here, at runtime, because sphinx-multiversion mediates the reading of this config
 nbsphinx_prolog = fr"""
 {{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}}
+{{% if env.config.version.endswith('-dev') %}}
+    {{% set frag = 'main' %}}
+{{% elif '-' in env.config.version %}}
+    {{% set frag = env.config.version.split('-', 1)[1].split('.', 1)[0] %}}
+{{% else %}}
+    {{% set frag = 'v' ~ env.config.version %}}
+{{% endif %}}
 .. raw:: html
 
     <div class="admonition note">
       This page was generated from
-      <a class="reference external" href="https://github.com/opendp/opendp{github_frag}/{{{{ docname|e }}}}" target="_blank">{{{{ docname|e }}}}</a>.
+      <a class="reference external" href="https://github.com/opendp/opendp/tree/{{{{ frag|e }}}}/{{{{ docname|e }}}}" target="_blank">{{{{ docname|e }}}}</a>.
       Interactive online version:
-      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp{binder_frag}?filepath={{{{ docname|e }}}}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
+      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp/{{{{ frag|e }}}}?filepath={{{{ docname|e }}}}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
     </div>
 """

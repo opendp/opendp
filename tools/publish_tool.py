@@ -1,54 +1,84 @@
 import argparse
+import configparser
+import datetime
 import os
-import subprocess
-import sys
 
-
-def log(message, command=False):
-    prefix = "$" if command else "#"
-    print(f"{prefix} {message}", file=sys.stderr)
-
-
-def run_command(description, args, capture_output=True, shell=True):
-    if description:
-        log(description)
-    printed_args = args.join(" ") if type(args) == list else args
-    log(printed_args, command=True)
-    stdout = subprocess.PIPE if capture_output else None
-    completed_process = subprocess.run(args, stdout=stdout, shell=shell, check=True, encoding="utf-8")
-    return completed_process.stdout.rstrip() if capture_output else None
+from utils import *
 
 
 def rust(args):
-    log(f"*** PUBLISHING RUST LIBRARY ***")
+    log(f"*** PUBLISHING RUST CRATE ***")
     os.environ["CARGO_REGISTRY_TOKEN"] = os.environ["CRATES_IO_API_TOKEN"]
     # We can't do a dry run of everything, because dependencies won't be available for later crates,
     # but we can at least do any leaf nodes (i.e. opendp_tooling).
     dry_run_arg = " --dry-run" if args.dry_run else ""
-    run_command("Publishing opendp_tooling crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp_tooling/Cargo.toml", capture_output=False)
+    run_command("Publishing opendp_tooling crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp_tooling/Cargo.toml")
     if not args.dry_run:
-        run_command("Letting crates.io index settle", f"sleep {args.settle_time}")
-        run_command("Publishing opendp_derive crate", f"cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml", capture_output=False)
-        run_command("Letting crates.io index settle", f"sleep {args.settle_time}")
-        run_command("Publishing opendp crate", f"cargo publish --verbose --manifest-path=rust/Cargo.toml", capture_output=False)
+        # As of https://github.com/rust-lang/cargo/pull/11062, cargo publish blocks until the index is propagated,
+        # so we don't have to wait here anymore.
+        run_command("Publishing opendp_derive crate", f"cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml")
+        run_command("Publishing opendp crate", f"cargo publish --verbose --manifest-path=rust/Cargo.toml")
 
 
 def python(args):
-    log(f"*** PUBLISHING PYTHON LIBRARY ***")
+    log(f"*** PUBLISHING PYTHON PACKAGE ***")
     # https://pypi.org/help/#apitoken
     os.environ["TWINE_USERNAME"] = "__token__"
     os.environ["TWINE_PASSWORD"] = os.environ["PYPI_API_TOKEN"]
-    dry_run_arg = " --repository testpypi" if args.dry_run else ""
-    run_command("Publishing opendp package", f"python3 -m twine upload{dry_run_arg} --verbose --skip-existing python/wheelhouse/*", capture_output=False)
+    config = configparser.RawConfigParser()
+    config.read("python/setup.cfg")
+    version = config["metadata"]["version"]
+    wheel = f"opendp-{version}-py3-none-any.whl"
+    run_command("Publishing opendp package", f"python -m twine upload -r {args.repository} --verbose python/wheelhouse/{wheel}")
+    # Unfortunately, twine doesn't have an option to block until the index is propagated. Polling the index is unreliable,
+    # because often the new item will appear, but installs will still fail (probably because of stale caches).
+    # So downstream things like sanity test will have to retry.
 
 
-def meta(args):
-    meta_args = [
-        f"rust -r {args.rust_token}",
-        f"python -p {args.python_token}",
-    ]
-    for args in meta_args:
-        _main(f"meta {args}".split())
+def sanity(args):
+    log(f"*** RUNNING SANITY TEST ***")
+    if args.python_repository not in ("pypi", "testpypi", "local"):
+        raise Exception(f"Unknown Python repository {args.python_repository}")
+    version = get_version()
+    version = get_python_version(version)
+    run_command("Creating venv", f"rm -rf {args.venv} && python -m venv {args.venv}")
+    if args.python_repository == "local":
+        package = f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
+        run_command(f"Installing opendp {version}", f". {args.venv}/bin/activate && pip install {package}")
+    else:
+        index_url = "https://test.pypi.org/simple" if args.python_repository == "testpypi" else "https://pypi.org/simple"
+        package = f"opendp=={version}"
+        run_command_with_retries(
+            f"Installing opendp {version}", f". {args.venv}/bin/activate && pip install -i {index_url} {package}",
+            args.package_timeout,
+            args.package_backoff
+        )
+    if args.fake:
+        run_command("Running test script", f". {args.venv}/bin/activate && echo FAKE TEST!!!")
+    else:
+        run_command("Running test script", f". {args.venv}/bin/activate && python tools/test.py")
+
+
+def github(args):
+    log(f"*** PUBLISHING GITHUB RELEASE ***")
+    version = get_version()
+    channel = infer_channel(version)
+    branch = get_current_branch()
+    if branch != channel:
+        raise Exception(f"Version {version} implies channel {channel}, but current branch is {branch}")
+    tag = f"v{version}"
+    # Just in case, clear out any existing tag, so a new one will be created by GitHub.
+    run_command("Clearing tag", f"git push origin :refs/tags/{tag}")
+    title = f"OpenDP {version}"
+    stripped_version = str(version).replace(".", "")
+    date = args.date or datetime.date.today()
+    notes = f"[CHANGELOG](https://github.com/opendp/opendp/blob/main/CHANGELOG.md#{stripped_version}---{date})"
+    cmd = f"gh release create {tag} --target {channel} -t '{title}' -n '{notes}'"
+    if version.prerelease:
+        cmd += " -p"
+    if args.draft:
+        cmd += " -d"
+    run_command("Creating GitHub release", cmd)
 
 
 def _main(argv):
@@ -56,19 +86,33 @@ def _main(argv):
     subparsers = parser.add_subparsers(dest="COMMAND", help="Command to run")
     subparsers.required = True
 
-    subparser = subparsers.add_parser("rust", help="Publish Rust library")
+    subparser = subparsers.add_parser("rust", help="Publish Rust crate")
     subparser.set_defaults(func=rust)
     subparser.add_argument("-n", "--dry-run", dest="dry_run", action="store_true", default=False)
     subparser.add_argument("-nn", "--no-dry-run", dest="dry_run", action="store_false")
-    subparser.add_argument("-s", "--settle-time", default=60)
+    subparser.add_argument("-t", "--index-check-timeout", type=int, default=300, help="How long to keep checking for index update (0 = don't check)")
+    subparser.add_argument("-b", "--index-check-backoff", type=float, default=2.0, help="How much to back off between checks for index update")
 
-    subparser = subparsers.add_parser("python", help="Publish Python library")
+    subparser = subparsers.add_parser("python", help="Publish Python package")
     subparser.set_defaults(func=python)
-    subparser.add_argument("-n", "--dry-run", dest="dry_run", action="store_true", default=False)
-    subparser.add_argument("-nn", "--no-dry-run", dest="dry_run", action="store_false")
+    subparser.add_argument("-r", "--repository", choices=["pypi", "testpypi"], default="pypi", help="Package repository")
+    subparser.add_argument("-t", "--index-check-timeout", type=int, default=300, help="How long to keep checking for index update (0 = don't check)")
+    subparser.add_argument("-b", "--index-check-backoff", type=float, default=2.0, help="How much to back off between checks for index update")
 
-    subparser = subparsers.add_parser("all", help="Publish everything")
-    subparser.set_defaults(func=meta, command="all")
+    subparser = subparsers.add_parser("sanity", help="Run a sanity test")
+    subparser.set_defaults(func=sanity)
+    subparser.add_argument("-e", "--venv", default="/tmp/sanity-venv", help="Virtual environment directory")
+    subparser.add_argument("-r", "--python-repository", choices=["pypi", "testpypi", "local"], default="pypi", help="Python package repository")
+    subparser.add_argument("-t", "--package-timeout", type=int, default=0, help="How long to retry package installation attempts (0 = no retries)")
+    subparser.add_argument("-b", "--package-backoff", type=float, default=2.0, help="How much to back off between package installation attempts")
+    subparser.add_argument("-f", "--fake", dest="fake", action="store_true", default=False)
+    subparser.add_argument("-nf", "--no-fake", dest="fake", action="store_false")
+
+    subparser = subparsers.add_parser("github", help="Publish GitHub release")
+    subparser.set_defaults(func=github)
+    subparser.add_argument("-d", "--date", type=datetime.date.fromisoformat, help="Release date")
+    subparser.add_argument("-n", "--draft", dest="draft", action="store_true", default=False)
+    subparser.add_argument("-nn", "--no-draft", dest="draft", action="store_false")
 
     args = parser.parse_args(argv[1:])
     args.func(args)
