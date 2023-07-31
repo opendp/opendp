@@ -20,15 +20,15 @@ use num::ToPrimitive;
 /// * `input_domain` - ExprDomain
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared
 pub trait ContextInSum<QO>: Context {
-    type OutputMetric: ExprMetric<Self, InnerMetric = AbsoluteDistance<QO>, Distance = QO>;
+    type SumMetric: ExprMetric<Self, InnerMetric = AbsoluteDistance<QO>, Distance = QO>;
 }
 
 impl<QO> ContextInSum<QO> for LazyGroupByContext {
-    type OutputMetric = L1Distance<QO>;
+    type SumMetric = L1Distance<QO>;
 }
 
 impl<QO> ContextInSum<QO> for LazyFrameContext {
-    type OutputMetric = AbsoluteDistance<QO>;
+    type SumMetric = AbsoluteDistance<QO>;
 }
 
 pub trait SumPrimitive: Sized {
@@ -109,14 +109,14 @@ impl_sum_primitive_for_int!(i64);
 pub fn make_sum_expr<MI, C: ContextInSum<QO>, QO>(
     input_domain: ExprDomain<C>,
     input_metric: MI,
-) -> Fallible<Transformation<ExprDomain<C>, ExprDomain<C>, MI, C::OutputMetric>>
+) -> Fallible<Transformation<ExprDomain<C>, ExprDomain<C>, MI, C::SumMetric>>
 where
     MI: 'static + ExprMetric<C, Distance = IntDistance> + Send + Sync,
     MI::InnerMetric: SumDatasetMetric,
     QO: Number + SumPrimitive + DataTypeFrom + ExactIntCast<i64>,
 
     (ExprDomain<C>, MI): MetricSpace,
-    (ExprDomain<C>, C::OutputMetric): MetricSpace,
+    (ExprDomain<C>, C::SumMetric): MetricSpace,
 {
     // check that input type is one of the typs that result in QO
     let active_column = input_domain.clone().active_column()?;
@@ -224,7 +224,7 @@ where
             },
         ),
         input_metric.clone(),
-        C::OutputMetric::default(),
+        C::SumMetric::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
             let max_changed_partitions = QO::exact_int_cast(if C::GROUPBY {
                 input_metric
