@@ -22,6 +22,7 @@ __all__ = [
     "make_base_laplace_threshold",
     "make_gaussian",
     "make_laplace",
+    "make_private_mean_expr",
     "make_randomized_response",
     "make_randomized_response_bool",
     "make_report_noisy_max_gumbel",
@@ -37,6 +38,7 @@ __all__ = [
     "then_base_laplace_threshold",
     "then_gaussian",
     "then_laplace",
+    "then_private_mean_expr",
     "then_report_noisy_max_gumbel",
     "then_user_measurement"
 ]
@@ -979,6 +981,85 @@ def then_laplace(
         input_domain=input_domain,
         input_metric=input_metric,
         scale=scale,
+        QO=QO))
+
+
+
+def make_private_mean_expr(
+    input_domain: Domain,
+    input_metric: Metric,
+    scale,
+    TI: RuntimeTypeDescriptor,
+    QO: RuntimeTypeDescriptor = "float"
+) -> Measurement:
+    r"""Polars operator to compute the private mean of a column in a LazyFrame or LazyGroupBy
+
+    [make_private_mean_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_private_mean_expr.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `ExprDomain<MI::LazyDomain>`
+    * Output Type:    `Expr`
+    * Input Metric:   `MI`
+    * Output Measure: `MaxDivergence<QO>`
+
+    :param input_domain: ExprDomain
+    :type input_domain: Domain
+    :param input_metric: The metric under which neighboring LazyFrames are compared
+    :type input_metric: Metric
+    :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+    :param TI: Data type of the input data
+    :type TI: :py:ref:`RuntimeTypeDescriptor`
+    :param QO: Output data type of the scale and epsilon
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    TI = RuntimeType.parse(type_name=TI)
+    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
+
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
+    c_TI = py_to_c(TI, c_type=ctypes.c_char_p)
+    c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
+
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_private_mean_expr
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_TI, c_QO), Measurement))
+
+    return output
+
+def then_private_mean_expr(
+    scale,
+    TI: RuntimeTypeDescriptor,
+    QO: RuntimeTypeDescriptor = "float"
+):  
+    r"""partial constructor of make_private_mean_expr
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_private_mean_expr`
+
+    :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+    :param TI: Data type of the input data
+    :type TI: :py:ref:`RuntimeTypeDescriptor`
+    :param QO: Output data type of the scale and epsilon
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_private_mean_expr(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        TI=TI,
         QO=QO))
 
 

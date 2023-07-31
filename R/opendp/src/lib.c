@@ -92,6 +92,8 @@ static R_CMethodDef R_CDef[] = {
     {"measurements__make_base_laplace_threshold", (DL_FUNC) &measurements__make_base_laplace_threshold, 7},
     {"measurements__make_gaussian", (DL_FUNC) &measurements__make_gaussian, 7},
     {"measurements__make_laplace", (DL_FUNC) &measurements__make_laplace, 6},
+    {"measurements__make_laplace_expr", (DL_FUNC) &measurements__make_laplace_expr, 6},
+    {"measurements__make_private_mean_expr", (DL_FUNC) &measurements__make_private_mean_expr, 6},
     {"measurements__make_randomized_response", (DL_FUNC) &measurements__make_randomized_response, 7},
     {"measurements__make_randomized_response_bool", (DL_FUNC) &measurements__make_randomized_response_bool, 4},
     {"measurements__make_report_noisy_max_gumbel", (DL_FUNC) &measurements__make_report_noisy_max_gumbel, 6},
