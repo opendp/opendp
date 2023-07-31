@@ -362,6 +362,21 @@ impl<F: Frame> Margin<F> {
         max_size
     }
 
+    pub fn get_min_size(&self) -> Fallible<u32> {
+        let count_col_name = self.get_count_column_name()?;
+        let min_df = self
+            .data
+            .clone()
+            .lazyframe()
+            .select([col(count_col_name.as_str()).min()])
+            .collect()?;
+        let min_size = min_df.get_columns()[0]
+            .u32()?
+            .get(0)
+            .ok_or_else(|| err!(FailedFunction, "expected one value"));
+        min_size
+    }
+
     fn get_join_column_names(&self) -> Fallible<Vec<String>> {
         Ok((self.data.schema()?.iter_names().enumerate())
             .filter(|(i, _)| Some(*i) != self.counts_index)

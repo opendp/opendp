@@ -101,7 +101,7 @@ mod test_make_laplace_expr {
 
         let laplace =
             make_base_laplace(VectorDomain::default(), L1Distance::default(), scale, None)?;
-        let result = laplace.invoke(&vec![1.0, 2.0])?;
+        let result = laplace.invoke(&vec![1.0, 2.0, 2.0])?;
         let series_res = Series::new("B", result);
 
         assert_ne!(series_exp, series_res);
@@ -118,7 +118,7 @@ mod test_make_laplace_expr {
         let series_res = lazy_groupby.agg([meas_res]).collect()?.column("B")?.clone();
 
         let chain = make_base_laplace(VectorDomain::default(), L1Distance::default(), scale, None)?;
-        let result = chain.invoke(&vec![1.0, 2.0])?;
+        let result = chain.invoke(&vec![1.0, 2.0, 2.0])?;
         let series_exp = Series::new("B", result);
 
         assert_ne!(series_res, series_exp);
