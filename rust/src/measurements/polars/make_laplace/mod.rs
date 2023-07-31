@@ -172,7 +172,7 @@ mod test_make_laplace_expr {
             .clone();
 
         let chain = make_base_laplace(VectorDomain::default(), L1Distance::default(), scale, None)?;
-        let result = chain.invoke(&vec![1.0, 2.0])?;
+        let result = chain.invoke(&vec![1.0, 2.0, 2.0])?;
         let series_exp = Series::new("B", result);
 
         assert_ne!(series_res, series_exp);
