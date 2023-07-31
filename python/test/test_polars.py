@@ -130,6 +130,21 @@ def test_private_lazyframe_sum():
     assert lf.select(expr).collect()["A"][0] == 50
 
 
+def test_private_lazyframe_mean():
+    pl = pytest.importorskip("polars")
+    lf_domain, lf = example_lf(
+        margin=["B"], public_info="lengths", max_partition_length=50
+    )
+
+    expr = pl.col("A").dp.mean((1.0, 2.0), scale=1.0)
+    plan = seed(lf.schema).group_by("B").agg(expr)
+    dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 1.0
+    )
+
+    print(lf.select(expr).collect())
+
+
 def test_stable_lazyframe():
     pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()

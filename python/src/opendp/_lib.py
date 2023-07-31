@@ -127,6 +127,10 @@ if pl is not None:
             :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
             """
             return self.expr.clip(*bounds).sum().dp.laplace(scale)
+        
+        
+        def mean(self, bounds, scale=None):
+            return self.expr.dp.sum(bounds, scale) / pl.len()
 
 
 # This enables backtraces in Rust by default.
