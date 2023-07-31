@@ -84,10 +84,7 @@ where
     )
 }
 
-#[bootstrap(
-    features("contrib"),
-    generics(D(suppress), MI(suppress))
-)]
+#[bootstrap(features("contrib"), generics(D(suppress), MI(suppress)))]
 /// Make a Transformation that converts the bounded dataset metric `MI`
 /// to the respective unbounded dataset metric with a no-op.
 ///
@@ -171,7 +168,7 @@ where
 #[cfg(test)]
 mod test {
     use crate::domains::{AtomDomain, VectorDomain};
-    use crate::metrics::{SymmetricDistance, ChangeOneDistance, InsertDeleteDistance};
+    use crate::metrics::{ChangeOneDistance, InsertDeleteDistance, SymmetricDistance};
 
     use super::*;
 
@@ -194,7 +191,8 @@ mod test {
         let data = vec![1i32, 2, 3];
         assert_eq!(bdd_trans.invoke(&data)?.len(), 3);
 
-        let ident_trans = (bdd_trans >> make_metric_unbounded(input_domain, ChangeOneDistance::default())?)?;
+        let ident_trans =
+            (bdd_trans >> make_metric_unbounded(input_domain, ChangeOneDistance::default())?)?;
         assert_eq!(ident_trans.invoke(&data)?.len(), 3);
         Ok(())
     }

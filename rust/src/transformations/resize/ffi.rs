@@ -4,8 +4,8 @@ use std::os::raw::{c_char, c_uint};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
-use crate::ffi::any::{Downcast, AnyMetric};
 use crate::ffi::any::{AnyDomain, AnyObject, AnyTransformation};
+use crate::ffi::any::{AnyMetric, Downcast};
 use crate::ffi::util::Type;
 use crate::metrics::{InsertDeleteDistance, IntDistance, SymmetricDistance};
 use crate::traits::CheckAtom;
@@ -39,7 +39,8 @@ pub extern "C" fn opendp_transformations__make_resize(
         (VectorDomain<AtomDomain<TA>>, MI): MetricSpace,
         (VectorDomain<AtomDomain<TA>>, MO): MetricSpace,
     {
-        let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
+        let input_domain =
+            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
         let input_metric = try_!(input_metric.downcast_ref::<MI>()).clone();
         let constant = try_!(constant.downcast_ref::<TA>()).clone();
         super::make_resize::<_, MI, MO>(input_domain, input_metric, size, constant).into_any()
@@ -80,7 +81,9 @@ mod tests {
     #[test]
     fn test_make_bounded_resize() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_resize(
-            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<i32>::new_closed((0i32, 10))?)),
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<i32>::new_closed((
+                0i32, 10,
+            ))?)),
             AnyMetric::new_raw(SymmetricDistance::default()),
             4 as c_uint,
             AnyObject::new_raw(0i32),

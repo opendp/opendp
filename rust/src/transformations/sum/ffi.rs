@@ -2,10 +2,10 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSp
 
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
-use crate::ffi::any::{AnyTransformation, Downcast, AnyDomain, AnyMetric};
+use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::metrics::{InsertDeleteDistance, SymmetricDistance};
-use crate::transformations::sum::MakeSum;
 use crate::transformations::make_sum;
+use crate::transformations::sum::MakeSum;
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_sum(
@@ -21,7 +21,8 @@ pub extern "C" fn opendp_transformations__make_sum(
         T: 'static + MakeSum<MI>,
         (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
     {
-        let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<T>>>()).clone();
+        let input_domain =
+            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<T>>>()).clone();
         let input_metric = try_!(input_metric.downcast_ref::<MI>()).clone();
         make_sum::<MI, T>(input_domain, input_metric).into_any()
     }

@@ -573,12 +573,11 @@ pub mod test {
         // let scale = 12.503562372734077;
 
         println!("scale: {}", scale);
-        let base_dg =
-            make_base_discrete_gaussian::<_, ZeroConcentratedDivergence<f64>, i32>(
-                AtomDomain::<i8>::default(),
-                AbsoluteDistance::default(),  
-                scale,
-            )?;
+        let base_dg = make_base_discrete_gaussian::<_, ZeroConcentratedDivergence<f64>, i32>(
+            AtomDomain::<i8>::default(),
+            AbsoluteDistance::default(),
+            scale,
+        )?;
         let n = 50_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_dg.invoke(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
