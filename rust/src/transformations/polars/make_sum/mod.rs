@@ -192,21 +192,28 @@ where
 
     let ideal_sensitivity = upper.inf_sub(&lower)?;
 
-    let margin = input_domain
-        .lazy_frame_domain
-        .margins
-        .get(&BTreeSet::from_iter(
-            input_domain.context.grouping_columns(),
-        ))
-        .ok_or_else(|| err!(MakeTransformation, "failed to find margin"))?;
-    
-    let max_size = margin.get_max_size()? as usize;
+    let margins = input_domain.lazy_frame_domain.margins.clone();
+    let (max_size, num_partitions) = if C::GROUPBY {
+        let margin = margins
+            .get(&BTreeSet::from_iter(
+                input_domain.context.grouping_columns(),
+            ))
+            .ok_or_else(|| err!(MakeTransformation, "failed to find margin"))?;
+
+        let max_size = margin.get_max_size()? as usize;
+        let num_partitions = item::<u32>(margin.data.clone().select([count()]))? as usize;
+        (max_size, num_partitions)
+    } else {
+        let margin = (margins.iter())
+            .find(|(_, m)| m.counts_index.is_some())
+            .ok_or_else(|| err!(MakeTransformation, "failed to find margin"))?.1;
+        let count_column = margin.get_count_column_name()?;
+        let max_size = item::<u32>(margin.data.clone().select([col(count_column.as_str()).sum()]))? as usize;
+        (max_size, 1)
+    };
 
     QO::check_overflow(max_size, lower, upper)?;
-
     let relaxation = QO::relaxation(max_size, lower, upper)?;
-
-    let num_partitions = item::<u32>(margin.data.clone().select([count()]))? as usize;
 
     Transformation::new(
         input_domain.clone(),
@@ -242,7 +249,56 @@ mod test_make_sum_expr {
 
     use super::*;
 
-    fn get_test_data() -> Fallible<(ExprDomain<LazyGroupByContext>, LazyGroupBy)> {
+    pub fn get_select_test_data() -> Fallible<(ExprDomain<LazyFrameContext>, LazyFrame)> {
+        let frame_domain = LazyFrameDomain::new(vec![
+            SeriesDomain::new("A", AtomDomain::<i32>::default()),
+            SeriesDomain::new("B", AtomDomain::<f64>::new_closed((0.5, 2.5))?),
+        ])?
+        .with_counts(df!["A" => [1, 2], "count" => [1u32, 2]]?.lazy())?
+        .with_counts(df!["B" => [1.0, 2.0], "count" => [2u32, 1]]?.lazy())?;
+
+        let expr_domain = ExprDomain::new(
+            frame_domain.clone(),
+            LazyFrameContext::Select,
+            Some("B".to_string()),
+            true,
+        );
+
+        let lazy_frame = df!(
+            "A" => &[1, 2, 2],
+            "B" => &[1.0, 1.0, 2.0],)?
+        .lazy();
+
+        Ok((expr_domain, lazy_frame))
+    }
+
+    #[test]
+    fn test_select_make_sum_expr() -> Fallible<()> {
+        let (expr_domain, lazy_frame) = get_select_test_data()?;
+
+        // Get resulting sum (expression result)
+        let trans = make_sum_expr::<_, _, f64>(expr_domain, InsertDeleteDistance)?;
+        let expr_res = trans.invoke(&(lazy_frame.clone(), col("B")))?.1;
+        let frame_actual = lazy_frame
+            .clone()
+            .select([expr_res])
+            .collect()?;
+
+        // Get expected sum
+        let frame_expected = lazy_frame
+            .select([col("B").sum()])
+            .collect()?;
+
+        assert_eq!(frame_actual, frame_expected);
+
+        let sens = trans.map(&2)?;
+        println!("sens: {:?}", sens);
+        assert!(sens > 2.);
+        assert!(sens < 2.00001);
+        Ok(())
+    }
+
+    fn get_grouped_test_data() -> Fallible<(ExprDomain<LazyGroupByContext>, LazyGroupBy)> {
         let frame_domain = LazyFrameDomain::new(vec![
             SeriesDomain::new("A", AtomDomain::<i32>::new_closed((1, 4))?),
             SeriesDomain::new("B", AtomDomain::<f64>::new_closed((0.5, 5.5))?),
@@ -268,8 +324,8 @@ mod test_make_sum_expr {
     }
 
     #[test]
-    fn test_make_sum_expr() -> Fallible<()> {
-        let (expr_domain, lazy_frame) = get_test_data()?;
+    fn test_grouped_make_sum_expr() -> Fallible<()> {
+        let (expr_domain, lazy_frame) = get_grouped_test_data()?;
 
         // Get resulting sum (expression result)
         let trans = make_sum_expr::<_, _, f64>(expr_domain, Lp(InsertDeleteDistance))?;
@@ -298,7 +354,7 @@ mod test_make_sum_expr {
 
     #[test]
     fn test_make_sum_expr_output_domain() -> Fallible<()> {
-        let (mut expr_domain, _) = get_test_data()?;
+        let (mut expr_domain, _) = get_grouped_test_data()?;
 
         let output_domain_res =
             make_sum_expr::<_, _, f64>(expr_domain.clone(), Lp(InsertDeleteDistance))?
