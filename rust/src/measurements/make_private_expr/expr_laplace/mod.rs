@@ -320,7 +320,10 @@ mod test_make_laplace_expr {
             .sort("A", Default::default())
             .collect()?;
 
-        assert_eq!(df_act, df_exp);
+        assert_eq!(
+            df_act.sort(["A"], false, false)?,
+            df_exp.sort(["A"], false, false)?
+        );
         Ok(())
     }
 }

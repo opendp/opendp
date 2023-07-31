@@ -131,18 +131,17 @@ pub mod polars_test {
         let pub_key_margin = Margin::new()
             .with_max_partition_length(3u32)
             .with_public_keys();
+        let pub_length_margin = Margin::new()
+            .with_max_partition_length(2u32)
+            .with_public_lengths();
+
         let lf_domain = LazyFrameDomain::new(vec![
             SeriesDomain::new("A", AtomDomain::<i32>::default()),
             SeriesDomain::new("B", AtomDomain::<f64>::new_closed((0.5, 2.5))?),
             SeriesDomain::new("C", AtomDomain::<i32>::default()),
         ])?
         .with_margin::<&str>(&[], pub_key_margin.clone())?
-        .with_margin(
-            &["A"],
-            Margin::new()
-                .with_public_keys()
-                .with_max_partition_length(2u32),
-        )?
+        .with_margin(&["A"], pub_length_margin)?
         .with_margin(&["B"], Margin::new().with_max_partition_length(2u32))?
         .with_margin(&["C"], pub_key_margin.with_max_num_partitions(4))?;
 

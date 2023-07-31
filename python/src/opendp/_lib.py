@@ -142,6 +142,10 @@ if pl is not None:
 
         def sum(self, bounds, scale=None):
             return self._expr.clip(*bounds).sum().dp.laplace(scale)
+        
+        
+        def mean(self, bounds, scale=float("nan")):
+            return self._expr.dp.sum(bounds, scale) / self._expr.len()
 
 
 # This enables backtraces in Rust by default.

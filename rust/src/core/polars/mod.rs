@@ -229,4 +229,8 @@ impl DPNamespace {
             .dp()
             .laplace(scale)
     }
+
+    pub fn mean<L: Literal>(self, bounds: (L, L), scale: f64) -> Expr {
+        self.0.clone().dp().sum(bounds, scale) / self.0.len()
+    }
 }
