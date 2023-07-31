@@ -77,7 +77,7 @@ where
 }
 
 #[cfg(test)]
-mod test_make_laplace_expr {
+pub mod test_make_laplace_expr {
     use super::*;
     use crate::metrics::{L1Distance, Lp};
     use crate::transformations::polars_test::{get_test_data, get_grouped_test_data};
