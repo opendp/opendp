@@ -4,7 +4,7 @@ use polars::lazy::dsl::Expr;
 
 use crate::{
     core::{Function, Measurement, MetricSpace},
-    domains::{item, DataTypeFrom, ExprDomain, ExprMetric},
+    domains::{DataTypeFrom, ExprDomain, ExprMetric},
     error::Fallible,
     measures::MaxDivergence,
     metrics::IntDistance,
@@ -33,7 +33,7 @@ use polars::prelude::*;
 pub fn make_private_mean_expr<MI, C: 'static + ContextInSum<TA>, TA>(
     input_domain: ExprDomain<C>,
     input_metric: MI,
-    scale: TA,
+    mut scale: TA,
     k: Option<i32>,
 ) -> Fallible<Measurement<ExprDomain<C>, Expr, MI, MaxDivergence<TA>>>
 where
@@ -51,29 +51,13 @@ where
     TA::Polars: PolarsNumericType<Native = TA>,
     Series: NamedFrom<Vec<TA>, [TA]>,
 {
-    let margins = input_domain.lazy_frame_domain.margins.clone();
-    let scale = if C::GROUPBY {
-        let margin = margins
-            .get(&BTreeSet::from_iter(
-                input_domain.context.grouping_columns(),
-            ))
-            .ok_or_else(|| err!(MakeTransformation, "failed to find margin"))?;
-        let min_size = margin.get_min_size()?;
-        scale/TA::inf_cast(min_size)?
-    } else {
-        let margin = (margins.iter())
-            .find(|(_, m)| m.counts_index.is_some())
-            .ok_or_else(|| err!(MakeTransformation, "failed to find margin"))?
-            .1;
-        let count_column = margin.get_count_column_name()?;
-        let size = item::<u32>(
-            margin
-                .data
-                .clone()
-                .select([col(count_column.as_str()).sum()]),
-        )? as usize;
-        scale/TA::inf_cast(size)?
-    };
+    let margin_id = BTreeSet::from_iter(input_domain.context.grouping_columns());
+    let margin = (input_domain.lazy_frame_domain.margins.get(&margin_id))
+        .ok_or_else(|| err!(MakeTransformation, "failed to find margin"))?;
+    let min_size = margin.get_min_size()?;
+
+    // we'll add noise to the sums, so we need to scale the noise by the number of rows
+    scale *= TA::inf_cast(min_size)?;
 
     make_sum_expr::<_, _, TA>(input_domain, input_metric)?
         >> then_laplace_expr(scale, k)
@@ -91,7 +75,7 @@ where
 mod test_make_mean_expr {
     use super::*;
     use crate::{
-        measurements::polars::make_laplace::test_make_laplace_expr::{
+        transformations::polars_test::{
             get_grouped_test_data, get_test_data,
         },
         metrics::{InsertDeleteDistance, Lp},
@@ -102,14 +86,17 @@ mod test_make_mean_expr {
         let (expr_domain, lazy_frame) = get_test_data()?;
         let scale: f64 = 0.1;
 
-        let meas = make_private_mean_expr::<_, _, f64>(expr_domain, InsertDeleteDistance, scale, None)?;
+        let meas =
+            make_private_mean_expr::<_, _, f64>(expr_domain, InsertDeleteDistance, scale, None)?;
         let expr_meas = meas.invoke(&(lazy_frame.clone(), col("B")))?;
 
         let release = lazy_frame.select([expr_meas]).collect()?;
         println!("{:?}", release);
 
-        let sens = meas.map(&2)?;
-        println!("sens: {:?}", sens);
+        let epsilon = meas.map(&2)?;
+        println!("sens: {:?}", epsilon);
+        assert!(epsilon > 8.33);
+        assert!(epsilon < 8.34);
 
         Ok(())
     }
@@ -122,13 +109,16 @@ mod test_make_mean_expr {
         let meas = make_private_mean_expr(expr_domain, Lp(InsertDeleteDistance), scale, None)?;
         let expr_meas = meas.invoke(&(group_by.clone(), col("B")))?;
 
-        let release = group_by.agg([expr_meas]).sort("A", Default::default()).collect()?;
+        let release = group_by
+            .agg([expr_meas])
+            .sort("A", Default::default())
+            .collect()?;
         println!("{:?}", release);
 
-        let sens = meas.map(&2)?;
-        println!("sens: {:?}", sens); // why ?
-        assert!(sens > 25.);
-        assert!(sens < 25.00001);
+        let epsilon = meas.map(&2)?;
+        println!("sens: {:?}", epsilon);
+        assert!(epsilon > 25.0);
+        assert!(epsilon < 25.00001);
 
         Ok(())
     }
