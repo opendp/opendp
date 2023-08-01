@@ -4,7 +4,7 @@ use std::fmt::{Debug, Formatter};
 
 use crate::core::{Metric, MetricSpace};
 use crate::domains::{DataTypeFrom, DatasetMetric, LazyFrameDomain};
-use crate::metrics::{AbsoluteDistance, L1Distance, Lp};
+use crate::metrics::{AbsoluteDistance, L1Distance, Lp, InsertDeleteDistance, SymmetricDistance, HammingDistance, ChangeOneDistance};
 use crate::traits::TotalOrd;
 use crate::{core::Domain, error::Fallible};
 
@@ -135,21 +135,34 @@ impl<C: Context> Debug for ExprDomain<C> {
     }
 }
 
-pub trait ExprMetric<C>: Metric {
+pub trait ExprMetric: Metric {
     type InnerMetric: Metric<Distance = Self::Distance>;
+    type Context: Context;
+    type Value: Clone;
     fn inner_metric(&self) -> Self::InnerMetric;
 }
 
-impl<M: Metric> ExprMetric<LazyFrameContext> for M {
-    type InnerMetric = Self;
 
-    fn inner_metric(&self) -> Self::InnerMetric {
-        self.clone()
+
+macro_rules! impl_expr_metric_select {
+    ($($ty:ty)+) => {$(
+        impl ExprMetric for $ty {
+            type InnerMetric = Self;
+            type Context = LazyFrameContext;
+            type Value = LazyFrame;
+        
+            fn inner_metric(&self) -> Self::InnerMetric {
+                self.clone()
+            }
+        })+
     }
 }
+impl_expr_metric_select!(InsertDeleteDistance SymmetricDistance HammingDistance ChangeOneDistance);
 
-impl<M: Metric> ExprMetric<LazyGroupByContext> for Lp<1, M> {
+impl<M: Metric> ExprMetric for Lp<1, M> {
     type InnerMetric = M;
+    type Context = LazyGroupByContext;
+    type Value = LazyGroupBy;
 
     fn inner_metric(&self) -> Self::InnerMetric {
         self.0.clone()

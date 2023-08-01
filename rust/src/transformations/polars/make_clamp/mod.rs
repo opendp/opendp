@@ -2,7 +2,7 @@ use num::One;
 use polars::prelude::*;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{Bounds, Context, DataTypeFrom, DynSeriesAtomDomain, ExprDomain, ExprMetric};
+use crate::domains::{Bounds, DataTypeFrom, DynSeriesAtomDomain, ExprDomain, ExprMetric};
 use crate::error::*;
 use crate::traits::{CheckAtom, DistanceConstant, TotalOrd};
 
@@ -14,17 +14,16 @@ use crate::traits::{CheckAtom, DistanceConstant, TotalOrd};
 /// * `bounds` - bounds to be applied in clamp operation.
 pub fn make_clamp_expr<
     M,
-    C: Context,
     TA: 'static + Clone + TotalOrd + CheckAtom + NumericNative + DataTypeFrom,
 >(
-    input_domain: ExprDomain<C>,
+    input_domain: ExprDomain<M::Context>,
     input_metric: M,
     bounds: (TA, TA),
-) -> Fallible<Transformation<ExprDomain<C>, ExprDomain<C>, M, M>>
+) -> Fallible<Transformation<ExprDomain<M::Context>, ExprDomain<M::Context>, M, M>>
 where
-    M: ExprMetric<C>,
+    M: ExprMetric,
     M::Distance: DistanceConstant<M::Distance> + One + Clone,
-    (ExprDomain<C>, M): MetricSpace,
+    (ExprDomain<M::Context>, M): MetricSpace,
     i32: From<TA>,
 {
     let mut output_domain = input_domain.clone();
@@ -57,7 +56,7 @@ where
         input_domain.clone(),
         output_domain,
         Function::new_fallible(
-            move |(frame, expr): &(C::Value, Expr)| -> Fallible<(C::Value, Expr)> {
+            move |(frame, expr): &(M::Value, Expr)| -> Fallible<(M::Value, Expr)> {
                 Ok((
                     frame.clone(),
                     expr.clone()

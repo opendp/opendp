@@ -9,114 +9,39 @@ use crate::metrics::{
 };
 use crate::traits::{ExactIntCast, Number};
 use crate::transformations::{CanFloatSumOverflow, CanIntSumOverflow, Sequential, SumRelaxation};
+use opendp_derive::bootstrap;
 use polars::prelude::*;
 use std::collections::{BTreeSet, HashMap};
 
 use num::ToPrimitive;
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
+#[bootstrap(generics(MI(suppress), QO(suppress)))] 
 /// Polars operator to compute sum of a series in a LazyFrame
+/// 
+/// | input metric               | input domain                     |
+/// | -------------------------- | -------------------------------- |
+/// | `SymmetricDistance`        | `ExprDomain<LazyFrameContext>`   |
+/// | `InsertDeleteDistance`     | `ExprDomain<LazyFrameContext>`   |
+/// | `L1<SymmetricDistance>`    | `ExprDomain<LazyGroupByContext>` |
+/// | `L1<InsertDeleteDistance>` | `ExprDomain<LazyGroupByContext>` |
 ///
 /// # Arguments
 /// * `input_domain` - ExprDomain
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared
-pub trait ContextInSum<QO>: Context {
-    type SumMetric: ExprMetric<Self, InnerMetric = AbsoluteDistance<QO>, Distance = QO>;
-}
-
-impl<QO> ContextInSum<QO> for LazyGroupByContext {
-    type SumMetric = L1Distance<QO>;
-}
-
-impl<QO> ContextInSum<QO> for LazyFrameContext {
-    type SumMetric = AbsoluteDistance<QO>;
-}
-
-pub trait SumPrimitive: Sized {
-    fn relaxation(size_limit: usize, lower: Self, upper: Self) -> Fallible<Self>;
-    fn check_overflow(size_limit: usize, lower: Self, upper: Self) -> Fallible<()>;
-}
-
-pub trait SumDatasetMetric: DatasetMetric {
-    fn max_changed_partitions(
-        &self,
-        num_partitions: usize,
-        d_in: &Self::Distance,
-    ) -> Fallible<usize>;
-}
-
-impl SumDatasetMetric for InsertDeleteDistance {
-    fn max_changed_partitions(
-        &self,
-        _num_partitions: usize,
-        d_in: &Self::Distance,
-    ) -> Fallible<usize> {
-        usize::exact_int_cast(*d_in)
-    }
-}
-impl SumDatasetMetric for SymmetricDistance {
-    fn max_changed_partitions(
-        &self,
-        num_partitions: usize,
-        _d_in: &Self::Distance,
-    ) -> Fallible<usize> {
-        Ok(num_partitions)
-    }
-}
-
-macro_rules! impl_sum_primitive_for_float {
-    ($t:ty) => {
-        impl SumPrimitive for $t {
-            fn relaxation(size_limit: usize, lower: Self, upper: Self) -> Fallible<Self> {
-                Sequential::<$t>::relaxation(size_limit, lower, upper)
-            }
-            fn check_overflow(size_limit: usize, lower: Self, upper: Self) -> Fallible<()> {
-                if Sequential::<$t>::float_sum_can_overflow(size_limit, (lower, upper))? {
-                    return fallible!(
-                        MakeTransformation,
-                        "potential for overflow when computing function"
-                    );
-                }
-                Ok(())
-            }
-        }
-    };
-}
-
-impl_sum_primitive_for_float!(f32);
-impl_sum_primitive_for_float!(f64);
-
-macro_rules! impl_sum_primitive_for_int {
-    ($t:ty) => {
-        impl SumPrimitive for $t {
-            fn relaxation(_size_limit: usize, _lower: Self, _upper: Self) -> Fallible<Self> {
-                Ok(0)
-            }
-            fn check_overflow(size_limit: usize, lower: Self, upper: Self) -> Fallible<()> {
-                if <$t>::int_sum_can_overflow(size_limit, (lower, upper))? {
-                    return fallible!(
-                        MakeTransformation,
-                        "potential for overflow when computing function"
-                    );
-                }
-                Ok(())
-            }
-        }
-    };
-}
-impl_sum_primitive_for_int!(u64);
-impl_sum_primitive_for_int!(i64);
-
-pub fn make_sum_expr<MI, C: ContextInSum<QO>, QO>(
-    input_domain: ExprDomain<C>,
+pub fn make_sum_expr<MI, QO>(
+    input_domain: ExprDomain<MI::Context>,
     input_metric: MI,
-) -> Fallible<Transformation<ExprDomain<C>, ExprDomain<C>, MI, C::SumMetric>>
+) -> Fallible<Transformation<ExprDomain<MI::Context>, ExprDomain<MI::Context>, MI, MI::SumMetric>>
 where
-    MI: 'static + ExprMetric<C, Distance = IntDistance> + Send + Sync,
+    MI: 'static + SumExprMetric<Distance = IntDistance> + Send + Sync,
     MI::InnerMetric: SumDatasetMetric,
     QO: Number + SumPrimitive + DataTypeFrom + ExactIntCast<i64>,
 
-    (ExprDomain<C>, MI): MetricSpace,
-    (ExprDomain<C>, C::SumMetric): MetricSpace,
+    (ExprDomain<MI::Context>, MI): MetricSpace,
+    (ExprDomain<MI::Context>, MI::Context::SumMetric): MetricSpace,
 {
     // check that input type is one of the typs that result in QO
     let active_column = input_domain.clone().active_column()?;
@@ -213,14 +138,14 @@ where
         input_domain.clone(),
         output_domain,
         Function::new(
-            move |(frame, expr): &(C::Value, Expr)| -> (C::Value, Expr) {
+            move |(frame, expr): &(MI::Value, Expr)| -> (MI::Value, Expr) {
                 (frame.clone(), expr.clone().sum())
             },
         ),
         input_metric.clone(),
-        C::SumMetric::default(),
+        MI::SumMetric::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
-            let max_changed_partitions = QO::exact_int_cast(if C::GROUPBY {
+            let max_changed_partitions = QO::exact_int_cast(if <MI::Context as Context>::GROUPBY {
                 input_metric
                     .inner_metric()
                     .max_changed_partitions(num_partitions, d_in)?
@@ -248,6 +173,93 @@ fn set_sum_margins<C: Context>(
         HashMap::from_iter([(BTreeSet::new(), output_margin)]);
     Ok(())
 }
+
+pub trait SumExprMetric<QO>: ExprMetric {
+    type SumMetric: ExprMetric<InnerMetric = AbsoluteDistance<QO>, Distance = QO>;
+}
+
+impl<QO> SumExprMetric<QO> for LazyGroupByContext {
+    type SumMetric = L1Distance<QO>;
+}
+
+impl<QO> SumExprMetric<QO> for LazyFrameContext {
+    type SumMetric = AbsoluteDistance<QO>;
+}
+
+pub trait SumPrimitive: Sized {
+    fn relaxation(size_limit: usize, lower: Self, upper: Self) -> Fallible<Self>;
+    fn check_overflow(size_limit: usize, lower: Self, upper: Self) -> Fallible<()>;
+}
+
+pub trait SumDatasetMetric: DatasetMetric {
+    fn max_changed_partitions(
+        &self,
+        num_partitions: usize,
+        d_in: &Self::Distance,
+    ) -> Fallible<usize>;
+}
+
+impl SumDatasetMetric for InsertDeleteDistance {
+    fn max_changed_partitions(
+        &self,
+        _num_partitions: usize,
+        d_in: &Self::Distance,
+    ) -> Fallible<usize> {
+        usize::exact_int_cast(*d_in)
+    }
+}
+impl SumDatasetMetric for SymmetricDistance {
+    fn max_changed_partitions(
+        &self,
+        num_partitions: usize,
+        _d_in: &Self::Distance,
+    ) -> Fallible<usize> {
+        Ok(num_partitions)
+    }
+}
+
+macro_rules! impl_sum_primitive_for_float {
+    ($t:ty) => {
+        impl SumPrimitive for $t {
+            fn relaxation(size_limit: usize, lower: Self, upper: Self) -> Fallible<Self> {
+                Sequential::<$t>::relaxation(size_limit, lower, upper)
+            }
+            fn check_overflow(size_limit: usize, lower: Self, upper: Self) -> Fallible<()> {
+                if Sequential::<$t>::float_sum_can_overflow(size_limit, (lower, upper))? {
+                    return fallible!(
+                        MakeTransformation,
+                        "potential for overflow when computing function"
+                    );
+                }
+                Ok(())
+            }
+        }
+    };
+}
+
+impl_sum_primitive_for_float!(f32);
+impl_sum_primitive_for_float!(f64);
+
+macro_rules! impl_sum_primitive_for_int {
+    ($t:ty) => {
+        impl SumPrimitive for $t {
+            fn relaxation(_size_limit: usize, _lower: Self, _upper: Self) -> Fallible<Self> {
+                Ok(0)
+            }
+            fn check_overflow(size_limit: usize, lower: Self, upper: Self) -> Fallible<()> {
+                if <$t>::int_sum_can_overflow(size_limit, (lower, upper))? {
+                    return fallible!(
+                        MakeTransformation,
+                        "potential for overflow when computing function"
+                    );
+                }
+                Ok(())
+            }
+        }
+    };
+}
+impl_sum_primitive_for_int!(u64);
+impl_sum_primitive_for_int!(i64);
 
 #[cfg(test)]
 mod test_make_sum_expr {

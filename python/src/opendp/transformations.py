@@ -60,6 +60,7 @@ __all__ = [
     "make_split_records",
     "make_subset_by",
     "make_sum",
+    "make_sum_expr",
     "make_sum_of_squared_deviations",
     "make_unordered",
     "make_variance",
@@ -96,6 +97,7 @@ __all__ = [
     "then_series_to_option_vec",
     "then_series_to_vec",
     "then_sum",
+    "then_sum_expr",
     "then_sum_of_squared_deviations",
     "then_unordered",
     "then_variance"
@@ -3207,6 +3209,59 @@ def then_sum(
     
 ):
     return PartialConstructor(lambda input_domain, input_metric: make_sum(
+        input_domain=input_domain,
+        input_metric=input_metric))
+
+
+
+@versioned
+def make_sum_expr(
+    input_domain,
+    input_metric
+) -> Transformation:
+    """Polars operator to compute sum of a series in a LazyFrame
+    
+    | input metric               | input domain                     |
+    | -------------------------- | -------------------------------- |
+    | `SymmetricDistance`        | `ExprDomain<LazyFrameContext>`   |
+    | `InsertDeleteDistance`     | `ExprDomain<LazyFrameContext>`   |
+    | `L1<SymmetricDistance>`    | `ExprDomain<LazyGroupByContext>` |
+    | `L1<InsertDeleteDistance>` | `ExprDomain<LazyGroupByContext>` |
+    
+    [make_sum_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sum_expr.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `ExprDomain<MI::Context>`
+    * Output Domain:  `ExprDomain<MI::Context>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MI::SumMetric`
+    
+    :param input_domain: ExprDomain
+    :param input_metric: The metric under which neighboring LazyFrames are compared
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_sum_expr
+    lib_function.argtypes = [Domain, Metric]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric), Transformation))
+    
+    return output
+
+def then_sum_expr(
+    
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_sum_expr(
         input_domain=input_domain,
         input_metric=input_metric))
 

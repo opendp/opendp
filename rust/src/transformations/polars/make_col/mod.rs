@@ -17,15 +17,15 @@ use crate::error::*;
 /// * `M` - Dataset Metric type.
 /// * `C` - Context in which expression is applied.
 ///
-pub fn make_col<M, C: Context>(
-    input_domain: ExprDomain<C>,
+pub fn make_col<M>(
+    input_domain: ExprDomain<M::Context>,
     input_metric: M,
     col_name: String,
-) -> Fallible<Transformation<ExprDomain<C>, ExprDomain<C>, M, M>>
+) -> Fallible<Transformation<ExprDomain<M::Context>, ExprDomain<M::Context>, M, M>>
 where
-    M: ExprMetric<C>,
+    M: ExprMetric,
     M::Distance: Clone + 'static,
-    (ExprDomain<C>, M): MetricSpace,
+    (ExprDomain<M::Context>, M): MetricSpace,
 {
     if input_domain.active_column.is_some() {
         return fallible!(
@@ -73,7 +73,7 @@ where
         input_domain.clone(),
         output_domain,
         Function::new_fallible(
-            move |(frame, expr): &(C::Value, Expr)| -> Fallible<(C::Value, Expr)> {
+            move |(frame, expr): &(M::Value, Expr)| -> Fallible<(M::Value, Expr)> {
                 if expr != &Expr::Wildcard {
                     return fallible!(
                         FailedFunction,
