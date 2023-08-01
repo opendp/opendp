@@ -205,9 +205,3 @@ impl<T: TotalOrd + DataTypeFrom, C: Context> MetricSpace for (ExprDomain<C>, L1D
         series_domain.field.dtype == T::dtype()
     }
 }
-
-impl<T: TotalOrd> MetricSpace for (ExprDomain<LazyFrameContext>, AbsoluteDistance<T>) {
-    fn check(&self) -> bool {
-        true
-    }
-}
