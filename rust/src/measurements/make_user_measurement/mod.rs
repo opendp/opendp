@@ -14,8 +14,8 @@ use crate::{
     arguments(
         input_domain(hint = "Domain"),
         input_metric(hint = "Metric"),
-        function(rust_type = "$pass_through(TO)"),
         output_measure(hint = "Measure"),
+        function(rust_type = "$pass_through(TO)"),
         privacy_map(rust_type = "$measure_distance_type(output_measure)"),
     ),
     dependencies("c_function", "c_privacy_map")
