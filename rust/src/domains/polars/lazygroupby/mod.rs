@@ -47,7 +47,8 @@ impl<Q> MetricSpace for (LazyFrameDomain, AbsoluteDistance<Q>) {
             (lf.collect()?.get_columns()[0].u32()?.get(0)).ok_or_else(|| err!(FailedFunction))
         };
 
-        if let Some(margin) = self.0.margins.get(&BTreeSet::default()) {
+        if let Some(btree) = self.0.margins.iter().find(|(_, m)| m.counts_index.is_some()) {
+            let margin = btree.1;
             let Ok(count_name) = margin.get_count_column_name() else { panic!("No count columns name specified")};
             let lf = margin.clone().data.select([col(count_name.as_str())]);
 
