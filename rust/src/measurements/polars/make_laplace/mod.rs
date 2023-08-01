@@ -86,55 +86,6 @@ mod test_make_laplace_expr {
         measurements::make_base_laplace,
     };
 
-<<<<<<< Updated upstream
-    fn get_test_data() -> Fallible<(ExprDomain<LazyFrameContext>, LazyFrame)> {
-        let frame_domain = LazyFrameDomain::new(vec![
-            SeriesDomain::new("A", AtomDomain::<i32>::default()),
-            SeriesDomain::new("B", AtomDomain::<f64>::default()),
-        ])?
-        .with_counts(df!["count" => [1u32]]?.lazy())?;
-
-        let expr_domain = ExprDomain::new(
-            frame_domain,
-            LazyFrameContext::Select,
-            Some("B".to_string()),
-            true,
-        );
-
-        let lazy_frame = df!(
-            "A" => &[1, 2],
-            "B" => &[1.0, 2.0],)?
-        .lazy();
-
-        Ok((expr_domain, lazy_frame))
-    }
-
-    fn get_grouped_test_data() -> Fallible<(ExprDomain<LazyGroupByContext>, LazyGroupBy)> {
-        let frame_domain = LazyFrameDomain::new(vec![
-            SeriesDomain::new("A", AtomDomain::<i32>::default()),
-            SeriesDomain::new("B", AtomDomain::<f64>::default()),
-        ])?
-        .with_counts(df!["B" => [1.0, 2.0], "count" => [1u32, 1]]?.lazy())?;
-
-        let lazy_frame = df!(
-            "A" => &[1, 2],
-            "B" => &[1.0, 2.0],)?
-        .lazy();
-
-        let expr_domain = ExprDomain::new(
-            frame_domain,
-            LazyGroupByContext {
-                columns: vec!["A".to_string()],
-            },
-            Some("B".to_string()),
-            true,
-        );
-
-        Ok((expr_domain, lazy_frame.groupby_stable([col("A")])))
-    }
-
-=======
->>>>>>> Stashed changes
     #[test]
     fn test_make_laplace_expr() -> Fallible<()> {
         let (expr_domain, lazy_frame) = get_test_data()?;
