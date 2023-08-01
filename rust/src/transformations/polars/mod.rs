@@ -43,9 +43,7 @@ pub use make_groupby::*;
 
 #[cfg(test)]
 pub mod polars_test {
-    use crate::domains::{
-        AtomDomain, ExprDomain, LazyFrameContext, LazyFrameDomain, LazyGroupByContext, SeriesDomain,
-    };
+    use crate::domains::{AtomDomain, ExprDomain, LazyFrameContext, LazyFrameDomain, SeriesDomain, LazyGroupByContext};
     use crate::error::*;
     use polars::prelude::*;
 
@@ -74,5 +72,19 @@ pub mod polars_test {
         .lazy();
 
         Ok((expr_domain, lazy_frame))
+    }
+
+    pub fn get_grouped_test_data() -> Fallible<(ExprDomain<LazyGroupByContext>, LazyGroupBy)> {
+        let (expr_domain, lazy_frame) = get_test_data()?;
+        let expr_domain = ExprDomain::new(
+            expr_domain.lazy_frame_domain,
+            LazyGroupByContext {
+                columns: vec!["A".to_string()],
+            },
+            expr_domain.active_column,
+            expr_domain.aligned,
+        );
+
+        Ok((expr_domain, lazy_frame.groupby_stable([col("A")])))
     }
 }
