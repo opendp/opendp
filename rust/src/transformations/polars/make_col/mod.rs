@@ -93,7 +93,7 @@ where
 mod test_make_col {
     use crate::domains::{AtomDomain, LazyGroupByContext, SeriesDomain};
     use crate::metrics::{Lp, SymmetricDistance};
-    use crate::transformations::polars::test::get_test_data;
+    use crate::transformations::polars_test::get_test_data;
 
     use super::*;
 
