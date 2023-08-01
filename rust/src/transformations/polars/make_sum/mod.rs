@@ -1,7 +1,7 @@
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{
     item, Context, DataTypeFrom, DatasetMetric, ExprDomain, ExprMetric, LazyFrameContext,
-    LazyGroupByContext,
+    LazyGroupByContext, Margin,
 };
 use crate::error::*;
 use crate::metrics::{
@@ -10,7 +10,7 @@ use crate::metrics::{
 use crate::traits::{ExactIntCast, Number};
 use crate::transformations::{CanFloatSumOverflow, CanIntSumOverflow, Sequential, SumRelaxation};
 use polars::prelude::*;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 
 use num::ToPrimitive;
 
@@ -150,6 +150,17 @@ where
         .drop_bounds()?;
     output_domain.aligned = false;
 
+    // output margins
+    // if select, then only one margin, with no grouping keys.
+    // if groupby, then only one margin, with current grouping keys. the data is one row per group: old_df, but replace all counts with 1
+
+    // we only care about margins that match the current grouping columns
+    let margin_id = BTreeSet::from_iter(input_domain.context.grouping_columns());
+    let margin = (input_domain.lazy_frame_domain.margins.get(&margin_id))
+        .ok_or_else(|| err!(MakeTransformation, "failed to find margin {:?}", margin_id))?;
+
+    set_sum_margins(&mut output_domain, margin)?;
+
     // stability map
 
     // 1. compute relaxation (via trait helper)
@@ -192,25 +203,8 @@ where
 
     let ideal_sensitivity = upper.inf_sub(&lower)?;
 
-    let margins = input_domain.lazy_frame_domain.margins.clone();
-    let (max_size, num_partitions) = if C::GROUPBY {
-        let margin = margins
-            .get(&BTreeSet::from_iter(
-                input_domain.context.grouping_columns(),
-            ))
-            .ok_or_else(|| err!(MakeTransformation, "failed to find margin"))?;
-
-        let max_size = margin.get_max_size()? as usize;
-        let num_partitions = item::<u32>(margin.data.clone().select([count()]))? as usize;
-        (max_size, num_partitions)
-    } else {
-        let margin = (margins.iter())
-            .find(|(_, m)| m.counts_index.is_some())
-            .ok_or_else(|| err!(MakeTransformation, "failed to find margin"))?.1;
-        let count_column = margin.get_count_column_name()?;
-        let max_size = item::<u32>(margin.data.clone().select([col(count_column.as_str()).sum()]))? as usize;
-        (max_size, 1)
-    };
+    let max_size = margin.get_max_size()? as usize;
+    let num_partitions = item::<u32>(margin.data.clone().select([count()]))? as usize;
 
     QO::check_overflow(max_size, lower, upper)?;
     let relaxation = QO::relaxation(max_size, lower, upper)?;
@@ -240,6 +234,21 @@ where
     )
 }
 
+/// Set the margins on the output domain to consist of only one margin: 1 row per group, with all counts set to 1.
+fn set_sum_margins<C: Context>(
+    output_domain: &mut ExprDomain<C>,
+    sum_margin: &Margin<LazyFrame>,
+) -> Fallible<()> {
+    let output_margin = Margin {
+        data: (sum_margin.data.clone())
+            .with_column(lit(1u32).alias(sum_margin.get_count_column_name()?.as_str())),
+        counts_index: sum_margin.counts_index,
+    };
+    output_domain.lazy_frame_domain.margins =
+        HashMap::from_iter([(BTreeSet::new(), output_margin)]);
+    Ok(())
+}
+
 #[cfg(test)]
 mod test_make_sum_expr {
     use crate::{
@@ -254,6 +263,7 @@ mod test_make_sum_expr {
             SeriesDomain::new("A", AtomDomain::<i32>::default()),
             SeriesDomain::new("B", AtomDomain::<f64>::new_closed((0.5, 2.5))?),
         ])?
+        .with_counts(df!["count" => [3u32]]?.lazy())?
         .with_counts(df!["A" => [1, 2], "count" => [1u32, 2]]?.lazy())?
         .with_counts(df!["B" => [1.0, 2.0], "count" => [2u32, 1]]?.lazy())?;
 
@@ -279,15 +289,11 @@ mod test_make_sum_expr {
         // Get resulting sum (expression result)
         let trans = make_sum_expr::<_, _, f64>(expr_domain, InsertDeleteDistance)?;
         let expr_res = trans.invoke(&(lazy_frame.clone(), col("B")))?.1;
-        let frame_actual = lazy_frame
-            .clone()
-            .select([expr_res])
-            .collect()?;
+        let frame_actual = lazy_frame.clone().select([expr_res]).collect()?;
+        println!("frame_actual: {:?}", frame_actual);
 
         // Get expected sum
-        let frame_expected = lazy_frame
-            .select([col("B").sum()])
-            .collect()?;
+        let frame_expected = lazy_frame.select([col("B").sum()]).collect()?;
 
         assert_eq!(frame_actual, frame_expected);
 
@@ -335,6 +341,7 @@ mod test_make_sum_expr {
             .agg([expr_res])
             .sort("A", Default::default())
             .collect()?;
+        println!("frame_actual: {:?}", frame_actual);
 
         // Get expected sum
         let frame_expected = lazy_frame
@@ -362,6 +369,13 @@ mod test_make_sum_expr {
                 .clone();
 
         expr_domain.aligned = false;
+
+        let margin_id = BTreeSet::from_iter(expr_domain.context.grouping_columns());
+        let margin = (expr_domain.lazy_frame_domain.margins.get(&margin_id))
+            .ok_or_else(|| err!(MakeTransformation, "failed to find margin {:?}", margin_id))?
+            .clone();
+
+        set_sum_margins(&mut expr_domain, &margin)?;
 
         assert_eq!(output_domain_res, expr_domain);
 

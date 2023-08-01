@@ -242,14 +242,24 @@ impl<F: Frame> FrameDomain<F> {
 
 impl<F: Frame> Debug for FrameDomain<F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut margins_debug = self
+            .margins
+            .keys()
+            .map(|id| format!("{:?}", id))
+            .collect::<Vec<_>>()
+            .join(", ");
+        if !margins_debug.is_empty() {
+            margins_debug = format!("; margins={{{}}}", margins_debug);
+        }
         write!(
             f,
-            "LazyFrameDomain({})",
+            "LazyFrameDomain({}{})",
             self.series_domains
                 .iter()
                 .map(|s| format!("{}: {}", s.field.name, s.field.dtype))
                 .collect::<Vec<_>>()
-                .join(", ")
+                .join(", "),
+            margins_debug
         )
     }
 }
