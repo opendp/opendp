@@ -190,7 +190,7 @@ mod test_make_with_columns {
     use crate::core::Domain;
     use crate::error::ErrorVariant::DomainMismatch;
     use crate::metrics::SymmetricDistance;
-    use crate::transformations::polars::test::get_test_data;
+    use crate::transformations::polars_test::get_test_data;
     use crate::transformations::{make_col, then_col};
 
     #[test]
