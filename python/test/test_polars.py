@@ -34,6 +34,18 @@ def test_dataframe_domain_with_counts():
     domain, data = test_dataframe_domain()
     return domain.with_counts(counts), data
 
+def test_expr_domain():
+    lf_domain = test_lazyframe_domain()[0]
+    expr_domain = dp.expr_domain(lf_domain, grouping_columns=["A"], active_column="B")
+
+    dp.expr_domain(lf_domain, context="filter", active_column="B")
+    with pytest.raises(dp.OpenDPException):
+        dp.expr_domain(lf_domain, context="X", active_column="B")
+
+    # TODO: data loader for ExprDomain members
+    return expr_domain, None
+
+
 # data loaders
 def test_series_ffi():
     """ensure that series can be passed to/from Rust"""
