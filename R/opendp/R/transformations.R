@@ -947,8 +947,8 @@ then_clamp <- function(
 #' | -------------------------- | -------------------------------- |
 #' | `SymmetricDistance`        | `ExprDomain<LazyFrameContext>`   |
 #' | `InsertDeleteDistance`     | `ExprDomain<LazyFrameContext>`   |
-#' | `L1<SymmetricDistance>`    | `ExprDomain<LazyGroupByContext>` |
-#' | `L1<InsertDeleteDistance>` | `ExprDomain<LazyGroupByContext>` |
+#' | `L1<SymmetricDistance>`    | `ExprDomain<LazyGroupByDomain>` |
+#' | `L1<InsertDeleteDistance>` | `ExprDomain<LazyGroupByDomain>` |
 #'
 #' [make_col in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_col.html)
 #'

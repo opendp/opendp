@@ -38,7 +38,10 @@ pub use make_col::*;
 
 #[cfg(test)]
 pub mod polars_test {
-    use crate::domains::{AtomDomain, ExprDomain, LazyFrameContext, LazyFrameDomain, SeriesDomain};
+    use crate::domains::{
+        AtomDomain, ExprDomain, LazyFrameContext, LazyFrameDomain, LazyGroupByContext,
+        LazyGroupByDomain, SeriesDomain,
+    };
     use crate::error::*;
     use polars::prelude::*;
 
@@ -53,8 +56,11 @@ pub mod polars_test {
         .with_counts(df!["B" => [1.0, 2.0], "count" => [2u32, 1]]?.lazy())?
         .with_counts(df!["C" => [8, 9, 10], "count" => [1u32, 1, 1]]?.lazy())?;
 
-        let expr_domain =
-            ExprDomain::new(frame_domain.clone(), LazyFrameContext::Select, Some("B".to_string()));
+        let expr_domain = ExprDomain::new(
+            frame_domain.clone(),
+            LazyFrameContext::Select,
+            Some("B".to_string()),
+        );
 
         let lazy_frame = df!(
             "A" => &[1, 2, 2],
@@ -63,5 +69,21 @@ pub mod polars_test {
         .lazy();
 
         Ok((expr_domain, Arc::new(lazy_frame)))
+    }
+
+    pub fn get_grouped_test_data() -> Fallible<(ExprDomain<LazyGroupByDomain>, Arc<LazyGroupBy>)> {
+        let (expr_domain, lazy_frame) = get_select_test_data()?;
+        let expr_domain = ExprDomain::new(
+            expr_domain.lazy_frame_domain,
+            LazyGroupByContext {
+                columns: vec!["A".to_string()],
+            },
+            expr_domain.active_column,
+        );
+
+        Ok((
+            expr_domain,
+            Arc::new((*lazy_frame).clone().group_by_stable([col("A")])),
+        ))
     }
 }

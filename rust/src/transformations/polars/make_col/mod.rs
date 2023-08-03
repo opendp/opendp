@@ -1,7 +1,7 @@
 use opendp_derive::bootstrap;
 use polars::prelude::*;
 
-use crate::core::{Function, MetricSpace, StabilityMap, Transformation, Domain};
+use crate::core::{Domain, Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric};
 use crate::error::*;
 
@@ -15,8 +15,8 @@ mod ffi;
 /// | -------------------------- | -------------------------------- |
 /// | `SymmetricDistance`        | `ExprDomain<LazyFrameContext>`   |
 /// | `InsertDeleteDistance`     | `ExprDomain<LazyFrameContext>`   |
-/// | `L1<SymmetricDistance>`    | `ExprDomain<LazyGroupByContext>` |
-/// | `L1<InsertDeleteDistance>` | `ExprDomain<LazyGroupByContext>` |
+/// | `L1<SymmetricDistance>`    | `ExprDomain<LazyGroupByDomain>` |
+/// | `L1<InsertDeleteDistance>` | `ExprDomain<LazyGroupByDomain>` |
 ///
 /// # Arguments
 /// * `input_domain` - Domain of the expression to be applied.
@@ -70,8 +70,8 @@ where
 
 #[cfg(test)]
 mod test_make_col {
-    use crate::metrics::SymmetricDistance;
-    use crate::transformations::polars_test::get_select_test_data;
+    use crate::metrics::{Lp, SymmetricDistance};
+    use crate::transformations::polars_test::{get_grouped_test_data, get_select_test_data};
 
     use super::*;
 
@@ -116,6 +116,27 @@ mod test_make_col {
             .unwrap_err()
             .variant;
         assert_eq!(error_res, ErrorVariant::FailedFunction);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_col_expr_domain() -> Fallible<()> {
+        let (mut expr_domain, _) = get_grouped_test_data()?;
+        let active_col = expr_domain.active_column.take().unwrap();
+
+        let transformation = make_col(
+            expr_domain.clone(),
+            Lp(SymmetricDistance),
+            active_col.clone(),
+        )?;
+
+        let expr_domain_res = transformation.output_domain.clone();
+
+        let mut expr_domain_exp = expr_domain;
+        expr_domain_exp.active_column = Some(active_col);
+
+        assert_eq!(expr_domain_res, expr_domain_exp);
 
         Ok(())
     }

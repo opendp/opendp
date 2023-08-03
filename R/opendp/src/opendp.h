@@ -1233,9 +1233,9 @@ struct FfiResult_____AnyTransformation opendp_transformations__make_group_by_sta
                                                                                     const struct AnyMetric *input_metric,
                                                                                     const struct AnyObject *grouping_columns);
 
-struct FfiResult_____AnyTransformation opendp_transformations__make_col_expr(const struct AnyDomain *input_domain,
-                                                                             const struct AnyMetric *input_metric,
-                                                                             const char *col_name);
+struct FfiResult_____AnyTransformation opendp_transformations__make_col(const struct AnyDomain *input_domain,
+                                                                        const struct AnyMetric *input_metric,
+                                                                        const char *col_name);
 
 struct FfiResult_____AnyTransformation opendp_transformations__make_variance(const struct AnyDomain *input_domain,
                                                                              const struct AnyMetric *input_metric,

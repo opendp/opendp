@@ -1,18 +1,18 @@
 use std::ffi::c_char;
 
-use crate::core::{IntoAnyTransformationFfiResultExt, Domain};
+use crate::core::{Domain, IntoAnyTransformationFfiResultExt};
 use crate::domains::OuterMetric;
 use crate::ffi::util::to_str;
 use crate::{
     core::{FfiResult, MetricSpace},
     domains::ExprDomain,
+    error::Fallible,
     ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast},
     metrics::{InsertDeleteDistance, SymmetricDistance, L1},
-    error::Fallible,
 };
 
 #[no_mangle]
-pub extern "C" fn opendp_transformations__make_col_expr(
+pub extern "C" fn opendp_transformations__make_col(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
     col_name: *const c_char,
