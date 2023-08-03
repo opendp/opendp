@@ -1,5 +1,4 @@
 use crate::combinators::assert_components_match;
-use num::Zero;
 use opendp_derive::bootstrap;
 use polars::prelude::*;
 use std::collections::HashMap;
@@ -9,9 +8,16 @@ use crate::core::PartialTransformation;
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{DatasetMetric, ExprDomain, LazyFrameContext, LazyFrameDomain, SeriesDomain};
 use crate::error::*;
-use crate::traits::TotalOrd;
 
-#[bootstrap(ffi = false)]
+#[cfg(feature = "ffi")]
+mod ffi;
+
+#[bootstrap(
+    features("contrib"),
+    arguments(measurements(rust_type = "Vec<AnyTransformationPtr>")),
+    dependencies("$get_dependencies_iterable(transformations)"),
+    generics(T(suppress))
+)]
 /// Make a Transformation that applies list of transformations in the `with_columns`` context to a Lazy Frame.
 ///
 /// Valid inputs for `input_domain` and `input_metric` are:
@@ -32,13 +38,13 @@ use crate::traits::TotalOrd;
 /// * `T` - WithColumnsTransformation type for Transformation or PartialTransformation.
 pub fn make_with_columns<T: WithColumnsTransformation>(
     input_domain: LazyFrameDomain,
-    input_metric: T::InputMetric,
+    input_metric: T::Metric,
     transformation: Vec<T>,
-) -> Fallible<Transformation<LazyFrameDomain, LazyFrameDomain, T::InputMetric, T::OutputMetric>>
+) -> Fallible<Transformation<LazyFrameDomain, LazyFrameDomain, T::Metric, T::Metric>>
 where
-    T::OutputMetric: DatasetMetric,
-    (LazyFrameDomain, T::InputMetric): MetricSpace,
-    (LazyFrameDomain, T::OutputMetric): MetricSpace,
+    T::Metric: IsDatasetMetric,
+    <T::Metric as Metric>::Distance: PartialEq + Clone,
+    (LazyFrameDomain, T::Metric): MetricSpace,
 {
     let expr_input_domain =
         ExprDomain::new(input_domain.clone(), LazyFrameContext::Select, None, true);
@@ -115,11 +121,16 @@ where
         .map(|t| t.stability_map.clone())
         .collect();
 
-    let stability_map = StabilityMap::new_fallible(move |d_in| {
-        (stability_maps.iter())
-            .try_fold(<T::OutputMetric as Metric>::Distance::zero(), |acc, map| {
-                acc.total_max(map.eval(d_in)?)
-            })
+    let stability_map = StabilityMap::new_fallible(move |d_in: &<T::Metric as Metric>::Distance| {
+        let d_in = d_in.clone();
+        (stability_maps.iter()).try_for_each(|map| {
+            if d_in != map.eval(&d_in)? {
+                return fallible!(FailedMap, "stability maps must be 1-stable");
+            }
+            Ok(())
+        })?;
+
+        Ok(d_in)
     });
 
     Transformation::new(
@@ -132,33 +143,40 @@ where
     )
 }
 
+pub trait IsDatasetMetric {
+    fn is_dataset_metric(&self) -> Fallible<()>;
+}
+
+impl<M: DatasetMetric> IsDatasetMetric for M {
+    fn is_dataset_metric(&self) -> Fallible<()> {
+        Ok(())
+    }
+}
+
 /// Either a `Transformation` or a `PartialTransformation` that can be used in the `with_columns`` context.
 pub trait WithColumnsTransformation: 'static {
-    type InputMetric: 'static + Metric;
-    type OutputMetric: 'static + Metric;
+    type Metric: 'static + Metric;
     fn fix(
         self,
         input_domain: &ExprDomain<LazyFrameContext>,
-        input_metric: &Self::InputMetric,
+        input_metric: &Self::Metric,
     ) -> Fallible<
         Transformation<
             ExprDomain<LazyFrameContext>,
             ExprDomain<LazyFrameContext>,
-            Self::InputMetric,
-            Self::OutputMetric,
+            Self::Metric,
+            Self::Metric,
         >,
     >;
 }
 
-impl<MI: 'static + Metric, MO: 'static + Metric> WithColumnsTransformation
-    for Transformation<ExprDomain<LazyFrameContext>, ExprDomain<LazyFrameContext>, MI, MO>
+impl<M: 'static + Metric> WithColumnsTransformation
+    for Transformation<ExprDomain<LazyFrameContext>, ExprDomain<LazyFrameContext>, M, M>
 where
-    (ExprDomain<LazyFrameContext>, MI): MetricSpace,
-    (ExprDomain<LazyFrameContext>, MO): MetricSpace,
+    (ExprDomain<LazyFrameContext>, M): MetricSpace,
 {
-    type InputMetric = MI;
-    type OutputMetric = MO;
-    fn fix(self, input_domain: &ExprDomain<LazyFrameContext>, input_metric: &MI) -> Fallible<Self> {
+    type Metric = M;
+    fn fix(self, input_domain: &ExprDomain<LazyFrameContext>, input_metric: &M) -> Fallible<Self> {
         assert_components_match!(DomainMismatch, &self.input_domain, input_domain);
         assert_components_match!(MetricMismatch, &self.input_metric, input_metric);
 
@@ -167,19 +185,17 @@ where
 }
 
 #[cfg(feature = "partials")]
-impl<MI: 'static + Metric, MO: 'static + Metric> WithColumnsTransformation
-    for PartialTransformation<ExprDomain<LazyFrameContext>, ExprDomain<LazyFrameContext>, MI, MO>
+impl<M: 'static + Metric> WithColumnsTransformation
+    for PartialTransformation<ExprDomain<LazyFrameContext>, ExprDomain<LazyFrameContext>, M, M>
 where
-    (ExprDomain<LazyFrameContext>, MI): MetricSpace,
-    (ExprDomain<LazyFrameContext>, MO): MetricSpace,
+    (ExprDomain<LazyFrameContext>, M): MetricSpace,
 {
-    type InputMetric = MI;
-    type OutputMetric = MO;
+    type Metric = M;
     fn fix(
         self,
         input_domain: &ExprDomain<LazyFrameContext>,
-        input_metric: &MI,
-    ) -> Fallible<Transformation<ExprDomain<LazyFrameContext>, ExprDomain<LazyFrameContext>, MI, MO>>
+        input_metric: &M,
+    ) -> Fallible<Transformation<ExprDomain<LazyFrameContext>, ExprDomain<LazyFrameContext>, M, M>>
     {
         self.fix(input_domain.clone(), input_metric.clone())
     }
@@ -197,7 +213,6 @@ mod test_make_with_columns {
     #[test]
     #[cfg(feature = "partials")]
     fn test_make_with_columns_output_lazy_frame() -> Fallible<()> {
-
         let (expr_domain, lazy_frame) = get_select_test_data()?;
         let space = (expr_domain.clone().lazy_frame_domain, SymmetricDistance);
 

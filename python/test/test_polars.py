@@ -81,3 +81,16 @@ def test_collect_lazy():
     space = domain, dp.symmetric_distance()
     trans_lazy = space >> dp.t.then_collect() >> dp.t.then_lazy()
     trans_lazy(data)
+
+
+def test_make_with_columns():
+    domain, data = test_lazyframe_domain()
+    metric = dp.symmetric_distance()
+    expr_domain = dp.expr_domain(domain, context="with_columns", active_column="A")
+
+    # TODO: update when we have another expr constructor
+    with pytest.raises(dp.OpenDPException):
+        trans_lazy = (domain, metric) >> dp.t.then_with_columns([
+            (expr_domain, metric) >> dp.t.then_col("B")
+        ])
+        trans_lazy(data)
