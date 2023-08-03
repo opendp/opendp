@@ -73,6 +73,7 @@ __all__ = [
     "make_unordered",
     "make_user_transformation",
     "make_variance",
+    "make_with_columns",
     "then_b_ary_tree",
     "then_cast",
     "then_cast_default",
@@ -111,7 +112,8 @@ __all__ = [
     "then_sum",
     "then_sum_of_squared_deviations",
     "then_unordered",
-    "then_variance"
+    "then_variance",
+    "then_with_columns"
 ]
 
 
@@ -3993,4 +3995,66 @@ def then_variance(
         input_metric=input_metric,
         ddof=ddof,
         S=S))
+
+
+
+@versioned
+def make_with_columns(
+    input_domain,
+    input_metric,
+    transformation: Any
+) -> Transformation:
+    """Make a Transformation that applies list of transformations in the `with_columns`` context to a Lazy Frame.
+    
+    Valid inputs for `input_domain` and `input_metric` are:
+    
+    | `input_domain`                  | `input_metric`                             |
+    | ------------------------------- | ------------------------------------------ |
+    | `LazyFrameDomain`               | `SymmetricDistance`                        |
+    | `LazyFrameDomain`               | `InsertDeleteDistance`                     |
+    | `LazyFrameDomain`               | `ChangeOneDistance` if Margins provided    |
+    | `LazyFrameDomain`               | `HammingDistance` if Margins provided      |
+    
+    [make_with_columns in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_with_columns.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `LazyFrameDomain`
+    * Output Domain:  `LazyFrameDomain`
+    * Input Metric:   `T::Metric`
+    * Output Metric:  `T::Metric`
+    
+    :param input_domain: Domain of the Lazy Frame.
+    :param input_metric: DatasetMetric under which neighboring LazyFrames are compared.
+    :param transformation: Expression transformation to be applied in the `with_columns` context.
+    :type transformation: Any
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_transformation = py_to_c(transformation, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[T]))
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_with_columns
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_transformation), Transformation))
+    output._depends_on(get_dependencies_iterable(transformations))
+    return output
+
+def then_with_columns(
+    transformation: Any
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_with_columns(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        transformation=transformation))
 
