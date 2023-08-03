@@ -4,8 +4,13 @@ use crate::error::*;
 use crate::metrics::{Lp, L1};
 use crate::transformations::traits::UnboundedMetric;
 use polars::export::ahash::HashSet;
+use opendp_derive::bootstrap;
 use polars::prelude::*;
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
+#[bootstrap(generics(M(suppress)))]
 pub fn make_groupby_stable<M>(
     input_domain: LazyFrameDomain,
     input_metric: M,
