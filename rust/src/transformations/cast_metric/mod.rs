@@ -14,7 +14,6 @@ use self::traits::{BoundedMetric, OrderedMetric, UnboundedMetric, UnorderedMetri
 mod ffi;
 pub(crate) mod traits;
 
-
 #[bootstrap(features("contrib"), generics(D(suppress), MI(suppress)))]
 /// Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
 /// to the respective ordered dataset metric `InsertDeleteDistance` by assigning a random permutation.

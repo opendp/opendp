@@ -28,6 +28,6 @@ mod sink_parquet;
 #[cfg(feature = "contrib")]
 pub use sink_parquet::*;
 #[cfg(feature = "contrib")]
-mod make_groupby;
+mod make_group_by_stable;
 #[cfg(feature = "contrib")]
-pub use make_groupby::*;
+pub use make_group_by_stable::*;

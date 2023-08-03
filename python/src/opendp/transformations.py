@@ -36,6 +36,7 @@ __all__ = [
     "make_drop_null",
     "make_find",
     "make_find_bin",
+    "make_group_by_stable",
     "make_identity",
     "make_impute_constant",
     "make_impute_uniform_float",
@@ -87,6 +88,7 @@ __all__ = [
     "then_drop_null",
     "then_find",
     "then_find_bin",
+    "then_group_by_stable",
     "then_identity",
     "then_impute_constant",
     "then_impute_uniform_float",
@@ -1726,6 +1728,64 @@ def then_find_bin(
         input_domain=input_domain,
         input_metric=input_metric,
         edges=edges))
+
+
+
+def make_group_by_stable(
+    input_domain: Domain,
+    input_metric: Metric,
+    grouping_columns: Any
+) -> Transformation:
+    r"""[make_group_by_stable in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_group_by_stable.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `LazyFrameDomain`
+    * Output Domain:  `LazyGroupByDomain`
+    * Input Metric:   `M`
+    * Output Metric:  `L1<M>`
+
+    :param input_domain: 
+    :type input_domain: Domain
+    :param input_metric: 
+    :type input_metric: Metric
+    :param grouping_columns: 
+    :type grouping_columns: Any
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_grouping_columns = py_to_c(grouping_columns, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[String]))
+
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_group_by_stable
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_grouping_columns), Transformation))
+
+    return output
+
+def then_group_by_stable(
+    grouping_columns: Any
+):  
+    r"""partial constructor of make_group_by_stable
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_group_by_stable`
+
+    :param grouping_columns: 
+    :type grouping_columns: Any
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_group_by_stable(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        grouping_columns=grouping_columns))
 
 
 

@@ -3,10 +3,15 @@ use crate::domains::{LazyFrameDomain, LazyGroupByDomain};
 use crate::error::*;
 use crate::metrics::{Lp, L1};
 use crate::transformations::traits::UnboundedMetric;
+use opendp_derive::bootstrap;
 use polars::export::ahash::HashSet;
 use polars::prelude::*;
 
-pub fn make_groupby_stable<M>(
+#[cfg(feature = "ffi")]
+mod ffi;
+
+#[bootstrap(generics(M(suppress)))]
+pub fn make_group_by_stable<M>(
     input_domain: LazyFrameDomain,
     input_metric: M,
     grouping_columns: Vec<String>,
@@ -41,7 +46,7 @@ where
         input_domain,
         output_domain,
         Function::new(move |lazy_frame: &LazyFrame| {
-            lazy_frame.clone().groupby_stable(&column_exprs)
+            lazy_frame.clone().group_by_stable(&column_exprs)
         }),
         input_metric.clone(),
         Lp(input_metric),
@@ -50,7 +55,7 @@ where
 }
 
 #[cfg(test)]
-mod test_make_groupby_trans {
+mod test_make_group_by {
     use crate::domains::{AtomDomain, SeriesDomain};
     use crate::error::ErrorVariant::MakeTransformation;
     use crate::error::*;
@@ -61,7 +66,7 @@ mod test_make_groupby_trans {
     use super::*;
 
     #[test]
-    fn test_make_groupby_output() -> Fallible<()> {
+    fn test_make_group_by_output() -> Fallible<()> {
         let lf_domain = LazyFrameDomain::new(vec![
             SeriesDomain::new("A", AtomDomain::<i32>::default()),
             SeriesDomain::new("B", AtomDomain::<f64>::default()),
@@ -79,7 +84,7 @@ mod test_make_groupby_trans {
         let grouping_columns = vec!["A".to_string(), "B".to_string()];
 
         let groupby_trans =
-            make_groupby_stable(lf_domain, SymmetricDistance::default(), grouping_columns);
+            make_group_by_stable(lf_domain, SymmetricDistance::default(), grouping_columns);
 
         let lf_res = groupby_trans?
             .invoke(&lazy_frame.clone())?
@@ -87,7 +92,7 @@ mod test_make_groupby_trans {
             .collect()?;
 
         let lf_exp = lazy_frame
-            .groupby_stable([col("A"), col("B")])
+            .group_by_stable([col("A"), col("B")])
             .agg([all()])
             .collect()?;
 
@@ -97,7 +102,7 @@ mod test_make_groupby_trans {
     }
 
     #[test]
-    fn test_make_groupby_output_no_margin() -> Fallible<()> {
+    fn test_make_group_by_output_no_margin() -> Fallible<()> {
         let lf_domain = LazyFrameDomain::new(vec![
             SeriesDomain::new("A", AtomDomain::<i32>::default()),
             SeriesDomain::new("B", AtomDomain::<f64>::default()),
@@ -107,7 +112,7 @@ mod test_make_groupby_trans {
         let grouping_columns = vec!["A".to_string(), "B".to_string()];
 
         let error_variant_res =
-            make_groupby_stable(lf_domain, SymmetricDistance::default(), grouping_columns)
+            make_group_by_stable(lf_domain, SymmetricDistance::default(), grouping_columns)
                 .map(|v| v.input_domain.clone())
                 .unwrap_err()
                 .variant;

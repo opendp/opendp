@@ -631,6 +631,31 @@ SEXP transformations__make_find_bin(
 }
 
 
+SEXP transformations__make_group_by_stable(
+    SEXP input_domain, SEXP input_metric, SEXP grouping_columns, SEXP T_grouping_columns, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(grouping_columns);
+    PROTECT(T_grouping_columns);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    AnyObject * c_grouping_columns = sexp_to_anyobjectptr(grouping_columns, T_grouping_columns);
+
+    // Call library function.
+    FfiResult_____AnyTransformation _result = opendp_transformations__make_group_by_stable(c_input_domain, c_input_metric, c_grouping_columns);
+
+    UNPROTECT(5);
+    if(_result.tag == Err_____AnyTransformation)
+        return(extract_error(_result.err));
+    AnyTransformation* _return_value = _result.ok;
+    return(anytransformationptr_to_sexp(_return_value, log));
+}
+
+
 SEXP transformations__make_identity(
     SEXP domain, SEXP metric, SEXP log
 ) {
