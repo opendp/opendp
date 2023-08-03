@@ -163,7 +163,7 @@ def loss_of(*, epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, flo
 
     :param U: The type of the privacy parameter.
 
-    >>> from opendp.analysis import loss_of
+    >>> from opendp.context import loss_of
     >>> measure, distance = loss_of(epsilon=1.0)
     >>> measure, distance = loss_of(epsilon=1.0, delta=1e-9)
     >>> measure, distance = loss_of(rho=1.0)
@@ -220,8 +220,8 @@ def unit_of(
         return metric, l2
 
 
-class Analysis(object):
-    """An Analysis coordinates queries to an instance of a privacy `accountant`."""
+class Context(object):
+    """A Context coordinates queries to an instance of a privacy `accountant`."""
 
     accountant: Measurement  # union Odometer once merged
     """The accountant is the measurement used to spawn the queryable.
@@ -238,7 +238,7 @@ class Analysis(object):
         d_mids=None,
         d_out=None,
     ):
-        """Initializes the analysis with the given accountant and queryable.
+        """Initializes the context with the given accountant and queryable.
 
         It is recommended to use the `sequential_composition` constructor instead of this one.
 
@@ -252,15 +252,15 @@ class Analysis(object):
         self.d_out = d_out
 
     @staticmethod
-    def sequential_composition(
+    def compositor(
         data: Any,
         privacy_unit: Tuple[Metric, float],
         privacy_loss: Tuple[Measure, Any],
         split_evenly_over: Optional[int] = None,
         split_by_weights: Optional[List[float]] = None,
         domain: Optional[Domain] = None,
-    ) -> "Analysis":
-        """Constructs a new analysis containing a sequential compositor with the given weights.
+    ) -> "Context":
+        """Constructs a new context containing a sequential compositor with the given weights.
 
         If the domain is not specified, it will be inferred from the data.
         This makes the assumption that the structure of the data is public information.
@@ -269,8 +269,8 @@ class Analysis(object):
         Alternatively, pass a single integer to distribute the loss evenly.
 
         :param data: The data to be analyzed.
-        :param privacy_unit: The privacy unit of the analysis.
-        :param privacy_loss: The privacy loss of the analysis.
+        :param privacy_unit: The privacy unit of the compositor.
+        :param privacy_loss: The privacy loss of the compositor.
         :param weights: How to distribute `privacy_loss` among the queries.
         :param domain: The domain of the data."""
         if domain is None:
@@ -280,7 +280,7 @@ class Analysis(object):
             domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights
         )
 
-        return Analysis(
+        return Context(
             accountant=accountant,
             queryable=accountant(data),
             d_in=privacy_unit[1],
@@ -288,7 +288,7 @@ class Analysis(object):
         )
 
     def __call__(self, query: Union["Query", Measurement]):
-        """Executes the given query on the analysis."""
+        """Executes the given query on the context."""
         if isinstance(query, Query):
             query = query.resolve()
         answer = self.queryable(query)
@@ -297,9 +297,9 @@ class Analysis(object):
         return answer
 
     def query(self, **kwargs) -> "Query":
-        """Starts a new Query to be executed in this analysis.
+        """Starts a new Query to be executed in this context.
 
-        If the analysis has been constructed with a sequence of privacy losses,
+        If the context has been constructed with a sequence of privacy losses,
         the next loss will be used. Otherwise, the loss will be computed from the kwargs.
 
         :param kwargs: The privacy loss to use for the query. Passed directly into `loss_of`.
@@ -323,7 +323,7 @@ class Analysis(object):
             output_measure=self.accountant.output_measure,
             d_in=self.d_in,
             d_out=d_query,
-            analysis=self,
+            context=self,
         )
 
 
@@ -337,8 +337,8 @@ class Query(object):
     """The current chain of transformations and measurements."""
     _output_measure: Measure
     """The output measure of the query."""
-    _analysis: Optional["Analysis"]
-    """The analysis that the query is part of. `query.release()` submits `_chain` to `_analysis`."""
+    _context: Optional["Context"]
+    """The context that the query is part of. `query.release()` submits `_chain` to `_context`."""
     _wrap_release: Optional[Callable[[Any], Any]]
     """For internal use. A function that wraps the release of the query. 
     Used to wrap the response of compositor/odometer queries in another `Analysis`."""
@@ -349,26 +349,26 @@ class Query(object):
         output_measure: Measure = None,
         d_in=None,
         d_out=None,
-        analysis: "Analysis" = None,
+        context: "Context" = None,
         _wrap_release=None,
     ) -> None:
         """Initializes the query with the given chain and output measure.
 
-        It is more convenient to use the `analysis.query()` constructor than this one.
-        However, this can be used stand-alone to help build a transformation/measurement that is not part of an analysis.
+        It is more convenient to use the `context.query()` constructor than this one.
+        However, this can be used stand-alone to help build a transformation/measurement that is not part of a context.
 
         :param chain: an initial metric space (tuple of domain and metric) or transformation
         :param output_measure: how privacy will be measured on the output of the query
         :param d_in: an upper bound on the distance between adjacent datasets
         :param d_out: an upper bound on the overall privacy loss
-        :param analysis: if specified, then when the query is released, the chain will be submitted to this analysis
+        :param context: if specified, then when the query is released, the chain will be submitted to this context
         :param _wrap_release: for internal use only
         """
         self._chain = chain
         self._output_measure = output_measure
         self._d_in = d_in
         self._d_out = d_out
-        self._analysis = analysis
+        self._context = context
         self._wrap_release = _wrap_release
 
     def __getattr__(self, name: str) -> Callable[[Any], "Query"]:
@@ -414,7 +414,7 @@ class Query(object):
             output_measure=self._output_measure,
             d_in=self._d_in,
             d_out=self._d_out,
-            analysis=self._analysis,
+            context=self._context,
             _wrap_release=wrap_release or self._wrap_release,
         )
 
@@ -440,9 +440,9 @@ class Query(object):
         return chain
 
     def release(self) -> Any:
-        """Release the query. The query must be part of an analysis."""
-        # TODO: consider adding an optional `data` parameter for when _analysis is None
-        answer = self._analysis(self.resolve())
+        """Release the query. The query must be part of a context."""
+        # TODO: consider adding an optional `data` parameter for when _context is None
+        answer = self._context(self.resolve())
         if self._wrap_release:
             answer = self._wrap_release(answer)
         return answer
@@ -451,14 +451,14 @@ class Query(object):
         """Returns the discovered parameter, if there is one"""
         return getattr(self.resolve(), "param", None)
 
-    def sequential_composition(
+    def compositor(
         self,
         split_evenly_over: Optional[int] = None,
         split_by_weights: Optional[List[float]] = None,
         d_out=None,
         output_measure=None,
-    ) -> "Analysis":
-        """Constructs a new analysis containing a sequential compositor with the given weights.
+    ) -> "Context":
+        """Constructs a new context containing a sequential compositor with the given weights.
 
         :param weights: A list of weights corresponding to the privacy budget allocated to a sequence of queries.
         """
@@ -495,7 +495,7 @@ class Query(object):
                 accountant = chain >> accountant
 
             def wrap_release(queryable):
-                return Analysis(
+                return Context(
                     accountant=accountant,
                     queryable=queryable,
                     d_in=d_in,
@@ -504,10 +504,10 @@ class Query(object):
 
             return self.new_with(chain=accountant, wrap_release=wrap_release)
 
-        return self._compose_analysis(compositor)
+        return self._compose_context(compositor)
 
-    def _compose_analysis(self, compositor):
-        """Helper function for composing an analysis."""
+    def _compose_context(self, compositor):
+        """Helper function for composition in a context."""
         if isinstance(self._chain, PartialChain):
             return PartialChain(lambda x: compositor(self._chain(x), self._d_in))
         else:

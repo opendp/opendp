@@ -261,7 +261,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         if isinstance(other, PartialConstructor):
             return self >> other(self.output_domain, self.output_metric)
         
-        from opendp.analysis import PartialChain
+        from opendp.context import PartialChain
         if isinstance(other, PartialChain):
             return PartialChain(lambda x: self >> other.partial(x))
 

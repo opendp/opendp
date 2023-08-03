@@ -18,8 +18,8 @@ def test_privacy_loss_of():
     )
 
 
-def test_analysis_init():
-    analysis = dp.Analysis.sequential_composition(
+def test_context_init():
+    context = dp.Context.compositor(
         data=[1, 2, 3],
         privacy_unit=dp.unit_of(contributions=3),
         privacy_loss=dp.loss_of(epsilon=3.0),
@@ -27,32 +27,32 @@ def test_analysis_init():
         domain=dp.domain_of(List[int]),
     )
 
-    dp_sum = analysis.query().clamp((1, 10)).sum().laplace(100.0)
+    dp_sum = context.query().clamp((1, 10)).sum().laplace(100.0)
     print(dp_sum.release())
 
-    # this time the scale parameter is omitted, but it is resolved from the analysis
-    print(analysis.query().clamp((1, 10)).sum().laplace().release())
+    # this time the scale parameter is omitted, but it is resolved from the context
+    print(context.query().clamp((1, 10)).sum().laplace().release())
     # where we're headed:
-    # print(analysis.query().dp_sum((1, 10)).release())
+    # print(context.query().dp_sum((1, 10)).release())
 
 
-def test_analysis_zCDP():
-    analysis = dp.Analysis.sequential_composition(
+def test_context_zCDP():
+    context = dp.Context.compositor(
         data=[1, 2, 3],
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=3.0, delta=1e-6),
         split_evenly_over=2,
     )
 
-    dp_sum = analysis.query().clamp((1, 10)).sum().gaussian(100.0)
+    dp_sum = context.query().clamp((1, 10)).sum().gaussian(100.0)
     print(dp_sum.release())
 
-    dp_sum = analysis.query().clamp((1, 10)).sum().gaussian()
+    dp_sum = context.query().clamp((1, 10)).sum().gaussian()
     print(dp_sum.release())
 
 
 def test_sc_query():
-    analysis = dp.Analysis.sequential_composition(
+    context = dp.Context.compositor(
         data=[1, 2, 3],
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=3.0, delta=1e-6),
@@ -61,22 +61,22 @@ def test_sc_query():
     )
 
     # build a child sequential compositor, and then use it to release a laplace sum
-    sub_analysis = analysis.query().sequential_composition(split_evenly_over=3).release()
-    dp_sum = sub_analysis.query().clamp((1, 10)).sum().laplace()
+    sub_context = context.query().compositor(split_evenly_over=3).release()
+    dp_sum = sub_context.query().clamp((1, 10)).sum().laplace()
     print("laplace dp_sum", dp_sum.release())
 
     # build a child sequential compositor in zCDP, and then use it to release some gaussian queries
-    sub_analysis = analysis.query().sequential_composition(
+    sub_context = context.query().compositor(
         split_evenly_over=2, 
         output_measure=dp.zero_concentrated_divergence(T=float)
     ).release()
-    dp_sum = sub_analysis.query().clamp((1, 10)).sum().gaussian()
+    dp_sum = sub_context.query().clamp((1, 10)).sum().gaussian()
     # with partials, fusing, and measure convention, would shorten to
-    # dp_sum = sub_analysis.query().dp_sum((1, 10))
+    # dp_sum = sub_context.query().dp_sum((1, 10))
     print("gaussian dp_sum", dp_sum.release())
 
     dp_mean = (
-        sub_analysis.query()
+        sub_context.query()
         .cast_default(float)
         .clamp((1.0, 10.0))
         .resize(3, constant=5.0)
@@ -84,18 +84,18 @@ def test_sc_query():
         .gaussian()
     )
     # with partials, fusing, and measure convention, would shorten to
-    # dp_mean = sub_analysis.query().cast(float).dp_mean((1., 10.))
+    # dp_mean = sub_context.query().cast(float).dp_mean((1., 10.))
     print("gaussian dp_mean", dp_mean.release())
 
 
 def test_rho_to_eps():
-    analysis = dp.Analysis.sequential_composition(
+    context = dp.Context.compositor(
         data=[1, 2, 3],
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(rho=3.0),
         split_evenly_over=1,
     )
 
-    dp_sum = analysis.query().clamp((1, 10)).sum().laplace()
+    dp_sum = context.query().clamp((1, 10)).sum().laplace()
 
     print(dp_sum.release())
