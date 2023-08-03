@@ -1,7 +1,7 @@
 use std::ffi::c_char;
 
-use crate::core::IntoAnyTransformationFfiResultExt;
-use crate::domains::ExprMetric;
+use crate::core::{Domain, IntoAnyTransformationFfiResultExt};
+use crate::domains::OuterMetric;
 use crate::ffi::util::to_str;
 use crate::{
     core::{FfiResult, MetricSpace},
@@ -11,7 +11,7 @@ use crate::{
 };
 
 #[no_mangle]
-pub extern "C" fn opendp_transformations__make_col_expr(
+pub extern "C" fn opendp_transformations__make_col(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
     col_name: *const c_char,
@@ -22,11 +22,12 @@ pub extern "C" fn opendp_transformations__make_col_expr(
         col_name: String,
     ) -> FfiResult<*mut AnyTransformation>
     where
-        M: ExprMetric,
+        M: OuterMetric,
         M::Distance: 'static + Clone + Send + Sync,
-        (ExprDomain<M::Context>, M): MetricSpace,
+        <ExprDomain<M::LazyDomain> as Domain>::Carrier: Send + Sync,
+        (ExprDomain<M::LazyDomain>, M): MetricSpace,
     {
-        let input_domain = try_!(input_domain.downcast_ref::<ExprDomain<M::Context>>()).clone();
+        let input_domain = try_!(input_domain.downcast_ref::<ExprDomain<M::LazyDomain>>()).clone();
         let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
         super::make_col(input_domain, input_metric, col_name).into_any()
     }

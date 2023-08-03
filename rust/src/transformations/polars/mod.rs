@@ -37,11 +37,11 @@ pub use make_col::*;
 
 #[cfg(test)]
 pub mod polars_test {
-    use crate::domains::{AtomDomain, ExprDomain, LazyFrameContext, LazyFrameDomain, SeriesDomain};
+    use crate::domains::{AtomDomain, ExprDomain, LazyFrameContext, LazyFrameDomain, SeriesDomain, LazyGroupByContext, LazyGroupByDomain};
     use crate::error::*;
     use polars::prelude::*;
 
-    pub fn get_select_test_data() -> Fallible<(ExprDomain<LazyFrameContext>, Arc<LazyFrame>)> {
+    pub fn get_select_test_data() -> Fallible<(ExprDomain<LazyFrameDomain>, Arc<LazyFrame>)> {
         let frame_domain = LazyFrameDomain::new(vec![
             SeriesDomain::new("A", AtomDomain::<i32>::default()),
             SeriesDomain::new("B", AtomDomain::<f64>::new_closed((0.5, 2.5))?),
@@ -62,5 +62,18 @@ pub mod polars_test {
         .lazy();
 
         Ok((expr_domain, Arc::new(lazy_frame)))
+    }
+
+    pub fn get_grouped_test_data() -> Fallible<(ExprDomain<LazyGroupByDomain>, Arc<LazyGroupBy>)> {
+        let (expr_domain, lazy_frame) = get_select_test_data()?;
+        let expr_domain = ExprDomain::new(
+            expr_domain.lazy_frame_domain,
+            LazyGroupByContext {
+                columns: vec!["A".to_string()],
+            },
+            expr_domain.active_column,
+        );
+
+        Ok((expr_domain, Arc::new((*lazy_frame).clone().groupby_stable([col("A")]))))
     }
 }
