@@ -844,6 +844,22 @@ struct FfiResult_____AnyDomain opendp_domains__dataframe_domain_with_counts(stru
 struct FfiResult_____AnyDomain opendp_domains__series_domain(char *name,
                                                              const struct AnyDomain *element_domain);
 
+/**
+ * Construct an ExprDomain from a LazyFrameDomain.
+ *
+ * Must pass either `context` or `grouping_columns`.
+ *
+ * # Arguments
+ * * `lazyframe_domain` - the domain of the LazyFrame to be constructed
+ * * `context` - used when the constructor is called inside a lazyframe context constructor
+ * * `grouping_columns` - used when the constructor is called inside a groupby context constructor
+ * * `active_column` - which column to apply expressions to
+ */
+struct FfiResult_____AnyDomain opendp_domains__expr_domain(const struct AnyDomain *lazyframe_domain,
+                                                           const char *context,
+                                                           const struct AnyObject *grouping_columns,
+                                                           const char *active_column);
+
 struct FfiResult_____AnyMeasurement opendp_measurements__make_base_gaussian(const struct AnyDomain *input_domain,
                                                                             const struct AnyMetric *input_metric,
                                                                             const void *scale,

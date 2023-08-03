@@ -173,6 +173,33 @@ SEXP domains__domain_type(
 }
 
 
+SEXP domains__expr_domain(
+    SEXP lazyframe_domain, SEXP context, SEXP grouping_columns, SEXP active_column, SEXP T_grouping_columns, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(lazyframe_domain);
+    PROTECT(context);
+    PROTECT(grouping_columns);
+    PROTECT(active_column);
+    PROTECT(T_grouping_columns);
+    PROTECT(log);
+
+    AnyDomain * c_lazyframe_domain = sexp_to_anydomainptr(lazyframe_domain);
+    char * c_context = (char *)CHAR(STRING_ELT(context, 0));
+    AnyObject * c_grouping_columns = sexp_to_anyobjectptr(grouping_columns, T_grouping_columns);
+    char * c_active_column = (char *)CHAR(STRING_ELT(active_column, 0));
+
+    // Call library function.
+    FfiResult_____AnyDomain _result = opendp_domains__expr_domain(c_lazyframe_domain, c_context, c_grouping_columns, c_active_column);
+
+    UNPROTECT(6);
+    if(_result.tag == Err_____AnyDomain)
+        return(extract_error(_result.err));
+    AnyDomain* _return_value = _result.ok;
+    return(anydomainptr_to_sexp(_return_value, log));
+}
+
+
 SEXP domains__lazyframe_domain(
     SEXP series_domains, SEXP T_series_domains, SEXP log
 ) {

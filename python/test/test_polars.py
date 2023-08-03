@@ -34,9 +34,22 @@ def dataframe_domain_with_counts():
     domain, data = dataframe_domain()
     return domain.with_counts(counts), data
 
+def expr_domain():
+    lf_domain = lazyframe_domain()[0]
+    expr_domain = dp.expr_domain(lf_domain, grouping_columns=["A"], active_column="B")
+
+    dp.expr_domain(lf_domain, context="filter", active_column="B")
+    with pytest.raises(dp.OpenDPException):
+        dp.expr_domain(lf_domain, context="X", active_column="B")
+
+    # TODO: data loader for ExprDomain members
+    return expr_domain, None
+
+
 def test_domains():
     lazyframe_domain_with_counts()
     dataframe_domain_with_counts()
+    expr_domain()
 
 
 # data loaders

@@ -11,6 +11,10 @@ use crate::{core::Domain, error::Fallible};
 
 use super::SeriesDomain;
 
+
+#[cfg(feature = "ffi")]
+mod ffi;
+
 // TODO: remove this allow marker later
 #[allow(dead_code)]
 #[derive(Clone, PartialEq, Debug)]
@@ -65,7 +69,7 @@ impl Context for LazyGroupByContext {
 /// * `lazy_frame_domain` - `LazyFrameDomain`.
 /// * `context` - Context in which expression is to be applied.
 /// * `active_column` - Column to which expression is to be applied.
-/// * `aligned` - `true` if the expression preserves order and number of rows, `false` otherwise.
+/// * `row_by_row` - `true` if the expression preserves order and number of rows, `false` otherwise.
 ///
 /// ## Generics
 /// * `C` - Context: `LazyFrameContext`, `LazyGroupByContext`.
@@ -95,13 +99,13 @@ impl<C: Context> ExprDomain<C> {
         lazy_frame_domain: LazyFrameDomain,
         context: C,
         active_column: Option<String>,
-        aligned: bool,
+        row_by_row: bool,
     ) -> ExprDomain<C> {
         Self {
             lazy_frame_domain,
             context,
             active_column,
-            row_by_row: aligned,
+            row_by_row,
         }
     }
 
