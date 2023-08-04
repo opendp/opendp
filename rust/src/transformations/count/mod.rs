@@ -22,7 +22,7 @@ use crate::traits::{CollectionSize, Hashable, Number, Primitive};
 /// # Arguments
 /// * `input_domain` - Domain of the data type to be privatized.
 /// * `input_metric` - Metric of the data type to be privatized.
-/// 
+///
 /// # Generics
 /// * `TIA` - Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
 /// * `TO` - Output Type. Must be numeric.
@@ -284,7 +284,8 @@ mod tests {
     #[test]
     fn test_make_count_distinct() -> Fallible<()> {
         let transformation = make_count_distinct::<_, i32>(
-            VectorDomain::new(AtomDomain::default()), SymmetricDistance::default(),
+            VectorDomain::new(AtomDomain::default()),
+            SymmetricDistance::default(),
         )?;
         let arg = vec![1, 1, 3, 4, 4];
         let ret = transformation.invoke(&arg)?;
@@ -295,11 +296,13 @@ mod tests {
 
     #[test]
     fn test_make_count_by_categories() {
-        let transformation =
-            make_count_by_categories::<L2Distance<f64>, i64, i8>(
-                VectorDomain::new(AtomDomain::default()),
-                SymmetricDistance::default(),
-                vec![2, 1, 3], true).unwrap_test();
+        let transformation = make_count_by_categories::<L2Distance<f64>, i64, i8>(
+            VectorDomain::new(AtomDomain::default()),
+            SymmetricDistance::default(),
+            vec![2, 1, 3],
+            true,
+        )
+        .unwrap_test();
         let arg = vec![1, 2, 3, 4, 5, 1, 1, 1, 2];
         let ret = transformation.invoke(&arg).unwrap_test();
         let expected = vec![2, 4, 1, 2];

@@ -2,15 +2,13 @@ use std::convert::TryFrom;
 use std::os::raw::c_char;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::domains::{VectorDomain, AtomDomain};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
-use crate::ffi::any::{AnyTransformation, Downcast, AnyDomain, AnyMetric};
+use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::metrics::SymmetricDistance;
 use crate::traits::Float;
-use crate::transformations::{
-    make_sum_of_squared_deviations, Pairwise, Sequential, UncheckedSum,
-};
+use crate::transformations::{make_sum_of_squared_deviations, Pairwise, Sequential, UncheckedSum};
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_sum_of_squared_deviations(
@@ -34,7 +32,8 @@ pub extern "C" fn opendp_transformations__make_sum_of_squared_deviations(
             S: UncheckedSum,
             S::Item: 'static + Float,
         {
-            let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<S::Item>>>()).clone();
+            let input_domain =
+                try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<S::Item>>>()).clone();
             let input_metric = try_!(input_metric.downcast_ref::<SymmetricDistance>()).clone();
             make_sum_of_squared_deviations::<S>(input_domain, input_metric).into_any()
         }

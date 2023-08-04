@@ -3,7 +3,7 @@ use num::Float;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
-use crate::ffi::any::{AnyTransformation, Downcast, AnyDomain, AnyMetric};
+use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
 use crate::traits::{ExactIntCast, InfMul};
 use crate::transformations::{
@@ -26,7 +26,8 @@ pub extern "C" fn opendp_transformations__make_mean(
         AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
         (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
     {
-        let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<T>>>()).clone();
+        let input_domain =
+            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<T>>>()).clone();
         let input_metric = try_!(input_metric.downcast_ref::<MI>()).clone();
         make_mean::<MI, T>(input_domain, input_metric).into_any()
     }

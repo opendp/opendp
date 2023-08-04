@@ -3,13 +3,13 @@ use std::os::raw::{c_char, c_uint};
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::domains::{AtomDomain, VectorDomain};
-use crate::ffi::any::{AnyTransformation, Downcast, AnyMetric, AnyDomain};
+use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
 use crate::traits::Float;
 use crate::transformations::{
-    make_variance, LipschitzMulFloatDomain, LipschitzMulFloatMetric, Pairwise,
-    Sequential, UncheckedSum,
+    make_variance, LipschitzMulFloatDomain, LipschitzMulFloatMetric, Pairwise, Sequential,
+    UncheckedSum,
 };
 
 #[no_mangle]
@@ -39,7 +39,8 @@ pub extern "C" fn opendp_transformations__make_variance(
             AtomDomain<S::Item>: LipschitzMulFloatDomain<Atom = S::Item>,
             AbsoluteDistance<S::Item>: LipschitzMulFloatMetric<Distance = S::Item>,
         {
-            let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<S::Item>>>()).clone();
+            let input_domain =
+                try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<S::Item>>>()).clone();
             let input_metric = try_!(input_metric.downcast_ref::<SymmetricDistance>()).clone();
             make_variance::<S>(input_domain, input_metric, ddof).into_any()
         }
