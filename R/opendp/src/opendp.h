@@ -858,7 +858,7 @@ struct FfiResult_____AnyDomain opendp_domains__series_domain(char *name,
 struct FfiResult_____AnyDomain opendp_domains__expr_domain(const struct AnyDomain *lazyframe_domain,
                                                            const char *context,
                                                            const struct AnyObject *grouping_columns,
-                                                           const char *active_column);
+                                                           const struct AnyObject *active_column);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_base_gaussian(const struct AnyDomain *input_domain,
                                                                             const struct AnyMetric *input_metric,

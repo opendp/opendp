@@ -3,12 +3,14 @@ use std::ffi::c_char;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::FfiResult,
-    domains::LazyFrameDomain,
+    core::{FfiResult, Metric, MetricSpace},
+    domains::{LazyFrameDomain, LazyGroupByDomain},
+    error::Fallible,
     ffi::{
-        any::{AnyDomain, AnyObject, Downcast},
-        util::{as_ref, to_option_str, to_str},
+        any::{AnyDomain, AnyMetric, AnyObject, Downcast},
+        util::{as_ref, to_option_str},
     },
+    metrics::{InsertDeleteDistance, SymmetricDistance},
 };
 
 use super::{ExprDomain, LazyFrameContext, LazyGroupByContext};
@@ -21,7 +23,11 @@ use super::{ExprDomain, LazyFrameContext, LazyGroupByContext};
         lazyframe_domain(c_type = "AnyDomain *", rust_type = b"null"),
         context(default = b"null", rust_type = b"null"),
         grouping_columns(rust_type = "Option<Vec<String>>", default = b"null"),
-        active_column(rust_type = b"null")
+        active_column(
+            c_type = "AnyObject *",
+            rust_type = "Option<String>",
+            default = b"null"
+        )
     )
 )]
 /// Construct an ExprDomain from a LazyFrameDomain.
@@ -37,12 +43,16 @@ pub extern "C" fn opendp_domains__expr_domain(
     lazyframe_domain: *const AnyDomain,
     context: *const c_char,
     grouping_columns: *const AnyObject,
-    active_column: *const c_char,
+    active_column: *const AnyObject,
 ) -> FfiResult<*mut AnyDomain> {
     let lazyframe_domain =
         try_!(try_as_ref!(lazyframe_domain).downcast_ref::<LazyFrameDomain>()).clone();
 
-    let active_column = try_!(to_str(active_column)).to_string();
+    let active_column = if let Some(object) = as_ref(active_column) {
+        Some(try_!(object.downcast_ref::<String>()).clone())
+    } else {
+        None
+    };
 
     Ok(if let Some(context) = try_!(to_option_str(context)) {
         let context = match context.to_lowercase().as_str() {
@@ -58,22 +68,43 @@ pub extern "C" fn opendp_domains__expr_domain(
             }
         };
 
-        AnyDomain::new(ExprDomain::new(
+        AnyDomain::new(ExprDomain::<LazyFrameDomain>::new(
             lazyframe_domain,
             context,
-            Some(active_column),
-            true,
+            active_column,
         ))
     } else if let Some(object) = as_ref(grouping_columns) {
         let columns = try_!(object.downcast_ref::<Vec<String>>()).clone();
-        AnyDomain::new(ExprDomain::new(
+        AnyDomain::new(ExprDomain::<LazyGroupByDomain>::new(
             lazyframe_domain,
             LazyGroupByContext { columns },
-            Some(active_column),
-            true,
+            active_column,
         ))
     } else {
         return err!(FFI, "must provide either context or grouping_columns").into();
     })
     .into()
+}
+
+impl MetricSpace for (ExprDomain<LazyFrameDomain>, AnyMetric) {
+    fn check_space(&self) -> Fallible<()> {
+        let (domain, metric) = self.clone();
+
+        fn monomorphize<M: 'static + Metric>(
+            domain: ExprDomain<LazyFrameDomain>,
+            metric: AnyMetric,
+        ) -> Fallible<()>
+        where
+            (ExprDomain<LazyFrameDomain>, M): MetricSpace,
+        {
+            let input_metric = metric.downcast_ref::<M>()?;
+            (domain.clone(), input_metric.clone()).check_space()
+        }
+
+        dispatch!(
+            monomorphize,
+            [(metric.type_, [SymmetricDistance, InsertDeleteDistance])],
+            (domain, metric)
+        )
+    }
 }

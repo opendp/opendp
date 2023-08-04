@@ -68,7 +68,7 @@ SEXP domains__dataframe_domain_with_counts(SEXP dataframe_domain, SEXP counts, S
 SEXP domains__domain_carrier_type(SEXP this, SEXP log);
 SEXP domains__domain_debug(SEXP this, SEXP log);
 SEXP domains__domain_type(SEXP this, SEXP log);
-SEXP domains__expr_domain(SEXP lazyframe_domain, SEXP context, SEXP grouping_columns, SEXP active_column, SEXP T_grouping_columns, SEXP log);
+SEXP domains__expr_domain(SEXP lazyframe_domain, SEXP context, SEXP grouping_columns, SEXP active_column, SEXP T_grouping_columns, SEXP T_active_column, SEXP log);
 SEXP domains__lazyframe_domain(SEXP series_domains, SEXP T_series_domains, SEXP log);
 SEXP domains__lazyframe_domain_with_counts(SEXP lazyframe_domain, SEXP counts, SEXP log);
 SEXP domains__map_domain(SEXP key_domain, SEXP value_domain, SEXP log);

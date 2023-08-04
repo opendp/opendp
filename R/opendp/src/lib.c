@@ -72,7 +72,7 @@ static R_CMethodDef R_CDef[] = {
     {"domains__domain_carrier_type", (DL_FUNC) &domains__domain_carrier_type, 2},
     {"domains__domain_debug", (DL_FUNC) &domains__domain_debug, 2},
     {"domains__domain_type", (DL_FUNC) &domains__domain_type, 2},
-    {"domains__expr_domain", (DL_FUNC) &domains__expr_domain, 6},
+    {"domains__expr_domain", (DL_FUNC) &domains__expr_domain, 7},
     {"domains__lazyframe_domain", (DL_FUNC) &domains__lazyframe_domain, 3},
     {"domains__lazyframe_domain_with_counts", (DL_FUNC) &domains__lazyframe_domain_with_counts, 3},
     {"domains__map_domain", (DL_FUNC) &domains__map_domain, 3},

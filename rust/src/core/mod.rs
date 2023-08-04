@@ -96,7 +96,6 @@ impl<TI, TO> Function<TI, TO> {
     }
 }
 
-
 pub trait ExprFunction {
     fn new_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self;
 }

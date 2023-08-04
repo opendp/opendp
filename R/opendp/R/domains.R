@@ -231,14 +231,15 @@ domain_type <- function(
 #' @export
 expr_domain <- function(
     lazyframe_domain,
-    active_column,
     context = NULL,
-    grouping_columns = NULL
+    grouping_columns = NULL,
+    active_column = NULL
 ) {
     assert_features("contrib")
 
     # Standardize type arguments.
     .T.grouping_columns <- new_runtime_type(origin = "Option", args = list(new_runtime_type(origin = "Vec", args = list(String))))
+    .T.active_column <- new_runtime_type(origin = "Option", args = list(String))
 
     log <- new_constructor_log("expr_domain", "domains", new_hashtab(
         list("lazyframe_domain", "context", "grouping_columns", "active_column"),
@@ -247,11 +248,12 @@ expr_domain <- function(
 
     # Assert that arguments are correctly typed.
     rt_assert_is_similar(expected = .T.grouping_columns, inferred = rt_infer(grouping_columns))
+    rt_assert_is_similar(expected = .T.active_column, inferred = rt_infer(active_column))
 
     # Call wrapper function.
     output <- .Call(
         "domains__expr_domain",
-        lazyframe_domain, context, grouping_columns, active_column, rt_parse(.T.grouping_columns),
+        lazyframe_domain, context, grouping_columns, active_column, rt_parse(.T.grouping_columns), rt_parse(.T.active_column),
         log, PACKAGE = "opendp")
     output
 }
