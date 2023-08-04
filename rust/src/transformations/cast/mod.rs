@@ -124,7 +124,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::metrics::{InsertDeleteDistance, HammingDistance, SymmetricDistance};
+    use crate::metrics::{HammingDistance, InsertDeleteDistance, SymmetricDistance};
 
     use super::*;
 

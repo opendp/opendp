@@ -116,10 +116,22 @@ pub extern "C" fn opendp_measurements__make_gaussian(
     if let Some(_) = dispatch!(in_set, [(T, @floats)]) {
         let QI = try_!(input_metric.distance_type.get_atom());
         if T != QI {
-            return err!(FFI, "since data type is float, input distance type ({}) must match data type ({})", QI.descriptor, T.descriptor).into();
+            return err!(
+                FFI,
+                "since data type is float, input distance type ({}) must match data type ({})",
+                QI.descriptor,
+                T.descriptor
+            )
+            .into();
         }
         if T != QO {
-            return err!(FFI, "since data type is float, output distance type ({}) must match data type ({})", QO.descriptor, T.descriptor).into();
+            return err!(
+                FFI,
+                "since data type is float, output distance type ({}) must match data type ({})",
+                QO.descriptor,
+                T.descriptor
+            )
+            .into();
         }
         dispatch!(monomorphize_float, [
             (T, @floats)

@@ -86,7 +86,11 @@ where
                 // noise output count
                 .map(|(key, v)| TV::sample_discrete_laplace_Z2k(v, scale, k).map(|v| (key, v)))
                 // only keep keys with values gte threshold
-                .filter(|res| res.as_ref().map(|(_k, v)| v >= &true_threshold).unwrap_or(true))
+                .filter(|res| {
+                    res.as_ref()
+                        .map(|(_k, v)| v >= &true_threshold)
+                        .unwrap_or(true)
+                })
                 // fail the whole computation if any cast or noise addition failed
                 .collect()
         }),

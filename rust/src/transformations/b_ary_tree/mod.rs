@@ -141,10 +141,7 @@ pub fn choose_branching_factor(size_guess: usize) -> usize {
 
 #[cfg(all(test, feature = "use-mpfr", feature = "derive"))]
 pub mod test_b_trees {
-    use crate::{
-        measurements::then_base_discrete_laplace,
-        metrics::{L1Distance},
-    };
+    use crate::{measurements::then_base_discrete_laplace, metrics::L1Distance};
 
     use super::*;
 

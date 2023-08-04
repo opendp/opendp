@@ -1,6 +1,6 @@
 use crate::core::{FfiResult, Metric, MetricSpace};
 use crate::err;
-use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, IntoAnyStabilityMapExt, Downcast};
+use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast, IntoAnyStabilityMapExt};
 use crate::metrics::{
     ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance, SymmetricDistance,
 };
@@ -28,7 +28,10 @@ pub extern "C" fn opendp_transformations__make_ordered_random(
         (AnyDomain, MI::OrderedMetric): MetricSpace,
     {
         let input_metric = try_!(input_metric.downcast_ref::<MI>()).clone();
-        let trans = try_!(super::make_ordered_random::<AnyDomain, MI>(input_domain.clone(), input_metric));
+        let trans = try_!(super::make_ordered_random::<AnyDomain, MI>(
+            input_domain.clone(),
+            input_metric
+        ));
 
         trans
             .with_map(
@@ -66,7 +69,10 @@ pub extern "C" fn opendp_transformations__make_unordered(
         (AnyDomain, MI::UnorderedMetric): MetricSpace,
     {
         let input_metric = try_!(input_metric.downcast_ref::<MI>()).clone();
-        let trans = try_!(super::make_unordered::<AnyDomain, MI>(input_domain.clone(), input_metric));
+        let trans = try_!(super::make_unordered::<AnyDomain, MI>(
+            input_domain.clone(),
+            input_metric
+        ));
 
         trans
             .with_map(
@@ -104,7 +110,10 @@ pub extern "C" fn opendp_transformations__make_metric_bounded(
         (AnyDomain, MI::BoundedMetric): MetricSpace,
     {
         let input_metric = try_!(input_metric.downcast_ref::<MI>()).clone();
-        let trans = try_!(super::make_metric_bounded::<AnyDomain, MI>(input_domain.clone(), input_metric));
+        let trans = try_!(super::make_metric_bounded::<AnyDomain, MI>(
+            input_domain.clone(),
+            input_metric
+        ));
 
         trans
             .with_map(

@@ -52,10 +52,7 @@ pub extern "C" fn opendp_measurements__make_laplace(
             (Q, [T])
         ], (input_domain, input_metric, scale))
     }
-    fn monomorphize_integer<
-        T: 'static + CheckAtom,
-        QO: 'static + Copy,
-    >(
+    fn monomorphize_integer<T: 'static + CheckAtom, QO: 'static + Copy>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
         scale: *const c_void,
@@ -73,10 +70,7 @@ pub extern "C" fn opendp_measurements__make_laplace(
             <VectorDomain<AtomDomain<T>> as BaseLaplaceDomain>::InputMetric,
         ): MetricSpace,
     {
-        fn monomorphize2<
-            D: 'static + MakeLaplace<QO>,
-            QO: 'static + Copy,
-        >(
+        fn monomorphize2<D: 'static + MakeLaplace<QO>, QO: 'static + Copy>(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
             scale: QO,
@@ -108,12 +102,24 @@ pub extern "C" fn opendp_measurements__make_laplace(
     }
 
     if T != QI {
-        return err!(FFI, "input distance type ({}) must match data type ({})", QI.descriptor, T.descriptor).into();
+        return err!(
+            FFI,
+            "input distance type ({}) must match data type ({})",
+            QI.descriptor,
+            T.descriptor
+        )
+        .into();
     }
 
     if let Some(_) = dispatch!(in_set, [(T, @floats)]) {
         if T != QO {
-            return err!(FFI, "since data type is float, output distance type ({}) must match data type ({})", QO.descriptor, T.descriptor).into();
+            return err!(
+                FFI,
+                "since data type is float, output distance type ({}) must match data type ({})",
+                QO.descriptor,
+                T.descriptor
+            )
+            .into();
         }
         dispatch!(monomorphize_float, [
             (T, @floats)
