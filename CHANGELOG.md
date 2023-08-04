@@ -6,6 +6,52 @@ showing the source changes from the previous version.
 
 ## [0.8.0-dev](https://github.com/opendp/opendp/compare/v0.7.0...HEAD) - TBD
 
+### Added
+- Partial constructors: each `make_*` constructor now has a `then_*` variant [#689](https://github.com/opendp/opendp/pull/689) [#761](https://github.com/opendp/opendp/pull/761)
+    - all `make_*` have gained two leading arguments: `input_domain` and `input_metric`
+    - all `then_*` have same arguments as `make_*`, sans `input_domain` and `input_metric`
+        - when chaining, `then_*` tunes to the previous transformation/metric space
+    - to migrate, replace `make_*` with `then_*`, and then remove redundant arguments
+    - [#687](https://github.com/opendp/opendp/pull/687) [#690](https://github.com/opendp/opendp/pull/690) [#692](https://github.com/opendp/opendp/pull/692) [#712](https://github.com/opendp/opendp/pull/712) [#713](https://github.com/opendp/opendp/pull/713) [#798](https://github.com/opendp/opendp/pull/798) [#799](https://github.com/opendp/opendp/pull/799) [#802](https://github.com/opendp/opendp/pull/802) [#803](https://github.com/opendp/opendp/pull/803) [#804](https://github.com/opendp/opendp/pull/804) [#808](https://github.com/opendp/opendp/pull/808) [#810](https://github.com/opendp/opendp/pull/810) [#813](https://github.com/opendp/opendp/pull/813) [#815](https://github.com/opendp/opendp/pull/815) [#816](https://github.com/opendp/opendp/pull/816)
+- (preview) Context API for Python, giving a more succinct alternative to `>>` [#750](https://github.com/opendp/opendp/pull/750)
+    - `context.query().clamp(bounds).sum().laplace().release()`
+    - automatically tunes a free parameter (like the scale) to satisfy privacy-loss bound
+    - mediates queries to the interactive compositor/dataset inside `context`
+    - [#749](https://github.com/opendp/opendp/pull/749)
+- Support for `aarch64` architecture on Linux [#843](https://github.com/opendp/opendp/pull/843)
+- Nightly builds can now be downloaded from PyPi: `pip install opendp --pre` [#879](https://github.com/opendp/opendp/pull/879) [#880](https://github.com/opendp/opendp/pull/880)
+- Proofs for `make_row_by_row` [#688](https://github.com/opendp/opendp/pull/688), `make_clamp` [#512](https://github.com/opendp/opendp/pull/512)
+- Transformations throughout library support any valid combination of domain descriptors
+    - for example, all data preprocessors now also work under bounded DP
+
+### Changed
+- Changed constructor names: 
+    - `make_base_laplace`, `make_base_discrete_laplace` -> `make_laplace` [#736](https://github.com/opendp/opendp/pull/736)
+    - `make_base_gaussian`, `make_base_discrete_gaussian` -> `make_gaussian` [#800](https://github.com/opendp/opendp/pull/800)
+    - `make_sized_bounded_sum`, `make_bounded_sum` -> `make_sum` [#801](https://github.com/opendp/opendp/pull/801)
+    - `make_sized_bounded_mean` -> `make_mean` [#806](https://github.com/opendp/opendp/pull/806)
+    - `make_sized_bounded_variance` -> `make_variance` [#807](https://github.com/opendp/opendp/pull/807)
+    - `dp.c.make_user_measurement` -> `dp.m.make_user_measurement` [#884](https://github.com/opendp/opendp/pull/884)
+    - `dp.c.make_user_transformation` -> `dp.m.make_user_transformation` [#884](https://github.com/opendp/opendp/pull/884)
+    - `dp.c.make_user_postprocessor` -> `dp.new_function` [#884](https://github.com/opendp/opendp/pull/884)
+    - `make_base_ptr` -> `make_base_laplace_threshold` [#849](https://github.com/opendp/opendp/pull/849)
+        - changed the privacy map to emit fixed (ε, δ) pairs
+- Reordered arguments to `make_user_transformation` and `make_user_measurement` 
+    - `input_domain` and `input_metric` now leading to enable `then_*` variants
+- `make_identity` is now `honest-but-curious` in Python, but is general over all choices of domains/metrics [#814](https://github.com/opendp/opendp/pull/814)
+- (Rust-only) sparse histogram APIs have been updated to prepare for Python [#756](https://github.com/opendp/opendp/pull/756)
+    - `make_base_alp_with_hashers` -> `make_alp_state_with_hashers`
+    - `make_base_alp` -> `make_alp_state`
+    - `make_alp_histogram_post_process` -> `make_alp_queryable`
+    - thank you Christian Lebeda! (https://github.com/ChristianLebeda)
+- (Rust-only) Transformations and Measurements made read-only [#706](https://github.com/opendp/opendp/pull/706)
+
+### Fixed
+- Infinite loop converting from ρ to ε when δ=0 [#845](https://github.com/opendp/opendp/pull/845)
+
+### Deprecated
+- All dataframe transformations, in anticipation of a new Polars backend in an upcoming release
+
 
 ## [0.7.0] - 2023-05-18
 [0.7.0]: https://github.com/opendp/opendp/compare/v0.6.2...v0.7.0
