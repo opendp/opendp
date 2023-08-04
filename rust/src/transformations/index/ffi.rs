@@ -2,9 +2,9 @@ use std::convert::TryFrom;
 use std::os::raw::c_char;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
-use crate::domains::{VectorDomain, AtomDomain, OptionDomain};
+use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::err;
-use crate::ffi::any::{Downcast, AnyMetric, AnyDomain};
+use crate::ffi::any::{AnyDomain, AnyMetric, Downcast};
 use crate::ffi::any::{AnyObject, AnyTransformation};
 use crate::ffi::util::Type;
 use crate::traits::{Hashable, Number, Primitive};
@@ -19,7 +19,7 @@ pub extern "C" fn opendp_transformations__make_find(
     fn monomorphize<M, TIA>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-        categories: &AnyObject
+        categories: &AnyObject,
     ) -> FfiResult<*mut AnyTransformation>
     where
         M: 'static + DatasetMetric,
@@ -27,7 +27,8 @@ pub extern "C" fn opendp_transformations__make_find(
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<OptionDomain<AtomDomain<usize>>>, M): MetricSpace,
     {
-        let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
+        let input_domain =
+            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
         let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
         let categories = try_!(categories.downcast_ref::<Vec<TIA>>()).clone();
         make_find(input_domain, input_metric, categories).into_any()
@@ -52,14 +53,16 @@ pub extern "C" fn opendp_transformations__make_find_bin(
     fn monomorphize<M, TIA>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-        edges: &AnyObject) -> FfiResult<*mut AnyTransformation>
+        edges: &AnyObject,
+    ) -> FfiResult<*mut AnyTransformation>
     where
         TIA: 'static + Number,
         M: 'static + DatasetMetric,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<usize>>, M): MetricSpace,
     {
-        let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
+        let input_domain =
+            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
         let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
         let edges = try_!(try_as_ref!(edges).downcast_ref::<Vec<TIA>>()).clone();
         make_find_bin(input_domain, input_metric, edges).into_any()
@@ -95,7 +98,8 @@ pub extern "C" fn opendp_transformations__make_index(
         (VectorDomain<AtomDomain<usize>>, M): MetricSpace,
         (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {
-        let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<usize>>>()).clone();
+        let input_domain =
+            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<usize>>>()).clone();
         let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
         let edges = try_!(try_as_ref!(edges).downcast_ref::<Vec<TOA>>()).clone();
         let null = try_!(try_as_ref!(null).downcast_ref::<TOA>()).clone();

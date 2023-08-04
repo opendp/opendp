@@ -3,7 +3,7 @@ mod ffi;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Domain, Function, StabilityMap, Transformation, MetricSpace};
+use crate::core::{Domain, Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::samplers::SampleUniform;
@@ -13,7 +13,7 @@ use crate::transformations::{make_row_by_row, make_row_by_row_fallible};
 use super::DatasetMetric;
 
 #[bootstrap(
-    features("contrib"), 
+    features("contrib"),
     generics(M(suppress), TA(suppress)),
     derived_types(TA = "$get_atom(get_type(input_domain))")
 )]
@@ -31,14 +31,7 @@ pub fn make_impute_uniform_float<M, TA>(
     input_domain: VectorDomain<AtomDomain<TA>>,
     input_metric: M,
     bounds: (TA, TA),
-) -> Fallible<
-    Transformation<
-        VectorDomain<AtomDomain<TA>>,
-        VectorDomain<AtomDomain<TA>>,
-        M,
-        M,
-    >,
->
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, VectorDomain<AtomDomain<TA>>, M, M>>
 where
     TA: Float + SampleUniform,
     M: DatasetMetric,
@@ -121,12 +114,10 @@ impl<T: CheckAtom + InherentNull> ImputeConstantDomain for AtomDomain<T> {
 
 #[bootstrap(
     features("contrib"),
-    arguments(
-        constant(
-            rust_type = "$get_atom(get_type(input_domain))",
-            c_type = "AnyObject *"
-        )
-    ),
+    arguments(constant(
+        rust_type = "$get_atom(get_type(input_domain))",
+        c_type = "AnyObject *"
+    )),
     generics(DIA(suppress), M(suppress))
 )]
 /// Make a Transformation that replaces null/None data with `constant`.
@@ -158,19 +149,16 @@ where
     DIA::Carrier: 'static,
     M: DatasetMetric,
     (VectorDomain<DIA>, M): MetricSpace,
-    (VectorDomain<AtomDomain<DIA::Imputed>>, M): MetricSpace
+    (VectorDomain<AtomDomain<DIA::Imputed>>, M): MetricSpace,
 {
     let output_atom_domain = AtomDomain::default();
     if !output_atom_domain.member(&constant)? {
         return fallible!(MakeTransformation, "Constant may not be null.");
     }
 
-    make_row_by_row(
-        input_domain,
-        input_metric,
-        output_atom_domain,
-        move |v| DIA::impute_constant(v, &constant).clone(),
-    )
+    make_row_by_row(input_domain, input_metric, output_atom_domain, move |v| {
+        DIA::impute_constant(v, &constant).clone()
+    })
 }
 
 /// Utility trait to drop null values from a dataset, regardless of the representation of nullity.
@@ -214,8 +202,7 @@ impl<T: CheckAtom + InherentNull + Clone> DropNullDomain for AtomDomain<T> {
     }
 }
 
-#[bootstrap(features("contrib"),
-    generics(DIA(suppress), M(suppress)))]
+#[bootstrap(features("contrib"), generics(DIA(suppress), M(suppress)))]
 /// Make a Transformation that drops null values.
 ///
 ///
@@ -230,14 +217,7 @@ impl<T: CheckAtom + InherentNull + Clone> DropNullDomain for AtomDomain<T> {
 pub fn make_drop_null<M, DIA>(
     input_domain: VectorDomain<DIA>,
     input_metric: M,
-) -> Fallible<
-    Transformation<
-        VectorDomain<DIA>,
-        VectorDomain<AtomDomain<DIA::Imputed>>,
-        M,
-        M,
-    >,
->
+) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<AtomDomain<DIA::Imputed>>, M, M>>
 where
     DIA: DropNullDomain + Default,
     DIA::Imputed: CheckAtom,
@@ -266,7 +246,8 @@ mod tests {
         let imputer = make_impute_uniform_float(
             VectorDomain::new(AtomDomain::default()),
             SymmetricDistance::default(),
-            (2.0, 2.0))?;
+            (2.0, 2.0),
+        )?;
 
         let result = imputer.invoke(&vec![1.0, f64::NAN])?;
 
@@ -293,9 +274,10 @@ mod tests {
     #[test]
     fn test_impute_constant_inherent() -> Fallible<()> {
         let imputer = make_impute_constant(
-            VectorDomain::new(AtomDomain::new_nullable()), 
+            VectorDomain::new(AtomDomain::new_nullable()),
             SymmetricDistance::default(),
-            12.)?;
+            12.,
+        )?;
 
         let result = imputer.invoke(&vec![f64::NAN, 23.])?;
 
@@ -306,7 +288,10 @@ mod tests {
 
     #[test]
     fn test_impute_drop_option() -> Fallible<()> {
-        let imputer = make_drop_null(VectorDomain::new(OptionDomain::default()), SymmetricDistance::default())?;
+        let imputer = make_drop_null(
+            VectorDomain::new(OptionDomain::default()),
+            SymmetricDistance::default(),
+        )?;
 
         let result = imputer.invoke(&vec![Some(f64::NAN), Some(23.), None])?;
 
@@ -316,7 +301,10 @@ mod tests {
     }
     #[test]
     fn test_impute_drop_inherent() -> Fallible<()> {
-        let imputer = make_drop_null(VectorDomain::new(AtomDomain::new_nullable()), SymmetricDistance::default())?;
+        let imputer = make_drop_null(
+            VectorDomain::new(AtomDomain::new_nullable()),
+            SymmetricDistance::default(),
+        )?;
 
         let result = imputer.invoke(&vec![f64::NAN, 23.])?;
 

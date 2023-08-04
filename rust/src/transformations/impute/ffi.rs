@@ -1,13 +1,13 @@
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::err;
-use crate::ffi::any::{AnyDomain, AnyObject, AnyTransformation, Downcast, AnyMetric};
+use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
 use crate::traits::samplers::SampleUniform;
 use crate::traits::{CheckAtom, Float, InherentNull};
 use crate::transformations::{
-    make_drop_null, make_impute_constant, make_impute_uniform_float,
-    ImputeConstantDomain, DatasetMetric,
+    make_drop_null, make_impute_constant, make_impute_uniform_float, DatasetMetric,
+    ImputeConstantDomain,
 };
 
 #[no_mangle]
@@ -25,14 +25,15 @@ pub extern "C" fn opendp_transformations__make_impute_uniform_float(
     fn monomorphize<M, TA>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-        bounds: &AnyObject
+        bounds: &AnyObject,
     ) -> FfiResult<*mut AnyTransformation>
     where
         TA: Float + SampleUniform,
         M: 'static + DatasetMetric,
         (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
     {
-        let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
+        let input_domain =
+            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
         let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
         let bounds = *try_!(try_as_ref!(bounds).downcast_ref::<(TA, TA)>());
         make_impute_uniform_float(input_domain, input_metric, bounds).into_any()
@@ -51,9 +52,15 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
     let constant = try_as_ref!(constant);
 
     let DI = input_domain.type_.clone();
-    let DIA = if let TypeContents::GENERIC { name: "VectorDomain", args } = DI.contents {
-        try_!(Type::of_id(try_!(args.get(0)
-            .ok_or_else(|| err!(FFI, "Vec must have one type argument.")))))
+    let DIA = if let TypeContents::GENERIC {
+        name: "VectorDomain",
+        args,
+    } = DI.contents
+    {
+        try_!(Type::of_id(try_!(args.get(0).ok_or_else(|| err!(
+            FFI,
+            "Vec must have one type argument."
+        )))))
     } else {
         return err!(FFI, "Invalid type name.").into();
     };
@@ -73,12 +80,15 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
                 TA: 'static + Clone + CheckAtom,
                 M: 'static + DatasetMetric,
                 (VectorDomain<OptionDomain<AtomDomain<TA>>>, M): MetricSpace,
-                (VectorDomain<AtomDomain<TA>>, M): MetricSpace
+                (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
-                let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<OptionDomain<AtomDomain<TA>>>>()).clone();
+                let input_domain = try_!(
+                    input_domain.downcast_ref::<VectorDomain<OptionDomain<AtomDomain<TA>>>>()
+                )
+                .clone();
                 let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
                 let constant: TA = try_!(constant.downcast_ref::<TA>()).clone();
-                
+
                 make_impute_constant(input_domain, input_metric, constant).into_any()
             }
             dispatch!(monomorphize, [(M, @dataset_metrics), (TA, @primitives)], (input_domain, input_metric, constant))
@@ -93,9 +103,10 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
                 AtomDomain<TA>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + InherentNull + Clone + CheckAtom,
                 M: 'static + DatasetMetric,
-                (VectorDomain<AtomDomain<TA>>, M): MetricSpace
+                (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
-                let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
+                let input_domain =
+                    try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
                 let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
                 let constant: TA = try_!(constant.downcast_ref::<TA>()).clone();
                 make_impute_constant(input_domain, input_metric, constant).into_any()
@@ -122,9 +133,15 @@ pub extern "C" fn opendp_transformations__make_drop_null(
     let input_metric = try_as_ref!(input_metric);
 
     let DI = input_domain.type_.clone();
-    let DIA = if let TypeContents::GENERIC { name: "VectorDomain", args } = DI.contents {
-        try_!(Type::of_id(try_!(args.get(0)
-            .ok_or_else(|| err!(FFI, "Vec must have one type argument.")))))
+    let DIA = if let TypeContents::GENERIC {
+        name: "VectorDomain",
+        args,
+    } = DI.contents
+    {
+        try_!(Type::of_id(try_!(args.get(0).ok_or_else(|| err!(
+            FFI,
+            "Vec must have one type argument."
+        )))))
     } else {
         return err!(FFI, "Invalid type name.").into();
     };
@@ -143,11 +160,14 @@ pub extern "C" fn opendp_transformations__make_drop_null(
                 TA: 'static + Clone + CheckAtom,
                 M: 'static + DatasetMetric,
                 (VectorDomain<OptionDomain<AtomDomain<TA>>>, M): MetricSpace,
-                (VectorDomain<AtomDomain<TA>>, M): MetricSpace
+                (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
-                let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<OptionDomain<AtomDomain<TA>>>>()).clone();
+                let input_domain = try_!(
+                    input_domain.downcast_ref::<VectorDomain<OptionDomain<AtomDomain<TA>>>>()
+                )
+                .clone();
                 let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
-                
+
                 make_drop_null(input_domain, input_metric).into_any()
             }
             dispatch!(monomorphize, [(M, @dataset_metrics), (TA, @primitives)], (input_domain, input_metric))
@@ -161,9 +181,10 @@ pub extern "C" fn opendp_transformations__make_drop_null(
                 AtomDomain<TA>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + InherentNull + Clone + CheckAtom,
                 M: 'static + DatasetMetric,
-                (VectorDomain<AtomDomain<TA>>, M): MetricSpace
+                (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
-                let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
+                let input_domain =
+                    try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
                 let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
                 make_drop_null(input_domain, input_metric).into_any()
             }

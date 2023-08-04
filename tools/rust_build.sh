@@ -4,21 +4,23 @@
 set -e -u
 
 function usage() {
-  echo "Usage: $(basename "$0") [-irt] [-p <PLATFORM>] [-c <TOOLCHAIN>] [-g <TARGET>] [-f <FEATURES>]" >&2
+  echo "Usage: $(basename "$0") [-irtn] [-p <PLATFORM>] [-c <TOOLCHAIN>] [-g <TARGET>] [-f <FEATURES>]" >&2
 }
 
 INIT=false
 RELEASE_MODE=false
 TEST=false
+CHECK=false
 PLATFORM=UNSET
 TARGET=UNSET
 TOOLCHAIN=stable
 FEATURES=default
-while getopts ":irtp:c:g:f:" OPT; do
+while getopts ":irtnp:c:g:f:" OPT; do
   case "$OPT" in
   i) INIT=true ;;
   r) RELEASE_MODE=true ;;
   t) TEST=true ;;
+  n) CHECK=true ;;
   p) PLATFORM="$OPTARG" ;;
   c) TOOLCHAIN="$OPTARG" ;;
   g) TARGET="$OPTARG" ;;
@@ -89,8 +91,9 @@ function init_linux() {
     run curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal
     source ~/.cargo/env
   fi
-  log "Install Perl IPC-CMD"
-  run yum -y install perl-IPC-Cmd
+  # We need m4 for gmp, but messense/manylinux2014-cross doesn't include it.
+  log "Install m4"
+  run apt-get -y install m4
 }
 
 function run_cargo() {
@@ -125,5 +128,10 @@ if [[ $TEST == true ]]; then
   run_cargo test
 fi
 
-log "***** RUNNING BUILD *****"
-run_cargo build
+if [[ $CHECK == true ]]; then
+  log "***** RUNNING CHECK *****"
+  run_cargo check
+else
+  log "***** RUNNING BUILD *****"
+  run_cargo build
+fi

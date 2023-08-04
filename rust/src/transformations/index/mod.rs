@@ -6,7 +6,7 @@ use std::iter::FromIterator;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Transformation, MetricSpace};
+use crate::core::{MetricSpace, Transformation};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::{Hashable, Number, Primitive};
@@ -15,7 +15,7 @@ use crate::transformations::make_row_by_row;
 use super::DatasetMetric;
 
 #[bootstrap(
-    features("contrib"), 
+    features("contrib"),
     generics(TIA(suppress), M(suppress)),
     derived_types(TIA = "$get_atom(get_type(input_domain))")
 )]
@@ -68,7 +68,7 @@ where
 }
 
 #[bootstrap(
-    features("contrib"), 
+    features("contrib"),
     generics(TIA(suppress), M(suppress)),
     derived_types(TIA = "$get_atom(get_type(input_domain))")
 )]
@@ -94,14 +94,7 @@ pub fn make_find_bin<M, TIA>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
     input_metric: M,
     edges: Vec<TIA>,
-) -> Fallible<
-    Transformation<
-        VectorDomain<AtomDomain<TIA>>,
-        VectorDomain<AtomDomain<usize>>,
-        M,
-        M,
-    >,
->
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, VectorDomain<AtomDomain<usize>>, M, M>>
 where
     TIA: Number,
     M: DatasetMetric,
@@ -143,14 +136,7 @@ pub fn make_index<M, TOA>(
     input_metric: M,
     categories: Vec<TOA>,
     null: TOA,
-) -> Fallible<
-    Transformation<
-        VectorDomain<AtomDomain<usize>>,
-        VectorDomain<AtomDomain<TOA>>,
-        M,
-        M,
-    >,
->
+) -> Fallible<Transformation<VectorDomain<AtomDomain<usize>>, VectorDomain<AtomDomain<TOA>>, M, M>>
 where
     TOA: Primitive,
     M: DatasetMetric,
@@ -172,7 +158,11 @@ mod test {
 
     #[test]
     fn test_find() -> Fallible<()> {
-        let find = make_find(VectorDomain::default(), SymmetricDistance::default(), vec!["1", "3", "4"])?;
+        let find = make_find(
+            VectorDomain::default(),
+            SymmetricDistance::default(),
+            vec!["1", "3", "4"],
+        )?;
         assert_eq!(
             find.invoke(&vec!["1", "2", "3", "4", "5"])?,
             vec![Some(0), None, Some(1), Some(2), None]
@@ -182,7 +172,11 @@ mod test {
 
     #[test]
     fn test_bin() -> Fallible<()> {
-        let bin = make_find_bin(Default::default(), SymmetricDistance::default(), vec![2, 3, 5])?;
+        let bin = make_find_bin(
+            Default::default(),
+            SymmetricDistance::default(),
+            vec![2, 3, 5],
+        )?;
         assert_eq!(
             bin.invoke(&(1..10).collect())?,
             vec![0, 1, 2, 2, 3, 3, 3, 3, 3]
@@ -195,7 +189,9 @@ mod test {
         let index = make_index(
             VectorDomain::default(),
             SymmetricDistance::default(),
-            vec!["A", "B", "C"], "NA")?;
+            vec!["A", "B", "C"],
+            "NA",
+        )?;
         assert_eq!(
             index.invoke(&vec![0, 1, 3, 1, 5])?,
             vec!["A", "B", "NA", "B", "NA"]

@@ -221,8 +221,8 @@ impl<T> Number for T where
 ///
 /// test_func(1i8);
 /// ```
-pub trait Integer: Number + Hashable {}
-impl<T> Integer for T where T: Number + Hashable {}
+pub trait Integer: Number + Hashable + Ord {}
+impl<T> Integer for T where T: Number + Hashable + Ord {}
 
 /// Floating-point types.
 ///

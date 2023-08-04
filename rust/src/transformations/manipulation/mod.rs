@@ -111,7 +111,10 @@ where
     )
 }
 
-#[bootstrap(features("contrib", "honest-but-curious"), generics(D(suppress), M(suppress)))]
+#[bootstrap(
+    features("contrib", "honest-but-curious"),
+    generics(D(suppress), M(suppress))
+)]
 /// Make a Transformation representing the identity function.
 ///
 /// WARNING: In Python, this function does not ensure that the domain and metric form a valid metric space.
