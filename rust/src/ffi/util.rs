@@ -7,11 +7,13 @@ use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::path::PathBuf;
 use std::str::Utf8Error;
+use std::sync::Arc;
 
-use polars::prelude::{LazyFrame, DataFrame};
+use polars::lazy::dsl::Expr;
+use polars::prelude::{LazyFrame, DataFrame, LazyGroupBy};
 use polars::series::Series;
 
-use crate::domains::{AtomDomain, OptionDomain, VectorDomain, SeriesDomain, LazyFrameDomain, DataFrameDomain};
+use crate::domains::{AtomDomain, OptionDomain, VectorDomain, SeriesDomain, LazyFrameDomain, DataFrameDomain, ExprDomain, LazyGroupByDomain, FrameDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
 use crate::measures::{
@@ -293,7 +295,10 @@ lazy_static! {
             // OptionDomain<AtomDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
             type_vec![Vec, <(f32, f32), (f64, f64)>],
-            type_vec![LazyFrame, DataFrame, Series],
+            type_vec![DataFrame, LazyFrame, LazyGroupBy, Series],
+            type_vec![Vec<Expr>, Expr],
+            type_vec![(Arc<LazyFrame>, Expr), (Arc<LazyGroupBy>, Expr)],
+            type_vec![Vec, <(Arc<LazyFrame>, Expr), (Arc<LazyGroupBy>, Expr)>],
 
             type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyQueryable, AnyMeasurement],
             type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr, SeriesDomain>],
@@ -308,7 +313,10 @@ lazy_static! {
             type_vec![[VectorDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[VectorDomain OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![OldFrameDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>],
-            type_vec![LazyFrameDomain, DataFrameDomain, SeriesDomain],
+            type_vec![LazyFrameDomain, DataFrameDomain, SeriesDomain, LazyGroupByDomain],
+            type_vec![FrameDomain, <LazyFrame, DataFrame>],
+            type_vec![ExprDomain, <LazyFrameDomain, LazyGroupByDomain>],
+            type_vec![[ExprDomain FrameDomain], <LazyFrame>],
 
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],
