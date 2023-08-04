@@ -4000,11 +4000,11 @@ def then_variance(
 
 @versioned
 def make_with_columns(
-    input_domain,
-    input_metric,
-    transformation: Any
+    input_domain: Domain,
+    input_metric: Metric,
+    transformations: Any
 ) -> Transformation:
-    """Make a Transformation that applies list of transformations in the `with_columns`` context to a Lazy Frame.
+    r"""Make a Transformation that applies list of transformations in the `with_columns`` context to a Lazy Frame.
     
     Valid inputs for `input_domain` and `input_metric` are:
     
@@ -4025,9 +4025,11 @@ def make_with_columns(
     * Output Metric:  `T::Metric`
     
     :param input_domain: Domain of the Lazy Frame.
+    :type input_domain: Domain
     :param input_metric: DatasetMetric under which neighboring LazyFrames are compared.
-    :param transformation: Expression transformation to be applied in the `with_columns` context.
-    :type transformation: Any
+    :type input_metric: Metric
+    :param transformations: 
+    :type transformations: Any
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -4039,22 +4041,22 @@ def make_with_columns(
     # Convert arguments to c types.
     c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
     c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
-    c_transformation = py_to_c(transformation, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[T]))
+    c_transformations = py_to_c(transformations, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[AnyTransformationPtr]))
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_with_columns
     lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_transformation), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_transformations), Transformation))
     output._depends_on(get_dependencies_iterable(transformations))
     return output
 
 def then_with_columns(
-    transformation: Any
+    transformations: Any
 ):
     return PartialConstructor(lambda input_domain, input_metric: make_with_columns(
         input_domain=input_domain,
         input_metric=input_metric,
-        transformation=transformation))
+        transformations=transformations))
 

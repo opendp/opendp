@@ -90,7 +90,7 @@ def test_collect_lazy():
 
 
 def test_make_with_columns():
-    domain, data = test_lazyframe_domain()
+    domain, data = lazyframe_domain()
     metric = dp.symmetric_distance()
     expr_domain = dp.expr_domain(domain, context="with_columns", active_column="A")
 
