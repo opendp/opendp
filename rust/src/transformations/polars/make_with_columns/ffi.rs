@@ -2,9 +2,9 @@ use polars::prelude::*;
 
 use crate::{
     core::{FfiResult, Function, Metric, Transformation},
-    domains::{ExprDomain, LazyFrameDomain, LazyFrameContext},
+    domains::{ExprDomain, LazyFrameDomain},
     error::Fallible,
-    ffi::{util, any::{AnyDomain, AnyMetric, AnyObject, Downcast, AnyTransformation}},
+    ffi::{util::{self, AnyTransformationPtr}, any::{AnyDomain, AnyMetric, AnyObject, Downcast, AnyTransformation}},
     metrics::{InsertDeleteDistance, SymmetricDistance, L1}, 
 };
 
@@ -12,7 +12,7 @@ use super::IsDatasetMetric;
 
 
 #[no_mangle]
-pub extern "C" fn opendp_measurements__make_with_columns(
+pub extern "C" fn opendp_transformations__make_with_columns(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
     transformations: *const AnyObject,
@@ -20,18 +20,18 @@ pub extern "C" fn opendp_measurements__make_with_columns(
     // dereference all the pointers
     let input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<LazyFrameDomain>()).clone();
     let input_metric = try_as_ref!(input_metric).clone();
-    let transformations = try_as_ref!(transformations).downcast_ref::<*const AnyTransformation>();
+    let transformations = try_!(try_as_ref!(transformations).downcast_ref::<Vec<AnyTransformationPtr>>());
 
     // re-pack the inner measurement to work with concrete types (ExprDomain instead of AnyDomain)
     let transformations = try_!(transformations.iter().map(|t| -> Fallible<Transformation<_, _, _, _>> {
-        let t = util::as_ref(**t).ok_or_else(|| err!(FFI, "transformation is null"))?;
+        let t = util::as_ref(t.0.clone()).ok_or_else(|| err!(FFI, "transformation is null"))?;
         let function = t.function.clone();
         Transformation::new(
             t.input_domain
-                .downcast_ref::<ExprDomain<LazyFrameContext>>()?
+                .downcast_ref::<ExprDomain<LazyFrameDomain>>()?
                 .clone(),
             t.output_domain
-                .downcast_ref::<ExprDomain<LazyFrameContext>>()?
+                .downcast_ref::<ExprDomain<LazyFrameDomain>>()?
                 .clone(),
             Function::new_fallible(move |v: &(Arc<LazyFrame>, Expr)| -> Fallible<(Arc<LazyFrame>, Expr)> {
                 let expr_obj = function.eval(&AnyObject::new(v.clone()))?;
