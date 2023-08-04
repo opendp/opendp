@@ -64,9 +64,15 @@ pub extern "C" fn opendp_transformations__make_is_null(
     let input_metric = try_as_ref!(input_metric);
     let M = input_metric.type_.clone();
     let DI = input_domain.type_.clone();
-    let DIA = if let TypeContents::GENERIC { name: "VectorDomain", args } = DI.contents {
-        try_!(Type::of_id(try_!(args.get(0)
-            .ok_or_else(|| err!(FFI, "Vec must have one type argument.")))))
+    let DIA = if let TypeContents::GENERIC {
+        name: "VectorDomain",
+        args,
+    } = DI.contents
+    {
+        try_!(Type::of_id(try_!(args.get(0).ok_or_else(|| err!(
+            FFI,
+            "Vec must have one type argument."
+        )))))
     } else {
         return err!(FFI, "Invalid type name.").into();
     };
@@ -84,7 +90,10 @@ pub extern "C" fn opendp_transformations__make_is_null(
                 (VectorDomain<OptionDomain<AtomDomain<TIA>>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
             {
-                let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<OptionDomain<AtomDomain<TIA>>>>()).clone();
+                let input_domain = try_!(
+                    input_domain.downcast_ref::<VectorDomain<OptionDomain<AtomDomain<TIA>>>>()
+                )
+                .clone();
                 let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
                 make_is_null(input_domain, input_metric).into_any()
             }
@@ -101,7 +110,8 @@ pub extern "C" fn opendp_transformations__make_is_null(
                 (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
             {
-                let input_domain = try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
+                let input_domain =
+                    try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
                 let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
                 make_is_null(input_domain, input_metric).into_any()
             }
@@ -151,7 +161,6 @@ mod tests {
         assert_eq!(res, vec![true, false, false]);
         Ok(())
     }
-
 
     #[test]
     fn test_make_is_null() -> Fallible<()> {

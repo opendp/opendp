@@ -260,8 +260,13 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         
         if isinstance(other, PartialConstructor):
             return self >> other(self.output_domain, self.output_metric)
+        
+        from opendp.context import PartialChain
+        if isinstance(other, PartialChain):
+            return PartialChain(lambda x: self >> other.partial(x))
 
         raise ValueError(f"rshift expected a measurement or transformation, got {other}")
+
 
     @property
     def input_domain(self) -> "Domain":
@@ -381,8 +386,12 @@ class Function(ctypes.POINTER(AnyFunction)):
         setattr(self, "_dependencies", args)
     
     def __del__(self):
-        from opendp.core import _function_free
-        _function_free(self)
+        try:
+            from opendp.core import _function_free
+            _function_free(self)
+        except (ImportError, TypeError):
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
 
 
 class Domain(ctypes.POINTER(AnyDomain)):
@@ -408,8 +417,12 @@ class Domain(ctypes.POINTER(AnyDomain)):
         return domain_debug(self)
     
     def __del__(self):
-        from opendp.domains import _domain_free
-        _domain_free(self)
+        try:
+            from opendp.domains import _domain_free
+            _domain_free(self)
+        except (ImportError, TypeError):
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
 
     def __repr__(self) -> str:
         return str(self)
@@ -438,9 +451,13 @@ class Metric(ctypes.POINTER(AnyMetric)):
         return metric_debug(self)
     
     def __del__(self):
-        from opendp.metrics import _metric_free
-        _metric_free(self)
-    
+        try:
+            from opendp.metrics import _metric_free
+            _metric_free(self)
+        except (ImportError, TypeError):
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
+
     def __repr__(self) -> str:
         return str(self)
     
@@ -455,7 +472,8 @@ class Measure(ctypes.POINTER(AnyMeasure)):
     @property
     def type(self):
         from opendp.measures import measure_type
-        return measure_type(self)
+        from opendp.typing import RuntimeType
+        return RuntimeType.parse(measure_type(self))
     
     @property
     def distance_type(self):
@@ -468,8 +486,15 @@ class Measure(ctypes.POINTER(AnyMeasure)):
         return measure_debug(self)
     
     def __del__(self):
-        from opendp.measures import _measure_free
-        _measure_free(self)
+        try:
+            from opendp.measures import _measure_free
+            _measure_free(self)
+        except (ImportError, TypeError):
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
+
+    def __eq__(self, other):
+        return str(self) == str(other)
 
 
 class SMDCurve(object):
@@ -872,115 +897,13 @@ def exponential_bounds_search(
             return False
     exception_bounds = exponential_bounds_search(exception_predicate, T=T)
     if exception_bounds is None:
-        error = ""
         try:
             predicate(center)
-        except Exception as err:
-            error = f". Error at center: {err}"
-        
-        raise ValueError(f"predicate always fails{error}")
+        except Exception:
+            raise ValueError(f"predicate always fails. An example traceback is shown above at {center}.")
+    
 
     center, sign = binary_search(exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
     at_center = predicate(center)
     return signed_band_search(center, at_center, sign)
 
-
-def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
-    """A shorthand for building a metric space.
-     
-    A metric space consists of a domain and a metric.
-
-    :example:
-
-    >>> import opendp.prelude as dp
-    >>> from typing import List # in Python 3.9, can just write list[int] below
-    ...
-    >>> dp.space_of(List[int])
-    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
-    >>> # the verbose form allows greater control:
-    >>> (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())
-    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
-    
-    :param T: carrier type (the type of members in the domain)
-    :param M: metric type
-    :param infer: if True, `T` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
-    """
-    import opendp.typing as ty
-    domain = domain_of(T, infer=infer)
-    D = domain.type
-
-    # choose a metric type if not set
-    if M is None:
-        if D.origin == "VectorDomain":
-            M = ty.SymmetricDistance
-        elif D.origin == "AtomDomain" and ty.get_atom(D) in ty.NUMERIC_TYPES:
-            M = ty.AbsoluteDistance
-        else:
-            raise TypeError(f"no default metric for domain {D}. Please set `M`")
-    
-    # choose a distance type if not set
-    if isinstance(M, ty.RuntimeType) and M.args is None:
-        M = M[ty.get_atom(D)]
-
-    return domain, metric_of(M)
-
-
-def domain_of(T, infer=False) -> Domain:
-    """Constructs an instance of a domain from carrier type `T`.
-
-    :param T: carrier type
-    :param infer: if True, `T` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
-    """
-    import opendp.typing as ty
-    from opendp.domains import vector_domain, atom_domain, option_domain, map_domain
-
-    # normalize to a type descriptor
-    if infer:
-        T = ty.RuntimeType.infer(T)
-    else:
-        T = ty.RuntimeType.parse(T)
-    
-    # construct the domain
-    if isinstance(T, ty.RuntimeType):
-        if T.origin == "Vec":
-            return vector_domain(domain_of(T.args[0]))
-        if T.origin == "HashMap":
-            return map_domain(domain_of(T.args[0]), domain_of(T.args[1]))
-        if T.origin == "Option":
-            return option_domain(domain_of(T.args[0]))
-
-    if T in ty.PRIMITIVE_TYPES:
-        return atom_domain(T=T)
-    
-    raise TypeError(f"unrecognized carrier type: {T}")
-    
-        
-def metric_of(M) -> Metric:
-    """Constructs an instance of a metric from metric type `M`."""
-    import opendp.typing as ty
-    import opendp.metrics as metrics
-
-    if isinstance(M, Metric):
-        return M
-    M = ty.RuntimeType.parse(M)
-
-    if isinstance(M, ty.RuntimeType):
-        if M.origin == "AbsoluteDistance":
-            return metrics.absolute_distance(T=M.args[0])
-        if M.origin == "L1Distance":
-            return metrics.l1_distance(T=M.args[0])
-        if M.origin == "L2Distance":
-            return metrics.l2_distance(T=M.args[0])
-        
-    if M == ty.HammingDistance:
-        return metrics.hamming_distance()
-    if M == ty.SymmetricDistance:
-        return metrics.symmetric_distance()
-    if M == ty.InsertDeleteDistance:
-        return metrics.insert_delete_distance()
-    if M == ty.ChangeOneDistance:
-        return metrics.change_one_distance()
-    if M == ty.DiscreteDistance:
-        return metrics.discrete_distance()
-
-    raise TypeError(f"unrecognized metric: {M}")

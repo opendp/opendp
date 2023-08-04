@@ -4,7 +4,7 @@ mod ffi;
 use opendp_derive::bootstrap;
 
 use crate::core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{VectorDomain, AtomDomain};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::{InsertDeleteDistance, IntDistance, SymmetricDistance};
 use crate::traits::samplers::Shuffle;
@@ -24,9 +24,7 @@ impl IsMetricOrdered for InsertDeleteDistance {
 
 #[bootstrap(
     features("contrib"),
-    arguments(
-        constant(rust_type = "$get_atom(get_type(input_domain))")
-    ),
+    arguments(constant(rust_type = "$get_atom(get_type(input_domain))")),
     generics(TA(suppress), MI(suppress), MO(default = "SymmetricDistance"))
 )]
 /// Make a Transformation that either truncates or imputes records
@@ -111,9 +109,16 @@ mod test {
 
     #[test]
     fn test() -> Fallible<()> {
-        let (input_domain, input_metric) = (VectorDomain::new(AtomDomain::default()), SymmetricDistance::default());
-        let trans =
-            make_resize::<_, SymmetricDistance, SymmetricDistance>(input_domain, input_metric, 3, "x")?;
+        let (input_domain, input_metric) = (
+            VectorDomain::new(AtomDomain::default()),
+            SymmetricDistance::default(),
+        );
+        let trans = make_resize::<_, SymmetricDistance, SymmetricDistance>(
+            input_domain,
+            input_metric,
+            3,
+            "x",
+        )?;
         assert_eq!(trans.invoke(&vec!["A"; 2])?, vec!["A", "A", "x"]);
         assert_eq!(trans.invoke(&vec!["A"; 3])?, vec!["A"; 3]);
         assert_eq!(trans.invoke(&vec!["A"; 4])?, vec!["A", "A", "A"]);
