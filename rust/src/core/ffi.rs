@@ -9,11 +9,13 @@ use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
 use crate::ffi::any::{
     AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyQueryable,
     AnyTransformation, Downcast, IntoAnyFunctionExt, IntoAnyMeasurementExt,
-    IntoAnyTransformationExt, QueryType,
+    IntoAnyTransformationExt, QueryType, CallbackFn, wrap_func,
 };
 use crate::ffi::util::into_c_char_p;
 use crate::ffi::util::{self, c_bool, Type};
 use crate::{try_, try_as_ref};
+
+use super::Function;
 
 #[repr(C)]
 pub struct FfiSlice {
@@ -657,6 +659,37 @@ pub extern "C" fn opendp_core__measurement_output_distance_type(
         this.output_measure.distance_type.descriptor.to_string()
     )))
 }
+
+
+#[bootstrap(
+    name = "new_function",
+    features("contrib"),
+    arguments(function(rust_type = "$pass_through(TO)")),
+    dependencies("c_function")
+)]
+/// Construct a Function from a user-defined callback.
+/// Can be used as a post-processing step.
+///
+/// # Arguments
+/// * `function` - A function mapping data to a value of type `TO`
+///
+/// # Generics
+/// * `TO` - Output Type
+#[allow(dead_code)]
+fn new_function<TO>(function: CallbackFn) -> Fallible<AnyFunction> {
+    let _ = function;
+    panic!("this signature only exists for code generation")
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__new_function(
+    function: CallbackFn,
+    TO: *const c_char,
+) -> FfiResult<*mut AnyFunction> {
+    let _TO = TO;
+    FfiResult::Ok(util::into_raw(Function::new_fallible(wrap_func(function))))
+}
+
 
 #[bootstrap(
     name = "function_eval",

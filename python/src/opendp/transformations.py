@@ -3,7 +3,10 @@ from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
-
+from opendp.core import *
+from opendp.domains import *
+from opendp.metrics import *
+from opendp.measures import *
 __all__ = [
     "choose_branching_factor",
     "make_b_ary_tree",
@@ -55,6 +58,7 @@ __all__ = [
     "make_sum",
     "make_sum_of_squared_deviations",
     "make_unordered",
+    "make_user_transformation",
     "make_variance",
     "then_b_ary_tree",
     "then_cast",
@@ -2954,6 +2958,55 @@ def then_unordered(
         input_domain=input_domain,
         input_metric=input_metric))
 
+
+
+@versioned
+def make_user_transformation(
+    input_domain: Domain,
+    input_metric: Metric,
+    output_domain: Domain,
+    output_metric: Metric,
+    function,
+    stability_map
+) -> Transformation:
+    """Construct a Transformation from user-defined callbacks.
+    
+    [make_user_transformation in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_user_transformation.html)
+    
+    :param input_domain: A domain describing the set of valid inputs for the function.
+    :type input_domain: Domain
+    :param input_metric: The metric from which distances between adjacent inputs are measured.
+    :type input_metric: Metric
+    :param output_domain: A domain describing the set of valid outputs of the function.
+    :type output_domain: Domain
+    :param output_metric: The metric from which distances between outputs of adjacent inputs are measured.
+    :type output_metric: Metric
+    :param function: A function mapping data from `input_domain` to `output_domain`.
+    :param stability_map: A function mapping distances from `input_metric` to `output_metric`.
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib", "honest-but-curious")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=AnyDomain)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=AnyMetric)
+    c_output_domain = py_to_c(output_domain, c_type=Domain, type_name=AnyDomain)
+    c_output_metric = py_to_c(output_metric, c_type=Metric, type_name=AnyMetric)
+    c_function = py_to_c(function, c_type=CallbackFn, type_name=domain_carrier_type(output_domain))
+    c_stability_map = py_to_c(stability_map, c_type=CallbackFn, type_name=metric_distance_type(output_metric))
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_user_transformation
+    lib_function.argtypes = [Domain, Metric, Domain, Metric, CallbackFn, CallbackFn]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_domain, c_output_metric, c_function, c_stability_map), Transformation))
+    output._depends_on(c_function, c_stability_map)
+    return output
 
 
 @versioned
