@@ -1,3 +1,9 @@
 # For https://mybinder.org
-# Pin to matching version
-opendp==0.8.0.dev0
+--editable python/
+
+# Used by examples in notebooks:
+matplotlib
+numpy
+pandas
+seaborn
+scipy
