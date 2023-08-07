@@ -185,10 +185,10 @@ rst_prolog = """
 # we have to resolve the link ref here, at runtime, because sphinx-multiversion mediates the reading of this config
 nbsphinx_prolog = fr"""
 {{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}}
-{{% if env.config.version.endswith('-dev') %}}
+{{% if env.config.release.endswith('-dev') %}}
     {{% set frag = 'main' %}}
-{{% elif '-' in env.config.version %}}
-    {{% set frag = env.config.version.split('-', 1)[1].split('.', 1)[0] %}}
+{{% elif '-' in env.config.release %}}
+    {{% set frag = env.config.release.split('-', 1)[1].split('.', 1)[0] %}}
 {{% else %}}
     {{% set frag = 'v' ~ env.config.version %}}
 {{% endif %}}
