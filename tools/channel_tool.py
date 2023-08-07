@@ -92,6 +92,7 @@ def update_version(version):
     def munge_cargo_root(toml):
         toml["workspace"]["package"]["version"] = str(version)
         toml["dependencies"]["opendp_derive"]["version"] = str(stripped_version)
+        toml["dependencies"]["opendp_tooling"]["version"] = str(stripped_version)
         toml["build-dependencies"]["opendp_tooling"]["version"] = str(stripped_version)
         return toml
     update_file("rust/Cargo.toml", tomlkit.load, munge_cargo_root, tomlkit.dump)
