@@ -321,7 +321,7 @@ lazy_static! {
             type_vec![SMDCurve, <f32, f64>],
         ].into_iter().flatten().collect();
         let descriptors: HashSet<_> = types.iter().map(|e| &e.descriptor).collect();
-        assert_eq!(descriptors.len(), types.len());
+        assert_eq!(descriptors.len(), types.len(), "detected duplicate TYPES");
         types
     };
 }
