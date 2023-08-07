@@ -5,7 +5,6 @@
 //! This is made possible by glue functions which can take the Any representation and downcast to the
 //! correct concrete type.
 
-use std::any;
 use std::any::Any;
 use std::fmt::{Debug, Formatter};
 
@@ -138,36 +137,27 @@ impl Downcast for ElementBox {
             .map_err(|_| {
                 err!(
                     FailedCast,
-                    "Failed downcast of AnyBox to {}",
-                    any::type_name::<T>()
+                    "Expected data of type {}",
+                    Type::of::<T>().to_string()
                 )
             })
             .map(|x| *x)
     }
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
         self.value.downcast_ref().ok_or_else(|| {
-            let other_type = Type::of_id(&self.value.type_id())
-                .map(|t| format!(" AnyBox contains {:?}.", t))
-                .unwrap_or_default();
             err!(
                 FailedCast,
-                "Failed downcast_ref of AnyBox to {}.{}",
-                any::type_name::<T>(),
-                other_type
+                "Expected data of type {}",
+                Type::of::<T>().to_string()
             )
         })
     }
     fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
-        let type_id = self.value.type_id();
         self.value.downcast_mut().ok_or_else(|| {
-            let other_type = Type::of_id(&type_id)
-                .map(|t| format!(" AnyBox contains {:?}.", t))
-                .unwrap_or_default();
             err!(
                 FailedCast,
-                "Failed downcast_mut of AnyBox to {}.{}",
-                any::type_name::<T>(),
-                other_type
+                "Expected data of type {}",
+                Type::of::<T>().to_string()
             )
         })
     }
@@ -220,15 +210,27 @@ impl AnyDomain {
     }
 }
 
+macro_rules! wrap_downcast_err {
+    ($exp:expr, $ty:expr) => {{
+        $exp.map_err(|mut e| {
+            e.message = e
+                .message
+                .map(|m| format!("{}. Got {}", m, $ty.to_string()));
+            e
+        })
+    }};
+}
+pub(crate) use wrap_downcast_err;
+
 impl Downcast for AnyDomain {
     fn downcast<T: 'static>(self) -> Fallible<T> {
-        self.domain.downcast()
+        wrap_downcast_err!(self.domain.downcast(), self.type_)
     }
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
-        self.domain.downcast_ref()
+        wrap_downcast_err!(self.domain.downcast_ref(), self.type_)
     }
     fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
-        self.domain.downcast_mut()
+        wrap_downcast_err!(self.domain.downcast_mut(), self.type_)
     }
 }
 
@@ -269,13 +271,13 @@ impl AnyMeasure {
 
 impl Downcast for AnyMeasure {
     fn downcast<T: 'static>(self) -> Fallible<T> {
-        self.measure.downcast()
+        wrap_downcast_err!(self.measure.downcast(), self.type_)
     }
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
-        self.measure.downcast_ref()
+        wrap_downcast_err!(self.measure.downcast_ref(), self.type_)
     }
     fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
-        self.measure.downcast_mut()
+        wrap_downcast_err!(self.measure.downcast_mut(), self.type_)
     }
 }
 
@@ -319,13 +321,13 @@ impl AnyMetric {
 
 impl Downcast for AnyMetric {
     fn downcast<T: 'static>(self) -> Fallible<T> {
-        self.metric.downcast()
+        wrap_downcast_err!(self.metric.downcast(), self.type_)
     }
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
-        self.metric.downcast_ref()
+        wrap_downcast_err!(self.metric.downcast_ref(), self.type_)
     }
     fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
-        self.metric.downcast_mut()
+        wrap_downcast_err!(self.metric.downcast_mut(), self.type_)
     }
 }
 
