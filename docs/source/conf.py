@@ -181,6 +181,11 @@ rst_prolog = """
 .. |toctitle| replace:: Contents:
 """
 
+binder_link = '' if semver_version <= semver.Version.parse('0.7.0') else '''
+  Interactive online version:
+  <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp/{{ frag|e }}?filepath={{ docname|e }}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
+'''
+
 # insert this header on nbsphinx pages to link to binder and github:
 # we have to resolve the link ref here, at runtime, because sphinx-multiversion mediates the reading of this config
 nbsphinx_prolog = fr"""
@@ -197,7 +202,6 @@ nbsphinx_prolog = fr"""
     <div class="admonition note">
       This page was generated from
       <a class="reference external" href="https://github.com/opendp/opendp/tree/{{{{ frag|e }}}}/{{{{ docname|e }}}}" target="_blank">{{{{ docname|e }}}}</a>.
-      Interactive online version:
-      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp/{{{{ frag|e }}}}?filepath={{{{ docname|e }}}}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
+      {binder_link}
     </div>
 """

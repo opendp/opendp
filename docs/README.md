@@ -12,6 +12,7 @@ The steps below assume the use of [Homebrew] on a Mac.
 [Homebrew]: https://brew.sh
 
 ```shell
+cd docs
 brew install pandoc
 python3 -m venv venv
 source venv/bin/activate
