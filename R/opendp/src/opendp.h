@@ -967,6 +967,10 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_private_quantile_e
                                                                                     double alpha,
                                                                                     const char *QO);
 
+struct FfiResult_____AnyMeasurement opendp_measurements__make_private_select(const struct AnyDomain *input_domain,
+                                                                             const struct AnyMetric *input_metric,
+                                                                             const AnyMeasurement *measurement);
+
 /**
  * Internal function. Free the memory associated with `this`.
  */
