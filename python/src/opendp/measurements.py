@@ -23,6 +23,7 @@ __all__ = [
     "make_private_agg",
     "make_private_mean_expr",
     "make_private_quantile",
+    "make_private_select",
     "make_randomized_response",
     "make_randomized_response_bool",
     "make_user_measurement",
@@ -41,6 +42,7 @@ __all__ = [
     "then_private_agg",
     "then_private_mean_expr",
     "then_private_quantile",
+    "then_private_select",
     "then_user_measurement"
 ]
 
@@ -1119,6 +1121,67 @@ def then_private_quantile(
         alpha=alpha,
         QO=QO,
         A=A))
+
+
+
+@versioned
+def make_private_select(
+    input_domain,
+    input_metric,
+    measurement: Measurement
+) -> Measurement:
+    """Make a Transformation that returns a Measurement in select context.
+    
+    Valid inputs for `input_domain` and `input_metric` are:
+    
+    | `input_domain`                  | `input_metric`                             |
+    | ------------------------------- | ------------------------------------------ |
+    | `LazyFrameDomain`               | `SymmetricDistance`                        |
+    | `LazyFrameDomain`               | `InsertDeleteDistance`                     |
+    | `LazyFrameDomain`               | `ChangeOneDistance` if Margins provided    |
+    | `LazyFrameDomain`               | `HammingDistance` if Margins provided      |
+    | `LazyFrameDomain`               | `AbsoluteDistance`                         |
+    
+    [make_private_select in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_private_select.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `LazyFrameDomain`
+    * Output Type:    `LazyFrame`
+    * Input Metric:   `T::InputMetric`
+    * Output Measure: `T::OutputMeasure`
+    
+    :param input_domain: LazyFrameDomain.
+    :param input_metric: The metric space under which neighboring LazyFrame frames are compared.
+    :param measurement: 
+    :type measurement: Measurement
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_measurement = py_to_c(measurement, c_type=Measurement, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_private_select
+    lib_function.argtypes = [Domain, Metric, Measurement]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_measurement), Measurement))
+    
+    return output
+
+def then_private_select(
+    measurement: Measurement
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_private_select(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        measurement=measurement))
 
 
 

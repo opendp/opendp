@@ -2,7 +2,7 @@ use crate::combinators::assert_components_match;
 use polars::prelude::*;
 
 use crate::core::{Function, Measure, Measurement, Metric, MetricSpace};
-use crate::domains::{ExprDomain, LazyGroupByDomain};
+use crate::domains::{ExprDomain, LazyGroupByDomain, LazyDomain};
 use crate::error::*;
 use opendp_derive::bootstrap;
 
@@ -32,7 +32,7 @@ mod ffi;
 /// # Generics
 /// * `T` - AggMeasurement.
 ///
-pub fn make_private_agg<T: AggMeasurement>(
+pub fn make_private_agg<T: VecMeasurementContext<LazyGroupByDomain>>(
     input_domain: LazyGroupByDomain,
     input_metric: T::InputMetric,
     measurement: Measurement<
@@ -65,24 +65,24 @@ where
 }
 
 /// Either a `Measurement` or a `PartialMeasurement` that can be used in the select context.
-pub trait AggMeasurement: 'static {
+pub trait VecMeasurementContext<DI: LazyDomain>: 'static {
     type InputMetric: 'static + Metric;
     type OutputMeasure: 'static + Measure;
     fn fix(
         self,
-        input_domain: &LazyGroupByDomain,
+        input_domain: &DI,
         input_metric: &Self::InputMetric,
-    ) -> Fallible<Measurement<LazyGroupByDomain, LazyFrame, Self::InputMetric, Self::OutputMeasure>>;
+    ) -> Fallible<Measurement<DI, LazyFrame, Self::InputMetric, Self::OutputMeasure>>;
 }
 
-impl<MI: 'static + Metric, MO: 'static + Measure> AggMeasurement
-    for Measurement<LazyGroupByDomain, LazyFrame, MI, MO>
+impl<DI: 'static + LazyDomain, MI: 'static + Metric, MO: 'static + Measure> VecMeasurementContext<DI>
+    for Measurement<DI, LazyFrame, MI, MO>
 where
-    (LazyGroupByDomain, MI): MetricSpace,
+    (DI, MI): MetricSpace,
 {
     type InputMetric = MI;
     type OutputMeasure = MO;
-    fn fix(self, input_domain: &LazyGroupByDomain, input_metric: &MI) -> Fallible<Self> {
+    fn fix(self, input_domain: &DI, input_metric: &MI) -> Fallible<Self> {
         assert_components_match!(DomainMismatch, &self.input_domain, input_domain);
         assert_components_match!(MetricMismatch, &self.input_metric, input_metric);
 
@@ -91,18 +91,18 @@ where
 }
 
 #[cfg(feature = "partials")]
-impl<MI: 'static + Metric, MO: 'static + Measure> AggMeasurement
-    for crate::core::PartialMeasurement<LazyGroupByDomain, LazyFrame, MI, MO>
+impl<DI: 'static + LazyDomain, MI: 'static + Metric, MO: 'static + Measure> VecMeasurementContext<DI>
+    for crate::core::PartialMeasurement<DI, LazyFrame, MI, MO>
 where
-    (LazyGroupByDomain, MI): MetricSpace,
+    (DI, MI): MetricSpace,
 {
     type InputMetric = MI;
     type OutputMeasure = MO;
     fn fix(
         self,
-        input_domain: &LazyGroupByDomain,
+        input_domain: &DI,
         input_metric: &MI,
-    ) -> Fallible<Measurement<LazyGroupByDomain, LazyFrame, MI, MO>> {
+    ) -> Fallible<Measurement<DI, LazyFrame, MI, MO>> {
         self.fix(input_domain.clone(), input_metric.clone())
     }
 }

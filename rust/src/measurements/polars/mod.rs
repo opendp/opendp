@@ -27,3 +27,8 @@ pub use make_discrete_exponential_expr::*;
 mod make_private_quantile;
 #[cfg(feature = "contrib")]
 pub use make_private_quantile::*;
+
+#[cfg(feature = "contrib")]
+mod make_private_select;
+#[cfg(feature = "contrib")]
+pub use make_private_select::*;
