@@ -32,3 +32,8 @@ pub use make_private_quantile::*;
 mod make_private_select;
 #[cfg(feature = "contrib")]
 pub use make_private_select::*;
+
+#[cfg(feature = "contrib")]
+mod make_multi_private_quantiles;
+#[cfg(feature = "contrib")]
+pub use make_multi_private_quantiles::*;
