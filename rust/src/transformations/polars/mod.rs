@@ -27,6 +27,12 @@ pub use scan_parquet::*;
 mod sink_parquet;
 #[cfg(feature = "contrib")]
 pub use sink_parquet::*;
+
+#[cfg(feature = "contrib")]
+mod make_sum;
+#[cfg(feature = "contrib")]
+pub use make_sum::*;
+
 #[cfg(feature = "contrib")]
 mod make_groupby;
 #[cfg(feature = "contrib")]
@@ -47,6 +53,27 @@ pub use make_with_columns::*;
 mod make_agg_trans;
 #[cfg(feature = "contrib")]
 pub use make_agg_trans::*;
+#[cfg(feature = "contrib")]
+mod make_clamp;
+#[cfg(feature = "contrib")]
+pub use make_clamp::*;
+#[cfg(feature = "contrib")]
+mod make_cut;
+#[cfg(feature = "contrib")]
+pub use make_cut::*;
+
+#[cfg(feature = "contrib")]
+pub use make_clamp::*;
+
+#[cfg(feature = "contrib")]
+mod make_quantile_score_candidates_expr;
+#[cfg(feature = "contrib")]
+pub use make_quantile_score_candidates_expr::*;
+
+// #[cfg(feature = "contrib")]
+// mod make_quantile_scores_continuous_expr;
+// #[cfg(feature = "contrib")]
+// pub use make_quantile_scores_continuous_expr::*;
 
 #[cfg(test)]
 pub mod polars_test {

@@ -7,6 +7,7 @@ from opendp.typing import *
 __all__ = [
     "bool_free",
     "ffislice_of_anyobjectptrs",
+    "get_active_column_type",
     "new_arrow_array",
     "object_as_slice",
     "object_free",
@@ -72,6 +73,34 @@ def ffislice_of_anyobjectptrs(
     lib_function.restype = FfiResult
     
     output = unwrap(lib_function(c_raw), FfiSlicePtr)
+    
+    return output
+
+
+@versioned
+def get_active_column_type(
+    domain
+) -> str:
+    """Internal function. Retrieve the active column type of an ExprDomain.
+    
+    [get_active_column_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.get_active_column_type.html)
+    
+    :param domain: 
+    :rtype: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_domain = py_to_c(domain, c_type=Domain, type_name=AnyDomain)
+    
+    # Call library function.
+    lib_function = lib.opendp_data__get_active_column_type
+    lib_function.argtypes = [Domain]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_domain), ctypes.c_char_p))
     
     return output
 

@@ -18,16 +18,32 @@ def test_series_domain():
 
 def test_lazyframe_domain():
     domains, data = test_series_domain()
-    return dp.lazyframe_domain(domains), pl.LazyFrame(data)
+    return dp.lazyframe_domain(domains), pl.LazyFrame(data, schema_overrides={"B": pl.Int32})
 
 def test_dataframe_domain():
     domains, data = test_series_domain()
-    return dp.dataframe_domain(domains), pl.DataFrame(data)
+    return dp.dataframe_domain(domains), pl.DataFrame(data={"B": pl.Int32})
 
 def test_lazyframe_domain_with_counts():
     counts = pl.LazyFrame({"B": [1], "counts": [50]}, schema_overrides={"B": pl.Int32, "counts": pl.UInt32})
     domain, data = test_lazyframe_domain()
     return domain.with_counts(counts), data
+
+def test_lazyframe_domain_with_many_counts():
+    counts = pl.LazyFrame(
+        {"counts": [50]},
+        schema_overrides={"counts": pl.UInt32},
+    )
+    a_counts = pl.LazyFrame(
+        {"A": [1.0], "counts": [50]},
+        schema_overrides={"A": pl.Float64, "counts": pl.UInt32},
+    )
+    b_counts = pl.LazyFrame(
+        {"B": [1], "counts": [50]}, 
+        schema_overrides={"B": pl.Int32, "counts": pl.UInt32}
+    )
+    domain, data = test_lazyframe_domain()
+    return domain.with_counts(counts).with_counts(a_counts).with_counts(b_counts), data
 
 def test_dataframe_domain_with_counts():
     counts = pl.DataFrame({"B": [1], "counts": [50]}, schema_overrides={"B": pl.Int32, "counts": pl.UInt32})
@@ -86,11 +102,98 @@ def test_collect_lazy():
 def test_make_with_columns():
     domain, data = test_lazyframe_domain()
     metric = dp.symmetric_distance()
-    expr_domain = dp.expr_domain(domain, context="with_columns", active_column="A")
+    expr_domain = dp.expr_domain(domain, context="with_columns")
 
-    # TODO: update when we have another expr constructor
+    trans_lazy = (domain, metric) >> dp.t.then_with_columns([
+        (expr_domain, metric) >> dp.t.then_col("A") >> dp.t.then_clamp_expr((1., 2.))
+    ])
+    # trans_lazy(data)
+
+def test_private_mean_expr():
+    domain, data = test_lazyframe_domain()
+    metric = dp.symmetric_distance()
+    expr_domain = dp.expr_domain(domain, context="with_columns")
+    expr_metric = dp.l1(dp.symmetric_distance())
+
+    # Fail because no margin
     with pytest.raises(dp.OpenDPException):
-        trans_lazy = (domain, metric) >> dp.t.then_with_columns([
-            (expr_domain, metric) >> dp.t.then_col("B")
+        meas_lazy = (domain, metric) >> dp.t.then_with_columns([
+            (expr_domain, metric) >> dp.t.then_col("A") >> dp.m.then_private_mean_expr(0.5)
         ])
-        trans_lazy(data)
+
+    # now add margins, it should pass
+    a_counts = pl.LazyFrame(
+        {"A": [1.0], "counts": [50]},
+        schema_overrides={"A": pl.Float64, "counts": pl.UInt32},
+    )
+    b_counts = pl.LazyFrame(
+        {"B": [1], "counts": [50]},
+        schema_overrides={"B": pl.Int32, "counts": pl.UInt32},
+    )
+
+    domain = domain.with_counts(a_counts).with_counts(b_counts)
+    expr_domain = dp.expr_domain(domain, grouping_columns=["A"])
+    meas_lazy = (
+        (domain, metric)
+        >> dp.t.then_groupby_stable(["A"])
+        >> dp.m.then_private_agg(
+            dp.c.make_basic_composition(
+                [
+                    (expr_domain, expr_metric)
+                    >> dp.t.then_col("B")
+                    >> dp.t.then_clamp_expr((2, 3))
+                    >> dp.m.then_private_mean_expr(0.5)
+                ]
+            )
+        )
+        >> dp.t.make_collect(domain, metric)
+    )
+
+    print(meas_lazy(data))
+
+
+def test_private_quantile_expr():
+    domain, data = test_lazyframe_domain_with_many_counts()
+    metric = dp.symmetric_distance()
+
+    expr_metric = dp.l1(dp.symmetric_distance())
+    expr_domain = dp.expr_domain(domain, grouping_columns=["A"])
+
+    clamp_bounds = (0, 1)
+    candidates = [20, 33, 40, 50, 72, 100]
+    temperature = 1.0
+    alpha = 0.5
+
+    meas_lazy = (
+        (domain, metric)
+        >> dp.t.then_groupby_stable(["A"])
+        >> dp.m.then_private_agg(
+            dp.c.make_basic_composition(
+                [
+                    (expr_domain, expr_metric)
+                    >> dp.t.then_col("B")
+                    >> dp.t.then_clamp_expr(clamp_bounds)
+                    >> dp.m.then_private_quantile(candidates, temperature, alpha)
+                ]
+            )
+        )
+        >> dp.t.make_collect(domain, metric)
+    )
+
+    print(meas_lazy(data))
+
+
+def test_make_private_select_mean():
+    domain, data = test_lazyframe_domain_with_many_counts()
+    metric = dp.symmetric_distance()
+
+    expr_domain = dp.expr_domain(domain, context="select")
+
+    meas_lazy = (domain, metric) >> dp.m.then_private_select(dp.c.make_basic_composition([
+        (expr_domain, metric) 
+        >> dp.t.then_col("B") 
+        >> dp.t.then_clamp_expr((1, 2)) 
+        >> dp.m.then_private_mean_expr(0.5)
+    ])) >> dp.t.make_collect(domain, metric)
+
+    meas_lazy(data)

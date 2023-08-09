@@ -453,6 +453,7 @@ impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
     }
 }
 
+
 /// Distance between score vectors for the exponential mechanism.
 ///
 /// # Proof Definition

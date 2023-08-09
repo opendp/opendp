@@ -5,8 +5,6 @@ use polars::lazy::dsl::{col, cols, count};
 use polars::prelude::*;
 
 use crate::core::Domain;
-use crate::metrics::AbsoluteDistance;
-use crate::traits::TotalOrd;
 use crate::transformations::item;
 use crate::domains::DatasetMetric;
 use crate::{
@@ -14,6 +12,7 @@ use crate::{
     domains::{AtomDomain, OptionDomain, SeriesDomain},
     error::Fallible,
 };
+
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -112,13 +111,6 @@ pub type LazyFrameDomain = FrameDomain<LazyFrame>;
 pub type DataFrameDomain = FrameDomain<DataFrame>;
 
 impl<F: Frame, D: DatasetMetric> MetricSpace for (FrameDomain<F>, D) {
-    fn check(&self) -> bool {
-        // TODO: tighten this check
-        true
-    }
-}
-
-impl<F: Frame, Q: TotalOrd> MetricSpace for (FrameDomain<F>, AbsoluteDistance<Q>) {
     fn check(&self) -> bool {
         // TODO: tighten this check
         true
@@ -351,6 +343,36 @@ impl<F: Frame> Margin<F> {
             .to_string())
     }
 
+    pub fn get_max_size(&self) -> Fallible<u32> {
+        let count_col_name = self.get_count_column_name()?;
+        let max_df = self
+            .data
+            .clone()
+            .lazyframe()
+            .select([col(count_col_name.as_str()).max()])
+            .collect()?;
+        let max_size = max_df.get_columns()[0]
+            .u32()?
+            .get(0)
+            .ok_or_else(|| err!(FailedFunction, "expected one value"));
+        max_size
+    }
+
+    pub fn get_min_size(&self) -> Fallible<u32> {
+        let count_col_name = self.get_count_column_name()?;
+        let min_df = self
+            .data
+            .clone()
+            .lazyframe()
+            .select([col(count_col_name.as_str()).min()])
+            .collect()?;
+        let min_size = min_df.get_columns()[0]
+            .u32()?
+            .get(0)
+            .ok_or_else(|| err!(FailedFunction, "expected one value"));
+        min_size
+    }
+
     fn get_join_column_names(&self) -> Fallible<Vec<String>> {
         Ok((self.data.schema()?.iter_names().enumerate())
             .filter(|(i, _)| Some(*i) != self.counts_index)
@@ -415,8 +437,12 @@ impl<F: Frame> PartialEq for Margin<F> {
             return false;
         }
 
-        let Ok(self_margins) = self.data.clone().dataframe() else {return false};
-        let Ok(other_margins) = self.data.clone().dataframe() else {return false};
+        let Ok(self_margins) = self.data.clone().dataframe() else {
+            return false;
+        };
+        let Ok(other_margins) = self.data.clone().dataframe() else {
+            return false;
+        };
         if self_margins != other_margins {
             return false;
         }

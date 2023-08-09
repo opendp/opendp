@@ -14,7 +14,7 @@ use polars::prelude::*;
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;
 use crate::error::Fallible;
-use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
+use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast, AnyDomain};
 use crate::ffi::util::{self, into_c_char_p, into_raw, to_str, AnyDomainPtr};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 use crate::measures::SMDCurve;
@@ -724,6 +724,17 @@ pub extern "C" fn opendp_data__smd_curve_epsilon(
     let curve = try_as_ref!(curve);
     let delta = try_as_ref!(delta);
     dispatch!(monomorphize, [(delta.type_, @floats)], (curve, delta)).into()
+}
+
+
+#[bootstrap(name = "get_active_column_type")]
+/// Internal function. Retrieve the active column type of an ExprDomain.
+#[no_mangle]
+pub extern "C" fn opendp_data__get_active_column_type(
+    domain: *const AnyDomain,
+) -> FfiResult<*mut c_char> {
+    let ty = try_!(try_as_ref!(domain).get_active_column_type());
+    FfiResult::Ok(try_!(into_c_char_p(ty.to_string())))
 }
 
 // need rust to own the memory for the ArrowArray and ArrowSchema

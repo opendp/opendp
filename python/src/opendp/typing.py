@@ -538,3 +538,7 @@ def get_distance_type(value):
 
 def get_type(value):
     return value.type
+
+def get_active_column_type(domain):
+    from ._data import get_active_column_type
+    return get_active_column_type(domain)

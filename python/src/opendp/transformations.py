@@ -20,6 +20,7 @@ __all__ = [
     "make_cast_inherent",
     "make_cdf",
     "make_clamp",
+    "make_clamp_expr",
     "make_col",
     "make_collect",
     "make_column",
@@ -76,6 +77,7 @@ __all__ = [
     "then_cast_default",
     "then_cast_inherent",
     "then_clamp",
+    "then_clamp_expr",
     "then_col",
     "then_collect",
     "then_column",
@@ -778,6 +780,59 @@ def then_clamp(
     bounds: Tuple[Any, Any]
 ):
     return PartialConstructor(lambda input_domain, input_metric: make_clamp(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        bounds=bounds))
+
+
+
+@versioned
+def make_clamp_expr(
+    input_domain,
+    input_metric,
+    bounds: Tuple[Any, Any]
+) -> Transformation:
+    """Make a Transformation that returns a `clip(bounds)` expression for a LazyFrame.
+    
+    [make_clamp_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_clamp_expr.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `ExprDomain<M::LazyDomain>`
+    * Output Domain:  `ExprDomain<M::LazyDomain>`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+    
+    :param input_domain: Expr domain
+    :param input_metric: The metric under which neighboring LazyFrames are compared
+    :param bounds: bounds to be applied in clamp operation.
+    :type bounds: Tuple[Any, Any]
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # Standardize type arguments.
+    TA = get_active_column_type(input_domain)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_clamp_expr
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_bounds), Transformation))
+    
+    return output
+
+def then_clamp_expr(
+    bounds: Tuple[Any, Any]
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_clamp_expr(
         input_domain=input_domain,
         input_metric=input_metric,
         bounds=bounds))
