@@ -267,7 +267,7 @@ where
         output_measure: MO,
         privacy_map: PrivacyMap<MI, MO>,
     ) -> Fallible<Self> {
-        (input_domain.clone(), input_metric.clone()).assert_compatible()?;
+        (input_domain.clone(), input_metric.clone()).check_space()?;
         Ok(Self {
             input_domain,
             function,
@@ -315,14 +315,7 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
 }
 
 pub trait MetricSpace {
-    fn check(&self) -> bool;
-    fn assert_compatible(&self) -> Fallible<()> {
-        if !self.check() {
-            fallible!(FailedFunction, "metric and domain are not compatible")
-        } else {
-            Ok(())
-        }
-    }
+    fn check_space(&self) -> Fallible<()>;
 }
 
 /// A data transformation with certain stability characteristics.
@@ -359,8 +352,8 @@ where
         output_metric: MO,
         stability_map: StabilityMap<MI, MO>,
     ) -> Fallible<Self> {
-        (input_domain.clone(), input_metric.clone()).assert_compatible()?;
-        (output_domain.clone(), output_metric.clone()).assert_compatible()?;
+        (input_domain.clone(), input_metric.clone()).check_space()?;
+        (output_domain.clone(), output_metric.clone()).check_space()?;
         Ok(Self {
             input_domain,
             output_domain,
