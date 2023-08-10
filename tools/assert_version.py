@@ -7,7 +7,7 @@ from utils import *
 version = get_version()
 python_version = get_python_version(version)
 
-assert "dev" not in version.prerelease, "Please configure the channel with a non-dev version."
+assert version.prerelease is None or "dev" not in version.prerelease, "Please configure the channel with a non-dev version."
 print("Checking if all version numbers are synchronized at", version, python_version)
 
 # check that opendp crate version is set properly
