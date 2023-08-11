@@ -1,8 +1,9 @@
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::err;
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
-use crate::ffi::util::{Type, TypeContents};
+use crate::ffi::util::{try_as_ref, Type, TypeContents};
 use crate::traits::samplers::SampleUniform;
 use crate::traits::{CheckAtom, Float, InherentNull};
 use crate::transformations::{
@@ -26,19 +27,20 @@ pub extern "C" fn opendp_transformations__make_impute_uniform_float(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
         bounds: &AnyObject,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         TA: Float + SampleUniform,
         M: 'static + DatasetMetric,
         (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
     {
-        let input_domain =
-            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
-        let bounds = *try_!(try_as_ref!(bounds).downcast_ref::<(TA, TA)>());
+        let input_domain = input_domain
+            .downcast_ref::<VectorDomain<AtomDomain<TA>>>()?
+            .clone();
+        let input_metric = input_metric.downcast_ref::<M>()?.clone();
+        let bounds = *try_as_ref(bounds)?.downcast_ref::<(TA, TA)>()?;
         make_impute_uniform_float(input_domain, input_metric, bounds).into_any()
     }
-    dispatch!(monomorphize, [(M, @dataset_metrics), (TA, @floats)], (input_domain, input_metric, bounds))
+    dispatch!(monomorphize, [(M, @dataset_metrics), (TA, @floats)], (input_domain, input_metric, bounds)).into()
 }
 
 #[no_mangle]
@@ -74,7 +76,7 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
                 input_domain: &AnyDomain,
                 input_metric: &AnyMetric,
                 constant: &AnyObject,
-            ) -> FfiResult<*mut AnyTransformation>
+            ) -> Fallible<AnyTransformation>
             where
                 OptionDomain<AtomDomain<TA>>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + Clone + CheckAtom,
@@ -82,23 +84,22 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
                 (VectorDomain<OptionDomain<AtomDomain<TA>>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
-                let input_domain = try_!(
-                    input_domain.downcast_ref::<VectorDomain<OptionDomain<AtomDomain<TA>>>>()
-                )
-                .clone();
-                let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
-                let constant: TA = try_!(constant.downcast_ref::<TA>()).clone();
+                let input_domain = input_domain
+                    .downcast_ref::<VectorDomain<OptionDomain<AtomDomain<TA>>>>()?
+                    .clone();
+                let input_metric = input_metric.downcast_ref::<M>()?.clone();
+                let constant: TA = constant.downcast_ref::<TA>()?.clone();
 
                 make_impute_constant(input_domain, input_metric, constant).into_any()
             }
-            dispatch!(monomorphize, [(M, @dataset_metrics), (TA, @primitives)], (input_domain, input_metric, constant))
+            dispatch!(monomorphize, [(M, @dataset_metrics), (TA, @primitives)], (input_domain, input_metric, constant)).into()
         }
         TypeContents::GENERIC { name, .. } if name == &"AtomDomain" => {
             fn monomorphize<M, TA>(
                 input_domain: &AnyDomain,
                 input_metric: &AnyMetric,
                 constant: &AnyObject,
-            ) -> FfiResult<*mut AnyTransformation>
+            ) -> Fallible<AnyTransformation>
             where
                 AtomDomain<TA>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + InherentNull + Clone + CheckAtom,
@@ -106,15 +107,15 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
                 let input_domain =
-                    try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
-                let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
-                let constant: TA = try_!(constant.downcast_ref::<TA>()).clone();
+                    input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()?.clone();
+                let input_metric = input_metric.downcast_ref::<M>()?.clone();
+                let constant: TA = constant.downcast_ref::<TA>()?.clone();
                 make_impute_constant(input_domain, input_metric, constant).into_any()
             }
             dispatch!(monomorphize,
                 [(M, @dataset_metrics), (TA, [f64, f32])],
                 (input_domain, input_metric, constant)
-            )
+            ).into()
         }
         _ => err!(
             TypeParse,
@@ -154,7 +155,7 @@ pub extern "C" fn opendp_transformations__make_drop_null(
             fn monomorphize<M, TA>(
                 input_domain: &AnyDomain,
                 input_metric: &AnyMetric,
-            ) -> FfiResult<*mut AnyTransformation>
+            ) -> Fallible<AnyTransformation>
             where
                 OptionDomain<AtomDomain<TA>>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + Clone + CheckAtom,
@@ -162,21 +163,19 @@ pub extern "C" fn opendp_transformations__make_drop_null(
                 (VectorDomain<OptionDomain<AtomDomain<TA>>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
-                let input_domain = try_!(
-                    input_domain.downcast_ref::<VectorDomain<OptionDomain<AtomDomain<TA>>>>()
-                )
+                let input_domain = input_domain.downcast_ref::<VectorDomain<OptionDomain<AtomDomain<TA>>>>()?
                 .clone();
-                let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
+                let input_metric = input_metric.downcast_ref::<M>()?.clone();
 
                 make_drop_null(input_domain, input_metric).into_any()
             }
-            dispatch!(monomorphize, [(M, @dataset_metrics), (TA, @primitives)], (input_domain, input_metric))
+            dispatch!(monomorphize, [(M, @dataset_metrics), (TA, @primitives)], (input_domain, input_metric)).into()
         }
         TypeContents::GENERIC { name, .. } if name == &"AtomDomain" => {
             fn monomorphize<M, TA>(
                 input_domain: &AnyDomain,
                 input_metric: &AnyMetric,
-            ) -> FfiResult<*mut AnyTransformation>
+            ) -> Fallible<AnyTransformation>
             where
                 AtomDomain<TA>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + InherentNull + Clone + CheckAtom,
@@ -184,14 +183,14 @@ pub extern "C" fn opendp_transformations__make_drop_null(
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
                 let input_domain =
-                    try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
-                let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
+                    input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()?.clone();
+                let input_metric = input_metric.downcast_ref::<M>()?.clone();
                 make_drop_null(input_domain, input_metric).into_any()
             }
             dispatch!(monomorphize,
                 [(M, @dataset_metrics), (TA, [f64, f32])],
                 (input_domain, input_metric)
-            )
+            ).into()
         }
         _ => err!(
             TypeParse,

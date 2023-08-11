@@ -2,11 +2,12 @@ use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
 use crate::core::{FfiResult, MetricSpace};
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, AnyObject, Downcast};
 use crate::{core::IntoAnyMeasurementFfiResultExt, ffi::util};
 use crate::{
     domains::{AtomDomain, VectorDomain},
-    ffi::util::Type,
+    ffi::util::{Type, try_as_ref},
     measurements::{make_base_discrete_laplace_linear, BaseDiscreteLaplaceDomain},
     traits::{samplers::SampleDiscreteLaplaceLinear, Float, InfCast, Integer},
 };
@@ -25,7 +26,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_linear(
         scale: *const c_void,
         bounds: *const AnyObject,
         QO: Type,
-    ) -> FfiResult<*mut AnyMeasurement>
+    ) -> Fallible<AnyMeasurement>
     where
         T: Integer + SampleDiscreteLaplaceLinear<QO>,
         QO: Float + InfCast<T>,
@@ -35,21 +36,21 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_linear(
             input_metric: &AnyMetric,
             scale: QO,
             bounds: Option<(D::Atom, D::Atom)>,
-        ) -> FfiResult<*mut AnyMeasurement>
+        ) -> Fallible<AnyMeasurement>
         where
             D: 'static + BaseDiscreteLaplaceDomain,
             (D, D::InputMetric): MetricSpace,
             D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
             QO: Float + InfCast<D::Atom>,
         {
-            let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();
-            let input_metric = try_!(input_metric.downcast_ref::<D::InputMetric>()).clone();
+            let input_domain = input_domain.downcast_ref::<D>()?.clone();
+            let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
             make_base_discrete_laplace_linear::<D, QO>(input_domain, input_metric, scale, bounds)
                 .into_any()
         }
-        let scale = *try_as_ref!(scale as *const QO);
+        let scale = *try_as_ref(scale as *const QO)?;
         let bounds = if let Some(bounds) = util::as_ref(bounds) {
-            Some(*try_!(bounds.downcast_ref::<(T, T)>()))
+            Some(*bounds.downcast_ref::<(T, T)>()?)
         } else {
             None
         };
@@ -66,7 +67,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_linear(
     dispatch!(monomorphize, [
         (T, @integers),
         (QO, @floats)
-    ], (input_domain, input_metric, scale, bounds, QO))
+    ], (input_domain, input_metric, scale, bounds, QO)).into()
 }
 
 #[no_mangle]

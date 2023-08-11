@@ -3,6 +3,7 @@ use std::ffi::c_char;
 use crate::{
     core::{FfiResult, IntoAnyMeasurementFfiResultExt},
     domains::{AtomDomain, VectorDomain},
+    error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMeasurement, AnyMetric, AnyObject, Downcast},
         util::{to_str, Type},
@@ -40,15 +41,16 @@ pub extern "C" fn opendp_measurements__make_report_noisy_max_gumbel(
         input_metric: &AnyMetric,
         scale: &AnyObject,
         optimize: Optimize,
-    ) -> FfiResult<*mut AnyMeasurement>
+    ) -> Fallible<AnyMeasurement>
     where
         TIA: Clone + CheckNull + Number + CastInternalRational,
         QO: 'static + InfCast<TIA> + RoundCast<TIA> + Float + SampleUniform + CastInternalRational,
     {
-        let input_domain =
-            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<LInfDistance<TIA>>()).clone();
-        let scale = *try_!(scale.downcast_ref::<QO>());
+        let input_domain = input_domain
+            .downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?
+            .clone();
+        let input_metric = input_metric.downcast_ref::<LInfDistance<TIA>>()?.clone();
+        let scale = *scale.downcast_ref::<QO>()?;
         make_report_noisy_max_gumbel::<TIA, QO>(input_domain, input_metric, scale, optimize)
             .into_any()
     }
@@ -57,4 +59,5 @@ pub extern "C" fn opendp_measurements__make_report_noisy_max_gumbel(
         (TIA, [u32, u64, i32, i64, usize, f32, f64]),
         (QO, @floats)
     ], (input_domain, input_metric, scale, optimize))
+    .into()
 }

@@ -143,7 +143,7 @@ impl<T: Debug> Debug for FfiResult<*mut T> {
 /// because there's a blanket implementation of From for FfiResult. We can't do this with a method on Result
 /// because it comes from another crate. So we need a separate trait.
 pub trait IntoAnyMeasurementFfiResultExt {
-    fn into_any(self) -> FfiResult<*mut AnyMeasurement>;
+    fn into_any(self) -> Fallible<AnyMeasurement>;
 }
 
 impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
@@ -152,8 +152,8 @@ where
     MO::Distance: 'static,
     (DI, MI): MetricSpace,
 {
-    fn into_any(self) -> FfiResult<*mut AnyMeasurement> {
-        self.map(Measurement::into_any).into()
+    fn into_any(self) -> Fallible<AnyMeasurement> {
+        self.map(Measurement::into_any)
     }
 }
 
@@ -161,7 +161,7 @@ where
 /// because there's a blanket implementation of From for FfiResult. We can't do this with a method on Result
 /// because it comes from another crate. So we need a separate trait.
 pub trait IntoAnyTransformationFfiResultExt {
-    fn into_any(self) -> FfiResult<*mut AnyTransformation>;
+    fn into_any(self) -> Fallible<AnyTransformation>;
 }
 
 impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
@@ -172,20 +172,18 @@ where
     (DI, MI): MetricSpace,
     (DO, MO): MetricSpace,
 {
-    fn into_any(self) -> FfiResult<*mut AnyTransformation> {
-        self.map(Transformation::into_any).into()
+    fn into_any(self) -> Fallible<AnyTransformation> {
+        self.map(Transformation::into_any)
     }
 }
 
 pub trait IntoAnyFunctionFfiResultExt {
-    fn into_any(self) -> FfiResult<*mut AnyFunction>;
+    fn into_any(self) -> Fallible<AnyFunction>;
 }
 
-impl<TI: 'static, TO: 'static> IntoAnyFunctionFfiResultExt
-    for Fallible<Function<TI, TO>>
-{
-    fn into_any(self) -> FfiResult<*mut AnyFunction> {
-        self.map(Function::into_any).into()
+impl<TI: 'static, TO: 'static> IntoAnyFunctionFfiResultExt for Fallible<Function<TI, TO>> {
+    fn into_any(self) -> Fallible<AnyFunction> {
+        self.map(Function::into_any)
     }
 }
 

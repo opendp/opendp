@@ -4,23 +4,23 @@ use crate::{
     core::{FfiResult, IntoAnyFunctionFfiResultExt},
     ffi::{
         any::{AnyFunction, AnyObject, Downcast},
-        util::{to_str, Type},
+        util::{to_str, Type, try_as_ref},
     },
     traits::{Float, Number, RoundCast},
-    transformations::{make_cdf, make_quantiles_from_counts, Interpolation},
+    transformations::{make_cdf, make_quantiles_from_counts, Interpolation}, error::Fallible,
 };
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_cdf(
     TA: *const c_char,
 ) -> FfiResult<*mut AnyFunction> {
-    fn monomorphize<TA: Float>() -> FfiResult<*mut AnyFunction> {
+    fn monomorphize<TA: Float>() -> Fallible<AnyFunction> {
         make_cdf::<TA>().into_any()
     }
     let TA = try_!(Type::try_from(TA));
     dispatch!(monomorphize, [
         (TA, @floats)
-    ], ())
+    ], ()).into()
 }
 
 #[no_mangle]
@@ -35,13 +35,13 @@ pub extern "C" fn opendp_transformations__make_quantiles_from_counts(
         bin_edges: *const AnyObject,
         alphas: *const AnyObject,
         interpolation: Interpolation,
-    ) -> FfiResult<*mut AnyFunction>
+    ) -> Fallible<AnyFunction>
     where
         TA: Number + RoundCast<F>,
         F: Float + RoundCast<TA>,
     {
-        let bin_edges = try_!(try_as_ref!(bin_edges).downcast_ref::<Vec<TA>>());
-        let alphas = try_!(try_as_ref!(alphas).downcast_ref::<Vec<F>>());
+        let bin_edges = try_as_ref(bin_edges)?.downcast_ref::<Vec<TA>>()?;
+        let alphas = try_as_ref(alphas)?.downcast_ref::<Vec<F>>()?;
         make_quantiles_from_counts::<TA, F>(bin_edges.clone(), alphas.clone(), interpolation)
             .into_any()
     }
@@ -58,5 +58,5 @@ pub extern "C" fn opendp_transformations__make_quantiles_from_counts(
     dispatch!(monomorphize, [
         (TA, @numbers),
         (F, @floats)
-    ], (bin_edges, alphas, interpolation))
+    ], (bin_edges, alphas, interpolation)).into()
 }

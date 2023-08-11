@@ -367,6 +367,10 @@ pub fn as_ref<'a, T>(p: *const T) -> Option<&'a T> {
     (!p.is_null()).then(|| unsafe { &*p })
 }
 
+pub fn try_as_ref<'a, T>(p: *const T) -> Fallible<&'a T> {
+    as_ref(p).ok_or_else(|| err!(FFI, "attempted to read a null pointer"))
+}
+
 pub fn as_mut_ref<'a, T>(p: *mut T) -> Option<&'a mut T> {
     (!p.is_null()).then(|| unsafe { &mut *p })
 }

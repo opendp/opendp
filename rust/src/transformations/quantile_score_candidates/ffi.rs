@@ -5,7 +5,7 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast},
     traits::Number,
-    transformations::{make_quantile_score_candidates, traits::UnboundedMetric},
+    transformations::{make_quantile_score_candidates, traits::UnboundedMetric}, error::Fallible,
 };
 
 #[no_mangle]
@@ -25,16 +25,16 @@ pub extern "C" fn opendp_transformations__make_quantile_score_candidates(
         input_metric: &AnyMetric,
         candidates: &AnyObject,
         alpha: f64,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         M: 'static + UnboundedMetric,
         TIA: 'static + Number,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
     {
         let input_domain =
-            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
-        let candidates = try_!(candidates.downcast_ref::<Vec<TIA>>()).clone();
+            input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?.clone();
+        let input_metric = input_metric.downcast_ref::<M>()?.clone();
+        let candidates = candidates.downcast_ref::<Vec<TIA>>()?.clone();
         make_quantile_score_candidates::<M, TIA>(input_domain, input_metric, candidates, alpha)
             .into_any()
     }
@@ -43,5 +43,5 @@ pub extern "C" fn opendp_transformations__make_quantile_score_candidates(
     dispatch!(monomorphize, [
         (M, @dataset_metrics),
         (TIA, @numbers)
-    ], (input_domain, input_metric, candidates, alpha))
+    ], (input_domain, input_metric, candidates, alpha)).into()
 }

@@ -4,9 +4,9 @@ use std::iter::FromIterator;
 use std::os::raw::{c_char, c_void};
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
-use crate::err;
+use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, Downcast};
-use crate::ffi::util::{c_bool, to_bool, Type};
+use crate::ffi::util::{c_bool, to_bool, try_as_ref, Type};
 use crate::measurements::{make_randomized_response, make_randomized_response_bool};
 use crate::traits::samplers::SampleBernoulli;
 use crate::traits::{Float, Hashable};
@@ -17,12 +17,12 @@ pub extern "C" fn opendp_measurements__make_randomized_response_bool(
     constant_time: c_bool,
     QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize<QO>(prob: *const c_void, constant_time: bool) -> FfiResult<*mut AnyMeasurement>
+    fn monomorphize<QO>(prob: *const c_void, constant_time: bool) -> Fallible<AnyMeasurement>
     where
         bool: SampleBernoulli<QO>,
         QO: Float,
     {
-        let prob = *try_as_ref!(prob as *const QO);
+        let prob = *try_as_ref(prob as *const QO)?;
         make_randomized_response_bool::<QO>(prob, constant_time).into_any()
     }
     let QO = try_!(Type::try_from(QO));
@@ -30,6 +30,7 @@ pub extern "C" fn opendp_measurements__make_randomized_response_bool(
     dispatch!(monomorphize, [
         (QO, @floats)
     ], (prob, constant_time))
+    .into()
 }
 
 #[no_mangle]
@@ -44,14 +45,14 @@ pub extern "C" fn opendp_measurements__make_randomized_response(
         categories: *const AnyObject,
         prob: *const c_void,
         constant_time: bool,
-    ) -> FfiResult<*mut AnyMeasurement>
+    ) -> Fallible<AnyMeasurement>
     where
         T: Hashable,
         bool: SampleBernoulli<QO>,
         QO: Float,
     {
-        let categories = try_!(try_as_ref!(categories).downcast_ref::<Vec<T>>()).clone();
-        let prob = *try_as_ref!(prob as *const QO);
+        let categories = try_as_ref(categories)?.downcast_ref::<Vec<T>>()?.clone();
+        let prob = *try_as_ref(prob as *const QO)?;
         make_randomized_response::<T, QO>(
             HashSet::from_iter(categories.into_iter()),
             prob,
@@ -66,4 +67,5 @@ pub extern "C" fn opendp_measurements__make_randomized_response(
         (T, @hashable),
         (QO, @floats)
     ], (categories, prob, constant_time))
+    .into()
 }

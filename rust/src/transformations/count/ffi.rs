@@ -5,9 +5,10 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::core::{Metric, MetricSpace};
 use crate::domains::{AtomDomain, MapDomain, VectorDomain};
 use crate::err;
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, Downcast};
 use crate::ffi::any::{AnyObject, AnyTransformation};
-use crate::ffi::util::{c_bool, to_bool, Type};
+use crate::ffi::util::{c_bool, to_bool, Type, try_as_ref};
 use crate::metrics::{L1Distance, L2Distance, SymmetricDistance};
 use crate::traits::{Hashable, Number, Primitive};
 use crate::transformations::{
@@ -24,14 +25,14 @@ pub extern "C" fn opendp_transformations__make_count(
     fn monomorphize<TIA, TO>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         TIA: Primitive,
         TO: Number,
     {
         let input_domain =
-            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<SymmetricDistance>()).clone();
+            input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?.clone();
+        let input_metric = input_metric.downcast_ref::<SymmetricDistance>()?.clone();
         make_count::<TIA, TO>(input_domain, input_metric).into_any()
     }
     let input_domain = try_as_ref!(input_domain);
@@ -41,7 +42,7 @@ pub extern "C" fn opendp_transformations__make_count(
     dispatch!(monomorphize, [
         (TIA, @primitives),
         (TO, @numbers)
-    ], (input_domain, input_metric))
+    ], (input_domain, input_metric)).into()
 }
 
 #[no_mangle]
@@ -53,14 +54,14 @@ pub extern "C" fn opendp_transformations__make_count_distinct(
     fn monomorphize<TIA, TO: 'static>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         TIA: Hashable,
         TO: Number,
     {
         let input_domain =
-            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<SymmetricDistance>()).clone();
+            input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?.clone();
+        let input_metric = input_metric.downcast_ref::<SymmetricDistance>()?.clone();
         make_count_distinct::<TIA, TO>(input_domain, input_metric).into_any()
     }
     let input_domain = try_as_ref!(input_domain);
@@ -70,7 +71,7 @@ pub extern "C" fn opendp_transformations__make_count_distinct(
     dispatch!(monomorphize, [
         (TIA, @hashable),
         (TO, @numbers)
-    ], (input_domain, input_metric))
+    ], (input_domain, input_metric)).into()
 }
 
 #[no_mangle]
@@ -90,7 +91,7 @@ pub extern "C" fn opendp_transformations__make_count_by_categories(
         MO: Type,
         TI: Type,
         TO: Type,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         QO: Number,
     {
@@ -99,7 +100,7 @@ pub extern "C" fn opendp_transformations__make_count_by_categories(
             input_metric: &AnyMetric,
             categories: *const AnyObject,
             null_category: bool,
-        ) -> FfiResult<*mut AnyTransformation>
+        ) -> Fallible<AnyTransformation>
         where
             MO: 'static + Metric + CountByCategoriesConstant<MO::Distance>,
             MO::Distance: Number,
@@ -108,9 +109,9 @@ pub extern "C" fn opendp_transformations__make_count_by_categories(
             (VectorDomain<AtomDomain<TO>>, MO): MetricSpace,
         {
             let input_domain =
-                try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TI>>>()).clone();
-            let input_metric = try_!(input_metric.downcast_ref::<SymmetricDistance>()).clone();
-            let categories = try_!(try_as_ref!(categories).downcast_ref::<Vec<TI>>()).clone();
+                input_domain.downcast_ref::<VectorDomain<AtomDomain<TI>>>()?.clone();
+            let input_metric = input_metric.downcast_ref::<SymmetricDistance>()?.clone();
+            let categories = try_as_ref(categories)?.downcast_ref::<Vec<TI>>()?.clone();
             make_count_by_categories::<MO, TI, TO>(
                 input_domain,
                 input_metric,
@@ -134,7 +135,7 @@ pub extern "C" fn opendp_transformations__make_count_by_categories(
     let QO = try_!(MO.get_atom());
     dispatch!(monomorphize, [
         (QO, @numbers)
-    ], (input_domain, input_metric, categories, null_category, MO, TI, TO))
+    ], (input_domain, input_metric, categories, null_category, MO, TI, TO)).into()
 }
 
 #[no_mangle]
@@ -150,14 +151,14 @@ pub extern "C" fn opendp_transformations__make_count_by(
         MO: Type,
         TK: Type,
         TV: Type,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         QO: Number,
     {
         fn monomorphize2<MO, TK, TV>(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
-        ) -> FfiResult<*mut AnyTransformation>
+        ) -> Fallible<AnyTransformation>
         where
             MO: 'static + Metric + CountByConstant<MO::Distance>,
             MO::Distance: Number,
@@ -166,8 +167,8 @@ pub extern "C" fn opendp_transformations__make_count_by(
             (MapDomain<AtomDomain<TK>, AtomDomain<TV>>, MO): MetricSpace,
         {
             let input_domain =
-                try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TK>>>()).clone();
-            let input_metric = try_!(input_metric.downcast_ref::<SymmetricDistance>()).clone();
+                input_domain.downcast_ref::<VectorDomain<AtomDomain<TK>>>()?.clone();
+            let input_metric = input_metric.downcast_ref::<SymmetricDistance>()?.clone();
             make_count_by::<MO, TK, TV>(input_domain, input_metric).into_any()
         }
         dispatch!(monomorphize2, [
@@ -183,5 +184,5 @@ pub extern "C" fn opendp_transformations__make_count_by(
     let TV = try_!(Type::try_from(TV));
     let QO = try_!(MO.get_atom());
 
-    dispatch!(monomorphize, [(QO, @numbers)], (input_domain, input_metric, MO, TK, TV))
+    dispatch!(monomorphize, [(QO, @numbers)], (input_domain, input_metric, MO, TK, TV)).into()
 }
