@@ -4,7 +4,10 @@ This file documents the version history of OpenDP. The links on each version num
 showing the source changes from the previous version.
 
 
-## [0.8.0-dev](https://github.com/opendp/opendp/compare/v0.7.0...HEAD) - TBD
+## [0.9.0-dev](https://github.com/opendp/opendp/compare/v0.8.0...HEAD) - TBD
+
+
+## [0.8.0](https://github.com/opendp/opendp/compare/v0.7.0...v0.8.0) - 2023-08-11
 
 ### Added
 - Partial constructors: each `make_*` constructor now has a `then_*` variant [#689](https://github.com/opendp/opendp/pull/689) [#761](https://github.com/opendp/opendp/pull/761)
