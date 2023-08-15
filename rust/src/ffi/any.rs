@@ -10,16 +10,15 @@ use std::any::Any;
 use std::fmt::{Debug, Formatter};
 
 use crate::core::{
-    Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap, StabilityMap,
-    Transformation, FfiResult,
+    Domain, FfiResult, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap,
+    StabilityMap, Transformation,
 };
 use crate::error::*;
 use crate::interactive::{Answer, Query, Queryable};
 use crate::{err, fallible};
 
 use super::glue::Glue;
-use super::util::{Type, into_owned};
-
+use super::util::{into_owned, Type};
 
 pub type CallbackFn = extern "C" fn(*const AnyObject) -> *mut FfiResult<*mut AnyObject>;
 
@@ -233,16 +232,19 @@ pub enum Either<L, R> {
     Right(R),
 }
 
-impl<Q: 'static, A: 'static> Measurement<AnyDomain, Queryable<Q, A>, AnyMetric, AnyMeasure> {
-    pub fn into_any_Q(
-        self,
-    ) -> Measurement<AnyDomain, Queryable<AnyObject, A>, AnyMetric, AnyMeasure> {
+impl<DI: Domain, Q: 'static, A: 'static, MI: Metric, MO: Measure>
+    Measurement<DI, Queryable<Q, A>, MI, MO>
+where
+    DI::Carrier: 'static,
+    (DI, MI): MetricSpace,
+{
+    pub fn into_any_Q(self) -> Measurement<DI, Queryable<AnyObject, A>, MI, MO> {
         let function = self.function.clone();
 
         Measurement::new(
             self.input_domain.clone(),
             Function::new_fallible(
-                move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, A>> {
+                move |arg: &DI::Carrier| -> Fallible<Queryable<AnyObject, A>> {
                     let mut inner_qbl = function.eval(arg)?;
 
                     Queryable::new(move |_self, query: Query<AnyObject>| match query {
@@ -276,26 +278,24 @@ where
     DI::Carrier: 'static,
     (DI, MI): MetricSpace,
 {
-    pub fn into_any_queryable(self) -> Measurement<DI, AnyQueryable, MI, MO> {
+    pub fn into_any_A(self) -> Measurement<DI, Queryable<Q, AnyObject>, MI, MO> {
         let function = self.function.clone();
+
         Measurement::new(
             self.input_domain.clone(),
             Function::new_fallible(
-                move |arg: &DI::Carrier| -> Fallible<AnyQueryable> {
+                move |arg: &DI::Carrier| -> Fallible<Queryable<Q, AnyObject>> {
                     let mut inner_qbl = function.eval(arg)?;
 
-                    Queryable::new(move |_self, query: Query<AnyObject>| match query {
+                    Queryable::new(move |_self, query: Query<Q>| match query {
                         Query::External(query) => inner_qbl
-                            .eval(query.downcast_ref::<Q>()?)
+                            .eval(query)
                             .map(AnyObject::new)
                             .map(Answer::External),
                         Query::Internal(query) => {
-                            if query.downcast_ref::<QueryType>().is_some() {
-                                return Ok(Answer::internal(Type::of::<Q>()));
-                            }
-                            let Answer::Internal(a) = inner_qbl.eval_query(Query::Internal(query))?
-                            else { return fallible!(FailedFunction, "internal query returned external answer") };
-
+                            let Answer::Internal(a) = inner_qbl.eval_query(Query::Internal(query))? else {
+                                return fallible!(FailedFunction, "internal query returned external answer")
+                            };
                             Ok(Answer::Internal(a))
                         }
                     })
@@ -303,8 +303,8 @@ where
             ),
             self.input_metric.clone(),
             self.output_measure.clone(),
-            self.privacy_map.clone()
-        ).expect("compatibility check already passed")
+            self.privacy_map.clone(),
+        ).expect("AnyDomain is not checked for compatibility")
     }
 }
 

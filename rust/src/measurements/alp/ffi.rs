@@ -58,7 +58,8 @@ pub extern "C" fn opendp_measurements__make_alp_queryable(
             size_factor,
             alpha
         ))
-        .into_any_queryable())
+        .into_any_Q()
+        .into_any_A())
         .into_any()
     }
 
