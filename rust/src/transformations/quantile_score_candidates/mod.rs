@@ -359,9 +359,12 @@ mod test_scorer {
 }
 
 // feature-gated because non-mpfr InfCast errors on numbers greater than 2^52
-#[cfg(all(test, feature = "use-mpfr"))]
+#[cfg(all(test, feature = "use-mpfr", feature = "derive"))]
 mod test_trans {
-    use crate::metrics::SymmetricDistance;
+    use crate::{
+        measurements::{make_base_discrete_exponential, Optimize},
+        metrics::SymmetricDistance,
+    };
 
     use super::*;
 
@@ -392,6 +395,47 @@ mod test_trans {
         //   * a factor of 2 from non-monotonicity
         //   * a factor of 2 from difference in score after moving one record from above to below a candidate
         assert_eq!(trans_sized.map(&2)?, usize::MAX / 100 * 4);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_release() -> Fallible<()> {
+        let candidates = vec![7, 12, 14, 72, 76];
+        let input_domain = VectorDomain::new(AtomDomain::default());
+        let input_metric = SymmetricDistance::default();
+        let trans = make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
+        let exp_mech = make_base_discrete_exponential(
+            trans.output_domain.clone(),
+            trans.output_metric.clone(),
+            trans.map(&1)? as f64,
+            Optimize::Min,
+        )?;
+
+        let quantile_meas = (trans >> exp_mech)?;
+        let idx = quantile_meas.invoke(&(0..100).collect())?;
+        println!("idx {:?}", idx);
+        assert!(quantile_meas.check(&1, &1.)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_release_sized() -> Fallible<()> {
+        let candidates = vec![7, 12, 14, 72, 76];
+        let input_domain = VectorDomain::new(AtomDomain::default()).with_size(100);
+        let input_metric = SymmetricDistance::default();
+        let trans_sized =
+            make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
+        let exp_mech = make_base_discrete_exponential(
+            trans_sized.output_domain.clone(),
+            trans_sized.output_metric.clone(),
+            trans_sized.map(&2)? as f64, Optimize::Min
+        )?;
+
+        let quantile_sized_meas = (trans_sized >> exp_mech)?;
+        let idx = quantile_sized_meas.invoke(&(0..100).collect())?;
+        println!("idx sized {:?}", idx);
+        assert!(quantile_sized_meas.check(&1, &1.)?);
 
         Ok(())
     }

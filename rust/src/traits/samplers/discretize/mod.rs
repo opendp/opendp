@@ -29,11 +29,7 @@ pub trait SampleDiscreteLaplaceZ2k: Sized {
     fn sample_discrete_laplace_Z2k(shift: Self, scale: Self, k: i32) -> Fallible<Self>;
 }
 
-impl<T> SampleDiscreteLaplaceZ2k for T
-where
-    Rational: TryFrom<T>,
-    T: CastInternalRational,
-{
+impl<T: CastInternalRational> SampleDiscreteLaplaceZ2k for T {
     fn sample_discrete_laplace_Z2k(shift: Self, scale: Self, k: i32) -> Fallible<Self> {
         // integerize
         let mut i = find_nearest_multiple_of_2k(shift.into_rational()?, k);
@@ -66,11 +62,7 @@ pub trait SampleDiscreteGaussianZ2k: Sized {
     fn sample_discrete_gaussian_Z2k(shift: Self, scale: Self, k: i32) -> Fallible<Self>;
 }
 
-impl<T> SampleDiscreteGaussianZ2k for T
-where
-    Rational: TryFrom<T>,
-    T: CastInternalRational,
-{
+impl<T: CastInternalRational> SampleDiscreteGaussianZ2k for T {
     fn sample_discrete_gaussian_Z2k(shift: Self, scale: Self, k: i32) -> Fallible<Self> {
         // integerize
         let mut i = find_nearest_multiple_of_2k(shift.into_rational()?, k);
@@ -115,7 +107,7 @@ pub trait CastInternalRational {
     fn into_rational(self) -> Fallible<Rational>;
 }
 
-macro_rules! impl_cast_internal_rational {
+macro_rules! impl_cast_internal_rational_float {
     ($ty:ty, $method:ident) => {
         impl CastInternalRational for $ty {
             fn from_rational(v: Rational) -> Self {
@@ -128,8 +120,24 @@ macro_rules! impl_cast_internal_rational {
     };
 }
 
-impl_cast_internal_rational!(f32, to_f32);
-impl_cast_internal_rational!(f64, to_f64);
+impl_cast_internal_rational_float!(f32, to_f32);
+impl_cast_internal_rational_float!(f64, to_f64);
+
+macro_rules! impl_cast_internal_rational_int {
+    ($($ty:ty)+) => {
+        $(impl CastInternalRational for $ty {
+            fn from_rational(v: Rational) -> Self {
+                use az::SaturatingCast;
+                v.round().numer().saturating_cast()
+            }
+            fn into_rational(self) -> Fallible<Rational> {
+                Ok(Rational::from((self, Integer::from(1))))
+            }
+        })+
+    };
+}
+
+impl_cast_internal_rational_int!(u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize);
 
 #[cfg(test)]
 mod test {
