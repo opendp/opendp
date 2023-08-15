@@ -204,9 +204,7 @@ def test_alp_histogram():
         dp.symmetric_distance(),
         MO=dp.L1Distance[int])
 
-    alp_meas = counter >> dp.m.make_alp_queryable(
-        counter.output_domain,
-        counter.output_metric,
+    alp_meas = counter >> dp.m.then_alp_queryable(
         scale=1.,
         total_limit=24,
         value_limit=24,
