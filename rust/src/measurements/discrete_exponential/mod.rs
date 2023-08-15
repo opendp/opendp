@@ -1,3 +1,8 @@
+#[cfg(feature = "ffi")]
+mod ffi;
+
+use opendp_derive::bootstrap;
+
 use crate::{
     core::{Function, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
@@ -25,6 +30,11 @@ pub enum Optimize {
 }
 
 #[cfg(feature = "use-mpfr")]
+#[bootstrap(
+    features("contrib", "floating-point"),
+    arguments(optimize(c_type = "char *", rust_type = "String")),
+    generics(TIA(suppress))
+)]
 /// Make a Measurement that takes a vector of scores and privately selects the index of the highest score.
 ///
 /// # Arguments

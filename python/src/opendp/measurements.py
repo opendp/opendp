@@ -8,6 +8,7 @@ from opendp.domains import *
 from opendp.metrics import *
 from opendp.measures import *
 __all__ = [
+    "make_base_discrete_exponential",
     "make_base_discrete_gaussian",
     "make_base_discrete_laplace",
     "make_base_discrete_laplace_cks20",
@@ -21,6 +22,7 @@ __all__ = [
     "make_randomized_response",
     "make_randomized_response_bool",
     "make_user_measurement",
+    "then_base_discrete_exponential",
     "then_base_discrete_gaussian",
     "then_base_discrete_laplace",
     "then_base_discrete_laplace_cks20",
@@ -33,6 +35,73 @@ __all__ = [
     "then_laplace",
     "then_user_measurement"
 ]
+
+
+@versioned
+def make_base_discrete_exponential(
+    input_domain,
+    input_metric,
+    temperature: Any,
+    optimize: str,
+    QO: RuntimeTypeDescriptor = None
+) -> Measurement:
+    """Make a Measurement that takes a vector of scores and privately selects the index of the highest score.
+    
+    [make_base_discrete_exponential in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_exponential.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+    * Output Type:    `usize`
+    * Input Metric:   `LInfDiffDistance<TIA>`
+    * Output Measure: `MaxDivergence<QO>`
+    
+    :param input_domain: Domain of the input vector. Must be a non-nullable VectorDomain.
+    :param input_metric: Metric on the input domain. Must be LInfDiffDistance
+    :param temperature: Higher temperatures are more private.
+    :type temperature: Any
+    :param optimize: Indicate whether to privately return the "Max" or "Min"
+    :type optimize: str
+    :param QO: Output Distance Type.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib", "floating-point")
+    
+    # Standardize type arguments.
+    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=temperature)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_temperature = py_to_c(temperature, c_type=AnyObjectPtr, type_name=QO)
+    c_optimize = py_to_c(optimize, c_type=ctypes.c_char_p, type_name=String)
+    c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_base_discrete_exponential
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_temperature, c_optimize, c_QO), Measurement))
+    
+    return output
+
+def then_base_discrete_exponential(
+    temperature: Any,
+    optimize: str,
+    QO: RuntimeTypeDescriptor = None
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_base_discrete_exponential(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        temperature=temperature,
+        optimize=optimize,
+        QO=QO))
+
 
 
 @versioned
