@@ -9,7 +9,8 @@ use crate::{error::Fallible, traits::samplers::SampleStandardBernoulli};
 #[derive(Default)]
 pub struct UniformPSRN {
     pub numer: Integer,
-    pub denom: u32,
+    /// The denominator is 2^denom_pow.
+    pub denom_pow: u32,
 }
 
 impl UniformPSRN {
@@ -20,12 +21,12 @@ impl UniformPSRN {
             Round::Down => 0,
             _ => panic!("value must be rounded Up or Down"),
         };
-        Rational::from((self.numer.clone() + round, Integer::from(1) << self.denom))
+        Rational::from((self.numer.clone() + round, Integer::from(1) << self.denom_pow))
     }
     // Randomly discard the lower or upper half of the remaining interval.
     fn refine(&mut self) -> Fallible<()> {
         self.numer <<= 1;
-        self.denom += 1;
+        self.denom_pow += 1;
         if bool::sample_standard_bernoulli()? {
             self.numer += 1;
         }
