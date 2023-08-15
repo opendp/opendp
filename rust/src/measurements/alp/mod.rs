@@ -3,6 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use num::ToPrimitive;
+use opendp_derive::bootstrap;
 use rug::{float::Round, ops::AddAssignRound, ops::DivAssignRound, Float as RugFloat};
 
 use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
@@ -14,6 +15,9 @@ use crate::metrics::L1Distance;
 use crate::traits::samplers::{fill_bytes, SampleBernoulli};
 use crate::traits::{Float, Hashable, InfCast, Integer};
 use std::collections::hash_map::DefaultHasher;
+
+#[cfg(feature = "ffi")]
+mod ffi;
 
 const ALPHA_DEFAULT: u32 = 4;
 const SIZE_FACTOR_DEFAULT: u32 = 50;
@@ -337,6 +341,20 @@ where
     })
 }
 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        input_domain(c_type = "AnyDomain *"),
+        input_metric(c_type = "AnyMetric *"),
+        scale(c_type = "void *"),
+        total_limit(c_type = "void *"),
+        value_limit(c_type = "void *", default = b"null"),
+        size_factor(c_type = "void *", default = 50),
+        alpha(c_type = "void *", default = 4),
+    ),
+    generics(K(suppress), CI(suppress)),
+    derived_types(CI = "$get_value_type(get_carrier_type(input_domain))")
+)]
 /// Measurement to release a queryable containing a DP projection of bounded sparse data.
 ///
 /// The size of the projection is O(total * size_factor * scale / alpha).

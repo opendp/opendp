@@ -8,6 +8,7 @@ from opendp.domains import *
 from opendp.metrics import *
 from opendp.measures import *
 __all__ = [
+    "make_alp_queryable",
     "make_base_discrete_exponential",
     "make_base_discrete_gaussian",
     "make_base_discrete_laplace",
@@ -22,6 +23,7 @@ __all__ = [
     "make_randomized_response",
     "make_randomized_response_bool",
     "make_user_measurement",
+    "then_alp_queryable",
     "then_base_discrete_exponential",
     "then_base_discrete_gaussian",
     "then_base_discrete_laplace",
@@ -35,6 +37,98 @@ __all__ = [
     "then_laplace",
     "then_user_measurement"
 ]
+
+
+@versioned
+def make_alp_queryable(
+    input_domain,
+    input_metric,
+    scale,
+    total_limit,
+    value_limit = None,
+    size_factor = 50,
+    alpha = 4,
+    CO: RuntimeTypeDescriptor = None
+) -> Measurement:
+    """Measurement to release a queryable containing a DP projection of bounded sparse data.
+    
+    The size of the projection is O(total * size_factor * scale / alpha).
+    The evaluation time of post-processing is O(beta * scale / alpha).
+    
+    `size_factor` is an optional multiplier (defaults to 50) for setting the size of the projection.
+    There is a memory/utility trade-off.
+    The value should be sufficiently large to limit hash collisions.
+    
+    [make_alp_queryable in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_alp_queryable.html)
+    
+    **Citations:**
+    
+    * [ALP21 Differentially Private Sparse Vectors with Low Error, Optimal Space, and Fast Access](https://arxiv.org/abs/2106.10068) Algorithm 4
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `MapDomain<AtomDomain<K>, AtomDomain<CI>>`
+    * Output Type:    `Queryable<K, CO>`
+    * Input Metric:   `L1Distance<CI>`
+    * Output Measure: `MaxDivergence<CO>`
+    
+    :param input_domain: 
+    :param input_metric: 
+    :param scale: Privacy loss parameter. This is equal to epsilon/sensitivity.
+    :param total_limit: Either the true value or an upper bound estimate of the sum of all values in the input.
+    :param value_limit: Upper bound on individual values (referred to as β). Entries above β are clamped.
+    :param size_factor: Optional multiplier (default of 50) for setting the size of the projection.
+    :param alpha: Optional parameter (default of 4) for scaling and determining p in randomized response step.
+    :param CO: 
+    :type CO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    CO = RuntimeType.parse_or_infer(type_name=CO, public_example=scale)
+    CI = get_value_type(get_carrier_type(input_domain))
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=CO)
+    c_total_limit = py_to_c(total_limit, c_type=ctypes.c_void_p, type_name=CI)
+    c_value_limit = py_to_c(value_limit, c_type=ctypes.c_void_p, type_name=RuntimeType(origin='Option', args=[CI]))
+    c_size_factor = py_to_c(size_factor, c_type=ctypes.c_void_p, type_name=RuntimeType(origin='Option', args=[u32]))
+    c_alpha = py_to_c(alpha, c_type=ctypes.c_void_p, type_name=RuntimeType(origin='Option', args=[u32]))
+    c_CO = py_to_c(CO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_alp_queryable
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_total_limit, c_value_limit, c_size_factor, c_alpha, c_CO), Measurement))
+    
+    return output
+
+def then_alp_queryable(
+    scale,
+    total_limit,
+    value_limit = None,
+    size_factor = 50,
+    alpha = 4,
+    CO: RuntimeTypeDescriptor = None
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_alp_queryable(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        total_limit=total_limit,
+        value_limit=value_limit,
+        size_factor=size_factor,
+        alpha=alpha,
+        CO=CO))
+
 
 
 @versioned
