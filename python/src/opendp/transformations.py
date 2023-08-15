@@ -2093,6 +2093,10 @@ def make_quantile_score_candidates(
     * Input Metric:   `MI`
     * Output Metric:  `LInfDiffDistance<usize>`
     
+    **Proof Definition:**
+    
+    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/quantile_score_candidates/make_quantile_score_candidates.pdf)
+    
     :param input_domain: Uses a tighter sensitivity when the size of vectors in the input domain is known.
     :param input_metric: Either SymmetricDistance or InsertDeleteDistance.
     :param candidates: Potential quantiles to score
