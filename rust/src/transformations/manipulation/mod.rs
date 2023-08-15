@@ -28,12 +28,27 @@ impl<D: Domain> DatasetDomain for VectorDomain<D> {
     type ElementDomain = D;
 }
 
-pub trait DatasetMetric: Metric<Distance = IntDistance> {}
+pub trait DatasetMetric: Metric<Distance = IntDistance> {
+    const ORDERED: bool;
+    const SIZED: bool;
+}
 
-impl DatasetMetric for SymmetricDistance {}
-impl DatasetMetric for InsertDeleteDistance {}
-impl DatasetMetric for ChangeOneDistance {}
-impl DatasetMetric for HammingDistance {}
+impl DatasetMetric for SymmetricDistance {
+    const ORDERED: bool = false;
+    const SIZED: bool = false;
+}
+impl DatasetMetric for InsertDeleteDistance {
+    const ORDERED: bool = true;
+    const SIZED: bool = false;
+}
+impl DatasetMetric for ChangeOneDistance {
+    const ORDERED: bool = false;
+    const SIZED: bool = true;
+}
+impl DatasetMetric for HammingDistance {
+    const ORDERED: bool = true;
+    const SIZED: bool = false;
+}
 
 pub trait RowByRowDomain<DO: DatasetDomain>: DatasetDomain {
     fn translate(&self, output_row_domain: DO::ElementDomain) -> DO;

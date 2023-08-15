@@ -1,9 +1,9 @@
 use crate::{
     core::Metric,
-    metrics::{ChangeOneDistance, HammingDistance, InsertDeleteDistance, SymmetricDistance},
+    metrics::{ChangeOneDistance, HammingDistance, InsertDeleteDistance, SymmetricDistance, IntDistance},
 };
 
-pub trait UnorderedMetric: Metric {
+pub trait UnorderedMetric: Metric<Distance = IntDistance> {
     type OrderedMetric: Metric<Distance = Self::Distance>;
 }
 impl UnorderedMetric for SymmetricDistance {
@@ -13,7 +13,7 @@ impl UnorderedMetric for ChangeOneDistance {
     type OrderedMetric = HammingDistance;
 }
 
-pub trait OrderedMetric: Metric {
+pub trait OrderedMetric: Metric<Distance = IntDistance> {
     type UnorderedMetric: Metric<Distance = Self::Distance>;
 }
 impl OrderedMetric for InsertDeleteDistance {
@@ -23,7 +23,7 @@ impl OrderedMetric for HammingDistance {
     type UnorderedMetric = ChangeOneDistance;
 }
 
-pub trait BoundedMetric: Metric {
+pub trait BoundedMetric: Metric<Distance = IntDistance> {
     type UnboundedMetric: Metric<Distance = Self::Distance>;
 }
 impl BoundedMetric for ChangeOneDistance {
@@ -33,7 +33,7 @@ impl BoundedMetric for HammingDistance {
     type UnboundedMetric = InsertDeleteDistance;
 }
 
-pub trait UnboundedMetric: Metric {
+pub trait UnboundedMetric: Metric<Distance = IntDistance> {
     type BoundedMetric: Metric<Distance = Self::Distance>;
 }
 impl UnboundedMetric for SymmetricDistance {

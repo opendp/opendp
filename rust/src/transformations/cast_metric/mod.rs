@@ -12,7 +12,7 @@ use self::traits::{BoundedMetric, OrderedMetric, UnboundedMetric, UnorderedMetri
 
 #[cfg(feature = "ffi")]
 mod ffi;
-mod traits;
+pub mod traits;
 
 #[bootstrap(features("contrib"), generics(D(suppress), MI(suppress)))]
 /// Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
