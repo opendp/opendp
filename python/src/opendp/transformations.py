@@ -722,7 +722,7 @@ def make_clamp(
     
     **Proof Definition:**
     
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/clamp/make_clamp.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/clamp/make_clamp.pdf)
     
     :param input_domain: Domain of input data.
     :type input_domain: Domain
@@ -845,7 +845,7 @@ def make_count(
     
     **Proof Definition:**
     
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/count/make_count.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/count/make_count.pdf)
     
     :param input_domain: Domain of the data type to be privatized.
     :param input_metric: Metric of the data type to be privatized.
@@ -2095,7 +2095,7 @@ def make_quantile_score_candidates(
     
     **Proof Definition:**
     
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/quantile_score_candidates/make_quantile_score_candidates.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/quantile_score_candidates/make_quantile_score_candidates.pdf)
     
     :param input_domain: Uses a tighter sensitivity when the size of vectors in the input domain is known.
     :param input_metric: Either SymmetricDistance or InsertDeleteDistance.

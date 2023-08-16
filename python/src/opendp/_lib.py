@@ -209,7 +209,7 @@ def versioned(function):
 
         docs_ref = get_docs_ref(version)
         function.__doc__ = function.__doc__.replace(
-            "https://docs.opendp.org/en/latest/",
+            "https://docs.opendp.org/en/nightly/",
             f"https://docs.opendp.org/en/{docs_ref}/",
         )
 
