@@ -121,7 +121,7 @@ SEXP combinators__make_population_amplification(
     PROTECT(measurement);
     PROTECT(population_size);
     AnyMeasurement * c_measurement = sexp_to_anymeasurementptr(measurement);
-    size_t c_population_size = (size_t)(INTEGER(population_size)[0]);
+    size_t c_population_size = (size_t)Rf_asInteger(population_size);
 
     // Call library function.
     FfiResult_____AnyMeasurement _result = opendp_combinators__make_population_amplification(c_measurement, c_population_size);

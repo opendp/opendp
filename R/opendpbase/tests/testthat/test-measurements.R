@@ -1,5 +1,5 @@
 library(opendpbase)
-enable_features("contrib")
+enable_features("contrib", "floating-point")
 
 test_that("make_randomized_response_bool", {
     meas <- make_randomized_response_bool(0.75)

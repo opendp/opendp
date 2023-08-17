@@ -282,9 +282,10 @@ fn r_to_c(arg: &Argument) -> String {
         ty if ty == "AnyMeasure *" => format!("sexp_to_anymeasureptr({name})"),
         ty if ty == "AnyFunction *" => format!("sexp_to_anyfunctionptr({name})"),
         ty if ty == "char *" => format!("(char *)CHAR(STRING_ELT({name}, 0))"),
-        ty if ty == "int32_t" => format!("(int)(INTEGER({name})[0])"),
-        ty if ty == "size_t" => format!("(size_t)(INTEGER({name})[0])"),
-        ty if ty == "uint32_t" => format!("(unsigned int)(INTEGER({name})[0])"),
+        ty if ty == "int32_t" => format!("(int32_t)Rf_asInteger({name})"),
+        ty if ty == "double" => format!("Rf_asReal({name})"),
+        ty if ty == "size_t" => format!("(size_t)Rf_asInteger({name})"),
+        ty if ty == "uint32_t" => format!("(unsigned int)Rf_asInteger({name})"),
         ty if ty == "bool" => format!("asLogical({name})"),
         _ => format!("\"UNKNOWN TYPE: {c_type}\""),
     }

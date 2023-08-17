@@ -164,7 +164,7 @@ SEXP measurements__make_base_gaussian(
     AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
     AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
     void * c_scale = sexp_to_voidptr(scale, T);
-    uint32_t c_k = (unsigned int)(INTEGER(k)[0]);
+    uint32_t c_k = (unsigned int)Rf_asInteger(k);
     char * c_MO = rt_to_string(MO);
 
     // Call library function.
@@ -218,7 +218,7 @@ SEXP measurements__make_base_laplace(
     AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
     AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
     void * c_scale = sexp_to_voidptr(scale, T);
-    uint32_t c_k = (unsigned int)(INTEGER(k)[0]);
+    uint32_t c_k = (unsigned int)Rf_asInteger(k);
 
     // Call library function.
     FfiResult_____AnyMeasurement _result = opendp_measurements__make_base_laplace(c_input_domain, c_input_metric, c_scale, c_k);
@@ -245,7 +245,7 @@ SEXP measurements__make_base_laplace_threshold(
     AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
     void * c_scale = sexp_to_voidptr(scale, TV);
     void * c_threshold = sexp_to_voidptr(threshold, TV);
-    uint32_t c_k = (unsigned int)(INTEGER(k)[0]);
+    uint32_t c_k = (unsigned int)Rf_asInteger(k);
 
     // Call library function.
     FfiResult_____AnyMeasurement _result = opendp_measurements__make_base_laplace_threshold(c_input_domain, c_input_metric, c_scale, c_threshold, c_k);

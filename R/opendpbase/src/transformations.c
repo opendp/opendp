@@ -19,7 +19,7 @@ SEXP transformations__choose_branching_factor(
 ) {
     // Convert arguments to c types.
     PROTECT(size_guess);
-    uint32_t c_size_guess = (unsigned int)(INTEGER(size_guess)[0]);
+    uint32_t c_size_guess = (unsigned int)Rf_asInteger(size_guess);
 
     // Call library function.
     uint32_t _result = opendp_transformations__choose_branching_factor(c_size_guess);
@@ -39,8 +39,8 @@ SEXP transformations__make_b_ary_tree(
     PROTECT(branching_factor);
     AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
     AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
-    uint32_t c_leaf_count = (unsigned int)(INTEGER(leaf_count)[0]);
-    uint32_t c_branching_factor = (unsigned int)(INTEGER(branching_factor)[0]);
+    uint32_t c_leaf_count = (unsigned int)Rf_asInteger(leaf_count);
+    uint32_t c_branching_factor = (unsigned int)Rf_asInteger(branching_factor);
 
     // Call library function.
     FfiResult_____AnyTransformation _result = opendp_transformations__make_b_ary_tree(c_input_domain, c_input_metric, c_leaf_count, c_branching_factor);
@@ -62,7 +62,7 @@ SEXP transformations__make_bounded_float_checked_sum(
     PROTECT(S);
     PROTECT(T);
     PROTECT(T_bounds);
-    size_t c_size_limit = (size_t)(INTEGER(size_limit)[0]);
+    size_t c_size_limit = (size_t)Rf_asInteger(size_limit);
     AnyObject * c_bounds = sexp_to_anyobjectptr(bounds, T_bounds);
     char * c_S = rt_to_string(S);
 
@@ -86,7 +86,7 @@ SEXP transformations__make_bounded_float_ordered_sum(
     PROTECT(S);
     PROTECT(T);
     PROTECT(T_bounds);
-    size_t c_size_limit = (size_t)(INTEGER(size_limit)[0]);
+    size_t c_size_limit = (size_t)Rf_asInteger(size_limit);
     AnyObject * c_bounds = sexp_to_anyobjectptr(bounds, T_bounds);
     char * c_S = rt_to_string(S);
 
@@ -281,7 +281,7 @@ SEXP transformations__make_consistent_b_ary_tree(
     PROTECT(branching_factor);
     PROTECT(TIA);
     PROTECT(TOA);
-    uint32_t c_branching_factor = (unsigned int)(INTEGER(branching_factor)[0]);
+    uint32_t c_branching_factor = (unsigned int)Rf_asInteger(branching_factor);
     char * c_TIA = rt_to_string(TIA);
     char * c_TOA = rt_to_string(TOA);
 
@@ -796,7 +796,7 @@ SEXP transformations__make_quantile_score_candidates(
     AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
     AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
     AnyObject * c_candidates = sexp_to_anyobjectptr(candidates, T_candidates);
-    double c_alpha = "UNKNOWN TYPE: double";
+    double c_alpha = Rf_asReal(alpha);
 
     // Call library function.
     FfiResult_____AnyTransformation _result = opendp_transformations__make_quantile_score_candidates(c_input_domain, c_input_metric, c_candidates, c_alpha);
@@ -849,7 +849,7 @@ SEXP transformations__make_resize(
     PROTECT(T_constant);
     AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
     AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
-    size_t c_size = (size_t)(INTEGER(size)[0]);
+    size_t c_size = (size_t)Rf_asInteger(size);
     AnyObject * c_constant = sexp_to_anyobjectptr(constant, T_constant);
     char * c_MO = rt_to_string(MO);
 
@@ -895,7 +895,7 @@ SEXP transformations__make_sized_bounded_float_checked_sum(
     PROTECT(S);
     PROTECT(T);
     PROTECT(T_bounds);
-    size_t c_size = (size_t)(INTEGER(size)[0]);
+    size_t c_size = (size_t)Rf_asInteger(size);
     AnyObject * c_bounds = sexp_to_anyobjectptr(bounds, T_bounds);
     char * c_S = rt_to_string(S);
 
@@ -919,7 +919,7 @@ SEXP transformations__make_sized_bounded_float_ordered_sum(
     PROTECT(S);
     PROTECT(T);
     PROTECT(T_bounds);
-    size_t c_size = (size_t)(INTEGER(size)[0]);
+    size_t c_size = (size_t)Rf_asInteger(size);
     AnyObject * c_bounds = sexp_to_anyobjectptr(bounds, T_bounds);
     char * c_S = rt_to_string(S);
 
@@ -942,7 +942,7 @@ SEXP transformations__make_sized_bounded_int_checked_sum(
     PROTECT(bounds);
     PROTECT(T);
     PROTECT(T_bounds);
-    size_t c_size = (size_t)(INTEGER(size)[0]);
+    size_t c_size = (size_t)Rf_asInteger(size);
     AnyObject * c_bounds = sexp_to_anyobjectptr(bounds, T_bounds);
     char * c_T = rt_to_string(T);
 
@@ -965,7 +965,7 @@ SEXP transformations__make_sized_bounded_int_monotonic_sum(
     PROTECT(bounds);
     PROTECT(T);
     PROTECT(T_bounds);
-    size_t c_size = (size_t)(INTEGER(size)[0]);
+    size_t c_size = (size_t)Rf_asInteger(size);
     AnyObject * c_bounds = sexp_to_anyobjectptr(bounds, T_bounds);
     char * c_T = rt_to_string(T);
 
@@ -988,7 +988,7 @@ SEXP transformations__make_sized_bounded_int_ordered_sum(
     PROTECT(bounds);
     PROTECT(T);
     PROTECT(T_bounds);
-    size_t c_size = (size_t)(INTEGER(size)[0]);
+    size_t c_size = (size_t)Rf_asInteger(size);
     AnyObject * c_bounds = sexp_to_anyobjectptr(bounds, T_bounds);
     char * c_T = rt_to_string(T);
 
@@ -1011,7 +1011,7 @@ SEXP transformations__make_sized_bounded_int_split_sum(
     PROTECT(bounds);
     PROTECT(T);
     PROTECT(T_bounds);
-    size_t c_size = (size_t)(INTEGER(size)[0]);
+    size_t c_size = (size_t)Rf_asInteger(size);
     AnyObject * c_bounds = sexp_to_anyobjectptr(bounds, T_bounds);
     char * c_T = rt_to_string(T);
 
@@ -1179,7 +1179,7 @@ SEXP transformations__make_variance(
     PROTECT(T);
     AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
     AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
-    size_t c_ddof = (size_t)(INTEGER(ddof)[0]);
+    size_t c_ddof = (size_t)Rf_asInteger(ddof);
     char * c_S = rt_to_string(S);
 
     // Call library function.
