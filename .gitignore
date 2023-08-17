@@ -187,4 +187,4 @@ AUTHORS
 Makevars
 vendor.tar.xz
 opendp.tar.xz
-R/src/.cargo
+R/opendpbase/src/.cargo
