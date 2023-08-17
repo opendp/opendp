@@ -522,3 +522,6 @@ def get_distance_type(value):
 
 def get_type(value):
     return value.type
+
+def get_value_type(type_name):
+    return RuntimeType.parse(type_name).args[1]

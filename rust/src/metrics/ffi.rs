@@ -12,7 +12,8 @@ use crate::{
 };
 
 use super::{
-    ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance, SymmetricDistance,
+    ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance, LInfDiffDistance,
+    SymmetricDistance,
 };
 #[bootstrap(
     name = "_metric_free",
@@ -170,4 +171,27 @@ pub extern "C" fn opendp_metrics__l2_distance(T: *const c_char) -> FfiResult<*mu
 #[no_mangle]
 pub extern "C" fn opendp_metrics__discrete_distance() -> FfiResult<*mut AnyMetric> {
     FfiResult::Ok(util::into_raw(AnyMetric::new(DiscreteDistance::default())))
+}
+
+#[bootstrap(returns(c_type = "FfiResult<AnyMetric *>"))]
+/// Construct an instance of the `LInfDiffDistance` metric.
+///
+/// # Arguments
+/// * `T` - The type of the distance.
+fn linf_diff_distance<T>() -> LInfDiffDistance<T> {
+    LInfDiffDistance::default()
+}
+#[no_mangle]
+pub extern "C" fn opendp_metrics__linf_diff_distance(
+    T: *const c_char,
+) -> FfiResult<*mut AnyMetric> {
+    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
+        Ok(AnyMetric::new(linf_diff_distance::<T>())).into()
+    }
+    let T = try_!(Type::try_from(T));
+    dispatch!(
+        monomorphize,
+        [(T, [u32, u64, i32, i64, usize, f32, f64])],
+        ()
+    )
 }

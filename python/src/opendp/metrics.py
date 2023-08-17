@@ -13,6 +13,7 @@ __all__ = [
     "insert_delete_distance",
     "l1_distance",
     "l2_distance",
+    "linf_diff_distance",
     "metric_debug",
     "metric_distance_type",
     "metric_type",
@@ -229,6 +230,36 @@ def l2_distance(
     
     # Call library function.
     lib_function = lib.opendp_metrics__l2_distance
+    lib_function.argtypes = [ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_T), Metric))
+    
+    return output
+
+
+@versioned
+def linf_diff_distance(
+    T: RuntimeTypeDescriptor
+):
+    """Construct an instance of the `LInfDiffDistance` metric.
+    
+    [linf_diff_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.linf_diff_distance.html)
+    
+    :param T: 
+    :type T: :py:ref:`RuntimeTypeDescriptor`
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # Standardize type arguments.
+    T = RuntimeType.parse(type_name=T)
+    
+    # Convert arguments to c types.
+    c_T = py_to_c(T, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_metrics__linf_diff_distance
     lib_function.argtypes = [ctypes.c_char_p]
     lib_function.restype = FfiResult
     

@@ -7,4 +7,5 @@ from opendp.metrics import *
 from opendp.measures import *
 from opendp.typing import *
 from opendp.accuracy import *
-from opendp.analysis import *
+from opendp.core import new_function
+from opendp.context import *

@@ -117,6 +117,9 @@ impl<T: CheckAtom> AtomDomain<T> {
         }
         Ok(())
     }
+    pub fn bounds(&self) -> Option<&Bounds<T>> {
+        self.bounds.as_ref()
+    }
 }
 impl<T: CheckAtom + InherentNull> AtomDomain<T> {
     pub fn new_nullable() -> Self {
@@ -133,13 +136,13 @@ impl<T: CheckAtom + TotalOrd> AtomDomain<T> {
             nullable: false,
         })
     }
-    
+
     pub fn get_closed_bounds(&self) -> Option<(T, T)> {
         let bounds = self.bounds.as_ref()?;
 
         match (&bounds.lower, &bounds.upper) {
             (Bound::Included(l), Bound::Included(u)) => Some((l.clone(), u.clone())),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -234,6 +237,20 @@ impl<T: TotalOrd> Bounds<T> {
         }
         Ok(Bounds { lower, upper })
     }
+    pub fn lower(&self) -> Option<&T> {
+        match &self.lower {
+            Bound::Included(v) => Some(v),
+            Bound::Excluded(v) => Some(v),
+            Bound::Unbounded => None,
+        }
+    }
+    pub fn upper(&self) -> Option<&T> {
+        match &self.upper {
+            Bound::Included(v) => Some(v),
+            Bound::Excluded(v) => Some(v),
+            Bound::Unbounded => None,
+        }
+    }
 }
 impl<T: Clone> Bounds<T> {
     pub fn get_closed(&self) -> Fallible<(T, T)> {
@@ -304,7 +321,7 @@ impl<T: Clone + TotalOrd> Bounds<T> {
 /// assert!(!domain.member(&hashmap)?);
 /// # opendp::error::Fallible::Ok(())
 /// ```
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Default)]
 pub struct MapDomain<DK: Domain, DV: Domain>
 where
     DK::Carrier: Eq + Hash,

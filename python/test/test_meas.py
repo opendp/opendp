@@ -154,13 +154,11 @@ def test_make_count_by_ptr():
     meas = (
         input_space >>
         dp.t.then_count_by(MO=dp.L1Distance[float], TV=float) >> 
-        dp.m.make_base_ptr(scale=2., threshold=28., TK=str)
+        dp.m.then_base_laplace_threshold(scale=2., threshold=28.)
     )
-    fixed_meas = dp.c.make_fix_delta(meas, 1e-6)
-    print("stability histogram:", fixed_meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
-
-    print(meas.map(1).epsilon(1e-6))
-    assert fixed_meas.check(1, (1.0, 1e-6))
+    print("stability histogram:", meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
+    print(meas.map(1))
+    assert meas.check(1, (1.0, 1e-6))
 
 def test_randomized_response():
     meas = dp.m.make_randomized_response(categories=["A", "B", "C", "D"], prob=0.75)
@@ -190,3 +188,31 @@ def test_gaussian():
 
     input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.l2_distance(T=float)
     (input_space >> dp.m.then_gaussian(1.))([1., 2., 3.])
+
+def test_discrete_exponential():
+    input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
+    input_metric = dp.linf_diff_distance(T=dp.usize)
+    meas = (input_domain, input_metric) >> dp.m.then_base_discrete_exponential(1., "maximize")
+    print(meas(list(range(10))))
+    print(meas.map(2))
+
+def test_alp_histogram():
+    import opendp.prelude as dp
+
+    counter = dp.t.make_count_by(
+        dp.vector_domain(dp.atom_domain(T=str)),
+        dp.symmetric_distance(),
+        MO=dp.L1Distance[int])
+
+    alp_meas = counter >> dp.m.then_alp_queryable(
+        scale=1.,
+        total_limit=24,
+        value_limit=24,
+    )
+
+    alp_qbl = alp_meas(["A"] * 20 + ["B"] * 10)
+
+    print(alp_qbl("A"))
+    print(alp_qbl("B"))
+    print(alp_qbl("C"))
+    print(alp_meas.map(1))

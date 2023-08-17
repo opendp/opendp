@@ -29,8 +29,8 @@ use std::rc::Rc;
 
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
-use std::fmt::Debug;
 use num::Zero;
+use std::fmt::Debug;
 
 /// A set which constrains the input or output of a [`Function`].
 ///

@@ -454,3 +454,47 @@ impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
         true
     }
 }
+
+/// Distance between score vectors for the exponential mechanism.
+///
+/// # Proof Definition
+///
+/// ### `d`-closeness
+/// For any two datasets $u, v \in$ `VectorDomain<AtomDomain<T>>` and any $d$ of type `T`,
+/// we say that $u, v$ are $d$-close under the inf-difference metric (abbreviated as $d_{IDD}$) whenever
+///
+/// ```math
+/// d_{\infty'}(u, v) = max_{ij} |(u_i - v_i) - (u_j - v_j)|
+/// ```
+pub struct LInfDiffDistance<Q>(PhantomData<Q>);
+impl<Q> Default for LInfDiffDistance<Q> {
+    fn default() -> Self {
+        LInfDiffDistance(PhantomData)
+    }
+}
+
+impl<Q> Clone for LInfDiffDistance<Q> {
+    fn clone(&self) -> Self {
+        Self::default()
+    }
+}
+impl<Q> PartialEq for LInfDiffDistance<Q> {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+impl<Q> Debug for LInfDiffDistance<Q> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "LInfDiffDistance({})", type_name!(Q))
+    }
+}
+
+impl<Q> Metric for LInfDiffDistance<Q> {
+    type Distance = Q;
+}
+
+impl<T: CheckAtom> MetricSpace for (VectorDomain<AtomDomain<T>>, LInfDiffDistance<T>) {
+    fn check(&self) -> bool {
+        !self.0.element_domain.nullable()
+    }
+}

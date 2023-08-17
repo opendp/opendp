@@ -20,6 +20,7 @@ __all__ = [
     "measurement_map",
     "measurement_output_distance_type",
     "measurement_output_measure",
+    "new_function",
     "queryable_eval",
     "queryable_query_type",
     "transformation_check",
@@ -486,6 +487,43 @@ def measurement_output_measure(
     
     output = unwrap(lib_function(c_this), Measure)
     
+    return output
+
+
+@versioned
+def new_function(
+    function,
+    TO: RuntimeTypeDescriptor
+) -> Function:
+    """Construct a Function from a user-defined callback.
+    Can be used as a post-processing step.
+    
+    [new_function in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.new_function.html)
+    
+    :param function: A function mapping data to a value of type `TO`
+    :param TO: Output Type
+    :type TO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Function
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TO = RuntimeType.parse(type_name=TO)
+    
+    # Convert arguments to c types.
+    c_function = py_to_c(function, c_type=CallbackFn, type_name=pass_through(TO))
+    c_TO = py_to_c(TO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_core__new_function
+    lib_function.argtypes = [CallbackFn, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_function, c_TO), Function))
+    output._depends_on(c_function)
     return output
 
 

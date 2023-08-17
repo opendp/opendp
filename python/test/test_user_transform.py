@@ -1,14 +1,6 @@
-from opendp.transformations import then_cast_default, then_clamp, then_sum
-from opendp.measurements import then_base_discrete_laplace
-from opendp.combinators import *
-from opendp.mod import enable_features
+import opendp.prelude as dp
 
-from opendp.domains import vector_domain, atom_domain
-from opendp.metrics import symmetric_distance, absolute_distance
-from opendp.measures import max_divergence
-from opendp.typing import *
-
-enable_features("contrib", "honest-but-curious")
+dp.enable_features("contrib", "honest-but-curious")
 
 
 def make_duplicate(multiplicity, raises=False):
@@ -21,25 +13,25 @@ def make_duplicate(multiplicity, raises=False):
     def stability_map(d_in):
         return d_in * multiplicity
 
-    return make_user_transformation(
-        vector_domain(atom_domain(T=int)),
-        vector_domain(atom_domain(T=int)),
+    return dp.t.make_user_transformation(
+        dp.vector_domain(dp.atom_domain(T=int)),
+        dp.symmetric_distance(),
+        dp.vector_domain(dp.atom_domain(T=int)),
+        dp.symmetric_distance(),
         function,
-        symmetric_distance(),
-        symmetric_distance(),
         stability_map
     )
 
 def test_make_user_transformation():
-    input_domain = vector_domain(atom_domain(T=str))
-    input_metric = symmetric_distance()
+    input_domain = dp.vector_domain(dp.atom_domain(T=str))
+    input_metric = dp.symmetric_distance()
     trans = (
         (input_domain, input_metric)
-        >> then_cast_default(TOA=int)
+        >> dp.t.then_cast_default(TOA=int)
         >> make_duplicate(2)
-        >> then_clamp((1, 2))
-        >> then_sum()
-        >> then_base_discrete_laplace(1.0)
+        >> dp.t.then_clamp((1, 2))
+        >> dp.t.then_sum()
+        >> dp.m.then_base_discrete_laplace(1.0)
     )
 
     print(trans(["0", "1", "2", "3"]))
@@ -57,31 +49,30 @@ def make_constant_mechanism(constant):
     def function(_arg):
         return constant
 
-    def stability_map(_d_in):
+    def privacy_map(_d_in):
         return 0.
 
-    return make_user_measurement(
-        atom_domain(T=int),
+    return dp.m.make_user_measurement(
+        dp.atom_domain(T=int),
+        dp.absolute_distance(int),
+        dp.max_divergence(float),
         function,
-        absolute_distance(int),
-        max_divergence(float),
-        stability_map,
-        int,
+        privacy_map,
+        TO=dp.RuntimeType.infer(constant),
     )
 
 def test_make_user_measurement():
     mech = make_constant_mechanism(23)
-    print(mech(1))
-
+    assert mech(1) == 23
     assert mech.map(200) == 0.
-    
+
 
 def make_postprocess_frac():
     """An example user-defined postprocessor from Python"""
     def function(arg):
         return arg[0] / arg[1]
 
-    return make_user_postprocessor(function, float)
+    return dp.new_function(function, float)
 
 def test_make_user_postprocessor():
     mech = make_postprocess_frac()
@@ -89,36 +80,28 @@ def test_make_user_postprocessor():
 
 
 def test_user_constructors():
-
-    from opendp.combinators import make_user_transformation, make_user_measurement
-    from opendp.domains import vector_domain, atom_domain
-    from opendp.metrics import symmetric_distance
-    from opendp.measures import max_divergence
-
-    trans = make_user_transformation(
-        atom_domain((2, 10)),
-        vector_domain(atom_domain((2, 10)), 10),
+    trans = dp.t.make_user_transformation(
+        dp.atom_domain((2, 10)),
+        dp.symmetric_distance(),
+        dp.vector_domain(dp.atom_domain((2, 10)), 10),
+        dp.symmetric_distance(),
         lambda x: [x] * 10,
-        symmetric_distance(),
-        symmetric_distance(),
         lambda d_in: d_in * 10
     )
     print(trans(2))
     print(trans.map(1))
 
-
-    meas = make_user_measurement(
-        atom_domain((2, 10)),
+    meas = dp.m.make_user_measurement(
+        dp.atom_domain((2, 10)),
+        dp.symmetric_distance(),
+        dp.max_divergence(dp.f64),
         lambda x: [x] * 10,
-        symmetric_distance(),
-        max_divergence(f64),
         lambda d_in: float(d_in * 10),
-        Vec[int],
+        TO=dp.Vec[int],
     )
     print(meas(2))
     print(meas.map(1))
 
-
-    post = make_user_postprocessor(lambda x: x[0], i32)
+    post = dp.new_function(lambda x: x[0], dp.i32)
 
     print((meas >> post)(2))

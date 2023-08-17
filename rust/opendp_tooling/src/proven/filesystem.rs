@@ -1,6 +1,7 @@
 use std::{collections::HashMap, env, ffi::OsStr, path::PathBuf};
 
 use darling::{Error, Result};
+use regex::Regex;
 
 /// Traverses the filesystem, starting at src_dir, looking for .tex files.
 /// If more than one file is discovered with the same name, the value becomes None
@@ -71,6 +72,7 @@ pub fn get_src_dir() -> Result<PathBuf> {
         .ok_or_else(|| Error::custom("Failed to determine location of Cargo.toml."))?;
     Ok(PathBuf::from(manifest_dir).join("src"))
 }
+
 fn get_out_dir() -> Result<PathBuf> {
     let manifest_dir =
         std::env::var_os("OUT_DIR").ok_or_else(|| Error::custom("Failed to determine OUT_DIR."))?;
@@ -102,13 +104,9 @@ pub fn make_proof_link(
 
         // find the version
         let version = env!("CARGO_PKG_VERSION");
-        let version_segment = if version == "0.0.0+development" {
-            "latest".to_string()
-        } else {
-            format!("v{version}")
-        };
+        let docs_ref = get_docs_ref(version);
 
-        format!("{docs_uri}/en/{version_segment}")
+        format!("{docs_uri}/en/{docs_ref}")
     };
 
     Ok(format!(
@@ -117,4 +115,23 @@ pub fn make_proof_link(
         repo_path = repo_path.display(),
         relative_path = relative_path.display()
     ))
+}
+
+fn get_docs_ref(version: &str) -> String {
+    // docs.opendp.org has tags for stable versions, but only a single branch for beta & nightly.
+    let channel = get_channel(version);
+    match channel.as_str() {
+        "stable" => format!("v{version}"),  // For stable, we have tags.
+        "dev" => "latest".to_string(),  // Will be replaced by the @versioned decorator.
+        _ => channel,  // For beta & nightly, we don't have tags, just a single branch.
+    }
+}
+
+fn get_channel(version: &str) -> String {
+    let re = Regex::new(r"^(\d+\.\d+\.\d+)(?:-(dev|nightly|beta)(?:\.(.+))?)?$").unwrap();
+    if let Some(caps) = re.captures(version) {
+        let channel = caps.get(2);
+        return channel.map_or("stable", |m| m.as_str()).to_string()
+    }
+    "unknown".to_string()
 }

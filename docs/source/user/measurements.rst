@@ -151,10 +151,14 @@ The geometric mechanism (:func:`make_base_geometric <opendp.measurements.make_ba
 If you need constant-time execution to protect against timing side-channels, use :func:`opendp.measurements.make_base_discrete_laplace_linear`, which is equivalent to the previous algorithm.
 
 
-Stability Histogram
--------------------
+Noise Addition with Thresholding
+---------------------------------
+When releasing data grouped by an unknown key-set,
+it is necessary to use a mechanism that only releases keys which are "stable".
+That is, keys which are present among all neighboring datasets.
+
 The stability histogram is used to release a category set and frequency counts, and is useful when the category set is unknown or very large.
-`make_count_by` is included here because it is currently the only transformation that `make_base_ptr` chains with.
+`make_count_by` is included here because it is currently the only transformation that `make_base_laplace_threshold` chains with.
 
 See the `Histograms notebook <../examples/histograms.html>`_ for code examples and more exposition.
 
@@ -169,7 +173,7 @@ See the `Histograms notebook <../examples/histograms.html>`_ for code examples a
      - ``VectorDomain<AtomDomain<TK>>``
      - ``SymmetricDistance``
      - ``L1Distance<TV>``
-   * - :func:`opendp.measurements.make_base_ptr`
+   * - :func:`opendp.measurements.make_base_laplace_threshold`
      - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
      - ``L1Distance<TV>``
      - ``SmoothedMaxDivergence<TV>``
@@ -196,3 +200,58 @@ See the `Randomized Response notebook <measurements/randomized-response.html>`_ 
      - ``AtomDomain<T>``
      - ``DiscreteDistance``
      - ``MaxDivergence<QO>``
+
+
+Bring Your Own
+--------------
+
+Use :func:`opendp.measurements.make_user_measurement` to construct a measurement for your own mechanism.
+
+.. note::
+
+    This requires a looser trust model, as we cannot verify any privacy or stability properties of user-defined functions.
+
+    .. doctest::
+
+        >>> import opendp.prelude as dp
+        >>> dp.enable_features("honest-but-curious", "contrib")
+
+This example mocks the typical API of the OpenDP library to make the *most private* DP mechanism ever!
+
+.. doctest::
+
+    >>> def make_base_constant(constant):
+    ...     """Constructs a Measurement that only returns a constant value."""
+    ...     def function(_arg: int):
+    ...         return constant
+    ... 
+    ...     def privacy_map(d_in: int) -> float:
+    ...         return 0.0
+    ...
+    ...     return dp.m.make_user_measurement(
+    ...         input_domain=dp.atom_domain(T=int),
+    ...         input_metric=dp.absolute_distance(T=int),
+    ...         output_measure=dp.max_divergence(T=float),
+    ...         function=function,
+    ...         privacy_map=privacy_map,
+    ...         TO=type(constant),  # the expected type of the output
+    ...     )
+    
+The resulting Measurement may be used interchangeably with those constructed via the library:
+
+.. doctest::
+
+    >>> meas = (
+    ...     (dp.vector_domain(dp.atom_domain((0, 10))), dp.symmetric_distance())
+    ...     >> dp.t.then_sum()
+    ...     >> make_base_constant("denied")
+    ... )
+    ...
+    >>> assert meas([2, 3, 4]) == "denied"
+    >>> assert meas.map(1) == 0. # computes epsilon, because the output measure is max divergence
+
+While this mechanism clearly has no utility, 
+the code snip may form a basis for you to create own measurements, 
+or even incorporate mechanisms from other libraries.
+
+You can also define your own transformations (:func:`opendp.transformations.make_user_transformation`) and postprocessors (:func:`opendp.core.new_function`).

@@ -175,6 +175,19 @@ where
             },
         )
     }
+
+    pub(crate) fn new_raw_external(
+        mut transition: impl FnMut(&Q) -> Fallible<A> + 'static,
+    ) -> Self {
+        Queryable::new_raw(
+            move |_self: &Self, query: Query<Q>| -> Fallible<Answer<A>> {
+                match query {
+                    Query::External(q) => transition(q).map(Answer::External),
+                    Query::Internal(_) => fallible!(FailedFunction, "unrecognized internal query"),
+                }
+            },
+        )
+    }
 }
 
 // manually implemented instead of derived so that Q and A don't have to be Clone

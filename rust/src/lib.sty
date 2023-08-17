@@ -27,8 +27,9 @@
 
 % \contrib macro to indicate inclusion in "contrib".
 \usepackage{tcolorbox}
-\newtcolorbox{contrib_box}{colback=red!5!white,colframe=red!75!black}
-\newcommand{\contrib}{{\begin{contrib_box}This proof resides in \textbf{``contrib''} because it has not completed the vetting process.\end{contrib_box}}} 
+\newtcolorbox{warn_box}{colback=red!5!white,colframe=red!75!black}
+\newcommand{\contrib}{{\begin{warn_box}This proof resides in \textbf{``contrib''} because it has not completed the vetting process.\end{warn_box}}} 
+\newcommand{\floatingPoint}{{\begin{warn_box}This implementation is susceptible to floating-point vulnerabilities.\end{warn_box}}} 
 
 % asOfCommit macro to version a code dependency. Arguments:
 %    #1: relative path to file you are dependent on
@@ -76,7 +77,7 @@
 \ifnum\pdf@shellescape=1
   % latex macro expansion has a separate phase for \input evaluation
   %     immediately evaluate a command to write a temp file to ./out containing the base path
-  \immediate\write18{[ ! -f out/rustdoc.txt ] && mkdir -p out && ([ -z `kpsewhich --var-value OPENDP_RUSTDOC_PORT` ] && echo "https://docs.rs/opendp/`head -n 1 \@backslashchar`git rev-parse --show-toplevel\@backslashchar`/VERSION | sed 's|0.0.0+development|latest|g'`" || echo "http://localhost:`kpsewhich --var-value OPENDP_RUSTDOC_PORT`") > out/rustdoc.txt}
+  \immediate\write18{[ ! -f out/rustdoc.txt ] && mkdir -p out && ([ -z `kpsewhich --var-value OPENDP_RUSTDOC_PORT` ] && echo "https://docs.rs/opendp/`head -n 1 \@backslashchar`git rev-parse --show-toplevel\@backslashchar`/VERSION | sed 's|.*-dev.*|latest|g'`" || echo "http://localhost:`kpsewhich --var-value OPENDP_RUSTDOC_PORT`") > out/rustdoc.txt}
   %     ...and then retrieve the base path by loading the temp file
   \CatchFileDef\OpenDPRustdocBase{out/rustdoc.txt}{\endlinechar=-1}
 \else

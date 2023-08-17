@@ -1,8 +1,9 @@
 import ctypes
 import os
+import platform
+import re
 import sys
 from typing import Optional, Any
-import re
 
 
 # list all acceptable alternative types for each default type
@@ -14,30 +15,62 @@ ATOM_EQUIVALENCE_CLASSES = {
     'AnyTransformationPtr': ['AnyTransformationPtr'],
 }
 
-lib_dir = os.environ.get("OPENDP_LIB_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
-if not os.path.exists(lib_dir):
-    # fall back to default location of binaries in a developer install
-    build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
-    lib_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'rust', 'target', build_dir)
 
-if os.path.exists(lib_dir):
-    platform_to_name = {
-        "darwin": "libopendp.dylib",
-        "linux": "libopendp.so",
-        "win32": "opendp.dll",
-    }
-    if sys.platform not in platform_to_name:
-        raise Exception("Platform not supported", sys.platform)
-    lib_name = platform_to_name[sys.platform]
+def _load_library():
+    lib_dir = os.environ.get("OPENDP_LIB_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
+    if not os.path.exists(lib_dir):
+        # fall back to default location of binaries in a developer install
+        build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
+        lib_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'rust', 'target', build_dir)
 
-    lib = ctypes.cdll.LoadLibrary(os.path.join(lib_dir, lib_name))
+    if os.path.exists(lib_dir):
+        # Mapping of Python platform to library name format
+        platform_to_name_template = {
+            "darwin": "libopendp{}.dylib",
+            "linux": "libopendp{}.so",
+            "win32": "opendp{}.dll",
+        }
+        # Mapping of Python platform/machine to Rust architecture.
+        platform_machine_to_architecture = {
+            ("win32", "AMD64"): "x86_64",
+            # No way to build this yet ("win32", "ARM64"): "aarch64",
+            ("darwin", "x86_64"): "x86_64",
+            ("darwin", "arm64"): "aarch64",
+            ("linux", "x86_64"): "x86_64",
+            ("linux", "aarch64"): "aarch64",
+        }
 
-elif os.environ.get('OPENDP_HEADLESS', "false") != "false":
-    lib = None
+        name_template = platform_to_name_template.get(sys.platform)
+        if name_template is None:
+            raise Exception("Platform not supported", sys.platform)
+        architecture = platform_machine_to_architecture.get((sys.platform, platform.machine()))
+        if architecture is None:
+            raise Exception("Machine not supported", sys.platform, platform.machine())
 
-else:
-    raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
+        def get_lib_path(name_template, architecture):
+            suffix = f"-{architecture}" if architecture is not None else ""
+            name = name_template.format(suffix)
+            return os.path.join(lib_dir, name)
 
+        # First try name with architecture
+        lib_path = get_lib_path(name_template, architecture)
+        if not os.path.exists(lib_path):
+            # Fall back to name without architecture (happens on darwin, which has fat binaries, and developer installs)
+            lib_path = get_lib_path(name_template, None)
+
+        try:
+            return ctypes.cdll.LoadLibrary(lib_path)
+        except Exception as e:
+            raise Exception("Unable to load OpenDP shared library", lib_path, e)
+
+    elif os.environ.get('OPENDP_HEADLESS', "false") != "false":
+        return None
+
+    else:
+        raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
+
+
+lib = _load_library()
 
 # This enables backtraces in Rust by default.
 # It can be disabled by setting RUST_BACKTRACE=0.
@@ -166,15 +199,18 @@ def versioned(function):
     This is shown in the help(*) and Sphinx documentation (like docs.opendp.org)."""
 
     version = get_opendp_version()
+    channel = get_channel(version)
 
-    if version != "0.0.0+development":
+    if channel != "dev":
+        # docs.rs keeps all releases, so we can use the full version.
         function.__doc__ = function.__doc__.replace(
             "https://docs.rs/opendp/latest/", f"https://docs.rs/opendp/{version}/"
         )
 
+        docs_ref = get_docs_ref(version)
         function.__doc__ = function.__doc__.replace(
             "https://docs.opendp.org/en/latest/",
-            f"https://docs.opendp.org/en/v{version}/",
+            f"https://docs.opendp.org/en/{docs_ref}/",
         )
 
     return function
@@ -240,9 +276,9 @@ def make_proof_link(
 
         # find the version
         version = get_opendp_version()
-        version_segment = "latest" if version == "0.0.0+development" else "v" + version
+        docs_ref = get_docs_ref(version)
 
-        proof_uri = f"{docs_uri}/en/{version_segment}"
+        proof_uri = f"{docs_uri}/en/{docs_ref}"
 
     return f"{proof_uri}/proofs/{repo_path}/{relative_path}"
 
@@ -266,13 +302,23 @@ def get_opendp_version():
             return get_opendp_version_from_file()
 
 
-def unmangle_py_version(version):
-    # Python mangles pre-release versions like "X.Y.Z-rc.N" into "X.Y.ZrcN", but the docs use the correct format,
-    # so we need to unmangle so the links will work.
-    match = re.match(r"^(\d+\.\d+\.\d+)rc(\d+)$", version)
+def unmangle_py_version(py_version):
+    # Python mangles pre-release versions like "X.Y.Z-nightly.NNN.M" into "X.Y.ZaNNN00M", but the docs use
+    # the original format, so we need to unmangle for links to work.
+    # There are more variations possible, but we only need to handle X.Y.Z-dev0, X.Y.Z-aNNN00M, X.Y.Z-bNNN00M, X.Y.Z
+    if py_version.endswith(".dev0"):
+        return f"{py_version[:-5]}-dev"
+    match = re.match(r"^(\d+\.\d+\.\d+)(?:([ab])(\d{8})(\d{3}))?$", py_version)
     if match:
-        version = f"{match.group(1)}-rc.{match.group(2)}"
-    return version
+        base = match.group(1)
+        py_tag = match.group(2)
+        if not py_tag:
+            return base
+        channel = "nightly" if py_tag == "a" else "beta"
+        date = match.group(3)
+        counter = int(match.group(4))
+        return f"{base}-{channel}.{date}.{counter}"
+    return py_version
 
 
 def get_opendp_version_from_file():
@@ -280,3 +326,21 @@ def get_opendp_version_from_file():
     # so fall back to the version file.
     version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'VERSION')
     return open(version_file, 'r').read().strip()
+
+
+def get_docs_ref(version):
+    channel = get_channel(version)
+    if channel == "stable":
+        return f"v{version}"  # For stable, we have tags.
+    elif channel == "dev":
+        return "latest"  # Will be replaced by the @versioned decorator.
+    else:
+        return channel  # For beta & nightly, we don't have tags, just a single branch.
+
+
+def get_channel(version):
+    match = re.match(r"^(\d+\.\d+\.\d+)(?:-(dev|nightly|beta)(?:\.(.+))?)?$", version)
+    if match:
+        channel = match.group(2)
+        return channel or "stable"
+    return "unknown"

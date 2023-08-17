@@ -3,8 +3,13 @@ from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
-
+from opendp.core import *
+from opendp.domains import *
+from opendp.metrics import *
+from opendp.measures import *
 __all__ = [
+    "make_alp_queryable",
+    "make_base_discrete_exponential",
     "make_base_discrete_gaussian",
     "make_base_discrete_laplace",
     "make_base_discrete_laplace_cks20",
@@ -12,11 +17,14 @@ __all__ = [
     "make_base_gaussian",
     "make_base_geometric",
     "make_base_laplace",
-    "make_base_ptr",
+    "make_base_laplace_threshold",
     "make_gaussian",
     "make_laplace",
     "make_randomized_response",
     "make_randomized_response_bool",
+    "make_user_measurement",
+    "then_alp_queryable",
+    "then_base_discrete_exponential",
     "then_base_discrete_gaussian",
     "then_base_discrete_laplace",
     "then_base_discrete_laplace_cks20",
@@ -24,9 +32,174 @@ __all__ = [
     "then_base_gaussian",
     "then_base_geometric",
     "then_base_laplace",
+    "then_base_laplace_threshold",
     "then_gaussian",
-    "then_laplace"
+    "then_laplace",
+    "then_user_measurement"
 ]
+
+
+@versioned
+def make_alp_queryable(
+    input_domain,
+    input_metric,
+    scale,
+    total_limit,
+    value_limit = None,
+    size_factor = 50,
+    alpha = 4,
+    CO: RuntimeTypeDescriptor = None
+) -> Measurement:
+    """Measurement to release a queryable containing a DP projection of bounded sparse data.
+    
+    The size of the projection is O(total * size_factor * scale / alpha).
+    The evaluation time of post-processing is O(beta * scale / alpha).
+    
+    `size_factor` is an optional multiplier (defaults to 50) for setting the size of the projection.
+    There is a memory/utility trade-off.
+    The value should be sufficiently large to limit hash collisions.
+    
+    [make_alp_queryable in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_alp_queryable.html)
+    
+    **Citations:**
+    
+    * [ALP21 Differentially Private Sparse Vectors with Low Error, Optimal Space, and Fast Access](https://arxiv.org/abs/2106.10068) Algorithm 4
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `MapDomain<AtomDomain<K>, AtomDomain<CI>>`
+    * Output Type:    `Queryable<K, CO>`
+    * Input Metric:   `L1Distance<CI>`
+    * Output Measure: `MaxDivergence<CO>`
+    
+    :param input_domain: 
+    :param input_metric: 
+    :param scale: Privacy loss parameter. This is equal to epsilon/sensitivity.
+    :param total_limit: Either the true value or an upper bound estimate of the sum of all values in the input.
+    :param value_limit: Upper bound on individual values (referred to as β). Entries above β are clamped.
+    :param size_factor: Optional multiplier (default of 50) for setting the size of the projection.
+    :param alpha: Optional parameter (default of 4) for scaling and determining p in randomized response step.
+    :param CO: 
+    :type CO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    CO = RuntimeType.parse_or_infer(type_name=CO, public_example=scale)
+    CI = get_value_type(get_carrier_type(input_domain))
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=CO)
+    c_total_limit = py_to_c(total_limit, c_type=ctypes.c_void_p, type_name=CI)
+    c_value_limit = py_to_c(value_limit, c_type=ctypes.c_void_p, type_name=RuntimeType(origin='Option', args=[CI]))
+    c_size_factor = py_to_c(size_factor, c_type=ctypes.c_void_p, type_name=RuntimeType(origin='Option', args=[u32]))
+    c_alpha = py_to_c(alpha, c_type=ctypes.c_void_p, type_name=RuntimeType(origin='Option', args=[u32]))
+    c_CO = py_to_c(CO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_alp_queryable
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_total_limit, c_value_limit, c_size_factor, c_alpha, c_CO), Measurement))
+    
+    return output
+
+def then_alp_queryable(
+    scale,
+    total_limit,
+    value_limit = None,
+    size_factor = 50,
+    alpha = 4,
+    CO: RuntimeTypeDescriptor = None
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_alp_queryable(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        total_limit=total_limit,
+        value_limit=value_limit,
+        size_factor=size_factor,
+        alpha=alpha,
+        CO=CO))
+
+
+
+@versioned
+def make_base_discrete_exponential(
+    input_domain,
+    input_metric,
+    temperature: Any,
+    optimize: str,
+    QO: RuntimeTypeDescriptor = None
+) -> Measurement:
+    """Make a Measurement that takes a vector of scores and privately selects the index of the highest score.
+    
+    [make_base_discrete_exponential in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_exponential.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+    * Output Type:    `usize`
+    * Input Metric:   `LInfDiffDistance<TIA>`
+    * Output Measure: `MaxDivergence<QO>`
+    
+    **Proof Definition:**
+    
+    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/measurements/discrete_exponential/make_base_discrete_exponential.pdf)
+    
+    :param input_domain: Domain of the input vector. Must be a non-nullable VectorDomain.
+    :param input_metric: Metric on the input domain. Must be LInfDiffDistance
+    :param temperature: Higher temperatures are more private.
+    :type temperature: Any
+    :param optimize: Indicate whether to privately return the "Max" or "Min"
+    :type optimize: str
+    :param QO: Output Distance Type.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib", "floating-point")
+    
+    # Standardize type arguments.
+    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=temperature)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_temperature = py_to_c(temperature, c_type=AnyObjectPtr, type_name=QO)
+    c_optimize = py_to_c(optimize, c_type=ctypes.c_char_p, type_name=String)
+    c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_base_discrete_exponential
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_temperature, c_optimize, c_QO), Measurement))
+    
+    return output
+
+def then_base_discrete_exponential(
+    temperature: Any,
+    optimize: str,
+    QO: RuntimeTypeDescriptor = None
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_base_discrete_exponential(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        temperature=temperature,
+        optimize=optimize,
+        QO=QO))
+
 
 
 @versioned
@@ -546,12 +719,12 @@ def then_base_laplace(
 
 
 @versioned
-def make_base_ptr(
+def make_base_laplace_threshold(
+    input_domain,
+    input_metric,
     scale,
     threshold,
-    TK: RuntimeTypeDescriptor,
-    k: int = -1074,
-    TV: RuntimeTypeDescriptor = None
+    k: int = -1074
 ) -> Measurement:
     """Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
     
@@ -559,23 +732,21 @@ def make_base_ptr(
     Larger granularities are more computationally efficient, but have a looser privacy map.
     If k is not set, k defaults to the smallest granularity.
     
-    [make_base_ptr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_ptr.html)
+    [make_base_laplace_threshold in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_laplace_threshold.html)
     
     **Supporting Elements:**
     
     * Input Domain:   `MapDomain<AtomDomain<TK>, AtomDomain<TV>>`
     * Output Type:    `HashMap<TK, TV>`
     * Input Metric:   `L1Distance<TV>`
-    * Output Measure: `SmoothedMaxDivergence<TV>`
+    * Output Measure: `FixedSmoothedMaxDivergence<TV>`
     
+    :param input_domain: Domain of the input.
+    :param input_metric: Metric for the input domain.
     :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
     :param threshold: Exclude counts that are less than this minimum value.
     :param k: The noise granularity in terms of 2^k.
     :type k: int
-    :param TK: Type of Key. Must be hashable/categorical.
-    :type TK: :py:ref:`RuntimeTypeDescriptor`
-    :param TV: Type of Value. Must be float.
-    :type TV: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -584,24 +755,36 @@ def make_base_ptr(
     assert_features("contrib", "floating-point")
     
     # Standardize type arguments.
-    TK = RuntimeType.parse(type_name=TK)
-    TV = RuntimeType.parse_or_infer(type_name=TV, public_example=scale)
+    TV = get_distance_type(input_metric)
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=TV)
     c_threshold = py_to_c(threshold, c_type=ctypes.c_void_p, type_name=TV)
     c_k = py_to_c(k, c_type=ctypes.c_uint32, type_name=i32)
-    c_TK = py_to_c(TK, c_type=ctypes.c_char_p)
-    c_TV = py_to_c(TV, c_type=ctypes.c_char_p)
     
     # Call library function.
-    lib_function = lib.opendp_measurements__make_base_ptr
-    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function = lib.opendp_measurements__make_base_laplace_threshold
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_scale, c_threshold, c_k, c_TK, c_TV), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_threshold, c_k), Measurement))
     
     return output
+
+def then_base_laplace_threshold(
+    scale,
+    threshold,
+    k: int = -1074
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_base_laplace_threshold(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        threshold=threshold,
+        k=k))
+
 
 
 @versioned
@@ -848,3 +1031,76 @@ def make_randomized_response_bool(
     output = c_to_py(unwrap(lib_function(c_prob, c_constant_time, c_QO), Measurement))
     
     return output
+
+
+@versioned
+def make_user_measurement(
+    input_domain: Domain,
+    input_metric: Metric,
+    output_measure: Measure,
+    function,
+    privacy_map,
+    TO: RuntimeTypeDescriptor
+) -> Measurement:
+    """Construct a Measurement from user-defined callbacks.
+    
+    [make_user_measurement in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_user_measurement.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `AnyDomain`
+    * Output Type:    `AnyObject`
+    * Input Metric:   `AnyMetric`
+    * Output Measure: `AnyMeasure`
+    
+    :param input_domain: A domain describing the set of valid inputs for the function.
+    :type input_domain: Domain
+    :param input_metric: The metric from which distances between adjacent inputs are measured.
+    :type input_metric: Metric
+    :param output_measure: The measure from which distances between adjacent output distributions are measured.
+    :type output_measure: Measure
+    :param function: A function mapping data from `input_domain` to a release of type `TO`.
+    :param privacy_map: A function mapping distances from `input_metric` to `output_measure`.
+    :param TO: The data type of outputs from the function.
+    :type TO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib", "honest-but-curious")
+    
+    # Standardize type arguments.
+    TO = RuntimeType.parse(type_name=TO)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=AnyMeasure)
+    c_function = py_to_c(function, c_type=CallbackFn, type_name=pass_through(TO))
+    c_privacy_map = py_to_c(privacy_map, c_type=CallbackFn, type_name=measure_distance_type(output_measure))
+    c_TO = py_to_c(TO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_user_measurement
+    lib_function.argtypes = [Domain, Metric, Measure, CallbackFn, CallbackFn, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_function, c_privacy_map, c_TO), Measurement))
+    output._depends_on(c_function, c_privacy_map)
+    return output
+
+def then_user_measurement(
+    output_measure: Measure,
+    function,
+    privacy_map,
+    TO: RuntimeTypeDescriptor
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_user_measurement(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        output_measure=output_measure,
+        function=function,
+        privacy_map=privacy_map,
+        TO=TO))
+
