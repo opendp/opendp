@@ -37,6 +37,6 @@ sed \
     -e "s|@BEFORE_CARGO_BUILD@|${BEFORE_CARGO_BUILD}|" \
     -e "s|@AFTER_CARGO_BUILD@|${AFTER_CARGO_BUILD}|" \
     -e "s|@OPENDP_LIB_DIR@|${OPENDP_LIB_DIR}|" \
-    src/Makevars.in > src/Makevars
+    src/Makevars.in >src/Makevars
 
 # cat src/Makevars

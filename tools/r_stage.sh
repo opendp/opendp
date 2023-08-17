@@ -14,11 +14,9 @@ function usage() {
 }
 
 CLEAN=false
-CI=false
 while getopts ":ci" OPT; do
   case "$OPT" in
   c) CLEAN=true ;;
-  i) CI=true ;;
   *) usage && exit 1 ;;
   esac
 done
@@ -58,10 +56,9 @@ function clean() {
   run rm -rf vendor
 }
 
-function prepare() {
+function stage() {
   clean
 
-  log "***** PREPARE CRAN *****"
   mkdir -p R/opendpbase/src/rust
 
   log "Tar library sources into R/opendpbase/src"
@@ -82,28 +79,13 @@ function prepare() {
   log "Copy header file to R/opendpbase/src"
   run cp rust/opendp.h R/opendpbase/src/
 
-  echo "***** SUCCESS *****"
+  echo "R package is staged. Run R CMD build R/opendpbase to build the package."
 }
 
 if [[ $CLEAN == true ]]; then
   log "***** CLEAN *****"
   clean
-  
-  exit 0
+else
+  log "***** STAGE *****"
+  stage
 fi
-
-if [[ $CI == true ]]; then
-  clean
-  log "***** PREPARE CI *****"
-
-  log "Copy libopendp.a to R/opendpbase/src"
-  cp rust/target/debug/libopendp.a R/opendpbase/src/
-
-  log "Copy opendp.h to R/opendpbase/src"
-  cp rust/opendp.h R/opendpbase/src/
-
-  exit 0
-fi
-
-log "***** RUNNING BUILD *****"
-prepare
