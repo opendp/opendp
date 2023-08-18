@@ -1,10 +1,10 @@
 # Auto-generated. Do not edit.
 
 #' @include typing.R mod.R
+NULL
+
 
 #' Retrieve the descriptor value stored in a user domain.
-#'
-#' [_user_domain_descriptor in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn._user_domain_descriptor.html)
 #'
 #' @param domain The UserDomain to extract the descriptor from
 user_domain_descriptor <- function(
@@ -48,7 +48,7 @@ atom_domain <- function(
 
     log <- new_constructor_log("atom_domain", "domains", new_hashtab(
         list("bounds", "nullable", "T"),
-        list(bounds, unbox(nullable), .T)
+        list(bounds, unbox2(nullable), .T)
     ))
 
     # Assert that arguments are correctly typed.
@@ -65,8 +65,6 @@ atom_domain <- function(
 
 
 #' Get the carrier type of a `domain`.
-#'
-#' [domain_carrier_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.domain_carrier_type.html)
 #'
 #' @param this The domain to retrieve the carrier type from.
 #' @return str
@@ -91,8 +89,6 @@ domain_carrier_type <- function(
 
 #' Debug a `domain`.
 #'
-#' [domain_debug in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.domain_debug.html)
-#'
 #' @param this The domain to debug (stringify).
 #' @return str
 #' @export
@@ -116,8 +112,6 @@ domain_debug <- function(
 
 #' Get the type of a `domain`.
 #'
-#' [domain_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.domain_type.html)
-#'
 #' @param this The domain to retrieve the type from.
 #' @return str
 #' @export
@@ -140,8 +134,6 @@ domain_type <- function(
 
 
 #' Construct an instance of `MapDomain`.
-#'
-#' [map_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.map_domain.html)
 #'
 #' @param key_domain domain of keys in the hashmap
 #' @param value_domain domain of values in the hashmap
@@ -171,8 +163,6 @@ map_domain <- function(
 
 
 #' Check membership in a `domain`.
-#'
-#' [member in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.member.html)
 #'
 #' @param this The domain to check membership in.
 #' @param val A potential element of the domain.
@@ -238,8 +228,6 @@ option_domain <- function(
 #' Any two instances of an UserDomain are equal if their string descriptors are equal.
 #' Contains a function used to check if any value is a member of the domain.
 #'
-#' [user_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.user_domain.html)
-#'
 #' @param identifier A string description of the data domain.
 #' @param member A function used to test if a value is a member of the data domain.
 #' @param descriptor Additional constraints on the domain.
@@ -255,7 +243,7 @@ user_domain <- function(
     # No type arguments to standardize.
     log <- new_constructor_log("user_domain", "domains", new_hashtab(
         list("identifier", "member", "descriptor"),
-        list(identifier, unbox(member), descriptor)
+        list(identifier, unbox2(member), descriptor)
     ))
 
     # Assert that arguments are correctly typed.
@@ -272,8 +260,6 @@ user_domain <- function(
 
 
 #' Construct an instance of `VectorDomain`.
-#'
-#' [vector_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.vector_domain.html)
 #'
 #' @param atom_domain The inner domain.
 #' @param size undocumented

@@ -31,12 +31,14 @@ impl Function {
         let signature = BootstrapSignature::from_syn(item_fn.sig.clone())?;
 
         // Parse the docstring
-        let path = module.map(|m| {
-            (
-                m,
-                arguments.name.as_ref().unwrap_or(&signature.name).as_str(),
-            )
-        });
+        let path = if arguments.name.is_none() {
+            module.map(|module| {
+                let name = arguments.name.as_ref().unwrap_or(&signature.name).as_str();
+                (module, name)
+            })
+        } else {
+            None
+        };
         let docstring = BootstrapDocstring::from_attrs(item_fn.attrs, &item_fn.sig.output, path)?;
 
         // aggregate info from all sources

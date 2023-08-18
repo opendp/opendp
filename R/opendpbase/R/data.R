@@ -1,11 +1,11 @@
 # Auto-generated. Do not edit.
 
 #' @include typing.R mod.R
+NULL
+
 
 #' Internal function. Free the memory associated with `this`, a string.
 #' Used to clean up after the type getter functions.
-#'
-#' [extrinsic_object_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.extrinsic_object_free.html)
 #'
 #' @param this undocumented
 extrinsic_object_free <- function(
@@ -32,8 +32,6 @@ extrinsic_object_free <- function(
 #' Internal function. Populate the buffer behind `ptr` with `len` random bytes
 #' sampled from a cryptographically secure RNG.
 #'
-#' [fill_bytes in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.fill_bytes.html)
-#'
 #' @param ptr undocumented
 #' @param len undocumented
 #' @return bool
@@ -44,7 +42,7 @@ fill_bytes <- function(
     # No type arguments to standardize.
     log <- new_constructor_log("fill_bytes", "data", new_hashtab(
         list("ptr", "len"),
-        list(ptr, unbox(len))
+        list(ptr, unbox2(len))
     ))
 
     # Assert that arguments are correctly typed.
@@ -61,8 +59,6 @@ fill_bytes <- function(
 
 
 #' Internal function. Retrieve the type descriptor string of an AnyObject.
-#'
-#' [object_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.object_type.html)
 #'
 #' @param this A pointer to the AnyObject.
 #' @return str
@@ -85,8 +81,6 @@ object_type <- function(
 
 
 #' Internal function. Use an SMDCurve to find epsilon at a given `delta`.
-#'
-#' [smd_curve_epsilon in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.smd_curve_epsilon.html)
 #'
 #' @param curve The SMDCurve.
 #' @param delta What to fix delta to compute epsilon.
@@ -116,8 +110,6 @@ smd_curve_epsilon <- function(
 
 
 #' Internal function. Convert the AnyObject to a string representation.
-#'
-#' [to_string in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.to_string.html)
 #'
 #' @param this The AnyObject to convert to a string representation.
 #' @return str

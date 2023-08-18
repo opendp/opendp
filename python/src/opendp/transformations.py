@@ -767,7 +767,7 @@ def make_clamp(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/clamp/make_clamp.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/clamp/make_clamp.pdf)
 
     :param input_domain: Domain of input data.
     :type input_domain: Domain
@@ -898,7 +898,7 @@ def make_count(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/count/make_count.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/count/make_count.pdf)
 
     :param input_domain: Domain of the data type to be privatized.
     :type input_domain: Domain
@@ -1918,7 +1918,7 @@ def make_is_equal(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/trans/manipulation/make_is_equal.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/trans/manipulation/make_is_equal.pdf)
 
     :param input_domain: 
     :type input_domain: Domain
@@ -2355,7 +2355,7 @@ def make_quantile_score_candidates(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/quantile_score_candidates/make_quantile_score_candidates.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/quantile_score_candidates/make_quantile_score_candidates.pdf)
 
     :param input_domain: Uses a tighter sensitivity when the size of vectors in the input domain is known.
     :type input_domain: Domain
@@ -3351,8 +3351,6 @@ def make_user_transformation(
     stability_map
 ) -> Transformation:
     r"""Construct a Transformation from user-defined callbacks.
-
-    [make_user_transformation in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_user_transformation.html)
 
     :param input_domain: A domain describing the set of valid inputs for the function.
     :type input_domain: Domain

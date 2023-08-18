@@ -31,8 +31,6 @@ def _metric_free(
 ):
     r"""Internal function. Free the memory associated with `this`.
 
-    [_metric_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn._metric_free.html)
-
     :param this: 
     :type this: Metric
     :raises TypeError: if an argument's type differs from the expected type
@@ -90,8 +88,6 @@ def change_one_distance(
 ) -> Metric:
     r"""Construct an instance of the `ChangeOneDistance` metric.
 
-    [change_one_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.change_one_distance.html)
-
 
     :rtype: Metric
     :raises TypeError: if an argument's type differs from the expected type
@@ -115,8 +111,6 @@ def discrete_distance(
 
 ) -> Metric:
     r"""Construct an instance of the `DiscreteDistance` metric.
-
-    [discrete_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.discrete_distance.html)
 
 
     :rtype: Metric
@@ -142,8 +136,6 @@ def hamming_distance(
 ) -> Metric:
     r"""Construct an instance of the `HammingDistance` metric.
 
-    [hamming_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.hamming_distance.html)
-
 
     :rtype: Metric
     :raises TypeError: if an argument's type differs from the expected type
@@ -167,8 +159,6 @@ def insert_delete_distance(
 
 ) -> Metric:
     r"""Construct an instance of the `InsertDeleteDistance` metric.
-
-    [insert_delete_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.insert_delete_distance.html)
 
 
     :rtype: Metric
@@ -291,8 +281,6 @@ def metric_debug(
 ) -> str:
     r"""Debug a `metric`.
 
-    [metric_debug in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.metric_debug.html)
-
     :param this: The metric to debug (stringify).
     :type this: Metric
     :rtype: str
@@ -319,8 +307,6 @@ def metric_distance_type(
     this: Metric
 ) -> str:
     r"""Get the distance type of a `metric`.
-
-    [metric_distance_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.metric_distance_type.html)
 
     :param this: The metric to retrieve the distance type from.
     :type this: Metric
@@ -349,8 +335,6 @@ def metric_type(
 ) -> str:
     r"""Get the type of a `metric`.
 
-    [metric_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.metric_type.html)
-
     :param this: The metric to retrieve the type from.
     :type this: Metric
     :rtype: str
@@ -378,8 +362,6 @@ def symmetric_distance(
 ) -> Metric:
     r"""Construct an instance of the `SymmetricDistance` metric.
 
-    [symmetric_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.symmetric_distance.html)
-
 
     :rtype: Metric
     :raises TypeError: if an argument's type differs from the expected type
@@ -404,8 +386,6 @@ def user_distance(
 ) -> Metric:
     r"""Construct a new UserDistance.
     Any two instances of an UserDistance are equal if their string descriptors are equal.
-
-    [user_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.user_distance.html)
 
     :param descriptor: A string description of the metric.
     :type descriptor: str

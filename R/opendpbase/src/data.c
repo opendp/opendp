@@ -39,7 +39,7 @@ SEXP data__fill_bytes(
     PROTECT(ptr);
     PROTECT(len);
     uint8_t * c_ptr = "UNKNOWN TYPE: uint8_t *";
-    size_t c_len = (size_t)(INTEGER(len)[0]);
+    size_t c_len = (size_t)Rf_asInteger(len);
 
     // Call library function.
     c_bool _result = opendp_data__fill_bytes(c_ptr, c_len);

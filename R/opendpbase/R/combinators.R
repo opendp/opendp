@@ -1,6 +1,8 @@
 # Auto-generated. Do not edit.
 
 #' @include typing.R mod.R
+NULL
+
 
 #' basic composition constructor
 #'
@@ -342,7 +344,7 @@ make_population_amplification <- function(
     # No type arguments to standardize.
     log <- new_constructor_log("make_population_amplification", "combinators", new_hashtab(
         list("measurement", "population_size"),
-        list(measurement, unbox(population_size))
+        list(measurement, unbox2(population_size))
     ))
 
     # Assert that arguments are correctly typed.
@@ -374,7 +376,7 @@ then_population_amplification <- function(
 
     log <- new_constructor_log("then_population_amplification", "combinators", new_hashtab(
         list("measurement", "population_size"),
-        list(measurement, unbox(population_size))
+        list(measurement, unbox2(population_size))
     ))
 
     make_chain_dyn(

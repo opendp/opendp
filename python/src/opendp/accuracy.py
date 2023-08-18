@@ -31,7 +31,7 @@ def accuracy_to_discrete_gaussian_scale(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/accuracy/accuracy_to_discrete_gaussian_scale.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/accuracy/accuracy_to_discrete_gaussian_scale.pdf)
 
     :param accuracy: Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
@@ -72,7 +72,7 @@ def accuracy_to_discrete_laplacian_scale(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/accuracy/accuracy_to_discrete_laplacian_scale.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/accuracy/accuracy_to_discrete_laplacian_scale.pdf)
 
     :param accuracy: Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
@@ -189,7 +189,7 @@ def discrete_gaussian_scale_to_accuracy(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/accuracy/discrete_gaussian_scale_to_accuracy.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/accuracy/discrete_gaussian_scale_to_accuracy.pdf)
 
     :param scale: Gaussian noise scale.
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
@@ -236,7 +236,7 @@ def discrete_laplacian_scale_to_accuracy(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/accuracy/discrete_laplacian_scale_to_accuracy.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/accuracy/discrete_laplacian_scale_to_accuracy.pdf)
 
     :param scale: Discrete Laplacian noise scale.
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].

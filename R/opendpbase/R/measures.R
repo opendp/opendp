@@ -1,6 +1,8 @@
 # Auto-generated. Do not edit.
 
 #' @include typing.R mod.R
+NULL
+
 
 #' Construct an instance of the `FixedSmoothedMaxDivergence` measure.
 #'
@@ -58,8 +60,6 @@ max_divergence <- function(
 
 #' Debug a `measure`.
 #'
-#' [measure_debug in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.measure_debug.html)
-#'
 #' @param this The measure to debug (stringify).
 #' @return str
 #' @export
@@ -83,8 +83,6 @@ measure_debug <- function(
 
 #' Get the distance type of a `measure`.
 #'
-#' [measure_distance_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.measure_distance_type.html)
-#'
 #' @param this The measure to retrieve the distance type from.
 #' @return str
 #' @export
@@ -107,8 +105,6 @@ measure_distance_type <- function(
 
 
 #' Get the type of a `measure`.
-#'
-#' [measure_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.measure_type.html)
 #'
 #' @param this The measure to retrieve the type from.
 #' @return str
@@ -161,8 +157,6 @@ smoothed_max_divergence <- function(
 #' Construct a new UserDivergence.
 #' Any two instances of an UserDivergence are equal if their string descriptors are equal.
 #'
-#' [user_divergence in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.user_divergence.html)
-#'
 #' @param descriptor A string description of the privacy measure.
 #' @return Measure
 #' @export
@@ -174,7 +168,7 @@ user_divergence <- function(
     # No type arguments to standardize.
     log <- new_constructor_log("user_divergence", "measures", new_hashtab(
         list("descriptor"),
-        list(unbox(descriptor))
+        list(unbox2(descriptor))
     ))
 
     # Assert that arguments are correctly typed.

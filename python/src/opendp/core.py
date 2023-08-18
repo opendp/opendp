@@ -47,8 +47,6 @@ def _error_free(
 ) -> bool:
     r"""Internal function. Free the memory associated with `error`.
 
-    [_error_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn._error_free.html)
-
     :param this: 
     :type this: FfiError
     :return: A boolean, where true indicates successful free
@@ -76,8 +74,6 @@ def _function_free(
 ):
     r"""Internal function. Free the memory associated with `this`.
 
-    [_function_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn._function_free.html)
-
     :param this: 
     :type this: Function
     :raises TypeError: if an argument's type differs from the expected type
@@ -104,8 +100,6 @@ def _measurement_free(
 ):
     r"""Internal function. Free the memory associated with `this`.
 
-    [_measurement_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn._measurement_free.html)
-
     :param this: 
     :type this: Measurement
     :raises TypeError: if an argument's type differs from the expected type
@@ -131,8 +125,6 @@ def _transformation_free(
     this
 ):
     r"""Internal function. Free the memory associated with `this`.
-
-    [_transformation_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn._transformation_free.html)
 
     :param this: 
     :type this: Transformation
@@ -161,8 +153,6 @@ def function_eval(
     TI: Optional[str] = None
 ) -> Any:
     r"""Eval the `function` with `arg`.
-
-    [function_eval in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.function_eval.html)
 
     :param this: Function to invoke.
     :type this: Function
@@ -199,8 +189,6 @@ def measurement_check(
 ):
     r"""Check the privacy relation of the `measurement` at the given `d_in`, `d_out`
 
-    [measurement_check in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.measurement_check.html)
-
     :param measurement: Measurement to check the privacy relation of.
     :type measurement: Measurement
     :param distance_in: 
@@ -234,8 +222,6 @@ def measurement_function(
 ) -> Function:
     r"""Get the function from a measurement.
 
-    [measurement_function in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.measurement_function.html)
-
     :param this: The measurement to retrieve the value from.
     :type this: Measurement
     :rtype: Function
@@ -262,8 +248,6 @@ def measurement_input_carrier_type(
     this: Measurement
 ) -> str:
     r"""Get the input (carrier) data type of `this`.
-
-    [measurement_input_carrier_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.measurement_input_carrier_type.html)
 
     :param this: The measurement to retrieve the type from.
     :type this: Measurement
@@ -292,8 +276,6 @@ def measurement_input_distance_type(
 ) -> str:
     r"""Get the input distance type of `measurement`.
 
-    [measurement_input_distance_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.measurement_input_distance_type.html)
-
     :param this: The measurement to retrieve the type from.
     :type this: Measurement
     :rtype: str
@@ -320,8 +302,6 @@ def measurement_input_domain(
     this: Measurement
 ) -> Domain:
     r"""Get the input domain from a `measurement`.
-
-    [measurement_input_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.measurement_input_domain.html)
 
     :param this: The measurement to retrieve the value from.
     :type this: Measurement
@@ -350,8 +330,6 @@ def measurement_input_metric(
 ) -> Metric:
     r"""Get the input domain from a `measurement`.
 
-    [measurement_input_metric in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.measurement_input_metric.html)
-
     :param this: The measurement to retrieve the value from.
     :type this: Measurement
     :rtype: Metric
@@ -379,8 +357,6 @@ def measurement_invoke(
     arg: Any
 ) -> Any:
     r"""Invoke the `measurement` with `arg`. Returns a differentially private release.
-
-    [measurement_invoke in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.measurement_invoke.html)
 
     :param this: Measurement to invoke.
     :type this: Measurement
@@ -413,8 +389,6 @@ def measurement_map(
 ) -> Any:
     r"""Use the `measurement` to map a given `d_in` to `d_out`.
 
-    [measurement_map in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.measurement_map.html)
-
     :param measurement: Measurement to check the map distances with.
     :type measurement: Measurement
     :param distance_in: Distance in terms of the input metric.
@@ -445,8 +419,6 @@ def measurement_output_distance_type(
 ) -> str:
     r"""Get the output distance type of `measurement`.
 
-    [measurement_output_distance_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.measurement_output_distance_type.html)
-
     :param this: The measurement to retrieve the type from.
     :type this: Measurement
     :rtype: str
@@ -473,8 +445,6 @@ def measurement_output_measure(
     this: Measurement
 ) -> Measure:
     r"""Get the output domain from a `measurement`.
-
-    [measurement_output_measure in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.measurement_output_measure.html)
 
     :param this: The measurement to retrieve the value from.
     :type this: Measurement
@@ -504,8 +474,6 @@ def new_function(
 ) -> Function:
     r"""Construct a Function from a user-defined callback.
     Can be used as a post-processing step.
-
-    [new_function in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.new_function.html)
 
     :param function: A function mapping data to a value of type `TO`
     :param TO: Output Type
@@ -541,8 +509,6 @@ def new_queryable(
     A: Optional[RuntimeTypeDescriptor] = "ExtrinsicObject"
 ) -> Any:
     r"""Construct a queryable from a user-defined transition function.
-
-    [new_queryable in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.new_queryable.html)
 
     :param transition: A transition function taking a reference to self, a query, and an internal/external indicator
     :param Q: Query Type
@@ -582,8 +548,6 @@ def queryable_eval(
 ) -> Any:
     r"""Invoke the `queryable` with `query`. Returns a differentially private release.
 
-    [queryable_eval in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.queryable_eval.html)
-
     :param queryable: Queryable to eval.
     :type queryable: Any
     :param query: Input data to supply to the measurement. A member of the measurement's input domain.
@@ -614,8 +578,6 @@ def queryable_query_type(
 ) -> str:
     r"""Get the query type of `queryable`.
 
-    [queryable_query_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.queryable_query_type.html)
-
     :param this: The queryable to retrieve the query type from.
     :type this: Any
     :rtype: str
@@ -644,8 +606,6 @@ def transformation_check(
     distance_out: Any
 ):
     r"""Check the privacy relation of the `measurement` at the given `d_in`, `d_out`
-
-    [transformation_check in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.transformation_check.html)
 
     :param transformation: 
     :type transformation: Transformation
@@ -680,8 +640,6 @@ def transformation_function(
 ) -> Function:
     r"""Get the function from a transformation.
 
-    [transformation_function in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.transformation_function.html)
-
     :param this: The transformation to retrieve the value from.
     :type this: Transformation
     :rtype: Function
@@ -708,8 +666,6 @@ def transformation_input_carrier_type(
     this: Transformation
 ) -> str:
     r"""Get the input (carrier) data type of `this`.
-
-    [transformation_input_carrier_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.transformation_input_carrier_type.html)
 
     :param this: The transformation to retrieve the type from.
     :type this: Transformation
@@ -738,8 +694,6 @@ def transformation_input_distance_type(
 ) -> str:
     r"""Get the input distance type of `transformation`.
 
-    [transformation_input_distance_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.transformation_input_distance_type.html)
-
     :param this: The transformation to retrieve the type from.
     :type this: Transformation
     :rtype: str
@@ -766,8 +720,6 @@ def transformation_input_domain(
     this: Transformation
 ) -> Domain:
     r"""Get the input domain from a `transformation`.
-
-    [transformation_input_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.transformation_input_domain.html)
 
     :param this: The transformation to retrieve the value from.
     :type this: Transformation
@@ -796,8 +748,6 @@ def transformation_input_metric(
 ) -> Metric:
     r"""Get the input domain from a `transformation`.
 
-    [transformation_input_metric in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.transformation_input_metric.html)
-
     :param this: The transformation to retrieve the value from.
     :type this: Transformation
     :rtype: Metric
@@ -825,8 +775,6 @@ def transformation_invoke(
     arg: Any
 ) -> Any:
     r"""Invoke the `transformation` with `arg`. Returns a differentially private release.
-
-    [transformation_invoke in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.transformation_invoke.html)
 
     :param this: Transformation to invoke.
     :type this: Transformation
@@ -859,8 +807,6 @@ def transformation_map(
 ) -> Any:
     r"""Use the `transformation` to map a given `d_in` to `d_out`.
 
-    [transformation_map in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.transformation_map.html)
-
     :param transformation: Transformation to check the map distances with.
     :type transformation: Transformation
     :param distance_in: Distance in terms of the input metric.
@@ -891,8 +837,6 @@ def transformation_output_distance_type(
 ) -> str:
     r"""Get the output distance type of `transformation`.
 
-    [transformation_output_distance_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.transformation_output_distance_type.html)
-
     :param this: The transformation to retrieve the type from.
     :type this: Transformation
     :rtype: str
@@ -920,8 +864,6 @@ def transformation_output_domain(
 ) -> Domain:
     r"""Get the output domain from a `transformation`.
 
-    [transformation_output_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.transformation_output_domain.html)
-
     :param this: The transformation to retrieve the value from.
     :type this: Transformation
     :rtype: Domain
@@ -948,8 +890,6 @@ def transformation_output_metric(
     this: Transformation
 ) -> Metric:
     r"""Get the output domain from a `transformation`.
-
-    [transformation_output_metric in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.transformation_output_metric.html)
 
     :param this: The transformation to retrieve the value from.
     :type this: Transformation

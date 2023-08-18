@@ -1,6 +1,8 @@
 # Auto-generated. Do not edit.
 
 #' @include typing.R mod.R
+NULL
+
 
 #' alp queryable constructor
 #'
@@ -529,7 +531,7 @@ make_base_gaussian <- function(
 
     log <- new_constructor_log("make_base_gaussian", "measurements", new_hashtab(
         list("input_domain", "input_metric", "scale", "k", "MO"),
-        list(input_domain, input_metric, scale, unbox(k), .MO)
+        list(input_domain, input_metric, scale, unbox2(k), .MO)
     ))
 
     # Assert that arguments are correctly typed.
@@ -563,7 +565,7 @@ then_base_gaussian <- function(
 
     log <- new_constructor_log("then_base_gaussian", "measurements", new_hashtab(
         list("scale", "k", "MO"),
-        list(scale, unbox(k), .MO)
+        list(scale, unbox2(k), .MO)
     ))
 
     make_chain_dyn(
@@ -708,7 +710,7 @@ make_base_laplace <- function(
 
     log <- new_constructor_log("make_base_laplace", "measurements", new_hashtab(
         list("input_domain", "input_metric", "scale", "k"),
-        list(input_domain, input_metric, scale, unbox(k))
+        list(input_domain, input_metric, scale, unbox2(k))
     ))
 
     # Assert that arguments are correctly typed.
@@ -740,7 +742,7 @@ then_base_laplace <- function(
 
     log <- new_constructor_log("then_base_laplace", "measurements", new_hashtab(
         list("scale", "k"),
-        list(scale, unbox(k))
+        list(scale, unbox2(k))
     ))
 
     make_chain_dyn(
@@ -792,7 +794,7 @@ make_base_laplace_threshold <- function(
 
     log <- new_constructor_log("make_base_laplace_threshold", "measurements", new_hashtab(
         list("input_domain", "input_metric", "scale", "threshold", "k"),
-        list(input_domain, input_metric, scale, threshold, unbox(k))
+        list(input_domain, input_metric, scale, threshold, unbox2(k))
     ))
 
     # Assert that arguments are correctly typed.
@@ -827,7 +829,7 @@ then_base_laplace_threshold <- function(
 
     log <- new_constructor_log("then_base_laplace_threshold", "measurements", new_hashtab(
         list("scale", "threshold", "k"),
-        list(scale, threshold, unbox(k))
+        list(scale, threshold, unbox2(k))
     ))
 
     make_chain_dyn(
@@ -1057,7 +1059,7 @@ make_randomized_response <- function(
 
     log <- new_constructor_log("make_randomized_response", "measurements", new_hashtab(
         list("categories", "prob", "constant_time", "T", "QO"),
-        list(categories, prob, unbox(constant_time), .T, .QO)
+        list(categories, prob, unbox2(constant_time), .T, .QO)
     ))
 
     # Assert that arguments are correctly typed.
@@ -1096,7 +1098,7 @@ then_randomized_response <- function(
 
     log <- new_constructor_log("then_randomized_response", "measurements", new_hashtab(
         list("categories", "prob", "constant_time", "T", "QO"),
-        list(categories, prob, unbox(constant_time), .T, .QO)
+        list(categories, prob, unbox2(constant_time), .T, .QO)
     ))
 
     make_chain_dyn(
@@ -1126,7 +1128,7 @@ then_randomized_response <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/measurements/randomized_response/make_randomized_response_bool.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/randomized_response/make_randomized_response_bool.pdf)
 #'
 #' @param prob Probability of returning the correct answer. Must be in `[0.5, 1)`
 #' @param constant_time Set to true to enable constant time. Slower.
@@ -1145,7 +1147,7 @@ make_randomized_response_bool <- function(
 
     log <- new_constructor_log("make_randomized_response_bool", "measurements", new_hashtab(
         list("prob", "constant_time", "QO"),
-        list(prob, unbox(constant_time), .QO)
+        list(prob, unbox2(constant_time), .QO)
     ))
 
     # Assert that arguments are correctly typed.
@@ -1179,7 +1181,7 @@ then_randomized_response_bool <- function(
 
     log <- new_constructor_log("then_randomized_response_bool", "measurements", new_hashtab(
         list("prob", "constant_time", "QO"),
-        list(prob, unbox(constant_time), .QO)
+        list(prob, unbox2(constant_time), .QO)
     ))
 
     make_chain_dyn(
@@ -1207,7 +1209,7 @@ then_randomized_response_bool <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/measurements/gumbel_max/make_report_noisy_max_gumbel.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/gumbel_max/make_report_noisy_max_gumbel.pdf)
 #'
 #' @param input_domain Domain of the input vector. Must be a non-nullable VectorDomain.
 #' @param input_metric Metric on the input domain. Must be LInfDistance
@@ -1230,7 +1232,7 @@ make_report_noisy_max_gumbel <- function(
 
     log <- new_constructor_log("make_report_noisy_max_gumbel", "measurements", new_hashtab(
         list("input_domain", "input_metric", "scale", "optimize", "QO"),
-        list(input_domain, input_metric, scale, unbox(optimize), .QO)
+        list(input_domain, input_metric, scale, unbox2(optimize), .QO)
     ))
 
     # Assert that arguments are correctly typed.
@@ -1264,7 +1266,7 @@ then_report_noisy_max_gumbel <- function(
 
     log <- new_constructor_log("then_report_noisy_max_gumbel", "measurements", new_hashtab(
         list("scale", "optimize", "QO"),
-        list(scale, unbox(optimize), .QO)
+        list(scale, unbox2(optimize), .QO)
     ))
 
     make_chain_dyn(

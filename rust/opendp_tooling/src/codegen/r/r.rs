@@ -29,8 +29,9 @@ pub fn generate_r_module(
         "# Auto-generated. Do not edit.
 
 #' @include typing.R mod.R
-{body}"
-    )
+NULL
+
+{body}")
 }
 
 fn generate_r_function(
@@ -480,9 +481,9 @@ log <- new_constructor_log("{func_name}", "{module_name}", new_hashtab(
 
 fn generate_recipe_logger(recipe: TypeRecipe, name: String) -> String {
     match recipe {
-        TypeRecipe::Name(ty) if ATOM_TYPES.contains(&ty.as_str()) => format!("unbox({name})"),
+        TypeRecipe::Name(ty) if ATOM_TYPES.contains(&ty.as_str()) => format!("unbox2({name})"),
         TypeRecipe::Nest { origin, .. } if origin == "Tuple" => {
-            format!("lapply({name}, unbox)")
+            format!("lapply({name}, unbox2)")
             // format!("list({})", args.iter().enumerate().map(|(i, arg)| {
             //     generate_recipe_logger(arg.clone(), format!("{}[[{}]]", name, i + 1))
             // }).collect::<Vec<_>>().join(", "))

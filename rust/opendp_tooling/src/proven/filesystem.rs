@@ -121,9 +121,9 @@ fn get_docs_ref(version: &str) -> String {
     // docs.opendp.org has tags for stable versions, but only a single branch for beta & nightly.
     let channel = get_channel(version);
     match channel.as_str() {
-        "stable" => format!("v{version}"), // For stable, we have tags.
-        "dev" => "latest".to_string(),     // Will be replaced by the @versioned decorator.
-        _ => channel, // For beta & nightly, we don't have tags, just a single branch.
+        "stable" => format!("v{version}"),  // For stable, we have tags.
+        "dev" => "nightly".to_string(),  // Will be replaced by the @versioned decorator.
+        _ => channel,  // For beta & nightly, we don't have tags, just a single branch.
     }
 }
 

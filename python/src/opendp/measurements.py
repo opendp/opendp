@@ -1069,7 +1069,7 @@ def make_randomized_response_bool(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/measurements/randomized_response/make_randomized_response_bool.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/randomized_response/make_randomized_response_bool.pdf)
 
     :param prob: Probability of returning the correct answer. Must be in `[0.5, 1)`
     :param constant_time: Set to true to enable constant time. Slower.
@@ -1122,7 +1122,7 @@ def make_report_noisy_max_gumbel(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/measurements/gumbel_max/make_report_noisy_max_gumbel.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/gumbel_max/make_report_noisy_max_gumbel.pdf)
 
     :param input_domain: Domain of the input vector. Must be a non-nullable VectorDomain.
     :type input_domain: Domain
@@ -1196,8 +1196,6 @@ def make_user_measurement(
     TO: Optional[RuntimeTypeDescriptor] = "ExtrinsicObject"
 ) -> Measurement:
     r"""Construct a Measurement from user-defined callbacks.
-
-    [make_user_measurement in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_user_measurement.html)
 
     **Supporting Elements:**
 

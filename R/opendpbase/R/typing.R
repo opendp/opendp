@@ -157,7 +157,7 @@ rt_to_string <- function(rt) {
 }
 
 #' @export
-`print.runtime_type` <- function(v) print(rt_to_string(v))
+`print.runtime_type` <- function(x, ...) print(rt_to_string(x), ...)
 
 rt_assert_is_similar <- function(expected, inferred) {
     ERROR_URL_298 <- "https://github.com/opendp/opendp/discussions/298"
@@ -293,37 +293,80 @@ pass_through <- function(x) x
 get_carrier_type <- function(value) rt_parse(value("carrier_type"))
 get_distance_type <- function(value) rt_parse(value("distance_type"))
 get_type <- function(value) rt_parse(value("type"))
+get_value_type <- function(value) rt_parse(value("type"))$args[[2]]
 
+#' type signature for an 8-bit signed integer
+#'
 #' @export
 i8 <- new_runtime_type("i8")
+
+#' type signature for a 16-bit signed integer
+#'
 #' @export
 i16 <- new_runtime_type("i16")
+
+#' type signature for a 32-bit signed integer
+#'
 #' @export
 i32 <- new_runtime_type("i32")
+
+#' type signature for a 64-bit signed integer
+#'
 #' @export
 i64 <- new_runtime_type("i64")
+
+#' type signature for a 128-bit signed integer
+#'
 #' @export
 i128 <- new_runtime_type("i128")
-#' @export
-isize <- new_runtime_type("isize")
+
+#' type signature for an 8-bit unsigned integer
+#'
 #' @export
 u8 <- new_runtime_type("u8")
+
+#' type signature for a 16-bit unsigned integer
+#'
 #' @export
 u16 <- new_runtime_type("u16")
+
+#' type signature for a 32-bit unsigned integer
+#'
 #' @export
 u32 <- new_runtime_type("u32")
+
+#' type signature for a 64-bit unsigned integer
+#'
 #' @export
 u64 <- new_runtime_type("u64")
+
+#' type signature for a 128-bit unsigned integer
+#'
 #' @export
 u128 <- new_runtime_type("u128")
+
+#' type signature for a pointer-sized unsigned integer
+#'
 #' @export
 usize <- new_runtime_type("usize")
+
+#' type signature for a 32-bit floating point number
+#'
 #' @export
 f32 <- new_runtime_type("f32")
+
+#' type signature for a 64-bit floating point number
+#'
 #' @export
 f64 <- new_runtime_type("f64")
+
+#' type signature for a string
+#'
 #' @export
 String <- new_runtime_type("String")
+
+#' type signature for a boolean
+#'
 #' @export
 bool <- new_runtime_type("bool")
 

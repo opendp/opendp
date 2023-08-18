@@ -1,6 +1,8 @@
 # Auto-generated. Do not edit.
 
 #' @include typing.R mod.R
+NULL
+
 
 #' Construct an instance of the `AbsoluteDistance` metric.
 #'
@@ -31,8 +33,6 @@ absolute_distance <- function(
 
 #' Construct an instance of the `ChangeOneDistance` metric.
 #'
-#' [change_one_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.change_one_distance.html)
-#'
 #'
 #' @return Metric
 #' @export
@@ -54,8 +54,6 @@ change_one_distance <- function(
 
 
 #' Construct an instance of the `DiscreteDistance` metric.
-#'
-#' [discrete_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.discrete_distance.html)
 #'
 #'
 #' @return Metric
@@ -79,8 +77,6 @@ discrete_distance <- function(
 
 #' Construct an instance of the `HammingDistance` metric.
 #'
-#' [hamming_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.hamming_distance.html)
-#'
 #'
 #' @return Metric
 #' @export
@@ -102,8 +98,6 @@ hamming_distance <- function(
 
 
 #' Construct an instance of the `InsertDeleteDistance` metric.
-#'
-#' [insert_delete_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.insert_delete_distance.html)
 #'
 #'
 #' @return Metric
@@ -196,7 +190,7 @@ linf_distance <- function(
 
     log <- new_constructor_log("linf_distance", "metrics", new_hashtab(
         list("monotonic", "T"),
-        list(unbox(monotonic), .T)
+        list(unbox2(monotonic), .T)
     ))
 
     # Assert that arguments are correctly typed.
@@ -212,8 +206,6 @@ linf_distance <- function(
 
 
 #' Debug a `metric`.
-#'
-#' [metric_debug in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.metric_debug.html)
 #'
 #' @param this The metric to debug (stringify).
 #' @return str
@@ -238,8 +230,6 @@ metric_debug <- function(
 
 #' Get the distance type of a `metric`.
 #'
-#' [metric_distance_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.metric_distance_type.html)
-#'
 #' @param this The metric to retrieve the distance type from.
 #' @return str
 #' @export
@@ -262,8 +252,6 @@ metric_distance_type <- function(
 
 
 #' Get the type of a `metric`.
-#'
-#' [metric_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.metric_type.html)
 #'
 #' @param this The metric to retrieve the type from.
 #' @return str
@@ -288,8 +276,6 @@ metric_type <- function(
 
 #' Construct an instance of the `SymmetricDistance` metric.
 #'
-#' [symmetric_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.symmetric_distance.html)
-#'
 #'
 #' @return Metric
 #' @export
@@ -313,8 +299,6 @@ symmetric_distance <- function(
 #' Construct a new UserDistance.
 #' Any two instances of an UserDistance are equal if their string descriptors are equal.
 #'
-#' [user_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.user_distance.html)
-#'
 #' @param descriptor A string description of the metric.
 #' @return Metric
 #' @export
@@ -326,7 +310,7 @@ user_distance <- function(
     # No type arguments to standardize.
     log <- new_constructor_log("user_distance", "metrics", new_hashtab(
         list("descriptor"),
-        list(unbox(descriptor))
+        list(unbox2(descriptor))
     ))
 
     # Assert that arguments are correctly typed.

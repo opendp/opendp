@@ -1,6 +1,8 @@
 # Auto-generated. Do not edit.
 
 #' @include typing.R mod.R
+NULL
+
 
 #' Returns an approximation to the ideal `branching_factor` for a dataset of a given size,
 #' that minimizes error in cdf and quantile estimates based on b-ary trees.
@@ -22,7 +24,7 @@ choose_branching_factor <- function(
     # No type arguments to standardize.
     log <- new_constructor_log("choose_branching_factor", "transformations", new_hashtab(
         list("size_guess"),
-        list(unbox(size_guess))
+        list(unbox2(size_guess))
     ))
 
     # Assert that arguments are correctly typed.
@@ -68,7 +70,7 @@ make_b_ary_tree <- function(
     # No type arguments to standardize.
     log <- new_constructor_log("make_b_ary_tree", "transformations", new_hashtab(
         list("input_domain", "input_metric", "leaf_count", "branching_factor"),
-        list(input_domain, input_metric, unbox(leaf_count), unbox(branching_factor))
+        list(input_domain, input_metric, unbox2(leaf_count), unbox2(branching_factor))
     ))
 
     # Assert that arguments are correctly typed.
@@ -100,7 +102,7 @@ then_b_ary_tree <- function(
 
     log <- new_constructor_log("then_b_ary_tree", "transformations", new_hashtab(
         list("leaf_count", "branching_factor"),
-        list(unbox(leaf_count), unbox(branching_factor))
+        list(unbox2(leaf_count), unbox2(branching_factor))
     ))
 
     make_chain_dyn(
@@ -166,7 +168,7 @@ make_bounded_float_checked_sum <- function(
 
     log <- new_constructor_log("make_bounded_float_checked_sum", "transformations", new_hashtab(
         list("size_limit", "bounds", "S"),
-        list(unbox(size_limit), lapply(bounds, unbox), .S)
+        list(unbox2(size_limit), lapply(bounds, unbox2), .S)
     ))
 
     # Assert that arguments are correctly typed.
@@ -200,7 +202,7 @@ then_bounded_float_checked_sum <- function(
 
     log <- new_constructor_log("then_bounded_float_checked_sum", "transformations", new_hashtab(
         list("size_limit", "bounds", "S"),
-        list(unbox(size_limit), lapply(bounds, unbox), .S)
+        list(unbox2(size_limit), lapply(bounds, unbox2), .S)
     ))
 
     make_chain_dyn(
@@ -266,7 +268,7 @@ make_bounded_float_ordered_sum <- function(
 
     log <- new_constructor_log("make_bounded_float_ordered_sum", "transformations", new_hashtab(
         list("size_limit", "bounds", "S"),
-        list(unbox(size_limit), lapply(bounds, unbox), .S)
+        list(unbox2(size_limit), lapply(bounds, unbox2), .S)
     ))
 
     # Assert that arguments are correctly typed.
@@ -300,7 +302,7 @@ then_bounded_float_ordered_sum <- function(
 
     log <- new_constructor_log("then_bounded_float_ordered_sum", "transformations", new_hashtab(
         list("size_limit", "bounds", "S"),
-        list(unbox(size_limit), lapply(bounds, unbox), .S)
+        list(unbox2(size_limit), lapply(bounds, unbox2), .S)
     ))
 
     make_chain_dyn(
@@ -348,7 +350,7 @@ make_bounded_int_monotonic_sum <- function(
 
     log <- new_constructor_log("make_bounded_int_monotonic_sum", "transformations", new_hashtab(
         list("bounds", "T"),
-        list(lapply(bounds, unbox), .T)
+        list(lapply(bounds, unbox2), .T)
     ))
 
     # Assert that arguments are correctly typed.
@@ -379,7 +381,7 @@ then_bounded_int_monotonic_sum <- function(
 
     log <- new_constructor_log("then_bounded_int_monotonic_sum", "transformations", new_hashtab(
         list("bounds", "T"),
-        list(lapply(bounds, unbox), .T)
+        list(lapply(bounds, unbox2), .T)
     ))
 
     make_chain_dyn(
@@ -426,7 +428,7 @@ make_bounded_int_ordered_sum <- function(
 
     log <- new_constructor_log("make_bounded_int_ordered_sum", "transformations", new_hashtab(
         list("bounds", "T"),
-        list(lapply(bounds, unbox), .T)
+        list(lapply(bounds, unbox2), .T)
     ))
 
     # Assert that arguments are correctly typed.
@@ -457,7 +459,7 @@ then_bounded_int_ordered_sum <- function(
 
     log <- new_constructor_log("then_bounded_int_ordered_sum", "transformations", new_hashtab(
         list("bounds", "T"),
-        list(lapply(bounds, unbox), .T)
+        list(lapply(bounds, unbox2), .T)
     ))
 
     make_chain_dyn(
@@ -504,7 +506,7 @@ make_bounded_int_split_sum <- function(
 
     log <- new_constructor_log("make_bounded_int_split_sum", "transformations", new_hashtab(
         list("bounds", "T"),
-        list(lapply(bounds, unbox), .T)
+        list(lapply(bounds, unbox2), .T)
     ))
 
     # Assert that arguments are correctly typed.
@@ -535,7 +537,7 @@ then_bounded_int_split_sum <- function(
 
     log <- new_constructor_log("then_bounded_int_split_sum", "transformations", new_hashtab(
         list("bounds", "T"),
-        list(lapply(bounds, unbox), .T)
+        list(lapply(bounds, unbox2), .T)
     ))
 
     make_chain_dyn(
@@ -852,7 +854,7 @@ then_cdf <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/clamp/make_clamp.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/clamp/make_clamp.pdf)
 #'
 #' @param input_domain Domain of input data.
 #' @param input_metric Metric on input domain.
@@ -872,7 +874,7 @@ make_clamp <- function(
 
     log <- new_constructor_log("make_clamp", "transformations", new_hashtab(
         list("input_domain", "input_metric", "bounds"),
-        list(input_domain, input_metric, lapply(bounds, unbox))
+        list(input_domain, input_metric, lapply(bounds, unbox2))
     ))
 
     # Assert that arguments are correctly typed.
@@ -901,7 +903,7 @@ then_clamp <- function(
 
     log <- new_constructor_log("then_clamp", "transformations", new_hashtab(
         list("bounds"),
-        list(lapply(bounds, unbox))
+        list(lapply(bounds, unbox2))
     ))
 
     make_chain_dyn(
@@ -954,7 +956,7 @@ make_consistent_b_ary_tree <- function(
 
     log <- new_constructor_log("make_consistent_b_ary_tree", "transformations", new_hashtab(
         list("branching_factor", "TIA", "TOA"),
-        list(unbox(branching_factor), .TIA, .TOA)
+        list(unbox2(branching_factor), .TIA, .TOA)
     ))
 
     # Assert that arguments are correctly typed.
@@ -987,7 +989,7 @@ then_consistent_b_ary_tree <- function(
 
     log <- new_constructor_log("then_consistent_b_ary_tree", "transformations", new_hashtab(
         list("branching_factor", "TIA", "TOA"),
-        list(unbox(branching_factor), .TIA, .TOA)
+        list(unbox2(branching_factor), .TIA, .TOA)
     ))
 
     make_chain_dyn(
@@ -1019,7 +1021,7 @@ then_consistent_b_ary_tree <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/count/make_count.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/count/make_count.pdf)
 #'
 #' @param input_domain Domain of the data type to be privatized.
 #' @param input_metric Metric of the data type to be privatized.
@@ -1202,7 +1204,7 @@ make_count_by_categories <- function(
 
     log <- new_constructor_log("make_count_by_categories", "transformations", new_hashtab(
         list("input_domain", "input_metric", "categories", "null_category", "MO", "TOA"),
-        list(input_domain, input_metric, categories, unbox(null_category), .MO, .TOA)
+        list(input_domain, input_metric, categories, unbox2(null_category), .MO, .TOA)
     ))
 
     # Assert that arguments are correctly typed.
@@ -1238,7 +1240,7 @@ then_count_by_categories <- function(
 
     log <- new_constructor_log("then_count_by_categories", "transformations", new_hashtab(
         list("categories", "null_category", "MO", "TOA"),
-        list(categories, unbox(null_category), .MO, .TOA)
+        list(categories, unbox2(null_category), .MO, .TOA)
     ))
 
     make_chain_dyn(
@@ -1984,7 +1986,7 @@ make_impute_uniform_float <- function(
 
     log <- new_constructor_log("make_impute_uniform_float", "transformations", new_hashtab(
         list("input_domain", "input_metric", "bounds"),
-        list(input_domain, input_metric, lapply(bounds, unbox))
+        list(input_domain, input_metric, lapply(bounds, unbox2))
     ))
 
     # Assert that arguments are correctly typed.
@@ -2013,7 +2015,7 @@ then_impute_uniform_float <- function(
 
     log <- new_constructor_log("then_impute_uniform_float", "transformations", new_hashtab(
         list("bounds"),
-        list(lapply(bounds, unbox))
+        list(lapply(bounds, unbox2))
     ))
 
     make_chain_dyn(
@@ -2125,7 +2127,7 @@ then_index <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/trans/manipulation/make_is_equal.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/trans/manipulation/make_is_equal.pdf)
 #'
 #' @param input_domain undocumented
 #' @param input_metric undocumented
@@ -2289,7 +2291,7 @@ make_lipschitz_float_mul <- function(
 
     log <- new_constructor_log("make_lipschitz_float_mul", "transformations", new_hashtab(
         list("constant", "bounds", "D", "M"),
-        list(constant, lapply(bounds, unbox), .D, .M)
+        list(constant, lapply(bounds, unbox2), .D, .M)
     ))
 
     # Assert that arguments are correctly typed.
@@ -2325,7 +2327,7 @@ then_lipschitz_float_mul <- function(
 
     log <- new_constructor_log("then_lipschitz_float_mul", "transformations", new_hashtab(
         list("constant", "bounds", "D", "M"),
-        list(constant, lapply(bounds, unbox), .D, .M)
+        list(constant, lapply(bounds, unbox2), .D, .M)
     ))
 
     make_chain_dyn(
@@ -2630,7 +2632,7 @@ then_ordered_random <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/quantile_score_candidates/make_quantile_score_candidates.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/quantile_score_candidates/make_quantile_score_candidates.pdf)
 #'
 #' @param input_domain Uses a tighter sensitivity when the size of vectors in the input domain is known.
 #' @param input_metric Either SymmetricDistance or InsertDeleteDistance.
@@ -2652,7 +2654,7 @@ make_quantile_score_candidates <- function(
 
     log <- new_constructor_log("make_quantile_score_candidates", "transformations", new_hashtab(
         list("input_domain", "input_metric", "candidates", "alpha"),
-        list(input_domain, input_metric, candidates, unbox(alpha))
+        list(input_domain, input_metric, candidates, unbox2(alpha))
     ))
 
     # Assert that arguments are correctly typed.
@@ -2684,7 +2686,7 @@ then_quantile_score_candidates <- function(
 
     log <- new_constructor_log("then_quantile_score_candidates", "transformations", new_hashtab(
         list("candidates", "alpha"),
-        list(candidates, unbox(alpha))
+        list(candidates, unbox2(alpha))
     ))
 
     make_chain_dyn(
@@ -2733,7 +2735,7 @@ make_quantiles_from_counts <- function(
 
     log <- new_constructor_log("make_quantiles_from_counts", "transformations", new_hashtab(
         list("bin_edges", "alphas", "interpolation", "TA", "F"),
-        list(bin_edges, alphas, unbox(interpolation), .TA, .F)
+        list(bin_edges, alphas, unbox2(interpolation), .TA, .F)
     ))
 
     # Assert that arguments are correctly typed.
@@ -2772,7 +2774,7 @@ then_quantiles_from_counts <- function(
 
     log <- new_constructor_log("then_quantiles_from_counts", "transformations", new_hashtab(
         list("bin_edges", "alphas", "interpolation", "TA", "F"),
-        list(bin_edges, alphas, unbox(interpolation), .TA, .F)
+        list(bin_edges, alphas, unbox2(interpolation), .TA, .F)
     ))
 
     make_chain_dyn(
@@ -2823,7 +2825,7 @@ make_resize <- function(
 
     log <- new_constructor_log("make_resize", "transformations", new_hashtab(
         list("input_domain", "input_metric", "size", "constant", "MO"),
-        list(input_domain, input_metric, unbox(size), constant, .MO)
+        list(input_domain, input_metric, unbox2(size), constant, .MO)
     ))
 
     # Assert that arguments are correctly typed.
@@ -2857,7 +2859,7 @@ then_resize <- function(
 
     log <- new_constructor_log("then_resize", "transformations", new_hashtab(
         list("size", "constant", "MO"),
-        list(unbox(size), constant, .MO)
+        list(unbox2(size), constant, .MO)
     ))
 
     make_chain_dyn(
@@ -3000,7 +3002,7 @@ make_sized_bounded_float_checked_sum <- function(
 
     log <- new_constructor_log("make_sized_bounded_float_checked_sum", "transformations", new_hashtab(
         list("size", "bounds", "S"),
-        list(unbox(size), lapply(bounds, unbox), .S)
+        list(unbox2(size), lapply(bounds, unbox2), .S)
     ))
 
     # Assert that arguments are correctly typed.
@@ -3034,7 +3036,7 @@ then_sized_bounded_float_checked_sum <- function(
 
     log <- new_constructor_log("then_sized_bounded_float_checked_sum", "transformations", new_hashtab(
         list("size", "bounds", "S"),
-        list(unbox(size), lapply(bounds, unbox), .S)
+        list(unbox2(size), lapply(bounds, unbox2), .S)
     ))
 
     make_chain_dyn(
@@ -3100,7 +3102,7 @@ make_sized_bounded_float_ordered_sum <- function(
 
     log <- new_constructor_log("make_sized_bounded_float_ordered_sum", "transformations", new_hashtab(
         list("size", "bounds", "S"),
-        list(unbox(size), lapply(bounds, unbox), .S)
+        list(unbox2(size), lapply(bounds, unbox2), .S)
     ))
 
     # Assert that arguments are correctly typed.
@@ -3134,7 +3136,7 @@ then_sized_bounded_float_ordered_sum <- function(
 
     log <- new_constructor_log("then_sized_bounded_float_ordered_sum", "transformations", new_hashtab(
         list("size", "bounds", "S"),
-        list(unbox(size), lapply(bounds, unbox), .S)
+        list(unbox2(size), lapply(bounds, unbox2), .S)
     ))
 
     make_chain_dyn(
@@ -3184,7 +3186,7 @@ make_sized_bounded_int_checked_sum <- function(
 
     log <- new_constructor_log("make_sized_bounded_int_checked_sum", "transformations", new_hashtab(
         list("size", "bounds", "T"),
-        list(unbox(size), lapply(bounds, unbox), .T)
+        list(unbox2(size), lapply(bounds, unbox2), .T)
     ))
 
     # Assert that arguments are correctly typed.
@@ -3218,7 +3220,7 @@ then_sized_bounded_int_checked_sum <- function(
 
     log <- new_constructor_log("then_sized_bounded_int_checked_sum", "transformations", new_hashtab(
         list("size", "bounds", "T"),
-        list(unbox(size), lapply(bounds, unbox), .T)
+        list(unbox2(size), lapply(bounds, unbox2), .T)
     ))
 
     make_chain_dyn(
@@ -3268,7 +3270,7 @@ make_sized_bounded_int_monotonic_sum <- function(
 
     log <- new_constructor_log("make_sized_bounded_int_monotonic_sum", "transformations", new_hashtab(
         list("size", "bounds", "T"),
-        list(unbox(size), lapply(bounds, unbox), .T)
+        list(unbox2(size), lapply(bounds, unbox2), .T)
     ))
 
     # Assert that arguments are correctly typed.
@@ -3302,7 +3304,7 @@ then_sized_bounded_int_monotonic_sum <- function(
 
     log <- new_constructor_log("then_sized_bounded_int_monotonic_sum", "transformations", new_hashtab(
         list("size", "bounds", "T"),
-        list(unbox(size), lapply(bounds, unbox), .T)
+        list(unbox2(size), lapply(bounds, unbox2), .T)
     ))
 
     make_chain_dyn(
@@ -3354,7 +3356,7 @@ make_sized_bounded_int_ordered_sum <- function(
 
     log <- new_constructor_log("make_sized_bounded_int_ordered_sum", "transformations", new_hashtab(
         list("size", "bounds", "T"),
-        list(unbox(size), lapply(bounds, unbox), .T)
+        list(unbox2(size), lapply(bounds, unbox2), .T)
     ))
 
     # Assert that arguments are correctly typed.
@@ -3388,7 +3390,7 @@ then_sized_bounded_int_ordered_sum <- function(
 
     log <- new_constructor_log("then_sized_bounded_int_ordered_sum", "transformations", new_hashtab(
         list("size", "bounds", "T"),
-        list(unbox(size), lapply(bounds, unbox), .T)
+        list(unbox2(size), lapply(bounds, unbox2), .T)
     ))
 
     make_chain_dyn(
@@ -3440,7 +3442,7 @@ make_sized_bounded_int_split_sum <- function(
 
     log <- new_constructor_log("make_sized_bounded_int_split_sum", "transformations", new_hashtab(
         list("size", "bounds", "T"),
-        list(unbox(size), lapply(bounds, unbox), .T)
+        list(unbox2(size), lapply(bounds, unbox2), .T)
     ))
 
     # Assert that arguments are correctly typed.
@@ -3474,7 +3476,7 @@ then_sized_bounded_int_split_sum <- function(
 
     log <- new_constructor_log("then_sized_bounded_int_split_sum", "transformations", new_hashtab(
         list("size", "bounds", "T"),
-        list(unbox(size), lapply(bounds, unbox), .T)
+        list(unbox2(size), lapply(bounds, unbox2), .T)
     ))
 
     make_chain_dyn(
@@ -4034,7 +4036,7 @@ make_variance <- function(
 
     log <- new_constructor_log("make_variance", "transformations", new_hashtab(
         list("input_domain", "input_metric", "ddof", "S"),
-        list(input_domain, input_metric, unbox(ddof), .S)
+        list(input_domain, input_metric, unbox2(ddof), .S)
     ))
 
     # Assert that arguments are correctly typed.
@@ -4065,7 +4067,7 @@ then_variance <- function(
 
     log <- new_constructor_log("then_variance", "transformations", new_hashtab(
         list("ddof", "S"),
-        list(unbox(ddof), .S)
+        list(unbox2(ddof), .S)
     ))
 
     make_chain_dyn(

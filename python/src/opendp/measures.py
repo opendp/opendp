@@ -26,8 +26,6 @@ def _measure_free(
 ):
     r"""Internal function. Free the memory associated with `this`.
 
-    [_measure_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn._measure_free.html)
-
     :param this: 
     :type this: Measure
     :raises TypeError: if an argument's type differs from the expected type
@@ -116,8 +114,6 @@ def measure_debug(
 ) -> str:
     r"""Debug a `measure`.
 
-    [measure_debug in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.measure_debug.html)
-
     :param this: The measure to debug (stringify).
     :type this: Measure
     :rtype: str
@@ -145,8 +141,6 @@ def measure_distance_type(
 ) -> str:
     r"""Get the distance type of a `measure`.
 
-    [measure_distance_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.measure_distance_type.html)
-
     :param this: The measure to retrieve the distance type from.
     :type this: Measure
     :rtype: str
@@ -173,8 +167,6 @@ def measure_type(
     this: Measure
 ) -> str:
     r"""Get the type of a `measure`.
-
-    [measure_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.measure_type.html)
 
     :param this: The measure to retrieve the type from.
     :type this: Measure
@@ -234,8 +226,6 @@ def user_divergence(
 ) -> Measure:
     r"""Construct a new UserDivergence.
     Any two instances of an UserDivergence are equal if their string descriptors are equal.
-
-    [user_divergence in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.user_divergence.html)
 
     :param descriptor: A string description of the privacy measure.
     :type descriptor: str

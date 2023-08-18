@@ -10,6 +10,7 @@ assert_features <- function(...) {
 #'
 #' See https://github.com/opendp/opendp/discussions/304 for available features.
 #'
+#' @param ... features to enable
 #' @export
 enable_features <- function(...) {
   options(opendp_features = union(getOption("opendp_features"), list(...)))
@@ -17,6 +18,7 @@ enable_features <- function(...) {
 
 #' Disable features in the opendp package.
 #'
+#' @param ... features to disable
 #' @export
 disable_features <- function(...) {
   features <- getOption("opendp_features")
@@ -100,6 +102,7 @@ new_transformation <- function(ptr, log) {
       output_domain = transformation_output_domain(ptr),
       output_metric = transformation_output_metric(ptr),
       `function` = transformation_function(ptr),
+      json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
       stop("unrecognized attribute")
@@ -107,6 +110,23 @@ new_transformation <- function(ptr, log) {
   }
   class(transformation) <- "transformation"
   transformation
+}
+
+#' @export
+toString.transformation <- function(x, ...) {
+  paste0(
+    "Transformation(\n",
+    "  input_domain=", toString(x("input_domain")), ",\n",
+    "  input_metric=", toString(x("input_metric")), ",\n",
+    "  output_domain=", toString(x("output_domain")), ",\n",
+    "  output_metric=", toString(x("output_metric")), "\n",
+    ")"
+  )
+}
+
+#' @export
+print.transformation <- function(x, ...) {
+  cat(toString(x, ...))
 }
 
 #' new measurement
@@ -137,6 +157,7 @@ new_measurement <- function(ptr, log) {
       input_metric = measurement_input_metric(ptr),
       output_measure = measurement_output_measure(ptr),
       `function` = measurement_function(ptr),
+      json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
       stop("unrecognized attribute")
@@ -144,6 +165,22 @@ new_measurement <- function(ptr, log) {
   }
   class(measurement) <- "measurement"
   measurement
+}
+
+#' @export
+toString.measurement <- function(x, ...) {
+  paste0(
+    "Measurement(\n",
+    "  input_domain=", toString(x("input_domain")), ",\n",
+    "  input_metric=", toString(x("input_metric")), ",\n",
+    "  output_measure=", toString(x("output_measure")), "\n",
+    ")"
+  )
+}
+
+#' @export
+print.measurement <- function(x, ...) {
+  cat(toString(x, ...))
 }
 
 #' new domain
@@ -164,6 +201,7 @@ new_domain <- function(ptr, log) {
       debug = domain_debug(ptr),
       type = domain_type(ptr),
       carrier_type = domain_carrier_type(ptr),
+      json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
       stop("unrecognized attribute")
@@ -171,6 +209,16 @@ new_domain <- function(ptr, log) {
   }
   class(domain) <- "domain"
   domain
+}
+
+#' @export
+toString.domain <- function(x, ...) {
+  x("debug")
+}
+
+#' @export
+print.domain <- function(x, ...) {
+  cat(toString(x, ...))
 }
 
 #' new metric
@@ -183,6 +231,7 @@ new_metric <- function(ptr, log) {
       debug = metric_debug(ptr),
       type = metric_type(ptr),
       distance_type = metric_distance_type(ptr),
+      json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
       stop("unrecognized attribute")
@@ -190,6 +239,16 @@ new_metric <- function(ptr, log) {
   }
   class(metric) <- "metric"
   metric
+}
+
+#' @export
+toString.metric <- function(x, ...) {
+  x("debug")
+}
+
+#' @export
+print.metric <- function(x, ...) {
+  cat(toString(x, ...))
 }
 
 #' new measure
@@ -202,6 +261,7 @@ new_measure <- function(ptr, log) {
       debug = measure_debug(ptr),
       type = measure_type(ptr),
       distance_type = measure_distance_type(ptr),
+      json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
       stop("unrecognized attribute")
@@ -209,6 +269,16 @@ new_measure <- function(ptr, log) {
   }
   class(measure) <- "measure"
   measure
+}
+
+#' @export
+toString.measure <- function(x, ...) {
+  x("debug")
+}
+
+#' @export
+print.measure <- function(x, ...) {
+  cat(toString(x, ...))
 }
 
 #' new function
@@ -226,6 +296,7 @@ new_function <- function(ptr, log) {
     }
 
     switch(attr,
+      json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
       stop("unrecognized attribute")
@@ -303,6 +374,10 @@ hashitems <- function(data, type_name) {
   list(keys, vals)
 }
 
+#' create an instance of a hashtab from keys and values
+#'
+#' @param keys a vector of keys
+#' @param vals a vector of values
 #' @export
 new_hashtab <- function(keys, vals) {
   if (length(keys) != length(vals)) stop("keys and vals must have the same length")
@@ -329,9 +404,9 @@ to_str <- function(x, depth) UseMethod("to_str")
 CONSTRUCTOR_LOG_KEYS <- list("_type", "name", "module", "kwargs")
 new_constructor_log <- function(name, module, kwargs) {
   new_hashtab(CONSTRUCTOR_LOG_KEYS, list(
-    unbox("constructor"),
-    unbox(name),
-    unbox(module),
+    unbox2("constructor"),
+    unbox2(name),
+    unbox2(module),
     kwargs
   ))
 }
@@ -339,21 +414,20 @@ new_constructor_log <- function(name, module, kwargs) {
 PARTIAL_LOG_KEYS <- list("_type", "lhs", "rhs")
 new_partial_log <- function(lhs, rhs) {
   new_hashtab(PARTIAL_LOG_KEYS, list(
-    unbox("partial_chain"),
+    unbox2("partial_chain"),
     lhs,
     rhs
   ))
 }
 
 
-#' @export
 to_ast <- function(item) {
   if (inherits(item, "scalar")) {
     item
   } else if (inherits(item, c("transformation", "measurement", "domain", "metric", "measure", "function"))) {
     to_ast(item$log)
   } else if (inherits(item, "runtime_type")) {
-    unbox(rt_to_string(item))
+    unbox2(rt_to_string(item))
   } else if (utils::is.hashtab(item)) {
     # TODO: can jsonlite even write non-string keys?
     data <- list()
@@ -407,7 +481,7 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
   }, bounds, .T))
 }
 
-unbox <- function(x) {
+unbox2 <- function(x) {
   if (requireNamespace("jsonlite", quietly = TRUE)) {
     jsonlite::unbox(x)
   } else {

@@ -28,8 +28,6 @@ def _domain_free(
 ):
     r"""Internal function. Free the memory associated with `this`.
 
-    [_domain_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn._domain_free.html)
-
     :param this: 
     :type this: Domain
     :raises TypeError: if an argument's type differs from the expected type
@@ -55,8 +53,6 @@ def _user_domain_descriptor(
     domain: Domain
 ):
     r"""Retrieve the descriptor value stored in a user domain.
-
-    [_user_domain_descriptor in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn._user_domain_descriptor.html)
 
     :param domain: The UserDomain to extract the descriptor from
     :type domain: Domain
@@ -123,8 +119,6 @@ def domain_carrier_type(
 ) -> str:
     r"""Get the carrier type of a `domain`.
 
-    [domain_carrier_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.domain_carrier_type.html)
-
     :param this: The domain to retrieve the carrier type from.
     :type this: Domain
     :rtype: str
@@ -151,8 +145,6 @@ def domain_debug(
     this: Domain
 ) -> str:
     r"""Debug a `domain`.
-
-    [domain_debug in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.domain_debug.html)
 
     :param this: The domain to debug (stringify).
     :type this: Domain
@@ -181,8 +173,6 @@ def domain_type(
 ) -> str:
     r"""Get the type of a `domain`.
 
-    [domain_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.domain_type.html)
-
     :param this: The domain to retrieve the type from.
     :type this: Domain
     :rtype: str
@@ -210,8 +200,6 @@ def map_domain(
     value_domain: Domain
 ) -> Domain:
     r"""Construct an instance of `MapDomain`.
-
-    [map_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.map_domain.html)
 
     :param key_domain: domain of keys in the hashmap
     :type key_domain: Domain
@@ -243,8 +231,6 @@ def member(
     val: Any
 ):
     r"""Check membership in a `domain`.
-
-    [member in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.member.html)
 
     :param this: The domain to check membership in.
     :type this: Domain
@@ -314,8 +300,6 @@ def user_domain(
     Any two instances of an UserDomain are equal if their string descriptors are equal.
     Contains a function used to check if any value is a member of the domain.
 
-    [user_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.user_domain.html)
-
     :param identifier: A string description of the data domain.
     :type identifier: str
     :param member: A function used to test if a value is a member of the data domain.
@@ -349,8 +333,6 @@ def vector_domain(
     size: Optional[Any] = None
 ) -> Domain:
     r"""Construct an instance of `VectorDomain`.
-
-    [vector_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.vector_domain.html)
 
     :param atom_domain: The inner domain.
     :type atom_domain: Domain

@@ -30,8 +30,6 @@ def bool_free(
     r"""Internal function. Free the memory associated with `this`, a bool.
     Used to clean up after the relation check.
 
-    [bool_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.bool_free.html)
-
     :param this: A pointer to the bool to free.
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -58,8 +56,6 @@ def extrinsic_object_free(
     r"""Internal function. Free the memory associated with `this`, a string.
     Used to clean up after the type getter functions.
 
-    [extrinsic_object_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.extrinsic_object_free.html)
-
     :param this: 
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -84,8 +80,6 @@ def ffislice_of_anyobjectptrs(
     raw: Any
 ) -> Any:
     r"""Internal function. Converts an FfiSlice of AnyObjects to an FfiSlice of AnyObjectPtrs.
-
-    [ffislice_of_anyobjectptrs in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.ffislice_of_anyobjectptrs.html)
 
     :param raw: A pointer to the slice to free.
     :type raw: Any
@@ -116,8 +110,6 @@ def fill_bytes(
     r"""Internal function. Populate the buffer behind `ptr` with `len` random bytes
     sampled from a cryptographically secure RNG.
 
-    [fill_bytes in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.fill_bytes.html)
-
     :param ptr: 
     :param len: 
     :type len: int
@@ -145,8 +137,6 @@ def object_as_slice(
     obj: Any
 ) -> Any:
     r"""Internal function. Unload data from an AnyObject into an FfiSlicePtr.
-
-    [object_as_slice in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.object_as_slice.html)
 
     :param obj: A pointer to the AnyObject to unpack.
     :type obj: Any
@@ -176,8 +166,6 @@ def object_free(
 ):
     r"""Internal function. Free the memory associated with `this`, an AnyObject.
 
-    [object_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.object_free.html)
-
     :param this: A pointer to the AnyObject to free.
     :type this: Any
     :raises TypeError: if an argument's type differs from the expected type
@@ -203,8 +191,6 @@ def object_type(
     this: Any
 ) -> str:
     r"""Internal function. Retrieve the type descriptor string of an AnyObject.
-
-    [object_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.object_type.html)
 
     :param this: A pointer to the AnyObject.
     :type this: Any
@@ -233,8 +219,6 @@ def slice_as_object(
     T: str
 ) -> Any:
     r"""Internal function. Load data from a `slice` into an AnyObject
-
-    [slice_as_object in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.slice_as_object.html)
 
     :param raw: A pointer to the slice with data.
     :type raw: FfiSlicePtr
@@ -272,8 +256,6 @@ def slice_free(
     Used to clean up after object_as_slice.
     Frees the slice, but not what the slice references!
 
-    [slice_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.slice_free.html)
-
     :param this: A pointer to the FfiSlice to free.
     :type this: Any
     :raises TypeError: if an argument's type differs from the expected type
@@ -300,8 +282,6 @@ def smd_curve_epsilon(
     delta: Any
 ) -> Any:
     r"""Internal function. Use an SMDCurve to find epsilon at a given `delta`.
-
-    [smd_curve_epsilon in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.smd_curve_epsilon.html)
 
     :param curve: The SMDCurve.
     :type curve: Any
@@ -335,8 +315,6 @@ def str_free(
     r"""Internal function. Free the memory associated with `this`, a string.
     Used to clean up after the type getter functions.
 
-    [str_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.str_free.html)
-
     :param this: A pointer to the string to free.
     :type this: str
     :raises TypeError: if an argument's type differs from the expected type
@@ -362,8 +340,6 @@ def to_string(
     this: Any
 ) -> str:
     r"""Internal function. Convert the AnyObject to a string representation.
-
-    [to_string in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.to_string.html)
 
     :param this: The AnyObject to convert to a string representation.
     :type this: Any
