@@ -22,6 +22,7 @@ library(opendpbase)
 
 ```r
 
+
 # chaining
 aggregator = make_bounded_sum(bounds=c(0L, 10L))
 mechanism = make_base_discrete_laplace(scale=1)

@@ -79,6 +79,12 @@ function stage() {
   log "Copy header file to R/opendpbase/src"
   run cp rust/opendp.h R/opendpbase/src/
 
+  log "Copy README.md to R/opendpbase"
+  run cp README.md R/opendpbase/
+
+  log "Copy CHANGELOG.md to R/opendpbase"
+  run cp CHANGELOG.md R/opendpbase/NEWS.md
+
   echo "R package is staged. Run R CMD build R/opendpbase to build the package."
 }
 

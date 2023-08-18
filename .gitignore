@@ -188,3 +188,6 @@ Makevars
 vendor.tar.xz
 opendp.tar.xz
 R/opendpbase/src/.cargo
+NEWS.md
+R/opendpbase/README.md
+R/opendpbase/docs

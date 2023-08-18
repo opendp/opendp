@@ -2,7 +2,7 @@
 # 1. install the GNU Makefile plugin
 # 2. right click on this file and associate the filetype with a Makefile
 
-# will always be located at src/libopendp.a once this script is done
+# will always be located at src/libopendp.a once rust_build is done
 STATLIB = libopendp.a
 
 # PKG_LIBS tells R where to find the static library (libopendp.a)
@@ -12,18 +12,16 @@ all: rust_build
 
 rust_build:
 
-	if [ -f "opendp.tar.xz" ]; then \
+	@if [ -f "opendp.tar.xz" ]; then \
 		echo "* extracting opendp and vendor files"; \
 		$(TAR) --extract --xz -f opendp.tar.xz -C .; \
 		$(TAR) --extract --xz -f vendor.tar.xz -C rust; \
-		echo "** setting vendor configuration"; \
 		mkdir -p .cargo; \
 		cp cargo_vendor_config.toml .cargo/config.toml; \
-		echo "* building static library"; \
+		echo "* building OpenDP Library (libopendp.a)"; \
 		@BEFORE_CARGO_BUILD@ cargo build --manifest-path rust/Cargo.toml --color always --release --jobs 2 --offline --features @RUST_FEATURES@; \
 		@AFTER_CARGO_BUILD@ \
-		cp rust/target/release/libopendp.a libopendp.a; \
-		cp rust/opendp.h .; \
+		cp rust/target/release/libopendp.a .; \
 	elif [ ! -z "@OPENDP_LIB_DIR@" ]; then \
 		cp @OPENDP_LIB_DIR@/libopendp.a .; \
 	else \

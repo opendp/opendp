@@ -17,12 +17,6 @@ if [ -e "${HOME}/.cargo/env" ]; then
     BEFORE_CARGO_BUILD="${BEFORE_CARGO_BUILD} . \"${HOME}/.cargo/env\" \\&\\&"
 fi
 
-# If it's on CRAN, a package is not allowed to write in any other place than the
-# temporary directory on installation. So, we need to tweak Makevars to make the
-# compilation happen only within the package directory (i.e. `$(PWD)`).
-BEFORE_CARGO_BUILD="${BEFORE_CARGO_BUILD}"' export CARGO_HOME="$(PWD)/.cargo" \&\&'
-AFTER_CARGO_BUILD="${AFTER_CARGO_BUILD}"'rm -Rf $(PWD)/.cargo $(LIBDIR)/build;'
-
 # Check the Rust installation, and abort if not available
 "${R_HOME}/bin/Rscript" "./tools/configure.R"
 
@@ -30,6 +24,14 @@ ret=$?
 
 if [ $ret -ne 0 ]; then
     exit $ret
+fi
+
+# If it's on CRAN, a package is not allowed to write in any other place than the
+# temporary directory on installation. So, we need to tweak Makevars to make the
+# compilation happen only within the package directory (i.e. `$(PWD)`).
+if [ "${NOT_CRAN}" != "true" ]; then
+    BEFORE_CARGO_BUILD="${BEFORE_CARGO_BUILD}"' export CARGO_HOME="$(PWD)/.cargo" \&\&'
+    AFTER_CARGO_BUILD="${AFTER_CARGO_BUILD}"'rm -Rf $(PWD)/.cargo $(LIBDIR)/build;'
 fi
 
 sed \

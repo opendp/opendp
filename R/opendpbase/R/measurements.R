@@ -79,7 +79,7 @@ make_alp_queryable <- function(
 
 #' partial alp queryable constructor
 #'
-#' See documentation for make_alp_queryable for details.
+#' See documentation for [make_alp_queryable()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param scale Privacy loss parameter. This is equal to epsilon/sensitivity.
@@ -177,7 +177,7 @@ make_base_discrete_gaussian <- function(
 
 #' partial base discrete gaussian constructor
 #'
-#' See documentation for make_base_discrete_gaussian for details.
+#' See documentation for [make_base_discrete_gaussian()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
@@ -268,7 +268,7 @@ make_base_discrete_laplace <- function(
 
 #' partial base discrete laplace constructor
 #'
-#' See documentation for make_base_discrete_laplace for details.
+#' See documentation for [make_base_discrete_laplace()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
@@ -357,7 +357,7 @@ make_base_discrete_laplace_cks20 <- function(
 
 #' partial base discrete laplace cks20 constructor
 #'
-#' See documentation for make_base_discrete_laplace_cks20 for details.
+#' See documentation for [make_base_discrete_laplace_cks20()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
@@ -452,7 +452,7 @@ make_base_discrete_laplace_linear <- function(
 
 #' partial base discrete laplace linear constructor
 #'
-#' See documentation for make_base_discrete_laplace_linear for details.
+#' See documentation for [make_base_discrete_laplace_linear()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
@@ -548,7 +548,7 @@ make_base_gaussian <- function(
 
 #' partial base gaussian constructor
 #'
-#' See documentation for make_base_gaussian for details.
+#' See documentation for [make_base_gaussian()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
@@ -635,7 +635,7 @@ make_base_geometric <- function(
 
 #' partial base geometric constructor
 #'
-#' See documentation for make_base_geometric for details.
+#' See documentation for [make_base_geometric()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param scale undocumented
@@ -727,7 +727,7 @@ make_base_laplace <- function(
 
 #' partial base laplace constructor
 #'
-#' See documentation for make_base_laplace for details.
+#' See documentation for [make_base_laplace()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
@@ -812,7 +812,7 @@ make_base_laplace_threshold <- function(
 
 #' partial base laplace threshold constructor
 #'
-#' See documentation for make_base_laplace_threshold for details.
+#' See documentation for [make_base_laplace_threshold()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
@@ -902,7 +902,7 @@ make_gaussian <- function(
 
 #' partial gaussian constructor
 #'
-#' See documentation for make_gaussian for details.
+#' See documentation for [make_gaussian()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
@@ -994,7 +994,7 @@ make_laplace <- function(
 
 #' partial laplace constructor
 #'
-#' See documentation for make_laplace for details.
+#' See documentation for [make_laplace()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
@@ -1077,7 +1077,7 @@ make_randomized_response <- function(
 
 #' partial randomized response constructor
 #'
-#' See documentation for make_randomized_response for details.
+#' See documentation for [make_randomized_response()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param categories Set of valid outcomes
@@ -1164,7 +1164,7 @@ make_randomized_response_bool <- function(
 
 #' partial randomized response bool constructor
 #'
-#' See documentation for make_randomized_response_bool for details.
+#' See documentation for [make_randomized_response_bool()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param prob Probability of returning the correct answer. Must be in `[0.5, 1)`
@@ -1249,7 +1249,7 @@ make_report_noisy_max_gumbel <- function(
 
 #' partial report noisy max gumbel constructor
 #'
-#' See documentation for make_report_noisy_max_gumbel for details.
+#' See documentation for [make_report_noisy_max_gumbel()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param scale Higher scales are more private.

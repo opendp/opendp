@@ -238,8 +238,7 @@ fn generate_then_doc_block(func: &Function, hierarchy: &HashMap<String, Vec<Stri
         .collect::<Vec<String>>()
         .join("\n");
 
-    format!(
-        r#"partial {title}See documentation for {func_name} for details.
+    format!(r#"partial {title}See documentation for [{func_name}()] for details.
 
 @param lhs The prior transformation or metric space.
 {doc_args}{ret_arg}

@@ -49,7 +49,7 @@ make_basic_composition <- function(
 
 #' partial basic composition constructor
 #'
-#' See documentation for make_basic_composition for details.
+#' See documentation for [make_basic_composition()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param measurements A vector of Measurements to compose.
@@ -106,7 +106,7 @@ make_chain_mt <- function(
 
 #' partial chain mt constructor
 #'
-#' See documentation for make_chain_mt for details.
+#' See documentation for [make_chain_mt()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param measurement1 outer mechanism
@@ -167,7 +167,7 @@ make_chain_pm <- function(
 
 #' partial chain pm constructor
 #'
-#' See documentation for make_chain_pm for details.
+#' See documentation for [make_chain_pm()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param postprocess1 outer postprocessor
@@ -227,7 +227,7 @@ make_chain_tt <- function(
 
 #' partial chain tt constructor
 #'
-#' See documentation for make_chain_tt for details.
+#' See documentation for [make_chain_tt()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param transformation1 outer transformation
@@ -291,7 +291,7 @@ make_fix_delta <- function(
 
 #' partial fix delta constructor
 #'
-#' See documentation for make_fix_delta for details.
+#' See documentation for [make_fix_delta()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param measurement a measurement with a privacy curve to be fixed
@@ -361,7 +361,7 @@ make_population_amplification <- function(
 
 #' partial population amplification constructor
 #'
-#' See documentation for make_population_amplification for details.
+#' See documentation for [make_population_amplification()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param measurement the computation to amplify
@@ -422,7 +422,7 @@ make_pureDP_to_fixed_approxDP <- function(
 
 #' partial pureDP to fixed approxDP constructor
 #'
-#' See documentation for make_pureDP_to_fixed_approxDP for details.
+#' See documentation for [make_pureDP_to_fixed_approxDP()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param measurement a measurement with a privacy measure to be casted
@@ -484,7 +484,7 @@ make_pureDP_to_zCDP <- function(
 
 #' partial pureDP to zCDP constructor
 #'
-#' See documentation for make_pureDP_to_zCDP for details.
+#' See documentation for [make_pureDP_to_zCDP()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param measurement a measurement with a privacy measure to be casted
@@ -573,7 +573,7 @@ make_sequential_composition <- function(
 
 #' partial sequential composition constructor
 #'
-#' See documentation for make_sequential_composition for details.
+#' See documentation for [make_sequential_composition()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param output_measure how privacy is measured
@@ -639,7 +639,7 @@ make_zCDP_to_approxDP <- function(
 
 #' partial zCDP to approxDP constructor
 #'
-#' See documentation for make_zCDP_to_approxDP for details.
+#' See documentation for [make_zCDP_to_approxDP()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param measurement a measurement with a privacy measure to be casted

@@ -87,7 +87,7 @@ make_b_ary_tree <- function(
 
 #' partial b ary tree constructor
 #'
-#' See documentation for make_b_ary_tree for details.
+#' See documentation for [make_b_ary_tree()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param leaf_count The number of leaf nodes in the b-ary tree.
@@ -185,7 +185,7 @@ make_bounded_float_checked_sum <- function(
 
 #' partial bounded float checked sum constructor
 #'
-#' See documentation for make_bounded_float_checked_sum for details.
+#' See documentation for [make_bounded_float_checked_sum()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param size_limit Upper bound on number of records to keep in the input data.
@@ -285,7 +285,7 @@ make_bounded_float_ordered_sum <- function(
 
 #' partial bounded float ordered sum constructor
 #'
-#' See documentation for make_bounded_float_ordered_sum for details.
+#' See documentation for [make_bounded_float_ordered_sum()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param size_limit Upper bound on the number of records in input data. Used to bound sensitivity.
@@ -366,7 +366,7 @@ make_bounded_int_monotonic_sum <- function(
 
 #' partial bounded int monotonic sum constructor
 #'
-#' See documentation for make_bounded_int_monotonic_sum for details.
+#' See documentation for [make_bounded_int_monotonic_sum()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
@@ -444,7 +444,7 @@ make_bounded_int_ordered_sum <- function(
 
 #' partial bounded int ordered sum constructor
 #'
-#' See documentation for make_bounded_int_ordered_sum for details.
+#' See documentation for [make_bounded_int_ordered_sum()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
@@ -522,7 +522,7 @@ make_bounded_int_split_sum <- function(
 
 #' partial bounded int split sum constructor
 #'
-#' See documentation for make_bounded_int_split_sum for details.
+#' See documentation for [make_bounded_int_split_sum()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
@@ -595,7 +595,7 @@ make_cast <- function(
 
 #' partial cast constructor
 #'
-#' See documentation for make_cast for details.
+#' See documentation for [make_cast()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param .TOA Atomic Output Type to cast into
@@ -675,7 +675,7 @@ make_cast_default <- function(
 
 #' partial cast default constructor
 #'
-#' See documentation for make_cast_default for details.
+#' See documentation for [make_cast_default()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param .TOA Atomic Output Type to cast into
@@ -749,7 +749,7 @@ make_cast_inherent <- function(
 
 #' partial cast inherent constructor
 #'
-#' See documentation for make_cast_inherent for details.
+#' See documentation for [make_cast_inherent()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param .TOA Atomic Output Type to cast into
@@ -812,7 +812,7 @@ make_cdf <- function(
 
 #' partial cdf constructor
 #'
-#' See documentation for make_cdf for details.
+#' See documentation for [make_cdf()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param .TA Atomic Type. One of `f32` or `f64`
@@ -890,7 +890,7 @@ make_clamp <- function(
 
 #' partial clamp constructor
 #'
-#' See documentation for make_clamp for details.
+#' See documentation for [make_clamp()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param bounds Tuple of inclusive lower and upper bounds.
@@ -972,7 +972,7 @@ make_consistent_b_ary_tree <- function(
 
 #' partial consistent b ary tree constructor
 #'
-#' See documentation for make_consistent_b_ary_tree for details.
+#' See documentation for [make_consistent_b_ary_tree()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param branching_factor the maximum number of children
@@ -1053,7 +1053,7 @@ make_count <- function(
 
 #' partial count constructor
 #'
-#' See documentation for make_count for details.
+#' See documentation for [make_count()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param .TO Output Type. Must be numeric.
@@ -1130,7 +1130,7 @@ make_count_by <- function(
 
 #' partial count by constructor
 #'
-#' See documentation for make_count_by for details.
+#' See documentation for [make_count_by()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param .MO Output Metric.
@@ -1221,7 +1221,7 @@ make_count_by_categories <- function(
 
 #' partial count by categories constructor
 #'
-#' See documentation for make_count_by_categories for details.
+#' See documentation for [make_count_by_categories()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param categories The set of categories to compute counts for.
@@ -1303,7 +1303,7 @@ make_count_distinct <- function(
 
 #' partial count distinct constructor
 #'
-#' See documentation for make_count_distinct for details.
+#' See documentation for [make_count_distinct()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param .TO Output Type. Must be numeric.
@@ -1374,7 +1374,7 @@ make_create_dataframe <- function(
 
 #' partial create dataframe constructor
 #'
-#' See documentation for make_create_dataframe for details.
+#' See documentation for [make_create_dataframe()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param col_names Column names for each record entry.
@@ -1463,7 +1463,7 @@ make_df_cast_default <- function(
 
 #' partial df cast default constructor
 #'
-#' See documentation for make_df_cast_default for details.
+#' See documentation for [make_df_cast_default()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param column_name column name to be transformed
@@ -1548,7 +1548,7 @@ make_df_is_equal <- function(
 
 #' partial df is equal constructor
 #'
-#' See documentation for make_df_is_equal for details.
+#' See documentation for [make_df_is_equal()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param column_name Column name to be transformed
@@ -1625,7 +1625,7 @@ make_drop_null <- function(
 
 #' partial drop null constructor
 #'
-#' See documentation for make_drop_null for details.
+#' See documentation for [make_drop_null()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #'
@@ -1700,7 +1700,7 @@ make_find <- function(
 
 #' partial find constructor
 #'
-#' See documentation for make_find for details.
+#' See documentation for [make_find()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param categories The set of categories to find indexes from.
@@ -1781,7 +1781,7 @@ make_find_bin <- function(
 
 #' partial find bin constructor
 #'
-#' See documentation for make_find_bin for details.
+#' See documentation for [make_find_bin()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param edges The set of edges to split bins by.
@@ -1851,7 +1851,7 @@ make_identity <- function(
 
 #' partial identity constructor
 #'
-#' See documentation for make_identity for details.
+#' See documentation for [make_identity()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #'
@@ -1929,7 +1929,7 @@ make_impute_constant <- function(
 
 #' partial impute constant constructor
 #'
-#' See documentation for make_impute_constant for details.
+#' See documentation for [make_impute_constant()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param constant Value to replace nulls with.
@@ -2002,7 +2002,7 @@ make_impute_uniform_float <- function(
 
 #' partial impute uniform float constructor
 #'
-#' See documentation for make_impute_uniform_float for details.
+#' See documentation for [make_impute_uniform_float()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param bounds Tuple of inclusive lower and upper bounds.
@@ -2080,7 +2080,7 @@ make_index <- function(
 
 #' partial index constructor
 #'
-#' See documentation for make_index for details.
+#' See documentation for [make_index()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param categories The set of categories to index into.
@@ -2163,7 +2163,7 @@ make_is_equal <- function(
 
 #' partial is equal constructor
 #'
-#' See documentation for make_is_equal for details.
+#' See documentation for [make_is_equal()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param value value to check against
@@ -2228,7 +2228,7 @@ make_is_null <- function(
 
 #' partial is null constructor
 #'
-#' See documentation for make_is_null for details.
+#' See documentation for [make_is_null()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #'
@@ -2308,7 +2308,7 @@ make_lipschitz_float_mul <- function(
 
 #' partial lipschitz float mul constructor
 #'
-#' See documentation for make_lipschitz_float_mul for details.
+#' See documentation for [make_lipschitz_float_mul()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param constant The constant to multiply aggregates by.
@@ -2383,7 +2383,7 @@ make_mean <- function(
 
 #' partial mean constructor
 #'
-#' See documentation for make_mean for details.
+#' See documentation for [make_mean()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #'
@@ -2455,7 +2455,7 @@ make_metric_bounded <- function(
 
 #' partial metric bounded constructor
 #'
-#' See documentation for make_metric_bounded for details.
+#' See documentation for [make_metric_bounded()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #'
@@ -2524,7 +2524,7 @@ make_metric_unbounded <- function(
 
 #' partial metric unbounded constructor
 #'
-#' See documentation for make_metric_unbounded for details.
+#' See documentation for [make_metric_unbounded()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #'
@@ -2593,7 +2593,7 @@ make_ordered_random <- function(
 
 #' partial ordered random constructor
 #'
-#' See documentation for make_ordered_random for details.
+#' See documentation for [make_ordered_random()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #'
@@ -2671,7 +2671,7 @@ make_quantile_score_candidates <- function(
 
 #' partial quantile score candidates constructor
 #'
-#' See documentation for make_quantile_score_candidates for details.
+#' See documentation for [make_quantile_score_candidates()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param candidates Potential quantiles to score
@@ -2753,7 +2753,7 @@ make_quantiles_from_counts <- function(
 
 #' partial quantiles from counts constructor
 #'
-#' See documentation for make_quantiles_from_counts for details.
+#' See documentation for [make_quantiles_from_counts()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param bin_edges The edges that the input data was binned into before counting.
@@ -2842,7 +2842,7 @@ make_resize <- function(
 
 #' partial resize constructor
 #'
-#' See documentation for make_resize for details.
+#' See documentation for [make_resize()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param size Number of records in output data.
@@ -2921,7 +2921,7 @@ make_select_column <- function(
 
 #' partial select column constructor
 #'
-#' See documentation for make_select_column for details.
+#' See documentation for [make_select_column()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param key categorical/hashable data type of the key/column name
@@ -3019,7 +3019,7 @@ make_sized_bounded_float_checked_sum <- function(
 
 #' partial sized bounded float checked sum constructor
 #'
-#' See documentation for make_sized_bounded_float_checked_sum for details.
+#' See documentation for [make_sized_bounded_float_checked_sum()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param size Number of records in input data.
@@ -3119,7 +3119,7 @@ make_sized_bounded_float_ordered_sum <- function(
 
 #' partial sized bounded float ordered sum constructor
 #'
-#' See documentation for make_sized_bounded_float_ordered_sum for details.
+#' See documentation for [make_sized_bounded_float_ordered_sum()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param size Number of records in input data.
@@ -3203,7 +3203,7 @@ make_sized_bounded_int_checked_sum <- function(
 
 #' partial sized bounded int checked sum constructor
 #'
-#' See documentation for make_sized_bounded_int_checked_sum for details.
+#' See documentation for [make_sized_bounded_int_checked_sum()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param size Number of records in input data.
@@ -3287,7 +3287,7 @@ make_sized_bounded_int_monotonic_sum <- function(
 
 #' partial sized bounded int monotonic sum constructor
 #'
-#' See documentation for make_sized_bounded_int_monotonic_sum for details.
+#' See documentation for [make_sized_bounded_int_monotonic_sum()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param size Number of records in input data.
@@ -3373,7 +3373,7 @@ make_sized_bounded_int_ordered_sum <- function(
 
 #' partial sized bounded int ordered sum constructor
 #'
-#' See documentation for make_sized_bounded_int_ordered_sum for details.
+#' See documentation for [make_sized_bounded_int_ordered_sum()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param size Number of records in input data.
@@ -3459,7 +3459,7 @@ make_sized_bounded_int_split_sum <- function(
 
 #' partial sized bounded int split sum constructor
 #'
-#' See documentation for make_sized_bounded_int_split_sum for details.
+#' See documentation for [make_sized_bounded_int_split_sum()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param size Number of records in input data.
@@ -3537,7 +3537,7 @@ make_split_dataframe <- function(
 
 #' partial split dataframe constructor
 #'
-#' See documentation for make_split_dataframe for details.
+#' See documentation for [make_split_dataframe()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param separator The token(s) that separate entries in each record.
@@ -3603,7 +3603,7 @@ make_split_lines <- function(
 
 #' partial split lines constructor
 #'
-#' See documentation for make_split_lines for details.
+#' See documentation for [make_split_lines()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #'
@@ -3663,7 +3663,7 @@ make_split_records <- function(
 
 #' partial split records constructor
 #'
-#' See documentation for make_split_records for details.
+#' See documentation for [make_split_records()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param separator The token(s) that separate entries in each record.
@@ -3735,7 +3735,7 @@ make_subset_by <- function(
 
 #' partial subset by constructor
 #'
-#' See documentation for make_subset_by for details.
+#' See documentation for [make_subset_by()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param indicator_column name of the boolean column that indicates inclusion in the subset
@@ -3812,7 +3812,7 @@ make_sum <- function(
 
 #' partial sum constructor
 #'
-#' See documentation for make_sum for details.
+#' See documentation for [make_sum()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #'
@@ -3900,7 +3900,7 @@ make_sum_of_squared_deviations <- function(
 
 #' partial sum of squared deviations constructor
 #'
-#' See documentation for make_sum_of_squared_deviations for details.
+#' See documentation for [make_sum_of_squared_deviations()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param .S Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
@@ -3971,7 +3971,7 @@ make_unordered <- function(
 
 #' partial unordered constructor
 #'
-#' See documentation for make_unordered for details.
+#' See documentation for [make_unordered()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #'
@@ -4052,7 +4052,7 @@ make_variance <- function(
 
 #' partial variance constructor
 #'
-#' See documentation for make_variance for details.
+#' See documentation for [make_variance()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param ddof Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.
