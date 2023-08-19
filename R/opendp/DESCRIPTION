@@ -3,10 +3,10 @@ Version: 0.8.0
 Title: R Bindings for the OpenDP Library
 Authors@R: c(
     person("Stefano", "Iacus",
-            role = c("aut", "cre"),
+            role = "cre",
             email = "siacus@iq.harvard.edu"),
     person("The OpenDP Project",
-            role = "ctb",
+            role = "aut",
             email = "info@opendp.org",
             comment = "https://github.com/opendp/opendp/graphs/contributors"),
     person("The authors of the dependency Rust crates",
@@ -30,6 +30,8 @@ RoxygenNote: 7.2.3
 SystemRequirements: Cargo (Rust's package manager), rustc
 Config/testthat/edition: 3
 Config/opendp/MSRV: 1.64.0
+Config/Needs/website:
+    pkgdown
 Collate: 
     'mod.R'
     'typing.R'

@@ -1,4 +1,8 @@
-url: ~
+url: https://docs.opendp.org
 template:
   bootstrap: 5
-mode: devel
+authors:
+  footer:
+    roles: [aut]
+  sidebar:
+    roles: [aut]

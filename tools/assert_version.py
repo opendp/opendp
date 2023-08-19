@@ -1,11 +1,13 @@
 import configparser
 import tomlkit
+import debmutate
 
 from utils import *
 
 # all version numbers should be:
 version = get_version()
 python_version = get_python_version(version)
+r_version = get_r_version(version)
 
 assert version.prerelease is None or "dev" not in version.prerelease, "Please configure the channel with a non-dev version."
 print("Checking if all version numbers are synchronized at", version, python_version)
@@ -34,5 +36,8 @@ for line in binder_requirements:
     if line.startswith("opendp=="):
         assert line == f"opendp=={python_version}\n", \
             ".binder/requirements.txt opendp dependency is incorrect"
+
+with debmutate.control.ControlEditor(path='R/opendp/DESCRIPTION') as control:
+    assert control.version == r_version
 
 print("All version numbers are synchronized")

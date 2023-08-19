@@ -73,7 +73,7 @@ function docs() {
 
   log "copy README and CHANGELOG into the docs"
   run cp README.md R/opendp-docs/
-  # run cp CHANGELOG.md R/opendp-docs/NEWS.md
+  # https://pkgdown.r-lib.org/reference/build_news.html
   sed "s|^## |# Version |" CHANGELOG.md > R/opendp-docs/NEWS.md
 
   log "remove all traces of compiled code from the package"

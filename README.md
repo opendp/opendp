@@ -30,9 +30,13 @@ We welcome you to try it and look forward to feedback on the library! However, p
 
 ## Installation
 
-[OpenDP is on PyPI](https://pypi.org/project/opendp/) and can be installed with `pip` (the [package installer for Python](https://pypi.org/project/pip/)):
+Install OpenDP for Python with `pip` (the [package installer for Python](https://pypi.org/project/pip/)):
 
     $ pip install opendp
+
+Install OpenDP for R from an R session:
+
+    install.packages("opendp", repos = "https://opendp.r-universe.dev")
 
 More information can be found in the [Getting Started section of the User Guide](https://docs.opendp.org/en/stable/user/getting-started.html).
 

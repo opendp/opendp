@@ -6,6 +6,7 @@ import re
 import zoneinfo
 
 import tomlkit
+import debmutate
 
 from utils import *
 
@@ -81,6 +82,7 @@ def update_file(path, load, munge, dump, binary=False):
 def update_version(version):
     log(f"Updating version references to {version}")
     python_version = get_python_version(version)
+    r_version = get_r_version(version)
 
     # Main version file
     with open("VERSION", "w") as f:
@@ -117,6 +119,11 @@ def update_version(version):
     def munge_binder_requirements(lines):
         opendp_line = f"opendp=={python_version}\n"
         return [opendp_line if line.startswith("opendp==") else line for line in lines]
+    
+    # R Package
+
+    with debmutate.control.ControlEditor(path='R/opendp/DESCRIPTION') as control:
+        control.version = r_version
     update_file(".binder/requirements.txt", io.IOBase.readlines, munge_binder_requirements, lambda data, f: f.writelines(data))
 
 
