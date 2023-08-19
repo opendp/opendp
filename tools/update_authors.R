@@ -20,11 +20,11 @@ authors <- vapply(l, \(x) {
 
 licenses <- vapply(l, \(x) x[["license"]], FUN.VALUE = character(1L))
 
-dir.create("R/opendpbase/inst", showWarnings = FALSE)
+dir.create("R/opendp/inst", showWarnings = FALSE)
 
 cat("The authors of the dependency Rust crates:
 
-", file = "R/opendpbase/inst/AUTHORS")
+", file = "R/opendp/inst/AUTHORS")
 
 authors_flattened <- vapply(stringr::str_split(authors, ",\\s+"), \(x) {
   paste(x, collapse = "\n  ")
@@ -36,7 +36,7 @@ cat(paste(
   "\n",
   sep = "",
   collapse = "\n"
-), file = "R/opendpbase/inst/AUTHORS", append = TRUE)
+), file = "R/opendp/inst/AUTHORS", append = TRUE)
 
 ## Update LICENSE.note
 
@@ -46,7 +46,7 @@ distributed either under the MIT license or under MIT/Apache-2.0 dual license.
 
 ===============================
 
-", file = "R/opendpbase/LICENSE.note")
+", file = "R/opendp/LICENSE.note")
 
 cat(paste(
   "Name:    ", names,    "\n",
@@ -55,4 +55,4 @@ cat(paste(
   "License: ", licenses, "\n",
   sep = "",
   collapse = "\n------------------------------\n\n"
-), file = "R/opendpbase/LICENSE.note", append = TRUE)
+), file = "R/opendp/LICENSE.note", append = TRUE)

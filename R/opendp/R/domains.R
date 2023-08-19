@@ -23,7 +23,7 @@ user_domain_descriptor <- function(
     output <- .Call(
         "domains___user_domain_descriptor",
         domain,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -59,7 +59,7 @@ atom_domain <- function(
     output <- .Call(
         "domains__atom_domain",
         bounds, nullable, .T, rt_parse(.T.bounds),
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -82,7 +82,7 @@ domain_carrier_type <- function(
     output <- .Call(
         "domains__domain_carrier_type",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -105,7 +105,7 @@ domain_debug <- function(
     output <- .Call(
         "domains__domain_debug",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -128,7 +128,7 @@ domain_type <- function(
     output <- .Call(
         "domains__domain_type",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -157,7 +157,7 @@ map_domain <- function(
     output <- .Call(
         "domains__map_domain",
         key_domain, value_domain,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -187,7 +187,7 @@ member <- function(
     output <- .Call(
         "domains__member",
         this, val, rt_parse(.T.val),
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -219,7 +219,7 @@ option_domain <- function(
     output <- .Call(
         "domains__option_domain",
         element_domain, .D,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -254,7 +254,7 @@ user_domain <- function(
     output <- .Call(
         "domains__user_domain",
         identifier, member, descriptor,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -284,6 +284,6 @@ vector_domain <- function(
     output <- .Call(
         "domains__vector_domain",
         atom_domain, size, rt_parse(.T.size),
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }

@@ -1,4 +1,4 @@
-library(opendpbase)
+library(opendp)
 
 test_that("atom_domain", {
     domain <- atom_domain(.T = "i32")

@@ -1,4 +1,4 @@
-library(opendpbase)
+library(opendp)
 enable_features("contrib")
 
 

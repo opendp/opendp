@@ -27,7 +27,7 @@ tools/r_stage.sh -c
 
 ## Submit to CRAN
 
-First, make sure that the checks pass (run from `R/opendpbase`):
+First, make sure that the checks pass (run from `R/opendp`):
 ```R
 devtools::check()
 ```
@@ -35,17 +35,17 @@ devtools::check()
 To run the same check manually, use:
 ```bash
 R CMD build .
-R CMD check opendpbase_*.tar.xz --as-cran
+R CMD check opendp_*.tar.xz --as-cran
 ```
 It is important R CMD check is run on the `.tar.xz`, not on `.`, 
 because `check` depends on some of the changes `build` makes within the `.tar.xz`.
 
 ## Testing on CI
 
-Rust compilation is skipped when `libopendp.a` from `rust/target/debug/` is in `R/opendpbase/src/`.
+Rust compilation is skipped when `libopendp.a` from `rust/target/debug/` is in `R/opendp/src/`.
 
 ```shell
-cp rust/target/debug/libopendp.a R/opendpbase/src/
+cp rust/target/debug/libopendp.a R/opendp/src/
 ```
 
 ## Status 04.08.2023: Installing and making the package work
@@ -60,8 +60,8 @@ otherwise R might not find cargo.
 
 From the root directory of the openDP project, run the following command
 ```shell
-bash tools/r_stage.sh && (cd R/opendpbase/ && Rscript -e 'devtools::install()')
-cd R/opendpbase/
+bash tools/r_stage.sh && (cd R/opendp/ && Rscript -e 'devtools::install()')
+cd R/opendp/
 R
 ```
 

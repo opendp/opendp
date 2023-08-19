@@ -205,7 +205,7 @@ First, install devtools:
 
 On Mac you may need to run `brew install harfbuzz fribidi libgit2` first.
 
-After each edit to the R or Rust source, run the following command in R from `R/opendpbase/` to (re)load the R package:
+After each edit to the R or Rust source, run the following command in R from `R/opendp/` to (re)load the R package:
 
 .. code-block:: R
 
@@ -222,7 +222,7 @@ After each edit to the R or Rust source, run the following command in R from `R/
 R Tests
 -------
 
-Run tests from `R/opendpbase/` (located in `R/opendpbase/tests/`):
+Run tests from `R/opendp/` (located in `R/opendp/tests/`):
 
 .. code-block:: R
 
@@ -233,12 +233,12 @@ Run tests from `R/opendpbase/` (located in `R/opendpbase/tests/`):
 Alternatively, 
 .. code-block:: bash
 
-    R CMD check R/opendpbase/ --as-cran
+    R CMD check R/opendp/ --as-cran
 
 
 R Documentation
 ---------------
-Uses roxygen to generate `R/opendpbase/man` pages from `#'` code comments.
+Uses roxygen to generate `R/opendp/man` pages from `#'` code comments.
 
 .. code-block:: R
 

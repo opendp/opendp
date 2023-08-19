@@ -1,4 +1,4 @@
-library(opendpbase)
+library(opendp)
 
 test_that("rt_parse-vec", {
     rt <- rt_parse("Vec<i32>")

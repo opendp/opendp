@@ -1,4 +1,4 @@
-#' OpenDP Base R Bindings
+#' OpenDP R Bindings
 #'
 #' The OpenDP Library is a modular collection of statistical algorithms that adhere to the definition of differential privacy.
 #'
@@ -8,7 +8,7 @@
 #' * [GitHub](https://github.com/opendp/opendp)
 #'
 #' @docType package
-#' @name opendpbase
-#' @useDynLib opendpbase, .registration = TRUE
+#' @name opendp
+#' @useDynLib opendp, .registration = TRUE
 NULL
 #> NULL

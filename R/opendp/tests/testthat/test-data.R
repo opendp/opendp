@@ -1,4 +1,4 @@
-opendpbase::enable_features("contrib", "honest-but-curious")
+opendp::enable_features("contrib", "honest-but-curious")
 
 scalar_space_of <- function(.T) c(atom_domain(.T = .T), discrete_distance())
 vector_space_of <- function(.T) c(vector_domain(atom_domain(.T = .T)), symmetric_distance())

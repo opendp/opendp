@@ -38,7 +38,7 @@ accuracy_to_discrete_gaussian_scale <- function(
     output <- .Call(
         "accuracy__accuracy_to_discrete_gaussian_scale",
         accuracy, alpha, .T,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -77,7 +77,7 @@ accuracy_to_discrete_laplacian_scale <- function(
     output <- .Call(
         "accuracy__accuracy_to_discrete_laplacian_scale",
         accuracy, alpha, .T,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -112,7 +112,7 @@ accuracy_to_gaussian_scale <- function(
     output <- .Call(
         "accuracy__accuracy_to_gaussian_scale",
         accuracy, alpha, .T,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -147,7 +147,7 @@ accuracy_to_laplacian_scale <- function(
     output <- .Call(
         "accuracy__accuracy_to_laplacian_scale",
         accuracy, alpha, .T,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -186,7 +186,7 @@ discrete_gaussian_scale_to_accuracy <- function(
     output <- .Call(
         "accuracy__discrete_gaussian_scale_to_accuracy",
         scale, alpha, .T,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -231,7 +231,7 @@ discrete_laplacian_scale_to_accuracy <- function(
     output <- .Call(
         "accuracy__discrete_laplacian_scale_to_accuracy",
         scale, alpha, .T,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -266,7 +266,7 @@ gaussian_scale_to_accuracy <- function(
     output <- .Call(
         "accuracy__gaussian_scale_to_accuracy",
         scale, alpha, .T,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -301,6 +301,6 @@ laplacian_scale_to_accuracy <- function(
     output <- .Call(
         "accuracy__laplacian_scale_to_accuracy",
         scale, alpha, .T,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }

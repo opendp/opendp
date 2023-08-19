@@ -3,7 +3,7 @@
 *.dll
 *.a
 
-opendpbase.so
+opendp.so
 libopendp.a
 
 rust/

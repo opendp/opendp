@@ -40,7 +40,7 @@ SEXP get_args(SEXP rust_type)
 
 SEXP get_private_func(const char *func_name)
 {
-  SEXP namespace = PROTECT(mkString("opendpbase"));
+  SEXP namespace = PROTECT(mkString("opendp"));
   SEXP func_name_sexp = PROTECT(mkString(func_name));
   SEXP get_func_call = PROTECT(lang3(install("getFromNamespace"), func_name_sexp, namespace));
   int errorOccurred;

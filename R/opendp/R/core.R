@@ -31,7 +31,7 @@ function_eval <- function(
     output <- .Call(
         "core__function_eval",
         this, arg, TI, rt_parse(.T.arg),
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -65,7 +65,7 @@ measurement_check <- function(
     output <- .Call(
         "core__measurement_check",
         measurement, distance_in, distance_out, rt_parse(.T.distance_in), rt_parse(.T.distance_out),
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -88,7 +88,7 @@ measurement_function <- function(
     output <- .Call(
         "core__measurement_function",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -111,7 +111,7 @@ measurement_input_carrier_type <- function(
     output <- .Call(
         "core__measurement_input_carrier_type",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -134,7 +134,7 @@ measurement_input_distance_type <- function(
     output <- .Call(
         "core__measurement_input_distance_type",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -157,7 +157,7 @@ measurement_input_domain <- function(
     output <- .Call(
         "core__measurement_input_domain",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -180,7 +180,7 @@ measurement_input_metric <- function(
     output <- .Call(
         "core__measurement_input_metric",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -210,7 +210,7 @@ measurement_invoke <- function(
     output <- .Call(
         "core__measurement_invoke",
         this, arg, rt_parse(.T.arg),
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -240,7 +240,7 @@ measurement_map <- function(
     output <- .Call(
         "core__measurement_map",
         measurement, distance_in, rt_parse(.T.distance_in),
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -263,7 +263,7 @@ measurement_output_distance_type <- function(
     output <- .Call(
         "core__measurement_output_distance_type",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -286,7 +286,7 @@ measurement_output_measure <- function(
     output <- .Call(
         "core__measurement_output_measure",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -322,7 +322,7 @@ new_queryable <- function(
     output <- .Call(
         "core__new_queryable",
         transition, .Q, .A, rt_parse(.T.transition),
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -352,7 +352,7 @@ queryable_eval <- function(
     output <- .Call(
         "core__queryable_eval",
         queryable, query, rt_parse(.T.query),
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -375,7 +375,7 @@ queryable_query_type <- function(
     output <- .Call(
         "core__queryable_query_type",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -409,7 +409,7 @@ transformation_check <- function(
     output <- .Call(
         "core__transformation_check",
         transformation, distance_in, distance_out, rt_parse(.T.distance_in), rt_parse(.T.distance_out),
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -432,7 +432,7 @@ transformation_function <- function(
     output <- .Call(
         "core__transformation_function",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -455,7 +455,7 @@ transformation_input_carrier_type <- function(
     output <- .Call(
         "core__transformation_input_carrier_type",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -478,7 +478,7 @@ transformation_input_distance_type <- function(
     output <- .Call(
         "core__transformation_input_distance_type",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -501,7 +501,7 @@ transformation_input_domain <- function(
     output <- .Call(
         "core__transformation_input_domain",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -524,7 +524,7 @@ transformation_input_metric <- function(
     output <- .Call(
         "core__transformation_input_metric",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -554,7 +554,7 @@ transformation_invoke <- function(
     output <- .Call(
         "core__transformation_invoke",
         this, arg, rt_parse(.T.arg),
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -584,7 +584,7 @@ transformation_map <- function(
     output <- .Call(
         "core__transformation_map",
         transformation, distance_in, rt_parse(.T.distance_in),
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -607,7 +607,7 @@ transformation_output_distance_type <- function(
     output <- .Call(
         "core__transformation_output_distance_type",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -630,7 +630,7 @@ transformation_output_domain <- function(
     output <- .Call(
         "core__transformation_output_domain",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -653,6 +653,6 @@ transformation_output_metric <- function(
     output <- .Call(
         "core__transformation_output_metric",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }

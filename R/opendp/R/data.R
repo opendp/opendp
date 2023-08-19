@@ -24,7 +24,7 @@ extrinsic_object_free <- function(
     output <- .Call(
         "data__extrinsic_object_free",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -53,7 +53,7 @@ fill_bytes <- function(
     output <- .Call(
         "data__fill_bytes",
         ptr, len,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -75,7 +75,7 @@ object_type <- function(
     output <- .Call(
         "data__object_type",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -104,7 +104,7 @@ smd_curve_epsilon <- function(
     output <- .Call(
         "data__smd_curve_epsilon",
         curve, delta, rt_parse(.T.delta),
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }
 
@@ -126,6 +126,6 @@ to_string <- function(
     output <- .Call(
         "data__to_string",
         this,
-        log, PACKAGE = "opendpbase")
+        log, PACKAGE = "opendp")
     output
 }

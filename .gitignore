@@ -172,13 +172,13 @@ out/
 /python/wheelhouse
 
 # R miscellanea
-R/opendpbase/man
+R/opendp/man
 .Rhistory
 .Rproj/
 .Rproj.user/
 *.tar.gz
 *.zip
-opendpbase.Rcheck
+opendp.Rcheck
 ..Rcheck
 *.rds
 .RData
@@ -187,8 +187,8 @@ AUTHORS
 Makevars
 vendor.tar.xz
 opendp.tar.xz
-R/opendpbase/src/.cargo
+R/opendp/src/.cargo
 NEWS.md
-R/opendpbase/README.md
-R/opendpbase/docs
-R/opendpbase-docs
+R/opendp/README.md
+R/opendp/docs
+R/opendp-docs

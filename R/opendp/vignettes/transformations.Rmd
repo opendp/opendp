@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
-library(opendpbase)
+library(opendp)
 ```
 
 

@@ -1,4 +1,4 @@
-library(opendpbase)
+library(opendp)
 enable_features("contrib", "floating-point")
 
 test_that("make_randomized_response_bool", {
