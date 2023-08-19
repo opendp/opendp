@@ -14,9 +14,11 @@ function usage() {
 }
 
 CLEAN=false
-while getopts ":ci" OPT; do
+DOCS=false
+while getopts ":cd" OPT; do
   case "$OPT" in
   c) CLEAN=true ;;
+  d) DOCS=true ;;
   *) usage && exit 1 ;;
   esac
 done
@@ -54,21 +56,52 @@ function clean() {
   run rm -f R/opendpbase/src/*.o R/opendpbase/src/opendpbase.so
   run rm -f R/opendpbase/opendpbase_*.tar.gz R/opendpbase/src/Makevars
   run rm -rf vendor
+  run rm -rf R/opendpbase-docs
+  rm -rf R/opendpbase/docs
+}
+
+function docs() {
+  clean
+  # We don't directly expose any APIs from compiled code, 
+  # so we don't actually have to build the binary in order to build docs.
+  # To avoid the overhead of building the binary, 
+  # stage the docs build in a separate package where binaries are stripped out.
+
+  log "stage docs version of package in R/opendpbase-docs"
+  run cp -r R/opendpbase R/opendpbase-docs
+  run rm -rf R/opendpbase-docs/src
+
+  log "copy README and CHANGELOG into the docs"
+  run cp README.md R/opendpbase-docs/
+  run cp CHANGELOG.md R/opendpbase-docs/NEWS.md
+
+  log "remove all traces of compiled code from the package"
+  sed "/#' @useDynLib opendpbase, .registration = TRUE/d" R/opendpbase-docs/R/opendpbase-package.R > R/opendpbase-docs/R/opendpbase-package.R
+  rm -f R/opendpbase-docs/NAMESPACE
+
+  log "build the docs, and then website"
+  Rscript -e 'devtools::document("R/opendpbase-docs")'
+  Rscript -e 'pkgdown::build_site("R/opendpbase-docs")'
+
+  log "move docs to the main package"
+  mv R/opendpbase-docs/docs R/opendpbase
+
+  log "R package docs are ready in R/opendpbase/docs/index.html"
+  # open R/opendpbase/docs/index.html
 }
 
 function stage() {
   clean
 
-  mkdir -p R/opendpbase/src/rust
+  log "Vendor dependencies"
+  run cargo vendor --manifest-path rust/Cargo.toml
 
   log "Tar library sources into R/opendpbase/src"
+  mkdir -p R/opendpbase/src/rust
   [ -d rust/target ] && mv rust/target target
   # tar everything because R CMD build ignores arbitrary file patterns like .*old (like threshold...)
   tar --create --xz --no-xattrs --file=R/opendpbase/src/opendp.tar.xz rust
   [ -d target ] && mv target rust/target
-
-  log "Vendor dependencies"
-  run cargo vendor --manifest-path rust/Cargo.toml
 
   log "Tar dependencies into R/opendpbase/src"
   tar --create --xz --no-xattrs --file=R/opendpbase/src/vendor.tar.xz vendor
@@ -79,18 +112,15 @@ function stage() {
   log "Copy header file to R/opendpbase/src"
   run cp rust/opendp.h R/opendpbase/src/
 
-  log "Copy README.md to R/opendpbase"
-  run cp README.md R/opendpbase/
-
-  log "Copy CHANGELOG.md to R/opendpbase"
-  run cp CHANGELOG.md R/opendpbase/NEWS.md
-
   echo "R package is staged. Run R CMD build R/opendpbase to build the package."
 }
 
 if [[ $CLEAN == true ]]; then
   log "***** CLEAN *****"
   clean
+elif [[ $DOCS == true ]]; then
+  log "***** DOCS *****"
+  docs
 else
   log "***** STAGE *****"
   stage
