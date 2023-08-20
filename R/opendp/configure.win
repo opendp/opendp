@@ -3,9 +3,9 @@ BEFORE_CARGO_BUILD=''
 AFTER_CARGO_BUILD=''
 
 RUST_FEATURES=untrusted,ffi
-# if [ "${OPENDP_USE_SYSTEM_LIBS:-false}" != "false" ]; then
-RUST_FEATURES="${RUST_FEATURES},use-system-libs"
-# fi
+if [ "${OPENDP_USE_SYSTEM_LIBS:-false}" != "false" ]; then
+    RUST_FEATURES="${RUST_FEATURES},use-system-libs"
+fi
 
 # Even when `cargo` is on `PATH`, `rustc` might not. We need to source
 # ~/.cargo/env to ensure PATH is configured correctly in some cases

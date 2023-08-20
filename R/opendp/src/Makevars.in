@@ -6,7 +6,7 @@
 STATLIB = libopendp.a
 
 # PKG_LIBS tells R where to find the static library (libopendp.a)
-PKG_LIBS = $(STATLIB) -lgcc_eh
+PKG_LIBS = $(STATLIB)
 
 all: rust_build
 
