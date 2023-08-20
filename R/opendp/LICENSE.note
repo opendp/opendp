@@ -1,0 +1,1165 @@
+This package contains the Rust source code of the dependencies in src/rust/vendor.tar.xz
+The authorships and the licenses are listed below. In summary, all libraries are
+distributed either under the MIT license or under MIT/Apache-2.0 dual license.
+
+===============================
+
+Name:    aho-corasick
+Files:   vendor/aho-corasick/*
+Authors: Andrew Gallant
+License: Unlicense OR MIT
+
+------------------------------
+
+Name:    alga
+Files:   vendor/alga/*
+Authors: Brendan Zabarauskas, Darin Morrison, Sébastien Crozet, Wadelma
+License: Apache-2.0
+
+------------------------------
+
+Name:    anes
+Files:   vendor/anes/*
+Authors: Robert Vojta
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    ansi_term
+Files:   vendor/ansi_term/*
+Authors: ogham@bsago.me, Ryan Scheel (Havvy), Josh Triplett
+License: MIT
+
+------------------------------
+
+Name:    anyhow
+Files:   vendor/anyhow/*
+Authors: David Tolnay
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    approx
+Files:   vendor/approx/*
+Authors: Brendan Zabarauskas
+License: Apache-2.0
+
+------------------------------
+
+Name:    atty
+Files:   vendor/atty/*
+Authors: softprops
+License: MIT
+
+------------------------------
+
+Name:    autocfg
+Files:   vendor/autocfg/*
+Authors: Josh Stone
+License: Apache-2.0 OR MIT
+
+------------------------------
+
+Name:    az
+Files:   vendor/az/*
+Authors: 
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    base64
+Files:   vendor/base64/*
+Authors: Alice Maz, Marshall Pierce
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    bitflags
+Files:   vendor/bitflags/*
+Authors: The Rust Project Developers
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    bitflags
+Files:   vendor/bitflags/*
+Authors: The Rust Project Developers
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    bumpalo
+Files:   vendor/bumpalo/*
+Authors: Nick Fitzgerald
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    cast
+Files:   vendor/cast/*
+Authors: Jorge Aparicio
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    cbindgen
+Files:   vendor/cbindgen/*
+Authors: Emilio Cobos Álvarez, Jeff Muizelaar, Kartikaya Gupta, Ryan Hunt
+License: MPL-2.0
+
+------------------------------
+
+Name:    cc
+Files:   vendor/cc/*
+Authors: Alex Crichton
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    cfg-if
+Files:   vendor/cfg-if/*
+Authors: Alex Crichton
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    ciborium-io
+Files:   vendor/ciborium-io/*
+Authors: Nathaniel McCallum
+License: Apache-2.0
+
+------------------------------
+
+Name:    ciborium-ll
+Files:   vendor/ciborium-ll/*
+Authors: Nathaniel McCallum
+License: Apache-2.0
+
+------------------------------
+
+Name:    ciborium
+Files:   vendor/ciborium/*
+Authors: Nathaniel McCallum
+License: Apache-2.0
+
+------------------------------
+
+Name:    clap_lex
+Files:   vendor/clap_lex/*
+Authors: 
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    clap
+Files:   vendor/clap/*
+Authors: Kevin K.
+License: MIT
+
+------------------------------
+
+Name:    clap
+Files:   vendor/clap/*
+Authors: 
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    criterion-plot
+Files:   vendor/criterion-plot/*
+Authors: Jorge Aparicio, Brook Heisler
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    criterion
+Files:   vendor/criterion/*
+Authors: Jorge Aparicio, Brook Heisler
+License: Apache-2.0/MIT
+
+------------------------------
+
+Name:    crossbeam-channel
+Files:   vendor/crossbeam-channel/*
+Authors: 
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    crossbeam-deque
+Files:   vendor/crossbeam-deque/*
+Authors: 
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    crossbeam-epoch
+Files:   vendor/crossbeam-epoch/*
+Authors: 
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    crossbeam-utils
+Files:   vendor/crossbeam-utils/*
+Authors: 
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    csv-core
+Files:   vendor/csv-core/*
+Authors: Andrew Gallant
+License: Unlicense/MIT
+
+------------------------------
+
+Name:    csv
+Files:   vendor/csv/*
+Authors: Andrew Gallant
+License: Unlicense/MIT
+
+------------------------------
+
+Name:    darling_core
+Files:   vendor/darling_core/*
+Authors: Ted Driggs
+License: MIT
+
+------------------------------
+
+Name:    darling_core
+Files:   vendor/darling_core/*
+Authors: Ted Driggs
+License: MIT
+
+------------------------------
+
+Name:    darling_macro
+Files:   vendor/darling_macro/*
+Authors: Ted Driggs
+License: MIT
+
+------------------------------
+
+Name:    darling_macro
+Files:   vendor/darling_macro/*
+Authors: Ted Driggs
+License: MIT
+
+------------------------------
+
+Name:    darling
+Files:   vendor/darling/*
+Authors: Ted Driggs
+License: MIT
+
+------------------------------
+
+Name:    darling
+Files:   vendor/darling/*
+Authors: Ted Driggs
+License: MIT
+
+------------------------------
+
+Name:    derive_builder_core
+Files:   vendor/derive_builder_core/*
+Authors: Colin Kiegel, Pascal Hertleif, Jan-Erik Rediger, Ted Driggs
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    derive_builder
+Files:   vendor/derive_builder/*
+Authors: Colin Kiegel, Pascal Hertleif, Jan-Erik Rediger, Ted Driggs
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    derive_more
+Files:   vendor/derive_more/*
+Authors: Jelte Fennema
+License: MIT
+
+------------------------------
+
+Name:    either
+Files:   vendor/either/*
+Authors: bluss
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    errno-dragonfly
+Files:   vendor/errno-dragonfly/*
+Authors: Michael Neumann
+License: MIT
+
+------------------------------
+
+Name:    errno
+Files:   vendor/errno/*
+Authors: Chris Wong
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    fastrand
+Files:   vendor/fastrand/*
+Authors: Stjepan Glavina
+License: Apache-2.0 OR MIT
+
+------------------------------
+
+Name:    fnv
+Files:   vendor/fnv/*
+Authors: Alex Crichton
+License: Apache-2.0 / MIT
+
+------------------------------
+
+Name:    foreign-types-shared
+Files:   vendor/foreign-types-shared/*
+Authors: Steven Fackler
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    foreign-types
+Files:   vendor/foreign-types/*
+Authors: Steven Fackler
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    generic-array
+Files:   vendor/generic-array/*
+Authors: Bartłomiej Kamiński, Aaron Trent
+License: MIT
+
+------------------------------
+
+Name:    getrandom
+Files:   vendor/getrandom/*
+Authors: The Rand Project Developers
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    gmp-mpfr-sys
+Files:   vendor/gmp-mpfr-sys/*
+Authors: 
+License: LGPL-3.0+
+
+------------------------------
+
+Name:    half
+Files:   vendor/half/*
+Authors: Kathryn Long
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    hashbrown
+Files:   vendor/hashbrown/*
+Authors: Amanieu d'Antras
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    heck
+Files:   vendor/heck/*
+Authors: Without Boats
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    hermit-abi
+Files:   vendor/hermit-abi/*
+Authors: Stefan Lankes
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    hermit-abi
+Files:   vendor/hermit-abi/*
+Authors: Stefan Lankes
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    ident_case
+Files:   vendor/ident_case/*
+Authors: Ted Driggs
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    indexmap
+Files:   vendor/indexmap/*
+Authors: 
+License: Apache-2.0 OR MIT
+
+------------------------------
+
+Name:    itertools
+Files:   vendor/itertools/*
+Authors: bluss
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    itoa
+Files:   vendor/itoa/*
+Authors: David Tolnay
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    js-sys
+Files:   vendor/js-sys/*
+Authors: The wasm-bindgen Developers
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    lazy_static
+Files:   vendor/lazy_static/*
+Authors: Marvin Löbel
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    libc
+Files:   vendor/libc/*
+Authors: The Rust Project Developers
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    libm
+Files:   vendor/libm/*
+Authors: Jorge Aparicio
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    linux-raw-sys
+Files:   vendor/linux-raw-sys/*
+Authors: Dan Gohman
+License: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
+
+------------------------------
+
+Name:    log
+Files:   vendor/log/*
+Authors: The Rust Project Developers
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    matrixmultiply
+Files:   vendor/matrixmultiply/*
+Authors: bluss, R. Janis Goldschmidt
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    memchr
+Files:   vendor/memchr/*
+Authors: Andrew Gallant, bluss
+License: Unlicense/MIT
+
+------------------------------
+
+Name:    memoffset
+Files:   vendor/memoffset/*
+Authors: Gilad Naaman
+License: MIT
+
+------------------------------
+
+Name:    nalgebra
+Files:   vendor/nalgebra/*
+Authors: Sébastien Crozet
+License: BSD-3-Clause
+
+------------------------------
+
+Name:    ndarray
+Files:   vendor/ndarray/*
+Authors: bluss, Jim Turner
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    num_cpus
+Files:   vendor/num_cpus/*
+Authors: Sean McArthur
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    num-bigint
+Files:   vendor/num-bigint/*
+Authors: The Rust Project Developers
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    num-complex
+Files:   vendor/num-complex/*
+Authors: The Rust Project Developers
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    num-complex
+Files:   vendor/num-complex/*
+Authors: The Rust Project Developers
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    num-integer
+Files:   vendor/num-integer/*
+Authors: The Rust Project Developers
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    num-iter
+Files:   vendor/num-iter/*
+Authors: The Rust Project Developers
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    num-rational
+Files:   vendor/num-rational/*
+Authors: The Rust Project Developers
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    num-rational
+Files:   vendor/num-rational/*
+Authors: The Rust Project Developers
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    num-traits
+Files:   vendor/num-traits/*
+Authors: The Rust Project Developers
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    num
+Files:   vendor/num/*
+Authors: The Rust Project Developers
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    once_cell
+Files:   vendor/once_cell/*
+Authors: Aleksey Kladov
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    oorandom
+Files:   vendor/oorandom/*
+Authors: Simon Heath
+License: MIT
+
+------------------------------
+
+Name:    opener
+Files:   vendor/opener/*
+Authors: Brian Bowman
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    openssl-macros
+Files:   vendor/openssl-macros/*
+Authors: 
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    openssl-src
+Files:   vendor/openssl-src/*
+Authors: Alex Crichton
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    openssl-sys
+Files:   vendor/openssl-sys/*
+Authors: Alex Crichton, Steven Fackler
+License: MIT
+
+------------------------------
+
+Name:    openssl
+Files:   vendor/openssl/*
+Authors: Steven Fackler
+License: Apache-2.0
+
+------------------------------
+
+Name:    os_str_bytes
+Files:   vendor/os_str_bytes/*
+Authors: dylni
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    pkg-config
+Files:   vendor/pkg-config/*
+Authors: Alex Crichton
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    plotters-backend
+Files:   vendor/plotters-backend/*
+Authors: Hao Hou
+License: MIT
+
+------------------------------
+
+Name:    plotters-svg
+Files:   vendor/plotters-svg/*
+Authors: Hao Hou
+License: MIT
+
+------------------------------
+
+Name:    plotters
+Files:   vendor/plotters/*
+Authors: Hao Hou
+License: MIT
+
+------------------------------
+
+Name:    ppv-lite86
+Files:   vendor/ppv-lite86/*
+Authors: The CryptoCorrosion Contributors
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    proc-macro2
+Files:   vendor/proc-macro2/*
+Authors: David Tolnay, Alex Crichton
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    quote
+Files:   vendor/quote/*
+Authors: David Tolnay
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    rand_chacha
+Files:   vendor/rand_chacha/*
+Authors: The Rand Project Developers, The Rust Project Developers, The CryptoCorrosion Contributors
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    rand_core
+Files:   vendor/rand_core/*
+Authors: The Rand Project Developers, The Rust Project Developers
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    rand_distr
+Files:   vendor/rand_distr/*
+Authors: The Rand Project Developers
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    rand_hc
+Files:   vendor/rand_hc/*
+Authors: The Rand Project Developers
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    rand
+Files:   vendor/rand/*
+Authors: The Rand Project Developers, The Rust Project Developers
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    rawpointer
+Files:   vendor/rawpointer/*
+Authors: bluss
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    rayon-core
+Files:   vendor/rayon-core/*
+Authors: Niko Matsakis, Josh Stone
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    rayon
+Files:   vendor/rayon/*
+Authors: Niko Matsakis, Josh Stone
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    readonly
+Files:   vendor/readonly/*
+Authors: David Tolnay
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    redox_syscall
+Files:   vendor/redox_syscall/*
+Authors: Jeremy Soller
+License: MIT
+
+------------------------------
+
+Name:    regex-automata
+Files:   vendor/regex-automata/*
+Authors: The Rust Project Developers, Andrew Gallant
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    regex-syntax
+Files:   vendor/regex-syntax/*
+Authors: The Rust Project Developers, Andrew Gallant
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    regex
+Files:   vendor/regex/*
+Authors: The Rust Project Developers, Andrew Gallant
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    rug
+Files:   vendor/rug/*
+Authors: 
+License: LGPL-3.0+
+
+------------------------------
+
+Name:    rustix
+Files:   vendor/rustix/*
+Authors: Dan Gohman, Jakub Konka
+License: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
+
+------------------------------
+
+Name:    ryu
+Files:   vendor/ryu/*
+Authors: David Tolnay
+License: Apache-2.0 OR BSL-1.0
+
+------------------------------
+
+Name:    same-file
+Files:   vendor/same-file/*
+Authors: Andrew Gallant
+License: Unlicense/MIT
+
+------------------------------
+
+Name:    scopeguard
+Files:   vendor/scopeguard/*
+Authors: bluss
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    serde_derive
+Files:   vendor/serde_derive/*
+Authors: David Tolnay
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    serde_json
+Files:   vendor/serde_json/*
+Authors: Erick Tryzelaar, David Tolnay
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    serde
+Files:   vendor/serde/*
+Authors: Erick Tryzelaar, David Tolnay
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    showata
+Files:   vendor/showata/*
+Authors: David Bernard
+License: Apache-2.0
+
+------------------------------
+
+Name:    statrs
+Files:   vendor/statrs/*
+Authors: Michael Ma
+License: MIT
+
+------------------------------
+
+Name:    strsim
+Files:   vendor/strsim/*
+Authors: Danny Guo
+License: MIT
+
+------------------------------
+
+Name:    strsim
+Files:   vendor/strsim/*
+Authors: Danny Guo
+License: MIT
+
+------------------------------
+
+Name:    strsim
+Files:   vendor/strsim/*
+Authors: Danny Guo
+License: MIT
+
+------------------------------
+
+Name:    syn
+Files:   vendor/syn/*
+Authors: David Tolnay
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    syn
+Files:   vendor/syn/*
+Authors: David Tolnay
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    tempfile
+Files:   vendor/tempfile/*
+Authors: Steven Allen, The Rust Project Developers, Ashley Mannix, Jason White
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    textwrap
+Files:   vendor/textwrap/*
+Authors: Martin Geisler
+License: MIT
+
+------------------------------
+
+Name:    textwrap
+Files:   vendor/textwrap/*
+Authors: Martin Geisler
+License: MIT
+
+------------------------------
+
+Name:    thiserror-impl
+Files:   vendor/thiserror-impl/*
+Authors: David Tolnay
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    thiserror
+Files:   vendor/thiserror/*
+Authors: David Tolnay
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    tinytemplate
+Files:   vendor/tinytemplate/*
+Authors: Brook Heisler
+License: Apache-2.0 OR MIT
+
+------------------------------
+
+Name:    toml
+Files:   vendor/toml/*
+Authors: Alex Crichton
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    typenum
+Files:   vendor/typenum/*
+Authors: Paho Lurie-Gregg, Andre Bogus
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    unicode-ident
+Files:   vendor/unicode-ident/*
+Authors: David Tolnay
+License: (MIT OR Apache-2.0) AND Unicode-DFS-2016
+
+------------------------------
+
+Name:    unicode-segmentation
+Files:   vendor/unicode-segmentation/*
+Authors: kwantam, Manish Goregaokar
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    unicode-width
+Files:   vendor/unicode-width/*
+Authors: kwantam, Manish Goregaokar
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    vcpkg
+Files:   vendor/vcpkg/*
+Authors: Jim McGrath
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    vec_map
+Files:   vendor/vec_map/*
+Authors: Alex Crichton, Jorge Aparicio, Alexis Beingessner, Brian Anderson <>, tbu- <>, Manish Goregaokar <>, Aaron Turon, Adolfo Ochagavía <>, Niko Matsakis <>, Steven Fackler <>, Chase Southwood, Eduard Burtescu <>, Florian Wilkens <>, Félix Raimundo <>, Tibor Benke <>, Markus Siemens, Josh Branchaud, Huon Wilson, Corey Farwell, Aaron Liblong <>, Nick Cameron, Patrick Walton, Felix S Klock II <>, Andrew Paseltiner, Sean McArthur, Vadim Petrochenkov <>
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    vega_lite_4
+Files:   vendor/vega_lite_4/*
+Authors: David Bernard, François Mockers, Thomas Aubry
+License: Apache-2.0
+
+------------------------------
+
+Name:    walkdir
+Files:   vendor/walkdir/*
+Authors: Andrew Gallant
+License: Unlicense/MIT
+
+------------------------------
+
+Name:    wasi
+Files:   vendor/wasi/*
+Authors: The Cranelift Project Developers
+License: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
+
+------------------------------
+
+Name:    wasm-bindgen-backend
+Files:   vendor/wasm-bindgen-backend/*
+Authors: The wasm-bindgen Developers
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    wasm-bindgen-macro-support
+Files:   vendor/wasm-bindgen-macro-support/*
+Authors: The wasm-bindgen Developers
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    wasm-bindgen-macro
+Files:   vendor/wasm-bindgen-macro/*
+Authors: The wasm-bindgen Developers
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    wasm-bindgen-shared
+Files:   vendor/wasm-bindgen-shared/*
+Authors: The wasm-bindgen Developers
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    wasm-bindgen
+Files:   vendor/wasm-bindgen/*
+Authors: The wasm-bindgen Developers
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    web-sys
+Files:   vendor/web-sys/*
+Authors: The wasm-bindgen Developers
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    winapi-i686-pc-windows-gnu
+Files:   vendor/winapi-i686-pc-windows-gnu/*
+Authors: Peter Atashian
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    winapi-util
+Files:   vendor/winapi-util/*
+Authors: Andrew Gallant
+License: Unlicense/MIT
+
+------------------------------
+
+Name:    winapi-x86_64-pc-windows-gnu
+Files:   vendor/winapi-x86_64-pc-windows-gnu/*
+Authors: Peter Atashian
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    winapi
+Files:   vendor/winapi/*
+Authors: Peter Atashian
+License: MIT/Apache-2.0
+
+------------------------------
+
+Name:    windows_aarch64_gnullvm
+Files:   vendor/windows_aarch64_gnullvm/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows_aarch64_gnullvm
+Files:   vendor/windows_aarch64_gnullvm/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows_aarch64_msvc
+Files:   vendor/windows_aarch64_msvc/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows_aarch64_msvc
+Files:   vendor/windows_aarch64_msvc/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows_i686_gnu
+Files:   vendor/windows_i686_gnu/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows_i686_gnu
+Files:   vendor/windows_i686_gnu/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows_i686_msvc
+Files:   vendor/windows_i686_msvc/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows_i686_msvc
+Files:   vendor/windows_i686_msvc/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows_x86_64_gnu
+Files:   vendor/windows_x86_64_gnu/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows_x86_64_gnu
+Files:   vendor/windows_x86_64_gnu/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows_x86_64_gnullvm
+Files:   vendor/windows_x86_64_gnullvm/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows_x86_64_gnullvm
+Files:   vendor/windows_x86_64_gnullvm/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows_x86_64_msvc
+Files:   vendor/windows_x86_64_msvc/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows_x86_64_msvc
+Files:   vendor/windows_x86_64_msvc/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows-sys
+Files:   vendor/windows-sys/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows-sys
+Files:   vendor/windows-sys/*
+Authors: Microsoft
+License: MIT OR Apache-2.0
+
+------------------------------
+
+Name:    windows-targets
+Files:   vendor/windows-targets/*
+Authors: Microsoft
+License: MIT OR Apache-2.0

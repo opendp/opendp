@@ -1,0 +1,44 @@
+# existence of tar-ed source code indicates that we are building from source
+BEFORE_CARGO_BUILD=''
+AFTER_CARGO_BUILD=''
+
+RUST_FEATURES=untrusted,ffi
+if [ "${OPENDP_USE_SYSTEM_LIBS:-false}" != "false" ]; then
+    RUST_FEATURES="${RUST_FEATURES},use-system-libs"
+fi
+
+# Even when `cargo` is on `PATH`, `rustc` might not. We need to source
+# ~/.cargo/env to ensure PATH is configured correctly in some cases
+# (c.f. yutannihilation/string2path#4). However, this file is not always
+# available (e.g. when Rust is installed via apt on Ubuntu), so it might be
+# more straightforward to add `PATH` directly.
+if [ -e "${HOME}/.cargo/env" ]; then
+    . "${HOME}/.cargo/env"
+    BEFORE_CARGO_BUILD="${BEFORE_CARGO_BUILD} . \"${HOME}/.cargo/env\" \\&\\&"
+fi
+
+# Check the Rust installation, and abort if not available
+"${R_HOME}/bin/Rscript" "./tools/configure.R"
+
+ret=$?
+
+if [ $ret -ne 0 ]; then
+    exit $ret
+fi
+
+# If it's on CRAN, a package is not allowed to write in any other place than the
+# temporary directory on installation. So, we need to tweak Makevars to make the
+# compilation happen only within the package directory (i.e. `$(PWD)`).
+if [ "${NOT_CRAN}" != "true" ]; then
+    BEFORE_CARGO_BUILD="${BEFORE_CARGO_BUILD}"' export CARGO_HOME="$(PWD)/.cargo" \&\&'
+    AFTER_CARGO_BUILD="${AFTER_CARGO_BUILD}"'rm -Rf $(PWD)/.cargo $(LIBDIR)/build;'
+fi
+
+sed \
+    -e "s|@RUST_FEATURES@|${RUST_FEATURES}|" \
+    -e "s|@BEFORE_CARGO_BUILD@|${BEFORE_CARGO_BUILD}|" \
+    -e "s|@AFTER_CARGO_BUILD@|${AFTER_CARGO_BUILD}|" \
+    -e "s|@OPENDP_LIB_DIR@|${OPENDP_LIB_DIR}|" \
+    src/Makevars.in >src/Makevars
+
+# cat src/Makevars

@@ -1,0 +1,14 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index aecd0f1..58514a4 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -35,7 +35,8 @@ version = "0.2.44"
+ default-features = false
+ 
+ [dependencies.gmp-mpfr-sys]
+-version = "~1.2.0"
++path = "../gmp-mpfr-sys-1.2.4"
++version = "=1.2.4"
+ default-features = false
+ optional = true
+ 

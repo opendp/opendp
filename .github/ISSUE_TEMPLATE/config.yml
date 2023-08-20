@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Discussions
+    url: https://github.com/opendp/opendp/discussions/new
+    about: Ask questions, make feature requests, and discuss with other OpenDP community members
+  - name: Blank issue
+    url: https://github.com/opendp/opendp/issues/new
+    about: Just let me make an issue!

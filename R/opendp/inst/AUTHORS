@@ -1,0 +1,567 @@
+The authors of the dependency Rust crates:
+
+aho-corasick (version 1.0.4):
+  Andrew Gallant
+
+alga (version 0.9.3):
+  Brendan Zabarauskas
+  Darin Morrison
+  Sébastien Crozet
+  Wadelma
+
+anes (version 0.1.6):
+  Robert Vojta
+
+ansi_term (version 0.12.1):
+  ogham@bsago.me
+  Ryan Scheel (Havvy)
+  Josh Triplett
+
+anyhow (version 1.0.75):
+  David Tolnay
+
+approx (version 0.3.2):
+  Brendan Zabarauskas
+
+atty (version 0.2.14):
+  softprops
+
+autocfg (version 1.1.0):
+  Josh Stone
+
+az (version 1.2.1):
+  
+
+base64 (version 0.11.0):
+  Alice Maz
+  Marshall Pierce
+
+bitflags (version 1.3.2):
+  The Rust Project Developers
+
+bitflags (version 2.4.0):
+  The Rust Project Developers
+
+bumpalo (version 3.13.0):
+  Nick Fitzgerald
+
+cast (version 0.3.0):
+  Jorge Aparicio
+
+cbindgen (version 0.20.0):
+  Emilio Cobos Álvarez
+  Jeff Muizelaar
+  Kartikaya Gupta
+  Ryan Hunt
+
+cc (version 1.0.82):
+  Alex Crichton
+
+cfg-if (version 1.0.0):
+  Alex Crichton
+
+ciborium-io (version 0.2.1):
+  Nathaniel McCallum
+
+ciborium-ll (version 0.2.1):
+  Nathaniel McCallum
+
+ciborium (version 0.2.1):
+  Nathaniel McCallum
+
+clap_lex (version 0.2.4):
+  
+
+clap (version 2.34.0):
+  Kevin K.
+
+clap (version 3.2.25):
+  
+
+criterion-plot (version 0.5.0):
+  Jorge Aparicio
+  Brook Heisler
+
+criterion (version 0.4.0):
+  Jorge Aparicio
+  Brook Heisler
+
+crossbeam-channel (version 0.5.8):
+  
+
+crossbeam-deque (version 0.8.3):
+  
+
+crossbeam-epoch (version 0.9.15):
+  
+
+crossbeam-utils (version 0.8.16):
+  
+
+csv-core (version 0.1.10):
+  Andrew Gallant
+
+csv (version 1.2.2):
+  Andrew Gallant
+
+darling_core (version 0.10.2):
+  Ted Driggs
+
+darling_core (version 0.14.4):
+  Ted Driggs
+
+darling_macro (version 0.10.2):
+  Ted Driggs
+
+darling_macro (version 0.14.4):
+  Ted Driggs
+
+darling (version 0.10.2):
+  Ted Driggs
+
+darling (version 0.14.4):
+  Ted Driggs
+
+derive_builder_core (version 0.9.0):
+  Colin Kiegel
+  Pascal Hertleif
+  Jan-Erik Rediger
+  Ted Driggs
+
+derive_builder (version 0.9.0):
+  Colin Kiegel
+  Pascal Hertleif
+  Jan-Erik Rediger
+  Ted Driggs
+
+derive_more (version 0.99.17):
+  Jelte Fennema
+
+either (version 1.9.0):
+  bluss
+
+errno-dragonfly (version 0.1.2):
+  Michael Neumann
+
+errno (version 0.3.2):
+  Chris Wong
+
+fastrand (version 2.0.0):
+  Stjepan Glavina
+
+fnv (version 1.0.7):
+  Alex Crichton
+
+foreign-types-shared (version 0.1.1):
+  Steven Fackler
+
+foreign-types (version 0.3.2):
+  Steven Fackler
+
+generic-array (version 0.13.3):
+  Bartłomiej Kamiński
+  Aaron Trent
+
+getrandom (version 0.1.16):
+  The Rand Project Developers
+
+gmp-mpfr-sys (version 1.6.0):
+  
+
+half (version 1.8.2):
+  Kathryn Long
+
+hashbrown (version 0.12.3):
+  Amanieu d'Antras
+
+heck (version 0.3.3):
+  Without Boats
+
+hermit-abi (version 0.1.19):
+  Stefan Lankes
+
+hermit-abi (version 0.3.2):
+  Stefan Lankes
+
+ident_case (version 1.0.1):
+  Ted Driggs
+
+indexmap (version 1.9.3):
+  
+
+itertools (version 0.10.5):
+  bluss
+
+itoa (version 1.0.9):
+  David Tolnay
+
+js-sys (version 0.3.64):
+  The wasm-bindgen Developers
+
+lazy_static (version 1.4.0):
+  Marvin Löbel
+
+libc (version 0.2.147):
+  The Rust Project Developers
+
+libm (version 0.2.7):
+  Jorge Aparicio
+
+linux-raw-sys (version 0.4.5):
+  Dan Gohman
+
+log (version 0.4.20):
+  The Rust Project Developers
+
+matrixmultiply (version 0.2.4):
+  bluss
+  R. Janis Goldschmidt
+
+memchr (version 2.5.0):
+  Andrew Gallant
+  bluss
+
+memoffset (version 0.9.0):
+  Gilad Naaman
+
+nalgebra (version 0.19.0):
+  Sébastien Crozet
+
+ndarray (version 0.14.0):
+  bluss
+  Jim Turner
+
+num_cpus (version 1.16.0):
+  Sean McArthur
+
+num-bigint (version 0.3.3):
+  The Rust Project Developers
+
+num-complex (version 0.2.4):
+  The Rust Project Developers
+
+num-complex (version 0.3.1):
+  The Rust Project Developers
+
+num-integer (version 0.1.45):
+  The Rust Project Developers
+
+num-iter (version 0.1.43):
+  The Rust Project Developers
+
+num-rational (version 0.2.4):
+  The Rust Project Developers
+
+num-rational (version 0.3.2):
+  The Rust Project Developers
+
+num-traits (version 0.2.16):
+  The Rust Project Developers
+
+num (version 0.3.1):
+  The Rust Project Developers
+
+once_cell (version 1.18.0):
+  Aleksey Kladov
+
+oorandom (version 11.1.3):
+  Simon Heath
+
+opener (version 0.4.1):
+  Brian Bowman
+
+openssl-macros (version 0.1.1):
+  
+
+openssl-src (version 111.27.0+1.1.1v):
+  Alex Crichton
+
+openssl-sys (version 0.9.91):
+  Alex Crichton
+  Steven Fackler
+
+openssl (version 0.10.56):
+  Steven Fackler
+
+os_str_bytes (version 6.5.1):
+  dylni
+
+pkg-config (version 0.3.27):
+  Alex Crichton
+
+plotters-backend (version 0.3.5):
+  Hao Hou
+
+plotters-svg (version 0.3.5):
+  Hao Hou
+
+plotters (version 0.3.5):
+  Hao Hou
+
+ppv-lite86 (version 0.2.17):
+  The CryptoCorrosion Contributors
+
+proc-macro2 (version 1.0.66):
+  David Tolnay
+  Alex Crichton
+
+quote (version 1.0.33):
+  David Tolnay
+
+rand_chacha (version 0.2.2):
+  The Rand Project Developers
+  The Rust Project Developers
+  The CryptoCorrosion Contributors
+
+rand_core (version 0.5.1):
+  The Rand Project Developers
+  The Rust Project Developers
+
+rand_distr (version 0.2.2):
+  The Rand Project Developers
+
+rand_hc (version 0.2.0):
+  The Rand Project Developers
+
+rand (version 0.7.3):
+  The Rand Project Developers
+  The Rust Project Developers
+
+rawpointer (version 0.2.1):
+  bluss
+
+rayon-core (version 1.11.0):
+  Niko Matsakis
+  Josh Stone
+
+rayon (version 1.7.0):
+  Niko Matsakis
+  Josh Stone
+
+readonly (version 0.2.11):
+  David Tolnay
+
+redox_syscall (version 0.3.5):
+  Jeremy Soller
+
+regex-automata (version 0.3.6):
+  The Rust Project Developers
+  Andrew Gallant
+
+regex-syntax (version 0.7.4):
+  The Rust Project Developers
+  Andrew Gallant
+
+regex (version 1.9.3):
+  The Rust Project Developers
+  Andrew Gallant
+
+rug (version 1.20.1):
+  
+
+rustix (version 0.38.8):
+  Dan Gohman
+  Jakub Konka
+
+ryu (version 1.0.15):
+  David Tolnay
+
+same-file (version 1.0.6):
+  Andrew Gallant
+
+scopeguard (version 1.2.0):
+  bluss
+
+serde_derive (version 1.0.183):
+  David Tolnay
+
+serde_json (version 1.0.105):
+  Erick Tryzelaar
+  David Tolnay
+
+serde (version 1.0.183):
+  Erick Tryzelaar
+  David Tolnay
+
+showata (version 0.2.0):
+  David Bernard
+
+statrs (version 0.13.0):
+  Michael Ma
+
+strsim (version 0.8.0):
+  Danny Guo
+
+strsim (version 0.9.3):
+  Danny Guo
+
+strsim (version 0.10.0):
+  Danny Guo
+
+syn (version 1.0.109):
+  David Tolnay
+
+syn (version 2.0.29):
+  David Tolnay
+
+tempfile (version 3.8.0):
+  Steven Allen
+  The Rust Project Developers
+  Ashley Mannix
+  Jason White
+
+textwrap (version 0.11.0):
+  Martin Geisler
+
+textwrap (version 0.16.0):
+  Martin Geisler
+
+thiserror-impl (version 1.0.47):
+  David Tolnay
+
+thiserror (version 1.0.47):
+  David Tolnay
+
+tinytemplate (version 1.2.1):
+  Brook Heisler
+
+toml (version 0.5.11):
+  Alex Crichton
+
+typenum (version 1.16.0):
+  Paho Lurie-Gregg
+  Andre Bogus
+
+unicode-ident (version 1.0.11):
+  David Tolnay
+
+unicode-segmentation (version 1.10.1):
+  kwantam
+  Manish Goregaokar
+
+unicode-width (version 0.1.10):
+  kwantam
+  Manish Goregaokar
+
+vcpkg (version 0.2.15):
+  Jim McGrath
+
+vec_map (version 0.8.2):
+  Alex Crichton
+  Jorge Aparicio
+  Alexis Beingessner
+  Brian Anderson <>
+  tbu- <>
+  Manish Goregaokar <>
+  Aaron Turon
+  Adolfo Ochagavía <>
+  Niko Matsakis <>
+  Steven Fackler <>
+  Chase Southwood
+  Eduard Burtescu <>
+  Florian Wilkens <>
+  Félix Raimundo <>
+  Tibor Benke <>
+  Markus Siemens
+  Josh Branchaud
+  Huon Wilson
+  Corey Farwell
+  Aaron Liblong <>
+  Nick Cameron
+  Patrick Walton
+  Felix S Klock II <>
+  Andrew Paseltiner
+  Sean McArthur
+  Vadim Petrochenkov <>
+
+vega_lite_4 (version 0.6.0):
+  David Bernard
+  François Mockers
+  Thomas Aubry
+
+walkdir (version 2.3.3):
+  Andrew Gallant
+
+wasi (version 0.9.0+wasi-snapshot-preview1):
+  The Cranelift Project Developers
+
+wasm-bindgen-backend (version 0.2.87):
+  The wasm-bindgen Developers
+
+wasm-bindgen-macro-support (version 0.2.87):
+  The wasm-bindgen Developers
+
+wasm-bindgen-macro (version 0.2.87):
+  The wasm-bindgen Developers
+
+wasm-bindgen-shared (version 0.2.87):
+  The wasm-bindgen Developers
+
+wasm-bindgen (version 0.2.87):
+  The wasm-bindgen Developers
+
+web-sys (version 0.3.64):
+  The wasm-bindgen Developers
+
+winapi-i686-pc-windows-gnu (version 0.4.0):
+  Peter Atashian
+
+winapi-util (version 0.1.5):
+  Andrew Gallant
+
+winapi-x86_64-pc-windows-gnu (version 0.4.0):
+  Peter Atashian
+
+winapi (version 0.3.9):
+  Peter Atashian
+
+windows_aarch64_gnullvm (version 0.42.2):
+  Microsoft
+
+windows_aarch64_gnullvm (version 0.48.5):
+  Microsoft
+
+windows_aarch64_msvc (version 0.42.2):
+  Microsoft
+
+windows_aarch64_msvc (version 0.48.5):
+  Microsoft
+
+windows_i686_gnu (version 0.42.2):
+  Microsoft
+
+windows_i686_gnu (version 0.48.5):
+  Microsoft
+
+windows_i686_msvc (version 0.42.2):
+  Microsoft
+
+windows_i686_msvc (version 0.48.5):
+  Microsoft
+
+windows_x86_64_gnu (version 0.42.2):
+  Microsoft
+
+windows_x86_64_gnu (version 0.48.5):
+  Microsoft
+
+windows_x86_64_gnullvm (version 0.42.2):
+  Microsoft
+
+windows_x86_64_gnullvm (version 0.48.5):
+  Microsoft
+
+windows_x86_64_msvc (version 0.42.2):
+  Microsoft
+
+windows_x86_64_msvc (version 0.48.5):
+  Microsoft
+
+windows-sys (version 0.42.0):
+  Microsoft
+
+windows-sys (version 0.48.0):
+  Microsoft
+
+windows-targets (version 0.48.5):
+  Microsoft
