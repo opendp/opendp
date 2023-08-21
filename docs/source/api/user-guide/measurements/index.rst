@@ -15,6 +15,7 @@ This means you will need to choose a measurement that chains with your :ref:`agg
 
   additive-noise-mechanisms
   randomized-response
+  tulap
 
 Additive Noise Mechanisms
 -------------------------
@@ -90,6 +91,11 @@ Geometric Noise
 ***************
 The geometric mechanism (:func:`make_geometric <opendp.measurements.make_geometric>`) is an alias for the discrete Laplace (:func:`make_laplace <opendp.measurements.make_laplace>`).
 If you need constant-time execution to protect against timing side-channels, specify bounds!
+
+
+Tulap Noise
+***************
+The Tulap mechanism (:func:`make_geometric <opendp.measurements.make_tulap>`) `is discussed in more detail in the linked notebook <tulap.html>`_
 
 
 Noise Addition with Thresholding
