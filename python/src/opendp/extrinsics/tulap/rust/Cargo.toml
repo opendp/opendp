@@ -1,0 +1,10 @@
+[package]
+name = "opendp"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rug = "1.20.1" # You might want to check https://crates.io/crates/rug for the latest version.
+
