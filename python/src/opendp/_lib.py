@@ -61,6 +61,7 @@ lib, lib_path = _load_library()
 install_names = {
     'sklearn': 'scikit-learn',
     'randomgen': 'numpy',
+    'scipy': 'scikit-learn',
 }
 
 

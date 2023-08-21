@@ -48,6 +48,11 @@ mod randomized_response_bitvec;
 #[cfg(feature = "contrib")]
 pub use randomized_response_bitvec::*;
 
+#[cfg(feature = "contrib")]
+mod tulap;
+#[cfg(feature = "contrib")]
+pub use tulap::*;
+
 #[cfg(all(feature = "floating-point", feature = "contrib"))]
 mod alp;
 #[cfg(all(feature = "floating-point", feature = "contrib"))]

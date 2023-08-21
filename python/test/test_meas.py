@@ -306,3 +306,11 @@ def test_gaussian_threshold_float():
     # 12.5 = (10 / 2)^2 / 2 = (Δ / σ)^2 / 2
     assert meas.map((1, 10, 10)) == (12.5, 1.1102230246251565e-16)
 
+
+def test_tulap():
+    space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    tulap_meas = space >> dp.m.then_tulap(epsilon=1., delta=1e-6)
+
+    assert tulap_meas.map(1.) == (1.0, 1e-6)
+    # just check that it runs
+    assert isinstance(tulap_meas(0.), float)

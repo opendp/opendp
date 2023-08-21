@@ -18,6 +18,9 @@ mod test;
 mod gumbel;
 pub use gumbel::GumbelRV;
 
+mod tulap;
+pub use tulap::TulapRV;
+
 pub trait InverseCDF: Sized {
     /// Type of lower or upper bound on the true random sample.
     type Edge: PartialOrd + Debug;
