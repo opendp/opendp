@@ -808,3 +808,81 @@ then_report_noisy_max_gumbel <- function(
     lhs,
     log)
 }
+
+
+#' tulap constructor
+#'
+#' Make a Measurement that adds noise from the Tulap distribution to the input.
+#'
+#' [make_tulap in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_tulap.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `AtomDomain<f64>`
+#' * Output Type:    `f64`
+#' * Input Metric:   `AbsoluteDistance<f64>`
+#' * Output Measure: `FixedSmoothedMaxDivergence<f64>`
+#'
+#' @concept measurements
+#' @param input_domain Domain of the input.
+#' @param input_metric Metric of the input.
+#' @param epsilon Privacy parameter ε.
+#' @param delta Privacy parameter δ.
+#' @return Measurement
+#' @export
+make_tulap <- function(
+    input_domain,
+    input_metric,
+    epsilon,
+    delta
+) {
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    log <- new_constructor_log("make_tulap", "measurements", new_hashtab(
+        list("input_domain", "input_metric", "epsilon", "delta"),
+        list(input_domain, input_metric, unbox2(epsilon), unbox2(delta))
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = f64, inferred = rt_infer(epsilon))
+    rt_assert_is_similar(expected = f64, inferred = rt_infer(delta))
+
+    # Call wrapper function.
+    output <- .Call(
+        "measurements__make_tulap",
+        input_domain, input_metric, epsilon, delta,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial tulap constructor
+#'
+#' See documentation for [make_tulap()] for details.
+#'
+#' @concept measurements
+#' @param lhs The prior transformation or metric space.
+#' @param epsilon Privacy parameter ε.
+#' @param delta Privacy parameter δ.
+#' @return Measurement
+#' @export
+then_tulap <- function(
+    lhs,
+    epsilon,
+    delta
+) {
+
+    log <- new_constructor_log("then_tulap", "measurements", new_hashtab(
+        list("epsilon", "delta"),
+        list(unbox2(epsilon), unbox2(delta))
+    ))
+
+    make_chain_dyn(
+        make_tulap(
+            output_domain(lhs),
+            output_metric(lhs),
+            epsilon = epsilon,
+            delta = delta),
+        lhs,
+        log)
+}

@@ -48,6 +48,11 @@ mod randomized_response;
 #[cfg(feature = "contrib")]
 pub use randomized_response::*;
 
+#[cfg(feature = "contrib")]
+mod tulap;
+#[cfg(feature = "contrib")]
+pub use tulap::*;
+
 #[cfg(all(feature = "floating-point", feature = "contrib"))]
 mod alp;
 #[cfg(all(feature = "floating-point", feature = "contrib"))]

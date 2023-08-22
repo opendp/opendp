@@ -80,6 +80,7 @@ static R_CMethodDef R_CDef[] = {
     {"measurements__make_randomized_response", (DL_FUNC) &measurements__make_randomized_response, 7},
     {"measurements__make_randomized_response_bool", (DL_FUNC) &measurements__make_randomized_response_bool, 4},
     {"measurements__make_report_noisy_max_gumbel", (DL_FUNC) &measurements__make_report_noisy_max_gumbel, 6},
+    {"measurements__make_tulap", (DL_FUNC) &measurements__make_tulap, 5},
     {"measures__fixed_smoothed_max_divergence", (DL_FUNC) &measures__fixed_smoothed_max_divergence, 2},
     {"measures__max_divergence", (DL_FUNC) &measures__max_divergence, 2},
     {"measures__measure_debug", (DL_FUNC) &measures__measure_debug, 2},

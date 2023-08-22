@@ -910,6 +910,11 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_respons
                                                                                   const char *T,
                                                                                   const char *QO);
 
+struct FfiResult_____AnyMeasurement opendp_measurements__make_tulap(const struct AnyDomain *input_domain,
+                                                                    const struct AnyMetric *input_metric,
+                                                                    double epsilon,
+                                                                    double delta);
+
 struct FfiResult_____AnyMeasurement opendp_measurements__make_alp_queryable(const struct AnyDomain *input_domain,
                                                                             const struct AnyMetric *input_metric,
                                                                             const void *scale,

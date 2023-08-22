@@ -76,6 +76,7 @@ SEXP measurements__make_laplace_threshold(SEXP input_domain, SEXP input_metric, 
 SEXP measurements__make_randomized_response(SEXP categories, SEXP prob, SEXP constant_time, SEXP T, SEXP QO, SEXP T_categories, SEXP log);
 SEXP measurements__make_randomized_response_bool(SEXP prob, SEXP constant_time, SEXP QO, SEXP log);
 SEXP measurements__make_report_noisy_max_gumbel(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP optimize, SEXP QO, SEXP log);
+SEXP measurements__make_tulap(SEXP input_domain, SEXP input_metric, SEXP epsilon, SEXP delta, SEXP log);
 SEXP measures__fixed_smoothed_max_divergence(SEXP T, SEXP log);
 SEXP measures__max_divergence(SEXP T, SEXP log);
 SEXP measures__measure_debug(SEXP this, SEXP log);
