@@ -31,6 +31,7 @@ __all__ = [
     "make_randomized_response",
     "make_randomized_response_bool",
     "make_report_noisy_max_gumbel",
+    "make_tulap",
     "make_user_measurement",
     "then_alp_queryable",
     "then_gaussian",
@@ -40,6 +41,7 @@ __all__ = [
     "then_private_expr",
     "then_private_lazyframe",
     "then_report_noisy_max_gumbel",
+    "then_tulap",
     "then_user_measurement"
 ]
 
@@ -911,6 +913,76 @@ def then_report_noisy_max_gumbel(
         scale=scale,
         optimize=optimize,
         QO=QO))
+
+
+
+def make_tulap(
+    input_domain: Domain,
+    input_metric: Metric,
+    epsilon: float,
+    delta: float
+) -> Measurement:
+    r"""Make a Measurement that adds noise from the Tulap distribution to the input.
+
+    [make_tulap in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_tulap.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `AtomDomain<f64>`
+    * Output Type:    `f64`
+    * Input Metric:   `AbsoluteDistance<f64>`
+    * Output Measure: `FixedSmoothedMaxDivergence<f64>`
+
+    :param input_domain: Domain of the input.
+    :type input_domain: Domain
+    :param input_metric: Metric of the input.
+    :type input_metric: Metric
+    :param epsilon: Privacy parameter ε.
+    :type epsilon: float
+    :param delta: Privacy parameter δ.
+    :type delta: float
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_epsilon = py_to_c(epsilon, c_type=ctypes.c_double, type_name=f64)
+    c_delta = py_to_c(delta, c_type=ctypes.c_double, type_name=f64)
+
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_tulap
+    lib_function.argtypes = [Domain, Metric, ctypes.c_double, ctypes.c_double]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_epsilon, c_delta), Measurement))
+
+    return output
+
+def then_tulap(
+    epsilon: float,
+    delta: float
+):  
+    r"""partial constructor of make_tulap
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_tulap`
+
+    :param epsilon: Privacy parameter ε.
+    :type epsilon: float
+    :param delta: Privacy parameter δ.
+    :type delta: float
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_tulap(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        epsilon=epsilon,
+        delta=delta))
 
 
 
