@@ -8,10 +8,13 @@ use super::UniformPSRN;
 // TODO: make sure the implementation is still correct! Hope I didn't break anything
 //       make sure the inverse tulap is done in a way where the rounding direction is always preserved!
 //       fix tests
+//       is there a clean way to do this with b and q instead of epsilon and delta?
 //       pack into a constructor! (Mike)
 //       remove tulap sampler from Python side
 // 
 //       update the proof to reflect this new implementation (if still correct)
+//           - decide on b and q vs epsilon and delta
+//               - I think scale and b are the same thing? But the pseudocode takes b and scale instead of scale and q?
 //           - update pseudocode
 //
 
@@ -19,6 +22,7 @@ use super::UniformPSRN;
 pub struct TulapPSRN {
     // b: Float, // b = exp(-eps), geom(p = 1 - b) - geom(p = 1 - b) ~ laplace(1 / eps)  ??
     // q: Float,
+    shift: Rational,
     epsilon: Float,
     delta: Float,
     uniform: UniformPSRN,
@@ -26,8 +30,9 @@ pub struct TulapPSRN {
 }
 
 impl TulapPSRN {
-    pub fn new(epsilon: Float, delta: Float) -> Self {
+    pub fn new(shift: Rational, epsilon: Float, delta: Float) -> Self {
         TulapPSRN {
+            shift,
             epsilon,
             delta,
             uniform: UniformPSRN::default(),
@@ -42,7 +47,7 @@ impl TulapPSRN {
             let tulap = self.inverse_tulap(uniform, round);
 
             if let Ok(value) = Rational::try_from(tulap) {
-                return Ok(value);
+                return Ok(value + &self.shift);
             } else {
                 self.refine()?;
             }
@@ -101,10 +106,11 @@ mod tests {
     #[test]
     fn test_value_calculation() {
         // Choose appropriate epsilon, delta, and alpha for your use case
+        let shift = Rational::from((0, 1));
         let epsilon = Float::with_val(52, 0.5);
         let delta = Float::with_val(52, 0.25);
 
-        let mut psrn = TulapPSRN::new(epsilon, delta);
+        let mut psrn = TulapPSRN::new(shift, epsilon, delta);
 
         // Ensure the value is within expected bounds.
         // This depends on your domain-specific expectations for Tulap.
@@ -114,10 +120,11 @@ mod tests {
 
     #[test]
     fn test_refining_behavior() {
+        let shift = Rational::from((0, 1));
         let epsilon = Float::with_val(52, 0.5);
         let delta = Float::with_val(52, 0.25);
 
-        let mut psrn = TulapPSRN::new(epsilon, delta);
+        let mut psrn = TulapPSRN::new(shift, epsilon, delta);
         assert_eq!(psrn.precision, 1);
 
         psrn.refine().unwrap();
