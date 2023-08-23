@@ -124,6 +124,9 @@ class RuntimeType(object):
         if self.args:
             result += f'<{", ".join(map(str, self.args))}>'
         return result
+    
+    def __hash__(self) -> int:
+        return hash(str(self))
 
     @classmethod
     def parse(cls, type_name: RuntimeTypeDescriptor, generics: List[str] = None) -> Union["RuntimeType", str]:
@@ -271,19 +274,19 @@ class RuntimeType(object):
         if isinstance(public_example, tuple):
             return RuntimeType('Tuple', [cls.infer(e, py_object) for e in public_example])
 
-        if isinstance(public_example, list):
-            if public_example:
-                inner_type = cls.infer(public_example[0], py_object=py_object)
-                for inner in public_example:
-                    other_type = cls.infer(inner, py_object)
-                    if inner_type == "ExtrinsicObject":
-                        break
-                    if other_type != inner_type:
-                        raise TypeError(f"vectors must be homogeneously typed, found {inner_type} and {other_type}")
-            else:
-                inner_type = UnknownType("cannot infer atomic type of empty list")
+        def infer_homogeneous(value):
+            types = {cls.infer(v, py_object=py_object) for v in value}
 
-            return RuntimeType('Vec', [inner_type])
+            if len(types) == 0:
+                return UnknownType("cannot infer atomic type when empty")
+            if len(types) == 1:
+                return next(iter(types))
+            if py_object:
+                return "ExtrinsicObject"
+            raise TypeError(f"elements must be homogeneously typed. Found {types}")
+        
+        if isinstance(public_example, list):
+            return RuntimeType('Vec', [infer_homogeneous(public_example)])
 
         if np is not None and isinstance(public_example, np.ndarray):
             if public_example.ndim == 0:
@@ -299,8 +302,8 @@ class RuntimeType(object):
 
         if isinstance(public_example, dict):
             return RuntimeType('HashMap', [
-                cls.infer(next(iter(public_example.keys()))),
-                cls.infer(next(iter(public_example.values())), py_object=py_object)
+                infer_homogeneous(public_example.keys()),
+                infer_homogeneous(public_example.values())
             ])
 
         if isinstance(public_example, Measurement):
