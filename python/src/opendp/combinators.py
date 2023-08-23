@@ -51,7 +51,7 @@ def make_basic_composition(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_measurements), Measurement))
-    output._depends_on(get_dependencies_iterable(measurements))
+    set_dependencies(output, get_dependencies_iterable(measurements))
     return output
 
 
@@ -87,7 +87,7 @@ def make_chain_mt(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_measurement1, c_transformation0), Measurement))
-    output._depends_on(get_dependencies(measurement1), get_dependencies(transformation0))
+    set_dependencies(output, get_dependencies(measurement1), get_dependencies(transformation0))
     return output
 
 
@@ -124,7 +124,7 @@ def make_chain_pm(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_postprocess1, c_measurement0), Measurement))
-    output._depends_on(get_dependencies(postprocess1), get_dependencies(measurement0))
+    set_dependencies(output, get_dependencies(postprocess1), get_dependencies(measurement0))
     return output
 
 
@@ -160,7 +160,7 @@ def make_chain_tt(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_transformation1, c_transformation0), Transformation))
-    output._depends_on(get_dependencies(transformation1), get_dependencies(transformation0))
+    set_dependencies(output, get_dependencies(transformation1), get_dependencies(transformation0))
     return output
 
 
@@ -195,7 +195,7 @@ def make_fix_delta(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_measurement, c_delta), Measurement))
-    output._depends_on(get_dependencies(measurement))
+    set_dependencies(output, get_dependencies(measurement))
     return output
 
 
@@ -237,7 +237,7 @@ def make_population_amplification(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_measurement, c_population_size), Measurement))
-    output._depends_on(get_dependencies(measurement))
+    set_dependencies(output, get_dependencies(measurement))
     return output
 
 
@@ -383,5 +383,5 @@ def make_zCDP_to_approxDP(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_measurement), Measurement))
-    output._depends_on(get_dependencies(measurement))
+    set_dependencies(output, get_dependencies(measurement))
     return output

@@ -468,7 +468,8 @@ pub extern "C" fn opendp_core__measurement_check(
     arguments(
         this(rust_type = b"null"),
         arg(rust_type = "$measurement_input_carrier_type(this)")
-    )
+    ),
+    dependencies("arg")
 )]
 /// Invoke the `measurement` with `arg`. Returns a differentially private release.
 ///
@@ -501,7 +502,8 @@ pub extern "C" fn opendp_core___measurement_free(this: *mut AnyMeasurement) -> F
     arguments(
         this(rust_type = b"null"),
         arg(rust_type = "$transformation_input_carrier_type(this)")
-    )
+    ),
+    dependencies("arg")
 )]
 /// Invoke the `transformation` with `arg`. Returns a differentially private release.
 ///
@@ -698,7 +700,8 @@ pub extern "C" fn opendp_core__new_function(
         this(rust_type = b"null"),
         arg(rust_type = "$parse_or_infer(TI, arg)"),
         TI(rust_type = b"null", default = b"null"),
-    )
+    ),
+    dependencies("arg")
 )]
 /// Eval the `function` with `arg`.
 ///
@@ -734,7 +737,8 @@ pub extern "C" fn opendp_core___function_free(this: *mut AnyFunction) -> FfiResu
     arguments(
         queryable(rust_type = b"null"),
         query(rust_type = "$queryable_query_type(queryable)")
-    )
+    ),
+    dependencies("query")
 )]
 /// Invoke the `queryable` with `query`. Returns a differentially private release.
 ///
