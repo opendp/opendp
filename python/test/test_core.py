@@ -242,3 +242,39 @@ def test_extrinsic_free():
     qbl(query)
 
     # this test will pass if Queryable extends the lifetime of [] by holding a reference to it
+
+
+
+def test_user_metric():
+    from datetime import datetime, timedelta
+
+    # create custom transformation
+    trans = dp.t.make_user_transformation(
+        dp.vector_domain(dp.user_domain("datetimes", lambda x: isinstance(x, datetime))),
+        dp.user_metric("sum of millisecond distances"),
+        dp.atom_domain(T=float),
+        dp.absolute_distance(T=float),
+        lambda arg: sum(datetime.timestamp(x) for x in arg),
+        lambda d_in: d_in.total_seconds() * 1000
+    )
+
+    data = [datetime.now(), datetime.now()]
+    assert trans(data) == sum(datetime.timestamp(x) for x in data)
+
+    d_in = timedelta(days=2.4, seconds=45.2)
+    assert trans.map(d_in) == d_in.total_seconds() * 1000
+
+
+    # create custom measurement
+    meas = dp.m.make_user_measurement(
+        dp.atom_domain(T=float),
+        dp.absolute_distance(T=float),
+        dp.user_measure("tCDP"),
+        lambda _: 0.,
+        # clearly not actually tCDP
+        lambda d_in: lambda omega: d_in * omega * 2,
+        TO="ExtrinsicObject"
+    )
+
+    assert meas(2.) == 0.
+    assert meas.map(2.)(3.) == 12.

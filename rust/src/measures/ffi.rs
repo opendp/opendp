@@ -151,39 +151,39 @@ pub extern "C" fn opendp_measures__zero_concentrated_divergence(
 
 
 #[derive(Clone, Default)]
-pub struct ExtrinsicMeasure {
+pub struct UserMeasure {
     pub descriptor: String,
 }
 
-impl std::fmt::Debug for ExtrinsicMeasure {
+impl std::fmt::Debug for UserMeasure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ExtrinsicMeasure({:?})", self.descriptor)
+        write!(f, "UserMeasure({:?})", self.descriptor)
     }
 }
 
-impl PartialEq for ExtrinsicMeasure {
+impl PartialEq for UserMeasure {
     fn eq(&self, other: &Self) -> bool {
         self.descriptor == other.descriptor
     }
 }
 
-impl Measure for ExtrinsicMeasure {
+impl Measure for UserMeasure {
     type Distance = ExtrinsicObject;
 }
 
 #[bootstrap(
-    name = "extrinsic_measure",
+    name = "user_measure",
     arguments(descriptor(rust_type = "String"))
 )]
-/// Construct a new ExtrinsicMeasure.
-/// Any two instances of an ExtrinsicMeasure are equal if their string descriptors are equal.
+/// Construct a new UserMeasure.
+/// Any two instances of an UserMeasure are equal if their string descriptors are equal.
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the privacy measure.
 #[no_mangle]
-pub extern "C" fn opendp_measures__extrinsic_measure(
+pub extern "C" fn opendp_measures__user_measure(
     descriptor: *mut c_char,
 ) -> FfiResult<*mut AnyMeasure> {
     let descriptor = try_!(to_str(descriptor)).to_string();
-    Ok(AnyMeasure::new(ExtrinsicMeasure { descriptor })).into()
+    Ok(AnyMeasure::new(UserMeasure { descriptor })).into()
 }
