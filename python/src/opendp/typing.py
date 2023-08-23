@@ -343,54 +343,6 @@ class RuntimeType(object):
             return cls.infer(public_example)
         raise UnknownTypeException("either type_name or public_example must be passed")
 
-    @classmethod
-    def assert_is_similar(cls, expected, inferred):
-        """Assert that `inferred` is a member of the same equivalence class as `parsed`.
-
-        :param expected: the type that the data will be converted to
-        :param inferred: the type inferred from data
-        :raises TypeError: if `expected` type differs significantly from `inferred` type
-        """
-
-        ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
-        if isinstance(inferred, UnknownType):
-            return
-        
-        if expected == "ExtrinsicObject":
-            return
-        
-        # allow extra flexibility around options, as the inferred type of an Option::<T>::Some will just be T
-        def is_option(type_name):
-            return isinstance(type_name, RuntimeType) and type_name.origin == "Option"
-        if is_option(expected):
-            expected = expected.args[0]
-            if is_option(inferred):
-                if isinstance(inferred.args[0], UnknownType):
-                    return
-                else:
-                    inferred = inferred.args[0]
-
-        if isinstance(expected, str) and isinstance(inferred, str):
-            if inferred in ATOM_EQUIVALENCE_CLASSES:
-                if expected not in ATOM_EQUIVALENCE_CLASSES[inferred]:
-                    raise TypeError(f"inferred type is {inferred}, expected {expected}. See {ERROR_URL_298}")
-            else:
-                if expected != inferred:
-                    raise TypeError(f"inferred type is {inferred}, expected {expected}. See {ERROR_URL_298}")
-
-        elif isinstance(expected, RuntimeType) and isinstance(inferred, RuntimeType):
-            if expected.origin != inferred.origin:
-                raise TypeError(f"inferred type is {inferred.origin}, expected {expected.origin}. See {ERROR_URL_298}")
-
-            if len(expected.args) != len(inferred.args):
-                raise TypeError(f"inferred type has {len(inferred.args)} arg(s), expected {len(expected.args)} arg(s). See {ERROR_URL_298}")
-
-            for (arg_par, arg_inf) in zip(expected.args, inferred.args):
-                RuntimeType.assert_is_similar(arg_par, arg_inf)
-        else:
-            # inferred type differs in structure
-            raise TypeError(f"inferred type is {inferred}, expected {expected}. See {ERROR_URL_298}")
-
     def substitute(self, **kwargs):
         if isinstance(self, GenericType):
             return kwargs.get(self.origin, self)
@@ -406,7 +358,7 @@ class GenericType(RuntimeType):
 
 class UnknownType(RuntimeType):
     """Indicator for a type that cannot be inferred. Typically the atomic type of an empty list.
-    RuntimeTypes containing UnknownType cannot be used in FFI, but still pass RuntimeType.assert_is_similar
+    RuntimeTypes containing UnknownType cannot be used in FFI
     """
     def __init__(self, reason):
         self.origin = None

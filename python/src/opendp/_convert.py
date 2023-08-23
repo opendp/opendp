@@ -1,7 +1,6 @@
 from typing import Sequence, Tuple, List, Union, Dict
 
 from opendp._lib import *
-
 from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
 from opendp.typing import RuntimeType, Vec
 
@@ -40,6 +39,24 @@ INT_SIZES = {
         'u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64', 'usize',
     )
 }
+_ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
+
+def check_similar_scalar(expected, value):
+    if expected == "ExtrinsicObject":
+        return
+    
+    inferred = RuntimeType.infer(value)
+    
+    if inferred in ATOM_EQUIVALENCE_CLASSES:
+        if expected not in ATOM_EQUIVALENCE_CLASSES[inferred]:
+            raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
+    else:
+        if expected != inferred:
+            raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
+
+    if expected in INT_SIZES:
+        check_c_int_cast(value, expected)
+
 
 def check_c_int_cast(v, type_name):
     lower, upper = INT_SIZES[type_name]
@@ -70,8 +87,6 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
 
     # check that the type name is consistent with the value
     if type_name is not None:
-        RuntimeType.assert_is_similar(RuntimeType.parse(type_name), RuntimeType.infer(value, py_object=True))
-
         # exit early with a null pointer if trying to load an Option type with a None value
         if isinstance(type_name, RuntimeType) and type_name.origin == "Option":
             if value is None:
@@ -82,9 +97,9 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
         assert type_name is not None
 
         rust_type = str(type_name)
+        check_similar_scalar(rust_type, value)
+
         if rust_type in ATOM_MAP:
-            if rust_type in INT_SIZES:
-                check_c_int_cast(value, rust_type)
             return ctypes.byref(ATOM_MAP[rust_type](value))
 
         if rust_type == "String":
@@ -219,8 +234,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
     if np is not None and isinstance(val, np.ndarray):
         val = val.item()
-    if type_name in INT_SIZES:
-        check_c_int_cast(val, type_name)
+    check_similar_scalar(type_name, val)
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     return _wrap_in_slice(ctypes.pointer(ATOM_MAP[type_name](val)), 1)
 
@@ -240,23 +254,15 @@ def _slice_to_string(raw: FfiSlicePtr) -> str:
 
 
 def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
-    assert type_name.origin == 'Vec'
-    assert len(type_name.args) == 1, "Vec only has one generic argument"
-    inner_type_name = type_name.args[0]
-
-    # input is numpy array
+    # when input is numpy array
     # TODO: can we use the underlying buffer directly?
     if np is not None and isinstance(val, np.ndarray):
         val = val.tolist()
 
     if not isinstance(val, list):
-        raise TypeError(f"Cannot cast a non-list type to a vector")
+        raise TypeError(f"Expected type is {type_name} but input data is not a list.")
 
-    if inner_type_name == "String":
-        def str_to_slice(val):
-            return ctypes.c_char_p(val.encode())
-        array = (ctypes.c_char_p * len(val))(*map(str_to_slice, val))
-        return _wrap_in_slice(array, len(val))
+    inner_type_name = type_name.args[0]
 
     if isinstance(inner_type_name, RuntimeType):
         c_repr = [py_to_c(v, c_type=AnyObjectPtr, type_name=inner_type_name) for v in val]
@@ -265,18 +271,17 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         ffislice.depends_on(*c_repr)
         return ffislice
 
+    for v in val:
+        check_similar_scalar(inner_type_name, v)
+
+    if inner_type_name == "String":
+        def str_to_slice(val):
+            return ctypes.c_char_p(val.encode())
+        array = (ctypes.c_char_p * len(val))(*map(str_to_slice, val))
+        return _wrap_in_slice(array, len(val))
+
     if inner_type_name not in ATOM_MAP:
         raise TypeError(f"Members must be one of {tuple(ATOM_MAP.keys())}. Found {inner_type_name}.")
-
-    if val:
-        # check that actual type can be represented by the inner_type_name
-        equivalence_class = ATOM_EQUIVALENCE_CLASSES[str(RuntimeType.infer(val[0], py_object=inner_type_name == "ExtrinsicObject"))]
-        if inner_type_name not in equivalence_class:
-            raise TypeError("Data cannot be represented by the suggested type_name")
-
-    if inner_type_name in INT_SIZES:
-        for elem in val:
-            check_c_int_cast(elem, inner_type_name)
 
     array = (ATOM_MAP[inner_type_name] * len(val))(*val)
     return _wrap_in_slice(array, len(val))
@@ -325,12 +330,7 @@ def _tuple_to_slice(val: Tuple[Any, ...], type_name: RuntimeType) -> FfiSlicePtr
 
     # check that actual type can be represented by the inner_type_name
     for v, inner_type_name in zip(val, inner_type_names):
-        equivalence_class = ATOM_EQUIVALENCE_CLASSES[str(RuntimeType.infer(v))]
-        if inner_type_name not in equivalence_class:
-            raise TypeError("Data cannot be represented by the suggested type_name")
-        
-        if inner_type_name in INT_SIZES:
-            check_c_int_cast(v, inner_type_name)
+        check_similar_scalar(inner_type_name, v)
     
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     ptr_data = (ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p)
@@ -353,6 +353,13 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> Tuple[Any, ...]
 
 def _hashmap_to_slice(val: Dict[Any, Any], type_name: RuntimeType) -> FfiSlicePtr:
     key_type, val_type = type_name.args
+    if not isinstance(val, dict):
+        raise TypeError(f"Expected type is {type_name} but input data is not a dict.")
+
+    for k, v in val.items():
+        check_similar_scalar(key_type, k)
+        check_similar_scalar(val_type, v)
+    
     keys: AnyObjectPtr = py_to_c(list(val.keys()), type_name=Vec[key_type], c_type=AnyObjectPtr)
     vals: AnyObjectPtr = py_to_c(list(val.values()), type_name=Vec[val_type], c_type=AnyObjectPtr)
     ffislice = _wrap_in_slice(ctypes.pointer((AnyObjectPtr * 2)(keys, vals)), 2)
