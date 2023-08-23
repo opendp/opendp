@@ -76,16 +76,16 @@ def test_sequential_composition_approxdp():
 
 def test_udf_queryable():
     def transition(query, _is_internal):
-        print("inside transition", query)
+        assert query == 2
         return query + 1
     qbl = dp.new_user_queryable(transition, int, int)
-    print("after transition", qbl(2))
+    assert qbl(2) == 3
 
     def transition(query, _is_internal):
-        print("inside transition", query)
+        assert query == [2, 3]
         return query[-1]
     qbl = dp.new_user_queryable(transition, "Vec<i32>", int)
-    print("after transition", qbl([2, 3]))
+    assert qbl([2, 3]) == 3
 
     def transition(_query, _is_internal):
         raise ValueError("test clean stack trace")

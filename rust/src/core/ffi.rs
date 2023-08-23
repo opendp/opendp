@@ -775,7 +775,7 @@ pub extern "C" fn opendp_core__queryable_query_type(
 type TransitionFn = extern "C" fn(*const AnyObject, c_bool) -> *mut FfiResult<*mut AnyObject>;
 
 // wrap a TransitionFn in a closure, so that it can be used in Queryables
-fn wrap_trans(
+fn wrap_transition(
     transition: TransitionFn,
     Q: Type
 ) -> impl FnMut(&AnyQueryable, Query<AnyObject>) -> Fallible<Answer<AnyObject>> {
@@ -833,7 +833,7 @@ pub extern "C" fn opendp_core__new_user_queryable(
     let Q = try_!(Type::try_from(Q));
     let _A = A;
     FfiResult::Ok(util::into_raw(AnyObject::new(try_!(Queryable::new(
-        wrap_trans(transition, Q)
+        wrap_transition(transition, Q)
     )))))
 }
 
