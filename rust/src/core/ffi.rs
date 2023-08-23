@@ -13,6 +13,7 @@ use crate::ffi::any::{
 };
 use crate::ffi::util::into_c_char_p;
 use crate::ffi::util::{self, c_bool, Type};
+use crate::interactive::{Queryable, Query, Answer};
 use crate::{try_, try_as_ref};
 
 use super::Function;
@@ -768,6 +769,72 @@ pub extern "C" fn opendp_core__queryable_query_type(
     let this = try_!(this.downcast_mut::<AnyQueryable>());
     let answer: Type = try_!(this.eval_internal(&QueryType));
     FfiResult::Ok(try_!(into_c_char_p(answer.descriptor.to_string())))
+}
+
+
+type TransitionFn = extern "C" fn(*const AnyObject, c_bool) -> *mut FfiResult<*mut AnyObject>;
+
+// wrap a TransitionFn in a closure, so that it can be used in Queryables
+fn wrap_trans(
+    transition: TransitionFn,
+    Q: Type
+) -> impl FnMut(&AnyQueryable, Query<AnyObject>) -> Fallible<Answer<AnyObject>> {
+    fn eval(transition: &TransitionFn, q: &AnyObject, is_internal: bool) -> Fallible<AnyObject> {
+        util::into_owned(transition(
+            q as *const AnyObject,
+            util::from_bool(is_internal),
+        ))?
+        .into()
+    }
+
+    move |_self: &AnyQueryable, arg: Query<AnyObject>| -> Fallible<Answer<AnyObject>> {
+        Ok(match arg {
+            Query::External(q) => Answer::External(eval(&transition, q, false)?),
+            Query::Internal(q) => {
+                if q.downcast_ref::<QueryType>().is_some() {
+                    return Ok(Answer::internal(Q.clone()));
+                }
+                let q = q
+                    .downcast_ref::<AnyObject>()
+                    .ok_or_else(|| err!(FFI, "failed to downcast internal query to AnyObject"))?;
+
+                Answer::Internal(Box::new(eval(&transition, q, true)?))
+            }
+        })
+    }
+}
+
+#[bootstrap(
+    name = "new_user_queryable",
+    features("contrib"),
+    arguments(transition(rust_type = "$pass_through(A)")),
+    dependencies("c_transition")
+)]
+/// Construct a queryable from a user-defined transition function.
+///
+/// # Arguments
+/// * `transition` - A transition function taking a reference to self, a query, and an internal/external indicator
+///
+/// # Generics
+/// * `Q` - Query Type
+/// * `A` - Output Type
+#[allow(dead_code)]
+fn new_user_queryable<Q, A>(transition: TransitionFn) -> Fallible<AnyObject> {
+    let _ = transition;
+    panic!("this signature only exists for code generation")
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__new_user_queryable(
+    transition: TransitionFn,
+    Q: *const c_char,
+    A: *const c_char,
+) -> FfiResult<*mut AnyObject> {
+    let Q = try_!(Type::try_from(Q));
+    let _A = A;
+    FfiResult::Ok(util::into_raw(AnyObject::new(try_!(Queryable::new(
+        wrap_trans(transition, Q)
+    )))))
 }
 
 #[cfg(test)]

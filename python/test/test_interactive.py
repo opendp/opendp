@@ -78,18 +78,18 @@ def test_udf_queryable():
     def transition(query, _is_internal):
         print("inside transition", query)
         return query + 1
-    qbl = dp.c.new_user_queryable(transition, int, int)
+    qbl = dp.new_user_queryable(transition, int, int)
     print("after transition", qbl(2))
 
     def transition(query, _is_internal):
         print("inside transition", query)
         return query[-1]
-    qbl = dp.c.new_user_queryable(transition, "Vec<i32>", int)
+    qbl = dp.new_user_queryable(transition, "Vec<i32>", int)
     print("after transition", qbl([2, 3]))
 
     def transition(_query, _is_internal):
         raise ValueError("test clean stack trace")
-    qbl = dp.c.new_user_queryable(transition, "Vec<i32>", int)
+    qbl = dp.new_user_queryable(transition, "Vec<i32>", int)
 
     with pytest.raises(dp.OpenDPException):
         qbl([2, 3])
