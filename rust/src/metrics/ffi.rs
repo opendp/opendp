@@ -218,6 +218,7 @@ impl Metric for UserMetric {
 
 #[bootstrap(
     name = "user_metric",
+    features("honest-but-curious"),
     arguments(descriptor(rust_type = "String"))
 )]
 /// Construct a new UserMetric.

@@ -173,6 +173,7 @@ impl Measure for UserMeasure {
 
 #[bootstrap(
     name = "user_measure",
+    features("honest-but-curious"),
     arguments(descriptor(rust_type = "String"))
 )]
 /// Construct a new UserMeasure.
