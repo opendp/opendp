@@ -309,7 +309,26 @@ pub extern "C" fn opendp_domains__map_domain(
     }.into()
 }
 
-pub type ExtrinsicObject = *const c_void;
+pub type RefCountFn = extern "C" fn(*const c_void, bool) -> bool;
+
+#[repr(C)]
+pub struct ExtrinsicObject {
+    pub(crate) ptr: *const c_void,
+    pub(crate) count: RefCountFn,
+}
+
+impl Clone for ExtrinsicObject {
+    fn clone(&self) -> Self {
+        (self.count)(self.ptr, true);
+        Self { ptr: self.ptr.clone(), count: self.count.clone() }
+    }
+}
+
+impl Drop for ExtrinsicObject {
+    fn drop(&mut self) {
+        (self.count)(self.ptr, false);
+    }
+}
 
 #[derive(Clone)]
 pub struct ExtrinsicDomain {
@@ -356,7 +375,7 @@ pub extern "C" fn opendp_domains__extrinsic_domain(
 ) -> FfiResult<*mut AnyDomain> {
     let descriptor = try_!(to_str(descriptor)).to_string();
     let func = move |arg: &ExtrinsicObject| -> Fallible<AnyObject> {
-        let res = member(AnyObject::new_raw(*arg));
+        let res = member(AnyObject::new_raw(arg.clone()));
         util::into_owned(res)?.into()
     };
     let member = Function::new_fallible(move |arg: &ExtrinsicObject| -> Fallible<bool> {

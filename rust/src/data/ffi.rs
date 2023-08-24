@@ -63,12 +63,6 @@ pub extern "C" fn opendp_data__slice_as_object(
         let string = util::to_str(raw.ptr as *const c_char)?.to_owned();
         Ok(AnyObject::new(string))
     }
-    fn raw_to_extrinsic_object(raw: &FfiSlice) -> Fallible<AnyObject> {
-        // don't use util::into_owned, as it will free the pointer (which we don't own)
-        let extrinsic_object = util::as_ref(raw.ptr as *mut ExtrinsicObject)
-            .ok_or_else(|| err!(FFI, "attempted to consume a null pointer"))?;
-        Ok(AnyObject::new(*extrinsic_object))
-    }
     fn raw_to_vec_string(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_char, raw.len) };
         let vec = slice
@@ -142,7 +136,7 @@ pub extern "C" fn opendp_data__slice_as_object(
     }
     match T.contents {
         TypeContents::PLAIN("String") => raw_to_string(raw),
-        TypeContents::PLAIN("ExtrinsicObject") => raw_to_extrinsic_object(raw),
+        TypeContents::PLAIN("ExtrinsicObject") => raw_to_plain::<ExtrinsicObject>(raw),
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(&element_id));
             dispatch!(raw_to_slice, [(element, @primitives)], (raw))
@@ -240,10 +234,6 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             string.len() + 1,
         ))
     }
-    fn extrinsic_object_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let py_object = *obj.downcast_ref::<ExtrinsicObject>()?;
-        Ok(FfiSlice::new(util::into_raw(py_object) as *mut c_void, 1))
-    }
     fn vec_string_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
         let vec_str: &Vec<String> = obj.downcast_ref()?;
         let vec = vec_str
@@ -293,7 +283,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         TypeContents::PLAIN("String") => {
             string_to_raw(obj)
         }
-        TypeContents::PLAIN("ExtrinsicObject") => extrinsic_object_to_raw(obj),
+        TypeContents::PLAIN("ExtrinsicObject") => plain_to_raw::<ExtrinsicObject>(obj),
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(element_id));
             dispatch!(slice_to_raw, [(element, @primitives)], (obj))

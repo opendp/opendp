@@ -166,6 +166,13 @@ class FfiResult(ctypes.Structure):
     ]
 
 
+class ExtrinsicObject(ctypes.Structure):
+    _fields_ = [
+        ("ptr", ctypes.py_object),
+        ("count", ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.py_object, ctypes.c_bool))
+    ]
+
+
 # def _str_to_c_char_p(s: Optional[str]) -> Optional[bytes]:
 #     return s and s.encode("utf-8")
 def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
