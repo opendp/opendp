@@ -124,6 +124,9 @@ class RuntimeType(object):
         if self.args:
             result += f'<{", ".join(map(str, self.args))}>'
         return result
+    
+    def __hash__(self) -> int:
+        return hash(str(self))
 
     @classmethod
     def parse(cls, type_name: RuntimeTypeDescriptor, generics: List[str] = None) -> Union["RuntimeType", str]:
@@ -245,10 +248,11 @@ class RuntimeType(object):
         return [cls.parse(v, generics=generics) for v in re.split(r",\s*(?![^()<>]*\))", args)]
 
     @classmethod
-    def infer(cls, public_example: Any) -> Union["RuntimeType", str]:
+    def infer(cls, public_example: Any, py_object=False) -> Union["RuntimeType", str]:
         """Infer the normalized type from a public example.
 
         :param public_example: data used to infer the type
+        :param py_object: return "ExtrinsicObject" when type not recognized, instead of error
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
         :raises UnknownTypeException: if inference fails on `public_example`
@@ -268,23 +272,25 @@ class RuntimeType(object):
             return RuntimeType.parse(public_example.type)
 
         if isinstance(public_example, tuple):
-            return RuntimeType('Tuple', list(map(cls.infer, public_example)))
+            return RuntimeType('Tuple', [cls.infer(e, py_object) for e in public_example])
 
+        def infer_homogeneous(value):
+            types = {cls.infer(v, py_object=py_object) for v in value}
+
+            if len(types) == 0:
+                return UnknownType("cannot infer atomic type when empty")
+            if len(types) == 1:
+                return next(iter(types))
+            if py_object:
+                return "ExtrinsicObject"
+            raise TypeError(f"elements must be homogeneously typed. Found {types}")
+        
         if isinstance(public_example, list):
-            if public_example:
-                inner_type = cls.infer(public_example[0])
-                for inner in public_example[1:]:
-                    other_type = cls.infer(inner)
-                    if other_type != inner_type:
-                        raise TypeError(f"vectors must be homogeneously typed, found {inner_type} and {other_type}")
-            else:
-                inner_type = UnknownType("cannot infer atomic type of empty list")
-
-            return RuntimeType('Vec', [inner_type])
+            return RuntimeType('Vec', [infer_homogeneous(public_example)])
 
         if np is not None and isinstance(public_example, np.ndarray):
             if public_example.ndim == 0:
-                return cls.infer(public_example.item())
+                return cls.infer(public_example.item(), py_object)
 
             if public_example.ndim == 1:
                 inner_type = ELEMENTARY_TYPES.get(public_example.dtype.type)
@@ -296,8 +302,8 @@ class RuntimeType(object):
 
         if isinstance(public_example, dict):
             return RuntimeType('HashMap', [
-                cls.infer(next(iter(public_example.keys()))),
-                cls.infer(next(iter(public_example.values())))
+                infer_homogeneous(public_example.keys()),
+                infer_homogeneous(public_example.values())
             ])
 
         if isinstance(public_example, Measurement):
@@ -312,6 +318,8 @@ class RuntimeType(object):
         if callable(public_example):
             return "CallbackFn"
 
+        if py_object:
+            return "ExtrinsicObject"
         raise UnknownTypeException(type(public_example))
 
     @classmethod
@@ -338,51 +346,6 @@ class RuntimeType(object):
             return cls.infer(public_example)
         raise UnknownTypeException("either type_name or public_example must be passed")
 
-    @classmethod
-    def assert_is_similar(cls, expected, inferred):
-        """Assert that `inferred` is a member of the same equivalence class as `parsed`.
-
-        :param expected: the type that the data will be converted to
-        :param inferred: the type inferred from data
-        :raises TypeError: if `expected` type differs significantly from `inferred` type
-        """
-
-        ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
-        if isinstance(inferred, UnknownType):
-            return
-        
-        # allow extra flexibility around options, as the inferred type of an Option::<T>::Some will just be T
-        def is_option(type_name):
-            return isinstance(type_name, RuntimeType) and type_name.origin == "Option"
-        if is_option(expected):
-            expected = expected.args[0]
-            if is_option(inferred):
-                if isinstance(inferred.args[0], UnknownType):
-                    return
-                else:
-                    inferred = inferred.args[0]
-
-        if isinstance(expected, str) and isinstance(inferred, str):
-            if inferred in ATOM_EQUIVALENCE_CLASSES:
-                if expected not in ATOM_EQUIVALENCE_CLASSES[inferred]:
-                    raise TypeError(f"inferred type is {inferred}, expected {expected}. See {ERROR_URL_298}")
-            else:
-                if expected != inferred:
-                    raise TypeError(f"inferred type is {inferred}, expected {expected}. See {ERROR_URL_298}")
-
-        elif isinstance(expected, RuntimeType) and isinstance(inferred, RuntimeType):
-            if expected.origin != inferred.origin:
-                raise TypeError(f"inferred type is {inferred.origin}, expected {expected.origin}. See {ERROR_URL_298}")
-
-            if len(expected.args) != len(inferred.args):
-                raise TypeError(f"inferred type has {len(inferred.args)} arg(s), expected {len(expected.args)} arg(s). See {ERROR_URL_298}")
-
-            for (arg_par, arg_inf) in zip(expected.args, inferred.args):
-                RuntimeType.assert_is_similar(arg_par, arg_inf)
-        else:
-            # inferred type differs in structure
-            raise TypeError(f"inferred type is {inferred}, expected {expected}. See {ERROR_URL_298}")
-
     def substitute(self, **kwargs):
         if isinstance(self, GenericType):
             return kwargs.get(self.origin, self)
@@ -398,7 +361,7 @@ class GenericType(RuntimeType):
 
 class UnknownType(RuntimeType):
     """Indicator for a type that cannot be inferred. Typically the atomic type of an empty list.
-    RuntimeTypes containing UnknownType cannot be used in FFI, but still pass RuntimeType.assert_is_similar
+    RuntimeTypes containing UnknownType cannot be used in FFI
     """
     def __init__(self, reason):
         self.origin = None

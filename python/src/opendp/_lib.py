@@ -13,6 +13,7 @@ ATOM_EQUIVALENCE_CLASSES = {
     'bool': ['bool'],
     'AnyMeasurementPtr': ['AnyMeasurementPtr', 'AnyMeasurement'],
     'AnyTransformationPtr': ['AnyTransformationPtr'],
+    'ExtrinsicObject': ['ExtrinsicObject']
 }
 
 
@@ -162,6 +163,13 @@ class FfiResult(ctypes.Structure):
     _fields_ = [
         ("tag", ctypes.c_uint32),
         ("payload", FfiResultPayload),
+    ]
+
+
+class ExtrinsicObject(ctypes.Structure):
+    _fields_ = [
+        ("ptr", ctypes.py_object),
+        ("count", ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.py_object, ctypes.c_bool))
     ]
 
 
