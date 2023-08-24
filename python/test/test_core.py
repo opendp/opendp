@@ -245,13 +245,13 @@ def test_extrinsic_free():
 
 
 
-def test_user_metric():
+def test_user_distance():
     from datetime import datetime, timedelta
 
     # create custom transformation
     trans = dp.t.make_user_transformation(
         dp.vector_domain(dp.user_domain("datetimes", lambda x: isinstance(x, datetime))),
-        dp.user_metric("sum of millisecond distances"),
+        dp.user_distance("sum of millisecond distances"),
         dp.atom_domain(T=float),
         dp.absolute_distance(T=float),
         lambda arg: sum(datetime.timestamp(x) for x in arg),
@@ -269,7 +269,7 @@ def test_user_metric():
     meas = dp.m.make_user_measurement(
         dp.atom_domain(T=float),
         dp.absolute_distance(T=float),
-        dp.user_measure("tCDP"),
+        dp.user_divergence("tCDP"),
         lambda _: 0.,
         # clearly not actually tCDP
         lambda d_in: lambda omega: d_in * omega * 2,

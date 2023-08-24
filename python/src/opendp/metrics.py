@@ -18,7 +18,7 @@ __all__ = [
     "metric_distance_type",
     "metric_type",
     "symmetric_distance",
-    "user_metric"
+    "user_distance"
 ]
 
 
@@ -379,13 +379,13 @@ def symmetric_distance(
 
 
 @versioned
-def user_metric(
+def user_distance(
     descriptor: str
 ):
-    """Construct a new UserMetric.
-    Any two instances of an UserMetric are equal if their string descriptors are equal.
+    """Construct a new UserDistance.
+    Any two instances of an UserDistance are equal if their string descriptors are equal.
     
-    [user_metric in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.user_metric.html)
+    [user_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.user_distance.html)
     
     :param descriptor: A string description of the metric.
     :type descriptor: str
@@ -400,7 +400,7 @@ def user_metric(
     c_descriptor = py_to_c(descriptor, c_type=ctypes.c_char_p, type_name=String)
     
     # Call library function.
-    lib_function = lib.opendp_metrics__user_metric
+    lib_function = lib.opendp_metrics__user_distance
     lib_function.argtypes = [ctypes.c_char_p]
     lib_function.restype = FfiResult
     

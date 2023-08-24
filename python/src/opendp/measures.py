@@ -222,8 +222,8 @@ def smoothed_max_divergence(
 def user_measure(
     descriptor: str
 ):
-    """Construct a new UserMeasure.
-    Any two instances of an UserMeasure are equal if their string descriptors are equal.
+    """Construct a new UserDivergence.
+    Any two instances of an UserDivergence are equal if their string descriptors are equal.
     
     [user_measure in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.user_measure.html)
     

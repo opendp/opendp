@@ -196,40 +196,40 @@ pub extern "C" fn opendp_metrics__linf_diff_distance(
     )
 }
 #[derive(Clone, Default)]
-pub struct UserMetric {
+pub struct UserDistance {
     pub descriptor: String,
 }
 
-impl std::fmt::Debug for UserMetric {
+impl std::fmt::Debug for UserDistance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "UserMetric({:?})", self.descriptor)
+        write!(f, "UserDistance({:?})", self.descriptor)
     }
 }
 
-impl PartialEq for UserMetric {
+impl PartialEq for UserDistance {
     fn eq(&self, other: &Self) -> bool {
         self.descriptor == other.descriptor
     }
 }
 
-impl Metric for UserMetric {
+impl Metric for UserDistance {
     type Distance = ExtrinsicObject;
 }
 
 #[bootstrap(
-    name = "user_metric",
+    name = "user_distance",
     features("honest-but-curious"),
     arguments(descriptor(rust_type = "String"))
 )]
-/// Construct a new UserMetric.
-/// Any two instances of an UserMetric are equal if their string descriptors are equal.
+/// Construct a new UserDistance.
+/// Any two instances of an UserDistance are equal if their string descriptors are equal.
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the metric.
 #[no_mangle]
-pub extern "C" fn opendp_metrics__user_metric(
+pub extern "C" fn opendp_metrics__user_distance(
     descriptor: *mut c_char,
 ) -> FfiResult<*mut AnyMetric> {
     let descriptor = try_!(to_str(descriptor)).to_string();
-    Ok(AnyMetric::new(UserMetric { descriptor })).into()
+    Ok(AnyMetric::new(UserDistance { descriptor })).into()
 }
