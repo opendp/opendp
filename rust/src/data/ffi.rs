@@ -10,10 +10,9 @@ use opendp_derive::bootstrap;
 
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;
-use crate::domains::ffi::ExtrinsicObject;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
-use crate::ffi::util::{self, into_c_char_p};
+use crate::ffi::util::{self, into_c_char_p, ExtrinsicObject};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 use crate::measures::SMDCurve;
 use crate::traits::samplers::Shuffle;

@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_void};
+use std::ffi::c_char;
 
 use opendp_derive::bootstrap;
 
@@ -8,7 +8,7 @@ use crate::{
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyObject, Downcast, CallbackFn},
-        util::{self, c_bool, into_c_char_p, Type, TypeContents, to_str},
+        util::{self, c_bool, into_c_char_p, Type, TypeContents, to_str, ExtrinsicObject},
     },
     traits::{CheckAtom, Float, Hashable, Integer, Primitive},
 };
@@ -309,26 +309,6 @@ pub extern "C" fn opendp_domains__map_domain(
     }.into()
 }
 
-pub type RefCountFn = extern "C" fn(*const c_void, bool) -> bool;
-
-#[repr(C)]
-pub struct ExtrinsicObject {
-    pub(crate) ptr: *const c_void,
-    pub(crate) count: RefCountFn,
-}
-
-impl Clone for ExtrinsicObject {
-    fn clone(&self) -> Self {
-        (self.count)(self.ptr, true);
-        Self { ptr: self.ptr.clone(), count: self.count.clone() }
-    }
-}
-
-impl Drop for ExtrinsicObject {
-    fn drop(&mut self) {
-        (self.count)(self.ptr, false);
-    }
-}
 
 #[derive(Clone)]
 pub struct ExtrinsicDomain {
