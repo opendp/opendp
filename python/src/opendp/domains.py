@@ -196,7 +196,7 @@ def extrinsic_domain(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_descriptor, c_member), Domain))
-    set_dependencies(output, c_member)
+    output._depends_on(c_member)
     return output
 
 

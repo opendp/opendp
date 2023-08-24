@@ -184,7 +184,7 @@ def function_eval(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_this, c_arg, c_TI), AnyObjectPtr))
-    set_dependencies(output, arg)
+    
     return output
 
 
@@ -397,7 +397,7 @@ def measurement_invoke(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_this, c_arg), AnyObjectPtr))
-    set_dependencies(output, arg)
+    
     return output
 
 
@@ -524,7 +524,7 @@ def new_function(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_function, c_TO), Function))
-    set_dependencies(output, c_function)
+    output._depends_on(c_function)
     return output
 
 
@@ -565,7 +565,7 @@ def new_user_queryable(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_transition, c_Q, c_A), AnyObjectPtr))
-    set_dependencies(output, c_transition)
+    output._depends_on(c_transition)
     return output
 
 
@@ -598,7 +598,7 @@ def queryable_eval(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_queryable, c_query), AnyObjectPtr))
-    set_dependencies(output, query)
+    
     return output
 
 
@@ -840,7 +840,7 @@ def transformation_invoke(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_this, c_arg), AnyObjectPtr))
-    set_dependencies(output, arg)
+    
     return output
 
 

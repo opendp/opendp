@@ -1087,7 +1087,7 @@ def make_user_measurement(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_function, c_privacy_map, c_TO), Measurement))
-    set_dependencies(output, c_function, c_privacy_map)
+    output._depends_on(c_function, c_privacy_map)
     return output
 
 def then_user_measurement(

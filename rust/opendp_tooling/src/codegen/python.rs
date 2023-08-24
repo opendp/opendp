@@ -488,6 +488,6 @@ fn set_dependencies(dependencies: &Vec<TypeRecipe>) -> String {
             .map(|dep| dep.to_python())
             .collect::<Vec<String>>()
             .join(", ");
-        format!("set_dependencies(output, {dependencies})")
+        format!("output._depends_on({dependencies})")
     }
 }

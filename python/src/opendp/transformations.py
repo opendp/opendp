@@ -3072,7 +3072,7 @@ def make_user_transformation(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_domain, c_output_metric, c_function, c_stability_map), Transformation))
-    set_dependencies(output, c_function, c_stability_map)
+    output._depends_on(c_function, c_stability_map)
     return output
 
 

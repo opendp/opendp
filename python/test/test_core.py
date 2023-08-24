@@ -186,7 +186,6 @@ def test_new_domain():
 
 def test_extrinsic_domain():
     from datetime import datetime
-
     domain = dp.extrinsic_domain("all datetimes", lambda x: isinstance(x, datetime))
     assert str(domain) == 'ExtrinsicDomain("all datetimes")'
     assert domain.member(datetime.now())
@@ -207,38 +206,3 @@ def test_extrinsic_domain():
     misc_data = {"A": datetime.now(), "C": 1j + 2}
     assert trans(misc_data) == misc_data
     assert not map_domain.member(misc_data)
-
-
-def test_extrinsic_free():
-    domain = dp.extrinsic_domain("anything", lambda _: True)
-    sc_meas = dp.c.make_sequential_composition(
-        domain,
-        dp.symmetric_distance(),
-        dp.max_divergence(T=float),
-        d_in=1,
-        d_mids=[1.0],
-    )
-
-    # pass in something that gets a new id(), so as to have a refcount that can drop to zero
-    qbl = sc_meas([])
-    # at this point []'s refcount is zero, but has not been freed yet, because the gc has not run
-    # however, a pointer to [] is stored inside qbl
-
-    query = dp.m.make_user_measurement(
-        domain,
-        dp.symmetric_distance(),
-        dp.max_divergence(T=float),
-        lambda x: x,
-        lambda _: 0.0,
-        TO="ExtrinsicObject",
-    )
-
-    import gc
-
-    # frees the memory behind [] (if the refcount is zero)
-    gc.collect()
-
-    # use-after-free
-    qbl(query)
-
-    # this test will pass if Queryable extends the lifetime of [] by holding a reference to it

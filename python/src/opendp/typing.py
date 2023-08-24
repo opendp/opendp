@@ -447,11 +447,6 @@ MapDomain = DomainDescriptor('MapDomain')
 OptionDomain = DomainDescriptor('OptionDomain')
 
 
-def set_dependencies(value, *dependencies):
-    if hasattr(value, "_depends_on"):
-        value._depends_on(dependencies)
-
-
 def get_atom(type_name):
     type_name = RuntimeType.parse(type_name)
     while isinstance(type_name, RuntimeType):
