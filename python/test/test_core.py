@@ -184,10 +184,11 @@ def test_new_domain():
     assert not not_null_domain.member(float("nan"))
 
 
-def test_extrinsic_domain():
+def test_user_domain():
     from datetime import datetime
-    domain = dp.extrinsic_domain("all datetimes", lambda x: isinstance(x, datetime))
-    assert str(domain) == 'ExtrinsicDomain("all datetimes")'
+
+    domain = dp.user_domain("all datetimes", lambda x: isinstance(x, datetime))
+    assert str(domain) == 'UserDomain("all datetimes")'
     assert domain.member(datetime.now())
     assert not domain.member("A")
 
@@ -209,7 +210,7 @@ def test_extrinsic_domain():
 
 
 def test_extrinsic_free():
-    domain = dp.extrinsic_domain("anything", lambda _: True)
+    domain = dp.user_domain("anything", lambda _: True)
     sc_meas = dp.c.make_sequential_composition(
         domain,
         dp.symmetric_distance(),

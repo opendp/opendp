@@ -90,7 +90,8 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
             type_name = type_name.args[0]
 
     if c_type == ctypes.c_void_p:
-        assert type_name is not None
+        if type_name is None:
+            raise ValueError("type_name must be known")
 
         rust_type = str(type_name)
         check_similar_scalar(rust_type, value)
@@ -108,7 +109,8 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
         return slice_as_object(value, type_name)
 
     if c_type == FfiSlicePtr:
-        assert type_name is not None
+        if type_name is None:
+            raise ValueError("type_name must be known")
         return _py_to_slice(value, type_name)
 
     if isinstance(value, RuntimeType):
@@ -274,6 +276,10 @@ def _slice_to_string(raw: FfiSlicePtr) -> str:
 
 
 def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
+    if type_name.origin != 'Vec' or len(type_name.args) != 1:
+        raise ValueError("type_name must be a Vec<_>")
+
+    inner_type_name = type_name.args[0]
     # when input is numpy array
     # TODO: can we use the underlying buffer directly?
     if np is not None and isinstance(val, np.ndarray):
@@ -315,8 +321,9 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
 
 
 def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> List[Any]:
-    assert type_name.origin == 'Vec'
-    assert len(type_name.args) == 1, "Vec only has one generic argument"
+    if type_name.origin != 'Vec' or len(type_name.args) != 1:
+        raise ValueError("type_name must be a Vec<_>")
+    
     inner_type_name = type_name.args[0]
 
     if inner_type_name == 'AnyObject':

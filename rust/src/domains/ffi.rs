@@ -247,12 +247,12 @@ pub extern "C" fn opendp_domains__vector_domain(
         };
         Ok(AnyDomain::new(vector_domain))
     }
-    fn monomorphize_extrinsic_domain(
-        extrinsic_domain: &AnyDomain,
+    fn monomorphize_user_domain(
+        user_domain: &AnyDomain,
         size: *const AnyObject,
     ) -> Fallible<AnyDomain> {
-        let extrinsic_domain = extrinsic_domain.downcast_ref::<ExtrinsicDomain>()?.clone();
-        let mut vector_domain = VectorDomain::new(extrinsic_domain);
+        let user_domain = user_domain.downcast_ref::<UserDomain>()?.clone();
+        let mut vector_domain = VectorDomain::new(user_domain);
         if let Some(size) = util::as_ref(size) {
             vector_domain = vector_domain.with_size(*try_!(size.downcast_ref::<i32>()) as usize)
         };
@@ -263,8 +263,8 @@ pub extern "C" fn opendp_domains__vector_domain(
     match atom_domain.type_.contents {
         TypeContents::GENERIC { name: "AtomDomain", .. } => 
             dispatch!(monomorphize_all, [(atom_domain.carrier_type, @primitives)], (atom_domain, size)),
-        TypeContents::PLAIN("ExtrinsicDomain") => monomorphize_extrinsic_domain(atom_domain, size),
-        _ => fallible!(FFI, "VectorDomain constructor only supports AtomDomain or ExtrinsicDomain inner domains")
+        TypeContents::PLAIN("UserDomain") => monomorphize_user_domain(atom_domain, size),
+        _ => fallible!(FFI, "VectorDomain constructor only supports AtomDomain or UserDomain inner domains")
     }.into()
 }
 
@@ -293,7 +293,7 @@ pub extern "C" fn opendp_domains__map_domain(
         value_domain: &AnyDomain,
     ) -> Fallible<AnyDomain> {
         let key_domain = key_domain.downcast_ref::<AtomDomain<K>>()?.clone();
-        let value_domain = value_domain.downcast_ref::<ExtrinsicDomain>()?.clone();
+        let value_domain = value_domain.downcast_ref::<UserDomain>()?.clone();
         let map_domain = MapDomain::new(key_domain, value_domain);
         Ok(AnyDomain::new(map_domain))
     }
@@ -303,32 +303,32 @@ pub extern "C" fn opendp_domains__map_domain(
     match (&key_domain.type_.contents, &value_domain.type_.contents) {
         (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::GENERIC { name: "AtomDomain", .. }) => 
             dispatch!(monomorphize, [(key_domain.carrier_type, @hashable), (value_domain.carrier_type, @primitives)], (key_domain, value_domain)),
-        (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::PLAIN("ExtrinsicDomain")) => 
+        (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::PLAIN("UserDomain")) => 
             dispatch!(monomorphize_extrinsic, [(key_domain.carrier_type, @hashable)], (key_domain, value_domain)),
-        _ => fallible!(FFI, "MapDomain constructor only supports AtomDomain or ExtrinsicDomain inner domains")
+        _ => fallible!(FFI, "MapDomain constructor only supports AtomDomain or UserDomain inner domains")
     }.into()
 }
 
 
 #[derive(Clone)]
-pub struct ExtrinsicDomain {
+pub struct UserDomain {
     pub descriptor: String,
     pub member: Function<ExtrinsicObject, bool>,
 }
 
-impl std::fmt::Debug for ExtrinsicDomain {
+impl std::fmt::Debug for UserDomain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ExtrinsicDomain({:?})", self.descriptor)
+        write!(f, "UserDomain({:?})", self.descriptor)
     }
 }
 
-impl PartialEq for ExtrinsicDomain {
+impl PartialEq for UserDomain {
     fn eq(&self, other: &Self) -> bool {
         self.descriptor == other.descriptor
     }
 }
 
-impl Domain for ExtrinsicDomain {
+impl Domain for UserDomain {
     type Carrier = ExtrinsicObject;
 
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
@@ -337,20 +337,20 @@ impl Domain for ExtrinsicDomain {
 }
 
 #[bootstrap(
-    name = "extrinsic_domain",
+    name = "user_domain",
     features("honest-but-curious"),
     arguments(descriptor(rust_type = "String"), member(rust_type = "bool")),
     dependencies("c_member")
 )]
-/// Construct a new ExtrinsicDomain.
-/// Any two instances of an ExtrinsicDomain are equal if their string descriptors are equal.
+/// Construct a new UserDomain.
+/// Any two instances of an UserDomain are equal if their string descriptors are equal.
 /// Contains a function used to check if any value is a member of the domain.
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the data domain.
 /// * `member` - A function used to test if a value is a member of the data domain.
 #[no_mangle]
-pub extern "C" fn opendp_domains__extrinsic_domain(
+pub extern "C" fn opendp_domains__user_domain(
     descriptor: *mut c_char,
     member: CallbackFn,
 ) -> FfiResult<*mut AnyDomain> {
@@ -363,5 +363,5 @@ pub extern "C" fn opendp_domains__extrinsic_domain(
         (func)(arg)?.downcast::<bool>()
     });
 
-    Ok(AnyDomain::new(ExtrinsicDomain { descriptor, member })).into()
+    Ok(AnyDomain::new(UserDomain { descriptor, member })).into()
 }
