@@ -3,10 +3,10 @@ use std::ffi::c_char;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::FfiResult,
+    core::{FfiResult, Metric},
     ffi::{
         any::AnyMetric,
-        util::{self, into_c_char_p, Type},
+        util::{self, into_c_char_p, to_str, Type, ExtrinsicObject},
     },
     metrics::{AbsoluteDistance, L1Distance, L2Distance},
 };
@@ -194,4 +194,42 @@ pub extern "C" fn opendp_metrics__linf_diff_distance(
         [(T, [u32, u64, i32, i64, usize, f32, f64])],
         ()
     )
+}
+#[derive(Clone, Default)]
+pub struct UserDistance {
+    pub descriptor: String,
+}
+
+impl std::fmt::Debug for UserDistance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "UserDistance({:?})", self.descriptor)
+    }
+}
+
+impl PartialEq for UserDistance {
+    fn eq(&self, other: &Self) -> bool {
+        self.descriptor == other.descriptor
+    }
+}
+
+impl Metric for UserDistance {
+    type Distance = ExtrinsicObject;
+}
+
+#[bootstrap(
+    name = "user_distance",
+    features("honest-but-curious"),
+    arguments(descriptor(rust_type = "String"))
+)]
+/// Construct a new UserDistance.
+/// Any two instances of an UserDistance are equal if their string descriptors are equal.
+///
+/// # Arguments
+/// * `descriptor` - A string description of the metric.
+#[no_mangle]
+pub extern "C" fn opendp_metrics__user_distance(
+    descriptor: *mut c_char,
+) -> FfiResult<*mut AnyMetric> {
+    let descriptor = try_!(to_str(descriptor)).to_string();
+    Ok(AnyMetric::new(UserDistance { descriptor })).into()
 }
