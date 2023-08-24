@@ -338,6 +338,7 @@ impl Domain for ExtrinsicDomain {
 
 #[bootstrap(
     name = "extrinsic_domain",
+    features("honest-but-curious"),
     arguments(descriptor(rust_type = "String"), member(rust_type = "bool")),
     dependencies("c_member")
 )]

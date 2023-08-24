@@ -185,6 +185,8 @@ def extrinsic_domain(
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("honest-but-curious")
+    
     # No type arguments to standardize.
     # Convert arguments to c types.
     c_descriptor = py_to_c(descriptor, c_type=ctypes.c_char_p, type_name=String)
