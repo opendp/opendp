@@ -372,6 +372,10 @@ class Queryable(object):
 
     def __str__(self):
         return f"Queryable(Q={self.query_type})"
+
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
         
 
 class Function(ctypes.POINTER(AnyFunction)):
