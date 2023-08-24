@@ -12,7 +12,7 @@ __all__ = [
     "measure_distance_type",
     "measure_type",
     "smoothed_max_divergence",
-    "user_measure",
+    "user_divergence",
     "zero_concentrated_divergence"
 ]
 
@@ -219,13 +219,13 @@ def smoothed_max_divergence(
 
 
 @versioned
-def user_measure(
+def user_divergence(
     descriptor: str
 ):
     """Construct a new UserDivergence.
     Any two instances of an UserDivergence are equal if their string descriptors are equal.
     
-    [user_measure in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.user_measure.html)
+    [user_divergence in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.user_divergence.html)
     
     :param descriptor: A string description of the privacy measure.
     :type descriptor: str
@@ -240,7 +240,7 @@ def user_measure(
     c_descriptor = py_to_c(descriptor, c_type=ctypes.c_char_p, type_name=String)
     
     # Call library function.
-    lib_function = lib.opendp_measures__user_measure
+    lib_function = lib.opendp_measures__user_divergence
     lib_function.argtypes = [ctypes.c_char_p]
     lib_function.restype = FfiResult
     

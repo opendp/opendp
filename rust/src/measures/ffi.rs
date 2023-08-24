@@ -172,7 +172,7 @@ impl Measure for UserDivergence {
 }
 
 #[bootstrap(
-    name = "user_measure",
+    name = "user_divergence",
     features("honest-but-curious"),
     arguments(descriptor(rust_type = "String"))
 )]
