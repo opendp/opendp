@@ -360,7 +360,6 @@ jobs:
           name: packages
         
       - name: Publish GitHub Release
-        if: ${{ inputs.channel == 'stable' }}
         env:
           DRAFT_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
         run: |
