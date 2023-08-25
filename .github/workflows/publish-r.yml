@@ -220,14 +220,18 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Download libs
+      - name: Download binaries
         uses: actions/download-artifact@v2
         with:
           name: libs
-          path: binary
-  
+          path: libs
+
       - name: Binary tar
-        run: bash tools/r_stage.sh -b
+        run: |
+          ls libs
+          mkdir -p binary/
+          mv libs/target/release/libopendp.a binary/
+          bash tools/r_stage.sh -b
       
       - name: Source tar
         run: bash tools/r_stage.sh -s
@@ -267,8 +271,8 @@ jobs:
         run: |
           ls libs
           mkdir -p binary/x86_64 binary/arm64
-          mv libs/x86_64-apple-darwin/release/libopendp.a binary/x86_64
-          mv libs/aarch64-apple-darwin/release/libopendp.a binary/arm64
+          mv libs/target/x86_64-apple-darwin/release/libopendp.a binary/x86_64
+          mv libs/target/aarch64-apple-darwin/release/libopendp.a binary/arm64
           bash tools/r_stage.sh -b
       
       - name: Source tar
@@ -309,8 +313,8 @@ jobs:
         run: |
           ls libs
           mkdir -p binary/x86_64 binary/aarch64
-          mv libs/x86_64-unknown-linux-gnu/release/libopendp.a binary/x86_64
-          mv libs/aarch64-unknown-linux-gnu/release/libopendp.a binary/aarch64
+          mv libs/target/x86_64-unknown-linux-gnu/release/libopendp.a binary/x86_64
+          mv libs/target/aarch64-unknown-linux-gnu/release/libopendp.a binary/aarch64
           bash tools/r_stage.sh -b
 
       - name: Source tar
