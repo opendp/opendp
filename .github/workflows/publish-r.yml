@@ -58,7 +58,7 @@ jobs:
           install: m4
 
       - name: Checkout repository
-        if: ${{ !inputs.fake }}
+        # if: ${{ !inputs.fake }}
         uses: actions/checkout@v3
         # with:
         #   ref: ${{ inputs.channel }}
@@ -107,7 +107,7 @@ jobs:
       TARGET: ${{ matrix.architecture }}-apple-darwin
     steps:
       - name: Checkout repository
-        if: ${{ !inputs.fake }}
+        # if: ${{ !inputs.fake }}
         uses: actions/checkout@v3
         # with:
         #   ref: ${{ inputs.channel }}
@@ -164,7 +164,7 @@ jobs:
       TARGET: ${{ matrix.architecture }}-unknown-linux-gnu
     steps:
       - name: Checkout repository
-        if: ${{ !inputs.fake }}
+        # if: ${{ !inputs.fake }}
         uses: actions/checkout@v3
         # with:
         #   ref: ${{ inputs.channel }}
