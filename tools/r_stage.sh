@@ -15,12 +15,16 @@ function usage() {
 
 CLEAN=false
 DOCS=false
-BINARY=false
-while getopts ":cdbb" OPT; do
+VENDOR=false
+SOURCE=false
+AUTHORS=false
+while getopts ":cdvsa" OPT; do
   case "$OPT" in
   c) CLEAN=true ;;
   d) DOCS=true ;;
-  b) BINARY=true ;;
+  v) VENDOR=true ;;
+  s) SOURCE=true ;;
+  a) authors=true ;;
   *) usage && exit 1 ;;
   esac
 done
@@ -94,23 +98,25 @@ function docs() {
   log "R package docs are ready in R/opendp/docs/index.html"
 }
 
-function stage() {
-  clean
-
+function vendor_tar() {
   log "Vendor dependencies"
   run cargo vendor --manifest-path rust/Cargo.toml
 
+  log "Tar dependencies into: R/opendp/src/vendor.tar.xz"
+  tar --create --xz --no-xattrs --file=R/opendp/src/vendor.tar.xz vendor
+}
+
+function source_tar() {
   log "Tar lib sources into:  R/opendp/src/source.tar.xz"
   mkdir -p R/opendp/src/rust
   [ -d rust/target ] && mv rust/target target
   # tar everything because R CMD build ignores arbitrary file patterns like .*old (like threshold...)
   tar --create --xz --no-xattrs --file=R/opendp/src/source.tar.xz rust
   [ -d target ] && mv target rust/target
+}
 
-  log "Tar dependencies into: R/opendp/src/vendor.tar.xz"
-  tar --create --xz --no-xattrs --file=R/opendp/src/vendor.tar.xz vendor
-
-  if [[ $BINARY == true ]] && [[ -f "rust/target/debug/libopendp.a" ]]; then
+function binary_tar() {
+  if [[ -f "rust/target/debug/libopendp.a" ]]; then
     log "    Detected debug library, using it to simulate precompiled binaries"
     mkdir -p binary/$(uname -m)/
     cp rust/target/debug/libopendp.a binary/$(uname -m)/
@@ -120,14 +126,16 @@ function stage() {
     log "Tar binaries into:     R/opendp/src/binary.tar.xz"
     tar --create --xz --no-xattrs --file=R/opendp/src/binary.tar.xz binary
   fi
+}
+
+function notes() {
+  if [[ ! -d "vendor" ]] && [[ -f "R/opendp/src/vendor.tar.xz" ]]; then
+    mkdir vendor
+    tar --extract --xz -f R/opendp/src/vendor.tar.xz -C ./vendor
+  fi
 
   log "Prepare inst/AUTHORS and LICENSE.note"
-  run Rscript tools/update_authors.R
-
-  log "Copy header file to R/opendp/src"
-  run cp rust/opendp.h R/opendp/src/
-
-  echo "R package is staged. Run R CMD build R/opendp to build the package."
+  run Rscript tools/update_notes.R
 }
 
 if [[ $CLEAN == true ]]; then
@@ -136,7 +144,19 @@ if [[ $CLEAN == true ]]; then
 elif [[ $DOCS == true ]]; then
   log "***** DOCS *****"
   docs
+elif [[ $VENDOR == true ]]; then
+  log "***** VENDOR *****"
+  vendor_tar
+elif [[ $SOURCE == true ]]; then
+  log "***** SOURCE *****"
+  source_tar
 else
   log "***** STAGE *****"
-  stage
+  clean
+  vendor_tar
+  source_tar
+  binary_tar
+  notes
+
+  echo "R package is staged. Run R CMD build R/opendp to build the package."
 fi

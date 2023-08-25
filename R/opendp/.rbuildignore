@@ -21,4 +21,4 @@
 
 ^check$
 
-^update_authors\.R$
+^update_notes\.R$

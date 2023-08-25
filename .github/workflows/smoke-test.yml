@@ -5,7 +5,7 @@ on:
     branches:
       - main
       - release/*
-  # pull_request:
+  pull_request:
 
 jobs:
   rust-build-and-test:
@@ -57,11 +57,7 @@ jobs:
             rust/target/debug/libopendp.a
       
       - name: Prepare vendored sources
-        run: |
-          echo "Stage R"
-          cd ..
-          cargo vendor --manifest-path rust/Cargo.toml
-          tar --create --xz --no-xattrs -f vendor.tar.xz vendor
+        run: cd .. && bash tools/r_stage.sh -v
           
       - name: Upload vendored sources
         uses: actions/upload-artifact@v3
@@ -264,31 +260,20 @@ jobs:
         run: Rscript -e 'devtools::test(reporter = c("summary", "fail"))'
 
       # disabled so as not to affect R-universe
-      # - name: Clean R package
-      #   run: bash tools/r_stage.sh -c
+      - name: Clean R package
+        run: bash tools/r_stage.sh -c
       
-      # - name: Download vendor
-      #   uses: actions/download-artifact@v3
-      #   with:
-      #     name: vendor
-      #     path: ./
-  
-      # - name: Stage R package sources
-      #   run: |
-      #     echo "Stage R"
+      - name: Download vendor
+        uses: actions/download-artifact@v3
+        with:
+          name: vendor
+          path: R/opendp/src/rust
 
-      #     # for preparing authors and license note
-      #     mkdir vendor
-      #     tar --extract --xz -f vendor.tar.xz -C ./vendor
+      - name: Source tar
+        run: bash tools/r_stage.sh -s
 
-      #     echo "Prepare inst/AUTHORS and LICENSE.note"
-      #     Rscript tools/update_authors.R
-
-      #     echo "Tar library sources into R/opendp/src/rust"
-      #     tar --create --xz --no-xattrs --file=R/opendp/src/source.tar.xz rust
-
-      #     echo "Move vendor.tar.xz into R/opendp/src/rust"
-      #     mv vendor.tar.xz R/opendp/src
+      - name: Notes
+        run: bash tools/r_stage.sh -n
 
       # - name: Push to r-latest branch
       #   run: |
