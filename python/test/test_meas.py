@@ -173,9 +173,8 @@ def test_randomized_response_bool():
     print("randomized response:", meas(True))
     import math
     assert meas.check(1, math.log(3.))
-    print(meas.map(1))
     assert not meas.check(1, math.log(2.999))
-test_randomized_response_bool()
+
 
 def test_gaussian():
     input_space = dp.atom_domain(T=int), dp.absolute_distance(T=float)
