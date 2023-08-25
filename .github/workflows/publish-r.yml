@@ -58,7 +58,7 @@ jobs:
           install: m4
 
       - name: Checkout repository
-        # if: ${{ !inputs.fake }}
+        if: ${{ !inputs.fake }}
         uses: actions/checkout@v3
         # with:
         #   ref: ${{ inputs.channel }}
@@ -183,15 +183,6 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Prepare vendored sources
-        run: bash tools/r_stage.sh -v
-          
-      - name: Upload vendored sources
-        uses: actions/upload-artifact@v3
-        with:
-          name: vendor
-          path: vendor.tar.xz
-
       - name: Create Rust build for linux
         if: ${{ !inputs.fake }}
         env:
@@ -199,12 +190,17 @@ jobs:
           FLAGS: ${{ matrix.architecture == 'x86_64' && '-i -r -t' || '-i -r' }}
         run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh $FLAGS -g $TARGET -f \"$FEATURES\""
 
+      - name: Prepare vendored sources
+        if: ${{ !inputs.fake }}
+        run: bash tools/r_stage.sh -v
+
       - name: Create Rust build for linux (FAKE)
         if: ${{ inputs.fake }}
         run: |
           mkdir -p rust/target/${{ env.TARGET }}/release/
           echo linux > rust/target/${{ env.TARGET }}/release/libopendp.so
           echo linux > rust/target/${{ env.TARGET }}/release/libopendp.a
+          echo linux > vendor.tar.xz
 
       - name: Upload .so
         uses: actions/upload-artifact@v3
@@ -214,7 +210,12 @@ jobs:
           path: |
             rust/target*/${{ env.TARGET }}/release/libopendp.so
             rust/target*/${{ env.TARGET }}/release/libopendp.a
-
+          
+      - name: Upload vendored sources
+        uses: actions/upload-artifact@v3
+        with:
+          name: vendor
+          path: vendor.tar.xz
 
 
 
@@ -224,7 +225,7 @@ jobs:
 
 
   pkg-windows:
-    needs: libs-windows
+    needs: [libs-windows, libs-linux]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -265,7 +266,7 @@ jobs:
           path: opendp__pc-windows-gnu.zip
 
   pkg-macos:
-    needs: libs-macos
+    needs: [libs-macos, libs-linux]
     runs-on: macos-11
     steps:
       - uses: actions/checkout@v3
