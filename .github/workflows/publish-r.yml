@@ -1,7 +1,19 @@
+# INTEGRATION GUIDE: 
+# 1. all jobs before pkg-windows should replace the corresponding jobs in publish.yml
+# 2. the remaining jobs should be added to publish.yml
+# 3. edit publish_tool.py to not hardcode 365-r-bindings-iqss-gen
+
+# Use the following to trigger this workflow (and don't forget to update the date):
+# gh workflow run publish-r.yml --ref 365-r-bindings-iqss-gen -f channel=nightly -f date=2023-08-25 -f dry_run=true
+
+
+
+
+
 # Creates a build for a channel:
-# * Compiles for all platforms, uploads to the lib artifact
-# * Creates R bindings, uploads to the r_bindings artifact
-# * Downloads the lib and python_bindings artifacts, creates a Python wheel, uploads to the python_wheel artifact
+# * Compiles for all platforms, uploads to the libs artifact
+# * Creates R packages, uploads to the packages artifact
+# * Downloads the packages artifact, creates a GitHub release
 #
 # INPUTS
 # * channel:  The release channel
