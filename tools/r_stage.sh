@@ -99,11 +99,10 @@ function binary_tar() {
 function source_tar() {
   log "***** SOURCE *****"
   log "Tar lib sources into:  R/opendp/src/source.tar.xz"
-  mkdir -p R/opendp/src/rust
-  [ -d rust/target ] && mv rust/target target
+  [[ -d "rust/target" ]] && mv rust/target target
   # tar everything because R CMD build ignores arbitrary file patterns like .*old (like threshold...)
   tar --create --xz --no-xattrs --file=R/opendp/src/source.tar.xz rust
-  [ -d target ] && mv target rust/target
+  [[ -d "target" ]] && mv target rust/target
 }
 
 function vendor_tar() {
@@ -137,15 +136,15 @@ if (($# == 0)); then
   exit 0
 fi
 
-while getopts ":cdbsvna" OPT; do
+while getopts ":dcbsvna" OPT; do
   case "$OPT" in
-  c) clean ;;
-  d) docs ;;
-  b) binary_tar ;;
-  s) source_tar ;;
-  v) vendor_tar ;;
-  n) notes ;;
-  *) usage && exit 1 ;;
+    d) docs ;;
+    c) clean ;;
+    b) binary_tar ;;
+    s) source_tar ;;
+    v) vendor_tar ;;
+    n) notes ;;
+    *) usage && exit 1 ;;
   esac
 done
 

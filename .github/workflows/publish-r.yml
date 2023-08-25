@@ -230,7 +230,7 @@ jobs:
         run: |
           ls libs
           mkdir -p binary/
-          mv libs/target/release/libopendp.a binary/
+          mv libs/target/release/opendp.lib binary/
           bash tools/r_stage.sh -b
       
       - name: Source tar
