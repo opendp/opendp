@@ -38,7 +38,7 @@ output_domain <- function(x) {
     return(x[[1]])
   }
 
-  stop(paste("expected a measurement, transformation, or metric space. Got", class(x)))
+  stop(paste("expected a transformation or metric space. Got", class(x)))
 }
 
 output_metric <- function(x) {
@@ -50,7 +50,7 @@ output_metric <- function(x) {
     return(x[[2]])
   }
 
-  stop("expected a measurement, transformation, or metric space")
+  stop("expected a transformation or metric space")
 }
 
 make_chain_dyn <- function(rhs, lhs, log) {
@@ -445,6 +445,14 @@ to_ast <- function(item) {
 }
 
 
+unbox2 <- function(x) {
+  if (requireNamespace("jsonlite", quietly = TRUE)) {
+    jsonlite::unbox(x)
+  } else {
+    x
+  }
+}
+
 # TODO: reformat to Roxygen:
 # pre <- make_bounded_sum(bounds=c(0., 1.))
 # fun <- function(s) make_chain_mt(make_base_laplace(scale=s), pre)
@@ -481,14 +489,6 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
   }, bounds, .T))
 }
 
-unbox2 <- function(x) {
-  if (requireNamespace("jsonlite", quietly = TRUE)) {
-    jsonlite::unbox(x)
-  } else {
-    x
-  }
-}
-
 #' @export
 binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FALSE) {
   if (is.null(bounds)) {
@@ -503,20 +503,12 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
   #   stop("bounds must share the same type")
   # }
 
-  # print(str(bounds))
   tmp <- sort(bounds)
   lower <- tmp[1]
   upper <- tmp[2]
 
-  # print("here")
-  # print(str(c(lower, upper)))
-  #  print("doing maximize")
   maximize <- predicate(lower) # if the lower bound passes, we should maximize
-  #  print(str(maximize))
-  #  print("doing minimize")
   minimize <- predicate(upper) # if the upper bound passes, we should minimize
-  #  print(str(minimize))
-  #  print(c(maximize, minimize))
   if (maximize == minimize) {
     stop("the decision boundary of the predicate is outside the bounds")
   }
@@ -540,7 +532,9 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
   mid <- lower
   while (upper - lower > tolerance) {
     new_mid <- lower + half(upper - lower) # avoid overflow
+
     # cat(sprintf("\n lower=%f, upper=%f, tolerance=%f, new_mid=%f", lower, upper, tolerance, new_mid))
+
     # avoid an infinite loop from float roundoff
     if (new_mid == mid) break
     mid <- new_mid

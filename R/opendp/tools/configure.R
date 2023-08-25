@@ -1,3 +1,5 @@
+# This file is adapted from https://github.com/yutannihilation/string2path, under MIT license
+
 # The following fields in DESCRIPTION can be used for customizing the behavior.
 #
 # Config/<package name>/MSRV (optional):
@@ -80,7 +82,7 @@ check_cargo <- function() {
   res_version <- safe_system2(cargo_cmd, cargo_args)
 
   if (!isTRUE(res_version$success)) {
-    stop(errorCondition("cargo command is not available", class = c("string2path_error_cargo_check", "error")))
+    stop(errorCondition("cargo command is not available", class = c("opendp_error_cargo_check", "error")))
   }
 
   ### Check the version ###

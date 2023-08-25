@@ -72,7 +72,7 @@ derive = ["opendp_tooling", "opendp_derive/full", "syn", "proc-macro2"]
 # deprecated
 bindings-python = ["bindings"]
 # generate language bindings
-bindings = ["ffi", "derive", "cbindgen"]
+bindings = ["ffi", "derive"]
 
 # generate "then_xxx" functions in Rust for "make_xxx" functions whose first two arguments are the metric space
 partials = ["derive", "opendp_derive/partials"]

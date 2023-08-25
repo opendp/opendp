@@ -13,7 +13,7 @@ hashtab_eq <- function(x, y) {
     equal
 }
 
-test_that("scalar data loaders", {
+test_that("vector data loaders", {
     expect_equal((vector_space_of(f64) |> then_identity())(arg = 1), 1)
     expect_equal((vector_space_of(i32) |> then_identity())(arg = 1L), 1L)
     expect_equal((vector_space_of(usize) |> then_identity())(arg = 1L), 1L)
@@ -21,7 +21,7 @@ test_that("scalar data loaders", {
     expect_equal((vector_space_of(String) |> then_identity())(arg = c("A")), "A")
 })
 
-test_that("vector data loaders", {
+test_that("scalar data loaders", {
     expect_equal((scalar_space_of(f64) |> then_identity())(arg = 1), 1)
     expect_equal((scalar_space_of(i32) |> then_identity())(arg = 1L), 1L)
     expect_equal((scalar_space_of(usize) |> then_identity())(arg = 1L), 1L)

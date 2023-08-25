@@ -215,7 +215,7 @@ jobs:
           mkdir -p rust/target/${{ env.TARGET }}/release/
           echo linux > rust/target/${{ env.TARGET }}/release/libopendp.so
           echo linux > rust/target/${{ env.TARGET }}/release/libopendp.a
-          echo linux > vendor.tar.xz
+          echo fake > R/opendp/src/vendor.tar.xz
 
       - name: Upload .so and .a
         uses: actions/upload-artifact@v3
