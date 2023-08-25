@@ -1,0 +1,319 @@
+# Creates a build for a channel:
+# * Compiles for all platforms, uploads to the lib artifact
+# * Creates R bindings, uploads to the r_bindings artifact
+# * Downloads the lib and python_bindings artifacts, creates a Python wheel, uploads to the python_wheel artifact
+#
+# INPUTS
+# * channel:  The release channel
+# * fake:     Whether to do a fake build (to save time, for testing only)
+name: Publish R Channel
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Target Channel
+        type: choice
+        options:
+          - nightly
+          - beta
+          - stable
+        required: true
+        default: nightly
+      date:
+        description: Release Date
+        type: string
+        required: true
+      dry_run:
+        description: Dry Run?
+        type: boolean
+        required: false
+        default: false
+      fake:
+        description: Fake Build?
+        type: boolean
+        required: false
+        default: false
+env:
+  FEATURES: untrusted,ffi
+
+jobs:
+  credential-check:
+    uses: ./.github/workflows/credential-check.yml
+    with:
+      ref: ${{ inputs.channel }}
+
+  libs-windows:
+    needs: credential-check
+    runs-on: windows-latest
+    env:
+      MSYS: winsymlinks:nativestrict
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          path-type: inherit
+          install: m4
+
+      - name: Checkout repository
+        if: ${{ !inputs.fake }}
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Cache Rust dependencies
+        if: ${{ !inputs.fake }}
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~\.cargo\bin
+            ~\.cargo\registry\index
+            ~\.cargo\registry\cache
+            ~\.cargo\git\db
+            ~\AppData\Local\gmp-mpfr-sys
+            rust\target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Create Rust build for windows
+        if: ${{ !inputs.fake }}
+        run: bash tools/rust_build.sh -i -r -t -f "$FEATURES"
+
+      - name: Create Rust build for windows (FAKE)
+        if: ${{ inputs.fake }}
+        run: |
+          mkdir -p rust/target/release/
+          echo windows >rust/target/release/opendp.dll
+
+      - name: Upload .dll
+        uses: actions/upload-artifact@v3
+        with:
+          name: libs
+          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
+          path: |
+            rust/target*/release/opendp.dll
+            rust/target*/release/opendp.lib
+
+  libs-macos:
+    needs: credential-check
+    runs-on: macos-11
+    strategy:
+      matrix:
+        architecture: [x86_64, aarch64]
+    env:
+      TARGET: ${{ matrix.architecture }}-apple-darwin
+    steps:
+      - name: Checkout repository
+        if: ${{ !inputs.fake }}
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Cache Rust dependencies
+        if: ${{ !inputs.fake }}
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ~/Library/Caches/gmp-mpfr-sys
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Create Rust build for macos
+        if: ${{ !inputs.fake }}
+        env:
+          # Only run tests for native compile
+          FLAGS: ${{ matrix.architecture == 'x86_64' && '-i -r -t' || '-i -r' }}
+          # Explicit setting of clang -target is necessary for gmp-mpfr-sys
+          CC: clang -target ${{ env.TARGET }}
+        run: bash tools/rust_build.sh $FLAGS -g $TARGET -f "$FEATURES"
+
+      - name: Create Rust build for macos (FAKE)
+        if: ${{ inputs.fake }}
+        run: |
+          mkdir -p rust/target/${{ env.TARGET }}/release/
+          echo macos > rust/target/${{ env.TARGET }}/release/libopendp.dylib
+          echo macos > rust/target/${{ env.TARGET }}/release/libopendp.a
+
+      - name: Upload .dylib
+        uses: actions/upload-artifact@v3
+        with:
+          name: libs
+          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
+          path: |
+            rust/target*/${{ env.TARGET }}/release/libopendp.dylib
+            rust/target*/${{ env.TARGET }}/release/libopendp.a
+
+  libs-linux:
+    needs: credential-check
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        architecture: [x86_64, aarch64]
+    env:
+      # This image is important. The default manylinux2014 images are problematic to configure for cross-compilation
+      # in a way that will satisfy the gmp configure script.
+      DOCKER_IMAGE: messense/manylinux2014-cross:${{ matrix.architecture }}
+      TARGET: ${{ matrix.architecture }}-unknown-linux-gnu
+    steps:
+      - name: Checkout repository
+        if: ${{ !inputs.fake }}
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Cache Rust dependencies
+        if: ${{ !inputs.fake }}
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ~/.cache/gmp-mpfr-sys
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Create Rust build for linux
+        if: ${{ !inputs.fake }}
+        env:
+          # Only run tests for native compile
+          FLAGS: ${{ matrix.architecture == 'x86_64' && '-i -r -t' || '-i -r' }}
+        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh $FLAGS -g $TARGET -f \"$FEATURES\""
+
+      - name: Create Rust build for linux (FAKE)
+        if: ${{ inputs.fake }}
+        run: |
+          mkdir -p rust/target/${{ env.TARGET }}/release/
+          echo linux > rust/target/${{ env.TARGET }}/release/libopendp.so
+          echo linux > rust/target/${{ env.TARGET }}/release/libopendp.a
+
+      - name: Upload .so
+        uses: actions/upload-artifact@v3
+        with:
+          name: libs
+          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
+          path: |
+            rust/target*/${{ env.TARGET }}/release/libopendp.so
+            rust/target*/${{ env.TARGET }}/release/libopendp.a
+
+
+
+
+
+
+
+
+
+  pkg-windows:
+    needs: libs-windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: r-lib/actions/setup-r@v2
+
+      - name: Download libs
+        uses: actions/download-artifact@v2
+        with:
+          name: libs
+      
+      - name: Create package
+        run: |
+          mkdir -p binary
+          mv libs/release/opendp.lib binary/
+          bash tools/r_stage.sh
+
+          R CMD build R/opendp
+          mv opendp*.zip opendp__pc-windows-gnu.zip
+      
+      - name: build binary
+        run: R CMD build R/opendp
+
+      - name: Upload package
+        uses: actions/upload-artifact@v3
+        with:
+          name: packages
+          path: opendp__pc-windows-gnu.zip
+
+  pkg-macos:
+    needs: libs-macos
+    runs-on: macos-11
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: r-lib/actions/setup-r@v2
+
+      - name: Download libs
+        uses: actions/download-artifact@v2
+        with:
+          name: libs
+      
+      - name: Stage package
+        run: |
+          mkdir -p binary
+          mv libs/x86_64-apple-darwin/opendp.lib binary/x86_64
+          mv libs/aarch64-apple-darwin/opendp.lib binary/arm64
+          bash tools/r_stage.sh
+
+          R CMD build R/opendp
+          mv opendp*.tar.gz opendp__apple-darwin.tgz
+        
+      - name: Upload package
+        uses: actions/upload-artifact@v3
+        with:
+          name: packages
+          path: opendp__apple-darwin.tgz
+
+  pkg-linux:
+    needs: libs-linux
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: r-lib/actions/setup-r@v2
+
+      - name: Download libs
+        uses: actions/download-artifact@v2
+        with:
+          name: libs
+      
+      - name: Stage package
+        run: |
+          mkdir -p binary
+          mv libs/x86_64-unknown-linux-gnu/opendp.lib binary/x86_64
+          mv libs/aarch64-unknown-linux-gnu/opendp.lib binary/aarch64
+          bash tools/r_stage.sh
+
+          R CMD build R/opendp
+          mv opendp*.gz opendp__linux-gnu.gz
+      
+      - name: Upload package
+        uses: actions/upload-artifact@v3
+        with:
+          name: packages
+          path: opendp__linux-gnu.gz
+
+  r-pkg:
+    needs: [pkg-windows, pkg-macos, pkg-linux]
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v2
+        with:
+          name: packages
+        
+      - name: Publish GitHub Release
+        if: ${{ inputs.channel == 'stable' }}
+        env:
+          DRAFT_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
+        run: |
+          pip install -r tools/requirements-publish_tool.txt
+          python tools/publish_tool.py github -d ${{ inputs.date }} $DRAFT_FLAG

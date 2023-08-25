@@ -15,10 +15,12 @@ function usage() {
 
 CLEAN=false
 DOCS=false
-while getopts ":cd" OPT; do
+BINARY=false
+while getopts ":cdbb" OPT; do
   case "$OPT" in
   c) CLEAN=true ;;
   d) DOCS=true ;;
+  b) BINARY=true ;;
   *) usage && exit 1 ;;
   esac
 done
@@ -46,10 +48,10 @@ function clean() {
   if [ -f "R/opendp/src/rust/Cargo.toml" ]; then
     run cargo clean --manifest-path R/opendp/src/rust/Cargo.toml
   fi
-  run rm -rf R/opendp/src/rust
+  run rm -rf R/opendp/src/rust R/opendp/src/binary
   run rm -rf R/opendp/opendp.Rcheck
   run rm -rf R/opendp/man
-  run rm -f R/opendp/src/opendp.tar.xz R/opendp/src/vendor.tar.xz
+  run rm -f R/opendp/src/*.tar.xz
   run rm -f R/opendp/README.md
   run rm -f R/opendp/inst/AUTHORS
   run rm -f R/opendp/LICENSE.note
@@ -98,15 +100,26 @@ function stage() {
   log "Vendor dependencies"
   run cargo vendor --manifest-path rust/Cargo.toml
 
-  log "Tar library sources into R/opendp/src"
+  log "Tar lib sources into:  R/opendp/src/source.tar.xz"
   mkdir -p R/opendp/src/rust
   [ -d rust/target ] && mv rust/target target
   # tar everything because R CMD build ignores arbitrary file patterns like .*old (like threshold...)
-  tar --create --xz --no-xattrs --file=R/opendp/src/opendp.tar.xz rust
+  tar --create --xz --no-xattrs --file=R/opendp/src/source.tar.xz rust
   [ -d target ] && mv target rust/target
 
-  log "Tar dependencies into R/opendp/src"
+  log "Tar dependencies into: R/opendp/src/vendor.tar.xz"
   tar --create --xz --no-xattrs --file=R/opendp/src/vendor.tar.xz vendor
+
+  if [[ $BINARY == true ]] && [[ -f "rust/target/debug/libopendp.a" ]]; then
+    log "    Detected debug library, using it to simulate precompiled binaries"
+    mkdir -p binary/$(uname -m)/
+    cp rust/target/debug/libopendp.a binary/$(uname -m)/
+  fi
+
+  if [[ -d "binary" ]]; then
+    log "Tar binaries into:     R/opendp/src/binary.tar.xz"
+    tar --create --xz --no-xattrs --file=R/opendp/src/binary.tar.xz binary
+  fi
 
   log "Prepare inst/AUTHORS and LICENSE.note"
   run Rscript tools/update_authors.R

@@ -137,6 +137,7 @@ dmypy.json
 debug/
 target/
 vendor/
+binary/
 
 # auto-generated header file
 rust/opendp.h
@@ -185,8 +186,9 @@ opendp.Rcheck
 LICENSE.note
 AUTHORS
 Makevars
+binary.tar.xz
 vendor.tar.xz
-opendp.tar.xz
+source.tar.xz
 R/opendp/src/.cargo
 NEWS.md
 R/opendp/README.md

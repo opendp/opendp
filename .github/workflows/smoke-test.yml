@@ -296,7 +296,7 @@ jobs:
           Rscript tools/update_authors.R
 
           echo "Tar library sources into R/opendp/src/rust"
-          tar --create --xz --no-xattrs --file=R/opendp/src/opendp.tar.xz rust
+          tar --create --xz --no-xattrs --file=R/opendp/src/source.tar.xz rust
 
           echo "Move vendor.tar.xz into R/opendp/src/rust"
           mv vendor.tar.xz R/opendp/src

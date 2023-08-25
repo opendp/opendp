@@ -1,4 +1,3 @@
-# existence of tar-ed source code indicates that we are building from source
 BEFORE_CARGO_BUILD=''
 AFTER_CARGO_BUILD=''
 
@@ -19,9 +18,7 @@ fi
 
 # Check the Rust installation, and abort if not available
 "${R_HOME}/bin/Rscript" "./tools/configure.R"
-
 ret=$?
-
 if [ $ret -ne 0 ]; then
     exit $ret
 fi
@@ -39,6 +36,6 @@ sed \
     -e "s|@BEFORE_CARGO_BUILD@|${BEFORE_CARGO_BUILD}|" \
     -e "s|@AFTER_CARGO_BUILD@|${AFTER_CARGO_BUILD}|" \
     -e "s|@OPENDP_LIB_DIR@|${OPENDP_LIB_DIR}|" \
-    src/Makevars.in >src/Makevars
+    src/Makevars.in > src/Makevars
 
 # cat src/Makevars
