@@ -1,4 +1,4 @@
-# https://github.com/yutannihilation/string2path
+# Based on https://github.com/yutannihilation/string2path/blob/main/update_authors.R
 
 rlang::check_installed("RcppTOML")
 
@@ -42,9 +42,8 @@ cat(paste(
 
 ## Update LICENSE.note
 
-cat("This package contains the Rust source code of the dependencies in src/rust/vendor.tar.xz
-The authorships and the licenses are listed below. In summary, all libraries are
-distributed either under the MIT license or under MIT/Apache-2.0 dual license.
+cat("This package contains the Rust source code of the dependencies in src/vendor.tar.xz
+The authorships and the licenses are listed below.
 
 ===============================
 
