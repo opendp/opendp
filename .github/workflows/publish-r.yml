@@ -364,6 +364,7 @@ jobs:
       - name: Publish GitHub Release
         env:
           DRAFT_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
           python tools/publish_tool.py github-r -d ${{ inputs.date }} $DRAFT_FLAG
