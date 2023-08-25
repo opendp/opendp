@@ -380,7 +380,7 @@ jobs:
           R CMD build R/opendp
           mv opendp*.gz R/opendp__linux-gnu.tar.gz
 
-          rm R/opendp/src/binary.tar.gz
+          rm R/opendp/src/binary.tar.xz
           R CMD build R/opendp
           mv opendp_*.gz R/opendp.tar.gz
       
