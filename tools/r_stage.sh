@@ -91,9 +91,6 @@ function notes() {
 
   log "Prepare inst/AUTHORS and LICENSE.note"
   run Rscript tools/update_notes.R
-
-  log "Build documentation"
-  Rscript -e 'devtools::document("R/opendp")'
 }
 
 function docs() {
@@ -136,6 +133,9 @@ if (($# == 0)); then
   source_tar
   vendor_tar
   notes
+
+  log "Build documentation"
+  Rscript -e 'devtools::document("R/opendp")'
 
   echo "R package is staged. Run R CMD build R/opendp to build the package."
   exit 0
