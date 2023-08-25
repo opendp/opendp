@@ -85,7 +85,8 @@ jobs:
         if: ${{ inputs.fake }}
         run: |
           mkdir -p rust/target/release/
-          echo windows >rust/target/release/opendp.dll
+          echo windows > rust/target/release/opendp.dll
+          echo windows > rust/target/release/opendp.lib
 
       - name: Upload .dll
         uses: actions/upload-artifact@v3
