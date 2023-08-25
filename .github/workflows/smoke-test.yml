@@ -263,55 +263,44 @@ jobs:
         working-directory: R/opendp/
         run: Rscript -e 'devtools::test(reporter = c("summary", "fail"))'
 
-      # - uses: r-lib/actions/check-r-package@v2
-      #   with:
-      #     working-directory: R/opendp
-
-      # - name: Build
-      #   working-directory: ./R/opendp/
-      #   run: R CMD build .
-        
-      # - name: 
-      #   working-directory: ./R/opendp/
-      #   run: R CMD check opendp_*.tar.gz
-
-      - name: Clean R package
-        run: bash tools/r_stage.sh -c
+      # disabled so as not to affect R-universe
+      # - name: Clean R package
+      #   run: bash tools/r_stage.sh -c
       
-      - name: Download vendor
-        uses: actions/download-artifact@v3
-        with:
-          name: vendor
-          path: ./
+      # - name: Download vendor
+      #   uses: actions/download-artifact@v3
+      #   with:
+      #     name: vendor
+      #     path: ./
   
-      - name: Stage R package sources
-        run: |
-          echo "Stage R"
+      # - name: Stage R package sources
+      #   run: |
+      #     echo "Stage R"
 
-          # for preparing authors and license note
-          mkdir vendor
-          tar --extract --xz -f vendor.tar.xz -C ./vendor
+      #     # for preparing authors and license note
+      #     mkdir vendor
+      #     tar --extract --xz -f vendor.tar.xz -C ./vendor
 
-          echo "Prepare inst/AUTHORS and LICENSE.note"
-          Rscript tools/update_authors.R
+      #     echo "Prepare inst/AUTHORS and LICENSE.note"
+      #     Rscript tools/update_authors.R
 
-          echo "Tar library sources into R/opendp/src/rust"
-          tar --create --xz --no-xattrs --file=R/opendp/src/source.tar.xz rust
+      #     echo "Tar library sources into R/opendp/src/rust"
+      #     tar --create --xz --no-xattrs --file=R/opendp/src/source.tar.xz rust
 
-          echo "Move vendor.tar.xz into R/opendp/src/rust"
-          mv vendor.tar.xz R/opendp/src
+      #     echo "Move vendor.tar.xz into R/opendp/src/rust"
+      #     mv vendor.tar.xz R/opendp/src
 
-      - name: Push to r-latest branch
-        run: |
-          git fetch
-          git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
-          git config --global user.name "$GITHUB_ACTOR"
+      # - name: Push to r-latest branch
+      #   run: |
+      #     git fetch
+      #     git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
+      #     git config --global user.name "$GITHUB_ACTOR"
 
-          # create brand new history each time
-          git checkout --orphan r-latest
+      #     # create brand new history each time
+      #     git checkout --orphan r-latest
 
-          git add R/opendp/ --force
-          echo "Push R package to r-latest branch"
-          git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
-          git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
-          git push --force origin r-latest
+      #     git add R/opendp/ --force
+      #     echo "Push R package to r-latest branch"
+      #     git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
+      #     git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
+      #     git push --force origin r-latest
