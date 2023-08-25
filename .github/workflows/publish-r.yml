@@ -8,6 +8,7 @@
 # * fake:     Whether to do a fake build (to save time, for testing only)
 name: Publish R Channel
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       channel:
