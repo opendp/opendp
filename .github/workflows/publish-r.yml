@@ -260,8 +260,8 @@ jobs:
       - name: Stage package
         run: |
           mkdir -p binary
-          mv libs/x86_64-apple-darwin/opendp.lib binary/x86_64
-          mv libs/aarch64-apple-darwin/opendp.lib binary/arm64
+          mv libs/x86_64-apple-darwin/libopendp.a binary/x86_64
+          mv libs/aarch64-apple-darwin/libopendp.a binary/arm64
           bash tools/r_stage.sh
 
           R CMD build R/opendp
@@ -289,8 +289,8 @@ jobs:
       - name: Stage package
         run: |
           mkdir -p binary
-          mv libs/x86_64-unknown-linux-gnu/opendp.lib binary/x86_64
-          mv libs/aarch64-unknown-linux-gnu/opendp.lib binary/aarch64
+          mv libs/x86_64-unknown-linux-gnu/libopendp.a binary/x86_64
+          mv libs/aarch64-unknown-linux-gnu/libopendp.a binary/aarch64
           bash tools/r_stage.sh
 
           R CMD build R/opendp
