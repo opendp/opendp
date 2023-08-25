@@ -60,8 +60,8 @@ jobs:
       - name: Checkout repository
         if: ${{ !inputs.fake }}
         uses: actions/checkout@v3
-        with:
-          ref: ${{ inputs.channel }}
+        # with:
+        #   ref: ${{ inputs.channel }}
 
       - name: Cache Rust dependencies
         if: ${{ !inputs.fake }}
@@ -109,8 +109,8 @@ jobs:
       - name: Checkout repository
         if: ${{ !inputs.fake }}
         uses: actions/checkout@v3
-        with:
-          ref: ${{ inputs.channel }}
+        # with:
+        #   ref: ${{ inputs.channel }}
 
       - name: Cache Rust dependencies
         if: ${{ !inputs.fake }}
@@ -166,8 +166,8 @@ jobs:
       - name: Checkout repository
         if: ${{ !inputs.fake }}
         uses: actions/checkout@v3
-        with:
-          ref: ${{ inputs.channel }}
+        # with:
+        #   ref: ${{ inputs.channel }}
 
       - name: Cache Rust dependencies
         if: ${{ !inputs.fake }}
