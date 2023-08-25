@@ -87,7 +87,9 @@ def github(args):
 def github_r(args):
     log(f"*** PUBLISHING GITHUB R RELEASE ***")
     version = get_version()
-    channel = infer_channel(version)
+    # TODO: uncomment
+    # channel = infer_channel(version)
+    channel = "365-bindings-r-iqss-gen"
     tag = f"v{version}-R"
     # Just in case, clear out any existing tag, so a new one will be created by GitHub.
     run_command("Clearing tag", f"git push origin :refs/tags/{tag}")
@@ -95,7 +97,7 @@ def github_r(args):
     stripped_version = str(version).replace(".", "")
     date = args.date or datetime.date.today()
     notes = f"[{stripped_version} on {date}](https://github.com/opendp/opendp/pull/679)"
-    cmd = f"gh release create {tag} --target {channel} -t '{title}' -n '{notes}'"
+    cmd = f"gh release create {tag} --target {channel} -t '{title}' -n '{notes}' opendp__pc-windows-gnu.tar.gz opendp__apple-darwin.tar.gz opendp__linux-gnu.gz"
     if version.prerelease:
         cmd += " -p"
     if args.draft:
