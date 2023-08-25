@@ -195,9 +195,13 @@ R Setup
 
 You can also load an R package that uses your new OpenDP binary. 
 
-Instructions to set up a development environment.
+First, set an environment variable to the absolute path of the OpenDP Library binary directory:
 
-First, install devtools:
+.. code-block:: bash
+
+    export OPENDP_RUST_LIB=/absolute/path/to/opendp/rust/target/debug/
+
+Then, install devtools in R:
 
 .. code-block:: R
 

@@ -4,20 +4,10 @@
 These steps are only useful when you want a full (fixed) package installation from source.
 If you are doing library development, it is better to use the `(Re)load Package` instructions above.
 
-To prepare the package for a full package installation, copy the rust sources into `src/rust`:
+To do a full package installation from local sources:
 
 ```shell
-tools/r_stage.sh
-```
-
-To submit to CRAN, you must ensure that the checks pass:
-```R
-devtools::check()
-```
-
-Now that the package is staged, you can install it locally:
-```R
-devtools::install()
+bash tools/r_stage.sh && Rscript -e 'devtools::install("R/opendp")'
 ```
 
 To restore to a developer setup (as described in the Development Environment docs) run:
@@ -27,51 +17,28 @@ tools/r_stage.sh -c
 
 ## Submit to CRAN
 
-First, make sure that the checks pass (run from `R/opendp`):
+First, make sure that the checks pass:
 ```R
-devtools::check()
+devtools::check("R/opendp")
 ```
 
 To run the same check manually, use:
 ```bash
-R CMD build .
-R CMD check opendp_*.tar.xz --as-cran
+R CMD build R/opendp
+R CMD check opendp_*.tar.gz --as-cran
 ```
-It is important R CMD check is run on the `.tar.xz`, not on `.`, 
-because `check` depends on some of the changes `build` makes within the `.tar.xz`.
+It is important R CMD check is run on the `.tar.gz`, not on `R/opendp`, 
+because `check` depends on some of the changes `build` makes within the `.tar.gz`.
 
-## Testing on CI
 
-Rust compilation is skipped when `libopendp.a` from `rust/target/debug/` is in `R/opendp/src/`.
-
-```shell
-cp rust/target/debug/libopendp.a R/opendp/src/
-```
-
-## Status 04.08.2023: Installing and making the package work
-On linux stations, you might need to install rust using 
+## Troubleshooting
+If R cannot find cargo, you might need to install Rust using:
 
 ```shell
 sudo apt-get update
 sudo apt-get install cargo
 ```
 
-otherwise R might not find cargo.
-
-From the root directory of the openDP project, run the following command
-```shell
-bash tools/r_stage.sh && (cd R/opendp/ && Rscript -e 'devtools::install()')
-cd R/opendp/
-R
-```
-
-insert the following command in the opened R console:
-
-```R
-devtools::document()
-```
-
-The package should be installed and working (without pipe).
 
 
 ## Resources

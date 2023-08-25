@@ -1,3 +1,5 @@
+# https://github.com/yutannihilation/string2path
+
 rlang::check_installed("RcppTOML")
 
 library(RcppTOML)

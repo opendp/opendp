@@ -46,6 +46,7 @@ function clean() {
   run rm -rf vendor
   run rm -rf R/opendp-docs
   rm -rf R/opendp/docs
+  Rscript -e 'try(remove.packages("opendp"), silent=TRUE)'
 }
 
 function binary_tar() {
@@ -90,6 +91,9 @@ function notes() {
 
   log "Prepare inst/AUTHORS and LICENSE.note"
   run Rscript tools/update_notes.R
+
+  log "Build documentation"
+  Rscript -e 'devtools::document("R/opendp")'
 }
 
 function docs() {

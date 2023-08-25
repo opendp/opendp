@@ -63,7 +63,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: vendor
-          path: vendor.tar.xz
+          path: R/opendp/src/vendor.tar.xz
 
   python-lint:
     runs-on: ubuntu-22.04
@@ -259,7 +259,6 @@ jobs:
         working-directory: R/opendp/
         run: Rscript -e 'devtools::test(reporter = c("summary", "fail"))'
 
-      # disabled so as not to affect R-universe
       - name: Clean R package
         run: bash tools/r_stage.sh -c
       
@@ -267,7 +266,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: vendor
-          path: R/opendp/src/rust
+          path: R/opendp/src
 
       - name: Source tar
         run: bash tools/r_stage.sh -s
@@ -275,6 +274,7 @@ jobs:
       - name: Notes
         run: bash tools/r_stage.sh -n
 
+      # disabled so as not to affect R-universe
       # - name: Push to r-latest branch
       #   run: |
       #     git fetch
