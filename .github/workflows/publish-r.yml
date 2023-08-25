@@ -257,14 +257,14 @@ jobs:
       - name: Build package
         run: |
           R CMD build R/opendp
-          mv opendp*.zip opendp__pc-windows-gnu.zip
+          mv opendp*.tar.gz opendp__pc-windows-gnu.tar.gz
         shell: bash
       
       - name: Upload package
         uses: actions/upload-artifact@v3
         with:
           name: packages
-          path: opendp__pc-windows-gnu.zip
+          path: opendp__pc-windows-gnu.tar.gz
 
   pkg-macos:
     needs: [libs-macos, libs-linux]

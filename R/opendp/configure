@@ -1,3 +1,5 @@
+echo "***** CONFIGURE *****"
+
 BEFORE_CARGO_BUILD=''
 AFTER_CARGO_BUILD=''
 
