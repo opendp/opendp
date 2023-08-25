@@ -66,10 +66,10 @@ function source_tar() {
   log "***** SOURCE *****"
   log "Tar lib sources into:  R/opendp/src/source.tar.xz"
 
-  [ -d "rust/target" ] && mv rust/target target
+  [ -d "rust/target" ] && mv rust/target target || true
   # tar everything because R CMD build ignores arbitrary file patterns like .*old (like threshold...)
   tar --create --xz --no-xattrs --file=R/opendp/src/source.tar.xz rust
-  [ -d "target" ] && mv target rust/target
+  [ -d "target" ] && mv target rust/target || true
 }
 
 function vendor_tar() {
