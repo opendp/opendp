@@ -355,7 +355,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Download packages
         uses: actions/download-artifact@v3
         with:
@@ -366,4 +366,4 @@ jobs:
           DRAFT_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
-          python tools/publish_tool.py github -d ${{ inputs.date }} $DRAFT_FLAG
+          python tools/publish_tool.py github-r -d ${{ inputs.date }} $DRAFT_FLAG
