@@ -354,6 +354,8 @@ jobs:
     needs: [pkg-windows, pkg-macos, pkg-linux]
     runs-on: ubuntu-20.04
     steps:
+      - uses: actions/checkout@v3
+      
       - name: Download packages
         uses: actions/download-artifact@v3
         with:
