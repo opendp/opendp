@@ -1,36 +1,3 @@
-
-### Install from Source
-
-These steps are only useful when you want a full (fixed) package installation from source.
-If you are doing library development, it is better to use the `(Re)load Package` instructions above.
-
-To do a full package installation from local sources:
-
-```shell
-bash tools/r_stage.sh && Rscript -e 'devtools::install("R/opendp")'
-```
-
-To restore to a developer setup (as described in the Development Environment docs) run:
-```shell
-tools/r_stage.sh -c
-```
-
-## Submit to CRAN
-
-First, make sure that the checks pass:
-```R
-devtools::check("R/opendp")
-```
-
-To run the same check manually, use:
-```bash
-R CMD build R/opendp
-R CMD check opendp_*.tar.gz --as-cran
-```
-It is important R CMD check is run on the `.tar.gz`, not on `R/opendp`, 
-because `check` depends on some of the changes `build` makes within the `.tar.gz`.
-
-
 ## Troubleshooting
 If R cannot find cargo, you might need to install Rust using:
 
@@ -40,8 +7,7 @@ sudo apt-get install cargo
 ```
 
 
-
-## Resources
+# Resources
 
 * official resources:
     * https://cran.r-project.org/doc/manuals/r-devel/R-exts.html

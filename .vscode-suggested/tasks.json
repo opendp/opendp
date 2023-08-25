@@ -142,6 +142,102 @@
             "presentation": {
                 "clear": true
             }
+        },
+
+        {
+            "label": "R/ stage",
+            "detail": "    stage an R package so that it can be built",
+            "type": "shell",
+            "command": "bash tools/r_stage.sh",
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ clean",
+            "detail": "    return a staged R package to developer mode",
+            "type": "shell",
+            "command": "bash tools/r_stage.sh -c",
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ pkgdown",
+            "detail": "    build a pkgdown site",
+            "type": "shell",
+            "command": "bash tools/r_stage.sh -d",
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ test",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "Rscript -e 'devtools::load_all(recompile=TRUE); devtools::test(reporter = c(\"progress\", \"fail\"))'",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ document",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "Rscript -e 'devtools::document()'",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ check (devtools)",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "Rscript -e 'devtools::check()'",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ check (R CMD)",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "R CMD build . && R CMD check --as-cran opendp_*.tar.gz",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ install",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "Rscript -e 'devtools::install()'",
+            "presentation": {
+                "clear": true
+            }
         }
-    ]
+    ],
+    "options": {
+        "env": {
+            "OPENDP_LIB_DIR": "${workspaceFolder}/rust/target/debug"
+        }
+    }
 }

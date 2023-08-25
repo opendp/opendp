@@ -205,48 +205,73 @@ Then, install devtools in R:
 
 .. code-block:: R
 
-    install.packages("devtools")
+    install.packages("devtools", "RcppTOML")
 
-On Mac you may need to run `brew install harfbuzz fribidi libgit2` first.
+On Mac you may need to run ``brew install harfbuzz fribidi libgit2`` first.
 
-After each edit to the R or Rust source, run the following command in R from `R/opendp/` to (re)load the R package:
+After each edit to the R or Rust source, run the following command in R to (re)load the R package:
 
 .. code-block:: R
 
-    devtools::load_all(recompile=TRUE)
+    devtools::load_all("R/opendp/", recompile=TRUE)
 
 .. This function...
 .. - runs `src/Makevars`
 ..     - cargo builds `libopendp.a` (rust-lib) and `opendp.h` (rust-lib header file)
-..     - copies `opendp.h` into `src/`
 .. - compiles the c files in `src/`, which statically links with `libopendp.a`
 .. - outputs `src/opendp.so`, which is used by all R functions
 .. - reloads all R functions
 
+To do a full package installation from local sources:
+
+.. prompt:: bash
+
+    tools/r_stage.sh && Rscript -e 'devtools::install("R/opendp")'
+
+To restore to a developer setup, run:
+
+.. prompt:: bash
+
+    tools/r_stage.sh -c
+
+
+
 R Tests
 -------
 
-Run tests from `R/opendp/` (located in `R/opendp/tests/`):
+Run tests (tests are located in ``R/opendp/tests/``):
 
 .. code-block:: R
 
-    # runs testthat tests
-    devtools::test()
-    
+    devtools::test("R/opendp")
 
-Alternatively, 
+
+R also has a built-in check function that runs tests and checks for common errors:
+
+.. code-block:: R
+    
+    devtools::check("R/opendp")
+
+To run the same check manually, use:
+
 .. code-block:: bash
 
-    R CMD check R/opendp/ --as-cran
+    R CMD build R/opendp
+    R CMD check opendp_*.tar.gz --as-cran
+
+It is important R CMD check is run on the `.tar.gz`, not on `R/opendp`, 
+because `check` depends on some of the changes `build` makes within the `.tar.gz`.
 
 
 R Documentation
 ---------------
-Uses roxygen to generate `R/opendp/man` pages from `#'` code comments.
+Uses roxygen to generate ``R/opendp/man`` pages from `#'` code comments.
+Then uses ``pkgdown`` to render the documentation website.
 
-.. code-block:: R
+.. code-block:: bash
 
-    devtools::document()
+    tools/r_stage.sh -d
+
 
 Developer Tooling
 -----------------
