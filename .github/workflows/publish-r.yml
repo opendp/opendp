@@ -183,6 +183,15 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
+      - name: Prepare vendored sources
+        run: bash tools/r_stage.sh -v
+          
+      - name: Upload vendored sources
+        uses: actions/upload-artifact@v3
+        with:
+          name: vendor
+          path: vendor.tar.xz
+
       - name: Create Rust build for linux
         if: ${{ !inputs.fake }}
         env:
