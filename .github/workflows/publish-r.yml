@@ -8,7 +8,6 @@
 # * fake:     Whether to do a fake build (to save time, for testing only)
 name: Publish R Channel
 on:
-  pull_request:
   workflow_dispatch:
     inputs:
       channel:
@@ -305,6 +304,7 @@ jobs:
 
   r-pkg:
     needs: [pkg-windows, pkg-macos, pkg-linux]
+    runs-on: ubuntu-20.04
     steps:
       - name: Download packages
         uses: actions/download-artifact@v2
