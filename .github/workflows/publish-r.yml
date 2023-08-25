@@ -342,13 +342,13 @@ jobs:
       - name: Build package
         run: |
           R CMD build R/opendp
-          mv opendp*.gz opendp__linux-gnu.gz
+          mv opendp*.gz opendp__linux-gnu.tar.gz
       
       - name: Upload package
         uses: actions/upload-artifact@v3
         with:
           name: packages
-          path: opendp__linux-gnu.gz
+          path: opendp__linux-gnu.tar.gz
 
   r-pkg:
     needs: [pkg-windows, pkg-macos, pkg-linux]
