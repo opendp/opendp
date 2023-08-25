@@ -8,10 +8,10 @@ TARGET = x86_64-pc-windows-gnu
 # need to overwrite it via configuration.
 CARGO_LINKER = x86_64-w64-mingw32.static.posix-gcc.exe
 
-# will always be located at src/opendp.lib once rust_build is done
-STATLIB = opendp.lib
+# will always be located at src/libopendp.a once rust_build is done
+STATLIB = libopendp.a
 
-# PKG_LIBS tells R where to find the static library (opendp.lib)
+# PKG_LIBS tells R where to find the static library (libopendp.a)
 PKG_LIBS = $(STATLIB) -lws2_32 -ladvapi32 -luserenv -lbcrypt -lntdll
 
 all: rust_build
@@ -21,7 +21,7 @@ rust_build:
 	@if [ -f "binary.tar.xz" ]; then \
 		echo "* detected suitable pre-compiled binary"; \
 		$(TAR) --extract --xz -f binary.tar.xz -C .; \
-		cp binary/opendp.lib .; \
+		cp binary/libopendp.a .; \
 	elif [ -f "source.tar.xz" ]; then \
 		# https://github.com/extendr/rextendr/issues/279 \
 	    mkdir -p rust/target/release/libgcc_mock && touch rust/target/release/libgcc_mock/libgcc_eh.a \
@@ -30,12 +30,12 @@ rust_build:
 		$(TAR) --extract --xz -f vendor.tar.xz -C rust; \
 		mkdir -p .cargo; \
 		cp cargo_vendor_config.toml .cargo/config.toml; \
-		echo "* building OpenDP Library (opendp.lib)"; \
+		echo "* building OpenDP Library (libopendp.a)"; \
 		@BEFORE_CARGO_BUILD@ cargo build --manifest-path rust/Cargo.toml --target=$(TARGET) --color always --release --jobs 2 --offline --features @RUST_FEATURES@; \
 		@AFTER_CARGO_BUILD@ \
-		cp rust/target/release/opendp.lib .; \
+		cp rust/target/release/libopendp.a .; \
 	elif [ ! -z "@OPENDP_LIB_DIR@" ]; then \
-		cp @OPENDP_LIB_DIR@/opendp.lib .; \
+		cp @OPENDP_LIB_DIR@/libopendp.a .; \
 	else \
 		echo "expected either a src/binary.tar.xz, src/source.tar.xz (run bash tools/r_stage.sh) or OPENDP_LIB_DIR to be set"; \
 		exit 1; \

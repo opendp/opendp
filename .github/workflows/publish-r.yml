@@ -86,16 +86,19 @@ jobs:
         run: |
           mkdir -p rust/target/release/
           echo windows > rust/target/release/opendp.dll
-          echo windows > rust/target/release/opendp.lib
+          echo windows > rust/target/release/libopendp.a
 
-      - name: Upload .dll
+      - name: ls outputs
+        run: ls rust/target/release/
+  
+      - name: Upload .dll and .a
         uses: actions/upload-artifact@v3
         with:
           name: libs
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: |
             rust/target*/release/opendp.dll
-            rust/target*/release/opendp.lib
+            rust/target*/release/libopendp.a
 
   libs-macos:
     needs: credential-check
@@ -142,7 +145,7 @@ jobs:
           echo macos > rust/target/${{ env.TARGET }}/release/libopendp.dylib
           echo macos > rust/target/${{ env.TARGET }}/release/libopendp.a
 
-      - name: Upload .dylib
+      - name: Upload .dylib and .a
         uses: actions/upload-artifact@v3
         with:
           name: libs
@@ -202,7 +205,7 @@ jobs:
           echo linux > rust/target/${{ env.TARGET }}/release/libopendp.a
           echo linux > vendor.tar.xz
 
-      - name: Upload .so
+      - name: Upload .so and .a
         uses: actions/upload-artifact@v3
         with:
           name: libs
@@ -215,7 +218,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: vendor
-          path: vendor.tar.xz
+          path: R/opendp/src/vendor.tar.xz
 
 
 
@@ -240,7 +243,7 @@ jobs:
         run: |
           ls libs
           mkdir -p binary/
-          mv libs/target/release/opendp.lib binary/
+          mv libs/target/release/libopendp.a binary/
           bash tools/r_stage.sh -b
       
       - name: Source tar
@@ -250,7 +253,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: vendor
-          path: R/opendp/src/rust
+          path: R/opendp/src
 
       - uses: r-lib/actions/setup-r@v2
 
@@ -293,7 +296,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: vendor
-          path: R/opendp/src/rust
+          path: R/opendp/src
 
       - uses: r-lib/actions/setup-r@v2
       
@@ -335,7 +338,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: vendor
-          path: R/opendp/src/rust
+          path: R/opendp/src
 
       - uses: r-lib/actions/setup-r@v2
 
