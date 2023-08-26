@@ -18,24 +18,11 @@ pub use psrn::*;
 mod uniform;
 pub use uniform::*;
 
+use drbg::thread::LocalCtrDrbg;
 use rand::RngCore;
 use rand::prelude::SliceRandom;
 
 use crate::error::Fallible;
-
-use chacha20::{XChaCha20, cipher::{KeyIvInit, StreamCipher}};
-
-thread_local! {
-    static CIPHER: std::cell::RefCell<XChaCha20>  = {
-        // key length is 256 bits. Must be filled with cryptographically secure unbiased random bits.
-        let mut key = [0; 32];
-        getrandom::getrandom(&mut key).expect("insufficient system entropy");
-        // nonce length is 192 bits. This algorithm is still secure if nonce is left constant.
-        let mut nonce = [0; 24];
-        getrandom::getrandom(&mut nonce).expect("insufficient system entropy");
-        std::cell::RefCell::new(XChaCha20::new(&key.into(), &nonce.into()))
-    };
-}
 
 /// Fill a byte buffer with random bits.
 ///
@@ -43,7 +30,8 @@ thread_local! {
 /// For any input `buffer`, fill the `buffer` with random bits, where each bit is an iid draw from Bernoulli(p=0.5).
 /// Return `Err(e)` if there is insufficient system entropy, otherwise return `Ok(())`.
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
-    CIPHER.with(|v| v.borrow_mut().try_apply_keystream(buffer))
+    LocalCtrDrbg::default()
+        .fill_bytes(buffer, None)
         .map_err(|e| err!(FailedFunction, "failed to sample bits: {:?}", e))
 }
 
