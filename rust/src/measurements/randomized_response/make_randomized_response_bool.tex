@@ -61,34 +61,9 @@ The measurement function makes mitigations against timing channels if \texttt{co
 \end{note}
 \end{tcolorbox}
 
-    \texttt{sample\_bernoulli} can only fail when the pseudorandom byte generator used in its implementation fails due to lack of system entropy. 
-    This is usually related to the computer's physical environment and not the dataset. 
-    The rest of this proof is conditioned on the assumption that \texttt{sample\_bernoulli} does not raise an exception. 
-    
-    Let $v$ and $w$ be datasets that are \texttt{d\_in}-close with respect to \texttt{input\_metric}.
-    Here, the metric is \texttt{DiscreteMetric} which enforces that $\din \geq 1$ if $v \ne w$ and $\din = 0$ if $v = w$. 
-    If $v = w$, then the output distributions on $v$ and $w$ are identical, and therefore the max-divergence is 0.
-    Consider $v \ne w$ and assume without loss of generality that $v = \texttt{true}$ and $w = \texttt{false}$. 
-    For shorthand, we let $p$ represent \texttt{prob}, the probability that \texttt{sample\_bernoulli} returns \texttt{true}. 
-    Observe that $p = [0.5, 1.0)$ otherwise \texttt{make\_randomized\_response\_bool} raises an error. 
-    
-    We now consider the max-divergence $D_{\infty}(Y||Z)$ over the random variables $Y = \function(v)$ and $Z = \function(w)$.
-    
-    \[
-    D_{\infty}(Y||Z) = \max_{S \subseteq Supp(Y)}\left[\ln (\frac{\Pr[Y \in S]}{\Pr[Z \in S]})\right] 
-    \]
-    
-    \[
-    = \max\left(\ln (\frac{\Pr[Y = \texttt{true}]}{\Pr[Z = \texttt{true}]}), \ln(\frac{\Pr[Y = \texttt{false}]}{\Pr[Z = \texttt{false}]})\right)
-    \]
-    
-    \[
-    = \max\left(\ln (\frac{p}{1 - p}), \ln(\frac{1 - p}{p})\right)
-    \]
-    
-    \[
-    = \ln (\frac{p}{1 - p})
-    \]
+\texttt{sample\_bernoulli} can only fail due to lack of system entropy. 
+This is usually related to the computer's physical environment and not the dataset. 
+The rest of this proof is conditioned on the assumption that \texttt{sample\_bernoulli} does not raise an exception. 
 
 Let $x$ and $x'$ be datasets in the input domain (either $\top$ or $\bot$) that are \texttt{d\_in}-close with respect to \texttt{input\_metric}.
 Here, the metric is \texttt{DiscreteMetric} which enforces that $\din \geq 1$ if $x \ne x'$ and $\din = 0$ if $x = x'$. 
