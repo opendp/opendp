@@ -21,6 +21,7 @@ __all__ = [
     "measurement_output_distance_type",
     "measurement_output_measure",
     "new_function",
+    "new_user_queryable",
     "queryable_eval",
     "queryable_query_type",
     "transformation_check",
@@ -524,6 +525,47 @@ def new_function(
     
     output = c_to_py(unwrap(lib_function(c_function, c_TO), Function))
     output._depends_on(c_function)
+    return output
+
+
+@versioned
+def new_user_queryable(
+    transition,
+    Q: RuntimeTypeDescriptor,
+    A: RuntimeTypeDescriptor
+) -> Any:
+    """Construct a queryable from a user-defined transition function.
+    
+    [new_user_queryable in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.new_user_queryable.html)
+    
+    :param transition: A transition function taking a reference to self, a query, and an internal/external indicator
+    :param Q: Query Type
+    :type Q: :py:ref:`RuntimeTypeDescriptor`
+    :param A: Output Type
+    :type A: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Any
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    Q = RuntimeType.parse(type_name=Q)
+    A = RuntimeType.parse(type_name=A)
+    
+    # Convert arguments to c types.
+    c_transition = py_to_c(transition, c_type=TransitionFn, type_name=pass_through(A))
+    c_Q = py_to_c(Q, c_type=ctypes.c_char_p)
+    c_A = py_to_c(A, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_core__new_user_queryable
+    lib_function.argtypes = [TransitionFn, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_transition, c_Q, c_A), AnyObjectPtr))
+    output._depends_on(c_transition)
     return output
 
 
