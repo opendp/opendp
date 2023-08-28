@@ -180,10 +180,10 @@ These are the GitHub workflows that support the release process.
 sync-branches.yml
 ^^^^^^^^^^^^^^^^^
 
-* Keeps the tracking branches ``nightly`` and ``stable`` in sync with their targets.
+* Keeps the tracking branches ``latest`` and ``stable`` in sync with their targets.
   This is used when generating docs, so that we have a consistent path to each category.
 * Triggered on every push to ``main``, or when release is published.
-* Whenever there's a push to ``main``, it advances ``nightly`` to the same ref.
+* Whenever there's a push to ``main``, it advances ``latest`` to the same ref.
 * Whenever a release is created, it advances ``stable`` to the release tag.
 
 release.yml
