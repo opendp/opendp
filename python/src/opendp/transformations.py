@@ -722,7 +722,7 @@ def make_clamp(
     
     **Proof Definition:**
     
-    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/clamp/make_clamp.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/clamp/make_clamp.pdf)
     
     :param input_domain: Domain of input data.
     :type input_domain: Domain

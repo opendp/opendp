@@ -152,7 +152,7 @@ def make_base_discrete_exponential(
     
     **Proof Definition:**
     
-    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/discrete_exponential/make_base_discrete_exponential.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/measurements/discrete_exponential/make_base_discrete_exponential.pdf)
     
     :param input_domain: Domain of the input vector. Must be a non-nullable VectorDomain.
     :param input_metric: Metric on the input domain. Must be LInfDiffDistance

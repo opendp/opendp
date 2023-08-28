@@ -233,7 +233,7 @@ def discrete_laplacian_scale_to_accuracy(
     
     **Proof Definition:**
     
-    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/accuracy/discrete_laplacian_scale_to_accuracy.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/accuracy/discrete_laplacian_scale_to_accuracy.pdf)
     
     :param scale: Discrete Laplacian noise scale.
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
