@@ -7,8 +7,8 @@ use crate::{
         any::{AnyDomain, AnyMeasurement, AnyMetric, AnyObject, Downcast},
         util::{to_str, Type},
     },
-    measurements::{make_base_discrete_exponential, Optimize},
-    metrics::LInfDiffDistance,
+    measurements::{make_gumbel_max, Optimize},
+    metrics::RangeDistance,
     traits::{
         samplers::{CastInternalRational, SampleUniform},
         CheckNull, Float, InfCast, Number, RoundCast,
@@ -16,7 +16,7 @@ use crate::{
 };
 
 #[no_mangle]
-pub extern "C" fn opendp_measurements__make_base_discrete_exponential(
+pub extern "C" fn opendp_measurements__make_gumbel_max(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
     temperature: *const AnyObject,
@@ -47,9 +47,9 @@ pub extern "C" fn opendp_measurements__make_base_discrete_exponential(
     {
         let input_domain =
             try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<LInfDiffDistance<TIA>>()).clone();
+        let input_metric = try_!(input_metric.downcast_ref::<RangeDistance<TIA>>()).clone();
         let temperature = *try_!(temperature.downcast_ref::<QO>());
-        make_base_discrete_exponential::<TIA, QO>(input_domain, input_metric, temperature, optimize)
+        make_gumbel_max::<TIA, QO>(input_domain, input_metric, temperature, optimize)
             .into_any()
     }
 

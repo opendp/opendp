@@ -6,7 +6,7 @@ use crate::{
     core::{Function, MetricSpace, StabilityMap, Transformation},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    metrics::LInfDiffDistance,
+    metrics::RangeDistance,
     traits::{AlertingMul, ExactIntCast, InfDiv, Number, RoundCast},
 };
 
@@ -42,7 +42,7 @@ pub fn make_quantile_score_candidates<MI: UnboundedMetric, TIA: Number>(
         VectorDomain<AtomDomain<TIA>>,
         VectorDomain<AtomDomain<usize>>,
         MI,
-        LInfDiffDistance<usize>,
+        RangeDistance<usize>,
     >,
 >
 where
@@ -97,7 +97,7 @@ where
             compute_score(arg.clone(), &candidates, alpha_num, alpha_den, size_limit)
         }),
         input_metric,
-        LInfDiffDistance::default(),
+        RangeDistance::default(),
         stability_map,
     )
 }
@@ -362,7 +362,7 @@ mod test_scorer {
 #[cfg(all(test, feature = "use-mpfr", feature = "derive"))]
 mod test_trans {
     use crate::{
-        measurements::{make_base_discrete_exponential, Optimize},
+        measurements::{make_gumbel_max, Optimize},
         metrics::SymmetricDistance,
     };
 
@@ -405,7 +405,7 @@ mod test_trans {
         let input_domain = VectorDomain::new(AtomDomain::default());
         let input_metric = SymmetricDistance::default();
         let trans = make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
-        let exp_mech = make_base_discrete_exponential(
+        let exp_mech = make_gumbel_max(
             trans.output_domain.clone(),
             trans.output_metric.clone(),
             trans.map(&1)? as f64,
@@ -426,7 +426,7 @@ mod test_trans {
         let input_metric = SymmetricDistance::default();
         let trans_sized =
             make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
-        let exp_mech = make_base_discrete_exponential(
+        let exp_mech = make_gumbel_max(
             trans_sized.output_domain.clone(),
             trans_sized.output_metric.clone(),
             trans_sized.map(&2)? as f64, Optimize::Min

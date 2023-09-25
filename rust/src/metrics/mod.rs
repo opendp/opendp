@@ -466,34 +466,34 @@ impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
 /// ```math
 /// d_{\infty'}(u, v) = max_{ij} |(u_i - v_i) - (u_j - v_j)|
 /// ```
-pub struct LInfDiffDistance<Q>(PhantomData<Q>);
-impl<Q> Default for LInfDiffDistance<Q> {
+pub struct RangeDistance<Q>(PhantomData<Q>);
+impl<Q> Default for RangeDistance<Q> {
     fn default() -> Self {
-        LInfDiffDistance(PhantomData)
+        RangeDistance(PhantomData)
     }
 }
 
-impl<Q> Clone for LInfDiffDistance<Q> {
+impl<Q> Clone for RangeDistance<Q> {
     fn clone(&self) -> Self {
         Self::default()
     }
 }
-impl<Q> PartialEq for LInfDiffDistance<Q> {
+impl<Q> PartialEq for RangeDistance<Q> {
     fn eq(&self, _other: &Self) -> bool {
         true
     }
 }
-impl<Q> Debug for LInfDiffDistance<Q> {
+impl<Q> Debug for RangeDistance<Q> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "LInfDiffDistance({})", type_name!(Q))
+        write!(f, "RangeDistance({})", type_name!(Q))
     }
 }
 
-impl<Q> Metric for LInfDiffDistance<Q> {
+impl<Q> Metric for RangeDistance<Q> {
     type Distance = Q;
 }
 
-impl<T: CheckAtom> MetricSpace for (VectorDomain<AtomDomain<T>>, LInfDiffDistance<T>) {
+impl<T: CheckAtom> MetricSpace for (VectorDomain<AtomDomain<T>>, RangeDistance<T>) {
     fn check(&self) -> bool {
         !self.0.element_domain.nullable()
     }

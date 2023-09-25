@@ -40,6 +40,6 @@ def make_quantile_score_candidates(
             size=len(candidates)),
         function=function,
         input_metric=input_metric,
-        output_metric=LInfDiffDistance(Q=usize),
+        output_metric=RangeDistance(Q=usize),
         stability_map=stability_map,
     )

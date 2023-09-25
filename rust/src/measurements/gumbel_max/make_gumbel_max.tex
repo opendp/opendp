@@ -136,7 +136,7 @@ Unfortunately, this choice of metric always results in a loosening by a factor o
 This is because both the $i^{th}$ likelihood and normalization term may vary in opposite directions, resulting in a more distinguishing event.
 However, this loosening is not necessary if we can prove that the scoring function is monotonic, because the $i^{th}$ likelihood and normalization term will always vary in the same direction.
 
-We instead use a slight adjustment to this metric, \texttt{LInfDiffDistance}, characterizing the greatest difference in scores:
+We instead use a slight adjustment to this metric, \texttt{RangeDistance}, characterizing the greatest difference in scores:
 \begin{equation}
     \Delta_{\infty'} = \max_{u \sim v} d_{\infty'}(f(u), f(v)) = \max\limits_{u \sim v} \max\limits_{ij} \abs{(f(u)_i - f(v)_i) - (f(u)_j - f(v)_j)}
 \end{equation}
@@ -161,7 +161,7 @@ It is shown in \ref{privacy-guarantee} that a tighter analysis of the exponentia
 
 \subsection*{Function}
 \label{sec:python-pseudocode}
-\lstinputlisting[language=Python,firstline=2]{./pseudocode/make_base_discrete_exponential.py}
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/make_gumbel_max.py}
 
 \subsection*{Postcondition}
 
@@ -211,7 +211,7 @@ For this reason, the domain descriptor about the dataset size is ignored.
 \end{proof}
 
 \label{privacy-guarantee}
-Assume $u$, $v$ in \texttt{input\_domain} are \din-close under \rustdoc{metrics/struct}{LInfDiffDistance} and $\texttt{privacy\_map}(\din) \le \dout$.
+Assume $u$, $v$ in \texttt{input\_domain} are \din-close under \rustdoc{metrics/struct}{RangeDistance} and $\texttt{privacy\_map}(\din) \le \dout$.
 
 \begin{align*}
     &\quad \max\limits_{u \sim v} D_\infty(\function(u), \function(v)) \\
@@ -245,7 +245,7 @@ Assume $u$, $v$ in \texttt{input\_domain} are \din-close under \rustdoc{metrics/
         + \ln\left(\frac{\sum_{k} \exp(\frac{\epsilon v_k}{\Delta})}{\sum_{k} \exp(\frac{\epsilon u_k}{\Delta})}\right) \\
     &\leq \max\limits_{u \sim v} \max\limits_{i} \frac{\epsilon (u_i - v_i)}{\Delta} + \frac{\epsilon \max_j (v_j - u_j)}{\Delta} &&\text{by \ref{priv-inequality}} \\
     &\leq \epsilon \max\limits_{u \sim v} \frac{\max\limits_{ij} \abs{(u_i - v_i) - (u_j - v_j)}}{\Delta} \\
-    &\leq \epsilon &&\text{by }\rustdoc{metrics/struct}{LInfDiffDistance} \\
+    &\leq \epsilon &&\text{by }\rustdoc{metrics/struct}{RangeDistance} \\
     &= \dout
 \end{align*}    
 

@@ -8,7 +8,7 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measures::MaxDivergence,
-    metrics::LInfDiffDistance,
+    metrics::RangeDistance,
     traits::{Float, Number},
 };
 
@@ -39,20 +39,20 @@ pub enum Optimize {
 ///
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable VectorDomain.
-/// * `input_metric` - Metric on the input domain. Must be LInfDiffDistance
+/// * `input_metric` - Metric on the input domain. Must be RangeDistance
 /// * `temperature` - Higher temperatures are more private.
 /// * `optimize` - Indicate whether to privately return the "Max" or "Min"
 ///
 /// # Generics
 /// * `TIA` - Atom Input Type. Type of each element in the score vector.
 /// * `QO` - Output Distance Type.
-pub fn make_base_discrete_exponential<TIA, QO>(
+pub fn make_gumbel_max<TIA, QO>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
-    input_metric: LInfDiffDistance<TIA>,
+    input_metric: RangeDistance<TIA>,
     temperature: QO,
     optimize: Optimize,
 ) -> Fallible<
-    Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDiffDistance<TIA>, MaxDivergence<QO>>,
+    Measurement<VectorDomain<AtomDomain<TIA>>, usize, RangeDistance<TIA>, MaxDivergence<QO>>,
 >
 where
     TIA: Number + CastInternalRational,
@@ -103,13 +103,13 @@ where
 }
 
 #[cfg(not(feature = "use-mpfr"))]
-pub fn make_base_discrete_exponential<TIA, QO>(
+pub fn make_gumbel_max<TIA, QO>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
-    input_metric: LInfDiffDistance<TIA>,
+    input_metric: RangeDistance<TIA>,
     temperature: QO,
     optimize: Optimize,
 ) -> Fallible<
-    Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDiffDistance<TIA>, MaxDivergence<QO>>,
+    Measurement<VectorDomain<AtomDomain<TIA>>, usize, RangeDistance<TIA>, MaxDivergence<QO>>,
 >
 where
     TIA: Clone + Number,
@@ -178,8 +178,8 @@ pub mod test_exponential {
     #[test]
     fn test_exponential() -> Fallible<()> {
         let input_domain = VectorDomain::new(AtomDomain::default());
-        let input_metric = LInfDiffDistance::default();
-        let de = make_base_discrete_exponential(input_domain, input_metric, 1., Optimize::Max)?;
+        let input_metric = RangeDistance::default();
+        let de = make_gumbel_max(input_domain, input_metric, 1., Optimize::Max)?;
         let release = de.invoke(&vec![1., 2., 3., 2., 1.])?;
         println!("{:?}", release);
 
