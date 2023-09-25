@@ -1,7 +1,7 @@
 # type: ignore
-def make_base_discrete_exponential(
+def make_gumbel_max(
     input_domain: VectorDomain[AtomDomain[TIA]],
-    input_metric: LInfDiffDistance[TIA]
+    input_metric: RangeDistance[TIA]
     temperature: QO, 
     optimize: Union[Literal["max"], Literal["min"]]
 ) -> Measurement:

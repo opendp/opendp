@@ -2091,7 +2091,7 @@ def make_quantile_score_candidates(
     * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
     * Output Domain:  `VectorDomain<AtomDomain<usize>>`
     * Input Metric:   `MI`
-    * Output Metric:  `LInfDiffDistance<usize>`
+    * Output Metric:  `RangeDistance<usize>`
     
     **Proof Definition:**
     

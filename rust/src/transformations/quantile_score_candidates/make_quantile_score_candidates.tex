@@ -251,7 +251,7 @@ Assume $X, X'$ are \din-close under \texttt{input\_metric} and that $\texttt{sta
 
 \begin{align*}
     \dout &= \max\limits_{X \sim X'} d_{IDD}(s, s') &&\text{where } s = \function(X)\\
-    &= \max\limits_{X \sim X'} \max\limits_{ij} |(s_i - s'_i) - (s_j - s'_j)| &&\text{by definition of }\rustdoc{metrics/struct}{LInfDiffDistance} \\
+    &= \max\limits_{X \sim X'} \max\limits_{ij} |(s_i - s'_i) - (s_j - s'_j)| &&\text{by definition of }\rustdoc{metrics/struct}{RangeDistance} \\
     &\le \max\limits_{X \sim X'} \max\limits_{ij} |(s_i - s'_i)| + |- (s_j - s'_j)| &&\text{by triangle inequality} \\
     &\leq 2 \max\limits_{X \sim X'} \max\limits_{i} |s_i - s'_i| &&\text{since $s$ is not monotonic, we used the looser triangle inequality}\\
     &\leq 2 \sum_j^{\din} \max\limits_{Z_{j} \sim Z_{j+1}} \max\limits_{i} |s_{i,j} - s_{i,j+1}| &&\text{by path property where } d_{Sym}(Z_i, Z_{i+1}) = 1, X = Z_0 \text{ and } X' = Z_\din \\
@@ -312,7 +312,7 @@ Assume $X, X'$ are \din-close under \texttt{input\_metric} and that $\texttt{sta
 
 \begin{align*}
     \dout &= \max\limits_{X \sim X'} d_{IDD}(s, s') \\
-    &= \max\limits_{X \sim X'} \max\limits_{ij} |(s_i - s'_i) - (s_j - s'_j)| &&\text{by definition of }\rustdoc{metrics/struct}{LInfDiffDistance} \\
+    &= \max\limits_{X \sim X'} \max\limits_{ij} |(s_i - s'_i) - (s_j - s'_j)| &&\text{by definition of }\rustdoc{metrics/struct}{RangeDistance} \\
     &\le \max\limits_{X \sim X'} \max\limits_{ij} |(s_i - s'_i)| + |- (s_j - s'_j)| &&\text{by triangle inequality} \\
     &\leq 2 \max\limits_{X \sim X'} \max\limits_{i} |s_i - s'_i| &&\text{since $s$ is not monotonic, we used the looser triangle inequality}\\
     &\leq 2 \sum_j^{\din // 2} \max\limits_{Z_{j} \sim Z_{j+1}} \max\limits_{i} |s_{i,j} - s_{i,j+1}| &&\text{by path property where } d_{CO}(Z_i, Z_{i+1}) = 1, X = Z_0 \text{ and } Z_\din = X' \\

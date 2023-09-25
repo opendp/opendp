@@ -12,7 +12,7 @@ use crate::{
 };
 
 use super::{
-    ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance, LInfDiffDistance,
+    ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance, RangeDistance,
     SymmetricDistance,
 };
 #[bootstrap(
@@ -174,19 +174,19 @@ pub extern "C" fn opendp_metrics__discrete_distance() -> FfiResult<*mut AnyMetri
 }
 
 #[bootstrap(returns(c_type = "FfiResult<AnyMetric *>"))]
-/// Construct an instance of the `LInfDiffDistance` metric.
+/// Construct an instance of the `RangeDistance` metric.
 ///
 /// # Arguments
 /// * `T` - The type of the distance.
-fn linf_diff_distance<T>() -> LInfDiffDistance<T> {
-    LInfDiffDistance::default()
+fn range_distance<T>() -> RangeDistance<T> {
+    RangeDistance::default()
 }
 #[no_mangle]
-pub extern "C" fn opendp_metrics__linf_diff_distance(
+pub extern "C" fn opendp_metrics__range_distance(
     T: *const c_char,
 ) -> FfiResult<*mut AnyMetric> {
     fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
-        Ok(AnyMetric::new(linf_diff_distance::<T>())).into()
+        Ok(AnyMetric::new(range_distance::<T>())).into()
     }
     let T = try_!(Type::try_from(T));
     dispatch!(
