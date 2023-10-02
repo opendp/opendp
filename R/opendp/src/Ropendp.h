@@ -76,7 +76,7 @@ SEXP measurements__make_base_discrete_laplace_linear(SEXP input_domain, SEXP inp
 SEXP measurements__make_base_gaussian(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP k, SEXP MO, SEXP T, SEXP log);
 SEXP measurements__make_base_geometric(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP bounds, SEXP QO, SEXP T, SEXP OptionT, SEXP log);
 SEXP measurements__make_base_laplace(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP k, SEXP T, SEXP log);
-SEXP measurements__make_base_laplace_threshold(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP threshold, SEXP k, SEXP TV, SEXP log);
+SEXP measurements__make_base_laplace_threshold(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP threshold, SEXP TV, SEXP log);
 SEXP measurements__make_gaussian(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP MO, SEXP QO, SEXP T_scale, SEXP log);
 SEXP measurements__make_laplace(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP QO, SEXP T_scale, SEXP log);
 SEXP measurements__make_randomized_response(SEXP categories, SEXP prob, SEXP constant_time, SEXP T, SEXP QO, SEXP T_categories, SEXP log);

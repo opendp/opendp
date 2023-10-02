@@ -760,10 +760,6 @@ then_base_laplace <- function(
 #'
 #' Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
 #'
-#' This function takes a noise granularity in terms of 2^k.
-#' Larger granularities are more computationally efficient, but have a looser privacy map.
-#' If k is not set, k defaults to the smallest granularity.
-#'
 #' [make_base_laplace_threshold in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_laplace_threshold.html)
 #'
 #' **Supporting Elements:**
@@ -777,35 +773,32 @@ then_base_laplace <- function(
 #' @param input_metric Metric for the input domain.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 #' @param threshold Exclude counts that are less than this minimum value.
-#' @param k The noise granularity in terms of 2^k.
 #' @return Measurement
 #' @export
 make_base_laplace_threshold <- function(
     input_domain,
     input_metric,
     scale,
-    threshold,
-    k = -1074L
+    threshold
 ) {
-    assert_features("contrib", "floating-point")
+    assert_features("contrib")
 
     # Standardize type arguments.
     .TV <- get_distance_type(input_metric)
 
     log <- new_constructor_log("make_base_laplace_threshold", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "threshold", "k"),
-        list(input_domain, input_metric, scale, threshold, unbox2(k))
+        list("input_domain", "input_metric", "scale", "threshold"),
+        list(input_domain, input_metric, scale, threshold)
     ))
 
     # Assert that arguments are correctly typed.
     rt_assert_is_similar(expected = .TV, inferred = rt_infer(scale))
     rt_assert_is_similar(expected = .TV, inferred = rt_infer(threshold))
-    rt_assert_is_similar(expected = i32, inferred = rt_infer(k))
 
     # Call wrapper function.
     output <- .Call(
         "measurements__make_base_laplace_threshold",
-        input_domain, input_metric, scale, threshold, k, .TV,
+        input_domain, input_metric, scale, threshold, .TV,
         log, PACKAGE = "opendp")
     output
 }
@@ -817,19 +810,17 @@ make_base_laplace_threshold <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 #' @param threshold Exclude counts that are less than this minimum value.
-#' @param k The noise granularity in terms of 2^k.
 #' @return Measurement
 #' @export
 then_base_laplace_threshold <- function(
     lhs,
     scale,
-    threshold,
-    k = -1074L
+    threshold
 ) {
 
     log <- new_constructor_log("then_base_laplace_threshold", "measurements", new_hashtab(
-        list("scale", "threshold", "k"),
-        list(scale, threshold, unbox2(k))
+        list("scale", "threshold"),
+        list(scale, threshold)
     ))
 
     make_chain_dyn(
@@ -837,8 +828,7 @@ then_base_laplace_threshold <- function(
             output_domain(lhs),
             output_metric(lhs),
             scale = scale,
-            threshold = threshold,
-            k = k),
+            threshold = threshold),
         lhs,
         log)
 }
