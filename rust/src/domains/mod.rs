@@ -26,6 +26,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
+use crate::metrics::AbsoluteDistance;
 use crate::traits::{CheckAtom, InherentNull, ProductOrd};
 use std::fmt::{Debug, Formatter};
 
@@ -614,6 +615,57 @@ impl Domain for CategoricalDomain {
             .as_ref()
             .map(|e| e.contains(value))
             .unwrap_or(true))
+    }
+}
+
+/// A domain that represents all values of a given type.
+///
+/// This is a simpler alternative to `AtomDomain`, for when the value is not an atomic/primitive,
+/// and thus the usual descriptors do not apply: no bounds, no nullity.
+///
+/// # Proof Definition
+/// `AllDomain(T)` is the domain of all values of type `T`.
+pub struct AllDomain<T>(PhantomData<fn() -> T>);
+
+impl<T> Debug for AllDomain<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "AllDomain({})", type_name!(T))
+    }
+}
+
+impl<T> Default for AllDomain<T> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<T> Domain for AllDomain<T> {
+    type Carrier = T;
+    fn member(&self, _value: &Self::Carrier) -> Fallible<bool> {
+        Ok(true)
+    }
+}
+
+impl<T> Clone for AllDomain<T> {
+    fn clone(&self) -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<T> PartialEq for AllDomain<T> {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl<Q: ?Sized, A, QD> crate::core::MetricSpace
+    for (
+        AllDomain<crate::interactive::Queryable<Q, A>>,
+        AbsoluteDistance<QD>,
+    )
+{
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
