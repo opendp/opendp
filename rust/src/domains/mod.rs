@@ -24,9 +24,11 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::Bound;
 
-use crate::core::Domain;
+use crate::core::{Domain, MetricSpace};
 use crate::error::Fallible;
-use crate::traits::{CheckAtom, HasNull, ProductOrd};
+use crate::interactive::Queryable;
+use crate::metrics::LInfDistance;
+use crate::traits::{CheckAtom, HasNull, Number, ProductOrd};
 use std::fmt::{Debug, Formatter};
 
 use bitvec::prelude::{BitVec, Lsb0};
@@ -558,6 +560,71 @@ impl<D: Domain> Domain for OptionDomain<D> {
             .as_ref()
             .map(|v| self.element_domain.member(v))
             .unwrap_or(Ok(true))
+    }
+}
+
+pub struct StreamDomain<SI, DO: Domain> {
+    signature: PhantomData<fn(SI) -> DO::Carrier>,
+    pub output_domain: DO,
+}
+
+impl<SI, DO: Domain> StreamDomain<SI, DO> {
+    pub fn new(output_domain: DO) -> Self {
+        Self {
+            signature: PhantomData,
+            output_domain,
+        }
+    }
+}
+
+impl<SI, DO: Domain> Debug for StreamDomain<SI, DO> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(
+            f,
+            "StreamDomain({}, {:?})",
+            type_name!(SI),
+            self.output_domain
+        )
+    }
+}
+
+impl<SI, DO: Domain + Default> Default for StreamDomain<SI, DO> {
+    fn default() -> Self {
+        Self {
+            signature: PhantomData,
+            output_domain: DO::default(),
+        }
+    }
+}
+
+impl<SI, DO: Domain> Domain for StreamDomain<SI, DO> {
+    type Carrier = Queryable<SI, DO::Carrier>;
+    fn member(&self, _value: &Self::Carrier) -> Fallible<bool> {
+        Ok(true)
+    }
+}
+
+impl<SI, DO: Domain> Clone for StreamDomain<SI, DO> {
+    fn clone(&self) -> Self {
+        Self {
+            signature: PhantomData,
+            output_domain: self.output_domain.clone(),
+        }
+    }
+}
+
+impl<SI, DO: Domain> PartialEq for StreamDomain<SI, DO> {
+    fn eq(&self, other: &Self) -> bool {
+        self.output_domain == other.output_domain
+    }
+}
+
+impl<SI, SO: Number> MetricSpace for (StreamDomain<SI, AtomDomain<SO>>, LInfDistance<SO>) {
+    fn check_space(&self) -> Fallible<()> {
+        fallible!(
+            FailedFunction,
+            "member check is not implemented for streams"
+        )
     }
 }
 
