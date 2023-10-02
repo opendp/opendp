@@ -1,147 +1,116 @@
+use std::cmp::Ordering;
+
+use rug::{float::Round, ops::AssignRound, Float as RFloat};
+
 use crate::{
-    core::{Domain, Function, Measure, Measurement, MetricSpace, PrivacyMap},
+    core::{Function, Measurement, MetricSpace, PrivacyMap},
     domains::AllDomain,
     error::Fallible,
     interactive::Queryable,
     measures::MaxDivergence,
-    metrics::AbsoluteDistance,
-    traits::{samplers::SampleDiscreteLaplaceZ2k, CheckNull, Float, InfCast},
+    metrics::RangeDistance,
+    traits::{
+        samplers::{LaplacePSRN, PSRN},
+        Float, InfCast, Number,
+    },
 };
 
-pub fn make_above_threshold<DI: 'static + Domain, T: Float, QI, MODE>(
-    threshold: T,
-    scale_threshold: T,
-    scale_aggregate: T,
+macro_rules! float {
+    ($val:expr, $round:ident) => {
+        RFloat::with_val_round(f64::MANTISSA_DIGITS, $val, Round::$round).0
+    };
+}
+
+pub fn make_above_threshold<TI, QI: Number, QO: Float>(
+    scale: QO,
+    threshold: QI,
 ) -> Fallible<
     Measurement<
-        AllDomain<Queryable<DI::Carrier, T>>,
-        Queryable<DI::Carrier, MODE::Output>,
-        AbsoluteDistance<QI>,
-        MaxDivergence<T>,
+        AllDomain<Queryable<TI, QI>>,
+        Queryable<TI, bool>,
+        RangeDistance<QI>,
+        MaxDivergence<QO>,
     >,
 >
 where
-    DI::Carrier: 'static + Clone,
-    T: 'static + Clone + SampleDiscreteLaplaceZ2k + PartialOrd + InfCast<QI>,
-    MaxDivergence<T>: Measure<Distance = T>,
-    QI: Clone,
-    MODE: SVMode<T>,
-    (AllDomain<Queryable<DI::Carrier, T>>, AbsoluteDistance<QI>): MetricSpace,
+    TI: 'static,
+    QO: InfCast<QI>,
+    (AllDomain<Queryable<TI, QI>>, RangeDistance<QI>): MetricSpace,
+
+    RFloat: AssignRound<QI, Round = Round, Ordering = Ordering>,
+    RFloat: AssignRound<QO, Round = Round, Ordering = Ordering>,
 {
+    let _2 = QO::exact_int_cast(2)?;
+    let threshold = float!(threshold, Up);
+
     Measurement::new(
         AllDomain::default(),
-        Function::new_fallible(enclose!(scale_release, move |arg: &Queryable<
-            DI::Carrier,
-            T,
-        >| {
+        Function::new_fallible(move |arg: &Queryable<TI, QI>| {
+            let scale = float!(scale.inf_mul(&_2)?, Up);
+
             let mut trans_queryable = arg.clone();
+            let mut found = false;
+            // TODO: twice as much noise as necessary if monotonic
+            // TODO: can be reused in other instances of above_threshold
+            let mut threshold_psrn = LaplacePSRN::new(threshold.clone(), scale.clone());
+            let scale = scale.clone();
 
-            let threshold =
-                T::sample_discrete_laplace_Z2k(threshold, scale_threshold.clone(), -100)?;
-            let scale_aggregate = scale_aggregate.clone();
-            let scale_release = scale_release.clone();
-            let mut query_limit = query_limit.clone();
-
-            Queryable::new_external(move |query: &DI::Carrier| {
-                if query_limit == 0 {
+            Queryable::new_external(move |query: &TI| {
+                if found {
                     return fallible!(FailedFunction, "queries exhausted");
                 }
 
-                let aggregate = trans_queryable.eval(query)?;
-                let aggregate =
-                    T::sample_discrete_laplace_Z2k(aggregate, scale_aggregate.clone(), -100)?;
+                let aggregate = float!(trans_queryable.eval(query)?, Down);
+                let mut aggregate_psrn = LaplacePSRN::new(aggregate, scale.clone());
 
-                if aggregate >= threshold {
-                    query_limit -= 1;
-                }
-
-                Ok(MODE::eval_release(
-                    aggregate >= threshold,
-                    aggregate,
-                    scale_release.clone(),
-                )?)
+                Ok(if aggregate_psrn.greater_than(&mut threshold_psrn)? {
+                    found = true;
+                    true
+                } else {
+                    false
+                })
             })
-        })),
-        AbsoluteDistance::default(),
+        }),
+        RangeDistance::default(),
         MaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &QI| {
-            let d_in = T::inf_cast(d_in.clone())?;
-            let _2 = T::one() + T::one();
-            let k_ = T::exact_int_cast(query_limit)?;
+            let d_in = QO::inf_cast(d_in.clone())?;
+            if d_in.is_sign_negative() {
+                return fallible!(InvalidDistance, "sensitivity must be non-negative");
+            }
 
-            let eps_threshold = d_in.inf_div(&scale_threshold)?;
-            let eps_aggregate = _2.inf_mul(&k_)?.inf_mul(&d_in)?.inf_div(&scale_aggregate)?;
-            let eps_release = if let Some(scale_release) = MODE::option_scale(scale_release.clone())
-            {
-                k_.inf_mul(&d_in)?.inf_div(&scale_release)?
-            } else {
-                T::zero()
-            };
+            if d_in.is_zero() {
+                return Ok(QO::zero());
+            }
 
-            eps_threshold.inf_add(&eps_aggregate)?.inf_add(&eps_release)
+            if scale.is_zero() {
+                return Ok(QO::infinity());
+            }
+
+            // d_in / scale
+            d_in.inf_div(&scale)
         }),
     )
-}
-
-pub trait SVMode<T> {
-    type Output: 'static + CheckNull;
-    type Scale: 'static + Clone;
-    fn eval_release(passes: bool, value: T, scale: Self::Scale) -> Fallible<Self::Output>;
-    fn option_scale(scale: Self::Scale) -> Option<T>;
-}
-
-struct OnlyBool;
-struct WithValue;
-
-impl<T> SVMode<T> for OnlyBool {
-    type Output = bool;
-    type Scale = ();
-    fn eval_release(passes: bool, _value: T, _scale: Self::Scale) -> Fallible<Self::Output> {
-        Ok(passes)
-    }
-    fn option_scale(_scale: Self::Scale) -> Option<T> {
-        None
-    }
-}
-
-impl<T: 'static + Clone + CheckNull> SVMode<T> for WithValue
-where
-    T: SampleDiscreteLaplaceZ2k,
-{
-    type Output = Option<T>;
-    type Scale = T;
-    fn eval_release(passes: bool, value: T, scale: Self::Scale) -> Fallible<Self::Output> {
-        passes
-            .then(|| T::sample_discrete_laplace_Z2k(value, scale, -100))
-            .transpose()
-    }
-    fn option_scale(scale: Self::Scale) -> Option<T> {
-        Some(scale)
-    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
 
-    // #[test]
-    // fn test_sparse_vector() -> Fallible<()> {
-    //     let sv_meas = make_above_threshold::<AllDomain<f64>, f64, f64, OnlyBool>(
-    //         100., // threshold
-    //         4.,   // noise scale for threshold
-    //         6.,   // noise scale for aggregates
-    //         (),   // noise scale for releases
-    //         3,    // limit on number of queries released
-    //     )?;
+    #[test]
+    fn test_sparse_vector() -> Fallible<()> {
+        let sv_meas = make_above_threshold::<f64, f64, f64>(
+            100., // threshold
+            4.,   // noise scale for threshold
+        )?;
 
-    //     let mut sv = sv_meas.invoke(&Queryable::new_external(|query: &f64| Ok(*query))?)?;
+        let mut sv = sv_meas.invoke(&Queryable::new_external(|query: &f64| Ok(*query))?)?;
 
-    //     println!("too small       : {:?}", sv.eval(&1.)?);
-    //     println!("maybe true      : {:?}", sv.eval(&100.)?);
-    //     println!("definitely true : {:?}", sv.eval(&1000.)?);
-    //     println!("maybe exhausted : {:?}", sv.eval(&1000.).is_err());
-    //     println!("exhausted       : {:?}", sv.eval(&1000.).is_err());
+        println!("too small       : {:?}", sv.eval(&1.)?);
+        println!("maybe true      : {:?}", sv.eval(&100.).is_err());
+        println!("definitely true : {:?}", sv.eval(&1000.).is_err());
+        println!("exhausted       : {:?}", sv.eval(&1000.).is_err());
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 }

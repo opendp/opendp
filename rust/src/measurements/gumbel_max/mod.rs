@@ -14,7 +14,7 @@ use crate::{
 
 #[cfg(feature = "use-mpfr")]
 use crate::traits::{
-    samplers::{CastInternalRational, GumbelPSRN},
+    samplers::{CastInternalRational, GumbelPSRN, PSRN},
     DistanceConstant,
 };
 #[cfg(feature = "use-mpfr")]
