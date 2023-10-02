@@ -22,6 +22,8 @@ macro_rules! float {
 }
 
 pub fn make_above_threshold<TI, QI: Number, QO: Float>(
+    input_domain: AllDomain<Queryable<TI, QI>>,
+    input_metric: RangeDistance<QI>,
     scale: QO,
     threshold: QI,
 ) -> Fallible<
@@ -44,7 +46,7 @@ where
     let threshold = float!(threshold, Up);
 
     Measurement::new(
-        AllDomain::default(),
+        input_domain,
         Function::new_fallible(move |arg: &Queryable<TI, QI>| {
             let scale = float!(scale.inf_mul(&_2)?, Up);
 
@@ -71,7 +73,7 @@ where
                 })
             })
         }),
-        RangeDistance::default(),
+        input_metric,
         MaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &QI| {
             let d_in = QO::inf_cast(d_in.clone())?;
@@ -100,6 +102,8 @@ mod test {
     #[test]
     fn test_sparse_vector() -> Fallible<()> {
         let sv_meas = make_above_threshold::<f64, f64, f64>(
+            AllDomain::default(),
+            RangeDistance::default(),
             100., // threshold
             4.,   // noise scale for threshold
         )?;
