@@ -52,3 +52,8 @@ pub use randomized_response::*;
 mod alp;
 #[cfg(all(feature = "floating-point", feature = "contrib"))]
 pub use alp::*;
+
+#[cfg(all(feature = "use-mpfr", feature = "floating-point", feature = "contrib"))]
+mod above_threshold;
+#[cfg(all(feature = "use-mpfr", feature = "floating-point", feature = "contrib"))]
+pub use above_threshold::*;
