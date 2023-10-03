@@ -36,6 +36,7 @@ __all__ = [
     "make_df_cast_default",
     "make_df_is_equal",
     "make_drop_null",
+    "make_filter",
     "make_find",
     "make_find_bin",
     "make_group_by_stable",
@@ -91,6 +92,7 @@ __all__ = [
     "then_df_cast_default",
     "then_df_is_equal",
     "then_drop_null",
+    "then_filter",
     "then_find",
     "then_find_bin",
     "then_group_by_stable",
@@ -1723,6 +1725,73 @@ def then_drop_null(
     return PartialConstructor(lambda input_domain, input_metric: make_drop_null(
         input_domain=input_domain,
         input_metric=input_metric))
+
+
+
+def make_filter(
+    input_domain: Domain,
+    input_metric: Metric,
+    transformation: Transformation
+) -> Transformation:
+    r"""Make a Transformation that filters a LazyFrame.
+
+    Valid inputs for `input_domain` and `input_metric` are:
+
+    | `input_domain`                  | `input_metric`         |
+    | ------------------------------- | ---------------------- |
+    | `LazyFrameDomain`               | `SymmetricDistance`    |
+    | `LazyFrameDomain`               | `InsertDeleteDistance` |
+
+    [make_filter in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_filter.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `LazyFrameDomain`
+    * Output Domain:  `LazyFrameDomain`
+    * Input Metric:   `T::Metric`
+    * Output Metric:  `T::Metric`
+
+    :param input_domain: LazyFrameDomain.
+    :type input_domain: Domain
+    :param input_metric: The metric space under which neighboring LazyFrame frames are compared.
+    :type input_metric: Metric
+    :param transformation: 
+    :type transformation: Transformation
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_transformation = py_to_c(transformation, c_type=Transformation, type_name=None)
+
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_filter
+    lib_function.argtypes = [Domain, Metric, Transformation]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_transformation), Transformation))
+
+    return output
+
+def then_filter(
+    transformation: Transformation
+):  
+    r"""partial constructor of make_filter
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_filter`
+
+    :param transformation: 
+    :type transformation: Transformation
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_filter(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        transformation=transformation))
 
 
 

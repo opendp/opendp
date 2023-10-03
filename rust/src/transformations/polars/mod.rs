@@ -9,6 +9,9 @@ pub use make_collect::*;
 mod make_column;
 pub use make_column::*;
 
+mod make_filter;
+pub use make_filter::*;
+
 mod make_lazy;
 pub use make_lazy::*;
 

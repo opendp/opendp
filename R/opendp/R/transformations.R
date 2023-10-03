@@ -2053,6 +2053,80 @@ then_drop_null <- function(
 }
 
 
+#' filter constructor
+#'
+#' Make a Transformation that filters a LazyFrame.
+#'
+#' Valid inputs for `input_domain` and `input_metric` are:
+#'
+#' | `input_domain`                  | `input_metric`         |
+#' | ------------------------------- | ---------------------- |
+#' | `LazyFrameDomain`               | `SymmetricDistance`    |
+#' | `LazyFrameDomain`               | `InsertDeleteDistance` |
+#'
+#' [make_filter in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_filter.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `LazyFrameDomain`
+#' * Output Domain:  `LazyFrameDomain`
+#' * Input Metric:   `T::Metric`
+#' * Output Metric:  `T::Metric`
+#'
+#' @concept transformations
+#' @param input_domain LazyFrameDomain.
+#' @param input_metric The metric space under which neighboring LazyFrame frames are compared.
+#' @param transformation undocumented
+#' @return Transformation
+#' @export
+make_filter <- function(
+    input_domain,
+    input_metric,
+    transformation
+) {
+    # No type arguments to standardize.
+    log <- new_constructor_log("make_filter", "transformations", new_hashtab(
+        list("input_domain", "input_metric", "transformation"),
+        list(input_domain, input_metric, transformation)
+    ))
+
+    # Call wrapper function.
+    output <- .Call(
+        "transformations__make_filter",
+        input_domain, input_metric, transformation,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial filter constructor
+#'
+#' See documentation for [make_filter()] for details.
+#'
+#' @concept transformations
+#' @param lhs The prior transformation or metric space.
+#' @param transformation undocumented
+#' @return Transformation
+#' @export
+then_filter <- function(
+    lhs,
+    transformation
+) {
+
+    log <- new_constructor_log("then_filter", "transformations", new_hashtab(
+        list("transformation"),
+        list(transformation)
+    ))
+
+    make_chain_dyn(
+        make_filter(
+            output_domain(lhs),
+            output_metric(lhs),
+            transformation = transformation),
+        lhs,
+        log)
+}
+
+
 #' find constructor
 #'
 #' Find the index of a data value in a set of categories.

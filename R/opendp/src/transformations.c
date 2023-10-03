@@ -656,6 +656,30 @@ SEXP transformations__make_drop_null(
 }
 
 
+SEXP transformations__make_filter(
+    SEXP input_domain, SEXP input_metric, SEXP transformation, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(transformation);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    AnyTransformation * c_transformation = sexp_to_anytransformationptr(transformation);
+
+    // Call library function.
+    FfiResult_____AnyTransformation _result = opendp_transformations__make_filter(c_input_domain, c_input_metric, c_transformation);
+
+    UNPROTECT(4);
+    if(_result.tag == Err_____AnyTransformation)
+        return(extract_error(_result.err));
+    AnyTransformation* _return_value = _result.ok;
+    return(anytransformationptr_to_sexp(_return_value, log));
+}
+
+
 SEXP transformations__make_find(
     SEXP input_domain, SEXP input_metric, SEXP categories, SEXP TIA, SEXP T_categories, SEXP log
 ) {
