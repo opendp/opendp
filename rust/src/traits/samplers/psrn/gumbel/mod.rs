@@ -48,9 +48,9 @@ impl InverseCDF for GumbelRV {
         // Return to normal rounding for shift/scale
         let mut f_gumbel = f_gumbel.with_rounding::<R>();
 
-        // Return to normal rounding for shift/scale
         f_gumbel *= self.scale.clone().with_rounding();
         f_gumbel += self.shift.clone().with_rounding();
+
         Some(f_gumbel.with_rounding())
     }
 }
