@@ -13,10 +13,13 @@ use crate::{
     error::Fallible,
     measures::RangeDivergence,
     metrics::LInfDistance,
-    traits::{samplers::PartialSample, InfAdd, InfCast, InfDiv, Number},
+    traits::{
+        samplers::{ExponentialRV, InverseCDF, PartialSample},
+        InfAdd, InfCast, InfDiv, Number,
+    },
 };
 
-use crate::traits::{samplers::GumbelRV, DistanceConstant};
+use crate::traits::samplers::GumbelRV;
 
 #[cfg(test)]
 mod test;
@@ -59,7 +62,7 @@ impl TryFrom<&str> for Optimize {
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable VectorDomain.
 /// * `input_metric` - Metric on the input domain. Must be LInfDistance
-/// * `scale` - Higher scales are more private.
+/// * `scale` - Noise scale for the Gumbel distribution.
 /// * `optimize` - Indicate whether to privately return the "max" or "min"
 ///
 /// # Generics
@@ -72,9 +75,13 @@ pub fn make_report_noisy_max_gumbel<TIA>(
 ) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, RangeDivergence>>
 where
     TIA: Number,
-    f64: DistanceConstant<TIA>,
     FBig: TryFrom<TIA> + TryFrom<f64>,
+    f64: InfCast<TIA>,
 {
+    if input_domain.element_domain.nullable() {
+        return fallible!(MakeMeasurement, "values must be non-null");
+    }
+
     if input_domain.element_domain.nullable() {
         return fallible!(MakeMeasurement, "input domain must be non-nullable");
     }
@@ -83,13 +90,13 @@ where
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
 
-    let scale_frac = FBig::try_from(scale.clone())
+    let f_scale = FBig::try_from(scale.clone())
         .map_err(|_| err!(MakeMeasurement, "scale parameter must be finite"))?;
 
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &Vec<TIA>| {
-            select_score(arg.iter().cloned(), optimize.clone(), scale_frac.clone())
+            select_score::<_, GumbelRV>(arg.iter().cloned(), optimize.clone(), f_scale.clone())
         }),
         input_metric.clone(),
         RangeDivergence,
@@ -123,7 +130,22 @@ where
     }
 }
 
-pub fn select_score<TIA>(
+pub(crate) trait NewArgmaxRV: InverseCDF + Sized {
+    fn new(shift: FBig, scale: FBig) -> Fallible<Self>;
+}
+
+impl NewArgmaxRV for GumbelRV {
+    fn new(shift: FBig, scale: FBig) -> Fallible<Self> {
+        GumbelRV::new(shift, scale)
+    }
+}
+impl NewArgmaxRV for ExponentialRV {
+    fn new(shift: FBig, scale: FBig) -> Fallible<Self> {
+        ExponentialRV::new(shift, scale)
+    }
+}
+
+pub(crate) fn select_score<TIA, RV: NewArgmaxRV>(
     iter: impl Iterator<Item = TIA>,
     optimize: Optimize,
     scale: FBig,
@@ -154,7 +176,7 @@ where
             }
 
             // create a partial sample
-            Ok((i, PartialSample::new(GumbelRV::new(shift, scale.clone())?)))
+            Ok((i, PartialSample::new(RV::new(shift, scale.clone())?)))
         })
         .reduce(|l, r| {
             let (mut l, mut r) = (l?, r?);

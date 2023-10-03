@@ -259,8 +259,9 @@ fn report_noisy_max_gumbel_udf(
     ) -> PolarsResult<Column>
     where
         // the physical (rust) dtype must be a number that can be converted into a rational
-        for<'a> PT::Physical<'a>: NativeType + Number,
-        for<'a> FBig: TryFrom<PT::Physical<'a>>,
+        PT::Physical<'static>: NativeType + Number,
+        FBig: TryFrom<PT::Physical<'static>>,
+        f64: InfCast<PT::Physical<'static>>,
     {
         Ok(column
             .as_materialized_series()
@@ -275,8 +276,8 @@ fn report_noisy_max_gumbel_udf(
                         PolarsError::InvalidOperation("input dtype does not match".into())
                     })?;
 
-                select_score(arr.values_iter().cloned(), optimize.clone(), scale.clone())
-                    .map(|idx| idx as u32)
+                let idx = m_rnm.invoke(&arr.values_iter().cloned().collect())? as u32;
+                PolarsResult::Ok(idx)
             })?
             // convert the resulting chunked array back to a series
             .into_series()
