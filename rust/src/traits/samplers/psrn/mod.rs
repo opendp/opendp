@@ -17,6 +17,9 @@ pub use gumbel::GumbelDist;
 
 use crate::{error::Fallible, traits::RoundCast};
 
+mod exponential;
+pub use exponential::ExponentialDist;
+
 use super::sample_standard_bernoulli;
 
 pub trait InverseCDF {

@@ -10,7 +10,7 @@ use crate::{
         any::{AnyDomain, AnyMeasurement, AnyMetric, AnyObject, Downcast},
         util::{to_str, Type},
     },
-    measurements::{make_report_noisy_max_gumbel, Optimize},
+    measurements::{make_report_noisy_max_exponential, Optimize},
     metrics::LInfDistance,
     traits::{
         samplers::{CastInternalRational, SampleUniform},
@@ -19,7 +19,7 @@ use crate::{
 };
 
 #[no_mangle]
-pub extern "C" fn opendp_measurements__make_report_noisy_max_gumbel(
+pub extern "C" fn opendp_measurements__make_report_noisy_max_exponential(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
     scale: *const AnyObject,
@@ -50,7 +50,7 @@ pub extern "C" fn opendp_measurements__make_report_noisy_max_gumbel(
             .clone();
         let input_metric = input_metric.downcast_ref::<LInfDistance<TIA>>()?.clone();
         let scale = *scale.downcast_ref::<QO>()?;
-        make_report_noisy_max_gumbel::<TIA, QO>(input_domain, input_metric, scale, optimize)
+        make_report_noisy_max_exponential::<TIA, QO>(input_domain, input_metric, scale, optimize)
             .into_any()
     }
 

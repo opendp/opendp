@@ -2,7 +2,7 @@ use crate::core::{MetricSpace, PrivacyMap};
 use crate::measurements::{report_noisy_max_gumbel_map, select_score, Optimize};
 use crate::metrics::{IntDistance, LInfDistance, Parallel, PartitionDistance};
 use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
-use crate::traits::samplers::CastInternalRational;
+use crate::traits::samplers::GumbelDist;
 use crate::traits::{InfCast, InfMul, Number};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
@@ -12,7 +12,7 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
 };
-use dashu::rational::RBig;
+use dashu::float::FBig;
 
 use polars::datatypes::{
     DataType, Field, Float32Type, Float64Type, Int16Type, Int32Type, Int64Type, Int8Type,
@@ -238,22 +238,24 @@ fn report_noisy_max_gumbel_udf(
 
     let ReportNoisyMaxPlugin { optimize, scale } = kwargs;
 
-    let Ok(scale) = RBig::try_from(scale) else {
-        polars_bail!(InvalidOperation: "{} scale must be a number", ReportNoisyMaxPlugin::NAME);
-    };
-    if scale < RBig::ZERO {
+    if scale.is_sign_negative() {
         polars_bail!(InvalidOperation: "{} scale must be non-negative", ReportNoisyMaxPlugin::NAME);
     }
+
+    let Ok(scale) = FBig::try_from(scale.clone()) else {
+        polars_bail!(InvalidOperation: "{} scale must be finite", ReportNoisyMaxPlugin::NAME);
+    };
 
     // PT stands for Polars Type
     fn rnm_gumbel_impl<PT: 'static + PolarsDataType>(
         series: &Series,
-        scale: RBig,
+        scale: FBig,
         optimize: Optimize,
     ) -> PolarsResult<Series>
     where
         // the physical (rust) dtype must be a number that can be converted into a rational
-        for<'a> PT::Physical<'a>: NativeType + Number + CastInternalRational,
+        for<'a> PT::Physical<'a>: NativeType + Number,
+        FBig: for<'a> TryFrom<PT::Physical<'a>>,
     {
         Ok(series
             // unpack the series into a chunked array
@@ -267,8 +269,12 @@ fn report_noisy_max_gumbel_udf(
                         PolarsError::InvalidOperation("input dtype does not match".into())
                     })?;
 
-                select_score(arr.values_iter().cloned(), optimize.clone(), scale.clone())
-                    .map(|idx| idx as u32)
+                select_score::<_, GumbelDist>(
+                    arr.values_iter().cloned(),
+                    optimize.clone(),
+                    scale.clone(),
+                )
+                .map(|idx| idx as u32)
             })?
             // convert the resulting chunked array back to a series
             .into_series())
