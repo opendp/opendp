@@ -19,6 +19,11 @@ mod gumbel_max;
 pub use gumbel_max::*;
 
 #[cfg(feature = "contrib")]
+mod exponential_max;
+#[cfg(feature = "contrib")]
+pub use exponential_max::*;
+
+#[cfg(feature = "contrib")]
 mod laplace;
 #[cfg(feature = "contrib")]
 pub use laplace::*;
