@@ -3,6 +3,7 @@ use crate::domains::{ExprPlan, WildExprDomain};
 use crate::measurements::{report_noisy_max_gumbel_map, select_score, Optimize};
 use crate::metrics::{IntDistance, LInfDistance, Parallel, PartitionDistance};
 use crate::polars::{apply_plugin, literal_value_of, match_plugin, OpenDPPlugin};
+use crate::traits::samplers::GumbelRV;
 use crate::traits::{InfCast, InfMul, Number};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
@@ -260,7 +261,7 @@ fn report_noisy_max_gumbel_udf(
     where
         // the physical (rust) dtype must be a number that can be converted into a rational
         for<'a> PT::Physical<'a>: NativeType + Number,
-        for<'a> FBig: TryFrom<PT::Physical<'a>>,
+        FBig: for<'a> TryFrom<PT::Physical<'a>>,
     {
         Ok(column
             .as_materialized_series()
@@ -275,8 +276,12 @@ fn report_noisy_max_gumbel_udf(
                         PolarsError::InvalidOperation("input dtype does not match".into())
                     })?;
 
-                select_score(arr.values_iter().cloned(), optimize.clone(), scale.clone())
-                    .map(|idx| idx as u32)
+                select_score::<_, GumbelRV>(
+                    arr.values_iter().cloned(),
+                    optimize.clone(),
+                    scale.clone(),
+                )
+                .map(|idx| idx as u32)
             })?
             // convert the resulting chunked array back to a series
             .into_series()
