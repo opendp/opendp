@@ -382,6 +382,34 @@ SEXP measurements__make_randomized_response_bool(
 }
 
 
+SEXP measurements__make_report_noisy_max_exponential(
+    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP optimize, SEXP QO, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(scale);
+    PROTECT(optimize);
+    PROTECT(QO);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    AnyObject * c_scale = sexp_to_anyobjectptr(scale, QO);
+    char * c_optimize = (char *)CHAR(STRING_ELT(optimize, 0));
+    char * c_QO = rt_to_string(QO);
+
+    // Call library function.
+    FfiResult_____AnyMeasurement _result = opendp_measurements__make_report_noisy_max_exponential(c_input_domain, c_input_metric, c_scale, c_optimize, c_QO);
+
+    UNPROTECT(6);
+    if(_result.tag == Err_____AnyMeasurement)
+        return(extract_error(_result.err));
+    AnyMeasurement* _return_value = _result.ok;
+    return(anymeasurementptr_to_sexp(_return_value, log));
+}
+
+
 SEXP measurements__make_report_noisy_max_gumbel(
     SEXP input_domain, SEXP input_metric, SEXP scale, SEXP optimize, SEXP QO, SEXP log
 ) {

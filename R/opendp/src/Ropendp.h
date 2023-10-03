@@ -81,6 +81,7 @@ SEXP measurements__make_gaussian(SEXP input_domain, SEXP input_metric, SEXP scal
 SEXP measurements__make_laplace(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP QO, SEXP T_scale, SEXP log);
 SEXP measurements__make_randomized_response(SEXP categories, SEXP prob, SEXP constant_time, SEXP T, SEXP QO, SEXP T_categories, SEXP log);
 SEXP measurements__make_randomized_response_bool(SEXP prob, SEXP constant_time, SEXP QO, SEXP log);
+SEXP measurements__make_report_noisy_max_exponential(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP optimize, SEXP QO, SEXP log);
 SEXP measurements__make_report_noisy_max_gumbel(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP optimize, SEXP QO, SEXP log);
 SEXP measures__fixed_smoothed_max_divergence(SEXP T, SEXP log);
 SEXP measures__max_divergence(SEXP T, SEXP log);

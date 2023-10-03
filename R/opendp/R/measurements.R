@@ -1184,6 +1184,90 @@ then_randomized_response_bool <- function(
 }
 
 
+#' report noisy max exponential constructor
+#'
+#' Make a Measurement that takes a vector of scores and privately selects the index of the highest score
+#' with noise added from the exponential distribution.
+#'
+#' [make_report_noisy_max_exponential in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_report_noisy_max_exponential.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+#' * Output Type:    `usize`
+#' * Input Metric:   `LInfDistance<TIA>`
+#' * Output Measure: `MaxDivergence<QO>`
+#'
+#' @param input_domain Domain of the input vector. Must be a non-nullable VectorDomain.
+#' @param input_metric Metric on the input domain. Must be LInfDistance
+#' @param scale Higher scales are more private.
+#' @param optimize Indicate whether to privately return the "Max" or "Min"
+#' @param .QO Output Distance Type.
+#' @return Measurement
+#' @export
+make_report_noisy_max_exponential <- function(
+    input_domain,
+    input_metric,
+    scale,
+    optimize,
+    .QO = NULL
+) {
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    .QO <- parse_or_infer(type_name = .QO, public_example = scale)
+
+    log <- new_constructor_log("make_report_noisy_max_exponential", "measurements", new_hashtab(
+        list("input_domain", "input_metric", "scale", "optimize", "QO"),
+        list(input_domain, input_metric, scale, unbox2(optimize), .QO)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
+    rt_assert_is_similar(expected = String, inferred = rt_infer(optimize))
+
+    # Call wrapper function.
+    output <- .Call(
+        "measurements__make_report_noisy_max_exponential",
+        input_domain, input_metric, scale, optimize, .QO,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial report noisy max exponential constructor
+#'
+#' See documentation for [make_report_noisy_max_exponential()] for details.
+#'
+#' @param lhs The prior transformation or metric space.
+#' @param scale Higher scales are more private.
+#' @param optimize Indicate whether to privately return the "Max" or "Min"
+#' @param .QO Output Distance Type.
+#' @return Measurement
+#' @export
+then_report_noisy_max_exponential <- function(
+    lhs,
+    scale,
+    optimize,
+    .QO = NULL
+) {
+
+    log <- new_constructor_log("then_report_noisy_max_exponential", "measurements", new_hashtab(
+        list("scale", "optimize", "QO"),
+        list(scale, unbox2(optimize), .QO)
+    ))
+
+    make_chain_dyn(
+        make_report_noisy_max_exponential(
+            output_domain(lhs),
+            output_metric(lhs),
+            scale = scale,
+            optimize = optimize,
+            .QO = .QO),
+        lhs,
+        log)
+}
+
+
 #' report noisy max gumbel constructor
 #'
 #' Make a Measurement that takes a vector of scores and privately selects the index of the highest score.
@@ -1203,7 +1287,7 @@ then_randomized_response_bool <- function(
 #'
 #' @param input_domain Domain of the input vector. Must be a non-nullable VectorDomain.
 #' @param input_metric Metric on the input domain. Must be LInfDistance
-#' @param scale Higher scales are more private.
+#' @param scale Noise scale for the Gumbel distribution.
 #' @param optimize Indicate whether to privately return the "Max" or "Min"
 #' @param .QO Output Distance Type.
 #' @return Measurement
@@ -1242,7 +1326,7 @@ make_report_noisy_max_gumbel <- function(
 #' See documentation for [make_report_noisy_max_gumbel()] for details.
 #'
 #' @param lhs The prior transformation or metric space.
-#' @param scale Higher scales are more private.
+#' @param scale Noise scale for the Gumbel distribution.
 #' @param optimize Indicate whether to privately return the "Max" or "Min"
 #' @param .QO Output Distance Type.
 #' @return Measurement

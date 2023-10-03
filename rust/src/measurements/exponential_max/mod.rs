@@ -14,33 +14,30 @@ use crate::{
 };
 
 use crate::traits::{
-    samplers::{CastInternalRational, GumbelPSRN, PSRN},
+    samplers::{CastInternalRational, ExponentialPSRN, PSRN},
     DistanceConstant,
 };
 
-#[derive(PartialEq)]
-pub enum Optimize {
-    Max,
-    Min,
-}
+use super::Optimize;
 
 #[bootstrap(
     features("contrib"),
     arguments(optimize(c_type = "char *", rust_type = "String")),
     generics(TIA(suppress))
 )]
-/// Make a Measurement that takes a vector of scores and privately selects the index of the highest score.
+/// Make a Measurement that takes a vector of scores and privately selects the index of the highest score
+/// with noise added from the exponential distribution.
 ///
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable VectorDomain.
 /// * `input_metric` - Metric on the input domain. Must be LInfDistance
-/// * `scale` - Noise scale for the Gumbel distribution.
+/// * `scale` - Higher scales are more private.
 /// * `optimize` - Indicate whether to privately return the "Max" or "Min"
 ///
 /// # Generics
 /// * `TIA` - Atom Input Type. Type of each element in the score vector.
 /// * `QO` - Output Distance Type.
-pub fn make_report_noisy_max_gumbel<TIA, QO>(
+pub fn make_report_noisy_max_exponential<TIA, QO>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
     input_metric: LInfDistance<TIA>,
     scale: QO,
@@ -74,7 +71,7 @@ where
                             Optimize::Max => Sign::Positive,
                             Optimize::Min => Sign::Negative,
                         };
-                    Ok((i, GumbelPSRN::new(shift, r_scale.clone())))
+                    Ok((i, ExponentialPSRN::new(shift, r_scale.clone())))
                 })
                 .reduce(|l, r| {
                     let (mut l, mut r) = (l?, r?);
@@ -90,7 +87,7 @@ where
             let d_in = input_metric.range_distance(*d_in)?;
 
             // convert data type to QO
-            let d_in = QO::inf_cast(d_in)?;
+            let d_in = QO::inf_cast(d_in.clone())?;
 
             if d_in.is_sign_negative() {
                 return fallible!(InvalidDistance, "sensitivity must be non-negative");
@@ -106,8 +103,9 @@ where
     )
 }
 
+#[cfg(feature = "floating-point")]
 #[cfg(test)]
-pub mod test_exponential {
+pub mod test_laplace {
     use crate::error::Fallible;
 
     use super::*;
@@ -116,7 +114,7 @@ pub mod test_exponential {
     fn test_exponential() -> Fallible<()> {
         let input_domain = VectorDomain::new(AtomDomain::default());
         let input_metric = LInfDistance::default();
-        let de = make_report_noisy_max_gumbel(input_domain, input_metric, 1., Optimize::Max)?;
+        let de = make_report_noisy_max_exponential(input_domain, input_metric, 1., Optimize::Max)?;
         let release = de.invoke(&vec![1., 2., 3., 2., 1.])?;
         println!("{:?}", release);
 
