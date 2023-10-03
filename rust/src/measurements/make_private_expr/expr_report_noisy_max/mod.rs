@@ -1,9 +1,8 @@
 use crate::core::PrivacyMap;
-use crate::domains::{ExprPlan, WildExprDomain};
+use crate::domains::{AtomDomain, ExprPlan, VectorDomain, WildExprDomain};
 use crate::measurements::{Optimize, report_noisy_max_gumbel_map, select_score};
 use crate::metrics::{IntDistance, L0InfDistance, L01InfDistance, LInfDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
-use crate::traits::samplers::sample_uniform_uint_below;
 use crate::traits::{InfCast, InfMul, Number};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
@@ -261,21 +260,28 @@ fn report_noisy_max_gumbel_udf(
         polars_bail!(InvalidOperation: "{} scale ({}) must be non-negative", ReportNoisyMaxPlugin::NAME, scale);
     }
 
-    let Ok(scale) = FBig::try_from(scale) else {
+    if scale.is_nan() {
         polars_bail!(InvalidOperation: "{} scale ({}) must be a number", ReportNoisyMaxPlugin::NAME, scale);
-    };
-
+    }
+    
     // PT stands for Polars Type
     fn rnm_gumbel_impl<PT: 'static + PolarsDataType>(
         column: &Column,
-        scale: FBig,
+        scale: f64,
         optimize: Optimize,
     ) -> PolarsResult<Column>
     where
         // the physical (rust) dtype must be a number that can be converted into a rational
-        for<'a> PT::Physical<'a>: NativeType + Number,
-        for<'a> FBig: TryFrom<PT::Physical<'a>>,
+        PT::Physical<'static>: NativeType + Number,
+        FBig: TryFrom<PT::Physical<'static>>,
+        f64: InfCast<PT::Physical<'static>>,
     {
+        let m_rnm = make_report_noisy_max_gumbel::<PT::Physical<'static>>(
+            VectorDomain::new(AtomDomain::default()),
+            LInfDistance::default(),
+            scale,
+            optimize,
+        )?;
         Ok(column
             .as_materialized_series()
             // unpack the series into a chunked array
@@ -289,15 +295,8 @@ fn report_noisy_max_gumbel_udf(
                         PolarsError::InvalidOperation("input dtype does not match".into())
                     })?;
 
-                // When all scores are same, return a random index.
-                // This is a workaround for slow performance of the gumbel mechanism
-                // when all scores are the same.
-                if arr.values().windows(2).all(|w| w[0] == w[1]) {
-                    return sample_uniform_uint_below(arr.len() as u32);
-                }
-
-                select_score(arr.values_iter().cloned(), optimize.clone(), scale.clone())
-                    .map(|idx| idx as u32)
+                let idx = m_rnm.invoke(&arr.values_iter().cloned().collect())? as u32;
+                PolarsResult::Ok(idx)
             })?
             // convert the resulting chunked array back to a series
             .into_series()
