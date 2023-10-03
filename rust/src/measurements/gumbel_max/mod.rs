@@ -13,10 +13,13 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
     metrics::LInfDistance,
-    traits::{InfAdd, InfCast, InfDiv, Number, samplers::PartialSample},
+    traits::{
+        samplers::{sample_uniform_uint_below, ExponentialRV, InverseCDF, PartialSample},
+        InfAdd, InfCast, InfDiv, Number,
+    },
 };
 
-use crate::traits::{DistanceConstant, samplers::GumbelRV};
+use crate::traits::samplers::GumbelRV;
 
 #[cfg(test)]
 mod test;
@@ -59,7 +62,7 @@ impl TryFrom<&str> for Optimize {
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nan VectorDomain.
 /// * `input_metric` - Metric on the input domain. Must be LInfDistance
-/// * `scale` - Higher scales are more private.
+/// * `scale` - Noise scale for the Gumbel distribution.
 /// * `optimize` - Indicate whether to privately return the "max" or "min"
 ///
 /// # Generics
@@ -72,8 +75,8 @@ pub fn make_report_noisy_max_gumbel<TIA>(
 ) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, LInfDistance<TIA>, MaxDivergence, usize>>
 where
     TIA: Number,
-    f64: DistanceConstant<TIA>,
     FBig: TryFrom<TIA> + TryFrom<f64>,
+    f64: InfCast<TIA>,
 {
     if input_domain.element_domain.nan() {
         return fallible!(MakeMeasurement, "input domain must be non-nan");
@@ -83,7 +86,7 @@ where
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
 
-    let scale_frac = FBig::try_from(scale.clone())
+    let f_scale = FBig::try_from(scale.clone())
         .map_err(|_| err!(MakeMeasurement, "scale parameter must be finite"))?;
 
     Measurement::new(
@@ -91,7 +94,14 @@ where
         input_metric.clone(),
         MaxDivergence,
         Function::new_fallible(move |arg: &Vec<TIA>| {
-            select_score(arg.iter().cloned(), optimize.clone(), scale_frac.clone())
+            // When all scores are same, return a random index.
+            // This is a workaround for slow performance of the gumbel mechanism
+            // when all scores are the same.
+            if arg.windows(2).all(|w| w[0] == w[1]) {
+                return sample_uniform_uint_below(arg.len());
+            }
+
+            select_score::<_, GumbelRV>(arg.iter().cloned(), optimize.clone(), f_scale.clone())
         }),
         PrivacyMap::new_fallible(report_noisy_max_gumbel_map(scale, input_metric)),
     )
@@ -125,7 +135,22 @@ where
     }
 }
 
-pub fn select_score<TIA>(
+pub(crate) trait NewArgmaxRV: InverseCDF + Sized {
+    fn new(shift: FBig, scale: FBig) -> Fallible<Self>;
+}
+
+impl NewArgmaxRV for GumbelRV {
+    fn new(shift: FBig, scale: FBig) -> Fallible<Self> {
+        GumbelRV::new(shift, scale)
+    }
+}
+impl NewArgmaxRV for ExponentialRV {
+    fn new(shift: FBig, scale: FBig) -> Fallible<Self> {
+        ExponentialRV::new(shift, scale)
+    }
+}
+
+pub(crate) fn select_score<TIA, RV: NewArgmaxRV>(
     iter: impl Iterator<Item = TIA>,
     optimize: Optimize,
     scale: FBig,
@@ -156,7 +181,7 @@ where
             }
 
             // create a partial sample
-            Ok((i, PartialSample::new(GumbelRV::new(shift, scale.clone())?)))
+            Ok((i, PartialSample::new(RV::new(shift, scale.clone())?)))
         })
         .reduce(|l, r| {
             let (mut l, mut r) = (l?, r?);
