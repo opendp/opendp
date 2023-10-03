@@ -3,7 +3,7 @@ use crate::error::Fallible;
 use super::*;
 
 #[test]
-fn test_exponential() -> Fallible<()> {
+fn test_rnm_gumbel() -> Fallible<()> {
     let input_domain = VectorDomain::new(AtomDomain::new_non_nan());
     let input_metric = LInfDistance::default();
     let de = make_report_noisy_max_gumbel(input_domain, input_metric, 1., Optimize::Max)?;
@@ -14,22 +14,22 @@ fn test_exponential() -> Fallible<()> {
 }
 
 #[test]
-fn test_max_vs_min() -> Fallible<()> {
+fn test_max_vs_min_gumbel() -> Fallible<()> {
     assert_eq!(
-        select_score([1, 2, 3].into_iter(), Optimize::Max, FBig::ZERO)?,
+        select_score::<_, GumbelRV>([1, 2, 3].into_iter(), Optimize::Max, FBig::ZERO)?,
         2
     );
     assert_eq!(
-        select_score([1, 2, 3].into_iter(), Optimize::Min, FBig::ZERO)?,
+        select_score::<_, GumbelRV>([1, 2, 3].into_iter(), Optimize::Min, FBig::ZERO)?,
         0
     );
 
     assert_eq!(
-        select_score([1, 1, 100_000].into_iter(), Optimize::Max, FBig::ONE)?,
+        select_score::<_, GumbelRV>([1, 1, 100_000].into_iter(), Optimize::Max, FBig::ONE)?,
         2
     );
     assert_eq!(
-        select_score([1, 100_000, 100_000].into_iter(), Optimize::Min, FBig::ONE)?,
+        select_score::<_, GumbelRV>([1, 100_000, 100_000].into_iter(), Optimize::Min, FBig::ONE)?,
         0
     );
     Ok(())
