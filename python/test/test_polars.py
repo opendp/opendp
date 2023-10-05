@@ -245,4 +245,30 @@ def test_make_private_select_mean():
 
     meas_lazy(data)
 
-test_make_private_select_mean()
+
+
+def test_make_private_sum():
+    domain, data = lazyframe_domain_with_many_counts()
+    metric = dp.symmetric_distance()
+
+    expr_domain = dp.expr_domain(domain, context="select")
+
+    meas_lazy = (
+        (domain, metric)
+        >> dp.t.then_filter(pl.col("A").ge(1.0))
+        >> dp.m.then_private_select(
+            dp.c.make_basic_composition(
+                [
+                    (expr_domain, metric)
+                    >> dp.t.then_col("B")
+                    >> dp.t.then_clamp_expr((1, 2))
+                    >> dp.m.then_private_sum_expr(0.5)
+                ]
+            )
+        )
+        >> dp.t.make_collect(domain, metric)
+    )
+
+    meas_lazy(data)
+
+test_make_private_sum()

@@ -1456,6 +1456,85 @@ then_private_select <- function(
 }
 
 
+#' private sum expr constructor
+#'
+#' Polars operator to compute the private sum of a column in a LazyFrame or LazyGroupBy
+#'
+#' [make_private_sum_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_private_sum_expr.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `ExprDomain<MI::LazyDomain>`
+#' * Output Type:    `Expr`
+#' * Input Metric:   `MI`
+#' * Output Measure: `MaxDivergence<QO>`
+#'
+#' @concept measurements
+#' @param input_domain ExprDomain
+#' @param input_metric The metric under which neighboring LazyFrames are compared
+#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+#' @param .QO Output data type of the scale and epsilon
+#' @return Measurement
+#' @export
+make_private_sum_expr <- function(
+    input_domain,
+    input_metric,
+    scale,
+    .QO = "float"
+) {
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    .QO <- parse_or_infer(type_name = .QO, public_example = scale)
+
+    log <- new_constructor_log("make_private_sum_expr", "measurements", new_hashtab(
+        list("input_domain", "input_metric", "scale", "QO"),
+        list(input_domain, input_metric, scale, .QO)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
+
+    # Call wrapper function.
+    output <- .Call(
+        "measurements__make_private_sum_expr",
+        input_domain, input_metric, scale, .QO,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial private sum expr constructor
+#'
+#' See documentation for [make_private_sum_expr()] for details.
+#'
+#' @concept measurements
+#' @param lhs The prior transformation or metric space.
+#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+#' @param .QO Output data type of the scale and epsilon
+#' @return Measurement
+#' @export
+then_private_sum_expr <- function(
+    lhs,
+    scale,
+    .QO = "float"
+) {
+
+    log <- new_constructor_log("then_private_sum_expr", "measurements", new_hashtab(
+        list("scale", "QO"),
+        list(scale, .QO)
+    ))
+
+    make_chain_dyn(
+        make_private_sum_expr(
+            output_domain(lhs),
+            output_metric(lhs),
+            scale = scale,
+            .QO = .QO),
+        lhs,
+        log)
+}
+
+
 #' randomized response constructor
 #'
 #' Make a Measurement that implements randomized response on a categorical value.
