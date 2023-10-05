@@ -1,9 +1,10 @@
+use polars::lazy::dsl::Expr;
 use polars::prelude::*;
 
-use crate::combinators::assert_components_match;
-use crate::core::{Function, Metric, MetricSpace, Transformation};
-use crate::domains::{ExprDomain, LazyDomain, LazyFrameContext, LazyFrameDomain};
+use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
+use crate::domains::{AtomDomain, ExprDomain, LazyFrameDomain, SeriesDomain};
 use crate::error::*;
+use crate::transformations::DatasetMetric;
 use opendp_derive::bootstrap;
 
 #[cfg(feature = "ffi")]
@@ -11,7 +12,7 @@ mod ffi;
 
 #[bootstrap(
     arguments(transformation(c_type = "AnyTransformation *", rust_type = b"null")),
-    generics(T(suppress))
+    generics(M(suppress))
 )]
 /// Make a Transformation that filters a LazyFrame.
 ///
@@ -28,110 +29,193 @@ mod ffi;
 ///
 /// # Generics
 /// * `T` - ExprPredicate.
-pub fn make_filter<T: ExprPredicate<Domain = LazyFrameDomain>>(
+pub fn make_filter<M: DatasetMetric>(
     input_domain: LazyFrameDomain,
-    input_metric: T::Metric,
-    transformation: T,
-) -> Fallible<Transformation<LazyFrameDomain, LazyFrameDomain, T::Metric, T::Metric>>
+    input_metric: M,
+    expr: Expr,
+) -> Fallible<Transformation<LazyFrameDomain, LazyFrameDomain, M, M>>
 where
-    (LazyFrameDomain, T::Metric): MetricSpace,
-    (ExprDomain<LazyFrameDomain>, T::Metric): MetricSpace,
+    (LazyFrameDomain, M): MetricSpace,
+    (ExprDomain<LazyFrameDomain>, M): MetricSpace,
 {
-    let expr_domain = ExprDomain {
-        lazy_frame_domain: input_domain.clone(),
-        context: LazyFrameContext::Filter,
-        active_column: None,
-    };
-    let transformation = transformation.fix(&expr_domain, &input_metric)?;
+    let predicate_domain = row_by_row_translate(expr.clone(), input_domain.clone())?;
 
-    if transformation.output_domain.active_series()?.field.dtype != DataType::Boolean {
-        return fallible!(MakeTransformation, "predicates should evaluate to booleans");
+    if predicate_domain.series_domains.len() != 1 {
+        return fallible!(MakeTransformation, "predicates must be univariate");
     }
 
-    let function = transformation.function.clone();
+    if predicate_domain.series_domains[0].field.dtype != DataType::Boolean {
+        return fallible!(MakeTransformation, "predicates must be boolean");
+    }
 
-    // margin data is invalidated after filtering
-    // TODO: consider only dropping counts, leave categories
+    // margin data counts become upper bounds after filtering
     let mut output_domain = input_domain.clone();
-    output_domain.margins.clear();
+    output_domain
+        .margins
+        .iter_mut()
+        .for_each(|(_k, m)| m.upper_bound = true);
 
     Transformation::new(
         input_domain,
         output_domain,
         Function::new_fallible(move |frame: &LazyFrame| -> Fallible<LazyFrame> {
-            let frame = Arc::new(frame.clone());
-            let expr = function.eval(&(frame.clone(), all()))?.1;
-
-            let frame = Arc::try_unwrap(frame).map_err(|_| {
-                err!(
-                    FailedFunction,
-                    "transformations are not allowed to have side-effects"
-                )
-            })?;
-            Ok(frame.filter(expr))
+            Ok(frame.clone().filter(expr.clone()))
         }),
         input_metric.clone(),
         input_metric,
-        transformation.stability_map.clone(),
+        StabilityMap::new_from_constant(1),
     )
 }
 
-/// Either a `Transformation` or a `PartialTransformation` that can be used in the select context.
-pub trait ExprPredicate: 'static {
-    type Domain: 'static + LazyDomain;
-    type Metric: 'static + Metric;
-    fn fix(
-        self,
-        input_domain: &ExprDomain<Self::Domain>,
-        input_metric: &Self::Metric,
-    ) -> Fallible<
-        Transformation<
-            ExprDomain<Self::Domain>,
-            ExprDomain<Self::Domain>,
-            Self::Metric,
-            Self::Metric,
-        >,
-    >;
-}
+fn row_by_row_translate(
+    expr: Expr,
+    mut input_domain: LazyFrameDomain,
+) -> Fallible<LazyFrameDomain> {
+    Ok(match expr {
+        Expr::Alias(expr, name) => {
+            let mut domain = row_by_row_translate(*expr, input_domain)?;
+            if domain.series_domains.len() != 1 {
+                return fallible!(
+                    MakeTransformation,
+                    "expected exactly one column under alias"
+                );
+            }
+            domain.series_domains[0].field.name = (&*name).into();
+            domain
+        }
+        Expr::Column(name) => {
+            let column = (input_domain.column(name))
+                .ok_or_else(|| err!(MakeTransformation, "column does not exist"))?;
+            input_domain.series_domains = vec![column.clone()];
+            input_domain
+        }
+        Expr::Columns(names) => {
+            input_domain.series_domains = names
+                .iter()
+                .map(|name| {
+                    (input_domain.column(name).cloned())
+                        .ok_or_else(|| err!(MakeTransformation, "column does not exist"))
+                })
+                .collect::<Fallible<Vec<_>>>()?;
+            input_domain
+        }
+        Expr::DtypeColumn(_) => {
+            return fallible!(MakeTransformation, "DtypeColumn not implemented")
+        }
+        Expr::Literal(literal) => {
+            let name = "literal";
+            let series_domain = match literal {
+                LiteralValue::Boolean(_) => SeriesDomain::new(name, AtomDomain::<bool>::default()),
+                LiteralValue::String(_) => SeriesDomain::new(name, AtomDomain::<String>::default()),
+                LiteralValue::UInt32(_) => SeriesDomain::new(name, AtomDomain::<u32>::default()),
+                LiteralValue::UInt64(_) => SeriesDomain::new(name, AtomDomain::<u64>::default()),
+                LiteralValue::Int32(_) => SeriesDomain::new(name, AtomDomain::<i32>::default()),
+                LiteralValue::Int64(_) => SeriesDomain::new(name, AtomDomain::<i64>::default()),
+                LiteralValue::Float32(v) => SeriesDomain::new(
+                    name,
+                    AtomDomain::<f32> {
+                        bounds: None,
+                        nullable: v.is_nan(),
+                    },
+                ),
+                LiteralValue::Float64(v) => SeriesDomain::new(
+                    name,
+                    AtomDomain::<f64> {
+                        bounds: None,
+                        nullable: v.is_nan(),
+                    },
+                ),
+                _ => return fallible!(MakeTransformation, "literal dtype not implemented"),
+            };
+            LazyFrameDomain::new(vec![series_domain])?
+        }
+        Expr::BinaryExpr { left, op, right } => {
+            use polars::lazy::dsl::Operator::*;
+            let left_domain = row_by_row_translate(*left, input_domain.clone())?;
+            row_by_row_translate(*right, input_domain.clone())?;
 
-impl<D: 'static + LazyDomain, M: 'static + Metric> ExprPredicate
-    for Transformation<ExprDomain<D>, ExprDomain<D>, M, M>
-where
-    (ExprDomain<D>, M): MetricSpace,
-{
-    type Domain = D;
-    type Metric = M;
-    fn fix(self, input_domain: &ExprDomain<D>, input_metric: &M) -> Fallible<Self> {
-        assert_components_match!(DomainMismatch, &self.input_domain, input_domain);
-        assert_components_match!(MetricMismatch, &self.input_metric, input_metric);
+            if left_domain.series_domains.len() != 1 {
+                return fallible!(
+                    MakeTransformation,
+                    "binary Expr expected univariate arguments"
+                );
+            }
+            // name gets pulled from the lhs
+            let name = left_domain.series_domains[0].field.name.as_str();
 
-        Ok(self)
-    }
-}
-
-#[cfg(feature = "partials")]
-impl<D: 'static + LazyDomain, M: 'static + Metric> ExprPredicate
-    for crate::core::PartialTransformation<ExprDomain<D>, ExprDomain<D>, M, M>
-where
-    (ExprDomain<D>, M): MetricSpace,
-{
-    type Domain = D;
-    type Metric = M;
-    fn fix(
-        self,
-        input_domain: &ExprDomain<D>,
-        input_metric: &M,
-    ) -> Fallible<Transformation<ExprDomain<D>, ExprDomain<D>, M, M>> {
-        crate::core::PartialTransformation::fix(self, input_domain.clone(), input_metric.clone())
-    }
+            let output_series = match op {
+                Eq | EqValidity | NotEq | NotEqValidity | Lt | LtEq | Gt | GtEq | And | Or | Xor => {
+                    SeriesDomain::new(name, AtomDomain::<bool>::default())
+                }
+                _ => return fallible!(MakeTransformation, "binary op not supported")
+                // polars::lazy::dsl::Operator::Plus => todo!(),
+                // polars::lazy::dsl::Operator::Minus => todo!(),
+                // polars::lazy::dsl::Operator::Multiply => todo!(),
+                // polars::lazy::dsl::Operator::Divide => todo!(),
+                // polars::lazy::dsl::Operator::TrueDivide => todo!(),
+                // polars::lazy::dsl::Operator::FloorDivide => todo!(),
+                // polars::lazy::dsl::Operator::Modulus => todo!(),
+            };
+            LazyFrameDomain::new(vec![output_series])?
+        }
+        // Expr::Cast {
+        //     expr,
+        //     data_type,
+        //     strict,
+        // } => todo!(),
+        // Expr::Sort { expr, options } => todo!(),
+        // Expr::Take { expr, idx } => todo!(),
+        // Expr::SortBy {
+        //     expr,
+        //     by,
+        //     descending,
+        // } => todo!(),
+        // Expr::Agg(_) => todo!(),
+        // Expr::Ternary {
+        //     predicate,
+        //     truthy,
+        //     falsy,
+        // } => todo!(),
+        // Expr::Function {
+        //     input,
+        //     function,
+        //     options,
+        // } => todo!(),
+        // Expr::Explode(_) => todo!(),
+        // Expr::Filter { input, by } => todo!(),
+        // Expr::Window {
+        //     function,
+        //     partition_by,
+        //     order_by,
+        //     options,
+        // } => todo!(),
+        // Expr::Wildcard => todo!(),
+        // Expr::Slice {
+        //     input,
+        //     offset,
+        //     length,
+        // } => todo!(),
+        // Expr::Exclude(_, _) => todo!(),
+        // Expr::KeepName(_) => todo!(),
+        // Expr::Count => todo!(),
+        // Expr::Nth(_) => todo!(),
+        // Expr::RenameAlias { function, expr } => todo!(),
+        // Expr::AnonymousFunction {
+        //     input,
+        //     function,
+        //     output_type,
+        //     options,
+        // } => todo!(),
+        // Expr::Selector(_) => todo!(),
+        _ => return fallible!(MakeTransformation, "expr is not implemented"),
+    })
 }
 
 #[cfg(test)]
 #[cfg(feature = "partials")]
 mod test_make_filter {
-    use crate::core::{ExprFunction, StabilityMap};
     use crate::metrics::InsertDeleteDistance;
-    use crate::transformations::{item, make_col};
+    use crate::transformations::item;
 
     use super::*;
 
@@ -142,32 +226,10 @@ mod test_make_filter {
         let (mut expr_domain, lazy_frame) = get_select_test_data()?;
         expr_domain.active_column = None;
 
-        let col = make_col(
-            expr_domain.clone(),
-            InsertDeleteDistance::default(),
-            "B".to_string(),
-        )?;
-
-        let mut output_domain = col.output_domain.clone();
-        output_domain
-            .lazy_frame_domain
-            .try_column_mut(output_domain.active_column()?)?
-            .field
-            .dtype = DataType::Boolean;
-
-        let predicate = Transformation::new(
-            col.output_domain.clone(),
-            output_domain,
-            Function::new_expr(|_expr| lit(false)),
-            col.output_metric.clone(),
-            col.output_metric.clone(),
-            StabilityMap::new_from_constant(1),
-        )?;
-
-        let filter_trans = make_filter::<Transformation<_, _, _, _>>(
+        let filter_trans = make_filter(
             expr_domain.lazy_frame_domain.clone(),
             InsertDeleteDistance::default(),
-            (col >> predicate)?,
+            col("B").gt(lit(2)),
         );
 
         let lf_count = filter_trans?.invoke(&lazy_frame)?.select([len()]);

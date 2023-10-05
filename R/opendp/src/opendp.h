@@ -1251,9 +1251,9 @@ struct FfiResult_____AnyTransformation opendp_transformations__make_column(const
                                                                            const struct AnyMetric *input_metric,
                                                                            char *column_name);
 
-struct FfiResult_____AnyTransformation opendp_measurements__make_filter(const struct AnyDomain *input_domain,
-                                                                        const struct AnyMetric *input_metric,
-                                                                        const AnyTransformation *transformation);
+struct FfiResult_____AnyTransformation opendp_transformations__make_filter(const struct AnyDomain *input_domain,
+                                                                           const struct AnyMetric *input_metric,
+                                                                           const struct AnyObject *expr);
 
 struct FfiResult_____AnyTransformation opendp_transformations__make_lazy(const struct AnyDomain *input_domain,
                                                                          const struct AnyMetric *input_metric);

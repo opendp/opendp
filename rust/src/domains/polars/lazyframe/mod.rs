@@ -345,6 +345,7 @@ impl<F: Frame> Domain for FrameDomain<F> {
 pub struct Margin<F: Frame> {
     pub data: F,
     pub counts: Option<String>,
+    pub upper_bound: bool,
 }
 
 impl<F: Frame> Margin<F> {
@@ -355,12 +356,14 @@ impl<F: Frame> Margin<F> {
         Ok(Self {
             data: F::new(vec![series])?,
             counts: None,
+            upper_bound: false,
         })
     }
     pub fn new_from_counts(data: F, counts_name: String) -> Fallible<Self> {
         let margin = Self {
             data,
             counts: Some(counts_name),
+            upper_bound: false,
         };
 
         // set the data type on the counts column

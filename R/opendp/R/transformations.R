@@ -2070,30 +2070,33 @@ then_drop_null <- function(
 #'
 #' * Input Domain:   `LazyFrameDomain`
 #' * Output Domain:  `LazyFrameDomain`
-#' * Input Metric:   `T::Metric`
-#' * Output Metric:  `T::Metric`
+#' * Input Metric:   `M`
+#' * Output Metric:  `M`
 #'
 #' @concept transformations
 #' @param input_domain LazyFrameDomain.
 #' @param input_metric The metric space under which neighboring LazyFrame frames are compared.
-#' @param transformation undocumented
+#' @param expr undocumented
 #' @return Transformation
 #' @export
 make_filter <- function(
     input_domain,
     input_metric,
-    transformation
+    expr
 ) {
     # No type arguments to standardize.
     log <- new_constructor_log("make_filter", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "transformation"),
-        list(input_domain, input_metric, transformation)
+        list("input_domain", "input_metric", "expr"),
+        list(input_domain, input_metric, expr)
     ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = Expr, inferred = rt_infer(expr))
 
     # Call wrapper function.
     output <- .Call(
         "transformations__make_filter",
-        input_domain, input_metric, transformation,
+        input_domain, input_metric, expr,
         log, PACKAGE = "opendp")
     output
 }
@@ -2104,24 +2107,24 @@ make_filter <- function(
 #'
 #' @concept transformations
 #' @param lhs The prior transformation or metric space.
-#' @param transformation undocumented
+#' @param expr undocumented
 #' @return Transformation
 #' @export
 then_filter <- function(
     lhs,
-    transformation
+    expr
 ) {
 
     log <- new_constructor_log("then_filter", "transformations", new_hashtab(
-        list("transformation"),
-        list(transformation)
+        list("expr"),
+        list(expr)
     ))
 
     make_chain_dyn(
         make_filter(
             output_domain(lhs),
             output_metric(lhs),
-            transformation = transformation),
+            expr = expr),
         lhs,
         log)
 }

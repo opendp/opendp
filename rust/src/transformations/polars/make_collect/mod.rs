@@ -30,6 +30,7 @@ where
                     let margin = Margin {
                         data: m.data.collect()?,
                         counts: m.counts,
+                        upper_bound: m.upper_bound,
                     };
                     Ok((k, margin))
                 })

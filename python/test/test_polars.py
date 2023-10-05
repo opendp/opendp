@@ -4,6 +4,7 @@ import polars as pl
 
 dp.enable_features("contrib", "honest-but-curious")
 
+
 # domains
 def series_domain():
     return [
@@ -16,24 +17,38 @@ def series_domain():
         "C": ["1"] * 50,
     }
 
+
 def lazyframe_domain():
     domains, data = series_domain()
-    return dp.lazyframe_domain(domains), pl.LazyFrame(data, schema_overrides={"B": pl.Int32})
+    return dp.lazyframe_domain(domains), pl.LazyFrame(
+        data, schema_overrides={"B": pl.Int32}
+    )
+
 
 def dataframe_domain():
     domains, data = series_domain()
-    return dp.dataframe_domain(domains), pl.DataFrame(data, schema_overrides={"B": pl.Int32})
+    return dp.dataframe_domain(domains), pl.DataFrame(
+        data, schema_overrides={"B": pl.Int32}
+    )
+
 
 def lazyframe_domain_with_counts():
-    counts = pl.LazyFrame({"B": [1], "counts": [50]}, schema_overrides={"B": pl.Int32, "counts": pl.UInt32})
+    counts = pl.LazyFrame(
+        {"B": [1], "counts": [50]},
+        schema_overrides={"B": pl.Int32, "counts": pl.UInt32},
+    )
     domain, data = lazyframe_domain()
     return domain.with_counts(counts), data
 
 
 def dataframe_domain_with_counts():
-    counts = pl.DataFrame({"B": [1], "counts": [50]}, schema_overrides={"B": pl.Int32, "counts": pl.UInt32})
+    counts = pl.DataFrame(
+        {"B": [1], "counts": [50]},
+        schema_overrides={"B": pl.Int32, "counts": pl.UInt32},
+    )
     domain, data = dataframe_domain()
     return domain.with_counts(counts), data
+
 
 def lazyframe_domain_with_many_counts():
     counts = pl.LazyFrame(
@@ -45,11 +60,12 @@ def lazyframe_domain_with_many_counts():
         schema_overrides={"A": pl.Float64, "counts": pl.UInt32},
     )
     b_counts = pl.LazyFrame(
-        {"B": [1], "counts": [50]}, 
-        schema_overrides={"B": pl.Int32, "counts": pl.UInt32}
+        {"B": [1], "counts": [50]},
+        schema_overrides={"B": pl.Int32, "counts": pl.UInt32},
     )
     domain, data = lazyframe_domain()
     return domain.with_counts(counts).with_counts(a_counts).with_counts(b_counts), data
+
 
 def expr_domain():
     lf_domain = lazyframe_domain()[0]
@@ -77,17 +93,20 @@ def test_series_ffi():
         ident_trans = (domain, dp.symmetric_distance()) >> dp.t.then_identity()
         print(ident_trans(pl.Series(name, data)))
 
+
 def test_lazyframe_ffi():
     """ensure that lazyframes can be passed to/from Rust"""
     domain, data = lazyframe_domain()
     ident_trans = (domain, dp.symmetric_distance()) >> dp.t.then_identity()
     print(ident_trans(data))
 
+
 def test_dataframe_ffi():
     """ensure that dataframes can be passed to/from Rust"""
     domain, data = dataframe_domain()
     ident_trans = (domain, dp.symmetric_distance()) >> dp.t.then_identity()
     print(ident_trans(data))
+
 
 # constructors
 def test_scan_csv():
@@ -97,7 +116,7 @@ def test_scan_csv():
     scanner = input_space >> dp.t.then_scan_csv()
     with pytest.raises(dp.OpenDPException) as err:
         scanner("A/B.csv")
-    
+
 
 def test_collect_lazy():
     domain, data = lazyframe_domain()
@@ -111,10 +130,15 @@ def test_make_with_columns():
     metric = dp.symmetric_distance()
     expr_domain = dp.expr_domain(domain, context="with_columns")
 
-    trans_lazy = (domain, metric) >> dp.t.then_with_columns([
-        (expr_domain, metric) >> dp.t.then_col("A") >> dp.t.then_clamp_expr((1., 2.))
-    ])
+    trans_lazy = (domain, metric) >> dp.t.then_with_columns(
+        [
+            (expr_domain, metric)
+            >> dp.t.then_col("A")
+            >> dp.t.then_clamp_expr((1.0, 2.0))
+        ]
+    )
     trans_lazy(data)
+
 
 def test_private_mean_expr():
     domain, data = lazyframe_domain()
@@ -124,9 +148,13 @@ def test_private_mean_expr():
 
     # Fail because no margin
     with pytest.raises(dp.OpenDPException):
-        meas_lazy = (domain, metric) >> dp.t.then_with_columns([
-            (expr_domain, metric) >> dp.t.then_col("A") >> dp.m.then_private_mean_expr(0.5)
-        ])
+        meas_lazy = (domain, metric) >> dp.t.then_with_columns(
+            [
+                (expr_domain, metric)
+                >> dp.t.then_col("A")
+                >> dp.m.then_private_mean_expr(0.5)
+            ]
+        )
 
     # now add margins, it should pass
     a_counts = pl.LazyFrame(
@@ -157,7 +185,10 @@ def test_private_mean_expr():
     )
 
     print(meas_lazy(data))
-test_private_mean_expr()
+
+
+# test_private_mean_expr()
+
 
 def test_private_quantile_expr():
     domain, data = lazyframe_domain_with_many_counts()
@@ -196,11 +227,22 @@ def test_make_private_select_mean():
 
     expr_domain = dp.expr_domain(domain, context="select")
 
-    meas_lazy = (domain, metric) >> dp.m.then_private_select(dp.c.make_basic_composition([
-        (expr_domain, metric) 
-        >> dp.t.then_col("B") 
-        >> dp.t.then_clamp_expr((1, 2)) 
-        >> dp.m.then_private_mean_expr(0.5)
-    ])) >> dp.t.make_collect(domain, metric)
+    meas_lazy = (
+        (domain, metric)
+        >> dp.t.then_filter(pl.col("A").ge(1.0))
+        >> dp.m.then_private_select(
+            dp.c.make_basic_composition(
+                [
+                    (expr_domain, metric)
+                    >> dp.t.then_col("B")
+                    >> dp.t.then_clamp_expr((1, 2))
+                    >> dp.m.then_private_mean_expr(0.5)
+                ]
+            )
+        )
+        >> dp.t.make_collect(domain, metric)
+    )
 
     meas_lazy(data)
+
+test_make_private_select_mean()

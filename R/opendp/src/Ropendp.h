@@ -145,7 +145,7 @@ SEXP transformations__make_create_dataframe(SEXP col_names, SEXP K, SEXP T_col_n
 SEXP transformations__make_df_cast_default(SEXP input_domain, SEXP input_metric, SEXP column_name, SEXP TIA, SEXP TOA, SEXP TK, SEXP M, SEXP log);
 SEXP transformations__make_df_is_equal(SEXP input_domain, SEXP input_metric, SEXP column_name, SEXP value, SEXP TIA, SEXP TK, SEXP M, SEXP log);
 SEXP transformations__make_drop_null(SEXP input_domain, SEXP input_metric, SEXP log);
-SEXP transformations__make_filter(SEXP input_domain, SEXP input_metric, SEXP transformation, SEXP log);
+SEXP transformations__make_filter(SEXP input_domain, SEXP input_metric, SEXP expr, SEXP log);
 SEXP transformations__make_find(SEXP input_domain, SEXP input_metric, SEXP categories, SEXP TIA, SEXP T_categories, SEXP log);
 SEXP transformations__make_find_bin(SEXP input_domain, SEXP input_metric, SEXP edges, SEXP TIA, SEXP T_edges, SEXP log);
 SEXP transformations__make_group_by_stable(SEXP input_domain, SEXP input_metric, SEXP grouping_columns, SEXP T_grouping_columns, SEXP log);
