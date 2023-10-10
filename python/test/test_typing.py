@@ -60,6 +60,7 @@ def test_tuples():
 def test_c():
     """test that c_type strings are not mangled"""
     rt_type = RuntimeType.parse('FfiResult<void *>')
+    assert isinstance(rt_type, RuntimeType)
     assert str(rt_type) == 'FfiResult<void *>'
     assert rt_type.args[0] == 'void *'
 

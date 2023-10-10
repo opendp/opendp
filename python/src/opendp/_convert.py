@@ -1,8 +1,8 @@
-from typing import Sequence, Tuple, List, Union, Dict
+from typing import Sequence, Tuple, List, Union, Dict, cast
 
 from opendp._lib import *
 from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
-from opendp.typing import RuntimeType, Vec
+from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 
 try:
     import numpy as np
@@ -60,7 +60,7 @@ def check_c_int_cast(v, type_name):
         raise ValueError(f"value is not representable by {type_name}")
 
 
-def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
+def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     """Map from Python `value` to ctypes `c_type`.
 
     :param value: value to convert to c_type
@@ -106,12 +106,12 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
 
     if c_type == AnyObjectPtr:
         from opendp._data import slice_as_object
-        return slice_as_object(value, type_name)
+        return slice_as_object(value, type_name) # type: ignore
 
     if c_type == FfiSlicePtr:
         if type_name is None:
             raise ValueError("type_name must be known")
-        return _py_to_slice(value, type_name)
+        return _py_to_slice(value, RuntimeType.parse(type_name))
 
     if isinstance(value, RuntimeType):
         value = str(value)
@@ -129,7 +129,7 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
     return value
 
 
-def c_to_py(value):
+def c_to_py(value: Any) -> Any:
     """Map from ctypes `value` to Python value.
     It is assumed that the C type is simpler than in py_to_c, as the library returns fewer types.
 
@@ -151,7 +151,7 @@ def c_to_py(value):
 
     if isinstance(value, ctypes.c_char_p):
         from opendp._data import str_free
-        value_contents = value.value.decode()
+        value_contents = value.value.decode() # type: ignore[reportOptionalMemberAccess]
         str_free(value)
         return value_contents
 
@@ -181,23 +181,26 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
     :param type_name: Rust type name that determines the Python type to unload into
     :return: a standard Python reference-counted data type
     """
-    if isinstance(type_name, str) and type_name in ATOM_MAP:
-        return _slice_to_scalar(raw, type_name)
-    
-    if type_name == "ExtrinsicObject":
-        return _slice_to_extrinsic(raw)
-    
-    if type_name == "String":
-        return _slice_to_string(raw)
 
-    if type_name.origin == "Vec":
-        return _slice_to_vector(raw, type_name)
+    if isinstance(type_name, str):
+        if type_name in ATOM_MAP:
+            return _slice_to_scalar(raw, type_name)
+        
+        if type_name == "ExtrinsicObject":
+            return _slice_to_extrinsic(raw)
+        
+        if type_name == "String":
+            return _slice_to_string(raw)
 
-    if type_name.origin == "HashMap":
-        return _slice_to_hashmap(raw)
+    if isinstance(type_name, RuntimeType):
+        if type_name.origin == "Vec":
+            return _slice_to_vector(raw, type_name)
 
-    if type_name.origin == "Tuple":
-        return _slice_to_tuple(raw, type_name)
+        if type_name.origin == "HashMap":
+            return _slice_to_hashmap(raw)
+
+        if type_name.origin == "Tuple":
+            return _slice_to_tuple(raw, type_name)
 
     raise UnknownTypeException(type_name)
 
@@ -211,26 +214,28 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
     :param type_name: Rust type name to load value into.
     :return: pointer to an FfiSlice owned by Python.
     """
-    if isinstance(type_name, str) and type_name in ATOM_MAP:
-        return _scalar_to_slice(value, type_name)
+    if isinstance(type_name, str):
+        if type_name in ATOM_MAP:
+            return _scalar_to_slice(value, type_name)
     
-    if type_name == "ExtrinsicObject":
-        return _extrinsic_to_slice(value)
+        if type_name == "ExtrinsicObject":
+            return _extrinsic_to_slice(value)
+        
+        if type_name == "AnyMeasurement":
+            return _wrap_in_slice(value, 1)
+
+        if type_name == "String":
+            return _string_to_slice(value)
     
-    if type_name == "AnyMeasurement":
-        return _wrap_in_slice(value, 1)
+    if isinstance(type_name, RuntimeType):
+        if type_name.origin == "Vec":
+            return _vector_to_slice(value, type_name)
 
-    if type_name == "String":
-        return _string_to_slice(value)
+        if type_name.origin == "HashMap":
+            return _hashmap_to_slice(value, type_name)
 
-    if type_name.origin == "Vec":
-        return _vector_to_slice(value, type_name)
-
-    if type_name.origin == "HashMap":
-        return _hashmap_to_slice(value, type_name)
-
-    if type_name.origin == "Tuple":
-        return _tuple_to_slice(value, type_name)
+        if type_name.origin == "Tuple":
+            return _tuple_to_slice(value, type_name)
 
     raise UnknownTypeException(type_name)
 
@@ -272,7 +277,7 @@ def _string_to_slice(val: str) -> FfiSlicePtr:
 
 
 def _slice_to_string(raw: FfiSlicePtr) -> str:
-    return ctypes.cast(raw.contents.ptr, ctypes.c_char_p).value.decode()
+    return ctypes.cast(raw.contents.ptr, ctypes.c_char_p).value.decode() # type: ignore[reportOptionalMemberAccess]
 
 
 def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
@@ -345,10 +350,11 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> List[Any]:
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p))[0:raw.contents.len]
         return list(map(lambda v: v.decode(), array))
 
-    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len]
+    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len] # type: ignore
 
 
-def _tuple_to_slice(val: Tuple[Any, ...], type_name: RuntimeType) -> FfiSlicePtr:
+def _tuple_to_slice(val: Tuple[Any, ...], type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
+    type_name = cast(RuntimeType, type_name)
     inner_type_names = type_name.args
     if not isinstance(val, tuple):
         raise TypeError("Cannot coerce a non-tuple type to a tuple")
@@ -371,7 +377,7 @@ def _tuple_to_slice(val: Tuple[Any, ...], type_name: RuntimeType) -> FfiSlicePtr
         check_similar_scalar(inner_type_name, v)
     
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
-    ptr_data = (ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p)
+    ptr_data = (ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p) # type: ignore
         for v, name in zip(val, inner_type_names))
 
     array = (ctypes.c_void_p * len(val))(*ptr_data)
@@ -385,7 +391,7 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> Tuple[Any, ...]
     # list of void*
     ptr_data = void_array_ptr[0:raw.contents.len]
     # tuple of instances of Python types
-    return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value
+    return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value # type: ignore
                  for void_p, name in zip(ptr_data, inner_type_names))
 
 
