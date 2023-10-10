@@ -1715,6 +1715,10 @@ def make_is_equal(
     * Input Metric:   `M`
     * Output Metric:  `M`
     
+    **Proof Definition:**
+    
+    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/trans/manipulation/make_is_equal.pdf)
+    
     :param input_domain: 
     :param input_metric: 
     :param value: value to check against
