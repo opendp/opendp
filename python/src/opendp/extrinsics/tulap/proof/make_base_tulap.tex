@@ -15,7 +15,7 @@
 \newtheorem{prop}{Proposition}
 \newcommand{\mrm}[1]{\mathrm{#1}}
 
-\title{\texttt{fn make\_base\_tulap}}
+\title{\texttt{fn make\_tulap}}
 \author{Yu-Ju Ku, Jordan Awan}
 \begin{document}
 
@@ -23,10 +23,10 @@
 
 \contrib
 
-Proves soundness of \rustdoc{measurements/fn}{make\_base\_tulap} in 
+Proves soundness of \rustdoc{measurements/fn}{make\_tulap} in 
 % \asOfCommit{mod.rs}{f5bb719}.
 
-\texttt{make\_base\_tulap} accepts a parameter \texttt{m} of type \texttt{float}, which is a rational number, a parameter \texttt{b} of type \texttt{float}, which is greater than 0 and less than 1, and a parameter \texttt{q} of type \texttt{float}, which is greater than or equal to 0 and less than 1.
+\texttt{make\_tulap} accepts a parameter \texttt{m} of type \texttt{float}, which is a rational number, a parameter \texttt{b} of type \texttt{float}, which is greater than 0 and less than 1, and a parameter \texttt{q} of type \texttt{float}, which is greater than or equal to 0 and less than 1.
 The function on the resulting measurement takes in float data points that follow Binomial Distribution \texttt{arg} and returns the probability \texttt{prob}, or the complement $\texttt{!arg}$ with probability $1 - \texttt{prob}$.
 
 % \begin{tcolorbox}
@@ -54,7 +54,7 @@ The function on the resulting measurement takes in float data points that follow
 
 \subsection*{Pseudocode}
 
-% def make_base_tulap(m: float, b: float, q: float, s: float):
+% def make_tulap(m: float, b: float, q: float, s: float):
 %     input_domain = AllDomain(float)
 %     input_metric = AbsoluteDistance(float)
 %     output_measure = SmoothedMaxDivergence(float)
@@ -81,7 +81,7 @@ The function on the resulting measurement takes in float data points that follow
 %         return Measurement(input_domain, function, input_metric, output_measure, privacy_map)
 
 \begin{lstlisting}[language=Python, escapechar=|]
-def make_base_tulap(b: float, scale: float):
+def make_tulap(b: float, scale: float):
     input_domain = AllDomain(float)
     input_metric = AbsoluteDistance(float)
     output_measure = SmoothedMaxDivergence(float)
@@ -118,14 +118,14 @@ def make_base_tulap(b: float, scale: float):
 
 \subsection*{Postcondition}
 
-\validMeasurement{\texttt{(prob, m, b, q, QO)}}{\\ \texttt{make\_base\_tulap}}
+\validMeasurement{\texttt{(prob, m, b, q, QO)}}{\\ \texttt{make\_tulap}}
 
 \section{Proof}
 
 \begin{proof} 
 \hfill
 \begin{enumerate}
-    \item \textbf{(Domain-metric compatibility.)} For \texttt{make\_base\_tulap}, this corresponds to showing \texttt{AllDomain(bool)} is compatible with \texttt{DiscreteMetric}. 
+    \item \textbf{(Domain-metric compatibility.)} For \texttt{make\_tulap}, this corresponds to showing \texttt{AllDomain(bool)} is compatible with \texttt{DiscreteMetric}. 
     This follows directly from the definition of \rustdoc{metrics/struct}{DiscreteMetric}.
 
     \item \textbf{(Privacy guarantee.)} 
@@ -135,12 +135,12 @@ def make_base_tulap(b: float, scale: float):
 The following proof makes use of the following lemmas that asserts the correctness of the Discrete Laplace sampler and Uniform sampler function.
     \begin{lemma}
     If system entropy is insufficient, \texttt{sample\_discrete\_laplace\_Z2k} raises an error. 
-    Otherwise, \texttt{sample\_discrete\_laplace\_Z2k(shift, scale, k)}, the Discrete Laplace sampler function used in \texttt{make\_base\_tulap}, 
+    Otherwise, \texttt{sample\_discrete\_laplace\_Z2k(shift, scale, k)}, the Discrete Laplace sampler function used in \texttt{make\_tulap}, 
     returns sample from the discrete laplace distribution on $\mathbb{Z} \cdot 2^k$.
     \end{lemma}
     \begin{lemma}
     If system entropy is insufficient, \texttt{sample\_standard\_uniform} raises an error. 
-    Otherwise, \texttt{sample\_standard\_uniform(constant\_time)}, the Uniform sampler function used in \texttt{make\_base\_tulap}, 
+    Otherwise, \texttt{sample\_standard\_uniform(constant\_time)}, the Uniform sampler function used in \texttt{make\_tulap}, 
     returns sample drawn from Uniform[0,1).
     \end{lemma}
 \end{note}
