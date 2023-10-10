@@ -10,8 +10,8 @@ use std::any::Any;
 use std::fmt::{Debug, Formatter};
 
 use crate::core::{
-    Domain, FfiResult, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap,
-    StabilityMap, Transformation,
+    Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap, StabilityMap,
+    Transformation, FfiResult,
 };
 use crate::error::*;
 use crate::interactive::{Answer, Query, Queryable};
@@ -208,7 +208,6 @@ impl AnyObject {
         }
     }
 
-    #[cfg(test)]
     pub fn new_raw<T: 'static>(value: T) -> *mut Self {
         crate::ffi::util::into_raw(Self::new(value))
     }

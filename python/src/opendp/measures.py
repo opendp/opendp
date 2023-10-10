@@ -12,6 +12,7 @@ __all__ = [
     "measure_distance_type",
     "measure_type",
     "smoothed_max_divergence",
+    "user_divergence",
     "zero_concentrated_divergence"
 ]
 
@@ -213,6 +214,37 @@ def smoothed_max_divergence(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_T), Measure))
+    
+    return output
+
+
+@versioned
+def user_divergence(
+    descriptor: str
+):
+    """Construct a new UserDivergence.
+    Any two instances of an UserDivergence are equal if their string descriptors are equal.
+    
+    [user_divergence in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.user_divergence.html)
+    
+    :param descriptor: A string description of the privacy measure.
+    :type descriptor: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("honest-but-curious")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_descriptor = py_to_c(descriptor, c_type=ctypes.c_char_p, type_name=String)
+    
+    # Call library function.
+    lib_function = lib.opendp_measures__user_divergence
+    lib_function.argtypes = [ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_descriptor), Measure))
     
     return output
 

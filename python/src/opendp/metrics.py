@@ -17,7 +17,8 @@ __all__ = [
     "metric_debug",
     "metric_distance_type",
     "metric_type",
-    "symmetric_distance"
+    "symmetric_distance",
+    "user_distance"
 ]
 
 
@@ -373,5 +374,36 @@ def symmetric_distance(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(), Metric))
+    
+    return output
+
+
+@versioned
+def user_distance(
+    descriptor: str
+):
+    """Construct a new UserDistance.
+    Any two instances of an UserDistance are equal if their string descriptors are equal.
+    
+    [user_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.user_distance.html)
+    
+    :param descriptor: A string description of the metric.
+    :type descriptor: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("honest-but-curious")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_descriptor = py_to_c(descriptor, c_type=ctypes.c_char_p, type_name=String)
+    
+    # Call library function.
+    lib_function = lib.opendp_metrics__user_distance
+    lib_function.argtypes = [ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_descriptor), Metric))
     
     return output

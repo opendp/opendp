@@ -3,12 +3,12 @@ use std::ffi::c_char;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Domain, FfiResult},
+    core::{Domain, FfiResult, Function},
     domains::{type_name, AtomDomain, MapDomain, VectorDomain},
     error::Fallible,
     ffi::{
-        any::{AnyDomain, AnyObject, Downcast},
-        util::{self, c_bool, into_c_char_p, Type, TypeContents},
+        any::{AnyDomain, AnyObject, Downcast, CallbackFn},
+        util::{self, c_bool, into_c_char_p, Type, TypeContents, to_str, ExtrinsicObject},
     },
     traits::{CheckAtom, Float, Hashable, Integer, Primitive},
 };
@@ -247,12 +247,24 @@ pub extern "C" fn opendp_domains__vector_domain(
         };
         Ok(AnyDomain::new(vector_domain))
     }
+    fn monomorphize_user_domain(
+        user_domain: &AnyDomain,
+        size: *const AnyObject,
+    ) -> Fallible<AnyDomain> {
+        let user_domain = user_domain.downcast_ref::<UserDomain>()?.clone();
+        let mut vector_domain = VectorDomain::new(user_domain);
+        if let Some(size) = util::as_ref(size) {
+            vector_domain = vector_domain.with_size(*try_!(size.downcast_ref::<i32>()) as usize)
+        };
+        Ok(AnyDomain::new(vector_domain))
+    }
     let atom_domain = try_as_ref!(atom_domain);
 
     match atom_domain.type_.contents {
         TypeContents::GENERIC { name: "AtomDomain", .. } => 
             dispatch!(monomorphize_all, [(atom_domain.carrier_type, @primitives)], (atom_domain, size)),
-        _ => fallible!(FFI, "VectorDomain constructors only support AtomDomain inner domains")
+        TypeContents::PLAIN("UserDomain") => monomorphize_user_domain(atom_domain, size),
+        _ => fallible!(FFI, "VectorDomain constructor only supports AtomDomain or UserDomain inner domains")
     }.into()
 }
 
@@ -276,12 +288,80 @@ pub extern "C" fn opendp_domains__map_domain(
         let map_domain = MapDomain::new(key_domain, value_domain);
         Ok(AnyDomain::new(map_domain))
     }
+    fn monomorphize_extrinsic<K: Hashable>(
+        key_domain: &AnyDomain,
+        value_domain: &AnyDomain,
+    ) -> Fallible<AnyDomain> {
+        let key_domain = key_domain.downcast_ref::<AtomDomain<K>>()?.clone();
+        let value_domain = value_domain.downcast_ref::<UserDomain>()?.clone();
+        let map_domain = MapDomain::new(key_domain, value_domain);
+        Ok(AnyDomain::new(map_domain))
+    }
     let key_domain = try_as_ref!(key_domain);
     let value_domain = try_as_ref!(value_domain);
 
     match (&key_domain.type_.contents, &value_domain.type_.contents) {
         (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::GENERIC { name: "AtomDomain", .. }) => 
             dispatch!(monomorphize, [(key_domain.carrier_type, @hashable), (value_domain.carrier_type, @primitives)], (key_domain, value_domain)),
-        _ => fallible!(FFI, "MapDomain constructors only support AtomDomain inner domains")
+        (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::PLAIN("UserDomain")) => 
+            dispatch!(monomorphize_extrinsic, [(key_domain.carrier_type, @hashable)], (key_domain, value_domain)),
+        _ => fallible!(FFI, "MapDomain constructor only supports AtomDomain or UserDomain inner domains")
     }.into()
+}
+
+
+#[derive(Clone)]
+pub struct UserDomain {
+    pub descriptor: String,
+    pub member: Function<ExtrinsicObject, bool>,
+}
+
+impl std::fmt::Debug for UserDomain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "UserDomain({:?})", self.descriptor)
+    }
+}
+
+impl PartialEq for UserDomain {
+    fn eq(&self, other: &Self) -> bool {
+        self.descriptor == other.descriptor
+    }
+}
+
+impl Domain for UserDomain {
+    type Carrier = ExtrinsicObject;
+
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        self.member.eval(val)
+    }
+}
+
+#[bootstrap(
+    name = "user_domain",
+    features("honest-but-curious"),
+    arguments(descriptor(rust_type = "String"), member(rust_type = "bool")),
+    dependencies("c_member")
+)]
+/// Construct a new UserDomain.
+/// Any two instances of an UserDomain are equal if their string descriptors are equal.
+/// Contains a function used to check if any value is a member of the domain.
+///
+/// # Arguments
+/// * `descriptor` - A string description of the data domain.
+/// * `member` - A function used to test if a value is a member of the data domain.
+#[no_mangle]
+pub extern "C" fn opendp_domains__user_domain(
+    descriptor: *mut c_char,
+    member: CallbackFn,
+) -> FfiResult<*mut AnyDomain> {
+    let descriptor = try_!(to_str(descriptor)).to_string();
+    let func = move |arg: &ExtrinsicObject| -> Fallible<AnyObject> {
+        let res = member(AnyObject::new_raw(arg.clone()));
+        util::into_owned(res)?.into()
+    };
+    let member = Function::new_fallible(move |arg: &ExtrinsicObject| -> Fallible<bool> {
+        (func)(arg)?.downcast::<bool>()
+    });
+
+    Ok(AnyDomain::new(UserDomain { descriptor, member })).into()
 }
