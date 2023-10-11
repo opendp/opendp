@@ -6,7 +6,7 @@ use crate::{
     core::{Function, MetricSpace, StabilityMap, Transformation},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    metrics::RangeDistance,
+    metrics::LInfDistance,
     traits::{AlertingMul, ExactIntCast, InfDiv, Number, RoundCast},
 };
 
@@ -42,7 +42,7 @@ pub fn make_quantile_score_candidates<MI: UnboundedMetric, TIA: Number>(
         VectorDomain<AtomDomain<TIA>>,
         VectorDomain<AtomDomain<usize>>,
         MI,
-        RangeDistance<usize>,
+        LInfDistance<usize>,
     >,
 >
 where
@@ -81,13 +81,12 @@ where
     let stability_map = if input_domain.size.is_some() {
         StabilityMap::new_fallible(move |d_in| {
             usize::exact_int_cast(d_in / 2)?
-                .alerting_mul(&4)?
+                .alerting_mul(&2)?
                 .alerting_mul(&alpha_den)
         })
     } else {
         let abs_dist_const = alpha_num.max(alpha_den - alpha_num);
-        let inf_diff_dist_const = abs_dist_const.alerting_mul(&2)?;
-        StabilityMap::new_from_constant(inf_diff_dist_const)
+        StabilityMap::new_from_constant(abs_dist_const)
     };
 
     Transformation::<_, VectorDomain<AtomDomain<usize>>, _, _>::new(
@@ -97,7 +96,7 @@ where
             compute_score(arg.clone(), &candidates, alpha_num, alpha_den, size_limit)
         }),
         input_metric,
-        RangeDistance::default(),
+        LInfDistance::new(true),
         stability_map,
     )
 }
@@ -362,7 +361,7 @@ mod test_scorer {
 #[cfg(all(test, feature = "use-mpfr", feature = "derive"))]
 mod test_trans {
     use crate::{
-        measurements::{make_gumbel_max, Optimize},
+        measurements::{make_report_noisy_max_gumbel, Optimize},
         metrics::SymmetricDistance,
     };
 
@@ -386,7 +385,7 @@ mod test_trans {
 
         // because alpha is .75, sensitivity is 1.5 (because not monotonic)
         // granularity of quantile is .00001, so scores are integerized at a scale of 10000x
-        assert_eq!(trans.map(&1)?, 15000);
+        assert_eq!(trans.map(&1)?, 7500);
 
         // alpha does not affect sensitivity- it's solely based on the size of the input domain
         // using all of the range of the usize, 
@@ -394,7 +393,7 @@ mod test_trans {
         // factor of 4 breaks into:
         //   * a factor of 2 from non-monotonicity
         //   * a factor of 2 from difference in score after moving one record from above to below a candidate
-        assert_eq!(trans_sized.map(&2)?, usize::MAX / 100 * 4);
+        assert_eq!(trans_sized.map(&2)?, usize::MAX / 100 * 2);
 
         Ok(())
     }
@@ -405,10 +404,10 @@ mod test_trans {
         let input_domain = VectorDomain::new(AtomDomain::default());
         let input_metric = SymmetricDistance::default();
         let trans = make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
-        let exp_mech = make_gumbel_max(
+        let exp_mech = make_report_noisy_max_gumbel(
             trans.output_domain.clone(),
             trans.output_metric.clone(),
-            trans.map(&1)? as f64,
+            trans.map(&1)? as f64 * 2.,
             Optimize::Min,
         )?;
 
@@ -426,10 +425,10 @@ mod test_trans {
         let input_metric = SymmetricDistance::default();
         let trans_sized =
             make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
-        let exp_mech = make_gumbel_max(
+        let exp_mech = make_report_noisy_max_gumbel(
             trans_sized.output_domain.clone(),
             trans_sized.output_metric.clone(),
-            trans_sized.map(&2)? as f64, Optimize::Min
+            trans_sized.map(&2)? as f64 * 2., Optimize::Min
         )?;
 
         let quantile_sized_meas = (trans_sized >> exp_mech)?;

@@ -27,11 +27,10 @@ def make_quantile_score_candidates(
 
     if input_domain.size is not None:
         def stability_map(d_in: u32) -> usize:
-            return TOA.inf_cast(d_in // 2).inf_mul(4).inf_mul(alpha_denom)
+            return TOA.inf_cast(d_in // 2).inf_mul(2).inf_mul(alpha_denom)
     else:
         abs_dist_const: usize = max(alpha_numer, alpha_denom.inf_sub(alpha_numer))
-        sup_dist_const: usize = abs_dist_const.inf_mul(2)
-        stability_map = new_stability_map_from_constant(sup_dist_const, QO=usize)
+        stability_map = new_stability_map_from_constant(abs_dist_const, QO=usize)
 
     return Transformation(
         input_domain=input_domain,
@@ -40,6 +39,6 @@ def make_quantile_score_candidates(
             size=len(candidates)),
         function=function,
         input_metric=input_metric,
-        output_metric=RangeDistance(Q=usize),
+        output_metric=LInfDistance(Q=usize),
         stability_map=stability_map,
     )

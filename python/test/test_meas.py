@@ -189,12 +189,19 @@ def test_gaussian():
     input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.l2_distance(T=float)
     (input_space >> dp.m.then_gaussian(1.))([1., 2., 3.])
 
-def test_gumbel_max():
+def test_report_noisy_max_gumbel():
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
-    input_metric = dp.range_distance(T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_gumbel_max(1., "maximize")
+
+    input_metric = dp.linf_distance(T=dp.usize)
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "maximize")
     print(meas(list(range(10))))
-    print(meas.map(2))
+    assert meas.map(2) == 4
+
+    input_metric = dp.linf_distance(monotonic=True, T=dp.usize)
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "maximize")
+    print(meas(list(range(10))))
+    assert meas.map(2) == 2
+
 
 def test_alp_histogram():
     import opendp.prelude as dp

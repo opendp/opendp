@@ -6,13 +6,13 @@ use crate::{
     core::{FfiResult, Metric},
     ffi::{
         any::AnyMetric,
-        util::{self, into_c_char_p, to_str, Type, ExtrinsicObject},
+        util::{self, into_c_char_p, to_str, Type, ExtrinsicObject, c_bool},
     },
-    metrics::{AbsoluteDistance, L1Distance, L2Distance},
+    metrics::{AbsoluteDistance, L1Distance, L2Distance}, traits::InfAdd,
 };
 
 use super::{
-    ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance, RangeDistance,
+    ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance, LInfDistance,
     SymmetricDistance,
 };
 #[bootstrap(
@@ -173,26 +173,33 @@ pub extern "C" fn opendp_metrics__discrete_distance() -> FfiResult<*mut AnyMetri
     FfiResult::Ok(util::into_raw(AnyMetric::new(DiscreteDistance::default())))
 }
 
-#[bootstrap(returns(c_type = "FfiResult<AnyMetric *>"))]
-/// Construct an instance of the `RangeDistance` metric.
+#[bootstrap(
+    arguments(monotonic(default = false)),
+    returns(c_type = "FfiResult<AnyMetric *>"))]
+/// Construct an instance of the `LInfDistance` metric.
 ///
 /// # Arguments
+/// * `monotonic` - set to true if non-monotonicity implies infinite distance
+/// 
+/// # Generics
 /// * `T` - The type of the distance.
-fn range_distance<T>() -> RangeDistance<T> {
-    RangeDistance::default()
+fn linf_distance<T: InfAdd>(monotonic: bool) -> LInfDistance<T> {
+    LInfDistance::new(monotonic)
 }
 #[no_mangle]
-pub extern "C" fn opendp_metrics__range_distance(
+pub extern "C" fn opendp_metrics__linf_distance(
+    monotonic: c_bool,
     T: *const c_char,
 ) -> FfiResult<*mut AnyMetric> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
-        Ok(AnyMetric::new(range_distance::<T>())).into()
+    let monotonic = util::to_bool(monotonic);
+    fn monomorphize<T: 'static + InfAdd>(monotonic: bool) -> FfiResult<*mut AnyMetric> {
+        Ok(AnyMetric::new(linf_distance::<T>(monotonic))).into()
     }
     let T = try_!(Type::try_from(T));
     dispatch!(
         monomorphize,
         [(T, [u32, u64, i32, i64, usize, f32, f64])],
-        ()
+        (monotonic)
     )
 }
 #[derive(Clone, Default)]

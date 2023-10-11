@@ -7,8 +7,8 @@ use crate::{
         any::{AnyDomain, AnyMeasurement, AnyMetric, AnyObject, Downcast},
         util::{to_str, Type},
     },
-    measurements::{make_gumbel_max, Optimize},
-    metrics::RangeDistance,
+    measurements::{make_report_noisy_max_gumbel, Optimize},
+    metrics::LInfDistance,
     traits::{
         samplers::{CastInternalRational, SampleUniform},
         CheckNull, Float, InfCast, Number, RoundCast,
@@ -16,17 +16,17 @@ use crate::{
 };
 
 #[no_mangle]
-pub extern "C" fn opendp_measurements__make_gumbel_max(
+pub extern "C" fn opendp_measurements__make_report_noisy_max_gumbel(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
-    temperature: *const AnyObject,
+    scale: *const AnyObject,
     optimize: *const c_char,
     QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
     let TIA = try_!(input_domain.type_.get_atom());
-    let temperature = try_as_ref!(temperature);
+    let scale = try_as_ref!(scale);
 
     let optimize = match try_!(to_str(optimize)) {
         i if i.to_lowercase().starts_with("min") => Optimize::Min,
@@ -38,7 +38,7 @@ pub extern "C" fn opendp_measurements__make_gumbel_max(
     fn monomorphize<TIA, QO>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-        temperature: &AnyObject,
+        scale: &AnyObject,
         optimize: Optimize,
     ) -> FfiResult<*mut AnyMeasurement>
     where
@@ -47,14 +47,14 @@ pub extern "C" fn opendp_measurements__make_gumbel_max(
     {
         let input_domain =
             try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<RangeDistance<TIA>>()).clone();
-        let temperature = *try_!(temperature.downcast_ref::<QO>());
-        make_gumbel_max::<TIA, QO>(input_domain, input_metric, temperature, optimize)
+        let input_metric = try_!(input_metric.downcast_ref::<LInfDistance<TIA>>()).clone();
+        let scale = *try_!(scale.downcast_ref::<QO>());
+        make_report_noisy_max_gumbel::<TIA, QO>(input_domain, input_metric, scale, optimize)
             .into_any()
     }
 
     dispatch!(monomorphize, [
         (TIA, [u32, u64, i32, i64, usize, f32, f64]),
         (QO, @floats)
-    ], (input_domain, input_metric, temperature, optimize))
+    ], (input_domain, input_metric, scale, optimize))
 }
