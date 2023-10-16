@@ -2,7 +2,6 @@ import opendp
 from opendp.transformations import make_cast_default, make_clamp, make_bounded_sum
 from opendp.measurements import make_base_discrete_laplace
 from opendp.combinators import *
-from opendp.combinators import make_user_postprocessor
 from opendp.mod import enable_features
 from opendp.typing import *
 
@@ -12,7 +11,24 @@ from scipy.stats import binom
 from Tulap import ptulap
 import scipy
 
-def make_ump_test(VectorDomain[AllDomain[float], AllDomain[str]]):
+from opendp.core import new_function
+from opendp.measurements import make_tulap
+
+
+# def make_postprocess_frac():
+#     """An example user-defined postprocessor from Python"""
+#     def function(arg):
+#         return arg[0] / arg[1]
+
+#     return dp.new_function(function, float)
+
+# def test_new_function():
+#     mech = make_postprocess_frac()
+#     print(mech([12., 100.]))
+
+## TODO: update ptulap
+
+def make_ump_test(VectorDomain[AllDomain[float,str]]):
     
     def function(theta, size, alpha, epsilon, delta, tail):
         b = math.exp(-epsilon)
@@ -53,14 +69,13 @@ def make_ump_test(VectorDomain[AllDomain[float], AllDomain[str]]):
         elif tail == 'right':
             return 1 - phi
 
-    return make_user_postprocessor(
+    return new_function(
         function,
-        DI = VectorDomain[AllDomain[float], AllDomain[str]],
-        DO = VectorDomain[AllDomain[float]]
+        VectorDomain[AllDomain[float]]
     )
 
 
-def make_oneside_pvalue(VectorDomain[AllDomain[float], AllDomain[str]]):
+def make_oneside_pvalue(VectorDomain[AllDomain[float, str]]):
         
     def function(Z, theta, size, b, q, tail):
         """_summary_
@@ -100,10 +115,9 @@ def make_oneside_pvalue(VectorDomain[AllDomain[float], AllDomain[str]]):
             pval[0] = np.dot(F.T, B)
             return pval[0]
     
-    return make_user_postprocessor(
+    return new_function(
         function, 
-        DI = VectorDomain[AllDomain[float], AllDomain[str]]
-        DO = VectorDomain[AllDomain[float]]
+        VectorDomain[AllDomain[float]]
     )
 
 
@@ -116,15 +130,14 @@ def make_twoside_pvalue(VectorDomain[AllDomain[float]]):
 
         return pval+1
     
-    return make_user_postprocessor(
+    return new_function(
         function, 
-        DI = VectorDomain[AllDomain[float]]
-        DO = AllDomain[float]
+        VectorDomain[AllDomain[float]]
     )
             
 
 
-def make_CI(VectorDomain[AllDomain[float], AllDomain[str]]):
+def make_CI(VectorDomain[AllDomain[float, str]]):
     from scipy.optimize import OptimizeResult, minimize_scalar
 
     def custmin(fun, bracket, args=(), 
@@ -182,10 +195,9 @@ def make_CI(VectorDomain[AllDomain[float], AllDomain[str]]):
         L = minimize_scalar(fun=CIobj, method=custmin, bracket=(0, 1))    # args already set in CIobj
         return L.x
     
-    return make_user_postprocessor(
+    return new_function(
         function, 
-        DI = VectorDomain[AllDomain[float], AllDomain[float]]
-        DO = AllDomain[float]
+        VectorDomain[AllDomain[float]]
     )
 
 def make_CI_twoside(VectorDomain[AllDomain[float]]):
@@ -256,19 +268,8 @@ def make_CI_twoside(VectorDomain[AllDomain[float]]):
         CI = [L, U]
         return CI
     
-    return make_user_postprocessor(
+    return new_function(
         function, 
-        DI = VectorDomain[AllDomain[float]]
-        DO = VectorDomain[AllDomain[float]]
+        VectorDomain[AllDomain[float]]
     )
 
-def test_make_dp_ump():
-    dp_ump_test = make_base_tulap(0.5, 0.5) >> make_ump_test()
-
-    print(dp_ump_test([1.] * 20))
-
-
-if __name__ == "__main__":
-
-
-    test_make_dp_ump()
