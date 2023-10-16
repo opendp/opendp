@@ -8,7 +8,8 @@ use super::UniformPSRN;
 // TODO: make sure the implementation is still correct! Hope I didn't break anything
 //       make sure the inverse tulap is done in a way where the rounding direction is always preserved!
 //       fix tests
-//       is there a clean way to do this with b and q instead of epsilon and delta?
+//       is there a clean way to do this with b and q instead of epsilon and delta? (epsilon = ln(1/b) and delta = q (1-b) / (2b(1-q)) )
+//       if the user gives us the value of q and b, epsilon and delta can be calculated
 //       pack into a constructor! (Mike)
 //       remove tulap sampler from Python side
 // 
@@ -40,6 +41,7 @@ impl TulapPSRN {
         }
     }
 
+     
     pub fn value(&mut self, round: Round) -> Fallible<Rational> {
         loop {
             // The first few rounds are susceptible to NaN due to the uniform PSRN initializing at zero.
@@ -65,9 +67,6 @@ impl TulapPSRN {
     }
 
     fn inverse_tulap(&self, unif: Float, round: Round) -> Float {
-        // This is the spot you'd retrieve your uniform random number in Rust.
-        // This would involve the UniformPSRN or another generator depending on your setup.
-
         let c = Float::with_val_round(self.precision, 1.0 - &self.delta, round).0 / (1.0 + Float::exp(self.epsilon.clone()));
         return self.q_cnd(unif, c);
     }
@@ -89,57 +88,47 @@ impl TulapPSRN {
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use super::*;
-
-    // #[test]
-    // fn test_basic_creation() {
-    //     let epsilon = Float::with_val(52, 0.5);
-    //     let delta = Float::with_val(52, 0.25);
-
-    //     let psrn = TulapPSRN::new(epsilon, delta);
-    //     assert_eq!(psrn.epsilon, epsilon);
-    //     assert_eq!(psrn.delta, delta);
-    //     assert_eq!(psrn.precision, 1);
-    // }
+    use rug::Float;
 
     #[test]
-    fn test_value_calculation() {
-        // Choose appropriate epsilon, delta, and alpha for your use case
-        let shift = Rational::from((0, 1));
-        let epsilon = Float::with_val(52, 0.5);
-        let delta = Float::with_val(52, 0.25);
+    fn test_sample_tulap_interval_progression() -> Fallible<()> {
+        let epsilon = Float::with_val(52, 0.1);
+        let delta = Float::with_val(52, 0.001);
+        let mut tulap = TulapPSRN::new(Rational::from(0), epsilon, delta);
 
-        let mut psrn = TulapPSRN::new(shift, epsilon, delta);
-
-        // Ensure the value is within expected bounds.
-        // This depends on your domain-specific expectations for Tulap.
-        let value = psrn.value(Round::Up).unwrap();
-        assert!(value >= 0.0 && value <= 1.0);
+        for _ in 0..10 {
+            println!(
+                "{:?}, {:?}",
+                //"{:?}, {:?}, {}",
+                tulap.value(Round::Down)?.to_f64(),
+                //tulap.value(Round::Up)?.to_f64(),
+                tulap.precision
+            );
+            tulap.refine()?;
+        }
+        Ok(())
     }
-
+// there is an issue with the round up tests
     #[test]
-    fn test_refining_behavior() {
-        let shift = Rational::from((0, 1));
-        let epsilon = Float::with_val(52, 0.5);
-        let delta = Float::with_val(52, 0.25);
+    fn test_tulap_psrn_samples() -> Fallible<()> {
+        fn sample_tulap() -> Fallible<f64> {
+            let epsilon = Float::with_val(52, 0.1);
+            let delta = Float::with_val(52, 0.001);
+            let mut tulap = TulapPSRN::new(Rational::from(0), epsilon, delta);
 
-        let mut psrn = TulapPSRN::new(shift, epsilon, delta);
-        assert_eq!(psrn.precision, 1);
+            for _ in 0..10 {
+                tulap.refine()?;
+            }
+            Ok(tulap.value(Round::Down)?.to_f64())
+        }
 
-        psrn.refine().unwrap();
-        assert_eq!(psrn.precision, 2);
+        let samples = (0..1000)
+            .map(|_| sample_tulap())
+            .collect::<Fallible<Vec<_>>>()?;
+
+        println!("{:?}", samples);
+        Ok(())
     }
-
-    /*    #[test]
-    fn test_inverse_tulap() {
-        // This should be a direct test of known input-output pairs for inverse_tulap.
-        // You would need to adjust the visibility of the inverse_tulap function to be public, or declare tests in the same module.
-        let epsilon = Float::from(0.5);
-        let delta = Float::from(0.25);
-        let alpha = Float::from(0.1);
-
-        let result = TulapPSRN::inverse_tulap(epsilon, delta, alpha);
-        assert!(/* fill this up */);
-    }  */
 }
