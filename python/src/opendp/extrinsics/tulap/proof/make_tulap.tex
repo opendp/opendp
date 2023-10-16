@@ -176,18 +176,18 @@ The following proof makes use of the following lemmas that asserts the correctne
     
     In Definition \ref{def1} \parencite{awan2023canonical}, we explained the cdf of the CND we made. This explanation helps us understand the distribution's features, but when it comes to sampling, the quantile function is key. In Proposition \ref{prop1} \parencite{awan2023canonical} provides a recursive formula for the CND's quantile function, as described in Definition \ref{def2}\parencite{awan2023canonical}, and show that we can finish it in just a few steps.
 
-    \begin{restatable}{prop}{propsamplingCND}\label{prop1}
-      Let $f$ be a symmetric nontrivial tradeoff function and let $F_f$ be as in Definition \ref{def:CNDsynthetic}. Then the quantile function $F_f^{-1}:(0,1)\rightarrow \RR$ for $F_f$ can be expressed as
+    \begin{prop}\label{prop1}   % Prop F.6
+      Let $f$ be a symmetric nontrivial tradeoff function and let $F_f$ be as in Definition \ref{def1}. Then the quantile function $F_f^{-1}:(0,1)\rightarrow \RR$ for $F_f$ can be expressed as
       \[F_f^{-1}(u) = \begin{cases}
       F_f^{-1}(1-f(u))-1&u<c\\
       \frac{u-1/2}{1-2c}&c\leq u\leq 1-c\\
       F_f^{-1}(f(1-u))+1&u>1-c,
       \end{cases}\]
       where $c$ is the unique fixed point of $f$. {Furthermore, for any $u\in (0,1)$, the expression $Q_f(u)$ takes a finite number of recursive steps to evaluate. Thus,} if $U\sim U(0,1)$, then $F_f^{-1}(U) \sim F_f$. 
-    \end{restatable}
+    \end{prop}
     
     % Cor 3.10
-    According to Corollary 3.10 in cite{awan2023canonical}, the distribution $\mathrm{Tulap}(0,b,q)$, where $b=\exp(-\ep)$ and $q = \frac{2\de b}{1-b+2\de b}$ is a CND for $f_{\ep,\de}$-DP, which agrees with the construction of Definition \ref{def1} \parencite{awan2023canonical}. 
+    According to Corollary 3.10 in \cite{awan2023canonical}, the distribution $\mathrm{Tulap}(0,b,q)$, where $b=\exp(-\ep)$ and $q = \frac{2\de b}{1-b+2\de b}$ is a CND for $f_{\ep,\de}$-DP, which agrees with the construction of Definition \ref{def1} \parencite{awan2023canonical}. 
     
     From the definition, it is easy to verify that the cdf of a Tulap random variable agrees with $F_f$ on $[-1/2,1/2]$. Tulap cdf also satisfies the recurrence relation of Definition \ref{def1} \parencite{awan2023canonical}. 
     Note that the cdf of $\mathrm{Tulap}(0,b,0)$ is 
