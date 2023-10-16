@@ -20,9 +20,9 @@ __all__ = [
 def accuracy_to_discrete_gaussian_scale(
     accuracy,
     alpha,
-    T: RuntimeTypeDescriptor = None
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Any:
-    """Convert a desired `accuracy` (tolerance) into a discrete gaussian noise scale at a statistical significance level `alpha`.
+    r"""Convert a desired `accuracy` (tolerance) into a discrete gaussian noise scale at a statistical significance level `alpha`.
     
     [accuracy_to_discrete_gaussian_scale in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.accuracy_to_discrete_gaussian_scale.html)
     
@@ -61,9 +61,9 @@ def accuracy_to_discrete_gaussian_scale(
 def accuracy_to_discrete_laplacian_scale(
     accuracy,
     alpha,
-    T: RuntimeTypeDescriptor = None
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Any:
-    """Convert a desired `accuracy` (tolerance) into a discrete Laplacian noise scale at a statistical significance level `alpha`.
+    r"""Convert a desired `accuracy` (tolerance) into a discrete Laplacian noise scale at a statistical significance level `alpha`.
     
     [accuracy_to_discrete_laplacian_scale in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.accuracy_to_discrete_laplacian_scale.html)
     
@@ -103,9 +103,9 @@ def accuracy_to_discrete_laplacian_scale(
 def accuracy_to_gaussian_scale(
     accuracy,
     alpha,
-    T: RuntimeTypeDescriptor = None
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Any:
-    """Convert a desired `accuracy` (tolerance) into a gaussian noise scale at a statistical significance level `alpha`.
+    r"""Convert a desired `accuracy` (tolerance) into a gaussian noise scale at a statistical significance level `alpha`.
     
     [accuracy_to_gaussian_scale in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.accuracy_to_gaussian_scale.html)
     
@@ -140,9 +140,9 @@ def accuracy_to_gaussian_scale(
 def accuracy_to_laplacian_scale(
     accuracy,
     alpha,
-    T: RuntimeTypeDescriptor = None
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Any:
-    """Convert a desired `accuracy` (tolerance) into a Laplacian noise scale at a statistical significance level `alpha`.
+    r"""Convert a desired `accuracy` (tolerance) into a Laplacian noise scale at a statistical significance level `alpha`.
     
     [accuracy_to_laplacian_scale in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.accuracy_to_laplacian_scale.html)
     
@@ -178,9 +178,9 @@ def accuracy_to_laplacian_scale(
 def discrete_gaussian_scale_to_accuracy(
     scale,
     alpha,
-    T: RuntimeTypeDescriptor = None
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Any:
-    """Convert a discrete gaussian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
+    r"""Convert a discrete gaussian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
     
     [discrete_gaussian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.discrete_gaussian_scale_to_accuracy.html)
     
@@ -219,11 +219,11 @@ def discrete_gaussian_scale_to_accuracy(
 def discrete_laplacian_scale_to_accuracy(
     scale,
     alpha,
-    T: RuntimeTypeDescriptor = None
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Any:
-    """Convert a discrete Laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
+    r"""Convert a discrete Laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
     
-    $\alpha = P[Y \ge accuracy]$, where $Y = |X - z|$, and $X \sim \mathcal{L}_{Z}(0, scale)$.
+    $\alpha = P[Y \ge accuracy]$, where $Y = | X - z |$, and $X \sim \mathcal{L}_{Z}(0, scale)$.
     That is, $X$ is a discrete Laplace random variable and $Y$ is the distribution of the errors.
     
     This function returns a float accuracy.
@@ -266,9 +266,9 @@ def discrete_laplacian_scale_to_accuracy(
 def gaussian_scale_to_accuracy(
     scale,
     alpha,
-    T: RuntimeTypeDescriptor = None
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Any:
-    """Convert a gaussian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
+    r"""Convert a gaussian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
     
     [gaussian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.gaussian_scale_to_accuracy.html)
     
@@ -303,9 +303,9 @@ def gaussian_scale_to_accuracy(
 def laplacian_scale_to_accuracy(
     scale,
     alpha,
-    T: RuntimeTypeDescriptor = None
+    T: Optional[RuntimeTypeDescriptor] = None
 ) -> Any:
-    """Convert a Laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
+    r"""Convert a Laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
     
     [laplacian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.laplacian_scale_to_accuracy.html)
     

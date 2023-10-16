@@ -22,11 +22,12 @@ __all__ = [
 def _domain_free(
     this
 ):
-    """Internal function. Free the memory associated with `this`.
+    r"""Internal function. Free the memory associated with `this`.
     
     [_domain_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn._domain_free.html)
     
     :param this: 
+    :type this: Domain
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -47,11 +48,11 @@ def _domain_free(
 
 @versioned
 def atom_domain(
-    bounds: Any = None,
-    nullable: bool = False,
-    T: RuntimeTypeDescriptor = None
-):
-    """Construct an instance of `AtomDomain`.
+    bounds: Optional[Any] = None,
+    nullable: Optional[bool] = False,
+    T: Optional[RuntimeTypeDescriptor] = None
+) -> Domain:
+    r"""Construct an instance of `AtomDomain`.
     
     [atom_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.atom_domain.html)
     
@@ -61,6 +62,7 @@ def atom_domain(
     :type nullable: bool
     :param T: The type of the atom.
     :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -85,13 +87,14 @@ def atom_domain(
 
 @versioned
 def domain_carrier_type(
-    this
+    this: Domain
 ) -> str:
-    """Get the carrier type of a `domain`.
+    r"""Get the carrier type of a `domain`.
     
     [domain_carrier_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.domain_carrier_type.html)
     
     :param this: The domain to retrieve the carrier type from.
+    :type this: Domain
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -113,13 +116,14 @@ def domain_carrier_type(
 
 @versioned
 def domain_debug(
-    this
+    this: Domain
 ) -> str:
-    """Debug a `domain`.
+    r"""Debug a `domain`.
     
     [domain_debug in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.domain_debug.html)
     
     :param this: The domain to debug (stringify).
+    :type this: Domain
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -141,13 +145,14 @@ def domain_debug(
 
 @versioned
 def domain_type(
-    this
+    this: Domain
 ) -> str:
-    """Get the type of a `domain`.
+    r"""Get the type of a `domain`.
     
     [domain_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.domain_type.html)
     
     :param this: The domain to retrieve the type from.
+    :type this: Domain
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -169,15 +174,18 @@ def domain_type(
 
 @versioned
 def map_domain(
-    key_domain,
-    value_domain
-):
-    """Construct an instance of `MapDomain`.
+    key_domain: Domain,
+    value_domain: Domain
+) -> Domain:
+    r"""Construct an instance of `MapDomain`.
     
     [map_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.map_domain.html)
     
     :param key_domain: domain of keys in the hashmap
+    :type key_domain: Domain
     :param value_domain: domain of values in the hashmap
+    :type value_domain: Domain
+    :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -202,7 +210,7 @@ def member(
     this: Domain,
     val: Any
 ):
-    """Check membership in a `domain`.
+    r"""Check membership in a `domain`.
     
     [member in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.member.html)
     
@@ -231,16 +239,18 @@ def member(
 
 @versioned
 def option_domain(
-    element_domain,
-    D: RuntimeTypeDescriptor = None
-):
-    """Construct an instance of `OptionDomain`.
+    element_domain: Domain,
+    D: Optional[RuntimeTypeDescriptor] = None
+) -> Domain:
+    r"""Construct an instance of `OptionDomain`.
     
     [option_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.option_domain.html)
     
     :param element_domain: 
+    :type element_domain: Domain
     :param D: The type of the inner domain.
     :type D: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -266,8 +276,8 @@ def option_domain(
 def user_domain(
     descriptor: str,
     member
-):
-    """Construct a new UserDomain.
+) -> Domain:
+    r"""Construct a new UserDomain.
     Any two instances of an UserDomain are equal if their string descriptors are equal.
     Contains a function used to check if any value is a member of the domain.
     
@@ -276,6 +286,7 @@ def user_domain(
     :param descriptor: A string description of the data domain.
     :type descriptor: str
     :param member: A function used to test if a value is a member of the data domain.
+    :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -299,16 +310,18 @@ def user_domain(
 
 @versioned
 def vector_domain(
-    atom_domain,
-    size: Any = None
-):
-    """Construct an instance of `VectorDomain`.
+    atom_domain: Domain,
+    size: Optional[Any] = None
+) -> Domain:
+    r"""Construct an instance of `VectorDomain`.
     
     [vector_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.vector_domain.html)
     
     :param atom_domain: The inner domain.
+    :type atom_domain: Domain
     :param size: 
     :type size: Any
+    :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
