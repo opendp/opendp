@@ -1,18 +1,17 @@
 \documentclass{article}
 \input{../../lib.sty}
 
-\title{\texttt{fn make\_base\_discrete\_exponential}}
+\title{\texttt{fn make\_report\_noisy\_max\_gumbel}}
 \author{Michael Shoemate}
 \begin{document} 
 \maketitle
 
 \contrib
 
-Proves soundness of \rustdoc{measurements/fn}{make\_base\_discrete\_exponential} 
-in \asOfCommit{mod.rs}{f5bb719}.
-\texttt{make\_base\_discrete\_exponential} returns a Measurement that 
+Proves soundness of \rustdoc{measurements/fn}{make\_report\_noisy\_max\_gumbel} 
+in \asOfCommit{mod.rs}{f5bb719}.\\
+\texttt{make\_report\_noisy\_max\_gumbel} returns a Measurement that 
 noisily selects the index of the greatest score, from a vector of input scores.
-
 This released index can be later be used to index into a public candidate set (postprocessing).
 
 \subsection*{Vetting History}
@@ -136,9 +135,9 @@ Unfortunately, this choice of metric always results in a loosening by a factor o
 This is because both the $i^{th}$ likelihood and normalization term may vary in opposite directions, resulting in a more distinguishing event.
 However, this loosening is not necessary if we can prove that the scoring function is monotonic, because the $i^{th}$ likelihood and normalization term will always vary in the same direction.
 
-We instead use a slight adjustment to this metric, \texttt{LInfDiffDistance}, characterizing the greatest difference in scores:
+We instead use a slight adjustment to this metric, \texttt{RangeDistance}, characterizing the greatest difference in scores:
 \begin{equation}
-    \Delta_{\infty'} = \max_{u \sim v} d_{\infty'}(f(u), f(v)) = \max\limits_{u \sim v} \max\limits_{ij} \abs{(f(u)_i - f(v)_i) - (f(u)_j - f(v)_j)}
+    \Delta_{\text{Range}} = \max_{u \sim v} d_{\text{Range}}(f(u), f(v)) = \max\limits_{u \sim v} \max\limits_{ij} \abs{(f(u)_i - f(v)_i) - (f(u)_j - f(v)_j)}
 \end{equation}
 Consider when the scoring function is not monotonic.
 The sensitivity is maximized when $u_i - v_i$ and $u_j - v_j$ vary maximally in opposite directions, resulting in the same loosening factor of 2.
@@ -147,6 +146,8 @@ and their magnitudes cancel.
 Therefore, when the scorer is monotonic, the sensitivity is maximized when one term is zero. 
 It is shown in \ref{privacy-guarantee} that a tighter analysis of the exponential mechanism is compatible with a score vector whose sensitivity is expressed in terms of this metric.
 
+Given that both the infinity-distance and range-distance are useful, the mechanism still uses the infinity-distance,
+but an additional boolean is stored in the metric to indicate when the score is monotonic.
 
 
 \section{Hoare Triple}
@@ -161,28 +162,21 @@ It is shown in \ref{privacy-guarantee} that a tighter analysis of the exponentia
 
 \subsection*{Function}
 \label{sec:python-pseudocode}
-\lstinputlisting[language=Python,firstline=2]{./pseudocode/make_base_discrete_exponential.py}
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/make_report_noisy_max_gumbel.py}
 
 \subsection*{Postcondition}
 
-\validMeasurement{\texttt{input\_domain, input\_metric, temperature, optimize, TIA, QO}}{\texttt{make\_base\_discrete\_exponential}} 
+\validMeasurement{\texttt{input\_domain, input\_metric, scale, optimize, TIA, QO}}{\texttt{make\_report\_noisy\_max\_gumbel}} 
 
 \section{Proof}
 \subsection{Privacy Guarantee}
 
 To ensure that the Gumbel sample is valid, the \texttt{input\_domain} is required to be non-null.
-The temperature is also required to be positive, because epsilon is non-negative,
-and to avoid division by zero.
-
-Technically, the input domain is required to have known size, because neighboring sets of scores with different sizes are incomparable.
-The drawback to enforcing this requirement is that it requires the user to specify the size of the input domain in advance, which is inconvenient.
-Instead, we allow the input domain to have unknown size, and define the distance between two score vectors with different lengths to be infinite.
-Therefore, in the map, if the input distance is finite, then we only need to consider neighboring score vectors with the same size.
-For this reason, the domain descriptor about the dataset size is ignored.
+The scale is also required to be positive.
 
 \begin{lemma}
     \label{function-prob}
-    By the definition of \function in the pseudocode, for any $x$ in \texttt{input\_domain},
+    By the definition of $\function$ in the pseudocode, for any $x$ in \texttt{input\_domain}, \\
     $\Pr[\function(x) = i] = \Pr[\mathrm{argmax}_k (u_k / \tau - \ln(-\ln(U_k))) = i]$.
 \end{lemma}
 
@@ -211,7 +205,7 @@ For this reason, the domain descriptor about the dataset size is ignored.
 \end{proof}
 
 \label{privacy-guarantee}
-Assume $u$, $v$ in \texttt{input\_domain} are \din-close under \rustdoc{metrics/struct}{LInfDiffDistance} and $\texttt{privacy\_map}(\din) \le \dout$.
+Assume $u$, $v$ in \texttt{input\_domain} are \din-close under \rustdoc{metrics/struct}{LInfDistance} and $\texttt{privacy\_map}(\din) \le \dout$.
 
 \begin{align*}
     &\quad \max\limits_{u \sim v} D_\infty(\function(u), \function(v)) \\
@@ -221,7 +215,10 @@ Assume $u$, $v$ in \texttt{input\_domain} are \din-close under \rustdoc{metrics/
             {\Pr[\mathrm{argmax}_k (u_k / \tau - \ln(-\ln(U_k))) = i]}
             {\Pr[\mathrm{argmax}_k (v_k / \tau - \ln(-\ln(U_k))) = i]}
         \right) &&\text{by \ref{function-prob}, substitute \function}\\
-    \intertext{Assuming $\texttt{privacy\_map}(\din) \le \dout = \epsilon$, then $ \tau \geq \Delta / \epsilon$.}
+    \intertext{Assume $\texttt{privacy\_map}(\din) \le \dout = \epsilon$. 
+    For convenience, we'll shorten $\Delta_\text{Range}$ to $\Delta$, the sensitivity wrt the range-distance. 
+    If monotonic, $\Delta = \din$, else $\Delta = 2 \cdot \din$. 
+    Now substitute the inequality that $ \tau \geq \Delta / \epsilon$.}
     &\le \max\limits_{u \sim v} \max\limits_{i} \ln\left(\frac
             {\Pr[\mathrm{argmax}_k (u_k \epsilon / \Delta - \ln(-\ln(U_k))) = i]}
             {\Pr[\mathrm{argmax}_k (v_k \epsilon / \Delta - \ln(-\ln(U_k))) = i]}
@@ -245,7 +242,7 @@ Assume $u$, $v$ in \texttt{input\_domain} are \din-close under \rustdoc{metrics/
         + \ln\left(\frac{\sum_{k} \exp(\frac{\epsilon v_k}{\Delta})}{\sum_{k} \exp(\frac{\epsilon u_k}{\Delta})}\right) \\
     &\leq \max\limits_{u \sim v} \max\limits_{i} \frac{\epsilon (u_i - v_i)}{\Delta} + \frac{\epsilon \max_j (v_j - u_j)}{\Delta} &&\text{by \ref{priv-inequality}} \\
     &\leq \epsilon \max\limits_{u \sim v} \frac{\max\limits_{ij} \abs{(u_i - v_i) - (u_j - v_j)}}{\Delta} \\
-    &\leq \epsilon &&\text{by }\rustdoc{metrics/struct}{LInfDiffDistance} \\
+    &\leq \epsilon &&\text{by }\texttt{RangeDistance}\\
     &= \dout
 \end{align*}    
 

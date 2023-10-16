@@ -20,7 +20,7 @@ use std::marker::PhantomData;
 use crate::{
     core::{Domain, Metric, MetricSpace},
     domains::{type_name, AtomDomain, MapDomain, VectorDomain},
-    traits::CheckAtom,
+    traits::{CheckAtom, InfAdd}, error::Fallible,
 };
 #[cfg(feature = "contrib")]
 use crate::{traits::Hashable, transformations::DataFrameDomain};
@@ -455,45 +455,77 @@ impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
     }
 }
 
-/// Distance between score vectors for the exponential mechanism.
+/// Distance between score vectors with monotonicity indicator.
 ///
 /// # Proof Definition
 ///
 /// ### `d`-closeness
 /// For any two datasets $u, v \in$ `VectorDomain<AtomDomain<T>>` and any $d$ of type `T`,
-/// we say that $u, v$ are $d$-close under the inf-difference metric (abbreviated as $d_{IDD}$) whenever
+/// we say that $u, v$ are $d$-close under the l-infinity metric (abbreviated as $d_{\infty}$) whenever
 ///
 /// ```math
-/// d_{\infty'}(u, v) = max_{ij} |(u_i - v_i) - (u_j - v_j)|
+/// d_{\infty}(u, v) = max_{i} |u_i - v_i|
 /// ```
-pub struct LInfDiffDistance<Q>(PhantomData<Q>);
-impl<Q> Default for LInfDiffDistance<Q> {
+pub struct LInfDistance<Q> {
+    pub monotonic: bool,
+    _marker: PhantomData<Q>
+}
+
+impl<Q: InfAdd> LInfDistance<Q> {
+    /// Translate a distance bound `d_in` wrt the $L_\infty$ metric to a distance bound wrt the range metric.
+    /// 
+    /// ```math
+    /// d_{\text{Range}}(u, v) = max_{ij} |(u_i - v_i) - (u_j - v_j)|
+    /// ```
+    pub fn range_distance(&self, d_in: Q) -> Fallible<Q> {
+        if self.monotonic {
+            Ok(d_in)
+        } else {
+            d_in.inf_add(&d_in)
+        }
+    }
+
+    pub fn new(monotonic: bool) -> Self {
+        LInfDistance {
+            monotonic,
+            _marker: PhantomData
+        }
+    }
+}
+impl<Q> Default for LInfDistance<Q> {
     fn default() -> Self {
-        LInfDiffDistance(PhantomData)
+        LInfDistance {
+            monotonic: false,
+            _marker: PhantomData
+        }
     }
 }
 
-impl<Q> Clone for LInfDiffDistance<Q> {
+impl<Q> Clone for LInfDistance<Q> {
     fn clone(&self) -> Self {
-        Self::default()
+        LInfDistance { 
+            monotonic: self.monotonic, 
+            _marker: PhantomData 
+        }
     }
 }
-impl<Q> PartialEq for LInfDiffDistance<Q> {
-    fn eq(&self, _other: &Self) -> bool {
-        true
+impl<Q> PartialEq for LInfDistance<Q> {
+    fn eq(&self, other: &Self) -> bool {
+        self.monotonic == other.monotonic
     }
 }
-impl<Q> Debug for LInfDiffDistance<Q> {
+impl<Q> Debug for LInfDistance<Q> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "LInfDiffDistance({})", type_name!(Q))
+        let monotonic = self.monotonic.then_some("monotonic, ").unwrap_or_default();
+        write!(f, "LInfDistance({monotonic}T={})", type_name!(Q))
     }
 }
 
-impl<Q> Metric for LInfDiffDistance<Q> {
+impl<Q> Metric for LInfDistance<Q> {
     type Distance = Q;
 }
 
-impl<T: CheckAtom> MetricSpace for (VectorDomain<AtomDomain<T>>, LInfDiffDistance<T>) {
+impl<T: CheckAtom> MetricSpace for (VectorDomain<AtomDomain<T>>, LInfDistance<T>) {
     fn check(&self) -> bool {
         !self.0.element_domain.nullable()
     }

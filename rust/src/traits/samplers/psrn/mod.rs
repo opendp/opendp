@@ -1,5 +1,4 @@
-use std::ops::AddAssign;
-
+use num::traits::MulAddAssign;
 use rug::{float::Round, ops::NegAssign, Float, Integer, Rational};
 
 use crate::{error::Fallible, traits::samplers::SampleStandardBernoulli};
@@ -38,14 +37,16 @@ impl UniformPSRN {
 /// Initializes to span all reals.
 pub struct GumbelPSRN {
     shift: Rational,
+    scale: Rational,
     uniform: UniformPSRN,
     precision: u32,
 }
 
 impl GumbelPSRN {
-    pub fn new(shift: Rational) -> Self {
+    pub fn new(shift: Rational, scale: Rational) -> Self {
         GumbelPSRN {
             shift,
+            scale,
             uniform: UniformPSRN::default(),
             precision: 1,
         }
@@ -59,7 +60,7 @@ impl GumbelPSRN {
             let uniform = Float::with_val_round(self.precision, self.uniform.value(round), round).0;
 
             if let Some(mut gumbel) = Self::inverse_cdf(uniform, round).to_rational() {
-                gumbel.add_assign(&self.shift);
+                gumbel.mul_add_assign(&self.scale, &self.shift);
                 return Ok(gumbel);
             } else {
                 self.refine()?;
@@ -121,7 +122,7 @@ mod test {
 
     #[test]
     fn test_sample_gumbel_interval_progression() -> Fallible<()> {
-        let mut gumbel = GumbelPSRN::new(Rational::from(0));
+        let mut gumbel = GumbelPSRN::new(Rational::from(0), Rational::from(1));
         for _ in 0..10 {
             println!(
                 "{:?}, {:?}, {}",
@@ -137,7 +138,7 @@ mod test {
     #[test]
     fn test_gumbel_psrn() -> Fallible<()> {
         fn sample_gumbel() -> Fallible<f64> {
-            let mut gumbel = GumbelPSRN::new(Rational::from(0));
+            let mut gumbel = GumbelPSRN::new(Rational::from(0), Rational::from(1));
             for _ in 0..10 {
                 gumbel.refine()?;
             }
