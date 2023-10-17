@@ -31,7 +31,14 @@ def make_basic_composition(
     r"""Construct the DP composition [`measurement0`, `measurement1`, ...].
     Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
     
-    All metrics and domains must be equivalent, except for the output domain.
+    All metrics and domains must be equivalent.
+    
+    **Composition Properties**
+    
+    * sequential: all measurements are applied to the same dataset
+    * basic: the composition is the linear sum of the privacy usage of each query
+    * noninteractive: all mechanisms specified up-front (but each can be interactive)
+    * compositor: all privacy parameters specified up-front (via the map)
     
     [make_basic_composition in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_basic_composition.html)
     
@@ -320,7 +327,19 @@ def make_sequential_composition(
     d_in: Any,
     d_mids: Any
 ) -> Measurement:
-    r"""Construct a queryable that interactively composes interactive measurements.
+    r"""Construct a Measurement that when invoked, 
+    returns a queryable that interactively composes measurements.
+    
+    **Composition Properties**
+    
+    * sequential: all measurements are applied to the same dataset
+    * basic: the composition is the linear sum of the privacy usage of each query
+    * interactive: mechanisms can be specified based on answers to previous queries
+    * compositor: all privacy parameters specified up-front
+    
+    If the privacy measure supports concurrency, 
+    this compositor allows you to spawn multiple interactive mechanisms 
+    and interleave your queries amongst them.
     
     [make_sequential_composition in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_sequential_composition.html)
     

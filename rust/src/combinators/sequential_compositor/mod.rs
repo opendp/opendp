@@ -4,6 +4,6 @@ mod noninteractive;
 pub use noninteractive::*;
 
 #[cfg(feature = "contrib")]
-mod sequential;
+mod interactive;
 #[cfg(feature = "contrib")]
-pub use sequential::*;
+pub use interactive::*;

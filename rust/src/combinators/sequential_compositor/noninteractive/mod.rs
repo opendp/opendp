@@ -11,12 +11,15 @@ use crate::{
     traits::InfAdd,
 };
 
-/// Construct the DP composition [`measurement0`, `measurement1`, ...].
+/// Construct the DP composition of [`measurement0`, `measurement1`, ...].
 /// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
-///
-/// Aside from sharing the same type, each output domain need not be equivalent.
-/// This is useful when converting types to PolyDomain,
-/// which can enable composition over non-homogeneous measurements.
+/// 
+/// **Composition Properties**
+/// 
+/// * sequential: all measurements are applied to the same dataset
+/// * basic: the composition is the linear sum of the privacy usage of each query
+/// * noninteractive: all mechanisms specified up-front (but each can be interactive)
+/// * compositor: all privacy parameters specified up-front (via the map)
 ///
 /// # Arguments
 /// * `measurements` - A vector of Measurements to compose. All DI, MI, MO must be equivalent.
@@ -27,7 +30,7 @@ use crate::{
 /// * `MI` - Input Metric
 /// * `MO` - Output Metric
 pub fn make_basic_composition<DI, TO, MI, MO>(
-    measurements: Vec<&Measurement<DI, TO, MI, MO>>,
+    measurements: Vec<Measurement<DI, TO, MI, MO>>,
 ) -> Fallible<Measurement<DI, Vec<TO>, MI, MO>>
 where
     DI: 'static + Domain,
@@ -66,23 +69,25 @@ where
         .map(|m| m.privacy_map.clone())
         .collect::<Vec<_>>();
 
+    let concurrent = output_measure.concurrent();
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &DI::Carrier| {
-            wrap(
-                |_qbl| {
-                    fallible!(
-                        FailedFunction,
-                        "cannot return queryables from a noninteractive compositor"
-                    )
-                },
-                || {
-                    functions
-                        .iter()
-                        .map(|f| f.eval(arg))
-                        .collect::<Fallible<_>>()
-                },
-            )
+            let go = || functions.iter().map(|f| f.eval(arg)).collect();
+
+            if concurrent {
+                go()
+            } else {
+                wrap(
+                    |_qbl| {
+                        fallible!(
+                            FailedFunction,
+                            "output_measure must allow concurrency to spawn queryables from a noninteractive compositor"
+                        )
+                    },
+                    go,
+                )
+            }
         }),
         input_metric,
         output_measure.clone(),
@@ -97,16 +102,23 @@ where
 }
 
 pub trait BasicCompositionMeasure: Measure {
+    fn concurrent(&self) -> bool;
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance>;
 }
 
 impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for MaxDivergence<Q> {
+    fn concurrent(&self) -> bool {
+        true
+    }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         d_i.iter().try_fold(Q::zero(), |sum, d_i| sum.inf_add(d_i))
     }
 }
 
 impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for FixedSmoothedMaxDivergence<Q> {
+    fn concurrent(&self) -> bool {
+        true
+    }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         d_i.iter()
             .try_fold((Q::zero(), Q::zero()), |(e1, d1), (e2, d2)| {
@@ -116,6 +128,9 @@ impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for FixedSmoothedMaxDiver
 }
 
 impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for ZeroConcentratedDivergence<Q> {
+    fn concurrent(&self) -> bool {
+        true
+    }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         d_i.iter().try_fold(Q::zero(), |sum, d_i| sum.inf_add(d_i))
     }
@@ -158,7 +173,7 @@ mod tests {
             output_measure1,
             privacy_map1,
         )?;
-        let composition = make_basic_composition(vec![&measurement0, &measurement1])?;
+        let composition = make_basic_composition(vec![measurement0, measurement1])?;
         let arg = 99;
         let ret = composition.invoke(&arg)?;
         assert_eq!(ret, vec![100_f64, 98_f64]);
@@ -171,7 +186,7 @@ mod tests {
         let input_domain = AtomDomain::default();
         let input_metric = AbsoluteDistance::default();
         let laplace = make_base_laplace(input_domain, input_metric, 1.0f64, None)?;
-        let measurements = vec![&laplace; 2];
+        let measurements = vec![laplace; 2];
         let composition = make_basic_composition(measurements)?;
         let arg = 99.;
         let ret = composition.invoke(&arg)?;

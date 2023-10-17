@@ -19,7 +19,19 @@ use crate::{
     ),
     derived_types(QO = "$get_distance_type(output_measure)")
 )]
-/// Construct a queryable that interactively composes interactive measurements.
+/// Construct a Measurement that when invoked, 
+/// returns a queryable that interactively composes measurements.
+/// 
+/// **Composition Properties**
+/// 
+/// * sequential: all measurements are applied to the same dataset
+/// * basic: the composition is the linear sum of the privacy usage of each query
+/// * interactive: mechanisms can be specified based on answers to previous queries
+/// * compositor: all privacy parameters specified up-front
+///
+/// If the privacy measure supports concurrency, 
+/// this compositor allows you to spawn multiple interactive mechanisms 
+/// and interleave your queries amongst them. 
 ///
 /// # Arguments
 /// * `input_domain` - indicates the space of valid input datasets
