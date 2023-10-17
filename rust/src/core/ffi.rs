@@ -7,16 +7,15 @@ use opendp_derive::bootstrap;
 
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
 use crate::ffi::any::{
-    AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyQueryable,
-    AnyTransformation, Downcast, IntoAnyFunctionExt, IntoAnyMeasurementExt,
-    IntoAnyTransformationExt, QueryType, CallbackFn, wrap_func,
+    wrap_func, AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject,
+    AnyQueryable, AnyTransformation, CallbackFn, Downcast, QueryType,
 };
 use crate::ffi::util::into_c_char_p;
 use crate::ffi::util::{self, c_bool, Type};
-use crate::interactive::{Queryable, Query, Answer};
+use crate::interactive::{Answer, Query, Queryable};
 use crate::{try_, try_as_ref};
 
-use super::Function;
+use super::{Domain, Function, Measure, Measurement, Metric, MetricSpace, Transformation};
 
 #[repr(C)]
 pub struct FfiSlice {
@@ -147,9 +146,14 @@ pub trait IntoAnyMeasurementFfiResultExt {
     fn into_any(self) -> FfiResult<*mut AnyMeasurement>;
 }
 
-impl<T: IntoAnyMeasurementExt> IntoAnyMeasurementFfiResultExt for Fallible<T> {
+impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
+    IntoAnyMeasurementFfiResultExt for Fallible<Measurement<DI, TO, MI, MO>>
+where
+    MO::Distance: 'static,
+    (DI, MI): MetricSpace,
+{
     fn into_any(self) -> FfiResult<*mut AnyMeasurement> {
-        self.map(IntoAnyMeasurementExt::into_any).into()
+        self.map(Measurement::into_any).into()
     }
 }
 
@@ -160,9 +164,16 @@ pub trait IntoAnyTransformationFfiResultExt {
     fn into_any(self) -> FfiResult<*mut AnyTransformation>;
 }
 
-impl<T: IntoAnyTransformationExt> IntoAnyTransformationFfiResultExt for Fallible<T> {
+impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
+    IntoAnyTransformationFfiResultExt for Fallible<Transformation<DI, DO, MI, MO>>
+where
+    DO::Carrier: 'static,
+    MO::Distance: 'static,
+    (DI, MI): MetricSpace,
+    (DO, MO): MetricSpace,
+{
     fn into_any(self) -> FfiResult<*mut AnyTransformation> {
-        self.map(IntoAnyTransformationExt::into_any).into()
+        self.map(Transformation::into_any).into()
     }
 }
 
@@ -170,11 +181,14 @@ pub trait IntoAnyFunctionFfiResultExt {
     fn into_any(self) -> FfiResult<*mut AnyFunction>;
 }
 
-impl<T: IntoAnyFunctionExt> IntoAnyFunctionFfiResultExt for Fallible<T> {
+impl<TI: 'static, TO: 'static> IntoAnyFunctionFfiResultExt
+    for Fallible<Function<TI, TO>>
+{
     fn into_any(self) -> FfiResult<*mut AnyFunction> {
-        self.map(IntoAnyFunctionExt::into_any).into()
+        self.map(Function::into_any).into()
     }
 }
+
 
 impl From<FfiError> for Error {
     fn from(val: FfiError) -> Self {
@@ -661,7 +675,6 @@ pub extern "C" fn opendp_core__measurement_output_distance_type(
     )))
 }
 
-
 #[bootstrap(
     name = "new_function",
     features("contrib"),
@@ -690,7 +703,6 @@ pub extern "C" fn opendp_core__new_function(
     let _TO = TO;
     FfiResult::Ok(util::into_raw(Function::new_fallible(wrap_func(function))))
 }
-
 
 #[bootstrap(
     name = "function_eval",
@@ -771,13 +783,12 @@ pub extern "C" fn opendp_core__queryable_query_type(
     FfiResult::Ok(try_!(into_c_char_p(answer.descriptor.to_string())))
 }
 
-
 type TransitionFn = extern "C" fn(*const AnyObject, c_bool) -> *mut FfiResult<*mut AnyObject>;
 
 // wrap a TransitionFn in a closure, so that it can be used in Queryables
 fn wrap_transition(
     transition: TransitionFn,
-    Q: Type
+    Q: Type,
 ) -> impl FnMut(&AnyQueryable, Query<AnyObject>) -> Fallible<Answer<AnyObject>> {
     fn eval(transition: &TransitionFn, q: &AnyObject, is_internal: bool) -> Fallible<AnyObject> {
         util::into_owned(transition(

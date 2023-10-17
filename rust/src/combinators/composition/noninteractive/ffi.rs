@@ -2,10 +2,10 @@ use num::Zero;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::FfiResult,
+    core::{FfiResult, Measurement},
     error::Fallible,
     ffi::{
-        any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast, IntoAnyMeasurementOutExt},
+        any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
         util::AnyMeasurementPtr,
     },
     measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence, ffi::TypedMeasure},
@@ -27,7 +27,7 @@ use super::BasicCompositionMeasure;
 /// # Arguments
 /// * `measurements` - A vector of Measurements to compose.
 fn make_basic_composition(measurements: Vec<&AnyMeasurement>) -> Fallible<AnyMeasurement> {
-    super::make_basic_composition(measurements).map(IntoAnyMeasurementOutExt::into_any_out)
+    super::make_basic_composition(measurements).map(Measurement::into_any_out)
 }
 
 #[no_mangle]
@@ -88,7 +88,7 @@ mod tests {
     use crate::combinators::tests::make_test_measurement;
     use crate::core;
     use crate::error::Fallible;
-    use crate::ffi::any::{AnyObject, Downcast, IntoAnyMeasurementExt};
+    use crate::ffi::any::{AnyObject, Downcast};
     use crate::ffi::util;
 
     use super::*;
