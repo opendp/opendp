@@ -21,7 +21,7 @@ pub trait CollectionSize {
     fn size(&self) -> usize;
 }
 
-pub trait CheckAtom: CheckNull + Sized + Clone + PartialEq + Debug {
+pub trait CheckAtom: CheckNull + Sized + Clone + PartialEq + Debug + Send + Sync {
     fn is_bounded(&self, _bounds: Bounds<Self>) -> Fallible<bool> {
         fallible!(FailedFunction, "bounds check is not implemented")
     }

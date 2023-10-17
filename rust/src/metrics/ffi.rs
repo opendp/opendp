@@ -1,4 +1,4 @@
-use std::ffi::c_char;
+use std::{fmt::Debug, marker::PhantomData, ffi::c_char};
 
 use opendp_derive::bootstrap;
 
@@ -8,7 +8,7 @@ use crate::{
         any::AnyMetric,
         util::{self, into_c_char_p, to_str, Type, ExtrinsicObject, c_bool},
     },
-    metrics::{AbsoluteDistance, L1Distance, L2Distance}, traits::InfAdd,
+    metrics::{AbsoluteDistance, L1Distance, L2Distance}, traits::InfAdd, error::Fallible,
 };
 
 use super::{
@@ -239,4 +239,56 @@ pub extern "C" fn opendp_metrics__user_distance(
 ) -> FfiResult<*mut AnyMetric> {
     let descriptor = try_!(to_str(descriptor)).to_string();
     Ok(AnyMetric::new(UserDistance { descriptor })).into()
+}
+
+
+
+
+
+pub struct TypedMetric<Q> {
+    metric: AnyMetric,
+    marker: PhantomData<fn() -> Q>,
+}
+
+impl<Q: 'static> TypedMetric<Q> {
+    pub fn new(metric: AnyMetric) -> Fallible<TypedMetric<Q>> {
+        if metric.distance_type != Type::of::<Q>() {
+            return fallible!(FFI, "unexpected distance type");
+        }
+
+        Ok(TypedMetric {
+            metric,
+            marker: PhantomData,
+        })
+    }
+}
+
+impl<Q> PartialEq for TypedMetric<Q> {
+    fn eq(&self, other: &Self) -> bool {
+        self.metric == other.metric
+    }
+}
+
+impl<Q> Clone for TypedMetric<Q> {
+    fn clone(&self) -> Self {
+        Self {
+            metric: self.metric.clone(),
+            marker: self.marker.clone(),
+        }
+    }
+}
+
+impl<Q> Debug for TypedMetric<Q> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.metric)
+    }
+}
+impl<Q> Default for TypedMetric<Q> {
+    fn default() -> Self {
+        panic!()
+    }
+}
+
+impl<Q> Metric for TypedMetric<Q> {
+    type Distance = Q;
 }

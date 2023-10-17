@@ -12,7 +12,7 @@
 //! This means that the symmetric distance between vectors is expressed in terms of a [`u32`].
 
 #[cfg(feature = "ffi")]
-mod ffi;
+pub(crate) mod ffi;
 
 use std::hash::Hash;
 use std::marker::PhantomData;
@@ -306,7 +306,7 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, HammingDistance) {
 ///
 /// * `VectorDomain<D>` for any valid `D`
 /// * `MapDomain<D>` for any valid `D`
-pub struct LpDistance<const P: usize, Q>(PhantomData<Q>);
+pub struct LpDistance<const P: usize, Q>(PhantomData<fn() -> Q>);
 impl<const P: usize, Q> Default for LpDistance<P, Q> {
     fn default() -> Self {
         LpDistance(PhantomData)
@@ -374,7 +374,7 @@ pub type L2Distance<Q> = LpDistance<2, Q>;
 /// # Compatible Domains
 ///
 /// * `AtomDomain<T>` for any valid `T`
-pub struct AbsoluteDistance<Q>(PhantomData<Q>);
+pub struct AbsoluteDistance<Q>(PhantomData<fn() -> Q>);
 impl<Q> Default for AbsoluteDistance<Q> {
     fn default() -> Self {
         AbsoluteDistance(PhantomData)
@@ -468,7 +468,7 @@ impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
 /// ```
 pub struct LInfDistance<Q> {
     pub monotonic: bool,
-    _marker: PhantomData<Q>
+    _marker: PhantomData<fn() -> Q>
 }
 
 impl<Q: InfAdd> LInfDistance<Q> {

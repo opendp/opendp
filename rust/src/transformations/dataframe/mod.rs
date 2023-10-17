@@ -24,7 +24,7 @@ pub type DataFrame<K> = HashMap<K, Column>;
 
 #[derive(PartialEq)]
 pub struct DataFrameDomain<K: Hash + Eq> {
-    pub _marker: PhantomData<K>,
+    pub _marker: PhantomData<fn() -> K>,
 }
 impl<K: Hash + Eq> Clone for DataFrameDomain<K> {
     fn clone(&self) -> Self {
