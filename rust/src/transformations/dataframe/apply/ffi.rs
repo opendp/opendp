@@ -3,6 +3,7 @@ use std::os::raw::c_char;
 
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
+use crate::error::Fallible;
 use crate::transformations::{
     make_df_cast_default, make_df_is_equal, DataFrameDomain, DatasetMetric,
 };
@@ -24,7 +25,7 @@ pub extern "C" fn opendp_transformations__make_df_cast_default(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
         column_name: *const AnyObject,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         TK: Hashable,
         TIA: Primitive,
@@ -34,9 +35,9 @@ pub extern "C" fn opendp_transformations__make_df_cast_default(
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {
-        let input_domain = try_!(input_domain.downcast_ref::<DataFrameDomain<TK>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
-        let column_name: TK = try_!(try_as_ref!(column_name).downcast_ref::<TK>()).clone();
+        let input_domain = input_domain.downcast_ref::<DataFrameDomain<TK>>()?.clone();
+        let input_metric = input_metric.downcast_ref::<M>()?.clone();
+        let column_name: TK = try_as_ref!(column_name).downcast_ref::<TK>()?.clone();
         make_df_cast_default::<TK, TIA, TOA, M>(input_domain, input_metric, column_name).into_any()
     }
 
@@ -52,7 +53,7 @@ pub extern "C" fn opendp_transformations__make_df_cast_default(
         (TIA, @primitives),
         (TOA, @primitives),
         (M, @dataset_metrics)
-    ], (input_domain, input_metric, column_name))
+    ], (input_domain, input_metric, column_name)).into()
 }
 
 #[no_mangle]
@@ -73,7 +74,7 @@ pub extern "C" fn opendp_transformations__make_df_is_equal(
         input_metric: &AnyMetric,
         column_name: &AnyObject,
         value: &AnyObject,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         TK: Hashable,
         TIA: Primitive,
@@ -82,10 +83,10 @@ pub extern "C" fn opendp_transformations__make_df_is_equal(
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
     {
-        let input_domain = try_!(input_domain.downcast_ref::<DataFrameDomain<TK>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
-        let column_name: TK = try_!(column_name.downcast_ref::<TK>()).clone();
-        let value: TIA = try_!(value.downcast_ref::<TIA>()).clone();
+        let input_domain = input_domain.downcast_ref::<DataFrameDomain<TK>>()?.clone();
+        let input_metric = input_metric.downcast_ref::<M>()?.clone();
+        let column_name: TK = column_name.downcast_ref::<TK>()?.clone();
+        let value: TIA = value.downcast_ref::<TIA>()?.clone();
         make_df_is_equal::<TK, TIA, M>(input_domain, input_metric, column_name, value).into_any()
     }
     let TK = try_!(input_domain.type_.get_atom());
@@ -96,7 +97,7 @@ pub extern "C" fn opendp_transformations__make_df_is_equal(
         (TK, @hashable),
         (TIA, @primitives),
         (M, @dataset_metrics)
-    ], (input_domain, input_metric, column_name, value))
+    ], (input_domain, input_metric, column_name, value)).into()
 }
 
 #[cfg(test)]

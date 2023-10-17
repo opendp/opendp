@@ -3,6 +3,7 @@ use std::os::raw::{c_char, c_uint};
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::domains::{AtomDomain, VectorDomain};
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
@@ -24,7 +25,7 @@ pub extern "C" fn opendp_transformations__make_variance(
         input_metric: &AnyMetric,
         ddof: usize,
         S: Type,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         T: 'static + Float,
     {
@@ -32,7 +33,7 @@ pub extern "C" fn opendp_transformations__make_variance(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
             ddof: usize,
-        ) -> FfiResult<*mut AnyTransformation>
+        ) -> Fallible<AnyTransformation>
         where
             S: UncheckedSum,
             S::Item: 'static + Float,
@@ -40,8 +41,8 @@ pub extern "C" fn opendp_transformations__make_variance(
             AbsoluteDistance<S::Item>: LipschitzMulFloatMetric<Distance = S::Item>,
         {
             let input_domain =
-                try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<S::Item>>>()).clone();
-            let input_metric = try_!(input_metric.downcast_ref::<SymmetricDistance>()).clone();
+                input_domain.downcast_ref::<VectorDomain<AtomDomain<S::Item>>>()?.clone();
+            let input_metric = input_metric.downcast_ref::<SymmetricDistance>()?.clone();
             make_variance::<S>(input_domain, input_metric, ddof).into_any()
         }
         dispatch!(monomorphize2, [(S, [Sequential<T>, Pairwise<T>])], (input_domain, input_metric, ddof))
@@ -53,5 +54,5 @@ pub extern "C" fn opendp_transformations__make_variance(
     let T = try_!(S.get_atom());
     dispatch!(monomorphize, [
         (T, @floats)
-    ], (input_domain, input_metric, ddof, S))
+    ], (input_domain, input_metric, ddof, S)).into()
 }

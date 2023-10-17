@@ -3,6 +3,7 @@ use num::Float;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
 use crate::traits::{ExactIntCast, InfMul};
@@ -18,7 +19,7 @@ pub extern "C" fn opendp_transformations__make_mean(
     fn monomorphize<MI, T>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         MI: 'static + Metric,
         T: 'static + MakeSum<MI> + ExactIntCast<usize> + Float + InfMul,
@@ -27,8 +28,8 @@ pub extern "C" fn opendp_transformations__make_mean(
         (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
     {
         let input_domain =
-            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<T>>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<MI>()).clone();
+            input_domain.downcast_ref::<VectorDomain<AtomDomain<T>>>()?.clone();
+        let input_metric = input_metric.downcast_ref::<MI>()?.clone();
         make_mean::<MI, T>(input_domain, input_metric).into_any()
     }
     let input_domain = try_as_ref!(input_domain);
@@ -39,7 +40,7 @@ pub extern "C" fn opendp_transformations__make_mean(
     dispatch!(monomorphize, [
         (MI, [SymmetricDistance, InsertDeleteDistance]),
         (T, @floats)
-    ], (input_domain, input_metric))
+    ], (input_domain, input_metric)).into()
 }
 
 #[cfg(test)]

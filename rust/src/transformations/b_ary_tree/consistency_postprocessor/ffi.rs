@@ -7,7 +7,7 @@ use crate::{
     core::{FfiResult, IntoAnyFunctionFfiResultExt},
     ffi::{any::AnyFunction, util::Type},
     traits::{CheckAtom, Float, RoundCast},
-    transformations::make_consistent_b_ary_tree,
+    transformations::make_consistent_b_ary_tree, error::Fallible,
 };
 
 #[no_mangle]
@@ -16,7 +16,7 @@ pub extern "C" fn opendp_transformations__make_consistent_b_ary_tree(
     TIA: *const c_char,
     TOA: *const c_char,
 ) -> FfiResult<*mut AnyFunction> {
-    fn monomorphize<TIA, TOA>(branching_factor: usize) -> FfiResult<*mut AnyFunction>
+    fn monomorphize<TIA, TOA>(branching_factor: usize) -> Fallible<AnyFunction>
     where
         TIA: 'static + CheckAtom + Clone,
         TOA: Float + RoundCast<TIA>,
@@ -30,5 +30,5 @@ pub extern "C" fn opendp_transformations__make_consistent_b_ary_tree(
     dispatch!(monomorphize, [
         (TIA, @integers),
         (TOA, @floats)
-    ], (branching_factor))
+    ], (branching_factor)).into()
 }

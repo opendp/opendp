@@ -2,6 +2,7 @@ use crate::core::MetricSpace;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::err;
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
 use crate::traits::{CheckAtom, InherentNull, Primitive};
@@ -35,24 +36,25 @@ pub extern "C" fn opendp_transformations__make_is_equal(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
         value: &AnyObject,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         TIA: Primitive,
         M: 'static + DatasetMetric,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
     {
-        let input_domain =
-            try_!(try_as_ref!(input_domain).downcast_ref::<VectorDomain<AtomDomain<TIA>>>())
-                .clone();
-        let input_metric = try_!(try_as_ref!(input_metric).downcast_ref::<M>()).clone();
-        let value = try_!(try_as_ref!(value).downcast_ref::<TIA>()).clone();
+        let input_domain = try_as_ref!(input_domain)
+            .downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?
+            .clone();
+        let input_metric = try_as_ref!(input_metric).downcast_ref::<M>()?.clone();
+        let value = try_as_ref!(value).downcast_ref::<TIA>()?.clone();
         make_is_equal::<TIA, M>(input_domain, input_metric, value).into_any()
     }
     dispatch!(monomorphize, [
         (TIA, @primitives),
         (M, @dataset_metrics)
     ], (input_domain, input_metric, value))
+    .into()
 }
 
 #[no_mangle]
@@ -83,39 +85,39 @@ pub extern "C" fn opendp_transformations__make_is_null(
             fn monomorphize<M, TIA>(
                 input_domain: &AnyDomain,
                 input_metric: &AnyMetric,
-            ) -> FfiResult<*mut AnyTransformation>
+            ) -> Fallible<AnyTransformation>
             where
                 TIA: 'static + CheckAtom,
                 M: 'static + DatasetMetric,
                 (VectorDomain<OptionDomain<AtomDomain<TIA>>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
             {
-                let input_domain = try_!(
-                    input_domain.downcast_ref::<VectorDomain<OptionDomain<AtomDomain<TIA>>>>()
-                )
-                .clone();
+                let input_domain = input_domain
+                    .downcast_ref::<VectorDomain<OptionDomain<AtomDomain<TIA>>>>()?
+                    .clone();
                 let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
                 make_is_null(input_domain, input_metric).into_any()
             }
-            dispatch!(monomorphize, [(M, @dataset_metrics), (TIA, @primitives)], (input_domain, input_metric))
+            dispatch!(monomorphize, [(M, @dataset_metrics), (TIA, @primitives)], (input_domain, input_metric)).into()
         }
         TypeContents::GENERIC { name, .. } if name == &"AtomDomain" => {
             fn monomorphize<M, TIA>(
                 input_domain: &AnyDomain,
                 input_metric: &AnyMetric,
-            ) -> FfiResult<*mut AnyTransformation>
+            ) -> Fallible<AnyTransformation>
             where
                 TIA: 'static + CheckAtom + InherentNull,
                 M: 'static + DatasetMetric,
                 (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
             {
-                let input_domain =
-                    try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
-                let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
+                let input_domain = input_domain
+                    .downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?
+                    .clone();
+                let input_metric = input_metric.downcast_ref::<M>()?.clone();
                 make_is_null(input_domain, input_metric).into_any()
             }
-            dispatch!(monomorphize, [(M, @dataset_metrics), (TIA, [f64, f32])], (input_domain, input_metric))
+            dispatch!(monomorphize, [(M, @dataset_metrics), (TIA, [f64, f32])], (input_domain, input_metric)).into()
         }
         _ => err!(
             TypeParse,

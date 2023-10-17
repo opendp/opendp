@@ -10,7 +10,7 @@ use crate::{
     metrics::AbsoluteDistance,
     traits::Float,
     traits::SaturatingMul,
-    transformations::{make_lipschitz_float_mul, LipschitzMulFloatDomain, LipschitzMulFloatMetric},
+    transformations::{make_lipschitz_float_mul, LipschitzMulFloatDomain, LipschitzMulFloatMetric}, error::Fallible,
 };
 
 #[no_mangle]
@@ -25,14 +25,14 @@ pub extern "C" fn opendp_transformations__make_lipschitz_float_mul(
         bounds: *const AnyObject,
         D: Type,
         M: Type,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         T: 'static + Float + SaturatingMul,
     {
         fn monomorphize2<D, M>(
             constant: D::Atom,
             bounds: (D::Atom, D::Atom),
-        ) -> FfiResult<*mut AnyTransformation>
+        ) -> Fallible<AnyTransformation>
         where
             D: 'static + LipschitzMulFloatDomain,
             D::Atom: Float + SaturatingMul,
@@ -55,5 +55,5 @@ pub extern "C" fn opendp_transformations__make_lipschitz_float_mul(
     let T = try_!(D.get_atom());
     dispatch!(monomorphize, [
         (T, @floats)
-    ], (constant, bounds, D, M))
+    ], (constant, bounds, D, M)).into()
 }

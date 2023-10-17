@@ -4,6 +4,7 @@ use std::os::raw::{c_char, c_uint};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyObject, AnyTransformation};
 use crate::ffi::any::{AnyMetric, Downcast};
 use crate::ffi::util::Type;
@@ -32,7 +33,7 @@ pub extern "C" fn opendp_transformations__make_resize(
         input_metric: &AnyMetric,
         size: usize,
         constant: &AnyObject,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         MI: 'static + IsMetricOrdered<Distance = IntDistance>,
         MO: 'static + IsMetricOrdered<Distance = IntDistance>,
@@ -40,9 +41,9 @@ pub extern "C" fn opendp_transformations__make_resize(
         (VectorDomain<AtomDomain<TA>>, MO): MetricSpace,
     {
         let input_domain =
-            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<MI>()).clone();
-        let constant = try_!(constant.downcast_ref::<TA>()).clone();
+            input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()?.clone();
+        let input_metric = input_metric.downcast_ref::<MI>()?.clone();
+        let constant = constant.downcast_ref::<TA>()?.clone();
         super::make_resize::<_, MI, MO>(input_domain, input_metric, size, constant).into_any()
     }
 
@@ -50,7 +51,7 @@ pub extern "C" fn opendp_transformations__make_resize(
         (MI, [SymmetricDistance, InsertDeleteDistance]),
         (MO, [SymmetricDistance, InsertDeleteDistance]),
         (T, @primitives)
-    ], (input_domain, input_metric, size, constant))
+    ], (input_domain, input_metric, size, constant)).into()
 }
 
 #[cfg(test)]
