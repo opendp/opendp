@@ -448,9 +448,9 @@ where
 pub(crate) type AnyFunction = Function<AnyObject, AnyObject>;
 
 impl<M: Metric> MetricSpace for (AnyDomain, M) {
-    fn check(&self) -> bool {
+    fn check_space(&self) -> Fallible<()> {
         // TODO: check that the domain is compatible with the metric
-        true
+        Ok(())
     }
 }
 

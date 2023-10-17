@@ -86,6 +86,9 @@ pub enum ErrorVariant {
     #[error("MakeMeasurement")]
     MakeMeasurement,
 
+    #[error("MetricSpace")]
+    MetricSpace,
+
     #[error("InvalidDistance")]
     InvalidDistance,
 

@@ -80,21 +80,21 @@ impl Metric for SymmetricDistance {
 
 // Symmetric distance is defined in terms of unescaped line-breaks for CSV string datasets
 impl MetricSpace for (AtomDomain<String>, SymmetricDistance) {
-    fn check(&self) -> bool {
-        true
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
 impl<D: Domain> MetricSpace for (VectorDomain<D>, SymmetricDistance) {
-    fn check(&self) -> bool {
-        true
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
 #[cfg(feature = "contrib")]
 impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, SymmetricDistance) {
-    fn check(&self) -> bool {
-        true
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
@@ -149,15 +149,15 @@ impl Metric for InsertDeleteDistance {
 }
 
 impl<D: Domain> MetricSpace for (VectorDomain<D>, InsertDeleteDistance) {
-    fn check(&self) -> bool {
-        true
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
 #[cfg(feature = "contrib")]
 impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, InsertDeleteDistance) {
-    fn check(&self) -> bool {
-        true
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
@@ -221,8 +221,13 @@ impl Metric for ChangeOneDistance {
 }
 
 impl<D: Domain> MetricSpace for (VectorDomain<D>, ChangeOneDistance) {
-    fn check(&self) -> bool {
-        self.0.size.is_some()
+    fn check_space(&self) -> Fallible<()> {
+        self.0.size.map(|_| ()).ok_or_else(|| {
+            err!(
+                MetricSpace,
+                "change-one distance requires a known dataset size"
+            )
+        })
     }
 }
 
@@ -280,8 +285,13 @@ impl Metric for HammingDistance {
     type Distance = IntDistance;
 }
 impl<D: Domain> MetricSpace for (VectorDomain<D>, HammingDistance) {
-    fn check(&self) -> bool {
-        self.0.size.is_some()
+    fn check_space(&self) -> Fallible<()> {
+        self.0.size.map(|_| ()).ok_or_else(|| {
+            err!(
+                MetricSpace,
+                "Hamming distance requires a known dataset size"
+            )
+        })
     }
 }
 
@@ -335,8 +345,12 @@ impl<const P: usize, Q> Metric for LpDistance<P, Q> {
 impl<T: CheckAtom, const P: usize, Q> MetricSpace
     for (VectorDomain<AtomDomain<T>>, LpDistance<P, Q>)
 {
-    fn check(&self) -> bool {
-        !self.0.element_domain.nullable()
+    fn check_space(&self) -> Fallible<()> {
+        if self.0.element_domain.nullable() {
+            fallible!(MetricSpace, "LpDistance requires non-nullable elements")
+        } else {
+            Ok(())
+        }
     }
 }
 impl<K: CheckAtom, V: CheckAtom, const P: usize, Q> MetricSpace
@@ -344,8 +358,12 @@ impl<K: CheckAtom, V: CheckAtom, const P: usize, Q> MetricSpace
 where
     K: Eq + Hash,
 {
-    fn check(&self) -> bool {
-        !self.0.value_domain.nullable()
+    fn check_space(&self) -> Fallible<()> {
+        if self.0.value_domain.nullable() {
+            return fallible!(MetricSpace, "LpDistance requires non-nullable elements")
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -400,8 +418,12 @@ impl<Q> Metric for AbsoluteDistance<Q> {
     type Distance = Q;
 }
 impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
-    fn check(&self) -> bool {
-        !self.0.nullable()
+    fn check_space(&self) -> Fallible<()> {
+        if self.0.nullable() {
+            fallible!(MetricSpace, "AbsoluteDistance requires non-nullable elements")
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -450,8 +472,8 @@ impl Metric for DiscreteDistance {
 }
 
 impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
-    fn check(&self) -> bool {
-        true
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
@@ -526,7 +548,11 @@ impl<Q> Metric for LInfDistance<Q> {
 }
 
 impl<T: CheckAtom> MetricSpace for (VectorDomain<AtomDomain<T>>, LInfDistance<T>) {
-    fn check(&self) -> bool {
-        !self.0.element_domain.nullable()
+    fn check_space(&self) -> Fallible<()> {
+        if self.0.element_domain.nullable() {
+            fallible!(MetricSpace, "LInfDistance requires non-nullable elements")
+        } else {
+            Ok(())
+        }
     }
 }
