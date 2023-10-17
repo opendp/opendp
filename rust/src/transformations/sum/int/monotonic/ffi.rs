@@ -5,7 +5,7 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 
 use crate::error::Fallible;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
-use crate::ffi::util::{Type, try_as_ref};
+use crate::ffi::util::Type;
 use crate::traits::Number;
 use crate::transformations::{
     make_bounded_int_monotonic_sum, make_sized_bounded_int_monotonic_sum, AddIsExact, IsMonotonic,
@@ -20,7 +20,7 @@ pub extern "C" fn opendp_transformations__make_bounded_int_monotonic_sum(
     where
         T: Number + AddIsExact + IsMonotonic,
     {
-        let bounds = try_as_ref(bounds)?.downcast_ref::<(T, T)>()?.clone();
+        let bounds = try_as_ref!(bounds).downcast_ref::<(T, T)>()?.clone();
         make_bounded_int_monotonic_sum::<T>(bounds).into_any()
     }
     let T = try_!(Type::try_from(T));
@@ -39,7 +39,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_int_monotonic_sum(
     where
         T: Number + AddIsExact + IsMonotonic,
     {
-        let bounds = try_as_ref(bounds)?.downcast_ref::<(T, T)>()?.clone();
+        let bounds = try_as_ref!(bounds).downcast_ref::<(T, T)>()?.clone();
         make_sized_bounded_int_monotonic_sum::<T>(size, bounds).into_any()
     }
     let size = size as usize;

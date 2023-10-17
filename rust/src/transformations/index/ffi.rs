@@ -7,7 +7,7 @@ use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, Downcast};
 use crate::ffi::any::{AnyObject, AnyTransformation};
-use crate::ffi::util::{Type, try_as_ref};
+use crate::ffi::util::Type;
 use crate::traits::{Hashable, Number, Primitive};
 use crate::transformations::{make_find, make_find_bin, make_index, DatasetMetric};
 
@@ -65,7 +65,7 @@ pub extern "C" fn opendp_transformations__make_find_bin(
         let input_domain =
             input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?.clone();
         let input_metric = input_metric.downcast_ref::<M>()?.clone();
-        let edges = try_as_ref(edges)?.downcast_ref::<Vec<TIA>>()?.clone();
+        let edges = try_as_ref!(edges).downcast_ref::<Vec<TIA>>()?.clone();
         make_find_bin(input_domain, input_metric, edges).into_any()
     }
     let input_domain = try_as_ref!(input_domain);
@@ -102,8 +102,8 @@ pub extern "C" fn opendp_transformations__make_index(
         let input_domain =
             input_domain.downcast_ref::<VectorDomain<AtomDomain<usize>>>()?.clone();
         let input_metric = input_metric.downcast_ref::<M>()?.clone();
-        let edges = try_as_ref(edges)?.downcast_ref::<Vec<TOA>>()?.clone();
-        let null = try_as_ref(null)?.downcast_ref::<TOA>()?.clone();
+        let edges = try_as_ref!(edges).downcast_ref::<Vec<TOA>>()?.clone();
+        let null = try_as_ref!(null).downcast_ref::<TOA>()?.clone();
         make_index(input_domain, input_metric, edges, null).into_any()
     }
     let input_domain = try_as_ref!(input_domain);

@@ -5,7 +5,7 @@ use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
-use crate::ffi::util::{try_as_ref, Type};
+use crate::ffi::util::Type;
 use crate::measurements::{make_base_discrete_laplace, BaseDiscreteLaplaceDomain};
 use crate::traits::samplers::SampleDiscreteLaplaceLinear;
 use crate::traits::{Float, InfCast, Integer};
@@ -49,7 +49,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace(
             make_base_discrete_laplace::<D, QO>(input_domain, input_metric, scale).into_any()
         }
         let D = input_domain.type_.clone();
-        let scale = *try_as_ref(scale as *const QO)?;
+        let scale = *try_as_ref!(scale as *const QO);
         dispatch!(monomorphize2, [
             (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
             (QO, [QO])
@@ -82,7 +82,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace(
             make_base_discrete_laplace::<D, QO>(input_domain, input_metric, scale).into_any()
         }
         let D = input_domain.type_.clone();
-        let scale = *try_as_ref(scale as *const QO)?;
+        let scale = *try_as_ref!(scale as *const QO);
         dispatch!(monomorphize2, [
             (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
             (QO, [QO])

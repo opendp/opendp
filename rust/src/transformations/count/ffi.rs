@@ -8,7 +8,7 @@ use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, Downcast};
 use crate::ffi::any::{AnyObject, AnyTransformation};
-use crate::ffi::util::{c_bool, to_bool, Type, try_as_ref};
+use crate::ffi::util::{c_bool, to_bool, Type};
 use crate::metrics::{L1Distance, L2Distance, SymmetricDistance};
 use crate::traits::{Hashable, Number, Primitive};
 use crate::transformations::{
@@ -111,7 +111,7 @@ pub extern "C" fn opendp_transformations__make_count_by_categories(
             let input_domain =
                 input_domain.downcast_ref::<VectorDomain<AtomDomain<TI>>>()?.clone();
             let input_metric = input_metric.downcast_ref::<SymmetricDistance>()?.clone();
-            let categories = try_as_ref(categories)?.downcast_ref::<Vec<TI>>()?.clone();
+            let categories = try_as_ref!(categories).downcast_ref::<Vec<TI>>()?.clone();
             make_count_by_categories::<MO, TI, TO>(
                 input_domain,
                 input_metric,

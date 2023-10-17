@@ -6,7 +6,7 @@ use crate::transformations::make_subset_by;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
-use crate::ffi::util::{try_as_ref, Type};
+use crate::ffi::util::Type;
 use crate::traits::Hashable;
 
 #[no_mangle]
@@ -22,8 +22,8 @@ pub extern "C" fn opendp_transformations__make_subset_by(
     where
         TK: Hashable,
     {
-        let indicator_column: TK = try_as_ref(indicator_column)?.downcast_ref::<TK>()?.clone();
-        let keep_columns: Vec<TK> = try_as_ref(keep_columns)?.downcast_ref::<Vec<TK>>()?.clone();
+        let indicator_column: TK = try_as_ref!(indicator_column).downcast_ref::<TK>()?.clone();
+        let keep_columns: Vec<TK> = try_as_ref!(keep_columns).downcast_ref::<Vec<TK>>()?.clone();
         make_subset_by::<TK>(indicator_column, keep_columns).into_any()
     }
     let TK = try_!(Type::try_from(TK));

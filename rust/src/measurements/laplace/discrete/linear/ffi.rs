@@ -7,7 +7,7 @@ use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, AnyObject, Downcast}
 use crate::{core::IntoAnyMeasurementFfiResultExt, ffi::util};
 use crate::{
     domains::{AtomDomain, VectorDomain},
-    ffi::util::{Type, try_as_ref},
+    ffi::util::Type,
     measurements::{make_base_discrete_laplace_linear, BaseDiscreteLaplaceDomain},
     traits::{samplers::SampleDiscreteLaplaceLinear, Float, InfCast, Integer},
 };
@@ -48,7 +48,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_linear(
             make_base_discrete_laplace_linear::<D, QO>(input_domain, input_metric, scale, bounds)
                 .into_any()
         }
-        let scale = *try_as_ref(scale as *const QO)?;
+        let scale = *try_as_ref!(scale as *const QO);
         let bounds = if let Some(bounds) = util::as_ref(bounds) {
             Some(*bounds.downcast_ref::<(T, T)>()?)
         } else {

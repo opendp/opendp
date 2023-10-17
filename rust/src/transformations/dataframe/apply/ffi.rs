@@ -10,7 +10,7 @@ use crate::transformations::{
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
-use crate::ffi::util::{Type, try_as_ref};
+use crate::ffi::util::Type;
 use crate::traits::{Hashable, Primitive, RoundCast};
 
 #[no_mangle]
@@ -37,7 +37,7 @@ pub extern "C" fn opendp_transformations__make_df_cast_default(
     {
         let input_domain = input_domain.downcast_ref::<DataFrameDomain<TK>>()?.clone();
         let input_metric = input_metric.downcast_ref::<M>()?.clone();
-        let column_name: TK = try_as_ref(column_name)?.downcast_ref::<TK>()?.clone();
+        let column_name: TK = try_as_ref!(column_name).downcast_ref::<TK>()?.clone();
         make_df_cast_default::<TK, TIA, TOA, M>(input_domain, input_metric, column_name).into_any()
     }
 

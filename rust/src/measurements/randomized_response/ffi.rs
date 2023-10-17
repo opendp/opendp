@@ -6,7 +6,7 @@ use std::os::raw::{c_char, c_void};
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, Downcast};
-use crate::ffi::util::{c_bool, to_bool, try_as_ref, Type};
+use crate::ffi::util::{c_bool, to_bool, Type};
 use crate::measurements::{make_randomized_response, make_randomized_response_bool};
 use crate::traits::samplers::SampleBernoulli;
 use crate::traits::{Float, Hashable};
@@ -22,7 +22,7 @@ pub extern "C" fn opendp_measurements__make_randomized_response_bool(
         bool: SampleBernoulli<QO>,
         QO: Float,
     {
-        let prob = *try_as_ref(prob as *const QO)?;
+        let prob = *try_as_ref!(prob as *const QO);
         make_randomized_response_bool::<QO>(prob, constant_time).into_any()
     }
     let QO = try_!(Type::try_from(QO));
@@ -51,8 +51,8 @@ pub extern "C" fn opendp_measurements__make_randomized_response(
         bool: SampleBernoulli<QO>,
         QO: Float,
     {
-        let categories = try_as_ref(categories)?.downcast_ref::<Vec<T>>()?.clone();
-        let prob = *try_as_ref(prob as *const QO)?;
+        let categories = try_as_ref!(categories).downcast_ref::<Vec<T>>()?.clone();
+        let prob = *try_as_ref!(prob as *const QO);
         make_randomized_response::<T, QO>(
             HashSet::from_iter(categories.into_iter()),
             prob,

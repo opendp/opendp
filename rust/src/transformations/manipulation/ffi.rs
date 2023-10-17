@@ -4,7 +4,7 @@ use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
-use crate::ffi::util::{Type, TypeContents, try_as_ref};
+use crate::ffi::util::{Type, TypeContents};
 use crate::traits::{CheckAtom, InherentNull, Primitive};
 use crate::transformations::{make_is_equal, make_is_null, DatasetMetric};
 
@@ -43,11 +43,11 @@ pub extern "C" fn opendp_transformations__make_is_equal(
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
     {
-        let input_domain = try_as_ref(input_domain)?
+        let input_domain = try_as_ref!(input_domain)
             .downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?
             .clone();
-        let input_metric = try_as_ref(input_metric)?.downcast_ref::<M>()?.clone();
-        let value = try_as_ref(value)?.downcast_ref::<TIA>()?.clone();
+        let input_metric = try_as_ref!(input_metric).downcast_ref::<M>()?.clone();
+        let value = try_as_ref!(value).downcast_ref::<TIA>()?.clone();
         make_is_equal::<TIA, M>(input_domain, input_metric, value).into_any()
     }
     dispatch!(monomorphize, [

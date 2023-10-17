@@ -4,7 +4,7 @@ use crate::{
     core::{FfiResult, IntoAnyFunctionFfiResultExt},
     ffi::{
         any::{AnyFunction, AnyObject, Downcast},
-        util::{to_str, Type, try_as_ref},
+        util::{to_str, Type},
     },
     traits::{Float, Number, RoundCast},
     transformations::{make_cdf, make_quantiles_from_counts, Interpolation}, error::Fallible,
@@ -40,8 +40,8 @@ pub extern "C" fn opendp_transformations__make_quantiles_from_counts(
         TA: Number + RoundCast<F>,
         F: Float + RoundCast<TA>,
     {
-        let bin_edges = try_as_ref(bin_edges)?.downcast_ref::<Vec<TA>>()?;
-        let alphas = try_as_ref(alphas)?.downcast_ref::<Vec<F>>()?;
+        let bin_edges = try_as_ref!(bin_edges).downcast_ref::<Vec<TA>>()?;
+        let alphas = try_as_ref!(alphas).downcast_ref::<Vec<F>>()?;
         make_quantiles_from_counts::<TA, F>(bin_edges.clone(), alphas.clone(), interpolation)
             .into_any()
     }

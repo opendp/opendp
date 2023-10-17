@@ -4,7 +4,6 @@ use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
-use crate::ffi::util::try_as_ref;
 use crate::measurements::{make_base_laplace, BaseLaplaceDomain};
 use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
 use crate::traits::{ExactIntCast, Float, FloatBits};
@@ -31,7 +30,7 @@ pub extern "C" fn opendp_measurements__make_base_laplace(
     {
         let input_domain = input_domain.downcast_ref::<D>()?.clone();
         let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
-        let scale = *try_as_ref(scale as *const D::Atom)?;
+        let scale = *try_as_ref!(scale as *const D::Atom);
         make_base_laplace::<D>(input_domain, input_metric, scale, Some(k)).into_any()
     }
     let input_domain = try_as_ref!(input_domain);

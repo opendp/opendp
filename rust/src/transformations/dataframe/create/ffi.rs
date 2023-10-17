@@ -4,7 +4,7 @@ use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
     ffi::{
         any::{AnyObject, AnyTransformation, Downcast},
-        util::{self, Type, try_as_ref},
+        util::{self, Type},
     },
     traits::Hashable,
     transformations::{make_create_dataframe, make_split_dataframe}, error::Fallible,
@@ -34,7 +34,7 @@ pub extern "C" fn opendp_transformations__make_create_dataframe(
     where
         K: Hashable,
     {
-        let col_names = try_as_ref(col_names)?.downcast_ref::<Vec<K>>()?.clone();
+        let col_names = try_as_ref!(col_names).downcast_ref::<Vec<K>>()?.clone();
         make_create_dataframe::<K>(col_names).into_any()
     }
     let K = try_!(Type::try_from(K));
@@ -54,7 +54,7 @@ pub extern "C" fn opendp_transformations__make_split_dataframe(
     where
         K: Hashable,
     {
-        let col_names = try_as_ref(col_names)?.downcast_ref::<Vec<K>>()?.clone();
+        let col_names = try_as_ref!(col_names).downcast_ref::<Vec<K>>()?.clone();
         make_split_dataframe::<K>(separator, col_names).into_any()
     }
     let K = try_!(Type::try_from(K));

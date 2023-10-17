@@ -8,7 +8,7 @@ use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::{
     domains::{AtomDomain, VectorDomain},
-    ffi::util::{Type, try_as_ref},
+    ffi::util::Type,
     measurements::{make_base_discrete_laplace_cks20, BaseDiscreteLaplaceDomain},
     traits::InfCast,
 };
@@ -50,7 +50,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
             let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
             make_base_discrete_laplace_cks20::<D, QO>(input_domain, input_metric, scale).into_any()
         }
-        let scale = *try_as_ref(scale as *const QO)?;
+        let scale = *try_as_ref!(scale as *const QO);
         dispatch!(monomorphize2, [
             (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
             (QO, [QO])

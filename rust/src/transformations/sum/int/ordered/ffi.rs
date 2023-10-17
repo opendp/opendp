@@ -6,7 +6,7 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 
 use crate::error::Fallible;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
-use crate::ffi::util::{Type, try_as_ref};
+use crate::ffi::util::Type;
 use crate::traits::Number;
 use crate::transformations::{
     make_bounded_int_ordered_sum, make_sized_bounded_int_ordered_sum, AddIsExact,
@@ -21,7 +21,7 @@ pub extern "C" fn opendp_transformations__make_bounded_int_ordered_sum(
     where
         T: Number + AddIsExact,
     {
-        let bounds = try_as_ref(bounds)?.downcast_ref::<(T, T)>()?.clone();
+        let bounds = try_as_ref!(bounds).downcast_ref::<(T, T)>()?.clone();
         make_bounded_int_ordered_sum::<T>(bounds).into_any()
     }
     let T = try_!(Type::try_from(T));
@@ -40,7 +40,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_int_ordered_sum(
     where
         T: Number + AddIsExact,
     {
-        let bounds = try_as_ref(bounds)?.downcast_ref::<(T, T)>()?.clone();
+        let bounds = try_as_ref!(bounds).downcast_ref::<(T, T)>()?.clone();
         make_sized_bounded_int_ordered_sum::<T>(size, bounds).into_any()
     }
     let size = size as usize;

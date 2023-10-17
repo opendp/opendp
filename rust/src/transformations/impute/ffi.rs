@@ -3,7 +3,7 @@ use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
-use crate::ffi::util::{try_as_ref, Type, TypeContents};
+use crate::ffi::util::{Type, TypeContents};
 use crate::traits::samplers::SampleUniform;
 use crate::traits::{CheckAtom, Float, InherentNull};
 use crate::transformations::{
@@ -37,7 +37,7 @@ pub extern "C" fn opendp_transformations__make_impute_uniform_float(
             .downcast_ref::<VectorDomain<AtomDomain<TA>>>()?
             .clone();
         let input_metric = input_metric.downcast_ref::<M>()?.clone();
-        let bounds = *try_as_ref(bounds)?.downcast_ref::<(TA, TA)>()?;
+        let bounds = *try_as_ref!(bounds).downcast_ref::<(TA, TA)>()?;
         make_impute_uniform_float(input_domain, input_metric, bounds).into_any()
     }
     dispatch!(monomorphize, [(M, @dataset_metrics), (TA, @floats)], (input_domain, input_metric, bounds)).into()

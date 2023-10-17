@@ -6,7 +6,7 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 
 use crate::error::Fallible;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
-use crate::ffi::util::{Type, try_as_ref};
+use crate::ffi::util::Type;
 use crate::traits::Number;
 use crate::transformations::make_sized_bounded_int_checked_sum;
 use crate::transformations::sum::int::AddIsExact;
@@ -22,7 +22,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_int_checked_sum(
         T: 'static + Number + AddIsExact,
         for<'a> T: Sum<&'a T>,
     {
-        let bounds = try_as_ref(bounds)?.downcast_ref::<(T, T)>()?.clone();
+        let bounds = try_as_ref!(bounds).downcast_ref::<(T, T)>()?.clone();
         make_sized_bounded_int_checked_sum::<T>(size, bounds).into_any()
     }
     let size = size as usize;

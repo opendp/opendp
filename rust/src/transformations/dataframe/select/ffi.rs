@@ -6,7 +6,7 @@ use crate::transformations::make_select_column;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
-use crate::ffi::util::{Type, try_as_ref};
+use crate::ffi::util::Type;
 use crate::traits::{Hashable, Primitive};
 
 #[no_mangle]
@@ -20,7 +20,7 @@ pub extern "C" fn opendp_transformations__make_select_column(
         K: Hashable,
         TOA: Primitive,
     {
-        let key: K = try_as_ref(key)?.downcast_ref::<K>()?.clone();
+        let key: K = try_as_ref!(key).downcast_ref::<K>()?.clone();
         make_select_column::<K, TOA>(key).into_any()
     }
     let K = try_!(Type::try_from(K));

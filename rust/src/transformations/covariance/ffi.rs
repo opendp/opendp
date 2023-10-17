@@ -7,7 +7,7 @@ use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
     ffi::{
         any::{AnyObject, AnyTransformation, Downcast},
-        util::{Type, try_as_ref},
+        util::Type,
     },
     traits::{CheckAtom, Float},
     transformations::{make_sized_bounded_covariance, Pairwise, Sequential, UncheckedSum}, error::Fallible,
@@ -46,8 +46,8 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_covariance(
         {
             make_sized_bounded_covariance::<S>(size, bounds_0, bounds_1, ddof).into_any()
         }
-        let bounds_0 = *try_as_ref(bounds_0)?.downcast_ref::<(T, T)>()?;
-        let bounds_1 = *try_as_ref(bounds_1)?.downcast_ref::<(T, T)>()?;
+        let bounds_0 = *try_as_ref!(bounds_0).downcast_ref::<(T, T)>()?;
+        let bounds_1 = *try_as_ref!(bounds_1).downcast_ref::<(T, T)>()?;
         dispatch!(monomorphize2, [
             (S, [Sequential<T>, Pairwise<T>])
         ], (size, bounds_0, bounds_1, ddof))
