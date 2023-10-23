@@ -321,7 +321,7 @@ fn c_to_r(arg: Argument) -> String {
     let rust_type = arg
         .rust_type
         .clone()
-        .map(|rt| rt.to_c())
+        .map(|rt| rt.to_r(&[]))
         // TODO: make sure it's ok to default to void, and to wrap in SEXP like this
         .unwrap_or_else(|| "ScalarString(mkChar(\"void\"))".to_string());
 

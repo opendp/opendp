@@ -31,7 +31,8 @@ pub fn generate_r_module(
 #' @include typing.R mod.R
 NULL
 
-{body}")
+{body}"
+    )
 }
 
 fn generate_r_function(
@@ -43,6 +44,7 @@ fn generate_r_function(
     let mut args = (func.args.iter())
         .map(|arg| generate_r_input_argument(arg, func))
         .collect::<Vec<_>>();
+    // move default arguments to end
     args.sort_by(|(_, l_is_default), (_, r_is_default)| l_is_default.cmp(r_is_default));
     let args = args.into_iter().map(|v| v.0).collect::<Vec<_>>();
 
@@ -157,6 +159,7 @@ fn generate_r_input_argument(arg: &Argument, func: &Function) -> (String, bool) 
 // R wants special formatting for latex
 fn escape_latex(r: &str) -> String {
     let s = format!(" {r} ");
+    // if a substring is enclosed in latex "$"
     if let Some((l, u)) = s.find(" $").zip(s.find("$ ")) {
         if l > u {
             return r.to_string();
@@ -174,6 +177,7 @@ fn escape_latex(r: &str) -> String {
     }
 }
 
+// docstrings in R lead with a one-line title
 fn generate_constructor_title(name: &String) -> String {
     if name.starts_with("make") {
         format!(
@@ -238,7 +242,8 @@ fn generate_then_doc_block(func: &Function, hierarchy: &HashMap<String, Vec<Stri
         .collect::<Vec<String>>()
         .join("\n");
 
-    format!(r#"partial {title}See documentation for [{func_name}()] for details.
+    format!(
+        r#"partial {title}See documentation for [{func_name}()] for details.
 
 @param lhs The prior transformation or metric space.
 {doc_args}{ret_arg}
@@ -388,9 +393,8 @@ fn generate_type_arg_formatter(func: &Function) -> String {
     } else {
         format!(
             r#"# Standardize type arguments.
-{formatter}
-"#,
-            formatter = type_arg_formatter
+{type_arg_formatter}
+"#
         )
     }
 }
@@ -446,6 +450,7 @@ fn generate_assert_is_similar(func: &Function) -> String {
     }
 }
 
+// generates the `log <- ...` code that tracks arguments
 fn generate_logger(module_name: &str, func: &Function, then: bool) -> String {
     let func_name = if then {
         func.name.replacen("make_", "then_", 1)
@@ -478,14 +483,12 @@ log <- new_constructor_log("{func_name}", "{module_name}", new_hashtab(
     )
 }
 
+// adds unboxes wherever possible to `name`, based on its type `recipe`
 fn generate_recipe_logger(recipe: TypeRecipe, name: String) -> String {
     match recipe {
         TypeRecipe::Name(ty) if ATOM_TYPES.contains(&ty.as_str()) => format!("unbox2({name})"),
         TypeRecipe::Nest { origin, .. } if origin == "Tuple" => {
             format!("lapply({name}, unbox2)")
-            // format!("list({})", args.iter().enumerate().map(|(i, arg)| {
-            //     generate_recipe_logger(arg.clone(), format!("{}[[{}]]", name, i + 1))
-            // }).collect::<Vec<_>>().join(", "))
         }
         _ => name,
     }
@@ -493,10 +496,7 @@ fn generate_recipe_logger(recipe: TypeRecipe, name: String) -> String {
 
 /// the generated code
 /// - constructs and retrieves the ffi function name
-/// - sets argtypes and restype on the ctypes function
-/// - makes the call assuming that the arguments have been converted to C
-/// - handles errors
-/// - converts the response to python
+/// - calls the C wrapper with arguments *and* extra type info
 fn generate_wrapper_call(module_name: &str, func: &Function) -> String {
     let args = (func.args.iter())
         .chain(func.derived_types.iter())
@@ -509,11 +509,13 @@ fn generate_wrapper_call(module_name: &str, func: &Function) -> String {
         .map(|name| format!("{name},"))
         .collect::<Vec<_>>()
         .join(" ");
+
     let args_str = if args.is_empty() {
         "".to_string()
     } else {
         format!("\n    {args}")
     };
+
     let call = format!(
         r#".Call(
     "{module_name}__{name}",{args_str}
@@ -525,6 +527,7 @@ fn generate_wrapper_call(module_name: &str, func: &Function) -> String {
 output <- {call}"#
     )
 }
+
 // generate code that checks that a set of feature flags are enabled
 fn generate_flag_check(features: &Vec<String>) -> String {
     if features.is_empty() {
@@ -541,6 +544,7 @@ fn generate_flag_check(features: &Vec<String>) -> String {
     }
 }
 
+// ensures that `name` is a valid R variable name, and prefixes types with dots
 fn sanitize_r<T: AsRef<str> + ToString>(name: T, is_type: bool) -> String {
     let mut name = name.to_string();
     if is_type {
@@ -592,32 +596,6 @@ impl TypeRecipe {
                 args = args
                     .iter()
                     .map(|arg| arg.to_r(types))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
-            Self::None => "NULL".to_string(),
-        }
-    }
-
-    // TODO: avoid code duplication with to_r
-    pub fn to_c(&self) -> String {
-        match self {
-            Self::Name(name) => name.to_string(),
-            Self::Function { function, params } => format!(
-                "{function}({params})",
-                function = function,
-                params = params
-                    .iter()
-                    .map(|v| v.to_c())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
-            Self::Nest { origin, args } => format!(
-                "new_runtime_type(origin = \"{origin}\", args = list({args}))",
-                origin = origin,
-                args = args
-                    .iter()
-                    .map(|arg| arg.to_c())
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
