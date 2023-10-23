@@ -307,7 +307,7 @@ output"#,
 fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<String> {
     // the json has supplied explicit instructions to find an example
     if let Some(example) = &type_arg.example {
-        return Some(example.to_r(&func.type_names()));
+        return Some(example.to_r(Some(&func.type_names())));
     }
 
     let type_name = type_arg.name.as_ref().unwrap();
@@ -368,7 +368,7 @@ fn generate_type_arg_formatter(func: &Function) -> String {
             .map(|type_spec|
                 format!("{name} <- {derivation}",
                         name = sanitize_r(type_spec.name(), true),
-                        derivation = type_spec.rust_type.as_ref().unwrap().to_r(&type_names))))
+                        derivation = type_spec.rust_type.as_ref().unwrap().to_r(Some(&type_names)))))
         // substitute concrete types in for generics
         .chain(func.args.iter()
             .filter(|arg| !arg.generics.is_empty())
@@ -382,7 +382,7 @@ fn generate_type_arg_formatter(func: &Function) -> String {
         .chain(func.args.iter().filter(|arg| arg.has_implicit_type())
             .map(|arg| {
                 let name = sanitize_r(arg.name(), arg.is_type);
-                let converter = arg.rust_type.as_ref().unwrap().to_r(&type_names);
+                let converter = arg.rust_type.as_ref().unwrap().to_r(Some(&type_names));
                 format!(r#".T.{name} <- {converter}"#)
             }))
         .collect::<Vec<_>>()
@@ -407,7 +407,7 @@ fn generate_assert_is_similar(func: &Function) -> String {
                 let name = sanitize_r(arg.name(), arg.is_type);
                 format!(".T.{name}")
             } else {
-                arg.rust_type.as_ref().unwrap().to_r(&func.type_names())
+                arg.rust_type.as_ref().unwrap().to_r(Some(&func.type_names()))
             };
             let inferred = {
                 let name = sanitize_r(arg.name(), arg.is_type);
@@ -578,15 +578,17 @@ impl Function {
 
 impl TypeRecipe {
     /// translate the abstract derived_types info into R RuntimeType constructors
-    pub fn to_r(&self, types: &[String]) -> String {
+    pub fn to_r(&self, sanitize_types: Option<&[String]>) -> String {
         match self {
-            Self::Name(name) => sanitize_r(name, types.contains(name)),
+            Self::Name(name) => sanitize_types
+                .map(|types| sanitize_r(name, types.contains(name)))
+                .unwrap_or_else(|| name.to_string()),
             Self::Function { function, params } => format!(
                 "{function}({params})",
                 function = function,
                 params = params
                     .iter()
-                    .map(|v| v.to_r(types))
+                    .map(|v| v.to_r(sanitize_types))
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
@@ -595,7 +597,7 @@ impl TypeRecipe {
                 origin = origin,
                 args = args
                     .iter()
-                    .map(|arg| arg.to_r(types))
+                    .map(|arg| arg.to_r(sanitize_types))
                     .collect::<Vec<_>>()
                     .join(", ")
             ),

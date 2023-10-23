@@ -318,15 +318,11 @@ fn c_to_r(arg: Argument) -> String {
         );
     }
 
-    let rust_type = arg
-        .rust_type
-        .clone()
-        .map(|rt| rt.to_r(&[]))
-        // TODO: make sure it's ok to default to void, and to wrap in SEXP like this
-        .unwrap_or_else(|| "ScalarString(mkChar(\"void\"))".to_string());
-
     let converter = match arg.c_type().replace("const ", "") {
-        ty if ty == "void *" => format!("voidptr_to_sexp({name}, {rust_type})"),
+        ty if ty == "void *" => {
+            let rust_type = arg.rust_type.clone().unwrap().to_r(None);
+            format!("voidptr_to_sexp({name}, {rust_type})")
+        },
         ty if ty == "AnyObject *" => format!("anyobjectptr_to_sexp({name})"),
         ty if ty == "AnyTransformation *" => format!("anytransformationptr_to_sexp({name}, log)"),
         ty if ty == "AnyMeasurement *" => format!("anymeasurementptr_to_sexp({name}, log)"),
