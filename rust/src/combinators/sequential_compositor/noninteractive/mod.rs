@@ -13,9 +13,9 @@ use crate::{
 
 /// Construct the DP composition of [`measurement0`, `measurement1`, ...].
 /// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
-/// 
+///
 /// **Composition Properties**
-/// 
+///
 /// * sequential: all measurements are applied to the same dataset
 /// * basic: the composition is the linear sum of the privacy usage of each query
 /// * noninteractive: all mechanisms specified up-front (but each can be interactive)
@@ -28,7 +28,7 @@ use crate::{
 /// * `DI` - Input Domain.
 /// * `TO` - Output Type.
 /// * `MI` - Input Metric
-/// * `MO` - Output Metric
+/// * `MO` - Output Measure
 pub fn make_basic_composition<DI, TO, MI, MO>(
     measurements: Vec<Measurement<DI, TO, MI, MO>>,
 ) -> Fallible<Measurement<DI, Vec<TO>, MI, MO>>
@@ -69,7 +69,7 @@ where
         .map(|m| m.privacy_map.clone())
         .collect::<Vec<_>>();
 
-    let concurrent = output_measure.concurrent();
+    let concurrent = output_measure.concurrent()?;
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &DI::Carrier| {
@@ -102,13 +102,13 @@ where
 }
 
 pub trait BasicCompositionMeasure: Measure {
-    fn concurrent(&self) -> bool;
+    fn concurrent(&self) -> Fallible<bool>;
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance>;
 }
 
 impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for MaxDivergence<Q> {
-    fn concurrent(&self) -> bool {
-        true
+    fn concurrent(&self) -> Fallible<bool> {
+        Ok(true)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         d_i.iter().try_fold(Q::zero(), |sum, d_i| sum.inf_add(d_i))
@@ -116,8 +116,8 @@ impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for MaxDivergence<Q> {
 }
 
 impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for FixedSmoothedMaxDivergence<Q> {
-    fn concurrent(&self) -> bool {
-        true
+    fn concurrent(&self) -> Fallible<bool> {
+        Ok(true)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         d_i.iter()
@@ -128,8 +128,8 @@ impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for FixedSmoothedMaxDiver
 }
 
 impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for ZeroConcentratedDivergence<Q> {
-    fn concurrent(&self) -> bool {
-        true
+    fn concurrent(&self) -> Fallible<bool> {
+        Ok(true)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         d_i.iter().try_fold(Q::zero(), |sum, d_i| sum.inf_add(d_i))

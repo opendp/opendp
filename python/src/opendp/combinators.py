@@ -327,7 +327,7 @@ def make_sequential_composition(
     d_in: Any,
     d_mids: Any
 ) -> Measurement:
-    r"""Construct a Measurement that when invoked, 
+    r"""Construct a Measurement that when invoked,
     returns a queryable that interactively composes measurements.
     
     **Composition Properties**
@@ -337,8 +337,8 @@ def make_sequential_composition(
     * interactive: mechanisms can be specified based on answers to previous queries
     * compositor: all privacy parameters specified up-front
     
-    If the privacy measure supports concurrency, 
-    this compositor allows you to spawn multiple interactive mechanisms 
+    If the privacy measure supports concurrency,
+    this compositor allows you to spawn multiple interactive mechanisms
     and interleave your queries amongst them.
     
     [make_sequential_composition in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_sequential_composition.html)

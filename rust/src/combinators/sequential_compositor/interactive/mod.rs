@@ -11,19 +11,19 @@ mod ffi;
 
 use super::BasicCompositionMeasure;
 
-/// Construct a Measurement that when invoked, 
+/// Construct a Measurement that when invoked,
 /// returns a queryable that interactively composes measurements.
-/// 
+///
 /// **Composition Properties**
-/// 
+///
 /// * sequential: all measurements are applied to the same dataset
 /// * basic: the composition is the linear sum of the privacy usage of each query
 /// * interactive: mechanisms can be specified based on answers to previous queries
 /// * compositor: all privacy parameters specified up-front
 ///
-/// If the privacy measure supports concurrency, 
-/// this compositor allows you to spawn multiple interactive mechanisms 
-/// and interleave your queries amongst them. 
+/// If the privacy measure supports concurrency,
+/// this compositor allows you to spawn multiple interactive mechanisms
+/// and interleave your queries amongst them.
 ///
 /// # Arguments
 /// * `input_domain` - indicates the space of valid input datasets
@@ -31,7 +31,7 @@ use super::BasicCompositionMeasure;
 /// * `output_measure` - how privacy is measured
 /// * `d_in` - maximum distance between adjacent input datasets
 /// * `d_mids` - maximum privacy expenditure of each query
-/// 
+///
 /// # Generics
 /// * `DI` - Input Domain.
 /// * `TO` - Output Type.
@@ -120,12 +120,10 @@ where
                             return fallible!(FailedFunction, "insufficient budget for query");
                         }
 
-                        let answer = if output_measure.concurrent() {
-
+                        let answer = if output_measure.concurrent()? {
                             // evaluate the query and wrap the answer
                             measurement.invoke(&arg)
                         } else {
-                            
                             // if the answer contains a queryable,
                             // wrap it so that when the child gets a query it sends an AskPermission query to this parent queryable
                             // it gives this sequential composition queryable (or any parent of this queryable)
