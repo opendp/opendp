@@ -41,37 +41,52 @@ impl TulapPSRN {
         }
     }
 
-     
+ //     
     pub fn value(&mut self, round: Round) -> Fallible<Rational> {
         loop {
+            println!("this is the psrn function");
             // The first few rounds are susceptible to NaN due to the uniform PSRN initializing at zero.
             let uniform = Float::with_val_round(self.precision, self.uniform.value(round), round).0;
-            let tulap = self.inverse_tulap(uniform, round);
-
+            println!("Generated uniform number: {}", uniform); 
+            let tulap = self.inverse_tulap(uniform.clone(), round);
+            println!("u: {}, tulap: {}", uniform, tulap); 
             if let Ok(value) = Rational::try_from(tulap) {
                 return Ok(value + &self.shift);
             } else {
                 self.refine()?;
             }
+            
         }
     }
 
+    // q cnd funtion explanation: 
     fn q_cnd(&self, u: Float, c: Float) -> Float {
-        if u < c {
+        //println!("this is the qcnd function");
+        //println!("Generated uniform number: {}", u); 
+        if u <  c.clone() {
+            //println!("u < c");
+            //println!("u: {}, c: {}", u, c); 
             return self.q_cnd(1.0 - self.f(u), c.clone()) - 1.0;
-        } else if u >= c && u <= 1.0 - c.clone() {
+        } else if u >=  c.clone() && u <= 1.0 - c.clone() {
+            //println!("u >= c && u <= 1.0 - c.clone()");
+            //println!("u: {}, c: {}", u, c); 
             return (u - 0.5) / (1.0 - 2.0 * c.clone());
         } else {
-            return self.q_cnd(self.f(1.0 - u), c) + 1.0;
+            //println!("else");
+            //println!("u: {}, c: {}", u, c); 
+            return self.q_cnd(self.f(1.0 - u),  c.clone()) + 1.0;
         }
     }
 
     fn inverse_tulap(&self, unif: Float, round: Round) -> Float {
+        //println!("this is the inverse tulap function");
+        // why should the c value be rounded? should it only be rounded towards the end?
         let c = Float::with_val_round(self.precision, 1.0 - &self.delta, round).0 / (1.0 + Float::exp(self.epsilon.clone()));
         return self.q_cnd(unif, c);
     }
 
     fn f(&self, alpha: Float) -> Float {
+        //println!("this is the fdp function");
         let _1 = Float::with_val(52, 1.);
         // if this function can only be phrased in terms of ε, δ,
         // then we might as well keep everything in terms of ε, δ?
@@ -82,6 +97,7 @@ impl TulapPSRN {
     }
 
     pub fn refine(&mut self) -> Fallible<()> {
+        //println!("this is for refining the interval");
         self.precision += 1;
         self.uniform.refine()
     }
@@ -94,16 +110,17 @@ mod test {
 
     #[test]
     fn test_sample_tulap_interval_progression() -> Fallible<()> {
-        let epsilon = Float::with_val(52, 0.1);
-        let delta = Float::with_val(52, 0.001);
+        // change the value of epsilon and delta
+        let epsilon = Float::with_val(52, 1);
+        let delta = Float::with_val(52, 0.01);
         let mut tulap = TulapPSRN::new(Rational::from(0), epsilon, delta);
 
         for _ in 0..10 {
             println!(
-                "{:?}, {:?}",
-                //"{:?}, {:?}, {}",
+                //"{:?}, {:?}",
+                "{:?}, {:?}, {}",
                 tulap.value(Round::Down)?.to_f64(),
-                //tulap.value(Round::Up)?.to_f64(),
+                tulap.value(Round::Up)?.to_f64(),
                 tulap.precision
             );
             tulap.refine()?;
