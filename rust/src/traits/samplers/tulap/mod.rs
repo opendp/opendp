@@ -44,7 +44,6 @@ impl TulapPSRN {
  //     
     pub fn value(&mut self, round: Round) -> Fallible<Rational> {
         loop {
-            println!("this is the psrn function");
             // The first few rounds are susceptible to NaN due to the uniform PSRN initializing at zero.
             let uniform = Float::with_val_round(self.precision, self.uniform.value(round), round).0;
             println!("Generated uniform number: {}", uniform); 
@@ -61,32 +60,21 @@ impl TulapPSRN {
 
     // q cnd funtion explanation: 
     fn q_cnd(&self, u: Float, c: Float) -> Float {
-        //println!("this is the qcnd function");
-        //println!("Generated uniform number: {}", u); 
         if u <  c.clone() {
-            //println!("u < c");
-            //println!("u: {}, c: {}", u, c); 
             return self.q_cnd(1.0 - self.f(u), c.clone()) - 1.0;
         } else if u >=  c.clone() && u <= 1.0 - c.clone() {
-            //println!("u >= c && u <= 1.0 - c.clone()");
-            //println!("u: {}, c: {}", u, c); 
             return (u - 0.5) / (1.0 - 2.0 * c.clone());
         } else {
-            //println!("else");
-            //println!("u: {}, c: {}", u, c); 
             return self.q_cnd(self.f(1.0 - u),  c.clone()) + 1.0;
         }
     }
 
     fn inverse_tulap(&self, unif: Float, round: Round) -> Float {
-        //println!("this is the inverse tulap function");
-        // why should the c value be rounded? should it only be rounded towards the end?
         let c = Float::with_val_round(self.precision, 1.0 - &self.delta, round).0 / (1.0 + Float::exp(self.epsilon.clone()));
         return self.q_cnd(unif, c);
     }
 
     fn f(&self, alpha: Float) -> Float {
-        //println!("this is the fdp function");
         let _1 = Float::with_val(52, 1.);
         // if this function can only be phrased in terms of ε, δ,
         // then we might as well keep everything in terms of ε, δ?
@@ -97,7 +85,6 @@ impl TulapPSRN {
     }
 
     pub fn refine(&mut self) -> Fallible<()> {
-        //println!("this is for refining the interval");
         self.precision += 1;
         self.uniform.refine()
     }
@@ -127,7 +114,7 @@ mod test {
         }
         Ok(())
     }
-// there is an issue with the round up tests
+
     #[test]
     fn test_tulap_psrn_samples() -> Fallible<()> {
         fn sample_tulap() -> Fallible<f64> {
