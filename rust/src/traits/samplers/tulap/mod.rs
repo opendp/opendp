@@ -31,13 +31,15 @@ pub struct TulapPSRN {
 }
 
 impl TulapPSRN {
+    // caliberate precision here to check if c is less than 0.5
+    // sanity check the use of rounds in the inverse cdfs. 
     pub fn new(shift: Rational, epsilon: Float, delta: Float) -> Self {
         TulapPSRN {
             shift,
             epsilon,
             delta,
             uniform: UniformPSRN::default(),
-            precision: 1,
+            precision: 1, // check with a higer precision = 50 and if it runs. 
         }
     }
 
@@ -70,7 +72,11 @@ impl TulapPSRN {
     }
 
     fn inverse_tulap(&self, unif: Float, round: Round) -> Float {
+        // more privacy makes c higher -> rounding up and this will make it more private
+        // throw an error when c tends to 0.5
+        // increment the precision until c is not 0.5 (line 34)
         let c = Float::with_val_round(self.precision, 1.0 - &self.delta, round).0 / (1.0 + Float::exp(self.epsilon.clone()));
+        println!("The value of c is: {}", c);
         return self.q_cnd(unif, c);
     }
 
@@ -98,8 +104,8 @@ mod test {
     #[test]
     fn test_sample_tulap_interval_progression() -> Fallible<()> {
         // change the value of epsilon and delta
-        let epsilon = Float::with_val(52, 1);
-        let delta = Float::with_val(52, 0.01);
+        let epsilon = Float::with_val(52, 0.1);
+        let delta = Float::with_val(52, 0.001);
         let mut tulap = TulapPSRN::new(Rational::from(0), epsilon, delta);
 
         for _ in 0..10 {
