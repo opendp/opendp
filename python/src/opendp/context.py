@@ -407,6 +407,50 @@ class Query(object):
 
         return make
 
+    def mean(self):
+        """
+        
+        # Example
+
+        >>> print("A")
+
+        
+        """
+        import opendp.prelude as dp
+        return Query(
+            chain=self._chain >> dp.t.then_mean(),
+            output_measure=self._output_measure,
+            d_in=self._d_in,
+            d_out=self._d_out,
+            context=self._context,
+            _wrap_release=self._wrap_release,
+        )
+
+    def laplace(self, scale=None):
+        """
+        # Example
+
+        >>> query = my_context.query().a().b().laplace()
+        >>> accuracy = query.accuracy(alpha=0.05)
+        """
+        return Query.extend(
+            self,
+            next=dp.t.then_laplace(scale),
+            accuracy_help=dp.laplacian_scale_to_accuracy
+        )
+    
+    # laplace, gaussian
+    # private_mean
+    #  - clamps
+    #  - either splits between a sum and count, then postprocess or just mean, depending on if data size known
+    #  - noise addition- if self.privacy_measure is max divergence then laplace, else gaussian
+    # private_count, private sum, private_variance, private_std, private_histogram, any other private_* things
+    # some transformations... 
+
+
+    def accuracy(self, alpha):
+        return self.laplacian_scale_to_accuracy(self.param(), alpha)
+
     def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":
         """Convenience constructor that creates a new query with a different chain."""
         return Query(
