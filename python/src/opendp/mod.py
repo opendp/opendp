@@ -25,8 +25,9 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     ...     scale=2.)
     ...
     >>> # invoke the measurement (invoke and __call__ are equivalent)
-    >>> base_dl.invoke(100)  # -> 101   # doctest: +SKIP
-    >>> base_dl(100)  # -> 99           # doctest: +SKIP
+    >>> base_dl.invoke(100)  # -> 101   # doctest: +ELLIPSIS
+    ...
+    >>> base_dl(100)  # -> 99           # doctest: +ELLIPSIS
     ...
     >>> # check the measurement's relation at
     >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence)
@@ -40,7 +41,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     ... )
     ...
     >>> # the resulting measurement has the same features
-    >>> chained([1, 2, 3])  # -> 4     # doctest: +SKIP
+    >>> chained([1, 2, 3])  # -> 4     # doctest: +ELLIPSIS
+    ...
     >>> # check the chained measurement's relation at
     >>> #     (1, 0.5): (SymmetricDistance, MaxDivergence)
     >>> assert chained.check(1, 0.5)
@@ -190,8 +192,10 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     >>> count: dp.Transformation = input_space >> dp.t.then_count()
     ...
     >>> # invoke the transformation (invoke and __call__ are equivalent)
-    >>> count.invoke([1, 2, 3])  # -> 3  # doctest: +SKIP
-    >>> count([1, 2, 3])  # -> 3         # doctest: +SKIP
+    >>> count.invoke([1, 2, 3])
+    3
+    >>> count([1, 2, 3])
+    3
     ...
     >>> # check the transformation's relation at
     >>> #     (1, 1): (SymmetricDistance, AbsoluteDistance<u32>)
@@ -205,7 +209,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     ... )
     ...
     >>> # the resulting transformation has the same features
-    >>> chained("1\\n2\\n3")  # -> 3 # doctest: +SKIP
+    >>> chained("1\\n2\\n3")
+    3
     >>> assert chained.check(1, 1)  # both chained transformations were 1-stable
     """
     _type_ = AnyTransformation
