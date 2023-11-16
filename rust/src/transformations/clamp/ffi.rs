@@ -1,6 +1,7 @@
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
 use crate::traits::{CheckAtom, TotalOrd};
 use crate::transformations::{make_clamp, DatasetMetric};
@@ -21,7 +22,7 @@ pub extern "C" fn opendp_transformations__make_clamp(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
         bounds: &AnyObject,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         TA: 'static + Clone + TotalOrd + CheckAtom,
         M: 'static + DatasetMetric,
@@ -29,14 +30,14 @@ pub extern "C" fn opendp_transformations__make_clamp(
     {
         let input_domain =
             try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
-        let bounds = try_!(bounds.downcast_ref::<(TA, TA)>()).clone();
+        let input_metric = input_metric.downcast_ref::<M>()?.clone();
+        let bounds = bounds.downcast_ref::<(TA, TA)>()?.clone();
         make_clamp::<TA, M>(input_domain, input_metric, bounds).into_any()
     }
     dispatch!(monomorphize_dataset, [
         (TA, @numbers),
         (M, @dataset_metrics)
-    ], (input_domain, input_metric, bounds))
+    ], (input_domain, input_metric, bounds)).into()
 }
 
 #[cfg(test)]

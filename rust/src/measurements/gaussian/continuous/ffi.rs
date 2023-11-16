@@ -3,6 +3,7 @@ use std::os::raw::{c_char, c_long, c_void};
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::Type;
 use crate::measurements::{make_base_gaussian, BaseGaussianDomain, GaussianMeasure};
@@ -26,7 +27,7 @@ pub extern "C" fn opendp_measurements__make_base_gaussian(
         k: i32,
         D: Type,
         MO: Type,
-    ) -> FfiResult<*mut AnyMeasurement>
+    ) -> Fallible<AnyMeasurement>
     where
         T: Float + CastInternalRational + SampleDiscreteGaussianZ2k,
         i32: ExactIntCast<T::Bits>,
@@ -38,7 +39,7 @@ pub extern "C" fn opendp_measurements__make_base_gaussian(
             input_metric: &AnyMetric,
             scale: D::Atom,
             k: i32,
-        ) -> FfiResult<*mut AnyMeasurement>
+        ) -> Fallible<AnyMeasurement>
         where
             D: 'static + BaseGaussianDomain,
             (D, D::InputMetric): MetricSpace,
@@ -46,8 +47,8 @@ pub extern "C" fn opendp_measurements__make_base_gaussian(
             MO: 'static + GaussianMeasure<D>,
             i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
         {
-            let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();
-            let input_metric = try_!(input_metric.downcast_ref::<D::InputMetric>()).clone();
+            let input_domain = input_domain.downcast_ref::<D>()?.clone();
+            let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
             make_base_gaussian::<D, MO>(input_domain, input_metric, scale, Some(k)).into_any()
         }
 
@@ -65,6 +66,7 @@ pub extern "C" fn opendp_measurements__make_base_gaussian(
     dispatch!(monomorphize1, [
         (T, @floats)
     ], (input_domain, input_metric, scale, k, D, MO))
+    .into()
 }
 
 #[cfg(test)]

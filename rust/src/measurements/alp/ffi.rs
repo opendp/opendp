@@ -4,14 +4,14 @@ use num::ToPrimitive;
 use rug::Float as RugFloat;
 
 use crate::{
-    core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace},
+    core::{FfiResult, MetricSpace},
     domains::{AtomDomain, MapDomain},
     ffi::{
         any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast},
         util::{self, Type, TypeContents},
     },
     metrics::L1Distance,
-    traits::{DistanceConstant, Float, Hashable, InfCast, Integer},
+    traits::{DistanceConstant, Float, Hashable, InfCast, Integer}, error::Fallible,
 };
 
 #[no_mangle]
@@ -33,7 +33,7 @@ pub extern "C" fn opendp_measurements__make_alp_queryable(
         value_limit: *const c_void,
         size_factor: Option<u32>,
         alpha: *const c_void,
-    ) -> FfiResult<*mut AnyMeasurement>
+    ) -> Fallible<AnyMeasurement> 
     where
         K: 'static + Hashable,
         CI: 'static + Integer + DistanceConstant<CI> + InfCast<CO> + ToPrimitive,
@@ -49,7 +49,7 @@ pub extern "C" fn opendp_measurements__make_alp_queryable(
         let value_limit = util::as_ref(value_limit as *const CI).cloned();
         let alpha = util::as_ref(alpha as *const u32).cloned();
 
-        Ok(try_!(super::make_alp_queryable(
+        Ok(super::make_alp_queryable(
             input_domain.clone(),
             input_metric.clone(),
             scale,
@@ -57,10 +57,10 @@ pub extern "C" fn opendp_measurements__make_alp_queryable(
             value_limit,
             size_factor,
             alpha
-        ))
+        )?
         .into_any_Q()
-        .into_any_A())
-        .into_any()
+        .into_any_A()
+        .into_any())
     }
 
     let input_domain = try_as_ref!(input_domain);
@@ -82,5 +82,5 @@ pub extern "C" fn opendp_measurements__make_alp_queryable(
         (K, @hashable),
         (CI, @integers),
         (CO, @floats)
-    ], (input_domain, input_metric, scale, total_limit, value_limit, size_factor, alpha))
+    ], (input_domain, input_metric, scale, total_limit, value_limit, size_factor, alpha)).into()
 }

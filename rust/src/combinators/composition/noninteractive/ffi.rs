@@ -2,13 +2,13 @@ use num::Zero;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::FfiResult,
+    core::{FfiResult, Measurement},
     error::Fallible,
     ffi::{
-        any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast, IntoAnyMeasurementOutExt},
+        any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
         util::AnyMeasurementPtr,
     },
-    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence, ffi::TypedMeasure},
     traits::InfAdd,
 };
 
@@ -27,7 +27,7 @@ use super::BasicCompositionMeasure;
 /// # Arguments
 /// * `measurements` - A vector of Measurements to compose.
 fn make_basic_composition(measurements: Vec<&AnyMeasurement>) -> Fallible<AnyMeasurement> {
-    super::make_basic_composition(measurements).map(IntoAnyMeasurementOutExt::into_any_out)
+    super::make_basic_composition(measurements).map(Measurement::into_any_out)
 }
 
 #[no_mangle]
@@ -74,12 +74,21 @@ impl BasicCompositionMeasure for AnyMeasure {
     }
 }
 
+impl<Q: 'static> BasicCompositionMeasure for TypedMeasure<Q> {
+    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        self.measure
+            .compose(d_i.into_iter().map(AnyObject::new).collect())?
+            .downcast()
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use crate::combinators::tests::make_test_measurement;
     use crate::core;
     use crate::error::Fallible;
-    use crate::ffi::any::{AnyObject, Downcast, IntoAnyMeasurementExt};
+    use crate::ffi::any::{AnyObject, Downcast};
     use crate::ffi::util;
 
     use super::*;

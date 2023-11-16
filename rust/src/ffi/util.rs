@@ -2,11 +2,12 @@ use std::any;
 use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
-use std::ffi::CString;
+use std::ffi::{CString, c_void};
 use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
+use crate::domains::ffi::UserDomain;
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
@@ -32,6 +33,27 @@ use std::marker::PhantomData;
 pub struct Sequential<T>(PhantomData<T>);
 #[cfg(not(feature = "untrusted"))]
 pub struct Pairwise<T>(PhantomData<T>);
+
+pub type RefCountFn = extern "C" fn(*const c_void, bool) -> bool;
+
+#[repr(C)]
+pub struct ExtrinsicObject {
+    pub(crate) ptr: *const c_void,
+    pub(crate) count: RefCountFn,
+}
+
+impl Clone for ExtrinsicObject {
+    fn clone(&self) -> Self {
+        (self.count)(self.ptr, true);
+        Self { ptr: self.ptr.clone(), count: self.count.clone() }
+    }
+}
+
+impl Drop for ExtrinsicObject {
+    fn drop(&mut self) {
+        (self.count)(self.ptr, false);
+    }
+}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeContents {
@@ -258,8 +280,9 @@ lazy_static! {
             type_vec![(bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject)],
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject]],
-            type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
-            type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, usize, String, AnyObject>],
+            type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject, ExtrinsicObject>],
+            type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, usize, String, AnyObject, ExtrinsicObject>],
+            type_vec![ExtrinsicObject],
             // OptionDomain<AtomDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
             type_vec![Vec, <(f32, f32), (f64, f64)>],
@@ -277,6 +300,7 @@ lazy_static! {
             type_vec![[VectorDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[VectorDomain OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![DataFrameDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>],
+            type_vec![UserDomain],
 
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],
@@ -295,7 +319,7 @@ lazy_static! {
             type_vec![SMDCurve, <f32, f64>],
         ].into_iter().flatten().collect();
         let descriptors: HashSet<_> = types.iter().map(|e| &e.descriptor).collect();
-        assert_eq!(descriptors.len(), types.len());
+        assert_eq!(descriptors.len(), types.len(), "detected duplicate TYPES");
         types
     };
 }

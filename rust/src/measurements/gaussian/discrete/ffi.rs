@@ -6,6 +6,7 @@ use rug::{Integer, Rational};
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::Type;
 use crate::measurements::{
@@ -28,7 +29,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
         D: Type,
         MO: Type,
         QI: Type,
-    ) -> FfiResult<*mut AnyMeasurement>
+    ) -> Fallible<AnyMeasurement>
     where
         T: 'static + CheckAtom + Clone,
         Integer: From<T> + SaturatingCast<T>,
@@ -41,7 +42,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
             scale: MO::Atom,
-        ) -> FfiResult<*mut AnyMeasurement>
+        ) -> Fallible<AnyMeasurement>
         where
             D: 'static + BaseDiscreteGaussianDomain<QI>,
             (D, D::InputMetric): MetricSpace,
@@ -52,8 +53,8 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
 
             QI: Number,
         {
-            let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();
-            let input_metric = try_!(input_metric.downcast_ref::<D::InputMetric>()).clone();
+            let input_domain = input_domain.downcast_ref::<D>()?.clone();
+            let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
             make_base_discrete_gaussian::<D, MO, QI>(input_domain, input_metric, scale).into_any()
         }
         let scale = *try_as_ref!(scale as *const QO);
@@ -77,6 +78,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
         (QI, @numbers),
         (QO, @floats)
     ], (input_domain, input_metric, scale, D, MO, QI))
+    .into()
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::c_char;
 
-use crate::err;
+use crate::error::Fallible;
 use crate::transformations::make_subset_by;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
@@ -18,21 +18,19 @@ pub extern "C" fn opendp_transformations__make_subset_by(
     fn monomorphize<TK>(
         indicator_column: *const AnyObject,
         keep_columns: *const AnyObject,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         TK: Hashable,
     {
-        let indicator_column: TK =
-            try_!(try_as_ref!(indicator_column).downcast_ref::<TK>()).clone();
-        let keep_columns: Vec<TK> =
-            try_!(try_as_ref!(keep_columns).downcast_ref::<Vec<TK>>()).clone();
+        let indicator_column: TK = try_as_ref!(indicator_column).downcast_ref::<TK>()?.clone();
+        let keep_columns: Vec<TK> = try_as_ref!(keep_columns).downcast_ref::<Vec<TK>>()?.clone();
         make_subset_by::<TK>(indicator_column, keep_columns).into_any()
     }
     let TK = try_!(Type::try_from(TK));
 
     dispatch!(monomorphize, [
         (TK, @hashable)
-    ], (indicator_column, keep_columns))
+    ], (indicator_column, keep_columns)).into()
 }
 
 #[cfg(test)]

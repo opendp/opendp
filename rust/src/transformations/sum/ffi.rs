@@ -2,6 +2,7 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSp
 
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::metrics::{InsertDeleteDistance, SymmetricDistance};
 use crate::transformations::make_sum;
@@ -15,15 +16,15 @@ pub extern "C" fn opendp_transformations__make_sum(
     fn monomorphize<MI, T>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         MI: 'static + Metric,
         T: 'static + MakeSum<MI>,
         (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
     {
         let input_domain =
-            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<T>>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<MI>()).clone();
+            input_domain.downcast_ref::<VectorDomain<AtomDomain<T>>>()?.clone();
+        let input_metric = input_metric.downcast_ref::<MI>()?.clone();
         make_sum::<MI, T>(input_domain, input_metric).into_any()
     }
     let input_domain = try_as_ref!(input_domain);
@@ -33,7 +34,7 @@ pub extern "C" fn opendp_transformations__make_sum(
     dispatch!(monomorphize, [
         (MI, [SymmetricDistance, InsertDeleteDistance]),
         (T, @numbers)
-    ], (input_domain, input_metric))
+    ], (input_domain, input_metric)).into()
 }
 
 #[cfg(test)]

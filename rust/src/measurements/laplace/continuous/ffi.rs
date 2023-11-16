@@ -2,6 +2,7 @@ use std::os::raw::{c_long, c_void};
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::measurements::{make_base_laplace, BaseLaplaceDomain};
 use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
@@ -20,15 +21,15 @@ pub extern "C" fn opendp_measurements__make_base_laplace(
         input_metric: &AnyMetric,
         scale: *const c_void,
         k: i32,
-    ) -> FfiResult<*mut AnyMeasurement>
+    ) -> Fallible<AnyMeasurement>
     where
         D: 'static + BaseLaplaceDomain,
         (D, D::InputMetric): MetricSpace,
         D::Atom: Float + SampleDiscreteLaplaceZ2k,
         i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
     {
-        let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<D::InputMetric>()).clone();
+        let input_domain = input_domain.downcast_ref::<D>()?.clone();
+        let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
         let scale = *try_as_ref!(scale as *const D::Atom);
         make_base_laplace::<D>(input_domain, input_metric, scale, Some(k)).into_any()
     }
@@ -38,7 +39,7 @@ pub extern "C" fn opendp_measurements__make_base_laplace(
     let D = input_domain.type_.clone();
     dispatch!(monomorphize, [
         (D, [AtomDomain<f64>, AtomDomain<f32>, VectorDomain<AtomDomain<f64>>, VectorDomain<AtomDomain<f32>>])
-    ], (input_domain, input_metric, scale, k))
+    ], (input_domain, input_metric, scale, k)).into()
 }
 
 #[cfg(test)]

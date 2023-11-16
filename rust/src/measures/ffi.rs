@@ -1,14 +1,14 @@
-use std::ffi::c_char;
+use std::{fmt::Debug, marker::PhantomData, ffi::c_char};
 
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::FfiResult,
+    core::{FfiResult, Measure},
     ffi::{
         any::AnyMeasure,
-        util::{self, into_c_char_p, Type},
+        util::{self, into_c_char_p, Type, to_str, ExtrinsicObject},
     },
-    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence}, error::Fallible,
 };
 
 use super::SmoothedMaxDivergence;
@@ -147,4 +147,92 @@ pub extern "C" fn opendp_measures__zero_concentrated_divergence(
     }
     let T = try_!(Type::try_from(T));
     dispatch!(monomorphize, [(T, @numbers)], ())
+}
+
+
+#[derive(Clone, Default)]
+pub struct UserDivergence {
+    pub descriptor: String,
+}
+
+impl std::fmt::Debug for UserDivergence {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "UserDivergence({:?})", self.descriptor)
+    }
+}
+
+impl PartialEq for UserDivergence {
+    fn eq(&self, other: &Self) -> bool {
+        self.descriptor == other.descriptor
+    }
+}
+
+impl Measure for UserDivergence {
+    type Distance = ExtrinsicObject;
+}
+
+#[bootstrap(
+    name = "user_divergence",
+    features("honest-but-curious"),
+    arguments(descriptor(rust_type = "String"))
+)]
+/// Construct a new UserDivergence.
+/// Any two instances of an UserDivergence are equal if their string descriptors are equal.
+///
+/// # Arguments
+/// * `descriptor` - A string description of the privacy measure.
+#[no_mangle]
+pub extern "C" fn opendp_measures__user_divergence(
+    descriptor: *mut c_char,
+) -> FfiResult<*mut AnyMeasure> {
+    let descriptor = try_!(to_str(descriptor)).to_string();
+    Ok(AnyMeasure::new(UserDivergence { descriptor })).into()
+}
+
+pub struct TypedMeasure<Q> {
+    pub measure: AnyMeasure,
+    marker: PhantomData<fn() -> Q>,
+}
+
+impl<Q: 'static> TypedMeasure<Q> {
+    pub fn new(measure: AnyMeasure) -> Fallible<TypedMeasure<Q>> {
+        if measure.distance_type != Type::of::<Q>() {
+            return fallible!(FFI, "unexpected distance type");
+        }
+
+        Ok(TypedMeasure {
+            measure,
+            marker: PhantomData,
+        })
+    }
+}
+
+impl<Q> PartialEq for TypedMeasure<Q> {
+    fn eq(&self, other: &Self) -> bool {
+        self.measure == other.measure
+    }
+}
+
+impl<Q> Clone for TypedMeasure<Q> {
+    fn clone(&self) -> Self {
+        Self {
+            measure: self.measure.clone(),
+            marker: self.marker.clone(),
+        }
+    }
+}
+
+impl<Q> Debug for TypedMeasure<Q> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.measure)
+    }
+}
+impl<Q> Default for TypedMeasure<Q> {
+    fn default() -> Self {
+        panic!()
+    }
+}
+
+impl<Q> Measure for TypedMeasure<Q> {
+    type Distance = Q;
 }

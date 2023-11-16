@@ -250,13 +250,11 @@ where \din\ has the associated type for \texttt{input\_metric} and \dout\ has th
 Assume $X, X'$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$. 
 
 \begin{align*}
-    \dout &= \max\limits_{X \sim X'} d_{IDD}(s, s') &&\text{where } s = \function(X)\\
-    &= \max\limits_{X \sim X'} \max\limits_{ij} |(s_i - s'_i) - (s_j - s'_j)| &&\text{by definition of }\rustdoc{metrics/struct}{LInfDiffDistance} \\
-    &\le \max\limits_{X \sim X'} \max\limits_{ij} |(s_i - s'_i)| + |- (s_j - s'_j)| &&\text{by triangle inequality} \\
-    &\leq 2 \max\limits_{X \sim X'} \max\limits_{i} |s_i - s'_i| &&\text{since $s$ is not monotonic, we used the looser triangle inequality}\\
-    &\leq 2 \sum_j^{\din} \max\limits_{Z_{j} \sim Z_{j+1}} \max\limits_{i} |s_{i,j} - s_{i,j+1}| &&\text{by path property where } d_{Sym}(Z_i, Z_{i+1}) = 1, X = Z_0 \text{ and } X' = Z_\din \\
-    &\leq 2 \sum_j^{\din} \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) &&\text{by \ref{single-change-stab-sym}} \\
-    &\leq 2 \cdot \din \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) \\
+    \dout &= \max\limits_{X \sim X'} d_{\infty}(s, s') &&\text{where } s = \function(X)\\
+    &= \max\limits_{X \sim X'} \max\limits_{i} |s_i - s'_i| &&\text{by definition of }\rustdoc{metrics/struct}{LInfDistance} \text{, without monotonicity} \\
+    &\leq \sum_j^{\din} \max\limits_{Z_{j} \sim Z_{j+1}} \max\limits_{i} |s_{i,j} - s_{i,j+1}| &&\text{by path property } d_{Sym}(Z_i, Z_{i+1}) = 1, X = Z_0 \text{ and } X' = Z_\din \\
+    &\leq \sum_j^{\din} \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) &&\text{by \ref{single-change-stab-sym}} \\
+    &\leq \din \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) \\
 \end{align*}
 \label{sec:unknown-size}
 This formula matches the stability map in the case where the dataset size is unknown.
@@ -277,12 +275,15 @@ Assume $d_{CO}(X, X') \le 1$.
 \begin{align*}
     &d_\infty(\function(X), \function(X')) \\
     &= \max\limits_{i} |\function(X)_i - \function(X')_i| &&\text{by definition of } d_\infty \\
-    &= \max\limits_{i} |\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(X < C_i), l), \alpha_{num} \cdot \min(|X| - \#(X = C_i), l)) &&\text{by definition of } \function
+    &= \max\limits_{i} |\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(X < C_i), l), \alpha_{num} \cdot \min(|X| - \#(X = C_i), l)) &&\text{by def. of } \function
         \\&\hspace{1cm} -\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(X' < C_i), l), \alpha_{num} \cdot \min(|X'| - \#(X' = C_i), l))| \\
     &= \alpha_{den} \cdot \max\limits_{i} ||\min(\#(X < C_i), l) - \alpha \cdot \min(|X| - \#(X = C_i), l)|
         \\&\hspace{1cm}-|\min(\#(X' < C_i), l) - \alpha \cdot \min(|X'| - \#(X' = C_i), l)|| \\
     &= \alpha_{den} \cdot \max\limits_{i} ||\#(X < C_i) - \alpha \cdot (|X| - \#(X = C_i))|
         \\&\hspace{1cm}-|\#(X' < C_i) - \alpha \cdot (|X| - \#(X' = C_i))|| \\
+\end{align*}
+
+\begin{align*}
 \intertext{Consider each of the four cases of changing a row in X.}
 \intertext{Case 1. Assume $X'$ is equal to $X$, but with some $X_j < C_i$ replaced with $X'_j > C_i$.}
     &= 2 \cdot \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(X < C_i) - \alpha \cdot \#(X > C_i)| 
@@ -311,13 +312,11 @@ where \din\ has the associated type for \texttt{input\_metric} and \dout\ has th
 Assume $X, X'$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$. 
 
 \begin{align*}
-    \dout &= \max\limits_{X \sim X'} d_{IDD}(s, s') \\
-    &= \max\limits_{X \sim X'} \max\limits_{ij} |(s_i - s'_i) - (s_j - s'_j)| &&\text{by definition of }\rustdoc{metrics/struct}{LInfDiffDistance} \\
-    &\le \max\limits_{X \sim X'} \max\limits_{ij} |(s_i - s'_i)| + |- (s_j - s'_j)| &&\text{by triangle inequality} \\
-    &\leq 2 \max\limits_{X \sim X'} \max\limits_{i} |s_i - s'_i| &&\text{since $s$ is not monotonic, we used the looser triangle inequality}\\
-    &\leq 2 \sum_j^{\din // 2} \max\limits_{Z_{j} \sim Z_{j+1}} \max\limits_{i} |s_{i,j} - s_{i,j+1}| &&\text{by path property where } d_{CO}(Z_i, Z_{i+1}) = 1, X = Z_0 \text{ and } Z_\din = X' \\
-    &\leq 2 \sum_j^{\din // 2} 2 \cdot \alpha_{den} &&\text{by \ref{single-change-stab}} \\
-    &\leq 4 (\din // 2) \cdot \alpha_{den} \\
+    \dout &= \max\limits_{X \sim X'} d_{\infty}(s, s') \\
+    &= \max\limits_{X \sim X'} \max\limits_{i} |s_i - s'_i| &&\text{by definition of }\rustdoc{metrics/struct}{LInfDistance}\text{, without monotonicity} \\
+    &\leq \sum_j^{\din // 2} \max\limits_{Z_{j} \sim Z_{j+1}} \max\limits_{i} |s_{i,j} - s_{i,j+1}| &&\text{by path property } d_{CO}(Z_i, Z_{i+1}) = 1, X = Z_0 \text{ and } Z_\din = X' \\
+    &\leq \sum_j^{\din // 2} 2 \cdot \alpha_{den} &&\text{by \ref{single-change-stab}} \\
+    &\leq 2 \cdot (\din // 2) \cdot \alpha_{den} \\
 \end{align*}
 
 This formula matches the stability map in the case where the dataset size is known.

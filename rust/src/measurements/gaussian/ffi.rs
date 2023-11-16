@@ -3,6 +3,7 @@ use std::os::raw::{c_char, c_void};
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::Type;
 use crate::measurements::{make_gaussian, BaseDiscreteGaussianDomain, MakeGaussian};
@@ -21,7 +22,7 @@ pub extern "C" fn opendp_measurements__make_gaussian(
         input_metric: &AnyMetric,
         scale: *const c_void,
         MO: Type,
-    ) -> FfiResult<*mut AnyMeasurement>
+    ) -> Fallible<AnyMeasurement>
     where
         AtomDomain<T>: MakeGaussian<ZeroConcentratedDivergence<T>, T>,
         VectorDomain<AtomDomain<T>>: MakeGaussian<ZeroConcentratedDivergence<T>, T>,
@@ -38,12 +39,12 @@ pub extern "C" fn opendp_measurements__make_gaussian(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
             scale: MO::Distance,
-        ) -> FfiResult<*mut AnyMeasurement>
+        ) -> Fallible<AnyMeasurement>
         where
             (D, D::InputMetric): MetricSpace,
         {
-            let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();
-            let input_metric = try_!(input_metric.downcast_ref::<D::InputMetric>()).clone();
+            let input_domain = input_domain.downcast_ref::<D>()?.clone();
+            let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
             make_gaussian::<D, MO, MO::Distance>(input_domain, input_metric, scale).into_any()
         }
         let D = input_domain.type_.clone();
@@ -63,7 +64,7 @@ pub extern "C" fn opendp_measurements__make_gaussian(
         scale: *const c_void,
         MO: Type,
         QI: Type,
-    ) -> FfiResult<*mut AnyMeasurement>
+    ) -> Fallible<AnyMeasurement>
     where
         AtomDomain<T>: MakeGaussian<ZeroConcentratedDivergence<QO>, QI>,
         VectorDomain<AtomDomain<T>>: MakeGaussian<ZeroConcentratedDivergence<QO>, QI>,
@@ -84,13 +85,13 @@ pub extern "C" fn opendp_measurements__make_gaussian(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
             scale: MO::Distance,
-        ) -> FfiResult<*mut AnyMeasurement>
+        ) -> Fallible<AnyMeasurement>
         where
             MO::Distance: Number + InfCast<QI>,
             (D, D::InputMetric): MetricSpace,
         {
-            let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();
-            let input_metric = try_!(input_metric.downcast_ref::<D::InputMetric>()).clone();
+            let input_domain = input_domain.downcast_ref::<D>()?.clone();
+            let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
             make_gaussian::<D, MO, QI>(input_domain, input_metric, scale).into_any()
         }
         let D = input_domain.type_.clone();
@@ -143,7 +144,7 @@ pub extern "C" fn opendp_measurements__make_gaussian(
             (QI, @numbers),
             (QO, @floats)
         ], (input_domain, input_metric, scale, MO, QI))
-    }
+    }.into()
 }
 
 #[cfg(test)]

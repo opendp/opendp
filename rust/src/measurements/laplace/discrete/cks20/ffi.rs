@@ -4,6 +4,7 @@ use std::os::raw::{c_char, c_void};
 use az::SaturatingCast;
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::{
     domains::{AtomDomain, VectorDomain},
@@ -25,7 +26,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
         scale: *const c_void,
         D: Type,
         QO: Type,
-    ) -> FfiResult<*mut AnyMeasurement>
+    ) -> Fallible<AnyMeasurement>
     where
         T: crate::traits::Integer,
         QO: crate::traits::Float + InfCast<T>,
@@ -36,7 +37,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
             scale: QO,
-        ) -> FfiResult<*mut AnyMeasurement>
+        ) -> Fallible<AnyMeasurement>
         where
             D: 'static + BaseDiscreteLaplaceDomain,
             D::Atom: crate::traits::Integer,
@@ -45,8 +46,8 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
             rug::Rational: TryFrom<QO>,
             rug::Integer: From<D::Atom> + SaturatingCast<D::Atom>,
         {
-            let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();
-            let input_metric = try_!(input_metric.downcast_ref::<D::InputMetric>()).clone();
+            let input_domain = input_domain.downcast_ref::<D>()?.clone();
+            let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
             make_base_discrete_laplace_cks20::<D, QO>(input_domain, input_metric, scale).into_any()
         }
         let scale = *try_as_ref!(scale as *const QO);
@@ -63,7 +64,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
     dispatch!(monomorphize, [
         (T, @integers),
         (QO, @floats)
-    ], (input_domain, input_metric, scale, D, QO))
+    ], (input_domain, input_metric, scale, D, QO)).into()
 }
 
 #[cfg(test)]

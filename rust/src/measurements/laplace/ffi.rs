@@ -3,6 +3,7 @@ use std::os::raw::{c_char, c_void};
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::Type;
 use crate::measurements::{make_laplace, BaseLaplaceDomain, MakeLaplace};
@@ -20,7 +21,7 @@ pub extern "C" fn opendp_measurements__make_laplace(
         input_metric: &AnyMetric,
         scale: *const c_void,
         Q: Type,
-    ) -> FfiResult<*mut AnyMeasurement>
+    ) -> Fallible<AnyMeasurement>
     where
         AtomDomain<T>: MakeLaplace<T>,
         VectorDomain<AtomDomain<T>>: MakeLaplace<T>,
@@ -37,12 +38,12 @@ pub extern "C" fn opendp_measurements__make_laplace(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
             scale: Q,
-        ) -> FfiResult<*mut AnyMeasurement>
+        ) -> Fallible<AnyMeasurement>
         where
             (D, D::InputMetric): MetricSpace,
         {
-            let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();
-            let input_metric = try_!(input_metric.downcast_ref::<D::InputMetric>()).clone();
+            let input_domain = input_domain.downcast_ref::<D>()?.clone();
+            let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
             make_laplace::<D, Q>(input_domain, input_metric, scale).into_any()
         }
         let D = input_domain.type_.clone();
@@ -57,7 +58,7 @@ pub extern "C" fn opendp_measurements__make_laplace(
         input_metric: &AnyMetric,
         scale: *const c_void,
         QO: Type,
-    ) -> FfiResult<*mut AnyMeasurement>
+    ) -> Fallible<AnyMeasurement>
     where
         AtomDomain<T>: MakeLaplace<QO>,
         VectorDomain<AtomDomain<T>>: MakeLaplace<QO>,
@@ -74,12 +75,12 @@ pub extern "C" fn opendp_measurements__make_laplace(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
             scale: QO,
-        ) -> FfiResult<*mut AnyMeasurement>
+        ) -> Fallible<AnyMeasurement>
         where
             (D, D::InputMetric): MetricSpace,
         {
-            let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();
-            let input_metric = try_!(input_metric.downcast_ref::<D::InputMetric>()).clone();
+            let input_domain = input_domain.downcast_ref::<D>()?.clone();
+            let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
             make_laplace::<D, QO>(input_domain, input_metric, scale).into_any()
         }
         let D = input_domain.type_.clone();
@@ -129,7 +130,7 @@ pub extern "C" fn opendp_measurements__make_laplace(
             (T, @integers),
             (QO, @floats)
         ], (input_domain, input_metric, scale, QO))
-    }
+    }.into()
 }
 
 #[cfg(test)]

@@ -79,7 +79,6 @@
 #[macro_use]
 pub mod dispatch;
 pub mod any;
-mod glue;
 pub(crate) mod util;
 
 // replacement for ? operator, for FfiResults

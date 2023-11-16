@@ -9,12 +9,12 @@
 //! In this context Q is usually [`f32`] or [`f64`].
 
 #[cfg(feature = "ffi")]
-mod ffi;
+pub(crate) mod ffi;
 
 use std::{
     fmt::{Debug, Formatter},
     marker::PhantomData,
-    rc::Rc,
+    sync::Arc,
 };
 
 use crate::{core::Measure, domains::type_name, error::Fallible};
@@ -32,7 +32,7 @@ use crate::{core::Measure, domains::type_name, error::Fallible};
 /// ```math
 /// D_{\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S]}{\Pr[M(v) \in S]} \Big] \leq d.
 /// ```
-pub struct MaxDivergence<Q>(PhantomData<Q>);
+pub struct MaxDivergence<Q>(PhantomData<fn() -> Q>);
 impl<Q> Default for MaxDivergence<Q> {
     fn default() -> Self {
         MaxDivergence(PhantomData)
@@ -79,7 +79,7 @@ impl<Q> Measure for MaxDivergence<Q> {
 /// ```math
 /// D_{S\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S] + \delta}{\Pr[M(v) \in S]} \Big] \leq \epsilon.
 /// ```
-pub struct SmoothedMaxDivergence<Q>(PhantomData<Q>);
+pub struct SmoothedMaxDivergence<Q>(PhantomData<fn() -> Q>);
 
 impl<Q> Default for SmoothedMaxDivergence<Q> {
     fn default() -> Self {
@@ -111,7 +111,7 @@ impl<Q> Measure for SmoothedMaxDivergence<Q> {
 ///
 /// SMD stands for "Smoothed Max Divergence".
 /// This is the distance type for [`SmoothedMaxDivergence`].
-pub struct SMDCurve<Q>(Rc<dyn Fn(&Q) -> Fallible<Q>>);
+pub struct SMDCurve<Q>(Arc<dyn Fn(&Q) -> Fallible<Q> + Send + Sync>);
 
 impl<Q> Clone for SMDCurve<Q> {
     fn clone(&self) -> Self {
@@ -120,8 +120,8 @@ impl<Q> Clone for SMDCurve<Q> {
 }
 
 impl<Q> SMDCurve<Q> {
-    pub fn new(epsilon: impl Fn(&Q) -> Fallible<Q> + 'static) -> Self {
-        SMDCurve(Rc::new(epsilon))
+    pub fn new(epsilon: impl Fn(&Q) -> Fallible<Q> + 'static + Send + Sync) -> Self {
+        SMDCurve(Arc::new(epsilon))
     }
 
     // these functions allow direct invocation as a method, making parens unnecessary
@@ -145,7 +145,7 @@ impl<Q> SMDCurve<Q> {
 /// ```math
 /// D_{S\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S] + \delta}{\Pr[M(v) \in S]} \Big] \leq \epsilon.
 /// ```
-pub struct FixedSmoothedMaxDivergence<Q>(PhantomData<Q>);
+pub struct FixedSmoothedMaxDivergence<Q>(PhantomData<fn() -> Q>);
 
 impl<Q> Default for FixedSmoothedMaxDivergence<Q> {
     fn default() -> Self {
@@ -189,7 +189,7 @@ impl<Q> Measure for FixedSmoothedMaxDivergence<Q> {
 /// D_{\alpha}(P \| Q) = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Q} \Big[\ln \left( \dfrac{P(x)}{Q(x)} \right)^\alpha \Big] \leq d \alpha.
 /// ```
 /// for all possible choices of $\alpha \in (1, \infty)$.
-pub struct ZeroConcentratedDivergence<Q>(PhantomData<Q>);
+pub struct ZeroConcentratedDivergence<Q>(PhantomData<fn() -> Q>);
 impl<Q> Default for ZeroConcentratedDivergence<Q> {
     fn default() -> Self {
         ZeroConcentratedDivergence(PhantomData)

@@ -1,18 +1,18 @@
-use std::ffi::c_char;
+use std::{fmt::Debug, marker::PhantomData, ffi::c_char};
 
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::FfiResult,
+    core::{FfiResult, Metric},
     ffi::{
         any::AnyMetric,
-        util::{self, into_c_char_p, Type},
+        util::{self, into_c_char_p, to_str, Type, ExtrinsicObject, c_bool},
     },
-    metrics::{AbsoluteDistance, L1Distance, L2Distance},
+    metrics::{AbsoluteDistance, L1Distance, L2Distance}, traits::InfAdd, error::Fallible,
 };
 
 use super::{
-    ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance, LInfDiffDistance,
+    ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance, LInfDistance,
     SymmetricDistance,
 };
 #[bootstrap(
@@ -173,25 +173,122 @@ pub extern "C" fn opendp_metrics__discrete_distance() -> FfiResult<*mut AnyMetri
     FfiResult::Ok(util::into_raw(AnyMetric::new(DiscreteDistance::default())))
 }
 
-#[bootstrap(returns(c_type = "FfiResult<AnyMetric *>"))]
-/// Construct an instance of the `LInfDiffDistance` metric.
+#[bootstrap(
+    arguments(monotonic(default = false)),
+    returns(c_type = "FfiResult<AnyMetric *>"))]
+/// Construct an instance of the `LInfDistance` metric.
 ///
 /// # Arguments
+/// * `monotonic` - set to true if non-monotonicity implies infinite distance
+/// 
+/// # Generics
 /// * `T` - The type of the distance.
-fn linf_diff_distance<T>() -> LInfDiffDistance<T> {
-    LInfDiffDistance::default()
+fn linf_distance<T: InfAdd>(monotonic: bool) -> LInfDistance<T> {
+    LInfDistance::new(monotonic)
 }
 #[no_mangle]
-pub extern "C" fn opendp_metrics__linf_diff_distance(
+pub extern "C" fn opendp_metrics__linf_distance(
+    monotonic: c_bool,
     T: *const c_char,
 ) -> FfiResult<*mut AnyMetric> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
-        Ok(AnyMetric::new(linf_diff_distance::<T>())).into()
+    let monotonic = util::to_bool(monotonic);
+    fn monomorphize<T: 'static + InfAdd>(monotonic: bool) -> FfiResult<*mut AnyMetric> {
+        Ok(AnyMetric::new(linf_distance::<T>(monotonic))).into()
     }
     let T = try_!(Type::try_from(T));
     dispatch!(
         monomorphize,
         [(T, [u32, u64, i32, i64, usize, f32, f64])],
-        ()
+        (monotonic)
     )
+}
+#[derive(Clone, Default)]
+pub struct UserDistance {
+    pub descriptor: String,
+}
+
+impl std::fmt::Debug for UserDistance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "UserDistance({:?})", self.descriptor)
+    }
+}
+
+impl PartialEq for UserDistance {
+    fn eq(&self, other: &Self) -> bool {
+        self.descriptor == other.descriptor
+    }
+}
+
+impl Metric for UserDistance {
+    type Distance = ExtrinsicObject;
+}
+
+#[bootstrap(
+    name = "user_distance",
+    features("honest-but-curious"),
+    arguments(descriptor(rust_type = "String"))
+)]
+/// Construct a new UserDistance.
+/// Any two instances of an UserDistance are equal if their string descriptors are equal.
+///
+/// # Arguments
+/// * `descriptor` - A string description of the metric.
+#[no_mangle]
+pub extern "C" fn opendp_metrics__user_distance(
+    descriptor: *mut c_char,
+) -> FfiResult<*mut AnyMetric> {
+    let descriptor = try_!(to_str(descriptor)).to_string();
+    Ok(AnyMetric::new(UserDistance { descriptor })).into()
+}
+
+
+
+
+
+pub struct TypedMetric<Q> {
+    metric: AnyMetric,
+    marker: PhantomData<fn() -> Q>,
+}
+
+impl<Q: 'static> TypedMetric<Q> {
+    pub fn new(metric: AnyMetric) -> Fallible<TypedMetric<Q>> {
+        if metric.distance_type != Type::of::<Q>() {
+            return fallible!(FFI, "unexpected distance type");
+        }
+
+        Ok(TypedMetric {
+            metric,
+            marker: PhantomData,
+        })
+    }
+}
+
+impl<Q> PartialEq for TypedMetric<Q> {
+    fn eq(&self, other: &Self) -> bool {
+        self.metric == other.metric
+    }
+}
+
+impl<Q> Clone for TypedMetric<Q> {
+    fn clone(&self) -> Self {
+        Self {
+            metric: self.metric.clone(),
+            marker: self.marker.clone(),
+        }
+    }
+}
+
+impl<Q> Debug for TypedMetric<Q> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.metric)
+    }
+}
+impl<Q> Default for TypedMetric<Q> {
+    fn default() -> Self {
+        panic!()
+    }
+}
+
+impl<Q> Metric for TypedMetric<Q> {
+    type Distance = Q;
 }

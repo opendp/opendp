@@ -4,6 +4,7 @@ use std::os::raw::c_char;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::err;
+use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::metrics::IntDistance;
@@ -25,7 +26,7 @@ pub extern "C" fn opendp_transformations__make_cast(
     fn monomorphize<M, TIA, TOA>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         M: 'static + DatasetMetric<Distance = IntDistance>,
         TIA: 'static + Clone + CheckAtom,
@@ -34,15 +35,15 @@ pub extern "C" fn opendp_transformations__make_cast(
         (VectorDomain<OptionDomain<AtomDomain<TOA>>>, M): MetricSpace,
     {
         let input_domain =
-            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
+            input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?.clone();
+        let input_metric = input_metric.downcast_ref::<M>()?.clone();
         make_cast::<M, TIA, TOA>(input_domain, input_metric).into_any()
     }
     dispatch!(monomorphize, [
         (M, @dataset_metrics),
         (TIA, @primitives), 
         (TOA, @primitives)
-    ], (input_domain, input_metric))
+    ], (input_domain, input_metric)).into()
 }
 
 #[no_mangle]
@@ -60,7 +61,7 @@ pub extern "C" fn opendp_transformations__make_cast_default(
     fn monomorphize<M, TIA, TOA>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         M: 'static + DatasetMetric,
         TIA: 'static + Clone + CheckAtom,
@@ -69,15 +70,15 @@ pub extern "C" fn opendp_transformations__make_cast_default(
         (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {
         let input_domain =
-            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
+            input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?.clone();
+        let input_metric = input_metric.downcast_ref::<M>()?.clone();
         make_cast_default::<M, TIA, TOA>(input_domain, input_metric).into_any()
     }
     dispatch!(monomorphize, [
         (M, @dataset_metrics),
         (TIA, @primitives), 
         (TOA, @primitives)
-    ], (input_domain, input_metric))
+    ], (input_domain, input_metric)).into()
 }
 
 #[no_mangle]
@@ -95,7 +96,7 @@ pub extern "C" fn opendp_transformations__make_cast_inherent(
     fn monomorphize<M, TIA, TOA>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         M: 'static + DatasetMetric,
         TIA: 'static + Clone + CheckAtom,
@@ -104,15 +105,15 @@ pub extern "C" fn opendp_transformations__make_cast_inherent(
         (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {
         let input_domain =
-            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
-        let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
+            input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?.clone();
+        let input_metric = input_metric.downcast_ref::<M>()?.clone();
         make_cast_inherent::<M, TIA, TOA>(input_domain, input_metric).into_any()
     }
     dispatch!(monomorphize, [
         (M, @dataset_metrics),
         (TIA, @primitives), 
         (TOA, @floats)
-    ], (input_domain, input_metric))
+    ], (input_domain, input_metric)).into()
 }
 
 #[cfg(test)]

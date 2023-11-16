@@ -25,7 +25,7 @@ mod ffi;
 #[cfg(feature = "ffi")]
 pub use ffi::*;
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
@@ -38,7 +38,7 @@ use std::fmt::Debug;
 ///
 /// # Proof Definition
 /// A type `Self` implements `Domain` iff it can represent a set of values that make up a domain.
-pub trait Domain: Clone + PartialEq + Debug {
+pub trait Domain: Clone + PartialEq + Debug + Send + Sync {
     /// The underlying type that the Domain specializes.
     /// This is the type of a member of a domain, where a domain is any data type that implements this trait.
     ///
@@ -69,7 +69,7 @@ pub trait Domain: Clone + PartialEq + Debug {
 
 /// A mathematical function which maps values from an input [`Domain`] to an output [`Domain`].
 pub struct Function<TI, TO> {
-    pub function: Rc<dyn Fn(&TI) -> Fallible<TO>>,
+    pub function: Arc<dyn Fn(&TI) -> Fallible<TO> + Send + Sync>,
 }
 impl<TI, TO> Clone for Function<TI, TO> {
     fn clone(&self) -> Self {
@@ -80,13 +80,13 @@ impl<TI, TO> Clone for Function<TI, TO> {
 }
 
 impl<TI, TO> Function<TI, TO> {
-    pub fn new(function: impl Fn(&TI) -> TO + 'static) -> Self {
+    pub fn new(function: impl Fn(&TI) -> TO + 'static + Send + Sync) -> Self {
         Self::new_fallible(move |arg| Ok(function(arg)))
     }
 
-    pub fn new_fallible(function: impl Fn(&TI) -> Fallible<TO> + 'static) -> Self {
+    pub fn new_fallible(function: impl Fn(&TI) -> Fallible<TO> + 'static + Send + Sync) -> Self {
         Self {
-            function: Rc::new(function),
+            function: Arc::new(function),
         }
     }
 
@@ -110,7 +110,7 @@ impl<TI: 'static, TO: 'static> Function<TI, TO> {
 ///
 /// # Proof Definition
 /// A type `Self` has an implementation for `Metric` iff it can represent a metric for quantifying distances between values in a set.
-pub trait Metric: Default + Clone + PartialEq + Debug {
+pub trait Metric: Default + Clone + PartialEq + Debug + Send + Sync {
     /// # Proof Definition
     /// `Self::Distance` is a type that represents distances in terms of a metric `Self`.
     type Distance;
@@ -121,7 +121,7 @@ pub trait Metric: Default + Clone + PartialEq + Debug {
 /// # Proof Definition
 /// A type `Self` has an implementation for `Measure` iff it can represent a measure for quantifying distances between distributions.
 
-pub trait Measure: Default + Clone + PartialEq + Debug {
+pub trait Measure: Default + Clone + PartialEq + Debug + Send + Sync {
     /// # Proof Definition
     /// `Self::Distance` is a type that represents distances in terms of a measure `Self`.
     type Distance;
@@ -132,7 +132,7 @@ pub trait Measure: Default + Clone + PartialEq + Debug {
 /// A `PrivacyMap` is implemented as a function that takes an input [`Metric::Distance`]
 /// and returns the smallest upper bound on distances between output distributions on neighboring input datasets.
 pub struct PrivacyMap<MI: Metric, MO: Measure>(
-    pub Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>,
+    pub Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance> + Send + Sync>,
 );
 
 impl<MI: Metric, MO: Measure> Clone for PrivacyMap<MI, MO> {
@@ -142,11 +142,11 @@ impl<MI: Metric, MO: Measure> Clone for PrivacyMap<MI, MO> {
 }
 
 impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
-    pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static) -> Self {
-        PrivacyMap(Rc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
+    pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static + Send + Sync) -> Self {
+        PrivacyMap(Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
     }
-    pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static) -> Self {
-        PrivacyMap(Rc::new(map))
+    pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static + Send + Sync) -> Self {
+        PrivacyMap(Arc::new(map))
     }
     pub fn new_from_constant(c: MO::Distance) -> Self
     where
@@ -172,7 +172,7 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
     ) -> Self {
         let map1 = map1.0.clone();
         let map0 = map0.0.clone();
-        PrivacyMap(Rc::new(move |d_in: &MI::Distance| map1(&map0(d_in)?)))
+        PrivacyMap(Arc::new(move |d_in: &MI::Distance| map1(&map0(d_in)?)))
     }
 }
 
@@ -181,7 +181,7 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
 /// A `StabilityMap` is implemented as a function that takes an input [`Metric::Distance`],
 /// and returns the smallest upper bound on distances between output datasets on neighboring input datasets.
 pub struct StabilityMap<MI: Metric, MO: Metric>(
-    pub Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>,
+    pub Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance> + Send + Sync>,
 );
 
 impl<MI: Metric, MO: Metric> Clone for StabilityMap<MI, MO> {
@@ -191,11 +191,11 @@ impl<MI: Metric, MO: Metric> Clone for StabilityMap<MI, MO> {
 }
 
 impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
-    pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static) -> Self {
-        StabilityMap(Rc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
+    pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static + Send + Sync) -> Self {
+        StabilityMap(Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
     }
-    pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static) -> Self {
-        StabilityMap(Rc::new(map))
+    pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static + Send + Sync) -> Self {
+        StabilityMap(Arc::new(map))
     }
     pub fn new_from_constant(c: MO::Distance) -> Self
     where
@@ -221,7 +221,7 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
     ) -> Self {
         let map1 = map1.0.clone();
         let map0 = map0.0.clone();
-        StabilityMap(Rc::new(move |d_in: &MI::Distance| map1(&map0(d_in)?)))
+        StabilityMap(Arc::new(move |d_in: &MI::Distance| map1(&map0(d_in)?)))
     }
 }
 
@@ -267,7 +267,7 @@ where
         output_measure: MO,
         privacy_map: PrivacyMap<MI, MO>,
     ) -> Fallible<Self> {
-        (input_domain.clone(), input_metric.clone()).assert_compatible()?;
+        (input_domain.clone(), input_metric.clone()).check_space()?;
         Ok(Self {
             input_domain,
             function,
@@ -315,14 +315,7 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
 }
 
 pub trait MetricSpace {
-    fn check(&self) -> bool;
-    fn assert_compatible(&self) -> Fallible<()> {
-        if !self.check() {
-            fallible!(FailedFunction, "metric and domain are not compatible")
-        } else {
-            Ok(())
-        }
-    }
+    fn check_space(&self) -> Fallible<()>;
 }
 
 /// A data transformation with certain stability characteristics.
@@ -359,8 +352,8 @@ where
         output_metric: MO,
         stability_map: StabilityMap<MI, MO>,
     ) -> Fallible<Self> {
-        (input_domain.clone(), input_metric.clone()).assert_compatible()?;
-        (output_domain.clone(), output_metric.clone()).assert_compatible()?;
+        (input_domain.clone(), input_metric.clone()).check_space()?;
+        (output_domain.clone(), output_metric.clone()).check_space()?;
         Ok(Self {
             input_domain,
             output_domain,
@@ -416,6 +409,24 @@ mod tests {
     use crate::metrics::AbsoluteDistance;
 
     use super::*;
+
+    #[test]
+    #[cfg(feature = "ffi")]
+    fn test_threading() -> Fallible<()> {
+        use crate::{measurements::make_randomized_response_bool, transformations::make_split_lines};
+
+        fn is_send_sync<T: Send + Sync>(_arg: &T) {}
+
+        let meas = make_randomized_response_bool(0.75, false)?;
+        is_send_sync(&meas);
+        is_send_sync(&meas.into_any());
+
+        let trans = make_split_lines()?;
+        is_send_sync(&trans);
+        is_send_sync(&trans.into_any());
+
+        Ok(())
+    }
 
     #[test]
     fn test_identity() -> Fallible<()> {

@@ -25,7 +25,7 @@ __all__ = [
 def make_basic_composition(
     measurements: Any
 ) -> Measurement:
-    """Construct the DP composition [`measurement0`, `measurement1`, ...].
+    r"""Construct the DP composition [`measurement0`, `measurement1`, ...].
     Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
     
     All metrics and domains must be equivalent, except for the output domain.
@@ -60,7 +60,7 @@ def make_chain_mt(
     measurement1: Measurement,
     transformation0: Transformation
 ) -> Measurement:
-    """Construct the functional composition (`measurement1` ○ `transformation0`).
+    r"""Construct the functional composition (`measurement1` ○ `transformation0`).
     Returns a Measurement that when invoked, computes `measurement1(transformation0(x))`.
     
     [make_chain_mt in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_chain_mt.html)
@@ -96,7 +96,7 @@ def make_chain_pm(
     postprocess1: Function,
     measurement0: Measurement
 ) -> Measurement:
-    """Construct the functional composition (`postprocess1` ○ `measurement0`).
+    r"""Construct the functional composition (`postprocess1` ○ `measurement0`).
     Returns a Measurement that when invoked, computes `postprocess1(measurement0(x))`.
     Used to represent non-interactive postprocessing.
     
@@ -133,7 +133,7 @@ def make_chain_tt(
     transformation1: Transformation,
     transformation0: Transformation
 ) -> Transformation:
-    """Construct the functional composition (`transformation1` ○ `transformation0`).
+    r"""Construct the functional composition (`transformation1` ○ `transformation0`).
     Returns a Transformation that when invoked, computes `transformation1(transformation0(x))`.
     
     [make_chain_tt in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_chain_tt.html)
@@ -169,7 +169,7 @@ def make_fix_delta(
     measurement: Measurement,
     delta: Any
 ) -> Measurement:
-    """Fix the delta parameter in the privacy map of a `measurement` with a SmoothedMaxDivergence output measure.
+    r"""Fix the delta parameter in the privacy map of a `measurement` with a SmoothedMaxDivergence output measure.
     
     [make_fix_delta in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_fix_delta.html)
     
@@ -204,7 +204,7 @@ def make_population_amplification(
     measurement: Measurement,
     population_size: int
 ) -> Measurement:
-    """Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.
+    r"""Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.
     This measurement does not perform any sampling.
     It is useful when you have a dataset on-hand that is a simple random sample from a larger population.
     
@@ -245,7 +245,7 @@ def make_population_amplification(
 def make_pureDP_to_fixed_approxDP(
     measurement: Measurement
 ) -> Measurement:
-    """Constructs a new output measurement where the output measure
+    r"""Constructs a new output measurement where the output measure
     is casted from `MaxDivergence<QO>` to `FixedSmoothedMaxDivergence<QO>`.
     
     [make_pureDP_to_fixed_approxDP in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_pureDP_to_fixed_approxDP.html)
@@ -277,7 +277,7 @@ def make_pureDP_to_fixed_approxDP(
 def make_pureDP_to_zCDP(
     measurement: Measurement
 ) -> Measurement:
-    """Constructs a new output measurement where the output measure
+    r"""Constructs a new output measurement where the output measure
     is casted from `MaxDivergence<QO>` to `ZeroConcentratedDivergence<QO>`.
     
     [make_pureDP_to_zCDP in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_pureDP_to_zCDP.html)
@@ -311,19 +311,22 @@ def make_pureDP_to_zCDP(
 
 @versioned
 def make_sequential_composition(
-    input_domain,
-    input_metric,
-    output_measure,
+    input_domain: Domain,
+    input_metric: Metric,
+    output_measure: Measure,
     d_in: Any,
     d_mids: Any
 ) -> Measurement:
-    """Construct a queryable that interactively composes interactive measurements.
+    r"""Construct a queryable that interactively composes interactive measurements.
     
     [make_sequential_composition in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_sequential_composition.html)
     
     :param input_domain: indicates the space of valid input datasets
+    :type input_domain: Domain
     :param input_metric: how distances are measured between members of the input domain
+    :type input_metric: Metric
     :param output_measure: how privacy is measured
+    :type output_measure: Measure
     :param d_in: maximum distance between adjacent input datasets
     :type d_in: Any
     :param d_mids: maximum privacy expenditure of each query
@@ -336,7 +339,7 @@ def make_sequential_composition(
     assert_features("contrib")
     
     # Standardize type arguments.
-    QO = get_distance_type(output_measure)
+    QO = get_distance_type(output_measure) # type: ignore
     
     # Convert arguments to c types.
     c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=AnyDomain)
@@ -359,7 +362,7 @@ def make_sequential_composition(
 def make_zCDP_to_approxDP(
     measurement: Measurement
 ) -> Measurement:
-    """Constructs a new output measurement where the output measure
+    r"""Constructs a new output measurement where the output measure
     is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
     
     [make_zCDP_to_approxDP in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_zCDP_to_approxDP.html)
