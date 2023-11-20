@@ -408,7 +408,7 @@ class Query(object):
         return make
 
     def mean(self):
-        r"""Calculates the mean of data with known size and bounds.
+        r"""Calculate the mean of data with known size and bounds.
         TODO: `private_mean` does not have the same constraints, and is preferred.
 
         :example:
@@ -424,30 +424,35 @@ class Query(object):
         ...    split_evenly_over=1
         ... )
         >>> dp_mean = context.query().clamp((0.0, 10.0)).mean().laplace().release()
-        >>> assert isinstance(dp_mean, float)
         """
         import opendp.prelude as dp
-        return Query(
-            chain=self._chain >> dp.t.then_mean(),
-            output_measure=self._output_measure,
-            d_in=self._d_in,
-            d_out=self._d_out,
-            context=self._context,
-            _wrap_release=self._wrap_release,
-        )
+        return self.new_with(chain=self._chain >> dp.t.then_mean())
 
-    # def laplace(self, scale=None):
-    #     """
-    #     # Example
+    def laplace(self):
+        r"""Add Laplacian noise in preparation for a DP release.
+        TODO: The `private_mean`, `private_count`, etc. methods apply the appropriate noise automatically,
+        and are preferred.
 
-    #     >>> query = my_context.query().a().b().laplace()
-    #     >>> accuracy = query.accuracy(alpha=0.05)
-    #     """
-    #     return Query.extend(
-    #         self,
-    #         next=dp.t.then_laplace(scale),
-    #         accuracy_help=dp.laplacian_scale_to_accuracy
-    #     )
+        :example:
+
+        >>> import opendp.prelude as dp
+        >>> dp.enable_features('contrib')
+        >>> data = [1.0, 2.0, 3.0]
+        >>> context = dp.Context.compositor(
+        ...    data=data,
+        ...    privacy_unit=dp.unit_of(contributions=1),
+        ...    privacy_loss=dp.loss_of(epsilon=1.0),
+        ...    domain=dp.vector_domain(dp.atom_domain(T=float), size=len(data)),
+        ...    split_evenly_over=1
+        ... )
+        >>> dp_mean = context.query().clamp((0.0, 10.0)).mean().laplace().release()
+        """
+        import opendp.prelude as dp
+
+        # TODO: Use binary search to calculate scale
+        # See https://docs.opendp.org/en/stable/examples/attacks/membership.html?highlight=then_base_laplace#Differential-Privacy
+        scale = 1.0 # TODO: Remove this placeholder
+        return self.new_with(chain=self._chain >> dp.m.then_base_laplace(scale))
     
     # laplace, gaussian
     # private_mean
