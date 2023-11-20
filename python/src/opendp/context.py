@@ -408,13 +408,23 @@ class Query(object):
         return make
 
     def mean(self):
-        """
-        
-        # Example
+        r"""Calculates the mean of data with known size and bounds.
+        TODO: `private_mean` does not have the same constraints, and is preferred.
 
-        >>> print("A")
+        :example:
 
-        
+        >>> import opendp.prelude as dp
+        >>> dp.enable_features('contrib')
+        >>> data = [1.0, 2.0, 3.0]
+        >>> context = dp.Context.compositor(
+        ...    data=data,
+        ...    privacy_unit=dp.unit_of(contributions=1),
+        ...    privacy_loss=dp.loss_of(epsilon=1.0),
+        ...    domain=dp.vector_domain(dp.atom_domain(T=float), size=len(data)),
+        ...    split_evenly_over=1
+        ... )
+        >>> dp_mean = context.query().clamp((0.0, 10.0)).mean().laplace().release()
+        >>> assert isinstance(dp_mean, float)
         """
         import opendp.prelude as dp
         return Query(
@@ -426,18 +436,18 @@ class Query(object):
             _wrap_release=self._wrap_release,
         )
 
-    def laplace(self, scale=None):
-        """
-        # Example
+    # def laplace(self, scale=None):
+    #     """
+    #     # Example
 
-        >>> query = my_context.query().a().b().laplace()
-        >>> accuracy = query.accuracy(alpha=0.05)
-        """
-        return Query.extend(
-            self,
-            next=dp.t.then_laplace(scale),
-            accuracy_help=dp.laplacian_scale_to_accuracy
-        )
+    #     >>> query = my_context.query().a().b().laplace()
+    #     >>> accuracy = query.accuracy(alpha=0.05)
+    #     """
+    #     return Query.extend(
+    #         self,
+    #         next=dp.t.then_laplace(scale),
+    #         accuracy_help=dp.laplacian_scale_to_accuracy
+    #     )
     
     # laplace, gaussian
     # private_mean
