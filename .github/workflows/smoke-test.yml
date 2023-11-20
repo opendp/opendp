@@ -85,7 +85,7 @@ jobs:
         run: |
           # Stop the build if there are new linting errors.
           # There is a long ignore list in .flake8.
-          flake8 . --count --show-source --statistics
+          flake8 .. --count --show-source --statistics
 
       - name: Download libs
         uses: actions/download-artifact@v3
