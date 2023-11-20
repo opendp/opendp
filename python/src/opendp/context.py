@@ -463,8 +463,8 @@ class Query(object):
     # some transformations... 
 
 
-    def accuracy(self, alpha):
-        return self.laplacian_scale_to_accuracy(self.param(), alpha)
+    # def accuracy(self, alpha):
+    #     return self.laplacian_scale_to_accuracy(self.param(), alpha)
 
     def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":
         """Convenience constructor that creates a new query with a different chain."""
