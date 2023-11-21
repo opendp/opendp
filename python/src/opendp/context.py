@@ -409,7 +409,6 @@ class Query(object):
 
     def mean(self):
         r"""Calculate the mean of data with known size and bounds.
-        TODO: `private_mean` does not have the same constraints, and is preferred.
 
         :example:
 
@@ -425,13 +424,13 @@ class Query(object):
         ... )
         >>> dp_mean = context.query().clamp((0.0, 10.0)).mean().laplace().release()
         """
+        # TODO: When it exists, add this note to docstring:
+        # > `private_mean` does not have the same constraints, and is preferred.
         import opendp.prelude as dp
         return self.new_with(chain=self._chain >> dp.t.then_mean())
 
-    def laplace(self):
+    def laplace(self, scale=None, k=-1074):
         r"""Add Laplacian noise in preparation for a DP release.
-        TODO: The `private_mean`, `private_count`, etc. methods apply the appropriate noise automatically,
-        and are preferred.
 
         :example:
 
@@ -446,13 +445,25 @@ class Query(object):
         ...    split_evenly_over=1
         ... )
         >>> dp_mean = context.query().clamp((0.0, 10.0)).mean().laplace().release()
-        """
-        import opendp.prelude as dp
 
-        # TODO: Use binary search to calculate scale
-        # See https://docs.opendp.org/en/stable/examples/attacks/membership.html?highlight=then_base_laplace#Differential-Privacy
-        scale = 1.0 # TODO: Remove this placeholder
-        return self.new_with(chain=self._chain >> dp.m.then_base_laplace(scale))
+        :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+        :param k: The noise granularity in terms of 2^k.
+        """
+        # TODO: When they exist, add this note to docstring:
+        # > The `private_mean`, `private_count`, etc. methods apply
+        # > the appropriate noise automatically, and are preferred.
+
+        import opendp.prelude as dp
+        # The signature of `then_laplace` is `(scale, QO="float")`
+        # but if one argument is missing, the previous behavior was to call
+        # `PartialChain.wrap`, to calculate the missing parameter.
+        # Passing through `None` causes downstream problems, so we need two cases here.
+        next_f = (
+            PartialChain.wrap(dp.m.then_laplace)()
+            if scale is None else
+            dp.m.then_laplace(scale)
+        )
+        return self.new_with(chain=self._chain >> next_f)
     
     # laplace, gaussian
     # private_mean
