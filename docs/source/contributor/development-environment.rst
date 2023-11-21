@@ -146,7 +146,7 @@ Change to the ``python`` directory, install dependencies, and then install the P
 
     cd python
 
-    pip install flake8 pytest wheel
+    pip install -r requirements-dev.txt
     pip install -e .
 
 The `-e` flag is significant! 
