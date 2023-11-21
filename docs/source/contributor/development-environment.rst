@@ -133,8 +133,9 @@ We recommend setting up a virtual environment first, but this is optional:
 .. code-block:: bash
 
     # recommended. conda is just as valid
-    python3 -m venv opendp
-    source opendp/bin/activate
+    cd opendp
+    python3 -m venv .venv
+    source .venv/bin/activate
 
 .. raw:: html
 
