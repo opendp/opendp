@@ -38,6 +38,11 @@ jobs:
       - name: Test
         run: cargo test --verbose --features untrusted,ffi
 
+      - name: Format
+        run: |
+          shopt -s globstar
+          rustfmt **/*.rs --check
+
       - name: Upload libs
         uses: actions/upload-artifact@v3
         with:
