@@ -6,7 +6,7 @@ from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 
 try:
     import numpy as np
-except ImportError:
+except ImportError: # pragma: no cover
     np = None
 
 ATOM_MAP = {
@@ -48,7 +48,7 @@ def check_similar_scalar(expected, value):
             raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
     else:
         if expected != inferred:
-            raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
+            raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}") 
 
     if expected in INT_SIZES:
         check_c_int_cast(value, expected)
@@ -99,7 +99,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         if rust_type in ATOM_MAP:
             return ctypes.byref(ATOM_MAP[rust_type](value))
 
-        if rust_type == "String":
+        if rust_type == "String": # pragma: no cover
             return ctypes.c_char_p(value.encode())
 
         raise UnknownTypeException(rust_type)

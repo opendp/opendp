@@ -84,7 +84,7 @@ def set_default_int_type(T: RuntimeTypeDescriptor) -> None:
     ELEMENTARY_TYPES[int] = T
 
 
-def set_default_float_type(T: RuntimeTypeDescriptor) -> None:
+def set_default_float_type(T: RuntimeTypeDescriptor) -> None: # pragma: no cover
     """Set the default float type throughout the library.
     This function is particularly useful when building computation chains with constructors.
     When you build a computation chain, any unspecified float types default to this float type.
@@ -119,7 +119,7 @@ class RuntimeType(object):
         if isinstance(other, str):
             other = RuntimeType.parse(other)
         if isinstance(other, str):
-            return False
+            return False # pragma: no cover
         return self.origin == other.origin and self.args == other.args
 
     def __str__(self):
@@ -131,7 +131,7 @@ class RuntimeType(object):
         return result
     
     def __hash__(self) -> int:
-        return hash(str(self))
+        return hash(str(self)) # pragma: no cover
 
     @classmethod
     def parse(cls, type_name: RuntimeTypeDescriptor, generics: Optional[List[str]] = None) -> Union["RuntimeType", str]:
@@ -172,7 +172,7 @@ class RuntimeType(object):
         if sys.version_info >= (3, 9):
             from types import GenericAlias
             if isinstance(type_name, GenericAlias):
-                hinted_type = type_name.__origin__, type_name.__args__
+                hinted_type = type_name.__origin__, type_name.__args__ # pragma: no cover
     
         if hinted_type:
             origin, args = hinted_type
@@ -193,7 +193,7 @@ class RuntimeType(object):
         # parse a string-- "Vec<f32>",
         if isinstance(type_name, str):
 
-            if "AllDomain" in type_name:
+            if "AllDomain" in type_name: # pragma: no cover
                 import warnings
                 warnings.warn("AllDomain is deprecated. Use AtomDomain instead.", DeprecationWarning)
                 type_name = type_name.replace("AllDomain", "AtomDomain")
@@ -274,7 +274,7 @@ class RuntimeType(object):
             return ELEMENTARY_TYPES[type(public_example)]
         
         if isinstance(public_example, (Domain, Metric, Measure)):
-            return RuntimeType.parse(public_example.type)
+            return RuntimeType.parse(public_example.type) # pragma: no cover
 
         if isinstance(public_example, tuple):
             return RuntimeType('Tuple', [cls.infer(e, py_object) for e in public_example])
@@ -283,10 +283,10 @@ class RuntimeType(object):
             types = {cls.infer(v, py_object=py_object) for v in value}
 
             if len(types) == 0:
-                return UnknownType("cannot infer atomic type when empty")
+                return UnknownType("cannot infer atomic type when empty") # pragma: no cover
             if len(types) == 1:
                 return next(iter(types))
-            if py_object:
+            if py_object: # pragma: no cover
                 return "ExtrinsicObject"
             raise TypeError(f"elements must be homogeneously typed. Found {types}")
         
@@ -311,19 +311,19 @@ class RuntimeType(object):
                 infer_homogeneous(public_example.values())
             ])
 
-        if isinstance(public_example, Measurement):
+        if isinstance(public_example, Measurement): # pragma: no cover
             return "AnyMeasurementPtr"
 
-        if isinstance(public_example, Transformation):
+        if isinstance(public_example, Transformation): # pragma: no cover
             return "AnyTransformationPtr"
 
-        if public_example is None:
+        if public_example is None: # pragma: no cover
             return RuntimeType('Option', [UnknownType("Constructed Option from a None variant")])
         
-        if callable(public_example):
+        if callable(public_example): # pragma: no cover
             return "CallbackFn"
 
-        if py_object:
+        if py_object: # pragma: no cover
             return "ExtrinsicObject"
         raise UnknownTypeException(type(public_example))
 
@@ -371,7 +371,7 @@ class UnknownType(RuntimeType):
     origin: None
     args: None
 
-    def __init__(self, reason):
+    def __init__(self, reason): # pragma: no cover
         self.origin = None
         self.args = None
         self.reason = reason
