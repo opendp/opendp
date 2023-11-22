@@ -447,7 +447,6 @@ class Query(object):
         >>> dp_mean = context.query().clamp((0.0, 10.0)).mean().laplace().release()
 
         :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-        :param k: The noise granularity in terms of 2^k.
         """
         # TODO: When they exist, add this note to docstring:
         # > The `private_mean`, `private_count`, etc. methods apply
