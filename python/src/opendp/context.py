@@ -429,7 +429,7 @@ class Query(object):
         import opendp.prelude as dp
         return self.new_with(chain=self._chain >> dp.t.then_mean())
 
-    def laplace(self, scale=None, k=-1074):
+    def laplace(self, scale=None):
         r"""Add Laplacian noise in preparation for a DP release.
 
         :example:
