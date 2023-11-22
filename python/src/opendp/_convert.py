@@ -288,7 +288,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
     # when input is numpy array
     # TODO: can we use the underlying buffer directly?
     if np is not None and isinstance(val, np.ndarray):
-        val = val.tolist()
+        val = val.tolist() # pragma: no cover
 
     if not isinstance(val, list):
         raise TypeError(f"Expected type is {type_name} but input data is not a list.")

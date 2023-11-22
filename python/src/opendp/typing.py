@@ -297,7 +297,7 @@ class RuntimeType(object):
             if public_example.ndim == 0:  # pragma: no cover
                 return cls.infer(public_example.item(), py_object)
 
-            if public_example.ndim == 1:
+            if public_example.ndim == 1: # pragma: no cover
                 inner_type = ELEMENTARY_TYPES.get(public_example.dtype.type)
                 if inner_type is None:
                     raise UnknownTypeException(f"Unknown numpy array dtype: {public_example.dtype.type}")
