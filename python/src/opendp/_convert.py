@@ -242,7 +242,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 
 def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
     if np is not None and isinstance(val, np.ndarray):
-        val = val.item()
+        val = val.item() # pragma: no cover
     check_similar_scalar(type_name, val)
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     return _wrap_in_slice(ctypes.pointer(ATOM_MAP[type_name](val)), 1)
@@ -272,7 +272,7 @@ def _slice_to_extrinsic(raw: FfiSlicePtr):
 
 def _string_to_slice(val: str) -> FfiSlicePtr:
     if np is not None and isinstance(val, np.ndarray):
-        val = val.item()
+        val = val.item() # pragma: no cover
     return _wrap_in_slice(ctypes.c_char_p(val.encode()), len(val) + 1)
 
 

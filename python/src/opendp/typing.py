@@ -18,7 +18,7 @@ ELEMENTARY_TYPES: Dict[Any, str] = {
 try:
     import numpy as np
     # https://numpy.org/doc/stable/reference/arrays.scalars.html#sized-aliases
-    ELEMENTARY_TYPES.update({
+    ELEMENTARY_TYPES.update({  # pragma: no cover
         # np.bytes_: '&[u8]',  # np.string_ # not used in OpenDP
         np.str_: 'String',  # np.unicode_
         np.bool_: 'bool',  # np.bool_
@@ -60,7 +60,7 @@ if sys.version_info >= (3, 8):
     # a Python type hint from the std typing module -- List[int]
     RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (_GenericAlias,)
 
-if sys.version_info >= (3, 9):
+if sys.version_info >= (3, 9):  # pragma: no cover
     from types import GenericAlias
     # a Python type hint from the std types module -- list[int]
     RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (GenericAlias,)
@@ -169,7 +169,7 @@ class RuntimeType(object):
             from typing import _GenericAlias
             if isinstance(type_name, _GenericAlias):
                 hinted_type = typing.get_origin(type_name), typing.get_args(type_name)
-        if sys.version_info >= (3, 9):
+        if sys.version_info >= (3, 9):  # pragma: no cover
             from types import GenericAlias
             if isinstance(type_name, GenericAlias):
                 hinted_type = type_name.__origin__, type_name.__args__ # pragma: no cover
@@ -294,7 +294,7 @@ class RuntimeType(object):
             return RuntimeType('Vec', [infer_homogeneous(public_example)])
 
         if np is not None and isinstance(public_example, np.ndarray):
-            if public_example.ndim == 0:
+            if public_example.ndim == 0:  # pragma: no cover
                 return cls.infer(public_example.item(), py_object)
 
             if public_example.ndim == 1:
