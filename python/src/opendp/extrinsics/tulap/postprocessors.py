@@ -5,15 +5,6 @@ import numpy as np
 from scipy.stats import binom
 import scipy
 
-# what needs to be done?
-
-# arguments are in terms of b and q, but user doesn't know what those are
-# examples
-# code cleanup
-# documentation
-# another pass on naming
-# tests
-
 
 def _ptulap(t, m=0, b=0, q=0):
     lcut = q / 2
