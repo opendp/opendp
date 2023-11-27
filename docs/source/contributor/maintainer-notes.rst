@@ -158,9 +158,12 @@ Playbook
    :Tag version: ``v<MAJ>.<MIN>.<PAT>[-rc.<NUM>]``
    :Target: ``release/<MAJ>.<MIN>.<PAT>[-rc.<NUM>]``
    :Release title: ``OpenDP <MAJ>.<MIN>.<PAT>[-rc.<NUM>]``
-   :Describe this release: (Changelog)[https://github.com/opendp/opendp/blob/main/CHANGELOG.md#<MAJ><MIN><PAT>---<ISO-8601-DATE>]
-   :This is a pre-release: <CHECKED IF RC>
-   :Create a discussion...: <UNCHECKED>
+   :Describe this release: ``(Changelog)[https://github.com/opendp
+     /opendp/blob/main/CHANGELOG.md
+     #<MAJ><MIN><PAT>---<ISO-8601-DATE>]``
+
+   :This is a pre-release: ``<CHECKED IF RC>``
+   :Create a discussion...: ``<UNCHECKED>``
 
 #. Build and publish process is triggered by the creation of the GitHub Release.
 #. If this is a GM release, you're done!
