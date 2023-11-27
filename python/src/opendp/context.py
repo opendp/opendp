@@ -446,25 +446,53 @@ class Query(object):
         ... )
         >>> dp_mean = context.query().clamp((0.0, 10.0)).mean().laplace().release()
 
-        :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+        :param scale: Optional noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
         """
         # TODO: When they exist, add this note to docstring:
         # > The `private_mean`, `private_count`, etc. methods apply
         # > the appropriate noise automatically, and are preferred.
 
         import opendp.prelude as dp
-        # The signature of `then_laplace` is `(scale, QO="float")`
-        # but if one argument is missing, the previous behavior was to call
-        # `PartialChain.wrap`, to calculate the missing parameter.
-        # Passing through `None` causes downstream problems, so we need two cases here.
+        then_f = dp.m.then_laplace
         next_f = (
-            PartialChain.wrap(dp.m.then_laplace)()
+            PartialChain.wrap(then_f)()
             if scale is None else
-            dp.m.then_laplace(scale)
+            then_f(scale)
         )
         return self.new_with(chain=self._chain >> next_f)
     
-    # laplace, gaussian
+    def gaussian(self, scale=None):
+        r"""Add Guassian noise in preparation for a DP release.
+
+        :example:
+
+        >>> import opendp.prelude as dp
+        >>> dp.enable_features('contrib')
+        >>> data = [1.0, 2.0, 3.0]
+        >>> context = dp.Context.compositor(
+        ...    data=data,
+        ...    privacy_unit=dp.unit_of(contributions=1),
+        ...    privacy_loss=dp.loss_of(epsilon=1.0),
+        ...    domain=dp.vector_domain(dp.atom_domain(T=float), size=len(data)),
+        ...    split_evenly_over=1
+        ... )
+        >>> dp_mean = context.query().clamp((0.0, 10.0)).mean().gaussian().release()
+
+        :param scale: Optional noise scale parameter for the Gaussian distribution. `scale` == standard_deviation.
+        """
+        # TODO: When they exist, add this note to docstring:
+        # > The `private_mean`, `private_count`, etc. methods apply
+        # > the appropriate noise automatically, and are preferred.
+
+        import opendp.prelude as dp
+        then_f = dp.m.then_gaussian
+        next_f = (
+            PartialChain.wrap(then_f)()
+            if scale is None else
+            then_f(scale)
+        )
+        return self.new_with(chain=self._chain >> next_f)
+
     # private_mean
     #  - clamps
     #  - either splits between a sum and count, then postprocess or just mean, depending on if data size known
