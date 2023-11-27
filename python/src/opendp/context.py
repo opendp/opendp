@@ -407,6 +407,75 @@ class Query(object):
 
         return make
 
+    def mean(self):
+        r"""Calculate the mean of data with known size and bounds.
+
+        :example:
+
+        >>> import opendp.prelude as dp
+        >>> dp.enable_features('contrib')
+        >>> data = [1.0, 2.0, 3.0]
+        >>> context = dp.Context.compositor(
+        ...    data=data,
+        ...    privacy_unit=dp.unit_of(contributions=1),
+        ...    privacy_loss=dp.loss_of(epsilon=1.0),
+        ...    domain=dp.vector_domain(dp.atom_domain(T=float), size=len(data)),
+        ...    split_evenly_over=1
+        ... )
+        >>> dp_mean = context.query().clamp((0.0, 10.0)).mean().laplace().release()
+        """
+        # TODO: When it exists, add this note to docstring:
+        # > `private_mean` does not have the same constraints, and is preferred.
+        import opendp.prelude as dp
+        return self.new_with(chain=self._chain >> dp.t.then_mean())
+
+    def laplace(self, scale=None):
+        r"""Add Laplacian noise in preparation for a DP release.
+
+        :example:
+
+        >>> import opendp.prelude as dp
+        >>> dp.enable_features('contrib')
+        >>> data = [1.0, 2.0, 3.0]
+        >>> context = dp.Context.compositor(
+        ...    data=data,
+        ...    privacy_unit=dp.unit_of(contributions=1),
+        ...    privacy_loss=dp.loss_of(epsilon=1.0),
+        ...    domain=dp.vector_domain(dp.atom_domain(T=float), size=len(data)),
+        ...    split_evenly_over=1
+        ... )
+        >>> dp_mean = context.query().clamp((0.0, 10.0)).mean().laplace().release()
+
+        :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+        """
+        # TODO: When they exist, add this note to docstring:
+        # > The `private_mean`, `private_count`, etc. methods apply
+        # > the appropriate noise automatically, and are preferred.
+
+        import opendp.prelude as dp
+        # The signature of `then_laplace` is `(scale, QO="float")`
+        # but if one argument is missing, the previous behavior was to call
+        # `PartialChain.wrap`, to calculate the missing parameter.
+        # Passing through `None` causes downstream problems, so we need two cases here.
+        next_f = (
+            PartialChain.wrap(dp.m.then_laplace)()
+            if scale is None else
+            dp.m.then_laplace(scale)
+        )
+        return self.new_with(chain=self._chain >> next_f)
+    
+    # laplace, gaussian
+    # private_mean
+    #  - clamps
+    #  - either splits between a sum and count, then postprocess or just mean, depending on if data size known
+    #  - noise addition- if self.privacy_measure is max divergence then laplace, else gaussian
+    # private_count, private sum, private_variance, private_std, private_histogram, any other private_* things
+    # some transformations... 
+
+
+    # def accuracy(self, alpha):
+    #     return self.laplacian_scale_to_accuracy(self.param(), alpha)
+
     def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":
         """Convenience constructor that creates a new query with a different chain."""
         return Query(
