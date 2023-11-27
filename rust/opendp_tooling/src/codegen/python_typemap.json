@@ -42,6 +42,7 @@
     "mut AnyQueryable *": "Queryable",
     "FfiError *": "ctypes.POINTER(FfiError)",
     "const FfiError *": "ctypes.POINTER(FfiError)",
+    "ExtrinsicObject *": "ExtrinsicObjectPtr",
     "FfiResult": "FfiResult",
     "CallbackFn": "CallbackFn",
     "TransitionFn": "TransitionFn"

@@ -18,7 +18,7 @@ use crate::{
         function(rust_type = "$pass_through(TO)"),
         privacy_map(rust_type = "$measure_distance_type(output_measure)"),
     ),
-    dependencies("c_function", "c_privacy_map")
+    dependencies("input_domain", "input_metric", "output_measure", "c_function", "c_privacy_map")
 )]
 /// Construct a Measurement from user-defined callbacks.
 ///

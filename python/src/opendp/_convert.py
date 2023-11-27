@@ -57,7 +57,7 @@ def check_similar_scalar(expected, value):
 def check_c_int_cast(v, type_name):
     lower, upper = INT_SIZES[type_name]
     if not (lower <= v <= upper):
-        raise ValueError(f"value is not representable by {type_name}")
+        raise ValueError(f"{v} is not representable by {type_name}")
 
 
 def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
@@ -71,6 +71,9 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
 
     if isinstance(type_name, str):
         type_name = RuntimeType.parse(type_name)
+    
+    if type_name == ExtrinsicObject:
+        type_name = "ExtrinsicObject"
 
     if isinstance(value, c_type):
         return value
@@ -164,6 +167,9 @@ def c_to_py(value: Any) -> Any:
     if isinstance(value, (Transformation, Measurement)):
         # these types are meant to pass through
         return value
+
+    if isinstance(value, ctypes.POINTER(ExtrinsicObject)):
+        return value.contents.ptr
 
     if isinstance(value, ctypes.c_void_p):
         # returned void pointers are interpreted as None
@@ -265,7 +271,8 @@ def _refcounter(ptr, increment):
 c_counter = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.py_object, ctypes.c_bool)(_refcounter)
 
 def _extrinsic_to_slice(val) -> FfiSlicePtr:
-    return _wrap_in_slice(ctypes.pointer(ExtrinsicObject(ctypes.py_object(val), c_counter)), 1)
+    val = ctypes.py_object(val)
+    return _wrap_in_slice(ctypes.pointer(ExtrinsicObject(val, c_counter)), 1)
 
 def _slice_to_extrinsic(raw: FfiSlicePtr):
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ExtrinsicObject)).contents.ptr
