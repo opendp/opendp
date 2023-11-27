@@ -240,7 +240,7 @@ class Context(object):
     ):
         """Initializes the context with the given accountant and queryable.
 
-        It is recommended to use the `sequential_composition` constructor instead of this one.
+        It is recommended to use the `compositor` constructor instead of this one.
 
         :param d_in: An upper bound on the distance between adjacent datasets.
         :param d_mids: A sequence of privacy losses for each query to be sent to the queryable. Used for compositors.
