@@ -5,6 +5,7 @@ use crate::error::Fallible;
 
 use super::UniformPSRN;
 
+
 // TODO: make sure the implementation is still correct! Hope I didn't break anything
 //       make sure the inverse tulap is done in a way where the rounding direction is always preserved!
 //       fix tests
@@ -48,9 +49,7 @@ impl TulapPSRN {
         loop {
             // The first few rounds are susceptible to NaN due to the uniform PSRN initializing at zero.
             let uniform = Float::with_val_round(self.precision, self.uniform.value(round), round).0;
-            println!("Generated uniform number: {}", uniform); 
             let tulap = self.inverse_tulap(uniform.clone(), round);
-            println!("u: {}, tulap: {}", uniform, tulap); 
             if let Ok(value) = Rational::try_from(tulap) {
                 return Ok(value + &self.shift);
             } else {
@@ -71,14 +70,28 @@ impl TulapPSRN {
         }
     }
 
-    fn inverse_tulap(&self, unif: Float, round: Round) -> Float {
-        // more privacy makes c higher -> rounding up and this will make it more private
-        // throw an error when c tends to 0.5
-        // increment the precision until c is not 0.5 (line 34)
-        let c = Float::with_val_round(self.precision, 1.0 - &self.delta, round).0 / (1.0 + Float::exp(self.epsilon.clone()));
-        println!("The value of c is: {}", c);
-        return self.q_cnd(unif, c);
+    fn inverse_tulap(&mut self, unif: Float, round: Round) -> Fallible<Float> {
+        loop {
+            let c = Float::with_val_round(self.precision, 1.0 - &self.delta, round).0 / (1.0 + Float::exp(&self.epsilon));
+            println!("The value of c is: {}", c);
+
+            if c == Float::with_val(self.precision, 0.5) {
+                println!("value of c is 0.5, increasing precision");
+                self.precision += 1; // Increase precision
+                // Continue the loop to recalculate c with updated precision
+            } else {
+                return Ok(self.q_cnd(unif.clone(), c));
+            }
+        }
     }
+    // fn inverse_tulap(&self, unif: Float, round: Round) -> Float {
+    //     // more privacy makes c higher -> rounding up and this will make it more private
+    //     // throw an error when c tends to 0.5
+    //     // increment the precision until c is not 0.5 (line 34)
+    //     let c = Float::with_val_round(self.precision, 1.0 - &self.delta, round).0 / (1.0 + Float::exp(self.epsilon.clone()));
+    //     println!("The value of c is: {}", c);
+    //     return self.q_cnd(unif, c);
+    // }
 
     fn f(&self, alpha: Float) -> Float {
         let _1 = Float::with_val(52, 1.);
