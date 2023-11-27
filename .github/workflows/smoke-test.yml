@@ -105,7 +105,7 @@ jobs:
           cd ../docs
           python -m pip install -r requirements.txt
           make doctest-python
-          linkchecker --check-extern build/html/index.html
+          linkchecker -f linkchecker.cfg build/html/index.html
 
 
   python-test-notebooks:
