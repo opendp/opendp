@@ -1194,6 +1194,10 @@ def make_tulap(
     * Input Metric:   `AbsoluteDistance<f64>`
     * Output Measure: `FixedSmoothedMaxDivergence<f64>`
     
+    **Proof Definition:**
+    
+    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/measurements/tulap/make_tulap.pdf)
+    
     :param input_domain: Domain of the input.
     :type input_domain: Domain
     :param input_metric: Metric of the input.
