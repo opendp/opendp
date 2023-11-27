@@ -136,7 +136,6 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         :return: distance type
         """
         from opendp.core import measurement_input_distance_type
-        from opendp.typing import RuntimeType
         return RuntimeType.parse(measurement_input_distance_type(self))
 
     @property
@@ -147,7 +146,6 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         :return: distance type
         """
         from opendp.core import measurement_output_distance_type
-        from opendp.typing import RuntimeType
         return RuntimeType.parse(measurement_output_distance_type(self))
 
     @property
@@ -439,6 +437,11 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         from opendp.domains import domain_carrier_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(domain_carrier_type(self))
+    
+    @property
+    def descriptor(self) -> Any:
+        from opendp.domains import _user_domain_value
+        return _user_domain_value(self)
 
     def __str__(self):
         from opendp.domains import domain_debug
@@ -470,7 +473,8 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     @property
     def type(self):
         from opendp.metrics import metric_type
-        return metric_type(self)
+        from opendp.typing import RuntimeType
+        return RuntimeType.parse(metric_type(self))
     
     @property
     def distance_type(self) -> Union["RuntimeType", str]:
@@ -496,6 +500,10 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
         return str(self) == str(other)
+    
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
 
 
 class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
@@ -527,6 +535,10 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
 
     def __eq__(self, other):
         return str(self) == str(other)
+    
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
 
 
 class SMDCurve(object):

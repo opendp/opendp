@@ -395,6 +395,20 @@ pub extern "C" fn opendp_data__bool_free(this: *mut c_bool) -> FfiResult<*mut ()
     util::into_owned(this).map(|_| ()).into()
 }
 
+#[bootstrap(
+    name = "extrinsic_object_free",
+    arguments(this(do_not_convert = true, c_type = "ExtrinsicObject *")),
+    returns(c_type = "FfiResult<void *>")
+)]
+/// Internal function. Free the memory associated with `this`, a string.
+/// Used to clean up after the type getter functions.
+#[no_mangle]
+pub extern "C" fn opendp_data__extrinsic_object_free(
+    this: *mut ExtrinsicObject,
+) -> FfiResult<*mut ()> {
+    util::into_owned(this).map(|_| ()).into()
+}
+
 impl std::fmt::Debug for AnyObject {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         fn monomorphize<T: 'static + std::fmt::Debug>(this: &AnyObject) -> Fallible<String> {

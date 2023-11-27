@@ -174,6 +174,17 @@ class ExtrinsicObject(ctypes.Structure):
     ]
 
 
+class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)):
+    _type_ = ExtrinsicObject
+
+    def __del__(self):
+        try:
+            from opendp._data import extrinsic_object_free
+            extrinsic_object_free(self)
+        except (ImportError, TypeError):
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
+
 # def _str_to_c_char_p(s: Optional[str]) -> Optional[bytes]:
 #     return s and s.encode("utf-8")
 def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
