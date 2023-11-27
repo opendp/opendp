@@ -9,6 +9,7 @@ from opendp.typing import *
 
 __all__ = [
     "bool_free",
+    "extrinsic_object_free",
     "ffislice_of_anyobjectptrs",
     "object_as_slice",
     "object_free",
@@ -42,6 +43,34 @@ def bool_free(
     # Call library function.
     lib_function = lib.opendp_data__bool_free
     lib_function.argtypes = [BoolPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+    
+    return output
+
+
+@versioned
+def extrinsic_object_free(
+    this
+):
+    r"""Internal function. Free the memory associated with `this`, a string.
+    Used to clean up after the type getter functions.
+    
+    [extrinsic_object_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.extrinsic_object_free.html)
+    
+    :param this: 
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = this
+    
+    # Call library function.
+    lib_function = lib.opendp_data__extrinsic_object_free
+    lib_function.argtypes = [ExtrinsicObjectPtr]
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))

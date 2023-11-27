@@ -47,7 +47,7 @@ use crate::traits::samplers::SampleBernoulli;
 use opendp_derive::proven;
 use rug::{Integer, Rational};
 
-use num::{One, Zero};
+use num::One;
 
 use super::{SampleStandardBernoulli, SampleUniformIntBelow};
 

@@ -9,6 +9,7 @@ from opendp.typing import *
 
 __all__ = [
     "_domain_free",
+    "_user_domain_value",
     "atom_domain",
     "domain_carrier_type",
     "domain_debug",
@@ -45,6 +46,34 @@ def _domain_free(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+    
+    return output
+
+
+@versioned
+def _user_domain_value(
+    domain: Domain
+):
+    r"""Retrieve the descriptor value stored in a user domain.
+    
+    [_user_domain_value in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn._user_domain_value.html)
+    
+    :param domain: The UserDomain to extract the descriptor from
+    :type domain: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_domain = py_to_c(domain, c_type=Domain, type_name=AnyDomain)
+    
+    # Call library function.
+    lib_function = lib.opendp_domains___user_domain_value
+    lib_function.argtypes = [Domain]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_domain), ExtrinsicObjectPtr))
     
     return output
 
@@ -277,8 +306,9 @@ def option_domain(
 
 @versioned
 def user_domain(
-    descriptor: str,
-    member
+    descriptor: Any,
+    member,
+    ID: Optional[str] = None
 ) -> Domain:
     r"""Construct a new UserDomain.
     Any two instances of an UserDomain are equal if their string descriptors are equal.
@@ -286,9 +316,11 @@ def user_domain(
     
     [user_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.user_domain.html)
     
-    :param descriptor: A string description of the data domain.
-    :type descriptor: str
+    :param descriptor: 
+    :type descriptor: Any
     :param member: A function used to test if a value is a member of the data domain.
+    :param ID: A string description of the data domain.
+    :type ID: str
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -296,18 +328,21 @@ def user_domain(
     """
     assert_features("honest-but-curious")
     
-    # No type arguments to standardize.
+    # Standardize type arguments.
+    ID = id_from_descriptor(ID, descriptor) # type: ignore
+    
     # Convert arguments to c types.
-    c_descriptor = py_to_c(descriptor, c_type=ctypes.c_char_p, type_name=String)
+    c_descriptor = py_to_c(descriptor, c_type=AnyObjectPtr, type_name=ExtrinsicObject)
     c_member = py_to_c(member, c_type=CallbackFn, type_name=bool)
+    c_ID = py_to_c(ID, c_type=ctypes.c_char_p, type_name=None)
     
     # Call library function.
     lib_function = lib.opendp_domains__user_domain
-    lib_function.argtypes = [ctypes.c_char_p, CallbackFn]
+    lib_function.argtypes = [AnyObjectPtr, CallbackFn, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_descriptor, c_member), Domain))
-    output._depends_on(c_member)
+    output = c_to_py(unwrap(lib_function(c_descriptor, c_member, c_ID), Domain))
+    output._depends_on(c_member, descriptor)
     return output
 
 
