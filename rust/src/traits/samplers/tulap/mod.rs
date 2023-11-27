@@ -49,7 +49,7 @@ impl TulapPSRN {
         loop {
             // The first few rounds are susceptible to NaN due to the uniform PSRN initializing at zero.
             let uniform = Float::with_val_round(self.precision, self.uniform.value(round), round).0;
-            let tulap = self.inverse_tulap(uniform.clone(), round);
+            let tulap = self.inverse_tulap(uniform.clone(), round)?;
             if let Ok(value) = Rational::try_from(tulap) {
                 return Ok(value + &self.shift);
             } else {
@@ -70,9 +70,9 @@ impl TulapPSRN {
         }
     }
 
-    fn inverse_tulap(&mut self, unif: Float, round: Round) -> Fallible<Float> {
-        loop {
-            let c = Float::with_val_round(self.precision, 1.0 - &self.delta, round).0 / (1.0 + Float::exp(&self.epsilon));
+    pub(crate) fn inverse_tulap(&mut self, unif: Float, round: Round) -> Fallible<Float> {
+        loop {  
+            let c = Float::with_val_round(self.precision, 1.0 - &self.delta, round).0 / (1.0 + self.epsilon.clone().exp());
             println!("The value of c is: {}", c);
 
             if c == Float::with_val(self.precision, 0.5) {
