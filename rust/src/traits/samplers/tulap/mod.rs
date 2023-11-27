@@ -6,19 +6,27 @@ use crate::error::Fallible;
 use super::UniformPSRN;
 
 
-// TODO: make sure the implementation is still correct! Hope I didn't break anything
-//       make sure the inverse tulap is done in a way where the rounding direction is always preserved!
-//       fix tests
-//       is there a clean way to do this with b and q instead of epsilon and delta? (epsilon = ln(1/b) and delta = q (1-b) / (2b(1-q)) )
-//       if the user gives us the value of q and b, epsilon and delta can be calculated
-//       pack into a constructor! (Mike)
-//       remove tulap sampler from Python side
+// TODO
+//
+//
+// RUST
+//     make sure the implementation is still correct! Hope I didn't break anything
+//     make sure the inverse tulap is done in a way where the rounding direction is always preserved!
 // 
+// PROOF
 //       update the proof to reflect this new implementation (if still correct)
 //           - decide on b and q vs epsilon and delta
 //               - I think scale and b are the same thing? But the pseudocode takes b and scale instead of scale and q?
 //           - update pseudocode
-//
+// 
+// PYTHON
+//     arguments are in terms of b and q, but user doesn't know what those are
+//     examples
+//     code cleanup
+//     documentation
+//     another pass on naming
+//     tests in python
+
 
 /// A partially sampled tulap random number.
 pub struct TulapPSRN {
