@@ -441,6 +441,9 @@ class Query(object):
         ...    split_evenly_over=1
         ... )
         >>> dp_mean = context.query().clamp((0.0, 10.0)).mean().gaussian().release()
+        Exception raised:
+        ...
+        ValueError: Unable to cast measure from ZeroConcentratedDivergence to MaxDivergence
 
         :param scale: Optional noise scale parameter for the Gaussian distribution. `scale` == standard_deviation.
         """
@@ -511,7 +514,7 @@ class Query(object):
         ...    data=data,
         ...    privacy_unit=dp.unit_of(contributions=1),
         ...    privacy_loss=dp.loss_of(epsilon=1.0),
-        ...    domain=dp.vector_domain(dp.atom_domain(T=float), size=len(data)),
+        ...    domain=dp.vector_domain(dp.option_domain(dp.atom_domain(T=float)), size=len(data)),
         ...    split_evenly_over=1
         ... )
         >>> dp_mean = context.query().cast_default(float).clamp((0.0, 10.0)).mean().laplace().release()
@@ -549,6 +552,26 @@ class Query(object):
         """
         import opendp.prelude as dp
         return self.new_with(chain=self._chain >> dp.t.then_resize(size, constant))
+
+    def count(self):
+        r"""Count the records in the data, using some of the privacy budget.
+
+        :example:
+
+        >>> import opendp.prelude as dp
+        >>> dp.enable_features('contrib')
+        >>> data = [1.0, 2.0, 3.0]
+        >>> context = dp.Context.compositor(
+        ...    data=data,
+        ...    privacy_unit=dp.unit_of(contributions=1),
+        ...    privacy_loss=dp.loss_of(epsilon=1.0),
+        ...    domain=dp.vector_domain(dp.atom_domain(T=float), size=len(data)),
+        ...    split_evenly_over=1
+        ... )
+        >>> dp_mean = context.query().count().laplace().release()
+        """
+        import opendp.prelude as dp
+        return self.new_with(chain=self._chain >> dp.t.then_count())
     # private_mean
     #  - clamps
     #  - either splits between a sum and count, then postprocess or just mean, depending on if data size known
