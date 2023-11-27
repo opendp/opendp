@@ -9,7 +9,7 @@ use crate::{
     },
     metrics::{L1Distance, L2Distance},
     traits::{Integer, Number},
-    transformations::{make_b_ary_tree, BAryTreeMetric},
+    transformations::{make_b_ary_tree, BAryTreeMetric}, error::Fallible,
 };
 
 use super::choose_branching_factor;
@@ -28,7 +28,7 @@ pub extern "C" fn opendp_transformations__make_b_ary_tree(
         branching_factor: usize,
         M: Type,
         TA: Type,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         Q: Number,
     {
@@ -37,7 +37,7 @@ pub extern "C" fn opendp_transformations__make_b_ary_tree(
             input_metric: &AnyMetric,
             leaf_count: usize,
             branching_factor: usize,
-        ) -> FfiResult<*mut AnyTransformation>
+        ) -> Fallible<AnyTransformation>
         where
             TA: Integer,
             (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
@@ -45,8 +45,8 @@ pub extern "C" fn opendp_transformations__make_b_ary_tree(
             M::Distance: Number,
         {
             let input_domain =
-                try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()).clone();
-            let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
+                input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()?.clone();
+            let input_metric = input_metric.downcast_ref::<M>()?.clone();
             make_b_ary_tree::<M, TA>(input_domain, input_metric, leaf_count, branching_factor)
                 .into_any()
         }
@@ -66,7 +66,7 @@ pub extern "C" fn opendp_transformations__make_b_ary_tree(
     let Q = try_!(M.get_atom());
     dispatch!(monomorphize, [
         (Q, @integers)
-    ], (input_domain, input_metric, leaf_count, branching_factor, M, TA))
+    ], (input_domain, input_metric, leaf_count, branching_factor, M, TA)).into()
 }
 
 #[no_mangle]

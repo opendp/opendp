@@ -4,6 +4,7 @@ use std::os::raw::{c_char, c_uint};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 
 use crate::err;
+use crate::error::Fallible;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::traits::Float;
@@ -22,7 +23,7 @@ pub extern "C" fn opendp_transformations__make_bounded_float_checked_sum(
         S: Type,
         size_limit: usize,
         bounds: *const AnyObject,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         T: 'static + Float,
         Sequential<T>: CanFloatSumOverflow<Item = T>,
@@ -31,20 +32,20 @@ pub extern "C" fn opendp_transformations__make_bounded_float_checked_sum(
         fn monomorphize2<S>(
             size_limit: usize,
             bounds: (S::Item, S::Item),
-        ) -> FfiResult<*mut AnyTransformation>
+        ) -> Fallible<AnyTransformation>
         where
             S: UncheckedSum,
             S::Item: 'static + Float,
         {
             make_bounded_float_checked_sum::<S>(size_limit, bounds).into_any()
         }
-        let bounds = *try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>());
+        let bounds = *try_as_ref!(bounds).downcast_ref::<(T, T)>()?;
         dispatch!(monomorphize2, [(S, [Sequential<T>, Pairwise<T>])], (size_limit, bounds))
     }
     let size_limit = size_limit as usize;
     let S = try_!(Type::try_from(S));
     let T = try_!(S.get_atom());
-    dispatch!(monomorphize, [(T, @floats)], (S, size_limit, bounds))
+    dispatch!(monomorphize, [(T, @floats)], (S, size_limit, bounds)).into()
 }
 
 #[no_mangle]
@@ -57,14 +58,14 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_float_checked_sum(
         S: Type,
         size: usize,
         bounds: *const AnyObject,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         T: 'static + Float,
     {
         fn monomorphize2<S>(
             size: usize,
             bounds: (S::Item, S::Item),
-        ) -> FfiResult<*mut AnyTransformation>
+        ) -> Fallible<AnyTransformation>
         where
             S: UncheckedSum,
             S::Item: 'static + Float,
@@ -77,7 +78,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_float_checked_sum(
     let size = size as usize;
     let S = try_!(Type::try_from(S));
     let T = try_!(S.get_atom());
-    dispatch!(monomorphize, [(T, @floats)], (S, size, bounds))
+    dispatch!(monomorphize, [(T, @floats)], (S, size, bounds)).into()
 }
 
 #[cfg(test)]

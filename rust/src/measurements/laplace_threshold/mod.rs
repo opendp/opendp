@@ -125,7 +125,7 @@ where
     )
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "partials"))]
 mod tests {
     use super::*;
     use crate::{
@@ -133,6 +133,7 @@ mod tests {
     };
 
     #[test]
+    #[cfg(feature = "partials")]
     fn test_count_by_ptr() -> Fallible<()> {
         let max_influence = 1;
         let sensitivity = max_influence as f64;

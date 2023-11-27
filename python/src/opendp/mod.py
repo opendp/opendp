@@ -1,7 +1,11 @@
 import ctypes
-from typing import Union, Tuple, Callable, Optional
+from typing import Any, Literal, Type, TypeVar, Union, Tuple, Callable, Optional, overload, TYPE_CHECKING
 
 from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
+
+# https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
+if TYPE_CHECKING:
+    from opendp.typing import RuntimeType
 
 
 class Measurement(ctypes.POINTER(AnyMeasurement)):
@@ -14,29 +18,32 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
 
     >>> import opendp.prelude as dp
     >>> dp.enable_features("contrib")
-    ...
+
     >>> # create an instance of Measurement using a constructor from the meas module
     >>> base_dl: dp.Measurement = dp.m.make_base_discrete_laplace(
     ...     dp.atom_domain(T=int), dp.absolute_distance(T=int),
     ...     scale=2.)
-    ...
+
     >>> # invoke the measurement (invoke and __call__ are equivalent)
-    >>> base_dl.invoke(100)  # -> 101   # doctest: +SKIP
-    >>> base_dl(100)  # -> 99           # doctest: +SKIP
-    ...
+    >>> print('explicit: ', base_dl.invoke(100))  # -> 101   # doctest: +ELLIPSIS
+    explicit: ...
+    >>> print('concise: ', base_dl(100))  # -> 99            # doctest: +ELLIPSIS
+    concise: ...
     >>> # check the measurement's relation at
     >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence)
     >>> assert base_dl.check(1, 0.5)
-    ...
+
     >>> # chain with a transformation from the trans module
     >>> chained = (
     ...     (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()) >>
     ...     dp.t.then_count() >>
     ...     base_dl
     ... )
-    ...
+
     >>> # the resulting measurement has the same features
-    >>> chained([1, 2, 3])  # -> 4     # doctest: +SKIP
+    >>> print('dp count: ', chained([1, 2, 3]))  # -> 4     # doctest: +ELLIPSIS
+    dp count: ...
+
     >>> # check the chained measurement's relation at
     >>> #     (1, 0.5): (SymmetricDistance, MaxDivergence)
     >>> assert chained.check(1, 0.5)
@@ -87,7 +94,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
                 return False
             raise
 
-    def __rshift__(self, other: Union["Function", "Transformation"]):
+    def __rshift__(self, other: Union["Function", "Transformation"]) -> "Measurement":
         if isinstance(other, Transformation):
             other = other.function
 
@@ -122,7 +129,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         return measurement_function(self)
     
     @property
-    def input_distance_type(self):
+    def input_distance_type(self) -> Union["RuntimeType", str]:
         """Retrieve the distance type of the input metric.
         This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
         
@@ -133,18 +140,18 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         return RuntimeType.parse(measurement_input_distance_type(self))
 
     @property
-    def output_distance_type(self):
+    def output_distance_type(self) -> Union["RuntimeType", str]:
         """Retrieve the distance type of the output measure.
         This is the type that the budget is expressed in.
         
         :return: distance type
         """
-        from opendp.typing import RuntimeType
         from opendp.core import measurement_output_distance_type
+        from opendp.typing import RuntimeType
         return RuntimeType.parse(measurement_output_distance_type(self))
 
     @property
-    def input_carrier_type(self):
+    def input_carrier_type(self) -> Union["RuntimeType", str]:
         """Retrieve the carrier type of the input domain.
         Any member of the input domain is a member of the carrier type.
         
@@ -180,28 +187,30 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
 
     >>> import opendp.prelude as dp
     >>> dp.enable_features("contrib")
-    ...
+
     >>> # create an instance of Transformation using a constructor from the trans module
     >>> input_space = (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
     >>> count: dp.Transformation = input_space >> dp.t.then_count()
-    ...
+
     >>> # invoke the transformation (invoke and __call__ are equivalent)
-    >>> count.invoke([1, 2, 3])  # -> 3  # doctest: +SKIP
-    >>> count([1, 2, 3])  # -> 3         # doctest: +SKIP
-    ...
+    >>> count.invoke([1, 2, 3])
+    3
+    >>> count([1, 2, 3])
+    3
     >>> # check the transformation's relation at
     >>> #     (1, 1): (SymmetricDistance, AbsoluteDistance<u32>)
     >>> assert count.check(1, 1)
-    ...
+
     >>> # chain with more transformations from the trans module
     >>> chained = (
     ...     dp.t.make_split_lines() >>
     ...     dp.t.then_cast_default(TOA=int) >>
     ...     count
     ... )
-    ...
+
     >>> # the resulting transformation has the same features
-    >>> chained("1\\n2\\n3")  # -> 3 # doctest: +SKIP
+    >>> chained("1\\n2\\n3")
+    3
     >>> assert chained.check(1, 1)  # both chained transformations were 1-stable
     """
     _type_ = AnyTransformation
@@ -249,7 +258,19 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
                 return False
             raise
 
-    def __rshift__(self, other: Union["Measurement", "Transformation", "PartialConstructor"]):
+    @overload
+    def __rshift__(self, other: "Transformation") -> "Transformation":
+        ...
+
+    @overload
+    def __rshift__(self, other: "Measurement") -> "Measurement":
+        ...
+
+    @overload
+    def __rshift__(self, other: "PartialConstructor") -> "PartialConstructor":
+        ...
+
+    def __rshift__(self, other: Union["Measurement", "Transformation", "PartialConstructor"]) -> Union["Measurement", "Transformation", "PartialConstructor"]:
         if isinstance(other, Measurement):
             from opendp.combinators import make_chain_mt
             return make_chain_mt(other, self)
@@ -304,7 +325,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         return transformation_function(self)
 
     @property
-    def input_distance_type(self):
+    def input_distance_type(self) -> Union["RuntimeType", str]:
         """Retrieve the distance type of the input metric.
         This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
 
@@ -315,7 +336,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         return RuntimeType.parse(transformation_input_distance_type(self))
 
     @property
-    def output_distance_type(self):
+    def output_distance_type(self) -> Union["RuntimeType", str]:
         """Retrieve the distance type of the output metric.
         This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
 
@@ -326,7 +347,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         return RuntimeType.parse(transformation_output_distance_type(self))
     
     @property
-    def input_carrier_type(self):
+    def input_carrier_type(self) -> Union["RuntimeType", str]:
         """Retrieve the carrier type of the input domain.
         Any member of the input domain is a member of the carrier type.
 
@@ -351,6 +372,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     def __str__(self) -> str:
         return f"Transformation(\n    input_domain   = {self.input_domain},\n    output_domain  = {self.output_domain},\n    input_metric   = {self.input_metric},\n    output_metric  = {self.output_metric}\n)"
 
+from typing import cast
+Transformation = cast(Type[Transformation], Transformation)
 
 class Queryable(object):
     def __init__(self, value):
@@ -372,6 +395,10 @@ class Queryable(object):
 
     def __str__(self):
         return f"Queryable(Q={self.query_type})"
+
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
         
 
 class Function(ctypes.POINTER(AnyFunction)):
@@ -402,15 +429,16 @@ class Domain(ctypes.POINTER(AnyDomain)):
         return member(self, val)
 
     @property
-    def type(self):
+    def type(self) -> Union["RuntimeType", str]:
         from opendp.domains import domain_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(domain_type(self))
     
     @property
-    def carrier_type(self):
+    def carrier_type(self) -> Union["RuntimeType", str]:
         from opendp.domains import domain_carrier_type
-        return domain_carrier_type(self)
+        from opendp.typing import RuntimeType
+        return RuntimeType.parse(domain_carrier_type(self))
 
     def __str__(self):
         from opendp.domains import domain_debug
@@ -430,6 +458,10 @@ class Domain(ctypes.POINTER(AnyDomain)):
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
         return str(self) == str(other)
+    
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
 
 
 class Metric(ctypes.POINTER(AnyMetric)):
@@ -441,7 +473,7 @@ class Metric(ctypes.POINTER(AnyMetric)):
         return metric_type(self)
     
     @property
-    def distance_type(self):
+    def distance_type(self) -> Union["RuntimeType", str]:
         from opendp.metrics import metric_distance_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(metric_distance_type(self))
@@ -476,7 +508,7 @@ class Measure(ctypes.POINTER(AnyMeasure)):
         return RuntimeType.parse(measure_type(self))
     
     @property
-    def distance_type(self):
+    def distance_type(self) -> Union["RuntimeType", str]:
         from opendp.measures import measure_distance_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(measure_distance_type(self))
@@ -533,14 +565,16 @@ class OpenDPException(Exception):
 
     See `Rust ErrorVariant <https://docs.rs/opendp/latest/opendp/error/enum.ErrorVariant.html>`_ for values variant may take on.
     """
-    def __init__(self, variant: str, message: str = None, raw_traceback: str = None):
+    raw_traceback: Optional[str]
+
+    def __init__(self, variant: str, message: Optional[str] = None, raw_traceback: Optional[str] = None):
         self.variant = variant
         self.message = message
         self.raw_traceback = raw_traceback
 
     def raw_frames(self):
         import re
-        return re.split(r"\s*[0-9]+: ", self.raw_traceback)
+        return re.split(r"\s*[0-9]+: ", self.raw_traceback or "")
     
     def frames(self):
         def format_frame(frame):
@@ -578,11 +612,14 @@ def assert_features(*features: str) -> None:
         assert feature in GLOBAL_FEATURES, f"Attempted to use function that requires {feature}, but {feature} is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"{feature}\")"
 
 
+T = TypeVar("T", float, int)
+M = TypeVar("M", Transformation, Measurement)
+
 def binary_search_chain(
-        make_chain: Callable[[Union[float, int]], Union[Transformation, Measurement]],
-        d_in, d_out,
-        bounds: Union[Tuple[float, float], Tuple[int, int]] = None,
-        T=None) -> Union[Transformation, Measurement]:
+        make_chain: Callable[[T], M],
+        d_in: Any, d_out: Any,
+        bounds: Union[Tuple[T, T], None] = None,
+        T=None) -> M:
     """Useful to find the Transformation or Measurement parameterized with the ideal constructor argument.
     
     Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
@@ -643,10 +680,10 @@ def binary_search_chain(
 
 
 def binary_search_param(
-        make_chain: Callable[[Union[float, int]], Union[Transformation, Measurement]],
-        d_in, d_out,
-        bounds: Union[Tuple[float, float], Tuple[int, int]] = None,
-        T=None) -> Union[float, int]:
+        make_chain: Callable[[T], Union[Transformation, Measurement]],
+        d_in: Any, d_out: Any,
+        bounds: Optional[Tuple[T, T]] = None,
+        T=None) -> T:
     """Useful to solve for the ideal constructor argument.
     
     Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
@@ -709,12 +746,28 @@ def binary_search_param(
 
     return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, T)
 
+@overload
+def binary_search(
+        predicate: Callable[[T], bool],
+        bounds: Optional[Tuple[T, T]] = None,
+        T: Optional[Type[T]] = None,
+        return_sign: Literal[False] = False) -> T:
+    ...
+
+
+@overload
+def binary_search(
+        predicate: Callable[[T], bool],
+        bounds: Optional[Tuple[T, T]] = None,
+        T: Optional[Type[T]] = None,
+        return_sign: Literal[True] = True) -> Tuple[T, int]:
+    ...
 
 def binary_search(
-        predicate: Callable[[Union[float, int]], bool],
-        bounds: Union[Tuple[float, float], Tuple[int, int]] = None,
-        T=None,
-        return_sign=False):
+        predicate: Callable[[T], bool],
+        bounds: Optional[Tuple[T, T]] = None,
+        T: Optional[Type[T]] = None,
+        return_sign: bool = False) -> Union[T, Tuple[T, int]]:
     """Find the closest passing value to the decision boundary of `predicate` within float or integer `bounds`.
 
     If bounds are not passed, conducts an exponential search.
@@ -770,7 +823,7 @@ def binary_search(
     3
     """
     if bounds is None:
-        bounds = exponential_bounds_search(predicate, T)
+        bounds = exponential_bounds_search(predicate, T) # type: ignore
 
     if bounds is None:
         raise ValueError("unable to infer bounds")
@@ -812,14 +865,14 @@ def binary_search(
 
     # optionally return sign
     if return_sign:
-        return value, 1 if minimize else -1
+        return value, 1 if minimize else -1 # type: ignore
     
     return value
 
 
 def exponential_bounds_search(
     predicate: Callable[[Union[float, int]], bool], 
-    T: Optional[type]) -> Optional[Union[Tuple[float, float], Tuple[int, int]]]:
+    T: Optional[Union[Type[float], Type[int]]]) -> Optional[Union[Tuple[float, float], Tuple[int, int]]]:
     """Determine bounds for a binary search via an exponential search,
     in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
     Will attempt to recover once if `predicate` throws an exception, 
@@ -841,7 +894,7 @@ def exponential_bounds_search(
             except TypeError as e:
                 return False
             except OpenDPException as e:
-                if "No match for concrete type" in e.message:
+                if "No match for concrete type" in (e.message or ""):
                     return False
             return True
         
@@ -862,12 +915,14 @@ def exponential_bounds_search(
             # center + 1 included because zero is prone to error
             bands = [center, center + 1, *(center + sign * 2 ** 16 * k for k in range(1, 9))]
 
-        if T == float:
+        elif T == float:
             # searching bands of [2^((k - 1)^2), 2^(k^2)].
             # exponent has ten bits (2.^1024 overflows) so k must be in [0, 32).
             # unlikely to need numbers greater than 2**64, and to avoid overflow from shifted centers,
             #    only check k in [0, 8). Set your own bounds if this is not sufficient
             bands = [center, *(center + sign * 2. ** k ** 2 for k in range(1024 // 32 // 4))]
+        else:
+            raise TypeError(f"unknown type {T}. Must be one of int, float")
 
         for i in range(1, len(bands)):
             # looking for a change in sign that indicates the decision boundary is within this band
@@ -878,8 +933,8 @@ def exponential_bounds_search(
         # No band found!
         return None
 
+    center = {int: 0, float: 0.}[T]
     try:
-        center = {int: 0, float: 0.}[T]
         at_center = predicate(center)
         # search positive bands, then negative bands
         return signed_band_search(center, at_center, 1) or signed_band_search(center, at_center, -1)

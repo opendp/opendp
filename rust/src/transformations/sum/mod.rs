@@ -214,7 +214,7 @@ macro_rules! impl_make_sum_float {
 }
 impl_make_sum_float! { f32 f64 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "partials"))]
 mod tests {
     use super::*;
 

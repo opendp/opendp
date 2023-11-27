@@ -3,16 +3,18 @@ import os
 import platform
 import re
 import sys
-from typing import Optional, Any
+from typing import Dict, List, Optional, Any
+import re
 
 
 # list all acceptable alternative types for each default type
-ATOM_EQUIVALENCE_CLASSES = {
+ATOM_EQUIVALENCE_CLASSES: Dict[str, List[str]] = {
     'i32': ['u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64', 'usize'],
     'f64': ['f32', 'f64'],
     'bool': ['bool'],
     'AnyMeasurementPtr': ['AnyMeasurementPtr', 'AnyMeasurement'],
     'AnyTransformationPtr': ['AnyTransformationPtr'],
+    'ExtrinsicObject': ['ExtrinsicObject']
 }
 
 
@@ -165,10 +167,18 @@ class FfiResult(ctypes.Structure):
     ]
 
 
+class ExtrinsicObject(ctypes.Structure):
+    _fields_ = [
+        ("ptr", ctypes.py_object),
+        ("count", ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.py_object, ctypes.c_bool))
+    ]
+
+
 # def _str_to_c_char_p(s: Optional[str]) -> Optional[bytes]:
 #     return s and s.encode("utf-8")
 def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
-    return s and s.decode("utf-8")
+    if s is not None:
+        return s.decode("utf-8")
 
 
 def unwrap(result, type_) -> Any:
@@ -183,7 +193,7 @@ def unwrap(result, type_) -> Any:
 
     err = result.payload.Err
     err_contents = err.contents
-    variant = _c_char_p_to_str(err_contents.variant)
+    variant = _c_char_p_to_str(err_contents.variant) or "Core"
     message = _c_char_p_to_str(err_contents.message)
     backtrace = _c_char_p_to_str(err_contents.backtrace)
 

@@ -7,14 +7,14 @@ use crate::{
         util::{self, Type},
     },
     traits::Hashable,
-    transformations::{make_create_dataframe, make_split_dataframe},
+    transformations::{make_create_dataframe, make_split_dataframe}, error::Fallible,
 };
 
 use super::{make_split_lines, make_split_records};
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_split_lines() -> FfiResult<*mut AnyTransformation> {
-    make_split_lines().into_any()
+    make_split_lines().into_any().into()
 }
 
 #[no_mangle]
@@ -22,7 +22,7 @@ pub extern "C" fn opendp_transformations__make_split_records(
     separator: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     let separator = try_!(util::to_option_str(separator));
-    make_split_records(separator).into_any()
+    make_split_records(separator).into_any().into()
 }
 
 #[no_mangle]
@@ -30,15 +30,15 @@ pub extern "C" fn opendp_transformations__make_create_dataframe(
     col_names: *const AnyObject,
     K: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<K>(col_names: *const AnyObject) -> FfiResult<*mut AnyTransformation>
+    fn monomorphize<K>(col_names: *const AnyObject) -> Fallible<AnyTransformation>
     where
         K: Hashable,
     {
-        let col_names = try_!(try_as_ref!(col_names).downcast_ref::<Vec<K>>()).clone();
+        let col_names = try_as_ref!(col_names).downcast_ref::<Vec<K>>()?.clone();
         make_create_dataframe::<K>(col_names).into_any()
     }
     let K = try_!(Type::try_from(K));
-    dispatch!(monomorphize, [(K, @hashable)], (col_names))
+    dispatch!(monomorphize, [(K, @hashable)], (col_names)).into()
 }
 
 #[no_mangle]
@@ -50,17 +50,17 @@ pub extern "C" fn opendp_transformations__make_split_dataframe(
     fn monomorphize<K>(
         separator: Option<&str>,
         col_names: *const AnyObject,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> Fallible<AnyTransformation>
     where
         K: Hashable,
     {
-        let col_names = try_!(try_as_ref!(col_names).downcast_ref::<Vec<K>>()).clone();
+        let col_names = try_as_ref!(col_names).downcast_ref::<Vec<K>>()?.clone();
         make_split_dataframe::<K>(separator, col_names).into_any()
     }
     let K = try_!(Type::try_from(K));
     let separator = try_!(util::to_option_str(separator));
 
-    dispatch!(monomorphize, [(K, @hashable)], (separator, col_names))
+    dispatch!(monomorphize, [(K, @hashable)], (separator, col_names)).into()
 }
 
 #[cfg(test)]

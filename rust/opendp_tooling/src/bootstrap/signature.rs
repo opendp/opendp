@@ -209,6 +209,7 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                 i if i == "AnyMetric" => "AnyMetric *".to_string(),
                 i if i == "AnyMeasure" => "AnyMeasure *".to_string(),
                 i if i == "CallbackFn" => "CallbackFn".to_string(),
+                i if i == "TransitionFn" => "TransitionFn".to_string(),
                 i if i == "Fallible" || i == "FfiResult" => {
                     let args = match &segment.arguments {
                         PathArguments::AngleBracketed(ref ab) => &ab.args,

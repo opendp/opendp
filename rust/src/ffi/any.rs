@@ -5,7 +5,6 @@
 //! This is made possible by glue functions which can take the Any representation and downcast to the
 //! correct concrete type.
 
-use std::any;
 use std::any::Any;
 use std::fmt::{Debug, Formatter};
 
@@ -17,17 +16,7 @@ use crate::error::*;
 use crate::interactive::{Answer, Query, Queryable};
 use crate::{err, fallible};
 
-use super::glue::Glue;
 use super::util::{into_owned, Type};
-
-pub type CallbackFn = extern "C" fn(*const AnyObject) -> *mut FfiResult<*mut AnyObject>;
-
-// wrap a CallbackFn in a closure, so that it can be used in transformations and measurements
-pub fn wrap_func(func: CallbackFn) -> impl Fn(&AnyObject) -> Fallible<AnyObject> {
-    move |arg: &AnyObject| -> Fallible<AnyObject> {
-        into_owned(func(arg as *const AnyObject))?.into()
-    }
-}
 
 /// A trait for something that can be downcast to a concrete type.
 pub trait Downcast {
@@ -36,179 +25,20 @@ pub trait Downcast {
     fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T>;
 }
 
-/// A struct wrapping a Box<dyn Any>, optionally implementing Clone and/or PartialEq.
-pub struct AnyBoxBase<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> {
-    pub value: Box<dyn Any>,
-    clone_glue: Option<Glue<fn(&Self) -> Self>>,
-    partial_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
-    debug_glue: Option<Glue<fn(&Self) -> String>>,
-}
-
-impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool>
-    AnyBoxBase<CLONE, PARTIALEQ, DEBUG>
-{
-    fn new_base<T: 'static>(
-        value: T,
-        clone_glue: Option<Glue<fn(&Self) -> Self>>,
-        partial_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
-        debug_glue: Option<Glue<fn(&Self) -> String>>,
-    ) -> Self {
-        Self {
-            value: Box::new(value),
-            clone_glue,
-            partial_eq_glue,
-            debug_glue,
-        }
-    }
-    fn make_clone_glue<T: 'static + Clone>() -> Glue<fn(&Self) -> Self> {
-        Glue::new(|self_: &Self| {
-            Self::new_base(
-                self_
-                    .value
-                    .downcast_ref::<T>()
-                    .unwrap_assert("Failed downcast of AnyBox value")
-                    .clone(),
-                self_.clone_glue.clone(),
-                self_.partial_eq_glue.clone(),
-                self_.debug_glue.clone(),
-            )
-        })
-    }
-    fn make_eq_glue<T: 'static + PartialEq>() -> Glue<fn(&Self, &Self) -> bool> {
-        Glue::new(|self_: &Self, other: &Self| {
-            // The first downcast will always succeed, so equality check is all that's necessary.
-            self_.value.downcast_ref::<T>() == other.value.downcast_ref::<T>()
-        })
-    }
-    fn make_debug_glue<T: 'static + Debug>() -> Glue<fn(&Self) -> String> {
-        Glue::new(|self_: &Self| {
-            format!(
-                "{:?}",
-                self_
-                    .value
-                    .downcast_ref::<T>()
-                    .unwrap_assert("Failed downcast of AnyBox value")
-            )
-        })
-    }
-}
-
-impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> Downcast
-    for AnyBoxBase<CLONE, PARTIALEQ, DEBUG>
-{
-    fn downcast<T: 'static>(self) -> Fallible<T> {
-        self.value
-            .downcast()
-            .map_err(|_| {
-                err!(
-                    FailedCast,
-                    "Failed downcast of AnyBox to {}",
-                    any::type_name::<T>()
-                )
-            })
-            .map(|x| *x)
-    }
-    fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
-        self.value.downcast_ref().ok_or_else(|| {
-            let other_type = Type::of_id(&self.value.type_id())
-                .map(|t| format!(" AnyBox contains {:?}.", t))
-                .unwrap_or_default();
-            err!(
-                FailedCast,
-                "Failed downcast_ref of AnyBox to {}.{}",
-                any::type_name::<T>(),
-                other_type
-            )
-        })
-    }
-    fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
-        let type_id = self.value.type_id();
-        self.value.downcast_mut().ok_or_else(|| {
-            let other_type = Type::of_id(&type_id)
-                .map(|t| format!(" AnyBox contains {:?}.", t))
-                .unwrap_or_default();
-            err!(
-                FailedCast,
-                "Failed downcast_mut of AnyBox to {}.{}",
-                any::type_name::<T>(),
-                other_type
-            )
-        })
-    }
-}
-
-impl<const PARTIALEQ: bool, const DEBUG: bool> Clone for AnyBoxBase<true, PARTIALEQ, DEBUG> {
-    fn clone(&self) -> Self {
-        (self
-            .clone_glue
-            .as_ref()
-            .unwrap_assert("clone_glue always exists for CLONE=true AnyBoxBase"))(self)
-    }
-}
-
-impl<const CLONE: bool, const DEBUG: bool> PartialEq for AnyBoxBase<CLONE, true, DEBUG> {
-    fn eq(&self, other: &Self) -> bool {
-        (self
-            .partial_eq_glue
-            .as_ref()
-            .unwrap_assert("eq_glue always exists for PARTIALEQ=true AnyBoxBase"))(
-            self, other
-        )
-    }
-}
-
-impl<const CLONE: bool, const PARTIALEQ: bool> Debug for AnyBoxBase<CLONE, PARTIALEQ, true> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(
-            f,
-            "{}",
-            (self
-                .debug_glue
-                .as_ref()
-                .unwrap_assert("debug_glue always exists for DEBUG=true AnyBoxBase"))(
-                self
-            )
-        )
-    }
-}
-
-/// An AnyBox not implementing optional traits.
-pub type AnyBox = AnyBoxBase<false, false, false>;
-
-impl AnyBox {
-    pub fn new<T: 'static>(value: T) -> Self {
-        Self::new_base(value, None, None, None)
-    }
-}
-
-pub type AnyClonePartialEqDebugBox = AnyBoxBase<true, true, true>;
-
-impl AnyClonePartialEqDebugBox {
-    pub fn new_clone_partial_eq_debug<T: 'static + Clone + PartialEq + Debug>(value: T) -> Self {
-        Self::new_base(
-            value,
-            Some(Self::make_clone_glue::<T>()),
-            Some(Self::make_eq_glue::<T>()),
-            Some(Self::make_debug_glue::<T>()),
-        )
-    }
-}
-
 /// A struct that can wrap any object.
 pub struct AnyObject {
     pub type_: Type,
-    value: AnyBox,
+    value: Box<dyn Any>,
 }
 
 impl AnyObject {
     pub fn new<T: 'static>(value: T) -> Self {
         AnyObject {
             type_: Type::of::<T>(),
-            value: AnyBox::new(value),
+            value: Box::new(value),
         }
     }
 
-    #[cfg(test)]
     pub fn new_raw<T: 'static>(value: T) -> *mut Self {
         crate::ffi::util::into_raw(Self::new(value))
     }
@@ -216,20 +46,311 @@ impl AnyObject {
 
 impl Downcast for AnyObject {
     fn downcast<T: 'static>(self) -> Fallible<T> {
-        self.value.downcast()
+        self.value
+            .downcast::<T>()
+            .map_err(|_| {
+                err!(
+                    FailedCast,
+                    "Expected data of type {}. Got {}",
+                    Type::of::<T>().to_string(),
+                    self.type_.to_string()
+                )
+            })
+            .map(|v| *v)
     }
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
-        self.value.downcast_ref()
+        self.value.downcast_ref::<T>().ok_or_else(|| {
+            err!(
+                FailedCast,
+                "Expected data of type {}. Got {}",
+                Type::of::<T>().to_string(),
+                self.type_.to_string()
+            )
+        })
     }
     fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
-        self.value.downcast_mut()
+        self.value.downcast_mut::<T>().ok_or_else(|| {
+            err!(
+                FailedCast,
+                "Expected data of type {}. Got {}",
+                Type::of::<T>().to_string(),
+                self.type_.to_string()
+            )
+        })
     }
 }
 
-#[allow(dead_code)]
-pub enum Either<L, R> {
-    Left(L),
-    Right(R),
+/// A struct wrapping a Box<dyn Any + Send + Sync>, with closures allowing it to implement Clone, PartialEq and Debug.
+pub struct ElementBox {
+    pub value: Box<dyn Any + Send + Sync>,
+    clone_glue: fn(&Self) -> Self,
+    partial_eq_glue: fn(&Self, &Self) -> bool,
+    debug_glue: fn(&Self) -> String,
+}
+
+impl ElementBox {
+    pub fn new<T: 'static + Clone + PartialEq + Debug + Send + Sync>(value: T) -> Self {
+        Self {
+            value: Box::new(value),
+            clone_glue: Self::make_clone_glue::<T>(),
+            partial_eq_glue: Self::make_eq_glue::<T>(),
+            debug_glue: Self::make_debug_glue::<T>(),
+        }
+    }
+
+    fn make_clone_glue<T: 'static + Clone + PartialEq + Debug + Send + Sync>() -> fn(&Self) -> Self
+    {
+        |self_: &Self| {
+            Self::new(
+                self_
+                    .value
+                    .downcast_ref::<T>()
+                    .unwrap_assert("Failed downcast of ElementBox value")
+                    .clone(),
+            )
+        }
+    }
+    fn make_eq_glue<T: 'static + PartialEq + Send + Sync>() -> fn(&Self, &Self) -> bool {
+        |self_: &Self, other: &Self| {
+            // The first downcast will always succeed, so equality check is all that's necessary.
+            self_.value.downcast_ref::<T>() == other.value.downcast_ref::<T>()
+        }
+    }
+    fn make_debug_glue<T: 'static + Debug + Send + Sync>() -> fn(&Self) -> String {
+        |self_: &Self| {
+            format!(
+                "{:?}",
+                self_
+                    .value
+                    .downcast_ref::<T>()
+                    .unwrap_assert("Failed downcast of AnyBox value")
+            )
+        }
+    }
+}
+
+impl Downcast for ElementBox {
+    fn downcast<T: 'static>(self) -> Fallible<T> {
+        self.value
+            .downcast()
+            .map_err(|_| {
+                err!(
+                    FailedCast,
+                    "Expected data of type {}",
+                    Type::of::<T>().to_string()
+                )
+            })
+            .map(|x| *x)
+    }
+    fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
+        self.value.downcast_ref().ok_or_else(|| {
+            err!(
+                FailedCast,
+                "Expected data of type {}",
+                Type::of::<T>().to_string()
+            )
+        })
+    }
+    fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
+        self.value.downcast_mut().ok_or_else(|| {
+            err!(
+                FailedCast,
+                "Expected data of type {}",
+                Type::of::<T>().to_string()
+            )
+        })
+    }
+}
+
+impl Clone for ElementBox {
+    fn clone(&self) -> Self {
+        (self.clone_glue)(self)
+    }
+}
+
+impl PartialEq for ElementBox {
+    fn eq(&self, other: &Self) -> bool {
+        (self.partial_eq_glue)(self, other)
+    }
+}
+
+impl Debug for ElementBox {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{}", (self.debug_glue)(self))
+    }
+}
+
+#[derive(Clone, PartialEq)]
+pub struct AnyDomain {
+    pub type_: Type,
+    pub carrier_type: Type,
+    pub domain: ElementBox,
+    member_glue: fn(&Self, &<Self as Domain>::Carrier) -> Fallible<bool>,
+}
+
+impl AnyDomain {
+    pub fn new<D: 'static + Domain>(domain: D) -> Self {
+        Self {
+            type_: Type::of::<D>(),
+            carrier_type: Type::of::<D::Carrier>(),
+            domain: ElementBox::new(domain),
+            member_glue: |self_: &Self, val: &<Self as Domain>::Carrier| {
+                let self_ = self_
+                    .downcast_ref::<D>()
+                    .unwrap_assert("downcast of AnyDomain to constructed type will always work");
+                self_.member(val.downcast_ref::<D::Carrier>()?)
+            },
+        }
+    }
+
+    #[cfg(test)]
+    pub fn new_raw<D: 'static + Domain>(value: D) -> *mut Self {
+        crate::ffi::util::into_raw(Self::new(value))
+    }
+}
+
+macro_rules! wrap_downcast_err {
+    ($exp:expr, $ty:expr) => {{
+        $exp.map_err(|mut e| {
+            e.message = e.message.map(|m| format!("{}. Got {}", m, $ty.to_string()));
+            e
+        })
+    }};
+}
+pub(crate) use wrap_downcast_err;
+
+impl Downcast for AnyDomain {
+    fn downcast<T: 'static>(self) -> Fallible<T> {
+        wrap_downcast_err!(self.domain.downcast(), self.type_)
+    }
+    fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
+        wrap_downcast_err!(self.domain.downcast_ref(), self.type_)
+    }
+    fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
+        wrap_downcast_err!(self.domain.downcast_mut(), self.type_)
+    }
+}
+
+impl Domain for AnyDomain {
+    type Carrier = AnyObject;
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        (self.member_glue)(self, val)
+    }
+}
+
+impl Debug for AnyDomain {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{:?}", self.domain)
+    }
+}
+
+#[derive(Clone, PartialEq)]
+pub struct AnyMeasure {
+    pub measure: ElementBox,
+    pub type_: Type,
+    pub distance_type: Type,
+}
+
+impl AnyMeasure {
+    pub fn new<M: 'static + Measure>(measure: M) -> Self {
+        Self {
+            measure: ElementBox::new(measure),
+            type_: Type::of::<M>(),
+            distance_type: Type::of::<M::Distance>(),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn new_raw<D: 'static + Measure>(value: D) -> *mut Self {
+        crate::ffi::util::into_raw(Self::new(value))
+    }
+}
+
+impl Downcast for AnyMeasure {
+    fn downcast<T: 'static>(self) -> Fallible<T> {
+        wrap_downcast_err!(self.measure.downcast(), self.type_)
+    }
+    fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
+        wrap_downcast_err!(self.measure.downcast_ref(), self.type_)
+    }
+    fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
+        wrap_downcast_err!(self.measure.downcast_mut(), self.type_)
+    }
+}
+
+impl Default for AnyMeasure {
+    fn default() -> Self {
+        unimplemented!("called AnyMeasure::default()")
+    }
+}
+
+impl Measure for AnyMeasure {
+    type Distance = AnyObject;
+}
+
+impl Debug for AnyMeasure {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        self.measure.fmt(f)
+    }
+}
+
+#[derive(Clone, PartialEq)]
+pub struct AnyMetric {
+    pub type_: Type,
+    pub distance_type: Type,
+    pub metric: ElementBox,
+}
+
+impl AnyMetric {
+    pub fn new<M: 'static + Metric>(metric: M) -> Self {
+        Self {
+            type_: Type::of::<M>(),
+            distance_type: Type::of::<M::Distance>(),
+            metric: ElementBox::new(metric),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn new_raw<D: 'static + Metric>(value: D) -> *mut Self {
+        crate::ffi::util::into_raw(Self::new(value))
+    }
+}
+
+impl Downcast for AnyMetric {
+    fn downcast<T: 'static>(self) -> Fallible<T> {
+        wrap_downcast_err!(self.metric.downcast(), self.type_)
+    }
+    fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
+        wrap_downcast_err!(self.metric.downcast_ref(), self.type_)
+    }
+    fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
+        wrap_downcast_err!(self.metric.downcast_mut(), self.type_)
+    }
+}
+
+impl Default for AnyMetric {
+    fn default() -> Self {
+        unimplemented!("called AnyMetric::default()")
+    }
+}
+
+impl Metric for AnyMetric {
+    type Distance = AnyObject;
+}
+
+impl Debug for AnyMetric {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        self.metric.fmt(f)
+    }
+}
+
+pub type CallbackFn = extern "C" fn(*const AnyObject) -> *mut FfiResult<*mut AnyObject>;
+
+// wrap a CallbackFn in a closure, so that it can be used in transformations and measurements
+pub fn wrap_func(func: CallbackFn) -> impl Fn(&AnyObject) -> Fallible<AnyObject> {
+    move |arg: &AnyObject| -> Fallible<AnyObject> {
+        into_owned(func(arg as *const AnyObject))?.into()
+    }
 }
 
 impl<DI: Domain, Q: 'static, A: 'static, MI: Metric, MO: Measure>
@@ -255,9 +376,14 @@ where
                             if query.downcast_ref::<QueryType>().is_some() {
                                 return Ok(Answer::internal(Type::of::<Q>()));
                             }
-                            let Answer::Internal(a) = inner_qbl.eval_query(Query::Internal(query))? else {
-                                    return fallible!(FailedFunction, "internal query returned external answer")
-                                };
+                            let Answer::Internal(a) =
+                                inner_qbl.eval_query(Query::Internal(query))?
+                            else {
+                                return fallible!(
+                                    FailedFunction,
+                                    "internal query returned external answer"
+                                );
+                            };
                             Ok(Answer::Internal(a))
                         }
                     })
@@ -266,7 +392,8 @@ where
             self.input_metric.clone(),
             self.output_measure.clone(),
             self.privacy_map.clone(),
-        ).expect("AnyDomain is not checked for compatibility")
+        )
+        .expect("AnyDomain is not checked for compatibility")
     }
 }
 
@@ -293,8 +420,13 @@ where
                             .map(AnyObject::new)
                             .map(Answer::External),
                         Query::Internal(query) => {
-                            let Answer::Internal(a) = inner_qbl.eval_query(Query::Internal(query))? else {
-                                return fallible!(FailedFunction, "internal query returned external answer")
+                            let Answer::Internal(a) =
+                                inner_qbl.eval_query(Query::Internal(query))?
+                            else {
+                                return fallible!(
+                                    FailedFunction,
+                                    "internal query returned external answer"
+                                );
                             };
                             Ok(Answer::Internal(a))
                         }
@@ -304,179 +436,22 @@ where
             self.input_metric.clone(),
             self.output_measure.clone(),
             self.privacy_map.clone(),
-        ).expect("AnyDomain is not checked for compatibility")
-    }
-}
-
-#[derive(Clone, PartialEq)]
-pub struct AnyDomain {
-    pub type_: Type,
-    pub carrier_type: Type,
-    pub domain: AnyClonePartialEqDebugBox,
-    member_glue: Glue<fn(&Self, &<Self as Domain>::Carrier) -> Fallible<bool>>,
-}
-
-impl AnyDomain {
-    pub fn new<D: 'static + Domain>(domain: D) -> Self {
-        Self {
-            type_: Type::of::<D>(),
-            carrier_type: Type::of::<D::Carrier>(),
-            domain: AnyClonePartialEqDebugBox::new_clone_partial_eq_debug(domain),
-            member_glue: Glue::new(|self_: &Self, val: &<Self as Domain>::Carrier| {
-                let self_ = self_
-                    .downcast_ref::<D>()
-                    .unwrap_assert("downcast of AnyDomain to constructed type will always work");
-                self_.member(val.downcast_ref::<D::Carrier>()?)
-            }),
-        }
-    }
-
-    #[cfg(test)]
-    pub fn new_raw<D: 'static + Domain>(value: D) -> *mut Self {
-        crate::ffi::util::into_raw(Self::new(value))
-    }
-}
-
-impl Downcast for AnyDomain {
-    fn downcast<T: 'static>(self) -> Fallible<T> {
-        self.domain.downcast()
-    }
-    fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
-        self.domain.downcast_ref()
-    }
-    fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
-        self.domain.downcast_mut()
-    }
-}
-
-impl Domain for AnyDomain {
-    type Carrier = AnyObject;
-    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        (self.member_glue)(self, val)
-    }
-}
-
-impl Debug for AnyDomain {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{:?}", self.domain)
-    }
-}
-
-#[derive(Clone, PartialEq)]
-pub struct AnyMeasure {
-    pub measure: AnyClonePartialEqDebugBox,
-    pub type_: Type,
-    pub distance_type: Type,
-}
-
-impl AnyMeasure {
-    pub fn new<M: 'static + Measure>(measure: M) -> Self {
-        Self {
-            measure: AnyClonePartialEqDebugBox::new_clone_partial_eq_debug(measure),
-            type_: Type::of::<M>(),
-            distance_type: Type::of::<M::Distance>(),
-        }
-    }
-
-    #[cfg(test)]
-    pub fn new_raw<D: 'static + Measure>(value: D) -> *mut Self {
-        crate::ffi::util::into_raw(Self::new(value))
-    }
-}
-
-impl Downcast for AnyMeasure {
-    fn downcast<T: 'static>(self) -> Fallible<T> {
-        self.measure.downcast()
-    }
-    fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
-        self.measure.downcast_ref()
-    }
-    fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
-        self.measure.downcast_mut()
-    }
-}
-
-impl Default for AnyMeasure {
-    fn default() -> Self {
-        unimplemented!("called AnyMeasure::default()")
-    }
-}
-
-impl Measure for AnyMeasure {
-    type Distance = AnyObject;
-}
-
-impl Debug for AnyMeasure {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        self.measure.fmt(f)
-    }
-}
-
-#[derive(Clone, PartialEq)]
-pub struct AnyMetric {
-    pub type_: Type,
-    pub distance_type: Type,
-    pub metric: AnyClonePartialEqDebugBox,
-}
-
-impl AnyMetric {
-    pub fn new<M: 'static + Metric>(metric: M) -> Self {
-        Self {
-            type_: Type::of::<M>(),
-            distance_type: Type::of::<M::Distance>(),
-            metric: AnyClonePartialEqDebugBox::new_clone_partial_eq_debug(metric),
-        }
-    }
-
-    #[cfg(test)]
-    pub fn new_raw<D: 'static + Metric>(value: D) -> *mut Self {
-        crate::ffi::util::into_raw(Self::new(value))
-    }
-}
-
-impl Downcast for AnyMetric {
-    fn downcast<T: 'static>(self) -> Fallible<T> {
-        self.metric.downcast()
-    }
-    fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
-        self.metric.downcast_ref()
-    }
-    fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
-        self.metric.downcast_mut()
-    }
-}
-
-impl Default for AnyMetric {
-    fn default() -> Self {
-        unimplemented!("called AnyMetric::default()")
-    }
-}
-
-impl Metric for AnyMetric {
-    type Distance = AnyObject;
-}
-
-impl Debug for AnyMetric {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        self.metric.fmt(f)
+        )
+        .expect("AnyDomain is not checked for compatibility")
     }
 }
 
 pub(crate) type AnyFunction = Function<AnyObject, AnyObject>;
 
 impl<M: Metric> MetricSpace for (AnyDomain, M) {
-    fn check(&self) -> bool {
+    fn check_space(&self) -> Fallible<()> {
         // TODO: check that the domain is compatible with the metric
-        true
+        Ok(())
     }
 }
 
-pub trait IntoAnyFunctionExt {
-    fn into_any(self) -> AnyFunction;
-}
-
-impl<TI: 'static, TO: 'static> IntoAnyFunctionExt for Function<TI, TO> {
-    fn into_any(self) -> AnyFunction {
+impl<TI: 'static, TO: 'static> Function<TI, TO> {
+    pub fn into_any(self) -> AnyFunction {
         Function::new_fallible(move |arg: &AnyObject| -> Fallible<AnyObject> {
             let arg = arg.downcast_ref()?;
             let res = self.eval(arg);
@@ -485,12 +460,8 @@ impl<TI: 'static, TO: 'static> IntoAnyFunctionExt for Function<TI, TO> {
     }
 }
 
-pub trait IntoAnyFunctionOutExt {
-    fn into_any_out(self) -> AnyFunction;
-}
-
-impl<TO: 'static> IntoAnyFunctionOutExt for Function<AnyObject, TO> {
-    fn into_any_out(self) -> AnyFunction {
+impl<TO: 'static> Function<AnyObject, TO> {
+    pub fn into_any_out(self) -> AnyFunction {
         let function = move |arg: &AnyObject| -> Fallible<AnyObject> {
             let res = self.eval(arg);
             res.map(AnyObject::new)
@@ -537,22 +508,16 @@ where
 /// passed back and forth over FFI.
 pub type AnyMeasurement = Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>;
 
-/// A trait for turning a Measurement into an AnyMeasurement. We can't used From because it'd conflict
-/// with blanket implementation, and we need an extension trait to add methods to Measurement.
-pub trait IntoAnyMeasurementExt {
-    fn into_any(self) -> AnyMeasurement;
-}
-
 /// Turn a Measurement into an AnyMeasurement.
 impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
-    IntoAnyMeasurementExt for Measurement<DI, TO, MI, MO>
+    Measurement<DI, TO, MI, MO>
 where
     DI::Carrier: 'static,
     MI::Distance: 'static,
     MO::Distance: 'static,
     (DI, MI): MetricSpace,
 {
-    fn into_any(self) -> AnyMeasurement {
+    pub fn into_any(self) -> AnyMeasurement {
         AnyMeasurement::new(
             AnyDomain::new(self.input_domain.clone()),
             self.function.clone().into_any(),
@@ -564,14 +529,8 @@ where
     }
 }
 
-/// A trait for turning a Measurement into an AnyMeasurement, when only the output side needs to be wrapped.
-/// Used for composition.
-pub trait IntoAnyMeasurementOutExt {
-    fn into_any_out(self) -> AnyMeasurement;
-}
-
-impl<TO: 'static> IntoAnyMeasurementOutExt for Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
-    fn into_any_out(self) -> AnyMeasurement {
+impl<TO: 'static> Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
+    pub fn into_any_out(self) -> AnyMeasurement {
         Measurement::new(
             self.input_domain.clone(),
             self.function.clone().into_any_out(),
@@ -587,14 +546,8 @@ impl<TO: 'static> IntoAnyMeasurementOutExt for Measurement<AnyDomain, TO, AnyMet
 /// passed back and forth over FFI.
 pub type AnyTransformation = Transformation<AnyDomain, AnyDomain, AnyMetric, AnyMetric>;
 
-/// A trait for turning a Transformation into an AnyTransformation. We can't used From because it'd conflict
-/// with blanket implementation, and we need an extension trait to add methods to Measurement.
-pub trait IntoAnyTransformationExt {
-    fn into_any(self) -> AnyTransformation;
-}
-
 impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
-    IntoAnyTransformationExt for Transformation<DI, DO, MI, MO>
+    Transformation<DI, DO, MI, MO>
 where
     DI::Carrier: 'static,
     DO::Carrier: 'static,
@@ -603,7 +556,9 @@ where
     (DI, MI): MetricSpace,
     (DO, MO): MetricSpace,
 {
-    fn into_any(self) -> AnyTransformation {
+    // A trait for turning a Transformation into an AnyTransformation. We can't used From because it'd conflict
+    // with blanket implementation, and we need an extension trait to add methods to Measurement.
+    pub fn into_any(self) -> AnyTransformation {
         AnyTransformation::new(
             AnyDomain::new(self.input_domain.clone()),
             AnyDomain::new(self.output_domain.clone()),

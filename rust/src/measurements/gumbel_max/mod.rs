@@ -8,7 +8,7 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measures::MaxDivergence,
-    metrics::LInfDiffDistance,
+    metrics::LInfDistance,
     traits::{Float, Number},
 };
 
@@ -39,45 +39,45 @@ pub enum Optimize {
 ///
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable VectorDomain.
-/// * `input_metric` - Metric on the input domain. Must be LInfDiffDistance
-/// * `temperature` - Higher temperatures are more private.
+/// * `input_metric` - Metric on the input domain. Must be LInfDistance
+/// * `scale` - Higher scales are more private.
 /// * `optimize` - Indicate whether to privately return the "Max" or "Min"
 ///
 /// # Generics
 /// * `TIA` - Atom Input Type. Type of each element in the score vector.
 /// * `QO` - Output Distance Type.
-pub fn make_base_discrete_exponential<TIA, QO>(
+pub fn make_report_noisy_max_gumbel<TIA, QO>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
-    input_metric: LInfDiffDistance<TIA>,
-    temperature: QO,
+    input_metric: LInfDistance<TIA>,
+    scale: QO,
     optimize: Optimize,
 ) -> Fallible<
-    Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDiffDistance<TIA>, MaxDivergence<QO>>,
+    Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, MaxDivergence<QO>>,
 >
 where
     TIA: Number + CastInternalRational,
     QO: CastInternalRational + DistanceConstant<TIA> + Float,
 {
     if input_domain.element_domain.nullable() {
-        return fallible!(FailedFunction, "input domain must be non-nullable");
+        return fallible!(MakeMeasurement, "input domain must be non-nullable");
     }
 
-    if temperature.is_sign_negative() || temperature.is_zero() {
-        return fallible!(FailedFunction, "temperature must be positive");
+    if scale.is_sign_negative() {
+        return fallible!(MakeMeasurement, "scale must not be negative");
     }
 
-    let temp_frac = temperature.clone().into_rational()?;
+    let scale_frac = scale.clone().into_rational()?;
 
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &Vec<TIA>| {
             (arg.iter().cloned().enumerate())
                 .map(|(i, v)| {
-                    let mut shift = v.into_rational()? / &temp_frac;
+                    let mut shift = v.into_rational()?;
                     if optimize == Optimize::Min {
                         shift.neg_assign();
                     }
-                    Ok((i, GumbelPSRN::new(shift)))
+                    Ok((i, GumbelPSRN::new(shift, scale_frac.clone())))
                 })
                 .reduce(|l, r| {
                     let (mut l, mut r) = (l?, r?);
@@ -86,30 +86,37 @@ where
                 .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
                 .map(|v| v.0)
         }),
-        input_metric,
+        input_metric.clone(),
         MaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &TIA| {
-            let d_in = QO::inf_cast(d_in.clone())?;
+            // convert L_\infty distance to range distance
+            let d_in = input_metric.range_distance(*d_in)?;
+
+            // convert data type to QO
+            let d_in = QO::inf_cast(d_in)?;
+
             if d_in.is_sign_negative() {
                 return fallible!(InvalidDistance, "sensitivity must be non-negative");
             }
-            if temperature.is_zero() {
+
+            if scale.is_zero() {
                 return Ok(QO::infinity());
             }
-            // d_out >= d_in / temperature
-            d_in.inf_div(&temperature)
+
+            // d_out >= d_in / scale
+            d_in.inf_div(&scale)
         }),
     )
 }
 
 #[cfg(not(feature = "use-mpfr"))]
-pub fn make_base_discrete_exponential<TIA, QO>(
+pub fn make_report_noisy_max_gumbel<TIA, QO>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
-    input_metric: LInfDiffDistance<TIA>,
-    temperature: QO,
+    input_metric: LInfDistance<TIA>,
+    scale: QO,
     optimize: Optimize,
 ) -> Fallible<
-    Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDiffDistance<TIA>, MaxDivergence<QO>>,
+    Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, MaxDivergence<QO>>,
 >
 where
     TIA: Clone + Number,
@@ -120,11 +127,11 @@ where
         + crate::traits::samplers::SampleUniform,
 {
     if input_domain.element_domain.nullable() {
-        return fallible!(FailedFunction, "input domain must be non-nullable");
+        return fallible!(MakeMeasurement, "input domain must be non-nullable");
     }
 
-    if temperature.is_sign_negative() || temperature.is_zero() {
-        return fallible!(MakeMeasurement, "temperature must be positive");
+    if scale.is_sign_negative() {
+        return fallible!(MakeMeasurement, "scale must not be negative");
     }
 
     let sign = match optimize {
@@ -137,7 +144,7 @@ where
         Function::new_fallible(move |arg: &Vec<TIA>| {
             arg.iter()
                 .cloned()
-                .map(|v| QO::round_cast(v).map(|v| sign * v / temperature))
+                .map(|v| QO::round_cast(v).map(|v| sign * v / scale))
                 // enumerate before sampling so that indexes are inside the result
                 .enumerate()
                 // gumbel samples are porous
@@ -152,18 +159,23 @@ where
                 // only return the index
                 .map(|v| v.0)
         }),
-        input_metric,
+        input_metric.clone(),
         MaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &TIA| {
-            let d_in = QO::inf_cast(d_in.clone())?;
+            // convert L_\infty distance to range distance
+            let d_in = input_metric.range_distance(*d_in)?;
+
+            // convert data type to QO
+            let d_in = QO::inf_cast(d_in)?;
+
             if d_in.is_sign_negative() {
                 return fallible!(InvalidDistance, "sensitivity must be non-negative");
             }
             if d_in.is_zero() {
                 return Ok(QO::zero());
             }
-            // d_out >= d_in / temperature
-            d_in.inf_div(&temperature)
+            // d_out >= d_in / scale
+            d_in.inf_div(&scale)
         }),
     )
 }
@@ -178,8 +190,8 @@ pub mod test_exponential {
     #[test]
     fn test_exponential() -> Fallible<()> {
         let input_domain = VectorDomain::new(AtomDomain::default());
-        let input_metric = LInfDiffDistance::default();
-        let de = make_base_discrete_exponential(input_domain, input_metric, 1., Optimize::Max)?;
+        let input_metric = LInfDistance::default();
+        let de = make_report_noisy_max_gumbel(input_domain, input_metric, 1., Optimize::Max)?;
         let release = de.invoke(&vec![1., 2., 3., 2., 1.])?;
         println!("{:?}", release);
 

@@ -7,15 +7,15 @@ use opendp_derive::bootstrap;
 
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
 use crate::ffi::any::{
-    AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyQueryable,
-    AnyTransformation, Downcast, IntoAnyFunctionExt, IntoAnyMeasurementExt,
-    IntoAnyTransformationExt, QueryType, CallbackFn, wrap_func,
+    wrap_func, AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject,
+    AnyQueryable, AnyTransformation, CallbackFn, Downcast, QueryType,
 };
 use crate::ffi::util::into_c_char_p;
 use crate::ffi::util::{self, c_bool, Type};
+use crate::interactive::{Answer, Query, Queryable};
 use crate::{try_, try_as_ref};
 
-use super::Function;
+use super::{Domain, Function, Measure, Measurement, Metric, MetricSpace, Transformation};
 
 #[repr(C)]
 pub struct FfiSlice {
@@ -143,12 +143,17 @@ impl<T: Debug> Debug for FfiResult<*mut T> {
 /// because there's a blanket implementation of From for FfiResult. We can't do this with a method on Result
 /// because it comes from another crate. So we need a separate trait.
 pub trait IntoAnyMeasurementFfiResultExt {
-    fn into_any(self) -> FfiResult<*mut AnyMeasurement>;
+    fn into_any(self) -> Fallible<AnyMeasurement>;
 }
 
-impl<T: IntoAnyMeasurementExt> IntoAnyMeasurementFfiResultExt for Fallible<T> {
-    fn into_any(self) -> FfiResult<*mut AnyMeasurement> {
-        self.map(IntoAnyMeasurementExt::into_any).into()
+impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
+    IntoAnyMeasurementFfiResultExt for Fallible<Measurement<DI, TO, MI, MO>>
+where
+    MO::Distance: 'static,
+    (DI, MI): MetricSpace,
+{
+    fn into_any(self) -> Fallible<AnyMeasurement> {
+        self.map(Measurement::into_any)
     }
 }
 
@@ -156,24 +161,32 @@ impl<T: IntoAnyMeasurementExt> IntoAnyMeasurementFfiResultExt for Fallible<T> {
 /// because there's a blanket implementation of From for FfiResult. We can't do this with a method on Result
 /// because it comes from another crate. So we need a separate trait.
 pub trait IntoAnyTransformationFfiResultExt {
-    fn into_any(self) -> FfiResult<*mut AnyTransformation>;
+    fn into_any(self) -> Fallible<AnyTransformation>;
 }
 
-impl<T: IntoAnyTransformationExt> IntoAnyTransformationFfiResultExt for Fallible<T> {
-    fn into_any(self) -> FfiResult<*mut AnyTransformation> {
-        self.map(IntoAnyTransformationExt::into_any).into()
+impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
+    IntoAnyTransformationFfiResultExt for Fallible<Transformation<DI, DO, MI, MO>>
+where
+    DO::Carrier: 'static,
+    MO::Distance: 'static,
+    (DI, MI): MetricSpace,
+    (DO, MO): MetricSpace,
+{
+    fn into_any(self) -> Fallible<AnyTransformation> {
+        self.map(Transformation::into_any)
     }
 }
 
 pub trait IntoAnyFunctionFfiResultExt {
-    fn into_any(self) -> FfiResult<*mut AnyFunction>;
+    fn into_any(self) -> Fallible<AnyFunction>;
 }
 
-impl<T: IntoAnyFunctionExt> IntoAnyFunctionFfiResultExt for Fallible<T> {
-    fn into_any(self) -> FfiResult<*mut AnyFunction> {
-        self.map(IntoAnyFunctionExt::into_any).into()
+impl<TI: 'static, TO: 'static> IntoAnyFunctionFfiResultExt for Fallible<Function<TI, TO>> {
+    fn into_any(self) -> Fallible<AnyFunction> {
+        self.map(Function::into_any)
     }
 }
+
 
 impl From<FfiError> for Error {
     fn from(val: FfiError) -> Self {
@@ -660,7 +673,6 @@ pub extern "C" fn opendp_core__measurement_output_distance_type(
     )))
 }
 
-
 #[bootstrap(
     name = "new_function",
     features("contrib"),
@@ -689,7 +701,6 @@ pub extern "C" fn opendp_core__new_function(
     let _TO = TO;
     FfiResult::Ok(util::into_raw(Function::new_fallible(wrap_func(function))))
 }
-
 
 #[bootstrap(
     name = "function_eval",
@@ -768,6 +779,71 @@ pub extern "C" fn opendp_core__queryable_query_type(
     let this = try_!(this.downcast_mut::<AnyQueryable>());
     let answer: Type = try_!(this.eval_internal(&QueryType));
     FfiResult::Ok(try_!(into_c_char_p(answer.descriptor.to_string())))
+}
+
+type TransitionFn = extern "C" fn(*const AnyObject, c_bool) -> *mut FfiResult<*mut AnyObject>;
+
+// wrap a TransitionFn in a closure, so that it can be used in Queryables
+fn wrap_transition(
+    transition: TransitionFn,
+    Q: Type,
+) -> impl FnMut(&AnyQueryable, Query<AnyObject>) -> Fallible<Answer<AnyObject>> {
+    fn eval(transition: &TransitionFn, q: &AnyObject, is_internal: bool) -> Fallible<AnyObject> {
+        util::into_owned(transition(
+            q as *const AnyObject,
+            util::from_bool(is_internal),
+        ))?
+        .into()
+    }
+
+    move |_self: &AnyQueryable, arg: Query<AnyObject>| -> Fallible<Answer<AnyObject>> {
+        Ok(match arg {
+            Query::External(q) => Answer::External(eval(&transition, q, false)?),
+            Query::Internal(q) => {
+                if q.downcast_ref::<QueryType>().is_some() {
+                    return Ok(Answer::internal(Q.clone()));
+                }
+                let q = q
+                    .downcast_ref::<AnyObject>()
+                    .ok_or_else(|| err!(FFI, "failed to downcast internal query to AnyObject"))?;
+
+                Answer::Internal(Box::new(eval(&transition, q, true)?))
+            }
+        })
+    }
+}
+
+#[bootstrap(
+    name = "new_user_queryable",
+    features("contrib"),
+    arguments(transition(rust_type = "$pass_through(A)")),
+    dependencies("c_transition")
+)]
+/// Construct a queryable from a user-defined transition function.
+///
+/// # Arguments
+/// * `transition` - A transition function taking a reference to self, a query, and an internal/external indicator
+///
+/// # Generics
+/// * `Q` - Query Type
+/// * `A` - Output Type
+#[allow(dead_code)]
+fn new_user_queryable<Q, A>(transition: TransitionFn) -> Fallible<AnyObject> {
+    let _ = transition;
+    panic!("this signature only exists for code generation")
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__new_user_queryable(
+    transition: TransitionFn,
+    Q: *const c_char,
+    A: *const c_char,
+) -> FfiResult<*mut AnyObject> {
+    let Q = try_!(Type::try_from(Q));
+    let _A = A;
+    FfiResult::Ok(util::into_raw(AnyObject::new(try_!(Queryable::new(
+        wrap_transition(transition, Q)
+    )))))
 }
 
 #[cfg(test)]

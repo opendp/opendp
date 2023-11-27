@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::c_char;
 
-use crate::err;
+use crate::error::Fallible;
 use crate::transformations::make_select_column;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
@@ -15,12 +15,12 @@ pub extern "C" fn opendp_transformations__make_select_column(
     K: *const c_char,
     TOA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<K, TOA>(key: *const AnyObject) -> FfiResult<*mut AnyTransformation>
+    fn monomorphize<K, TOA>(key: *const AnyObject) -> Fallible<AnyTransformation>
     where
         K: Hashable,
         TOA: Primitive,
     {
-        let key: K = try_!(try_as_ref!(key).downcast_ref::<K>()).clone();
+        let key: K = try_as_ref!(key).downcast_ref::<K>()?.clone();
         make_select_column::<K, TOA>(key).into_any()
     }
     let K = try_!(Type::try_from(K));
@@ -29,5 +29,5 @@ pub extern "C" fn opendp_transformations__make_select_column(
     dispatch!(monomorphize, [
         (K, @hashable),
         (TOA, @primitives)
-    ], (key))
+    ], (key)).into()
 }

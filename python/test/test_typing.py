@@ -60,6 +60,7 @@ def test_tuples():
 def test_c():
     """test that c_type strings are not mangled"""
     rt_type = RuntimeType.parse('FfiResult<void *>')
+    assert isinstance(rt_type, RuntimeType)
     assert str(rt_type) == 'FfiResult<void *>'
     assert rt_type.args[0] == 'void *'
 
@@ -77,10 +78,25 @@ def test_set_feature():
     assert "A" not in GLOBAL_FEATURES
 
 
-def test_default_type():
+disallowed_int_default_types = set([i128, u128, isize])
+
+@pytest.mark.parametrize('integer_type', set(INTEGER_TYPES) - disallowed_int_default_types)
+def test_default_int_type(integer_type):
     assert RuntimeType.parse(int) == i32
-    set_default_int_type(u64)
-    assert RuntimeType.parse(int) == u64
+
+    set_default_int_type(integer_type)
+    assert RuntimeType.parse(int) == integer_type
+
+    set_default_int_type(i32)
+
+
+@pytest.mark.parametrize('integer_type', disallowed_int_default_types)
+def test_disallowed_default_int_type(integer_type):
+    assert RuntimeType.parse(int) == i32
+
+    with pytest.raises(AssertionError):
+        set_default_int_type(integer_type)
+
     set_default_int_type(i32)
 
 # for a more thorough manual test of the set_default_int_type and set_default_float_type functions:

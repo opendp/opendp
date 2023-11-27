@@ -22,7 +22,7 @@ __all__ = [
 def bool_free(
     this
 ):
-    """Internal function. Free the memory associated with `this`, a bool.
+    r"""Internal function. Free the memory associated with `this`, a bool.
     Used to clean up after the relation check.
     
     [bool_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.bool_free.html)
@@ -50,7 +50,7 @@ def bool_free(
 def ffislice_of_anyobjectptrs(
     raw: Any
 ) -> Any:
-    """Internal function. Converts an FfiSlice of AnyObjects to an FfiSlice of AnyObjectPtrs.
+    r"""Internal function. Converts an FfiSlice of AnyObjects to an FfiSlice of AnyObjectPtrs.
     
     [ffislice_of_anyobjectptrs in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.ffislice_of_anyobjectptrs.html)
     
@@ -79,7 +79,7 @@ def ffislice_of_anyobjectptrs(
 def object_as_slice(
     obj: Any
 ) -> Any:
-    """Internal function. Unload data from an AnyObject into an FfiSlicePtr.
+    r"""Internal function. Unload data from an AnyObject into an FfiSlicePtr.
     
     [object_as_slice in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.object_as_slice.html)
     
@@ -107,9 +107,9 @@ def object_as_slice(
 
 @versioned
 def object_free(
-    this: Any
+    this
 ):
-    """Internal function. Free the memory associated with `this`, an AnyObject.
+    r"""Internal function. Free the memory associated with `this`, an AnyObject.
     
     [object_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.object_free.html)
     
@@ -137,7 +137,7 @@ def object_free(
 def object_type(
     this: Any
 ) -> str:
-    """Internal function. Retrieve the type descriptor string of an AnyObject.
+    r"""Internal function. Retrieve the type descriptor string of an AnyObject.
     
     [object_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.object_type.html)
     
@@ -167,7 +167,7 @@ def slice_as_object(
     raw: FfiSlicePtr,
     T: str
 ) -> Any:
-    """Internal function. Load data from a `slice` into an AnyObject
+    r"""Internal function. Load data from a `slice` into an AnyObject
     
     [slice_as_object in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.slice_as_object.html)
     
@@ -183,7 +183,7 @@ def slice_as_object(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    T = parse_or_infer(T, raw)
+    T = parse_or_infer(T, raw) # type: ignore
     
     # Convert arguments to c types.
     c_raw = py_to_c(raw, c_type=FfiSlicePtr, type_name=T)
@@ -201,9 +201,9 @@ def slice_as_object(
 
 @versioned
 def slice_free(
-    this: Any
+    this
 ):
-    """Internal function. Free the memory associated with `this`, an FfiSlicePtr.
+    r"""Internal function. Free the memory associated with `this`, an FfiSlicePtr.
     Used to clean up after object_as_slice.
     Frees the slice, but not what the slice references!
     
@@ -234,7 +234,7 @@ def smd_curve_epsilon(
     curve: Any,
     delta: Any
 ) -> Any:
-    """Internal function. Use an SMDCurve to find epsilon at a given `delta`.
+    r"""Internal function. Use an SMDCurve to find epsilon at a given `delta`.
     
     [smd_curve_epsilon in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.smd_curve_epsilon.html)
     
@@ -265,9 +265,9 @@ def smd_curve_epsilon(
 
 @versioned
 def str_free(
-    this: str
+    this
 ):
-    """Internal function. Free the memory associated with `this`, a string.
+    r"""Internal function. Free the memory associated with `this`, a string.
     Used to clean up after the type getter functions.
     
     [str_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.str_free.html)
@@ -296,7 +296,7 @@ def str_free(
 def to_string(
     this: Any
 ) -> str:
-    """Internal function. Convert the AnyObject to a string representation.
+    r"""Internal function. Convert the AnyObject to a string representation.
     
     [to_string in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.to_string.html)
     

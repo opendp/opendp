@@ -12,7 +12,7 @@
 //! This means that the symmetric distance between vectors is expressed in terms of a [`u32`].
 
 #[cfg(feature = "ffi")]
-mod ffi;
+pub(crate) mod ffi;
 
 use std::hash::Hash;
 use std::marker::PhantomData;
@@ -20,7 +20,7 @@ use std::marker::PhantomData;
 use crate::{
     core::{Domain, Metric, MetricSpace},
     domains::{type_name, AtomDomain, MapDomain, VectorDomain},
-    traits::CheckAtom,
+    traits::{CheckAtom, InfAdd}, error::Fallible,
 };
 #[cfg(feature = "contrib")]
 use crate::{traits::Hashable, transformations::DataFrameDomain};
@@ -80,21 +80,21 @@ impl Metric for SymmetricDistance {
 
 // Symmetric distance is defined in terms of unescaped line-breaks for CSV string datasets
 impl MetricSpace for (AtomDomain<String>, SymmetricDistance) {
-    fn check(&self) -> bool {
-        true
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
 impl<D: Domain> MetricSpace for (VectorDomain<D>, SymmetricDistance) {
-    fn check(&self) -> bool {
-        true
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
 #[cfg(feature = "contrib")]
 impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, SymmetricDistance) {
-    fn check(&self) -> bool {
-        true
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
@@ -149,15 +149,15 @@ impl Metric for InsertDeleteDistance {
 }
 
 impl<D: Domain> MetricSpace for (VectorDomain<D>, InsertDeleteDistance) {
-    fn check(&self) -> bool {
-        true
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
 #[cfg(feature = "contrib")]
 impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, InsertDeleteDistance) {
-    fn check(&self) -> bool {
-        true
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
@@ -221,8 +221,13 @@ impl Metric for ChangeOneDistance {
 }
 
 impl<D: Domain> MetricSpace for (VectorDomain<D>, ChangeOneDistance) {
-    fn check(&self) -> bool {
-        self.0.size.is_some()
+    fn check_space(&self) -> Fallible<()> {
+        self.0.size.map(|_| ()).ok_or_else(|| {
+            err!(
+                MetricSpace,
+                "change-one distance requires a known dataset size"
+            )
+        })
     }
 }
 
@@ -280,8 +285,13 @@ impl Metric for HammingDistance {
     type Distance = IntDistance;
 }
 impl<D: Domain> MetricSpace for (VectorDomain<D>, HammingDistance) {
-    fn check(&self) -> bool {
-        self.0.size.is_some()
+    fn check_space(&self) -> Fallible<()> {
+        self.0.size.map(|_| ()).ok_or_else(|| {
+            err!(
+                MetricSpace,
+                "Hamming distance requires a known dataset size"
+            )
+        })
     }
 }
 
@@ -306,7 +316,7 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, HammingDistance) {
 ///
 /// * `VectorDomain<D>` for any valid `D`
 /// * `MapDomain<D>` for any valid `D`
-pub struct LpDistance<const P: usize, Q>(PhantomData<Q>);
+pub struct LpDistance<const P: usize, Q>(PhantomData<fn() -> Q>);
 impl<const P: usize, Q> Default for LpDistance<P, Q> {
     fn default() -> Self {
         LpDistance(PhantomData)
@@ -335,8 +345,12 @@ impl<const P: usize, Q> Metric for LpDistance<P, Q> {
 impl<T: CheckAtom, const P: usize, Q> MetricSpace
     for (VectorDomain<AtomDomain<T>>, LpDistance<P, Q>)
 {
-    fn check(&self) -> bool {
-        !self.0.element_domain.nullable()
+    fn check_space(&self) -> Fallible<()> {
+        if self.0.element_domain.nullable() {
+            fallible!(MetricSpace, "LpDistance requires non-nullable elements")
+        } else {
+            Ok(())
+        }
     }
 }
 impl<K: CheckAtom, V: CheckAtom, const P: usize, Q> MetricSpace
@@ -344,8 +358,12 @@ impl<K: CheckAtom, V: CheckAtom, const P: usize, Q> MetricSpace
 where
     K: Eq + Hash,
 {
-    fn check(&self) -> bool {
-        !self.0.value_domain.nullable()
+    fn check_space(&self) -> Fallible<()> {
+        if self.0.value_domain.nullable() {
+            return fallible!(MetricSpace, "LpDistance requires non-nullable elements")
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -374,7 +392,7 @@ pub type L2Distance<Q> = LpDistance<2, Q>;
 /// # Compatible Domains
 ///
 /// * `AtomDomain<T>` for any valid `T`
-pub struct AbsoluteDistance<Q>(PhantomData<Q>);
+pub struct AbsoluteDistance<Q>(PhantomData<fn() -> Q>);
 impl<Q> Default for AbsoluteDistance<Q> {
     fn default() -> Self {
         AbsoluteDistance(PhantomData)
@@ -400,8 +418,12 @@ impl<Q> Metric for AbsoluteDistance<Q> {
     type Distance = Q;
 }
 impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
-    fn check(&self) -> bool {
-        !self.0.nullable()
+    fn check_space(&self) -> Fallible<()> {
+        if self.0.nullable() {
+            fallible!(MetricSpace, "AbsoluteDistance requires non-nullable elements")
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -450,51 +472,87 @@ impl Metric for DiscreteDistance {
 }
 
 impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
-    fn check(&self) -> bool {
-        true
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
-/// Distance between score vectors for the exponential mechanism.
+/// Distance between score vectors with monotonicity indicator.
 ///
 /// # Proof Definition
 ///
 /// ### `d`-closeness
 /// For any two datasets $u, v \in$ `VectorDomain<AtomDomain<T>>` and any $d$ of type `T`,
-/// we say that $u, v$ are $d$-close under the inf-difference metric (abbreviated as $d_{IDD}$) whenever
+/// we say that $u, v$ are $d$-close under the l-infinity metric (abbreviated as $d_{\infty}$) whenever
 ///
 /// ```math
-/// d_{\infty'}(u, v) = max_{ij} |(u_i - v_i) - (u_j - v_j)|
+/// d_{\infty}(u, v) = max_{i} |u_i - v_i|
 /// ```
-pub struct LInfDiffDistance<Q>(PhantomData<Q>);
-impl<Q> Default for LInfDiffDistance<Q> {
+pub struct LInfDistance<Q> {
+    pub monotonic: bool,
+    _marker: PhantomData<fn() -> Q>
+}
+
+impl<Q: InfAdd> LInfDistance<Q> {
+    /// Translate a distance bound `d_in` wrt the $L_\infty$ metric to a distance bound wrt the range metric.
+    /// 
+    /// ```math
+    /// d_{\text{Range}}(u, v) = max_{ij} |(u_i - v_i) - (u_j - v_j)|
+    /// ```
+    pub fn range_distance(&self, d_in: Q) -> Fallible<Q> {
+        if self.monotonic {
+            Ok(d_in)
+        } else {
+            d_in.inf_add(&d_in)
+        }
+    }
+
+    pub fn new(monotonic: bool) -> Self {
+        LInfDistance {
+            monotonic,
+            _marker: PhantomData
+        }
+    }
+}
+impl<Q> Default for LInfDistance<Q> {
     fn default() -> Self {
-        LInfDiffDistance(PhantomData)
+        LInfDistance {
+            monotonic: false,
+            _marker: PhantomData
+        }
     }
 }
 
-impl<Q> Clone for LInfDiffDistance<Q> {
+impl<Q> Clone for LInfDistance<Q> {
     fn clone(&self) -> Self {
-        Self::default()
+        LInfDistance { 
+            monotonic: self.monotonic, 
+            _marker: PhantomData 
+        }
     }
 }
-impl<Q> PartialEq for LInfDiffDistance<Q> {
-    fn eq(&self, _other: &Self) -> bool {
-        true
+impl<Q> PartialEq for LInfDistance<Q> {
+    fn eq(&self, other: &Self) -> bool {
+        self.monotonic == other.monotonic
     }
 }
-impl<Q> Debug for LInfDiffDistance<Q> {
+impl<Q> Debug for LInfDistance<Q> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "LInfDiffDistance({})", type_name!(Q))
+        let monotonic = self.monotonic.then_some("monotonic, ").unwrap_or_default();
+        write!(f, "LInfDistance({monotonic}T={})", type_name!(Q))
     }
 }
 
-impl<Q> Metric for LInfDiffDistance<Q> {
+impl<Q> Metric for LInfDistance<Q> {
     type Distance = Q;
 }
 
-impl<T: CheckAtom> MetricSpace for (VectorDomain<AtomDomain<T>>, LInfDiffDistance<T>) {
-    fn check(&self) -> bool {
-        !self.0.element_domain.nullable()
+impl<T: CheckAtom> MetricSpace for (VectorDomain<AtomDomain<T>>, LInfDistance<T>) {
+    fn check_space(&self) -> Fallible<()> {
+        if self.0.element_domain.nullable() {
+            fallible!(MetricSpace, "LInfDistance requires non-nullable elements")
+        } else {
+            Ok(())
+        }
     }
 }
