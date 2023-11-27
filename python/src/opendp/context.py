@@ -371,42 +371,6 @@ class Query(object):
         self._context = context
         self._wrap_release = _wrap_release
 
-    def __getattr__(self, name: str) -> Callable[[Any], "Query"]:
-        """Creates a new query by applying a transformation or measurement to the current chain."""
-        if name not in constructors:
-            raise AttributeError(f"Unrecognized constructor: '{name}'")
-
-        def make(*args, **kwargs) -> "Query":
-            """Wraps the `make_{name}` constructor to allow one optional parameter and chains it to the current query.
-
-            This function will be called when the user calls `query.{name}(...)`.
-            """
-            constructor, is_partial = constructors[name]
-
-            # determine how many parameters are missing
-            param_diff = len(args)
-            for param in signature(constructor).parameters.values():
-                if param.name in kwargs:
-                    continue
-                if param.default is not param.empty:
-                    break
-                param_diff -= 1
-
-            if param_diff == -1 and not isinstance(self._chain, PartialChain):
-                constructor = PartialChain.wrap(constructor)
-            elif param_diff < 0:
-                raise ValueError(f"{name} is missing {-param_diff} parameter(s).")
-            elif param_diff > 0:
-                raise ValueError(f"{name} has {param_diff} parameter(s) too many.")
-
-            new_chain = constructor(*args, **kwargs)
-            if is_partial or not isinstance(self._chain, tuple):
-                new_chain = self._chain >> new_chain
-
-            return self.new_with(chain=new_chain)
-
-        return make
-
     def mean(self):
         r"""Calculate the mean of data with known size and bounds.
 
@@ -493,6 +457,98 @@ class Query(object):
         )
         return self.new_with(chain=self._chain >> next_f)
 
+    def clamp(self, bounds):
+        r"""Clamp data to `bounds`. This is a prerequisite to making a DP release.
+
+        :example:
+
+        >>> import opendp.prelude as dp
+        >>> dp.enable_features('contrib')
+        >>> data = [1.0, 2.0, 3.0]
+        >>> context = dp.Context.compositor(
+        ...    data=data,
+        ...    privacy_unit=dp.unit_of(contributions=1),
+        ...    privacy_loss=dp.loss_of(epsilon=1.0),
+        ...    domain=dp.vector_domain(dp.atom_domain(T=float), size=len(data)),
+        ...    split_evenly_over=1
+        ... )
+        >>> dp_mean = context.query().clamp((0.0, 10.0)).mean().laplace().release()
+
+        :param bounds: Two-element tuple: The lower and upper bound to apply.
+        """
+        import opendp.prelude as dp
+        return self.new_with(chain=self._chain >> dp.t.then_clamp(bounds))
+
+    def sum(self):
+        r"""Sum the data.
+
+        :example:
+
+        >>> import opendp.prelude as dp
+        >>> dp.enable_features('contrib')
+        >>> data = [1.0, 2.0, 3.0]
+        >>> context = dp.Context.compositor(
+        ...    data=data,
+        ...    privacy_unit=dp.unit_of(contributions=1),
+        ...    privacy_loss=dp.loss_of(epsilon=1.0),
+        ...    domain=dp.vector_domain(dp.atom_domain(T=float), size=len(data)),
+        ...    split_evenly_over=1
+        ... )
+        >>> dp_mean = context.query().clamp((0.0, 10.0)).sum().laplace().release()
+        """
+        import opendp.prelude as dp
+        return self.new_with(chain=self._chain >> dp.t.then_sum())
+
+    def cast_default(self, domain):
+        r"""For numeric data, replace any `None`s with `0`.
+
+        :example:
+
+        >>> import opendp.prelude as dp
+        >>> dp.enable_features('contrib')
+        >>> data = [None, 2.0, 3.0]
+        >>> context = dp.Context.compositor(
+        ...    data=data,
+        ...    privacy_unit=dp.unit_of(contributions=1),
+        ...    privacy_loss=dp.loss_of(epsilon=1.0),
+        ...    domain=dp.vector_domain(dp.atom_domain(T=float), size=len(data)),
+        ...    split_evenly_over=1
+        ... )
+        >>> dp_mean = context.query().cast_default(float).clamp((0.0, 10.0)).mean().laplace().release()
+
+        :param domain: The domain of the data. Typically either `int` or `float`. 
+        """
+        import opendp.prelude as dp
+        return self.new_with(chain=self._chain >> dp.t.then_cast_default(domain))
+
+    def resize(self, size, constant):
+        r"""Either truncate data, if longer than `size`,
+        or impute new values equal to `constant` to make up the difference.
+
+        If the exact size of the dataset if private, counting the values will
+        consume some of your privacy budget. If you have a typical size,
+        and a typical value, resizing the dataset is an alternative route
+        to calculating a DP mean.
+
+        :example:
+
+        >>> import opendp.prelude as dp
+        >>> dp.enable_features('contrib')
+        >>> data = [1.0, 2.0, 3.0]
+        >>> context = dp.Context.compositor(
+        ...    data=data,
+        ...    privacy_unit=dp.unit_of(contributions=1),
+        ...    privacy_loss=dp.loss_of(epsilon=1.0),
+        ...    domain=dp.vector_domain(dp.atom_domain(T=float), size=len(data)),
+        ...    split_evenly_over=1
+        ... )
+        >>> dp_mean = context.query().clamp((0.0, 10.0)).resize(3, 2.0).mean().laplace().release()
+
+        :param size: Typical size of dataset.
+        :param constant: Value to fill if dataset is shorter than `size`.
+        """
+        import opendp.prelude as dp
+        return self.new_with(chain=self._chain >> dp.t.then_resize(size, constant))
     # private_mean
     #  - clamps
     #  - either splits between a sum and count, then postprocess or just mean, depending on if data size known
