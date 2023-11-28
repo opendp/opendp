@@ -121,6 +121,11 @@ def then_alp_queryable(
     alpha = 4,
     CO: Optional[RuntimeTypeDescriptor] = None
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric
+    as its input domain and metric. See also:
+
+    :py:func:`opendp.measurements.make_alp_queryable`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_alp_queryable(
         input_domain=input_domain,
         input_metric=input_metric,
