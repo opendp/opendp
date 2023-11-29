@@ -9,16 +9,6 @@ What is OpenDP?
 .. _OpenDP: https://opendp.org
 .. _differential privacy: https://opendp.org/about#whatisdifferentialprivacy
 
-Various tools build upon the `OpenDP library`_ and are known (along with the library itself) as the :doc:`/opendp-commons/index`. 
-The OpenDP library and examples of these tools are shown in the diagram below.
-
-.. _OpenDP library: https://github.com/opendp/opendp
-
-|opendp-cake|
-
-.. |opendp-cake| image:: /_static/images/opendp-cake.svg
-   :class: img-responsive
-
 
 First Steps
 -----------

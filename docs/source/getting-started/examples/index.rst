@@ -3,16 +3,15 @@
 Examples
 ========
 
-Python Docs
------------
+There are many useful examples in API docs:
 
-There are many useful notebooks embedded in the user guide and API docs:
-
-* `Getting started <../user/getting-started.html>`_ in the user guide.
-* :ref:`Putting things together <putting-together>` at the end of the user guide.
 * DP-sum in :ref:`chaining` (user guide)
 * count in :class:`opendp.mod.Transformation` (API docs)
 * DP-mean in :class:`opendp.mod.Measurement` (API docs)
+
+as well as the Theory section:
+
+* :doc:`../../theory/attacks/index`
 
 .. _notebooks:
 
@@ -21,7 +20,7 @@ Python Notebooks
 
 .. toctree::
 
-  attacks/index
+  pums-data-analysis
   unknown-dataset-size
   histograms
 
