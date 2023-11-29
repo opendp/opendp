@@ -13,3 +13,4 @@ For that, see :doc:`../getting-started/index` or :doc:`../api/index`.
   a-framework-to-understand-dp
   getting-started
   attacks/index
+  resources
