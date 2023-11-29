@@ -20,7 +20,6 @@ Potential contributors to OpenDP should read the :doc:`/contributor/index`.
    limitations
    installation
    programming-framework/index
-   getting-started
    transformations
    measurements
    combinators

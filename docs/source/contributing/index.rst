@@ -1,5 +1,5 @@
-Contributor Guide
-#################
+Contributing
+############
 
 This guide is directed towards people interested in contributing to the OpenDP Library and Commons.
 

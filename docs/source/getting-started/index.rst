@@ -1,5 +1,5 @@
-Get Started
-===========
+Getting Started
+===============
 
 In this introduction, we present a differential privacy "Hello World" using OpenDP.
 
