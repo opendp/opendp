@@ -9,7 +9,7 @@ This guide is intended primarily for researchers or data scientists who want to 
 
 Data scientists and others who are more interested in tools built on top of the OpenDP Library should review the :doc:`/opendp-commons/index`.
 
-Potential contributors to OpenDP should read the :doc:`/contributor/index`.
+Potential contributors to OpenDP should read the :doc:`/contributing/index`.
    
 
 .. toctree::

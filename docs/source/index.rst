@@ -26,7 +26,7 @@ First Steps
 Head to :doc:`/getting-started/index` to get started with the OpenDP Library.
 
 If you have an interest in contributing to the OpenDP Library, please contact us!
-You can also use the :doc:`/contributor/index` to get started.
+You can also use the :doc:`/contributing/index` to get started.
 
 Should you have any questions or feedback regarding OpenDP, please feel free to post on `GitHub Discussions`_.
 

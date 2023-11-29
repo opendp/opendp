@@ -61,7 +61,6 @@ These topics are covered at a more granular level in the following sections:
 
   core-structures
   supporting-elements
-  a-framework-to-understand-dp
 
 Key Points
 ----------
