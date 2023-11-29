@@ -36,6 +36,20 @@ make html-rustdoc
 ```
 The output is located in `../rust/target/doc`.
 
+## Updating dependencies
+
+First, update the versions in `requirements.in`. Then:
+```
+# More info: https://github.com/jazzband/pip-tools/#example-usage-for-pip-compile
+pip-compile
+# Install updated dependencies:
+pip install -r requirements.txt
+# Build docs
+build html
+```
+Then confirm that there were no errors and that the new HTML looks good,
+and commit your changes to both `requirements.in` and `requirements.txt`.
+
 ## Simulating documentation sites locally
 It is possible to fully simulate all documentation locally, 
 with functioning links across documentation sites and proofs.
