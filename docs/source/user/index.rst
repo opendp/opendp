@@ -19,7 +19,6 @@ Potential contributors to OpenDP should read the :doc:`/contributor/index`.
 
    limitations
    installation
-   first-look-at-DP
    programming-framework/index
    getting-started
    transformations

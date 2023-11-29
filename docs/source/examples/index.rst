@@ -21,7 +21,6 @@ Python Notebooks
 
 .. toctree::
 
-  pums-data-analysis
   attacks/index
   unknown-dataset-size
   histograms

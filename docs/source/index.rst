@@ -48,7 +48,7 @@ Documentation for past releases are available in the drop down on the left panel
   :titlesonly:
   :maxdepth: 3
 
-  quickstart
+  get-started/index
 
 .. toctree::
   :glob:
@@ -56,13 +56,6 @@ Documentation for past releases are available in the drop down on the left panel
   :maxdepth: 3
 
   user/index
-
-.. toctree::
-  :glob:
-  :titlesonly:
-  :maxdepth: 3
-
-  examples/index
 
 .. toctree::
   :glob:
