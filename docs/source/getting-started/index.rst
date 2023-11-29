@@ -11,4 +11,4 @@ and for an overview of the OpenDP library see the API documentation.
 
   quickstart
   first-look-at-DP
-  pums-data-analysis
+  examples/index
