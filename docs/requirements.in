@@ -7,3 +7,6 @@ ipython==8.18.1  # for notebook syntax highlighting in docs
 pandoc==2.3
 pypandoc==1.12
 semver==3.0
+
+# Not needed to build docs, only to update dependencies.
+pip-tools==7.3.0
