@@ -23,7 +23,7 @@ The OpenDP library and examples of these tools are shown in the diagram below.
 First Steps
 -----------
 
-Head to the :doc:`/user/index` to get started with the OpenDP Library.
+Head to :doc:`/get-started/index` to get started with the OpenDP Library.
 
 If you have an interest in contributing to the OpenDP Library, please contact us!
 You can also use the :doc:`/contributor/index` to get started.
@@ -49,13 +49,6 @@ Documentation for past releases are available in the drop down on the left panel
   :maxdepth: 3
 
   get-started/index
-
-.. toctree::
-  :glob:
-  :titlesonly:
-  :maxdepth: 3
-
-  user/index
 
 .. toctree::
   :glob:
