@@ -39,6 +39,6 @@ There is also a `tiny demo crate <https://github.com/opendp/opendp/commit/8561d7
 Applications
 ------------
 
-DPCreator, a part of the :ref:`opendp-commons`, is based on the OpenDP library.
+DPCreator, a part of the `OpenDP Commons <https://opendp.org/tools>`, is based on the OpenDP library.
 
 Please :ref:`let us know <contact>` if you are building applications with the library.
