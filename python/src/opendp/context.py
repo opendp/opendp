@@ -432,12 +432,9 @@ class Query(object):
             chain = self._chain.fix(self._d_in, self._d_out, self._output_measure)
         else:
             chain = self._chain
-        chain = _cast_measure(chain, self._output_measure, self._d_out)
-
         if not allow_transformations and isinstance(chain, Transformation):
             raise ValueError("Query is not yet a measurement")
-
-        return chain
+        return _cast_measure(chain, self._output_measure, self._d_out)
 
     def release(self) -> Any:
         """Release the query. The query must be part of a context."""
