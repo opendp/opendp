@@ -1,6 +1,6 @@
 # Auto-generated. Do not edit!
 '''
-TODO: Provide context
+The ``measures`` modules provides functions that measure the distance between probability distributions.
 '''
 from opendp._convert import *
 from opendp._lib import *

@@ -1,6 +1,6 @@
 # Auto-generated. Do not edit!
 '''
-TODO: Provide context
+The ``domains`` modules provides functions for creating and using domains.
 '''
 from opendp._convert import *
 from opendp._lib import *

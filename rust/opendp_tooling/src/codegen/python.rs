@@ -70,8 +70,15 @@ from opendp.measures import *"#
     };
 
     let module_docs = match module_name.as_str() {
-        "accuracy" => "The ``accuracy`` module provides utilities for converting between accuracy and scale parameters.",
-        _ => "TODO: Provide context"
+        "accuracy" => "The ``accuracy`` module provides functions for converting between accuracy and scale parameters.",
+        "combinators" => "The ``combinators`` module provides functions for combining transformations and measurements.",
+        "core" => "The ``core`` module provides functions for accessing the fields of transformations and measurements.",
+        "domains" => "The ``domains`` modules provides functions for creating and using domains.",
+        "measurements" => "The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.",
+        "measures" => "The ``measures`` modules provides functions that measure the distance between probability distributions.",
+        "metrics" => "The ``metrics`` module provides fuctions that measure the distance between two elements of a domain.",
+        "transformations" => "The ``transformations`` module provides functions that deterministicly transform datasets.",
+        _ => "TODO!"
     };
 
     format!(

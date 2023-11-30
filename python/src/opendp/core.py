@@ -1,6 +1,6 @@
 # Auto-generated. Do not edit!
 '''
-TODO: Provide context
+The ``core`` module provides functions for accessing the fields of transformations and measurements.
 '''
 from opendp._convert import *
 from opendp._lib import *
