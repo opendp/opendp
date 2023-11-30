@@ -69,7 +69,10 @@ from opendp.measures import *"#
         ""
     };
 
-    let module_docs = format!("TODO: Provide context for ``{module_name}``");
+    let module_docs = match module_name.as_str() {
+        "accuracy" => "The ``accuracy`` module provides utilities for converting between accuracy and scale parameters.",
+        _ => "TODO: Provide context"
+    };
 
     format!(
         r#"# Auto-generated. Do not edit!

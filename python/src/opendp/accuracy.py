@@ -1,6 +1,6 @@
 # Auto-generated. Do not edit!
 '''
-TODO: Provide context for ``accuracy``
+The ``accuracy`` module provides utilities for converting between accuracy and scale parameters.
 '''
 from opendp._convert import *
 from opendp._lib import *
