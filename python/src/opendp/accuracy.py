@@ -1,4 +1,7 @@
-# Auto-generated. Do not edit.
+# Auto-generated. Do not edit!
+'''
+TODO: Provide module docs
+'''
 from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *

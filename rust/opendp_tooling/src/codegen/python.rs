@@ -69,8 +69,13 @@ from opendp.measures import *"#
         ""
     };
 
+    let module_docs = "TODO: Provide module docs";
+
     format!(
-        r#"# Auto-generated. Do not edit.
+        r#"# Auto-generated. Do not edit!
+'''
+{module_docs}
+'''
 from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
