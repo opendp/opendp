@@ -134,7 +134,7 @@ class AnyQueryable(ctypes.Structure):
 
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)):
     _type_ = FfiSlice
-    _dependencies = {}
+    _dependencies: Dict[Any, Any] = {}  # TODO: Tighten this
 
     def depends_on(self, *args):
         """Extends the memory lifetime of args to the lifetime of self."""
