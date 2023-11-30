@@ -45,7 +45,7 @@ This is extremely powerful!
   .. doctest::
 
     >>> input_space = atom_domain(T=float), absolute_distance(T=float)
-    >>> binary_search_param(lambda s: make_base_gaussian(*input_space, scale=s), d_in=1., d_out=1.)
+    >>> binary_search_param(lambda s: make_gaussian(*input_space, scale=s), d_in=1., d_out=1.)
     0.7071067811865477
   
 * | If you have a bound on ``d_in`` and a noise scale, you can solve for the tightest budget ``d_out`` that is still differentially private.
@@ -54,7 +54,7 @@ This is extremely powerful!
   .. doctest::
 
     >>> # in this case, a search is unnecessary. We can just use the map:
-    >>> make_base_gaussian(*input_space, scale=1.).map(d_in=1.)
+    >>> make_gaussian(*input_space, scale=1.).map(d_in=1.)
     0.5
 
 * | If you have a noise scale and a budget ``d_out``, you can solve for the largest bound on ``d_in`` that is still differentially private.
@@ -63,7 +63,7 @@ This is extremely powerful!
   .. doctest::
 
     >>> # finds the largest permissible d_in, a sensitivity
-    >>> binary_search(lambda d_in: make_base_gaussian(*input_space, scale=1.).check(d_in=d_in, d_out=1.))
+    >>> binary_search(lambda d_in: make_gaussian(*input_space, scale=1.).check(d_in=d_in, d_out=1.))
     1.414213562373095
 
 
