@@ -18,29 +18,32 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
 
     >>> import opendp.prelude as dp
     >>> dp.enable_features("contrib")
-    ...
+
     >>> # create an instance of Measurement using a constructor from the meas module
     >>> base_dl: dp.Measurement = dp.m.make_base_discrete_laplace(
     ...     dp.atom_domain(T=int), dp.absolute_distance(T=int),
     ...     scale=2.)
-    ...
+
     >>> # invoke the measurement (invoke and __call__ are equivalent)
-    >>> base_dl.invoke(100)  # -> 101   # doctest: +SKIP
-    >>> base_dl(100)  # -> 99           # doctest: +SKIP
-    ...
+    >>> print('explicit: ', base_dl.invoke(100))  # -> 101   # doctest: +ELLIPSIS
+    explicit: ...
+    >>> print('concise: ', base_dl(100))  # -> 99            # doctest: +ELLIPSIS
+    concise: ...
     >>> # check the measurement's relation at
     >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence)
     >>> assert base_dl.check(1, 0.5)
-    ...
+
     >>> # chain with a transformation from the trans module
     >>> chained = (
     ...     (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()) >>
     ...     dp.t.then_count() >>
     ...     base_dl
     ... )
-    ...
+
     >>> # the resulting measurement has the same features
-    >>> chained([1, 2, 3])  # -> 4     # doctest: +SKIP
+    >>> print('dp count: ', chained([1, 2, 3]))  # -> 4     # doctest: +ELLIPSIS
+    dp count: ...
+
     >>> # check the chained measurement's relation at
     >>> #     (1, 0.5): (SymmetricDistance, MaxDivergence)
     >>> assert chained.check(1, 0.5)
@@ -184,28 +187,30 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
 
     >>> import opendp.prelude as dp
     >>> dp.enable_features("contrib")
-    ...
+
     >>> # create an instance of Transformation using a constructor from the trans module
     >>> input_space = (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
     >>> count: dp.Transformation = input_space >> dp.t.then_count()
-    ...
+
     >>> # invoke the transformation (invoke and __call__ are equivalent)
-    >>> count.invoke([1, 2, 3])  # -> 3  # doctest: +SKIP
-    >>> count([1, 2, 3])  # -> 3         # doctest: +SKIP
-    ...
+    >>> count.invoke([1, 2, 3])
+    3
+    >>> count([1, 2, 3])
+    3
     >>> # check the transformation's relation at
     >>> #     (1, 1): (SymmetricDistance, AbsoluteDistance<u32>)
     >>> assert count.check(1, 1)
-    ...
+
     >>> # chain with more transformations from the trans module
     >>> chained = (
     ...     dp.t.make_split_lines() >>
     ...     dp.t.then_cast_default(TOA=int) >>
     ...     count
     ... )
-    ...
+
     >>> # the resulting transformation has the same features
-    >>> chained("1\\n2\\n3")  # -> 3 # doctest: +SKIP
+    >>> chained("1\\n2\\n3")
+    3
     >>> assert chained.check(1, 1)  # both chained transformations were 1-stable
     """
     _type_ = AnyTransformation

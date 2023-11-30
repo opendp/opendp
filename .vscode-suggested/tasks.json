@@ -1,0 +1,172 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "cargo",
+            "command": "check",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--features",
+                "untrusted"
+            ],
+            "group": "build",
+            "label": "cargo check --features untrusted",
+            "detail": "    gives more detailed compiler errors than problems tab",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "type": "cargo",
+            "command": "build",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--features",
+                "untrusted bindings-python"
+            ],
+            "group": "build",
+            "label": "cargo build --features untrusted,bindings-python",
+            "detail": "    run before testing in Python",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "type": "cargo",
+            "command": "test",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--no-default-features",
+                "--features",
+                "bindings-python untrusted"
+            ],
+            "group": "build",
+            "label": "cargo test --no-default-features --features untrusted,bindings-python",
+            "detail": "    test a build without GMP/MPFR/OpenSSL (Windows)",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "type": "cargo",
+            "command": "test",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--features",
+                "bindings-python untrusted"
+            ],
+            "group": "build",
+            "label": "cargo test --features untrusted,ffi",
+            "detail": "    run all Rust tests, including ffi",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "type": "cargo",
+            "command": "clippy",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ],
+                "source": "clippy"
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--features",
+                "bindings-python untrusted"
+            ],
+            "group": "build",
+            "label": "cargo clippy --features ffi",
+            "detail": "    more detailed linting and style suggestions",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "type": "cargo",
+            "command": "rustdoc",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--open",
+                "--features", "derive untrusted",
+                "--", "--html-in-header", "katex.html", "--document-private-items"
+            ],
+            "group": "build",
+            "label": "cargo rustdoc",
+            "detail": "    build rust documentation (and open)",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "type": "cargo",
+            "command": "rustdoc",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": ["relative", "${workspaceFolder}/rust"],
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--features", "derive untrusted",
+                "--", "--html-in-header", "katex.html", "--document-private-items"
+            ],
+            "group": "build",
+            "label": "rust: cargo rustdoc",
+            "presentation": {
+                "clear": true
+            }
+        }
+    ]
+}
