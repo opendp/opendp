@@ -2,7 +2,6 @@ import ctypes
 from typing import Any, Literal, Type, TypeVar, Union, Tuple, Callable, Optional, overload, TYPE_CHECKING
 
 from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
-from opendp.context import PartialChain
 
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
 if TYPE_CHECKING:
@@ -278,6 +277,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         if isinstance(other, PartialConstructor):
             return self >> other(self.output_domain, self.output_metric)
 
+        from opendp.context import PartialChain
         if isinstance(other, PartialChain):
             return PartialChain(lambda x: self >> other.partial(x))
 
