@@ -69,7 +69,7 @@ from opendp.measures import *"#
         ""
     };
 
-    let module_docs = "TODO: Provide module docs";
+    let module_docs = format!("TODO: Provide context for ``{module_name}``");
 
     format!(
         r#"# Auto-generated. Do not edit!

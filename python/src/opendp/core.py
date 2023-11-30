@@ -1,6 +1,6 @@
 # Auto-generated. Do not edit!
 '''
-TODO: Provide module docs
+TODO: Provide context for ``core``
 '''
 from opendp._convert import *
 from opendp._lib import *
