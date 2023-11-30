@@ -218,6 +218,7 @@ def unit_of(
     if l2 is not None: # pragma: no cover
         metric = l2_distance(T=RuntimeType.parse_or_infer(U, l2))
         return metric, l2
+    raise Exception('No matching metric found')
 
 
 class Context(object):

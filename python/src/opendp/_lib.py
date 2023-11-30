@@ -179,6 +179,7 @@ class ExtrinsicObject(ctypes.Structure):
 def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
     if s is not None:
         return s.decode("utf-8")
+    return None
 
 
 def unwrap(result, type_) -> Any:
