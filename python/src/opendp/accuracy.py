@@ -1,4 +1,7 @@
-# Auto-generated. Do not edit.
+# Auto-generated. Do not edit!
+'''
+The ``accuracy`` module provides functions for converting between accuracy and scale parameters.
+'''
 from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *

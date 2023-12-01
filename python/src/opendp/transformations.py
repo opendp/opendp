@@ -1,4 +1,7 @@
-# Auto-generated. Do not edit.
+# Auto-generated. Do not edit!
+'''
+The ``transformations`` module provides functions that deterministicly transform datasets.
+'''
 from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
@@ -183,6 +186,10 @@ def then_b_ary_tree(
     leaf_count: int,
     branching_factor: int
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_b_ary_tree`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_b_ary_tree(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -533,6 +540,10 @@ def make_cast(
 def then_cast(
     TOA: RuntimeTypeDescriptor
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_cast`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_cast(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -601,6 +612,10 @@ def make_cast_default(
 def then_cast_default(
     TOA: RuntimeTypeDescriptor
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_cast_default`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_cast_default(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -663,6 +678,10 @@ def make_cast_inherent(
 def then_cast_inherent(
     TOA: RuntimeTypeDescriptor
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_cast_inherent`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_cast_inherent(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -765,6 +784,10 @@ def make_clamp(
 def then_clamp(
     bounds: Tuple[Any, Any]
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_clamp`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_clamp(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -888,6 +911,10 @@ def make_count(
 def then_count(
     TO: Optional[RuntimeTypeDescriptor] = "int"
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_count`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_count(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -957,6 +984,10 @@ def then_count_by(
     MO: SensitivityMetric,
     TV: Optional[RuntimeTypeDescriptor] = "int"
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_count_by`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_count_by(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -1039,6 +1070,10 @@ def then_count_by_categories(
     MO: Optional[SensitivityMetric] = "L1Distance<int>",
     TOA: Optional[RuntimeTypeDescriptor] = "int"
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_count_by_categories`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_count_by_categories(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -1103,6 +1138,10 @@ def make_count_distinct(
 def then_count_distinct(
     TO: Optional[RuntimeTypeDescriptor] = "int"
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_count_distinct`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_count_distinct(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -1226,6 +1265,10 @@ def then_df_cast_default(
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_df_cast_default`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_df_cast_default(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -1297,6 +1340,10 @@ def then_df_is_equal(
     value: Any,
     TIA: Optional[RuntimeTypeDescriptor] = None
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_df_is_equal`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_df_is_equal(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -1356,6 +1403,10 @@ def make_drop_null(
 def then_drop_null(
     
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_drop_null`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_drop_null(
         input_domain=input_domain,
         input_metric=input_metric))
@@ -1416,6 +1467,10 @@ def make_find(
 def then_find(
     categories: Any
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_find`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_find(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -1481,6 +1536,10 @@ def make_find_bin(
 def then_find_bin(
     edges: Any
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_find_bin`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_find_bin(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -1537,6 +1596,10 @@ def make_identity(
 def then_identity(
     
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_identity`
+    """
     return PartialConstructor(lambda domain, metric: make_identity(
         domain=domain,
         metric=metric))
@@ -1599,6 +1662,10 @@ def make_impute_constant(
 def then_impute_constant(
     constant: Any
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_impute_constant`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_impute_constant(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -1656,6 +1723,10 @@ def make_impute_uniform_float(
 def then_impute_uniform_float(
     bounds: Tuple[Any, Any]
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_impute_uniform_float`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_impute_uniform_float(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -1723,6 +1794,10 @@ def then_index(
     null: Any,
     TOA: Optional[RuntimeTypeDescriptor] = None
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_index`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_index(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -1787,6 +1862,10 @@ def make_is_equal(
 def then_is_equal(
     value: Any
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_is_equal`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_is_equal(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -1838,6 +1917,10 @@ def make_is_null(
 def then_is_null(
     
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_is_null`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_is_null(
         input_domain=input_domain,
         input_metric=input_metric))
@@ -1948,6 +2031,10 @@ def make_mean(
 def then_mean(
     
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_mean`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_mean(
         input_domain=input_domain,
         input_metric=input_metric))
@@ -2007,6 +2094,10 @@ def make_metric_bounded(
 def then_metric_bounded(
     
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_metric_bounded`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_metric_bounded(
         input_domain=input_domain,
         input_metric=input_metric))
@@ -2063,6 +2154,10 @@ def make_metric_unbounded(
 def then_metric_unbounded(
     
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_metric_unbounded`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_metric_unbounded(
         input_domain=input_domain,
         input_metric=input_metric))
@@ -2119,6 +2214,10 @@ def make_ordered_random(
 def then_ordered_random(
     
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_ordered_random`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_ordered_random(
         input_domain=input_domain,
         input_metric=input_metric))
@@ -2184,6 +2283,10 @@ def then_quantile_score_candidates(
     candidates: Any,
     alpha: float
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_quantile_score_candidates`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_quantile_score_candidates(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -2309,6 +2412,10 @@ def then_resize(
     constant: Any,
     MO: Optional[RuntimeTypeDescriptor] = "SymmetricDistance"
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_resize`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_resize(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -2947,6 +3054,10 @@ def make_sum(
 def then_sum(
     
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_sum`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_sum(
         input_domain=input_domain,
         input_metric=input_metric))
@@ -3024,6 +3135,10 @@ def make_sum_of_squared_deviations(
 def then_sum_of_squared_deviations(
     S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_sum_of_squared_deviations`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_sum_of_squared_deviations(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -3081,6 +3196,10 @@ def make_unordered(
 def then_unordered(
     
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_unordered`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_unordered(
         input_domain=input_domain,
         input_metric=input_metric))
@@ -3200,6 +3319,10 @@ def then_variance(
     ddof: Optional[int] = 1,
     S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.transformations.make_variance`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_variance(
         input_domain=input_domain,
         input_metric=input_metric,
