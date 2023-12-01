@@ -1,4 +1,7 @@
-# Auto-generated. Do not edit.
+# Auto-generated. Do not edit!
+'''
+The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.
+'''
 from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *

@@ -1,4 +1,7 @@
-# Auto-generated. Do not edit.
+# Auto-generated. Do not edit!
+'''
+The ``transformations`` module provides functions that deterministicly transform datasets.
+'''
 from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
