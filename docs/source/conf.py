@@ -84,13 +84,8 @@ nitpick_ignore = [
     ('py:class', 'opendp.mod.LP_AnyMeasurement'),
     ('py:class', 'opendp.mod.LP_AnyMetric'),
     ('py:class', 'opendp.mod.LP_AnyTransformation'),
-    ('py:class', 'opendp.mod.M'),
     ('py:class', 'opendp.mod.T'), # 17 occurrences
     ('py:class', 'types.GenericAlias'), # 56 occurrences
-    ('py:exc', 'UnknownTypeError'), # 143 occurrences
-    ('py:func', 'make_count_by_categories'),
-    ('py:func', 'opendp.combinators.make_chain_tm'), # 2 occurrences
-    ('py:func', 'opendp.measurements.make_count_by'),
     ('py:obj', 'typing._GenericAlias'), # 56 occurrences
 ]
 
