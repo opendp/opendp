@@ -78,13 +78,22 @@ nitpick_ignore = [
     # (no comment = single occurrence)
     ('py:class', '"RuntimeType"'), # 3 occurrences
     ('py:class', 'RuntimeTypeDescriptor'), # 28 occurrences
+
+    # For each of these, to provide a base class, the Python `Any*` class
+    # is wrapped by ctypes.POINTER(), producing the `LP_*`,
+    # which Sphinx can't resolve.
     ('py:class', 'opendp.mod.LP_AnyDomain'),
     ('py:class', 'opendp.mod.LP_AnyFunction'),
     ('py:class', 'opendp.mod.LP_AnyMeasure'),
     ('py:class', 'opendp.mod.LP_AnyMeasurement'),
     ('py:class', 'opendp.mod.LP_AnyMetric'),
     ('py:class', 'opendp.mod.LP_AnyTransformation'),
-    ('py:class', 'opendp.mod.T'), # 17 occurrences
+
+    # I think the problem is that Sphinx is making paramter list documentation,
+    # and it doesn't understand that `M` and `T` are type parameters, not actual types.
+    ('py:class', 'opendp.mod.M'),
+    ('py:class', 'opendp.mod.T'), #17
+
     ('py:class', 'types.GenericAlias'), # 56 occurrences
     ('py:obj', 'typing._GenericAlias'), # 56 occurrences
 ]
