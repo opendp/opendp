@@ -13,6 +13,7 @@ The steps below assume the use of [Homebrew] on a Mac.
 
 ```shell
 brew install pandoc
+brew install basictex
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
