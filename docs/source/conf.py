@@ -72,11 +72,14 @@ def setup(app):
 
 nitpicky = True
 nitpick_ignore = [
-    # TODO: In each case here, we want Sphinx to make a link,
-    # but our reference is wrong. Tracking issue:
-    # https://github.com/opendp/opendp/issues/1072
     # (no comment = single occurrence)
+
+    # Maybe the quoted name is to prevent a circular reference?
     ('py:class', '"RuntimeType"'), # 3 occurrences
+
+    # Rather than a class, this is defined by setting a variable to a `Union[]`,
+    # and we don't generate docs for variables, so there's nothing to point to.
+    # Can we selectively turn on documentation for module variables?
     ('py:class', 'RuntimeTypeDescriptor'), # 28 occurrences
 
     # For each of these, to provide a base class, the Python `Any*` class
@@ -94,6 +97,8 @@ nitpick_ignore = [
     ('py:class', 'opendp.mod.M'),
     ('py:class', 'opendp.mod.T'), #17
 
+    # In a given version of Python, only one will apply,
+    # but we need them both for compatibility.
     ('py:class', 'types.GenericAlias'), # 56 occurrences
     ('py:obj', 'typing._GenericAlias'), # 56 occurrences
 ]
