@@ -95,7 +95,7 @@ nitpick_ignore = [
     # I think the problem is that Sphinx is making paramter list documentation,
     # and it doesn't understand that `M` and `T` are type parameters, not actual types.
     ('py:class', 'opendp.mod.M'),
-    ('py:class', 'opendp.mod.T'), #17
+    ('py:class', 'opendp.mod.T'), # 17 occurrences
 
     # In a given version of Python, only one will apply,
     # but we need them both for compatibility.
