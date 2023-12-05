@@ -1,5 +1,5 @@
-Quickstart
-==========
+Installation
+============
 
 The easiest way to get started with OpenDP is from Python.
 Use ``pip`` to install the `opendp <https://pypi.org/project/opendp/>`_ package from PyPI.
@@ -10,15 +10,19 @@ Use ``pip`` to install the `opendp <https://pypi.org/project/opendp/>`_ package 
 
 This will make the OpenDP modules available to your local environment.
 
-The vetting process is currently underway for the code in the OpenDP Library.
-Any code that has not completed the vetting process is marked as "contrib" and will not run unless you opt-in.
-Enable ``contrib`` globally with the following snippet:
+Almost all of our examples begin with these lines:
 
 .. doctest::
 
-    >>> from opendp.mod import enable_features
-    >>> enable_features('contrib')
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features('contrib')
 
+The first line imports :py:mod:`opendp.prelude` under the conventional name `dp`.
+
+The second line enables features which have not yet been vetted.
+Any code that has not completed the vetting process is marked as "contrib" and will not run unless you opt-in.
+Our goal is to have all the core methods formally vetted,
+but until that is complete we need to explicitly opt-in.
 
 Hello, OpenDP!
 --------------
