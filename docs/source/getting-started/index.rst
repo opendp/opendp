@@ -11,5 +11,6 @@ and for an overview of the OpenDP library see the :doc:`../api/index` documentat
 
   installation
   hello-opendp
+  real-world
   first-look-at-DP
   examples/index
