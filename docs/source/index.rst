@@ -9,24 +9,14 @@ What is OpenDP?
 .. _OpenDP: https://opendp.org
 .. _differential privacy: https://opendp.org/about#whatisdifferentialprivacy
 
-Various tools build upon the `OpenDP library`_ and are known (along with the library itself) as the :doc:`/opendp-commons/index`. 
-The OpenDP library and examples of these tools are shown in the diagram below.
-
-.. _OpenDP library: https://github.com/opendp/opendp
-
-|opendp-cake|
-
-.. |opendp-cake| image:: /_static/images/opendp-cake.svg
-   :class: img-responsive
-
 
 First Steps
 -----------
 
-Head to the :doc:`/user/index` to get started with the OpenDP Library.
+Head to :doc:`/getting-started/index` to get started with the OpenDP Library.
 
 If you have an interest in contributing to the OpenDP Library, please contact us!
-You can also use the :doc:`/contributor/index` to get started.
+You can also use the :doc:`/contributing/index` to get started.
 
 Should you have any questions or feedback regarding OpenDP, please feel free to post on `GitHub Discussions`_.
 
@@ -48,38 +38,10 @@ Documentation for past releases are available in the drop down on the left panel
   :titlesonly:
   :maxdepth: 3
 
-  quickstart
-
-.. toctree::
-  :glob:
-  :titlesonly:
-  :maxdepth: 3
-
-  user/index
-
-.. toctree::
-  :glob:
-  :titlesonly:
-  :maxdepth: 3
-
-  examples/index
-
-.. toctree::
-  :glob:
-  :titlesonly:
-  :maxdepth: 4
-
+  getting-started/index
   api/index
-
-.. toctree::
-  :glob:
-  :titlesonly:
-  :maxdepth: 3
-
-  contributor/index
-  resources/index
-  opendp-commons/index
-  contact
+  theory/index
+  contributing/index
 
 This is version |version| of the guides, last built on |today|.
 

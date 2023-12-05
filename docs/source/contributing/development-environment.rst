@@ -192,7 +192,6 @@ If everything has gone well, you'll see a bunch of output, then a line similar t
 If pytest is not found, don't forget to activate your virtual environment!
 
 This is just a quick overview of building OpenDP. 
-If you're interested in porting OpenDP to a different platform, we'd be delighted to get your help; please :doc:`contact us <../contact>`!
 
 Documentation
 -------------
