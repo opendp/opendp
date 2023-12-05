@@ -70,6 +70,8 @@ def docstring(app, what, name, obj, options, lines):
 def setup(app):
     app.connect('autodoc-process-docstring', docstring)
 
+nitpicky = True
+
 # This prevents the RuntimeTypeDescriptors from expanding and making the signatures on API docs unreadable
 autodoc_typehints = "description"
 
