@@ -134,7 +134,13 @@ def test_pca_skl():
     )
 
     model.fit(sample_microdata(num_columns=num_columns, num_rows=num_rows))
-    print(model)
+    # print(model)
+
+    print("singular values", model.singular_values_)
+    print("components", model.components_)
+    
+    loadings = model.singular_values_ * model.components_
+    print("loadings", loadings)
 
 
 test_pca_skl()
