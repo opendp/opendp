@@ -118,7 +118,7 @@ class RuntimeType(object):
     def __eq__(self, other):
         if isinstance(other, str):
             other = RuntimeType.parse(other)
-        if isinstance(other, str):
+        if not isinstance(other, RuntimeType):
             return False # pragma: no cover
         return self.origin == other.origin and self.args == other.args
 
