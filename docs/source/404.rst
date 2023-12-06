@@ -13,7 +13,14 @@ The site search might help you find what you're looking for.
             const url = document.location.toString();
             // For demonstration, try "404.html#redirect-demo" 
             if (url.includes('redirect-demo')) {
-                document.location = 'http://example.com'
+                warnAndRedirect('http://example.com');
+            }
+
+            function warnAndRedirect(url) {
+                document.write("<p><b>Our site structure has changed: Redirecting in five seconds...</b></p>");
+                setTimeout(function() {
+                    document.location = url
+                }, 5000);
             }
         })()
     </script>
