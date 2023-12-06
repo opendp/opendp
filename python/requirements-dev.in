@@ -1,6 +1,8 @@
 # To add dev dependencies, make changes here and then
-# regenerate requirements-dev.txt by running
+# regenerate requirements-dev.txt by first installing pip tools:
+#   pip install pip-tools
 #
+# then run:
 #   pip-compile requirements-dev.in
 #
 # and then commit this file and requirements-dev.txt.
@@ -11,3 +13,4 @@ wheel ~= 0.41
 coverage ~= 7.3
 mypy ~= 1.7
 pip-tools==7.3.0
+numpy ~=1.26
