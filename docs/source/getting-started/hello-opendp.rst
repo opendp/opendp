@@ -49,5 +49,5 @@ While Polars supports ``mean``, attempting the same thing in a ``PrivateFrame`` 
 
 The ``PrivateFrame`` protects you from accidentally releasing data which is not differentially private.
 
-Typically, you won't provide your data in line, and you'll want to know more than the mean.
+Typically, you won't provide your data inline, and you'll want to know more than the mean.
 Our next example looks at what else is possible.
