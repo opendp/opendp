@@ -52,7 +52,7 @@ jobs:
         working-directory: python
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -83,10 +83,9 @@ jobs:
 
       - name: Lint with flake8
         run: |
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          # Stop the build if there are new linting errors.
+          # There is a long ignore list in .flake8.
+          flake8 .. --count --show-source --statistics
 
       - name: Type check with mypy
         run: |
@@ -112,6 +111,7 @@ jobs:
           cd ../docs
           python -m pip install -r requirements.txt
           make doctest-python
+          linkchecker -f linkchecker.cfg build/html/index.html
 
 
   python-test-notebooks:

@@ -71,6 +71,9 @@ jobs:
           echo docs.opendp.org > CNAME
           echo "for underscore directories" > .nojekyll
           cp -r /tmp/build/html/* .
+
+          # ghpages looks for 404.html at the top level
+          cp en/stable/404.html .
       
       - name: Checkout artifacts
         uses: actions/checkout@v3

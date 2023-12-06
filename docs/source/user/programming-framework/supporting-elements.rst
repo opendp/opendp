@@ -10,6 +10,28 @@ Function
 --------
 As one would expect, all data processing is handled via a function.
 The function member stored in a Transformation or Measurement struct is straightforward representation of an idealized mathematical function.
+
+To use the function, the Transformation or Measurement can be called directly:
+
+.. doctest::
+
+  >>> import opendp.prelude as dp
+  >>> dp.enable_features("contrib")
+  >>> input_domain = dp.vector_domain(dp.atom_domain(T=float))
+  >>> input_metric = dp.symmetric_distance()
+  >>> clamp = dp.t.make_clamp(input_domain, input_metric, bounds=(0., 5.))
+  >>> type(clamp)
+  <class 'opendp.mod.Transformation'>
+  >>> clamp([10.0])
+  [5.0]
+
+Or ``invoke`` can be used equivalently:
+
+  >>> type(clamp.invoke)
+  <class 'method'>
+  >>> clamp.invoke([10.0])
+  [5.0]
+
 A mathematical function associates each value in some input set with some value in the output set (or a distribution over such values, in the case of a randomized function).
 In OpenDP, we capture these sets with domains...
 

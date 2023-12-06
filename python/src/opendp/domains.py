@@ -1,4 +1,7 @@
-# Auto-generated. Do not edit.
+# Auto-generated. Do not edit!
+'''
+The ``domains`` modules provides functions for creating and using domains.
+'''
 from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *

@@ -13,6 +13,8 @@ omit =
   measures.py
   metrics.py
   transformations.py
+  _data.py
+  # We have some tests with conditional logic depending on environment.
   test/*
 
 [report]
