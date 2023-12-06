@@ -122,6 +122,21 @@ def test_pca():
     print(m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)))
 
 
-test_pca()
+def test_pca_skl():
+    num_columns = 4
+    num_rows = 10_000
+    
+    model = dp.PCA(
+        epsilon=1.,
+        row_norm=1.,
+        n_samples=num_rows,
+        n_features=4,
+    )
+
+    model.fit(sample_microdata(num_columns=num_columns, num_rows=num_rows))
+    print(model)
+
+
+test_pca_skl()
 # import numpy as np
 # print(np.cov(microdata().T))

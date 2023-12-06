@@ -105,31 +105,3 @@ def make_pca(input_domain, input_metric, unit_epsilon, components=None, norm=Non
 
 then_pca = register_measurement(make_pca)
 
-
-# from sklearn.decomposition._pca import PCA as SKLPCA
-
-# class PCA(SKLPCA):
-#     def __init__(
-#         self,
-#         n_components: int | float | str | None = None,
-#         *,
-#         copy: bool = True,
-#         whiten: bool = False,
-#         svd_solver: Literal["auto", "full", "arpack", "randomized"] = "auto",
-#         tol: float = 0,
-#         iterated_power: Literal["auto"] = "auto",
-#         n_oversamples: int = 10,
-#         power_iteration_normalizer: Literal["auto", "QR", "LU", "none"] = "auto",
-#         random_state: int | RandomState | None = None
-#     ) -> None:
-#         super().__init__(
-#             n_components,
-#             copy=copy,
-#             whiten=whiten,
-#             svd_solver=svd_solver,
-#             tol=tol,
-#             iterated_power=iterated_power,
-#             n_oversamples=n_oversamples,
-#             power_iteration_normalizer=power_iteration_normalizer,
-#             random_state=random_state,
-#         )

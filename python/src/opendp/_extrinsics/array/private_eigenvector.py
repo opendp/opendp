@@ -94,15 +94,12 @@ def make_private_eigenvectors(input_domain, input_metric, unit_epsilons):
         theta = np.zeros((0, cov.shape[1]))
 
         for epsilon_i in unit_epsilons:
-            print("epsilon_i", epsilon_i)
             if P.shape[0] == 1:
                 u = np.ones(1)
             else:
                 # c. update the covariance matrix
                 m_eigvec = make_np_cov_projection(input_domain, input_metric, P) >> then_private_eigenvector(epsilon_i)
-                print("A")
                 u = qbl(m_eigvec)
-                print("B")
 
             # http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=5
             # Algorithm 1
