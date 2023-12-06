@@ -72,26 +72,35 @@ def setup(app):
 
 nitpicky = True
 nitpick_ignore = [
-    # TODO: In each case here, we want Sphinx to make a link,
-    # but our reference is wrong. Tracking issue:
-    # https://github.com/opendp/opendp/issues/1072
     # (no comment = single occurrence)
-    ('py:class', '"RuntimeType"'), # 3 occurrences
-    ('py:class', 'RuntimeTypeDescriptor'), # 28 occurrences
+
+    # Maybe the quoted name is to prevent a circular reference?
+    ('py:class', '"RuntimeType"'),  # 3 occurrences
+
+    # Rather than a class, this is defined by setting a variable to a `Union[]`,
+    # and we don't generate docs for variables, so there's nothing to point to.
+    # Can we selectively turn on documentation for module variables?
+    ('py:class', 'RuntimeTypeDescriptor'),  # 28 occurrences
+
+    # For each of these, to provide a base class, the Python `Any*` class
+    # is wrapped by ctypes.POINTER(), producing the `LP_*`,
+    # which Sphinx can't resolve.
     ('py:class', 'opendp.mod.LP_AnyDomain'),
     ('py:class', 'opendp.mod.LP_AnyFunction'),
     ('py:class', 'opendp.mod.LP_AnyMeasure'),
     ('py:class', 'opendp.mod.LP_AnyMeasurement'),
     ('py:class', 'opendp.mod.LP_AnyMetric'),
     ('py:class', 'opendp.mod.LP_AnyTransformation'),
+
+    # I think the problem is that Sphinx is making paramter list documentation,
+    # and it doesn't understand that `M` and `T` are type parameters, not actual types.
     ('py:class', 'opendp.mod.M'),
-    ('py:class', 'opendp.mod.T'), # 17 occurrences
-    ('py:class', 'types.GenericAlias'), # 56 occurrences
-    ('py:exc', 'UnknownTypeError'), # 143 occurrences
-    ('py:func', 'make_count_by_categories'),
-    ('py:func', 'opendp.combinators.make_chain_tm'), # 2 occurrences
-    ('py:func', 'opendp.measurements.make_count_by'),
-    ('py:obj', 'typing._GenericAlias'), # 56 occurrences
+    ('py:class', 'opendp.mod.T'),  # 17 occurrences
+
+    # In a given version of Python, only one will apply,
+    # but we need them both for compatibility.
+    ('py:class', 'types.GenericAlias'),  # 56 occurrences
+    ('py:obj', 'typing._GenericAlias'),  # 56 occurrences
 ]
 
 # This prevents the RuntimeTypeDescriptors from expanding and making the signatures on API docs unreadable
