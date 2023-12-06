@@ -20,7 +20,7 @@ Why OpenDP?
 
 * OpenDP is based on a `solid conceptual framework <https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf>`_ for expressing privacy-aware computations.
 * OpenDP is built on a Rust core for memory and thread safety and performance.
-* OpenDP has a process for independant review of algorithms and implementations.
+* OpenDP has a process for independent review of algorithms and implementations.
 * OpenDP has performed well in `independent security audits <https://www.sri.inf.ethz.ch/publications/lokna2023groupandattack>`_.
 * OpenDP supports a range of differential privacy algorithms.
 * OpenDP has bindings for Python and R, both built on the same Rust core for consistency and security.
@@ -39,7 +39,7 @@ What next?
 There are multiple tracks in the documentation:
 
 * New users should begin with :doc:`getting-started/index`.
-* For a more architectural details, see the :doc:`api/index`.
+* For more architectural details, see the :doc:`api/index`.
 * If you want to see how the fundamentals of DP are applied in OpenDP, see :doc:`theory/index`.
 * Finally, if you're joining the project, see :doc:`contributing/index`.
 
