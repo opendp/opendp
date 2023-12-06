@@ -45,6 +45,7 @@ jobs:
       assert_version: ${{ inputs.channel != 'dev' }}
 
   libs-windows:
+    if: false
     needs: credential-check
     runs-on: windows-latest
     defaults:
@@ -223,7 +224,7 @@ jobs:
           path: python/src/opendp/
 
   python:
-    needs: [ libs-windows, libs-macos, libs-linux, python-bindings ]
+    needs: [ libs-macos, libs-linux, python-bindings ]
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout repository
