@@ -42,6 +42,12 @@ Transformation      Measurement
 Transformation
 --------------
 
+.. Diagram source: https://docs.google.com/drawings/d/1v406ncwgy0uvF4uow47waoHH7HG5IkzQaU8y0XUnOYM/edit
+
+.. image:: transformation.svg
+    :width: 75%
+    :alt: Diagram representing an OpenDP transformation and its six fields: input_domain, output_domain, function, input_metric, output_metric, and stability_map.
+
 A :py:class:`Transformation <opendp.mod.Transformation>` is a `deterministic` mapping from datasets to datasets.
 Transformations are used to preprocess and aggregate data.
 
