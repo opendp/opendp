@@ -5,3 +5,15 @@
 
 This page doesn't exist.
 The site search might help you find what you're looking for.
+
+.. raw:: html
+
+    <script>
+        (function(){
+            const url = document.location.toString();
+            // For demonstration, try "404.html#redirect-demo" 
+            if (url.includes('redirect-demo')) {
+                document.location = 'http://example.com'
+            }
+        })()
+    </script>
