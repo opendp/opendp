@@ -7,3 +7,4 @@ ipython  # for notebook syntax highlighting in docs
 pandoc
 pypandoc
 semver==3.0
+sphinx-tabs==3.4.4
