@@ -9,12 +9,12 @@ In this example we'll make a private release from a `very` small dataset:
 
     >>> import opendp.prelude as dp
     >>> import polars as pl
-    >>> lf = dp.LazyFrame(pl.DataFrame(
+    >>> pf = dp.PrivateFrame(pl.DataFrame(
     ...     "age": [20, 40, 60]
     ... }))
-    >>> lf.select(
+    >>> pf.select(
 	...     pl.col("age").private_mean()
-    ... )
+    ... ) # doctest: +ELLIPSIS
     shape: (1, 1)
     ┌──────┐
     │ age  │
@@ -29,25 +29,25 @@ and if you re-evaluate you will probably get a different number.
 
 Let's look at each line:
 
-OpenDP's :py:class:`LazyFrame` wraps a
+OpenDP's :py:class:`PrivateFrame` wraps a
 `DataFrame <https://pola-rs.github.io/polars/py-polars/html/reference/dataframe/index.html>`_ from Polars.
 You can use any Polars method to initialize the DataFrame:
 For this example the data is inline, but it could also be read from disk or from a URL.
 
-The LazyFrame offers a ``select`` analogous to the DataFrame ``select``.
+The ``PrivateFrame`` offers a ``select`` analogous to the DataFrame ``select``.
 The difference is that the expression provided must end with a private release method.
-While Polars natively supports ``mean``, attempting the same thing in a LazyFrame will cause an error:
+While Polars supports ``mean``, attempting the same thing in a ``PrivateFrame`` will cause an error:
 
 .. doctest::
 
-    >>> lf.select(
+    >>> pf.select(
 	...     pl.col("age").mean()
     ... )
     Traceback:
     ...
     Last method in chain must be a private_* method
 
-The ``LazyFrame`` protects you from accidentally releasing data which is not differentially private.
+The ``PrivateFrame`` protects you from accidentally releasing data which is not differentially private.
 
 Typically, you won't provide your data in line, and you'll want to know more than the mean.
 Our next example looks at what else is possible.
