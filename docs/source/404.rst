@@ -10,11 +10,16 @@ The site search might help you find what you're looking for.
 
     <script>
         (function(){
+            // For demonstration, try "404.html#redirect_demo" 
             const url = document.location.toString();
-            // For demonstration, try "404.html#redirect-demo" 
-            if (url.includes('redirect-demo')) {
-                warnAndRedirect('http://example.com');
-            }
+
+            Object.entries({
+                redirect_demo: 'http://example.com',
+            }).forEach(([match, newUrl]) => {
+                if (url.includes(match)) {
+                    warnAndRedirect(newUrl);
+                }
+            });
 
             function warnAndRedirect(url) {
                 document.write("<p><b>Our site structure has changed: Redirecting in five seconds...</b></p>");
@@ -22,5 +27,5 @@ The site search might help you find what you're looking for.
                     document.location = url
                 }, 5000);
             }
-        })()
+        })();
     </script>
