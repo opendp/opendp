@@ -22,10 +22,10 @@ Similarities
 Both transformations and measurements are mappings from inputs to outputs,
 and they share these four fields:
 
-:input_domain: A :ref:`domain <domains>` that describes the set of all possible input values for the function.
-:output_domain: A :ref:`domain <domains>` that describes the set of all possible output values of the function.
-:function: A :ref:`function <functions>` that transforms data.
-:input_metric: A :ref:`metric <metrics>` used to compute distance between two members of the input domain.
+:``input_domain``: A :ref:`domain <domains>` that describes the set of all possible input values for the function.
+:``output_domain``: A :ref:`domain <domains>` that describes the set of all possible output values of the function.
+:``function``: A :ref:`function <functions>` that transforms data.
+:``input_metric``: A :ref:`metric <metrics>` used to compute distance between two members of the input domain.
 
 Transformations and measurements have two additional fields, and this is where they differ:
 
@@ -82,8 +82,8 @@ Say we have an arbitrary instance of a Measurement, called ``meas``, and a code 
 This should look familiar!
 
 However, instead of talking about stability, we'll say that
-"``meas`` is (``d_in``, ``d_out``)-differentially private"
-if outputs of ``meas`` are ``d_out``-DP when inputs are ``d_in``-close.
+"``meas`` is (``d_in``, ``d_out``)-`differentially private`"
+if outputs of ``meas`` are ``d_out``-close when inputs are ``d_in``-close.
 
 The distances ``d_in`` and ``d_out`` are expressed in the units of the input metric and output `measure`, rather than `metric`.
 Because measurements emit samples from a probability distribution,
