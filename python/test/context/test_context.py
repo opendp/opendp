@@ -1,3 +1,4 @@
+import pytest
 from typing import List
 import opendp.prelude as dp
 
@@ -99,3 +100,18 @@ def test_rho_to_eps():
     dp_sum = context.query().clamp((1, 10)).sum().laplace()
 
     print(dp_sum.release())
+
+
+def test_transformation_release_error():
+    privacy_unit = dp.unit_of(contributions=2)
+    privacy_loss = dp.loss_of(epsilon=1.0)
+    context = dp.Context.compositor(
+        data=[1., 2., 3.],
+        privacy_unit=privacy_unit,
+        privacy_loss=privacy_loss,
+        domain=dp.vector_domain(dp.atom_domain(T=float), size=3),
+        split_evenly_over=1
+    )
+    clamped = context.query().clamp((1., 10.))
+    with pytest.raises(ValueError, match=r"Query is not yet a measurement"):
+        clamped.release()

@@ -20,7 +20,7 @@ ATOM_EQUIVALENCE_CLASSES: Dict[str, List[str]] = {
 
 def _load_library():
     lib_dir = os.environ.get("OPENDP_LIB_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
-    if not os.path.exists(lib_dir):
+    if not os.path.exists(lib_dir): # pragma: no cover
         # fall back to default location of binaries in a developer install
         build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
         lib_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'rust', 'target', build_dir)
@@ -186,7 +186,7 @@ def unwrap(result, type_) -> Any:
     from opendp.mod import OpenDPException
 
     if not isinstance(result, FfiResult):
-        return result
+        return result # pragma: no cover
 
     if result.tag == 0:
         return ctypes.cast(result.payload.Ok, type_)
@@ -211,7 +211,7 @@ def versioned(function):
     version = get_opendp_version()
     channel = get_channel(version)
 
-    if channel != "dev":
+    if channel != "dev": # pragma: no cover
         # docs.rs keeps all releases, so we can use the full version.
         function.__doc__ = function.__doc__.replace(
             "https://docs.rs/opendp/latest/", f"https://docs.rs/opendp/{version}/"
@@ -229,7 +229,7 @@ def versioned(function):
 proof_doc_re = re.compile(r"\[\(Proof Document\)\]\(([^)]+)\)")
 
 
-def proven(function):
+def proven(function): # pragma: no cover
     """Decorator for functions that have an associated proof document.
     Locates the proof document and edits the docstring with a link.
     """
@@ -265,7 +265,7 @@ def make_proof_link(
     source_dir,
     relative_path,
     repo_path,
-) -> str:
+) -> str: # pragma: no cover
     # construct absolute path
     absolute_path = os.path.join(source_dir, relative_path)
 
@@ -303,7 +303,7 @@ def get_opendp_version():
             return unmangle_py_version(importlib.metadata.version("opendp"))
         except importlib.metadata.PackageNotFoundError:
             return get_opendp_version_from_file()
-    else:
+    else: # pragma: no cover
         import pkg_resources
 
         try:
@@ -312,7 +312,7 @@ def get_opendp_version():
             return get_opendp_version_from_file()
 
 
-def unmangle_py_version(py_version):
+def unmangle_py_version(py_version): # pragma: no cover
     # Python mangles pre-release versions like "X.Y.Z-nightly.NNN.M" into "X.Y.ZaNNN00M", but the docs use
     # the original format, so we need to unmangle for links to work.
     # There are more variations possible, but we only need to handle X.Y.Z-dev0, X.Y.Z-aNNN00M, X.Y.Z-bNNN00M, X.Y.Z
@@ -331,14 +331,14 @@ def unmangle_py_version(py_version):
     return py_version
 
 
-def get_opendp_version_from_file():
+def get_opendp_version_from_file(): # pragma: no cover
     # If the package isn't installed (eg when we're building docs), we can't get the version from metadata,
     # so fall back to the version file.
     version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'VERSION')
     return open(version_file, 'r').read().strip()
 
 
-def get_docs_ref(version):
+def get_docs_ref(version): # pragma: no cover
     channel = get_channel(version)
     if channel == "stable":
         return f"v{version}"  # For stable, we have tags.
@@ -353,4 +353,4 @@ def get_channel(version):
     if match:
         channel = match.group(2)
         return channel or "stable"
-    return "unknown"
+    return "unknown" # pragma: no cover

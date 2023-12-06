@@ -7,3 +7,4 @@ ipython==8.18.1  # for notebook syntax highlighting in docs
 pandoc==2.3
 pypandoc==1.12
 semver==3.0
+linkchecker
