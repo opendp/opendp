@@ -72,11 +72,13 @@ jobs:
           echo "for underscore directories" > .nojekyll
           cp -r /tmp/build/html/* .
 
-          # ghpages looks for 404.html at the top level
-          # TODO: Remove once we know where the file is.
-          find . | grep 404.html
-          # TODO: Re-enable:
-          # cp en/stable/404.html .
+          # ghpages needs 404.html at the top level for it to work,
+          # but it could have been built at any of these:
+          #   en/{nightly,beta,stable}/404.html
+          # Channel is not an input to this workflow,
+          # so instead we search for the file and take the first match:
+          CUSTOM_404=$( find . | grep 404.html | head -n 1 )
+          cp "$CUSTOM_404" .
       
       - name: Checkout artifacts
         uses: actions/checkout@v3
