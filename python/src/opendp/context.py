@@ -421,7 +421,7 @@ class Query(object):
 
     def __dir__(self):
         """Returns the list of available constructors. Used by Python's error suggestion mechanism."""
-        return super().__dir__() + list(constructors.keys()) # pragma: no cover
+        return super().__dir__() + list(constructors.keys())  # type: ignore[operator] # pragma: no cover
 
     def resolve(self, allow_transformations=False):
         """Resolve the query into a measurement."

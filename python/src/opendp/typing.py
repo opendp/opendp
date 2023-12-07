@@ -494,7 +494,7 @@ def get_type(value):
     return value.type
 
 def get_value_type(type_name):
-    return RuntimeType.parse(type_name).args[1]
+    return RuntimeType.parse(type_name).args[1] # type: ignore[union-attr]
 
 def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
     return value.distance_type
