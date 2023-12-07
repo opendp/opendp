@@ -192,7 +192,7 @@ def unit_of(
     ordered=False,
     U=None,
 ) -> Tuple[Metric, float]:
-    """Constructs a unit of privacy, consisting of a metric and a dataset distance.
+    """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
 
     :param ordered: Set to true to use InsertDeleteDistance instead of SymmetricDistance, or HammingDistance instead of ChangeOneDistance.
     :param U: The type of the dataset distance."""
