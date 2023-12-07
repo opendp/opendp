@@ -73,12 +73,10 @@ jobs:
           cp -r /tmp/build/html/* .
 
           # ghpages needs 404.html at the top level for it to work,
-          # but it could have been built at any of these:
-          #   en/{nightly,beta,stable}/404.html
-          # Channel is not an input to this workflow,
-          # so instead we search for the file and take the first match:
-          CUSTOM_404=$( find . | grep 404.html | head -n 1 )
-          cp "$CUSTOM_404" .
+          # but the source location depends on the channel.
+          cp en/nightly/404.html . \
+          || cp en/beta/404.html . \
+          || cp en/stable/404.html
       
       - name: Checkout artifacts
         uses: actions/checkout@v3
