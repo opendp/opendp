@@ -5,8 +5,9 @@ Hello, OpenDP!
 Once you've installed OpenDP, you can write your first program.
 In this example we'll make a private release from a `very` small dataset:
 
-.. doctest::
+.. code-block::
 
+    # TODO: Revert to "doctest::" when API is available
     >>> import opendp.prelude as dp
     >>> import polars as pl
     >>> pf = dp.PrivateFrame(pl.DataFrame(
@@ -38,8 +39,9 @@ The ``PrivateFrame`` offers a ``select`` analogous to the DataFrame ``select``.
 The difference is that the expression provided must end with a private release method.
 While Polars supports ``mean``, attempting the same thing in a ``PrivateFrame`` will cause an error:
 
-.. doctest::
+.. code-block::
 
+    # TODO: Revert to "doctest::" when API is available
     >>> pf.select(
 	...     pl.col("age").mean()
     ... )
