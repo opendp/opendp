@@ -207,7 +207,7 @@ class RuntimeType(object):
 
             # attempt to upgrade strings to the metric/measure instance
             origin = type_name[:start] if 0 < start else type_name
-            closeness = {
+            closeness: RuntimeType = {
                 'ChangeOneDistance': ChangeOneDistance,
                 'SymmetricDistance': SymmetricDistance,
                 'AbsoluteDistance': AbsoluteDistance,
