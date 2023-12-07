@@ -15,7 +15,7 @@ Learning About Differential Privacy
 
 `Designing Access with Differential Privacy <https://admindatahandbook.mit.edu/book/latest/diffpriv.html>`_
 
-`Programming Differential Privacy <https://programming-dp.com/notebooks/cover.html>`_
+`Programming Differential Privacy <https://programming-dp.com/>`_
 
 `Privacy and Confidentiality Protection Overview <https://www2.census.gov/cac/nac/meetings/2019-05/garfinkel-privacy-confidentiality-protection.pdf>`_
 

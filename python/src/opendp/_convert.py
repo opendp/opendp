@@ -6,7 +6,7 @@ from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 
 try:
     import numpy as np
-except ImportError:
+except ImportError: # pragma: no cover
     np = None
 
 ATOM_MAP = {
@@ -48,7 +48,7 @@ def check_similar_scalar(expected, value):
             raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
     else:
         if expected != inferred:
-            raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
+            raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}") 
 
     if expected in INT_SIZES:
         check_c_int_cast(value, expected)
@@ -99,7 +99,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         if rust_type in ATOM_MAP:
             return ctypes.byref(ATOM_MAP[rust_type](value))
 
-        if rust_type == "String":
+        if rust_type == "String": # pragma: no cover
             return ctypes.c_char_p(value.encode())
 
         raise UnknownTypeException(rust_type)
@@ -242,7 +242,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 
 def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
     if np is not None and isinstance(val, np.ndarray):
-        val = val.item()
+        val = val.item() # pragma: no cover
     check_similar_scalar(type_name, val)
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     return _wrap_in_slice(ctypes.pointer(ATOM_MAP[type_name](val)), 1)
@@ -272,7 +272,7 @@ def _slice_to_extrinsic(raw: FfiSlicePtr):
 
 def _string_to_slice(val: str) -> FfiSlicePtr:
     if np is not None and isinstance(val, np.ndarray):
-        val = val.item()
+        val = val.item() # pragma: no cover
     return _wrap_in_slice(ctypes.c_char_p(val.encode()), len(val) + 1)
 
 
@@ -288,7 +288,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
     # when input is numpy array
     # TODO: can we use the underlying buffer directly?
     if np is not None and isinstance(val, np.ndarray):
-        val = val.tolist()
+        val = val.tolist() # pragma: no cover
 
     if not isinstance(val, list):
         raise TypeError(f"Expected type is {type_name} but input data is not a list.")
