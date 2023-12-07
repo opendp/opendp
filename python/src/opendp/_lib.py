@@ -134,7 +134,7 @@ class AnyQueryable(ctypes.Structure):
 
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)):
     _type_ = FfiSlice
-    _dependencies = {}
+    _dependencies: Dict[Any, Any] = {}  # TODO: Tighten this
 
     def depends_on(self, *args):
         """Extends the memory lifetime of args to the lifetime of self."""
@@ -179,6 +179,7 @@ class ExtrinsicObject(ctypes.Structure):
 def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
     if s is not None:
         return s.decode("utf-8")
+    return None  # pragma: no cover
 
 
 def unwrap(result, type_) -> Any:
