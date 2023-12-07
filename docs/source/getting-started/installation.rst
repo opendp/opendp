@@ -12,8 +12,9 @@ This will make the OpenDP modules available to your local environment.
 
 Many of our examples begin with these lines:
 
-.. doctest::
+.. code-block::
 
+    # TODO: Revert to "doctest::" when API is available
     >>> import opendp.prelude as dp
     >>> import polars as pl
     >>> dp.enable_features('contrib')
