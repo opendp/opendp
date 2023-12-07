@@ -211,8 +211,8 @@ where
 /// For any setting of the input arguments, return
 /// `Err(e)` if there is insufficient system entropy, or
 /// `Ok(sample)` where `sample` is drawn from a discrete distribution.
-/// 
-/// `sample` is either 
+///
+/// `sample` is either
 /// `None` with probability $2^{-buffer\_len * 8}$, or
 /// `Some(geo)` where `geo` is a sample from the Geometric(p=0.5) distribution.
 ///

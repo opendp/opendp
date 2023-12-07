@@ -5,9 +5,10 @@ use std::{
 
 use crate::{
     core::{FfiResult, IntoAnyFunctionFfiResultExt},
+    error::Fallible,
     ffi::{any::AnyFunction, util::Type},
     traits::{CheckAtom, Float, RoundCast},
-    transformations::make_consistent_b_ary_tree, error::Fallible,
+    transformations::make_consistent_b_ary_tree,
 };
 
 #[no_mangle]
@@ -30,5 +31,6 @@ pub extern "C" fn opendp_transformations__make_consistent_b_ary_tree(
     dispatch!(monomorphize, [
         (TIA, @integers),
         (TOA, @floats)
-    ], (branching_factor)).into()
+    ], (branching_factor))
+    .into()
 }

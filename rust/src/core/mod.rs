@@ -145,7 +145,9 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static + Send + Sync) -> Self {
         PrivacyMap(Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
     }
-    pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static + Send + Sync) -> Self {
+    pub fn new_fallible(
+        map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static + Send + Sync,
+    ) -> Self {
         PrivacyMap(Arc::new(map))
     }
     pub fn new_from_constant(c: MO::Distance) -> Self
@@ -194,7 +196,9 @@ impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
     pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static + Send + Sync) -> Self {
         StabilityMap(Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
     }
-    pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static + Send + Sync) -> Self {
+    pub fn new_fallible(
+        map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static + Send + Sync,
+    ) -> Self {
         StabilityMap(Arc::new(map))
     }
     pub fn new_from_constant(c: MO::Distance) -> Self
@@ -413,7 +417,9 @@ mod tests {
     #[test]
     #[cfg(feature = "ffi")]
     fn test_threading() -> Fallible<()> {
-        use crate::{measurements::make_randomized_response_bool, transformations::make_split_lines};
+        use crate::{
+            measurements::make_randomized_response_bool, transformations::make_split_lines,
+        };
 
         fn is_send_sync<T: Send + Sync>(_arg: &T) {}
 

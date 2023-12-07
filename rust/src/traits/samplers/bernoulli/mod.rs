@@ -2,7 +2,7 @@ use num::{One, Zero};
 
 use crate::{
     error::Fallible,
-    traits::{ExactIntCast, InfDiv, Float},
+    traits::{ExactIntCast, Float, InfDiv},
 };
 
 use super::{fill_bytes, sample_geometric_buffer};
@@ -45,11 +45,11 @@ impl SampleStandardBernoulli for bool {
 /// ```
 pub trait SampleBernoulli<T>: Sized {
     /// # Proof Definition
-    /// For any setting of the input parameters, 
+    /// For any setting of the input parameters,
     /// where `prob` is within $[0, 1]$,
     /// returns `Err(e)` if there is a lack of system entropy or `constant_time` is not supported,
     /// or `Ok(out)` where `out` is `true` with probability `prob`, otherwise `false`.
-    /// 
+    ///
     /// If `constant_time` is set, the implementation's runtime is constant.
     fn sample_bernoulli(prob: T, constant_time: bool) -> Fallible<Self>;
 }
