@@ -18,6 +18,10 @@ iniconfig==2.0.0
     # via pytest
 mccabe==0.7.0
     # via flake8
+mypy==1.7.1
+    # via -r requirements-dev.in
+mypy-extensions==1.0.0
+    # via mypy
 packaging==23.2
     # via
     #   build
@@ -37,9 +41,12 @@ pytest==7.4.3
 tomli==2.0.1
     # via
     #   build
+    #   mypy
     #   pip-tools
     #   pyproject-hooks
     #   pytest
+typing-extensions==4.8.0
+    # via mypy
 wheel==0.42.0
     # via
     #   -r requirements-dev.in
