@@ -52,7 +52,7 @@ jobs:
         working-directory: python
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -86,6 +86,10 @@ jobs:
           # Stop the build if there are new linting errors.
           # There is a long ignore list in .flake8.
           flake8 .. --count --show-source --statistics
+
+      - name: Type check with mypy
+        run: |
+          mypy .
 
       - name: Download libs
         uses: actions/download-artifact@v3

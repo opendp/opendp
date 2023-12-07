@@ -28,11 +28,11 @@ def test_context_init():
         domain=dp.domain_of(List[int]),
     )
 
-    dp_sum = context.query().clamp((1, 10)).sum().laplace(100.0)
+    dp_sum = context.query().clamp((1, 10)).sum().laplace(100.0)  # type: ignore
     print(dp_sum.release())
 
     # this time the scale parameter is omitted, but it is resolved from the context
-    print(context.query().clamp((1, 10)).sum().laplace().release())
+    print(context.query().clamp((1, 10)).sum().laplace().release())  # type: ignore
     # where we're headed:
     # print(context.query().dp_sum((1, 10)).release())
 
@@ -45,10 +45,10 @@ def test_context_zCDP():
         split_evenly_over=2,
     )
 
-    dp_sum = context.query().clamp((1, 10)).sum().gaussian(100.0)
+    dp_sum = context.query().clamp((1, 10)).sum().gaussian(100.0)  # type: ignore
     print(dp_sum.release())
 
-    dp_sum = context.query().clamp((1, 10)).sum().gaussian()
+    dp_sum = context.query().clamp((1, 10)).sum().gaussian()  # type: ignore
     print(dp_sum.release())
 
 
@@ -97,7 +97,7 @@ def test_rho_to_eps():
         split_evenly_over=1,
     )
 
-    dp_sum = context.query().clamp((1, 10)).sum().laplace()
+    dp_sum = context.query().clamp((1, 10)).sum().laplace()  # type: ignore
 
     print(dp_sum.release())
 

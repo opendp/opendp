@@ -57,20 +57,23 @@ def test_impute_uniform():
     assert -1. <= caster([float('nan')])[0] <= 2.
 
 
-def test_identity():
-    # test int
+def test_int_identity():
     space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
     transformation = dp.t.make_identity(*space)
     arg = [123]
     ret = transformation(arg)
     assert ret == arg
 
+
+def test_float_identity():
     space = dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance()
     transformation = dp.t.make_identity(*space)
     arg = [123.123]
     ret = transformation(arg)
     assert ret == arg
 
+
+def test_str_identity():
     # doesn't care about invalid domains
     space = dp.atom_domain(T=str), dp.absolute_distance(T=int)
     transformation = dp.t.make_identity(*space)
