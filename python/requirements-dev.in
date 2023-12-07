@@ -1,7 +1,12 @@
+# To add dev dependencies, make changes here and then
+# regenerate requirements-dev.txt by running
+#
+#   pip-compile requirements-dev.in
+#
+# in this directory, and then commit this file and requirements-dev.txt.
+
 flake8 ~= 6.1
 pytest ~= 7.4
 wheel ~= 0.41
 coverage ~= 7.3
-
-# Not needed to build docs, only to update dependencies.
 pip-tools==7.3.0
