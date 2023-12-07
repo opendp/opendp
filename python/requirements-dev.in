@@ -3,7 +3,7 @@
 #
 #   pip-compile requirements-dev.in
 #
-# in this directory, and then commit this file and requirements-dev.txt.
+# and then commit this file and requirements-dev.txt.
 
 flake8 ~= 6.1
 pytest ~= 7.4
