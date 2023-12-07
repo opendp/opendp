@@ -8,7 +8,7 @@ from opendp.typing import *
 import pytest
 import sys
 try:
-    import numpy as np
+    import numpy as np  # type: ignore
 except ImportError:
     pass
 

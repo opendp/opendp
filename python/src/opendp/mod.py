@@ -5,7 +5,7 @@ from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric,
 
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
 if TYPE_CHECKING:
-    from opendp.typing import RuntimeType
+    from opendp.typing import RuntimeType # pragma: no cover
 
 
 class Measurement(ctypes.POINTER(AnyMeasurement)):
@@ -18,29 +18,32 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
 
     >>> import opendp.prelude as dp
     >>> dp.enable_features("contrib")
-    ...
+
     >>> # create an instance of Measurement using a constructor from the meas module
     >>> base_dl: dp.Measurement = dp.m.make_base_discrete_laplace(
     ...     dp.atom_domain(T=int), dp.absolute_distance(T=int),
     ...     scale=2.)
-    ...
+
     >>> # invoke the measurement (invoke and __call__ are equivalent)
-    >>> base_dl.invoke(100)  # -> 101   # doctest: +SKIP
-    >>> base_dl(100)  # -> 99           # doctest: +SKIP
-    ...
+    >>> print('explicit: ', base_dl.invoke(100))  # -> 101   # doctest: +ELLIPSIS
+    explicit: ...
+    >>> print('concise: ', base_dl(100))  # -> 99            # doctest: +ELLIPSIS
+    concise: ...
     >>> # check the measurement's relation at
     >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence)
     >>> assert base_dl.check(1, 0.5)
-    ...
+
     >>> # chain with a transformation from the trans module
     >>> chained = (
     ...     (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()) >>
     ...     dp.t.then_count() >>
     ...     base_dl
     ... )
-    ...
+
     >>> # the resulting measurement has the same features
-    >>> chained([1, 2, 3])  # -> 4     # doctest: +SKIP
+    >>> print('dp count: ', chained([1, 2, 3]))  # -> 4     # doctest: +ELLIPSIS
+    dp count: ...
+
     >>> # check the chained measurement's relation at
     >>> #     (1, 0.5): (SymmetricDistance, MaxDivergence)
     >>> assert chained.check(1, 0.5)
@@ -93,7 +96,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
 
     def __rshift__(self, other: Union["Function", "Transformation"]) -> "Measurement":
         if isinstance(other, Transformation):
-            other = other.function
+            other = other.function # pragma: no cover
 
         if isinstance(other, Function):
             from opendp.combinators import make_chain_pm
@@ -171,7 +174,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
             pass
     
     def __str__(self) -> str:
-        return f"Measurement(\n    input_domain   = {self.input_domain}, \n    input_metric   = {self.input_metric}, \n    output_measure = {self.output_measure}\n)"
+        return f"Measurement(\n    input_domain   = {self.input_domain}, \n    input_metric   = {self.input_metric}, \n    output_measure = {self.output_measure}\n)" # pragma: no cover
 
 
 class Transformation(ctypes.POINTER(AnyTransformation)):
@@ -184,28 +187,30 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
 
     >>> import opendp.prelude as dp
     >>> dp.enable_features("contrib")
-    ...
+
     >>> # create an instance of Transformation using a constructor from the trans module
     >>> input_space = (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
     >>> count: dp.Transformation = input_space >> dp.t.then_count()
-    ...
+
     >>> # invoke the transformation (invoke and __call__ are equivalent)
-    >>> count.invoke([1, 2, 3])  # -> 3  # doctest: +SKIP
-    >>> count([1, 2, 3])  # -> 3         # doctest: +SKIP
-    ...
+    >>> count.invoke([1, 2, 3])
+    3
+    >>> count([1, 2, 3])
+    3
     >>> # check the transformation's relation at
     >>> #     (1, 1): (SymmetricDistance, AbsoluteDistance<u32>)
     >>> assert count.check(1, 1)
-    ...
+
     >>> # chain with more transformations from the trans module
     >>> chained = (
     ...     dp.t.make_split_lines() >>
     ...     dp.t.then_cast_default(TOA=int) >>
     ...     count
     ... )
-    ...
+
     >>> # the resulting transformation has the same features
-    >>> chained("1\\n2\\n3")  # -> 3 # doctest: +SKIP
+    >>> chained("1\\n2\\n3")
+    3
     >>> assert chained.check(1, 1)  # both chained transformations were 1-stable
     """
     _type_ = AnyTransformation
@@ -217,8 +222,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         :return: non-differentially-private answer
         :raises OpenDPException: packaged error from the core OpenDP library
         """
-        from opendp.core import transformation_invoke
-        return transformation_invoke(self, arg)
+        from opendp.core import transformation_invoke # pragma: no cover
+        return transformation_invoke(self, arg)  # pragma: no cover
 
     def __call__(self, arg):
         from opendp.core import transformation_invoke
@@ -244,7 +249,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         from opendp.core import transformation_check
 
         if debug:
-            return transformation_check(self, d_in, d_out)
+            return transformation_check(self, d_in, d_out) # pragma: no cover
 
         try:
             return transformation_check(self, d_in, d_out)
@@ -265,7 +270,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     def __rshift__(self, other: "PartialConstructor") -> "PartialConstructor":
         ...
 
-    def __rshift__(self, other: Union["Measurement", "Transformation", "PartialConstructor"]) -> Union["Measurement", "Transformation", "PartialConstructor"]:
+    def __rshift__(self, other: Union["Measurement", "Transformation", "PartialConstructor"]) -> Union["Measurement", "Transformation", "PartialConstructor", "PartialChain"]:  # noqa F821
         if isinstance(other, Measurement):
             from opendp.combinators import make_chain_mt
             return make_chain_mt(other, self)
@@ -276,7 +281,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         
         if isinstance(other, PartialConstructor):
             return self >> other(self.output_domain, self.output_metric)
-        
+
         from opendp.context import PartialChain
         if isinstance(other, PartialChain):
             return PartialChain(lambda x: self >> other.partial(x))
@@ -308,7 +313,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     
     @property
     def input_space(self) -> Tuple["Domain", "Metric"]:
-        return self.input_domain, self.input_metric
+        return self.input_domain, self.input_metric # pragma: no cover
     
     @property
     def output_space(self) -> Tuple["Domain", "Metric"]:
@@ -316,8 +321,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     
     @property
     def function(self) -> "Function":
-        from opendp.core import transformation_function
-        return transformation_function(self)
+        from opendp.core import transformation_function # pragma: no cover
+        return transformation_function(self) # pragma: no cover
 
     @property
     def input_distance_type(self) -> Union["RuntimeType", str]:
@@ -379,8 +384,8 @@ class Queryable(object):
         return queryable_eval(self.value, query)
     
     def eval(self, query):
-        from opendp.core import queryable_eval
-        return queryable_eval(self.value, query)
+        from opendp.core import queryable_eval # pragma: no cover
+        return queryable_eval(self.value, query) # pragma: no cover
 
     @property
     def query_type(self):
@@ -448,7 +453,7 @@ class Domain(ctypes.POINTER(AnyDomain)):
             pass
 
     def __repr__(self) -> str:
-        return str(self)
+        return str(self) # pragma: no cover
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
@@ -486,7 +491,7 @@ class Metric(ctypes.POINTER(AnyMetric)):
             pass
 
     def __repr__(self) -> str:
-        return str(self)
+        return str(self) # pragma: no cover
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
@@ -541,7 +546,7 @@ class PartialConstructor(object):
         return self.constructor(input_domain, input_metric)
     
     def __rshift__(self, other):
-        return PartialConstructor(lambda input_domain, input_metric: self(input_domain, input_metric) >> other)
+        return PartialConstructor(lambda input_domain, input_metric: self(input_domain, input_metric) >> other) # pragma: no cover
 
     def __rrshift__(self, other):
         if isinstance(other, tuple) and list(map(type, other)) == [Domain, Metric]:
@@ -567,16 +572,16 @@ class OpenDPException(Exception):
         self.message = message
         self.raw_traceback = raw_traceback
 
-    def raw_frames(self):
+    def raw_frames(self): # pragma: no cover
         import re
         return re.split(r"\s*[0-9]+: ", self.raw_traceback or "")
     
-    def frames(self):
+    def frames(self): # pragma: no cover
         def format_frame(frame):
             return "\n  ".join(l.strip() for l in frame.split("\n"))
         return [format_frame(f) for f in self.raw_frames() if f.startswith("opendp") or f.startswith("<opendp")]
 
-    def __str__(self) -> str:
+    def __str__(self) -> str: # pragma: no cover
         response = ''
         if self.raw_traceback:
             # join and split by newlines because frames may be multi-line
@@ -947,7 +952,7 @@ def exponential_bounds_search(
             return False
     exception_bounds = exponential_bounds_search(exception_predicate, T=T)
     if exception_bounds is None:
-        try:
+        try: # pragma: no cover
             predicate(center)
         except Exception:
             raise ValueError(f"predicate always fails. An example traceback is shown above at {center}.")

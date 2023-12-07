@@ -31,8 +31,7 @@ then invoke it on a scalar aggregate.
 
     >>> import opendp.prelude as dp
     >>> base_laplace = dp.space_of(float) >> dp.m.then_base_laplace(scale=1.)
-    >>> base_laplace(23.4) # doctest: +SKIP
-    22.74877695423367
+    >>> dp_agg = base_laplace(23.4)
 
 This code snip uses a number of OpenDP concepts:
 

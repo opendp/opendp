@@ -1,9 +1,10 @@
 sphinx==5.1.1
-sphinx-prompt
+sphinx-prompt==1.5.0
 git+https://github.com/samtygier-stfc/sphinx-multiversion.git@prebuild_command
-pydata-sphinx-theme
-nbsphinx
-ipython  # for notebook syntax highlighting in docs
-pandoc
-pypandoc
+pydata-sphinx-theme==0.13.3
+nbsphinx==0.9.3
+ipython==8.18.1  # for notebook syntax highlighting in docs
+pandoc==2.3
+pypandoc==1.12
 semver==3.0
+linkchecker
