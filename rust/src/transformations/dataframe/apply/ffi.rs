@@ -53,7 +53,8 @@ pub extern "C" fn opendp_transformations__make_df_cast_default(
         (TIA, @primitives),
         (TOA, @primitives),
         (M, @dataset_metrics)
-    ], (input_domain, input_metric, column_name)).into()
+    ], (input_domain, input_metric, column_name))
+    .into()
 }
 
 #[no_mangle]
@@ -97,7 +98,8 @@ pub extern "C" fn opendp_transformations__make_df_is_equal(
         (TK, @hashable),
         (TIA, @primitives),
         (M, @dataset_metrics)
-    ], (input_domain, input_metric, column_name, value)).into()
+    ], (input_domain, input_metric, column_name, value))
+    .into()
 }
 
 #[cfg(test)]

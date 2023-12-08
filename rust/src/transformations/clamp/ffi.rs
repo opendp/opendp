@@ -37,7 +37,8 @@ pub extern "C" fn opendp_transformations__make_clamp(
     dispatch!(monomorphize_dataset, [
         (TA, @numbers),
         (M, @dataset_metrics)
-    ], (input_domain, input_metric, bounds)).into()
+    ], (input_domain, input_metric, bounds))
+    .into()
 }
 
 #[cfg(test)]

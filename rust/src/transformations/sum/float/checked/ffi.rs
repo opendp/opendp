@@ -62,10 +62,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_float_checked_sum(
     where
         T: 'static + Float,
     {
-        fn monomorphize2<S>(
-            size: usize,
-            bounds: (S::Item, S::Item),
-        ) -> Fallible<AnyTransformation>
+        fn monomorphize2<S>(size: usize, bounds: (S::Item, S::Item)) -> Fallible<AnyTransformation>
         where
             S: UncheckedSum,
             S::Item: 'static + Float,

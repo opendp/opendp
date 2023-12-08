@@ -26,7 +26,8 @@ pub extern "C" fn opendp_transformations__make_bounded_int_split_sum(
     let T = try_!(Type::try_from(T));
     dispatch!(monomorphize, [
         (T, @integers)
-    ], (bounds)).into()
+    ], (bounds))
+    .into()
 }
 
 #[no_mangle]
