@@ -38,15 +38,13 @@ html:
 html-rustdoc:
 	cd ../rust && cargo rustdoc --features untrusted,derive -- --html-in-header katex.html --document-private-items
 
-doctest: doctest-rust doctest-python
+doctest: doctest-rust
 	@echo
+	@echo "TODO: python doctests now run by pytest; Remove this rule?"
 	@echo "Doctest finished. The output is in $(BUILDDIR)/doctest/output.txt."
 
 doctest-rust:
 	cd ../rust && $(CARGO) test --doc --features untrusted,ffi
-
-doctest-python: html
-	$(SPHINXBUILD) $(SPHINXOPTS) -b doctest source $(BUILDDIR)/doctest
 
 versions:
 	# "/en" is the default, but someday we might have translations
