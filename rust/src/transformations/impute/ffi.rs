@@ -106,8 +106,9 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
                 M: 'static + DatasetMetric,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
-                let input_domain =
-                    input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()?.clone();
+                let input_domain = input_domain
+                    .downcast_ref::<VectorDomain<AtomDomain<TA>>>()?
+                    .clone();
                 let input_metric = input_metric.downcast_ref::<M>()?.clone();
                 let constant: TA = constant.downcast_ref::<TA>()?.clone();
                 make_impute_constant(input_domain, input_metric, constant).into_any()
@@ -115,7 +116,8 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
             dispatch!(monomorphize,
                 [(M, @dataset_metrics), (TA, [f64, f32])],
                 (input_domain, input_metric, constant)
-            ).into()
+            )
+            .into()
         }
         _ => err!(
             TypeParse,
@@ -163,8 +165,9 @@ pub extern "C" fn opendp_transformations__make_drop_null(
                 (VectorDomain<OptionDomain<AtomDomain<TA>>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
-                let input_domain = input_domain.downcast_ref::<VectorDomain<OptionDomain<AtomDomain<TA>>>>()?
-                .clone();
+                let input_domain = input_domain
+                    .downcast_ref::<VectorDomain<OptionDomain<AtomDomain<TA>>>>()?
+                    .clone();
                 let input_metric = input_metric.downcast_ref::<M>()?.clone();
 
                 make_drop_null(input_domain, input_metric).into_any()
@@ -182,15 +185,17 @@ pub extern "C" fn opendp_transformations__make_drop_null(
                 M: 'static + DatasetMetric,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
-                let input_domain =
-                    input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()?.clone();
+                let input_domain = input_domain
+                    .downcast_ref::<VectorDomain<AtomDomain<TA>>>()?
+                    .clone();
                 let input_metric = input_metric.downcast_ref::<M>()?.clone();
                 make_drop_null(input_domain, input_metric).into_any()
             }
             dispatch!(monomorphize,
                 [(M, @dataset_metrics), (TA, [f64, f32])],
                 (input_domain, input_metric)
-            ).into()
+            )
+            .into()
         }
         _ => err!(
             TypeParse,

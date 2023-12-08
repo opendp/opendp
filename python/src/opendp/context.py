@@ -192,7 +192,7 @@ def unit_of(
     ordered=False,
     U=None,
 ) -> Tuple[Metric, float]:
-    """Constructs a unit of privacy, consisting of a metric and a dataset distance.
+    """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
 
     :param ordered: Set to true to use InsertDeleteDistance instead of SymmetricDistance, or HammingDistance instead of ChangeOneDistance.
     :param U: The type of the dataset distance."""
@@ -218,6 +218,7 @@ def unit_of(
     if l2 is not None: # pragma: no cover
         metric = l2_distance(T=RuntimeType.parse_or_infer(U, l2))
         return metric, l2
+    raise Exception('No matching metric found')
 
 
 class Context(object):
