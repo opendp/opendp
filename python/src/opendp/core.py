@@ -54,7 +54,7 @@ def _error_free(
     :return: A boolean, where true indicates successful free
     :rtype: bool
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -81,7 +81,7 @@ def _function_free(
     :param this: 
     :type this: Function
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -109,7 +109,7 @@ def _measurement_free(
     :param this: 
     :type this: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -137,7 +137,7 @@ def _transformation_free(
     :param this: 
     :type this: Transformation
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -172,7 +172,7 @@ def function_eval(
     :type TI: str
     :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -209,7 +209,7 @@ def measurement_check(
     :type distance_out: Any
     :return: True indicates that the relation passed at the given distance.
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -240,7 +240,7 @@ def measurement_function(
     :type this: Measurement
     :rtype: Function
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -269,7 +269,7 @@ def measurement_input_carrier_type(
     :type this: Measurement
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -298,7 +298,7 @@ def measurement_input_distance_type(
     :type this: Measurement
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -327,7 +327,7 @@ def measurement_input_domain(
     :type this: Measurement
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -356,7 +356,7 @@ def measurement_input_metric(
     :type this: Measurement
     :rtype: Metric
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -388,7 +388,7 @@ def measurement_invoke(
     :type arg: Any
     :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -421,7 +421,7 @@ def measurement_map(
     :type distance_in: Any
     :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -451,7 +451,7 @@ def measurement_output_distance_type(
     :type this: Measurement
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -480,7 +480,7 @@ def measurement_output_measure(
     :type this: Measurement
     :rtype: Measure
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -512,7 +512,7 @@ def new_function(
     :type TO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Function
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -551,7 +551,7 @@ def new_user_queryable(
     :type A: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -590,7 +590,7 @@ def queryable_eval(
     :type query: Any
     :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -620,7 +620,7 @@ def queryable_query_type(
     :type this: Any
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -655,7 +655,7 @@ def transformation_check(
     :type distance_out: Any
     :return: True indicates that the relation passed at the given distance.
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -686,7 +686,7 @@ def transformation_function(
     :type this: Transformation
     :rtype: Function
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -715,7 +715,7 @@ def transformation_input_carrier_type(
     :type this: Transformation
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -744,7 +744,7 @@ def transformation_input_distance_type(
     :type this: Transformation
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -773,7 +773,7 @@ def transformation_input_domain(
     :type this: Transformation
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -802,7 +802,7 @@ def transformation_input_metric(
     :type this: Transformation
     :rtype: Metric
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -834,7 +834,7 @@ def transformation_invoke(
     :type arg: Any
     :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -867,7 +867,7 @@ def transformation_map(
     :type distance_in: Any
     :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -897,7 +897,7 @@ def transformation_output_distance_type(
     :type this: Transformation
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -926,7 +926,7 @@ def transformation_output_domain(
     :type this: Transformation
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -955,7 +955,7 @@ def transformation_output_metric(
     :type this: Transformation
     :rtype: Metric
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.

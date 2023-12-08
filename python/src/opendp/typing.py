@@ -149,7 +149,7 @@ class RuntimeType(object):
         :type: List[str]
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
-        :raises UnknownTypeError: if `type_name` fails to parse
+        :raises UnknownTypeException: if `type_name` fails to parse
 
         :examples:
 

@@ -32,7 +32,7 @@ def _domain_free(
     :param this: 
     :type this: Domain
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -67,7 +67,7 @@ def atom_domain(
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -100,7 +100,7 @@ def domain_carrier_type(
     :type this: Domain
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -129,7 +129,7 @@ def domain_debug(
     :type this: Domain
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -158,7 +158,7 @@ def domain_type(
     :type this: Domain
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -190,7 +190,7 @@ def map_domain(
     :type value_domain: Domain
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -222,7 +222,7 @@ def member(
     :param val: A potential element of the domain.
     :type val: Any
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -255,7 +255,7 @@ def option_domain(
     :type D: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -291,7 +291,7 @@ def user_domain(
     :param member: A function used to test if a value is a member of the data domain.
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("honest-but-curious")
@@ -326,7 +326,7 @@ def vector_domain(
     :type size: Any
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
