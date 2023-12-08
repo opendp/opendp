@@ -14,6 +14,7 @@ omit =
   metrics.py
   transformations.py
   _data.py
+  extrinsics/_test.py
   # We have some tests with conditional logic depending on environment.
   test/*
 
