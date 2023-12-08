@@ -25,11 +25,6 @@ Make Sphinx html:
 make html
 ```
 
-Make html and run Python doctests:
-```shell
-make doctest-python
-```
-
 Make rust html:
 ```shell
 make html-rustdoc
