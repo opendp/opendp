@@ -20,7 +20,8 @@ use std::marker::PhantomData;
 use crate::{
     core::{Domain, Metric, MetricSpace},
     domains::{type_name, AtomDomain, MapDomain, VectorDomain},
-    traits::{CheckAtom, InfAdd}, error::Fallible,
+    error::Fallible,
+    traits::{CheckAtom, InfAdd},
 };
 #[cfg(feature = "contrib")]
 use crate::{traits::Hashable, transformations::DataFrameDomain};
@@ -360,7 +361,7 @@ where
 {
     fn check_space(&self) -> Fallible<()> {
         if self.0.value_domain.nullable() {
-            return fallible!(MetricSpace, "LpDistance requires non-nullable elements")
+            return fallible!(MetricSpace, "LpDistance requires non-nullable elements");
         } else {
             Ok(())
         }
@@ -420,7 +421,10 @@ impl<Q> Metric for AbsoluteDistance<Q> {
 impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
     fn check_space(&self) -> Fallible<()> {
         if self.0.nullable() {
-            fallible!(MetricSpace, "AbsoluteDistance requires non-nullable elements")
+            fallible!(
+                MetricSpace,
+                "AbsoluteDistance requires non-nullable elements"
+            )
         } else {
             Ok(())
         }
@@ -490,12 +494,12 @@ impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
 /// ```
 pub struct LInfDistance<Q> {
     pub monotonic: bool,
-    _marker: PhantomData<fn() -> Q>
+    _marker: PhantomData<fn() -> Q>,
 }
 
 impl<Q: InfAdd> LInfDistance<Q> {
     /// Translate a distance bound `d_in` wrt the $L_\infty$ metric to a distance bound wrt the range metric.
-    /// 
+    ///
     /// ```math
     /// d_{\text{Range}}(u, v) = max_{ij} |(u_i - v_i) - (u_j - v_j)|
     /// ```
@@ -510,7 +514,7 @@ impl<Q: InfAdd> LInfDistance<Q> {
     pub fn new(monotonic: bool) -> Self {
         LInfDistance {
             monotonic,
-            _marker: PhantomData
+            _marker: PhantomData,
         }
     }
 }
@@ -518,16 +522,16 @@ impl<Q> Default for LInfDistance<Q> {
     fn default() -> Self {
         LInfDistance {
             monotonic: false,
-            _marker: PhantomData
+            _marker: PhantomData,
         }
     }
 }
 
 impl<Q> Clone for LInfDistance<Q> {
     fn clone(&self) -> Self {
-        LInfDistance { 
-            monotonic: self.monotonic, 
-            _marker: PhantomData 
+        LInfDistance {
+            monotonic: self.monotonic,
+            _marker: PhantomData,
         }
     }
 }

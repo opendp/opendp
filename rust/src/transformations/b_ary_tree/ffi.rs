@@ -3,13 +3,14 @@ use std::os::raw::c_uint;
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace},
     domains::{AtomDomain, VectorDomain},
+    error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMetric, AnyTransformation, Downcast},
         util::Type,
     },
     metrics::{L1Distance, L2Distance},
     traits::{Integer, Number},
-    transformations::{make_b_ary_tree, BAryTreeMetric}, error::Fallible,
+    transformations::{make_b_ary_tree, BAryTreeMetric},
 };
 
 use super::choose_branching_factor;
@@ -44,8 +45,9 @@ pub extern "C" fn opendp_transformations__make_b_ary_tree(
             M: 'static + BAryTreeMetric,
             M::Distance: Number,
         {
-            let input_domain =
-                input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()?.clone();
+            let input_domain = input_domain
+                .downcast_ref::<VectorDomain<AtomDomain<TA>>>()?
+                .clone();
             let input_metric = input_metric.downcast_ref::<M>()?.clone();
             make_b_ary_tree::<M, TA>(input_domain, input_metric, leaf_count, branching_factor)
                 .into_any()
@@ -66,7 +68,8 @@ pub extern "C" fn opendp_transformations__make_b_ary_tree(
     let Q = try_!(M.get_atom());
     dispatch!(monomorphize, [
         (Q, @integers)
-    ], (input_domain, input_metric, leaf_count, branching_factor, M, TA)).into()
+    ], (input_domain, input_metric, leaf_count, branching_factor, M, TA))
+    .into()
 }
 
 #[no_mangle]
