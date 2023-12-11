@@ -67,7 +67,8 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_linear(
     dispatch!(monomorphize, [
         (T, @integers),
         (QO, @floats)
-    ], (input_domain, input_metric, scale, bounds, QO)).into()
+    ], (input_domain, input_metric, scale, bounds, QO))
+    .into()
 }
 
 #[no_mangle]

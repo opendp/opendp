@@ -2,12 +2,13 @@ use std::{convert::TryFrom, os::raw::c_char};
 
 use crate::{
     core::{FfiResult, IntoAnyFunctionFfiResultExt},
+    error::Fallible,
     ffi::{
         any::{AnyFunction, AnyObject, Downcast},
         util::{to_str, Type},
     },
     traits::{Float, Number, RoundCast},
-    transformations::{make_cdf, make_quantiles_from_counts, Interpolation}, error::Fallible,
+    transformations::{make_cdf, make_quantiles_from_counts, Interpolation},
 };
 
 #[no_mangle]
@@ -20,7 +21,8 @@ pub extern "C" fn opendp_transformations__make_cdf(
     let TA = try_!(Type::try_from(TA));
     dispatch!(monomorphize, [
         (TA, @floats)
-    ], ()).into()
+    ], ())
+    .into()
 }
 
 #[no_mangle]
@@ -58,5 +60,6 @@ pub extern "C" fn opendp_transformations__make_quantiles_from_counts(
     dispatch!(monomorphize, [
         (TA, @numbers),
         (F, @floats)
-    ], (bin_edges, alphas, interpolation)).into()
+    ], (bin_edges, alphas, interpolation))
+    .into()
 }

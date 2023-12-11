@@ -200,8 +200,9 @@ If you're interested in porting OpenDP to a different platform, we'd be delighte
 Documentation
 -------------
 
-The source for this documentation website can be found in the "docs" directory at https://github.com/opendp/opendp.
-The docs are built using Sphinx and the steps to build it are listed in the README in the "docs" directory.
+This documentation website is built with Sphinx.
+The source code and developer documentation is
+`here <https://github.com/opendp/opendp/tree/main/docs#readme>`_.
 
 
 Developer Tooling

@@ -5,7 +5,9 @@ use opendp_derive::bootstrap;
 use crate::{
     core::{FfiResult, Function, Measurement, PrivacyMap},
     error::Fallible,
-    ffi::any::{wrap_func, AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, CallbackFn, AnyObject},
+    ffi::any::{
+        wrap_func, AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, CallbackFn,
+    },
 };
 
 #[bootstrap(
