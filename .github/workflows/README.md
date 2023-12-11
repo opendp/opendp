@@ -28,7 +28,7 @@ graph LR
 ### Manual
 
 ```mermaid
-graph LR
+graph TD
     subgraph build.yml
         bcc[credential-check] --> libs-windows --> python
         bcc[credential-check] --> libs-macos --> python
