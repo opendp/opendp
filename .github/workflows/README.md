@@ -9,7 +9,7 @@ provide a broader view of the the develpment and release process.
 
 ### Automatic
 
-```
+```mermaid
 graph LR
     subgraph smoke-test.yml
         rust-build-and-test --> python-test
