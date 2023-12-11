@@ -8,7 +8,9 @@ use crate::{
         any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
         util::AnyMeasurementPtr,
     },
-    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence, ffi::TypedMeasure},
+    measures::{
+        ffi::TypedMeasure, FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence,
+    },
     traits::InfAdd,
 };
 
@@ -81,7 +83,6 @@ impl<Q: 'static> BasicCompositionMeasure for TypedMeasure<Q> {
             .downcast()
     }
 }
-
 
 #[cfg(test)]
 mod tests {

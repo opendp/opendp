@@ -5,12 +5,13 @@ use std::{
 
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
+    error::Fallible,
     ffi::{
         any::{AnyObject, AnyTransformation, Downcast},
         util::Type,
     },
     traits::{CheckAtom, Float},
-    transformations::{make_sized_bounded_covariance, Pairwise, Sequential, UncheckedSum}, error::Fallible,
+    transformations::{make_sized_bounded_covariance, Pairwise, Sequential, UncheckedSum},
 };
 
 // no entry in bootstrap.json because there's no way to get data into it
@@ -58,5 +59,6 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_covariance(
     let T = try_!(S.get_atom());
     dispatch!(monomorphize, [
         (T, @floats)
-    ], (size, bounds_0, bounds_1, ddof, S)).into()
+    ], (size, bounds_0, bounds_1, ddof, S))
+    .into()
 }
