@@ -51,9 +51,7 @@ pub fn make_report_noisy_max_gumbel<TIA, QO>(
     input_metric: LInfDistance<TIA>,
     scale: QO,
     optimize: Optimize,
-) -> Fallible<
-    Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, MaxDivergence<QO>>,
->
+) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, MaxDivergence<QO>>>
 where
     TIA: Number + CastInternalRational,
     QO: CastInternalRational + DistanceConstant<TIA> + Float,
@@ -115,9 +113,7 @@ pub fn make_report_noisy_max_gumbel<TIA, QO>(
     input_metric: LInfDistance<TIA>,
     scale: QO,
     optimize: Optimize,
-) -> Fallible<
-    Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, MaxDivergence<QO>>,
->
+) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, MaxDivergence<QO>>>
 where
     TIA: Clone + Number,
     QO: 'static

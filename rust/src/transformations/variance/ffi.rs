@@ -40,8 +40,9 @@ pub extern "C" fn opendp_transformations__make_variance(
             AtomDomain<S::Item>: LipschitzMulFloatDomain<Atom = S::Item>,
             AbsoluteDistance<S::Item>: LipschitzMulFloatMetric<Distance = S::Item>,
         {
-            let input_domain =
-                input_domain.downcast_ref::<VectorDomain<AtomDomain<S::Item>>>()?.clone();
+            let input_domain = input_domain
+                .downcast_ref::<VectorDomain<AtomDomain<S::Item>>>()?
+                .clone();
             let input_metric = input_metric.downcast_ref::<SymmetricDistance>()?.clone();
             make_variance::<S>(input_domain, input_metric, ddof).into_any()
         }
@@ -54,5 +55,6 @@ pub extern "C" fn opendp_transformations__make_variance(
     let T = try_!(S.get_atom());
     dispatch!(monomorphize, [
         (T, @floats)
-    ], (input_domain, input_metric, ddof, S)).into()
+    ], (input_domain, input_metric, ddof, S))
+    .into()
 }

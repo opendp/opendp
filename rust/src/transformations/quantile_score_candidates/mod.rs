@@ -388,7 +388,7 @@ mod test_trans {
         assert_eq!(trans.map(&1)?, 7500);
 
         // alpha does not affect sensitivity- it's solely based on the size of the input domain
-        // using all of the range of the usize, 
+        // using all of the range of the usize,
         //     so scores can be scaled up by a factor of usize::MAX / 100 before being converted to integers and not overflow
         // factor of 4 breaks into:
         //   * a factor of 2 from non-monotonicity
@@ -428,7 +428,8 @@ mod test_trans {
         let exp_mech = make_report_noisy_max_gumbel(
             trans_sized.output_domain.clone(),
             trans_sized.output_metric.clone(),
-            trans_sized.map(&2)? as f64 * 2., Optimize::Min
+            trans_sized.map(&2)? as f64 * 2.,
+            Optimize::Min,
         )?;
 
         let quantile_sized_meas = (trans_sized >> exp_mech)?;

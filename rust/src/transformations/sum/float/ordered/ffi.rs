@@ -45,7 +45,8 @@ pub extern "C" fn opendp_transformations__make_bounded_float_ordered_sum(
     let T = try_!(S.get_atom());
     dispatch!(monomorphize, [
         (T, @floats)
-    ], (S, size_limit, bounds)).into()
+    ], (S, size_limit, bounds))
+    .into()
 }
 
 #[no_mangle]
@@ -62,10 +63,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_float_ordered_sum(
     where
         T: 'static + Float,
     {
-        fn monomorphize2<S>(
-            size: usize,
-            bounds: (S::Item, S::Item),
-        ) -> Fallible<AnyTransformation>
+        fn monomorphize2<S>(size: usize, bounds: (S::Item, S::Item)) -> Fallible<AnyTransformation>
         where
             S: SaturatingSum,
             S::Item: 'static + Float,

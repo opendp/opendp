@@ -1,14 +1,15 @@
-use std::{fmt::Debug, marker::PhantomData, ffi::c_char};
+use std::{ffi::c_char, fmt::Debug, marker::PhantomData};
 
 use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, Measure},
+    error::Fallible,
     ffi::{
         any::AnyMeasure,
-        util::{self, into_c_char_p, Type, to_str, ExtrinsicObject},
+        util::{self, into_c_char_p, to_str, ExtrinsicObject, Type},
     },
-    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence}, error::Fallible,
+    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
 };
 
 use super::SmoothedMaxDivergence;
@@ -148,7 +149,6 @@ pub extern "C" fn opendp_measures__zero_concentrated_divergence(
     let T = try_!(Type::try_from(T));
     dispatch!(monomorphize, [(T, @numbers)], ())
 }
-
 
 #[derive(Clone, Default)]
 pub struct UserDivergence {

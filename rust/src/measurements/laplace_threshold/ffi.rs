@@ -61,5 +61,6 @@ pub extern "C" fn opendp_measurements__make_base_laplace_threshold(
     dispatch!(monomorphize, [
         (TK, @hashable),
         (TV, @floats)
-    ], (input_domain, input_metric, scale, threshold, k)).into()
+    ], (input_domain, input_metric, scale, threshold, k))
+    .into()
 }

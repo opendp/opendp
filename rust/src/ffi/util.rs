@@ -2,7 +2,7 @@ use std::any;
 use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
-use std::ffi::{CString, c_void};
+use std::ffi::{c_void, CString};
 use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
@@ -45,7 +45,10 @@ pub struct ExtrinsicObject {
 impl Clone for ExtrinsicObject {
     fn clone(&self) -> Self {
         (self.count)(self.ptr, true);
-        Self { ptr: self.ptr.clone(), count: self.count.clone() }
+        Self {
+            ptr: self.ptr.clone(),
+            count: self.count.clone(),
+        }
     }
 }
 
