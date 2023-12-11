@@ -98,7 +98,7 @@ graph LR
 
 ## Making one-off releases
 
-One-off releases can be started from the [github UI](https://docs.github.com/en/actions/using-workflows/manually-running-a-workflow). Find the `Release` workflow, and select "Dry Run". The other options are:
+One-off releases can be started from the [github UI](https://docs.github.com/en/actions/using-workflows/manually-running-a-workflow). Find the `Release` workflow, and select "Dry Run". The options are:
 
 - **Target channel** controls how the release is tagged, and what semantic version is given to the release. There is a git branch with the same name for each channel.
 - The **sync the Channel from upstream?** checkbox is for when you want to update the `nightly`, `beta` or `stable` branches.
