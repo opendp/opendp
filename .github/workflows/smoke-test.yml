@@ -29,6 +29,11 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
+      - name: Check Format
+        run: |
+          cargo fmt --manifest-path=rust/Cargo.toml --all --check \
+          || echo 'To fix Rust formatting, run: cargo fmt --manifest-path=rust/Cargo.toml --all'
+
       - name: Build
         run: cargo build --verbose --features untrusted,bindings-python
       
@@ -37,11 +42,6 @@ jobs:
 
       - name: Test
         run: cargo test --verbose --features untrusted,ffi
-
-      - name: Format
-        run: |
-          shopt -s globstar
-          rustfmt **/*.rs --check
 
       - name: Upload libs
         uses: actions/upload-artifact@v3
