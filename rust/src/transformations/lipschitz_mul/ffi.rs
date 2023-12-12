@@ -3,6 +3,7 @@ use std::{convert::TryFrom, ffi::c_void, os::raw::c_char};
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace},
     domains::AtomDomain,
+    error::Fallible,
     ffi::{
         any::{AnyObject, AnyTransformation, Downcast},
         util::Type,
@@ -10,7 +11,7 @@ use crate::{
     metrics::AbsoluteDistance,
     traits::Float,
     traits::SaturatingMul,
-    transformations::{make_lipschitz_float_mul, LipschitzMulFloatDomain, LipschitzMulFloatMetric}, error::Fallible,
+    transformations::{make_lipschitz_float_mul, LipschitzMulFloatDomain, LipschitzMulFloatMetric},
 };
 
 #[no_mangle]
@@ -55,5 +56,6 @@ pub extern "C" fn opendp_transformations__make_lipschitz_float_mul(
     let T = try_!(D.get_atom());
     dispatch!(monomorphize, [
         (T, @floats)
-    ], (constant, bounds, D, M)).into()
+    ], (constant, bounds, D, M))
+    .into()
 }

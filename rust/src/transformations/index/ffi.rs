@@ -28,8 +28,9 @@ pub extern "C" fn opendp_transformations__make_find(
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<OptionDomain<AtomDomain<usize>>>, M): MetricSpace,
     {
-        let input_domain =
-            input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?.clone();
+        let input_domain = input_domain
+            .downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?
+            .clone();
         let input_metric = input_metric.downcast_ref::<M>()?.clone();
         let categories = categories.downcast_ref::<Vec<TIA>>()?.clone();
         make_find(input_domain, input_metric, categories).into_any()
@@ -42,7 +43,8 @@ pub extern "C" fn opendp_transformations__make_find(
     dispatch!(monomorphize, [
         (M, @dataset_metrics),
         (TIA, @hashable)
-    ], (input_domain, input_metric, categories)).into()
+    ], (input_domain, input_metric, categories))
+    .into()
 }
 
 #[no_mangle]
@@ -62,8 +64,9 @@ pub extern "C" fn opendp_transformations__make_find_bin(
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<usize>>, M): MetricSpace,
     {
-        let input_domain =
-            input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?.clone();
+        let input_domain = input_domain
+            .downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?
+            .clone();
         let input_metric = input_metric.downcast_ref::<M>()?.clone();
         let edges = try_as_ref!(edges).downcast_ref::<Vec<TIA>>()?.clone();
         make_find_bin(input_domain, input_metric, edges).into_any()
@@ -76,7 +79,8 @@ pub extern "C" fn opendp_transformations__make_find_bin(
     dispatch!(monomorphize, [
         (M, @dataset_metrics),
         (TIA, @numbers)
-    ], (input_domain, input_metric, edges)).into()
+    ], (input_domain, input_metric, edges))
+    .into()
 }
 
 #[no_mangle]
@@ -99,8 +103,9 @@ pub extern "C" fn opendp_transformations__make_index(
         (VectorDomain<AtomDomain<usize>>, M): MetricSpace,
         (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {
-        let input_domain =
-            input_domain.downcast_ref::<VectorDomain<AtomDomain<usize>>>()?.clone();
+        let input_domain = input_domain
+            .downcast_ref::<VectorDomain<AtomDomain<usize>>>()?
+            .clone();
         let input_metric = input_metric.downcast_ref::<M>()?.clone();
         let edges = try_as_ref!(edges).downcast_ref::<Vec<TOA>>()?.clone();
         let null = try_as_ref!(null).downcast_ref::<TOA>()?.clone();
@@ -115,5 +120,6 @@ pub extern "C" fn opendp_transformations__make_index(
     dispatch!(monomorphize, [
         (M, @dataset_metrics),
         (TOA, @primitives)
-    ], (input_domain, input_metric, categories, null)).into()
+    ], (input_domain, input_metric, categories, null))
+    .into()
 }

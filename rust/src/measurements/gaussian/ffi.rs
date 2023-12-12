@@ -144,7 +144,8 @@ pub extern "C" fn opendp_measurements__make_gaussian(
             (QI, @numbers),
             (QO, @floats)
         ], (input_domain, input_metric, scale, MO, QI))
-    }.into()
+    }
+    .into()
 }
 
 #[cfg(test)]

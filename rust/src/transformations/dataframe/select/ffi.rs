@@ -29,5 +29,6 @@ pub extern "C" fn opendp_transformations__make_select_column(
     dispatch!(monomorphize, [
         (K, @hashable),
         (TOA, @primitives)
-    ], (key)).into()
+    ], (key))
+    .into()
 }
