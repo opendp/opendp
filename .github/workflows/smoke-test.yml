@@ -31,6 +31,7 @@ jobs:
 
       - name: Check Format
         run: |
+          cargo --version
           cargo fmt --manifest-path=Cargo.toml --all --check \
           || echo 'To fix Rust formatting, run: cargo fmt --manifest-path=Cargo.toml --all' && exit 1
 
