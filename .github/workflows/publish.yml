@@ -103,7 +103,7 @@ jobs:
 
       - name: Publish Rust crate
         env:
-          DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
+          DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
           python tools/publish_tool.py rust $DRY_RUN_FLAG
@@ -126,7 +126,7 @@ jobs:
       - name: Publish GitHub Release
         if: ${{ inputs.channel == 'stable' }}
         env:
-          DRAFT_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
+          DRAFT_FLAG: ${{ inputs.dry_run && '-n' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
           python tools/publish_tool.py github -d ${{ inputs.date }} $DRAFT_FLAG
