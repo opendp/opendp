@@ -49,17 +49,14 @@ jobs:
     defaults:
       run:
         working-directory: python
-    strategy:
-      matrix:
-        python-version: [3.9] # Do not expand: running under one python version is sufficient.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v3
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.9
 
       - name: Install dependencies
         run: |
@@ -75,17 +72,14 @@ jobs:
     defaults:
       run:
         working-directory: python
-    strategy:
-      matrix:
-        python-version: [3.9] # Do not expand: running under one python version is sufficient.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v3
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.9
 
       - name: Install dependencies
         run: |
@@ -150,9 +144,6 @@ jobs:
     defaults:
       run:
         working-directory: docs
-    strategy:
-      matrix:
-        python-version: [3.9] # Do not expand: running under one python version is sufficient.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -175,17 +166,14 @@ jobs:
     defaults:
       run:
         working-directory: docs
-    strategy:
-      matrix:
-        python-version: [3.9] # Do not expand: running under one python version is sufficient.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v3
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.9
 
       - name: Get pip cache dir
         id: pip-cache
