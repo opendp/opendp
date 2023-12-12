@@ -31,8 +31,8 @@ jobs:
 
       - name: Check Format
         run: |
-          cargo fmt --manifest-path=rust/Cargo.toml --all --check \
-          || echo 'To fix Rust formatting, run: cargo fmt --manifest-path=rust/Cargo.toml --all'
+          cargo fmt --manifest-path=Cargo.toml --all --check \
+          || echo 'To fix Rust formatting, run: cargo fmt --manifest-path=Cargo.toml --all' && exit 1
 
       - name: Build
         run: cargo build --verbose --features untrusted,bindings-python
