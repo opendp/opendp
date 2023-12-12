@@ -29,11 +29,11 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
+      - name: Check Rust version
+        run: cargo --version
+
       - name: Check Format
-        run: |
-          cargo --version
-          cargo fmt --manifest-path=Cargo.toml --all --check \
-          || echo 'To fix Rust formatting, run: cargo fmt --manifest-path=Cargo.toml --all' && exit 1
+        run: cargo fmt --manifest-path=Cargo.toml --all --check
 
       - name: Build
         run: cargo build --verbose --features untrusted,bindings-python
