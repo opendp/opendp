@@ -51,7 +51,7 @@ jobs:
         working-directory: python
     strategy:
       matrix:
-        python-version: [3.9] # Do not expand: linting under one python version is sufficient.
+        python-version: [3.9] # Do not expand: running under one python version is sufficient.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -77,7 +77,7 @@ jobs:
         working-directory: python
     strategy:
       matrix:
-        python-version: [3.9] # Do not expand: typing under one python version is sufficient.
+        python-version: [3.9] # Do not expand: running under one python version is sufficient.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -145,15 +145,18 @@ jobs:
         run: coverage report
 
   docs-links:
-    needs: rust-build-and-test
+    needs: rust-build-and-test # TODO: Is this needed?
     runs-on: ubuntu-22.04
     defaults:
       run:
         working-directory: docs
     strategy:
       matrix:
-        python-version: [3.9] # Do not expand: typing under one python version is sufficient.
+        python-version: [3.9] # Do not expand: running under one python version is sufficient.
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Install Pandoc
         run: sudo apt-get install -y pandoc
 
@@ -174,7 +177,7 @@ jobs:
         working-directory: docs
     strategy:
       matrix:
-        python-version: [3.9] # Do not expand: typing under one python version is sufficient.
+        python-version: [3.9] # Do not expand: running under one python version is sufficient.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
