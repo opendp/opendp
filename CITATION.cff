@@ -3,7 +3,39 @@ abstract: >-
   differential privacy. It can be used to build applications of privacy-preserving computations, using a number
   of different models of privacy. OpenDP is implemented in Rust, with bindings for easy use from Python.
 authors:
-  - name: The OpenDP Team
+  # Just taking contributors from the list in order.
+  # https://github.com/opendp/opendp/graphs/contributors
+  # In a few cases the name wasn't transparent on github and a little research was needed.
+  - family-names: Shoemate # Shoeboxam
+    given-names: Michael
+  - family-names: Vyrros # andrewvyrros
+    given-names: Andrew
+  - family-names: McCallum # mccalluc
+    given-names: Chuck
+  - family-names: Prasad # raprasad
+    given-names: Raman
+  - family-names: Durbin # pdurbin
+    given-names: Philip 
+  - family-names: Casacuberta Puig # silviacasac
+    given-names: Sílvia 
+  - family-names: Cowan # ecowan
+    given-names: Ethan
+  - family-names: Xu # matchaginseng
+    given-names: Vicki
+  - family-names: Ratliff # zachratliff
+    given-names: Zachary
+  - family-names: Berrios # nbcl
+    given-names: Nicolás
+  - family-names: Whitworth # alexWhitworth
+    given-names: Alex
+  - family-names: Eliot # michaeleliot
+    given-names: Michael
+  - family-names: Lebeda # ChristianLebeda
+    given-names: Christian
+  - family-names: Renard # orespo
+    given-names: Oren
+  - family-names: McKay Bowen # ClaireMcKayBowen
+    given-names: Claire
 cff-version: 1.2.0
 contact:
   - email: info@opendp.org
