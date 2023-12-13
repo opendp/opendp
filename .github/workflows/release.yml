@@ -74,10 +74,10 @@ env:
 jobs:
   debug:
     steps:
-      run: |
-        echo 'inputs.dry_run:' ${{ inputs.dry_run }}
-        echo 'inputs.fake:' ${{ inputs.fake }}
-        echo 'env.dry_run:' ${{ env.dry_run }}
+      - run: |
+          echo 'inputs.dry_run:' ${{ inputs.dry_run }}
+          echo 'inputs.fake:' ${{ inputs.fake }}
+          echo 'env.dry_run:' ${{ env.dry_run }}
 
   # prepare:
   #   uses: ./.github/workflows/prepare.yml
