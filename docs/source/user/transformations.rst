@@ -191,13 +191,10 @@ These operations work with `usize` data types: an integer data type representing
 :func:`opendp.transformations.make_find` finds the index of each input datum in a set of categories.
 In other words, it transforms a categorical data vector to a vector of numeric indices.
 
-.. testsetup::
-
-    import opendp.prelude as dp
-    dp.enable_features('contrib')
-
 .. doctest::
 
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features('contrib')
     >>> finder = (
     ...     # define the input space
     ...     (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()) >>

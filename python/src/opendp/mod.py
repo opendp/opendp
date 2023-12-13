@@ -793,12 +793,8 @@ def binary_search(
     Find epsilon usage of the gaussian(scale=1.) mechanism applied on a dp mean.
     Assume neighboring datasets differ by up to three additions/removals, and fix delta to 1e-8.
 
-    .. testsetup:: *
-
-        import opendp.prelude as dp
-        dp.enable_features("contrib", "floating-point")
-
     >>> # build a histogram that emits float counts
+    >>> import opendp.prelude as dp
     >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 100.)), 1000), dp.symmetric_distance()
     >>> dp_mean = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(
     ...     input_space >> dp.t.then_mean() >> dp.m.then_gaussian(1.)), 
