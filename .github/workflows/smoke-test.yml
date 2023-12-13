@@ -110,7 +110,7 @@ jobs:
         run: |
           cd ../docs
           python -m pip install -r requirements.txt
-          make doctest-python
+          make html
           linkchecker -f linkchecker.cfg build/html/index.html
 
 

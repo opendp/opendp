@@ -62,12 +62,12 @@ def test_sc_query():
     )
 
     # build a child sequential compositor, and then use it to release a laplace sum
-    sub_context = context.query().compositor(split_evenly_over=3).release()
+    sub_context = context.query().compositor(split_evenly_over=3).release() # type: ignore[attr-defined]
     dp_sum = sub_context.query().clamp((1, 10)).sum().laplace()
     print("laplace dp_sum", dp_sum.release())
 
     # build a child sequential compositor in zCDP, and then use it to release some gaussian queries
-    sub_context = context.query().compositor(
+    sub_context = context.query().compositor(  # type: ignore[attr-defined]
         split_evenly_over=2, 
         output_measure=dp.zero_concentrated_divergence(T=float)
     ).release()

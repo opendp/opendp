@@ -52,7 +52,7 @@ def test_data_object_tuple():
 def test_roundtrip_int():
     in_ = 23
     ptr = ctypes.POINTER(ctypes.c_int32)(ctypes.c_int32(in_))
-    ptr = ctypes.byref(ctypes.c_int32(in_))
+    ptr = ctypes.byref(ctypes.c_int32(in_))  # type: ignore[assignment]
 
     int_void = ctypes.cast(ptr, ctypes.c_void_p)
     out = ctypes.cast(int_void, ctypes.POINTER(ctypes.c_int32)).contents.value
