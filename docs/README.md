@@ -13,6 +13,13 @@ The steps below assume the use of [Homebrew] on a Mac.
 
 ```shell
 brew install pandoc
+brew install basictex
+
+sudo tlmgr install physics
+sudo tlmgr install tcolorbox
+sudo tlmgr install environ
+sudo tlmgr install catchfile
+
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -23,11 +30,6 @@ open build/html/index.html
 Make Sphinx html:
 ```shell
 make html
-```
-
-Make html and run Python doctests:
-```shell
-make doctest-python
 ```
 
 Make rust html:

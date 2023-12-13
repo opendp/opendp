@@ -73,6 +73,7 @@ jobs:
       channel: ${{ inputs.channel }}
       sync: ${{ inputs.sync }}
       counter: ${{ fromJSON(inputs.counter) }}
+      dry_run: ${{ inputs.dry_run || inputs.fake }}
 
   build:
     needs: prepare

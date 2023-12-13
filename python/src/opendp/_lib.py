@@ -116,11 +116,11 @@ class AnyFunction(ctypes.Structure):
     pass  # Opaque struct
 
 
-class BoolPtr(ctypes.POINTER(ctypes.c_bool)):
+class BoolPtr(ctypes.POINTER(ctypes.c_bool)): # type: ignore[misc]
     _type_ = ctypes.c_bool
 
 
-class AnyObjectPtr(ctypes.POINTER(AnyObject)):
+class AnyObjectPtr(ctypes.POINTER(AnyObject)): # type: ignore[misc]
     _type_ = AnyObject
 
     def __del__(self):
@@ -132,9 +132,9 @@ class AnyQueryable(ctypes.Structure):
     pass  # Opaque struct
 
 
-class FfiSlicePtr(ctypes.POINTER(FfiSlice)):
+class FfiSlicePtr(ctypes.POINTER(FfiSlice)): # type: ignore[misc]
     _type_ = FfiSlice
-    _dependencies = {}
+    _dependencies: Dict[Any, Any] = {}  # TODO: Tighten this
 
     def depends_on(self, *args):
         """Extends the memory lifetime of args to the lifetime of self."""
@@ -179,6 +179,7 @@ class ExtrinsicObject(ctypes.Structure):
 def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
     if s is not None:
         return s.decode("utf-8")
+    return None  # pragma: no cover
 
 
 def unwrap(result, type_) -> Any:

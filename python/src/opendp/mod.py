@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from opendp.typing import RuntimeType # pragma: no cover
 
 
-class Measurement(ctypes.POINTER(AnyMeasurement)):
+class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     """A differentially private unit of computation.
     A measurement contains a function and a privacy relation.
     The function releases a differentially-private release.
@@ -177,7 +177,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         return f"Measurement(\n    input_domain   = {self.input_domain}, \n    input_metric   = {self.input_metric}, \n    output_measure = {self.output_measure}\n)" # pragma: no cover
 
 
-class Transformation(ctypes.POINTER(AnyTransformation)):
+class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     """A non-differentially private unit of computation.
     A transformation contains a function and a stability relation.
     The function maps from an input domain to an output domain.
@@ -270,7 +270,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     def __rshift__(self, other: "PartialConstructor") -> "PartialConstructor":
         ...
 
-    def __rshift__(self, other: Union["Measurement", "Transformation", "PartialConstructor"]) -> Union["Measurement", "Transformation", "PartialConstructor"]:
+    def __rshift__(self, other: Union["Measurement", "Transformation", "PartialConstructor"]) -> Union["Measurement", "Transformation", "PartialConstructor", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
         if isinstance(other, Measurement):
             from opendp.combinators import make_chain_mt
             return make_chain_mt(other, self)
@@ -280,8 +280,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
             return make_chain_tt(other, self)
         
         if isinstance(other, PartialConstructor):
-            return self >> other(self.output_domain, self.output_metric)
-        
+            return self >> other(self.output_domain, self.output_metric) # type: ignore[call-arg]
+
         from opendp.context import PartialChain
         if isinstance(other, PartialChain):
             return PartialChain(lambda x: self >> other.partial(x))
@@ -373,7 +373,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         return f"Transformation(\n    input_domain   = {self.input_domain},\n    output_domain  = {self.output_domain},\n    input_metric   = {self.input_metric},\n    output_metric  = {self.output_metric}\n)"
 
 from typing import cast
-Transformation = cast(Type[Transformation], Transformation)
+Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
 
 class Queryable(object):
     def __init__(self, value):
@@ -401,7 +401,7 @@ class Queryable(object):
         setattr(self, "_dependencies", args)
         
 
-class Function(ctypes.POINTER(AnyFunction)):
+class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
     _type_ = AnyFunction
 
     def __call__(self, arg):
@@ -421,7 +421,7 @@ class Function(ctypes.POINTER(AnyFunction)):
             pass
 
 
-class Domain(ctypes.POINTER(AnyDomain)):
+class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     _type_ = AnyDomain
 
     def member(self, val):
@@ -464,7 +464,7 @@ class Domain(ctypes.POINTER(AnyDomain)):
         setattr(self, "_dependencies", args)
 
 
-class Metric(ctypes.POINTER(AnyMetric)):
+class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     _type_ = AnyMetric
 
     @property
@@ -498,7 +498,7 @@ class Metric(ctypes.POINTER(AnyMetric)):
         return str(self) == str(other)
 
 
-class Measure(ctypes.POINTER(AnyMeasure)):
+class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     _type_ = AnyMeasure
 
     @property
@@ -747,7 +747,7 @@ def binary_search_param(
     return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, T)
 
 @overload
-def binary_search(
+def binary_search( # type: ignore[overload-overlap]
         predicate: Callable[[T], bool],
         bounds: Optional[Tuple[T, T]] = None,
         T: Optional[Type[T]] = None,
@@ -793,12 +793,8 @@ def binary_search(
     Find epsilon usage of the gaussian(scale=1.) mechanism applied on a dp mean.
     Assume neighboring datasets differ by up to three additions/removals, and fix delta to 1e-8.
 
-    .. testsetup:: *
-
-        import opendp.prelude as dp
-        dp.enable_features("contrib", "floating-point")
-
     >>> # build a histogram that emits float counts
+    >>> import opendp.prelude as dp
     >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 100.)), 1000), dp.symmetric_distance()
     >>> dp_mean = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(
     ...     input_space >> dp.t.then_mean() >> dp.m.then_gaussian(1.)), 

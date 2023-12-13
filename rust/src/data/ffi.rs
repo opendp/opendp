@@ -493,9 +493,23 @@ impl Clone for AnyObject {
                 clone_plain,
                 [(
                     self.type_,
-                    [   
-                        u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, 
-                        String, ExtrinsicObject
+                    [
+                        u8,
+                        u16,
+                        u32,
+                        u64,
+                        u128,
+                        i8,
+                        i16,
+                        i32,
+                        i64,
+                        i128,
+                        usize,
+                        f32,
+                        f64,
+                        bool,
+                        String,
+                        ExtrinsicObject
                     ]
                 )],
                 (self)
@@ -531,10 +545,31 @@ impl Clone for AnyObject {
                 }
             }
             TypeContents::VEC(type_id) => {
-                dispatch!(clone_vec, [(
-                    Type::of_id(type_id).unwrap(), 
-                    [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, String, ExtrinsicObject]
-                )], (self))
+                dispatch!(
+                    clone_vec,
+                    [(
+                        Type::of_id(type_id).unwrap(),
+                        [
+                            u8,
+                            u16,
+                            u32,
+                            u64,
+                            u128,
+                            i8,
+                            i16,
+                            i32,
+                            i64,
+                            i128,
+                            usize,
+                            f32,
+                            f64,
+                            bool,
+                            String,
+                            ExtrinsicObject
+                        ]
+                    )],
+                    (self)
+                )
             }
         }
         .expect(&format!("Clone is not implemented for {:?}", self.type_))

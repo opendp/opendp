@@ -187,7 +187,6 @@ impl<TI: 'static, TO: 'static> IntoAnyFunctionFfiResultExt for Fallible<Function
     }
 }
 
-
 impl From<FfiError> for Error {
     fn from(val: FfiError) -> Self {
         let variant = util::to_str(val.variant).unwrap_assert("variants do not contain null bytes");

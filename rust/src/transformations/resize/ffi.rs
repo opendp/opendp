@@ -40,8 +40,9 @@ pub extern "C" fn opendp_transformations__make_resize(
         (VectorDomain<AtomDomain<TA>>, MI): MetricSpace,
         (VectorDomain<AtomDomain<TA>>, MO): MetricSpace,
     {
-        let input_domain =
-            input_domain.downcast_ref::<VectorDomain<AtomDomain<TA>>>()?.clone();
+        let input_domain = input_domain
+            .downcast_ref::<VectorDomain<AtomDomain<TA>>>()?
+            .clone();
         let input_metric = input_metric.downcast_ref::<MI>()?.clone();
         let constant = constant.downcast_ref::<TA>()?.clone();
         super::make_resize::<_, MI, MO>(input_domain, input_metric, size, constant).into_any()
@@ -51,7 +52,8 @@ pub extern "C" fn opendp_transformations__make_resize(
         (MI, [SymmetricDistance, InsertDeleteDistance]),
         (MO, [SymmetricDistance, InsertDeleteDistance]),
         (T, @primitives)
-    ], (input_domain, input_metric, size, constant)).into()
+    ], (input_domain, input_metric, size, constant))
+    .into()
 }
 
 #[cfg(test)]

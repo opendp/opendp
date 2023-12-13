@@ -52,7 +52,7 @@ jobs:
         working-directory: python
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -110,7 +110,8 @@ jobs:
         run: |
           cd ../docs
           python -m pip install -r requirements.txt
-          make doctest-python
+          make html
+          linkchecker -f linkchecker.cfg build/html/index.html
 
 
   python-test-notebooks:
