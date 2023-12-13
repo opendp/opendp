@@ -1,7 +1,7 @@
 name: Weekly link check
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
   schedule:
     # Run every Sunday at midnight.
     - cron: '0 0 * * 0'
