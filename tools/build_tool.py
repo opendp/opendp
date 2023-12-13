@@ -85,8 +85,8 @@ def _main(argv):
     subparser.set_defaults(func=rust)
     subparser.add_argument("-p", "--platform", choices=["mac", "windows", "linux"])
     subparser.add_argument("-c", "--toolchain", default="stable")
-    subparser.add_argument("-r", "--release-mode", dest="release_mode", action="store_true")
-    subparser.add_argument("-t", "--run-tests", dest="run_tests", action="store_true")
+    subparser.add_argument("--release_mode", action="store_true")
+    subparser.add_argument("--run_tests", action="store_true")
     subparser.add_argument("-f", "--features", default="untrusted,ffi")
 
     subparser = subparsers.add_parser("python", help="Build Python library")
