@@ -80,7 +80,7 @@ jobs:
 
       - name: Initialize channel
         env:
-          SYNC_FLAG: ${{ inputs.sync && '-s' || '-ns' }}
+          SYNC_FLAG: ${{ inputs.sync && '-s' || '' }}
         run: python tools/channel_tool.py initialize -c ${{ inputs.channel }} $SYNC_FLAG
 
       - name: Configure channel

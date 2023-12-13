@@ -218,11 +218,9 @@ def _main(argv):
     subparser = subparsers.add_parser("initialize", help="Initialize the channel")
     subparser.set_defaults(func=initialize)
     subparser.add_argument("-c", "--channel", choices=["nightly", "beta", "stable"], default="nightly", help="Which channel to target")
-    subparser.add_argument("-s", "--sync", dest="sync", action="store_true", default=True, help="Sync the channel from upstream")
-    subparser.add_argument("-ns", "--no-nosync", dest="sync", action="store_false", help="Don't sync the channel from upstream")
+    subparser.add_argument("-s", "--sync", dest="sync", action="store_true", help="Sync the channel from upstream")
     subparser.add_argument("-u", "--upstream", help="Upstream ref")
-    subparser.add_argument("-p", "--preserve", dest="preserve", action="store_true", default=False)
-    subparser.add_argument("-np", "--no-preserve", dest="preserve", action="store_false")
+    subparser.add_argument("-p", "--preserve", dest="preserve", action="store_true")
 
     subparser = subparsers.add_parser("date", help="Generate release date")
     subparser.set_defaults(func=date)
@@ -237,8 +235,7 @@ def _main(argv):
     subparser = subparsers.add_parser("changelog", help="Update the CHANGELOG file")
     subparser.set_defaults(func=changelog)
     subparser.add_argument("-d", "--date", type=datetime.date.fromisoformat, help="Release date")
-    subparser.add_argument("-p", "--prepend", dest="prepend", action="store_true", default=False, help="Prepend new empty heading (for dev only)")
-    subparser.add_argument("-np", "--no-prepend", dest="prepend", action="store_false", help="Don't prepend new empty heading (for dev only)")
+    subparser.add_argument("-p", "--prepend", dest="prepend", action="store_true", help="Prepend new empty heading (for dev only)")
 
     subparser = subparsers.add_parser("bump_version", help="Bump the version number (assumes dev channel)")
     subparser.set_defaults(func=bump_version)
