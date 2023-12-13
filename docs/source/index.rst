@@ -46,6 +46,7 @@ There are multiple tracks in the documentation:
 .. toctree::
   :hidden:
 
+
   getting-started/index
   api/index
   theory/index
