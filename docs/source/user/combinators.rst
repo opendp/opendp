@@ -1,9 +1,3 @@
-.. testsetup::
-
-    from typing import List
-    from opendp.mod import enable_features
-    enable_features('contrib', 'floating-point')
-
 .. _combinator-constructors:
 
 Combinators
@@ -213,6 +207,8 @@ you can make the privacy relation more permissive by wrapping your measurement w
 
     .. doctest::
 
+
+        >>> from opendp.mod import enable_features
         >>> enable_features("honest-but-curious")
 
 

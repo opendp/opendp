@@ -83,16 +83,16 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
 
     # choose a metric type if not set
     if M is None:
-        if D.origin == "VectorDomain":
+        if D.origin == "VectorDomain": # type: ignore[union-attr]
             M = ty.SymmetricDistance
-        elif D.origin == "AtomDomain" and ty.get_atom(D) in ty.NUMERIC_TYPES:
+        elif D.origin == "AtomDomain" and ty.get_atom(D) in ty.NUMERIC_TYPES: # type: ignore[union-attr]
             M = ty.AbsoluteDistance
         else:
             raise TypeError(f"no default metric for domain {D}. Please set `M`")
 
     # choose a distance type if not set
     if isinstance(M, ty.RuntimeType) and not M.args:
-        M = M[ty.get_atom(D)]
+        M = M[ty.get_atom(D)] # type: ignore[index]
 
     return domain, metric_of(M)
 
@@ -179,7 +179,7 @@ def loss_of(*, epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, flo
         return max_divergence(T=U), epsilon
     else:
         U = RuntimeType.parse_or_infer(U, epsilon)
-        return fixed_smoothed_max_divergence(T=U), (epsilon, delta)
+        return fixed_smoothed_max_divergence(T=U), (epsilon, delta) # type: ignore[return-value]
 
 
 def unit_of(
@@ -314,9 +314,9 @@ class Context(object):
             d_query = self.d_mids[0]
         elif kwargs: # pragma: no cover
             measure, d_query = loss_of(**kwargs)
-            if measure != self.output_measure:
+            if measure != self.output_measure: # type: ignore[attr-defined]
                 raise ValueError(
-                    f"Expected output measure {self.output_measure} but got {measure}"
+                    f"Expected output measure {self.output_measure} but got {measure}" # type: ignore[attr-defined]
                 )
 
         return Query(
@@ -347,10 +347,10 @@ class Query(object):
     def __init__(
         self,
         chain: Chain,
-        output_measure: Measure = None,
+        output_measure: Measure = None, # type: ignore[assignment]
         d_in=None,
         d_out=None,
-        context: "Context" = None,
+        context: "Context" = None, # type: ignore[assignment]
         _wrap_release=None,
     ) -> None:
         """Initializes the query with the given chain and output measure.
@@ -415,13 +415,13 @@ class Query(object):
             output_measure=self._output_measure,
             d_in=self._d_in,
             d_out=self._d_out,
-            context=self._context,
+            context=self._context, # type: ignore[arg-type]
             _wrap_release=wrap_release or self._wrap_release,
         )
 
     def __dir__(self):
         """Returns the list of available constructors. Used by Python's error suggestion mechanism."""
-        return super().__dir__() + list(constructors.keys()) # pragma: no cover
+        return super().__dir__() + list(constructors.keys())  # type: ignore[operator] # pragma: no cover
 
     def resolve(self, allow_transformations=False):
         """Resolve the query into a measurement."
@@ -440,7 +440,7 @@ class Query(object):
     def release(self) -> Any:
         """Release the query. The query must be part of a context."""
         # TODO: consider adding an optional `data` parameter for when _context is None
-        answer = self._context(self.resolve())
+        answer = self._context(self.resolve()) # type: ignore[misc]
         if self._wrap_release:
             answer = self._wrap_release(answer)
         return answer
