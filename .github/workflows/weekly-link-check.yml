@@ -1,101 +1,13 @@
 name: Weekly link check
 
 on:
-  workflow_call:
-    inputs:
-      channel:
-        type: string
-        required: true
-      sync:
-        type: boolean
-        required: false
-        default: false
-      counter:
-        type: number
-        required: false
-        default: 0
-      dry_run:
-        type: boolean
-        required: false
-        default: false
-      fake:
-        type: boolean
-        required: false
-        default: false
   workflow_dispatch:
-    inputs:
-      channel:
-        description: Target Channel
-        type: choice
-        options:
-          - nightly
-          - beta
-          - stable
-        required: true
-        default: nightly
-      sync:
-        description: Sync the Channel from Upstream?
-        type: boolean
-        required: false
-        default: false
-      counter:
-        description: Version Counter
-        type: number
-        required: false
-        default: 0
-      dry_run:
-        description: Dry Run?
-        type: boolean
-        required: false
-        default: false
-      fake:
-        description: Fake Build (Implies Dry Run)?
-        type: boolean
-        required: false
-        default: false
   schedule:
     # Run every Sunday at midnight.
     - cron: '0 0 * * 0'
 
 jobs:
-  # rust-build-and-test:
-  #   runs-on: ubuntu-22.04
-  #   defaults:
-  #     run:
-  #       working-directory: rust
-  #   env:
-  #     CARGO_TERM_COLOR: always
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v3
-
-  #     - name: Cache Rust dependencies
-  #       uses: actions/cache@v3
-  #       with:
-  #         path: |
-  #           ~/.cargo/registry
-  #           ~/.cargo/git
-  #           rust/target
-  #         key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-  #         restore-keys: ${{ runner.os }}-cargo-
-
-  #     - name: Build
-  #       run: cargo build --verbose --features untrusted,bindings-python
-      
-  #     - name: Check --no-default-features
-  #       run: cargo check --verbose --no-default-features --features untrusted,ffi
-
-  #     - name: Test
-  #       run: cargo test --verbose --features untrusted,ffi
-
-  #     - name: Upload libs
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: libs
-  #         path: rust/target/debug/libopendp.so
-
   check-links:
-    # needs: rust-build-and-test
     runs-on: ubuntu-22.04
     defaults:
       run:
