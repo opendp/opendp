@@ -73,6 +73,7 @@ env:
 
 jobs:
   debug:
+    runs-on: ubuntu-22.04
     steps:
       - run: |
           echo 'inputs.dry_run:' ${{ inputs.dry_run }}
