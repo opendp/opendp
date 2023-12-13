@@ -1,7 +1,58 @@
 name: Weekly link check
 
 on:
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        required: true
+      sync:
+        type: boolean
+        required: false
+        default: false
+      counter:
+        type: number
+        required: false
+        default: 0
+      dry_run:
+        type: boolean
+        required: false
+        default: false
+      fake:
+        type: boolean
+        required: false
+        default: false
   workflow_dispatch:
+    inputs:
+      channel:
+        description: Target Channel
+        type: choice
+        options:
+          - nightly
+          - beta
+          - stable
+        required: true
+        default: nightly
+      sync:
+        description: Sync the Channel from Upstream?
+        type: boolean
+        required: false
+        default: false
+      counter:
+        description: Version Counter
+        type: number
+        required: false
+        default: 0
+      dry_run:
+        description: Dry Run?
+        type: boolean
+        required: false
+        default: false
+      fake:
+        description: Fake Build (Implies Dry Run)?
+        type: boolean
+        required: false
+        default: false
   schedule:
     # Run every Sunday at midnight.
     - cron: '0 0 * * 0'
