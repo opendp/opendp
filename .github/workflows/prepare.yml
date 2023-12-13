@@ -23,6 +23,10 @@ on:
         type: number
         required: false
         default: 0
+      dry_run:
+        type: boolean
+        required: false
+        default: false
     outputs:
       date:
         value: ${{ jobs.prepare.outputs.date }}
@@ -47,6 +51,11 @@ on:
         type: number
         required: false
         default: 0
+      dry_run:
+        description: Dry Run?
+        type: boolean
+        required: false
+        default: false
 env:
   # Standardize dates to Eastern time
   TIME_ZONE: "America/New_York"
@@ -94,6 +103,7 @@ jobs:
         run: git diff
 
       - name: Push changes
+        if: ${{ !inputs.dry_run }}
         run: |
           git commit -a -m "Initialize and configure channel"
           git push --force origin ${{ inputs.channel }}
