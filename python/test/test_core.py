@@ -204,7 +204,7 @@ def test_user_domain():
     map_domain = dp.map_domain(dp.atom_domain(T=str), domain)
     assert map_domain.member({"A": datetime.now(), "B": datetime.now()})
     trans = dp.t.make_identity(map_domain, dp.symmetric_distance())
-    misc_data = {"A": datetime.now(), "C": 1j + 2}
+    misc_data = {"A": datetime.now(), "C": 1j + 2}  # type: ignore[assignment]
     assert trans(misc_data) == misc_data
     assert not map_domain.member(misc_data)
 

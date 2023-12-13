@@ -116,11 +116,11 @@ class AnyFunction(ctypes.Structure):
     pass  # Opaque struct
 
 
-class BoolPtr(ctypes.POINTER(ctypes.c_bool)):
+class BoolPtr(ctypes.POINTER(ctypes.c_bool)): # type: ignore[misc]
     _type_ = ctypes.c_bool
 
 
-class AnyObjectPtr(ctypes.POINTER(AnyObject)):
+class AnyObjectPtr(ctypes.POINTER(AnyObject)): # type: ignore[misc]
     _type_ = AnyObject
 
     def __del__(self):
@@ -132,7 +132,7 @@ class AnyQueryable(ctypes.Structure):
     pass  # Opaque struct
 
 
-class FfiSlicePtr(ctypes.POINTER(FfiSlice)):
+class FfiSlicePtr(ctypes.POINTER(FfiSlice)): # type: ignore[misc]
     _type_ = FfiSlice
     _dependencies: Dict[Any, Any] = {}  # TODO: Tighten this
 
