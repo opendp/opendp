@@ -150,7 +150,10 @@ Change to the ``python`` directory, install dependencies, and then install the P
     pip install -r requirements-dev.txt
     pip install -e .
 
-The `-e` flag is significant! 
+``requirement-dev.txt`` is compiled from ``requirements-dev.in``:
+To update dependencies, follow the directions in that file.
+
+In the second line, the ``-e`` flag is significant! 
 It stands for "editable", meaning you only have to run this command once.
 That is, you do not need to reinstall the OpenDP Python package if changes are made in the ``/python/src`` folder or to the library binary,
 but you should restart the Python interpreter or kernel.
