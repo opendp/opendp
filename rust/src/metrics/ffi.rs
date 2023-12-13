@@ -1,14 +1,16 @@
-use std::{fmt::Debug, marker::PhantomData, ffi::c_char};
+use std::{ffi::c_char, fmt::Debug, marker::PhantomData};
 
 use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, Metric},
+    error::Fallible,
     ffi::{
         any::AnyMetric,
-        util::{self, into_c_char_p, to_str, Type, ExtrinsicObject, c_bool},
+        util::{self, c_bool, into_c_char_p, to_str, ExtrinsicObject, Type},
     },
-    metrics::{AbsoluteDistance, L1Distance, L2Distance}, traits::InfAdd, error::Fallible,
+    metrics::{AbsoluteDistance, L1Distance, L2Distance},
+    traits::InfAdd,
 };
 
 use super::{
@@ -175,12 +177,13 @@ pub extern "C" fn opendp_metrics__discrete_distance() -> FfiResult<*mut AnyMetri
 
 #[bootstrap(
     arguments(monotonic(default = false)),
-    returns(c_type = "FfiResult<AnyMetric *>"))]
+    returns(c_type = "FfiResult<AnyMetric *>")
+)]
 /// Construct an instance of the `LInfDistance` metric.
 ///
 /// # Arguments
 /// * `monotonic` - set to true if non-monotonicity implies infinite distance
-/// 
+///
 /// # Generics
 /// * `T` - The type of the distance.
 fn linf_distance<T: InfAdd>(monotonic: bool) -> LInfDistance<T> {
@@ -240,10 +243,6 @@ pub extern "C" fn opendp_metrics__user_distance(
     let descriptor = try_!(to_str(descriptor)).to_string();
     Ok(AnyMetric::new(UserDistance { descriptor })).into()
 }
-
-
-
-
 
 pub struct TypedMetric<Q> {
     metric: AnyMetric,

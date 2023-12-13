@@ -6,12 +6,13 @@ use rug::Float as RugFloat;
 use crate::{
     core::{FfiResult, MetricSpace},
     domains::{AtomDomain, MapDomain},
+    error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast},
         util::{self, Type, TypeContents},
     },
     metrics::L1Distance,
-    traits::{DistanceConstant, Float, Hashable, InfCast, Integer}, error::Fallible,
+    traits::{DistanceConstant, Float, Hashable, InfCast, Integer},
 };
 
 #[no_mangle]
@@ -33,7 +34,7 @@ pub extern "C" fn opendp_measurements__make_alp_queryable(
         value_limit: *const c_void,
         size_factor: Option<u32>,
         alpha: *const c_void,
-    ) -> Fallible<AnyMeasurement> 
+    ) -> Fallible<AnyMeasurement>
     where
         K: 'static + Hashable,
         CI: 'static + Integer + DistanceConstant<CI> + InfCast<CO> + ToPrimitive,
@@ -56,7 +57,7 @@ pub extern "C" fn opendp_measurements__make_alp_queryable(
             total_limit,
             value_limit,
             size_factor,
-            alpha
+            alpha,
         )?
         .into_any_Q()
         .into_any_A()
@@ -82,5 +83,6 @@ pub extern "C" fn opendp_measurements__make_alp_queryable(
         (K, @hashable),
         (CI, @integers),
         (CO, @floats)
-    ], (input_domain, input_metric, scale, total_limit, value_limit, size_factor, alpha)).into()
+    ], (input_domain, input_metric, scale, total_limit, value_limit, size_factor, alpha))
+    .into()
 }

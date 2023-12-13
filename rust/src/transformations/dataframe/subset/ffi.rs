@@ -30,7 +30,8 @@ pub extern "C" fn opendp_transformations__make_subset_by(
 
     dispatch!(monomorphize, [
         (TK, @hashable)
-    ], (indicator_column, keep_columns)).into()
+    ], (indicator_column, keep_columns))
+    .into()
 }
 
 #[cfg(test)]

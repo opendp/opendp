@@ -34,8 +34,9 @@ pub extern "C" fn opendp_transformations__make_cast(
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<OptionDomain<AtomDomain<TOA>>>, M): MetricSpace,
     {
-        let input_domain =
-            input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?.clone();
+        let input_domain = input_domain
+            .downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?
+            .clone();
         let input_metric = input_metric.downcast_ref::<M>()?.clone();
         make_cast::<M, TIA, TOA>(input_domain, input_metric).into_any()
     }
@@ -43,7 +44,8 @@ pub extern "C" fn opendp_transformations__make_cast(
         (M, @dataset_metrics),
         (TIA, @primitives), 
         (TOA, @primitives)
-    ], (input_domain, input_metric)).into()
+    ], (input_domain, input_metric))
+    .into()
 }
 
 #[no_mangle]
@@ -69,8 +71,9 @@ pub extern "C" fn opendp_transformations__make_cast_default(
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {
-        let input_domain =
-            input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?.clone();
+        let input_domain = input_domain
+            .downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?
+            .clone();
         let input_metric = input_metric.downcast_ref::<M>()?.clone();
         make_cast_default::<M, TIA, TOA>(input_domain, input_metric).into_any()
     }
@@ -78,7 +81,8 @@ pub extern "C" fn opendp_transformations__make_cast_default(
         (M, @dataset_metrics),
         (TIA, @primitives), 
         (TOA, @primitives)
-    ], (input_domain, input_metric)).into()
+    ], (input_domain, input_metric))
+    .into()
 }
 
 #[no_mangle]
@@ -104,8 +108,9 @@ pub extern "C" fn opendp_transformations__make_cast_inherent(
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {
-        let input_domain =
-            input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?.clone();
+        let input_domain = input_domain
+            .downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?
+            .clone();
         let input_metric = input_metric.downcast_ref::<M>()?.clone();
         make_cast_inherent::<M, TIA, TOA>(input_domain, input_metric).into_any()
     }
@@ -113,7 +118,8 @@ pub extern "C" fn opendp_transformations__make_cast_inherent(
         (M, @dataset_metrics),
         (TIA, @primitives), 
         (TOA, @floats)
-    ], (input_domain, input_metric)).into()
+    ], (input_domain, input_metric))
+    .into()
 }
 
 #[cfg(test)]

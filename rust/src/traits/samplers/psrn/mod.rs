@@ -20,7 +20,10 @@ impl UniformPSRN {
             Round::Down => 0,
             _ => panic!("value must be rounded Up or Down"),
         };
-        Rational::from((self.numer.clone() + round, Integer::from(1) << self.denom_pow))
+        Rational::from((
+            self.numer.clone() + round,
+            Integer::from(1) << self.denom_pow,
+        ))
     }
     // Randomly discard the lower or upper half of the remaining interval.
     fn refine(&mut self) -> Fallible<()> {
