@@ -1,4 +1,4 @@
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover
     import os
     from opendp._lib import proven
     dummy_path = os.path.join(os.path.dirname(__file__), "dummy.tex")

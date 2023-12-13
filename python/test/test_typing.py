@@ -31,8 +31,8 @@ def test_typing_hint():
             # on Python < 3.8 the remaining tests do not apply
             return
 
-    assert str(RuntimeType.parse(Tuple[int, float])) == "(i32, f64)"
-    assert str(RuntimeType.parse(Tuple[int, Tuple[str]])) == "(i32, (String))"
+    assert str(RuntimeType.parse(Tuple[int, float])) == "(i32, f64)" # type: ignore[arg-type]
+    assert str(RuntimeType.parse(Tuple[int, Tuple[str]])) == "(i32, (String))" # type: ignore[arg-type]
     assert str(RuntimeType.parse(List[int])) == "Vec<i32>"
     assert str(RuntimeType.parse(List[List[str]])) == "Vec<Vec<String>>"
     assert str(RuntimeType.parse((List[int], (int, bool)))) == '(Vec<i32>, (i32, bool))'
