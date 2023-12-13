@@ -72,64 +72,56 @@ env:
   dry_run: ${{ inputs.dry_run || inputs.fake }}
 
 jobs:
-  debug:
-    runs-on: ubuntu-22.04
-    steps:
-      - run: |
-          echo 'inputs.dry_run:' ${{ inputs.dry_run }}
-          echo 'inputs.fake:' ${{ inputs.fake }}
-          echo 'env.dry_run:' ${{ env.dry_run }}
+  prepare:
+    uses: ./.github/workflows/prepare.yml
+    with:
+      channel: ${{ inputs.channel }}
+      sync: ${{ inputs.sync }}
+      counter: ${{ fromJSON(inputs.counter) }}
+      dry_run: ${{ env.dry_run }}
 
-  # prepare:
-  #   uses: ./.github/workflows/prepare.yml
-  #   with:
-  #     channel: ${{ inputs.channel }}
-  #     sync: ${{ inputs.sync }}
-  #     counter: ${{ fromJSON(inputs.counter) }}
-  #     dry_run: ${{ env.dry_run }}
+  build:
+    needs: prepare
+    uses: ./.github/workflows/build.yml
+    with:
+      channel: ${{ inputs.channel }}
+      fake: ${{ inputs.fake }}
 
-  # build:
-  #   needs: prepare
-  #   uses: ./.github/workflows/build.yml
-  #   with:
-  #     channel: ${{ inputs.channel }}
-  #     fake: ${{ inputs.fake }}
+  sanity-test-pre:
+    needs: build
+    uses: ./.github/workflows/sanity-test.yml
+    with:
+      channel: ${{ inputs.channel }}
+      python_repository: local
+      fake: ${{ inputs.fake }}
 
-  # sanity-test-pre:
-  #   needs: build
-  #   uses: ./.github/workflows/sanity-test.yml
-  #   with:
-  #     channel: ${{ inputs.channel }}
-  #     python_repository: local
-  #     fake: ${{ inputs.fake }}
+  publish:
+    needs: [ prepare, sanity-test-pre ]
+    uses: ./.github/workflows/publish.yml
+    with:
+      channel: ${{ inputs.channel }}
+      date: ${{ needs.prepare.outputs.date }}
+      dry_run: ${{ env.dry_run }}
+    secrets: inherit
 
-  # publish:
-  #   needs: [ prepare, sanity-test-pre ]
-  #   uses: ./.github/workflows/publish.yml
-  #   with:
-  #     channel: ${{ inputs.channel }}
-  #     date: ${{ needs.prepare.outputs.date }}
-  #     dry_run: ${{ env.dry_run }}
-  #   secrets: inherit
+  sanity-test-post:
+    needs: publish
+    uses: ./.github/workflows/sanity-test.yml
+    with:
+      channel: ${{ inputs.channel }}
+      # dry-runs go to TestPyPI instead of PyPI
+      python_repository: ${{ env.dry_run && 'testpypi' || 'pypi' }}
+      fake: ${{ inputs.fake }}
 
-  # sanity-test-post:
-  #   needs: publish
-  #   uses: ./.github/workflows/sanity-test.yml
-  #   with:
-  #     channel: ${{ inputs.channel }}
-  #     # dry-runs go to TestPyPI instead of PyPI
-  #     python_repository: ${{ env.dry_run && 'testpypi' || 'pypi' }}
-  #     fake: ${{ inputs.fake }}
+  latex:
+    needs: prepare
+    uses: ./.github/workflows/latex-release.yml
+    with:
+      channel: ${{ inputs.channel }}
+    secrets: inherit
 
-  # latex:
-  #   needs: prepare
-  #   uses: ./.github/workflows/latex-release.yml
-  #   with:
-  #     channel: ${{ inputs.channel }}
-  #   secrets: inherit
-
-  # docs:
-  #   needs: [ sanity-test-post, latex ]
-  #   uses: ./.github/workflows/docs.yml
-  #   with:
-  #     dry_run: ${{ env.dry_run }}
+  docs:
+    needs: [ sanity-test-post, latex ]
+    uses: ./.github/workflows/docs.yml
+    with:
+      dry_run: ${{ env.dry_run }}
