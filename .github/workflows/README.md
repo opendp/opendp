@@ -91,7 +91,7 @@ graph TD
 
 #### `docs.yml`
 
-- Last run in `release.yml`
+- Last step in `release.yml`
 - Runs `make versions`
   - Generates Python API docs
   - Generates Sphinx docs
@@ -100,7 +100,9 @@ graph TD
 
 ## Making one-off releases
 
-One-off releases can be started from the [github UI](https://docs.github.com/en/actions/using-workflows/manually-running-a-workflow). Find the `Release` workflow, and select "Dry Run". The options are:
+One-off releases can be made with the
+[`release.yml` workflow](https://github.com/opendp/opendp/actions/workflows/release.yml)
+on github, or with the `gh` command line tool. Parameters:
 
 - **Target channel** controls how the release is tagged, and what semantic version is given to the release. There is a git branch with the same name for each channel.
 - The **sync the Channel from upstream?** checkbox is for when you want to update the `nightly`, `beta` or `stable` branches.
