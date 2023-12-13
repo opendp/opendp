@@ -1,11 +1,10 @@
 name: Weekly link check
 
-# on:
-#   push:
-#     branches:
-#       - main
-#       - release/*
-#   pull_request:
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Run every Sunday at midnight.
+    - cron: '0 0 * * 0'
 
 jobs:
   # rust-build-and-test:
