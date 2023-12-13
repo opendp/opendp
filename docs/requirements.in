@@ -15,3 +15,4 @@ pandoc==2.3
 pypandoc==1.12
 semver==3.0
 linkchecker
+pip-tools
