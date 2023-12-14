@@ -1,10 +1,13 @@
 name: Weekly link check
 
 on:
-  workflow_dispatch:
+  # Runs every Sunday at midnight:
   schedule:
-    # Run every Sunday at midnight.
     - cron: '0 0 * * 0'
+  # Or run manually:
+  # CLI: gh workflow run weekly-link-check.yml
+  # web: https://github.com/opendp/opendp/actions/workflows/weekly-link-check.yml
+  workflow_dispatch:
 
 jobs:
   check-links:
