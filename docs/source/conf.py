@@ -174,7 +174,7 @@ html_css_files = [
 # See https://pydata-sphinx-theme.readthedocs.io/en/v0.6.3/user_guide/configuring.html#configure-the-sidebar
 # Note: Overridden in the Makefile for local builds. Be sure to update both places.
 html_sidebars = {
-   '**': ['search-field.html', 'sidebar-nav-bs.html', 'versioning.html'],
+   '**': ['sidebar-nav-bs.html', 'versioning.html'],
 }
 
 # SPHINX-MULTIVERSION STUFF
