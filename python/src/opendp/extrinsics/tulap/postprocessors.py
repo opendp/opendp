@@ -3,8 +3,7 @@ import math
 import numpy as np
 from scipy.stats import binom
 import scipy
-
-
+dp.enable_features("contrib")
 def _ptulap(t, m=0, b=0, q=0):
     lcut = q / 2
     rcut = q / 2
@@ -35,7 +34,7 @@ def _ptulap(t, m=0, b=0, q=0):
 
 
 def make_ump_test(theta, size, alpha, epsilon, delta, tail):
-    def function():
+    def function(data):
         b = math.exp(-epsilon)
         q = 2 * delta * b / (1 - b + 2 * delta * b)
         values = list(range(0, size + 1))
@@ -58,12 +57,13 @@ def make_ump_test(theta, size, alpha, epsilon, delta, tail):
         values_array = np.array(values)
         phi = _ptulap(t=values_array - s, m=0, b=b, q=q)
 
-        if tail == "left":
+        if data and tail == "left":
             return phi
-        elif tail == "right":
+        elif data and tail == "right":
             return 1 - phi
 
     return dp.new_function(function, TO=dp.Vec[float])
+
 
 def make_oneside_pvalue(theta, size, b, q, tail):
     """Right tailed p-value
