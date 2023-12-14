@@ -30,7 +30,7 @@ jobs:
       - name: Check markdown
         run: |
           find .. | grep '.md$' | grep -v 'venv/\|.git/\|CHANGELOG' \
-          | xargs linkchecker -f linkchecker-markdown.cfg
+          | xargs linkchecker -f linkchecker-external.cfg
 
       - name: Install Pandoc
         run: sudo apt-get install -y pandoc
