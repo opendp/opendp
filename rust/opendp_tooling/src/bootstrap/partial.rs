@@ -68,7 +68,8 @@ pub fn supports_partial(sig: &Signature) -> bool {
         return false;
     }
 
-    let Some((input_domain_type, input_metric_type)) = extract_domain_metric_types(&sig.output) else {
+    let Some((input_domain_type, input_metric_type)) = extract_domain_metric_types(&sig.output)
+    else {
         return false;
     };
 
