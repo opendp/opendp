@@ -5,6 +5,8 @@ use std::fmt::Debug;
 
 use std::backtrace::Backtrace as _Backtrace;
 
+use dashu::base::ConversionError;
+
 /// Create an instance of [`Fallible`]
 #[macro_export]
 macro_rules! fallible {
@@ -123,6 +125,16 @@ impl From<ErrorVariant> for Error {
 impl<T> From<Error> for Result<T, Error> {
     fn from(e: Error) -> Self {
         Err(e)
+    }
+}
+
+impl From<ConversionError> for Error {
+    fn from(err: ConversionError) -> Self {
+        Self {
+            variant: ErrorVariant::FailedCast,
+            message: Some(err.to_string()),
+            backtrace: std::backtrace::Backtrace::capture(),
+        }
     }
 }
 

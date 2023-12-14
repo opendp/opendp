@@ -709,7 +709,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(all(feature = "use-mpfr", feature = "partials"))]
+    #[cfg(feature = "partials")]
     #[test]
     fn test_any_chain() -> Fallible<()> {
         use crate::metrics::AbsoluteDistance;

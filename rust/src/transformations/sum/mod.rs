@@ -152,12 +152,15 @@ macro_rules! impl_make_sum_float {
                 input_domain: VectorDomain<AtomDomain<Self>>,
                 input_metric: SymmetricDistance,
             ) -> Fallible<Transformation<VectorDomain<AtomDomain<Self>>, AtomDomain<Self>, SymmetricDistance, AbsoluteDistance<Self>>> {
+                println!("sum A");
                 let bounds = input_domain.element_domain.bounds.as_ref()
                     .ok_or_else(|| err!(MakeTransformation, "`input_domain` must be bounded. Use `make_clamp` to bound data."))?
                     .get_closed()?;
 
+                println!("sum B");
                 if let Some(size) = input_domain.size {
                     if !Pairwise::<Self>::float_sum_can_overflow(size, bounds)? {
+                        println!("sum C");
                         // 1. try the checked sum first, as floats are unlikely to overflow
                         make_sized_bounded_float_checked_sum::<Pairwise<_>>(size, bounds)
 

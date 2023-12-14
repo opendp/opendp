@@ -1,19 +1,22 @@
-use std::{mem::size_of, ops::Sub};
+use std::{
+    mem::{replace, size_of},
+    ops::Sub,
+};
 
 use crate::{
     error::Fallible,
     traits::{ExactIntCast, FloatBits, InfDiv},
 };
 
-use super::{fill_bytes, sample_geometric_buffer};
+use super::{fill_bytes, sample_geometric_buffer, GeneratorOpenDP};
 
-#[cfg(feature = "use-mpfr")]
-use super::GeneratorOpenDP;
+use dashu::{
+    base::{BitTest, Signed},
+    integer::{IBig, UBig},
+};
+use num::{Integer, One};
 
-use num::One;
-
-#[cfg(feature = "use-mpfr")]
-use rug::rand::ThreadRandState;
+use rand::RngCore;
 
 /// Sample exactly from the uniform distribution.
 pub trait SampleUniform: Sized {
@@ -166,15 +169,39 @@ macro_rules! impl_sample_uniform_unsigned_int {
 }
 impl_sample_uniform_unsigned_int!(u8, u16, u32, u64, u128, usize);
 
-#[cfg(feature = "use-mpfr")]
-impl SampleUniformIntBelow for rug::Integer {
+impl SampleUniformIntBelow for UBig {
     fn sample_uniform_int_below(upper: Self) -> Fallible<Self> {
         let mut rng = GeneratorOpenDP::new();
-        let ret = {
-            let mut state = ThreadRandState::new_custom(&mut rng);
-            upper.random_below(&mut state)
-        };
-        rng.error.map(|_| ret)
+        // ceil(ceil(log_2(upper)) / 8)
+        let byte_len = Integer::div_ceil(&upper.bit_len(), &8);
+
+        // sample % upper is unbiased for any sample < threshold, because
+        // max - max % upper evenly folds into [0, upper) max/upper times
+        let max = UBig::from_be_bytes(&vec![u8::MAX; byte_len]);
+        let threshold = &max - &max % &upper;
+
+        let mut buffer = vec![0; byte_len];
+        loop {
+            rng.fill_bytes(&mut buffer);
+            replace(&mut rng.error, Ok(()))?;
+
+            let sample = UBig::from_be_bytes(&buffer);
+            if sample < threshold {
+                return Ok(sample % &upper);
+            }
+        }
+    }
+}
+
+impl SampleUniformIntBelow for IBig {
+    fn sample_uniform_int_below(upper: Self) -> Fallible<Self> {
+        if upper.is_negative() {
+            return fallible!(FailedFunction, "upper bound must not be negative");
+        }
+
+        let upper = UBig::try_from(upper)?;
+        let sample = UBig::sample_uniform_int_below(upper)?;
+        Ok(sample.into())
     }
 }
 
@@ -190,6 +217,20 @@ mod test_uniform_int {
         // this checks that the output distribution of each number is uniform
         (0..10000).try_for_each(|_| {
             let sample = u32::sample_uniform_int_below(7)?;
+            *counts.entry(sample).or_insert(0) += 1;
+            Fallible::Ok(())
+        })?;
+        println!("{:?}", counts);
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    fn test_sample_uniform_int_below_ubig() -> Fallible<()> {
+        let mut counts = HashMap::new();
+        // this checks that the output distribution of each number is uniform
+        (0..10000).try_for_each(|_| {
+            let sample = UBig::sample_uniform_int_below(UBig::from(255u8))?;
             *counts.entry(sample).or_insert(0) += 1;
             Fallible::Ok(())
         })?;

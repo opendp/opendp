@@ -270,7 +270,7 @@ pub trait Float:
     + InfLog2
     + InfExp
     + InfExpM1
-    + InfPow
+    + InfPowI
     + InfSqrt
     + FloatBits
     + ExactIntCast<Self::Bits>
@@ -286,7 +286,7 @@ impl<T> Float for T where
         + InfLog2
         + InfExp
         + InfExpM1
-        + InfPow
+        + InfPowI
         + InfSqrt
         + FloatBits
         + ExactIntCast<Self::Bits>

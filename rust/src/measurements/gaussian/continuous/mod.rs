@@ -54,7 +54,7 @@ where
             let d_in = d_in.inf_add(&relaxation)?;
 
             // (d_in / scale)^2 / 2
-            (d_in.inf_div(&scale)?).inf_pow(&_2)?.inf_div(&_2)
+            (d_in.inf_div(&scale)?).inf_powi(2.into())?.inf_div(&_2)
         })
     }
 }

@@ -1,8 +1,16 @@
 use std::convert::TryFrom;
 
+use dashu::{
+    float::{
+        round::{
+            mode::{Down, Up},
+            Round,
+        },
+        FBig,
+    },
+    integer::{IBig, UBig},
+};
 use num::{NumCast, One, Zero};
-#[cfg(feature = "use-mpfr")]
-use rug::Float;
 
 use crate::error::Fallible;
 
@@ -52,6 +60,14 @@ pub trait RoundCast<TI>: Sized {
     /// For any `v` of type `TI`, `Self::inf_cast(v)` either returns `Err(e)`,
     /// or `Ok(out)` where $out = argmin_{x \in TI} |x - v|$.
     fn round_cast(v: TI) -> Fallible<Self>;
+}
+
+/// Fallible casting where the casted value saturates.
+pub trait SaturatingCast<TI>: Sized {
+    /// # Proof Definition
+    /// For any `v` of type `TI`, `Self::saturating_cast(v)` either returns `Err(e)`,
+    /// or `Ok(out)` where $out = clamp(v, TI::MIN, TI::MAX)$.
+    fn saturating_cast(v: TI) -> Self;
 }
 
 macro_rules! cartesian {
@@ -220,30 +236,30 @@ impl ExactIntBounds for f32 {
     const MIN_CONSECUTIVE: Self = -16_777_216.0;
 }
 
+trait FromFBig<R: Round> {
+    fn from_fbig(value: FBig<R>) -> Self;
+}
+
+impl<R: Round> FromFBig<R> for f32 {
+    fn from_fbig(value: FBig<R>) -> Self {
+        value.to_f32().value()
+    }
+}
+
+impl<R: Round> FromFBig<R> for f64 {
+    fn from_fbig(value: FBig<R>) -> Self {
+        value.to_f64().value()
+    }
+}
+
 macro_rules! impl_inf_cast_int_float {
     ($int:ty, $float:ty) => {
-        #[cfg(feature = "use-mpfr")]
         impl InfCast<$int> for $float {
             fn inf_cast(v_int: $int) -> Fallible<Self> {
-                use rug::{float::Round, Float};
-                let float = Float::with_val_round(Self::MANTISSA_DIGITS, v_int, Round::Up).0;
-                Self::inf_cast(float)
+                Ok(<$float>::from_fbig(FBig::<Up>::from(IBig::from(v_int))))
             }
             fn neg_inf_cast(v_int: $int) -> Fallible<Self> {
-                use rug::{float::Round, Float};
-                let float = Float::with_val_round(Self::MANTISSA_DIGITS, v_int, Round::Down).0;
-                Self::neg_inf_cast(float)
-            }
-        }
-        // cast from int to float with controlled rounding, or fail
-        #[cfg(not(feature = "use-mpfr"))]
-        impl InfCast<$int> for $float {
-            fn inf_cast(v_int: $int) -> Fallible<Self> {
-                // defer to exact int cast implementation
-                Self::exact_int_cast(v_int)
-            }
-            fn neg_inf_cast(v_int: $int) -> Fallible<Self> {
-                Self::exact_int_cast(v_int)
+                Ok(<$float>::from_fbig(FBig::<Down>::from(IBig::from(v_int))))
             }
         }
     };
@@ -466,46 +482,74 @@ impl RoundCast<bool> for String {
     }
 }
 
-#[cfg(feature = "use-mpfr")]
-impl InfCast<f32> for Float {
+impl<R: Round> InfCast<f32> for FBig<R> {
     fn inf_cast(v: f32) -> Fallible<Self> {
-        Ok(Float::with_val_round(f32::MANTISSA_DIGITS, v, rug::float::Round::Up).0)
+        FBig::try_from(v).map_err(|_| err!(FailedCast, "found NaN"))
     }
 
     fn neg_inf_cast(v: f32) -> Fallible<Self> {
-        Ok(Float::with_val_round(f32::MANTISSA_DIGITS, v, rug::float::Round::Down).0)
+        FBig::try_from(v).map_err(|_| err!(FailedCast, "found NaN"))
     }
 }
 
-#[cfg(feature = "use-mpfr")]
-impl InfCast<f64> for Float {
+impl<R: Round> InfCast<f64> for FBig<R> {
     fn inf_cast(v: f64) -> Fallible<Self> {
-        Ok(Float::with_val_round(f64::MANTISSA_DIGITS, v, rug::float::Round::Up).0)
+        FBig::try_from(v).map_err(|_| err!(FailedCast, "found NaN"))
     }
 
     fn neg_inf_cast(v: f64) -> Fallible<Self> {
-        Ok(Float::with_val_round(f64::MANTISSA_DIGITS, v, rug::float::Round::Down).0)
+        FBig::try_from(v).map_err(|_| err!(FailedCast, "found NaN"))
     }
 }
 
-#[cfg(feature = "use-mpfr")]
-impl InfCast<Float> for f32 {
-    fn inf_cast(v: Float) -> Fallible<Self> {
-        Ok(v.to_f32_round(rug::float::Round::Up))
+impl<R: Round> InfCast<FBig<R>> for f32 {
+    fn inf_cast(v: FBig<R>) -> Fallible<Self> {
+        Ok(v.with_rounding::<Up>().to_f32().value())
     }
 
-    fn neg_inf_cast(v: Float) -> Fallible<Self> {
-        Ok(v.to_f32_round(rug::float::Round::Down))
+    fn neg_inf_cast(v: FBig<R>) -> Fallible<Self> {
+        Ok(v.with_rounding::<Down>().to_f32().value())
     }
 }
 
-#[cfg(feature = "use-mpfr")]
-impl InfCast<Float> for f64 {
-    fn inf_cast(v: Float) -> Fallible<Self> {
-        Ok(v.to_f64_round(rug::float::Round::Up))
+impl<R: Round> InfCast<FBig<R>> for f64 {
+    fn inf_cast(v: FBig<R>) -> Fallible<Self> {
+        Ok(v.with_rounding::<Up>().to_f64().value())
     }
 
-    fn neg_inf_cast(v: Float) -> Fallible<Self> {
-        Ok(v.to_f64_round(rug::float::Round::Down))
+    fn neg_inf_cast(v: FBig<R>) -> Fallible<Self> {
+        Ok(v.with_rounding::<Down>().to_f64().value())
     }
 }
+
+macro_rules! impl_saturating_cast_ubig_int {
+    ($($T:ty)+) => {$(
+        impl SaturatingCast<UBig> for $T {
+            fn saturating_cast(v: UBig) -> Self {
+                <$T>::try_from(v).unwrap_or(<$T>::MAX)
+                // let bytes = v.to_le_bytes();
+                // if bytes.len() > size_of::<Self>() {
+                //     return Self::MAX
+                // }
+
+                // let mut buf = [0; size_of::<Self>()];
+                // buf[..bytes.len()].copy_from_slice(&*bytes);
+                // Self::from_le_bytes(buf)
+            }
+        }
+    )+}
+}
+
+impl_saturating_cast_ubig_int! {u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize}
+
+macro_rules! impl_saturating_cast_ibig_uint {
+    ($($T:ty)+) => {$(
+        impl SaturatingCast<IBig> for $T {
+            fn saturating_cast(v: IBig) -> Self {
+                let positive = v > IBig::ZERO;
+                <$T>::try_from(v).unwrap_or_else(|_| if positive { <$T>::MAX } else { <$T>::MIN })
+            }
+        }
+    )+}
+}
+impl_saturating_cast_ibig_uint! {i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize}

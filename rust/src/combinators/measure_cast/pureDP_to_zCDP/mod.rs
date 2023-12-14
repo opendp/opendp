@@ -40,7 +40,7 @@ where
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             privacy_map
                 .eval(d_in)
-                .and_then(|eps| eps.inf_pow(&_2)?.inf_div(&_2))
+                .and_then(|eps| eps.inf_powi(2.into())?.inf_div(&_2))
         }),
     )
 }

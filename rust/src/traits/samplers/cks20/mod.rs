@@ -44,10 +44,12 @@
 
 use crate::error::Fallible;
 use crate::traits::samplers::SampleBernoulli;
+use dashu::{
+    base::Abs,
+    integer::{IBig, UBig},
+    rational::RBig,
+};
 use opendp_derive::proven;
-use rug::{Integer, Rational};
-
-use num::One;
 
 use super::{SampleStandardBernoulli, SampleUniformIntBelow};
 
@@ -58,13 +60,13 @@ use super::{SampleStandardBernoulli, SampleUniformIntBelow};
 /// For any rational number in [0, 1], `x`,
 /// `sample_bernoulli_exp1` either returns `Err(e)`, due to a lack of system entropy,
 /// or `Ok(out)`, where `out` is distributed as $Bernoulli(exp(-x))$.
-fn sample_bernoulli_exp1(x: Rational) -> Fallible<bool> {
-    let mut k = Integer::one();
+fn sample_bernoulli_exp1(x: RBig) -> Fallible<bool> {
+    let mut k = UBig::ONE;
     loop {
         if bool::sample_bernoulli(x.clone() / &k, false)? {
-            k += 1;
+            k += UBig::ONE;
         } else {
-            return Ok(k.is_odd());
+            return Ok(k % 2u8 == 1);
         }
     }
 }
@@ -77,12 +79,12 @@ fn sample_bernoulli_exp1(x: Rational) -> Fallible<bool> {
 /// `sample_bernoulli_exp` either returns `Err(e)` due to a lack of system entropy,
 /// or `Ok(out)`, where `out` is distributed as $Bernoulli(exp(-x))$.
 
-fn sample_bernoulli_exp(mut x: Rational) -> Fallible<bool> {
+fn sample_bernoulli_exp(mut x: RBig) -> Fallible<bool> {
     // Sample floor(x) independent Bernoulli(exp(-1))
     // If all are 1, return Bernoulli(exp(-(x-floor(x))))
-    while x > 1 {
+    while x > RBig::ONE {
         if sample_bernoulli_exp1(1.into())? {
-            x -= 1;
+            x -= RBig::ONE;
         } else {
             return Ok(false);
         }
@@ -97,11 +99,11 @@ fn sample_bernoulli_exp(mut x: Rational) -> Fallible<bool> {
 /// For any non-negative rational `x`,
 /// `sample_geometric_exp_slow` either returns `Err(e)` due to a lack of system entropy,
 /// or `Ok(out)`, where `out` is distributed as $Geometric(1 - exp(-x))$.
-fn sample_geometric_exp_slow(x: Rational) -> Fallible<Integer> {
-    let mut k = 0.into();
+fn sample_geometric_exp_slow(x: RBig) -> Fallible<UBig> {
+    let mut k = UBig::ZERO;
     loop {
         if sample_bernoulli_exp(x.clone())? {
-            k += 1;
+            k += UBig::ONE;
         } else {
             return Ok(k);
         }
@@ -115,18 +117,18 @@ fn sample_geometric_exp_slow(x: Rational) -> Fallible<Integer> {
 /// For any non-negative rational `x`,
 /// `sample_geometric_exp_fast` either returns `Err(e)` due to a lack of system entropy,
 /// or `Ok(out)`, where `out` is distributed as $Geometric(1 - exp(-x))$.
-fn sample_geometric_exp_fast(x: Rational) -> Fallible<Integer> {
+fn sample_geometric_exp_fast(x: RBig) -> Fallible<UBig> {
     if x.is_zero() {
-        return Ok(0.into());
+        return Ok(UBig::ZERO);
     }
 
-    let (numer, denom) = x.into_numer_denom();
-    let mut u = Integer::sample_uniform_int_below(denom.clone())?;
-    while !sample_bernoulli_exp(Rational::from((u.clone(), denom.clone())))? {
-        u = Integer::sample_uniform_int_below(denom.clone())?;
+    let (numer, denom) = x.into_parts();
+    let mut u = UBig::sample_uniform_int_below(denom.clone())?;
+    while !sample_bernoulli_exp(RBig::from_parts(u.as_ibig().clone(), denom.clone()))? {
+        u = UBig::sample_uniform_int_below(denom.clone())?;
     }
-    let v2 = sample_geometric_exp_slow(Rational::one())?;
-    Ok((v2 * denom + u) / numer)
+    let v2 = sample_geometric_exp_slow(RBig::ONE)?;
+    Ok((v2 * denom + u) / numer.into_parts().1)
 }
 
 #[proven]
@@ -146,18 +148,24 @@ fn sample_geometric_exp_fast(x: Rational) -> Fallible<Integer> {
 ///
 /// # Citation
 /// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/abs/2004.00010)
-pub fn sample_discrete_laplace(scale: Rational) -> Fallible<Integer> {
+pub fn sample_discrete_laplace(scale: RBig) -> Fallible<IBig> {
+    println!("entering discrete laplace sampler");
     if scale.is_zero() {
         return Ok(0.into());
     }
-    let inv_scale = scale.recip();
+    let (numer, denom) = scale.into_parts();
+    let inv_scale = RBig::from_parts(denom.as_ibig().clone(), numer.into_parts().1);
 
     loop {
+        println!("start discrete laplace loop");
         let positive = bool::sample_standard_bernoulli()?;
-        let magnitude = sample_geometric_exp_fast(inv_scale.clone())?;
+        let magnitude = sample_geometric_exp_fast(inv_scale.clone())?
+            .as_ibig()
+            .clone();
         if positive || !magnitude.is_zero() {
             return Ok(if positive { magnitude } else { -magnitude });
         }
+        println!("end discrete laplace loop");
     }
 }
 
@@ -178,16 +186,16 @@ pub fn sample_discrete_laplace(scale: Rational) -> Fallible<Integer> {
 ///
 /// # Citation
 /// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/abs/2004.00010)
-pub fn sample_discrete_gaussian(scale: Rational) -> Fallible<Integer> {
+pub fn sample_discrete_gaussian(scale: RBig) -> Fallible<IBig> {
     if scale.is_zero() {
-        return Ok(0.into());
+        return Ok(IBig::ZERO);
     }
-    let t = scale.clone().floor() + 1i8;
-    let sigma2 = scale.square();
+    let t = RBig::from(scale.clone().floor() + 1i8);
+    let sigma2 = scale.pow(2);
     loop {
         let candidate = sample_discrete_laplace(t.clone())?;
-        let x = candidate.clone().abs() - sigma2.clone() / &t;
-        let bias = x.square() / (2 * sigma2.clone());
+        let x = (&candidate).abs() - sigma2.clone() / &t;
+        let bias = x.pow(2) / (sigma2.clone() * RBig::from(2));
         if sample_bernoulli_exp(bias)? {
             return Ok(candidate);
         }

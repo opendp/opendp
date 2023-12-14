@@ -67,8 +67,10 @@ where
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
 
+    println!("getting disc consts");
     let (k, relaxation) = get_discretization_consts(k)?;
 
+    println!("done getting disc consts");
     Measurement::new(
         input_domain,
         D::new_map_function(move |arg: &D::Atom| {
@@ -104,22 +106,29 @@ where
     T: Float,
     i32: ExactIntCast<T::Bits>,
 {
+    println!("consts A");
     // the discretization may only be as fine as the subnormal ulp
     let k_min =
         -i32::exact_int_cast(T::EXPONENT_BIAS)? - i32::exact_int_cast(T::MANTISSA_BITS)? + 1;
     let k = k.unwrap_or(k_min).max(k_min);
 
+    println!("consts B");
     let _2 = T::exact_int_cast(2)?;
 
+    println!("consts B.1");
     // input has granularity 2^{k_min} (subnormal float precision)
-    let input_gran = _2.neg_inf_pow(&T::exact_int_cast(k_min)?)?;
+    let input_gran = _2.neg_inf_powi(k_min.into())?;
+    println!("consts B.2");
     // discretization rounds to the nearest 2^k
-    let output_gran = _2.inf_pow(&T::exact_int_cast(k)?)?;
+    println!("k {:?}", T::exact_int_cast(k)?);
+    let output_gran = _2.inf_powi(k.into())?;
 
+    println!("consts C");
     // the worst-case increase in sensitivity due to discretization is
     //     the range, minus the smallest step in the range
     let relaxation = output_gran.inf_sub(&input_gran)?;
 
+    println!("consts D");
     Ok((k, relaxation))
 }
 

@@ -1,7 +1,7 @@
 use std::ffi::{c_char, c_uint, c_void};
 
+use dashu::float::FBig;
 use num::ToPrimitive;
-use rug::Float as RugFloat;
 
 use crate::{
     core::{FfiResult, MetricSpace},
@@ -38,8 +38,8 @@ pub extern "C" fn opendp_measurements__make_alp_queryable(
     where
         K: 'static + Hashable,
         CI: 'static + Integer + DistanceConstant<CI> + InfCast<CO> + ToPrimitive,
-        CO: 'static + Float + DistanceConstant<CO> + InfCast<RugFloat> + InfCast<CI>,
-        RugFloat: InfCast<CO>,
+        CO: 'static + Float + DistanceConstant<CO> + InfCast<FBig> + InfCast<CI>,
+        FBig: InfCast<CO>,
         (MapDomain<AtomDomain<K>, AtomDomain<CI>>, L1Distance<CI>): MetricSpace,
     {
         let input_domain =

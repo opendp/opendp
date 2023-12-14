@@ -1,8 +1,6 @@
-use num::One;
+use dashu::integer::{IBig, UBig};
+use dashu::rational::RBig;
 use std::convert::TryFrom;
-
-// stands for Big Integer, an integer with unlimited precision, from gmp
-use rug::{Integer, Rational};
 
 use crate::error::Fallible;
 use crate::traits::samplers::sample_discrete_laplace;
@@ -31,11 +29,16 @@ pub trait SampleDiscreteLaplaceZ2k: Sized {
 
 impl<T: CastInternalRational> SampleDiscreteLaplaceZ2k for T {
     fn sample_discrete_laplace_Z2k(shift: Self, scale: Self, k: i32) -> Fallible<Self> {
+        println!("sample discrete laplace Z2k A");
         // integerize
         let mut i = find_nearest_multiple_of_2k(shift.into_rational()?, k);
 
+        println!("sample discrete laplace Z2k B");
+
         // sample from the discrete laplace on ℤ*2^k
-        i += sample_discrete_laplace(scale.into_rational()? >> k)?;
+        i += sample_discrete_laplace(shr(scale.into_rational()?, k))?;
+
+        println!("sample discrete laplace Z2k C");
 
         // postprocess! int -> rational -> T
         Ok(Self::from_rational(x_mul_2k(i, k)))
@@ -68,30 +71,46 @@ impl<T: CastInternalRational> SampleDiscreteGaussianZ2k for T {
         let mut i = find_nearest_multiple_of_2k(shift.into_rational()?, k);
 
         // sample from the discrete gaussian on ℤ*2^k
-        i += sample_discrete_gaussian(scale.into_rational()? >> k)?;
+        i += sample_discrete_gaussian(shr(scale.into_rational()?, k))?;
 
         // postprocess! int -> rational -> T
         Ok(Self::from_rational(x_mul_2k(i, k)))
     }
 }
 
+fn shr(lhs: RBig, rhs: i32) -> RBig {
+    let (mut num, mut den) = lhs.into_parts();
+    if rhs > 0 {
+        num <<= rhs as usize;
+    } else {
+        den <<= -rhs as usize;
+    }
+
+    RBig::from_parts(num, den)
+}
+
 /// Find index of nearest multiple of $2^k$ from x.
 ///
 /// # Proof Definition
 /// For any setting of input arguments, return the integer $argmin_i |i 2^k - x|$.
-fn find_nearest_multiple_of_2k(x: Rational, k: i32) -> Integer {
+fn find_nearest_multiple_of_2k(x: RBig, k: i32) -> IBig {
     // exactly compute shift/2^k and break into fractional parts
-    let (sx, sy) = (x >> k).into_numer_denom();
+    let (sx, sy) = shr(x, -k).into_parts();
 
     // argmin_i |i * 2^k - sx/sy|, the index of nearest multiple of 2^k
-    sx.div_rem_round(sy).0
+    let offset = &sy / UBig::from(2u8) * sx.sign();
+    (sx + offset) / sy
 }
 
 /// Exactly multiply x by 2^k.
 ///
 /// This is a postprocessing operation.
-fn x_mul_2k(x: Integer, k: i32) -> Rational {
-    Rational::from((x, Integer::one())) << k
+fn x_mul_2k(x: IBig, k: i32) -> RBig {
+    if k > 0 {
+        RBig::from(x << k as usize)
+    } else {
+        RBig::from_parts(x, UBig::ONE << -k as usize)
+    }
 }
 
 /// Casting between floating-point and rational values.
@@ -99,22 +118,22 @@ pub trait CastInternalRational {
     /// # Proof Definition
     /// For any [`Rational`] `v`, return `out`, the nearest representable value of type `Self`.
     /// `out` may saturate to +/- infinity.
-    fn from_rational(v: Rational) -> Self;
+    fn from_rational(v: RBig) -> Self;
     /// # Proof Definition
     /// For any `self` of type `Self`, either return
     /// `Err(e)` if `self` is not finite, or
     /// `Ok(out)`, where `out` is a [`Rational`] that exactly represents `self`.
-    fn into_rational(self) -> Fallible<Rational>;
+    fn into_rational(self) -> Fallible<RBig>;
 }
 
 macro_rules! impl_cast_internal_rational_float {
     ($ty:ty, $method:ident) => {
         impl CastInternalRational for $ty {
-            fn from_rational(v: Rational) -> Self {
-                v.$method()
+            fn from_rational(v: RBig) -> Self {
+                v.$method().value()
             }
-            fn into_rational(self) -> Fallible<Rational> {
-                Rational::try_from(self).map_err(|_| err!(FailedFunction, "shift must be finite"))
+            fn into_rational(self) -> Fallible<RBig> {
+                RBig::try_from(self).map_err(|_| err!(FailedFunction, "shift must be finite"))
             }
         }
     };
@@ -126,12 +145,12 @@ impl_cast_internal_rational_float!(f64, to_f64);
 macro_rules! impl_cast_internal_rational_int {
     ($($ty:ty)+) => {
         $(impl CastInternalRational for $ty {
-            fn from_rational(v: Rational) -> Self {
-                use az::SaturatingCast;
-                v.round().numer().saturating_cast()
+            fn from_rational(v: RBig) -> Self {
+                <$ty>::try_from(v.round())
+                    .unwrap_or_else(|_| if v > RBig::ZERO { <$ty>::MAX } else { <$ty>::MIN })
             }
-            fn into_rational(self) -> Fallible<Rational> {
-                Ok(Rational::from((self, Integer::from(1))))
+            fn into_rational(self) -> Fallible<RBig> {
+                Ok(RBig::from(self))
             }
         })+
     };
@@ -141,6 +160,11 @@ impl_cast_internal_rational_int!(u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 i
 
 #[cfg(test)]
 mod test {
+    use dashu::float::{
+        round::mode::Up,
+        FBig,
+    };
+
     use super::*;
     #[test]
     fn test_sample_discrete_laplace() -> Fallible<()> {
@@ -215,17 +239,48 @@ mod test {
     }
 
     #[test]
-    fn test_rational_k() -> Fallible<()> {
-        println!("{:?}", 1.5.into_rational()? << -2);
+    fn test_extreme_rational() -> Fallible<()> {
+        // rationals with greater magnitude than MAX saturate to infinity
+        let rat = RBig::try_from(f64::MAX).unwrap();
+        assert!((rat * IBig::from(2u8)).to_f64().value().is_nan());
+
         Ok(())
     }
 
     #[test]
-    fn test_extreme_rational() -> Fallible<()> {
-        // rationals with greater magnitude than MAX saturate to infinity
-        let rat = Rational::from_f64(f64::MAX).unwrap();
-        println!("{:?}", (rat * 2u8).to_f64());
+    fn test_shr() -> Fallible<()> {
+        assert_eq!(shr(RBig::try_from(1.)?, 0), RBig::from(1u8));
+        assert_eq!(shr(RBig::try_from(0.25)?, 2), RBig::from(1u8));
+        assert_eq!(shr(RBig::try_from(1.)?, -2), RBig::try_from(0.25)?);
+        Ok(())
+    }
 
+    #[test]
+    fn test_find_nearest_multiple_of_2k() -> Fallible<()> {
+        assert_eq!(
+            find_nearest_multiple_of_2k(RBig::try_from(-2.25)?, 0),
+            IBig::from(-2)
+        );
+        assert_eq!(
+            find_nearest_multiple_of_2k(RBig::try_from(2.25)?, -1),
+            IBig::from(5)
+        );
+        assert_eq!(
+            find_nearest_multiple_of_2k(RBig::try_from(-2.25)?, -1),
+            IBig::from(-5)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_dashu_pow() -> Fallible<()> {
+        FBig::<Up>::from(2).powf(&FBig::try_from(-1.)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_dashu_ln() -> Fallible<()> {
+        println!("{}", FBig::<Up>::from(2).ln());
         Ok(())
     }
 }

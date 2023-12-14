@@ -1,36 +1,55 @@
-use num::traits::MulAddAssign;
-use rug::{float::Round, ops::NegAssign, Float, Integer, Rational};
+use dashu::{
+    float::{
+        round::{
+            mode::{Down, Up},
+            ErrorBounds,
+        },
+        FBig,
+    },
+    integer::{IBig, UBig},
+    rational::RBig,
+};
 
 use crate::{error::Fallible, traits::samplers::SampleStandardBernoulli};
+
+pub trait ODPRound: ErrorBounds {
+    const UBIG: UBig;
+    type Complement: ODPRound<Complement = Self>;
+}
+
+impl ODPRound for Down {
+    const UBIG: UBig = UBig::ZERO;
+    type Complement = Up;
+}
+
+impl ODPRound for Up {
+    const UBIG: UBig = UBig::ONE;
+    type Complement = Down;
+}
 
 /// A partially sampled uniform random number.
 /// Initializes to the interval [0, 1].
 #[derive(Default)]
 pub struct UniformPSRN {
-    pub numer: Integer,
+    pub numer: UBig,
     /// The denominator is 2^denom_pow.
-    pub denom_pow: u32,
+    pub denom_pow: usize,
 }
 
 impl UniformPSRN {
     // Retrieve either the lower or upper edge of the uniform interval.
-    fn value(&self, round: Round) -> Rational {
-        let round = match round {
-            Round::Up => 1,
-            Round::Down => 0,
-            _ => panic!("value must be rounded Up or Down"),
-        };
-        Rational::from((
-            self.numer.clone() + round,
-            Integer::from(1) << self.denom_pow,
-        ))
+    fn value<R: ODPRound>(&self) -> RBig {
+        RBig::from_parts(
+            IBig::from(self.numer.clone() + R::UBIG),
+            UBig::ONE << self.denom_pow,
+        )
     }
     // Randomly discard the lower or upper half of the remaining interval.
     fn refine(&mut self) -> Fallible<()> {
         self.numer <<= 1;
         self.denom_pow += 1;
         if bool::sample_standard_bernoulli()? {
-            self.numer += 1;
+            self.numer += UBig::ONE;
         }
         Ok(())
     }
@@ -39,32 +58,39 @@ impl UniformPSRN {
 /// A partially sampled Gumbel random number.
 /// Initializes to span all reals.
 pub struct GumbelPSRN {
-    shift: Rational,
-    scale: Rational,
+    shift: RBig,
+    scale: RBig,
     uniform: UniformPSRN,
-    precision: u32,
+    precision: usize,
 }
 
 impl GumbelPSRN {
-    pub fn new(shift: Rational, scale: Rational) -> Self {
+    pub fn new(shift: RBig, scale: RBig) -> Self {
         GumbelPSRN {
             shift,
             scale,
             uniform: UniformPSRN::default(),
-            precision: 1,
+            precision: 20,
         }
     }
 
     /// Retrieve either the lower or upper edge of the Gumbel interval.
     /// The PSRN is refined until a valid value can be retrieved.
-    pub fn value(&mut self, round: Round) -> Fallible<Rational> {
+    pub fn value<R: ODPRound>(&mut self) -> Fallible<RBig> {
         // The first few rounds are susceptible to NaN due to the uniform PSRN initializing at zero.
         loop {
-            let uniform = Float::with_val_round(self.precision, self.uniform.value(round), round).0;
+            println!("precision: {}", self.precision);
+            let r_uniform = self.uniform.value::<R>();
+            if r_uniform.is_zero() {
+                self.uniform.refine()?;
+                continue;
+            }
+            let uniform = r_uniform.to_float::<R, 2>(self.precision).value();
 
-            if let Some(mut gumbel) = Self::inverse_cdf(uniform, round).to_rational() {
-                gumbel.mul_add_assign(&self.scale, &self.shift);
-                return Ok(gumbel);
+            println!("uni prec {}", uniform.precision());
+
+            if let Some(gumbel) = RBig::simplest_from_float(&Self::inverse_cdf::<R>(uniform)) {
+                return Ok(gumbel * &self.scale + &self.shift);
             } else {
                 self.refine()?;
             }
@@ -73,24 +99,19 @@ impl GumbelPSRN {
 
     /// Computes the inverse cdf of the standard Gumbel with controlled rounding:
     /// $-ln(-ln(u))$ where $u \sim \mathrm{Uniform}(0, 1)$
-    fn inverse_cdf(mut sample: Float, round: Round) -> Float {
-        fn complement(value: Round) -> Round {
-            match value {
-                Round::Up => Round::Down,
-                Round::Down => Round::Up,
-                _ => panic!("complement is only supported for Up/Down"),
-            }
-        }
-
+    fn inverse_cdf<R: ODPRound>(sample: FBig<R>) -> FBig<R> {
         // This round is behind two negations, so the rounding direction is preserved
-        sample.ln_round(round);
-        sample.neg_assign();
+        println!("sample {}", sample);
+        let sample = -sample.ln();
+        println!("stuck?");
 
         // This round is behind a negation, so the rounding direction is reversed
-        sample.ln_round(complement(round));
-        sample.neg_assign();
+        let sample = sample.with_rounding::<R::Complement>();
+        let sample = -sample.ln();
 
-        sample
+        println!("stuck? 2");
+
+        sample.with_rounding::<R>()
     }
 
     /// Improves the precision of the inverse transform,
@@ -104,10 +125,10 @@ impl GumbelPSRN {
     /// by refining the estimates for `self` and `other` until their intervals are disjoint.
     pub fn greater_than(&mut self, other: &mut Self) -> Fallible<bool> {
         Ok(loop {
-            if self.value(Round::Down)? > other.value(Round::Up)? {
+            if self.value::<Down>()? > other.value::<Up>()? {
                 break true;
             }
-            if self.value(Round::Up)? < other.value(Round::Down)? {
+            if self.value::<Up>()? < other.value::<Down>()? {
                 break false;
             }
             if self.precision < other.precision {
@@ -125,12 +146,12 @@ mod test {
 
     #[test]
     fn test_sample_gumbel_interval_progression() -> Fallible<()> {
-        let mut gumbel = GumbelPSRN::new(Rational::from(0), Rational::from(1));
+        let mut gumbel = GumbelPSRN::new(RBig::ZERO, RBig::ONE);
         for _ in 0..10 {
             println!(
                 "{:?}, {:?}, {}",
-                gumbel.value(Round::Down)?.to_f64(),
-                gumbel.value(Round::Up)?.to_f64(),
+                gumbel.value::<Down>()?.to_f64(),
+                gumbel.value::<Up>()?.to_f64(),
                 gumbel.precision
             );
             gumbel.refine()?;
@@ -141,11 +162,11 @@ mod test {
     #[test]
     fn test_gumbel_psrn() -> Fallible<()> {
         fn sample_gumbel() -> Fallible<f64> {
-            let mut gumbel = GumbelPSRN::new(Rational::from(0), Rational::from(1));
+            let mut gumbel = GumbelPSRN::new(RBig::ZERO, RBig::ONE);
             for _ in 0..10 {
                 gumbel.refine()?;
             }
-            Ok(gumbel.value(Round::Down)?.to_f64())
+            Ok(gumbel.value::<Down>()?.to_f64().value())
         }
         let samples = (0..1000)
             .map(|_| sample_gumbel())

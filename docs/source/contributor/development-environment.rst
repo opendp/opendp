@@ -84,10 +84,6 @@ Setting a feature changes how the crate compiles:
      - Enable to include C foreign function interfaces.
    * - ``derive``
      - Enable to embed links to proofs in the documentation.
-   * - ``use-system-libs``
-     - Enable to use the system installation of MPFR.
-   * - ``use-mpfr``
-     - Already enabled. Use MPFR for exact floating-point arithmetic.
    * - ``use-openssl``
      - Already enabled. Use OpenSSL for secure noise generation.
 
