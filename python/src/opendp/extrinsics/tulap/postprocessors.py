@@ -1,5 +1,4 @@
 import opendp.prelude as dp
-
 import math
 import numpy as np
 from scipy.stats import binom
@@ -36,25 +35,15 @@ def _ptulap(t, m=0, b=0, q=0):
 
 
 def make_ump_test(theta, size, alpha, epsilon, delta, tail):
-    def function(values):
+    def function():
         b = math.exp(-epsilon)
         q = 2 * delta * b / (1 - b + 2 * delta * b)
         values = list(range(0, size + 1))
         B = binom.pmf(k=values, n=size, p=theta)
-        """_summary_
-        Args:
-            theta (_type_): true probability of binomial distribution
-            size (_type_): sample size
-            alpha (_type_): significance level alpha
-            epsilon (_type_), delta (_type_): DP parameters
-
-        Returns:
-            _type_: _description_
-        """
 
         def obj(s):
-            values = np.array(values)
-            phi = _ptulap(t=values - s, m=0, b=b, q=q)
+            values_array = np.array(values)
+            phi = _ptulap(t=values_array - s, m=0, b=b, q=q)
             return np.dot(B, phi) - alpha
 
         lower = -1
@@ -64,12 +53,10 @@ def make_ump_test(theta, size, alpha, epsilon, delta, tail):
             lower *= 2
         while obj(upper) > 0:
             upper *= 2
-        root = scipy.optimize.brentq(
-            obj, lower, upper
-        )  # scipy.optimize.brentq(function, min, max)
+        root = scipy.optimize.brentq(obj, lower, upper)
         s = root
-        values = np.array(values)
-        phi = _ptulap(t=values - s, m=0, b=b, q=q)
+        values_array = np.array(values)
+        phi = _ptulap(t=values_array - s, m=0, b=b, q=q)
 
         if tail == "left":
             return phi
@@ -77,7 +64,6 @@ def make_ump_test(theta, size, alpha, epsilon, delta, tail):
             return 1 - phi
 
     return dp.new_function(function, TO=dp.Vec[float])
-
 
 def make_oneside_pvalue(theta, size, b, q, tail):
     """Right tailed p-value
