@@ -16,7 +16,7 @@
 \newcommand{\mrm}[1]{\mathrm{#1}}
 
 \title{\texttt{fn make\_tulap}}
-\author{Yu-Ju Ku, Jordan Awan}
+\author{Y-Ju Ku, Jordan Awan}
 \begin{document}
 
 \maketitle
@@ -54,7 +54,7 @@ The function on the resulting measurement takes in float data points that follow
 
 \subsection*{Pseudocode}
 
-% def make_tulap(m: float, b: float, q: float, s: float):
+% def make_tulap(shift: float, epsilon: float, delta: float):
 %     input_domain = AllDomain(float)
 %     input_metric = AbsoluteDistance(float)
 %     output_measure = SmoothedMaxDivergence(float)
@@ -65,20 +65,25 @@ The function on the resulting measurement takes in float data points that follow
 %         else: 
 %             return d_out
             
-%     def qCND(u, f, c):     # CND quantile function for f
-%         if u < c:
-%             return qCND(1 - f(u), f, c) - 1
-%         elif c <= u <= 1-c:
-%             return (u - 1/2)/(1 - 2*c)
-%         else:
-%             return qCND(f(1-u),f ,c) + 1    
-    
-%     def function(arg: float) -> float: |\label{line:fn}|
-    
-%         prob = b
-%         samples = m + sample_discrete_laplace_Z2k(prob) + sample_standard_uniform(prob)-1/2 
-        
-%         return Measurement(input_domain, function, input_metric, output_measure, privacy_map)
+%     def qCND(u, c):
+%       if u < c:
+%          return qCND(self, 1 - f(u), c) - 1
+%       elif u >= c and u <= 1 - c:
+%         return (u - 0.5) / (1 - 2 * c)
+%       else:
+%         return qCND(self, f(1 - u), c) + 1
+
+%      def inverse_tulap(unif, epsilon, delta):
+%          c = (1.0 - delta) / (1.0 + exp(epsilon))
+%          return qCND(unif, c)
+
+%     def f(alpha, epsilon, delta):
+%       t1 = 1 - delta - exp(epsilon) * alpha
+%       t2 = exp(-epsilon) * (1 - delta - alpha)
+%       return max(t1, t2, 0)
+
+%     measurement_result = inverse_tulap(unif, epsilon, delta)
+% return Measurement(input_domain, measurement_result, input_metric, output_measure, privacy_map)
 
 \begin{lstlisting}[language=Python, escapechar=|]
 def make_tulap(b: float, scale: float):
