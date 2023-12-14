@@ -9,21 +9,18 @@ provide a broader view of the the develpment and release process.
 
 ### Automatic
 
-```mermaid
-graph LR
-    subgraph smoke-test.yml
-        rust-build-and-test --> python-test
-        rust-build-and-test --> python-test-notebooks
-    end
+#### Every PR
 
-    subgraph latex.yml
-        pre-latex-build --> latex-build
-    end
+- [`smoke-test.yml`](smoke-test.yml) runs all tests and static checks.
+- [`latex.yml`](latex.yml) confirms that the LaTEX documentation builds.
 
-    subgraph nightly.yml
-        check --> release
-    end
-```
+#### Nightly
+
+- [`nightly.yml`](nightly.yml) makes a nightly release. [Past runs](https://github.com/opendp/opendp/actions/workflows/nightly.yml).
+
+#### Weekly
+
+- [`weekly-link-check.yml`](weekly-link-check.yml) checks external links. [Past runs](https://github.com/opendp/opendp/actions/workflows/weekly-link-check.yml).
 
 ### Manual
 
