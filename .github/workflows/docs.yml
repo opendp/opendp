@@ -72,8 +72,11 @@ jobs:
           echo "for underscore directories" > .nojekyll
           cp -r /tmp/build/html/* .
 
-          # ghpages looks for 404.html at the top level
-          cp en/stable/404.html .
+          # ghpages needs 404.html at the top level for it to work,
+          # but the source location depends on the channel.
+          cp en/nightly/404.html . \
+          || cp en/beta/404.html . \
+          || cp en/stable/404.html
       
       - name: Checkout artifacts
         uses: actions/checkout@v3

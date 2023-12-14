@@ -1,0 +1,42 @@
+name: Weekly link check
+
+on:
+  # Runs every Sunday at midnight:
+  schedule:
+    - cron: '0 0 * * 0'
+  # Or run manually:
+  # CLI: gh workflow run weekly-link-check.yml
+  # web: https://github.com/opendp/opendp/actions/workflows/weekly-link-check.yml
+  workflow_dispatch:
+
+jobs:
+  check-links:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.9
+
+      - name: Install deps
+        run: python -m pip install -r requirements.txt
+
+      - name: Check markdown
+        run: |
+          find .. | grep '.md$' | grep -v 'venv/\|.git/\|CHANGELOG' \
+          | xargs linkchecker -f linkchecker-external.cfg
+
+      - name: Install Pandoc
+        run: sudo apt-get install -y pandoc
+
+      - name: Build docs
+        run: make html
+
+      - name: Check links
+        run: linkchecker -f linkchecker-external.cfg build/html/index.html

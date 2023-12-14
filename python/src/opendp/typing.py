@@ -16,7 +16,7 @@ ELEMENTARY_TYPES: Dict[Any, str] = {
     Transformation: 'AnyTransformationPtr'
 }
 try:
-    import numpy as np
+    import numpy as np # type: ignore[import-not-found]
     # https://numpy.org/doc/stable/reference/arrays.scalars.html#sized-aliases
     ELEMENTARY_TYPES.update({  # pragma: no cover
         # np.bytes_: '&[u8]',  # np.string_ # not used in OpenDP
@@ -56,14 +56,14 @@ RuntimeTypeDescriptor = Union[
 ]
 
 if sys.version_info >= (3, 8):
-    from typing import _GenericAlias
+    from typing import _GenericAlias # type: ignore[attr-defined]
     # a Python type hint from the std typing module -- List[int]
-    RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (_GenericAlias,)
+    RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (_GenericAlias,) # type: ignore[attr-defined]
 
 if sys.version_info >= (3, 9):  # pragma: no cover
     from types import GenericAlias
     # a Python type hint from the std types module -- list[int]
-    RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (GenericAlias,)
+    RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (GenericAlias,) # type: ignore[attr-defined]
 
 
 def set_default_int_type(T: RuntimeTypeDescriptor) -> None:
@@ -80,8 +80,8 @@ def set_default_int_type(T: RuntimeTypeDescriptor) -> None:
     T = RuntimeType.parse(T)
     assert T in equivalence_class, f"T must be one of {equivalence_class}"
 
-    ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(ELEMENTARY_TYPES[int])
-    ELEMENTARY_TYPES[int] = T
+    ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(ELEMENTARY_TYPES[int]) # type: ignore[index]
+    ELEMENTARY_TYPES[int] = T # type: ignore[assignment]
 
 
 def set_default_float_type(T: RuntimeTypeDescriptor) -> None: # pragma: no cover
@@ -99,8 +99,8 @@ def set_default_float_type(T: RuntimeTypeDescriptor) -> None: # pragma: no cover
     T = RuntimeType.parse(T)
     assert T in equivalence_class, f"T must be a float type in {equivalence_class}"
 
-    ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(ELEMENTARY_TYPES[float])
-    ELEMENTARY_TYPES[float] = T
+    ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(ELEMENTARY_TYPES[float]) # type: ignore[index]
+    ELEMENTARY_TYPES[float] = T # type: ignore[assignment]
 
 
 class RuntimeType(object):
@@ -149,7 +149,7 @@ class RuntimeType(object):
         :type: List[str]
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
-        :raises UnknownTypeError: if `type_name` fails to parse
+        :raises UnknownTypeException: if `type_name` fails to parse
 
         :examples:
 
@@ -166,17 +166,17 @@ class RuntimeType(object):
         # parse type hints from the typing module
         hinted_type = None
         if sys.version_info >= (3, 8):
-            from typing import _GenericAlias
+            from typing import _GenericAlias # type: ignore[attr-defined]
             if isinstance(type_name, _GenericAlias):
                 hinted_type = typing.get_origin(type_name), typing.get_args(type_name)
         if sys.version_info >= (3, 9):  # pragma: no cover
             from types import GenericAlias
-            if isinstance(type_name, GenericAlias):
-                hinted_type = type_name.__origin__, type_name.__args__ # pragma: no cover
+            if isinstance(type_name, GenericAlias): # type: ignore[attr-defined]
+                hinted_type = type_name.__origin__, type_name.__args__ # type: ignore[attr-defined] # pragma: no cover
     
         if hinted_type:
             origin, args = hinted_type
-            args = [RuntimeType.parse(v, generics=generics) for v in args] or None
+            args = [RuntimeType.parse(v, generics=generics) for v in args] or None # type: ignore[assignment]
             if origin == tuple:
                 origin = 'Tuple'
             elif origin == list:
@@ -207,7 +207,7 @@ class RuntimeType(object):
 
             # attempt to upgrade strings to the metric/measure instance
             origin = type_name[:start] if 0 < start else type_name
-            closeness = {
+            closeness: RuntimeType = { # type: ignore[assignment]
                 'ChangeOneDistance': ChangeOneDistance,
                 'SymmetricDistance': SymmetricDistance,
                 'AbsoluteDistance': AbsoluteDistance,
@@ -330,7 +330,7 @@ class RuntimeType(object):
     @classmethod
     def parse_or_infer(
             cls,
-            type_name: RuntimeTypeDescriptor = None,
+            type_name: RuntimeTypeDescriptor = None, # type: ignore[assignment]
             public_example: Any = None,
             generics: Optional[List[str]] = None
     ) -> Union["RuntimeType", str]:
@@ -368,8 +368,8 @@ class UnknownType(RuntimeType):
     """Indicator for a type that cannot be inferred. Typically the atomic type of an empty list.
     RuntimeTypes containing UnknownType cannot be used in FFI
     """
-    origin: None
-    args: None
+    origin: None # type: ignore[assignment]
+    args: None # type: ignore[assignment]
 
     def __init__(self, reason): # pragma: no cover
         self.origin = None
@@ -494,7 +494,7 @@ def get_type(value):
     return value.type
 
 def get_value_type(type_name):
-    return RuntimeType.parse(type_name).args[1]
+    return RuntimeType.parse(type_name).args[1] # type: ignore[union-attr]
 
 def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
     return value.distance_type

@@ -70,6 +70,39 @@ def docstring(app, what, name, obj, options, lines):
 def setup(app):
     app.connect('autodoc-process-docstring', docstring)
 
+nitpicky = True
+nitpick_ignore = [
+    # (no comment = single occurrence)
+
+    # Maybe the quoted name is to prevent a circular reference?
+    ('py:class', '"RuntimeType"'),  # 3 occurrences
+
+    # Rather than a class, this is defined by setting a variable to a `Union[]`,
+    # and we don't generate docs for variables, so there's nothing to point to.
+    # Can we selectively turn on documentation for module variables?
+    ('py:class', 'RuntimeTypeDescriptor'),  # 28 occurrences
+
+    # For each of these, to provide a base class, the Python `Any*` class
+    # is wrapped by ctypes.POINTER(), producing the `LP_*`,
+    # which Sphinx can't resolve.
+    ('py:class', 'opendp.mod.LP_AnyDomain'),
+    ('py:class', 'opendp.mod.LP_AnyFunction'),
+    ('py:class', 'opendp.mod.LP_AnyMeasure'),
+    ('py:class', 'opendp.mod.LP_AnyMeasurement'),
+    ('py:class', 'opendp.mod.LP_AnyMetric'),
+    ('py:class', 'opendp.mod.LP_AnyTransformation'),
+
+    # I think the problem is that Sphinx is making parameter list documentation,
+    # and it doesn't understand that `M` and `T` are type parameters, not actual types.
+    ('py:class', 'opendp.mod.M'),
+    ('py:class', 'opendp.mod.T'),  # 17 occurrences
+
+    # In a given version of Python, only one will apply,
+    # but we need them both for compatibility.
+    ('py:class', 'types.GenericAlias'),  # 56 occurrences
+    ('py:obj', 'typing._GenericAlias'),  # 56 occurrences
+]
+
 # This prevents the RuntimeTypeDescriptors from expanding and making the signatures on API docs unreadable
 autodoc_typehints = "description"
 
@@ -141,7 +174,7 @@ html_css_files = [
 # See https://pydata-sphinx-theme.readthedocs.io/en/v0.6.3/user_guide/configuring.html#configure-the-sidebar
 # Note: Overridden in the Makefile for local builds. Be sure to update both places.
 html_sidebars = {
-   '**': ['search-field.html', 'sidebar-nav-bs.html', 'versioning.html'],
+   '**': ['sidebar-nav-bs.html', 'versioning.html'],
 }
 
 # SPHINX-MULTIVERSION STUFF

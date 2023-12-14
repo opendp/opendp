@@ -3,7 +3,6 @@ use std::os::raw::{c_char, c_uint};
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 
-
 use crate::error::Fallible;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
@@ -27,7 +26,8 @@ pub extern "C" fn opendp_transformations__make_bounded_int_ordered_sum(
     let T = try_!(Type::try_from(T));
     dispatch!(monomorphize, [
         (T, @integers)
-    ], (bounds)).into()
+    ], (bounds))
+    .into()
 }
 
 #[no_mangle]

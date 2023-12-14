@@ -150,7 +150,10 @@ Change to the ``python`` directory, install dependencies, and then install the P
     pip install -r requirements-dev.txt
     pip install -e .
 
-The `-e` flag is significant! 
+``requirement-dev.txt`` is compiled from ``requirements-dev.in``:
+To update dependencies, follow the directions in that file.
+
+In the second line, the ``-e`` flag is significant! 
 It stands for "editable", meaning you only have to run this command once.
 That is, you do not need to reinstall the OpenDP Python package if changes are made in the ``/python/src`` folder or to the library binary,
 but you should restart the Python interpreter or kernel.
@@ -197,8 +200,9 @@ If you're interested in porting OpenDP to a different platform, we'd be delighte
 Documentation
 -------------
 
-The source for this documentation website can be found in the "docs" directory at https://github.com/opendp/opendp.
-The docs are built using Sphinx and the steps to build it are listed in the README in the "docs" directory.
+This documentation website is built with Sphinx.
+The source code and developer documentation is
+`here <https://github.com/opendp/opendp/tree/main/docs#readme>`_.
 
 
 Developer Tooling

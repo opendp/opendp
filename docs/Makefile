@@ -31,22 +31,20 @@ html:
 	$(SPHINXAPIDOC) -f -F -e -H "OpenDP" -A "The OpenDP Project" -V $(VERSION) -o source/api/python ../python/src/opendp --templatedir source/_templates
 	# TODO: Figure out how to link locally generated Rust docs into sphinx structure.
 	# 	cd ../rust && $(CARGO) doc --no-deps --target-dir ../docs/source/api/rust
-	$(SPHINXBUILD) $(SPHINXOPTS) -D version=$(VERSION) -D 'html_sidebars.**'=search-field.html,sidebar-nav-bs.html source $(BUILDDIR)/html
+	$(SPHINXBUILD) $(SPHINXOPTS) -D version=$(VERSION) -D 'html_sidebars.**'=sidebar-nav-bs.html source $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
 html-rustdoc:
 	cd ../rust && cargo rustdoc --features untrusted,derive -- --html-in-header katex.html --document-private-items
 
-doctest: doctest-rust doctest-python
+doctest: doctest-rust
 	@echo
+	@echo "TODO: python doctests now run by pytest; Remove this rule?"
 	@echo "Doctest finished. The output is in $(BUILDDIR)/doctest/output.txt."
 
 doctest-rust:
 	cd ../rust && $(CARGO) test --doc --features untrusted,ffi
-
-doctest-python: html
-	$(SPHINXBUILD) $(SPHINXOPTS) -b doctest source $(BUILDDIR)/doctest
 
 versions:
 	# "/en" is the default, but someday we might have translations
@@ -61,7 +59,6 @@ latex:
 	@for file in `find ../rust/src -type f -name "*.tex"`; do \
 		[ -f "$$file" ] || break; \
 		echo test "$$file"; \
-		# switch to dir && out folder must exist && prevent stale links && build latex  \
 		(cd `dirname $$file` && mkdir -p out && rm -f out/rustdoc.txt && pdflatex --output-directory=out --shell-escape `basename $$file`); \
 		output_path=`dirname "$$file"`/out/`basename "$${file%.tex}.pdf"`; \
 		target_path=$(BUILDDIR)/html/proofs/`echo $${file%.tex}.pdf | sed 's|../rust/src/|rust/src/|'`; \

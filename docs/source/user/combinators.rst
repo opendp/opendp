@@ -1,9 +1,3 @@
-.. testsetup::
-
-    from typing import List
-    from opendp.mod import enable_features
-    enable_features('contrib', 'floating-point')
-
 .. _combinator-constructors:
 
 Combinators
@@ -27,7 +21,7 @@ The :py:func:`opendp.combinators.make_chain_mt` constructor similarly creates a 
 Notice that `there is no` ``make_chain_mm`` for chaining measurements together!
 Any computation beyond a measurement is postprocessing and need not be governed by relations.
 
-Postprocessing functionality is provided by the :py:func:`opendp.combinators.make_chain_tm` constructor that allows transformations to be chained onto a Measurement.
+Postprocessing functionality is provided by the :py:func:`opendp.combinators.make_chain_pm` constructor that allows transformations to be chained onto a Measurement.
 Since the outer Transformation is postprocessing, the metrics and stability map of the outer Transformation are ignored.
 In this case, it is only necessary for the types to conform.
 
@@ -59,7 +53,7 @@ In the following example we chain :py:func:`opendp.measurements.make_base_discre
 In practice, these chainers are used so frequently that we've written a shorthand (``>>``).
 The syntax automatically chooses between :func:`make_chain_mt <opendp.combinators.make_chain_mt>`, 
 :func:`make_chain_tt <opendp.combinators.make_chain_tt>`, 
-and :func:`make_chain_tm <opendp.combinators.make_chain_tm>`.
+and :func:`make_chain_pm <opendp.combinators.make_chain_pm>`.
 
 .. doctest::
 
@@ -213,6 +207,8 @@ you can make the privacy relation more permissive by wrapping your measurement w
 
     .. doctest::
 
+
+        >>> from opendp.mod import enable_features
         >>> enable_features("honest-but-curious")
 
 

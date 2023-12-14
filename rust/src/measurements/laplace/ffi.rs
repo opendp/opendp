@@ -130,7 +130,8 @@ pub extern "C" fn opendp_measurements__make_laplace(
             (T, @integers),
             (QO, @floats)
         ], (input_domain, input_metric, scale, QO))
-    }.into()
+    }
+    .into()
 }
 
 #[cfg(test)]
