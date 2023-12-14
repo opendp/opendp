@@ -1,49 +1,53 @@
 Welcome
 =======
 
-What is OpenDP?
----------------
+What is differential privacy?
+-----------------------------
 
-`OpenDP`_ is a community effort to build trustworthy, open source software tools for statistical analysis of sensitive private data using `differential privacy`_.
+Differential privacy is a rigorous mathematical definition of privacy.
+Consider an algorithm that analyzes a dataset and releases statistics:
+The algorithm is differentially private if by looking at the output,
+you cannot tell whether any individual's data was included in the original dataset or not.
+Differential privacy achieves this by carefully injecting random noise into the released statistics to hide the effects of each individual. 
 
-.. _OpenDP: https://opendp.org
-.. _differential privacy: https://opendp.org/about#whatisdifferentialprivacy
+For more background on differential privacy and its applications:
 
+* "`Designing Access with Differential Privacy <https://admindatahandbook.mit.edu/book/v1.0/diffpriv.html>`_" from *Handbook on Using Administrative Data for Research and Evidence-based Policy*
+* https://differentialprivacy.org/resources/
 
-First Steps
+Why OpenDP?
 -----------
 
-Head to :doc:`/getting-started/index` to get started with the OpenDP Library.
+* OpenDP is based on a `solid conceptual framework <https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf>`_ for expressing privacy-aware computations.
+* OpenDP is built on a Rust core for memory and thread safety and performance.
+* OpenDP has a process for independent review of algorithms and implementations.
+* OpenDP has performed well in `independent security audits <https://www.sri.inf.ethz.ch/publications/lokna2023groupandattack>`_.
+* OpenDP supports a range of differential privacy algorithms.
+* OpenDP has bindings for Python and R, both built on the same Rust core for consistency and security.
+* OpenDP is a community effort and is not owned or directed by a single corporation.
 
-If you have an interest in contributing to the OpenDP Library, please contact us!
-You can also use the :doc:`/contributing/index` to get started.
+That said, OpenDP is not the best tool for every job.
+In particular, it is a fairly low-level interface:
+There are a number of other projects which try to make it easy to add
+differential privacy to existing SQL interfaces or ML frameworks,
+in particular `SmartNoise SDK <https://github.com/opendp/smartnoise-sdk>`_,
+which is based on OpenDP.
 
-Should you have any questions or feedback regarding OpenDP, please feel free to post on `GitHub Discussions`_.
-
-.. _GitHub Discussions: https://github.com/opendp/opendp/discussions
-
-
-Navigation
+What next?
 ----------
 
-OpenDP documentation is organized into the guides below.
-Return home by clicking the OpenDP logo in the header.
-Each section in the header bar corresponds to a top-level section below.
-When you are in a top-level section, the left panel contains a table of contents for the section,
-and the right panel contains a table of contents for the current document.
-Documentation for past releases are available in the drop down on the left panel.
+There are multiple tracks in the documentation:
+
+* New users should begin with :doc:`getting-started/index`.
+* For more architectural details, see the :doc:`api/index`.
+* If you want to see how the fundamentals of DP are applied in OpenDP, see :doc:`theory/index`.
+* Finally, if you're joining the project, see :doc:`contributing/index`.
 
 .. toctree::
-  :glob:
-  :titlesonly:
-  :maxdepth: 3
+  :hidden:
+
 
   getting-started/index
   api/index
   theory/index
   contributing/index
-
-This is version |version| of the guides, last built on |today|.
-
-.. |opendp-logo| image:: _static/images/opendp-logo.png
-   :class: img-responsive
