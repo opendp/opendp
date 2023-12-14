@@ -24,11 +24,16 @@ jobs:
         with:
           python-version: 3.9
 
-      - name: Install Pandoc
-        run: sudo apt-get install -y pandoc
-
       - name: Install deps
         run: python -m pip install -r requirements.txt
+
+      - name: Check markdown
+        run: |
+          find .. | grep '.md$' | grep -v 'venv/\|.git/\|CHANGELOG' \
+          | xargs linkchecker -f linkchecker-markdown.cfg
+
+      - name: Install Pandoc
+        run: sudo apt-get install -y pandoc
 
       - name: Build docs
         run: make html
