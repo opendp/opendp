@@ -52,7 +52,7 @@ impl TulapPSRN {
         }
     }
 
- //     
+    
     pub fn value(&mut self, round: Round) -> Fallible<Rational> {
         loop {
             // The first few rounds are susceptible to NaN due to the uniform PSRN initializing at zero.
