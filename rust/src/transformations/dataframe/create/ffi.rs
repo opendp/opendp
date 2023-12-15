@@ -2,12 +2,13 @@ use std::{convert::TryFrom, os::raw::c_char};
 
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
+    error::Fallible,
     ffi::{
         any::{AnyObject, AnyTransformation, Downcast},
         util::{self, Type},
     },
     traits::Hashable,
-    transformations::{make_create_dataframe, make_split_dataframe}, error::Fallible,
+    transformations::{make_create_dataframe, make_split_dataframe},
 };
 
 use super::{make_split_lines, make_split_records};

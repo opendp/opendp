@@ -88,8 +88,7 @@ def _main(argv):
 
     subparser = subparsers.add_parser("rust", help="Publish Rust crate")
     subparser.set_defaults(func=rust)
-    subparser.add_argument("-n", "--dry-run", dest="dry_run", action="store_true", default=False)
-    subparser.add_argument("-nn", "--no-dry-run", dest="dry_run", action="store_false")
+    subparser.add_argument("--dry-run", action="store_true")
     subparser.add_argument("-t", "--index-check-timeout", type=int, default=300, help="How long to keep checking for index update (0 = don't check)")
     subparser.add_argument("-b", "--index-check-backoff", type=float, default=2.0, help="How much to back off between checks for index update")
 
@@ -105,14 +104,12 @@ def _main(argv):
     subparser.add_argument("-r", "--python-repository", choices=["pypi", "testpypi", "local"], default="pypi", help="Python package repository")
     subparser.add_argument("-t", "--package-timeout", type=int, default=0, help="How long to retry package installation attempts (0 = no retries)")
     subparser.add_argument("-b", "--package-backoff", type=float, default=2.0, help="How much to back off between package installation attempts")
-    subparser.add_argument("-f", "--fake", dest="fake", action="store_true", default=False)
-    subparser.add_argument("-nf", "--no-fake", dest="fake", action="store_false")
+    subparser.add_argument("--fake", action="store_true")
 
     subparser = subparsers.add_parser("github", help="Publish GitHub release")
     subparser.set_defaults(func=github)
     subparser.add_argument("-d", "--date", type=datetime.date.fromisoformat, help="Release date")
-    subparser.add_argument("-n", "--draft", dest="draft", action="store_true", default=False)
-    subparser.add_argument("-nn", "--no-draft", dest="draft", action="store_false")
+    subparser.add_argument("--draft", action="store_true")
 
     args = parser.parse_args(argv[1:])
     args.func(args)

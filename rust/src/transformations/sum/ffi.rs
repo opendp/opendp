@@ -22,8 +22,9 @@ pub extern "C" fn opendp_transformations__make_sum(
         T: 'static + MakeSum<MI>,
         (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
     {
-        let input_domain =
-            input_domain.downcast_ref::<VectorDomain<AtomDomain<T>>>()?.clone();
+        let input_domain = input_domain
+            .downcast_ref::<VectorDomain<AtomDomain<T>>>()?
+            .clone();
         let input_metric = input_metric.downcast_ref::<MI>()?.clone();
         make_sum::<MI, T>(input_domain, input_metric).into_any()
     }
@@ -34,7 +35,8 @@ pub extern "C" fn opendp_transformations__make_sum(
     dispatch!(monomorphize, [
         (MI, [SymmetricDistance, InsertDeleteDistance]),
         (T, @numbers)
-    ], (input_domain, input_metric)).into()
+    ], (input_domain, input_metric))
+    .into()
 }
 
 #[cfg(test)]

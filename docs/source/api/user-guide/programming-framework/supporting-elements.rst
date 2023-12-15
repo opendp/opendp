@@ -216,11 +216,6 @@ Maps are a useful tool to find stability or privacy properties directly.
 
 Putting this to practice, the following example invokes the stability map on a clamp transformation.
 
-.. testsetup::
-
-    from opendp.mod import enable_features
-    enable_features('contrib')
-
 .. doctest::
 
     >>> from opendp.transformations import make_clamp

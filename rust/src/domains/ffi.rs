@@ -7,8 +7,8 @@ use crate::{
     domains::{type_name, AtomDomain, MapDomain, VectorDomain},
     error::Fallible,
     ffi::{
-        any::{AnyDomain, AnyObject, Downcast, CallbackFn},
-        util::{self, c_bool, into_c_char_p, Type, TypeContents, to_str, ExtrinsicObject},
+        any::{AnyDomain, AnyObject, CallbackFn, Downcast},
+        util::{self, c_bool, into_c_char_p, to_str, ExtrinsicObject, Type, TypeContents},
     },
     traits::{CheckAtom, Float, Hashable, Integer, Primitive},
 };
@@ -308,7 +308,6 @@ pub extern "C" fn opendp_domains__map_domain(
         _ => fallible!(FFI, "MapDomain constructor only supports AtomDomain or UserDomain inner domains")
     }.into()
 }
-
 
 #[derive(Clone)]
 pub struct UserDomain {

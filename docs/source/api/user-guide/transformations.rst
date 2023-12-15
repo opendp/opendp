@@ -191,13 +191,10 @@ These operations work with `usize` data types: an integer data type representing
 :func:`opendp.transformations.make_find` finds the index of each input datum in a set of categories.
 In other words, it transforms a categorical data vector to a vector of numeric indices.
 
-.. testsetup::
-
-    import opendp.prelude as dp
-    dp.enable_features('contrib')
-
 .. doctest::
 
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features('contrib')
     >>> finder = (
     ...     # define the input space
     ...     (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()) >>
@@ -387,7 +384,7 @@ provide the option to choose the output metric: ``L1Distance[TOA]`` or ``L2Dista
 These default to ``L1Distance[TOA]``, which chains with L1 noise mechanisms like :func:`opendp.measurements.make_base_discrete_laplace` and :func:`opendp.measurements.make_base_laplace`.
 If you set the output metric to ``L2Distance[TOA]``, you can chain with L2 mechanisms like :func:`opendp.measurements.make_gaussian`.
 
-The constructor :func:`opendp.measurements.make_count_by` does a similar aggregation as :func:`opendp.transformations.make_count_by_categories <make_count_by_categories>`,
+The constructor :func:`opendp.transformations.make_count_by` does a similar aggregation as :func:`opendp.transformations.make_count_by_categories`,
 but does not need a category set (you instead chain with :func:`opendp.measurements.make_base_laplace_threshold`).
 
 The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time because data loaders for data of type ``Vec<(T, T)>`` are not implemented.
