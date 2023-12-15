@@ -21,26 +21,6 @@ def sample_covariance(num_features):
     return A.T @ A
 
 
-# def test_diffprivlib():
-#     from diffprivlib.models import PCA
-
-#     pca = PCA(data_norm=4.)
-#     microdata = sample_microdata(num_columns=4)
-#     pca.fit(microdata)
-#     pca.components_
-
-#     print("\n\n")
-#     space = (
-#         dp.np_array2_domain(num_columns=4, T=float),
-#         dp.symmetric_distance(),
-#     )
-#     meas = space >> dp.t.then_np_clamp(norm=4., ord=2) >> dp.t.then_np_cov() >> dp.m.then_private_eigenvector(.125)
-#     print(meas(microdata))
-
-
-# test_diffprivlib()
-
-
 def test_np_array2():
     print(dp.np_array2_domain(T=float))
     print(dp.np_array2_domain(T=float).descriptor)
@@ -134,15 +114,10 @@ def test_pca_skl():
     )
 
     model.fit(sample_microdata(num_columns=num_columns, num_rows=num_rows))
-    # print(model)
+    print(model)
 
     print("singular values", model.singular_values_)
     print("components", model.components_)
     
     loadings = model.singular_values_ * model.components_
     print("loadings", loadings)
-
-
-test_pca_skl()
-# import numpy as np
-# print(np.cov(microdata().T))
