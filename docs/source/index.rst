@@ -13,7 +13,7 @@ Differential privacy achieves this by carefully injecting random noise into the 
 For more background on differential privacy and its applications:
 
 * "`Designing Access with Differential Privacy <https://admindatahandbook.mit.edu/book/v1.0/diffpriv.html>`_" from *Handbook on Using Administrative Data for Research and Evidence-based Policy*
-* https://differentialprivacy.org/resources/
+* `Resources list <https://differentialprivacy.org/resources/>`_ from *differentialprivacy.org*
 
 Why OpenDP?
 -----------
@@ -29,14 +29,14 @@ Why OpenDP?
 That said, OpenDP is not the best tool for every job.
 In particular, it is a fairly low-level interface:
 There are a number of other projects which try to make it easy to add
-differential privacy to existing SQL interfaces or ML frameworks,
-in particular `SmartNoise SDK <https://github.com/opendp/smartnoise-sdk>`_,
-which is based on OpenDP.
+differential privacy to existing SQL interfaces or ML frameworks.
+One such tool is `SmartNoise SDK <https://github.com/opendp/smartnoise-sdk>`_,
+which is built on the OpenDP library.
 
 What next?
 ----------
 
-There are multiple tracks in the documentation:
+There are multiple tracks through the documentation:
 
 * New users should begin with :doc:`getting-started/index`.
 * For more architectural details, see the :doc:`api/index`.
