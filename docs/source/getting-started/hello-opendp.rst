@@ -5,25 +5,25 @@ Hello, OpenDP!
 Once you've installed OpenDP, you can write your first program.
 In this example we'll make a private release from a `very` small dataset:
 
-.. code-block::
+.. doctest::
 
-    # TODO: Revert to "doctest::" when API is available
-    >>> import opendp.prelude as dp
-    >>> import polars as pl
-    >>> pf = dp.PrivateFrame(pl.DataFrame(
-    ...     "age": [20, 40, 60]
-    ... }))
-    >>> pf.select(
-	...     pl.col("age").private_mean()
-    ... ) # doctest: +ELLIPSIS
-    shape: (1, 1)
-    ┌──────┐
-    │ age  │
-    │ ---  │
-    │ i64  │
-    ╞══════╡
-    │ ...  │
-    └──────┘
+    .. TODO
+    .. >>> import opendp.prelude as dp
+    .. >>> import polars as pl
+    .. >>> pf = dp.PrivateFrame(pl.DataFrame(
+    .. ...     "age": [20, 40, 60]
+    .. ... }))
+    .. >>> pf.select(
+    .. ...     pl.col("age").private_mean()
+    .. ... ) # doctest: +ELLIPSIS
+    .. shape: (1, 1)
+    .. ┌──────┐
+    .. │ age  │
+    .. │ ---  │
+    .. │ i64  │
+    .. ╞══════╡
+    .. │ ...  │
+    .. └──────┘
 
 You should get a number that is near, but probably not equal to, 40,
 and if you re-evaluate you will probably get a different number.
