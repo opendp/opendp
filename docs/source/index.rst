@@ -13,7 +13,11 @@ Differential privacy achieves this by carefully injecting random noise into the 
 For more background on differential privacy and its applications:
 
 * "`Designing Access with Differential Privacy <https://admindatahandbook.mit.edu/book/v1.0/diffpriv.html>`_" from *Handbook on Using Administrative Data for Research and Evidence-based Policy*
+<<<<<<< HEAD
 * `Resources list <https://differentialprivacy.org/resources/>`_ from *differentialprivacy.org*
+=======
+* https://differentialprivacy.org/resources/
+>>>>>>> 982-update-doc-content
 
 Why OpenDP?
 -----------
@@ -38,14 +42,13 @@ What next?
 
 There are multiple tracks through the documentation:
 
-* New users should begin with :doc:`getting-started/index`.
-* For more architectural details, see the :doc:`api/index`.
-* If you want to see how the fundamentals of DP are applied in OpenDP, see :doc:`theory/index`.
+* New users of the Python library should begin with :doc:`getting-started/index`.
+* For users of other languages, and for more detail, see the :doc:`api/index`.
+* If you want to understand how the fundamentals of DP are applied in OpenDP, see :doc:`theory/index`.
 * Finally, if you're joining the project, see :doc:`contributing/index`.
 
 .. toctree::
   :hidden:
-
 
   getting-started/index
   api/index
