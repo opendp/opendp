@@ -14,15 +14,16 @@ Many of our examples begin with these lines:
 
 .. doctest::
 
-    >>> import opendp.prelude as dp
-    >>> import polars as pl
-    >>> dp.enable_features('contrib')
+    .. TODO
+    .. >>> import opendp.prelude as dp
+    .. >>> import polars as pl
+    .. >>> dp.enable_features('contrib')
 
 The first line imports :py:mod:`opendp.prelude` under the conventional name ``dp``.
 
 The second line imports `Polars <https://pola-rs.github.io/polars/>`_ under the conventional name ``pl``.
 Polars is a dependency of OpenDP and does not need a separate ``pip install``.
-OpenDP leverages Polars, but no prior familiarty with Polars is assumed in this tutorial.
+OpenDP leverages Polars, but no prior familiarity with Polars is assumed in this tutorial.
 
 The last line enables features which have not yet been vetted.
 Any code that has not completed the vetting process is marked as "contrib" and will not run unless you opt-in.
