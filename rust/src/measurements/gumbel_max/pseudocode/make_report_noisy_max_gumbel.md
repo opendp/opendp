@@ -1,4 +1,4 @@
-# type: ignore
+```python
 def make_report_noisy_max_gumbel(
     input_domain: VectorDomain[AtomDomain[TIA]],
     input_metric: RangeDistance[TIA]
@@ -50,3 +50,4 @@ def make_report_noisy_max_gumbel(
         output_metric=MaxDivergence(QO),
         privacy_map=privacy_map,
     )
+```
