@@ -78,6 +78,7 @@ def make_oneside_pvalue(theta, size, b, q, tail):
         """
         :param Z: tulap random variables
         """
+        Z = np.array(Z)
         reps = Z.size  # sample size
         if reps > 1:
             pval = [0] * reps
@@ -109,20 +110,17 @@ def make_oneside_pvalue(theta, size, b, q, tail):
 
 def make_twoside_pvalue(theta, size, b, q):
     def function(Z):
-        T = abs(Z - size * theta)
-        pval = np.subtract(
-            make_oneside_pvalue(
-                Z=T + size * theta, size=size, theta=theta, b=b, q=q, tail="right"
-            ),
-            make_oneside_pvalue(
-                Z=size * theta - T, size=size, theta=theta, b=b, q=q, tail="right"
-            ),
-        )
+        Z = np.array(Z) if not isinstance(Z, np.ndarray) else Z
 
-        return pval + 1
+        T = abs(Z - size * theta)
+        pval_right = make_oneside_pvalue(theta, size, b, q, "right")(T + size * theta)
+        pval_left = make_oneside_pvalue(theta, size, b, q, "right")(size * theta - T)
+
+        pval = np.subtract(pval_right, pval_left) + 1
+        
+        return pval  # Ensure this is a vector if Z is a vector
 
     return dp.new_function(function, TO=dp.Vec[float])
-
 
 def make_CI(alpha, size, b, q, tail):
     from scipy.optimize import OptimizeResult, minimize_scalar
@@ -186,14 +184,15 @@ def make_CI(alpha, size, b, q, tail):
         )
 
     def function(Z):
+        Z = np.array(Z) if not isinstance(Z, np.ndarray) else Z
         if tail == "lower":
             CIobj = lambda x: (
-                (make_oneside_pvalue(Z=Z, size=size, theta=x, b=b, q=q, tail="right"))
+                (make_oneside_pvalue(Z=Z, size=size,  b=b, q=q, tail="right"))
                 - alpha
             )
         elif tail == "upper":
             CIobj = lambda x: (
-                (make_oneside_pvalue(Z=Z, size=size, theta=x, b=b, q=q, tail="right"))
+                (make_oneside_pvalue(Z=Z, size=size,  b=b, q=q, tail="right"))
                 - (1 - alpha)
             )
         L = minimize_scalar(
@@ -266,16 +265,17 @@ def make_CI_twoside(alpha, size, b, q):
         )
 
     def function(Z):
+        Z = np.array(Z) if not isinstance(Z, np.ndarray) else Z
         mle = Z / size
         mle = max(min(mle, 1), 0)
-        CIobj2 = lambda x: (
-            make_twoside_pvalue(Z=Z, theta=x, size=size, b=b, q=q) - alpha
-        )
+        twoside_pvalue_func = make_twoside_pvalue(theta=mle, size=size, b=b, q=q)
+        CIobj2 = lambda x: (twoside_pvalue_func(np.array([Z]))[0] - alpha)
+
 
         if mle > 0:
             L = minimize_scalar(
                 fun=CIobj2, method=custmin, bracket=(0, mle)
-            )  # , args=mle/2
+            )
             L = L.x
         else:
             L = 0
@@ -283,7 +283,7 @@ def make_CI_twoside(alpha, size, b, q):
         if mle < 1:
             U = minimize_scalar(
                 fun=CIobj2, method=custmin, bracket=(mle, 1)
-            )  # , args=((1-mle)/2)
+            )
             U = U.x
         else:
             U = 1
