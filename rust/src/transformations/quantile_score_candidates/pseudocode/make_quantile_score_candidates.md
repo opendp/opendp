@@ -1,4 +1,4 @@
-# type: ignore
+```python
 def make_quantile_score_candidates(
     input_domain: VectorDomain[AtomDomain[TIA]],
     input_metric: MI,
@@ -42,3 +42,4 @@ def make_quantile_score_candidates(
         output_metric=LInfDistance(Q=usize),
         stability_map=stability_map,
     )
+```
