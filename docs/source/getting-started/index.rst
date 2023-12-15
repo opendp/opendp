@@ -1,10 +1,10 @@
 Getting Started
 ===============
 
-In this introduction, we present a differential privacy "Hello World" using OpenDP.
+Here we'll present a differential privacy "Hello World" using OpenDP.
 
-For a more conceptual introduction to differential privacy see our Theory section,
-and for an overview of the OpenDP library see the API documentation.
+For a more conceptual introduction to differential privacy see our :doc:`../theory/index` section,
+and for an overview of the OpenDP library see the :doc:`../api/index` documentation.
 
 .. toctree::
   :titlesonly:
