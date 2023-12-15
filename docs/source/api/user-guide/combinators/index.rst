@@ -115,7 +115,7 @@ See the notebook for code examples and more thorough explanations:
    :glob:
    :titlesonly:
 
-   combinators/compositors
+   compositors
 
 .. _measure-casting:
 

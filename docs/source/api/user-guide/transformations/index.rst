@@ -395,8 +395,8 @@ See the notebooks for code examples and deeper explanations:
    :glob:
    :titlesonly:
 
-   transformations/aggregation-sum
-   transformations/aggregation-mean
+   aggregation-sum
+   aggregation-mean
 
 
 .. list-table::
@@ -532,7 +532,7 @@ See the following notebook for more information:
    :glob:
    :titlesonly:
 
-   transformations/aggregation-quantile
+   aggregation-quantile
 
 These use :func:`opendp.transformations.make_b_ary_tree`, :func:`opendp.transformations.make_consistent_b_ary_tree` and :func:`opendp.transformations.make_quantiles_from_counts`.
 

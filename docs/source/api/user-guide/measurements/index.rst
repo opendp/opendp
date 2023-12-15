@@ -12,8 +12,8 @@ This means you will need to choose a measurement that chains with your :ref:`agg
 
 .. toctree::
 
-   measurements/additive-noise-mechanisms
-   measurements/randomized-response
+  additive-noise-mechanisms
+  randomized-response
 
 Additive Noise Mechanisms
 -------------------------
