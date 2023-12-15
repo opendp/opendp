@@ -13,11 +13,7 @@ Differential privacy achieves this by carefully injecting random noise into the 
 For more background on differential privacy and its applications:
 
 * "`Designing Access with Differential Privacy <https://admindatahandbook.mit.edu/book/v1.0/diffpriv.html>`_" from *Handbook on Using Administrative Data for Research and Evidence-based Policy*
-<<<<<<< HEAD
 * `Resources list <https://differentialprivacy.org/resources/>`_ from *differentialprivacy.org*
-=======
-* https://differentialprivacy.org/resources/
->>>>>>> 982-update-doc-content
 
 Why OpenDP?
 -----------
