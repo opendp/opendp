@@ -27,8 +27,9 @@ pub extern "C" fn opendp_transformations__make_mean(
         AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
         (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
     {
-        let input_domain =
-            input_domain.downcast_ref::<VectorDomain<AtomDomain<T>>>()?.clone();
+        let input_domain = input_domain
+            .downcast_ref::<VectorDomain<AtomDomain<T>>>()?
+            .clone();
         let input_metric = input_metric.downcast_ref::<MI>()?.clone();
         make_mean::<MI, T>(input_domain, input_metric).into_any()
     }
@@ -40,7 +41,8 @@ pub extern "C" fn opendp_transformations__make_mean(
     dispatch!(monomorphize, [
         (MI, [SymmetricDistance, InsertDeleteDistance]),
         (T, @floats)
-    ], (input_domain, input_metric)).into()
+    ], (input_domain, input_metric))
+    .into()
 }
 
 #[cfg(test)]

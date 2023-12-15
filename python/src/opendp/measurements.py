@@ -1,4 +1,7 @@
-# Auto-generated. Do not edit.
+# Auto-generated. Do not edit!
+'''
+The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.
+'''
 from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
@@ -85,7 +88,7 @@ def make_alp_queryable(
     :type CO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -121,6 +124,10 @@ def then_alp_queryable(
     alpha = 4,
     CO: Optional[RuntimeTypeDescriptor] = None
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.measurements.make_alp_queryable`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_alp_queryable(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -167,7 +174,7 @@ def make_base_discrete_gaussian(
     :type MO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -196,6 +203,10 @@ def then_base_discrete_gaussian(
     scale,
     MO: Optional[RuntimeTypeDescriptor] = "ZeroConcentratedDivergence<QO>"
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.measurements.make_base_discrete_gaussian`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_base_discrete_gaussian(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -245,7 +256,7 @@ def make_base_discrete_laplace(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -272,6 +283,10 @@ def then_base_discrete_laplace(
     scale,
     QO: Optional[RuntimeTypeDescriptor] = None
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.measurements.make_base_discrete_laplace`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_base_discrete_laplace(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -319,7 +334,7 @@ def make_base_discrete_laplace_cks20(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -346,6 +361,10 @@ def then_base_discrete_laplace_cks20(
     scale,
     QO: Optional[RuntimeTypeDescriptor] = None
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.measurements.make_base_discrete_laplace_cks20`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_base_discrete_laplace_cks20(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -397,7 +416,7 @@ def make_base_discrete_laplace_linear(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -428,6 +447,10 @@ def then_base_discrete_laplace_linear(
     bounds: Optional[Any] = None,
     QO: Optional[RuntimeTypeDescriptor] = None
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.measurements.make_base_discrete_laplace_linear`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_base_discrete_laplace_linear(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -478,7 +501,7 @@ def make_base_gaussian(
     :type MO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -509,6 +532,10 @@ def then_base_gaussian(
     k: Optional[int] = -1074,
     MO: Optional[RuntimeTypeDescriptor] = "ZeroConcentratedDivergence<T>"
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.measurements.make_base_gaussian`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_base_gaussian(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -550,7 +577,7 @@ def make_base_geometric(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -581,6 +608,10 @@ def then_base_geometric(
     bounds: Optional[Any] = None,
     QO: Optional[RuntimeTypeDescriptor] = None
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.measurements.make_base_geometric`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_base_geometric(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -628,7 +659,7 @@ def make_base_laplace(
     :type k: int
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -655,6 +686,10 @@ def then_base_laplace(
     scale,
     k: Optional[int] = -1074
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.measurements.make_base_laplace`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_base_laplace(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -696,7 +731,7 @@ def make_base_laplace_threshold(
     :type k: int
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib", "floating-point")
@@ -725,6 +760,10 @@ def then_base_laplace_threshold(
     threshold,
     k: Optional[int] = -1074
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.measurements.make_base_laplace_threshold`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_base_laplace_threshold(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -768,7 +807,7 @@ def make_gaussian(
     :type MO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -797,6 +836,10 @@ def then_gaussian(
     scale,
     MO: Optional[RuntimeTypeDescriptor] = "ZeroConcentratedDivergence<QO>"
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.measurements.make_gaussian`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_gaussian(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -846,7 +889,7 @@ def make_laplace(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -873,6 +916,10 @@ def then_laplace(
     scale,
     QO: Optional[RuntimeTypeDescriptor] = "float"
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.measurements.make_laplace`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_laplace(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -911,7 +958,7 @@ def make_randomized_response(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -965,7 +1012,7 @@ def make_randomized_response_bool(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1023,7 +1070,7 @@ def make_report_noisy_max_gumbel(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib", "floating-point")
@@ -1052,6 +1099,10 @@ def then_report_noisy_max_gumbel(
     optimize: str,
     QO: Optional[RuntimeTypeDescriptor] = None
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.measurements.make_report_noisy_max_gumbel`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_report_noisy_max_gumbel(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -1093,7 +1144,7 @@ def make_user_measurement(
     :type TO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib", "honest-but-curious")
@@ -1124,6 +1175,10 @@ def then_user_measurement(
     privacy_map,
     TO: RuntimeTypeDescriptor
 ):
+    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+
+    :py:func:`opendp.measurements.make_user_measurement`
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_user_measurement(
         input_domain=input_domain,
         input_metric=input_metric,

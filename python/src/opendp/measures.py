@@ -1,4 +1,7 @@
-# Auto-generated. Do not edit.
+# Auto-generated. Do not edit!
+'''
+The ``measures`` modules provides functions that measure the distance between probability distributions.
+'''
 from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
@@ -28,7 +31,7 @@ def _measure_free(
     :param this: 
     :type this: Measure
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -57,7 +60,7 @@ def fixed_smoothed_max_divergence(
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measure
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -88,7 +91,7 @@ def max_divergence(
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measure
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -119,7 +122,7 @@ def measure_debug(
     :type this: Measure
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -148,7 +151,7 @@ def measure_distance_type(
     :type this: Measure
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -177,7 +180,7 @@ def measure_type(
     :type this: Measure
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -206,7 +209,7 @@ def smoothed_max_divergence(
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measure
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -238,7 +241,7 @@ def user_divergence(
     :type descriptor: str
     :rtype: Measure
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("honest-but-curious")
@@ -269,7 +272,7 @@ def zero_concentrated_divergence(
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measure
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.

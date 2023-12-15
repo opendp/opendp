@@ -64,7 +64,8 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
     dispatch!(monomorphize, [
         (T, @integers),
         (QO, @floats)
-    ], (input_domain, input_metric, scale, D, QO)).into()
+    ], (input_domain, input_metric, scale, D, QO))
+    .into()
 }
 
 #[cfg(test)]

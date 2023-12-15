@@ -5,8 +5,8 @@ from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Me
 from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 
 try:
-    import numpy as np
-except ImportError:
+    import numpy as np # type: ignore[import-not-found]
+except ImportError: # pragma: no cover
     np = None
 
 ATOM_MAP = {
@@ -44,11 +44,11 @@ def check_similar_scalar(expected, value):
     inferred = RuntimeType.infer(value)
     
     if inferred in ATOM_EQUIVALENCE_CLASSES:
-        if expected not in ATOM_EQUIVALENCE_CLASSES[inferred]:
+        if expected not in ATOM_EQUIVALENCE_CLASSES[inferred]: # type: ignore[index]
             raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
     else:
         if expected != inferred:
-            raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
+            raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}") 
 
     if expected in INT_SIZES:
         check_c_int_cast(value, expected)
@@ -60,7 +60,7 @@ def check_c_int_cast(v, type_name):
         raise ValueError(f"value is not representable by {type_name}")
 
 
-def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
+def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any: # type: ignore[assignment]
     """Map from Python `value` to ctypes `c_type`.
 
     :param value: value to convert to c_type
@@ -99,7 +99,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         if rust_type in ATOM_MAP:
             return ctypes.byref(ATOM_MAP[rust_type](value))
 
-        if rust_type == "String":
+        if rust_type == "String": # pragma: no cover
             return ctypes.c_char_p(value.encode())
 
         raise UnknownTypeException(rust_type)
@@ -151,7 +151,7 @@ def c_to_py(value: Any) -> Any:
 
     if isinstance(value, ctypes.c_char_p):
         from opendp._data import str_free
-        value_contents = value.value.decode() # type: ignore[reportOptionalMemberAccess]
+        value_contents = value.value.decode() # type: ignore[reportOptionalMemberAccess,union-attr]
         str_free(value)
         return value_contents
 
@@ -242,14 +242,14 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 
 def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
     if np is not None and isinstance(val, np.ndarray):
-        val = val.item()
+        val = val.item() # pragma: no cover
     check_similar_scalar(type_name, val)
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     return _wrap_in_slice(ctypes.pointer(ATOM_MAP[type_name](val)), 1)
 
 
 def _slice_to_scalar(raw: FfiSlicePtr, type_name: str):
-    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[type_name])).contents.value
+    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[type_name])).contents.value # type: ignore[attr-defined]
 
 
 def _refcounter(ptr, increment):
@@ -272,12 +272,12 @@ def _slice_to_extrinsic(raw: FfiSlicePtr):
 
 def _string_to_slice(val: str) -> FfiSlicePtr:
     if np is not None and isinstance(val, np.ndarray):
-        val = val.item()
+        val = val.item() # pragma: no cover
     return _wrap_in_slice(ctypes.c_char_p(val.encode()), len(val) + 1)
 
 
 def _slice_to_string(raw: FfiSlicePtr) -> str:
-    return ctypes.cast(raw.contents.ptr, ctypes.c_char_p).value.decode() # type: ignore[reportOptionalMemberAccess]
+    return ctypes.cast(raw.contents.ptr, ctypes.c_char_p).value.decode() # type: ignore[reportOptionalMemberAccess,union-attr]
 
 
 def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
@@ -288,7 +288,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
     # when input is numpy array
     # TODO: can we use the underlying buffer directly?
     if np is not None and isinstance(val, np.ndarray):
-        val = val.tolist()
+        val = val.tolist() # pragma: no cover
 
     if not isinstance(val, list):
         raise TypeError(f"Expected type is {type_name} but input data is not a list.")
@@ -297,7 +297,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
 
     if isinstance(inner_type_name, RuntimeType):
         c_repr = [py_to_c(v, c_type=AnyObjectPtr, type_name=inner_type_name) for v in val]
-        array = (AnyObjectPtr * len(val))(*c_repr)
+        array = (AnyObjectPtr * len(val))(*c_repr) # type: ignore[operator] # type: ignore[operator]
         ffislice = _wrap_in_slice(array, len(val))
         ffislice.depends_on(*c_repr)
         return ffislice
@@ -321,7 +321,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
     if inner_type_name not in ATOM_MAP:
         raise TypeError(f"Members must be one of {tuple(ATOM_MAP.keys())}. Found {inner_type_name}.")
 
-    array = (ATOM_MAP[inner_type_name] * len(val))(*val)
+    array = (ATOM_MAP[inner_type_name] * len(val))(*val) # type: ignore[operator] # type: ignore[operator]
     return _wrap_in_slice(array, len(val))
 
 
@@ -407,7 +407,7 @@ def _hashmap_to_slice(val: Dict[Any, Any], type_name: RuntimeType) -> FfiSlicePt
     
     keys: AnyObjectPtr = py_to_c(list(val.keys()), type_name=Vec[key_type], c_type=AnyObjectPtr)
     vals: AnyObjectPtr = py_to_c(list(val.values()), type_name=Vec[val_type], c_type=AnyObjectPtr)
-    ffislice = _wrap_in_slice(ctypes.pointer((AnyObjectPtr * 2)(keys, vals)), 2)
+    ffislice = _wrap_in_slice(ctypes.pointer((AnyObjectPtr * 2)(keys, vals)), 2) # type: ignore[operator] # type: ignore[operator]
 
     # The __del__ destructor on `keys` and `vals` is called and memory freed when their refcounts go to zero.
     # ffislice needs keys and vals to have a lifetime at least as long as itself,
@@ -425,8 +425,8 @@ def _slice_to_hashmap(raw: FfiSlicePtr) -> Dict[Any, Any]:
     # AnyObjectPtr.__del__ would free the memory behind keys and vals when this stack frame is popped.
     # But that memory has a lifetime at least as long as raw, so it cannot be freed yet.
     # Adjust the class to avoid calling AnyObjectPtr.__del__, which would free the backing memory.
-    keys.__class__ = ctypes.POINTER(AnyObject)
-    vals.__class__ = ctypes.POINTER(AnyObject)
+    keys.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
+    vals.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
     return result
 
 

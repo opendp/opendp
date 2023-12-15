@@ -69,8 +69,23 @@ from opendp.measures import *"#
         ""
     };
 
+    let module_docs = match module_name.as_str() {
+        "accuracy" => "The ``accuracy`` module provides functions for converting between accuracy and scale parameters.",
+        "combinators" => "The ``combinators`` module provides functions for combining transformations and measurements.",
+        "core" => "The ``core`` module provides functions for accessing the fields of transformations and measurements.",
+        "domains" => "The ``domains`` modules provides functions for creating and using domains.",
+        "measurements" => "The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.",
+        "measures" => "The ``measures`` modules provides functions that measure the distance between probability distributions.",
+        "metrics" => "The ``metrics`` module provides fuctions that measure the distance between two elements of a domain.",
+        "transformations" => "The ``transformations`` module provides functions that deterministicly transform datasets.",
+        _ => "TODO!"
+    };
+
     format!(
-        r#"# Auto-generated. Do not edit.
+        r#"# Auto-generated. Do not edit!
+'''
+{module_docs}
+'''
 from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
@@ -212,7 +227,7 @@ fn generate_docstring(func: &Function, hierarchy: &HashMap<String, Vec<String>>)
 
     let raises = format!(
         r#":raises TypeError: if an argument's type differs from the expected type
-:raises UnknownTypeError: if a type argument fails to parse{opendp_raise}"#,
+:raises UnknownTypeException: if a type argument fails to parse{opendp_raise}"#,
         opendp_raise = if func.ret.c_type_origin() == "FfiResult" {
             "\n:raises OpenDPException: packaged error from the core OpenDP library"
         } else {

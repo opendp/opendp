@@ -66,6 +66,11 @@ on:
         required: false
         default: false
 
+env:
+  # env.dry_run should be used instead of inputs.dry_run in each of
+  # the jobs below, to ensure that the fake override always works.
+  dry_run: ${{ inputs.dry_run || inputs.fake }}
+
 jobs:
   prepare:
     uses: ./.github/workflows/prepare.yml
@@ -73,6 +78,7 @@ jobs:
       channel: ${{ inputs.channel }}
       sync: ${{ inputs.sync }}
       counter: ${{ fromJSON(inputs.counter) }}
+      dry_run: ${{ env.dry_run }}
 
   build:
     needs: prepare
@@ -95,7 +101,7 @@ jobs:
     with:
       channel: ${{ inputs.channel }}
       date: ${{ needs.prepare.outputs.date }}
-      dry_run: ${{ inputs.dry_run || inputs.fake }}
+      dry_run: ${{ env.dry_run }}
     secrets: inherit
 
   sanity-test-post:
@@ -104,7 +110,7 @@ jobs:
     with:
       channel: ${{ inputs.channel }}
       # dry-runs go to TestPyPI instead of PyPI
-      python_repository: ${{ (inputs.dry_run || inputs.fake) && 'testpypi' || 'pypi' }}
+      python_repository: ${{ env.dry_run && 'testpypi' || 'pypi' }}
       fake: ${{ inputs.fake }}
 
   latex:
@@ -118,4 +124,4 @@ jobs:
     needs: [ sanity-test-post, latex ]
     uses: ./.github/workflows/docs.yml
     with:
-      dry_run: ${{ inputs.dry_run || inputs.fake }}
+      dry_run: ${{ env.dry_run }}

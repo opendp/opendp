@@ -1,4 +1,7 @@
-# Auto-generated. Do not edit.
+# Auto-generated. Do not edit!
+'''
+The ``combinators`` module provides functions for combining transformations and measurements.
+'''
 from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
@@ -36,7 +39,7 @@ def make_basic_composition(
     :type measurements: Any
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -71,7 +74,7 @@ def make_chain_mt(
     :type transformation0: Transformation
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -108,7 +111,7 @@ def make_chain_pm(
     :type measurement0: Measurement
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -144,7 +147,7 @@ def make_chain_tt(
     :type transformation0: Transformation
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -179,7 +182,7 @@ def make_fix_delta(
     :type delta: Any
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -221,7 +224,7 @@ def make_population_amplification(
     :type population_size: int
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib", "honest-but-curious")
@@ -254,7 +257,7 @@ def make_pureDP_to_fixed_approxDP(
     :type measurement: Measurement
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -290,7 +293,7 @@ def make_pureDP_to_zCDP(
     :type measurement: Measurement
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -333,7 +336,7 @@ def make_sequential_composition(
     :type d_mids: Any
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -371,7 +374,7 @@ def make_zCDP_to_approxDP(
     :type measurement: Measurement
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")

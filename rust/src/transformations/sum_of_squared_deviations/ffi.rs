@@ -33,8 +33,9 @@ pub extern "C" fn opendp_transformations__make_sum_of_squared_deviations(
             S: UncheckedSum,
             S::Item: 'static + Float,
         {
-            let input_domain =
-                input_domain.downcast_ref::<VectorDomain<AtomDomain<S::Item>>>()?.clone();
+            let input_domain = input_domain
+                .downcast_ref::<VectorDomain<AtomDomain<S::Item>>>()?
+                .clone();
             let input_metric = input_metric.downcast_ref::<SymmetricDistance>()?.clone();
             make_sum_of_squared_deviations::<S>(input_domain, input_metric).into_any()
         }
@@ -46,5 +47,6 @@ pub extern "C" fn opendp_transformations__make_sum_of_squared_deviations(
     let T = try_!(S.get_atom());
     dispatch!(monomorphize, [
         (T, @floats)
-    ], (input_domain, input_metric, S)).into()
+    ], (input_domain, input_metric, S))
+    .into()
 }

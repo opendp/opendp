@@ -31,7 +31,7 @@ We welcome you to try it and look forward to feedback on the library! However, p
 
 ## Installation
 
-The easiest way to install OpenDP is using `pip` (the [package installer for Python](https://pypi.org/project/pip/)):
+[OpenDP is on PyPI](https://pypi.org/project/opendp/) and can be installed with `pip` (the [package installer for Python](https://pypi.org/project/pip/)):
 
     $ pip install opendp
 

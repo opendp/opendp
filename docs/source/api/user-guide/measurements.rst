@@ -6,7 +6,7 @@ Measurements
 This section gives a high-level overview of the measurements that are available in the library.
 Refer to the :ref:`measurement` section for an explanation of what a measurement is.
 
-As mentioned in `Getting Started <getting-started.html#Chaining>`_, the intermediate domains and metrics need to match when chaining.
+The intermediate domains and metrics need to match when chaining.
 This means you will need to choose a measurement that chains with your :ref:`aggregator <aggregators>`.
 
 
@@ -160,7 +160,7 @@ That is, keys which are present among all neighboring datasets.
 The stability histogram is used to release a category set and frequency counts, and is useful when the category set is unknown or very large.
 `make_count_by` is included here because it is currently the only transformation that `make_base_laplace_threshold` chains with.
 
-See the `Histograms notebook <../examples/histograms.html>`_ for code examples and more exposition.
+See the `Histograms notebook <../../getting-started/examples/histograms.html>`_ for code examples and more exposition.
 
 .. list-table::
    :header-rows: 1

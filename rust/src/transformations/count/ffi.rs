@@ -30,8 +30,9 @@ pub extern "C" fn opendp_transformations__make_count(
         TIA: Primitive,
         TO: Number,
     {
-        let input_domain =
-            input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?.clone();
+        let input_domain = input_domain
+            .downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?
+            .clone();
         let input_metric = input_metric.downcast_ref::<SymmetricDistance>()?.clone();
         make_count::<TIA, TO>(input_domain, input_metric).into_any()
     }
@@ -42,7 +43,8 @@ pub extern "C" fn opendp_transformations__make_count(
     dispatch!(monomorphize, [
         (TIA, @primitives),
         (TO, @numbers)
-    ], (input_domain, input_metric)).into()
+    ], (input_domain, input_metric))
+    .into()
 }
 
 #[no_mangle]
@@ -59,8 +61,9 @@ pub extern "C" fn opendp_transformations__make_count_distinct(
         TIA: Hashable,
         TO: Number,
     {
-        let input_domain =
-            input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?.clone();
+        let input_domain = input_domain
+            .downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?
+            .clone();
         let input_metric = input_metric.downcast_ref::<SymmetricDistance>()?.clone();
         make_count_distinct::<TIA, TO>(input_domain, input_metric).into_any()
     }
@@ -71,7 +74,8 @@ pub extern "C" fn opendp_transformations__make_count_distinct(
     dispatch!(monomorphize, [
         (TIA, @hashable),
         (TO, @numbers)
-    ], (input_domain, input_metric)).into()
+    ], (input_domain, input_metric))
+    .into()
 }
 
 #[no_mangle]
@@ -108,8 +112,9 @@ pub extern "C" fn opendp_transformations__make_count_by_categories(
             TO: Number,
             (VectorDomain<AtomDomain<TO>>, MO): MetricSpace,
         {
-            let input_domain =
-                input_domain.downcast_ref::<VectorDomain<AtomDomain<TI>>>()?.clone();
+            let input_domain = input_domain
+                .downcast_ref::<VectorDomain<AtomDomain<TI>>>()?
+                .clone();
             let input_metric = input_metric.downcast_ref::<SymmetricDistance>()?.clone();
             let categories = try_as_ref!(categories).downcast_ref::<Vec<TI>>()?.clone();
             make_count_by_categories::<MO, TI, TO>(
@@ -135,7 +140,8 @@ pub extern "C" fn opendp_transformations__make_count_by_categories(
     let QO = try_!(MO.get_atom());
     dispatch!(monomorphize, [
         (QO, @numbers)
-    ], (input_domain, input_metric, categories, null_category, MO, TI, TO)).into()
+    ], (input_domain, input_metric, categories, null_category, MO, TI, TO))
+    .into()
 }
 
 #[no_mangle]
@@ -166,8 +172,9 @@ pub extern "C" fn opendp_transformations__make_count_by(
             TV: Number,
             (MapDomain<AtomDomain<TK>, AtomDomain<TV>>, MO): MetricSpace,
         {
-            let input_domain =
-                input_domain.downcast_ref::<VectorDomain<AtomDomain<TK>>>()?.clone();
+            let input_domain = input_domain
+                .downcast_ref::<VectorDomain<AtomDomain<TK>>>()?
+                .clone();
             let input_metric = input_metric.downcast_ref::<SymmetricDistance>()?.clone();
             make_count_by::<MO, TK, TV>(input_domain, input_metric).into_any()
         }

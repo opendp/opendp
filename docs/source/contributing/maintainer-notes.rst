@@ -158,9 +158,12 @@ Playbook
    :Tag version: ``v<MAJ>.<MIN>.<PAT>[-rc.<NUM>]``
    :Target: ``release/<MAJ>.<MIN>.<PAT>[-rc.<NUM>]``
    :Release title: ``OpenDP <MAJ>.<MIN>.<PAT>[-rc.<NUM>]``
-   :Describe this release: (Changelog)[https://github.com/opendp/opendp/blob/main/CHANGELOG.md#<MAJ><MIN><PAT>---<ISO-8601-DATE>]
-   :This is a pre-release: <CHECKED IF RC>
-   :Create a discussion...: <UNCHECKED>
+   :Describe this release: ``(Changelog)[https://github.com/opendp
+     /opendp/blob/main/CHANGELOG.md
+     #<MAJ><MIN><PAT>---<ISO-8601-DATE>]``
+
+   :This is a pre-release: ``<CHECKED IF RC>``
+   :Create a discussion...: ``<UNCHECKED>``
 
 #. Build and publish process is triggered by the creation of the GitHub Release.
 #. If this is a GM release, you're done!
@@ -175,34 +178,5 @@ Playbook
 Release Workflows
 -----------------
 
-These are the GitHub workflows that support the release process.
-
-sync-branches.yml
-^^^^^^^^^^^^^^^^^
-
-* Keeps the tracking branches ``latest`` and ``stable`` in sync with their targets.
-  This is used when generating docs, so that we have a consistent path to each category.
-* Triggered on every push to ``main``, or when release is published.
-* Whenever there's a push to ``main``, it advances ``latest`` to the same ref.
-* Whenever a release is created, it advances ``stable`` to the release tag.
-
-release.yml
-^^^^^^^^^^^
-
-* Triggered whenever a GH Release is created.
-* Rust library is compiled, creating shared libraries for Linux, macOS, Windows.
-* Python package is created.
-* Rust crates are uploaded to crates.io.
-* Python packages are uploaded to PyPI.
-
-docs.yml
-^^^^^^^^
-
-* Generates and publishes the docs to https://docs.opendp.org
-* Triggered whenever ``sync-branches.html`` completes (i.e., whenever ``latest`` or ``stable`` have changed).
-* Runs ``make versions``
-
-  * Generates Python API docs
-  * Generates Sphinx docs
-
-* Pushes HTML to ``gh-pages`` branch, which is linked to https://docs.opendp.org
+The `workflows README <https://github.com/opendp/opendp/tree/main/.github/workflows#readme>`_
+describes in more detail the workflows that support release and CI.
