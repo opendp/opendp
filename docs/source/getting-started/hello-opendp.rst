@@ -30,7 +30,7 @@ and if you re-evaluate you will probably get a different number.
 
 Let's look at each line:
 
-OpenDP's :py:class:`PrivateFrame` wraps a
+OpenDP's TODO:py:class:`PrivateFrame` wraps a
 `DataFrame <https://pola-rs.github.io/polars/py-polars/html/reference/dataframe/index.html>`_ from Polars.
 You can use any Polars method to initialize the DataFrame:
 For this example the data is inline, but it could also be read from disk or from a URL.
@@ -39,15 +39,15 @@ The ``PrivateFrame`` offers a ``select`` analogous to the DataFrame ``select``.
 The difference is that the expression provided must end with a private release method.
 While Polars supports ``mean``, attempting the same thing in a ``PrivateFrame`` will cause an error:
 
-.. code-block::
+.. doctest::
 
-    # TODO: Revert to "doctest::" when API is available
-    >>> pf.select(
-	...     pl.col("age").mean()
-    ... )
-    Traceback:
-    ...
-    Last method in chain must be a private_* method
+    .. TODO
+    .. >>> pf.select(
+    .. ...     pl.col("age").mean()
+    .. ... )
+    .. Traceback:
+    .. ...
+    .. Last method in chain must be a private_* method
 
 The ``PrivateFrame`` protects you from accidentally releasing data which is not differentially private.
 
