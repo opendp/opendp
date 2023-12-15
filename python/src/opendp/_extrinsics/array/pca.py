@@ -11,24 +11,43 @@ from opendp.extrinsics.composition import make_stateful_sequential_composition
 import numpy as np
 
 
-def make_pca(input_domain, input_metric, unit_epsilon, n_components=None, norm=None):
-    dp.assert_features("contrib")
-    n_components = n_components or input_domain.descriptor["num_columns"]
+def make_pca(input_domain, input_metric, unit_epsilon, num_components=None, norm=None):
+    """
+    :param input_domain: instance of `np_array2_domain(size=_, num_columns=_)`
+    :param input_metric: instance of `symmetric_distance()`
+    :param unit_epsilon: ε-expenditure assuming one changed record in the input data
+    :param num_components: optional, number of eigenvectors to release
+    :param norm: clamp each row to this norm bound
+    """
+    dp.assert_features("contrib", "floating-point")
 
     descriptor = input_domain.descriptor
     privacy_measure = dp.max_divergence(T=descriptor["T"])
 
     if "size" not in descriptor:
-        raise ValueError("dataset size must be known")
+        raise ValueError("input_domain's size must be known")
+
+    if "num_columns" not in descriptor:
+        raise ValueError("input_domain's num_columns must be known")
 
     num_columns = descriptor["num_columns"]
-    origin = descriptor.get("origin")
+    if num_columns < 1:
+        raise ValueError("input_domain's num_columns must be gte 1")
 
+    # if number of components is not specified, default to num_columns
+    num_components = num_components or num_columns
+    # the last eigvec is implicit if all other eigvecs are released
+    num_eigvec_releases = min(num_components, num_columns - 1)
+
+    # split budget evenly three ways if origin unknown, else 2
+    origin = descriptor.get("origin")
     weights = np.array([1.0] * (3 if origin is None else 2))
     epsilons = [unit_epsilon * w_i / sum(weights) for w_i in weights]
 
+    # make releases under the assumption that d_in is 2. For any other d_in,
+    unit_d_in = 2
     compositor = make_stateful_sequential_composition(
-        input_domain, input_metric, privacy_measure, 2, epsilons
+        input_domain, input_metric, privacy_measure, d_in=unit_d_in, d_mids=epsilons
     )
 
     def function(data):
@@ -41,9 +60,9 @@ def make_pca(input_domain, input_metric, unit_epsilon, n_components=None, norm=N
         if "origin" not in descriptor:
             m_mean = dp.binary_search_chain(
                 lambda s: make_private_np_mean(
-                    input_domain, input_metric, s, norm=norm, ord=1., origin=origin
+                    input_domain, input_metric, s, norm=norm, ord=1.0
                 ),
-                d_in=2,
+                d_in=unit_d_in,
                 d_out=epsilon_state.pop(),
                 T=float,
             )
@@ -63,8 +82,8 @@ def make_pca(input_domain, input_metric, unit_epsilon, n_components=None, norm=N
         qbl(t_offset)
 
         # scale the data
-        if "norm" not in descriptor:
-            t_clamp = make_np_clamp(input_domain, input_metric, norm)
+        if "norm" not in descriptor or descriptor["norm"] > norm:
+            t_clamp = make_np_clamp(input_domain, input_metric, norm, ord=2)
             input_domain = t_clamp.output_domain
             qbl(t_clamp)
 
@@ -74,11 +93,12 @@ def make_pca(input_domain, input_metric, unit_epsilon, n_components=None, norm=N
         t_eigvals = make_eigenvalues(*t_cov.output_space) >> then_l2_to_l1_norm()
         m_eigvals = dp.binary_search_chain(
             lambda s: t_eigvals >> dp.m.then_laplace(s),
-            2,
+            unit_d_in,
             epsilon_state.pop(),
         )
         m_eigvecs = make_private_eigenvectors(
-            *t_cov.output_space, [epsilon_state.pop() / num_columns] * (num_columns - 1)
+            *t_cov.output_space,
+            [epsilon_state.pop() / num_eigvec_releases] * num_eigvec_releases,
         )
 
         return origin, qbl(m_eigvals), qbl(m_eigvecs)
@@ -88,7 +108,7 @@ def make_pca(input_domain, input_metric, unit_epsilon, n_components=None, norm=N
         input_metric,
         privacy_measure,
         function,
-        lambda d_in: d_in // 2 * unit_epsilon,
+        lambda d_in: d_in // unit_d_in * unit_epsilon,
         TO="ExtrinsicObject",
     )
 
@@ -127,19 +147,21 @@ class PCA(SKLPCA):
             num_columns=self.n_features_in_, size=self.n_samples, T=float
         )
         input_metric = dp.symmetric_distance()
+        # from opendp.extrinsics.array.pca_consolidated import make_pca
 
         return dp.binary_search_chain(
             lambda e: make_pca(
                 input_domain,
                 input_metric,
                 e,
-                n_components=self.n_components,
+                num_components=self.n_components,
                 norm=self.row_norm,
             ),
             d_in=self.n_changes * 2,
             d_out=self.epsilon,
+            T=float,
         )
-    
+
     @property
     def n_features(self):
         return self.n_features_in_
@@ -172,12 +194,14 @@ class PCA(SKLPCA):
             # their variance is always greater than n_components float
             # passed. More discussion in issue: #15669
             ratio_cumsum = stable_cumsum(explained_variance_ratio_)
-            n_components = np.searchsorted(ratio_cumsum, self.n_components, side="right") + 1
+            n_components = (
+                np.searchsorted(ratio_cumsum, self.n_components, side="right") + 1
+            )
         else:
             n_components = self.n_components
         # Compute noise covariance using Probabilistic PCA model
         # The sigma2 maximum likelihood (cf. eq. 12.46)
-        if n_components < min(self.n_features_, self.n_samples):
+        if n_components < min(self.n_features_in_, self.n_samples):
             self.noise_variance_ = explained_variance_[n_components:].mean()
         else:
             self.noise_variance_ = 0.0
