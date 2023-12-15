@@ -6,6 +6,7 @@ it complements the bottom-up view provided by the `Python API Reference <../pyth
 
 .. toctree::
    :titlesonly:
+   :maxdepth: 1
 
    limitations
    installation
