@@ -22,6 +22,7 @@ These introductory notebooks can be run locally, on Binder, or Colab:
 .. toctree::
   :titlesonly:
 
+  first-look-at-DP
   pums-data-analysis
   unknown-dataset-size
   histograms
