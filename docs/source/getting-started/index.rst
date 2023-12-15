@@ -12,5 +12,4 @@ and for an overview of the OpenDP libraries for Python, R, and Rust see the :doc
   installation
   hello-opendp
   real-world
-  first-look-at-DP
   examples/index
