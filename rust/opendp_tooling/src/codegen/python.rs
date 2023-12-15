@@ -227,7 +227,7 @@ fn generate_docstring(func: &Function, hierarchy: &HashMap<String, Vec<String>>)
 
     let raises = format!(
         r#":raises TypeError: if an argument's type differs from the expected type
-:raises UnknownTypeError: if a type argument fails to parse{opendp_raise}"#,
+:raises UnknownTypeException: if a type argument fails to parse{opendp_raise}"#,
         opendp_raise = if func.ret.c_type_origin() == "FfiResult" {
             "\n:raises OpenDPException: packaged error from the core OpenDP library"
         } else {

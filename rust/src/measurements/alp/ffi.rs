@@ -68,8 +68,9 @@ pub extern "C" fn opendp_measurements__make_alp_queryable(
     let input_metric = try_as_ref!(input_metric);
     let size_factor = util::as_ref(size_factor as *const u32).cloned();
 
-    let TypeContents::GENERIC { name, args } = &input_domain.carrier_type.contents
-    else { return err!(FFI, "Expected generic input domain").into() };
+    let TypeContents::GENERIC { name, args } = &input_domain.carrier_type.contents else {
+        return err!(FFI, "Expected generic input domain").into();
+    };
 
     if name != &"HashMap" {
         return err!(FFI, "Expected input domain to be MapDomain").into();

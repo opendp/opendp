@@ -88,7 +88,7 @@ def make_alp_queryable(
     :type CO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -174,7 +174,7 @@ def make_base_discrete_gaussian(
     :type MO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -256,7 +256,7 @@ def make_base_discrete_laplace(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -334,7 +334,7 @@ def make_base_discrete_laplace_cks20(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -416,7 +416,7 @@ def make_base_discrete_laplace_linear(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -501,7 +501,7 @@ def make_base_gaussian(
     :type MO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -577,7 +577,7 @@ def make_base_geometric(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -659,7 +659,7 @@ def make_base_laplace(
     :type k: int
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -731,7 +731,7 @@ def make_base_laplace_threshold(
     :type k: int
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib", "floating-point")
@@ -807,7 +807,7 @@ def make_gaussian(
     :type MO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -889,7 +889,7 @@ def make_laplace(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -958,7 +958,7 @@ def make_randomized_response(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1012,7 +1012,7 @@ def make_randomized_response_bool(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1070,7 +1070,7 @@ def make_report_noisy_max_gumbel(
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib", "floating-point")
@@ -1144,7 +1144,7 @@ def make_user_measurement(
     :type TO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
+    :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib", "honest-but-curious")
