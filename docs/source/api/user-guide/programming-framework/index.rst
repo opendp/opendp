@@ -13,7 +13,7 @@ Summary
 The OpenDP Programming Framework consists of a set of high-level conceptual elements. 
 We'll cover the highlights here, which should be enough for you to get acquainted with OpenDP programming. 
 If you're interested in more of the details and motivations behind the framework, you're encouraged to read `the paper <https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf>`_.
-There is also an illustrative notebook `A Framework to Understand DP <a-framework-to-understand-dp.html>`_.
+There is also an illustrative notebook `A Framework to Understand DP <../../../theory/a-framework-to-understand-dp.html>`_.
 
 .. note::
 
