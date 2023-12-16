@@ -18,7 +18,7 @@ This means you will need to choose a measurement that chains with your :ref:`agg
 Additive Noise Mechanisms
 -------------------------
 
-See the `Additive Noise Mechanisms notebook <measurements/additive-noise-mechanisms.html>`_ for code examples and more exposition.
+See the `Additive Noise Mechanisms notebook <additive-noise-mechanisms.html>`_ for code examples and more exposition.
 
 Notice that there is a symmetric structure to the additive noise measurements:
 
@@ -160,7 +160,7 @@ That is, keys which are present among all neighboring datasets.
 The stability histogram is used to release a category set and frequency counts, and is useful when the category set is unknown or very large.
 `make_count_by` is included here because it is currently the only transformation that `make_base_laplace_threshold` chains with.
 
-See the `Histograms notebook <../../getting-started/examples/histograms.html>`_ for code examples and more exposition.
+See the `Histograms notebook <../../../getting-started/examples/histograms.html>`_ for code examples and more exposition.
 
 .. list-table::
    :header-rows: 1
@@ -182,7 +182,7 @@ Randomized Response
 -------------------
 These measurements are used to randomize an individual's response to a query in the local-DP model.
 
-See the `Randomized Response notebook <measurements/randomized-response.html>`_ for code examples and more exposition.
+See the `Randomized Response notebook <randomized-response.html>`_ for code examples and more exposition.
 
 
 .. list-table::
