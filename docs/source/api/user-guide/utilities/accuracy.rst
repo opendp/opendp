@@ -56,3 +56,4 @@ into the following statement to interpret these functions:
     f"at a statistical significance level alpha of {alpha}, "
     f"or with (1 - {alpha})100% = {(1 - alpha) * 100}% confidence."
 
+TODO: link to accuracy-pitfalls.ipynb
