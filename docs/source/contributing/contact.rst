@@ -25,6 +25,6 @@ To report bugs, please use the `issue tracker`_.
 
 .. _issue tracker: https://github.com/opendp/opendp/issues
 
-To report security issues, please email security@opendp.org.
+Guidelines for reporting security issues are `here <https://github.com/opendp/opendp/blob/main/SECURITY.md>`_.
 
 For general inquiries, please email info@opendp.org.

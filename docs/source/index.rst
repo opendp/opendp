@@ -14,6 +14,7 @@ For more background on differential privacy and its applications:
 
 * "`Designing Access with Differential Privacy <https://admindatahandbook.mit.edu/book/v1.0/diffpriv.html>`_" from *Handbook on Using Administrative Data for Research and Evidence-based Policy*
 * `Resources list <https://differentialprivacy.org/resources/>`_ from *differentialprivacy.org*
+* OpenDP's own :doc:`theory/resources`
 
 Why OpenDP?
 -----------
