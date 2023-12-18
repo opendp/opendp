@@ -11,7 +11,7 @@ def rust(args):
     os.environ["CARGO_REGISTRY_TOKEN"] = os.environ["CRATES_IO_API_TOKEN"]
     # We can't do a dry run of everything, because dependencies won't be available for later crates,
     # but we can at least do any leaf nodes (i.e. opendp_tooling).
-    dry_run_arg = " --dry-run" if args.dry_run else ""
+    dry_run_arg = " --dry-run" if args.dry_run else "" # Keep dash in this arg.
     run_command("Publishing opendp_tooling crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp_tooling/Cargo.toml")
     if not args.dry_run:
         # As of https://github.com/rust-lang/cargo/pull/11062, cargo publish blocks until the index is propagated,
@@ -28,6 +28,8 @@ def python(args):
     config = configparser.RawConfigParser()
     config.read("python/setup.cfg")
     version = config["metadata"]["version"]
+    if args.counter:
+        version += f'-{args.counter}'
     wheel = f"opendp-{version}-py3-none-any.whl"
     run_command("Publishing opendp package", f"python -m twine upload -r {args.repository} --verbose python/wheelhouse/{wheel}")
     # Unfortunately, twine doesn't have an option to block until the index is propagated. Polling the index is unreliable,
@@ -67,6 +69,8 @@ def github(args):
     if branch != channel:
         raise Exception(f"Version {version} implies channel {channel}, but current branch is {branch}")
     tag = f"v{version}"
+    if args.counter:
+        tag += f'-{args.counter}'
     # Just in case, clear out any existing tag, so a new one will be created by GitHub.
     run_command("Clearing tag", f"git push origin :refs/tags/{tag}")
     title = f"OpenDP {version}"
@@ -83,12 +87,13 @@ def github(args):
 
 def _main(argv):
     parser = argparse.ArgumentParser(description="OpenDP build tool")
+    parser.add_argument("--counter", type=int, default=0, help="Version counter")
     subparsers = parser.add_subparsers(dest="COMMAND", help="Command to run")
     subparsers.required = True
 
     subparser = subparsers.add_parser("rust", help="Publish Rust crate")
     subparser.set_defaults(func=rust)
-    subparser.add_argument("--dry-run", action="store_true")
+    subparser.add_argument("--dry_run", action="store_true")
     subparser.add_argument("-t", "--index-check-timeout", type=int, default=300, help="How long to keep checking for index update (0 = don't check)")
     subparser.add_argument("-b", "--index-check-backoff", type=float, default=2.0, help="How much to back off between checks for index update")
 
