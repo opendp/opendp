@@ -583,7 +583,7 @@ class OpenDPException(Exception):
 
     def __str__(self) -> str: # pragma: no cover
         response = ''
-        if self.raw_traceback:
+        if self.raw_traceback and 'rust-stack-trace' in GLOBAL_FEATURES:
             # join and split by newlines because frames may be multi-line
             lines = "\n".join(self.frames()[::-1]).split('\n')
             response += "Continued Rust stack trace:\n" + '\n'.join('    ' + line for line in lines)
