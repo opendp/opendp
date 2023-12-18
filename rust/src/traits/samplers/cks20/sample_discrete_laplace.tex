@@ -51,7 +51,7 @@ or \texttt{Ok(out)}, where \texttt{out} is distributed as $\mathcal{L}_\mathbb{Z
     The discrete laplace distribution with location $\mu$ and scale $s$ is denoted $\mathcal{L}_\mathbb{Z}(\mu, s)$. 
     It is a probability distribution supported on the integers and defined by
     \begin{equation*}
-        \forall x \in \mathbb{Z} \quad  P[X = x] = \frac{e^{-1/s} - 1}{e^{-1/s} + 1} e^{-|x|/s} \quad \text{where } X \sim \mathcal{L}_\mathbb{Z}(\mu, s)
+        \forall x \in \mathbb{Z} \quad  P[X = x] = \frac{1 - e^{-1/s}}{1 + e^{-1/s}} e^{-|x|/s} \quad \text{where } X \sim \mathcal{L}_\mathbb{Z}(\mu, s)
     \end{equation*}
 \end{definition}
 
