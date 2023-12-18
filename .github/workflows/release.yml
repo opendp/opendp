@@ -97,6 +97,7 @@ jobs:
       channel: ${{ inputs.channel }}
       date: ${{ needs.prepare.outputs.date }}
       dry_run: ${{ inputs.dry_run || inputs.fake }}
+      counter: ${{ fromJSON(inputs.counter) }}
     secrets: inherit
 
   sanity-test-post:
