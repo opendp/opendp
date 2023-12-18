@@ -247,8 +247,10 @@ The resulting Measurement may be used interchangeably with those constructed via
     ...     >> make_base_constant("denied")
     ... )
     ...
-    >>> assert meas([2, 3, 4]) == "denied"
-    >>> assert meas.map(1) == 0. # computes epsilon, because the output measure is max divergence
+    >>> meas([2, 3, 4])
+    'denied'
+    >>> meas.map(1) # computes epsilon, because the output measure is max divergence
+    0.0
 
 While this mechanism clearly has no utility, 
 the code snip may form a basis for you to create own measurements, 
