@@ -49,6 +49,12 @@ def test_data_object_tuple():
     assert val_out == val_in
 
 
+def test_data_object_string_pointer():
+    val_in = "hello, world"
+    obj = py_to_c(val_in, c_type=ctypes.c_void_p, type_name='String')
+    assert obj.value == val_in.encode()
+
+
 def test_roundtrip_int():
     in_ = 23
     ptr = ctypes.POINTER(ctypes.c_int32)(ctypes.c_int32(in_))
