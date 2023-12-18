@@ -11,7 +11,7 @@ def rust(args):
     os.environ["CARGO_REGISTRY_TOKEN"] = os.environ["CRATES_IO_API_TOKEN"]
     # We can't do a dry run of everything, because dependencies won't be available for later crates,
     # but we can at least do any leaf nodes (i.e. opendp_tooling).
-    dry_run_arg = " --dry_run" if args.dry_run else ""
+    dry_run_arg = " --dry-run" if args.dry_run else "" # Keep dash in this arg.
     run_command("Publishing opendp_tooling crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp_tooling/Cargo.toml")
     if not args.dry_run:
         # As of https://github.com/rust-lang/cargo/pull/11062, cargo publish blocks until the index is propagated,
