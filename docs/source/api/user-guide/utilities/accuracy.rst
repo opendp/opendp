@@ -50,5 +50,3 @@ into the following statement to interpret these functions:
     f"the DP estimate differs from the true value by no more than {accuracy} "
     f"at a statistical significance level alpha of {alpha}, "
     f"or with (1 - {alpha})100% = {(1 - alpha) * 100}% confidence."
-
-TODO: link to accuracy-pitfalls.ipynb
