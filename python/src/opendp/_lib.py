@@ -351,7 +351,17 @@ def get_opendp_version_from_file():
     return open(version_file, 'r').read().strip()
 
 
-def get_docs_ref(version): # pragma: no cover
+def get_docs_ref(version):
+    '''
+    >>> get_docs_ref('0.0.0')
+    'v0.0.0'
+    >>> get_docs_ref('0.0.0-dev')
+    'latest'
+    >>> get_docs_ref('0.0.0-nightly')
+    'nightly'
+    >>> get_docs_ref('0.0.0-surprise')
+    'unknown'
+    '''
     channel = get_channel(version)
     if channel == "stable":
         return f"v{version}"  # For stable, we have tags.
@@ -366,4 +376,4 @@ def get_channel(version):
     if match:
         channel = match.group(2)
         return channel or "stable"
-    return "unknown" # pragma: no cover
+    return "unknown"
