@@ -43,6 +43,7 @@ on:
           - nightly
           - beta
           - stable
+          - dev-branch
         required: true
         default: nightly
       sync:
@@ -111,6 +112,8 @@ jobs:
 
   latex:
     needs: prepare
+    # don't build latex if releasing for custom branch
+    if: ${{ inputs.channel != 'dev-branch' }}
     uses: ./.github/workflows/latex-release.yml
     with:
       channel: ${{ inputs.channel }}

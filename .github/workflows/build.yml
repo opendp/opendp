@@ -26,6 +26,7 @@ on:
           - nightly
           - beta
           - stable
+          - dev-branch
         required: true
         default: nightly
       fake:
@@ -41,6 +42,7 @@ jobs:
     uses: ./.github/workflows/credential-check.yml
     with:
       ref: ${{ inputs.channel }}
+      assert_version: ${{ inputs.channel != 'dev-branch' }}
 
   libs-windows:
     needs: credential-check
@@ -61,7 +63,7 @@ jobs:
         if: ${{ !inputs.fake }}
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.channel }}
+          ref: ${{ inputs.channel == 'dev-branch' && github.ref_name || inputs.channel }}
 
       - name: Cache Rust dependencies
         if: ${{ !inputs.fake }}
@@ -107,7 +109,7 @@ jobs:
         if: ${{ !inputs.fake }}
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.channel }}
+          ref: ${{ inputs.channel == 'dev-branch' && github.ref_name || inputs.channel }}
 
       - name: Cache Rust dependencies
         if: ${{ !inputs.fake }}
@@ -161,7 +163,7 @@ jobs:
         if: ${{ !inputs.fake }}
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.channel }}
+          ref: ${{ inputs.channel == 'dev-branch' && github.ref_name || inputs.channel }}
 
       - name: Cache Rust dependencies
         if: ${{ !inputs.fake }}
@@ -204,7 +206,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.channel }}
+          ref: ${{ inputs.channel == 'dev-branch' && github.ref_name || inputs.channel }}
 
       - name: Cache Rust dependencies
         if: ${{ !inputs.fake }}
@@ -237,7 +239,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.channel }}
+          ref: ${{ inputs.channel == 'dev-branch' && github.ref_name || inputs.channel }}
 
       - name: Set up Python
         uses: actions/setup-python@v3

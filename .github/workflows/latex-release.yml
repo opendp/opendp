@@ -30,6 +30,7 @@ jobs:
     uses: ./.github/workflows/credential-check.yml
     with:
       ref: ${{ inputs.channel }}
+      assert_version: ${{ inputs.channel != 'dev-branch' }}
 
   latex:
     needs: credential-check
@@ -38,7 +39,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.channel }}
+          ref: ${{ inputs.channel == 'dev-branch' && github.ref_name || inputs.channel }}
 
       - name: Collect file listing
         id: collect

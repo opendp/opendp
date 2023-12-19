@@ -67,6 +67,7 @@ jobs:
       assert_version: false
 
   prepare:
+    if: ${{ inputs.channel != 'dev-branch' }}
     needs: credential-check
     runs-on: ubuntu-22.04
     steps:

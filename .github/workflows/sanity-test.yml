@@ -27,6 +27,7 @@ on:
           - nightly
           - beta
           - stable
+          - dev-branch
         required: true
         default: nightly
       python_repository:
@@ -51,7 +52,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.channel }}
+          ref: ${{ inputs.channel == 'dev-branch' && github.ref_name || inputs.channel }}
 
       - name: Download Python wheel
         if: ${{ inputs.python_repository == 'local' }}
