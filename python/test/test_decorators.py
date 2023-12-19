@@ -7,7 +7,7 @@ def test_proven(monkeypatch):
     '''
     Fake doc string
 
-    [(Proof Document)](url-is-replaced)
+    [(Proof Document)](url-is-replaced.tex)
     '''
   
   # Proof doc does not actually exist, so fake it:
@@ -17,5 +17,5 @@ def test_proven(monkeypatch):
   assert (
     '[(Proof Document)](https://docs.opendp.org/'
     'en/latest/proofs/python/src/opendp/extrinsics/'
-    '../../../test/url-is-replaced)'
+    '../../../test/url-is-replaced.pdf)'
   ) in proven_fake.__doc__

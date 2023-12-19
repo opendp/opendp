@@ -266,7 +266,7 @@ def make_proof_link(
     source_dir,
     relative_path,
     repo_path,
-) -> str: # pragma: no cover
+) -> str:
     # construct absolute path
     absolute_path = os.path.join(source_dir, relative_path)
 
@@ -279,7 +279,7 @@ def make_proof_link(
     # link from sphinx and rustdoc to latex
     sphinx_port = os.environ.get("OPENDP_SPHINX_PORT", None)
     if sphinx_port is not None:
-        proof_uri = f"http://localhost:{sphinx_port}"
+        proof_uri = f"http://localhost:{sphinx_port}"  # pragma: no cover
 
     else:
         # find the docs uri
