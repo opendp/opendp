@@ -39,7 +39,7 @@ try:
         np.float64: 'f64',  # np.double, np.float_
     })
 except ImportError:
-    np = None
+    np = None  # type: ignore[assignment]
 
 INTEGER_TYPES = {"i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "usize"}
 NUMERIC_TYPES = INTEGER_TYPES | {"f32", "f64"}
