@@ -96,7 +96,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
 
     def __rshift__(self, other: Union["Function", "Transformation"]) -> "Measurement":
         if isinstance(other, Transformation):
-            other = other.function # pragma: no cover
+            other = other.function
 
         if isinstance(other, Function):
             from opendp.combinators import make_chain_pm
