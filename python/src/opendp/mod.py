@@ -453,7 +453,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
             pass
 
     def __repr__(self) -> str:
-        return str(self) # pragma: no cover
+        return str(self)
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
@@ -491,7 +491,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
             pass
 
     def __repr__(self) -> str:
-        return str(self) # pragma: no cover
+        return str(self)
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
