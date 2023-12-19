@@ -24,7 +24,17 @@ def test_option_domain():
     assert str(domain) == 'OptionDomain(AtomDomain(T=i32))'
 
 
-def test_context_init():
+def test_context_init_split_by_weights():
+    dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=3),
+        privacy_loss=dp.loss_of(epsilon=3.0),
+        split_by_weights=[1, 1, 1],
+        domain=dp.domain_of(List[int]),
+    )
+
+
+def test_context_init_split_evenly_over():
     context = dp.Context.compositor(
         data=[1, 2, 3],
         privacy_unit=dp.unit_of(contributions=3),

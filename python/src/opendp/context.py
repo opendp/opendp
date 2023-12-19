@@ -586,7 +586,7 @@ def _sequential_composition_by_weights(
 
     if split_evenly_over is not None:
         weights = [d_out] * split_evenly_over
-    elif split_by_weights is not None: # pragma: no cover
+    elif split_by_weights is not None:
         weights = split_by_weights
     else:
         raise ValueError(
