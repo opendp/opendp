@@ -123,14 +123,11 @@ mod test {
 
     #[test]
     fn test_amplifier() -> Fallible<()> {
-        println!("A");
         let meas = (make_mean(
             VectorDomain::new(AtomDomain::new_closed((0., 10.))?).with_size(10),
             SymmetricDistance::default(),
         ) >> then_base_laplace(0.5, None))?;
-        println!("B");
         let amp = make_population_amplification(&meas, 100)?;
-        println!("C");
         amp.function.eval(&vec![1.; 10])?;
         assert!(meas.check(&2, &(2. + 1e-6))?);
         assert!(!meas.check(&2, &2.)?);

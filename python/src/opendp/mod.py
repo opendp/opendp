@@ -955,8 +955,10 @@ def exponential_bounds_search(
     :raises ValueError: if the predicate function is constant
     """
 
+    print("bounds search")
     # try to infer T
     if T is None:
+        print("checking type")
         def check_type(v):
             try:
                 predicate(v)
@@ -974,6 +976,7 @@ def exponential_bounds_search(
         else:
             raise TypeError("unable to infer type `T`; pass the type `T` or bounds")
 
+    print("type is", T)
     # core search functionality
     def signed_band_search(center, at_center, sign):
         """identify which band (of eight) the decision boundary lies in, 
@@ -1006,11 +1009,15 @@ def exponential_bounds_search(
     try:
         at_center = predicate(center)
         # search positive bands, then negative bands
-        return signed_band_search(center, at_center, 1) or signed_band_search(center, at_center, -1)
+        pos = signed_band_search(center, at_center, 1)
+        print("finished pos")
+        return pos or signed_band_search(center, at_center, -1)
     except KeyboardInterrupt:
         raise
-    except:
-        pass
+    # except:
+    #     print("failed!")
+
+    #     pass
 
     # predicate has thrown an exception
     # 1. Treat exceptions as a secondary decision boundary, and find the edge value

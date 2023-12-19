@@ -149,7 +149,6 @@ fn sample_geometric_exp_fast(x: RBig) -> Fallible<UBig> {
 /// # Citation
 /// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/abs/2004.00010)
 pub fn sample_discrete_laplace(scale: RBig) -> Fallible<IBig> {
-    println!("entering discrete laplace sampler");
     if scale.is_zero() {
         return Ok(0.into());
     }
@@ -157,7 +156,6 @@ pub fn sample_discrete_laplace(scale: RBig) -> Fallible<IBig> {
     let inv_scale = RBig::from_parts(denom.as_ibig().clone(), numer.into_parts().1);
 
     loop {
-        println!("start discrete laplace loop");
         let positive = bool::sample_standard_bernoulli()?;
         let magnitude = sample_geometric_exp_fast(inv_scale.clone())?
             .as_ibig()
@@ -165,7 +163,6 @@ pub fn sample_discrete_laplace(scale: RBig) -> Fallible<IBig> {
         if positive || !magnitude.is_zero() {
             return Ok(if positive { magnitude } else { -magnitude });
         }
-        println!("end discrete laplace loop");
     }
 }
 

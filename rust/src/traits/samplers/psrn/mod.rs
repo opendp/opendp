@@ -79,7 +79,6 @@ impl GumbelPSRN {
     pub fn value<R: ODPRound>(&mut self) -> Fallible<RBig> {
         // The first few rounds are susceptible to NaN due to the uniform PSRN initializing at zero.
         loop {
-            println!("precision: {}", self.precision);
             let r_uniform = self.uniform.value::<R>();
             if r_uniform.is_zero() {
                 self.uniform.refine()?;
@@ -87,9 +86,12 @@ impl GumbelPSRN {
             }
             let uniform = r_uniform.to_float::<R, 2>(self.precision).value();
 
-            println!("uni prec {}", uniform.precision());
+            let Some(gumbel) = Self::inverse_cdf::<R>(uniform) else {
+                self.refine()?;
+                continue;
+            };
 
-            if let Some(gumbel) = RBig::simplest_from_float(&Self::inverse_cdf::<R>(uniform)) {
+            if let Some(gumbel) = RBig::simplest_from_float(&gumbel) {
                 return Ok(gumbel * &self.scale + &self.shift);
             } else {
                 self.refine()?;
@@ -99,19 +101,19 @@ impl GumbelPSRN {
 
     /// Computes the inverse cdf of the standard Gumbel with controlled rounding:
     /// $-ln(-ln(u))$ where $u \sim \mathrm{Uniform}(0, 1)$
-    fn inverse_cdf<R: ODPRound>(sample: FBig<R>) -> FBig<R> {
+    fn inverse_cdf<R: ODPRound>(sample: FBig<R>) -> Option<FBig<R>> {
+        let precision = sample.precision();
         // This round is behind two negations, so the rounding direction is preserved
-        println!("sample {}", sample);
-        let sample = -sample.ln();
-        println!("stuck?");
+        let sample = -sample.ln().with_precision(precision).value();
 
+        if sample == FBig::<R>::ZERO {
+            return None;
+        }
         // This round is behind a negation, so the rounding direction is reversed
         let sample = sample.with_rounding::<R::Complement>();
-        let sample = -sample.ln();
+        let sample = -sample.ln().with_precision(precision).value();
 
-        println!("stuck? 2");
-
-        sample.with_rounding::<R>()
+        Some(sample.with_rounding::<R>())
     }
 
     /// Improves the precision of the inverse transform,

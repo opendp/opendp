@@ -64,11 +64,16 @@ def test_count_by_threshold():
         >> dp.t.then_count_by(MO=dp.L1Distance[float], TV=float)
     )
     budget = (1.0, 1e-8)
+    def func(s):
+        print("scale", s)
+        meas = pre >> dp.m.then_base_laplace_threshold(scale=s, threshold=1e8)
+        return meas
     scale = dp.binary_search_param(
-        lambda s: pre >> dp.m.then_base_laplace_threshold(scale=s, threshold=1e8),
+        func,
         d_in=1,
         d_out=budget,
     )
+    print("done")
     threshold = dp.binary_search_param(
         lambda t: pre >> dp.m.then_base_laplace_threshold(scale=scale, threshold=t),
         d_in=1,
@@ -91,3 +96,4 @@ def test_count_by_threshold():
             dp.atom_domain(T=int),
             dp.l1_distance(T=float),
             scale=1., threshold=1e8)
+test_count_by_threshold()

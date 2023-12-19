@@ -119,6 +119,7 @@ where
             // delta based on the probability that noise will push the count beyond the threshold
             // δ = d_in / exp(norm) / 2
             let delta = d_in.inf_div(&dist.neg_inf_exp()?)?.inf_div(&_2)?;
+            println!("dist {:?}, delta {:?}", dist, delta);
 
             Ok((epsilon, delta))
         }),

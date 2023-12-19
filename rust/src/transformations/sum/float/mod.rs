@@ -22,9 +22,7 @@ pub trait SumRelaxation {
     type Item: Float;
     fn error(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item>;
     fn relaxation(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item> {
-        println!("relaxation A");
         let error = Self::error(size, lower, upper)?;
-        println!("relaxation B");
         error.inf_add(&error)
     }
 }
@@ -35,13 +33,10 @@ impl<T: Float> SumRelaxation for Sequential<T> {
         let size = T::exact_int_cast(size)?;
         let _2 = T::exact_int_cast(2)?;
 
-        println!("error A");
         // n^2 / 2^(k - 1) max(|L|, U)
-        let x = size.inf_mul(&size)?;
-        println!("error B");
-        let x = x.inf_div(&_2.inf_powi(T::MANTISSA_BITS.into())?)?;
-        println!("error C");
-        x.inf_mul(&lower.alerting_abs()?.total_max(upper)?)
+        size.inf_mul(&size)?
+            .inf_div(&_2.inf_powi(T::MANTISSA_BITS.into())?)?
+            .inf_mul(&lower.alerting_abs()?.total_max(upper)?)
     }
 }
 
@@ -50,13 +45,10 @@ impl<T: Float> SumRelaxation for Pairwise<T> {
     fn error(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item> {
         let size = T::exact_int_cast(size)?;
         let _2 = T::exact_int_cast(2)?;
-
-        println!("p error A");
         // u * k where k = log_2(n)
-        let uk = size.inf_log2()?;
-        println!("p error A.1");
-        let uk = uk.inf_div(&_2.inf_powi(T::MANTISSA_BITS.into())?)?;
-        println!("p error B");
+        let uk = size
+            .inf_log2()?
+            .inf_div(&_2.inf_powi(T::MANTISSA_BITS.into())?)?;
         // (uk / (1 - uk)) n max(|L|, U)
         uk.inf_div(&T::one().neg_inf_sub(&uk)?)?
             .inf_mul(&size)?

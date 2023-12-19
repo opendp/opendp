@@ -12,6 +12,7 @@ use dashu::{
     },
     integer::IBig,
 };
+use num::Zero;
 
 /// Fallible absolute value that returns an error if overflowing.
 ///
@@ -467,10 +468,7 @@ impl Log2 for FBig<Down> {
 }
 impl Log2 for FBig<Up> {
     fn log2(self) -> Self {
-        println!("log2 in");
-        let x = Self::try_from(self.log2_bounds().1).unwrap();
-        println!("log2 out");
-        return x;
+        Self::try_from(self.log2_bounds().1).unwrap()
     }
 }
 
@@ -563,7 +561,86 @@ macro_rules! impl_float_inf_bi {
 impl_float_inf_bi!(f64, f32; InfAdd, inf_add, neg_inf_add, add, alerting_add);
 impl_float_inf_bi!(f64, f32; InfSub, inf_sub, neg_inf_sub, sub, alerting_sub);
 impl_float_inf_bi!(f64, f32; InfMul, inf_mul, neg_inf_mul, mul, alerting_mul);
-impl_float_inf_bi!(f64, f32; InfDiv, inf_div, neg_inf_div, div, alerting_div);
+impl InfDiv for f64 {
+    fn inf_div(&self, other: &Self) -> Fallible<Self> {
+        if other.is_zero() {
+            return fallible!(FailedFunction, "attempt to divide by zero");
+        }
+        let this = FBig::<Up>::try_from(*self)?.div(&FBig::<Up>::try_from(*other)?);
+        let this = Self::inf_cast(this)?;
+        this.is_finite().then(|| this).ok_or_else(|| {
+            err!(
+                FailedFunction,
+                concat!(
+                    "({}).",
+                    stringify!(inf_div),
+                    "({}) is not finite. Consider tightening your parameters."
+                ),
+                self,
+                other
+            )
+        })
+    }
+    fn neg_inf_div(&self, other: &Self) -> Fallible<Self> {
+        if other.is_zero() {
+            return fallible!(FailedFunction, "attempt to divide by zero");
+        }
+        let this = FBig::<Down>::try_from(*self)?.div(&FBig::<Down>::try_from(*other)?);
+        let this = Self::neg_inf_cast(this)?;
+        this.is_finite().then(|| this).ok_or_else(|| {
+            err!(
+                FailedFunction,
+                concat!(
+                    "({}).",
+                    stringify!(neg_inf_div),
+                    "({}) is not finite. Consider tightening your parameters."
+                ),
+                self,
+                other
+            )
+        })
+    }
+}
+impl InfDiv for f32 {
+    fn inf_div(&self, other: &Self) -> Fallible<Self> {
+        if other.is_zero() {
+            return fallible!(FailedFunction, "attempt to divide by zero");
+        }
+        let this = FBig::<Up>::try_from(*self)?.div(&FBig::<Up>::try_from(*other)?);
+        let this = Self::inf_cast(this)?;
+        this.is_finite().then(|| this).ok_or_else(|| {
+            err!(
+                FailedFunction,
+                concat!(
+                    "({}).",
+                    stringify!(inf_div),
+                    "({}) is not finite. Consider tightening your parameters."
+                ),
+                self,
+                other
+            )
+        })
+    }
+    fn neg_inf_div(&self, other: &Self) -> Fallible<Self> {
+        if other.is_zero() {
+            return fallible!(FailedFunction, "attempt to divide by zero");
+        }
+        let this = FBig::<Down>::try_from(*self)?.div(&FBig::<Down>::try_from(*other)?);
+        let this = Self::neg_inf_cast(this)?;
+        this.is_finite().then(|| this).ok_or_else(|| {
+            err!(
+                FailedFunction,
+                concat!(
+                    "({}).",
+                    stringify!(neg_inf_div),
+                    "({}) is not finite. Consider tightening your parameters."
+                ),
+                self,
+                other
+            )
+        })
+    }
+}
 
 macro_rules! impl_float_inf_bi_ibig {
     ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident, $fallback:ident) => {

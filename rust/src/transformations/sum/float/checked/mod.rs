@@ -155,14 +155,10 @@ where
             "potential for overflow when computing function"
         );
     }
-    println!("specialized sum A");
 
     let (lower, upper) = bounds;
     let ideal_sensitivity = upper.inf_sub(&lower)?;
-    println!("specialized sum A.1");
     let relaxation = S::relaxation(size, lower, upper)?;
-
-    println!("specialized sum B");
 
     Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),

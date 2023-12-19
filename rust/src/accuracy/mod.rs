@@ -508,7 +508,7 @@ pub mod test {
         let base_laplace = make_base_laplace(input_domain, input_metric, scale, Some(-100))?;
         let n = 50_000;
         let empirical_alpha = (0..n)
-            .filter(|_| base_laplace.invoke(&0.0).unwrap_test().abs() > accuracy)
+            .filter(|_| base_laplace.invoke(&0.0).unwrap().abs() > accuracy)
             .count() as f64
             / n as f64;
 

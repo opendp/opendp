@@ -29,16 +29,11 @@ pub trait SampleDiscreteLaplaceZ2k: Sized {
 
 impl<T: CastInternalRational> SampleDiscreteLaplaceZ2k for T {
     fn sample_discrete_laplace_Z2k(shift: Self, scale: Self, k: i32) -> Fallible<Self> {
-        println!("sample discrete laplace Z2k A");
         // integerize
         let mut i = find_nearest_multiple_of_2k(shift.into_rational()?, k);
 
-        println!("sample discrete laplace Z2k B");
-
         // sample from the discrete laplace on ℤ*2^k
-        i += sample_discrete_laplace(shr(scale.into_rational()?, k))?;
-
-        println!("sample discrete laplace Z2k C");
+        i += sample_discrete_laplace(shr(scale.into_rational()?, -k))?;
 
         // postprocess! int -> rational -> T
         Ok(Self::from_rational(x_mul_2k(i, k)))
@@ -71,7 +66,7 @@ impl<T: CastInternalRational> SampleDiscreteGaussianZ2k for T {
         let mut i = find_nearest_multiple_of_2k(shift.into_rational()?, k);
 
         // sample from the discrete gaussian on ℤ*2^k
-        i += sample_discrete_gaussian(shr(scale.into_rational()?, k))?;
+        i += sample_discrete_gaussian(shr(scale.into_rational()?, -k))?;
 
         // postprocess! int -> rational -> T
         Ok(Self::from_rational(x_mul_2k(i, k)))
@@ -161,7 +156,7 @@ impl_cast_internal_rational_int!(u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 i
 #[cfg(test)]
 mod test {
     use dashu::float::{
-        round::mode::Up,
+        round::mode::{Up, Down},
         FBig,
     };
 
@@ -242,7 +237,7 @@ mod test {
     fn test_extreme_rational() -> Fallible<()> {
         // rationals with greater magnitude than MAX saturate to infinity
         let rat = RBig::try_from(f64::MAX).unwrap();
-        assert!((rat * IBig::from(2u8)).to_f64().value().is_nan());
+        assert!((rat * IBig::from(2u8)).to_f64().value().is_infinite());
 
         Ok(())
     }
@@ -281,6 +276,12 @@ mod test {
     #[test]
     fn test_dashu_ln() -> Fallible<()> {
         println!("{}", FBig::<Up>::from(2).ln());
+        Ok(())
+    }
+
+    #[test]
+    fn test_dashu_exp() -> Fallible<()> {
+        println!("{}", FBig::<Down>::from(0).exp());
         Ok(())
     }
 }

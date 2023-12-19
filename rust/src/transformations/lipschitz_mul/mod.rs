@@ -47,7 +47,6 @@ where
     M: LipschitzMulFloatMetric<Distance = D::Atom>,
     (D, M): MetricSpace,
 {
-    println!("lipschitz A");
     let _2 = D::Atom::one() + D::Atom::one();
     let (lower, upper) = bounds;
 
