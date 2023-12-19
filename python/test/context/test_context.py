@@ -19,6 +19,11 @@ def test_privacy_loss_of():
     )
 
 
+def test_option_domain():
+    domain = dp.domain_of('Option<int>')
+    assert str(domain) == 'OptionDomain(AtomDomain(T=i32))'
+
+
 def test_context_init():
     context = dp.Context.compositor(
         data=[1, 2, 3],
