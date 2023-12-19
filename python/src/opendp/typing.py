@@ -269,6 +269,11 @@ class RuntimeType(object):
         >>> assert RuntimeType.infer(12.) == "f64"
         >>> assert RuntimeType.infer(["A", "B"]) == "Vec<String>"
         >>> assert RuntimeType.infer((12., True, "A")) == "(f64,  bool,String)" # eq doesn't care about whitespace
+        
+        >>> print(RuntimeType.infer([]))
+        Traceback (most recent call last):
+        ...
+        opendp.mod.UnknownTypeException: attempted to create a type_name with an unknown type: cannot infer atomic type when empty
         """
         if type(public_example) in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type(public_example)]
@@ -283,7 +288,7 @@ class RuntimeType(object):
             types = {cls.infer(v, py_object=py_object) for v in value}
 
             if len(types) == 0:
-                return UnknownType("cannot infer atomic type when empty") # pragma: no cover
+                return UnknownType("cannot infer atomic type when empty")
             if len(types) == 1:
                 return next(iter(types))
             if py_object: # pragma: no cover
@@ -371,7 +376,7 @@ class UnknownType(RuntimeType):
     origin: None # type: ignore[assignment]
     args: None # type: ignore[assignment]
 
-    def __init__(self, reason): # pragma: no cover
+    def __init__(self, reason):
         self.origin = None
         self.args = None
         self.reason = reason
