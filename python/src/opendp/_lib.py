@@ -230,7 +230,7 @@ def versioned(function):
 proof_doc_re = re.compile(r"\[\(Proof Document\)\]\(([^)]+)\)")
 
 
-def proven(function): # pragma: no cover
+def proven(function):
     """Decorator for functions that have an associated proof document.
     Locates the proof document and edits the docstring with a link.
     """
