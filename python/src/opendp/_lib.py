@@ -313,14 +313,21 @@ def get_opendp_version():
             return get_opendp_version_from_file()
 
 
-def unmangle_py_version(py_version): # pragma: no cover
-    # Python mangles pre-release versions like "X.Y.Z-nightly.NNN.M" into "X.Y.ZaNNN00M", but the docs use
-    # the original format, so we need to unmangle for links to work.
-    # There are more variations possible, but we only need to handle X.Y.Z-dev0, X.Y.Z-aNNN00M, X.Y.Z-bNNN00M, X.Y.Z
+def unmangle_py_version(py_version):
+    '''
+    Python mangles pre-release versions like "X.Y.Z-nightly.NNN.M" into "X.Y.ZaNNN00M", but the docs use
+    the original format, so we need to unmangle for links to work.
+    There are more variations possible, but we only need to handle X.Y.Z-dev0, X.Y.Z-aNNN00M, X.Y.Z-bNNN00M, X.Y.Z
+    
+    >>> unmangle_py_version('0.9.0.dev0')
+    '0.9.0-dev'
+    >>> unmangle_py_version('other')
+    'other'
+    '''
     if py_version.endswith(".dev0"):
         return f"{py_version[:-5]}-dev"
     match = re.match(r"^(\d+\.\d+\.\d+)(?:([ab])(\d{8})(\d{3}))?$", py_version)
-    if match:
+    if match: # pragma: no cover
         base = match.group(1)
         py_tag = match.group(2)
         if not py_tag:
