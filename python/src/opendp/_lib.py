@@ -339,7 +339,7 @@ def unmangle_py_version(py_version):
     return py_version
 
 
-def get_opendp_version_from_file(): # pragma: no cover
+def get_opendp_version_from_file():
     '''
     If the package isn't installed (eg when we're building docs), we can't get the version from metadata,
     so fall back to the version file.
