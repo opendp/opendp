@@ -340,8 +340,13 @@ def unmangle_py_version(py_version):
 
 
 def get_opendp_version_from_file(): # pragma: no cover
-    # If the package isn't installed (eg when we're building docs), we can't get the version from metadata,
-    # so fall back to the version file.
+    '''
+    If the package isn't installed (eg when we're building docs), we can't get the version from metadata,
+    so fall back to the version file.
+
+    >>> import re
+    >>> assert re.match(r'\d+\.\d+\.\d+', get_opendp_version_from_file())
+    '''
     version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'VERSION')
     return open(version_file, 'r').read().strip()
 
