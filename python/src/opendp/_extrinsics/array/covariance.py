@@ -4,7 +4,6 @@ from opendp.extrinsics.register import register_transformation
 
 def make_np_cov(input_domain, input_metric):
     """Construct a new Transformation that computes a covariance matrix from the input data."""
-    import numpy as np
 
     dp.assert_features("contrib", "floating-point")
     descriptor = input_domain.descriptor
