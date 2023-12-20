@@ -115,10 +115,11 @@ def make_pca(input_domain, input_metric, unit_epsilon, num_components=None, norm
 
 then_pca = register_measurement(make_pca)
 
-
-from sklearn.decomposition._pca import PCA as SKLPCA, _infer_dimension
-from sklearn.utils.extmath import stable_cumsum, svd_flip
-
+try:
+    from sklearn.decomposition._pca import PCA as SKLPCA
+except ImportError:
+    class SKLPCA(object):
+        pass
 
 class PCA(SKLPCA):
     def __init__(
@@ -168,6 +169,8 @@ class PCA(SKLPCA):
 
     def _fit(self, X):
         import numpy as np
+        from sklearn.utils.extmath import stable_cumsum, svd_flip
+        from sklearn.decomposition._pca import _infer_dimension
         meas = self.get_measurement()
         self.mean_, eigvals, eigvecs = meas(X)
 
