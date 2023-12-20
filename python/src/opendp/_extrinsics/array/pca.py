@@ -1,3 +1,4 @@
+from __future__ import annotations
 import opendp.prelude as dp
 
 from opendp.extrinsics.array.clamp import make_np_clamp
