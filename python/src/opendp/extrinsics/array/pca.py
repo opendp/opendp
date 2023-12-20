@@ -8,7 +8,6 @@ from opendp.extrinsics.array.eigenvalues import make_eigenvalues
 from opendp.extrinsics.array.covariance import make_np_cov
 from opendp.extrinsics.array.stats import make_private_np_mean
 from opendp.extrinsics.composition import make_stateful_sequential_composition
-import numpy as np
 
 
 def make_pca(input_domain, input_metric, unit_epsilon, num_components=None, norm=None):
@@ -19,6 +18,7 @@ def make_pca(input_domain, input_metric, unit_epsilon, num_components=None, norm
     :param num_components: optional, number of eigenvectors to release
     :param norm: clamp each row to this norm bound
     """
+    import numpy as np
     dp.assert_features("contrib", "floating-point")
 
     descriptor = input_domain.descriptor
@@ -167,6 +167,7 @@ class PCA(SKLPCA):
         return self.n_features_in_
 
     def _fit(self, X):
+        import numpy as np
         meas = self.get_measurement()
         self.mean_, eigvals, eigvecs = meas(X)
 
