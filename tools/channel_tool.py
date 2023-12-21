@@ -22,7 +22,7 @@ def initialize(args):
     if args.channel not in ("experimental", "nightly", "beta", "stable"):
         raise Exception(f"Unknown channel {args.channel}")
     if args.sync:
-        channel_to_upstream = {"nightly": "main", "beta": "nightly", "stable": "beta"}
+        channel_to_upstream = {"nightly": "main", "beta": "nightly", "stable": "beta", "experimental": get_current_branch()}
         upstream = channel_to_upstream[args.channel] if args.upstream is None else args.upstream
         ensure_branch(upstream)
         log(f"Syncing {args.channel} <= {upstream}")
@@ -125,6 +125,7 @@ def configure(args):
     if args.channel not in ("dev", "experimental", "nightly", "beta", "stable"):
         raise Exception(f"Unknown channel {args.channel}")
     version = get_version()
+
     if args.channel == "dev":
         # dev has a bare tag
         version = version.replace(prerelease="dev", build=None)
@@ -132,11 +133,13 @@ def configure(args):
         # experimental/nightly/beta have a tag with the date and a counter
         date = args.date or datetime.date.today()
         counter = infer_counter(version, date, args)
-        prerelease = f"{args.channel}.{date.strftime('%Y%m%d')}.{counter}"
+        tag = "dev" if args.channel == "experimental" else args.channel
+        prerelease = f"{tag}.{date.strftime('%Y%m%d')}.{counter}"
         version = version.replace(prerelease=prerelease, build=None)
     elif args.channel == "stable":
         # stable has no tag
         version = version.finalize_version()
+
     update_version(version)
 
 
