@@ -90,7 +90,7 @@ jobs:
       - name: Publish Python package
         env:
           # twine doesn't support dry-runs, so if that's what we're doing, simulate it by using TestPyPI instead of PyPI
-          REPOSITORY: ${{ inputs.dry_run && 'testpypi' || 'pypi' }}
+          REPOSITORY: ${{ (inputs.dry_run || inputs.channel == 'dev-branch') && 'testpypi' || 'pypi' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
           python tools/publish_tool.py python -r $REPOSITORY
