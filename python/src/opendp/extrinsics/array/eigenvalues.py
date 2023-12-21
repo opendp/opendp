@@ -16,13 +16,11 @@ def make_eigenvalues(input_domain, input_metric):
     if "size" not in descriptor:
         raise ValueError("expected sized data")
 
-    output_metric = {1: dp.l1_distance, 2: dp.l2_distance}[descriptor["ord"]]
-
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
         dp.vector_domain(dp.atom_domain(T=descriptor["T"])),
-        output_metric(T=descriptor["T"]),
+        dp.l2_distance(T=descriptor["T"]),
         lambda arg: np.linalg.eigvalsh(arg),
         lambda d_in: d_in * descriptor["norm"] ** 2,
     )

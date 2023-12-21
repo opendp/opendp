@@ -30,6 +30,9 @@ def make_pca(input_domain, input_metric, unit_epsilon, num_components=None, norm
 
     if "num_columns" not in descriptor:
         raise ValueError("input_domain's num_columns must be known")
+    
+    if "norm" in descriptor and descriptor["ord"] != 2:
+        raise ValueError("input_domain's norm must be an L2 norm")
 
     num_columns = descriptor["num_columns"]
     if num_columns < 1:
@@ -151,17 +154,12 @@ class PCA(SKLPCA):
         input_metric = dp.symmetric_distance()
         # from opendp.extrinsics.array.pca_consolidated import make_pca
 
-        return dp.binary_search_chain(
-            lambda e: make_pca(
-                input_domain,
-                input_metric,
-                e,
-                num_components=self.n_components,
-                norm=self.row_norm,
-            ),
-            d_in=self.n_changes * 2,
-            d_out=self.epsilon,
-            T=float,
+        return make_pca(
+            input_domain,
+            input_metric,
+            self.epsilon / self.n_changes * 2,
+            num_components=self.n_components,
+            norm=self.row_norm,
         )
 
     @property
