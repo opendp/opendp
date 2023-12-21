@@ -28,8 +28,6 @@ def python(args):
     config = configparser.RawConfigParser()
     config.read("python/setup.cfg")
     version = config["metadata"]["version"]
-    if args.counter:
-        version += f'-{args.counter}'
     wheel = f"opendp-{version}-py3-none-any.whl"
     run_command("Publishing opendp package", f"python -m twine upload -r {args.repository} --verbose python/wheelhouse/{wheel}")
     # Unfortunately, twine doesn't have an option to block until the index is propagated. Polling the index is unreliable,
@@ -69,8 +67,6 @@ def github(args):
     if branch != channel:
         raise Exception(f"Version {version} implies channel {channel}, but current branch is {branch}")
     tag = f"v{version}"
-    if args.counter:
-        tag += f'-{args.counter}'
     # Just in case, clear out any existing tag, so a new one will be created by GitHub.
     run_command("Clearing tag", f"git push origin :refs/tags/{tag}")
     title = f"OpenDP {version}"
@@ -101,7 +97,6 @@ def _main(argv):
     subparser.add_argument("-r", "--repository", choices=["pypi", "testpypi"], default="pypi", help="Package repository")
     subparser.add_argument("-t", "--index-check-timeout", type=int, default=300, help="How long to keep checking for index update (0 = don't check)")
     subparser.add_argument("-b", "--index-check-backoff", type=float, default=2.0, help="How much to back off between checks for index update")
-    subparser.add_argument("--counter", type=int, default=0, help="Version counter")
 
     subparser = subparsers.add_parser("sanity", help="Run a sanity test")
     subparser.set_defaults(func=sanity)
@@ -115,7 +110,6 @@ def _main(argv):
     subparser.set_defaults(func=github)
     subparser.add_argument("-d", "--date", type=datetime.date.fromisoformat, help="Release date")
     subparser.add_argument("--draft", action="store_true")
-    subparser.add_argument("--counter", type=int, default=0, help="Version counter")
 
     args = parser.parse_args(argv[1:])
     args.func(args)

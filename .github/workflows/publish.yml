@@ -93,7 +93,7 @@ jobs:
           REPOSITORY: ${{ inputs.dry_run && 'testpypi' || 'pypi' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
-          python tools/publish_tool.py python -r $REPOSITORY --counter ${{ inputs.counter }}
+          python tools/publish_tool.py python -r $REPOSITORY
 
   publish-rust:
     needs: publish-python
@@ -140,4 +140,4 @@ jobs:
           DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry_run' || '' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
-          python tools/publish_tool.py github -d ${{ inputs.date }} $DRY_RUN_FLAG --counter ${{ inputs.counter }}
+          python tools/publish_tool.py github -d ${{ inputs.date }} $DRY_RUN_FLAG

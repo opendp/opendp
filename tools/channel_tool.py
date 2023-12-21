@@ -230,7 +230,6 @@ def _main(argv):
     subparser.set_defaults(func=configure)
     subparser.add_argument("-c", "--channel", choices=["dev", "nightly", "beta", "stable", "dev-branch"], default="dev", help="Which channel to target")
     subparser.add_argument("-d", "--date", type=datetime.date.fromisoformat, help="Release date")
-    subparser.add_argument("-i", "--counter", type=int, default=0, help="Intra-date version counter")
 
     subparser = subparsers.add_parser("changelog", help="Update the CHANGELOG file")
     subparser.set_defaults(func=changelog)
