@@ -22,7 +22,7 @@ def initialize(args):
     if args.channel not in ("experimental", "nightly", "beta", "stable"):
         raise Exception(f"Unknown channel {args.channel}")
     if args.sync:
-        channel_to_upstream = {"nightly": "main", "beta": "nightly", "stable": "beta"}
+        channel_to_upstream = {"nightly": "main", "beta": "nightly", "stable": "beta", "experimental": get_current_branch()}
         upstream = channel_to_upstream[args.channel] if args.upstream is None else args.upstream
         ensure_branch(upstream)
         log(f"Syncing {args.channel} <= {upstream}")
