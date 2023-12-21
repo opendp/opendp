@@ -56,7 +56,7 @@ def make_private_eigenvector(input_domain, input_metric, unit_epsilon):
 then_private_eigenvector = register_measurement(make_private_eigenvector)
 
 
-def make_np_cov_projection(input_domain, input_metric, P):
+def _make_np_cov_projection(input_domain, input_metric, P):
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
@@ -81,11 +81,6 @@ def make_private_eigenvectors(input_domain, input_metric, unit_epsilons):
         input_domain, input_metric, privacy_measure, 2, unit_epsilons
     )
 
-    # when all but the last eigvec are released,
-    # the last eigvec can be derived from the projection matrix
-    if len(unit_epsilons) == descriptor["num_features"] - 1:
-        unit_epsilons.append(0.)
-
     def function(cov):
         nonlocal input_domain, input_metric
         qbl = m_compose(cov)
@@ -94,12 +89,9 @@ def make_private_eigenvectors(input_domain, input_metric, unit_epsilons):
         theta = np.zeros((0, cov.shape[1]))
 
         for epsilon_i in unit_epsilons:
-            if P.shape[0] == 1:
-                u = np.ones(1)
-            else:
-                # c. update the covariance matrix
-                m_eigvec = make_np_cov_projection(input_domain, input_metric, P) >> then_private_eigenvector(epsilon_i)
-                u = qbl(m_eigvec)
+            # c. update the covariance matrix
+            m_eigvec = _make_np_cov_projection(input_domain, input_metric, P) >> then_private_eigenvector(epsilon_i)
+            u = qbl(m_eigvec)
 
             # http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=5
             # Algorithm 1
@@ -108,6 +100,9 @@ def make_private_eigenvectors(input_domain, input_metric, unit_epsilons):
 
             # b. update the projection
             P = null_space(theta).T
+        
+        if P.shape[0] == 1:
+            theta = np.vstack((theta, P.T))
 
         return theta.T
 
