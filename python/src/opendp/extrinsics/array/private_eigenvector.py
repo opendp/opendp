@@ -102,7 +102,7 @@ def make_private_eigenvectors(input_domain, input_metric, unit_epsilons):
             P = null_space(theta).T
         
         if P.shape[0] == 1:
-            theta = np.vstack((theta, P.T))
+            theta = np.vstack((theta, P))
 
         return theta.T
 
