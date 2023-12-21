@@ -63,7 +63,7 @@ jobs:
         if: ${{ !inputs.fake }}
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.channel == 'dev-branch' && github.ref_name || inputs.channel }}
+          ref: ${{ inputs.channel }}
 
       - name: Cache Rust dependencies
         if: ${{ !inputs.fake }}
@@ -109,7 +109,7 @@ jobs:
         if: ${{ !inputs.fake }}
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.channel == 'dev-branch' && github.ref_name || inputs.channel }}
+          ref: ${{ inputs.channel }}
 
       - name: Cache Rust dependencies
         if: ${{ !inputs.fake }}
@@ -163,7 +163,7 @@ jobs:
         if: ${{ !inputs.fake }}
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.channel == 'dev-branch' && github.ref_name || inputs.channel }}
+          ref: ${{ inputs.channel }}
 
       - name: Cache Rust dependencies
         if: ${{ !inputs.fake }}
@@ -206,7 +206,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.channel == 'dev-branch' && github.ref_name || inputs.channel }}
+          ref: ${{ inputs.channel }}
 
       - name: Cache Rust dependencies
         if: ${{ !inputs.fake }}
@@ -239,7 +239,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.channel == 'dev-branch' && github.ref_name || inputs.channel }}
+          ref: ${{ inputs.channel }}
 
       - name: Set up Python
         uses: actions/setup-python@v3

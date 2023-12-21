@@ -73,7 +73,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.channel == 'dev-branch' && github.ref_name || inputs.channel }}
+          ref: ${{ inputs.channel }}
 
       - name: Set up Python
         uses: actions/setup-python@v3
@@ -104,7 +104,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.channel == 'dev-branch' && github.ref_name || inputs.channel }}
+          ref: ${{ inputs.channel }}
 
       - name: Set up Python
         uses: actions/setup-python@v3
@@ -117,7 +117,7 @@ jobs:
           DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry_run' || '' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
-          python tools/publish_tool.py rust $DRY_RUN_FLAG --counter ${{ inputs.counter }}
+          python tools/publish_tool.py rust $DRY_RUN_FLAG
 
   publish-github:
     needs: publish-rust
@@ -126,7 +126,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.channel == 'dev-branch' && github.ref_name || inputs.channel }}
+          ref: ${{ inputs.channel }}
 
       - name: Set up Python
         uses: actions/setup-python@v3
