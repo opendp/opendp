@@ -121,7 +121,7 @@ def update_version(version):
 
 
 def configure(args):
-    log(f"*** CONFIGURING CHANNEL ?***")
+    log(f"*** CONFIGURING CHANNEL ***")
     if args.channel not in ("dev", "experimental", "nightly", "beta", "stable"):
         raise Exception(f"Unknown channel {args.channel}")
     version = get_version()
@@ -135,17 +135,12 @@ def configure(args):
         # experimental/nightly/beta have a tag with the date and a counter
         date = args.date or datetime.date.today()
         counter = infer_counter(version, date, args)
-        prerelease = f"{args.channel}.{date.strftime('%Y%m%d')}.{counter}"
+        tag = "dev" if args.channel == "experimental" else args.channel
+        prerelease = f"{tag}.{date.strftime('%Y%m%d')}.{counter}"
         version = version.replace(prerelease=prerelease, build=None)
     elif args.channel == "stable":
         # stable has no tag
         version = version.finalize_version()
-
-    # RP '1-off' change. Run to fix PEP 440 PyPI naming error
-    # ex/ version "0.9.0experimental20231221002" -> "0.9.0a20231221002"
-    #
-    #if args.channel == 'experimental' and version.find('experimental') > -1:
-    #    version = version.replace('experimental', 'a')
 
     log(f"  - updated version: {version}")
 
