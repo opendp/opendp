@@ -125,7 +125,9 @@ def configure(args):
     if args.channel not in ("dev", "experimental", "nightly", "beta", "stable"):
         raise Exception(f"Unknown channel {args.channel}")
     version = get_version()
-    print(f'  - initial version: {version}')
+
+    log(f"  - initial version: {version}")
+
     if args.channel == "dev":
         # dev has a bare tag
         version = version.replace(prerelease="dev", build=None)
@@ -138,13 +140,14 @@ def configure(args):
     elif args.channel == "stable":
         # stable has no tag
         version = version.finalize_version()
-    print(f'  - updated version: {version}')
 
     # RP '1-off' change. Run to fix PEP 440 PyPI naming error
     # ex/ version "0.9.0experimental20231221002" -> "0.9.0a20231221002"
     #
     if args.channel == 'experimental' and version.find('experimental') > -1:
         version = version.replace('experimental', 'a')
+
+    log(f"  - updated version: {version}")
 
     update_version(version)
 
