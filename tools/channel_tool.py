@@ -79,7 +79,7 @@ def update_file(path, load, munge, dump, binary=False):
 
 
 def update_version(version):
-    log(f"Updating version references to {version}")
+    log(f"Updating version references to {version} (!)")
     python_version = get_python_version(version)
 
     # Main version file
