@@ -28,7 +28,11 @@ def python(args):
     config = configparser.RawConfigParser()
     config.read("python/setup.cfg")
     version = config["metadata"]["version"]
-    wheel = f"opendp-{version}-py3-none-any.whl"
+
+    # RP: 1 run, forcing name
+    # Original: wheel = f"opendp-{version}-py3-none-any.whl"
+    _forced_version = '0.9EXP2023122101'
+    wheel = f"opendp-{_forced_version}-py3-none-any.whl"
     run_command("Publishing opendp package", f"python -m twine upload -r {args.repository} --verbose python/wheelhouse/{wheel}")
     # Unfortunately, twine doesn't have an option to block until the index is propagated. Polling the index is unreliable,
     # because often the new item will appear, but installs will still fail (probably because of stale caches).
