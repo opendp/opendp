@@ -35,10 +35,10 @@ on:
         description: Target Channel
         type: choice
         options:
+          - experimental
           - nightly
           - beta
           - stable
-          - dev-branch
         required: true
         default: nightly
       date:
@@ -61,7 +61,7 @@ jobs:
     uses: ./.github/workflows/credential-check.yml
     with:
       ref: ${{ inputs.channel }}
-      assert_version: ${{ inputs.channel != 'dev-branch' }}
+      assert_version: ${{ inputs.channel != 'experimental' }}
 
   publish-python:
     needs: credential-check
@@ -90,7 +90,8 @@ jobs:
       - name: Publish Python package
         env:
           # twine doesn't support dry-runs, so if that's what we're doing, simulate it by using TestPyPI instead of PyPI
-          REPOSITORY: ${{ (inputs.dry_run || inputs.channel == 'dev-branch') && 'testpypi' || 'pypi' }}
+          # always send experimental builds to TestPyPI
+          REPOSITORY: ${{ (inputs.dry_run || inputs.channel == 'experimental') && 'testpypi' || 'pypi' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
           python tools/publish_tool.py python -r $REPOSITORY

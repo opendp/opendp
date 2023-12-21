@@ -30,7 +30,7 @@ jobs:
     uses: ./.github/workflows/credential-check.yml
     with:
       ref: ${{ inputs.channel }}
-      assert_version: ${{ inputs.channel != 'dev-branch' }}
+      assert_version: ${{ inputs.channel != 'experimental' }}
 
   latex:
     needs: credential-check

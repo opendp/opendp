@@ -23,10 +23,10 @@ on:
         description: Target Channel
         type: choice
         options:
+          - experimental
           - nightly
           - beta
           - stable
-          - dev-branch
         required: true
         default: nightly
       fake:
@@ -42,7 +42,7 @@ jobs:
     uses: ./.github/workflows/credential-check.yml
     with:
       ref: ${{ inputs.channel }}
-      assert_version: ${{ inputs.channel != 'dev-branch' }}
+      assert_version: ${{ inputs.channel != 'experimental' }}
 
   libs-windows:
     needs: credential-check

@@ -40,10 +40,10 @@ on:
         description: Target Channel
         type: choice
         options:
+          - experimental
           - nightly
           - beta
           - stable
-          - dev-branch
         required: true
         default: nightly
       sync:
@@ -112,8 +112,8 @@ jobs:
 
   latex:
     needs: prepare
-    # don't build latex if releasing for custom branch
-    if: ${{ inputs.channel != 'dev-branch' }}
+    # don't build latex for experimental builds
+    if: ${{ inputs.channel != 'experimental' }}
     uses: ./.github/workflows/latex-release.yml
     with:
       channel: ${{ inputs.channel }}

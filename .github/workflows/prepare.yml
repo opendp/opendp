@@ -36,10 +36,10 @@ on:
         description: Target Channel
         type: choice
         options:
+          - experimental
           - nightly
           - beta
           - stable
-          - dev-branch
         required: true
         default: nightly
       sync:
