@@ -217,7 +217,7 @@ def _main(argv):
 
     subparser = subparsers.add_parser("initialize", help="Initialize the channel")
     subparser.set_defaults(func=initialize)
-    subparser.add_argument("-c", "--channel", choices=["nightly", "beta", "stable"], default="nightly", help="Which channel to target")
+    subparser.add_argument("-c", "--channel", choices=["nightly", "beta", "stable", "dev-branch"], default="nightly", help="Which channel to target")
     subparser.add_argument("--sync", action="store_true", help="Sync the channel from upstream")
     subparser.add_argument("-u", "--upstream", help="Upstream ref")
     subparser.add_argument("-p", "--preserve", dest="preserve", action="store_true")
