@@ -121,7 +121,7 @@ def update_version(version):
 
 
 def configure(args):
-    log(f"*** CONFIGURING CHANNEL ***")
+    log(f"*** CONFIGURING CHANNEL ?***")
     if args.channel not in ("dev", "experimental", "nightly", "beta", "stable"):
         raise Exception(f"Unknown channel {args.channel}")
     version = get_version()
