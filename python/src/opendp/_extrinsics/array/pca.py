@@ -121,9 +121,10 @@ then_pca = register_measurement(make_pca)
 
 try:
     from sklearn.decomposition._pca import PCA as SKLPCA
-except ImportError:
+except ImportError as e:
     class SKLPCA(object):
-        pass
+        def __init__(*args, **kwargs):
+            raise e
 
 class PCA(SKLPCA):
     def __init__(
