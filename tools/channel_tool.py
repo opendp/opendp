@@ -144,8 +144,8 @@ def configure(args):
     # RP '1-off' change. Run to fix PEP 440 PyPI naming error
     # ex/ version "0.9.0experimental20231221002" -> "0.9.0a20231221002"
     #
-    if args.channel == 'experimental' and version.find('experimental') > -1:
-        version = version.replace('experimental', 'a')
+    #if args.channel == 'experimental' and version.find('experimental') > -1:
+    #    version = version.replace('experimental', 'a')
 
     log(f"  - updated version: {version}")
 
