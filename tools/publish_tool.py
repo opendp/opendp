@@ -87,7 +87,6 @@ def github(args):
 
 def _main(argv):
     parser = argparse.ArgumentParser(description="OpenDP build tool")
-    parser.add_argument("--counter", type=int, default=0, help="Version counter")
     subparsers = parser.add_subparsers(dest="COMMAND", help="Command to run")
     subparsers.required = True
 
@@ -102,6 +101,7 @@ def _main(argv):
     subparser.add_argument("-r", "--repository", choices=["pypi", "testpypi"], default="pypi", help="Package repository")
     subparser.add_argument("-t", "--index-check-timeout", type=int, default=300, help="How long to keep checking for index update (0 = don't check)")
     subparser.add_argument("-b", "--index-check-backoff", type=float, default=2.0, help="How much to back off between checks for index update")
+    subparser.add_argument("--counter", type=int, default=0, help="Version counter")
 
     subparser = subparsers.add_parser("sanity", help="Run a sanity test")
     subparser.set_defaults(func=sanity)
@@ -115,6 +115,7 @@ def _main(argv):
     subparser.set_defaults(func=github)
     subparser.add_argument("-d", "--date", type=datetime.date.fromisoformat, help="Release date")
     subparser.add_argument("--draft", action="store_true")
+    subparser.add_argument("--counter", type=int, default=0, help="Version counter")
 
     args = parser.parse_args(argv[1:])
     args.func(args)
