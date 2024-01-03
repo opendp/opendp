@@ -46,7 +46,10 @@ def make_pca(input_domain, input_metric, unit_epsilon, num_components=None, norm
     # split budget evenly three ways if origin unknown, else 2
     origin = descriptor.get("origin")
     weights = np.array([1.0] * (3 if origin is None else 2))
-    epsilons = [unit_epsilon * w_i / sum(weights) for w_i in weights]
+    epsilons = [unit_epsilon * (w_i / sum(weights)) for w_i in weights]
+    
+    # use conservative epsilons
+    epsilons = [np.nextafter(e, -1) for e in epsilons]
 
     # make releases under the assumption that d_in is 2. For any other d_in,
     unit_d_in = 2
