@@ -10,6 +10,14 @@ from opendp.extrinsics.array.covariance import make_np_cov
 from opendp.extrinsics.array.stats import make_private_np_mean
 from opendp.extrinsics.composition import make_stateful_sequential_composition
 
+def _smaller(v):
+    if isinstance(v, list):
+        return [_smaller(v_i) for v_i in v]
+    if isinstance(v, float):
+        import numpy as np
+        if v < 0:
+            raise ValueError("expected non-negative value")
+        return v if v == 0 else np.nextafter(v, -1)
 
 def make_pca(input_domain, input_metric, unit_epsilon, num_components=None, norm=None):
     """
@@ -41,15 +49,12 @@ def make_pca(input_domain, input_metric, unit_epsilon, num_components=None, norm
     # if number of components is not specified, default to num_columns
     num_components = num_components or num_columns
     # the last eigvec is implicit if all other eigvecs are released
-    num_eigvec_releases = min(num_components, num_columns - 1)
+    num_evec_rels = min(num_components, num_columns - 1)
 
     # split budget evenly three ways if origin unknown, else 2
     origin = descriptor.get("origin")
-    weights = np.array([1.0] * (3 if origin is None else 2))
-    epsilons = [unit_epsilon * (w_i / sum(weights)) for w_i in weights]
-    
-    # use conservative epsilons
-    epsilons = [np.nextafter(e, -1) for e in epsilons]
+    num_queries = 3 if origin is None else 2
+    epsilons = [_smaller(unit_epsilon / num_queries)] * num_queries
 
     # make releases under the assumption that d_in is 2. For any other d_in,
     unit_d_in = 2
@@ -105,7 +110,7 @@ def make_pca(input_domain, input_metric, unit_epsilon, num_components=None, norm
         )
         m_eigvecs = make_private_eigenvectors(
             *t_cov.output_space,
-            [epsilon_state.pop() / num_eigvec_releases] * num_eigvec_releases,
+            [_smaller(epsilon_state.pop() / num_evec_rels)] * num_evec_rels
         )
 
         return origin, qbl(m_eigvals), qbl(m_eigvecs)
