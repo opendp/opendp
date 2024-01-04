@@ -271,8 +271,7 @@ def _refcounter(ptr, increment):
 c_counter = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.py_object, ctypes.c_bool)(_refcounter)
 
 def _extrinsic_to_slice(val) -> FfiSlicePtr:
-    val = ctypes.py_object(val)
-    return _wrap_in_slice(ctypes.pointer(ExtrinsicObject(val, c_counter)), 1)
+    return _wrap_in_slice(ctypes.pointer(ExtrinsicObject(ctypes.py_object(val), c_counter)), 1)
 
 def _slice_to_extrinsic(raw: FfiSlicePtr):
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ExtrinsicObject)).contents.ptr

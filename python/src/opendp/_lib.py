@@ -178,7 +178,7 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
     _type_ = ExtrinsicObject
 
     def __del__(self):
-        try:
+        try: # pragma: no cover
             from opendp._data import extrinsic_object_free
             extrinsic_object_free(self)
         except (ImportError, TypeError):
@@ -190,7 +190,7 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
 def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
     if s is not None:
         return s.decode("utf-8")
-    return None  # pragma: no cover
+    return None # pragma: no cover
 
 
 def unwrap(result, type_) -> Any:

@@ -310,35 +310,35 @@ pub extern "C" fn opendp_domains__map_domain(
 }
 
 pub struct ExtrinsicElement {
+    identifier: String,
     value: ExtrinsicObject,
-    id: String,
 }
 
 impl Clone for ExtrinsicElement {
     fn clone(&self) -> Self {
         (self.value.count)(self.value.ptr, true);
         Self {
+            identifier: self.identifier.clone(),
             value: self.value.clone(),
-            id: self.id.clone(),
         }
     }
 }
 
 impl ExtrinsicElement {
-    fn new(value: ExtrinsicObject, id: String) -> Self {
+    fn new(identifier: String, value: ExtrinsicObject) -> Self {
         (value.count)(value.ptr, true);
-        ExtrinsicElement { value, id }
+        ExtrinsicElement { value, identifier }
     }
 }
 
 impl Debug for ExtrinsicElement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.id)
+        write!(f, "{}", self.identifier)
     }
 }
 impl PartialEq for ExtrinsicElement {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
+        self.identifier == other.identifier
     }
 }
 impl Drop for ExtrinsicElement {
@@ -380,30 +380,30 @@ impl Domain for UserDomain {
     name = "user_domain",
     features("honest-but-curious"),
     arguments(
-        descriptor(rust_type = "ExtrinsicObject"),
+        identifier(c_type = "char *", rust_type = b"null"),
         member(rust_type = "bool"),
-        ID(c_type = "char *", rust_type = b"null", default = b"null")
+        descriptor(rust_type = "ExtrinsicObject", default = b"null"),
     ),
-    dependencies("c_member", "descriptor"),
-    derived_types(ID = "$id_from_descriptor(ID, descriptor)")
+    dependencies("c_member", "descriptor")
 )]
 /// Construct a new UserDomain.
 /// Any two instances of an UserDomain are equal if their string descriptors are equal.
 /// Contains a function used to check if any value is a member of the domain.
 ///
 /// # Arguments
-/// * `value` - User-defined data in the domain.
+/// * `identifier` - A string description of the data domain.
 /// * `member` - A function used to test if a value is a member of the data domain.
-/// * `ID` - A string description of the data domain.
+/// * `descriptor` - Additional constraints on the domain.
+/// * `hash` - Optional hash used for domain equality.
 #[no_mangle]
 pub extern "C" fn opendp_domains__user_domain(
-    descriptor: *mut AnyObject,
+    identifier: *mut c_char,
     member: CallbackFn,
-    ID: *mut c_char,
+    descriptor: *mut AnyObject,
 ) -> FfiResult<*mut AnyDomain> {
+    let identifier = try_!(to_str(identifier)).to_string();
     let descriptor = try_!(try_as_ref!(descriptor).downcast_ref::<ExtrinsicObject>()).clone();
-    let ID = try_!(to_str(ID)).to_string();
-    let descriptor = ExtrinsicElement::new(descriptor, ID);
+    let descriptor = ExtrinsicElement::new(identifier, descriptor);
     let member = Function::new_fallible(move |arg: &ExtrinsicObject| -> Fallible<bool> {
         let c_res = member(AnyObject::new_raw(arg.clone()));
         Fallible::from(util::into_owned(c_res)?)?.downcast::<bool>()

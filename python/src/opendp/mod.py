@@ -150,6 +150,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         :return: distance type
         """
         from opendp.core import measurement_input_distance_type
+        from opendp.typing import RuntimeType
         return RuntimeType.parse(measurement_input_distance_type(self))
 
     @property
@@ -160,6 +161,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         :return: distance type
         """
         from opendp.core import measurement_output_distance_type
+        from opendp.typing import RuntimeType
         return RuntimeType.parse(measurement_output_distance_type(self))
 
     @property

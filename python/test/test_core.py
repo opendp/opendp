@@ -200,10 +200,24 @@ def test_new_domain():
 def test_user_domain():
     from datetime import datetime
 
-    domain = dp.user_domain("all datetimes", lambda x: isinstance(x, datetime))
-    assert str(domain) == 'UserDomain("all datetimes")'
-    assert domain.member(datetime.now())
+    def datetime_domain(months=None):
+        """The domain of datetimes, restricted by user-defined months"""
+        if months is None:
+            months = set(range(1, 13)) # any month
+        
+        return dp.user_domain(
+            identifier=f"DatetimeDomain(months={months})", 
+            member=lambda x: isinstance(x, datetime) and x.month in months,
+            descriptor=months)
+
+    domain = datetime_domain(months={1, 2, 3, 4})
+    assert str(domain).startswith("DatetimeDomain")
+
+    element = datetime.strptime('03/17/20 4:32:34', '%m/%d/%y %H:%M:%S')
+    assert domain.member(element)
     assert not domain.member("A")
+    # can retrieve the descriptor for use in further analysis
+    assert domain.descriptor == {1, 2, 3, 4}
 
     # nest inside a vector domain
     vec_domain = dp.vector_domain(domain)

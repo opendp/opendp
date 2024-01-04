@@ -125,7 +125,7 @@ class RuntimeType(object):
     def __eq__(self, other):
         if isinstance(other, str):
             other = RuntimeType.parse(other)
-        if isinstance(other, str):
+        if not isinstance(other, RuntimeType):
             return False # pragma: no cover
         return self.origin == other.origin and self.args == other.args
 
@@ -514,9 +514,3 @@ def get_value_type(type_name):
 
 def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
     return value.distance_type
-
-def id_from_descriptor(default, descriptor):
-    if default:
-        return default
-    import json
-    return json.dumps(descriptor)
