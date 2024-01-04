@@ -174,7 +174,7 @@ class ExtrinsicObject(ctypes.Structure):
     ]
 
 
-class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)):
+class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
     _type_ = ExtrinsicObject
 
     def __del__(self):

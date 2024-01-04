@@ -538,7 +538,7 @@ class PartialChain(object):
 
         The discovered parameter is assigned to the param attribute of the returned transformation or measurement.
         """
-        param = binary_search(
+        param = binary_search( # type: ignore[misc]
             lambda x: _cast_measure(self.partial(x), output_measure, d_out).check(
                 d_in, d_out
             ),
@@ -662,7 +662,7 @@ def _translate_measure_distance(d_from, from_measure, to_measure):
 
     if from_to == ("ZeroConcentratedDivergence", "MaxDivergence"): # pragma: no cover
         space = atom_domain(T=T), absolute_distance(T=T)
-        scale = binary_search_param(
+        scale = binary_search_param( # type: ignore[misc]
             lambda eps: make_pureDP_to_zCDP(make_base_laplace(*space, eps)),
             d_in=constant,
             d_out=d_from,
@@ -678,7 +678,7 @@ def _translate_measure_distance(d_from, from_measure, to_measure):
             return make_fix_delta(make_zCDP_to_approxDP(measurement), delta=d_from[1])
 
         space = atom_domain(T=int), absolute_distance(T=T)
-        scale = binary_search_param(
+        scale = binary_search_param( # type: ignore[misc]
             lambda scale: caster(make_gaussian(*space, scale)),
             d_in=constant,
             d_out=d_from,

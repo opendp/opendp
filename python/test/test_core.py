@@ -79,12 +79,12 @@ def test_bisect_chain():
         >> dp.t.then_resize(size=10, constant=0.0)
         >> dp.t.then_mean()
     )
-    chain = dp.binary_search_chain(
+    chain = dp.binary_search_chain( # type: ignore[misc]
         lambda s: pre >> dp.m.then_laplace(scale=s), d_in=1, d_out=1.0
     )
     assert chain.check(1, 1.0)
 
-    scale = dp.binary_search_param(
+    scale = dp.binary_search_param( # type: ignore[misc]
         lambda s: pre >> dp.m.then_laplace(scale=s), d_in=1, d_out=1.0
     )
     assert scale - 0.1 < 1e-8

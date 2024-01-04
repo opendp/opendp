@@ -14,7 +14,7 @@ def test_count_by_categories():
         )
     )
 
-    noisy_histogram_from_dataframe = dp.binary_search_chain(
+    noisy_histogram_from_dataframe = dp.binary_search_chain( # type: ignore[misc]
         lambda s: preprocess >> dp.m.then_base_discrete_laplace(s), d_in=1, d_out=1.0
     )
 
@@ -64,12 +64,12 @@ def test_count_by_threshold():
         >> dp.t.then_count_by(MO=dp.L1Distance[float], TV=float)
     )
     budget = (1.0, 1e-8)
-    scale = dp.binary_search_param(
+    scale = dp.binary_search_param( # type: ignore[misc]
         lambda s: pre >> dp.m.then_base_laplace_threshold(scale=s, threshold=1e8),
         d_in=1,
         d_out=budget,
     )
-    threshold = dp.binary_search_param(
+    threshold = dp.binary_search_param( # type: ignore[misc]
         lambda t: pre >> dp.m.then_base_laplace_threshold(scale=scale, threshold=t),
         d_in=1,
         d_out=budget,

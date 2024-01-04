@@ -7,7 +7,7 @@ from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 try:
     import numpy as np # type: ignore[import-not-found]
 except ImportError: # pragma: no cover
-    np = None  # type: ignore[assignment]
+    np = None # type: ignore[assignment]
 
 ATOM_MAP = {
     'f32': ctypes.c_float,

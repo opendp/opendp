@@ -14,7 +14,7 @@ def test_count():
         then_count()
     )
 
-    noisy_count_from_dataframe = binary_search_chain(
+    noisy_count_from_dataframe = binary_search_chain( # type: ignore[misc]
         lambda s: preprocess >> then_base_discrete_laplace(s),
         d_in=1, d_out=1.)
 
@@ -36,7 +36,7 @@ def test_count_distinct():
         then_count_distinct()
     )
 
-    noisy_count_from_dataframe = binary_search_chain(
+    noisy_count_from_dataframe = binary_search_chain( # type: ignore[misc]
         lambda s: preprocess >> then_base_discrete_laplace(s),
         d_in=1, d_out=1.)
 

@@ -38,7 +38,7 @@ def test_base_gaussian_search():
     print("ideal dist", ideal_dist)
     print("check with ideal dist:", fixed_meas.check(1., ideal_dist))
 
-    print("Standard", dp.binary_search_param(
+    print("Standard", dp.binary_search_param( # type: ignore[misc]
         lambda s: make_smd_gauss(s, 1e-5),
         d_in=1., d_out=(1., 1e-5)))
 

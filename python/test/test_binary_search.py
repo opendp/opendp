@@ -18,7 +18,7 @@ def test_binary_search_overflow():
         dp.t.make_clamp(input_domain, input_metric, bounds=(0.0, 1.0)) >>
         dp.t.then_sum()
     )
-    dp.binary_search_param(
+    dp.binary_search_param( # type: ignore[misc]
         lambda s: bounded_sum >> dp.m.then_base_laplace(scale=s),
         d_in=d_in,
         d_out=d_out
