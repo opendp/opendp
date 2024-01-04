@@ -1,5 +1,5 @@
 '''
 The ``extrinsics`` module is a namespace where non-Rust contributions can live.
 '''
-from opendp.extrinsics.array import *
-from opendp.extrinsics.composition import *
+from opendp.extrinsics.domains import np_array2_domain
+from opendp.extrinsics.make_np_pca import PCA
