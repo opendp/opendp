@@ -2,7 +2,7 @@ from opendp.measures import max_divergence
 from opendp.mod import Measurement, Transformation
 from opendp.core import new_user_queryable
 from opendp.measurements import make_user_measurement
-from opendp.extrinsics._utilities import register_combinator
+from opendp.extrinsics._utilities import to_then
 
 
 def make_stateful_sequential_composition(
@@ -59,4 +59,4 @@ def make_stateful_sequential_composition(
     )
 
 
-then_stateful_sequential_composition = register_combinator(make_stateful_sequential_composition)
+then_stateful_sequential_composition = to_then(make_stateful_sequential_composition)

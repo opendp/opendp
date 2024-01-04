@@ -1,8 +1,9 @@
 from opendp.extrinsics._utilities import register_transformation
-import opendp.prelude as dp
+from opendp.mod import Domain, Metric
 
 
-def make_l2_to_l1_norm(input_domain: dp.Domain, input_metric: dp.Metric):
+def make_l2_to_l1_norm(input_domain: Domain, input_metric: Metric):
+    import opendp.prelude as dp
     dp.assert_features("contrib")
     if input_metric.type.origin != "L2Distance":
         raise ValueError("expected input_metric to be L2Distance")

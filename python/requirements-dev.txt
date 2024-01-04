@@ -20,8 +20,6 @@ mypy==1.7.1
     # via -r requirements-dev.in
 mypy-extensions==1.0.0
     # via mypy
-numpy==1.26.2
-    # via -r requirements-dev.in
 packaging==23.2
     # via
     #   build

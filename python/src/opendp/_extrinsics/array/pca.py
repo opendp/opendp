@@ -1,28 +1,28 @@
 from __future__ import annotations
-import opendp.prelude as dp
 
 from opendp.extrinsics.make_np_clamp import make_np_clamp
 from opendp.extrinsics.make_l2_to_l1_norm import then_l2_to_l1_norm
 from opendp.extrinsics._utilities import register_measurement
-from opendp.extrinsics._make_np_eigenvector import make_private_np_eigenvectors
-from opendp.extrinsics._make_np_eigenvalues import make_np_eigenvalues
+from opendp.extrinsics._make_np_eigenvector import then_private_np_eigenvectors
+from opendp.extrinsics._make_np_eigenvalues import then_np_eigenvalues
 from opendp.extrinsics._make_np_mean import make_private_np_mean
 from opendp.extrinsics._make_np_xTx import make_np_xTx
-from opendp.extrinsics._make_stateful_sequential_composition import make_stateful_sequential_composition
+from opendp.extrinsics._make_stateful_sequential_composition import (
+    make_stateful_sequential_composition,
+)
 
 
 def _smaller(v):
-    if isinstance(v, list):
-        return [_smaller(v_i) for v_i in v]
-    if isinstance(v, float):
-        import numpy as np
+    import numpy as np
 
-        if v < 0:
-            raise ValueError("expected non-negative value")
-        return v if v == 0 else np.nextafter(v, -1)
+    if v < 0:
+        raise ValueError("expected non-negative value")
+    return v if v == 0 else np.nextafter(v, -1)
 
 
-def make_np_pca(input_domain, input_metric, unit_epsilon, num_components=None, norm=None):
+def make_np_pca(
+    input_domain, input_metric, unit_epsilon, num_components=None, norm=None
+):
     """
     :param input_domain: instance of `np_array2_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
@@ -30,7 +30,7 @@ def make_np_pca(input_domain, input_metric, unit_epsilon, num_components=None, n
     :param num_components: optional, number of eigenvectors to release
     :param norm: clamp each row to this norm bound
     """
-    import numpy as np
+    import opendp.prelude as dp
 
     dp.assert_features("contrib", "floating-point")
 
@@ -43,7 +43,7 @@ def make_np_pca(input_domain, input_metric, unit_epsilon, num_components=None, n
     if "num_columns" not in descriptor:
         raise ValueError("input_domain's num_columns must be known")
 
-    if "norm" in descriptor and descriptor["ord"] != 2:
+    if "norm" in descriptor and descriptor["order"] != 2:
         raise ValueError("input_domain's norm must be an L2 norm")
 
     num_columns = descriptor["num_columns"]
@@ -60,7 +60,7 @@ def make_np_pca(input_domain, input_metric, unit_epsilon, num_components=None, n
     num_queries = 3 if origin is None else 2
     epsilons = [_smaller(unit_epsilon / num_queries)] * num_queries
 
-    # make releases under the assumption that d_in is 2. For any other d_in,
+    # make releases under the assumption that d_in is 2.
     unit_d_in = 2
     compositor = make_stateful_sequential_composition(
         input_domain, input_metric, privacy_measure, d_in=unit_d_in, d_mids=epsilons
@@ -74,9 +74,9 @@ def make_np_pca(input_domain, input_metric, unit_epsilon, num_components=None, n
 
         # shift the data
         if "origin" not in descriptor:
-            m_mean = dp.binary_search_chain(
+            m_mean = dp.binary_search_chain(  # type: ignore[misc]
                 lambda s: make_private_np_mean(
-                    input_domain, input_metric, s, norm=norm, ord=1.0
+                    input_domain, input_metric, s, norm=norm, order=1
                 ),
                 d_in=unit_d_in,
                 d_out=epsilon_state.pop(),
@@ -84,13 +84,10 @@ def make_np_pca(input_domain, input_metric, unit_epsilon, num_components=None, n
             )
             origin = qbl(m_mean)
 
-        new_desc = {**descriptor, "origin": np.zeros_like(origin)}
-        prior_input_domain, input_domain = input_domain, dp.np_array2_domain(**new_desc)
-
         t_offset = dp.t.make_user_transformation(
-            prior_input_domain,
+            input_domain,
             input_metric,
-            dp.np_array2_domain(**new_desc),
+            input_domain,
             input_metric,
             lambda arg: arg - origin,
             lambda d_in: d_in,
@@ -99,21 +96,20 @@ def make_np_pca(input_domain, input_metric, unit_epsilon, num_components=None, n
 
         # scale the data
         if "norm" not in descriptor or descriptor["norm"] > norm:
-            t_clamp = make_np_clamp(input_domain, input_metric, norm, ord=2)
+            t_clamp = make_np_clamp(input_domain, input_metric, norm, order=2)
             input_domain = t_clamp.output_domain
             qbl(t_clamp)
 
         t_cov = make_np_xTx(input_domain, input_metric, dp.symmetric_distance())
         qbl(t_cov)
 
-        t_eigvals = make_np_eigenvalues(*t_cov.output_space) >> then_l2_to_l1_norm()
-        m_eigvals = dp.binary_search_chain(
+        t_eigvals = t_cov.output_space >> then_np_eigenvalues() >> then_l2_to_l1_norm()
+        m_eigvals = dp.binary_search_chain(  # type: ignore[misc]
             lambda s: t_eigvals >> dp.m.then_laplace(s),
             unit_d_in,
             epsilon_state.pop(),
         )
-        m_eigvecs = make_private_np_eigenvectors(
-            *t_cov.output_space,
+        m_eigvecs = t_cov.output_space >> then_private_np_eigenvectors(
             [_smaller(epsilon_state.pop() / num_evec_rels)] * num_evec_rels,
         )
 
@@ -124,7 +120,7 @@ def make_np_pca(input_domain, input_metric, unit_epsilon, num_components=None, n
         input_metric,
         privacy_measure,
         function,
-        lambda d_in: d_in // unit_d_in * unit_epsilon,
+        compositor.map,
         TO="ExtrinsicObject",
     )
 
@@ -132,19 +128,21 @@ def make_np_pca(input_domain, input_metric, unit_epsilon, num_components=None, n
 then_np_pca = register_measurement(make_np_pca)
 
 try:
-    from sklearn.decomposition._pca import PCA as SKLPCA
-except ImportError as e:
+    from sklearn.decomposition._pca import PCA as SKLPCA  # type: ignore[import]
+except ImportError:
 
-    class SKLPCA(object):
+    class SKLPCA(object):  # type: ignore[no-redef]
         def __init__(*args, **kwargs):
-            raise e
+            raise ImportError(
+                "please install scikit-learn to use the sklearn API: https://scikit-learn.org/stable/install.html"
+            )
 
 
 class PCA(SKLPCA):
     def __init__(
         self,
         *,
-        epsilon: int,
+        epsilon: float,
         row_norm: float,
         n_samples: int,
         n_features: int,
@@ -162,31 +160,43 @@ class PCA(SKLPCA):
         self.n_features_in_ = n_features
         self.n_changes = n_changes
 
-    def get_measurement(self):
+    @property
+    def n_features(self):
+        return self.n_features_in_
+    
+    def _fit(self, X):
+        return self.prepare_fitter()(X)
+    
+    def prepare_fitter(self):
+        import opendp.prelude as dp
+
+        if hasattr(self, "components_"):
+            raise ValueError("DP-PCA model has already been fitted")
+
         input_domain = dp.np_array2_domain(
             num_columns=self.n_features_in_, size=self.n_samples, T=float
         )
         input_metric = dp.symmetric_distance()
 
+        if self.n_components == "mle" or 0 < self.n_components < 1.0:
+            n_components = self.n_features_in_
+        else:
+            n_components = self.n_components
+
         return make_np_pca(
             input_domain,
             input_metric,
             self.epsilon / self.n_changes * 2,
-            num_components=self.n_components,
+            num_components=n_components,
             norm=self.row_norm,
-        )
+        ) >> dp.new_function(self.postprocess, TO="ExtrinsicObject")
 
-    @property
-    def n_features(self):
-        return self.n_features_in_
-
-    def _fit(self, X):
+    def postprocess(self, values):
         import numpy as np
-        from sklearn.utils.extmath import stable_cumsum, svd_flip
+        from sklearn.utils.extmath import stable_cumsum, svd_flip  # type: ignore[import]
         from sklearn.decomposition._pca import _infer_dimension
 
-        meas = self.get_measurement()
-        self.mean_, eigvals, eigvecs = meas(X)
+        self.mean_, eigvals, eigvecs = values
 
         S = np.sqrt(eigvals)
         U = eigvecs
@@ -231,6 +241,10 @@ class PCA(SKLPCA):
         self.singular_values_ = singular_values_[:n_components]
 
         return U, S, Vt
+
+    def measurement(self):
+        import opendp.prelude as dp
+        return self.prepare_fitter() >> dp.new_function(lambda _: self, TO="ExtrinsicObject")
 
     def _validate_params(*args, **kwargs):
         pass

@@ -13,4 +13,3 @@ wheel ~= 0.41
 coverage ~= 7.3
 mypy ~= 1.7
 pip-tools==7.3.0
-numpy ~=1.26

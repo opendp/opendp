@@ -1,10 +1,10 @@
 from opendp.extrinsics._utilities import to_then, with_privacy
-import opendp.prelude as dp
 
 
 def make_np_eigenvalues(input_domain, input_metric):
     """Construct a new Transformation that computes the eigenvalues of a covariance matrix."""
-    import numpy as np
+    import numpy as np # type: ignore[import]
+    import opendp.prelude as dp
     dp.assert_features("contrib", "floating-point")
 
     if not str(input_domain).startswith("NPCovDomain"):

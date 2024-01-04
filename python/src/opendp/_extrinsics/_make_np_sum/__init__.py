@@ -1,10 +1,10 @@
-import opendp.prelude as dp
 from opendp.extrinsics._utilities import to_then, with_privacy
 
 
 def make_np_sum(input_domain, input_metric):
     """Construct a new Transformation that computes a sum over the row axis of a 2-dimensional array."""
-    import numpy as np
+    import opendp.prelude as dp
+    import numpy as np # type: ignore[import]
 
     dp.assert_features("contrib", "floating-point")
     descriptor = input_domain.descriptor
@@ -13,7 +13,7 @@ def make_np_sum(input_domain, input_metric):
     if norm is None:
         raise ValueError("input_domain must have bounds. See make_np_clamp")
 
-    order = input_domain.descriptor["ord"]
+    order = input_domain.descriptor["order"]
     output_metric = {1: dp.l1_distance, 2: dp.l2_distance}[order]
 
     size = descriptor.get("size")

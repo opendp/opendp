@@ -1,15 +1,15 @@
-import opendp.prelude as dp
 from opendp.extrinsics._utilities import register_transformation
 
 
-def make_np_clamp(input_domain, input_metric, norm, ord=2, origin=None):
+def make_np_clamp(input_domain, input_metric, norm, order=2, origin=None):
     """Construct a new Transformation that clamps the norm of input data."""
+    import opendp.prelude as dp
     dp.assert_features("contrib")
-    import numpy as np
+    import numpy as np # type: ignore[import]
     norm = float(norm)
     if norm < 0.: 
         raise ValueError("norm must not be negative")
-    if ord not in {1, 2}:
+    if order not in {1, 2}:
         raise ValueError("ord must be 1 or 2")
 
     if origin is None:
@@ -31,7 +31,7 @@ def make_np_clamp(input_domain, input_metric, norm, ord=2, origin=None):
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        dp.np_array2_domain(**{**input_domain.descriptor, "norm": norm, "ord": ord, "origin": origin}),
+        dp.np_array2_domain(**{**input_domain.descriptor, "norm": norm, "order": order, "origin": origin}),
         input_metric,
         function,
         lambda d_in: d_in,

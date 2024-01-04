@@ -2,48 +2,54 @@ from typing import Callable, Optional, Union
 from opendp.mod import PartialConstructor, Measurement, Transformation
 
 
-def to_then(func):
+def to_then(constructor):
     """Convert any `make_` constructor to a `then_` constructor"""
 
     def then_func(*args, **kwargs):
         return PartialConstructor(
-            lambda input_domain, input_metric: func(
+            lambda input_domain, input_metric: constructor(
                 input_domain, input_metric, *args, **kwargs
             )
         )
-    then_func.__name__ = func.__name__.replace("make_", "then_", 1)
+    then_func.__name__ = constructor.__name__.replace("make_", "then_", 1)
+    then_func.__doc__ = f"partial constructor of {constructor.__name__}"
     return then_func
 
 
-def _register(module, constructor):
-    import importlib, inspect
+def _register(module_name, constructor):
+    import importlib
+    import inspect
 
-    module = importlib.import_module(f"opendp.{module}")
-    module.__dict__[constructor.__name__] = constructor
+    module = importlib.import_module(f"opendp.{module_name}")
+    setattr(module, constructor.__name__, constructor)
     arg_names = inspect.getfullargspec(constructor)[0]
 
     if len(arg_names) >= 2 and arg_names[:2] == ["input_domain", "input_metric"]:
         then_const = to_then(constructor)
-        module.__dict__[then_const.__name__] = then_const
+        then_const.__doc__ = f"""{then_const.__doc__}
+
+        Fixes the `input_domain` and `input_metric` of:
+        :py:func:`opendp.{module_name}.{constructor.__name__}`"""
+        setattr(module, then_const.__name__, then_const)
         return then_const
 
 
 def register_transformation(
     constructor: Callable[..., Transformation]
-) -> Optional[PartialConstructor]:
+) -> Callable[..., PartialConstructor]:
     return _register("transformations", constructor)
 
 
 def register_measurement(
     constructor: Callable[..., Measurement]
-) -> Optional[PartialConstructor]:
+) -> Callable[..., PartialConstructor]:
     return _register("measurements", constructor)
 
 
 def register_combinator(
     constructor: Callable[..., Union[Transformation, Measurement]],
-) -> Optional[PartialConstructor]:
-    return _register("combinators", constructor)
+) -> Callable[..., PartialConstructor]:
+    return _register("combinators", constructor) # pragma: no cover
 
 
 def with_privacy(t_constructor: Callable) -> Callable[..., Union[Transformation, Measurement]]:
@@ -61,8 +67,9 @@ def with_privacy(t_constructor: Callable) -> Callable[..., Union[Transformation,
     private_constructor.__name__ = t_constructor.__name__.replace(
         "make_", "make_private_"
     )
-    private_constructor.__doc__ = t_constructor.__doc__.replace(
-        "Transformation", "Measurement"
-    )
+    if t_constructor.__doc__ is not None:
+        private_constructor.__doc__ = t_constructor.__doc__.replace(
+            "Transformation", "Measurement"
+        )
     return private_constructor
 

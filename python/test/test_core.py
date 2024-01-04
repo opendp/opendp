@@ -19,7 +19,7 @@ def test_type_getters():
     assert measurement.input_distance_type == "i32"
     assert measurement.output_distance_type == "f64"
     assert measurement.input_carrier_type == "i32"
-
+test_type_getters()
 
 def test_chain():
     data = [1, 2, 3, 4, 5]
@@ -278,9 +278,7 @@ def test_user_distance():
 
     # create custom transformation
     trans = dp.t.make_user_transformation(
-        dp.vector_domain(
-            dp.user_domain("datetimes", lambda x: isinstance(x, datetime))
-        ),
+        dp.vector_domain(dp.user_domain("DatetimeDomain()", lambda x: isinstance(x, datetime))),
         dp.user_distance("sum of millisecond distances"),
         dp.atom_domain(T=float),
         dp.absolute_distance(T=float),

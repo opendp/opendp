@@ -36,6 +36,7 @@ For example:
 '''
 
 from opendp.mod import *
+from opendp._extrinsics import np_array2_domain, PCA
 import opendp.transformations as t
 import opendp.measurements as m
 import opendp.combinators as c

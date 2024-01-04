@@ -1,11 +1,11 @@
-import opendp.prelude as dp
 from opendp.extrinsics._utilities import to_then
 from opendp.extrinsics.domains import _np_xTx_domain
 
 
 def make_np_xTx(input_domain, input_metric, output_metric):
     """Construct a new Transformation that computes a covariance matrix from the input data."""
-    import numpy as np
+    import opendp.prelude as dp
+    import numpy as np # type: ignore[import]
 
     dp.assert_features("contrib", "floating-point")
 
@@ -17,10 +17,9 @@ def make_np_xTx(input_domain, input_metric, output_metric):
     if "num_columns" not in descriptor:
         raise ValueError("num_columns must be known in input_domain")
     
-    Q = input_metric.distance_type
-    if output_metric == dp.symmetric_distance():
+    if output_metric.type == "SymmetricDistance":
         stability = lambda d_in: d_in
-    elif output_metric == dp.l2_distance(T=Q):
+    elif output_metric.type.origin == "L2Distance":
         norm, order, size = map(descriptor.get, ("norm", "order", "size"))
         if norm is None or order != 2:
             raise ValueError("rows in input_domain must have bounded L2 norm")
@@ -32,7 +31,7 @@ def make_np_xTx(input_domain, input_metric, output_metric):
         else:
             stability = lambda d_in: d_in // 2 * 2 * norm**2
     else:
-        raise ValueError(f"expected an output metric of either type SymmetricDistance or L2Distance<{Q}>")
+        raise ValueError("expected an output metric of either type SymmetricDistance or L2Distance<_>")
 
     return dp.t.make_user_transformation(
         input_domain,
@@ -40,7 +39,7 @@ def make_np_xTx(input_domain, input_metric, output_metric):
         _np_xTx_domain(
             num_features=descriptor["num_columns"],
             norm=descriptor.get("norm"),
-            ord=descriptor.get("ord"),
+            order=descriptor.get("order"),
             size=descriptor.get("size"),
             T=descriptor["T"],
         ),

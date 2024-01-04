@@ -1,11 +1,11 @@
-import opendp.prelude as dp
 from opendp.extrinsics.domains import _np_xTx_domain
 from opendp.extrinsics._utilities import to_then
 
 
 def make_private_np_eigenvector(input_domain, input_metric, unit_epsilon):
     """Construct a new Measurement that releases a private eigenvector from a covariance matrix."""
-    import numpy as np
+    import numpy as np # type: ignore[import]
+    import opendp.prelude as dp
     dp.assert_features("contrib", "floating-point")
 
     if input_metric != dp.symmetric_distance():
@@ -57,6 +57,7 @@ then_private_eigenvector = to_then(make_private_np_eigenvector)
 
 
 def _make_np_cov_projection(input_domain, input_metric, P):
+    import opendp.prelude as dp
     dp.assert_features("contrib", "floating-point")
     num_features = input_domain.descriptor["num_features"]
     if num_features != P.shape[1]:
@@ -73,8 +74,9 @@ def _make_np_cov_projection(input_domain, input_metric, P):
 
 
 def make_private_np_eigenvectors(input_domain, input_metric, unit_epsilons):
-    import numpy as np
-    from scipy.linalg import null_space
+    import numpy as np # type: ignore[import]
+    from scipy.linalg import null_space # type: ignore[import]
+    import opendp.prelude as dp
     dp.assert_features("contrib", "floating-point")
 
     descriptor = input_domain.descriptor
