@@ -13,13 +13,13 @@ def make_np_sum(input_domain, input_metric):
     if norm is None:
         raise ValueError("input_domain must have bounds. See make_np_clamp")
 
-    order = input_domain.descriptor["order"]
-    output_metric = {1: dp.l1_distance, 2: dp.l2_distance}[order]
+    p = input_domain.descriptor["p"]
+    output_metric = {1: dp.l1_distance, 2: dp.l2_distance}[p]
 
     size = descriptor.get("size")
     if size is None:
         origin = np.atleast_1d(descriptor.get("origin", 0.0))
-        norm += np.linalg.norm(origin, ord=order)
+        norm += np.linalg.norm(origin, ord=p)
         stability = lambda d_in: d_in * norm
     else:
         stability = lambda d_in: d_in // 2 * 2 * norm

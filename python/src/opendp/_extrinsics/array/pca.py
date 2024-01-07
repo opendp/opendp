@@ -43,7 +43,7 @@ def make_np_pca(
     if "num_columns" not in descriptor:
         raise ValueError("input_domain's num_columns must be known")
 
-    if "norm" in descriptor and descriptor["order"] != 2:
+    if "norm" in descriptor and descriptor["p"] != 2:
         raise ValueError("input_domain's norm must be an L2 norm")
 
     num_columns = descriptor["num_columns"]
@@ -76,7 +76,7 @@ def make_np_pca(
         if "origin" not in descriptor:
             m_mean = dp.binary_search_chain(  # type: ignore[misc]
                 lambda s: make_private_np_mean(
-                    input_domain, input_metric, s, norm=norm, order=1
+                    input_domain, input_metric, s, norm=norm, p=1
                 ),
                 d_in=unit_d_in,
                 d_out=epsilon_state.pop(),
@@ -96,7 +96,7 @@ def make_np_pca(
 
         # scale the data
         if "norm" not in descriptor or descriptor["norm"] > norm:
-            t_clamp = make_np_clamp(input_domain, input_metric, norm, order=2)
+            t_clamp = make_np_clamp(input_domain, input_metric, norm, p=2)
             input_domain = t_clamp.output_domain
             qbl(t_clamp)
 

@@ -20,8 +20,8 @@ def make_np_xTx(input_domain, input_metric, output_metric):
     if output_metric.type == "SymmetricDistance":
         stability = lambda d_in: d_in
     elif output_metric.type.origin == "L2Distance":
-        norm, order, size = map(descriptor.get, ("norm", "order", "size"))
-        if norm is None or order != 2:
+        norm, p, size = map(descriptor.get, ("norm", "p", "size"))
+        if norm is None or p != 2:
             raise ValueError("rows in input_domain must have bounded L2 norm")
         
         if size is None:
@@ -39,7 +39,7 @@ def make_np_xTx(input_domain, input_metric, output_metric):
         _np_xTx_domain(
             num_features=descriptor["num_columns"],
             norm=descriptor.get("norm"),
-            order=descriptor.get("order"),
+            p=descriptor.get("p"),
             size=descriptor.get("size"),
             T=descriptor["T"],
         ),

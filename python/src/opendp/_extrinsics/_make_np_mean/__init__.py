@@ -4,7 +4,7 @@ from opendp.extrinsics._make_np_sum import make_private_np_sum
 
 
 def make_private_np_mean(
-    input_domain, input_metric, scale, norm=None, order=2, origin=None
+    input_domain, input_metric, scale, norm=None, p=2, origin=None
 ):
     import opendp.prelude as dp
     import numpy as np # type: ignore[import]
@@ -14,7 +14,7 @@ def make_private_np_mean(
     descriptor = input_domain.descriptor
 
     if norm is not None:
-        t_clamp = make_np_clamp(input_domain, input_metric, norm, order, origin)
+        t_clamp = make_np_clamp(input_domain, input_metric, norm, p, origin)
         input_domain, input_metric = t_clamp.output_space
 
     size = descriptor.get("size")
@@ -24,7 +24,7 @@ def make_private_np_mean(
     privacy_measure = {
         1: dp.max_divergence(T=descriptor["T"]),
         2: dp.zero_concentrated_divergence(T=descriptor["T"]),
-    }[input_domain.descriptor["order"]]
+    }[input_domain.descriptor["p"]]
 
     t_sum = make_private_np_sum(
         input_domain, input_metric, privacy_measure, scale * size

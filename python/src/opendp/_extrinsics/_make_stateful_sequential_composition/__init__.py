@@ -1,6 +1,6 @@
 from opendp.measures import max_divergence
 from opendp.mod import Measurement, Transformation
-from opendp.core import new_user_queryable
+from opendp.core import new_queryable
 from opendp.measurements import make_user_measurement
 from opendp.extrinsics._utilities import to_then
 
@@ -42,19 +42,16 @@ def make_stateful_sequential_composition(
             
             raise ValueError("query must be a Measurement or Transformation")
 
-        return new_user_queryable(transition, Q="ExtrinsicObject", A="ExtrinsicObject")
+        return new_queryable(transition, Q="ExtrinsicObject", A="ExtrinsicObject")
 
     d_out = sum(d_mids)
-
-    def privacy_map(d_in_p):
-        return d_in_p // d_in * d_out
 
     return make_user_measurement(
         input_domain,
         input_metric,
         privacy_measure,
         function,
-        privacy_map,
+        privacy_map=lambda d_in_p: d_in_p / d_in * d_out,
         TO="ExtrinsicObject",
     )
 
