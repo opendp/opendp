@@ -23,6 +23,7 @@ on:
         description: Target Channel
         type: choice
         options:
+          - dev
           - nightly
           - beta
           - stable
@@ -41,6 +42,7 @@ jobs:
     uses: ./.github/workflows/credential-check.yml
     with:
       ref: ${{ inputs.channel }}
+      assert_version: ${{ inputs.channel != 'dev' }}
 
   libs-windows:
     needs: credential-check
