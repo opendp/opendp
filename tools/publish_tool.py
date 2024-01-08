@@ -28,8 +28,10 @@ def python(args):
     config = configparser.RawConfigParser()
     config.read("python/setup.cfg")
     version = config["metadata"]["version"]
-    if args.counter:
-        version += f'-{args.counter}'
+
+    # Note, version naming will comply with:
+    # https://packaging.python.org/en/latest/specifications/version-specifiers/
+    # (but don't enforce it here, enforce it in )
     wheel = f"opendp-{version}-py3-none-any.whl"
     run_command("Publishing opendp package", f"python -m twine upload -r {args.repository} --verbose python/wheelhouse/{wheel}")
     # Unfortunately, twine doesn't have an option to block until the index is propagated. Polling the index is unreliable,
@@ -69,8 +71,6 @@ def github(args):
     if branch != channel:
         raise Exception(f"Version {version} implies channel {channel}, but current branch is {branch}")
     tag = f"v{version}"
-    if args.counter:
-        tag += f'-{args.counter}'
     # Just in case, clear out any existing tag, so a new one will be created by GitHub.
     run_command("Clearing tag", f"git push origin :refs/tags/{tag}")
     title = f"OpenDP {version}"
@@ -87,7 +87,6 @@ def github(args):
 
 def _main(argv):
     parser = argparse.ArgumentParser(description="OpenDP build tool")
-    parser.add_argument("--counter", type=int, default=0, help="Version counter")
     subparsers = parser.add_subparsers(dest="COMMAND", help="Command to run")
     subparsers.required = True
 

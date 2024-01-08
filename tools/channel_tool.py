@@ -19,10 +19,10 @@ def ensure_branch(branch):
 
 def initialize(args):
     log(f"*** INITIALIZING CHANNEL FROM UPSTREAM ***")
-    if args.channel not in ("nightly", "beta", "stable"):
+    if args.channel not in ("dev", "nightly", "beta", "stable"):
         raise Exception(f"Unknown channel {args.channel}")
     if args.sync:
-        channel_to_upstream = {"nightly": "main", "beta": "nightly", "stable": "beta"}
+        channel_to_upstream = {"dev": get_current_branch(), "nightly": "main", "beta": "nightly", "stable": "beta"}
         upstream = channel_to_upstream[args.channel] if args.upstream is None else args.upstream
         ensure_branch(upstream)
         log(f"Syncing {args.channel} <= {upstream}")
@@ -125,11 +125,9 @@ def configure(args):
     if args.channel not in ("dev", "nightly", "beta", "stable"):
         raise Exception(f"Unknown channel {args.channel}")
     version = get_version()
-    if args.channel == "dev":
-        # dev has a bare tag
-        version = version.replace(prerelease="dev", build=None)
-    elif args.channel in ("nightly", "beta"):
-        # nightly/beta have a tag with the date and a counter
+
+    if args.channel in ("dev", "nightly", "beta"):
+        # dev/nightly/beta have a tag with the date and a counter
         date = args.date or datetime.date.today()
         counter = infer_counter(version, date, args)
         prerelease = f"{args.channel}.{date.strftime('%Y%m%d')}.{counter}"
@@ -217,7 +215,7 @@ def _main(argv):
 
     subparser = subparsers.add_parser("initialize", help="Initialize the channel")
     subparser.set_defaults(func=initialize)
-    subparser.add_argument("-c", "--channel", choices=["nightly", "beta", "stable"], default="nightly", help="Which channel to target")
+    subparser.add_argument("-c", "--channel", choices=["dev", "nightly", "beta", "stable"], default="nightly", help="Which channel to target")
     subparser.add_argument("--sync", action="store_true", help="Sync the channel from upstream")
     subparser.add_argument("-u", "--upstream", help="Upstream ref")
     subparser.add_argument("-p", "--preserve", dest="preserve", action="store_true")
