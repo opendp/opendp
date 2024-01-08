@@ -11,7 +11,7 @@ def rust(args):
     os.environ["CARGO_REGISTRY_TOKEN"] = os.environ["CRATES_IO_API_TOKEN"]
     # We can't do a dry run of everything, because dependencies won't be available for later crates,
     # but we can at least do any leaf nodes (i.e. opendp_tooling).
-    dry_run_arg = " --dry-run" if args.dry_run else ""
+    dry_run_arg = " --dry-run" if args.dry_run else "" # Keep dash in this arg.
     run_command("Publishing opendp_tooling crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp_tooling/Cargo.toml")
     if not args.dry_run:
         # As of https://github.com/rust-lang/cargo/pull/11062, cargo publish blocks until the index is propagated,
@@ -28,6 +28,10 @@ def python(args):
     config = configparser.RawConfigParser()
     config.read("python/setup.cfg")
     version = config["metadata"]["version"]
+
+    # Note, version naming will comply with:
+    # https://packaging.python.org/en/latest/specifications/version-specifiers/
+    # (but don't enforce it here, enforce it in )
     wheel = f"opendp-{version}-py3-none-any.whl"
     run_command("Publishing opendp package", f"python -m twine upload -r {args.repository} --verbose python/wheelhouse/{wheel}")
     # Unfortunately, twine doesn't have an option to block until the index is propagated. Polling the index is unreliable,
@@ -88,7 +92,7 @@ def _main(argv):
 
     subparser = subparsers.add_parser("rust", help="Publish Rust crate")
     subparser.set_defaults(func=rust)
-    subparser.add_argument("--dry-run", action="store_true")
+    subparser.add_argument("--dry_run", action="store_true")
     subparser.add_argument("-t", "--index-check-timeout", type=int, default=300, help="How long to keep checking for index update (0 = don't check)")
     subparser.add_argument("-b", "--index-check-backoff", type=float, default=2.0, help="How much to back off between checks for index update")
 

@@ -36,6 +36,7 @@ on:
         description: Target Channel
         type: choice
         options:
+          - dev
           - nightly
           - beta
           - stable
