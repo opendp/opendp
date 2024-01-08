@@ -10,7 +10,7 @@ There are also binary and exponential search algorithms for finding a free param
     :titlesonly:
 
     typing
-    accuracy/index
+    accuracy
     parameter-search
 
 The :ref:`putting-together` section provides an end-to-end example that makes use of all of these utilities.

@@ -12,12 +12,7 @@ or derive the necessary noise scale to meet a given target accuracy and statisti
     This confidence interval is specifically for the input to the noise addition mechanism.
     The library currently does not compensate for the bias introduced from clipping or other preprocessing
     (`[KMRS+23] <https://arxiv.org/pdf/2301.13334.pdf>`_ shows that this is somewhat unavoidable).
-    There is a notebook demonstrating this limitation:
-
-    .. toctree::
-        :titlesonly:
-
-        accuracy-pitfalls
+    In the Theory section we have `a notebook demonstrating this limitation <../../../theory/accuracy-pitfalls.html>`_.
 
 The noise distribution may be either Laplace or Gaussian.
 
@@ -55,4 +50,3 @@ into the following statement to interpret these functions:
     f"the DP estimate differs from the true value by no more than {accuracy} "
     f"at a statistical significance level alpha of {alpha}, "
     f"or with (1 - {alpha})100% = {(1 - alpha) * 100}% confidence."
-

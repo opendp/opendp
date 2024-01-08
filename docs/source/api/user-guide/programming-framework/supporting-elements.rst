@@ -198,7 +198,7 @@ Every Measurement (:ref:`see listing <measurement-constructors>`) contains an ou
 .. _maps:
 
 Stability/Privacy Map
----
+---------------------
 A map is a function that takes some ``d_in`` and returns a ``d_out`` that is (``d_in``, ``d_out``)-close.
 
 ``d_in`` is a distance in terms of the input metric, and ``d_out`` is a distance in terms of the output metric or measure.

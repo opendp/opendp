@@ -4,6 +4,16 @@
 Putting It Together
 ===================
 
+Now that all the parts of OpenDP have been introduced,
+let's see an example of how they can be put together.
+
+.. Diagram source: https://docs.google.com/drawings/d/1W4l9x3UM3hbVLWlC0nzijqgaQ31wY5ERebp8jkYy1yc/edit
+
+.. image:: opendp-flow.svg
+    :width: 60%
+    :alt: Diagram representing typical data flow with OpenDP, from a raw CSV to a differentially private release. 
+
+
 Let's say we want to compute the DP mean of a csv dataset of student exam scores,
 using a privacy budget of 1 epsilon.
 We also want an accuracy estimate with 95% confidence.

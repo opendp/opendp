@@ -54,13 +54,6 @@ There is also an illustrative notebook `A Framework to Understand DP <../../../t
 
 As you can see, these elements are interdependent and support each other. 
 The interaction of these elements is what gives the OpenDP Programming Framework its flexibility and expressiveness.
-These topics are covered at a more granular level in the following sections:
-
-.. toctree::
-  :titlesonly:
-
-  core-structures
-  supporting-elements
 
 Key Points
 ----------
@@ -91,3 +84,9 @@ Applying the Concepts
 
 This is just a glance at the abstract concepts in the OpenDP Programming Framework. 
 The following sections of this guide describe the actual software components in OpenDP implementing these concepts, and how they can be used in your programs.
+
+.. toctree::
+  :hidden:
+
+  core-structures
+  supporting-elements

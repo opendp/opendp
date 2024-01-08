@@ -1,27 +1,18 @@
-User Guide
-==========
+API User Guide
+==============
 
-
-Who Should Read This Guide?
----------------------------
-
-This guide is intended primarily for researchers or data scientists who want to make programmatic use of the OpenDP library or its Python bindings.
-
-Data scientists and others who are more interested in higher-level interfaces should see the list of `OpenDP Tools <https://opendp.org/tools>`.
-
-Potential contributors to OpenDP should read the :doc:`/contributing/index`.
-   
+This user guide tries to give a top-down picture of OpenDP;
+it complements the bottom-up view provided by the `Python API Reference <../python/index.html>`_.
 
 .. toctree::
-   :glob:
    :titlesonly:
-   :maxdepth: 3
+   :maxdepth: 1
 
    limitations
    installation
    programming-framework/index
-   transformations
-   measurements
-   combinators
+   transformations/index
+   measurements/index
+   combinators/index
    utilities/index
    putting-it-together

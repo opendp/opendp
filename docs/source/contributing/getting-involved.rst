@@ -8,7 +8,7 @@ OpenDP development takes place on GitHub, so you will need to create a GitHub ac
 
 Bug Reports
 -----------
-Email security@opendp.org to report a security issue.
+Guidelines for reporting security issues are `here <https://github.com/opendp/opendp/blob/main/SECURITY.md>`_.
 
 Please `open a new issue <https://github.com/opendp/opendp/issues/new?template=bug-report.md>`__ for any other bug report.
 We also welcome new issues for usability problems!

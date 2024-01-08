@@ -72,12 +72,3 @@ This is only required if you want to build OpenDP from scratch,
 or if you're interested in :doc:`writing Rust code for OpenDP <../../contributing/index>`.
 
 There is a thorough guide to building from source in the :doc:`Development Environment <../../contributing/development-environment>` documentation.
-
-What's Next?
-------------
-
-The next section of this guide will walk you through the conceptual underpinning of OpenDP, known as the :doc:`OpenDP Programming Framework <programming-framework/index>`.
-
-If you're eager to just jump in to programming, then :doc:`get started with the OpenDP library <../../getting-started/index>`.
-
-For those who prefer to study reference material, you can consult the :doc:`API Docs <../../api/index>`.

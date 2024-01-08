@@ -1,14 +1,15 @@
 Getting Started
 ===============
 
-In this introduction, we present a differential privacy "Hello World" using OpenDP.
+In this introduction, we present a differential privacy "Hello World" using OpenDP's Polars API in Python.
 
-For a more conceptual introduction to differential privacy see our Theory section,
-and for an overview of the OpenDP library see the API documentation.
+For a more conceptual introduction to differential privacy see the :doc:`../theory/index` section,
+and for an overview of the OpenDP libraries for Python, R, and Rust see the :doc:`../api/index` documentation.
 
 .. toctree::
   :titlesonly:
 
-  quickstart
-  first-look-at-DP
+  installation
+  hello-opendp
+  real-world
   examples/index
