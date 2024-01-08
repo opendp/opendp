@@ -11,12 +11,12 @@ def test_np_sum():
     from opendp.extrinsics._make_np_sum import then_np_sum
 
     # unsized data
-    space = dp.np_array2_domain(norm=1., order=2, T=float), dp.symmetric_distance()
+    space = dp.np_array2_domain(norm=1., p=2, T=float), dp.symmetric_distance()
     trans = space >> then_np_sum()
     assert trans.map(1) == 1
 
     # sized data
-    space = dp.np_array2_domain(norm=1., order=2, size=1000, T=float), dp.symmetric_distance()
+    space = dp.np_array2_domain(norm=1., p=2, size=1000, T=float), dp.symmetric_distance()
     trans = space >> then_np_sum()
     assert trans.map(2) == 2.
 
@@ -29,7 +29,7 @@ def test_np_sum():
 def test_private_np_sum():
     import numpy as np
     from opendp.extrinsics._make_np_sum import then_private_np_sum
-    space = dp.np_array2_domain(norm=1., order=2, T=float), dp.symmetric_distance()
+    space = dp.np_array2_domain(norm=1., p=2, T=float), dp.symmetric_distance()
     trans = space >> then_private_np_sum(dp.zero_concentrated_divergence(T=float), scale=1.)
     data = np.random.normal(size=(1000, 4))
     print(trans(data))

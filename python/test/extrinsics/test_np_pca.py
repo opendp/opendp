@@ -25,14 +25,14 @@ def sample_covariance(num_features):
 
 @pytest.mark.skipif('scipy' not in sys.modules, reason="Scipy needed")
 def test_pca():
-    from opendp.extrinsics.make_np_pca import then_np_pca
+    from opendp.extrinsics._make_np_eigendecomposition import then_private_np_eigendecomposition
     num_columns = 4
     num_rows = 10_000
     space = (
         dp.np_array2_domain(num_columns=num_columns, size=num_rows, T=float),
         dp.symmetric_distance(),
     )
-    m_pca = space >> then_np_pca(1.0, norm=25.0)
+    m_pca = space >> then_private_np_eigendecomposition(1.0, norm=25.0)
 
     print(m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)))
     assert m_pca.check(2, 1.)
@@ -44,7 +44,7 @@ def test_pca_skl():
     num_rows = 10_000
     data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
 
-    model = dp.PCA(
+    model = dp.sklearn.PCA(
         epsilon=1.0,
         row_norm=1.0,
         n_samples=num_rows,
@@ -61,7 +61,7 @@ def test_pca_skl():
     print("loadings", loadings)
 
 
-    model = dp.PCA(
+    model = dp.sklearn.PCA(
         epsilon=1.0,
         row_norm=1.0,
         n_samples=num_rows,
@@ -71,7 +71,7 @@ def test_pca_skl():
 
     model.fit(data)
 
-    model = dp.PCA(
+    model = dp.sklearn.PCA(
         epsilon=1.0,
         row_norm=1.0,
         n_samples=num_rows,
@@ -80,7 +80,7 @@ def test_pca_skl():
     )
     model.fit(data)
 
-    model = dp.PCA(
+    model = dp.sklearn.PCA(
         epsilon=1.0,
         row_norm=1.0,
         n_samples=num_rows,
@@ -90,3 +90,5 @@ def test_pca_skl():
     meas = model.measurement()
     meas(data)
     print(model.components_)
+
+test_pca()

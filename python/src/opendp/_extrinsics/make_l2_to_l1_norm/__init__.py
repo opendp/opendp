@@ -17,4 +17,5 @@ def make_l2_to_l1_norm(input_domain: Domain, input_metric: Metric):
         lambda d_in: d_in,
     )
 
+# generate then variant of the constructor
 then_l2_to_l1_norm = register_transformation(make_l2_to_l1_norm)

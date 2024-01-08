@@ -23,7 +23,7 @@ def test_np_xTx_l2():
     from opendp.extrinsics._make_np_xTx import then_np_xTx
 
     space = (
-        dp.np_array2_domain(num_columns=4, norm=2.0, order=2, T=float),
+        dp.np_array2_domain(num_columns=4, norm=2.0, p=2, T=float),
         dp.symmetric_distance(),
     )
     trans = space >> then_np_xTx(dp.l2_distance(T=float))
@@ -32,7 +32,7 @@ def test_np_xTx_l2():
     assert trans.map(2) == 8
 
     space = (
-        dp.np_array2_domain(num_columns=4, norm=2.0, order=2, size=1000, T=float),
+        dp.np_array2_domain(num_columns=4, norm=2.0, p=2, size=1000, T=float),
         dp.symmetric_distance(),
     )
     trans = space >> then_np_xTx(dp.l2_distance(T=float))

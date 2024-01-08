@@ -4,11 +4,12 @@ from opendp.extrinsics._utilities import register_transformation
 def make_np_clamp(input_domain, input_metric, norm, p=2, origin=None):
     """Construct a new Transformation that clamps the norm of input data."""
     import opendp.prelude as dp
-    import numpy as np # type: ignore[import]
+    import numpy as np  # type: ignore[import]
+
     dp.assert_features("contrib")
-    
+
     norm = float(norm)
-    if norm < 0.: 
+    if norm < 0.0:
         raise ValueError("norm must not be negative")
     if p not in {1, 2}:
         raise ValueError("order p must be 1 or 2")
@@ -32,11 +33,19 @@ def make_np_clamp(input_domain, input_metric, norm, p=2, origin=None):
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        dp.np_array2_domain(**{**input_domain.descriptor, "norm": norm, "p": p, "origin": origin}),
+        dp.np_array2_domain(
+            **{
+                **input_domain.descriptor._todict(),
+                "norm": norm,
+                "p": p,
+                "origin": origin,
+            }
+        ),
         input_metric,
         function,
         lambda d_in: d_in,
     )
 
 
+# generate then variant of the constructor
 then_np_clamp = register_transformation(make_np_clamp)

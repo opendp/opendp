@@ -504,6 +504,11 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     def _depends_on(self, *args):
         """Extends the memory lifetime of args to the lifetime of self."""
         setattr(self, "_dependencies", args)
+    
+    def __getattr__(self, name: str) -> Any:
+        from opendp.domains import _user_domain_value
+        descriptor = _user_domain_value(self)
+        return getattr(descriptor, name)
 
 
 

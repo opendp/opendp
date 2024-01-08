@@ -1,6 +1,7 @@
 from opendp.extrinsics._utilities import to_then
-from opendp.extrinsics.domains import _np_xTx_domain
+from opendp.extrinsics.domains import _np_SSCP_domain
 
+# planning to make this public, but may make more API changes
 
 def make_np_xTx(input_domain, input_metric, output_metric):
     """Construct a new Transformation that computes a covariance matrix from the input data."""
@@ -36,7 +37,7 @@ def make_np_xTx(input_domain, input_metric, output_metric):
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        _np_xTx_domain(
+        _np_SSCP_domain(
             num_features=descriptor["num_columns"],
             norm=descriptor.get("norm"),
             p=descriptor.get("p"),
@@ -49,4 +50,5 @@ def make_np_xTx(input_domain, input_metric, output_metric):
     )
 
 
+# generate then variant of the constructor
 then_np_xTx = to_then(make_np_xTx)

@@ -1,6 +1,9 @@
 from opendp.extrinsics._utilities import to_then, with_privacy
 
 
+# planning to make this public, but may make more API changes
+
+
 def make_np_sum(input_domain, input_metric):
     """Construct a new Transformation that computes a sum over the row axis of a 2-dimensional array."""
     import opendp.prelude as dp
@@ -34,6 +37,7 @@ def make_np_sum(input_domain, input_metric):
     )
 
 
+# generate then and private variants of the constructor
 then_np_sum = to_then(make_np_sum)
 make_private_np_sum = with_privacy(make_np_sum)
 then_private_np_sum = to_then(make_private_np_sum)

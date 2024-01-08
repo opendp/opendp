@@ -1,6 +1,6 @@
 import sys
 import opendp.prelude as dp
-from opendp.extrinsics.domains import _np_xTx_domain
+from opendp.extrinsics.domains import _np_SSCP_domain
 import pytest
 
 dp.enable_features("honest-but-curious", "contrib", "floating-point")
@@ -10,7 +10,7 @@ dp.enable_features("honest-but-curious", "contrib", "floating-point")
 def test_np_eigenvalues():
     import numpy as np
     from opendp.extrinsics._make_np_eigenvalues import then_np_eigenvalues, then_private_np_eigenvalues
-    space = _np_xTx_domain(num_features=4, norm=1., order=2, T=float), dp.symmetric_distance()
+    space = _np_SSCP_domain(num_features=4, norm=1., p=2, T=float), dp.symmetric_distance()
     trans = space >> then_np_eigenvalues()
     data = np.random.normal(size=(4, 4))
     data += data.T

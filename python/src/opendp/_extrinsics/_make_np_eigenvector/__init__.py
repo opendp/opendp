@@ -1,5 +1,7 @@
-from opendp.extrinsics.domains import _np_xTx_domain
+from opendp.extrinsics.domains import _np_SSCP_domain
 from opendp.extrinsics._utilities import to_then
+
+# planning to make this public, but may make more API changes
 
 
 def make_private_np_eigenvector(input_domain, input_metric, unit_epsilon):
@@ -11,8 +13,7 @@ def make_private_np_eigenvector(input_domain, input_metric, unit_epsilon):
     if input_metric != dp.symmetric_distance():
         raise ValueError("expected symmetric distance input metric")
 
-    descriptor = input_domain.descriptor
-    d = descriptor["num_features"]
+    d = input_domain.num_features
 
     def function(C):
         # Algorithm 2 Top Eigenvector Sampler
@@ -49,24 +50,24 @@ def make_private_np_eigenvector(input_domain, input_metric, unit_epsilon):
         dp.max_divergence(T=float),
         function,
         lambda d_in: d_in // 2 * unit_epsilon,
-        TO=dp.Vec[descriptor["T"]],
+        TO=dp.Vec[input_domain.T],
     )
 
 
+# generate then variant of the constructor
 then_private_eigenvector = to_then(make_private_np_eigenvector)
 
 
 def _make_np_cov_projection(input_domain, input_metric, P):
     import opendp.prelude as dp
     dp.assert_features("contrib", "floating-point")
-    num_features = input_domain.descriptor["num_features"]
-    if num_features != P.shape[1]:
+    if input_domain.num_features != P.shape[1]:
         raise ValueError("projection P is not conformable with data in input_domain")
     
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        _np_xTx_domain(**{**input_domain.descriptor, "num_features": P.shape[0]}),
+        _np_SSCP_domain(**{**input_domain.descriptor._asdict(), "num_features": P.shape[0]}),
         input_metric,
         lambda cov: P @ cov @ P.T,  # (c)
         lambda d_in: d_in,
@@ -79,11 +80,10 @@ def make_private_np_eigenvectors(input_domain, input_metric, unit_epsilons):
     import opendp.prelude as dp
     dp.assert_features("contrib", "floating-point")
 
-    descriptor = input_domain.descriptor
-    privacy_measure = dp.max_divergence(T=descriptor["T"])
+    privacy_measure = dp.max_divergence(T=input_domain.T)
 
-    if len(unit_epsilons) > descriptor["num_features"] - 1:
-        raise ValueError(f"must specify at most {descriptor['num_features'] - 1} unit_epsilons")
+    if len(unit_epsilons) > input_domain.num_features - 1:
+        raise ValueError(f"must specify at most {input_domain.num_features - 1} unit_epsilons")
 
     m_compose = dp.c.make_sequential_composition(
         input_domain, input_metric, privacy_measure, 2, unit_epsilons
@@ -124,4 +124,5 @@ def make_private_np_eigenvectors(input_domain, input_metric, unit_epsilons):
     )
 
 
+# generate then variant of the constructor
 then_private_np_eigenvectors = to_then(make_private_np_eigenvectors)

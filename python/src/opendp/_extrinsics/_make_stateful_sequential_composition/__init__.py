@@ -5,6 +5,9 @@ from opendp.measurements import make_user_measurement
 from opendp.extrinsics._utilities import to_then
 
 
+# planning to make this public, but may make more API changes
+
+
 def make_stateful_sequential_composition(
     input_domain, input_metric, privacy_measure, d_in, d_mids
 ):
@@ -56,4 +59,5 @@ def make_stateful_sequential_composition(
     )
 
 
+# generate then variant of the constructor
 then_stateful_sequential_composition = to_then(make_stateful_sequential_composition)
