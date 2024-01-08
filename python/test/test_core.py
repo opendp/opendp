@@ -117,11 +117,16 @@ def test_function():
     from opendp.measurements import make_base_laplace
     from opendp.domains import atom_domain
     from opendp.metrics import absolute_distance
+    from opendp.transformations import make_identity
 
     mechanism = make_base_laplace(atom_domain(T=float), absolute_distance(T=float), 1.0)
     pow = 4  # add noise 2^pow times
     for _ in range(pow):
         mechanism = mechanism >> mechanism.function
+    
+    # Exercise postprocessing transformation
+    transformation = make_identity(atom_domain(T=float), absolute_distance(T=float))
+    mechanism = mechanism >> transformation
     print(mechanism(0.0))
 
 

@@ -230,7 +230,7 @@ def versioned(function):
 proof_doc_re = re.compile(r"\[\(Proof Document\)\]\(([^)]+)\)")
 
 
-def proven(function): # pragma: no cover
+def proven(function):
     """Decorator for functions that have an associated proof document.
     Locates the proof document and edits the docstring with a link.
     """
@@ -266,7 +266,7 @@ def make_proof_link(
     source_dir,
     relative_path,
     repo_path,
-) -> str: # pragma: no cover
+) -> str:
     # construct absolute path
     absolute_path = os.path.join(source_dir, relative_path)
 
@@ -279,7 +279,7 @@ def make_proof_link(
     # link from sphinx and rustdoc to latex
     sphinx_port = os.environ.get("OPENDP_SPHINX_PORT", None)
     if sphinx_port is not None:
-        proof_uri = f"http://localhost:{sphinx_port}"
+        proof_uri = f"http://localhost:{sphinx_port}"  # pragma: no cover
 
     else:
         # find the docs uri
@@ -313,14 +313,21 @@ def get_opendp_version():
             return get_opendp_version_from_file()
 
 
-def unmangle_py_version(py_version): # pragma: no cover
-    # Python mangles pre-release versions like "X.Y.Z-nightly.NNN.M" into "X.Y.ZaNNN00M", but the docs use
-    # the original format, so we need to unmangle for links to work.
-    # There are more variations possible, but we only need to handle X.Y.Z-dev0, X.Y.Z-aNNN00M, X.Y.Z-bNNN00M, X.Y.Z
+def unmangle_py_version(py_version):
+    '''
+    Python mangles pre-release versions like "X.Y.Z-nightly.NNN.M" into "X.Y.ZaNNN00M", but the docs use
+    the original format, so we need to unmangle for links to work.
+    There are more variations possible, but we only need to handle X.Y.Z-dev0, X.Y.Z-aNNN00M, X.Y.Z-bNNN00M, X.Y.Z
+    
+    >>> unmangle_py_version('0.9.0.dev0')
+    '0.9.0-dev'
+    >>> unmangle_py_version('other')
+    'other'
+    '''
     if py_version.endswith(".dev0"):
         return f"{py_version[:-5]}-dev"
     match = re.match(r"^(\d+\.\d+\.\d+)(?:([ab])(\d{8})(\d{3}))?$", py_version)
-    if match:
+    if match: # pragma: no cover
         base = match.group(1)
         py_tag = match.group(2)
         if not py_tag:
@@ -332,14 +339,29 @@ def unmangle_py_version(py_version): # pragma: no cover
     return py_version
 
 
-def get_opendp_version_from_file(): # pragma: no cover
-    # If the package isn't installed (eg when we're building docs), we can't get the version from metadata,
-    # so fall back to the version file.
+def get_opendp_version_from_file():
+    '''
+    If the package isn't installed (eg when we're building docs), we can't get the version from metadata,
+    so fall back to the version file.
+
+    >>> import re
+    >>> assert re.match(r'\\d+\\.\\d+\\.\\d+', get_opendp_version_from_file())
+    '''
     version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'VERSION')
     return open(version_file, 'r').read().strip()
 
 
-def get_docs_ref(version): # pragma: no cover
+def get_docs_ref(version):
+    '''
+    >>> get_docs_ref('0.0.0')
+    'v0.0.0'
+    >>> get_docs_ref('0.0.0-dev')
+    'latest'
+    >>> get_docs_ref('0.0.0-nightly')
+    'nightly'
+    >>> get_docs_ref('0.0.0-surprise')
+    'unknown'
+    '''
     channel = get_channel(version)
     if channel == "stable":
         return f"v{version}"  # For stable, we have tags.
@@ -354,4 +376,4 @@ def get_channel(version):
     if match:
         channel = match.group(2)
         return channel or "stable"
-    return "unknown" # pragma: no cover
+    return "unknown"

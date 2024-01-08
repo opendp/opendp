@@ -109,7 +109,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
 
     def __rshift__(self, other: Union["Function", "Transformation"]) -> "Measurement":
         if isinstance(other, Transformation):
-            other = other.function # pragma: no cover
+            other = other.function
 
         if isinstance(other, Function):
             from opendp.combinators import make_chain_pm
@@ -481,7 +481,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
             pass
 
     def __repr__(self) -> str:
-        return str(self) # pragma: no cover
+        return str(self)
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
@@ -525,7 +525,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
             pass
 
     def __repr__(self) -> str:
-        return str(self) # pragma: no cover
+        return str(self)
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
@@ -991,7 +991,7 @@ def exponential_bounds_search(
             return False
     exception_bounds = exponential_bounds_search(exception_predicate, T=T)
     if exception_bounds is None:
-        try: # pragma: no cover
+        try:
             predicate(center)
         except Exception:
             raise ValueError(f"predicate always fails. An example traceback is shown above at {center}.")

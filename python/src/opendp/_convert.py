@@ -7,7 +7,7 @@ from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 try:
     import numpy as np # type: ignore[import-not-found]
 except ImportError: # pragma: no cover
-    np = None
+    np = None  # type: ignore[assignment]
 
 ATOM_MAP = {
     'f32': ctypes.c_float,
@@ -99,7 +99,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         if rust_type in ATOM_MAP:
             return ctypes.byref(ATOM_MAP[rust_type](value))
 
-        if rust_type == "String": # pragma: no cover
+        if rust_type == "String":
             return ctypes.c_char_p(value.encode())
 
         raise UnknownTypeException(rust_type)

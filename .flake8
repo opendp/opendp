@@ -5,9 +5,8 @@
 [flake8]
 exclude =
 	*/pseudocode/*
-    # Agree on name for venv: In https://github.com/opendp/opendp/pull/1013
-    # I propose `.venv`, but it could be anything else, but `opendp` may be confusing.
-    .venv
+    .venv # python/
+    venv # docs/
 
 extend-ignore =
     # E125: continuation line with same indent as next logical line

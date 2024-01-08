@@ -46,7 +46,7 @@ try:
         np.float64: 'f64',  # np.double, np.float_
     })
 except ImportError:
-    np = None
+    np = None  # type: ignore[assignment]
 
 INTEGER_TYPES = {"i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "usize"}
 NUMERIC_TYPES = INTEGER_TYPES | {"f32", "f64"}
@@ -276,14 +276,15 @@ class RuntimeType(object):
         :examples:
 
         >>> from opendp.typing import RuntimeType, L1Distance
-        >>> RuntimeType.infer(23)
-        'i32'
-        >>> RuntimeType.infer(12.)
-        'f64'
-        >>> print(RuntimeType.infer(["A", "B"]))
-        Vec<String>
-        >>> print(RuntimeType.infer((12., True, "A")))
-        (f64, bool, String)
+        >>> assert RuntimeType.infer(23) == "i32"
+        >>> assert RuntimeType.infer(12.) == "f64"
+        >>> assert RuntimeType.infer(["A", "B"]) == "Vec<String>"
+        >>> assert RuntimeType.infer((12., True, "A")) == "(f64,  bool,String)" # eq doesn't care about whitespace
+        
+        >>> print(RuntimeType.infer([]))
+        Traceback (most recent call last):
+        ...
+        opendp.mod.UnknownTypeException: attempted to create a type_name with an unknown type: cannot infer atomic type when empty
         """
         if type(public_example) in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type(public_example)]
@@ -298,7 +299,7 @@ class RuntimeType(object):
             types = {cls.infer(v, py_object=py_object) for v in value}
 
             if len(types) == 0:
-                return UnknownType("cannot infer atomic type when empty") # pragma: no cover
+                return UnknownType("cannot infer atomic type when empty")
             if len(types) == 1:
                 return next(iter(types))
             if py_object: # pragma: no cover
@@ -386,7 +387,7 @@ class UnknownType(RuntimeType):
     origin: None # type: ignore[assignment]
     args: None # type: ignore[assignment]
 
-    def __init__(self, reason): # pragma: no cover
+    def __init__(self, reason):
         self.origin = None
         self.args = None
         self.reason = reason
