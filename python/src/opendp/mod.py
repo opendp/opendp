@@ -823,12 +823,15 @@ def binary_search(
     :example:
 
     >>> from opendp.mod import binary_search
-    >>> # Float binary search
-    >>> assert binary_search(lambda x: x >= 5.) == 5.
-    >>> assert binary_search(lambda x: x <= 5.) == 5.
-    >>> # Integer binary search
-    >>> assert binary_search(lambda x: x > 5, T=int) == 6
-    >>> assert binary_search(lambda x: x < 5, T=int) == 4
+    >>> binary_search(lambda x: x >= 5.)
+    5.0
+    >>> binary_search(lambda x: x <= 5.)
+    5.0
+
+    >>> binary_search(lambda x: x > 5, T=int)
+    6
+    >>> binary_search(lambda x: x < 5, T=int)
+    4
 
     Find epsilon usage of the gaussian(scale=1.) mechanism applied on a dp mean.
     Assume neighboring datasets differ by up to three additions/removals, and fix delta to 1e-8.

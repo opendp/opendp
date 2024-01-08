@@ -161,10 +161,14 @@ class RuntimeType(object):
         :examples:
 
         >>> from opendp.typing import RuntimeType, L1Distance
-        >>> assert RuntimeType.parse(int) == "i32"
-        >>> assert RuntimeType.parse("i32") == "i32"
-        >>> assert RuntimeType.parse(L1Distance[int]) == "L1Distance<i32>"
-        >>> assert RuntimeType.parse(L1Distance["f32"]) == "L1Distance<f32>"
+        >>> RuntimeType.parse(int)
+        'i32'
+        >>> RuntimeType.parse("i32")
+        'i32'
+        >>> print(RuntimeType.parse(L1Distance[int]))
+        L1Distance<i32>
+        >>> print(RuntimeType.parse(L1Distance["f32"]))
+        L1Distance<f32>
         """
         generics = generics or []
         if isinstance(type_name, RuntimeType):
@@ -272,10 +276,14 @@ class RuntimeType(object):
         :examples:
 
         >>> from opendp.typing import RuntimeType, L1Distance
-        >>> assert RuntimeType.infer(23) == "i32"
-        >>> assert RuntimeType.infer(12.) == "f64"
-        >>> assert RuntimeType.infer(["A", "B"]) == "Vec<String>"
-        >>> assert RuntimeType.infer((12., True, "A")) == "(f64,  bool,String)" # eq doesn't care about whitespace
+        >>> RuntimeType.infer(23)
+        'i32'
+        >>> RuntimeType.infer(12.)
+        'f64'
+        >>> print(RuntimeType.infer(["A", "B"]))
+        Vec<String>
+        >>> print(RuntimeType.infer((12., True, "A")))
+        (f64, bool, String)
         """
         if type(public_example) in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type(public_example)]
