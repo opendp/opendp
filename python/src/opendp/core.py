@@ -24,7 +24,7 @@ __all__ = [
     "measurement_output_distance_type",
     "measurement_output_measure",
     "new_function",
-    "new_user_queryable",
+    "new_queryable",
     "queryable_eval",
     "queryable_query_type",
     "transformation_check",
@@ -535,14 +535,14 @@ def new_function(
 
 
 @versioned
-def new_user_queryable(
+def new_queryable(
     transition,
-    Q: RuntimeTypeDescriptor,
-    A: RuntimeTypeDescriptor
+    Q: Optional[RuntimeTypeDescriptor] = "ExtrinsicObject",
+    A: Optional[RuntimeTypeDescriptor] = "ExtrinsicObject"
 ) -> Any:
     r"""Construct a queryable from a user-defined transition function.
     
-    [new_user_queryable in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.new_user_queryable.html)
+    [new_queryable in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.new_queryable.html)
     
     :param transition: A transition function taking a reference to self, a query, and an internal/external indicator
     :param Q: Query Type
@@ -566,7 +566,7 @@ def new_user_queryable(
     c_A = py_to_c(A, c_type=ctypes.c_char_p)
     
     # Call library function.
-    lib_function = lib.opendp_core__new_user_queryable
+    lib_function = lib.opendp_core__new_queryable
     lib_function.argtypes = [TransitionFn, ctypes.c_char_p, ctypes.c_char_p]
     lib_function.restype = FfiResult
     

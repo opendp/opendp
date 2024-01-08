@@ -102,6 +102,4 @@ def test_user_constructors():
     print(meas(2))
     print(meas.map(1))
 
-    post = dp.new_function(lambda x: x[0], dp.i32)
-
-    print((meas >> post)(2))
+    print((meas >> (lambda x: x[0]))(2))

@@ -124,8 +124,12 @@ class AnyObjectPtr(ctypes.POINTER(AnyObject)): # type: ignore[misc]
     _type_ = AnyObject
 
     def __del__(self):
-        from opendp._data import object_free
-        object_free(self)
+        try:
+            from opendp._data import object_free
+            object_free(self)
+        except (ImportError, TypeError):
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
 
 
 class AnyQueryable(ctypes.Structure):
