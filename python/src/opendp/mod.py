@@ -1,3 +1,11 @@
+'''
+The ``mod`` module provides the classes which implement the
+`OpenDP Programming Framework <../../user/programming-framework/index.html>`_,
+as well as utilities for enabling features and finding parameter values.
+
+The classes here correspond to other top-level modules: For example,
+instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for functions in :py:mod:`opendp.domains`.
+'''
 import ctypes
 from typing import Any, Literal, Type, TypeVar, Union, Tuple, Callable, Optional, overload, TYPE_CHECKING
 
@@ -13,6 +21,11 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     A measurement contains a function and a privacy relation.
     The function releases a differentially-private release.
     The privacy relation maps from an input metric to an output measure.
+
+    See the `Measurement <../../user/programming-framework/core-structures.html#measurement>`_
+    section in the Programming Framework docs for more context.
+
+    Functions for creating measurements are in :py:mod:`opendp.measurements`.
 
     :example:
 
@@ -182,6 +195,11 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     A transformation contains a function and a stability relation.
     The function maps from an input domain to an output domain.
     The stability relation maps from an input metric to an output metric.
+
+    See the `Transformation <../../user/programming-framework/core-structures.html#transformation>`_
+    section in the Programming Framework docs for more context.
+
+    Functions for creating transformations are in :py:mod:`opendp.transformations`.
 
     :example:
 
@@ -402,6 +420,10 @@ class Queryable(object):
         
 
 class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
+    '''
+    See the `Function <../../user/programming-framework/supporting-elements.html#function>`_
+    section in the Programming Framework docs for more context.
+    '''
     _type_ = AnyFunction
 
     def __call__(self, arg):
@@ -422,6 +444,12 @@ class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
 
 
 class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
+    '''
+    See the `Domain <../../user/programming-framework/supporting-elements.html#domain>`_
+    section in the Programming Framework docs for more context.
+
+    Functions for creating domains are in :py:mod:`opendp.domains`.
+    '''
     _type_ = AnyDomain
 
     def member(self, val):
@@ -465,6 +493,12 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
 
 
 class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
+    '''
+    See the `Metric <../../user/programming-framework/supporting-elements.html#metric>`_
+    section in the Programming Framework docs for more context.
+
+    Functions for creating metrics are in :py:mod:`opendp.metrics`.
+    '''
     _type_ = AnyMetric
 
     @property
@@ -499,6 +533,12 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
 
 
 class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
+    '''
+    See the `Measure <../../user/programming-framework/supporting-elements.html#measure>`_
+    section in the Programming Framework docs for more context.
+
+    Functions for creating measures are in :py:mod:`opendp.measures`.
+    '''
     _type_ = AnyMeasure
 
     @property
@@ -583,7 +623,7 @@ class OpenDPException(Exception):
 
     def __str__(self) -> str: # pragma: no cover
         response = ''
-        if self.raw_traceback:
+        if self.raw_traceback and 'rust-stack-trace' in GLOBAL_FEATURES:
             # join and split by newlines because frames may be multi-line
             lines = "\n".join(self.frames()[::-1]).split('\n')
             response += "Continued Rust stack trace:\n" + '\n'.join('    ' + line for line in lines)
@@ -783,12 +823,15 @@ def binary_search(
     :example:
 
     >>> from opendp.mod import binary_search
-    >>> # Float binary search
-    >>> assert binary_search(lambda x: x >= 5.) == 5.
-    >>> assert binary_search(lambda x: x <= 5.) == 5.
-    >>> # Integer binary search
-    >>> assert binary_search(lambda x: x > 5, T=int) == 6
-    >>> assert binary_search(lambda x: x < 5, T=int) == 4
+    >>> binary_search(lambda x: x >= 5.)
+    5.0
+    >>> binary_search(lambda x: x <= 5.)
+    5.0
+
+    >>> binary_search(lambda x: x > 5, T=int)
+    6
+    >>> binary_search(lambda x: x < 5, T=int)
+    4
 
     Find epsilon usage of the gaussian(scale=1.) mechanism applied on a dp mean.
     Assume neighboring datasets differ by up to three additions/removals, and fix delta to 1e-8.

@@ -1,3 +1,10 @@
+'''
+The ``typing`` module provides utilities that bridge between Python and Rust types.
+OpenDP relies on precise descriptions of data types to make its security guarantees:
+These are more natural in Rust with its fine-grained type system,
+but they may feel out of place in Python. These utilities try to fill that gap.
+'''
+
 import sys
 import typing
 from collections.abc import Hashable
@@ -154,10 +161,14 @@ class RuntimeType(object):
         :examples:
 
         >>> from opendp.typing import RuntimeType, L1Distance
-        >>> assert RuntimeType.parse(int) == "i32"
-        >>> assert RuntimeType.parse("i32") == "i32"
-        >>> assert RuntimeType.parse(L1Distance[int]) == "L1Distance<i32>"
-        >>> assert RuntimeType.parse(L1Distance["f32"]) == "L1Distance<f32>"
+        >>> RuntimeType.parse(int)
+        'i32'
+        >>> RuntimeType.parse("i32")
+        'i32'
+        >>> print(RuntimeType.parse(L1Distance[int]))
+        L1Distance<i32>
+        >>> print(RuntimeType.parse(L1Distance["f32"]))
+        L1Distance<f32>
         """
         generics = generics or []
         if isinstance(type_name, RuntimeType):
