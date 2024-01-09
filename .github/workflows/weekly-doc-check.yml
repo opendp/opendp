@@ -10,6 +10,20 @@ on:
   workflow_dispatch:
 
 jobs:
+  rust-docs:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: rust
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Build docs, fail if warnings
+        run: RUSTDOCFLAGS='-D warnings' cargo rustdoc --no-deps
+
   check-links:
     runs-on: ubuntu-22.04
     defaults:
