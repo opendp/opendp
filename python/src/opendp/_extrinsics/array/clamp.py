@@ -1,8 +1,18 @@
-from opendp.extrinsics._utilities import register_transformation
+from opendp._extrinsics._utilities import register_transformation
+from opendp.mod import Domain, Metric, Transformation
 
 
-def make_np_clamp(input_domain, input_metric, norm, p=2, origin=None):
-    """Construct a new Transformation that clamps the norm of input data."""
+def make_np_clamp(
+    input_domain: Domain, input_metric: Metric, norm, p, origin=None
+) -> Transformation:
+    """Construct a Transformation that clamps the norm of input data.
+
+    :param input_domain: instance of `np_array2_domain(...)`
+    :param input_metric: instance of `symmetric_distance()`
+    :param norm: clamp each row to this norm. Required if data is not already bounded
+    :param p: designates L`p` norm
+    :param origin: norm clamping is centered on this point. Defaults to zero
+    """
     import opendp.prelude as dp
     import numpy as np  # type: ignore[import]
 

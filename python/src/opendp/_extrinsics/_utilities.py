@@ -1,8 +1,8 @@
-from typing import Callable, Union
+from typing import Callable, Optional, Union
 from opendp.mod import PartialConstructor, Measurement, Transformation
 
 
-def to_then(constructor):
+def to_then(constructor) -> Callable[..., PartialConstructor]:
     """Convert any `make_` constructor to a `then_` constructor"""
 
     def then_func(*args, **kwargs):
@@ -11,12 +11,13 @@ def to_then(constructor):
                 input_domain, input_metric, *args, **kwargs
             )
         )
+
     then_func.__name__ = constructor.__name__.replace("make_", "then_", 1)
     then_func.__doc__ = f"partial constructor of {constructor.__name__}"
     return then_func
 
 
-def _register(module_name, constructor):
+def _register(module_name, constructor) -> Callable[..., PartialConstructor]:  # type: ignore[return]
     import importlib
     import inspect
 
@@ -49,12 +50,15 @@ def register_measurement(
 def register_combinator(
     constructor: Callable[..., Union[Transformation, Measurement]],
 ) -> Callable[..., PartialConstructor]:
-    return _register("combinators", constructor) # pragma: no cover
+    return _register("combinators", constructor)  # pragma: no cover
 
 
-def with_privacy(t_constructor: Callable) -> Callable[..., Union[Transformation, Measurement]]:
+def with_privacy(
+    t_constructor: Callable,
+) -> Callable[..., Union[Transformation, Measurement]]:
     from opendp.mod import assert_features
     from opendp.measurements import then_gaussian, then_laplace
+
     def private_constructor(input_domain, input_metric, privacy_measure, scale):
         assert_features("contrib")
         m_constructor = {
@@ -72,4 +76,3 @@ def with_privacy(t_constructor: Callable) -> Callable[..., Union[Transformation,
             "Transformation", "Measurement"
         )
     return private_constructor
-

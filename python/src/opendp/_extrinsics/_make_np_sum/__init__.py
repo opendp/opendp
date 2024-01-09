@@ -1,13 +1,20 @@
-from opendp.extrinsics._utilities import to_then, with_privacy
+from opendp._extrinsics._utilities import to_then, with_privacy
+from opendp.mod import Domain, Metric, Transformation
 
 
 # planning to make this public, but may make more API changes
 
 
-def make_np_sum(input_domain, input_metric):
-    """Construct a new Transformation that computes a sum over the row axis of a 2-dimensional array."""
+def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
+    """Construct a Transformation that computes a sum over the row axis of a 2-dimensional array.
+
+    :param input_domain: instance of `np_array2_domain(size=_, num_columns=_)`
+    :param input_metric: instance of `symmetric_distance()`
+
+    :returns a Measurement that computes the DP sum
+    """
     import opendp.prelude as dp
-    import numpy as np # type: ignore[import]
+    import numpy as np  # type: ignore[import]
 
     dp.assert_features("contrib", "floating-point")
 

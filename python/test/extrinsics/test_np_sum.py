@@ -8,7 +8,7 @@ dp.enable_features("honest-but-curious", "contrib", "floating-point")
 @pytest.mark.skipif('numpy' not in sys.modules, reason="Numpy needed")
 def test_np_sum():
     import numpy as np
-    from opendp.extrinsics._make_np_sum import then_np_sum
+    from opendp._extrinsics._make_np_sum import then_np_sum
 
     # unsized data
     space = dp.np_array2_domain(norm=1., p=2, T=float), dp.symmetric_distance()
@@ -28,9 +28,9 @@ def test_np_sum():
 @pytest.mark.skipif('numpy' not in sys.modules, reason="Numpy needed")
 def test_private_np_sum():
     import numpy as np
-    from opendp.extrinsics._make_np_sum import then_private_np_sum
+    from opendp._extrinsics._make_np_sum import then_private_np_sum
     space = dp.np_array2_domain(norm=1., p=2, T=float), dp.symmetric_distance()
-    trans = space >> then_private_np_sum(dp.zero_concentrated_divergence(T=float), scale=1.)
+    meas = space >> then_private_np_sum(dp.zero_concentrated_divergence(T=float), scale=1.)
     data = np.random.normal(size=(1000, 4))
-    print(trans(data))
-    assert trans.map(1) == 0.5
+    print(meas(data))
+    assert meas.map(1) == 0.5

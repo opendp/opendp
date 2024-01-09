@@ -1,6 +1,6 @@
 import sys
 import opendp.prelude as dp
-from opendp.extrinsics.domains import _np_SSCP_domain
+from opendp._extrinsics.domains import _np_SSCP_domain
 import pytest
 
 dp.enable_features("honest-but-curious", "contrib", "floating-point")
@@ -9,7 +9,7 @@ dp.enable_features("honest-but-curious", "contrib", "floating-point")
 @pytest.mark.skipif('numpy' not in sys.modules, reason="Numpy needed")
 def test_private_np_eigenvector():
     import numpy as np
-    from opendp.extrinsics._make_np_eigenvector import then_private_eigenvector
+    from opendp._extrinsics._make_np_eigenvector import then_private_eigenvector
 
     space = (
         _np_SSCP_domain(num_features=4, norm=1.0, p=2, T=float),
@@ -31,9 +31,9 @@ def test_private_np_eigenvector():
 @pytest.mark.skipif('numpy' not in sys.modules, reason="Numpy needed")
 def test_eigenvector_integration():
     import numpy as np
-    from opendp.extrinsics.make_np_clamp import then_np_clamp
-    from opendp.extrinsics._make_np_xTx import then_np_xTx
-    from opendp.extrinsics._make_np_eigenvector import then_private_eigenvector
+    from opendp._extrinsics.make_np_clamp import then_np_clamp
+    from opendp._extrinsics._make_np_xTx import then_np_xTx
+    from opendp._extrinsics._make_np_eigenvector import then_private_eigenvector
 
     num_columns = 4
     space = (
@@ -54,9 +54,9 @@ def test_eigenvector_integration():
 @pytest.mark.skipif('scipy' not in sys.modules, reason="Scipy needed")
 def test_eigenvectors():
     import numpy as np
-    from opendp.extrinsics.make_np_clamp import then_np_clamp
-    from opendp.extrinsics._make_np_xTx import then_np_xTx
-    from opendp.extrinsics._make_np_eigenvector import then_private_np_eigenvectors
+    from opendp._extrinsics.make_np_clamp import then_np_clamp
+    from opendp._extrinsics._make_np_xTx import then_np_xTx
+    from opendp._extrinsics._make_np_eigenvector import then_private_np_eigenvectors
 
     num_columns = 4
     space = (

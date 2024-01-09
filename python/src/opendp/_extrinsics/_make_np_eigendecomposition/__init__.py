@@ -1,18 +1,23 @@
 from __future__ import annotations
+from typing import List
 
-from opendp.extrinsics.make_l2_to_l1_norm import then_l2_to_l1_norm
-from opendp.extrinsics._utilities import register_measurement
-from opendp.extrinsics._make_np_eigenvector import then_private_np_eigenvectors
-from opendp.extrinsics._make_np_eigenvalues import then_np_eigenvalues
-from opendp.extrinsics._make_np_xTx import make_np_xTx
+from opendp._extrinsics._utilities import register_measurement
+from opendp._extrinsics._make_np_eigenvector import then_private_np_eigenvectors
+from opendp._extrinsics._make_np_eigenvalues import then_np_eigenvalues
+from opendp._extrinsics._make_np_xTx import make_np_xTx
 
-from opendp.mod import Measurement
+from opendp.mod import Domain, Metric, Measurement
 
 
 def make_private_np_eigendecomposition(
-    input_domain, input_metric, eigvals_epsilon, eigvecs_epsilons, num_components=None
+    input_domain: Domain,
+    input_metric: Metric,
+    eigvals_epsilon: float,
+    eigvecs_epsilons: List[float],
+    num_components: int | None = None,
 ) -> Measurement:
-    """
+    """Construct a Measurement that releases eigenvalues and eigenvectors.
+
     :param input_domain: instance of `np_array2_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
     :param eigvals_epsilon: eigvals ε-expenditure per changed record in the input data
@@ -37,16 +42,18 @@ def make_private_np_eigendecomposition(
     if input_domain.num_columns < 1:
         raise ValueError("input_domain's num_columns must be >= 1")
 
+    if num_components is not None and num_components < 1:
+        raise ValueError("num_components must be least one")
+    
     # if number of components is not specified, default to num_columns
     num_components = num_components or input_domain.num_columns
 
-
     t_cov = make_np_xTx(input_domain, input_metric, dp.symmetric_distance())
 
-    t_eigvals = t_cov.output_space >> then_np_eigenvalues() >> then_l2_to_l1_norm()
+    t_eigvals = t_cov.output_space >> then_np_eigenvalues()
     m_eigvals = dp.binary_search_chain(  # type: ignore[misc]
         lambda s: t_eigvals >> dp.m.then_laplace(s),
-        d_in=2, # the unit d_in: one change = 1 addition + 1 removal
+        d_in=2,  # the unit d_in: one change = 1 addition + 1 removal
         d_out=eigvals_epsilon,
     )
     m_eigvecs = t_cov.output_space >> then_private_np_eigenvectors(

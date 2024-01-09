@@ -1,9 +1,9 @@
 import sys
 import opendp.prelude as dp
-from opendp.extrinsics.make_np_clamp import then_np_clamp
+from opendp._extrinsics.make_np_clamp import then_np_clamp
 import pytest
 
-dp.enable_features("honest-but-curious", "contrib", "floating-point")
+dp.enable_features("honest-but-curious", "contrib")
 
 
 @pytest.mark.skipif('numpy' not in sys.modules, reason="Numpy needed")

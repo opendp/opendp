@@ -1,9 +1,10 @@
-from opendp.extrinsics.make_np_pca import make_private_np_pca
+from __future__ import annotations
+from opendp._extrinsics.make_np_pca import make_private_np_pca
 from opendp.mod import Measurement
 
 
 try:
-    from sklearn.decomposition._pca import PCA as SKLPCA  # type: ignore[import]
+    from sklearn.decomposition import PCA as SKLPCA  # type: ignore[import]
 except ImportError:
 
     class SKLPCA(object):  # type: ignore[no-redef]
@@ -73,8 +74,8 @@ class PCA(SKLPCA):
     def _postprocess(self, values):
         """A function that applies a release of the mean and eigendecomposition to self"""
         import numpy as np
-        from sklearn.utils.extmath import stable_cumsum, svd_flip  # type: ignore[import]
-        from sklearn.decomposition._pca import _infer_dimension
+        from sklearn.utils.extmath import stable_cumsum, svd_flip # type: ignore[import]
+        from sklearn.decomposition._pca import _infer_dimension # type: ignore[import]
 
         self.mean_, S, Vt = values
 
@@ -82,6 +83,7 @@ class PCA(SKLPCA):
         _, components_ = svd_flip(Vt.T, Vt)
         U = None
 
+        # CODE BELOW THIS POINT IS FROM SKLEARN
         # Get variance explained by singular values
         explained_variance_ = np.sort((S**2) / (self.n_samples - 1))[::-1]
         total_var = explained_variance_.sum()
@@ -96,7 +98,7 @@ class PCA(SKLPCA):
             # variance percentage is superior to the desired threshold
             # side='right' ensures that number of features selected
             # their variance is always greater than n_components float
-            # passed. More discussion in issue: #15669
+            # passed. More discussion in issue: https://github.com/scikit-learn/scikit-learn/pull/15669
             ratio_cumsum = stable_cumsum(explained_variance_ratio_)
             n_components = (
                 np.searchsorted(ratio_cumsum, self.n_components, side="right") + 1

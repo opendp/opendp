@@ -19,7 +19,7 @@ def test_type_getters():
     assert measurement.input_distance_type == "i32"
     assert measurement.output_distance_type == "f64"
     assert measurement.input_carrier_type == "i32"
-test_type_getters()
+
 
 def test_chain():
     data = [1, 2, 3, 4, 5]

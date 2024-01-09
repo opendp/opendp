@@ -1,13 +1,13 @@
 from __future__ import annotations
 from typing import NamedTuple, List, Optional
 
-from opendp.extrinsics.make_np_clamp import then_np_clamp
-from opendp.extrinsics._utilities import register_measurement, to_then
-from opendp.extrinsics._make_np_mean import make_private_np_mean
-from opendp.extrinsics._make_np_eigendecomposition import (
+from opendp._extrinsics.make_np_clamp import then_np_clamp
+from opendp._extrinsics._utilities import register_measurement, to_then
+from opendp._extrinsics._make_np_mean import make_private_np_mean
+from opendp._extrinsics._make_np_eigendecomposition import (
     then_private_np_eigendecomposition,
 )
-from opendp.mod import Measurement
+from opendp.mod import Domain, Metric, Measurement
 
 
 class PCAEpsilons(NamedTuple):
@@ -17,20 +17,21 @@ class PCAEpsilons(NamedTuple):
 
 
 def make_private_np_pca(
-    input_domain,
-    input_metric,
+    input_domain: Domain,
+    input_metric: Metric,
     unit_epsilon: float | PCAEpsilons,
-    norm=None,
+    norm: float | None = None,
     num_components=None,
 ) -> Measurement:
-    """
+    """Construct a Measurement that returns the data mean, singular values and right singular vectors.
+
     :param input_domain: instance of `np_array2_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
     :param unit_epsilon: ε-expenditure per changed record in the input data
-    :param num_components: optional, number of eigenvectors to release. defaults to num_columns from input_domain
     :param norm: clamp each row to this norm bound
+    :param num_components: optional, number of eigenvectors to release. defaults to num_columns from input_domain
 
-    :returns a Measurement that computes a tuple of (mean, eigvals, eigvecs)
+    :returns a Measurement that computes a tuple of (mean, S, Vt)
     """
     import opendp.prelude as dp
     import numpy as np
@@ -53,25 +54,27 @@ def make_private_np_pca(
 
     if input_domain.num_columns < 1:
         raise ValueError("input_domain's num_columns must be >= 1")
-    
-    num_components = input_domain.num_columns if num_components is None else num_components
-    
+
+    num_components = (
+        input_domain.num_columns if num_components is None else num_components
+    )
+
     if isinstance(unit_epsilon, float):
         num_eigvec_releases = min(num_components, input_domain.num_columns - 1)
         unit_epsilon = _split_pca_epsilon_evenly(
             unit_epsilon, num_eigvec_releases, estimate_mean=input_domain.origin is None
         )
-    
+
     if not isinstance(unit_epsilon, PCAEpsilons):
         raise ValueError("epsilon must be a float or instance of PCAEpsilons")
-    
+
     eigvals_epsilon, eigvecs_epsilons, mean_epsilon = unit_epsilon
 
     def eig_to_SVt(decomp):
         eigvals, eigvecs = decomp
-        return np.sqrt(eigvals)[::-1], eigvecs[:, ::-1].T
-    
-    def make_eigdecomp(origin):
+        return np.sqrt(eigvals)[::-1], eigvecs.T
+
+    def make_eigdecomp(norm, origin):
         return (
             (input_domain, input_metric)
             >> then_np_clamp(norm, p=2, origin=origin)
@@ -80,10 +83,15 @@ def make_private_np_pca(
             >> (lambda out: PCAResult(origin, *eig_to_SVt(out)))
         )
 
-    if input_domain.origin is not None:
+    if input_domain.norm is not None:
         if mean_epsilon is not None:
             raise ValueError("mean_epsilon should be zero because origin is known")
-        return make_eigdecomp(input_domain.origin)
+        norm = input_domain.norm if norm is None else norm
+        norm = min(input_domain.norm, norm)
+        return make_eigdecomp(norm, input_domain.origin)
+    elif norm is None:
+        raise ValueError("must have either bounded `input_domain` or specify `norm`")
+
 
     # make releases under the assumption that d_in is 2.
     unit_d_in = 2
@@ -93,7 +101,7 @@ def make_private_np_pca(
         input_metric,
         dp.max_divergence(T=input_domain.T),
         d_in=unit_d_in,
-        d_mids=[mean_epsilon, make_eigdecomp(0).map(unit_d_in)],
+        d_mids=[mean_epsilon, make_eigdecomp(norm, 0).map(unit_d_in)],
     )
 
     def function(data):
@@ -111,8 +119,7 @@ def make_private_np_pca(
         )
         origin = qbl(m_mean)
         # make full release
-        return qbl(make_eigdecomp(origin))
-
+        return qbl(make_eigdecomp(norm, origin))
 
     return dp.m.make_user_measurement(
         input_domain,
@@ -136,9 +143,7 @@ def _smaller(v):
     return v if v == 0 else np.nextafter(v, -1)
 
 
-def _split_pca_epsilon_evenly(
-    unit_epsilon, num_eigvec_releases, estimate_mean=False
-):
+def _split_pca_epsilon_evenly(unit_epsilon, num_eigvec_releases, estimate_mean=False):
     num_queries = 3 if estimate_mean else 2
     per_query_epsilon = unit_epsilon / num_queries
     per_evec_epsilon = per_query_epsilon / num_eigvec_releases
@@ -155,6 +160,8 @@ def _make_center(input_domain, input_metric):
     import opendp.prelude as dp
     import numpy as np
 
+    dp.assert_features("contrib", "floating-point")
+
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
@@ -162,7 +169,7 @@ def _make_center(input_domain, input_metric):
             **{
                 **input_domain.descriptor._asdict(),
                 "origin": np.zeros(input_domain.num_columns),
-            }
+            }  # type: ignore[arg-type]
         ),
         input_metric,
         lambda arg: arg - input_domain.origin,

@@ -1,8 +1,6 @@
 # To add dev dependencies, make changes here and then
-# regenerate requirements-dev.txt by first installing pip tools:
-#   pip install pip-tools
+# regenerate requirements-dev.txt by running
 #
-# then run:
 #   pip-compile requirements-dev.in
 #
 # and then commit this file and requirements-dev.txt.

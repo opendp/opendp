@@ -1,14 +1,18 @@
 from __future__ import annotations
-from typing import NamedTuple, Optional, Literal
+from typing import NamedTuple, Literal
 from opendp.mod import Domain
+from opendp.typing import RuntimeTypeDescriptor, ELEMENTARY_TYPES
 from opendp._convert import ATOM_MAP
 
 
-def check_norm_and_p(norm, p):
+def _check_norm_and_p(norm: float | None, p: int | None):
+    """Checks that a scalar L`p` `norm` is well-defined"""
     if (norm is None) != (p is None):
         raise ValueError("norm and p must both be set")
 
     if norm is not None:
+        if isinstance(norm, int):
+            norm = float(norm)
         if not isinstance(norm, float):
             raise ValueError("norm must be float")
         if norm < 0.0:
@@ -18,7 +22,7 @@ def check_norm_and_p(norm, p):
         raise ValueError("p must be 1 or 2")
 
 
-def check_nonnegative_int(v, name):
+def _check_nonnegative_int(v: int | None, name: str):
     if v is not None:
         if not isinstance(v, int):
             raise ValueError(f"{name} must be an integer")
@@ -26,10 +30,20 @@ def check_nonnegative_int(v, name):
             raise ValueError(f"{name} must be non-negative")
 
 
+def _fmt_attrs(attrs: NamedTuple) -> str:
+    return ", ".join(f"{k}={v}" for k, v in attrs._asdict().items() if v is not None)
+
+
 def np_array2_domain(
-    *, norm=None, p=None, origin=None, size=None, num_columns=None, T=None
+    *,
+    norm: float | None = None,
+    p: Literal[1, 2, None] = None,
+    origin=None,
+    size: int | None = None,
+    num_columns: int | None = None,
+    T: RuntimeTypeDescriptor | None = None,
 ) -> Domain:
-    """Construct a new Domain representing 2-dimensional numpy arrays.
+    """Construct a Domain representing 2-dimensional numpy arrays.
 
     :param norm: each row in x is bounded by the norm
     :param p: designates L`p` norm
@@ -41,15 +55,7 @@ def np_array2_domain(
     import numpy as np  # type: ignore[import]
     import opendp.prelude as dp
 
-    class NPArray2Descriptor(NamedTuple):
-        origin: Optional[np.ndarray]
-        norm: Optional[np.ndarray]
-        p: Literal[1, 2, None]
-        size: Optional[int]
-        num_columns: Optional[int]
-        T: str | dp.RuntimeType
-
-    check_norm_and_p(norm, p)
+    _check_norm_and_p(norm, p)
 
     if norm is not None:
         # normalize origin to a scalar
@@ -63,6 +69,12 @@ def np_array2_domain(
         origin = np.array(origin)
 
     if isinstance(origin, np.ndarray):
+        if origin.dtype.kind in {"i", "u"}:
+            origin = origin.astype(float)
+
+        if origin.dtype.kind != "f":
+            raise ValueError("origin array must be numeric")
+
         if origin.ndim == 0:
             if origin != 0:
                 raise ValueError("scalar origin must be zero")
@@ -75,35 +87,33 @@ def np_array2_domain(
                 num_columns = origin.size
             if num_columns != origin.size:
                 raise ValueError(f"origin must have num_columns={num_columns} values")
-        
+
         if origin.ndim not in {0, 1}:
             raise ValueError("origin must have 0 or 1 dimensions")
-        
+
     elif origin is not None:
         raise ValueError("origin must be a scalar or ndarray")
 
-    check_nonnegative_int(size, "size")
-    check_nonnegative_int(num_columns, "num_columns")
+    _check_nonnegative_int(size, "size")
+    _check_nonnegative_int(num_columns, "num_columns")
 
-    T = dp.parse_or_infer(T, norm)
+
+    T = T or ELEMENTARY_TYPES.get(origin.dtype.type)
+    if T is None:
+        raise ValueError("must specify T, the type of data in the array")
+    T = dp.RuntimeType.parse(T)
     if T not in ATOM_MAP:
-        raise ValueError(f"T must be in {ATOM_MAP}")
-
-    desc = NPArray2Descriptor(
-        origin=origin,
-        norm=norm,
-        p=p,
-        size=size,
-        num_columns=num_columns,
-        T=T,
-    )
+        raise ValueError(f"T must be in an elementary type")
 
     def member(x):
         if not isinstance(x, np.ndarray):
             raise TypeError("must be a numpy ndarray")
+        T_actual = ELEMENTARY_TYPES.get(x.dtype.type)
+        if T_actual != T:
+            raise TypeError(f"expected data of type {T}, got {T_actual}")
         if x.ndim != 2:
             raise ValueError("Expected 2-dimensional array")
-        if num_columns is not None and x.shape[0] != num_columns:
+        if num_columns is not None and x.shape[1] != num_columns:
             raise ValueError(f"must have {num_columns} columns")
         if origin is not None:
             x = x - origin
@@ -115,31 +125,72 @@ def np_array2_domain(
             raise ValueError(f"expected exactly {size} rows")
         return True
 
-    attrs = ", ".join(f"{k}={v}" for k, v in desc._asdict().items() if v is not None)
-    return dp.user_domain(f"NPArray2Domain({attrs})", member, desc)
+    class NPArray2Descriptor(NamedTuple):
+        origin: np.ndarray | None
+        norm: float | None
+        p: Literal[1, 2, None]
+        size: int | None
+        num_columns: int | None
+        T: str | dp.RuntimeType
+
+    desc = NPArray2Descriptor(
+        origin=origin,
+        norm=norm,
+        p=p,
+        size=size,
+        num_columns=num_columns,
+        T=T,
+    )
+
+    return dp.user_domain(f"NPArray2Domain({_fmt_attrs(desc)})", member, desc)
 
 
-def _np_SSCP_domain(*, norm=None, p=None, size=None, num_features=None, T) -> Domain:
+def _np_SSCP_domain(
+    *,
+    norm: float | None = None,
+    p: Literal[1, 2, None] = None,
+    size: int | None = None,
+    num_features: int | None = None,
+    T: RuntimeTypeDescriptor = float,
+) -> Domain:
     """The domain of sums of squares and cross products matrices formed by computing x^Tx,
     for some dataset x.
 
-    :param num_features: number of rows/columns in the matrix
     :param norm: each row in x is bounded by the norm
     :param p: designates L`p` norm
     :param size: number of rows in data
+    :param num_features: number of rows/columns in the matrix
     """
     import opendp.prelude as dp
     import numpy as np  # type: ignore[import]
 
-    check_norm_and_p(norm, p)
-    check_nonnegative_int(size, "size")
-    check_nonnegative_int(num_features, "num_features")
+    _check_norm_and_p(norm, p)
+    _check_nonnegative_int(size, "size")
+    _check_nonnegative_int(num_features, "num_features")
+
+    if T is None:
+        raise ValueError("must specify T, the type of data in the array")
+    T = dp.RuntimeType.parse(T)
+    if T not in {dp.f32, dp.f64}:
+        raise ValueError(f"T must be a float type")
+
+    def member(x):
+        import numpy as np  # type: ignore[import]
+
+        if not isinstance(x, np.ndarray):
+            raise TypeError("must be a numpy ndarray")
+        T_actual = ELEMENTARY_TYPES.get(x.dtype.type)
+        if T_actual != T:
+            raise TypeError(f"expected data of type {T}, got {T_actual}")
+        if x.shape != (num_features,) * 2:
+            raise ValueError(f"expected a square array with {num_features} features")
+        return True
 
     class NPSSCPDescriptor(NamedTuple):
-        num_features: Optional[np.ndarray]
-        norm: Optional[np.ndarray]
+        num_features: int | None
+        norm: float | None
         p: Literal[1, 2, None]
-        size: Optional[int]
+        size: int | None
         T: str | dp.RuntimeType
 
     desc = NPSSCPDescriptor(
@@ -147,19 +198,7 @@ def _np_SSCP_domain(*, norm=None, p=None, size=None, num_features=None, T) -> Do
         norm=norm,
         p=p,
         size=size,
-        T=dp.RuntimeType.parse(T),
+        T=T,
     )
 
-    def member(x):
-        import numpy as np  # type: ignore[import]
-
-        if not isinstance(x, np.ndarray):
-            raise TypeError("must be a numpy ndarray")
-        if x.shape != (num_features,) * 2:
-            raise ValueError(f"expected a square array with {num_features} features")
-        return True
-
-    attrs = ", ".join(f"{k}={v}" for k, v in desc._asdict().items() if v is not None)
-    ident = f"NPSSCPDomain({attrs})"
-
-    return dp.user_domain(ident, member, desc)
+    return dp.user_domain(f"NPSSCPDomain({_fmt_attrs(desc)})", member, desc)
