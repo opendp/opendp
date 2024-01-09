@@ -120,7 +120,6 @@ def make_private_np_pca(
         compositor.output_measure,
         function,
         compositor.map,
-        TO="ExtrinsicObject",
     )
 
 

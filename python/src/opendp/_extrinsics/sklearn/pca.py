@@ -68,7 +68,7 @@ class PCA(SKLPCA):
             self.epsilon / self.n_changes * 2,
             norm=self.row_norm,
             num_components=n_estimated_components,
-        ) >> dp.new_function(self._postprocess, TO="ExtrinsicObject")
+        ) >> self._postprocess
 
     def _postprocess(self, values):
         """A function that applies a release of the mean and eigendecomposition to self"""
@@ -120,11 +120,7 @@ class PCA(SKLPCA):
 
     def measurement(self) -> Measurement:
         """Return a measurement that releases a fitted model."""
-        import opendp.prelude as dp
-
-        return self._prepare_fitter() >> dp.new_function(
-            lambda _: self, TO="ExtrinsicObject"
-        )
+        return self._prepare_fitter() >> (lambda _: self)
 
     # overrides an sklearn method
     def _validate_params(*args, **kwargs):

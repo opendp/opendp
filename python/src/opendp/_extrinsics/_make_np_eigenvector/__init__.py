@@ -120,7 +120,6 @@ def make_private_np_eigenvectors(input_domain, input_metric, unit_epsilons):
         privacy_measure,
         function,
         lambda d_in: d_in // 2 * m_compose.map(2),
-        TO="ExtrinsicObject",
     )
 
 

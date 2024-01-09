@@ -33,9 +33,7 @@ def make_private_np_mean(
     if norm is not None:
         t_sum = t_clamp >> t_sum
 
-    return t_sum >> dp.new_function(
-        lambda sums: np.array(sums) / size, TO="ExtrinsicObject"
-    )
+    return t_sum >> (lambda sums: np.array(sums) / size)
 
 
 # generate then variant of the constructor

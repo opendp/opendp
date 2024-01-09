@@ -259,7 +259,6 @@ def test_extrinsic_free():
         dp.max_divergence(T=float),
         lambda x: x,
         lambda _: 0.0,
-        TO="ExtrinsicObject",
     )
 
     import gc
@@ -300,7 +299,6 @@ def test_user_distance():
         lambda _: 0.0,
         # clearly not actually tCDP
         lambda d_in: lambda omega: d_in * omega * 2,
-        TO="ExtrinsicObject",
     )
 
     assert meas(2.0) == 0.0

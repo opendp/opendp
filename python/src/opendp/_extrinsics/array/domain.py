@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import NamedTuple, Optional, Literal
 from opendp.mod import Domain
 from opendp._convert import ATOM_MAP
