@@ -3,6 +3,28 @@ from opendp.mod import Domain
 from opendp._convert import ATOM_MAP
 
 
+def check_norm_and_p(norm, p):
+    if (norm is None) != (p is None):
+        raise ValueError("norm and p must both be set")
+
+    if norm is not None:
+        if not isinstance(norm, float):
+            raise ValueError("norm must be float")
+        if norm < 0.0:
+            raise ValueError("norm must be non-negative")
+
+    if p not in {None, 1, 2}:
+        raise ValueError("p must be 1 or 2")
+
+
+def check_nonnegative_int(v, name):
+    if v is not None:
+        if not isinstance(v, int):
+            raise ValueError(f"{name} must be an integer")
+        if v < 0:
+            raise ValueError(f"{name} must be non-negative")
+
+
 def np_array2_domain(
     *, norm=None, p=None, origin=None, size=None, num_columns=None, T=None
 ) -> Domain:
@@ -26,19 +48,11 @@ def np_array2_domain(
         num_columns: Optional[int]
         T: str | dp.RuntimeType
 
-    if (norm is None) != (p is None):
-        raise ValueError("norm and p must both be set")
+    check_norm_and_p(norm, p)
 
     if norm is not None:
-        if not isinstance(norm, float):
-            raise ValueError("norm must be float")
-        if norm < 0.0:
-            raise ValueError("norm must be non-negative")
         # normalize origin to a scalar
         origin = origin if origin is not None else 0.0
-
-    if p not in {None, 1, 2}:
-        raise ValueError("p must be 1 or 2")
 
     if norm is None and origin is not None:
         raise ValueError("origin may only be set if data has bounded norm")
@@ -60,17 +74,12 @@ def np_array2_domain(
                 num_columns = origin.size
             if num_columns != origin.size:
                 raise ValueError(f"origin must have num_columns={num_columns} values")
-        else:
+        
+        if origin.ndim not in {0, 1}:
             raise ValueError("origin must have 0 or 1 dimensions")
+        
     elif origin is not None:
         raise ValueError("origin must be a scalar or ndarray")
-
-    def check_nonnegative_int(v, name):
-        if v is not None:
-            if not isinstance(v, int):
-                raise ValueError(f"{name} must be an integer")
-            if size < 0:
-                raise ValueError(f"{name} must be non-negative")
 
     check_nonnegative_int(size, "size")
     check_nonnegative_int(num_columns, "num_columns")
@@ -109,7 +118,7 @@ def np_array2_domain(
     return dp.user_domain(f"NPArray2Domain({attrs})", member, desc)
 
 
-def _np_SSCP_domain(*, num_features, norm=None, p=None, size=None, T) -> Domain:
+def _np_SSCP_domain(*, norm=None, p=None, size=None, num_features=None, T) -> Domain:
     """The domain of sums of squares and cross products matrices formed by computing x^Tx,
     for some dataset x.
 
@@ -118,14 +127,27 @@ def _np_SSCP_domain(*, num_features, norm=None, p=None, size=None, T) -> Domain:
     :param p: designates L`p` norm
     :param size: number of rows in data
     """
-    desc = locals()
     import opendp.prelude as dp
+    import numpy as np  # type: ignore[import]
 
-    desc["T"] = dp.RuntimeType.parse(T)
+    check_norm_and_p(norm, p)
+    check_nonnegative_int(size, "size")
+    check_nonnegative_int(num_features, "num_features")
 
-    if num_features is not None:
-        if isinstance(num_features, int) and num_features < 0:
-            raise ValueError("num_features must be non-negative")
+    class NPSSCPDescriptor(NamedTuple):
+        num_features: Optional[np.ndarray]
+        norm: Optional[np.ndarray]
+        p: Literal[1, 2, None]
+        size: Optional[int]
+        T: str | dp.RuntimeType
+
+    desc = NPSSCPDescriptor(
+        num_features=num_features,
+        norm=norm,
+        p=p,
+        size=size,
+        T=dp.RuntimeType.parse(T),
+    )
 
     def member(x):
         import numpy as np  # type: ignore[import]
@@ -136,6 +158,7 @@ def _np_SSCP_domain(*, num_features, norm=None, p=None, size=None, T) -> Domain:
             raise ValueError(f"expected a square array with {num_features} features")
         return True
 
-    ident = f"NPSSCPDomain({', '.join(f'{k} = {v}' for k, v in desc.items())})"
+    attrs = ", ".join(f"{k}={v}" for k, v in desc._asdict().items() if v is not None)
+    ident = f"NPSSCPDomain({attrs})"
 
     return dp.user_domain(ident, member, desc)

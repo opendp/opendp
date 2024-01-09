@@ -1,4 +1,4 @@
-from opendp.extrinsics.make_np_pca import make_private_np_pca, split_pca_epsilon_evenly
+from opendp.extrinsics.make_np_pca import make_private_np_pca
 from opendp.mod import Measurement
 
 
@@ -66,8 +66,8 @@ class PCA(SKLPCA):
             input_domain,
             input_metric,
             self.epsilon / self.n_changes * 2,
-            num_components=n_estimated_components,
             norm=self.row_norm,
+            num_components=n_estimated_components,
         ) >> dp.new_function(self._postprocess, TO="ExtrinsicObject")
 
     def _postprocess(self, values):

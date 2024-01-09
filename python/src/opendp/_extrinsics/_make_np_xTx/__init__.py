@@ -12,21 +12,19 @@ def make_np_xTx(input_domain, input_metric, output_metric):
 
     if not str(input_domain).startswith("NPArray2Domain"):
         raise ValueError("input_domain must be NPArray2Domain")
-
-    descriptor = input_domain.descriptor
     
-    if "num_columns" not in descriptor:
+    if input_domain.num_columns is None:
         raise ValueError("num_columns must be known in input_domain")
     
     if output_metric.type == "SymmetricDistance":
         stability = lambda d_in: d_in
     elif output_metric.type.origin == "L2Distance":
-        norm, p, size = map(descriptor.get, ("norm", "p", "size"))
-        if norm is None or p != 2:
+        norm = input_domain.norm
+        if input_domain.p != 2:
             raise ValueError("rows in input_domain must have bounded L2 norm")
         
-        if size is None:
-            origin = np.atleast_1d(descriptor.get("origin", 0.0))
+        if input_domain.size is None:
+            origin = np.atleast_1d(input_domain.origin)
             norm += np.linalg.norm(origin, ord=2)
             stability = lambda d_in: d_in * norm**2
         else:
@@ -38,11 +36,11 @@ def make_np_xTx(input_domain, input_metric, output_metric):
         input_domain,
         input_metric,
         _np_SSCP_domain(
-            num_features=descriptor["num_columns"],
-            norm=descriptor.get("norm"),
-            p=descriptor.get("p"),
-            size=descriptor.get("size"),
-            T=descriptor["T"],
+            num_features=input_domain.num_columns,
+            norm=input_domain.norm,
+            p=input_domain.p,
+            size=input_domain.size,
+            T=input_domain.T,
         ),
         output_metric,
         lambda arg: arg.T @ arg,

@@ -10,7 +10,7 @@ from opendp.extrinsics._make_np_eigendecomposition import (
 from opendp.mod import Measurement
 
 
-class PCABudget(NamedTuple):
+class PCAEpsilons(NamedTuple):
     eigvals: float
     eigvecs: List[float]
     mean: Optional[float]
@@ -19,9 +19,9 @@ class PCABudget(NamedTuple):
 def make_private_np_pca(
     input_domain,
     input_metric,
-    epsilon: float | PCABudget,
-    num_components=None,
+    unit_epsilon: float | PCAEpsilons,
     norm=None,
+    num_components=None,
 ) -> Measurement:
     """
     :param input_domain: instance of `np_array2_domain(size=_, num_columns=_)`
@@ -54,16 +54,18 @@ def make_private_np_pca(
     if input_domain.num_columns < 1:
         raise ValueError("input_domain's num_columns must be >= 1")
     
-    if isinstance(epsilon, float):
-        num_eigvec_releases = min(num_components, input_domain.num_features - 1)
-        epsilon = split_pca_epsilon_evenly(
-            epsilon, num_eigvec_releases, estimate_mean=True
+    num_components = input_domain.num_columns if num_components is None else num_components
+    
+    if isinstance(unit_epsilon, float):
+        num_eigvec_releases = min(num_components, input_domain.num_columns - 1)
+        unit_epsilon = _split_pca_epsilon_evenly(
+            unit_epsilon, num_eigvec_releases, estimate_mean=input_domain.origin is None
         )
     
-    if not isinstance(epsilon, PCABudget):
-        raise ValueError("epsilon must be a float or instance of PCABudget")
+    if not isinstance(unit_epsilon, PCAEpsilons):
+        raise ValueError("epsilon must be a float or instance of PCAEpsilons")
     
-    eigvals_epsilon, eigvecs_epsilons, mean_epsilon = epsilon
+    eigvals_epsilon, eigvecs_epsilons, mean_epsilon = unit_epsilon
 
     def eig_to_SVt(decomp):
         eigvals, eigvecs = decomp
@@ -78,7 +80,7 @@ def make_private_np_pca(
             >> (lambda out: PCAResult(origin, *eig_to_SVt(out)))
         )
 
-    if input_domain.norm is not None:
+    if input_domain.origin is not None:
         if mean_epsilon is not None:
             raise ValueError("mean_epsilon should be zero because origin is known")
         return make_eigdecomp(input_domain.origin)
@@ -86,13 +88,12 @@ def make_private_np_pca(
     # make releases under the assumption that d_in is 2.
     unit_d_in = 2
 
-    epsilon_eigh = sum(eigvals_epsilon, *eigvecs_epsilons)
     compositor = dp.c.make_sequential_composition(
         input_domain,
         input_metric,
         dp.max_divergence(T=input_domain.T),
         d_in=unit_d_in,
-        d_mids=[mean_epsilon, epsilon_eigh],
+        d_mids=[mean_epsilon, make_eigdecomp(0).map(unit_d_in)],
     )
 
     def function(data):
@@ -109,7 +110,6 @@ def make_private_np_pca(
             T=float,
         )
         origin = qbl(m_mean)
-
         # make full release
         return qbl(make_eigdecomp(origin))
 
@@ -124,6 +124,10 @@ def make_private_np_pca(
     )
 
 
+# generate then variant of the constructor
+then_private_np_pca = register_measurement(make_private_np_pca)
+
+
 def _smaller(v):
     """returns the next non-negative float closer to zero"""
     import numpy as np
@@ -133,7 +137,7 @@ def _smaller(v):
     return v if v == 0 else np.nextafter(v, -1)
 
 
-def split_pca_epsilon_evenly(
+def _split_pca_epsilon_evenly(
     unit_epsilon, num_eigvec_releases, estimate_mean=False
 ):
     num_queries = 3 if estimate_mean else 2
@@ -141,15 +145,11 @@ def split_pca_epsilon_evenly(
     per_evec_epsilon = per_query_epsilon / num_eigvec_releases
 
     # use conservatively smaller budgets to prevent totals from exceeding total epsilon
-    return {
-        "mean_epsilon": 0 if estimate_mean else _smaller(per_query_epsilon),
-        "eigval_epsilon": per_query_epsilon,
-        "eigvec_epsilons": [_smaller(per_evec_epsilon)] * num_eigvec_releases,
-    }
-
-
-# generate then variant of the constructor
-then_private_np_pca = register_measurement(make_private_np_pca)
+    return PCAEpsilons(
+        eigvals=per_query_epsilon,
+        eigvecs=[_smaller(per_evec_epsilon)] * num_eigvec_releases,
+        mean=_smaller(per_query_epsilon) if estimate_mean else None,
+    )
 
 
 def _make_center(input_domain, input_metric):

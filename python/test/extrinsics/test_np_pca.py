@@ -25,14 +25,14 @@ def sample_covariance(num_features):
 
 @pytest.mark.skipif('scipy' not in sys.modules, reason="Scipy needed")
 def test_pca():
-    from opendp.extrinsics._make_np_eigendecomposition import then_private_np_eigendecomposition
+    from opendp.extrinsics.make_np_pca import then_private_np_pca
     num_columns = 4
     num_rows = 10_000
     space = (
         dp.np_array2_domain(num_columns=num_columns, size=num_rows, T=float),
         dp.symmetric_distance(),
     )
-    m_pca = space >> then_private_np_eigendecomposition(1.0, norm=25.0)
+    m_pca = space >> then_private_np_pca(unit_epsilon=1.0, norm=25.0)
 
     print(m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)))
     assert m_pca.check(2, 1.)

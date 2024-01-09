@@ -1,4 +1,5 @@
 use opendp_derive::bootstrap;
+use std::fmt::Debug;
 
 use crate::{
     combinators::assert_components_match,
@@ -64,7 +65,7 @@ pub fn make_sequential_composition<
 where
     DI::Carrier: 'static + Clone,
     MI::Distance: 'static + TotalOrd + Clone + Send + Sync,
-    MO::Distance: 'static + TotalOrd + Clone + Send + Sync,
+    MO::Distance: 'static + TotalOrd + Clone + Send + Sync + Debug,
     (DI, MI): MetricSpace,
 {
     if d_mids.len() == 0 {
@@ -129,7 +130,12 @@ where
 
                         // check that the query doesn't consume too much privacy
                         if !measurement.check(&d_in, d_mid)? {
-                            return fallible!(FailedFunction, "insufficient budget for query");
+                            return fallible!(
+                                FailedFunction,
+                                "insufficient budget for query: {:?} > {:?}",
+                                measurement.map(&d_in)?,
+                                d_mid
+                            );
                         }
 
                         let answer = if output_measure.concurrent()? {

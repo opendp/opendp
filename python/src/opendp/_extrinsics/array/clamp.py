@@ -35,7 +35,7 @@ def make_np_clamp(input_domain, input_metric, norm, p=2, origin=None):
         input_metric,
         dp.np_array2_domain(
             **{
-                **input_domain.descriptor._todict(),
+                **input_domain.descriptor._asdict(),
                 "norm": norm,
                 "p": p,
                 "origin": origin,
