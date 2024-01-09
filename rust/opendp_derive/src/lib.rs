@@ -190,7 +190,7 @@ mod full;
 /// We can communicate this to the bindings generation by setting the rust type manually.
 /// ```no_run
 /// #[bootstrap(
-///     arguments(bounds(rust_type = "(T, T)"))),
+///     arguments(bounds(rust_type = "(T, T)")),
 ///     generics(TA(example = "$get_first(bounds)"))
 /// )]
 /// fn make_unclamp<T>(bounds: (Bound<T>, Bound<T>)) -> S::Atom {
@@ -213,7 +213,7 @@ mod full;
 /// We can then use this inferred type to specify the rust type.
 /// ```no_run
 /// #[bootstrap(
-///     arguments(bounds(rust_type = "(T, T)"))),
+///     arguments(bounds(rust_type = "(T, T)")),
 ///     derived_types(T = "$get_first(bounds)")
 /// )]
 /// fn my_func<S: Summable>(bounds: (S::Atom, S::Atom)) -> S::Atom {
