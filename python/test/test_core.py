@@ -242,10 +242,9 @@ def test_user_domain():
 
 
 def test_extrinsic_free():
-    domain = dp.user_domain("anything", lambda _: True)
-    sc_meas = dp.c.make_sequential_composition(
-        domain,
-        dp.symmetric_distance(),
+    space = dp.user_domain("anything", lambda _: True), dp.symmetric_distance()
+
+    sc_meas = space >> dp.c.then_sequential_composition(
         dp.max_divergence(T=float),
         d_in=1,
         d_mids=[1.0],
@@ -256,9 +255,7 @@ def test_extrinsic_free():
     # at this point []'s refcount is zero, but has not been freed yet, because the gc has not run
     # however, a pointer to [] is stored inside qbl
 
-    query = dp.m.make_user_measurement(
-        domain,
-        dp.symmetric_distance(),
+    query = space >> dp.m.then_user_measurement(
         dp.max_divergence(T=float),
         lambda x: x,
         lambda _: 0.0,

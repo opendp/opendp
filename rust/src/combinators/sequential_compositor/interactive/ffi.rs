@@ -45,7 +45,7 @@ fn make_sequential_composition(
     output_measure: AnyMeasure,
     d_in: AnyObject,
     d_mids: Vec<AnyObject>,
-) -> Fallible<AnyMeasurement> {
+) -> Fallible<Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>> {
     fn monomorphize<
         QI: 'static + TotalOrd + Clone + Send + Sync,
         QO: 'static + TotalOrd + Clone + Send + Sync,

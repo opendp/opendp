@@ -20,7 +20,8 @@ __all__ = [
     "make_pureDP_to_fixed_approxDP",
     "make_pureDP_to_zCDP",
     "make_sequential_composition",
-    "make_zCDP_to_approxDP"
+    "make_zCDP_to_approxDP",
+    "then_sequential_composition"
 ]
 
 
@@ -343,6 +344,13 @@ def make_sequential_composition(
     
     [make_sequential_composition in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_sequential_composition.html)
     
+    **Supporting Elements:**
+    
+    * Input Domain:   `AnyDomain`
+    * Output Type:    `AnyObject`
+    * Input Metric:   `AnyMetric`
+    * Output Measure: `AnyMeasure`
+    
     :param input_domain: indicates the space of valid input datasets
     :type input_domain: Domain
     :param input_metric: how distances are measured between members of the input domain
@@ -364,8 +372,8 @@ def make_sequential_composition(
     QO = get_distance_type(output_measure) # type: ignore
     
     # Convert arguments to c types.
-    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=AnyDomain)
-    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=AnyMetric)
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=AnyMeasure)
     c_d_in = py_to_c(d_in, c_type=AnyObjectPtr, type_name=get_distance_type(input_metric))
     c_d_mids = py_to_c(d_mids, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[QO]))
@@ -378,6 +386,31 @@ def make_sequential_composition(
     output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_d_in, c_d_mids), Measurement))
     
     return output
+
+def then_sequential_composition(
+    output_measure: Measure,
+    d_in: Any,
+    d_mids: Any
+):  
+    r"""partial constructor of make_sequential_composition
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.combinators.make_sequential_composition`
+
+    :param output_measure: how privacy is measured
+    :type output_measure: Measure
+    :param d_in: maximum distance between adjacent input datasets
+    :type d_in: Any
+    :param d_mids: maximum privacy expenditure of each query
+    :type d_mids: Any
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_sequential_composition(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        output_measure=output_measure,
+        d_in=d_in,
+        d_mids=d_mids))
+
 
 
 @versioned
