@@ -37,7 +37,7 @@ def test_pca():
 
     print(m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)))
     assert m_pca.check(2, 1.0)
-test_pca()
+
 
 @pytest.mark.skipif("sklearn" not in sys.modules, reason="Scikit-Learn needed")
 def test_pca_skl():
@@ -121,6 +121,9 @@ def flaky_test_pca_compare_sklearn():
     print("skl components\n", skl_comp)
     print("diff\n", odp_comp - skl_comp)
     assert np.allclose(odp_comp, skl_comp, atol=1e-3)
+
+    print(model_skl.explained_variance_)
+    print(model_odp.explained_variance_)
 
 
 @pytest.mark.skipif("sklearn" not in sys.modules, reason="Scikit-Learn needed")

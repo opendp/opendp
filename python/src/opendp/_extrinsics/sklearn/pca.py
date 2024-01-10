@@ -78,41 +78,44 @@ class PCA(SKLPCA):
         from sklearn.decomposition._pca import _infer_dimension # type: ignore[import]
 
         self.mean_, S, Vt = values
-
-        # flip eigenvectors' sign to enforce deterministic output
-        _, components_ = svd_flip(Vt.T, Vt)
-        U = None
+        U = Vt.T
+        n_samples, n_features = self.n_samples, self.n_features_in_
+        n_components = self.n_components
 
         # CODE BELOW THIS POINT IS FROM SKLEARN
+        # flip eigenvectors' sign to enforce deterministic output
+        U, Vt = svd_flip(U, Vt)
+
+        components_ = Vt
+
         # Get variance explained by singular values
-        explained_variance_ = np.sort((S**2) / (self.n_samples - 1))[::-1]
-        total_var = explained_variance_.sum()
+        explained_variance_ = (S**2) / (n_samples - 1)
+        total_var = np.sum(explained_variance_)
         explained_variance_ratio_ = explained_variance_ / total_var
-        singular_values_ = S.copy()  # Store the singular values.
+        singular_values_ = S # Store the singular values. 
 
         # Postprocess the number of components required
-        if self.n_components == "mle":
-            n_components = _infer_dimension(explained_variance_, self.n_samples)
-        elif 0 < self.n_components < 1.0:
+        if n_components == "mle":
+            n_components = _infer_dimension(explained_variance_, n_samples)
+        elif 0 < n_components < 1.0:
             # number of components for which the cumulated explained
             # variance percentage is superior to the desired threshold
             # side='right' ensures that number of features selected
             # their variance is always greater than n_components float
             # passed. More discussion in issue: https://github.com/scikit-learn/scikit-learn/pull/15669
-            ratio_cumsum = stable_cumsum(explained_variance_ratio_)
-            n_components = (
-                np.searchsorted(ratio_cumsum, self.n_components, side="right") + 1
-            )
-        else:
-            n_components = self.n_components
+            explained_variance_ratio_np = explained_variance_ratio_
+            ratio_cumsum = stable_cumsum(explained_variance_ratio_np)
+            n_components = np.searchsorted(ratio_cumsum, n_components, side="right") + 1
+
         # Compute noise covariance using Probabilistic PCA model
         # The sigma2 maximum likelihood (cf. eq. 12.46)
-        if n_components < min(self.n_features_in_, self.n_samples):
-            self.noise_variance_ = explained_variance_[n_components:].mean()
+        if n_components < min(n_features, n_samples):
+            self.noise_variance_ = np.mean(explained_variance_[n_components:])
         else:
             self.noise_variance_ = 0.0
 
-        self.components_ = components_[:n_components]
+        self.n_samples_ = n_samples
+        self.components_ = components_[:n_components, :]
         self.n_components_ = n_components
         self.explained_variance_ = explained_variance_[:n_components]
         self.explained_variance_ratio_ = explained_variance_ratio_[:n_components]
