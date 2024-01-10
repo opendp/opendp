@@ -27,7 +27,7 @@ const SIZE_FACTOR_DEFAULT: u32 = 50;
 ///
 /// "Differentially Private Sparse Vectors with Low Error, Optimal Space, and Fast Access"
 ///
-/// Available here: arxiv.org/abs/2106.10068
+/// Available here: <https://arxiv.org/abs/2106.10068>
 
 /// Input domain. The mechanism is designed for settings where the domain of K is huge.
 type SparseDomain<K, C> = MapDomain<AtomDomain<K>, AtomDomain<C>>;
@@ -60,7 +60,7 @@ fn pre_hash<K: Hash>(x: K) -> u64 {
 /// * where l must be lt 64
 ///
 /// The hash function is 2-approximate universal and uniform.
-/// See http://hjemmesider.diku.dk/~jyrki/Paper/CP-11.4.1997.pdf
+/// See <http://hjemmesider.diku.dk/~jyrki/Paper/CP-11.4.1997.pdf>
 /// "A Reliable Randomized Algorithm for the Closest-Pair Problem"
 fn hash(x: u64, a: u64, b: u64, l: u32) -> usize {
     (a.wrapping_mul(x).wrapping_add(b) >> (64 - l)) as usize
