@@ -192,7 +192,7 @@ impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, InsertDeleteDistance) {
 /// so this metric is not generic over the distance type like many other metrics.
 ///
 /// WLOG, most OpenDP interfaces need only consider unbounded metrics.
-/// Use [`crate::transformations::make_metric_unbounded`] and [`crate::transformations::make_metric_bounded`]
+/// Use [`make_metric_unbounded`](../transformations/fn.make_metric_unbounded.html) and [`make_metric_bounded`](../transformations/fn.make_metric_bounded.html)
 /// to convert to/from the symmetric distance.
 ///
 /// # Compatible Domains
@@ -257,7 +257,7 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, ChangeOneDistance) {
 /// so this metric is not generic over the distance type like many other metrics.
 ///
 /// WLOG, most OpenDP interfaces need only consider unbounded metrics.
-/// Use [`crate::transformations::make_metric_unbounded`] and [`crate::transformations::make_metric_bounded`]
+/// Use [`make_metric_unbounded`](../transformations/fn.make_metric_unbounded.html) and [`make_metric_bounded`](../transformations/fn.make_metric_bounded.html)
 /// to convert to/from the symmetric distance.
 ///
 /// # Compatible Domains
