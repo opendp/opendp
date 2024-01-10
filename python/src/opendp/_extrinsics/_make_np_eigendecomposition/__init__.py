@@ -4,7 +4,7 @@ from typing import List
 from opendp._extrinsics._utilities import register_measurement
 from opendp._extrinsics._make_np_eigenvector import then_private_np_eigenvectors
 from opendp._extrinsics._make_np_eigenvalues import then_np_eigenvalues
-from opendp._extrinsics._make_np_xTx import make_np_xTx
+from opendp._extrinsics._make_np_sscp import make_np_sscp
 
 from opendp.mod import Domain, Metric, Measurement
 
@@ -44,22 +44,24 @@ def make_private_np_eigendecomposition(
 
     if num_components is not None and num_components < 1:
         raise ValueError("num_components must be least one")
-    
+
     # if number of components is not specified, default to num_columns
     num_components = num_components or input_domain.num_columns
 
-    t_cov = make_np_xTx(input_domain, input_metric, dp.symmetric_distance())
+    t_sscp = make_np_sscp(
+        input_domain, input_metric, dp.symmetric_distance()
+    )
 
-    t_eigvals = t_cov.output_space >> then_np_eigenvalues()
+    t_eigvals = t_sscp.output_space >> then_np_eigenvalues()
     m_eigvals = dp.binary_search_chain(  # type: ignore[misc]
         lambda s: t_eigvals >> dp.m.then_laplace(s),
         d_in=2,  # the unit d_in: one change = 1 addition + 1 removal
         d_out=eigvals_epsilon,
     )
-    m_eigvecs = t_cov.output_space >> then_private_np_eigenvectors(
+    m_eigvecs = t_sscp.output_space >> then_private_np_eigenvectors(
         eigvecs_epsilons,
     )
-    return t_cov >> dp.c.make_basic_composition([m_eigvals, m_eigvecs])
+    return t_sscp >> dp.c.make_basic_composition([m_eigvals, m_eigvecs])
 
 
 # generate then variant of the constructor

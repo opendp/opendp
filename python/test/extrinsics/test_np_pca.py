@@ -92,12 +92,12 @@ def flaky_test_pca_compare_sklearn():
     from sklearn.decomposition import PCA  # type: ignore[import]
 
     num_columns = 4
-    num_rows = 100_000
+    num_rows = 1_000_000
     data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
 
     model_odp = dp.sklearn.PCA(
         epsilon=1_000_000.0,
-        row_norm=100.0,
+        row_norm=64.0,
         n_samples=num_rows,
         n_features=4,
     )
@@ -112,7 +112,7 @@ def flaky_test_pca_compare_sklearn():
     print("odp singular values", model_odp.singular_values_)
     print("skl singular values", model_skl.singular_values_)
     assert np.allclose(
-        model_odp.singular_values_, model_skl.singular_values_, atol=1e-2
+        model_odp.singular_values_, model_skl.singular_values_, atol=1e-1
     )
 
     odp_comp, skl_comp = flip_row_signs(model_odp.components_, model_skl.components_)

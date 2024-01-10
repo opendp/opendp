@@ -1,6 +1,6 @@
 import sys
 import opendp.prelude as dp
-from opendp._extrinsics.domains import _np_SSCP_domain
+from opendp._extrinsics.domains import _np_sscp_domain
 import pytest
 
 dp.enable_features("honest-but-curious", "contrib", "floating-point")
@@ -12,7 +12,7 @@ def test_private_np_eigenvector():
     from opendp._extrinsics._make_np_eigenvector import then_private_eigenvector
 
     space = (
-        _np_SSCP_domain(num_features=4, norm=1.0, p=2, T=float),
+        _np_sscp_domain(num_features=4, norm=1.0, p=2, T=float),
         dp.symmetric_distance(),
     )
     meas = space >> then_private_eigenvector(unit_epsilon=100_000.0)
@@ -32,7 +32,7 @@ def test_private_np_eigenvector():
 def test_eigenvector_integration():
     import numpy as np
     from opendp._extrinsics.make_np_clamp import then_np_clamp
-    from opendp._extrinsics._make_np_xTx import then_np_xTx
+    from opendp._extrinsics._make_np_sscp import then_np_sscp
     from opendp._extrinsics._make_np_eigenvector import then_private_eigenvector
 
     num_columns = 4
@@ -42,8 +42,8 @@ def test_eigenvector_integration():
     )
     meas = (
         space
-        >> then_np_clamp(norm=4.0, p=2)
-        >> then_np_xTx(dp.symmetric_distance())
+        >> then_np_clamp(norm=1.0, p=2)
+        >> then_np_sscp(dp.symmetric_distance())
         >> then_private_eigenvector(1.0)
     )
 
@@ -55,7 +55,7 @@ def test_eigenvector_integration():
 def test_eigenvectors():
     import numpy as np
     from opendp._extrinsics.make_np_clamp import then_np_clamp
-    from opendp._extrinsics._make_np_xTx import then_np_xTx
+    from opendp._extrinsics._make_np_sscp import then_np_sscp
     from opendp._extrinsics._make_np_eigenvector import then_private_np_eigenvectors
 
     num_columns = 4
@@ -66,7 +66,7 @@ def test_eigenvectors():
     meas = (
         space
         >> then_np_clamp(norm=4.0, p=2)
-        >> then_np_xTx(dp.symmetric_distance())
+        >> then_np_sscp(dp.symmetric_distance())
         >> then_private_np_eigenvectors([1.0] * 3)
     )
     data = np.random.normal(size=(1000, num_columns))

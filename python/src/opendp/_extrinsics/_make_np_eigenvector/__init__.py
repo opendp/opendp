@@ -1,4 +1,5 @@
-from opendp._extrinsics.domains import _np_SSCP_domain
+from opendp._extrinsics.domains import _np_sscp_domain
+from opendp._extrinsics._make_np_sscp import make_np_sscp_scale_norm
 from opendp._extrinsics._utilities import to_then
 from opendp.mod import Domain, Metric, Transformation, Measurement
 from typing import List
@@ -11,13 +12,17 @@ def make_private_np_eigenvector(
 ) -> Measurement:
     """Construct a Measurement that releases a private eigenvector from a covariance matrix.
 
-    :param input_domain: instance of `_np_SSCP_domain(size=_, num_columns=_)`
+    :param input_domain: instance of `_np_sscp_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
+    :param unit_epsilon: ε-expenditure per changed record in the input data
     """
     import numpy as np  # type: ignore[import]
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "floating-point")
+
+    if input_domain.p != 2 or input_domain.norm > 1:
+        raise ValueError("input_domain must have L2-norm bounded above by 1")
 
     if input_metric != dp.symmetric_distance():
         raise ValueError("expected symmetric distance input metric")
@@ -38,7 +43,7 @@ def make_private_np_eigenvector(
         #   the equality is against 1 not 0
         # Instead of using bounds of (1, d), increase the upper bound for numerical stability
         b = dp.binary_search(
-            lambda b: sum(1 / (b + 2 * A_eigvals)) >= 1, bounds=(.9, float(d))
+            lambda b: sum(1 / (b + 2 * A_eigvals)) >= 1, bounds=(0.9, float(d))
         )
         Omega = np.eye(d) + 2 * A / b
 
@@ -59,7 +64,7 @@ def make_private_np_eigenvector(
         input_metric,
         dp.max_divergence(T=float),
         function,
-        lambda d_in: d_in // 2 * unit_epsilon,
+        lambda d_in: d_in / 2 * unit_epsilon,
         TO=dp.Vec[input_domain.T],
     )
 
@@ -68,17 +73,17 @@ def make_private_np_eigenvector(
 then_private_eigenvector = to_then(make_private_np_eigenvector)
 
 
-def _make_np_SSCP_projection(
+def make_np_sscp_projection(
     input_domain: Domain, input_metric: Metric, P
 ) -> Transformation:
     """Construct a Transformation that projects an SSCP matrix.
 
     In order for the output_domain to follow,
-    the singular values of `P` must be bounded above by 1, 
+    the singular values of `P` must be bounded above by 1,
     so as not to increase the row norms in the implied X matrix,
     as the row norms are simply passed through.
 
-    :param input_domain: instance of `_np_SSCP_domain(size=_, num_columns=_)`
+    :param input_domain: instance of `_np_sscp_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
     :param P: a projection whose singular values are no greater than 1
     """
@@ -93,7 +98,7 @@ def _make_np_SSCP_projection(
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        _np_SSCP_domain(
+        _np_sscp_domain(
             **{**input_domain.descriptor._asdict(), "num_features": P.shape[0]}
         ),
         input_metric,
@@ -102,6 +107,10 @@ def _make_np_SSCP_projection(
         lambda cov: P @ cov @ P.T,  # c: update the covariance matrix
         lambda d_in: d_in,
     )
+
+
+# generate then variant of the constructor
+then_np_sscp_projection = to_then(make_np_sscp_projection)
 
 
 def make_private_np_eigenvectors(
@@ -113,25 +122,29 @@ def make_private_np_eigenvectors(
 
     dp.assert_features("contrib", "floating-point")
 
-    privacy_measure = dp.max_divergence(T=input_domain.T)
+    if input_domain.p != 2:
+        raise ValueError("input_domain must have bounded L2 row norm")
 
     if len(unit_epsilons) > input_domain.num_features - 1:
         raise ValueError(
             f"must specify at most {input_domain.num_features - 1} unit_epsilons"
         )
 
-    m_compose = dp.c.make_sequential_composition(
-        input_domain, input_metric, privacy_measure, 2, unit_epsilons
+    privacy_measure = dp.max_divergence(T=input_domain.T)
+    t_sscp_scale_norm = make_np_sscp_scale_norm(input_domain, input_metric, 1)
+    m_compose = t_sscp_scale_norm >> dp.c.then_sequential_composition(
+        privacy_measure, 2, unit_epsilons
     )
 
     def function(C):
         nonlocal input_domain, input_metric
+
         # Algorithm 1: http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=5
 
-        # 1.i Initialize C_1 = C inside compositor. 
-        #     C_i will be computed by `_make_np_SSCP_projection`
+        # 1.i Initialize C_1 = C inside compositor.
+        #     C_i will be computed by `_make_np_sscp_projection`
         qbl = m_compose(C)
-        del C # only the compositor has the data now
+        del C  # only the compositor has the data now
 
         # 1.ii initialize P_1 with the identity matrix
         P = np.eye(input_domain.num_features)
@@ -141,11 +154,12 @@ def make_private_np_eigenvectors(
 
         # 2. only runs until epsilons are exhausted, not until num_features
         for epsilon_i in unit_epsilons:
-
             # 2.a.i: sample \hat{u}
-            m_eigvec = _make_np_SSCP_projection( # 2.c happens inside this transformation
-                input_domain, input_metric, P
-            ) >> then_private_eigenvector(epsilon_i)
+            m_eigvec = (
+                t_sscp_scale_norm.output_space
+                >> then_np_sscp_projection(P) # 2.c happens inside this transformation
+                >> then_private_eigenvector(epsilon_i)
+            )
             u = qbl(m_eigvec)
 
             # 2.a.ii: extend the set of eigenvectors
@@ -164,7 +178,7 @@ def make_private_np_eigenvectors(
     return dp.m.make_user_measurement(
         input_domain,
         input_metric,
-        privacy_measure,
+        m_compose.output_measure,
         function,
         lambda d_in: d_in / 2 * m_compose.map(2),
     )

@@ -1,5 +1,5 @@
 import sys
-from opendp._extrinsics.domains import _np_SSCP_domain
+from opendp._extrinsics.domains import _np_sscp_domain
 import opendp.prelude as dp
 import pytest
 
@@ -43,17 +43,17 @@ def test_np_array2_domain():
 
 
 @pytest.mark.skipif("numpy" not in sys.modules, reason="Numpy needed")
-def test_np_xTx_domain():
+def test_np_sscp_domain():
     import numpy as np
 
-    domain = _np_SSCP_domain(num_features=4, T=float)
+    domain = _np_sscp_domain(num_features=4, T=float)
     domain.member(np.random.normal(size=(4, 4)))
 
-    domain = _np_SSCP_domain(num_features=4, T=dp.f32)
+    domain = _np_sscp_domain(num_features=4, T=dp.f32)
     domain.member(np.random.normal(size=(4, 4)).astype(np.float32))
 
     with pytest.raises(dp.OpenDPException):
         domain.member(np.random.normal(size=(4, 4)))
 
     with pytest.raises(ValueError):
-        _np_SSCP_domain(T=bool)
+        _np_sscp_domain(T=bool)

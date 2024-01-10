@@ -1,11 +1,11 @@
 from opendp._extrinsics._utilities import to_then
-from opendp._extrinsics.domains import _np_SSCP_domain
+from opendp._extrinsics.domains import _np_sscp_domain
 from opendp.mod import Domain, Metric, Transformation
 
 # planning to make this public, but may make more API changes
 
 
-def make_np_xTx(
+def make_np_sscp(
     input_domain: Domain, input_metric: Metric, output_metric: Metric
 ) -> Transformation:
     """Construct a Transformation that computes a covariance matrix from the input data.
@@ -22,7 +22,7 @@ def make_np_xTx(
     dp.assert_features("contrib", "floating-point")
 
     if not str(input_domain).startswith("NPArray2Domain"):
-        raise ValueError("input_domain must be NPArray2Domain")
+        raise ValueError("input_domain must be a 2d-numpy array domain")
 
     if input_domain.num_columns is None:
         raise ValueError("num_columns must be known in input_domain")
@@ -48,7 +48,7 @@ def make_np_xTx(
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        _np_SSCP_domain(
+        _np_sscp_domain(
             num_features=input_domain.num_columns,
             norm=input_domain.norm,
             p=input_domain.p,
@@ -62,4 +62,42 @@ def make_np_xTx(
 
 
 # generate then variant of the constructor
-then_np_xTx = to_then(make_np_xTx)
+then_np_sscp = to_then(make_np_sscp)
+
+
+def make_np_sscp_scale_norm(
+    input_domain: Domain,
+    input_metric: Metric,
+    norm: float,
+) -> Transformation:
+    import opendp.prelude as dp
+    import numpy as np
+
+    if not str(input_domain).startswith("NPSSCPDomain"):
+        raise ValueError("input_domain must be a SSCP domain")
+    
+    if input_domain.norm is None:
+        raise ValueError("input_domain must have bounded norm")
+
+    if input_metric != dp.symmetric_distance():
+        raise ValueError("input_metric must be the symmetric distance")
+
+    #   c * (a^p + b^p)^(1/p)
+    # = (c^p)^(1/p) * (a^p + b^p)^(1/p)
+    # = (c^p * (a^p + b^p))^(1/p)
+    # = ((ca)^p + (cb)^p)^(1/p)
+
+    return dp.t.make_user_transformation(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        output_domain=_np_sscp_domain(
+            **{**input_domain.descriptor._asdict(), "norm": norm} # type: ignore[arg-type]
+        ),
+        output_metric=input_metric,
+        function=lambda x: x * (norm / input_domain.norm)**2,
+        stability_map=lambda d_in: d_in,
+    )
+
+
+# generate then variant of the constructor
+then_np_sscp_scale_norm = to_then(make_np_sscp_scale_norm)
