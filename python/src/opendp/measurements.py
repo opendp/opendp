@@ -123,10 +123,19 @@ def then_alp_queryable(
     size_factor = 50,
     alpha = 4,
     CO: Optional[RuntimeTypeDescriptor] = None
-):
-    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+):  
+    r"""partial constructor of make_alp_queryable
 
-    :py:func:`opendp.measurements.make_alp_queryable`
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_alp_queryable`
+
+    :param scale: Privacy loss parameter. This is equal to epsilon/sensitivity.
+    :param total_limit: Either the true value or an upper bound estimate of the sum of all values in the input.
+    :param value_limit: Upper bound on individual values (referred to as β). Entries above β are clamped.
+    :param size_factor: Optional multiplier (default of 50) for setting the size of the projection.
+    :param alpha: Optional parameter (default of 4) for scaling and determining p in randomized response step.
+    :param CO: 
+    :type CO: :py:ref:`RuntimeTypeDescriptor`
     """
     return PartialConstructor(lambda input_domain, input_metric: make_alp_queryable(
         input_domain=input_domain,
@@ -202,10 +211,15 @@ def make_base_discrete_gaussian(
 def then_base_discrete_gaussian(
     scale,
     MO: Optional[RuntimeTypeDescriptor] = "ZeroConcentratedDivergence<QO>"
-):
-    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+):  
+    r"""partial constructor of make_base_discrete_gaussian
 
-    :py:func:`opendp.measurements.make_base_discrete_gaussian`
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_base_discrete_gaussian`
+
+    :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
+    :param MO: Output measure. The only valid measure is `ZeroConcentratedDivergence<QO>`, but QO can be any float.
+    :type MO: :py:ref:`RuntimeTypeDescriptor`
     """
     return PartialConstructor(lambda input_domain, input_metric: make_base_discrete_gaussian(
         input_domain=input_domain,
@@ -282,10 +296,15 @@ def make_base_discrete_laplace(
 def then_base_discrete_laplace(
     scale,
     QO: Optional[RuntimeTypeDescriptor] = None
-):
-    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+):  
+    r"""partial constructor of make_base_discrete_laplace
 
-    :py:func:`opendp.measurements.make_base_discrete_laplace`
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_base_discrete_laplace`
+
+    :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+    :param QO: Data type of the output distance and scale. `f32` or `f64`.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
     """
     return PartialConstructor(lambda input_domain, input_metric: make_base_discrete_laplace(
         input_domain=input_domain,
@@ -360,10 +379,15 @@ def make_base_discrete_laplace_cks20(
 def then_base_discrete_laplace_cks20(
     scale,
     QO: Optional[RuntimeTypeDescriptor] = None
-):
-    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+):  
+    r"""partial constructor of make_base_discrete_laplace_cks20
 
-    :py:func:`opendp.measurements.make_base_discrete_laplace_cks20`
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_base_discrete_laplace_cks20`
+
+    :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+    :param QO: Data type of the output distance and scale.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
     """
     return PartialConstructor(lambda input_domain, input_metric: make_base_discrete_laplace_cks20(
         input_domain=input_domain,
@@ -446,10 +470,17 @@ def then_base_discrete_laplace_linear(
     scale,
     bounds: Optional[Any] = None,
     QO: Optional[RuntimeTypeDescriptor] = None
-):
-    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+):  
+    r"""partial constructor of make_base_discrete_laplace_linear
 
-    :py:func:`opendp.measurements.make_base_discrete_laplace_linear`
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_base_discrete_laplace_linear`
+
+    :param scale: Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
+    :param bounds: Set bounds on the count to make the algorithm run in constant-time.
+    :type bounds: Any
+    :param QO: Data type of the scale and output distance.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
     """
     return PartialConstructor(lambda input_domain, input_metric: make_base_discrete_laplace_linear(
         input_domain=input_domain,
@@ -531,10 +562,17 @@ def then_base_gaussian(
     scale,
     k: Optional[int] = -1074,
     MO: Optional[RuntimeTypeDescriptor] = "ZeroConcentratedDivergence<T>"
-):
-    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+):  
+    r"""partial constructor of make_base_gaussian
 
-    :py:func:`opendp.measurements.make_base_gaussian`
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_base_gaussian`
+
+    :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
+    :param k: The noise granularity in terms of 2^k.
+    :type k: int
+    :param MO: Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
+    :type MO: :py:ref:`RuntimeTypeDescriptor`
     """
     return PartialConstructor(lambda input_domain, input_metric: make_base_gaussian(
         input_domain=input_domain,
@@ -607,10 +645,17 @@ def then_base_geometric(
     scale,
     bounds: Optional[Any] = None,
     QO: Optional[RuntimeTypeDescriptor] = None
-):
-    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+):  
+    r"""partial constructor of make_base_geometric
 
-    :py:func:`opendp.measurements.make_base_geometric`
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_base_geometric`
+
+    :param scale: 
+    :param bounds: 
+    :type bounds: Any
+    :param QO: 
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
     """
     return PartialConstructor(lambda input_domain, input_metric: make_base_geometric(
         input_domain=input_domain,
@@ -685,10 +730,15 @@ def make_base_laplace(
 def then_base_laplace(
     scale,
     k: Optional[int] = -1074
-):
-    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+):  
+    r"""partial constructor of make_base_laplace
 
-    :py:func:`opendp.measurements.make_base_laplace`
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_base_laplace`
+
+    :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+    :param k: The noise granularity in terms of 2^k.
+    :type k: int
     """
     return PartialConstructor(lambda input_domain, input_metric: make_base_laplace(
         input_domain=input_domain,
@@ -759,10 +809,16 @@ def then_base_laplace_threshold(
     scale,
     threshold,
     k: Optional[int] = -1074
-):
-    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+):  
+    r"""partial constructor of make_base_laplace_threshold
 
-    :py:func:`opendp.measurements.make_base_laplace_threshold`
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_base_laplace_threshold`
+
+    :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+    :param threshold: Exclude counts that are less than this minimum value.
+    :param k: The noise granularity in terms of 2^k.
+    :type k: int
     """
     return PartialConstructor(lambda input_domain, input_metric: make_base_laplace_threshold(
         input_domain=input_domain,
@@ -835,10 +891,15 @@ def make_gaussian(
 def then_gaussian(
     scale,
     MO: Optional[RuntimeTypeDescriptor] = "ZeroConcentratedDivergence<QO>"
-):
-    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+):  
+    r"""partial constructor of make_gaussian
 
-    :py:func:`opendp.measurements.make_gaussian`
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_gaussian`
+
+    :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
+    :param MO: Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
+    :type MO: :py:ref:`RuntimeTypeDescriptor`
     """
     return PartialConstructor(lambda input_domain, input_metric: make_gaussian(
         input_domain=input_domain,
@@ -915,10 +976,15 @@ def make_laplace(
 def then_laplace(
     scale,
     QO: Optional[RuntimeTypeDescriptor] = "float"
-):
-    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+):  
+    r"""partial constructor of make_laplace
 
-    :py:func:`opendp.measurements.make_laplace`
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_laplace`
+
+    :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+    :param QO: Data type of the output distance and scale. `f32` or `f64`.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
     """
     return PartialConstructor(lambda input_domain, input_metric: make_laplace(
         input_domain=input_domain,
@@ -1098,10 +1164,18 @@ def then_report_noisy_max_gumbel(
     scale: Any,
     optimize: str,
     QO: Optional[RuntimeTypeDescriptor] = None
-):
-    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+):  
+    r"""partial constructor of make_report_noisy_max_gumbel
 
-    :py:func:`opendp.measurements.make_report_noisy_max_gumbel`
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_report_noisy_max_gumbel`
+
+    :param scale: Higher scales are more private.
+    :type scale: Any
+    :param optimize: Indicate whether to privately return the "Max" or "Min"
+    :type optimize: str
+    :param QO: Output Distance Type.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
     """
     return PartialConstructor(lambda input_domain, input_metric: make_report_noisy_max_gumbel(
         input_domain=input_domain,
@@ -1174,10 +1248,18 @@ def then_user_measurement(
     function,
     privacy_map,
     TO: RuntimeTypeDescriptor
-):
-    r"""Partial constructructor which uses the preceding output domain and metric as its input domain and metric. See also:
+):  
+    r"""partial constructor of make_user_measurement
 
-    :py:func:`opendp.measurements.make_user_measurement`
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_user_measurement`
+
+    :param output_measure: The measure from which distances between adjacent output distributions are measured.
+    :type output_measure: Measure
+    :param function: A function mapping data from `input_domain` to a release of type `TO`.
+    :param privacy_map: A function mapping distances from `input_metric` to `output_measure`.
+    :param TO: The data type of outputs from the function.
+    :type TO: :py:ref:`RuntimeTypeDescriptor`
     """
     return PartialConstructor(lambda input_domain, input_metric: make_user_measurement(
         input_domain=input_domain,

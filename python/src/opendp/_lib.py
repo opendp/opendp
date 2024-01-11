@@ -246,14 +246,14 @@ def proven(function):
 
 
         # split the path at the extrinsics directory
-        extrinsics_path = os.path.join(os.path.dirname(__file__), "extrinsics")
+        extrinsics_path = os.path.join(os.path.dirname(__file__), "_extrinsics")
         relative_proof_path = os.path.relpath(absolute_proof_path, extrinsics_path)
 
         # create the link
         proof_url = make_proof_link(
             extrinsics_path,
             relative_path=relative_proof_path,
-            repo_path="python/src/opendp/extrinsics",
+            repo_path="python/src/opendp/_extrinsics",
         )
 
         # replace the path with the link

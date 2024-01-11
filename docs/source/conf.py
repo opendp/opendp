@@ -43,12 +43,16 @@ import pypandoc
 import re
 py_attr_re = re.compile(r"\:py\:\w+\:(``[^:`]+``)")
 
+def is_rst(line):
+    """heuristic to determine where RST format begins"""
+    return line.startswith(":") or line.startswith(".. ")
+
 def docstring(app, what, name, obj, options, lines):
     path = name.split(".")
 
     if len(path) > 1 and path[1] in markdown_modules:
         # split docstring into description and params
-        param_index = next((i for i, line in enumerate(lines) if line.startswith(":")), len(lines))
+        param_index = next((i for i, line in enumerate(lines) if is_rst(line)), len(lines))
         description, params = lines[:param_index], lines[param_index:]
         
         # rust documentation is markdown, convert to rst

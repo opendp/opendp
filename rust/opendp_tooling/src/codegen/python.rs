@@ -129,11 +129,27 @@ fn generate_function(
 
 def {then_name}(
 {then_args}
-):
+):  
+    r"""partial constructor of {func_name}
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.{module_name}.{func_name}`
+
+{doc_params}
+    """
     return PartialConstructor(lambda {dom_met}: {name}(
 {args}))
 "#,
             then_name = func.name.replacen("make_", "then_", 1),
+            func_name = func.name,
+            doc_params = indent(
+                func.args
+                    .iter()
+                    .skip(2)
+                    .map(|v| generate_docstring_arg(v, hierarchy))
+                    .collect::<Vec<String>>()
+                    .join("\n")
+            ),
             then_args = indent(args[2..].join(",\n")),
             dom_met = func.args[..2]
                 .iter()
