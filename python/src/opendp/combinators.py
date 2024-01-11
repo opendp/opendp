@@ -346,10 +346,10 @@ def make_sequential_composition(
     
     **Supporting Elements:**
     
-    * Input Domain:   `AnyDomain`
-    * Output Type:    `AnyObject`
-    * Input Metric:   `AnyMetric`
-    * Output Measure: `AnyMeasure`
+    * Input Domain:   `DI`
+    * Output Type:    `Queryable<Measurement<DI, TO, MI, MO>, TO>`
+    * Input Metric:   `MI`
+    * Output Measure: `MO`
     
     :param input_domain: indicates the space of valid input datasets
     :type input_domain: Domain
@@ -374,7 +374,7 @@ def make_sequential_composition(
     # Convert arguments to c types.
     c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
     c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
-    c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=AnyMeasure)
+    c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=None)
     c_d_in = py_to_c(d_in, c_type=AnyObjectPtr, type_name=get_distance_type(input_metric))
     c_d_mids = py_to_c(d_mids, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[QO]))
     

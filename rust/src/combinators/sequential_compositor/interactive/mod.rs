@@ -1,3 +1,5 @@
+use opendp_derive::bootstrap;
+
 use crate::{
     combinators::assert_components_match,
     core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
@@ -11,6 +13,16 @@ mod ffi;
 
 use super::BasicCompositionMeasure;
 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        d_in(rust_type = "$get_distance_type(input_metric)", c_type = "AnyObject *"),
+        d_mids(rust_type = "Vec<QO>", c_type = "AnyObject *"),
+        output_measure(c_type = "AnyMeasure *", rust_type = b"null")
+    ),
+    generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress)),
+    derived_types(QO = "$get_distance_type(output_measure)")
+)]
 /// Construct a Measurement that when invoked,
 /// returns a queryable that interactively composes measurements.
 ///
@@ -121,7 +133,7 @@ where
                         }
 
                         let answer = if output_measure.concurrent()? {
-                            // evaluate the query and wrap the answer
+                            // evaluate the query directly; no wrapping is necessary
                             measurement.invoke(&arg)
                         } else {
                             // if the answer contains a queryable,

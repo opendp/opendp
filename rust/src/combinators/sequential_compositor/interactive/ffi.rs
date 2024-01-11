@@ -1,5 +1,3 @@
-use opendp_derive::bootstrap;
-
 use crate::{
     core::{FfiResult, Function, Measurement, PrivacyMap},
     error::Fallible,
@@ -10,35 +8,6 @@ use crate::{
     traits::TotalOrd,
 };
 
-#[bootstrap(
-    name = "make_sequential_composition",
-    features("contrib"),
-    arguments(
-        d_in(rust_type = "$get_distance_type(input_metric)", c_type = "AnyObject *"),
-        d_mids(rust_type = "Vec<QO>", c_type = "AnyObject *")
-    ),
-    derived_types(QO = "$get_distance_type(output_measure)")
-)]
-/// Construct a Measurement that when invoked,
-/// returns a queryable that interactively composes measurements.
-///
-/// **Composition Properties**
-///
-/// * sequential: all measurements are applied to the same dataset
-/// * basic: the composition is the linear sum of the privacy usage of each query
-/// * interactive: mechanisms can be specified based on answers to previous queries
-/// * compositor: all privacy parameters specified up-front
-///
-/// If the privacy measure supports concurrency,
-/// this compositor allows you to spawn multiple interactive mechanisms
-/// and interleave your queries amongst them.
-///
-/// # Arguments
-/// * `input_domain` - indicates the space of valid input datasets
-/// * `input_metric` - how distances are measured between members of the input domain
-/// * `output_measure` - how privacy is measured
-/// * `d_in` - maximum distance between adjacent input datasets
-/// * `d_mids` - maximum privacy expenditure of each query
 fn make_sequential_composition(
     input_domain: AnyDomain,
     input_metric: AnyMetric,
