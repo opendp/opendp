@@ -94,6 +94,9 @@ pub enum ErrorVariant {
     #[error("InvalidDistance")]
     InvalidDistance,
 
+    #[error("Overflow")]
+    Overflow,
+
     #[error("NotImplemented")]
     NotImplemented,
 }

@@ -14,7 +14,11 @@ def test_count_by_categories():
         )
     )
 
+<<<<<<< HEAD
     noisy_histogram_from_dataframe = dp.binary_search_chain(
+=======
+    noisy_histogram_from_dataframe = dp.binary_search_chain(  # type: ignore[misc]
+>>>>>>> af244047 (debug arithmetic inf and nan problems)
         lambda s: preprocess >> dp.m.then_base_discrete_laplace(s), d_in=1, d_out=1.0
     )
 
@@ -27,33 +31,25 @@ def test_count_by_categories():
 
 def test_count_by_categories_float():
     """Compute histogram with known category set"""
+    data = "\n".join(["a"] * 5 + ["b"] * 20 + ["c"] * 10 + ["z"] * 5)
+    cats = ["a", "b", "c"]
+    load = dp.t.make_split_dataframe(",", ["A", "B"]) >> dp.t.make_select_column(
+        "A", TOA=str
+    )
+    
     noisy_float_histogram = (
-        dp.t.make_split_dataframe(",", ["A", "B"])
-        >> dp.t.make_select_column("A", TOA=str)
-        >> dp.t.then_count_by_categories(
-            categories=["a", "b", "c"], MO=dp.L1Distance[float], TOA=float
-        )
+        load
+        >> dp.t.then_count_by_categories(cats, MO=dp.L1Distance[float], TOA=float)
         >> dp.m.then_base_laplace(scale=1.0)
     )
-    print(
-        noisy_float_histogram(
-            "\n".join(["a"] * 5 + ["b"] * 20 + ["c"] * 10 + ["z"] * 5)
-        )
-    )
+    print(noisy_float_histogram(data))
 
     noisy_float_histogram = (
-        dp.t.make_split_dataframe(",", ["A", "B"])
-        >> dp.t.make_select_column("A", TOA=str)
-        >> dp.t.then_count_by_categories(
-            categories=["a", "b", "c"], MO=dp.L2Distance[float], TOA=float
-        )
+        load
+        >> dp.t.then_count_by_categories(cats, MO=dp.L2Distance[float], TOA=float)
         >> dp.m.then_base_gaussian(scale=1.0)
     )
-    print(
-        noisy_float_histogram(
-            "\n".join(["a"] * 5 + ["b"] * 20 + ["c"] * 10 + ["z"] * 5)
-        )
-    )
+    print(noisy_float_histogram(data))
 
 
 def test_count_by_threshold():
@@ -64,16 +60,12 @@ def test_count_by_threshold():
         >> dp.t.then_count_by(MO=dp.L1Distance[float], TV=float)
     )
     budget = (1.0, 1e-8)
-    def func(s):
-        print("scale", s)
-        meas = pre >> dp.m.then_base_laplace_threshold(scale=s, threshold=1e8)
-        return meas
+
     scale = dp.binary_search_param(
-        func,
+        lambda s: pre >> dp.m.then_base_laplace_threshold(scale=s, threshold=1e8),
         d_in=1,
         d_out=budget,
     )
-    print("done")
     threshold = dp.binary_search_param(
         lambda t: pre >> dp.m.then_base_laplace_threshold(scale=scale, threshold=t),
         d_in=1,
@@ -90,10 +82,7 @@ def test_count_by_threshold():
 
     print(laplace_histogram_from_dataframe(data))
 
-
     with pytest.raises(dp.OpenDPException):
         dp.m.make_base_laplace_threshold(
-            dp.atom_domain(T=int),
-            dp.l1_distance(T=float),
-            scale=1., threshold=1e8)
-test_count_by_threshold()
+            dp.atom_domain(T=int), dp.l1_distance(T=float), scale=1.0, threshold=1e8
+        )

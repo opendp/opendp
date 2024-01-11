@@ -156,7 +156,7 @@ impl_cast_internal_rational_int!(u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 i
 #[cfg(test)]
 mod test {
     use dashu::float::{
-        round::mode::{Up, Down},
+        round::mode::{Down, Up},
         FBig,
     };
 

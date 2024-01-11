@@ -308,7 +308,7 @@ pub trait InfLn1P: Sized {
 macro_rules! impl_alerting_abs_signed_int {
     ($($ty:ty),+) => ($(impl AlertingAbs for $ty {
         fn alerting_abs(&self) -> Fallible<Self> {
-            self.checked_abs().ok_or_else(|| err!(FailedFunction,
+            self.checked_abs().ok_or_else(|| err!(Overflow,
                 "the corresponding positive value for {} is out of range", self))
         }
     })+)
@@ -350,7 +350,7 @@ macro_rules! impl_alerting_int {
             #[inline]
             fn alerting_mul(&self, v: &Self) -> Fallible<Self> {
                 <$t>::checked_mul(*self, *v).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} * {} overflows. Consider tightening your parameters.",
                     self, v))
             }
@@ -359,7 +359,7 @@ macro_rules! impl_alerting_int {
             #[inline]
             fn alerting_div(&self, v: &Self) -> Fallible<Self> {
                 <$t>::checked_div(*self, *v).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} / {} overflows. Consider tightening your parameters.",
                     self, v))
             }
@@ -368,7 +368,7 @@ macro_rules! impl_alerting_int {
             #[inline]
             fn alerting_add(&self, v: &Self) -> Fallible<Self> {
                 <$t>::checked_add(*self, *v).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} + {} overflows. Consider tightening your parameters.",
                     self, v))
             }
@@ -377,7 +377,7 @@ macro_rules! impl_alerting_int {
             #[inline]
             fn alerting_sub(&self, v: &Self) -> Fallible<Self> {
                 <$t>::checked_sub(*self, *v).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} - {} overflows. Consider tightening your parameters.",
                     self, v))
             }
@@ -388,7 +388,7 @@ macro_rules! impl_alerting_int {
             fn alerting_pow(&self, p: &Self) -> Fallible<Self> {
                 let p = u32::exact_int_cast(*p)?;
                 <$t>::checked_pow(*self, p).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{}.pow({}) overflows. Consider tightening your parameters.",
                     self, p))
             }
@@ -412,7 +412,7 @@ macro_rules! impl_alerting_float {
             fn alerting_mul(&self, v: &Self) -> Fallible<Self> {
                 let y = self * v;
                 y.is_finite().then(|| y).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} * {} is not finite. Consider tightening your parameters.",
                     self, v))
             }
@@ -421,7 +421,7 @@ macro_rules! impl_alerting_float {
             fn alerting_div(&self, v: &Self) -> Fallible<Self> {
                 let y = self / v;
                 y.is_finite().then(|| y).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} / {} is not finite. Consider tightening your parameters.",
                     self, v))
             }
@@ -430,7 +430,7 @@ macro_rules! impl_alerting_float {
             fn alerting_add(&self, v: &Self) -> Fallible<Self> {
                 let y = self + v;
                 y.is_finite().then(|| y).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} + {} is not finite. Consider tightening your parameters.",
                     self, v))
             }
@@ -439,7 +439,7 @@ macro_rules! impl_alerting_float {
             fn alerting_sub(&self, v: &Self) -> Fallible<Self> {
                 let y = self - v;
                 y.is_finite().then(|| y).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} - {} is not finite. Consider tightening your parameters.",
                     self, v))
             }
@@ -448,7 +448,7 @@ macro_rules! impl_alerting_float {
             fn alerting_pow(&self, v: &Self) -> Fallible<Self> {
                 let y = self.powf(*v);
                 y.is_finite().then(|| y).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} - {} is not finite. Consider tightening your parameters.",
                     self, v))
             }
@@ -481,7 +481,7 @@ macro_rules! impl_float_inf_uni {
                 let this = FBig::<Up>::inf_cast(self)?.$op();
                 let this = Self::inf_cast(this)?;
                 this.is_finite().then(|| this).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     concat!("({}).", stringify!($method_inf), "() is not finite. Consider tightening your parameters."),
                     self))
             }
@@ -489,7 +489,7 @@ macro_rules! impl_float_inf_uni {
                 let this = FBig::<Down>::neg_inf_cast(self)?.$op();
                 let this = Self::neg_inf_cast(this)?;
                 this.is_finite().then(|| this).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     concat!("({}).", stringify!($method_neg_inf), "() is not finite. Consider tightening your parameters."),
                     self))
             }
@@ -521,13 +521,13 @@ macro_rules! impl_int_inf {
         $(impl InfDiv for $ty {
             fn inf_div(&self, other: &Self) -> Fallible<Self> {
                 if other == &0 {
-                    return fallible!(FailedFunction, "attempt to divide by zero");
+                    return fallible!(Overflow, "attempt to divide by zero");
                 }
                 Ok(num::Integer::div_ceil(self, other))
             }
             fn neg_inf_div(&self, other: &Self) -> Fallible<Self> {
                 if other == &0 {
-                    return fallible!(FailedFunction, "attempt to divide by zero");
+                    return fallible!(Overflow, "attempt to divide by zero");
                 }
                 Ok(num::Integer::div_floor(self, other))
             }
@@ -540,18 +540,24 @@ macro_rules! impl_float_inf_bi {
     ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident, $fallback:ident) => {
         $(impl $name for $ty {
             fn $method_inf(&self, other: &Self) -> Fallible<Self> {
+                if !self.$op(other).is_finite() {
+                    return Ok(self.$op(other));
+                }
                 let this = FBig::<Up>::try_from(*self)?.$op(&FBig::<Up>::try_from(*other)?);
                 let this = Self::inf_cast(this)?;
                 this.is_finite().then(|| this).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     concat!("({}).", stringify!($method_inf), "({}) is not finite. Consider tightening your parameters."),
                     self, other))
             }
             fn $method_neg_inf(&self, other: &Self) -> Fallible<Self> {
+                if !self.$op(other).is_finite() {
+                    return Ok(self.$op(other));
+                }
                 let this = FBig::<Down>::try_from(*self)?.$op(&FBig::<Down>::try_from(*other)?);
                 let this = Self::neg_inf_cast(this)?;
                 this.is_finite().then(|| this).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     concat!("({}).", stringify!($method_neg_inf), "({}) is not finite. Consider tightening your parameters."),
                     self, other))
             }
@@ -563,14 +569,14 @@ impl_float_inf_bi!(f64, f32; InfSub, inf_sub, neg_inf_sub, sub, alerting_sub);
 impl_float_inf_bi!(f64, f32; InfMul, inf_mul, neg_inf_mul, mul, alerting_mul);
 impl InfDiv for f64 {
     fn inf_div(&self, other: &Self) -> Fallible<Self> {
-        if other.is_zero() {
-            return fallible!(FailedFunction, "attempt to divide by zero");
+        if !(self / other).is_finite() {
+            return Ok(self / other);
         }
         let this = FBig::<Up>::try_from(*self)?.div(&FBig::<Up>::try_from(*other)?);
         let this = Self::inf_cast(this)?;
         this.is_finite().then(|| this).ok_or_else(|| {
             err!(
-                FailedFunction,
+                Overflow,
                 concat!(
                     "({}).",
                     stringify!(inf_div),
@@ -582,14 +588,14 @@ impl InfDiv for f64 {
         })
     }
     fn neg_inf_div(&self, other: &Self) -> Fallible<Self> {
-        if other.is_zero() {
-            return fallible!(FailedFunction, "attempt to divide by zero");
+        if !(self / other).is_finite() {
+            return Ok(self / other);
         }
         let this = FBig::<Down>::try_from(*self)?.div(&FBig::<Down>::try_from(*other)?);
         let this = Self::neg_inf_cast(this)?;
         this.is_finite().then(|| this).ok_or_else(|| {
             err!(
-                FailedFunction,
+                Overflow,
                 concat!(
                     "({}).",
                     stringify!(neg_inf_div),
@@ -603,14 +609,14 @@ impl InfDiv for f64 {
 }
 impl InfDiv for f32 {
     fn inf_div(&self, other: &Self) -> Fallible<Self> {
-        if other.is_zero() {
-            return fallible!(FailedFunction, "attempt to divide by zero");
+        if !(self / other).is_finite() {
+            return Ok(self / other);
         }
         let this = FBig::<Up>::try_from(*self)?.div(&FBig::<Up>::try_from(*other)?);
         let this = Self::inf_cast(this)?;
         this.is_finite().then(|| this).ok_or_else(|| {
             err!(
-                FailedFunction,
+                Overflow,
                 concat!(
                     "({}).",
                     stringify!(inf_div),
@@ -622,14 +628,14 @@ impl InfDiv for f32 {
         })
     }
     fn neg_inf_div(&self, other: &Self) -> Fallible<Self> {
-        if other.is_zero() {
-            return fallible!(FailedFunction, "attempt to divide by zero");
+        if !(self / other).is_finite() {
+            return Ok(self / other);
         }
         let this = FBig::<Down>::try_from(*self)?.div(&FBig::<Down>::try_from(*other)?);
         let this = Self::neg_inf_cast(this)?;
         this.is_finite().then(|| this).ok_or_else(|| {
             err!(
-                FailedFunction,
+                Overflow,
                 concat!(
                     "({}).",
                     stringify!(neg_inf_div),
@@ -646,18 +652,24 @@ macro_rules! impl_float_inf_bi_ibig {
     ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident, $fallback:ident) => {
         $(impl $name for $ty {
             fn $method_inf(&self, other: IBig) -> Fallible<Self> {
+                if !self.is_finite() {
+                    return Ok(*self);
+                }
                 let this = FBig::<Up>::try_from(*self)?.$op(other.clone());
                 let this = Self::inf_cast(this)?;
                 this.is_finite().then(|| this).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     concat!("({}).", stringify!($method_inf), "({}) is not finite. Consider tightening your parameters."),
                     self, other))
             }
             fn $method_neg_inf(&self, other: IBig) -> Fallible<Self> {
+                if !self.is_finite() {
+                    return Ok(*self);
+                }
                 let this = FBig::<Down>::try_from(*self)?.$op(other.clone());
                 let this = Self::neg_inf_cast(this)?;
                 this.is_finite().then(|| this).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     concat!("({}).", stringify!($method_neg_inf), "({}) is not finite. Consider tightening your parameters."),
                     self, other))
             }
