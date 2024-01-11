@@ -14,11 +14,7 @@ def test_count_by_categories():
         )
     )
 
-<<<<<<< HEAD
     noisy_histogram_from_dataframe = dp.binary_search_chain(
-=======
-    noisy_histogram_from_dataframe = dp.binary_search_chain(  # type: ignore[misc]
->>>>>>> af244047 (debug arithmetic inf and nan problems)
         lambda s: preprocess >> dp.m.then_base_discrete_laplace(s), d_in=1, d_out=1.0
     )
 

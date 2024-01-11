@@ -223,6 +223,11 @@ impl<T: Float> CanFloatSumOverflow for Sequential<T> {
         let mag_limit = _2.powf(T::exact_int_cast(
             T::EXPONENT_BIAS - T::MANTISSA_BITS - T::Bits::one(),
         )?);
+        println!(
+            "pow {:?}",
+            T::exact_int_cast(T::EXPONENT_BIAS - T::MANTISSA_BITS - T::Bits::one(),)?
+        );
+        println!("mag limit {:?} {:?}", mag, mag_limit);
         if mag < mag_limit {
             // we can't overflow, because high magnitude additions will underflow
             return Ok(false);
@@ -353,6 +358,7 @@ mod test_checks {
     fn test_float_sum_overflows_sequential() -> Fallible<()> {
         let almost_max = f64::from_bits(f64::MAX.to_bits() - 1);
         let ulp_max = f64::MAX - almost_max;
+        println!("ulp max {}", ulp_max);
         let largest_size = usize::MAX;
 
         // should barely fail first check and significantly fail second check

@@ -43,6 +43,7 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
 /// Enable `use-openssl` for a secure implementation.
 #[cfg(not(feature = "use-openssl"))]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
+    use rand::Rng;
     if let Err(e) = rand::thread_rng().try_fill(buffer) {
         fallible!(FailedFunction, "Rand error: {:?}", e)
     } else {

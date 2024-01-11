@@ -12,7 +12,6 @@ use dashu::{
     },
     integer::IBig,
 };
-use num::Zero;
 
 /// Fallible absolute value that returns an error if overflowing.
 ///
@@ -478,20 +477,28 @@ macro_rules! impl_float_inf_uni {
         $(
         impl $name for $ty {
             fn $method_inf(self) -> Fallible<Self> {
-                let this = FBig::<Up>::inf_cast(self)?.$op();
-                let this = Self::inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(|| err!(
+                let not_finite = || err!(
                     Overflow,
                     concat!("({}).", stringify!($method_inf), "() is not finite. Consider tightening your parameters."),
-                    self))
+                    self);
+                if !self.$op().is_finite() {
+                    return Err(not_finite());
+                }
+                let this = FBig::<Up>::inf_cast(self)?.$op();
+                let this = Self::inf_cast(this)?;
+                this.is_finite().then(|| this).ok_or_else(not_finite)
             }
             fn $method_neg_inf(self) -> Fallible<Self> {
-                let this = FBig::<Down>::neg_inf_cast(self)?.$op();
-                let this = Self::neg_inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(|| err!(
+                let not_finite = || err!(
                     Overflow,
                     concat!("({}).", stringify!($method_neg_inf), "() is not finite. Consider tightening your parameters."),
-                    self))
+                    self);
+                if !self.$op().is_finite() {
+                    return Err(not_finite());
+                }
+                let this = FBig::<Down>::neg_inf_cast(self)?.$op();
+                let this = Self::neg_inf_cast(this)?;
+                this.is_finite().then(|| this).ok_or_else(not_finite)
             }
         })+
     }
@@ -540,26 +547,28 @@ macro_rules! impl_float_inf_bi {
     ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident, $fallback:ident) => {
         $(impl $name for $ty {
             fn $method_inf(&self, other: &Self) -> Fallible<Self> {
+                let not_finite = || err!(
+                    Overflow,
+                    concat!("({}).", stringify!($method_inf), "({}) is not finite. Consider tightening your parameters."),
+                    self, other);
                 if !self.$op(other).is_finite() {
-                    return Ok(self.$op(other));
+                    return Err(not_finite());
                 }
                 let this = FBig::<Up>::try_from(*self)?.$op(&FBig::<Up>::try_from(*other)?);
                 let this = Self::inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(|| err!(
-                    Overflow,
-                    concat!("({}).", stringify!($method_inf), "({}) is not finite. Consider tightening your parameters."),
-                    self, other))
+                this.is_finite().then(|| this).ok_or_else(not_finite)
             }
             fn $method_neg_inf(&self, other: &Self) -> Fallible<Self> {
+                let not_finite = || err!(
+                    Overflow,
+                    concat!("({}).", stringify!($method_neg_inf), "({}) is not finite. Consider tightening your parameters."),
+                    self, other);
                 if !self.$op(other).is_finite() {
-                    return Ok(self.$op(other));
+                    return Err(not_finite());
                 }
                 let this = FBig::<Down>::try_from(*self)?.$op(&FBig::<Down>::try_from(*other)?);
                 let this = Self::neg_inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(|| err!(
-                    Overflow,
-                    concat!("({}).", stringify!($method_neg_inf), "({}) is not finite. Consider tightening your parameters."),
-                    self, other))
+                this.is_finite().then(|| this).ok_or_else(not_finite)
             }
         })+
     }
@@ -569,12 +578,7 @@ impl_float_inf_bi!(f64, f32; InfSub, inf_sub, neg_inf_sub, sub, alerting_sub);
 impl_float_inf_bi!(f64, f32; InfMul, inf_mul, neg_inf_mul, mul, alerting_mul);
 impl InfDiv for f64 {
     fn inf_div(&self, other: &Self) -> Fallible<Self> {
-        if !(self / other).is_finite() {
-            return Ok(self / other);
-        }
-        let this = FBig::<Up>::try_from(*self)?.div(&FBig::<Up>::try_from(*other)?);
-        let this = Self::inf_cast(this)?;
-        this.is_finite().then(|| this).ok_or_else(|| {
+        let not_finite = || {
             err!(
                 Overflow,
                 concat!(
@@ -585,15 +589,16 @@ impl InfDiv for f64 {
                 self,
                 other
             )
-        })
+        };
+        if !(self / other).is_finite() {
+            return Err(not_finite());
+        }
+        let this = FBig::<Up>::try_from(*self)?.div(&FBig::<Up>::try_from(*other)?);
+        let this = Self::inf_cast(this)?;
+        this.is_finite().then(|| this).ok_or_else(not_finite)
     }
     fn neg_inf_div(&self, other: &Self) -> Fallible<Self> {
-        if !(self / other).is_finite() {
-            return Ok(self / other);
-        }
-        let this = FBig::<Down>::try_from(*self)?.div(&FBig::<Down>::try_from(*other)?);
-        let this = Self::neg_inf_cast(this)?;
-        this.is_finite().then(|| this).ok_or_else(|| {
+        let not_finite = || {
             err!(
                 Overflow,
                 concat!(
@@ -604,17 +609,18 @@ impl InfDiv for f64 {
                 self,
                 other
             )
-        })
+        };
+        if !(self / other).is_finite() {
+            return Err(not_finite());
+        }
+        let this = FBig::<Down>::try_from(*self)?.div(&FBig::<Down>::try_from(*other)?);
+        let this = Self::neg_inf_cast(this)?;
+        this.is_finite().then(|| this).ok_or_else(not_finite)
     }
 }
 impl InfDiv for f32 {
     fn inf_div(&self, other: &Self) -> Fallible<Self> {
-        if !(self / other).is_finite() {
-            return Ok(self / other);
-        }
-        let this = FBig::<Up>::try_from(*self)?.div(&FBig::<Up>::try_from(*other)?);
-        let this = Self::inf_cast(this)?;
-        this.is_finite().then(|| this).ok_or_else(|| {
+        let not_finite = || {
             err!(
                 Overflow,
                 concat!(
@@ -625,15 +631,16 @@ impl InfDiv for f32 {
                 self,
                 other
             )
-        })
+        };
+        if !(self / other).is_finite() {
+            return Err(not_finite());
+        }
+        let this = FBig::<Up>::try_from(*self)?.div(&FBig::<Up>::try_from(*other)?);
+        let this = Self::inf_cast(this)?;
+        this.is_finite().then(|| this).ok_or_else(not_finite)
     }
     fn neg_inf_div(&self, other: &Self) -> Fallible<Self> {
-        if !(self / other).is_finite() {
-            return Ok(self / other);
-        }
-        let this = FBig::<Down>::try_from(*self)?.div(&FBig::<Down>::try_from(*other)?);
-        let this = Self::neg_inf_cast(this)?;
-        this.is_finite().then(|| this).ok_or_else(|| {
+        let not_finite = || {
             err!(
                 Overflow,
                 concat!(
@@ -644,7 +651,13 @@ impl InfDiv for f32 {
                 self,
                 other
             )
-        })
+        };
+        if !(self / other).is_finite() {
+            return Err(not_finite());
+        }
+        let this = FBig::<Down>::try_from(*self)?.div(&FBig::<Down>::try_from(*other)?);
+        let this = Self::neg_inf_cast(this)?;
+        this.is_finite().then(|| this).ok_or_else(not_finite)
     }
 }
 
@@ -652,26 +665,28 @@ macro_rules! impl_float_inf_bi_ibig {
     ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident, $fallback:ident) => {
         $(impl $name for $ty {
             fn $method_inf(&self, other: IBig) -> Fallible<Self> {
+                let not_finite = || err!(
+                    Overflow,
+                    concat!("({}).", stringify!($method_inf), "({}) is not finite. Consider tightening your parameters."),
+                    self, other);
                 if !self.is_finite() {
-                    return Ok(*self);
+                    return Err(not_finite());
                 }
                 let this = FBig::<Up>::try_from(*self)?.$op(other.clone());
                 let this = Self::inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(|| err!(
-                    Overflow,
-                    concat!("({}).", stringify!($method_inf), "({}) is not finite. Consider tightening your parameters."),
-                    self, other))
+                this.is_finite().then(|| this).ok_or_else(not_finite)
             }
             fn $method_neg_inf(&self, other: IBig) -> Fallible<Self> {
+                let not_finite = || err!(
+                    Overflow,
+                    concat!("({}).", stringify!($method_neg_inf), "({}) is not finite. Consider tightening your parameters."),
+                    self, other);
                 if !self.is_finite() {
-                    return Ok(*self);
+                    return Err(not_finite());
                 }
                 let this = FBig::<Down>::try_from(*self)?.$op(other.clone());
                 let this = Self::neg_inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(|| err!(
-                    Overflow,
-                    concat!("({}).", stringify!($method_neg_inf), "({}) is not finite. Consider tightening your parameters."),
-                    self, other))
+                this.is_finite().then(|| this).ok_or_else(not_finite)
             }
         })+
     }
