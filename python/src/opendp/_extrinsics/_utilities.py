@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Union
+from typing import Callable, Union
 from opendp.mod import PartialConstructor, Measurement, Transformation
 
 

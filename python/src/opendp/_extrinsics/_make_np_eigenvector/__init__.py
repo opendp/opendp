@@ -1,6 +1,6 @@
 from opendp._extrinsics.domains import _np_sscp_domain
-from opendp._extrinsics._make_np_sscp import make_np_sscp_scale_norm
 from opendp._extrinsics._utilities import to_then
+from opendp._lib import np_csprng
 from opendp.mod import Domain, Metric, Transformation, Measurement
 from typing import List
 
@@ -21,8 +21,8 @@ def make_private_np_eigenvector(
 
     dp.assert_features("contrib", "floating-point")
 
-    if input_domain.p != 2 or input_domain.norm > 1:
-        raise ValueError("input_domain must have L2-norm bounded above by 1")
+    if input_domain.p != 2:
+        raise ValueError("input_domain must have bounded L2-norm")
 
     if input_metric != dp.symmetric_distance():
         raise ValueError("expected symmetric distance input metric")
@@ -32,6 +32,9 @@ def make_private_np_eigenvector(
     def function(C):
         # Algorithm 2 Top Eigenvector Sampler
         # http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=15
+        # scale norm down to at most 1
+        C = C / input_domain.norm**2
+
         # (1)
         A = unit_epsilon / 4 * (np.linalg.eigvalsh(C).max() * np.eye(d) - C)
 
@@ -54,7 +57,7 @@ def make_private_np_eigenvector(
         Omega_inv = np.linalg.inv(Omega)
 
         while True:
-            z = np.random.multivariate_normal(mean=np.zeros(d), cov=Omega_inv)
+            z = np_csprng.multivariate_normal(mean=np.zeros(d), cov=Omega_inv)
             u = z / np.linalg.norm(z)
             if np.exp(-u.T @ A @ u) / (M * (u.T @ Omega @ u) ** (d / 2)):
                 return u
@@ -131,14 +134,12 @@ def make_private_np_eigenvectors(
         )
 
     privacy_measure = dp.max_divergence(T=input_domain.T)
-    t_sscp_scale_norm = make_np_sscp_scale_norm(input_domain, input_metric, 1)
-    m_compose = t_sscp_scale_norm >> dp.c.then_sequential_composition(
-        privacy_measure, 2, unit_epsilons
+    m_compose = dp.c.make_sequential_composition(
+        input_domain, input_metric, privacy_measure, 2, unit_epsilons
     )
 
     def function(C):
         nonlocal input_domain, input_metric
-
         # Algorithm 1: http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=5
 
         # 1.i Initialize C_1 = C inside compositor.
@@ -156,8 +157,8 @@ def make_private_np_eigenvectors(
         for epsilon_i in unit_epsilons:
             # 2.a.i: sample \hat{u}
             m_eigvec = (
-                t_sscp_scale_norm.output_space
-                >> then_np_sscp_projection(P) # 2.c happens inside this transformation
+                (input_domain, input_metric)
+                >> then_np_sscp_projection(P)  # 2.c happens inside this transformation
                 >> then_private_eigenvector(epsilon_i)
             )
             u = qbl(m_eigvec)
