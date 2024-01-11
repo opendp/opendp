@@ -72,7 +72,7 @@ def make_private_np_pca(
 
     def eig_to_SVt(decomp):
         eigvals, eigvecs = decomp
-        return np.sqrt(eigvals)[::-1], eigvecs.T
+        return np.sqrt(np.maximum(eigvals, 0))[::-1], eigvecs.T
 
     def make_eigdecomp(norm, origin):
         return (
