@@ -243,7 +243,7 @@ def l2_distance(
 @versioned
 def linf_distance(
     T: RuntimeTypeDescriptor,
-    monotonic: Optional[bool] = False
+    monotonic: bool = False
 ) -> Metric:
     r"""Construct an instance of the `LInfDistance` metric.
 

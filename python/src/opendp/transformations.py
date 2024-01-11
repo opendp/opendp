@@ -208,7 +208,7 @@ def then_b_ary_tree(
 def make_bounded_float_checked_sum(
     size_limit: int,
     bounds: Tuple[Any, Any],
-    S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded data with known dataset size.
 
@@ -277,7 +277,7 @@ def make_bounded_float_checked_sum(
 def make_bounded_float_ordered_sum(
     size_limit: int,
     bounds: Tuple[Any, Any],
-    S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded floats with known ordering.
 
@@ -709,7 +709,7 @@ def then_cast_inherent(
 
 @versioned
 def make_cdf(
-    TA: Optional[RuntimeTypeDescriptor] = "float"
+    TA: RuntimeTypeDescriptor = "float"
 ) -> Function:
     r"""Postprocess a noisy array of float summary counts into a cumulative distribution.
 
@@ -820,8 +820,8 @@ def then_clamp(
 @versioned
 def make_consistent_b_ary_tree(
     branching_factor: int,
-    TIA: Optional[RuntimeTypeDescriptor] = "int",
-    TOA: Optional[RuntimeTypeDescriptor] = "float"
+    TIA: RuntimeTypeDescriptor = "int",
+    TOA: RuntimeTypeDescriptor = "float"
 ) -> Function:
     r"""Postprocessor that makes a noisy b-ary tree internally consistent, and returns the leaf layer.
 
@@ -879,7 +879,7 @@ def make_consistent_b_ary_tree(
 def make_count(
     input_domain: Domain,
     input_metric: Metric,
-    TO: Optional[RuntimeTypeDescriptor] = "int"
+    TO: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
     r"""Make a Transformation that computes a count of the number of records in data.
 
@@ -931,7 +931,7 @@ def make_count(
     return output
 
 def then_count(
-    TO: Optional[RuntimeTypeDescriptor] = "int"
+    TO: RuntimeTypeDescriptor = "int"
 ):  
     r"""partial constructor of make_count
 
@@ -953,7 +953,7 @@ def make_count_by(
     input_domain: Domain,
     input_metric: Metric,
     MO: SensitivityMetric,
-    TV: Optional[RuntimeTypeDescriptor] = "int"
+    TV: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
     r"""Make a Transformation that computes the count of each unique value in data.
     This assumes that the category set is unknown.
@@ -1008,7 +1008,7 @@ def make_count_by(
 
 def then_count_by(
     MO: SensitivityMetric,
-    TV: Optional[RuntimeTypeDescriptor] = "int"
+    TV: RuntimeTypeDescriptor = "int"
 ):  
     r"""partial constructor of make_count_by
 
@@ -1033,9 +1033,9 @@ def make_count_by_categories(
     input_domain: Domain,
     input_metric: Metric,
     categories: Any,
-    null_category: Optional[bool] = True,
-    MO: Optional[SensitivityMetric] = "L1Distance<int>",
-    TOA: Optional[RuntimeTypeDescriptor] = "int"
+    null_category: bool = True,
+    MO: SensitivityMetric = "L1Distance<int>",
+    TOA: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
     r"""Make a Transformation that computes the number of times each category appears in the data.
     This assumes that the category set is known.
@@ -1098,9 +1098,9 @@ def make_count_by_categories(
 
 def then_count_by_categories(
     categories: Any,
-    null_category: Optional[bool] = True,
-    MO: Optional[SensitivityMetric] = "L1Distance<int>",
-    TOA: Optional[RuntimeTypeDescriptor] = "int"
+    null_category: bool = True,
+    MO: SensitivityMetric = "L1Distance<int>",
+    TOA: RuntimeTypeDescriptor = "int"
 ):  
     r"""partial constructor of make_count_by_categories
 
@@ -1130,7 +1130,7 @@ def then_count_by_categories(
 def make_count_distinct(
     input_domain: Domain,
     input_metric: Metric,
-    TO: Optional[RuntimeTypeDescriptor] = "int"
+    TO: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
     r"""Make a Transformation that computes a count of the number of unique, distinct records in data.
 
@@ -1178,7 +1178,7 @@ def make_count_distinct(
     return output
 
 def then_count_distinct(
-    TO: Optional[RuntimeTypeDescriptor] = "int"
+    TO: RuntimeTypeDescriptor = "int"
 ):  
     r"""partial constructor of make_count_distinct
 
@@ -2030,8 +2030,8 @@ def then_is_null(
 def make_lipschitz_float_mul(
     constant,
     bounds: Tuple[Any, Any],
-    D: Optional[RuntimeTypeDescriptor] = "AtomDomain<T>",
-    M: Optional[RuntimeTypeDescriptor] = "AbsoluteDistance<T>"
+    D: RuntimeTypeDescriptor = "AtomDomain<T>",
+    M: RuntimeTypeDescriptor = "AbsoluteDistance<T>"
 ) -> Transformation:
     r"""Make a transformation that multiplies an aggregate by a constant.
 
@@ -2416,9 +2416,9 @@ def then_quantile_score_candidates(
 def make_quantiles_from_counts(
     bin_edges: Any,
     alphas: Any,
-    interpolation: Optional[str] = "linear",
+    interpolation: str = "linear",
     TA: Optional[RuntimeTypeDescriptor] = None,
-    F: Optional[RuntimeTypeDescriptor] = "float"
+    F: RuntimeTypeDescriptor = "float"
 ) -> Function:
     r"""Postprocess a noisy array of summary counts into quantiles.
 
@@ -2473,7 +2473,7 @@ def make_resize(
     input_metric: Metric,
     size: int,
     constant: Any,
-    MO: Optional[RuntimeTypeDescriptor] = "SymmetricDistance"
+    MO: RuntimeTypeDescriptor = "SymmetricDistance"
 ) -> Transformation:
     r"""Make a Transformation that either truncates or imputes records
     with `constant` to match a provided `size`.
@@ -2527,7 +2527,7 @@ def make_resize(
 def then_resize(
     size: int,
     constant: Any,
-    MO: Optional[RuntimeTypeDescriptor] = "SymmetricDistance"
+    MO: RuntimeTypeDescriptor = "SymmetricDistance"
 ):  
     r"""partial constructor of make_resize
 
@@ -2603,7 +2603,7 @@ def make_select_column(
 def make_sized_bounded_float_checked_sum(
     size: int,
     bounds: Tuple[Any, Any],
-    S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded floats with known dataset size.
 
@@ -2671,7 +2671,7 @@ def make_sized_bounded_float_checked_sum(
 def make_sized_bounded_float_ordered_sum(
     size: int,
     bounds: Tuple[Any, Any],
-    S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded floats with known ordering and dataset size.
 
@@ -3196,7 +3196,7 @@ def then_sum(
 def make_sum_of_squared_deviations(
     input_domain: Domain,
     input_metric: Metric,
-    S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of squared deviations of bounded data.
 
@@ -3261,7 +3261,7 @@ def make_sum_of_squared_deviations(
     return output
 
 def then_sum_of_squared_deviations(
-    S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
 ):  
     r"""partial constructor of make_sum_of_squared_deviations
 
@@ -3392,8 +3392,8 @@ def make_user_transformation(
 def make_variance(
     input_domain: Domain,
     input_metric: Metric,
-    ddof: Optional[int] = 1,
-    S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
+    ddof: int = 1,
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     r"""Make a Transformation that computes the variance of bounded data.
 
@@ -3449,8 +3449,8 @@ def make_variance(
     return output
 
 def then_variance(
-    ddof: Optional[int] = 1,
-    S: Optional[RuntimeTypeDescriptor] = "Pairwise<T>"
+    ddof: int = 1,
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
 ):  
     r"""partial constructor of make_variance
 

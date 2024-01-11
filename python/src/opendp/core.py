@@ -505,8 +505,8 @@ def new_function(
 @versioned
 def new_queryable(
     transition,
-    Q: Optional[RuntimeTypeDescriptor] = "ExtrinsicObject",
-    A: Optional[RuntimeTypeDescriptor] = "ExtrinsicObject"
+    Q: RuntimeTypeDescriptor = "ExtrinsicObject",
+    A: RuntimeTypeDescriptor = "ExtrinsicObject"
 ) -> Any:
     r"""Construct a queryable from a user-defined transition function.
 

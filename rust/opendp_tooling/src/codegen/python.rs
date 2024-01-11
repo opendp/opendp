@@ -209,11 +209,13 @@ fn generate_input_argument(
             hint = arg
                 .python_type_hint(hierarchy)
                 // make argument optional if there is a default
-                .map(|hint| if default.is_some() {
-                    format!("Optional[{}]", hint)
-                } else {
-                    hint
-                })
+                .map(
+                    |hint| if default.as_ref().is_some_and(|v| v.as_str() == "None") {
+                        format!("Optional[{}]", hint)
+                    } else {
+                        hint
+                    }
+                )
                 // don't hint for args that are not converted
                 .filter(|_| !arg.do_not_convert)
                 .map(|hint| format!(": {}", hint))
