@@ -9,7 +9,7 @@ from opendp.typing import *
 
 __all__ = [
     "_domain_free",
-    "_user_domain_value",
+    "_user_domain_descriptor",
     "atom_domain",
     "domain_carrier_type",
     "domain_debug",
@@ -51,12 +51,12 @@ def _domain_free(
 
 
 @versioned
-def _user_domain_value(
+def _user_domain_descriptor(
     domain: Domain
 ):
     r"""Retrieve the descriptor value stored in a user domain.
     
-    [_user_domain_value in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn._user_domain_value.html)
+    [_user_domain_descriptor in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn._user_domain_descriptor.html)
     
     :param domain: The UserDomain to extract the descriptor from
     :type domain: Domain
@@ -69,7 +69,7 @@ def _user_domain_value(
     c_domain = py_to_c(domain, c_type=Domain, type_name=AnyDomain)
     
     # Call library function.
-    lib_function = lib.opendp_domains___user_domain_value
+    lib_function = lib.opendp_domains___user_domain_descriptor
     lib_function.argtypes = [Domain]
     lib_function.restype = FfiResult
     
@@ -340,7 +340,7 @@ def user_domain(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_identifier, c_member, c_descriptor), Domain))
-    output._depends_on(c_member, descriptor)
+    output._depends_on(c_member)
     return output
 
 

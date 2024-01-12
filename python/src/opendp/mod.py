@@ -471,8 +471,8 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     
     @property
     def descriptor(self) -> Any:
-        from opendp.domains import _user_domain_value
-        return _user_domain_value(self)
+        from opendp.domains import _user_domain_descriptor
+        return _user_domain_descriptor(self)
 
     def __str__(self):
         from opendp.domains import domain_debug
@@ -496,6 +496,11 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     def _depends_on(self, *args):
         """Extends the memory lifetime of args to the lifetime of self."""
         setattr(self, "_dependencies", args)
+
+    def __getattr__(self, name: str) -> Any:
+        from opendp.domains import _user_domain_descriptor
+        descriptor = _user_domain_descriptor(self)
+        return getattr(descriptor, name)
 
 
 class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
@@ -537,10 +542,6 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
         return str(self) == str(other)
-    
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
 
 
 class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
@@ -578,10 +579,6 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
 
     def __eq__(self, other):
         return str(self) == str(other)
-    
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
 
 
 class SMDCurve(object):

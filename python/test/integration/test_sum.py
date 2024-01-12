@@ -26,11 +26,11 @@ def test_sized_bounded_float_sum():
     )
 
     # Add noise such that when d_in=1, the result is 1 epsilon DP
-    laplace_known_n_sum_from_dataframe = dp.binary_search_chain( # type: ignore[misc]
+    laplace_known_n_sum_from_dataframe = dp.binary_search_chain(
         lambda s: preprocess >> dp.m.then_base_laplace(s),
         d_in=1, d_out=1.)
 
-    gaussian_known_n_sum_from_dataframe = dp.binary_search_chain( # type: ignore[misc]
+    gaussian_known_n_sum_from_dataframe = dp.binary_search_chain(
         lambda s: dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(preprocess >> dp.m.then_base_gaussian(s)), 1e-5),
         d_in=1, d_out=(1., 1e-5))
 
@@ -65,7 +65,7 @@ def test_sized_bounded_int_sum():
         dp.t.then_sum()
     )
 
-    noisy_known_n_sum_from_dataframe = dp.binary_search_chain( # type: ignore[misc]
+    noisy_known_n_sum_from_dataframe = dp.binary_search_chain(
         lambda s: preprocess >> dp.m.then_base_discrete_laplace(s),
         d_in=1, d_out=1.)
 
@@ -95,11 +95,11 @@ def test_bounded_float_sum():
         dp.t.then_sum()
     )
 
-    laplace_sum_from_dataframe = dp.binary_search_chain( # type: ignore[misc]
+    laplace_sum_from_dataframe = dp.binary_search_chain(
         lambda s: preprocess >> dp.m.then_base_laplace(s),
         d_in=1, d_out=1.)
 
-    gaussian_sum_from_dataframe = dp.binary_search_chain( # type: ignore[misc]
+    gaussian_sum_from_dataframe = dp.binary_search_chain(
         lambda s: dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(preprocess >> dp.m.then_base_gaussian(s)), 1e-5),
         d_in=1, d_out=(1., 1e-5))
 
@@ -125,7 +125,7 @@ def test_bounded_int_sum():
         dp.t.then_sum()
     )
 
-    noisy_sum_from_dataframe = dp.binary_search_chain( # type: ignore[misc]
+    noisy_sum_from_dataframe = dp.binary_search_chain(
         lambda s: preprocess >> dp.m.then_base_discrete_laplace(s),
         d_in=1, d_out=1.)
 

@@ -36,7 +36,6 @@ For example:
 '''
 
 from opendp.mod import *
-from opendp.extrinsics import *
 import opendp.transformations as t
 import opendp.measurements as m
 import opendp.combinators as c

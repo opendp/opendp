@@ -253,7 +253,7 @@ def measurement_function(
     lib_function.restype = FfiResult
     
     output = unwrap(lib_function(c_this), Function)
-    output._depends_on(this)
+    
     return output
 
 
@@ -340,7 +340,7 @@ def measurement_input_domain(
     lib_function.restype = FfiResult
     
     output = unwrap(lib_function(c_this), Domain)
-    output._depends_on(this)
+    
     return output
 
 
@@ -369,7 +369,7 @@ def measurement_input_metric(
     lib_function.restype = FfiResult
     
     output = unwrap(lib_function(c_this), Metric)
-    output._depends_on(this)
+    
     return output
 
 
@@ -493,7 +493,7 @@ def measurement_output_measure(
     lib_function.restype = FfiResult
     
     output = unwrap(lib_function(c_this), Measure)
-    output._depends_on(this)
+    
     return output
 
 
@@ -786,7 +786,7 @@ def transformation_input_domain(
     lib_function.restype = FfiResult
     
     output = unwrap(lib_function(c_this), Domain)
-    output._depends_on(this)
+    
     return output
 
 
@@ -815,7 +815,7 @@ def transformation_input_metric(
     lib_function.restype = FfiResult
     
     output = unwrap(lib_function(c_this), Metric)
-    output._depends_on(this)
+    
     return output
 
 
@@ -939,7 +939,7 @@ def transformation_output_domain(
     lib_function.restype = FfiResult
     
     output = unwrap(lib_function(c_this), Domain)
-    output._depends_on(this)
+    
     return output
 
 
@@ -968,5 +968,5 @@ def transformation_output_metric(
     lib_function.restype = FfiResult
     
     output = unwrap(lib_function(c_this), Metric)
-    output._depends_on(this)
+    
     return output
