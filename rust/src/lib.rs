@@ -167,7 +167,7 @@ macro_rules! enclose {
 
 #[cfg(feature = "ffi")]
 #[macro_use]
-mod ffi;
+pub mod ffi;
 #[cfg(feature = "ffi")]
 #[macro_use]
 extern crate lazy_static;

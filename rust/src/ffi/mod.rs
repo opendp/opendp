@@ -3,6 +3,8 @@
 //! # Overview
 //!
 //! This module contains utilities necessary for the FFI bindings.
+//! It is public so you can write your own lightweight FFI for quick one-off language integrations,
+//! but its use should be rare: More often, you should use the Rust API directly.
 //!
 //! # Generic Functions
 //!
