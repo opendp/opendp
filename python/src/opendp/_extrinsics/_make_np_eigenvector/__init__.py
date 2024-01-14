@@ -57,6 +57,13 @@ def make_private_np_eigenvector(
         Omega_inv = np.linalg.inv(Omega)
 
         while True:
+            # Mike Shoemate: I know of no floating-point-safe sampler for `u`.
+            #  - Mult normal does not have an invertible cdf
+            #  - Could try:
+            #    1. a "conservative" Cholesky decomposition of Omega_inv 
+            #    2. compute clamp_norm(compute L @ std_gaussian(d), 1) with arbitrary precision
+            #       sample with sufficient precision where all components round to same float
+            
             z = np_csprng.multivariate_normal(mean=np.zeros(d), cov=Omega_inv)
             u = z / np.linalg.norm(z)
             if np.exp(-u.T @ A @ u) / (M * (u.T @ Omega @ u) ** (d / 2)):
