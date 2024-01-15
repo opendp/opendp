@@ -258,10 +258,7 @@ jobs:
       - name: Test
         working-directory: R/opendp/
         run: Rscript -e 'devtools::test(reporter = c("summary", "fail"))'
-
-      - name: Clean R package
-        run: bash tools/r_stage.sh -c
-      
+    
       - name: Download vendor
         uses: actions/download-artifact@v3
         with:
