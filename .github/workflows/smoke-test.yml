@@ -37,7 +37,7 @@ jobs:
         run: cargo fmt --manifest-path=Cargo.toml --all --check
 
       - name: Build
-        run: cargo build --verbose --features untrusted,bindings-python
+        run: cargo build --verbose --features untrusted,bindings
       
       - name: Check --no-default-features
         run: cargo check --verbose --no-default-features --features untrusted,ffi

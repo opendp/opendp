@@ -40,10 +40,10 @@
             },
             "args": [
                 "--features",
-                "untrusted bindings-python"
+                "untrusted bindings"
             ],
             "group": "build",
-            "label": "cargo build --features untrusted,bindings-python",
+            "label": "cargo build --features untrusted,bindings",
             "detail": "    run before testing in Python",
             "presentation": {
                 "clear": true
@@ -64,7 +64,7 @@
             },
             "args": [
                 "--features",
-                "bindings-python untrusted"
+                "untrusted bindings"
             ],
             "group": "build",
             "label": "cargo test --features untrusted,ffi",
@@ -89,7 +89,7 @@
             },
             "args": [
                 "--features",
-                "bindings-python untrusted"
+                "untrusted bindings"
             ],
             "group": "build",
             "label": "cargo clippy --features ffi",

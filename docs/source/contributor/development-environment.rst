@@ -47,14 +47,14 @@ Now run ``cargo build`` in the ``rust`` subdirectory of the repo:
 .. code-block:: bash
 
     cd rust
-    cargo build --features untrusted,bindings-python
+    cargo build --features untrusted,bindings
 
 This will compile a debug build of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. 
 (The specific name of the library file will vary depending on your platform.)
 
 Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to run a lightweight check that the code is valid.
 
-In the above commands, the features ``untrusted`` and ``bindings-python`` are enabled.
+In the above commands, the features ``untrusted`` and ``bindings`` are enabled.
 
 Setting a feature changes how the crate compiles:
 
@@ -78,8 +78,8 @@ Setting a feature changes how the crate compiles:
      - Enable to include constructors that are only private if the constructor arguments are honest.
    * - ``floating-point``
      - Enable to include transformations/measurements with floating-point vulnerabilities.
-   * - ``bindings-python``
-     - Enables the ``ffi`` and ``derive`` feature and regenerates sources in the Python package.
+   * - ``bindings``
+     - Enables the ``ffi`` and ``derive`` feature and regenerates sources in the Python and R packages.
    * - ``ffi``
      - Enable to include C foreign function interfaces.
    * - ``derive``
@@ -288,7 +288,7 @@ Use whatever tooling you are comfortable with.
 A few notes on VS Code:
 
 * Be sure to install the `rust-analyzer <https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer>`_ plugin, not the Rust plugin
-* Open ``rust-analyzer``'s extension settings, search "features" and add ``"untrusted", "bindings-python"``
+* Open ``rust-analyzer``'s extension settings, search "features" and add ``"untrusted", "bindings"``
 * Look for ``Problems`` in the bottom panel for live compilation errors as you work
 * Other useful extensions are "Better Toml", "crates" and "LaTex Workshop"
 * To configure VS Code with suggested tasks and settings: ``cp -a .vscode-suggested .vscode``
