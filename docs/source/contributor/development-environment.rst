@@ -101,18 +101,6 @@ set the environment variable ``OPENDP_TEST_RELEASE=1`` before importing OpenDP.
 
 If you run into problems, please contact us!
 
-.. note::
-
-    You may encounter the following build error on Windows:
-
-    .. code-block::
-
-        error: failed to run custom build command for `gmp-mpfr-sys v1.4.10`
-
-    There is a more involved `setup guide <https://github.com/opendp/opendp/tree/main/rust/windows>`_ for Windows users.
-    You can compromise to simple and vulnerable builds instead, by adding the ``--no-default-features`` flag to cargo commands.
-    Be advised this flag disables GMP's exact float handling, as well as OpenSSL's secure noise generation.
-
 
 Python Setup
 ------------

@@ -25,7 +25,7 @@ pub enum Optimize {
 }
 
 #[bootstrap(
-    features("contrib", "floating-point"),
+    features("contrib"),
     arguments(optimize(c_type = "char *", rust_type = "String")),
     generics(TIA(suppress))
 )]
@@ -102,7 +102,6 @@ where
     )
 }
 
-#[cfg(feature = "floating-point")]
 #[cfg(test)]
 pub mod test_exponential {
     use crate::error::Fallible;

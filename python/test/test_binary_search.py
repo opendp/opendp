@@ -6,7 +6,7 @@ dp.enable_features('floating-point', 'contrib')
 def test_binary_search_fail():
     with pytest.raises(ValueError, match=r'predicate always fails'):
         dp.binary_search(lambda x: bool(1/0), T=float)
-test_binary_search_fail()
+
 def test_binary_search_overflow():
 
     input_domain = dp.vector_domain(dp.atom_domain(T=float))

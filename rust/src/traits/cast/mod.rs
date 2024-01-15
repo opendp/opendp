@@ -236,6 +236,7 @@ impl ExactIntBounds for f32 {
     const MIN_CONSECUTIVE: Self = -16_777_216.0;
 }
 
+/// Convert from an FBig to a native type `Self` with controlled rounding
 trait FromFBig<R: Round> {
     fn from_fbig(value: FBig<R>) -> Self;
 }
@@ -527,14 +528,6 @@ macro_rules! impl_saturating_cast_ubig_int {
         impl SaturatingCast<UBig> for $T {
             fn saturating_cast(v: UBig) -> Self {
                 <$T>::try_from(v).unwrap_or(<$T>::MAX)
-                // let bytes = v.to_le_bytes();
-                // if bytes.len() > size_of::<Self>() {
-                //     return Self::MAX
-                // }
-
-                // let mut buf = [0; size_of::<Self>()];
-                // buf[..bytes.len()].copy_from_slice(&*bytes);
-                // Self::from_le_bytes(buf)
             }
         }
     )+}

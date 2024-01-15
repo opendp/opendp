@@ -456,6 +456,7 @@ macro_rules! impl_alerting_float {
 }
 impl_alerting_float!(f32, f64);
 
+// TRAIT InfSqrt, InfLn, InfExp (univariate)
 trait Log2 {
     fn log2(self) -> Self;
 }
@@ -463,17 +464,21 @@ trait Log2 {
 impl Log2 for FBig<Down> {
     fn log2(self) -> Self {
         Self::try_from(self.log2_bounds().0).unwrap()
+        // If you implement via log rules, the bound is looser than dashu's EstimatedLog2.
+        // However, dashu's EstimatedLog2 matches MPFR.
+        // log_b(x) = ln(x) / ln(b)
+        // self.ln() / FBig::<Up>::from(2).ln().with_rounding::<Down>()
     }
 }
 impl Log2 for FBig<Up> {
     fn log2(self) -> Self {
         Self::try_from(self.log2_bounds().1).unwrap()
+        // self.ln() / FBig::<Down>::from(2).ln().with_rounding::<Up>()
     }
 }
 
-// TRAIT InfSqrt, InfLn, InfExp (univariate)
 macro_rules! impl_float_inf_uni {
-    ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident, $fallback:ident) => {
+    ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident) => {
         $(
         impl $name for $ty {
             fn $method_inf(self) -> Fallible<Self> {
@@ -503,12 +508,12 @@ macro_rules! impl_float_inf_uni {
         })+
     }
 }
-impl_float_inf_uni!(f64, f32; InfLn, inf_ln, neg_inf_ln, ln, ln);
-impl_float_inf_uni!(f64, f32; InfLog2, inf_log2, neg_inf_log2, log2, log2);
-impl_float_inf_uni!(f64, f32; InfExp, inf_exp, neg_inf_exp, exp, exp);
-impl_float_inf_uni!(f64, f32; InfLn1P, inf_ln_1p, neg_inf_ln_1p, ln_1p, ln_1p);
-impl_float_inf_uni!(f64, f32; InfExpM1, inf_exp_m1, neg_inf_exp_m1, exp_m1, exp_m1);
-impl_float_inf_uni!(f64, f32; InfSqrt, inf_sqrt, neg_inf_sqrt, sqrt, sqrt);
+impl_float_inf_uni!(f64, f32; InfLn, inf_ln, neg_inf_ln, ln);
+impl_float_inf_uni!(f64, f32; InfLog2, inf_log2, neg_inf_log2, log2);
+impl_float_inf_uni!(f64, f32; InfExp, inf_exp, neg_inf_exp, exp);
+impl_float_inf_uni!(f64, f32; InfLn1P, inf_ln_1p, neg_inf_ln_1p, ln_1p);
+impl_float_inf_uni!(f64, f32; InfExpM1, inf_exp_m1, neg_inf_exp_m1, exp_m1);
+impl_float_inf_uni!(f64, f32; InfSqrt, inf_sqrt, neg_inf_sqrt, sqrt);
 
 // TRAIT InfAdd, InfSub, InfMul, InfDiv (bivariate)
 macro_rules! impl_int_inf {
@@ -544,7 +549,7 @@ macro_rules! impl_int_inf {
 impl_int_inf!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
 
 macro_rules! impl_float_inf_bi {
-    ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident, $fallback:ident) => {
+    ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident) => {
         $(impl $name for $ty {
             fn $method_inf(&self, other: &Self) -> Fallible<Self> {
                 let not_finite = || err!(
@@ -573,96 +578,13 @@ macro_rules! impl_float_inf_bi {
         })+
     }
 }
-impl_float_inf_bi!(f64, f32; InfAdd, inf_add, neg_inf_add, add, alerting_add);
-impl_float_inf_bi!(f64, f32; InfSub, inf_sub, neg_inf_sub, sub, alerting_sub);
-impl_float_inf_bi!(f64, f32; InfMul, inf_mul, neg_inf_mul, mul, alerting_mul);
-impl InfDiv for f64 {
-    fn inf_div(&self, other: &Self) -> Fallible<Self> {
-        let not_finite = || {
-            err!(
-                Overflow,
-                concat!(
-                    "({}).",
-                    stringify!(inf_div),
-                    "({}) is not finite. Consider tightening your parameters."
-                ),
-                self,
-                other
-            )
-        };
-        if !(self / other).is_finite() {
-            return Err(not_finite());
-        }
-        let this = FBig::<Up>::try_from(*self)?.div(&FBig::<Up>::try_from(*other)?);
-        let this = Self::inf_cast(this)?;
-        this.is_finite().then(|| this).ok_or_else(not_finite)
-    }
-    fn neg_inf_div(&self, other: &Self) -> Fallible<Self> {
-        let not_finite = || {
-            err!(
-                Overflow,
-                concat!(
-                    "({}).",
-                    stringify!(neg_inf_div),
-                    "({}) is not finite. Consider tightening your parameters."
-                ),
-                self,
-                other
-            )
-        };
-        if !(self / other).is_finite() {
-            return Err(not_finite());
-        }
-        let this = FBig::<Down>::try_from(*self)?.div(&FBig::<Down>::try_from(*other)?);
-        let this = Self::neg_inf_cast(this)?;
-        this.is_finite().then(|| this).ok_or_else(not_finite)
-    }
-}
-impl InfDiv for f32 {
-    fn inf_div(&self, other: &Self) -> Fallible<Self> {
-        let not_finite = || {
-            err!(
-                Overflow,
-                concat!(
-                    "({}).",
-                    stringify!(inf_div),
-                    "({}) is not finite. Consider tightening your parameters."
-                ),
-                self,
-                other
-            )
-        };
-        if !(self / other).is_finite() {
-            return Err(not_finite());
-        }
-        let this = FBig::<Up>::try_from(*self)?.div(&FBig::<Up>::try_from(*other)?);
-        let this = Self::inf_cast(this)?;
-        this.is_finite().then(|| this).ok_or_else(not_finite)
-    }
-    fn neg_inf_div(&self, other: &Self) -> Fallible<Self> {
-        let not_finite = || {
-            err!(
-                Overflow,
-                concat!(
-                    "({}).",
-                    stringify!(neg_inf_div),
-                    "({}) is not finite. Consider tightening your parameters."
-                ),
-                self,
-                other
-            )
-        };
-        if !(self / other).is_finite() {
-            return Err(not_finite());
-        }
-        let this = FBig::<Down>::try_from(*self)?.div(&FBig::<Down>::try_from(*other)?);
-        let this = Self::neg_inf_cast(this)?;
-        this.is_finite().then(|| this).ok_or_else(not_finite)
-    }
-}
+impl_float_inf_bi!(f64, f32; InfAdd, inf_add, neg_inf_add, add);
+impl_float_inf_bi!(f64, f32; InfSub, inf_sub, neg_inf_sub, sub);
+impl_float_inf_bi!(f64, f32; InfMul, inf_mul, neg_inf_mul, mul);
+impl_float_inf_bi!(f64, f32; InfDiv, inf_div, neg_inf_div, div);
 
 macro_rules! impl_float_inf_bi_ibig {
-    ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident, $fallback:ident) => {
+    ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident) => {
         $(impl $name for $ty {
             fn $method_inf(&self, other: IBig) -> Fallible<Self> {
                 let not_finite = || err!(
@@ -691,4 +613,4 @@ macro_rules! impl_float_inf_bi_ibig {
         })+
     }
 }
-impl_float_inf_bi_ibig!(f64, f32; InfPowI, inf_powi, neg_inf_powi, powi, alerting_pow);
+impl_float_inf_bi_ibig!(f64, f32; InfPowI, inf_powi, neg_inf_powi, powi);

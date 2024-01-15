@@ -142,7 +142,7 @@ where
     )
 }
 
-pub fn make_base_discrete_gaussian_rug<D>(
+pub fn make_base_rational_gaussian<D>(
     input_domain: D,
     input_metric: D::InputMetric,
     scale: RBig,
@@ -204,9 +204,9 @@ mod test {
     }
 
     #[test]
-    fn test_make_base_discrete_gaussian_rug() -> Fallible<()> {
+    fn test_make_base_rational_gaussian() -> Fallible<()> {
         let _1e30 = RBig::try_from(1e30f64)?;
-        let meas = make_base_discrete_gaussian_rug(
+        let meas = make_base_rational_gaussian(
             AtomDomain::default(),
             AbsoluteDistance::default(),
             _1e30.clone(),
@@ -214,7 +214,7 @@ mod test {
         println!("{:?}", meas.invoke(&IBig::ZERO)?);
         assert!(meas.check(&RBig::ONE, &_1e30)?);
 
-        assert!(make_base_discrete_gaussian_rug(
+        assert!(make_base_rational_gaussian(
             AtomDomain::default(),
             AbsoluteDistance::default(),
             RBig::ZERO
@@ -222,7 +222,7 @@ mod test {
         .is_err());
 
         let f64_max = RBig::try_from(f64::MAX).unwrap();
-        let meas = make_base_discrete_gaussian_rug(
+        let meas = make_base_rational_gaussian(
             AtomDomain::default(),
             AbsoluteDistance::default(),
             f64_max,

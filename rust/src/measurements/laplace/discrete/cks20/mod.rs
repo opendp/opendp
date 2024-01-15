@@ -89,7 +89,7 @@ where
 }
 
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
-/// directly using bignum types from [`rug`].
+/// directly using bignum rational types.
 ///
 /// Set `D` to change the input data type and input metric:
 ///
@@ -106,7 +106,7 @@ where
 ///
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<Integer>>` or `AtomDomain<Integer>`
-pub fn make_base_discrete_laplace_cks20_rug<D>(
+pub fn make_base_rational_laplace_cks20<D>(
     scale: RBig,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<RBig>>>
 where
@@ -166,16 +166,16 @@ mod test {
     }
 
     #[test]
-    fn test_make_base_discrete_laplace_cks20_rug() -> Fallible<()> {
+    fn test_make_base_rational_laplace_cks20() -> Fallible<()> {
         let _1e30 = RBig::try_from(1e30f64).unwrap();
-        let meas = make_base_discrete_laplace_cks20_rug::<AtomDomain<_>>(_1e30.clone())?;
+        let meas = make_base_rational_laplace_cks20::<AtomDomain<_>>(_1e30.clone())?;
         println!("{:?}", meas.invoke(&IBig::ZERO)?);
         assert!(meas.check(&IBig::ONE, &_1e30)?);
 
-        assert!(make_base_discrete_laplace_cks20_rug::<AtomDomain<_>>(RBig::ZERO).is_err());
+        assert!(make_base_rational_laplace_cks20::<AtomDomain<_>>(RBig::ZERO).is_err());
 
         let f64_max = RBig::try_from(f64::MAX).unwrap();
-        let meas = make_base_discrete_laplace_cks20_rug::<AtomDomain<_>>(f64_max)?;
+        let meas = make_base_rational_laplace_cks20::<AtomDomain<_>>(f64_max)?;
         println!(
             "sample with scale=f64::MAX: {:?}",
             meas.invoke(&IBig::ZERO)?

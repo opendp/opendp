@@ -51,7 +51,7 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     }
 }
 
-/// A struct that aids in sampling from [`rug`] and [`rand`].
+/// An OpenDP random number generator that implements [`rand::RngCore`].
 pub(crate) struct GeneratorOpenDP {
     /// If an error happens while sampling, it is packed into this struct and thrown later.
     pub error: Fallible<()>,

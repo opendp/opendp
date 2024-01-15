@@ -47,8 +47,6 @@ jobs:
   libs-windows:
     needs: credential-check
     runs-on: windows-latest
-    env:
-      MSYS: winsymlinks:nativestrict
     defaults:
       run:
         shell: msys2 {0}
@@ -74,7 +72,6 @@ jobs:
             ~\.cargo\registry\index
             ~\.cargo\registry\cache
             ~\.cargo\git\db
-            ~\AppData\Local\gmp-mpfr-sys
             rust\target
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
@@ -120,7 +117,6 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-            ~/Library/Caches/gmp-mpfr-sys
             rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
@@ -130,8 +126,6 @@ jobs:
         env:
           # Only run tests for native compile
           FLAGS: ${{ matrix.architecture == 'x86_64' && '-i -r -t' || '-i -r' }}
-          # Explicit setting of clang -target is necessary for gmp-mpfr-sys
-          CC: clang -target ${{ env.TARGET }}
         run: bash tools/rust_build.sh $FLAGS -g $TARGET -f "$FEATURES"
 
       - name: Create Rust build for macos (FAKE)
@@ -154,9 +148,7 @@ jobs:
       matrix:
         architecture: [x86_64, aarch64]
     env:
-      # This image is important. The default manylinux2014 images are problematic to configure for cross-compilation
-      # in a way that will satisfy the gmp configure script.
-      DOCKER_IMAGE: messense/manylinux2014-cross:${{ matrix.architecture }}
+      DOCKER_IMAGE: quay.io/pypa/manylinux2014_${{ matrix.architecture }}
       TARGET: ${{ matrix.architecture }}-unknown-linux-gnu
     steps:
       - name: Checkout repository
@@ -174,7 +166,6 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-            ~/.cache/gmp-mpfr-sys
             rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
@@ -217,7 +208,6 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-            ~/Library/Caches/gmp-mpfr-sys
             rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-

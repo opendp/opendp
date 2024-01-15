@@ -1,22 +1,17 @@
-use std::{
-    mem::{replace, size_of},
-    ops::Sub,
-};
+use std::{mem::size_of, ops::Sub};
 
 use crate::{
     error::Fallible,
     traits::{ExactIntCast, FloatBits, InfDiv},
 };
 
-use super::{fill_bytes, sample_geometric_buffer, GeneratorOpenDP};
+use super::{fill_bytes, sample_geometric_buffer};
 
 use dashu::{
     base::{BitTest, Signed},
     integer::{IBig, UBig},
 };
 use num::{Integer, One};
-
-use rand::RngCore;
 
 /// Sample exactly from the uniform distribution.
 pub trait SampleUniform: Sized {
@@ -171,7 +166,6 @@ impl_sample_uniform_unsigned_int!(u8, u16, u32, u64, u128, usize);
 
 impl SampleUniformIntBelow for UBig {
     fn sample_uniform_int_below(upper: Self) -> Fallible<Self> {
-        let mut rng = GeneratorOpenDP::new();
         // ceil(ceil(log_2(upper)) / 8)
         let byte_len = Integer::div_ceil(&upper.bit_len(), &8);
 
@@ -182,8 +176,7 @@ impl SampleUniformIntBelow for UBig {
 
         let mut buffer = vec![0; byte_len];
         loop {
-            rng.fill_bytes(&mut buffer);
-            replace(&mut rng.error, Ok(()))?;
+            fill_bytes(&mut buffer)?;
 
             let sample = UBig::from_be_bytes(&buffer);
             if sample < threshold {

@@ -63,22 +63,6 @@ function init_windows() {
   run sleep 5
   run rustup set default-host x86_64-pc-windows-gnu
   run sleep 5
-
-# The lines below copy components from the platform installation of mingw into the Rust toolchain,
-# and build the gmp & mpfr native libraries manually. This isn't necessary anymore, as the build script
-# in the gmp-mpfr-sys crate works with the current version of msys2.
-#
-#  log "Patch the Rust compiler"
-#  run cp -rp "$RUSTUP_DIR"/toolchains/stable-x86_64-pc-windows-gnu rust/toolchain
-#  run rustup toolchain link "$TOOLCHAIN" rust/toolchain
-#  run cp -f /mingw64/x86_64-w64-mingw32/lib/{*.a,*.o} rust/toolchain/lib/rustlib/x86_64-pc-windows-gnu/lib/self-contained
-#
-#  log "Prepare patches for binary dependencies"
-#  run \(cd rust/windows '&&' bash 1_download_and_patch.sh\)
-#
-#  log "Build binary dependencies"
-#  export RUSTFLAGS="-L native=D:\a\opendp\opendp\rust\toolchain\lib\rustlib\x86_64-pc-windows-gnu\lib\self-contained"
-#  run \(cd rust/windows '&&' bash 2_build_dependencies.sh\)
 }
 
 function init_macos() {
@@ -91,9 +75,6 @@ function init_linux() {
     run curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal
     source ~/.cargo/env
   fi
-  # We need m4 for gmp, but messense/manylinux2014-cross doesn't include it.
-  log "Install m4"
-  run apt-get -y install m4
 }
 
 function run_cargo() {

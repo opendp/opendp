@@ -357,7 +357,6 @@ mod test_scorer {
     }
 }
 
-// feature-gated because non-mpfr InfCast errors on numbers greater than 2^52
 #[cfg(all(test, feature = "derive"))]
 mod test_trans {
     use crate::{

@@ -63,31 +63,6 @@
                 "cwd": "./rust"
             },
             "args": [
-                "--no-default-features",
-                "--features",
-                "bindings-python untrusted"
-            ],
-            "group": "build",
-            "label": "cargo test --no-default-features --features untrusted,bindings-python",
-            "detail": "    test a build without GMP/MPFR/OpenSSL (Windows)",
-            "presentation": {
-                "clear": true
-            }
-        },
-        {
-            "type": "cargo",
-            "command": "test",
-            "problemMatcher": {
-                "base": "$rustc",
-                "fileLocation": [
-                    "relative",
-                    "${workspaceFolder}/rust"
-                ]
-            },
-            "options": {
-                "cwd": "./rust"
-            },
-            "args": [
                 "--features",
                 "bindings-python untrusted"
             ],
@@ -153,7 +128,7 @@
             "command": "rustdoc",
             "problemMatcher": {
                 "base": "$rustc",
-                "fileLocation": ["relative", "${workspaceFolder}/rust"],
+                "fileLocation": ["relative", "${workspaceFolder}/rust"]
             },
             "options": {
                 "cwd": "./rust"
