@@ -11,7 +11,7 @@ static ATOM_TYPES: &'static [&'static str] = &[
     "u32", "u64", "i32", "i64", "f32", "f64", "usize", "bool", "String",
 ];
 
-/// Generates all code for an opendp R module.
+/// Generates all code for an OpenDP R module.
 /// Each call corresponds to one R file.
 pub fn generate_r_module(
     module_name: &str,
@@ -35,6 +35,9 @@ NULL
     )
 }
 
+/// Generate the code for a user-facing R function.
+///
+/// This internally calls a C function that wraps the Rust OpenDP Library
 fn generate_r_function(
     module_name: &str,
     func: &Function,
@@ -44,8 +47,10 @@ fn generate_r_function(
     let mut args = (func.args.iter())
         .map(|arg| generate_r_input_argument(arg, func))
         .collect::<Vec<_>>();
+
     // move default arguments to end
     args.sort_by(|(_, l_is_default), (_, r_is_default)| l_is_default.cmp(r_is_default));
+
     let args = args.into_iter().map(|v| v.0).collect::<Vec<_>>();
 
     let then_func = if func.name.starts_with("make_") {
@@ -156,24 +161,26 @@ fn generate_r_input_argument(arg: &Argument, func: &Function) -> (String, bool) 
     )
 }
 
+fn find_quoted(s: &str, pat: char) -> Option<(usize, usize)> {
+    let left = s.find(pat)?;
+    let right = left + 1 + s[left + 1..].find(pat)?;
+    Some((left, right))
+}
+
 // R wants special formatting for latex
-fn escape_latex(r: &str) -> String {
-    let s = format!(" {r} ");
+fn escape_latex(s: &str) -> String {
     // if a substring is enclosed in latex "$"
-    if let Some((l, u)) = s.find(" $").zip(s.find("$ ")) {
-        if l > u {
-            return r.to_string();
-        }
+    if let Some((l, u)) = find_quoted(s, '$') {
         [
-            escape_latex(&r[..l]).as_str(),
+            escape_latex(&s[..l]).as_str(),
             "\\eqn{",
-            &r[l + 1..u - 1],
+            &s[l + 1..u],
             "}",
-            escape_latex(&r[u..]).as_str(),
+            escape_latex(&s[u + 1..]).as_str(),
         ]
         .join("")
     } else {
-        r.to_string()
+        s.to_string()
     }
 }
 
@@ -265,7 +272,8 @@ fn generate_docstring_arg(arg: &Argument) -> String {
         name = name,
         description = arg
             .description
-            .clone()
+            .as_ref()
+            .map(|v| escape_latex(v.as_str()))
             .unwrap_or_else(|| "undocumented".to_string())
     )
 }
@@ -407,7 +415,10 @@ fn generate_assert_is_similar(func: &Function) -> String {
                 let name = sanitize_r(arg.name(), arg.is_type);
                 format!(".T.{name}")
             } else {
-                arg.rust_type.as_ref().unwrap().to_r(Some(&func.type_names()))
+                arg.rust_type
+                    .as_ref()
+                    .unwrap()
+                    .to_r(Some(&func.type_names()))
             };
             let inferred = {
                 let name = sanitize_r(arg.name(), arg.is_type);

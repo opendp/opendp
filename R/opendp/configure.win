@@ -4,9 +4,6 @@ BEFORE_CARGO_BUILD=''
 AFTER_CARGO_BUILD=''
 
 RUST_FEATURES=untrusted,ffi
-if [ "${OPENDP_USE_SYSTEM_LIBS:-false}" != "false" ]; then
-    RUST_FEATURES="${RUST_FEATURES},use-system-libs"
-fi
 
 # Even when `cargo` is on `PATH`, `rustc` might not. We need to source
 # ~/.cargo/env to ensure PATH is configured correctly in some cases
@@ -18,11 +15,13 @@ if [ -e "${HOME}/.cargo/env" ]; then
     BEFORE_CARGO_BUILD="${BEFORE_CARGO_BUILD} . \"${HOME}/.cargo/env\" \\&\\&"
 fi
 
-# Check the Rust installation, and abort if not available
-"${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" "./tools/configure.R"
-ret=$?
-if [ $ret -ne 0 ]; then
-    exit $ret
+if [ ! -f "src/binary.tar.xz" ]; then
+    # Check the Rust installation, and abort if not available
+    "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" "./tools/configure.R"
+    ret=$?
+    if [ $ret -ne 0 ]; then
+        exit $ret
+    fi
 fi
 
 # To address the change of the toolchain on R 4.2

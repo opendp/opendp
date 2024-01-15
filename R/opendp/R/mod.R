@@ -453,35 +453,46 @@ unbox2 <- function(x) {
   }
 }
 
-# TODO: reformat to Roxygen:
-# pre <- make_bounded_sum(bounds=c(0., 1.))
-# fun <- function(s) make_chain_mt(make_base_laplace(scale=s), pre)
 
-# chain1 = binary_search_chain(function(x) fun(x), d_in=1L, d_out=1., bounds=c(0.,100.) , T="float")
-# chain1
-
-# chain2 = binary_search_chain(function(x) fun(x), d_in=1L, d_out=1. , T="float")
-# chain2
-
-# chain3 = binary_search_chain(function(x) fun(x), d_in=1L, d_out=1. )
-# chain3
-
-# pre <- make_base_discrete_laplace(scale=1.)
-# fun <- function(s) make_chain_mt(pre, make_bounded_sum(bounds=c(0L, s)))
-
-# chain1 = binary_search_chain(function(x) fun(x), d_in=1L, d_out=1., bounds=c(0L,100L) , T="int")
-# chain1
-
-# chain2 = binary_search_chain(function(x) fun(x), d_in=1L, d_out=1. , T="int")
-# chain2
-
-# chain3 = binary_search_chain(function(x) fun(x), d_in=1L, d_out=1. )
-# chain3
+#' Find the highest-utility (`d_in`, `d_out`)-close Transformation or Measurement.
+#'
+#' Searches for the numeric parameter to `make_chain` that results in a computation
+#' that most tightly satisfies `d_out` when datasets differ by at most `d_in`,
+#' then returns the Transformation or Measurement corresponding to said parameter.
+#'
+#' See `binary_search_param` to retrieve the discovered parameter instead of the complete computation chain.
+#'
+#' @param make_chain a function that takes a number and returns a Transformation or Measurement
+#' @param d_in how far apart input datasets can be
+#' @param d_out how far apart output datasets or distributions can be
+#' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
+#' @param .T type of argument to `make_chain`, one of {float, int}
+#' @return a Transformation or Measurement (chain) that is (`d_in`, `d_out`)-close.
 #' @export
+#' @examples
+#' enable_features("contrib")
+#' # create a sum transformation over the space of float vectors
+#' s_vec <- c(vector_domain(atom_domain(.T = "float")), symmetric_distance())
+#' t_sum <- s_vec |> then_clamp(c(0., 1.)) |> then_sum()
+#'
+#' # find a measurement that satisfies ε=1 when datasets differ by at most one record
+#' m_sum <- binary_search_chain(\(s) t_sum |> then_laplace(s), d_in = 1L, d_out = 1.)
 binary_search_chain <- function(make_chain, d_in, d_out, bounds = NULL, .T = NULL) {
   return(make_chain(binary_search_param(make_chain, d_in, d_out, bounds, .T)))
 }
 
+
+#' Solve for the ideal constructor argument to `make_chain`
+#'
+#' Searches for the numeric parameter to `make_chain` that results in a computation
+#' that most tightly satisfies `d_out` when datasets differ by at most `d_in`.
+#'
+#' @param make_chain a function that takes a number and returns a Transformation or Measurement
+#' @param d_in how far apart input datasets can be
+#' @param d_out how far apart output datasets or distributions can be
+#' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
+#' @param .T type of argument to `make_chain`, one of {float, int}
+#' @return the parameter to `make_chain` that results in a (`d_in`, `d_out`)-close Transformation or Measurement
 #' @export
 binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NULL) {
   return(binary_search(function(param) {
@@ -489,6 +500,15 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
   }, bounds, .T))
 }
 
+#' Find the closest passing value to the decision boundary of `predicate`
+#'
+#' If bounds are not passed, conducts an exponential search.
+#'
+#' @param predicate a monotonic unary function from a number to a boolean
+#' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
+#' @param .T type of argument to `predicate`, one of {float, int}
+#' @param return_sign if True, also return the direction away from the decision boundary
+#' @return the discovered parameter within the bounds
 #' @export
 binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FALSE) {
   if (is.null(bounds)) {
@@ -498,10 +518,6 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
   if (is.null(bounds)) {
     stop("unable to infer bounds")
   }
-
-  # if(len(set(map(type, bounds))) != 1){
-  #   stop("bounds must share the same type")
-  # }
 
   tmp <- sort(bounds)
   lower <- tmp[1]
@@ -533,12 +549,9 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
   while (upper - lower > tolerance) {
     new_mid <- lower + half(upper - lower) # avoid overflow
 
-    # cat(sprintf("\n lower=%f, upper=%f, tolerance=%f, new_mid=%f", lower, upper, tolerance, new_mid))
-
     # avoid an infinite loop from float roundoff
     if (new_mid == mid) break
     mid <- new_mid
-
 
     if (predicate(mid) == minimize) {
       upper <- mid
@@ -562,7 +575,6 @@ exponential_bounds_search <- function(predicate, .T) {
     check_type <- function(v) {
       f <- try(predicate(v), TRUE)
       if (inherits(f, "try-error")) {
-        # warning(attr(f,"condition")$message)
         return(FALSE)
       } else {
         return(TRUE)
@@ -611,7 +623,7 @@ exponential_bounds_search <- function(predicate, .T) {
   if (is.null(ret)) {
     ret <- try(signed_band_search(center, at_center, -1), TRUE)
   }
-  # print(str(ret))
+
   if (!inherits(at_center, "try-error") && !inherits(ret, "try-error")) {
     return(ret)
   }
@@ -630,13 +642,9 @@ exponential_bounds_search <- function(predicate, .T) {
 
   exception_bounds <- exponential_bounds_search(exception_predicate, .T = .T)
 
-  if (is.null(exception_bounds)) { # not sure about this code
-    f1 <- try(predicate(center), TRUE)
-    if (inherits(f1, "try-error")) {
-      err <- f1$message
-      error <- sprintf(". Error at center: %s", err)
-      stop(sprintf("predicate always fails%s", err))
-    }
+  if (is.null(exception_bounds)) {
+    msg <- "Predicate always fails. Example error at %s: %s"
+    stop(sprintf(msg, center, try(predicate(center), TRUE)))
   }
 
   tmp <- binary_search(exception_predicate, bounds = exception_bounds, .T = .T, return_sign = TRUE)

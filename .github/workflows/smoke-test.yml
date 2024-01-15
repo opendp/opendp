@@ -232,7 +232,7 @@ jobs:
           pytest --nbmake source/**/*.ipynb -n=auto
 
 
-  R-test:
+  r-test:
     needs: rust-build-and-test
     runs-on: ubuntu-22.04
     env:
@@ -273,19 +273,9 @@ jobs:
 
       - name: Notes
         run: bash tools/r_stage.sh -n
+      
+      - name: Document
+        run: cd R/opendp/ && Rscript -e 'devtools::document()'
 
-      # disabled so as not to affect R-universe
-      # - name: Push to r-latest branch
-      #   run: |
-      #     git fetch
-      #     git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
-      #     git config --global user.name "$GITHUB_ACTOR"
-
-      #     # create brand new history each time
-      #     git checkout --orphan r-latest
-
-      #     git add R/opendp/ --force
-      #     echo "Push R package to r-latest branch"
-      #     git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
-      #     git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
-      #     git push --force origin r-latest
+      - name: Check
+        run: cd R/opendp/ && Rscript -e 'devtools::check()'

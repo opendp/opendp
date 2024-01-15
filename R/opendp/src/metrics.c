@@ -19,12 +19,14 @@ SEXP metrics__absolute_distance(
 ) {
     // Convert arguments to c types.
     PROTECT(T);
+    PROTECT(log);
+
     char * c_T = rt_to_string(T);
 
     // Call library function.
     FfiResult_____AnyMetric _result = opendp_metrics__absolute_distance(c_T);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____AnyMetric)
         return(extract_error(_result.err));
     AnyMetric* _return_value = _result.ok;
@@ -36,10 +38,11 @@ SEXP metrics__change_one_distance(
     SEXP log
 ) {
     // No arguments to convert to c types.
+    PROTECT(log);
     // Call library function.
     FfiResult_____AnyMetric _result = opendp_metrics__change_one_distance();
 
-    UNPROTECT(0);
+    UNPROTECT(1);
     if(_result.tag == Err_____AnyMetric)
         return(extract_error(_result.err));
     AnyMetric* _return_value = _result.ok;
@@ -51,10 +54,11 @@ SEXP metrics__discrete_distance(
     SEXP log
 ) {
     // No arguments to convert to c types.
+    PROTECT(log);
     // Call library function.
     FfiResult_____AnyMetric _result = opendp_metrics__discrete_distance();
 
-    UNPROTECT(0);
+    UNPROTECT(1);
     if(_result.tag == Err_____AnyMetric)
         return(extract_error(_result.err));
     AnyMetric* _return_value = _result.ok;
@@ -66,10 +70,11 @@ SEXP metrics__hamming_distance(
     SEXP log
 ) {
     // No arguments to convert to c types.
+    PROTECT(log);
     // Call library function.
     FfiResult_____AnyMetric _result = opendp_metrics__hamming_distance();
 
-    UNPROTECT(0);
+    UNPROTECT(1);
     if(_result.tag == Err_____AnyMetric)
         return(extract_error(_result.err));
     AnyMetric* _return_value = _result.ok;
@@ -81,10 +86,11 @@ SEXP metrics__insert_delete_distance(
     SEXP log
 ) {
     // No arguments to convert to c types.
+    PROTECT(log);
     // Call library function.
     FfiResult_____AnyMetric _result = opendp_metrics__insert_delete_distance();
 
-    UNPROTECT(0);
+    UNPROTECT(1);
     if(_result.tag == Err_____AnyMetric)
         return(extract_error(_result.err));
     AnyMetric* _return_value = _result.ok;
@@ -97,12 +103,14 @@ SEXP metrics__l1_distance(
 ) {
     // Convert arguments to c types.
     PROTECT(T);
+    PROTECT(log);
+
     char * c_T = rt_to_string(T);
 
     // Call library function.
     FfiResult_____AnyMetric _result = opendp_metrics__l1_distance(c_T);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____AnyMetric)
         return(extract_error(_result.err));
     AnyMetric* _return_value = _result.ok;
@@ -115,12 +123,14 @@ SEXP metrics__l2_distance(
 ) {
     // Convert arguments to c types.
     PROTECT(T);
+    PROTECT(log);
+
     char * c_T = rt_to_string(T);
 
     // Call library function.
     FfiResult_____AnyMetric _result = opendp_metrics__l2_distance(c_T);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____AnyMetric)
         return(extract_error(_result.err));
     AnyMetric* _return_value = _result.ok;
@@ -134,13 +144,15 @@ SEXP metrics__linf_distance(
     // Convert arguments to c types.
     PROTECT(monotonic);
     PROTECT(T);
+    PROTECT(log);
+
     bool c_monotonic = asLogical(monotonic);
     char * c_T = rt_to_string(T);
 
     // Call library function.
     FfiResult_____AnyMetric _result = opendp_metrics__linf_distance(c_monotonic, c_T);
 
-    UNPROTECT(2);
+    UNPROTECT(3);
     if(_result.tag == Err_____AnyMetric)
         return(extract_error(_result.err));
     AnyMetric* _return_value = _result.ok;
@@ -153,12 +165,14 @@ SEXP metrics__metric_debug(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyMetric * c_this = sexp_to_anymetricptr(this);
 
     // Call library function.
     FfiResult_____c_char _result = opendp_metrics__metric_debug(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____c_char)
         return(extract_error(_result.err));
     c_char* _return_value = _result.ok;
@@ -171,12 +185,14 @@ SEXP metrics__metric_distance_type(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyMetric * c_this = sexp_to_anymetricptr(this);
 
     // Call library function.
     FfiResult_____c_char _result = opendp_metrics__metric_distance_type(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____c_char)
         return(extract_error(_result.err));
     c_char* _return_value = _result.ok;
@@ -189,12 +205,14 @@ SEXP metrics__metric_type(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyMetric * c_this = sexp_to_anymetricptr(this);
 
     // Call library function.
     FfiResult_____c_char _result = opendp_metrics__metric_type(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____c_char)
         return(extract_error(_result.err));
     c_char* _return_value = _result.ok;
@@ -206,10 +224,11 @@ SEXP metrics__symmetric_distance(
     SEXP log
 ) {
     // No arguments to convert to c types.
+    PROTECT(log);
     // Call library function.
     FfiResult_____AnyMetric _result = opendp_metrics__symmetric_distance();
 
-    UNPROTECT(0);
+    UNPROTECT(1);
     if(_result.tag == Err_____AnyMetric)
         return(extract_error(_result.err));
     AnyMetric* _return_value = _result.ok;
@@ -222,12 +241,14 @@ SEXP metrics__user_distance(
 ) {
     // Convert arguments to c types.
     PROTECT(descriptor);
+    PROTECT(log);
+
     char * c_descriptor = (char *)CHAR(STRING_ELT(descriptor, 0));
 
     // Call library function.
     FfiResult_____AnyMetric _result = opendp_metrics__user_distance(c_descriptor);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____AnyMetric)
         return(extract_error(_result.err));
     AnyMetric* _return_value = _result.ok;

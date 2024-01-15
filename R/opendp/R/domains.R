@@ -4,30 +4,6 @@
 NULL
 
 
-#' Retrieve the descriptor value stored in a user domain.
-#'
-#' @param domain The UserDomain to extract the descriptor from
-user_domain_descriptor <- function(
-    domain
-) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("_user_domain_descriptor", "domains", new_hashtab(
-        list("domain"),
-        list(domain)
-    ))
-
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = AnyDomain, inferred = rt_infer(domain))
-
-    # Call wrapper function.
-    output <- .Call(
-        "domains___user_domain_descriptor",
-        domain,
-        log, PACKAGE = "opendp")
-    output
-}
-
-
 #' Construct an instance of `AtomDomain`.
 #'
 #' [atom_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.atom_domain.html)
@@ -219,41 +195,6 @@ option_domain <- function(
     output <- .Call(
         "domains__option_domain",
         element_domain, .D,
-        log, PACKAGE = "opendp")
-    output
-}
-
-
-#' Construct a new UserDomain.
-#' Any two instances of an UserDomain are equal if their string descriptors are equal.
-#' Contains a function used to check if any value is a member of the domain.
-#'
-#' @param identifier A string description of the data domain.
-#' @param member A function used to test if a value is a member of the data domain.
-#' @param descriptor Additional constraints on the domain.
-#' @return Domain
-#' @export
-user_domain <- function(
-    identifier,
-    member,
-    descriptor = NULL
-) {
-    assert_features("honest-but-curious")
-
-    # No type arguments to standardize.
-    log <- new_constructor_log("user_domain", "domains", new_hashtab(
-        list("identifier", "member", "descriptor"),
-        list(identifier, unbox2(member), descriptor)
-    ))
-
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = bool, inferred = rt_infer(member))
-    rt_assert_is_similar(expected = ExtrinsicObject, inferred = rt_infer(descriptor))
-
-    # Call wrapper function.
-    output <- .Call(
-        "domains__user_domain",
-        identifier, member, descriptor,
         log, PACKAGE = "opendp")
     output
 }

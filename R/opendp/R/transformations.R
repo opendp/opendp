@@ -2637,7 +2637,7 @@ then_ordered_random <- function(
 #' @param input_domain Uses a tighter sensitivity when the size of vectors in the input domain is known.
 #' @param input_metric Either SymmetricDistance or InsertDeleteDistance.
 #' @param candidates Potential quantiles to score
-#' @param alpha a value in [0, 1]. Choose 0.5 for median
+#' @param alpha a value in \eqn{[0, 1]}. Choose 0.5 for median
 #' @return Transformation
 #' @export
 make_quantile_score_candidates <- function(
@@ -2675,7 +2675,7 @@ make_quantile_score_candidates <- function(
 #'
 #' @param lhs The prior transformation or metric space.
 #' @param candidates Potential quantiles to score
-#' @param alpha a value in [0, 1]. Choose 0.5 for median
+#' @param alpha a value in \eqn{[0, 1]}. Choose 0.5 for median
 #' @return Transformation
 #' @export
 then_quantile_score_candidates <- function(

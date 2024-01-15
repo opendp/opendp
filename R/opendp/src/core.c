@@ -22,6 +22,8 @@ SEXP core__function_eval(
     PROTECT(arg);
     PROTECT(TI);
     PROTECT(T_arg);
+    PROTECT(log);
+
     AnyFunction * c_this = sexp_to_anyfunctionptr(this);
     AnyObject * c_arg = sexp_to_anyobjectptr(arg, T_arg);
     char * c_TI = (char *)CHAR(STRING_ELT(TI, 0));
@@ -29,7 +31,7 @@ SEXP core__function_eval(
     // Call library function.
     FfiResult_____AnyObject _result = opendp_core__function_eval(c_this, c_arg, c_TI);
 
-    UNPROTECT(4);
+    UNPROTECT(5);
     if(_result.tag == Err_____AnyObject)
         return(extract_error(_result.err));
     AnyObject* _return_value = _result.ok;
@@ -46,6 +48,8 @@ SEXP core__measurement_check(
     PROTECT(distance_out);
     PROTECT(T_distance_in);
     PROTECT(T_distance_out);
+    PROTECT(log);
+
     AnyMeasurement * c_measurement = sexp_to_anymeasurementptr(measurement);
     AnyObject * c_distance_in = sexp_to_anyobjectptr(distance_in, T_distance_in);
     AnyObject * c_distance_out = sexp_to_anyobjectptr(distance_out, T_distance_out);
@@ -53,11 +57,11 @@ SEXP core__measurement_check(
     // Call library function.
     FfiResult_____c_bool _result = opendp_core__measurement_check(c_measurement, c_distance_in, c_distance_out);
 
-    UNPROTECT(5);
+    UNPROTECT(6);
     if(_result.tag == Err_____c_bool)
         return(extract_error(_result.err));
     c_bool* _return_value = _result.ok;
-    return(ScalarInteger(*(bool *)_return_value));
+    return(ScalarLogical(*(bool *)_return_value));
 }
 
 
@@ -66,12 +70,14 @@ SEXP core__measurement_function(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyMeasurement * c_this = sexp_to_anymeasurementptr(this);
 
     // Call library function.
     FfiResult_____AnyFunction _result = opendp_core__measurement_function(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____AnyFunction)
         return(extract_error(_result.err));
     AnyFunction* _return_value = _result.ok;
@@ -84,12 +90,14 @@ SEXP core__measurement_input_carrier_type(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyMeasurement * c_this = sexp_to_anymeasurementptr(this);
 
     // Call library function.
     FfiResult_____c_char _result = opendp_core__measurement_input_carrier_type(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____c_char)
         return(extract_error(_result.err));
     c_char* _return_value = _result.ok;
@@ -102,12 +110,14 @@ SEXP core__measurement_input_distance_type(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyMeasurement * c_this = sexp_to_anymeasurementptr(this);
 
     // Call library function.
     FfiResult_____c_char _result = opendp_core__measurement_input_distance_type(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____c_char)
         return(extract_error(_result.err));
     c_char* _return_value = _result.ok;
@@ -120,12 +130,14 @@ SEXP core__measurement_input_domain(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyMeasurement * c_this = sexp_to_anymeasurementptr(this);
 
     // Call library function.
     FfiResult_____AnyDomain _result = opendp_core__measurement_input_domain(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____AnyDomain)
         return(extract_error(_result.err));
     AnyDomain* _return_value = _result.ok;
@@ -138,12 +150,14 @@ SEXP core__measurement_input_metric(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyMeasurement * c_this = sexp_to_anymeasurementptr(this);
 
     // Call library function.
     FfiResult_____AnyMetric _result = opendp_core__measurement_input_metric(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____AnyMetric)
         return(extract_error(_result.err));
     AnyMetric* _return_value = _result.ok;
@@ -158,13 +172,15 @@ SEXP core__measurement_invoke(
     PROTECT(this);
     PROTECT(arg);
     PROTECT(T_arg);
+    PROTECT(log);
+
     AnyMeasurement * c_this = sexp_to_anymeasurementptr(this);
     AnyObject * c_arg = sexp_to_anyobjectptr(arg, T_arg);
 
     // Call library function.
     FfiResult_____AnyObject _result = opendp_core__measurement_invoke(c_this, c_arg);
 
-    UNPROTECT(3);
+    UNPROTECT(4);
     if(_result.tag == Err_____AnyObject)
         return(extract_error(_result.err));
     AnyObject* _return_value = _result.ok;
@@ -179,13 +195,15 @@ SEXP core__measurement_map(
     PROTECT(measurement);
     PROTECT(distance_in);
     PROTECT(T_distance_in);
+    PROTECT(log);
+
     AnyMeasurement * c_measurement = sexp_to_anymeasurementptr(measurement);
     AnyObject * c_distance_in = sexp_to_anyobjectptr(distance_in, T_distance_in);
 
     // Call library function.
     FfiResult_____AnyObject _result = opendp_core__measurement_map(c_measurement, c_distance_in);
 
-    UNPROTECT(3);
+    UNPROTECT(4);
     if(_result.tag == Err_____AnyObject)
         return(extract_error(_result.err));
     AnyObject* _return_value = _result.ok;
@@ -198,12 +216,14 @@ SEXP core__measurement_output_distance_type(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyMeasurement * c_this = sexp_to_anymeasurementptr(this);
 
     // Call library function.
     FfiResult_____c_char _result = opendp_core__measurement_output_distance_type(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____c_char)
         return(extract_error(_result.err));
     c_char* _return_value = _result.ok;
@@ -216,39 +236,18 @@ SEXP core__measurement_output_measure(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyMeasurement * c_this = sexp_to_anymeasurementptr(this);
 
     // Call library function.
     FfiResult_____AnyMeasure _result = opendp_core__measurement_output_measure(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____AnyMeasure)
         return(extract_error(_result.err));
     AnyMeasure* _return_value = _result.ok;
     return(anymeasureptr_to_sexp(_return_value, log));
-}
-
-
-SEXP core__new_queryable(
-    SEXP transition, SEXP Q, SEXP A, SEXP T_transition, SEXP log
-) {
-    // Convert arguments to c types.
-    PROTECT(transition);
-    PROTECT(Q);
-    PROTECT(A);
-    PROTECT(T_transition);
-    TransitionFn c_transition = "UNKNOWN TYPE: TransitionFn";
-    char * c_Q = rt_to_string(Q);
-    char * c_A = rt_to_string(A);
-
-    // Call library function.
-    FfiResult_____AnyObject _result = opendp_core__new_queryable(c_transition, c_Q, c_A);
-
-    UNPROTECT(4);
-    if(_result.tag == Err_____AnyObject)
-        return(extract_error(_result.err));
-    AnyObject* _return_value = _result.ok;
-    return(anyobjectptr_to_sexp(_return_value));
 }
 
 
@@ -259,13 +258,15 @@ SEXP core__queryable_eval(
     PROTECT(queryable);
     PROTECT(query);
     PROTECT(T_query);
+    PROTECT(log);
+
     AnyObject * c_queryable = sexp_to_anyobjectptr(queryable, R_NilValue);
     AnyObject * c_query = sexp_to_anyobjectptr(query, T_query);
 
     // Call library function.
     FfiResult_____AnyObject _result = opendp_core__queryable_eval(c_queryable, c_query);
 
-    UNPROTECT(3);
+    UNPROTECT(4);
     if(_result.tag == Err_____AnyObject)
         return(extract_error(_result.err));
     AnyObject* _return_value = _result.ok;
@@ -278,12 +279,14 @@ SEXP core__queryable_query_type(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyObject * c_this = sexp_to_anyobjectptr(this, R_NilValue);
 
     // Call library function.
     FfiResult_____c_char _result = opendp_core__queryable_query_type(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____c_char)
         return(extract_error(_result.err));
     c_char* _return_value = _result.ok;
@@ -300,6 +303,8 @@ SEXP core__transformation_check(
     PROTECT(distance_out);
     PROTECT(T_distance_in);
     PROTECT(T_distance_out);
+    PROTECT(log);
+
     AnyTransformation * c_transformation = sexp_to_anytransformationptr(transformation);
     AnyObject * c_distance_in = sexp_to_anyobjectptr(distance_in, T_distance_in);
     AnyObject * c_distance_out = sexp_to_anyobjectptr(distance_out, T_distance_out);
@@ -307,11 +312,11 @@ SEXP core__transformation_check(
     // Call library function.
     FfiResult_____c_bool _result = opendp_core__transformation_check(c_transformation, c_distance_in, c_distance_out);
 
-    UNPROTECT(5);
+    UNPROTECT(6);
     if(_result.tag == Err_____c_bool)
         return(extract_error(_result.err));
     c_bool* _return_value = _result.ok;
-    return(ScalarInteger(*(bool *)_return_value));
+    return(ScalarLogical(*(bool *)_return_value));
 }
 
 
@@ -320,12 +325,14 @@ SEXP core__transformation_function(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyTransformation * c_this = sexp_to_anytransformationptr(this);
 
     // Call library function.
     FfiResult_____AnyFunction _result = opendp_core__transformation_function(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____AnyFunction)
         return(extract_error(_result.err));
     AnyFunction* _return_value = _result.ok;
@@ -338,12 +345,14 @@ SEXP core__transformation_input_carrier_type(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyTransformation * c_this = sexp_to_anytransformationptr(this);
 
     // Call library function.
     FfiResult_____c_char _result = opendp_core__transformation_input_carrier_type(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____c_char)
         return(extract_error(_result.err));
     c_char* _return_value = _result.ok;
@@ -356,12 +365,14 @@ SEXP core__transformation_input_distance_type(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyTransformation * c_this = sexp_to_anytransformationptr(this);
 
     // Call library function.
     FfiResult_____c_char _result = opendp_core__transformation_input_distance_type(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____c_char)
         return(extract_error(_result.err));
     c_char* _return_value = _result.ok;
@@ -374,12 +385,14 @@ SEXP core__transformation_input_domain(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyTransformation * c_this = sexp_to_anytransformationptr(this);
 
     // Call library function.
     FfiResult_____AnyDomain _result = opendp_core__transformation_input_domain(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____AnyDomain)
         return(extract_error(_result.err));
     AnyDomain* _return_value = _result.ok;
@@ -392,12 +405,14 @@ SEXP core__transformation_input_metric(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyTransformation * c_this = sexp_to_anytransformationptr(this);
 
     // Call library function.
     FfiResult_____AnyMetric _result = opendp_core__transformation_input_metric(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____AnyMetric)
         return(extract_error(_result.err));
     AnyMetric* _return_value = _result.ok;
@@ -412,13 +427,15 @@ SEXP core__transformation_invoke(
     PROTECT(this);
     PROTECT(arg);
     PROTECT(T_arg);
+    PROTECT(log);
+
     AnyTransformation * c_this = sexp_to_anytransformationptr(this);
     AnyObject * c_arg = sexp_to_anyobjectptr(arg, T_arg);
 
     // Call library function.
     FfiResult_____AnyObject _result = opendp_core__transformation_invoke(c_this, c_arg);
 
-    UNPROTECT(3);
+    UNPROTECT(4);
     if(_result.tag == Err_____AnyObject)
         return(extract_error(_result.err));
     AnyObject* _return_value = _result.ok;
@@ -433,13 +450,15 @@ SEXP core__transformation_map(
     PROTECT(transformation);
     PROTECT(distance_in);
     PROTECT(T_distance_in);
+    PROTECT(log);
+
     AnyTransformation * c_transformation = sexp_to_anytransformationptr(transformation);
     AnyObject * c_distance_in = sexp_to_anyobjectptr(distance_in, T_distance_in);
 
     // Call library function.
     FfiResult_____AnyObject _result = opendp_core__transformation_map(c_transformation, c_distance_in);
 
-    UNPROTECT(3);
+    UNPROTECT(4);
     if(_result.tag == Err_____AnyObject)
         return(extract_error(_result.err));
     AnyObject* _return_value = _result.ok;
@@ -452,12 +471,14 @@ SEXP core__transformation_output_distance_type(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyTransformation * c_this = sexp_to_anytransformationptr(this);
 
     // Call library function.
     FfiResult_____c_char _result = opendp_core__transformation_output_distance_type(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____c_char)
         return(extract_error(_result.err));
     c_char* _return_value = _result.ok;
@@ -470,12 +491,14 @@ SEXP core__transformation_output_domain(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyTransformation * c_this = sexp_to_anytransformationptr(this);
 
     // Call library function.
     FfiResult_____AnyDomain _result = opendp_core__transformation_output_domain(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____AnyDomain)
         return(extract_error(_result.err));
     AnyDomain* _return_value = _result.ok;
@@ -488,12 +511,14 @@ SEXP core__transformation_output_metric(
 ) {
     // Convert arguments to c types.
     PROTECT(this);
+    PROTECT(log);
+
     AnyTransformation * c_this = sexp_to_anytransformationptr(this);
 
     // Call library function.
     FfiResult_____AnyMetric _result = opendp_core__transformation_output_metric(c_this);
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     if(_result.tag == Err_____AnyMetric)
         return(extract_error(_result.err));
     AnyMetric* _return_value = _result.ok;

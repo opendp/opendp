@@ -48,7 +48,6 @@ static R_CMethodDef R_CDef[] = {
     {"core__measurement_map", (DL_FUNC) &core__measurement_map, 4},
     {"core__measurement_output_distance_type", (DL_FUNC) &core__measurement_output_distance_type, 2},
     {"core__measurement_output_measure", (DL_FUNC) &core__measurement_output_measure, 2},
-    {"core__new_queryable", (DL_FUNC) &core__new_queryable, 5},
     {"core__queryable_eval", (DL_FUNC) &core__queryable_eval, 4},
     {"core__queryable_query_type", (DL_FUNC) &core__queryable_query_type, 2},
     {"core__transformation_check", (DL_FUNC) &core__transformation_check, 6},
@@ -62,12 +61,9 @@ static R_CMethodDef R_CDef[] = {
     {"core__transformation_output_distance_type", (DL_FUNC) &core__transformation_output_distance_type, 2},
     {"core__transformation_output_domain", (DL_FUNC) &core__transformation_output_domain, 2},
     {"core__transformation_output_metric", (DL_FUNC) &core__transformation_output_metric, 2},
-    {"data__extrinsic_object_free", (DL_FUNC) &data__extrinsic_object_free, 2},
-    {"data__fill_bytes", (DL_FUNC) &data__fill_bytes, 3},
     {"data__object_type", (DL_FUNC) &data__object_type, 2},
     {"data__smd_curve_epsilon", (DL_FUNC) &data__smd_curve_epsilon, 4},
     {"data__to_string", (DL_FUNC) &data__to_string, 2},
-    {"domains___user_domain_descriptor", (DL_FUNC) &domains___user_domain_descriptor, 2},
     {"domains__atom_domain", (DL_FUNC) &domains__atom_domain, 5},
     {"domains__domain_carrier_type", (DL_FUNC) &domains__domain_carrier_type, 2},
     {"domains__domain_debug", (DL_FUNC) &domains__domain_debug, 2},
@@ -75,7 +71,6 @@ static R_CMethodDef R_CDef[] = {
     {"domains__map_domain", (DL_FUNC) &domains__map_domain, 3},
     {"domains__member", (DL_FUNC) &domains__member, 4},
     {"domains__option_domain", (DL_FUNC) &domains__option_domain, 3},
-    {"domains__user_domain", (DL_FUNC) &domains__user_domain, 4},
     {"domains__vector_domain", (DL_FUNC) &domains__vector_domain, 4},
     {"measurements__make_alp_queryable", (DL_FUNC) &measurements__make_alp_queryable, 13},
     {"measurements__make_base_discrete_gaussian", (DL_FUNC) &measurements__make_base_discrete_gaussian, 6},
@@ -169,14 +164,14 @@ static R_CMethodDef R_CDef[] = {
 
 void R_init_opendp(DllInfo *dll)
 {
-  R_registerRoutines(dll, R_CDef, NULL, NULL, NULL);
-// here we create the tags for the external pointers
-  AnyObject_tag = install("AnyObject_TAG");
-  AnyTransformation_tag = install("AnyTransformation_TAG");
-  AnyMeasurement_tag = install("AnyMeasurement_TAG");
-  AnyDomain_tag = install("AnyDomain_TAG");
-  AnyMetric_tag = install("AnyMetric_TAG");
-  AnyMeasure_tag = install("AnyMeasure_TAG");
-  AnyFunction_tag = install("AnyFunction_TAG");
-  R_useDynamicSymbols(dll, TRUE);
+    R_registerRoutines(dll, R_CDef, NULL, NULL, NULL);
+    // here we create the tags for the external pointers
+    AnyObject_tag = install("AnyObject_TAG");
+    AnyTransformation_tag = install("AnyTransformation_TAG");
+    AnyMeasurement_tag = install("AnyMeasurement_TAG");
+    AnyDomain_tag = install("AnyDomain_TAG");
+    AnyMetric_tag = install("AnyMetric_TAG");
+    AnyMeasure_tag = install("AnyMeasure_TAG");
+    AnyFunction_tag = install("AnyFunction_TAG");
+    R_useDynamicSymbols(dll, TRUE);
 }

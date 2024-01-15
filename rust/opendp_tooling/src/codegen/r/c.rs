@@ -1,23 +1,29 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::{
     codegen::{indent, r::BLACKLIST},
     Argument, Function, TypeRecipe,
 };
 
-pub fn generate_c_lib(modules: &HashMap<String, Vec<Function>>) -> String {
+/// Generate the R/src/lib.c file.
+/// This file registers all the C functions that R can interface with.
+pub fn generate_lib_c(modules: &HashMap<String, Vec<Function>>) -> String {
+    // code generation should be deterministic- sort by module
     let mut modules = modules.iter().collect::<Vec<(&String, &Vec<Function>)>>();
     modules.sort_by_key(|(module_name, _)| *module_name);
 
-    let args = modules.iter().map(|(module_name, module)| {
+    // list all functions in all modules
+    let function_stubs = modules.iter().map(|(module_name, module)| {
 
         module.iter()
+        // don't register functions on the blacklist
         .filter(|func| !BLACKLIST.contains(&func.name.as_str()))
+        // R wants to know the name and number of arguments of each function
         .map(|func| {
-            format!(r#"    {{"{module_name}__{func_name}", (DL_FUNC) &{module_name}__{func_name}, {num_args}}},"#, 
-            module_name=module_name, 
-            func_name=func.name, 
-            num_args=flatten_args_for_c(func).len() + 1)
+            // takes into account extra type arguments used when converting R data to C
+            let num_args = flatten_args_for_c(func).len() + 1;
+            let func_name = &func.name;
+            format!(r#"    {{"{module_name}__{func_name}", (DL_FUNC) &{module_name}__{func_name}, {num_args}}},"#)
         }).collect::<Vec<_>>().join("\n")
     }).collect::<Vec<_>>().join("\n");
 
@@ -43,31 +49,36 @@ SEXP AnyMeasure_tag;
 SEXP AnyFunction_tag;
 
 static R_CMethodDef R_CDef[] = {{
-{args}
+{function_stubs}
     {{NULL, NULL, 0}},
 }};
 
 void R_init_opendp(DllInfo *dll)
 {{
-  R_registerRoutines(dll, R_CDef, NULL, NULL, NULL);
-// here we create the tags for the external pointers
-  AnyObject_tag = install("AnyObject_TAG");
-  AnyTransformation_tag = install("AnyTransformation_TAG");
-  AnyMeasurement_tag = install("AnyMeasurement_TAG");
-  AnyDomain_tag = install("AnyDomain_TAG");
-  AnyMetric_tag = install("AnyMetric_TAG");
-  AnyMeasure_tag = install("AnyMeasure_TAG");
-  AnyFunction_tag = install("AnyFunction_TAG");
-  R_useDynamicSymbols(dll, TRUE);
+    R_registerRoutines(dll, R_CDef, NULL, NULL, NULL);
+    // here we create the tags for the external pointers
+    AnyObject_tag = install("AnyObject_TAG");
+    AnyTransformation_tag = install("AnyTransformation_TAG");
+    AnyMeasurement_tag = install("AnyMeasurement_TAG");
+    AnyDomain_tag = install("AnyDomain_TAG");
+    AnyMetric_tag = install("AnyMetric_TAG");
+    AnyMeasure_tag = install("AnyMeasure_TAG");
+    AnyFunction_tag = install("AnyFunction_TAG");
+    R_useDynamicSymbols(dll, TRUE);
 }}
 "#
     )
 }
 
-pub fn generate_c_headers(modules: &HashMap<String, Vec<Function>>) -> String {
+/// Generate the Ropendp.h file.
+/// The generated .c files implement the functions declared here.
+#[allow(non_snake_case)]
+pub fn generate_Ropendp_h(modules: &HashMap<String, Vec<Function>>) -> String {
+    // code generation should be deterministic- sort by module
     let mut modules = modules.iter().collect::<Vec<(&String, &Vec<Function>)>>();
     modules.sort_by_key(|(module_name, _)| *module_name);
 
+    // list all functions in all modules
     let headers = (modules.iter())
         .map(|(module_name, module)| {
             (module.iter())
@@ -77,12 +88,8 @@ pub fn generate_c_headers(modules: &HashMap<String, Vec<Function>>) -> String {
                         .map(|arg| format!("{}, ", generate_c_input_argument(arg)))
                         .collect::<Vec<_>>()
                         .join("");
-                    format!(
-                        r#"SEXP {module_name}__{func_name}({args}SEXP log);"#,
-                        module_name = module_name,
-                        func_name = func.name,
-                        args = args
-                    )
+                    let func_name = &func.name;
+                    format!(r#"SEXP {module_name}__{func_name}({args}SEXP log);"#)
                 })
                 .collect::<Vec<_>>()
                 .join("\n")
@@ -144,10 +151,12 @@ pub fn generate_c_module(module_name: &str, module: &Vec<Function>) -> String {
     )
 }
 
+/// Each call generates the c glue
+/// between R SEXP objects and OpenDP Library c FFI for one library function.
 fn generate_c_function(module_name: &str, func: &Function) -> String {
     println!("generating C: {}", func.name);
+    // a comma is added to the last arg because all functions take a log argument
     let args = (flatten_args_for_c(func).iter())
-        .filter(|arg| !BLACKLIST.contains(&arg.name().as_str()))
         .map(|arg| format!("{}, ", generate_c_input_argument(arg)))
         .collect::<Vec<_>>()
         .join("");
@@ -166,11 +175,9 @@ SEXP {module_name}__{func_name}(
     )
 }
 
-/// generate the function body, consisting of type args formatters, data converters, and the call
-/// - type arg formatters make every type arg a RuntimeType, and construct derived RuntimeTypes
-/// - data converters convert from python to c representations according to the formatted type args
-/// - the call constructs and retrieves the ffi function name, sets ctypes,
-///     makes the call, handles errors, and converts the response to python
+/// generate the c function body, consisting of data converters, and the call
+/// - data converters convert from R to c representations according to the T_* type arguments
+/// - the call code first makes the call, then handles errors, and converts the response to an R SEXP
 fn generate_c_body(module_name: &str, func: &Function) -> String {
     format!(
         r#"{data_converter}
@@ -180,21 +187,27 @@ fn generate_c_body(module_name: &str, func: &Function) -> String {
     )
 }
 
-/// generate an input argument, complete with name, hint and default.
-/// also returns a bool to make it possible to move arguments with defaults to the end of the signature.
+/// Generates an input argument.
+/// This is pretty simple compared to R or C because all types are erased and this isn't user-facing
 fn generate_c_input_argument(arg: &Argument) -> String {
     format!("SEXP {}", arg.name())
 }
 
-/// the generated code ensures that all arguments have been converted to their c representations
+/// Generates code to convert all arguments to their C representations.
 fn generate_data_converter(func: &Function) -> String {
+    // all R objects being manipulated need to be protected to prevent them from being freed by R gc
+    // without PROTECT, R doesn't know we're manipulating/reading/using this memory
+    // will be unprotected in `generate_c_call` at the appropriate time
     let protect = flatten_args_for_c(func)
         .iter()
         .map(|arg| format!("PROTECT({});", arg.name()))
         .collect::<Vec<_>>()
         .join("\n");
+
+    // generates code that calls the appropriate function to read the memory behind the SEXP
     let data_converter: String = (func.args.iter())
         .map(|arg| {
+            // types are normalized/always packaged in readable runtime types
             if arg.is_type {
                 return format!("char * c_{name} = rt_to_string({name});", name = arg.name());
             }
@@ -209,31 +222,35 @@ fn generate_data_converter(func: &Function) -> String {
         .join("\n");
 
     if data_converter.is_empty() {
-        "// No arguments to convert to c types.".to_string()
+        "// No arguments to convert to c types.\nPROTECT(log);".to_string()
     } else {
         format!(
             r#"// Convert arguments to c types.
 {protect}
+PROTECT(log);
+
 {data_converter}
 "#
         )
     }
 }
 
-/// the generated code
-/// - converts the arguments (SEXP) to C
-/// - makes the call assuming that the arguments have been converted to C
-/// - handles errors
+/// Generates code for calling the OpenDP Library and unpacking the result.
+/// - makes the call assuming that arguments have already been converted to C by `generate_data_converter`
+/// - handles errors returned by the Rust
 /// - converts the response to SEXP
 fn generate_c_call(module_name: &str, func: &Function) -> String {
+    // all converted arguments were prefixed with `c_`
     let args = (func.args.iter())
         .map(|arg| format!("c_{}", arg.name()))
         .collect::<Vec<_>>()
         .join(", ");
 
-    let unprotect = format!("UNPROTECT({});", flatten_args_for_c(func).len());
+    // mirrors the PROTECT calls in `generate_data_converter`. One addition for `log`
+    let unprotect = format!("UNPROTECT({});", flatten_args_for_c(func).len() + 1);
 
     let mut ret = func.ret.clone();
+    // always save the output to a variable called `_result`
     ret.name = Some("_result".to_string());
 
     let convert_response = c_to_r(ret.clone());
@@ -261,6 +278,9 @@ fn generate_c_call(module_name: &str, func: &Function) -> String {
 //     }
 // }
 
+/// Generate code to convert an SEXP to OpenDP Library C FFI representation.
+///
+/// Reads the type information in `arg` to know which hand-written C function to call to perform the data conversion.
 fn r_to_c(arg: &Argument) -> String {
     let c_type = arg.c_type();
     let name = arg.name();
@@ -272,6 +292,9 @@ fn r_to_c(arg: &Argument) -> String {
         })
         .unwrap_or_else(|| "unknown rust type".to_string());
 
+    // conversions for primitive types are handled directly by R internals functions
+    // https://github.com/hadley/r-internals/blob/master/vectors.md
+    // other conversions are handled by hand-written functions from `convert.c` and `convert_elements.c`
     match &c_type {
         ty if ty == "void *" => format!("sexp_to_voidptr({name}, {rust_type})"),
         ty if ty == "AnyObject *" => format!("sexp_to_anyobjectptr({name}, {rust_type})"),
@@ -291,22 +314,35 @@ fn r_to_c(arg: &Argument) -> String {
     }
 }
 
+/// Generate code to convert data from the OpenDP Library C FFI to an R SEXP
+///
+/// Reads the type information in `arg` to know which hand-written C function to call to perform the data conversion.
 fn c_to_r(arg: Argument) -> String {
     let name = arg.name();
 
     // handle errors
     if arg.c_type().starts_with("FfiResult<") {
         let mut inner = arg.clone();
+
+        // STEP 1. update `arg` to what it would look like after handling the error
+
+        // mutate the c_type to that of the data stored inside the result
         (inner.c_type.as_mut()).map(|ct| *ct = ct["FfiResult<".len()..ct.len() - 1].to_string());
+
+        // when the rust_type is set, also mutate the
         if let Some(TypeRecipe::Nest { origin, args }) = inner.rust_type {
             if origin != "FfiResult" {
                 panic!("expected FfiResult, found {}", origin)
             }
+            // once the result is handled, you're left with the type of the data inside the result
             inner.rust_type = Some(args[0].clone());
         }
+
+        // name the variable used to hold the successful unwrapped return value
         let inner_name = "_return_value".to_string();
         inner.name = Some(inner_name.clone());
 
+        // STEP 2. handle the error
         let inner_type = mangle(inner.c_type().as_str());
 
         return format!(
@@ -318,11 +354,14 @@ fn c_to_r(arg: Argument) -> String {
         );
     }
 
+    // const qualifiers on pointers are discarded because it won't change how data is handled
     let converter = match arg.c_type().replace("const ", "") {
         ty if ty == "void *" => {
+            // when the c type is a void pointer, lean on the rust type information
             let rust_type = arg.rust_type.clone().unwrap().to_r(None);
             format!("voidptr_to_sexp({name}, {rust_type})")
-        },
+        }
+        // call out to hand-written code from `convert.c` and `convert_elements.c`
         ty if ty == "AnyObject *" => format!("anyobjectptr_to_sexp({name})"),
         ty if ty == "AnyTransformation *" => format!("anytransformationptr_to_sexp({name}, log)"),
         ty if ty == "AnyMeasurement *" => format!("anymeasurementptr_to_sexp({name}, log)"),
@@ -330,12 +369,14 @@ fn c_to_r(arg: Argument) -> String {
         ty if ty == "AnyMetric *" => format!("anymetricptr_to_sexp({name}, log)"),
         ty if ty == "AnyMeasure *" => format!("anymeasureptr_to_sexp({name}, log)"),
         ty if ty == "AnyFunction *" => format!("anyfunctionptr_to_sexp({name}, log)"),
+        // https://github.com/hadley/r-internals/blob/master/vectors.md
         ty if ty == "char *" => format!("ScalarString(mkChar({name}))"),
+        ty if ty == "double" => format!("ScalarReal(*(double *){name})"),
         ty if ty == "int32_t" => format!("ScalarInteger(*(int *){name})"),
         ty if ty == "size_t" => format!("ScalarInteger(*(size_t *){name})"),
         ty if ty == "uint32_t" => format!("ScalarInteger((int){name})"),
-        ty if ty == "bool" => format!("ScalarInteger({name})"),
-        ty if ty == "bool *" => format!("ScalarInteger(*(bool *){name})"),
+        ty if ty == "bool" => format!("ScalarLogical({name})"),
+        ty if ty == "bool *" => format!("ScalarLogical(*(bool *){name})"),
 
         _ => format!("\"UNKNOWN RET TYPE: {}\"", arg.c_type()),
     };
@@ -343,6 +384,7 @@ fn c_to_r(arg: Argument) -> String {
     format!("return({converter});")
 }
 
+/// Converts a Rust type like A<B> to align with the corresponding C type cbindgen generates
 fn mangle(name: &str) -> String {
     name.replace("<", "_____")
         .replace(">", "")
@@ -354,21 +396,29 @@ fn mangle(name: &str) -> String {
         .replace("bool", "c_bool")
 }
 
+/// Derive the set of arguments needed by a C wrapper around an OpenDP Library function.
+///
+/// Each named argument also has a type argument to unambiguously determine how data should be loaded
 fn flatten_args_for_c(function: &Function) -> Vec<Argument> {
     let mut args = function.args.clone();
-    let arg_names = function
-        .args
-        .iter()
-        .map(|arg| arg.name().clone())
-        .collect::<HashSet<_>>();
-    args.extend(
-        function
-            .derived_types
-            .iter()
-            .filter(|arg| !arg_names.contains(&arg.name()))
-            .cloned(),
-    );
 
+    // then collect all additional type arguments needed to aid data conversion
+    let derived_types_args = (function.derived_types.iter())
+        .filter(|arg| {
+            // if the derived type arg shadows the function arg,
+            //    then replace the function arg and don't add it again
+            if let Some(fnarg) = args.iter_mut().find(|fnarg| arg.name() == fnarg.name()) {
+                *fnarg = (*arg).clone();
+                false
+            } else {
+                true
+            }
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+    args.extend(derived_types_args);
+
+    // finally add type ascriptions for named arguments
     args.extend(
         (function.args.iter())
             .filter(|arg| arg.has_implicit_type())

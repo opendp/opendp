@@ -21,6 +21,8 @@ SEXP accuracy__accuracy_to_discrete_gaussian_scale(
     PROTECT(accuracy);
     PROTECT(alpha);
     PROTECT(T);
+    PROTECT(log);
+
     void * c_accuracy = sexp_to_voidptr(accuracy, T);
     void * c_alpha = sexp_to_voidptr(alpha, T);
     char * c_T = rt_to_string(T);
@@ -28,7 +30,7 @@ SEXP accuracy__accuracy_to_discrete_gaussian_scale(
     // Call library function.
     FfiResult_____AnyObject _result = opendp_accuracy__accuracy_to_discrete_gaussian_scale(c_accuracy, c_alpha, c_T);
 
-    UNPROTECT(3);
+    UNPROTECT(4);
     if(_result.tag == Err_____AnyObject)
         return(extract_error(_result.err));
     AnyObject* _return_value = _result.ok;
@@ -43,6 +45,8 @@ SEXP accuracy__accuracy_to_discrete_laplacian_scale(
     PROTECT(accuracy);
     PROTECT(alpha);
     PROTECT(T);
+    PROTECT(log);
+
     void * c_accuracy = sexp_to_voidptr(accuracy, T);
     void * c_alpha = sexp_to_voidptr(alpha, T);
     char * c_T = rt_to_string(T);
@@ -50,7 +54,7 @@ SEXP accuracy__accuracy_to_discrete_laplacian_scale(
     // Call library function.
     FfiResult_____AnyObject _result = opendp_accuracy__accuracy_to_discrete_laplacian_scale(c_accuracy, c_alpha, c_T);
 
-    UNPROTECT(3);
+    UNPROTECT(4);
     if(_result.tag == Err_____AnyObject)
         return(extract_error(_result.err));
     AnyObject* _return_value = _result.ok;
@@ -65,6 +69,8 @@ SEXP accuracy__accuracy_to_gaussian_scale(
     PROTECT(accuracy);
     PROTECT(alpha);
     PROTECT(T);
+    PROTECT(log);
+
     void * c_accuracy = sexp_to_voidptr(accuracy, T);
     void * c_alpha = sexp_to_voidptr(alpha, T);
     char * c_T = rt_to_string(T);
@@ -72,7 +78,7 @@ SEXP accuracy__accuracy_to_gaussian_scale(
     // Call library function.
     FfiResult_____AnyObject _result = opendp_accuracy__accuracy_to_gaussian_scale(c_accuracy, c_alpha, c_T);
 
-    UNPROTECT(3);
+    UNPROTECT(4);
     if(_result.tag == Err_____AnyObject)
         return(extract_error(_result.err));
     AnyObject* _return_value = _result.ok;
@@ -87,6 +93,8 @@ SEXP accuracy__accuracy_to_laplacian_scale(
     PROTECT(accuracy);
     PROTECT(alpha);
     PROTECT(T);
+    PROTECT(log);
+
     void * c_accuracy = sexp_to_voidptr(accuracy, T);
     void * c_alpha = sexp_to_voidptr(alpha, T);
     char * c_T = rt_to_string(T);
@@ -94,7 +102,7 @@ SEXP accuracy__accuracy_to_laplacian_scale(
     // Call library function.
     FfiResult_____AnyObject _result = opendp_accuracy__accuracy_to_laplacian_scale(c_accuracy, c_alpha, c_T);
 
-    UNPROTECT(3);
+    UNPROTECT(4);
     if(_result.tag == Err_____AnyObject)
         return(extract_error(_result.err));
     AnyObject* _return_value = _result.ok;
@@ -109,6 +117,8 @@ SEXP accuracy__discrete_gaussian_scale_to_accuracy(
     PROTECT(scale);
     PROTECT(alpha);
     PROTECT(T);
+    PROTECT(log);
+
     void * c_scale = sexp_to_voidptr(scale, T);
     void * c_alpha = sexp_to_voidptr(alpha, T);
     char * c_T = rt_to_string(T);
@@ -116,7 +126,7 @@ SEXP accuracy__discrete_gaussian_scale_to_accuracy(
     // Call library function.
     FfiResult_____AnyObject _result = opendp_accuracy__discrete_gaussian_scale_to_accuracy(c_scale, c_alpha, c_T);
 
-    UNPROTECT(3);
+    UNPROTECT(4);
     if(_result.tag == Err_____AnyObject)
         return(extract_error(_result.err));
     AnyObject* _return_value = _result.ok;
@@ -131,6 +141,8 @@ SEXP accuracy__discrete_laplacian_scale_to_accuracy(
     PROTECT(scale);
     PROTECT(alpha);
     PROTECT(T);
+    PROTECT(log);
+
     void * c_scale = sexp_to_voidptr(scale, T);
     void * c_alpha = sexp_to_voidptr(alpha, T);
     char * c_T = rt_to_string(T);
@@ -138,7 +150,7 @@ SEXP accuracy__discrete_laplacian_scale_to_accuracy(
     // Call library function.
     FfiResult_____AnyObject _result = opendp_accuracy__discrete_laplacian_scale_to_accuracy(c_scale, c_alpha, c_T);
 
-    UNPROTECT(3);
+    UNPROTECT(4);
     if(_result.tag == Err_____AnyObject)
         return(extract_error(_result.err));
     AnyObject* _return_value = _result.ok;
@@ -153,6 +165,8 @@ SEXP accuracy__gaussian_scale_to_accuracy(
     PROTECT(scale);
     PROTECT(alpha);
     PROTECT(T);
+    PROTECT(log);
+
     void * c_scale = sexp_to_voidptr(scale, T);
     void * c_alpha = sexp_to_voidptr(alpha, T);
     char * c_T = rt_to_string(T);
@@ -160,7 +174,7 @@ SEXP accuracy__gaussian_scale_to_accuracy(
     // Call library function.
     FfiResult_____AnyObject _result = opendp_accuracy__gaussian_scale_to_accuracy(c_scale, c_alpha, c_T);
 
-    UNPROTECT(3);
+    UNPROTECT(4);
     if(_result.tag == Err_____AnyObject)
         return(extract_error(_result.err));
     AnyObject* _return_value = _result.ok;
@@ -175,6 +189,8 @@ SEXP accuracy__laplacian_scale_to_accuracy(
     PROTECT(scale);
     PROTECT(alpha);
     PROTECT(T);
+    PROTECT(log);
+
     void * c_scale = sexp_to_voidptr(scale, T);
     void * c_alpha = sexp_to_voidptr(alpha, T);
     char * c_T = rt_to_string(T);
@@ -182,7 +198,7 @@ SEXP accuracy__laplacian_scale_to_accuracy(
     // Call library function.
     FfiResult_____AnyObject _result = opendp_accuracy__laplacian_scale_to_accuracy(c_scale, c_alpha, c_T);
 
-    UNPROTECT(3);
+    UNPROTECT(4);
     if(_result.tag == Err_____AnyObject)
         return(extract_error(_result.err));
     AnyObject* _return_value = _result.ok;

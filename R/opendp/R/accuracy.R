@@ -193,7 +193,7 @@ discrete_gaussian_scale_to_accuracy <- function(
 
 #' Convert a discrete Laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
 #'
-#' $\alpha = P[Y \ge accuracy]$, where $Y = | X - z |$, and $X \sim \mathcal{L}_{Z}(0, scale)$.
+#' \eqn{\alpha = P[Y \ge accuracy]}, where \eqn{Y = | X - z |}, and \eqn{X \sim \mathcal{L}_{Z}(0, scale)}.
 #' That is, \eqn{X} is a discrete Laplace random variable and \eqn{Y} is the distribution of the errors.
 #'
 #' This function returns a float accuracy.

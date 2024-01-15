@@ -7,7 +7,7 @@ use crate::codegen::indent;
 
 use super::flatten_type_recipe;
 
-/// Top-level function to generate python bindings, including all modules.
+/// Top-level function to generate Python bindings, including all modules.
 pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<PathBuf, String> {
     let typemap: HashMap<String, String> =
         serde_json::from_str(&include_str!("python_typemap.json")).unwrap();

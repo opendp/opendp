@@ -187,6 +187,18 @@
             }
         },
         {
+            "label": "R/ test file",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "Rscript -e 'devtools::load_all(recompile=TRUE); library(testthat); test_file(\"${file}\", reporter = c(\"location\"))'",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
             "label": "R/ document",
             "type": "shell",
             "group": "build",
@@ -237,7 +249,8 @@
     ],
     "options": {
         "env": {
-            "OPENDP_LIB_DIR": "${workspaceFolder}/rust/target/debug"
+            "OPENDP_LIB_DIR": "${workspaceFolder}/rust/target/debug",
+            "RUST_BACKTRACE": "1"
         }
     }
 }

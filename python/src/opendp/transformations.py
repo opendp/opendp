@@ -2363,7 +2363,7 @@ def make_quantile_score_candidates(
     :type input_metric: Metric
     :param candidates: Potential quantiles to score
     :type candidates: Any
-    :param alpha: a value in [0, 1]. Choose 0.5 for median
+    :param alpha: a value in $[0, 1]$. Choose 0.5 for median
     :type alpha: float
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
@@ -2401,7 +2401,7 @@ def then_quantile_score_candidates(
 
     :param candidates: Potential quantiles to score
     :type candidates: Any
-    :param alpha: a value in [0, 1]. Choose 0.5 for median
+    :param alpha: a value in $[0, 1]$. Choose 0.5 for median
     :type alpha: float
     """
     return PartialConstructor(lambda input_domain, input_metric: make_quantile_score_candidates(

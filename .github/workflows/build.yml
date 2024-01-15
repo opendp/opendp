@@ -1,7 +1,8 @@
 # Creates a build for a channel:
 # * Compiles for all platforms, uploads to the lib artifact
-# * Creates Python bindings, uploads to the python_bindings artifact
+# * Creates Python and R bindings, uploads to the python_bindings and r_bindings artifacts
 # * Downloads the lib and python_bindings artifacts, creates a Python wheel, uploads to the python_wheel artifact
+# * Downloads the lib and r_bindings artifacts, creates an R package, uploads to the r_package artifact
 #
 # INPUTS
 # * channel:  The release channel
@@ -84,14 +85,17 @@ jobs:
         if: ${{ inputs.fake }}
         run: |
           mkdir -p rust/target/release/
-          echo windows >rust/target/release/opendp.dll
+          echo windows > rust/target/release/opendp.dll
+          echo windows > rust/target/release/libopendp.a
 
-      - name: Upload .dll
+      - name: Upload .dll and .a
         uses: actions/upload-artifact@v3
         with:
           name: libs
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
-          path: rust/target*/release/opendp.dll
+          path: |
+            rust/target*/release/opendp.dll
+            rust/target*/release/libopendp.a
 
   libs-macos:
     needs: credential-check
@@ -132,14 +136,16 @@ jobs:
         if: ${{ inputs.fake }}
         run: |
           mkdir -p rust/target/${{ env.TARGET }}/release/
-          echo macos >rust/target/${{ env.TARGET }}/release/libopendp.dylib
+          echo macos > rust/target/${{ env.TARGET }}/release/libopendp.dylib
 
-      - name: Upload .dylib
+      - name: Upload .dylib and .a
         uses: actions/upload-artifact@v3
         with:
           name: libs
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
-          path: rust/target*/${{ env.TARGET }}/release/libopendp.dylib
+          path: |
+            rust/target*/${{ env.TARGET }}/release/libopendp.dylib
+            rust/target*/${{ env.TARGET }}/release/libopendp.a
 
   libs-linux:
     needs: credential-check
@@ -181,16 +187,26 @@ jobs:
         if: ${{ inputs.fake }}
         run: |
           mkdir -p rust/target/${{ env.TARGET }}/release/
-          echo linux >rust/target/${{ env.TARGET }}/release/libopendp.so
+          echo linux > rust/target/${{ env.TARGET }}/release/libopendp.so
+          echo linux > rust/target/${{ env.TARGET }}/release/libopendp.a
+          echo fake > R/opendp/src/vendor.tar.xz
 
-      - name: Upload .so
+      - name: Upload .so and .a
         uses: actions/upload-artifact@v3
         with:
           name: libs
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
-          path: rust/target*/${{ env.TARGET }}/release/libopendp.so
+          path: |
+            rust/target*/${{ env.TARGET }}/release/libopendp.so
+            rust/target*/${{ env.TARGET }}/release/libopendp.a
+          
+      - name: Upload vendored sources
+        uses: actions/upload-artifact@v3
+        with:
+          name: vendor
+          path: R/opendp/src/vendor.tar.xz
 
-  python-bindings:
+  bindings:
     needs: credential-check
     runs-on: ubuntu-20.04
     steps:
@@ -212,18 +228,29 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Create Python bindings
+      - name: Create bindings
         if: ${{ !inputs.fake }}
-        run: bash tools/rust_build.sh -r -n -f "$FEATURES,bindings-python"
+        run: bash tools/rust_build.sh -r -n -f "$FEATURES,bindings"
 
-      - name: Upload bindings
+      - name: Upload Python bindings
         uses: actions/upload-artifact@v3
         with:
           name: python_bindings
           path: python/src/opendp/
+  
+      - name: Prepare vendored sources
+        if: ${{ !inputs.fake }}
+        run: bash tools/r_stage.sh -v
+  
+      - name: Upload R bindings
+        uses: actions/upload-artifact@v3
+        with:
+          name: r_bindings
+          path: r/opendp/
+
 
   python:
-    needs: [ libs-windows, libs-macos, libs-linux, python-bindings ]
+    needs: [ libs-windows, libs-macos, libs-linux, bindings ]
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout repository
@@ -258,3 +285,38 @@ jobs:
         with:
           name: python_wheel
           path: python/wheelhouse/opendp-*-py3-none-any.whl
+
+  r:
+    needs: bindings
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: R/opendp
+          extra-packages: RcppTOML
+      
+      - name: Download vendor
+        uses: actions/download-artifact@v3
+        with:
+          name: vendor
+          path: R/opendp/src
+
+      - name: Source tar
+        run: bash tools/r_stage.sh -s
+
+      - name: Notes
+        run: bash tools/r_stage.sh -n
+
+      - name: Upload R package
+        uses: actions/upload-artifact@v3
+        with:
+          name: r_package
+          path: r/opendp/

@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::Function;
 
 use self::{
-    c::{generate_c_headers, generate_c_lib, generate_c_module},
+    c::{generate_Ropendp_h, generate_c_module, generate_lib_c},
     r::generate_r_module,
 };
 
@@ -31,13 +31,21 @@ const BLACKLIST: &'static [&'static str] = &[
     "str_free",
     "slice_free",
     "object_free",
+    "extrinsic_object_free",
+    "fill_bytes",
     // udf
     "make_user_transformation",
     "make_user_measurement",
     "new_function",
+    "new_queryable",
+    "user_domain",
+    "_user_domain_descriptor",
 ];
 
 /// Top-level function to generate R bindings, including all modules.
+///
+/// Data passes from R -> C -> Rust -> C -> R.
+/// This codegen handles the R and C portions.
 pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<PathBuf, String> {
     let hierarchy: HashMap<String, Vec<String>> =
         serde_json::from_str(&include_str!("../type_hierarchy.json")).unwrap();
@@ -62,11 +70,10 @@ pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<Pa
         })
         .collect::<HashMap<_, _>>();
 
-    c_bindings.insert(PathBuf::from("src/lib.c"), generate_c_lib(modules));
-    c_bindings.insert(PathBuf::from("src/Ropendp.h"), generate_c_headers(modules));
+    c_bindings.insert(PathBuf::from("src/lib.c"), generate_lib_c(modules));
+    c_bindings.insert(PathBuf::from("src/Ropendp.h"), generate_Ropendp_h(modules));
 
-    r_bindings
-        .into_iter()
+    (r_bindings.into_iter())
         .chain(c_bindings.into_iter())
         .collect()
 }

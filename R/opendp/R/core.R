@@ -291,42 +291,6 @@ measurement_output_measure <- function(
 }
 
 
-#' Construct a queryable from a user-defined transition function.
-#'
-#' @param transition A transition function taking a reference to self, a query, and an internal/external indicator
-#' @param .Q Query Type
-#' @param .A Output Type
-#' @return Any
-#' @export
-new_queryable <- function(
-    transition,
-    .Q = "ExtrinsicObject",
-    .A = "ExtrinsicObject"
-) {
-    assert_features("contrib")
-
-    # Standardize type arguments.
-    .Q <- rt_parse(type_name = .Q)
-    .A <- rt_parse(type_name = .A)
-    .T.transition <- pass_through(.A)
-
-    log <- new_constructor_log("new_queryable", "core", new_hashtab(
-        list("transition", "Q", "A"),
-        list(transition, .Q, .A)
-    ))
-
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.transition, inferred = rt_infer(transition))
-
-    # Call wrapper function.
-    output <- .Call(
-        "core__new_queryable",
-        transition, .Q, .A, rt_parse(.T.transition),
-        log, PACKAGE = "opendp")
-    output
-}
-
-
 #' Invoke the `queryable` with `query`. Returns a differentially private release.
 #'
 #' @param queryable Queryable to eval.

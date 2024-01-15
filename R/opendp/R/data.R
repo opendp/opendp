@@ -4,60 +4,6 @@
 NULL
 
 
-#' Internal function. Free the memory associated with `this`, a string.
-#' Used to clean up after the type getter functions.
-#'
-#' @param this undocumented
-extrinsic_object_free <- function(
-    this
-) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("extrinsic_object_free", "data", new_hashtab(
-        list("this"),
-        list(this)
-    ))
-
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = ExtrinsicObject, inferred = rt_infer(this))
-
-    # Call wrapper function.
-    output <- .Call(
-        "data__extrinsic_object_free",
-        this,
-        log, PACKAGE = "opendp")
-    output
-}
-
-
-#' Internal function. Populate the buffer behind `ptr` with `len` random bytes
-#' sampled from a cryptographically secure RNG.
-#'
-#' @param ptr undocumented
-#' @param len undocumented
-#' @return bool
-fill_bytes <- function(
-    ptr,
-    len
-) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("fill_bytes", "data", new_hashtab(
-        list("ptr", "len"),
-        list(ptr, unbox2(len))
-    ))
-
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = u8, inferred = rt_infer(ptr))
-    rt_assert_is_similar(expected = usize, inferred = rt_infer(len))
-
-    # Call wrapper function.
-    output <- .Call(
-        "data__fill_bytes",
-        ptr, len,
-        log, PACKAGE = "opendp")
-    output
-}
-
-
 #' Internal function. Retrieve the type descriptor string of an AnyObject.
 #'
 #' @param this A pointer to the AnyObject.
