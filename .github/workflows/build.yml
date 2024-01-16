@@ -313,10 +313,12 @@ jobs:
         run: bash tools/r_stage.sh -s
 
       - name: Notes
-        run: bash tools/r_stage.sh -n
+        run: |
+          bash tools/r_stage.sh -n
+          rm -r R/opendp/src/vendor
 
       - name: Upload R package
         uses: actions/upload-artifact@v3
         with:
           name: r_package
-          path: r/opendp/
+          path: R/opendp/

@@ -7,8 +7,6 @@
 #' * [docs.opendp.org](https://docs.opendp.org)
 #' * [GitHub](https://github.com/opendp/opendp)
 #'
-#' @docType package
 #' @name opendp
 #' @useDynLib opendp, .registration = TRUE
-NULL
-#> NULL
+"_PACKAGE"

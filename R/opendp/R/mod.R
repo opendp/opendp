@@ -387,7 +387,9 @@ new_hashtab <- function(keys, vals) {
 }
 
 to_str <- function(x, depth) UseMethod("to_str")
+#' @exportS3method
 `to_str.default` <- function(x, depth) format(x)
+#' @exportS3method
 `to_str.hashtab` <- function(x, depth = 0L) {
   spacer <- paste(rep("  ", depth), collapse = "")
   val <- "hashtab(\n"
@@ -397,6 +399,8 @@ to_str <- function(x, depth) UseMethod("to_str")
   val <- c(val, spacer, ")")
   paste0(val, collapse = "")
 }
+
+#' @exportS3method
 `print.hashtab` <- function(x, ...) {
   cat(to_str(x, ...))
 }
@@ -475,7 +479,7 @@ unbox2 <- function(x) {
 #' s_vec <- c(vector_domain(atom_domain(.T = "float")), symmetric_distance())
 #' t_sum <- s_vec |> then_clamp(c(0., 1.)) |> then_sum()
 #'
-#' # find a measurement that satisfies ε=1 when datasets differ by at most one record
+#' # find a measurement that satisfies epsilon = 1 when datasets differ by at most one record
 #' m_sum <- binary_search_chain(\(s) t_sum |> then_laplace(s), d_in = 1L, d_out = 1.)
 binary_search_chain <- function(make_chain, d_in, d_out, bounds = NULL, .T = NULL) {
   return(make_chain(binary_search_param(make_chain, d_in, d_out, bounds, .T)))
