@@ -88,7 +88,7 @@ jobs:
 
   publish-r:
     if: ${{ inputs.channel == 'stable' }}
-    needs: publish-python
+    needs: credential-check
     runs-on: ubuntu-20.04
     steps:
       - name: Download R bindings
@@ -111,7 +111,7 @@ jobs:
           git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
           git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
           git push --force origin r-latest
-        
+
   publish-rust:
     needs: publish-python
     runs-on: ubuntu-20.04

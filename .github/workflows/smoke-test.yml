@@ -55,7 +55,15 @@ jobs:
           path: |
             rust/target/debug/libopendp.so
             rust/target/debug/libopendp.a
-
+      
+      - name: Prepare vendored sources
+        run: cd .. && bash tools/r_stage.sh -v
+          
+      - name: Upload vendored sources
+        uses: actions/upload-artifact@v3
+        with:
+          name: vendor
+          path: R/opendp/src/vendor.tar.xz
 
   python-lint:
     runs-on: ubuntu-22.04

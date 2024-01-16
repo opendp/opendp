@@ -387,9 +387,7 @@ new_hashtab <- function(keys, vals) {
 }
 
 to_str <- function(x, depth) UseMethod("to_str")
-#' @exportS3method
 `to_str.default` <- function(x, depth) format(x)
-#' @exportS3method
 `to_str.hashtab` <- function(x, depth = 0L) {
   spacer <- paste(rep("  ", depth), collapse = "")
   val <- "hashtab(\n"
@@ -400,7 +398,7 @@ to_str <- function(x, depth) UseMethod("to_str")
   paste0(val, collapse = "")
 }
 
-#' @exportS3method
+#' @export
 `print.hashtab` <- function(x, ...) {
   cat(to_str(x, ...))
 }

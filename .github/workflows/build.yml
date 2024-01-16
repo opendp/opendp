@@ -199,12 +199,7 @@ jobs:
           path: |
             rust/target*/${{ env.TARGET }}/release/libopendp.so
             rust/target*/${{ env.TARGET }}/release/libopendp.a
-          
-      - name: Upload vendored sources
-        uses: actions/upload-artifact@v3
-        with:
-          name: vendor
-          path: R/opendp/src/vendor.tar.xz
+
 
   bindings:
     needs: credential-check
@@ -246,7 +241,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: r_bindings
-          path: r/opendp/
+          path: R/opendp/
 
 
   python:
@@ -300,22 +295,19 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          working-directory: R/opendp
           extra-packages: RcppTOML
       
-      - name: Download vendor
+      - name: Download R bindings
         uses: actions/download-artifact@v3
         with:
-          name: vendor
-          path: R/opendp/src
+          name: r_bindings
+          path: R/opendp/
 
       - name: Source tar
         run: bash tools/r_stage.sh -s
 
       - name: Notes
-        run: |
-          bash tools/r_stage.sh -n
-          rm -r R/opendp/src/vendor
+        run: bash tools/r_stage.sh -n
 
       - name: Upload R package
         uses: actions/upload-artifact@v3
