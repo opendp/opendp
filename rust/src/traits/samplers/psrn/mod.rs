@@ -15,6 +15,9 @@ pub use gumbel::GumbelPSRN;
 mod laplace;
 pub use laplace::LaplacePSRN;
 
+mod tulap;
+pub use tulap::TulapPSRN;
+
 mod uniform;
 pub use uniform::UniformPSRN;
 
@@ -82,7 +85,7 @@ pub fn check_above<RV: PSRN>(psrn: &mut RV, threshold: &RV::Edge) -> Fallible<bo
 
 /// Refine `psrn` until both bounds of interval round to same TO
 pub fn pinpoint<TI: PSRN<Edge = FBig>, TO: RoundCast<FBig> + PartialEq>(
-    psrn: &mut LaplacePSRN,
+    psrn: &mut TI,
 ) -> Fallible<TO> {
     loop {
         psrn.refine()?;
