@@ -2,7 +2,7 @@ from typing import Sequence, Tuple, List, Union, Dict, cast
 from inspect import signature
 
 from opendp._lib import *
-from opendp.mod import Domain, UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
+from opendp.mod import Domain, UnknownTypeException, Transformation, Measurement, SMDCurve, Queryable
 from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 
 ATOM_MAP = {
@@ -387,12 +387,6 @@ def _tuple_to_slice(val: Tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
     inner_type_names = type_name.args
     if not isinstance(val, tuple):
         raise TypeError("Cannot coerce a non-tuple type to a tuple")
-    # TODO: temporary check
-    if len(inner_type_names) != 2:
-        raise OpenDPException("Only 2-tuples are currently supported.")
-    # TODO: temporary check
-    if len(set(inner_type_names)) > 1:
-        raise OpenDPException("Only homogeneously-typed tuples are currently supported.")
 
     if len(inner_type_names) != len(val):
         raise TypeError("type_name members must have same length as tuple")

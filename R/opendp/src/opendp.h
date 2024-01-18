@@ -1001,6 +1001,8 @@ struct FfiResult_____AnyMetric opendp_metrics__l2_distance(const char *T);
  */
 struct FfiResult_____AnyMetric opendp_metrics__discrete_distance(void);
 
+struct FfiResult_____AnyMetric opendp_metrics__partition_distance(const struct AnyMetric *metric);
+
 struct FfiResult_____AnyMetric opendp_metrics__linf_distance(c_bool monotonic, const char *T);
 
 /**

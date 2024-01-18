@@ -22,6 +22,7 @@ use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
 use crate::ffi::util::{self, into_c_char_p, AnyDomainPtr, ExtrinsicObject};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 use crate::measures::SMDCurve;
+use crate::metrics::IntDistance;
 use crate::traits::samplers::{fill_bytes, Shuffle};
 use crate::traits::ProductOrd;
 use crate::{err, fallible, try_, try_as_ref};
@@ -103,14 +104,11 @@ pub extern "C" fn opendp_data__slice_as_object(
             .collect::<Fallible<Vec<T>>>()?;
         Ok(AnyObject::new(vec))
     }
-    fn raw_to_tuple<T0: 'static + Clone, T1: 'static + Clone>(
+    fn raw_to_tuple2<T0: 'static + Clone, T1: 'static + Clone>(
         raw: &FfiSlice,
     ) -> Fallible<AnyObject> {
         if raw.len != 2 {
-            return fallible!(
-                FFI,
-                "The slice length must be two when creating a tuple from FfiSlice"
-            );
+            return fallible!(FFI, "Expected a slice length of two");
         }
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, 2) };
 
@@ -119,6 +117,20 @@ pub extern "C" fn opendp_data__slice_as_object(
             .zip(util::as_ref(slice[1] as *const T1).cloned())
             .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a tuple"))?;
         Ok(AnyObject::new(tuple))
+    }
+    fn raw_to_tuple3_partition_distance<T: 'static + Clone>(
+        raw: &FfiSlice,
+    ) -> Fallible<AnyObject> {
+        if raw.len != 3 {
+            return fallible!(FFI, "Expected a slice length of three");
+        }
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, 3) };
+
+        let new_err = || err!(FFI, "Tuple contains null pointer");
+        let v0 = util::as_ref(slice[0] as *const IntDistance).ok_or_else(new_err)?.clone();
+        let v1 = util::as_ref(slice[1] as *const T).ok_or_else(new_err)?.clone();
+        let v2 = util::as_ref(slice[2] as *const T).ok_or_else(new_err)?.clone();
+        Ok(AnyObject::new((v0, v1, v2)))
     }
     fn raw_to_hashmap<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
         raw: &FfiSlice,
@@ -240,16 +252,22 @@ pub extern "C" fn opendp_data__slice_as_object(
             }
         }
         TypeContents::TUPLE(ref element_ids) => {
-            if element_ids.len() != 2 {
-                return fallible!(FFI, "Only tuples of length 2 are supported").into();
-            }
             let types = try_!(element_ids
                 .iter()
                 .map(Type::of_id)
                 .collect::<Fallible<Vec<_>>>());
-            // In the inbound direction, we can handle tuples of primitives only. This is probably OK,
-            // because the only likely way to get a tuple of AnyObjects is as the output of composition.
-            dispatch!(raw_to_tuple, [(types[0], @primitives), (types[1], @primitives)], (raw))
+
+            match element_ids.len() {
+                // In the inbound direction, we can handle tuples of primitives only.
+                2 => dispatch!(raw_to_tuple2, [(types[0], @primitives), (types[1], @primitives)], (raw)),
+                3 => {
+                    if types[0] != Type::of::<IntDistance>() || types[1] != types[2] {
+                        return err!(FFI, "3-tuples are only implemented for partition distances").into();
+                    }
+                    dispatch!(raw_to_tuple3_partition_distance, [(types[1], @numbers)], (raw))
+                },
+                _ => return err!(FFI, "Only tuples of length 2 or 3 are supported").into()
+            }
         }
         TypeContents::GENERIC { name, args } => {
             if name == "HashMap" {
@@ -268,14 +286,15 @@ pub extern "C" fn opendp_data__slice_as_object(
             }
         }
         // This list is explicit because it allows us to avoid including u32 in the @primitives
-        _ => dispatch!(
+        _ => {
+            dispatch!(
             raw_to_plain,
             [(
                 T,
                 [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyQueryable]
             )],
             (raw)
-        ),
+        )},
     }
     .into()
 }
@@ -346,7 +365,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         let vec: &Vec<T> = obj.downcast_ref()?;
         Ok(FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len()))
     }
-    fn tuple_to_raw<T0: 'static, T1: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
+    fn tuple2_to_raw<T0: 'static, T1: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let tuple: &(T0, T1) = obj.downcast_ref()?;
         Ok(FfiSlice::new(
             util::into_raw([
@@ -354,6 +373,17 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                 &tuple.1 as *const T1 as *const c_void,
             ]) as *mut c_void,
             2,
+        ))
+    }
+    fn tuple3_partition_distance_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let tuple: &(IntDistance, T, T) = obj.downcast_ref()?;
+        Ok(FfiSlice::new(
+            util::into_raw([
+                &tuple.0 as *const IntDistance as *const c_void,
+                &tuple.1 as *const T as *const c_void,
+                &tuple.2 as *const T as *const c_void,
+            ]) as *mut c_void,
+            3,
         ))
     }
     fn hashmap_to_raw<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
@@ -457,12 +487,19 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             }
         }
         TypeContents::TUPLE(element_ids) => {
-            if element_ids.len() != 2 {
-                return fallible!(FFI, "Only tuples of length 2 are supported").into();
-            }
             let types = try_!(element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>());
-            // In the outbound direction, we can handle tuples of both primitives and AnyObjects.
-            dispatch!(tuple_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))
+
+            match element_ids.len() {
+                // In the outbound direction, we can handle tuples of both primitives and AnyObjects.
+                2 => dispatch!(tuple2_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj)),
+                3 => {
+                    if types[0] != Type::of::<IntDistance>() || types[1] != types[2] {
+                        return err!(FFI, "3-tuples are only implemented for partition distances").into();
+                    }
+                    dispatch!(tuple3_partition_distance_to_raw, [(types[1], @numbers)], (obj))
+                },
+                _ => return err!(FFI, "Only tuples of length 2 or 3 are supported").into()
+            }
         }
         TypeContents::GENERIC { name, args } => {
             if name == &"HashMap" {

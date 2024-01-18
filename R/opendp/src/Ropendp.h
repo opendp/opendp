@@ -95,6 +95,7 @@ SEXP metrics__linf_distance(SEXP monotonic, SEXP T, SEXP log);
 SEXP metrics__metric_debug(SEXP this, SEXP log);
 SEXP metrics__metric_distance_type(SEXP this, SEXP log);
 SEXP metrics__metric_type(SEXP this, SEXP log);
+SEXP metrics__partition_distance(SEXP metric, SEXP log);
 SEXP metrics__symmetric_distance(SEXP log);
 SEXP metrics__user_distance(SEXP descriptor, SEXP log);
 SEXP transformations__choose_branching_factor(SEXP size_guess, SEXP log);
