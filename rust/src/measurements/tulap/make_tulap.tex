@@ -1,5 +1,5 @@
 \documentclass{article}
-\input{../../../lib.sty}
+\input{../../lib.sty}
 
 \usepackage[
         backend=biber,
@@ -24,8 +24,8 @@
 
 \contrib
 
-Proves soundness of \rustdoc{measurements/fn}{make\_tulap} in 
-% \asOfCommit{mod.rs}{f5bb719}.
+Proves soundness of \rustdoc{measurements/fn}{make\_tulap}.
+% in \asOfCommit{mod.rs}{f5bb719}.
 
 \texttt{make\_tulap} accepts a parameter \texttt{m} of type \texttt{float}, which is a rational number, a parameter \texttt{b} of type \texttt{float}, which is greater than 0 and less than 1, and a parameter \texttt{q} of type \texttt{float}, which is greater than or equal to 0 and less than 1.
 The function on the resulting measurement takes in float data points that follow Binomial Distribution \texttt{arg} and returns the probability \texttt{prob}, or the complement $\texttt{!arg}$ with probability $1 - \texttt{prob}$.
@@ -154,10 +154,11 @@ The following proof makes use of the following lemmas that asserts the correctne
     \begin{defn}\label{def2}  % Def 3.1
     Let $f$ be a symmetric nontrivial tradeoff function. A {continuous} distribution function $F$ is a \emph{canonical noise distribution} (CND) for $f$ if 
     \begin{enumerate}[(1)]
-    \item for every statistic $S:\mscr X^n\rightarrow \RR$ with sensitivity $\Delta>0$, and $N\sim F(\cdot)$, the mechanism $S(X) + \Delta N$ satisfies $f$-DP. Equivalently, for every $m\in [0,1]$, $T(F(\cdot),F(\cdot-m))\geq f$,
+        % Mike: there was an \mscr after "S:". What is it for?
+    \item for every statistic $S: X^n\rightarrow \mathbb{R}$ with sensitivity $\Delta>0$, and $N\sim F(\cdot)$, the mechanism $S(X) + \Delta N$ satisfies $f$-DP. Equivalently, for every $m\in [0,1]$, $T(F(\cdot),F(\cdot-m))\geq f$,
     \item $f(\alpha)=T(F(\cdot),F(\cdot-1))(\alpha)$ for all $\alpha \in (0,1)$,
     \item $T(F(\cdot),F(\cdot-1))(\alpha) = F(F^{-1}(1-\alpha)-1)$ for all $\alpha \in (0,1)$,
-    \item $F(x) = 1-F(-x)$ for all $x\in \RR$; that is, $F$ is the cdf of a random variable which is symmetric about zero.
+    \item $F(x) = 1-F(-x)$ for all $x\in \mathbb{R}$; that is, $F$ is the cdf of a random variable which is symmetric about zero.
     \end{enumerate}
     \end{defn}
     \begin{defn} \label{def1}  % Def 3.7
@@ -178,7 +179,7 @@ The following proof makes use of the following lemmas that asserts the correctne
     In Definition \ref{def1} \parencite{awan2023canonical}, we explained the cdf of the CND we made. This explanation helps us understand the distribution's features, but when it comes to sampling, the quantile function is key. In Proposition \ref{prop1} \parencite{awan2023canonical} provides a recursive formula for the CND's quantile function, as described in Definition \ref{def2}\parencite{awan2023canonical}, and show that we can finish it in just a few steps.
 
     \begin{prop}\label{prop1}   % Prop F.6
-      Let $f$ be a symmetric nontrivial tradeoff function and let $F_f$ be as in Definition \ref{def1}. Then the quantile function $F_f^{-1}:(0,1)\rightarrow \RR$ for $F_f$ can be expressed as
+      Let $f$ be a symmetric nontrivial tradeoff function and let $F_f$ be as in Definition \ref{def1}. Then the quantile function $F_f^{-1}:(0,1)\rightarrow \mathbb{R}$ for $F_f$ can be expressed as
       \[F_f^{-1}(u) = \begin{cases}
       F_f^{-1}(1-f(u))-1&u<c\\
       \frac{u-1/2}{1-2c}&c\leq u\leq 1-c\\
@@ -188,7 +189,9 @@ The following proof makes use of the following lemmas that asserts the correctne
     \end{prop}
     
     % Cor 3.10
-    According to Corollary 3.10 in \cite{awan2023canonical}, the distribution $\mathrm{Tulap}(0,b,q)$, where $b=\exp(-\ep)$ and $q = \frac{2\de b}{1-b+2\de b}$ is a CND for $f_{\ep,\de}$-DP, which agrees with the construction of Definition \ref{def1} \parencite{awan2023canonical}. 
+    According to Corollary 3.10 in \cite{awan2023canonical}, 
+    the distribution $\mathrm{Tulap}(0,b,q)$, where $b=\exp(-\epsilon)$ and $q = \frac{2\delta b}{1-b+2\delta b}$ 
+    is a CND for $f_{\epsilon,\delta}$-DP, which agrees with the construction of Definition \ref{def1} \parencite{awan2023canonical}. 
     
     From the definition, it is easy to verify that the cdf of a Tulap random variable agrees with $F_f$ on $[-1/2,1/2]$. Tulap cdf also satisfies the recurrence relation of Definition \ref{def1} \parencite{awan2023canonical}. 
     Note that the cdf of $\mathrm{Tulap}(0,b,0)$ is 

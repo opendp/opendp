@@ -1317,10 +1317,14 @@ then_report_noisy_max_gumbel <- function(
 #'
 #' **Supporting Elements:**
 #'
-#' * Input Domain:   `AtomDomain<f64>`
-#' * Output Type:    `f64`
-#' * Input Metric:   `AbsoluteDistance<f64>`
+#' * Input Domain:   `VectorDomain<AtomDomain<f64>>`
+#' * Output Type:    `Vec<f64>`
+#' * Input Metric:   `PartitionDistance<AbsoluteDistance<f64>>`
 #' * Output Measure: `FixedSmoothedMaxDivergence<f64>`
+#'
+#' **Proof Definition:**
+#'
+#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/tulap/make_tulap.pdf)
 #'
 #' @concept measurements
 #' @param input_domain Domain of the input.
