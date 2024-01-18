@@ -818,10 +818,14 @@ then_report_noisy_max_gumbel <- function(
 #'
 #' **Supporting Elements:**
 #'
-#' * Input Domain:   `AtomDomain<f64>`
-#' * Output Type:    `f64`
-#' * Input Metric:   `AbsoluteDistance<f64>`
+#' * Input Domain:   `VectorDomain<AtomDomain<f64>>`
+#' * Output Type:    `Vec<f64>`
+#' * Input Metric:   `PartitionDistance<AbsoluteDistance<f64>>`
 #' * Output Measure: `FixedSmoothedMaxDivergence<f64>`
+#'
+#' **Proof Definition:**
+#'
+#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/tulap/make_tulap.pdf)
 #'
 #' @concept measurements
 #' @param input_domain Domain of the input.
@@ -831,29 +835,29 @@ then_report_noisy_max_gumbel <- function(
 #' @return Measurement
 #' @export
 make_tulap <- function(
-    input_domain,
-    input_metric,
-    epsilon,
-    delta
+  input_domain,
+  input_metric,
+  epsilon,
+  delta
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # No type arguments to standardize.
-    log <- new_constructor_log("make_tulap", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "epsilon", "delta"),
-        list(input_domain, input_metric, unbox2(epsilon), unbox2(delta))
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("make_tulap", "measurements", new_hashtab(
+    list("input_domain", "input_metric", "epsilon", "delta"),
+    list(input_domain, input_metric, unbox2(epsilon), unbox2(delta))
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = f64, inferred = rt_infer(epsilon))
-    rt_assert_is_similar(expected = f64, inferred = rt_infer(delta))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = f64, inferred = rt_infer(epsilon))
+  rt_assert_is_similar(expected = f64, inferred = rt_infer(delta))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_tulap",
-        input_domain, input_metric, epsilon, delta,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "measurements__make_tulap",
+    input_domain, input_metric, epsilon, delta,
+    log, PACKAGE = "opendp")
+  output
 }
 
 #' partial tulap constructor
@@ -867,22 +871,22 @@ make_tulap <- function(
 #' @return Measurement
 #' @export
 then_tulap <- function(
-    lhs,
-    epsilon,
-    delta
+  lhs,
+  epsilon,
+  delta
 ) {
 
-    log <- new_constructor_log("then_tulap", "measurements", new_hashtab(
-        list("epsilon", "delta"),
-        list(unbox2(epsilon), unbox2(delta))
-    ))
+  log <- new_constructor_log("then_tulap", "measurements", new_hashtab(
+    list("epsilon", "delta"),
+    list(unbox2(epsilon), unbox2(delta))
+  ))
 
-    make_chain_dyn(
-        make_tulap(
-            output_domain(lhs),
-            output_metric(lhs),
-            epsilon = epsilon,
-            delta = delta),
-        lhs,
-        log)
+  make_chain_dyn(
+    make_tulap(
+      output_domain(lhs),
+      output_metric(lhs),
+      epsilon = epsilon,
+      delta = delta),
+    lhs,
+    log)
 }
