@@ -1,9 +1,12 @@
 import opendp.prelude as dp
 import math
-import numpy as np
-from scipy.stats import binom
-import scipy
+import numpy as np  # type: ignore[import]
+from scipy.stats import binom  # type: ignore[import]
+import scipy  # type: ignore[import]
+
 dp.enable_features("contrib")
+
+
 def _ptulap(t, m=0, b=0, q=0):
     lcut = q / 2
     rcut = q / 2
@@ -117,13 +120,14 @@ def make_twoside_pvalue(theta, size, b, q):
         pval_left = make_oneside_pvalue(theta, size, b, q, "right")(size * theta - T)
 
         pval = np.subtract(pval_right, pval_left) + 1
-        
+
         return pval  # Ensure this is a vector if Z is a vector
 
     return dp.new_function(function, TO=dp.Vec[float])
 
+
 def make_CI(alpha, size, b, q, tail):
-    from scipy.optimize import OptimizeResult, minimize_scalar
+    from scipy.optimize import OptimizeResult, minimize_scalar  # type: ignore[import]
 
     def custmin(
         fun,
@@ -187,12 +191,11 @@ def make_CI(alpha, size, b, q, tail):
         Z = np.array(Z) if not isinstance(Z, np.ndarray) else Z
         if tail == "lower":
             CIobj = lambda x: (
-                (make_oneside_pvalue(Z=Z, size=size,  b=b, q=q, tail="right"))
-                - alpha
+                (make_oneside_pvalue(x, size=size, b=b, q=q, tail="right")(Z)) - alpha
             )
         elif tail == "upper":
             CIobj = lambda x: (
-                (make_oneside_pvalue(Z=Z, size=size,  b=b, q=q, tail="right"))
+                (make_oneside_pvalue(x, size=size, b=b, q=q, tail="right")(Z))
                 - (1 - alpha)
             )
         L = minimize_scalar(
@@ -271,19 +274,14 @@ def make_CI_twoside(alpha, size, b, q):
         twoside_pvalue_func = make_twoside_pvalue(theta=mle, size=size, b=b, q=q)
         CIobj2 = lambda x: (twoside_pvalue_func(np.array([Z]))[0] - alpha)
 
-
         if mle > 0:
-            L = minimize_scalar(
-                fun=CIobj2, method=custmin, bracket=(0, mle)
-            )
+            L = minimize_scalar(fun=CIobj2, method=custmin, bracket=(0, mle))
             L = L.x
         else:
             L = 0
 
         if mle < 1:
-            U = minimize_scalar(
-                fun=CIobj2, method=custmin, bracket=(mle, 1)
-            )
+            U = minimize_scalar(fun=CIobj2, method=custmin, bracket=(mle, 1))
             U = U.x
         else:
             U = 1

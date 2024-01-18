@@ -928,19 +928,15 @@ def make_tulap(
 
     **Supporting Elements:**
 
-    * Input Domain:   `AtomDomain<f64>`
-    * Output Type:    `f64`
-    * Input Metric:   `AbsoluteDistance<f64>`
+    * Input Domain:   `VectorDomain<AtomDomain<f64>>`
+    * Output Type:    `Vec<f64>`
+    * Input Metric:   `PartitionDistance<AbsoluteDistance<f64>>`
     * Output Measure: `FixedSmoothedMaxDivergence<f64>`
-<<<<<<< HEAD
 
-=======
-    
     **Proof Definition:**
-    
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/measurements/tulap/make_tulap.pdf)
-    
->>>>>>> ab3604146 (move .tex over from Ruby, update postprocessors)
+
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/tulap/make_tulap.pdf)
+
     :param input_domain: Domain of the input.
     :type input_domain: Domain
     :param input_metric: Metric of the input.

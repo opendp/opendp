@@ -15,9 +15,6 @@ pub use geometric::*;
 mod psrn;
 pub use psrn::*;
 
-mod tulap;
-pub use tulap::*;
-
 mod uniform;
 pub use uniform::*;
 
