@@ -2,11 +2,11 @@ use num::Float as _;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Measure, Measurement, Metric, MetricSpace, PrivacyMap},
+    core::{Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measurements::{get_discretization_consts, MappableDomain},
-    measures::ZeroConcentratedDivergence,
+    measures::{RenyiDivergence, ZeroConcentratedDivergence},
     metrics::{AbsoluteDistance, L2Distance},
     traits::{samplers::SampleDiscreteGaussianZ2k, CheckAtom, ExactIntCast, Float, FloatBits},
 };
@@ -55,6 +55,40 @@ where
 
             // (d_in / scale)^2 / 2
             (d_in.inf_div(&scale)?).inf_powi(2.into())?.inf_div(&_2)
+        })
+    }
+}
+
+impl<DI, Q> GaussianMeasure<DI> for RenyiDivergence<Q>
+where
+    DI: BaseGaussianDomain<Atom = Q>,
+    Q: Float,
+{
+    fn new_forward_map(scale: Q, relaxation: Q) -> PrivacyMap<DI::InputMetric, Self> {
+        let _2 = Q::one() + Q::one();
+        PrivacyMap::new(move |d_in: &Q| {
+            Function::new_fallible(enclose!(d_in, move |alpha: &Q| {
+                if d_in.is_sign_negative() {
+                    return fallible!(InvalidDistance, "sensitivity must be non-negative");
+                }
+
+                if d_in.is_zero() {
+                    return Ok(Q::zero());
+                }
+
+                if scale.is_zero() {
+                    return Ok(Q::infinity());
+                }
+
+                // d_in is loosened by the size of the granularization
+                let d_in = d_in.inf_add(&relaxation)?;
+
+                // (d_in / scale)^2 / 2 * α
+                (d_in.inf_div(&scale)?)
+                    .inf_powi(2.into())?
+                    .inf_div(&_2)?
+                    .inf_mul(&alpha)
+            }))
         })
     }
 }

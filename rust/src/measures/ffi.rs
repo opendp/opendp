@@ -12,7 +12,7 @@ use crate::{
     measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
 };
 
-use super::SmoothedMaxDivergence;
+use super::{RenyiDivergence, SmoothedMaxDivergence};
 
 #[bootstrap(
     name = "_measure_free",
@@ -125,6 +125,25 @@ pub extern "C" fn opendp_measures__fixed_smoothed_max_divergence(
 ) -> FfiResult<*mut AnyMeasure> {
     fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMeasure> {
         Ok(AnyMeasure::new(fixed_smoothed_max_divergence::<T>())).into()
+    }
+    let T = try_!(Type::try_from(T));
+    dispatch!(monomorphize, [(T, @numbers)], ())
+}
+
+#[bootstrap(returns(c_type = "FfiResult<AnyMeasure *>"))]
+/// Construct an instance of the `RenyiDivergence` measure.
+///
+/// # Arguments
+/// * `T` - The type of the distance.
+fn renyi_divergence<T>() -> RenyiDivergence<T> {
+    RenyiDivergence::default()
+}
+#[no_mangle]
+pub extern "C" fn opendp_measures__renyi_divergence(
+    T: *const c_char,
+) -> FfiResult<*mut AnyMeasure> {
+    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMeasure> {
+        Ok(AnyMeasure::new(renyi_divergence::<T>())).into()
     }
     let T = try_!(Type::try_from(T));
     dispatch!(monomorphize, [(T, @numbers)], ())

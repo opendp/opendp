@@ -11,6 +11,7 @@ from opendp.domains import *
 from opendp.metrics import *
 from opendp.measures import *
 __all__ = [
+    "make_RDP_to_approxDP",
     "make_basic_composition",
     "make_chain_mt",
     "make_chain_pm",
@@ -23,6 +24,38 @@ __all__ = [
     "make_zCDP_to_approxDP",
     "then_sequential_composition"
 ]
+
+
+@versioned
+def make_RDP_to_approxDP(
+    measurement: Measurement
+) -> Measurement:
+    r"""Constructs a new output measurement where the output measure
+    is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
+    
+    [make_RDP_to_approxDP in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_RDP_to_approxDP.html)
+    
+    :param measurement: a measurement with a privacy measure to be casted
+    :type measurement: Measurement
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_measurement = py_to_c(measurement, c_type=Measurement, type_name=AnyMeasurement)
+    
+    # Call library function.
+    lib_function = lib.opendp_combinators__make_RDP_to_approxDP
+    lib_function.argtypes = [Measurement]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_measurement), Measurement))
+    output._depends_on(get_dependencies(measurement))
+    return output
 
 
 @versioned

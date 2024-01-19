@@ -17,7 +17,11 @@ use std::{
     sync::Arc,
 };
 
-use crate::{core::Measure, domains::type_name, error::Fallible};
+use crate::{
+    core::{Function, Measure},
+    domains::type_name,
+    error::Fallible,
+};
 
 /// $\epsilon$-pure differential privacy.
 ///
@@ -26,8 +30,8 @@ use crate::{core::Measure, domains::type_name, error::Fallible};
 /// # Proof Definition
 ///
 /// ### `d`-closeness
-/// For any two vectors $u, v \in \texttt{D}$ and any $d$ of generic type $\texttt{Q}$,
-/// we say that $M(u), M(v)$ are $d$-close under the max divergence measure (abbreviated as $D_{\infty}$) whenever
+/// For any two adjacent data sets $u, v \in \texttt{D}$ and any $d$ of generic type $\texttt{Q}$,
+/// $M(u), M(v)$ are $d$-close under the max divergence measure (abbreviated as $D_{\infty}$) whenever
 ///
 /// ```math
 /// D_{\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S]}{\Pr[M(v) \in S]} \Big] \leq d.
@@ -72,9 +76,9 @@ impl<Q> Measure for MaxDivergence<Q> {
 /// # Proof Definition
 ///
 /// ### `d`-closeness
-/// For any two vectors $u, v \in \texttt{D}$
+/// For any two adjacent data sets $u, v \in \texttt{D}$
 /// and any choice of $\epsilon, \delta$ such that $\epsilon \ge d(\delta)$,
-/// we say that $M(u), M(v)$ are $d$-close under the smoothed max divergence measure (abbreviated as $D_{S\infty}$) whenever
+/// $M(u), M(v)$ are $d$-close under the smoothed max divergence measure (abbreviated as $D_{S\infty}$) whenever
 ///
 /// ```math
 /// D_{S\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S] + \delta}{\Pr[M(v) \in S]} \Big] \leq \epsilon.
@@ -138,9 +142,9 @@ impl<Q> SMDCurve<Q> {
 /// # Proof Definition
 ///
 /// ### `d`-closeness
-/// For any two vectors $u, v \in \texttt{D}$ and any $d$ of type $(\texttt{Q}, \texttt{Q})$,
+/// For any two data sets $u, v \in \texttt{D}$ and any $d$ of type $(\texttt{Q}, \texttt{Q})$,
 /// where $d = (\epsilon, \delta)$,
-/// we say that $M(u), M(v)$ are $d$-close under the smoothed max divergence measure (abbreviated as $D_{S\infty}$) whenever
+/// $M(u), M(v)$ are $d$-close under the smoothed max divergence measure (abbreviated as $D_{S\infty}$) whenever
 ///
 /// ```math
 /// D_{S\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S] + \delta}{\Pr[M(v) \in S]} \Big] \leq \epsilon.
@@ -172,6 +176,46 @@ impl<Q> Debug for FixedSmoothedMaxDivergence<Q> {
 
 impl<Q> Measure for FixedSmoothedMaxDivergence<Q> {
     type Distance = (Q, Q);
+}
+
+/// $\epsilon(\alpha)$-Rényi differential privacy.
+///
+/// # Proof Definition
+///
+/// ### `d`-closeness
+/// For any two data sets $u, v \in \texttt{D}$
+/// and any choice of $\epsilon, \delta$ such that $\epsilon \ge d(\delta)$,
+/// $M(u), M(v)$ are $d$-close under the smoothed max divergence measure (abbreviated as $D_{S\infty}$) whenever
+///
+/// ```math
+/// D_{S\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S] + \delta}{\Pr[M(v) \in S]} \Big] \leq \epsilon.
+/// ```
+pub struct RenyiDivergence<Q>(PhantomData<fn() -> Q>);
+
+impl<Q> Default for RenyiDivergence<Q> {
+    fn default() -> Self {
+        RenyiDivergence(PhantomData)
+    }
+}
+impl<Q> Clone for RenyiDivergence<Q> {
+    fn clone(&self) -> Self {
+        RenyiDivergence(PhantomData)
+    }
+}
+
+impl<Q> PartialEq for RenyiDivergence<Q> {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+impl<Q> Debug for RenyiDivergence<Q> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "RenyiDivergence({})", type_name!(Q))
+    }
+}
+
+impl<Q> Measure for RenyiDivergence<Q> {
+    type Distance = Function<Q, Q>;
 }
 
 /// $\rho$-zero concentrated differential privacy.

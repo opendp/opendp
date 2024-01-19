@@ -5,11 +5,11 @@ use num::{Float as _, Zero};
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Measure, Measurement, Metric, MetricSpace, PrivacyMap},
+    core::{Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measurements::MappableDomain,
-    measures::ZeroConcentratedDivergence,
+    measures::{RenyiDivergence, ZeroConcentratedDivergence},
     metrics::{AbsoluteDistance, L2Distance},
     traits::{
         samplers::sample_discrete_gaussian, CheckAtom, Float, InfCast, Number, SaturatingCast,
@@ -68,6 +68,43 @@ where
 
             // (d_in / scale)^2 / 2
             (d_in.inf_div(&scale)?).inf_powi(2.into())?.inf_div(&_2)
+        }))
+    }
+}
+
+impl<DI, QI, QO> DiscreteGaussianMeasure<DI, QI> for RenyiDivergence<QO>
+where
+    DI: BaseDiscreteGaussianDomain<QI>,
+    QI: Number,
+    QO: Float + InfCast<QI>,
+    RBig: TryFrom<QO>,
+{
+    type Atom = QO;
+
+    fn new_forward_map(scale: Self::Atom) -> Fallible<PrivacyMap<DI::InputMetric, Self>> {
+        let _2 = QO::exact_int_cast(2)?;
+
+        Ok(PrivacyMap::new_fallible(move |d_in: &QI| {
+            let d_in = QO::inf_cast(*d_in)?;
+            Ok(Function::new_fallible(enclose!(d_in, move |alpha: &QO| {
+                if d_in.is_sign_negative() {
+                    return fallible!(InvalidDistance, "sensitivity must be non-negative");
+                }
+
+                if d_in.is_zero() {
+                    return Ok(QO::zero());
+                }
+
+                if scale.is_zero() {
+                    return Ok(QO::infinity());
+                }
+
+                // (d_in / scale)^2 / 2 * α
+                (d_in.inf_div(&scale)?)
+                    .inf_powi(2.into())?
+                    .inf_div(&_2)?
+                    .inf_mul(&alpha)
+            })))
         }))
     }
 }

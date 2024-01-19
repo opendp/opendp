@@ -12,7 +12,7 @@ use crate::ffi::util::Type;
 use crate::measurements::{
     make_base_discrete_gaussian, BaseDiscreteGaussianDomain, DiscreteGaussianMeasure,
 };
-use crate::measures::ZeroConcentratedDivergence;
+use crate::measures::{RenyiDivergence, ZeroConcentratedDivergence};
 use crate::traits::{CheckAtom, Float, InfCast, Number, SaturatingCast};
 
 #[no_mangle]
@@ -61,7 +61,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
         let scale = *try_as_ref!(scale as *const QO);
         dispatch!(monomorphize2, [
             (D, [VectorDomain<AtomDomain<T>>, AtomDomain<T>]),
-            (MO, [ZeroConcentratedDivergence<QO>]),
+            (MO, [ZeroConcentratedDivergence<QO>, RenyiDivergence<QO>]),
             (QI, [QI])
         ], (input_domain, input_metric, scale))
     }

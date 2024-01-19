@@ -1,13 +1,14 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure, MetricSpace};
+use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::Type;
+use crate::measurements::gaussian::MeasureAtom;
 use crate::measurements::{make_gaussian, BaseDiscreteGaussianDomain, MakeGaussian};
-use crate::measures::ZeroConcentratedDivergence;
+use crate::measures::{RenyiDivergence, ZeroConcentratedDivergence};
 use crate::traits::{CheckAtom, InfCast, Number};
 
 #[no_mangle]
@@ -25,7 +26,9 @@ pub extern "C" fn opendp_measurements__make_gaussian(
     ) -> Fallible<AnyMeasurement>
     where
         AtomDomain<T>: MakeGaussian<ZeroConcentratedDivergence<T>, T>,
+        AtomDomain<T>: MakeGaussian<RenyiDivergence<T>, T>,
         VectorDomain<AtomDomain<T>>: MakeGaussian<ZeroConcentratedDivergence<T>, T>,
+        VectorDomain<AtomDomain<T>>: MakeGaussian<RenyiDivergence<T>, T>,
         (
             AtomDomain<T>,
             <AtomDomain<T> as BaseDiscreteGaussianDomain<T>>::InputMetric,
@@ -35,23 +38,23 @@ pub extern "C" fn opendp_measurements__make_gaussian(
             <VectorDomain<AtomDomain<T>> as BaseDiscreteGaussianDomain<T>>::InputMetric,
         ): MetricSpace,
     {
-        fn monomorphize2<D: 'static + MakeGaussian<MO, MO::Distance>, MO: 'static + Measure>(
+        fn monomorphize2<D: 'static + MakeGaussian<MO, MO::Atom>, MO: 'static + MeasureAtom>(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
-            scale: MO::Distance,
+            scale: MO::Atom,
         ) -> Fallible<AnyMeasurement>
         where
             (D, D::InputMetric): MetricSpace,
         {
             let input_domain = input_domain.downcast_ref::<D>()?.clone();
             let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
-            make_gaussian::<D, MO, MO::Distance>(input_domain, input_metric, scale).into_any()
+            make_gaussian::<D, MO, MO::Atom>(input_domain, input_metric, scale).into_any()
         }
         let D = input_domain.type_.clone();
         let scale = *try_as_ref!(scale as *const T);
         dispatch!(monomorphize2, [
             (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
-            (MO, [ZeroConcentratedDivergence<T>])
+            (MO, [ZeroConcentratedDivergence<T>, RenyiDivergence<T>])
         ], (input_domain, input_metric, scale))
     }
     fn monomorphize_integer<
@@ -67,7 +70,9 @@ pub extern "C" fn opendp_measurements__make_gaussian(
     ) -> Fallible<AnyMeasurement>
     where
         AtomDomain<T>: MakeGaussian<ZeroConcentratedDivergence<QO>, QI>,
+        AtomDomain<T>: MakeGaussian<RenyiDivergence<QO>, QI>,
         VectorDomain<AtomDomain<T>>: MakeGaussian<ZeroConcentratedDivergence<QO>, QI>,
+        VectorDomain<AtomDomain<T>>: MakeGaussian<RenyiDivergence<QO>, QI>,
         (
             AtomDomain<T>,
             <AtomDomain<T> as BaseDiscreteGaussianDomain<QI>>::InputMetric,
@@ -79,15 +84,15 @@ pub extern "C" fn opendp_measurements__make_gaussian(
     {
         fn monomorphize2<
             D: 'static + MakeGaussian<MO, QI>,
-            MO: 'static + Measure,
+            MO: 'static + MeasureAtom,
             QI: 'static + Copy,
         >(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
-            scale: MO::Distance,
+            scale: MO::Atom,
         ) -> Fallible<AnyMeasurement>
         where
-            MO::Distance: Number + InfCast<QI>,
+            MO::Atom: Number + InfCast<QI>,
             (D, D::InputMetric): MetricSpace,
         {
             let input_domain = input_domain.downcast_ref::<D>()?.clone();
@@ -98,7 +103,7 @@ pub extern "C" fn opendp_measurements__make_gaussian(
         let scale = *try_as_ref!(scale as *const QO);
         dispatch!(monomorphize2, [
             (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
-            (MO, [ZeroConcentratedDivergence<QO>]),
+            (MO, [ZeroConcentratedDivergence<QO>, RenyiDivergence<QO>]),
             (QI, [QI])
         ], (input_domain, input_metric, scale))
     }

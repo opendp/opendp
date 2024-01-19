@@ -8,7 +8,7 @@ use std::slice;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{FfiError, FfiResult, FfiSlice};
+use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::data::Column;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
@@ -263,6 +263,13 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             2,
         ))
     }
+    fn function_to_raw<I: 'static + Clone, O: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let func: &Function<I, O> = obj.downcast_ref::<Function<I, O>>()?;
+        Ok(FfiSlice::new(
+            util::into_raw(func.clone().into_any()) as *mut c_void,
+            1,
+        ))
+    }
     fn hashmap_to_raw<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
         obj: &AnyObject,
     ) -> Fallible<FfiSlice> {
@@ -304,7 +311,12 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             dispatch!(tuple_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))
         }
         TypeContents::GENERIC { name, args } => {
-            if name == &"HashMap" {
+            if name == &"Function" {
+                if args.len() != 2 { return err!(FFI, "Functions should have 2 type arguments").into(); }
+                let I = try_!(Type::of_id(&args[0]));
+                let O = try_!(Type::of_id(&args[1]));
+                dispatch!(function_to_raw, [(I, @primitives), (O, @primitives)], (obj))
+            } else if name == &"HashMap" {
                 if args.len() != 2 { return err!(FFI, "HashMaps should have 2 type arguments").into(); }
                 let K = try_!(Type::of_id(&args[0]));
                 let V = try_!(Type::of_id(&args[1]));

@@ -14,6 +14,7 @@ __all__ = [
     "measure_debug",
     "measure_distance_type",
     "measure_type",
+    "renyi_divergence",
     "smoothed_max_divergence",
     "user_divergence",
     "zero_concentrated_divergence"
@@ -193,6 +194,37 @@ def measure_type(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+    
+    return output
+
+
+@versioned
+def renyi_divergence(
+    T: RuntimeTypeDescriptor
+) -> Measure:
+    r"""Construct an instance of the `RenyiDivergence` measure.
+    
+    [renyi_divergence in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.renyi_divergence.html)
+    
+    :param T: 
+    :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measure
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # Standardize type arguments.
+    T = RuntimeType.parse(type_name=T)
+    
+    # Convert arguments to c types.
+    c_T = py_to_c(T, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_measures__renyi_divergence
+    lib_function.argtypes = [ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_T), Measure))
     
     return output
 
