@@ -788,10 +788,10 @@ def binary_search_param(
 
 @overload
 def binary_search(
-        predicate: Callable[[float | int], bool],
-        bounds: Tuple[float, float] | Tuple[int, int] | None = ...,
-        T: Type[float] | Type[int] | None = ...,
-        return_sign: Literal[False] = False) -> float | int:
+        predicate: Callable[[float], bool],
+        bounds: Tuple[float, float] | None = ...,
+        T: Type[float] | None = ...,
+        return_sign: Literal[False] = False) -> float:
     ...
 
 
