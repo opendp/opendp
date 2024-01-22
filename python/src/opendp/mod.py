@@ -656,9 +656,9 @@ def assert_features(*features: str) -> None:
 M = TypeVar("M", Transformation, Measurement)
 
 def binary_search_chain(
-        make_chain: Callable[[float | int], M],
+        make_chain: Callable[[float], M],
         d_in: Any, d_out: Any,
-        bounds: Tuple[float, float] | Tuple[int, int] | None = None,
+        bounds: Tuple[float, float] | None = None,
         T=None) -> M:
     """Useful to find the Transformation or Measurement parameterized with the ideal constructor argument.
     
@@ -720,10 +720,10 @@ def binary_search_chain(
 
 
 def binary_search_param(
-        make_chain: Callable[[float | int], Union[Transformation, Measurement]],
+        make_chain: Callable[[float], Union[Transformation, Measurement]],
         d_in: Any, d_out: Any,
-        bounds: Tuple[float, float] | Tuple[int, int] | None = None,
-        T=None) -> float | int:
+        bounds: Tuple[float, float] | None = None,
+        T=None) -> float:
     """Useful to solve for the ideal constructor argument.
     
     Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
@@ -797,18 +797,18 @@ def binary_search(
 
 @overload
 def binary_search(
-        predicate: Callable[[float | int], bool],
-        bounds: Tuple[float, float] | Tuple[int, int] | None = ...,
-        T: Type[float] | Type[int] | None = ...,
+        predicate: Callable[[float], bool],
+        bounds: Tuple[float, float] | None = ...,
+        T: Type[float] | None = ...,
         *,
-        return_sign: Literal[True]) -> Tuple[float | int, int]:
+        return_sign: Literal[True]) -> Tuple[float, int]:
     ...
 
 def binary_search(
-        predicate: Callable[[float | int], bool],
-        bounds: Tuple[float, float] | Tuple[int, int] | None = None,
-        T: Type[float] | Type[int] | None = None,
-        return_sign: bool = False) -> Union[float | int, Tuple[float | int, int]]:
+        predicate: Callable[[float], bool],
+        bounds: Tuple[float, float] | None = None,
+        T: Type[float] | None = None,
+        return_sign: bool = False) -> float | Tuple[float, int]:
     """Find the closest passing value to the decision boundary of `predicate` within float or integer `bounds`.
 
     If bounds are not passed, conducts an exponential search.
