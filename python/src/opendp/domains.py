@@ -308,7 +308,7 @@ def option_domain(
 def user_domain(
     identifier: str,
     member,
-    descriptor: Optional[Any] = None
+    descriptor = None
 ) -> Domain:
     r"""Construct a new UserDomain.
     Any two instances of an UserDomain are equal if their string descriptors are equal.
@@ -320,7 +320,6 @@ def user_domain(
     :type identifier: str
     :param member: A function used to test if a value is a member of the data domain.
     :param descriptor: Additional constraints on the domain.
-    :type descriptor: Any
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -332,11 +331,11 @@ def user_domain(
     # Convert arguments to c types.
     c_identifier = py_to_c(identifier, c_type=ctypes.c_char_p, type_name=None)
     c_member = py_to_c(member, c_type=CallbackFn, type_name=bool)
-    c_descriptor = py_to_c(descriptor, c_type=AnyObjectPtr, type_name=ExtrinsicObject)
+    c_descriptor = py_to_c(descriptor, c_type=ExtrinsicObjectPtr, type_name=ExtrinsicObject)
     
     # Call library function.
     lib_function = lib.opendp_domains__user_domain
-    lib_function.argtypes = [ctypes.c_char_p, CallbackFn, AnyObjectPtr]
+    lib_function.argtypes = [ctypes.c_char_p, CallbackFn, ExtrinsicObjectPtr]
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_identifier, c_member, c_descriptor), Domain))

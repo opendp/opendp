@@ -200,11 +200,9 @@ def test_new_domain():
 def test_user_domain():
     from datetime import datetime
 
-    def datetime_domain(months=None):
+    def datetime_domain(months):
         """The domain of datetimes, restricted by user-defined months"""
-        if months is None:
-            months = set(range(1, 13))  # any month
-
+        assert isinstance(months, set)
         return dp.user_domain(
             identifier=f"DatetimeDomain(months={months})",
             member=lambda x: isinstance(x, datetime) and x.month in months,
@@ -217,17 +215,17 @@ def test_user_domain():
     element = datetime.strptime("03/17/20 4:32:34", "%m/%d/%y %H:%M:%S")
     assert domain.member(element)
     assert not domain.member("A")
+
+    # MEMORY CHECK: try to access data which would have fallen out-of-scope and been freed
+    import gc
+
+    gc.collect() # if refcount is incorrect, then accessing .descriptor will trigger a use-after-free
+
     # can retrieve the descriptor for use in further analysis
     assert domain.descriptor == {1, 2, 3, 4}
 
     # can access attributes on the descriptor through the domain
     assert domain.symmetric_difference({1, 2}) == {3, 4}
-
-    # MEMORY CHECK: try to access data which would have fallen out-of-scope and been freed
-    import gc
-
-    gc.collect()
-    datetime_domain().descriptor
 
     # nest inside a vector domain
     vec_domain = dp.vector_domain(domain)

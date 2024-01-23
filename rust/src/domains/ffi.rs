@@ -390,7 +390,7 @@ impl Domain for UserDomain {
     arguments(
         identifier(c_type = "char *", rust_type = b"null"),
         member(rust_type = "bool"),
-        descriptor(rust_type = "ExtrinsicObject", default = b"null"),
+        descriptor(default = b"null", rust_type = "ExtrinsicObject")
     ),
     dependencies("c_member")
 )]
@@ -406,10 +406,10 @@ impl Domain for UserDomain {
 pub extern "C" fn opendp_domains__user_domain(
     identifier: *mut c_char,
     member: CallbackFn,
-    descriptor: *mut AnyObject,
+    descriptor: *mut ExtrinsicObject,
 ) -> FfiResult<*mut AnyDomain> {
     let identifier = try_!(to_str(identifier)).to_string();
-    let descriptor = try_!(try_as_ref!(descriptor).downcast_ref::<ExtrinsicObject>()).clone();
+    let descriptor = try_as_ref!(descriptor).clone();
     let element = ExtrinsicElement::new(identifier, descriptor);
     let member = Function::new_fallible(move |arg: &ExtrinsicObject| -> Fallible<bool> {
         let c_res = member(AnyObject::new_raw(arg.clone()));

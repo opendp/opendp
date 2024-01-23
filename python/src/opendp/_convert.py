@@ -71,9 +71,6 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
 
     if isinstance(type_name, str):
         type_name = RuntimeType.parse(type_name)
-    
-    if type_name == ExtrinsicObject:
-        type_name = "ExtrinsicObject"
 
     if isinstance(value, c_type):
         return value
@@ -83,6 +80,12 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     
     if c_type == TransitionFn:
         return _wrap_py_transition(value, type_name)
+
+    if c_type == ExtrinsicObjectPtr:
+        # since the memory is allocated by python, 
+        #    don't actually return an ExtrinsicObjectPtr, 
+        #    which would call rust to free the Python-allocated ExtrinsicObject
+        return ctypes.pointer(ExtrinsicObject(ctypes.py_object(value), c_counter))
 
     # check that the type name is consistent with the value
     if type_name is not None:
@@ -163,10 +166,6 @@ def c_to_py(value: Any) -> Any:
         value_contents = value.contents.value
         bool_free(value)
         return value_contents
-
-    if isinstance(value, (Transformation, Measurement)):
-        # these types are meant to pass through
-        return value
 
     if isinstance(value, ctypes.POINTER(ExtrinsicObject)):
         return value.contents.ptr

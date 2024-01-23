@@ -182,7 +182,8 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
             from opendp._data import extrinsic_object_free
             extrinsic_object_free(self)
         except (ImportError, TypeError):
-            # ImportError: sys.meta_path is None, Python is likely shutting down
+            # an example error that this catches:
+            #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
 # def _str_to_c_char_p(s: Optional[str]) -> Optional[bytes]:

@@ -184,7 +184,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
             from opendp.core import _measurement_free
             _measurement_free(self)
         except (ImportError, TypeError):
-            # ImportError: sys.meta_path is None, Python is likely shutting down
+            # an example error that this catches:
+            #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
     
     def __str__(self) -> str:
@@ -385,7 +386,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
             from opendp.core import _transformation_free
             _transformation_free(self)
         except (ImportError, TypeError):
-            # ImportError: sys.meta_path is None, Python is likely shutting down
+            # an example error that this catches:
+            #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
     def __str__(self) -> str:
@@ -440,7 +442,8 @@ class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
             from opendp.core import _function_free
             _function_free(self)
         except (ImportError, TypeError):
-            # ImportError: sys.meta_path is None, Python is likely shutting down
+            # an example error that this catches:
+            #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
 
@@ -483,7 +486,8 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
             from opendp.domains import _domain_free
             _domain_free(self)
         except (ImportError, TypeError):
-            # ImportError: sys.meta_path is None, Python is likely shutting down
+            # an example error that this catches:
+            #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
     def __repr__(self) -> str:
@@ -533,7 +537,8 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
             from opendp.metrics import _metric_free
             _metric_free(self)
         except (ImportError, TypeError):
-            # ImportError: sys.meta_path is None, Python is likely shutting down
+            # an example error that this catches:
+            #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
     def __repr__(self) -> str:
@@ -574,7 +579,8 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
             from opendp.measures import _measure_free
             _measure_free(self)
         except (ImportError, TypeError):
-            # ImportError: sys.meta_path is None, Python is likely shutting down
+            # an example error that this catches:
+            #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
     def __eq__(self, other):
