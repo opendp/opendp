@@ -208,7 +208,7 @@ fn generate_input_argument(
             name = arg.name(),
             hint = arg
                 .python_type_hint(hierarchy)
-                // make argument optional if there is a default
+                // Add `Optional` annotation only if there is a default and it is `None`.
                 .map(
                     |hint| if default.as_ref().is_some_and(|v| v.as_str() == "None") {
                         format!("Optional[{}]", hint)
