@@ -928,9 +928,9 @@ def make_tulap(
 
     **Supporting Elements:**
 
-    * Input Domain:   `VectorDomain<AtomDomain<f64>>`
-    * Output Type:    `Vec<f64>`
-    * Input Metric:   `PartitionDistance<AbsoluteDistance<f64>>`
+    * Input Domain:   `AtomDomain<f64>`
+    * Output Type:    `f64`
+    * Input Metric:   `AbsoluteDistance<f64>`
     * Output Measure: `FixedSmoothedMaxDivergence<f64>`
 
     **Proof Definition:**

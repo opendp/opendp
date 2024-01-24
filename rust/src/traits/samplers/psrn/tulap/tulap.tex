@@ -1,0 +1,81 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\usepackage[
+        backend=biber,
+        style=authoryear-comp,
+        sorting=nyt,
+    ]{biblatex}
+
+\usepackage{thmtools}
+\usepackage{thm-restate}
+\newtheorem{thm}{Theorem}
+\newtheorem{defn}{Definition} 
+\newtheorem{prop}{Proposition}
+\newcommand{\mrm}[1]{\mathrm{#1}}
+
+
+\title{\texttt{trait impl PSRN for TulapPSRN}}
+\author{Yu-Ju Ku, Jordan Awan, Aishwarya Ramasethu, Michael Shoemate}
+\begin{document}
+
+\maketitle
+
+\contrib
+
+Proves soundness of \rustdoc{traits/samplers/psrn/tulap/struct}{TulapPSRN}.
+% in \asOfCommit{mod.rs}{f5bb719}.
+
+% only try to prove edge for now!
+\texttt{edge} accepts parameter \texttt{self}, containing the state of the Tulap sampler and \texttt{R} specifying the rounding mode.
+\floatingPoint
+
+\begin{tcolorbox}
+    \begin{warning}[Code is not constant-time]
+        The implementation of \texttt{edge} uses procedures that are vulnerable to timing attacks. 
+    \end{warning}
+\end{tcolorbox}
+
+\subsection*{PR History}
+\begin{itemize}
+    \item \vettingPR{1126}
+\end{itemize}
+
+\section{Hoare Triple}
+
+\subsection*{Preconditions}
+\begin{itemize}
+    \item Variable \texttt{self} is of type \texttt{TulapPSRN}.
+    \item Generic \texttt{R} denotes the rounding mode, one of "up" or "down".
+\end{itemize}
+
+\subsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/TulapPSRN.py}
+
+\subsection*{Postcondition}
+
+\texttt{edge} returns an estimate of the true Tulap sample,
+a distribution with CDF defined in \texttt{make\_tulap}.
+This mechanism is not implemented in a fashion that accurately samples from the Tulap distribution,
+so it may be subject to artifacts.
+
+\section{Proof}
+
+\begin{proof} 
+
+The cdf of $\mathrm{Tulap}(0,b,q)$ is
+\[F_N(x) = \begin{cases}
+    0&F_{N_0}(x)<q/2\\
+    \frac{F_{N_0}(x)-q/2}{1-q}& q/2\leq F_{N_0}(x)\leq 1-q/2\\
+    1&F_{N_0}(x)>1-q/2.
+\end{cases}\]
+By inspection, the fixed point of $f_{\epsilon,\delta}$ is $c=\frac{1-\delta}{1+e^\epsilon}$. 
+It is easy to verify that $F_N(x) = c(1/2-x) + (1-c)(x+1/2)$ for $x\in (-1/2,1/2)$. 
+
+The function then uses the inverse transform of a sample of a uniform RV to sample a Tulap RV centered at zero.
+The function then returns the value, shifted by \texttt{self.shift}.
+
+
+\end{proof}
+\end{document}

@@ -1,8 +1,8 @@
 use dashu::{
-    float::round::{
+    float::{round::{
         mode::{Down, Up},
         ErrorBounds,
-    },
+    }, FBig},
     integer::UBig,
 };
 
@@ -15,7 +15,7 @@ pub use tulap::TulapPSRN;
 mod uniform;
 pub use uniform::UniformPSRN;
 
-use crate::error::Fallible;
+use crate::{error::Fallible, traits::RoundCast};
 
 pub trait PSRN {
     type Edge: PartialOrd;
