@@ -8,18 +8,18 @@ use super::{ODPRound, UniformPSRN, PSRN};
 //
 //
 // RUST
-//     make sure the implementation is still correct! Hope I didn't break anything
 //     make sure the inverse tulap is done in a way where the rounding direction is always preserved!
+//     check that the partial psrn is not making the sampling worse
 //
 // PROOF
 //       update the proof to reflect this new implementation (if still correct)
-//           - decide on b and q vs epsilon and delta
-//               - I think scale and b are the same thing? But the pseudocode takes b and scale instead of scale and q?
-//           - update pseudocode
 //
 // PYTHON
-//     arguments are in terms of b and q, but user doesn't know what those are
-//     examples
+//     choose a final API for how to use the mechanism with postprocessing
+//     examples: notebook to show how it works
+//          for example: https://docs.opendp.org/en/stable/user/transformations/aggregation-quantile.html
+//          ...comes from this notebook: https://github.com/opendp/opendp/blob/main/docs/source/user/transformations/aggregation-quantile.ipynb
+//        a similar notebook in docs/source/user/measurements/tulap.ipynb demonstrating how/when to use it
 //     code cleanup
 //     documentation
 //     another pass on naming
@@ -27,8 +27,6 @@ use super::{ODPRound, UniformPSRN, PSRN};
 
 /// A partially sampled tulap random number.
 pub struct TulapPSRN {
-    // b: Float, // b = exp(-eps), geom(p = 1 - b) - geom(p = 1 - b) ~ tulap(1 / eps)  ??
-    // q: Float,
     shift: FBig,
     epsilon: FBig,
     delta: FBig,
@@ -61,16 +59,16 @@ impl TulapPSRN {
         }
     }
 
-    fn f<R: ODPRound>(&self, alpha: FBig<R>) -> FBig<R> {
+    fn f<R: ODPRound>(&self, u: FBig<R>) -> FBig<R> {
         // if this function can only be phrased in terms of ε, δ,
         // then we might as well keep everything in terms of ε, δ?
         let _1 = FBig::<R>::ONE.with_precision(self.precision).value();
 
         let t1 = &_1
             - self.delta.clone().with_rounding()
-            - self.epsilon.clone().with_rounding().exp() * alpha.clone();
+            - self.epsilon.clone().with_rounding().exp() * u.clone();
         let t2 = (-self.epsilon.clone().with_rounding()).exp()
-            * (_1 - &self.delta.clone().with_rounding() - alpha);
+            * (_1 - &self.delta.clone().with_rounding() - u);
         t1.max(t2).max(FBig::<R>::ZERO)
     }
 }
