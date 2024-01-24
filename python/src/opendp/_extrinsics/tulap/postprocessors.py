@@ -35,6 +35,29 @@ def _ptulap(t, m=0, b=0, q=0):
     is_rhs = np.less((1 - rcut), trunc).astype(int)
     return ((trunc - lcut) / (1 - q)) * is_mid + is_rhs
 
+# define a public API. How about this one?
+class Tulap(object):
+    def __init__(self, data, epsilon, delta) -> None:
+        self.data = data
+        self.epsilon = epsilon
+        self.delta = delta
+
+    def ump_test(self, theta, size, alpha, tail):
+        postprocessor = make_ump_test(theta, size, alpha, self.epsilon, self.delta, tail)
+        return postprocessor(self.data)
+
+    def p_value():
+        pass
+
+
+def make_tulap_analysis(input_domain, input_metric, epsilon, delta) -> dp.Measurement:
+    from opendp.measurements import make_tulap
+    return make_tulap(input_domain, input_metric, epsilon, delta) >> (lambda data: Tulap(data, epsilon, delta))
+
+
+# meas = make_tulap_analysis(...)
+# tulap = meas(data)
+# tulap.p_value(...)
 
 def make_ump_test(theta, size, alpha, epsilon, delta, tail):
     def function(data):

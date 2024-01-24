@@ -17,7 +17,7 @@
 
 
 \title{\texttt{fn make\_tulap}}
-\author{Yu-Ju Ku, Jordan Awan}
+\author{Yu-Ju Ku, Jordan Awan, Aishwarya Ramasethu, Michael Shoemate}
 \begin{document}
 
 \maketitle
@@ -27,187 +27,146 @@
 Proves soundness of \rustdoc{measurements/fn}{make\_tulap}.
 % in \asOfCommit{mod.rs}{f5bb719}.
 
-\texttt{make\_tulap} accepts a parameter \texttt{m} of type \texttt{float}, which is a rational number, a parameter \texttt{b} of type \texttt{float}, which is greater than 0 and less than 1, and a parameter \texttt{q} of type \texttt{float}, which is greater than or equal to 0 and less than 1.
-The function on the resulting measurement takes in float data points that follow Binomial Distribution \texttt{arg} and returns the probability \texttt{prob}, or the complement $\texttt{!arg}$ with probability $1 - \texttt{prob}$.
+\texttt{make\_tulap} accepts parameters \texttt{input\_domain} and \texttt{input\_metric} specifying the input metric space.
+This consists of the space of non-null floating-point numbers, where distance is computed via the absolute distance.
 
-% \begin{tcolorbox}
-%     \begin{warning}[Code is not constant-time]
-%         \texttt{make\_randomized\_response\_bool} takes in a boolean \texttt{constant\_time} parameter that protects against timing attacks on the Bernoulli sampling procedure. 
-%         However, the current implementation does not guard against other types of timing side-channels that can break differential privacy, e.g., non-constant time code execution due to branching.
-%     \end{warning}
-% \end{tcolorbox}
+Additionally, the privacy parameters \texttt{epsilon} (of type \texttt{float}) and \texttt{delta} are fixed the privacy loss.
+The measurement assumes (but does not require) that input data (\texttt{arg}) follows the Binomial Distribution,
+and returns a sample from the Tulap distribution centered at \texttt{arg}.
+
+\begin{tcolorbox}
+    \begin{warning}[Code is not constant-time]
+        The implementation of \texttt{make\_tulap} uses procedures that are vulnerable to timing attacks. 
+    \end{warning}
+\end{tcolorbox}
 
 \subsection*{PR History}
 \begin{itemize}
-    \item \vettingPR{}
+    \item \vettingPR{1126}
 \end{itemize}
 
 \section{Hoare Triple}
 
 \subsection*{Preconditions}
 \begin{itemize}
-    % \item Variable \texttt{m} must be of type \texttt{float}
-    \item Variable \texttt{b} must be of type \texttt{float}
-    % \item Variable \texttt{q} must be of type \texttt{float}
-    \item Variable \texttt{scale} must be of type \texttt{float}
-    \item Type \texttt{float} must have trait \rustdoc{traits/trait}{SampleDiscreteLaplaceZ2k}
+    \item Variable \texttt{input\_domain} is of type \texttt{AtomDomain<f64>}.
+    \item Variable \texttt{input\_metric} is of type \texttt{AbsoluteDistance<f64>}.
+    \item Variable \texttt{epsilon} is of type \texttt{float}
+    \item Variable \texttt{delta} is of type \texttt{float}
 \end{itemize}
 
 \subsection*{Pseudocode}
 
-% def make_tulap(m: float, b: float, q: float, s: float):
-%     input_domain = AllDomain(float)
-%     input_metric = AbsoluteDistance(float)
-%     output_measure = SmoothedMaxDivergence(float)
-
-%     def privacy_map(d_in: float) -> float: |\label{line:map}|
-%         if d_in == 0 or d_out > s:
-%             return 0
-%         else: 
-%             return d_out
-            
-%     def qCND(u, f, c):     # CND quantile function for f
-%         if u < c:
-%             return qCND(1 - f(u), f, c) - 1
-%         elif c <= u <= 1-c:
-%             return (u - 1/2)/(1 - 2*c)
-%         else:
-%             return qCND(f(1-u),f ,c) + 1    
-    
-%     def function(arg: float) -> float: |\label{line:fn}|
-    
-%         prob = b
-%         samples = m + sample_discrete_laplace_Z2k(prob) + sample_standard_uniform(prob)-1/2 
-        
-%         return Measurement(input_domain, function, input_metric, output_measure, privacy_map)
-
-\begin{lstlisting}[language=Python, escapechar=|]
-def make_tulap(b: float, scale: float):
-    input_domain = AllDomain(float)
-    input_metric = AbsoluteDistance(float)
-    output_measure = SmoothedMaxDivergence(float)
-
-    def privacy_map(d_in: float) -> float: |\label{line:map}|
-        if d_in == 0 or d_out > scale:  # check that delta <= scale
-            return 0
-        else: 
-            return d_out
-            
-    def qCND(u, f, c):         # CND quantile function for f
-        if u < c:
-            return qCND(1 - f(u), f, c) - 1
-        elif c <= u <= 1-c: # the linear function 
-            return (u - 1/2)/(1 - 2*c)
-        else:
-            return qCND(f(1-u),f ,c) + 1  
-            
-    def function(epsilon: float, delta: float) -> float: |\label{line:fn}|
-
-        # inverse transform sampling of Tulap
-        prob = b
-        unif = sample_standard_uniform(prob)
-        c = (1 - delta) / (1 + exp(epsilon))
-        f = max(0, 1 - delta - exp(epsilon) * unif, exp(-epsilon) * (1 - delta - unif))
-        samples = qCND(unif, f, c)
-        return samples
-        
-    return Measurement(input_domain, function, input_metric, output_measure, privacy_map)
-\end{lstlisting}
-
-% samples = m + sample_discrete_laplace_Z2k(prob) + sample_standard_uniform(prob)-1/2 
-
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/make_tulap.py}
 
 \subsection*{Postcondition}
 
-\validMeasurement{\texttt{(prob, m, b, q, QO)}}{\\ \texttt{make\_tulap}}
+\validMeasurement{\texttt{(input\_domain, input\_metric, epsilon, delta)}}{\\ \texttt{make\_tulap}}
 
 \section{Proof}
 
 \begin{proof} 
 \hfill
 \begin{enumerate}
-    \item \textbf{(Domain-metric compatibility.)} For \texttt{make\_tulap}, this corresponds to showing \texttt{AllDomain(bool)} is compatible with \texttt{DiscreteMetric}. 
-    This follows directly from the definition of \rustdoc{metrics/struct}{DiscreteMetric}.
-
     \item \textbf{(Privacy guarantee.)} 
 
-    \begin{tcolorbox}
-\begin{note}[Proof relies on correctness of Discrete Laplace sampler and Uniform sampler]
-The following proof makes use of the following lemmas that asserts the correctness of the Discrete Laplace sampler and Uniform sampler function.
+\begin{tcolorbox}
+    \begin{note}[Proof relies on correctness of the Tulap sampler]
+    The following proof makes use of the following lemmas that asserts the correctness of the Tulap sampler function.
     \begin{lemma}
-    If system entropy is insufficient, \texttt{sample\_discrete\_laplace\_Z2k} raises an error. 
-    Otherwise, \texttt{sample\_discrete\_laplace\_Z2k(shift, scale, k)}, the Discrete Laplace sampler function used in \texttt{make\_tulap}, 
-    returns sample from the discrete laplace distribution on $\mathbb{Z} \cdot 2^k$.
+        If system entropy is insufficient, \texttt{pinpoint} raises an error. 
+        Otherwise, \texttt{pinpoint}, the function that narrows the Tulap PSRN, 
+        returns sample from the Tulap distribution.
     \end{lemma}
-    \begin{lemma}
-    If system entropy is insufficient, \texttt{sample\_standard\_uniform} raises an error. 
-    Otherwise, \texttt{sample\_standard\_uniform(constant\_time)}, the Uniform sampler function used in \texttt{make\_tulap}, 
-    returns sample drawn from Uniform[0,1).
-    \end{lemma}
-\end{note}
+    \end{note}
 \end{tcolorbox}
 
-    \texttt{sample\_discrete\_laplace\_Z2k} and \texttt{sample\_standard\_uniform} can only fail when the OpenSSL pseudorandom byte generator used in its implementation fails due to lack of system entropy. 
-    This is usually related to the computer's physical environment and not the dataset. 
-    The rest of this proof is conditioned on the assumption that \texttt{sample\_discrete\_laplace\_Z2k} and \texttt{sample\_standard\_uniform} does not raise an exception. \\
-    The concept canonical noise distribution (CND)\parencite{awan2023canonical}, which captures whether a real-valued distribution is perfectly tailored to satisfy $f$-DP\parencite{dong2019gaussian}. We formalize this in Definition \ref{def2}\parencite{awan2023canonical}. 
-    \begin{defn}\label{def2}  % Def 3.1
-    Let $f$ be a symmetric nontrivial tradeoff function. A {continuous} distribution function $F$ is a \emph{canonical noise distribution} (CND) for $f$ if 
-    \begin{enumerate}[(1)]
-        % Mike: there was an \mscr after "S:". What is it for?
-    \item for every statistic $S: X^n\rightarrow \mathbb{R}$ with sensitivity $\Delta>0$, and $N\sim F(\cdot)$, the mechanism $S(X) + \Delta N$ satisfies $f$-DP. Equivalently, for every $m\in [0,1]$, $T(F(\cdot),F(\cdot-m))\geq f$,
+\texttt{pinpoint} can only fail when the pseudorandom byte generator used in its implementation fails due to lack of system entropy. 
+This is usually related to the computer's physical environment and not the dataset. 
+The rest of this proof is conditioned on the assumption that \texttt{pinpoint} does not raise an exception. \\
+
+A canonical noise distribution (CND)\parencite{awan2023canonical}, 
+captures whether a real-valued distribution is perfectly tailored to satisfy $f$-DP\parencite{dong2019gaussian}. 
+We formalize this in Definition \ref{def2}\parencite{awan2023canonical}. 
+\begin{defn}\label{def2}  % Def 3.1
+Let $f$ be a symmetric nontrivial tradeoff function. A {continuous} distribution function $F$ is a \emph{canonical noise distribution} (CND) for $f$ if 
+\begin{enumerate}[(1)]
+    % Mike: there was an \mscr after "S:". What is it for?
+    \item for every statistic $S: X^n\rightarrow \mathbb{R}$ with sensitivity $\Delta>0$, and $N\sim F(\cdot)$, 
+        the mechanism $S(X) + \Delta N$ satisfies $f$-DP. Equivalently, for every $m\in [0,1]$, $T(F(\cdot),F(\cdot-m))\geq f$,
     \item $f(\alpha)=T(F(\cdot),F(\cdot-1))(\alpha)$ for all $\alpha \in (0,1)$,
     \item $T(F(\cdot),F(\cdot-1))(\alpha) = F(F^{-1}(1-\alpha)-1)$ for all $\alpha \in (0,1)$,
     \item $F(x) = 1-F(-x)$ for all $x\in \mathbb{R}$; that is, $F$ is the cdf of a random variable which is symmetric about zero.
-    \end{enumerate}
-    \end{defn}
-    \begin{defn} \label{def1}  % Def 3.7
-    Let $f$ be a symmetric nontrivial tradeoff function, and let {$c\in [0,1/2)$} be the unique fixed point of $f$: $f(c)=c$. We define $F_f:\mathbb{R}\rightarrow \mathbb{R}$ as  \[ F_f(x) = \begin{cases}
+\end{enumerate}
+\end{defn}
+
+\begin{defn} \label{def1}  % Def 3.7
+Let $f$ be a symmetric nontrivial tradeoff function, and let {$c\in [0,1/2)$} be the unique fixed point of $f$: $f(c)=c$. 
+We define $F_f:\mathbb{R}\rightarrow \mathbb{R}$ as  \[ F_f(x) = \begin{cases}
     f(1-F_f(x+1))&x<-1/2\\
     c(1/2-x) + (1-c)(x+1/2)&-1/2\leq x\leq 1/2\\
     1-f(F_f(x-1))&x>1/2.\\
+\end{cases}\]
+\end{defn}
+In Definition \ref{def1} \parencite{awan2023canonical}, 
+the fact that there is a unique fixed point follows from the fact that $f$ is convex and decreasing, 
+and so intersects the line $y=\alpha$ at a unique value. 
+Note that in Definition \ref{def1} \parencite{awan2023canonical}, 
+the cumulative distribution function (CDF) corresponds to a uniform random variable on the interval $[-1/2,1/2]$. 
+However, due to the recursive nature of $F_f$ and the fact that $f$ is generally non-linear, 
+the Canonical Noise Distribution (CND) from Definition \ref{def1} \parencite{awan2023canonical} need not be uniformly distributed on any other intervals.
+
+Theorem \ref{thm1} \parencite{awan2023canonical} below states that for any nontrivial tradeoff function, 
+this construction yields a CND, which can be constructed as in Definition \ref{def1} \parencite{awan2023canonical}. 
+This CND can be used to add perfectly calibrated noise to a statistic to achieve $f$-DP \parencite{dong2019gaussian}. 
+
+\begin{thm} \label{thm1}  % Thm 3.9
+Let $f$ be a symmetric nontrivial tradeoff function and let $F_f$ be as in Definition \ref{def1} \parencite{awan2023canonical}. 
+Then $F_f$ is a canonical noise distribution for $f$. 
+\end{thm}
+
+In Definition \ref{def1} \parencite{awan2023canonical}, we explained the cdf of the CND we made. 
+This explanation helps us understand the distribution's features, but when it comes to sampling, the quantile function is key. 
+In Proposition \ref{prop1} \parencite{awan2023canonical} provides a recursive formula for the CND's quantile function,
+as described in Definition \ref{def2}\parencite{awan2023canonical}, and show that we can finish it in just a few steps.
+
+\begin{prop}\label{prop1}   % Prop F.6
+    Let $f$ be a symmetric nontrivial tradeoff function and let $F_f$ be as in Definition \ref{def1}. 
+    Then the quantile function $F_f^{-1}:(0,1)\rightarrow \mathbb{R}$ for $F_f$ can be expressed as
+    \[F_f^{-1}(u) = \begin{cases}
+    F_f^{-1}(1-f(u))-1&u<c\\
+    \frac{u-1/2}{1-2c}&c\leq u\leq 1-c\\
+    F_f^{-1}(f(1-u))+1&u>1-c,
     \end{cases}\]
-    \end{defn}
-    In Definition \ref{def1} \parencite{awan2023canonical}, the fact that there is a unique fixed point follows from the fact that $f$ is convex and decreasing, and so intersects the line $y=\alpha$ at a unique value. Note that in Definition \ref{def1} \parencite{awan2023canonical}, the cumulative distribution function (CDF) corresponds to a uniform random variable on the interval $[-1/2,1/2]$. However, due to the recursive nature of $F_f$ and the fact that $f$ is generally non-linear, the Canonical Noise Distribution (CND) from Definition \ref{def1} \parencite{awan2023canonical} need not be uniformly distributed on any other intervals.
+    where $c$ is the unique fixed point of $f$. 
+    {Furthermore, for any $u\in (0,1)$, the expression $Q_f(u)$ takes a finite number of recursive steps to evaluate. Thus,} 
+    if $U\sim U(0,1)$, then $F_f^{-1}(U) \sim F_f$. 
+\end{prop}
 
-    Theorem \ref{thm1} \parencite{awan2023canonical} below states that for any nontrivial tradeoff function, this construction yields a CND, which can be constructed as in Definition \ref{def1} \parencite{awan2023canonical}. This CND can be used to add perfectly calibrated noise to a statistic to achieve $f$-DP \parencite{dong2019gaussian}. 
-    
-    \begin{thm} \label{thm1}  % Thm 3.9
-    Let $f$ be a symmetric nontrivial tradeoff function and let $F_f$ be as in Definition \ref{def1} \parencite{awan2023canonical}. Then $F_f$ is a canonical noise distribution for $f$. 
-    \end{thm}
-    
-    In Definition \ref{def1} \parencite{awan2023canonical}, we explained the cdf of the CND we made. This explanation helps us understand the distribution's features, but when it comes to sampling, the quantile function is key. In Proposition \ref{prop1} \parencite{awan2023canonical} provides a recursive formula for the CND's quantile function, as described in Definition \ref{def2}\parencite{awan2023canonical}, and show that we can finish it in just a few steps.
+% Cor 3.10
+According to Corollary 3.10 in \cite{awan2023canonical}, 
+the distribution $\mathrm{Tulap}(0,b,q)$, where $b=\exp(-\epsilon)$ and $q = \frac{2\delta b}{1-b+2\delta b}$ 
+is a CND for $f_{\epsilon,\delta}$-DP, which agrees with the construction of Definition \ref{def1} \parencite{awan2023canonical}. 
 
-    \begin{prop}\label{prop1}   % Prop F.6
-      Let $f$ be a symmetric nontrivial tradeoff function and let $F_f$ be as in Definition \ref{def1}. Then the quantile function $F_f^{-1}:(0,1)\rightarrow \mathbb{R}$ for $F_f$ can be expressed as
-      \[F_f^{-1}(u) = \begin{cases}
-      F_f^{-1}(1-f(u))-1&u<c\\
-      \frac{u-1/2}{1-2c}&c\leq u\leq 1-c\\
-      F_f^{-1}(f(1-u))+1&u>1-c,
-      \end{cases}\]
-      where $c$ is the unique fixed point of $f$. {Furthermore, for any $u\in (0,1)$, the expression $Q_f(u)$ takes a finite number of recursive steps to evaluate. Thus,} if $U\sim U(0,1)$, then $F_f^{-1}(U) \sim F_f$. 
-    \end{prop}
-    
-    % Cor 3.10
-    According to Corollary 3.10 in \cite{awan2023canonical}, 
-    the distribution $\mathrm{Tulap}(0,b,q)$, where $b=\exp(-\epsilon)$ and $q = \frac{2\delta b}{1-b+2\delta b}$ 
-    is a CND for $f_{\epsilon,\delta}$-DP, which agrees with the construction of Definition \ref{def1} \parencite{awan2023canonical}. 
-    
-    From the definition, it is easy to verify that the cdf of a Tulap random variable agrees with $F_f$ on $[-1/2,1/2]$. Tulap cdf also satisfies the recurrence relation of Definition \ref{def1} \parencite{awan2023canonical}. 
-    Note that the cdf of $\mathrm{Tulap}(0,b,0)$ is 
-    \[F_{N_0}(x) = \begin{cases}
+From the definition, it is easy to verify that the cdf of a Tulap random variable agrees with $F_f$ on $[-1/2,1/2]$. 
+Tulap cdf also satisfies the recurrence relation of Definition \ref{def1} \parencite{awan2023canonical}. 
+Note that the cdf of $\mathrm{Tulap}(0,b,0)$ is 
+\[F_{N_0}(x) = \begin{cases}
     \frac{b^{-[x]}}{1+b}(b+\{x-[x]+1/2\}(1-b))& x\leq 0\\
     1- \frac{b^{[x]}}{1+b}(b+\{[x]-x+1/2\}(1-b))&x>0,
-    \end{cases}\]
-    where $[x]$ is the nearest integer function. The cdf of $\mathrm{Tulap}(0,b,q)$ is
-    \[F_N(x) = \begin{cases}
+\end{cases}\]
+where $[x]$ is the nearest integer function. 
+The cdf of $\mathrm{Tulap}(0,b,q)$ is
+\[F_N(x) = \begin{cases}
     0&F_{N_0}(x)<q/2\\
     \frac{F_{N_0}(x)-q/2}{1-q}& q/2\leq F_{N_0}(x)\leq 1-q/2\\
     1&F_{N_0}(x)>1-q/2.
-    \end{cases}\]
-    By inspection, the fixed point of $f_{\epsilon,\delta}$ is $c=\frac{1-\delta}{1+e^\epsilon}$. It is easy to verify that $F_N(x) = c(1/2-x) + (1-c)(x+1/2)$ for $x\in (-1/2,1/2)$. 
-    %By \cite[Lemma 2.8]{awan2020differentially},
-    We then have that $F_N$ satisfies the recurrence relation in Definition \ref{def1} \parencite{awan2023canonical}. We conclude that $F_N = F_f$ and that $F_N$ is a CND for N. Therefore, The distribution $\mathrm{Tulap}(0,b,q)$ is privacy guaranteed.
+\end{cases}\]
+By inspection, the fixed point of $f_{\epsilon,\delta}$ is $c=\frac{1-\delta}{1+e^\epsilon}$. 
+It is easy to verify that $F_N(x) = c(1/2-x) + (1-c)(x+1/2)$ for $x\in (-1/2,1/2)$. 
+%By \cite[Lemma 2.8]{awan2020differentially},
+We then have that $F_N$ satisfies the recurrence relation in Definition \ref{def1} \parencite{awan2023canonical}. 
+We conclude that $F_N = F_f$ and that $F_N$ is a CND for N. Therefore, The distribution $\mathrm{Tulap}(0,b,q)$ is privacy guaranteed.
 \end{enumerate}
 \end{proof}
 
