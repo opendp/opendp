@@ -113,7 +113,7 @@ def fill_bytes(
     ptr,
     len: int
 ) -> bool:
-    r"""Internal function. Populate the buffer behind `ptr` with `len` random bytes 
+    r"""Internal function. Populate the buffer behind `ptr` with `len` random bytes
     sampled from a cryptographically secure RNG.
     
     [fill_bytes in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.fill_bytes.html)
