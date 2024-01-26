@@ -501,6 +501,9 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         # TODO: consider adding ffi equality
         return str(self) == str(other)
     
+    def __hash__(self) -> int:
+        return hash(str(self))
+    
     def _depends_on(self, *args):
         """Extends the memory lifetime of args to the lifetime of self."""
         setattr(self, "_dependencies", args)
@@ -547,6 +550,9 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
         return str(self) == str(other)
+    
+    def __hash__(self) -> int:
+        return hash(str(self))
 
 
 class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
@@ -585,6 +591,9 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
 
     def __eq__(self, other):
         return str(self) == str(other)
+    
+    def __hash__(self) -> int:
+        return hash(str(self))
 
 
 class SMDCurve(object):
