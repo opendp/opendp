@@ -32,20 +32,19 @@ def test_count_by_categories_float():
     load = dp.t.make_split_dataframe(",", ["A", "B"]) >> dp.t.make_select_column(
         "A", TOA=str
     )
-    
-    noisy_float_histogram = (
-        load
-        >> dp.t.then_count_by_categories(cats, MO=dp.L1Distance[float], TOA=float)
-        >> dp.m.then_base_laplace(scale=1.0)
-    )
-    print(noisy_float_histogram(data))
 
-    noisy_float_histogram = (
-        load
-        >> dp.t.then_count_by_categories(cats, MO=dp.L2Distance[float], TOA=float)
-        >> dp.m.then_base_gaussian(scale=1.0)
+    t_hist = load >> dp.t.then_count_by_categories(
+        cats, MO=dp.L1Distance[float], TOA=float
     )
-    print(noisy_float_histogram(data))
+    assert t_hist(data) == [5.0, 20.0, 10.0, 5.0]
+    # ensure that chaining works as expected
+    (t_hist >> dp.m.then_laplace(1.0))(data)
+
+    t_hist = load >> dp.t.then_count_by_categories(
+        cats, MO=dp.L2Distance[float], TOA=float
+    )
+    assert t_hist(data) == [5.0, 20.0, 10.0, 5.0]
+    (t_hist >> dp.m.then_gaussian(1.0))(data)
 
 
 def test_count_by_threshold():
@@ -74,11 +73,20 @@ def test_count_by_threshold():
 
     assert laplace_histogram_from_dataframe.check(1, budget)
 
-    data = "\n".join(["a"] * 500 + ["b"] * 200 + ["what?"] * 100)
+    data = "\n".join(["a"] * 500 + ["b"] * 200 + ["other"] * 100)
 
+    assert pre(data) == {"a": 500, "b": 200, "other": 100}
     print(laplace_histogram_from_dataframe(data))
+    print(scale, threshold)
 
     with pytest.raises(dp.OpenDPException):
         dp.m.make_base_laplace_threshold(
             dp.atom_domain(T=int), dp.l1_distance(T=float), scale=1.0, threshold=1e8
         )
+
+    extreme_vals = pre >> dp.m.then_base_laplace_threshold(
+        scale=0., threshold=threshold
+    )
+    print(extreme_vals.map(1))
+
+test_count_by_threshold()

@@ -128,7 +128,7 @@ where
     FBig: InfCast<T>,
 {
     let alpha = FBig::neg_inf_cast(alpha).expect("impl is infallible");
-    let alpha: FBig<Down> = alpha.with_rounding() * 2;
+    let alpha: FBig<Down> = alpha.with_rounding() + 2;
     let alpha = FBig::<Up>::ONE / alpha.with_rounding();
     // Round up to preserve privacy
     f64::inf_cast(alpha).expect("impl is infallible")

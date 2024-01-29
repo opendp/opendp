@@ -105,10 +105,6 @@ where
                 return Ok((TV::zero(), TV::zero()));
             }
 
-            if scale.is_zero() {
-                return Ok((TV::infinity(), TV::one()));
-            }
-
             let d_in = d_in.inf_add(&relaxation)?;
             let epsilon = d_in.inf_div(&scale)?;
 
@@ -119,15 +115,18 @@ where
             // δ = exp(ln(d_in / 2) - distance_to_instability)
 
             // compute the distance to instability, conservatively rounding down
-            // dist2inst = (threshold -            d_in)             / scale
-            let dist2inst = threshold.neg_inf_sub(&d_in)?.neg_inf_div(&scale)?;
+            //                         = (threshold -            d_in)             / scale
+            let distance_to_instability = threshold.neg_inf_sub(&d_in)?.neg_inf_div(&scale)?;
 
-            if dist2inst.is_sign_negative() || dist2inst.is_zero() {
+            if distance_to_instability <= TV::zero() {
                 return Ok((epsilon, TV::one()));
             }
 
-            // ln(delta) = ln(d_in /      2)            -        distance_to_instability
-            let ln_delta = d_in.inf_div(&_2)?.inf_ln()?.inf_sub(&dist2inst)?;
+            // ln(delta) = ln(d_in / 2) - distance_to_instability
+            let ln_delta = d_in
+                .inf_div(&_2)?
+                .inf_ln()?
+                .inf_sub(&distance_to_instability)?;
 
             // delta =        exp(ln(delta))
             let delta = match ln_delta.inf_exp() {
@@ -135,9 +134,9 @@ where
                 Err(Error {
                     variant: ErrorVariant::Overflow,
                     ..
-                }) => Ok(TV::infinity()),
-                result => result,
-            }?;
+                }) => TV::infinity(),
+                result => result?,
+            };
 
             // delta is only sensibly at most 1
             Ok((epsilon, delta.min(TV::one())))

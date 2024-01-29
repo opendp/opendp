@@ -48,6 +48,7 @@ use dashu::{
     base::Abs,
     integer::{IBig, UBig},
     rational::RBig,
+    rbig,
 };
 use opendp_derive::proven;
 
@@ -192,7 +193,7 @@ pub fn sample_discrete_gaussian(scale: RBig) -> Fallible<IBig> {
     loop {
         let candidate = sample_discrete_laplace(t.clone())?;
         let x = (&candidate).abs() - sigma2.clone() / &t;
-        let bias = x.pow(2) / (sigma2.clone() * RBig::from(2));
+        let bias = x.pow(2) / (sigma2.clone() * rbig!(2));
         if sample_bernoulli_exp(bias)? {
             return Ok(candidate);
         }

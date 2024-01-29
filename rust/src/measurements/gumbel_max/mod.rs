@@ -25,7 +25,7 @@ pub enum Optimize {
 }
 
 #[bootstrap(
-    features("contrib"),
+    features("contrib", "floating-point"),
     arguments(optimize(c_type = "char *", rust_type = "String")),
     generics(TIA(suppress))
 )]

@@ -1007,10 +1007,9 @@ def exponential_bounds_search(
         at_center = predicate(center)
         # search positive bands, then negative bands
         return signed_band_search(center, at_center, 1) or signed_band_search(center, at_center, -1)
-    except KeyboardInterrupt:
-        raise
-    except:
+    except Exception:
         pass
+
 
     # predicate has thrown an exception
     # 1. Treat exceptions as a secondary decision boundary, and find the edge value
@@ -1019,16 +1018,12 @@ def exponential_bounds_search(
         try:
             predicate(v)
             return True
-        except KeyboardInterrupt:
-            raise
-        except:
+        except Exception:
             return False
     exception_bounds = exponential_bounds_search(exception_predicate, T=T)
     if exception_bounds is None:
         try:
             predicate(center)
-        except KeyboardInterrupt:
-            raise
         except Exception:
             raise ValueError(f"predicate always fails. An example traceback is shown above at {center}.")
     

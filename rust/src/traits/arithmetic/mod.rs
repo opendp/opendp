@@ -456,7 +456,6 @@ macro_rules! impl_alerting_float {
 }
 impl_alerting_float!(f32, f64);
 
-// TRAIT InfSqrt, InfLn, InfExp (univariate)
 trait Log2 {
     fn log2(self) -> Self;
 }
@@ -465,18 +464,18 @@ impl Log2 for FBig<Down> {
     fn log2(self) -> Self {
         Self::try_from(self.log2_bounds().0).unwrap()
         // If you implement via log rules, the bound is looser than dashu's EstimatedLog2.
-        // However, dashu's EstimatedLog2 matches MPFR.
-        // log_b(x) = ln(x) / ln(b)
+        //    However, dashu's EstimatedLog2 matches MPFR.
+        //    using log_b(x) = ln(x) / ln(b):
         // self.ln() / FBig::<Up>::from(2).ln().with_rounding::<Down>()
     }
 }
 impl Log2 for FBig<Up> {
     fn log2(self) -> Self {
         Self::try_from(self.log2_bounds().1).unwrap()
-        // self.ln() / FBig::<Down>::from(2).ln().with_rounding::<Up>()
     }
 }
 
+// TRAIT InfSqrt, InfLn, InfExp (univariate)
 macro_rules! impl_float_inf_uni {
     ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident) => {
         $(

@@ -240,8 +240,8 @@ mod test {
 
     #[test]
     fn test_shr() -> Fallible<()> {
-        assert_eq!(shr(RBig::try_from(1.)?, 0), RBig::from(1u8));
-        assert_eq!(shr(RBig::try_from(0.25)?, -2), RBig::from(1u8));
+        assert_eq!(shr(RBig::try_from(1.)?, 0), RBig::ONE);
+        assert_eq!(shr(RBig::try_from(0.25)?, -2), RBig::ONE);
         assert_eq!(shr(RBig::try_from(1.)?, 2), RBig::try_from(0.25)?);
         Ok(())
     }

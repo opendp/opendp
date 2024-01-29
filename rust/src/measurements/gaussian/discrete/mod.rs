@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use dashu::{base::Signed, integer::IBig, rational::RBig};
+use dashu::{base::Signed, integer::IBig, rational::RBig, rbig};
 use num::{Float as _, Zero};
 use opendp_derive::bootstrap;
 
@@ -162,7 +162,7 @@ where
         })),
         input_metric,
         ZeroConcentratedDivergence::default(),
-        PrivacyMap::new(move |d_in: &RBig| (d_in.clone() / &scale).pow(2) / RBig::from(2)),
+        PrivacyMap::new(move |d_in: &RBig| (d_in.clone() / &scale).pow(2) / rbig!(2)),
     )
 }
 
