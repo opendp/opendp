@@ -501,10 +501,6 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         """Extends the memory lifetime of args to the lifetime of self."""
         setattr(self, "_dependencies", args)
 
-    def __getattr__(self, name: str) -> Any:
-        from opendp.domains import _user_domain_descriptor
-        descriptor = _user_domain_descriptor(self)
-        return getattr(descriptor, name)
 
 
 class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]

@@ -224,9 +224,6 @@ def test_user_domain():
     # can retrieve the descriptor for use in further analysis
     assert domain.descriptor == {1, 2, 3, 4}
 
-    # can access attributes on the descriptor through the domain
-    assert domain.symmetric_difference({1, 2}) == {3, 4}
-
     # nest inside a vector domain
     vec_domain = dp.vector_domain(domain)
     assert vec_domain.member([datetime.now()])
