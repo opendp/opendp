@@ -37,7 +37,7 @@ rand = "0.7.3"
 num = "0.3.1"
 thiserror = "1.0.24"
 statrs = "0.13.0"
-rug = { version = "1.14.0", default-features = false, features = ["integer", "float", "rational", "num-traits", "rand"], optional = true }
+rug = { version = "1.24.0", default-features = false, features = ["std", "integer", "float", "rational", "num-traits", "rand"], optional = true }
 az = { version = "1.2.0", optional = true }
 gmp-mpfr-sys = { version = "1.4.7", default-features = false, features = ["mpfr", "force-cross"], optional = true }
 openssl = { version = "0.10.29", features = ["vendored"], optional = true }
