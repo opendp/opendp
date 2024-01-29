@@ -786,6 +786,7 @@ def binary_search_param(
 
     return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, T)
 
+# when return sign is false, only return float
 @overload
 def binary_search(
         predicate: Callable[[float], bool],
@@ -795,14 +796,25 @@ def binary_search(
     ...
 
 
+# when setting return sign to true as a keyword argument, return both
 @overload
 def binary_search(
         predicate: Callable[[float], bool],
         bounds: Tuple[float, float] | None = ...,
         T: Type[float] | None = ...,
-        *,
+        *, # see https://stackoverflow.com/questions/66435480/overload-following-optional-argument
         return_sign: Literal[True]) -> Tuple[float, int]:
     ...
+
+# when setting return sign to true as a positional argument, return both
+@overload
+def binary_search(
+        predicate: Callable[[float], bool],
+        bounds: Tuple[float, float] | None,
+        T: Type[float] | None,
+        return_sign: Literal[True]) -> Tuple[float, int]:
+    ...
+
 
 def binary_search(
         predicate: Callable[[float], bool],
