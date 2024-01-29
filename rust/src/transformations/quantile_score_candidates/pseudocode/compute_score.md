@@ -1,4 +1,4 @@
-# type: ignore
+```python
 def compute_score(
     x: List[TIA], 
     candidates: List[TIA], 
@@ -25,3 +25,4 @@ def compute_score(
             alpha_num * min(len(x) - eq, size_limit))
 
     return [score(lt, eq) for lt, eq in zip(num_lt, num_eq)]
+```

@@ -79,13 +79,14 @@ but the chaining fails because the sum emits floats and the discrete Laplace mec
     ...     dp.vector_domain(dp.atom_domain(bounds=(0., 1.))), 
     ...     dp.symmetric_distance()
     ... )
-    >>> try:
-    ...     sum_trans >> lap_meas
-    ... except OpenDPException as err:
-    ...     print(err.message[:-1])
-    Intermediate domains don't match. See https://github.com/opendp/opendp/discussions/297
+    >>> sum_trans >> lap_meas
+    Traceback (most recent call last):
+    ...
+    opendp.mod.OpenDPException: 
+      DomainMismatch("Intermediate domains don't match. See https://github.com/opendp/opendp/discussions/297
         output_domain: AtomDomain(T=f64)
         input_domain:  AtomDomain(T=i32)
+    ")
 
 Note that ``noisy_sum_trans``'s input domain and input metric come from ``sum_trans``'s input domain and input metric.
 This is intended to enable further chaining with preprocessors like :py:func:`make_cast <opendp.transformations.make_cast>`, :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`, :py:func:`make_clamp <opendp.transformations.make_clamp>` and :py:func:`make_resize <opendp.transformations.make_resize>`.

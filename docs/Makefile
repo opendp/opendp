@@ -16,7 +16,7 @@ ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
 $(error The '$(SPHINXBUILD)' command was not found. Make sure you have Sphinx installed, then set the SPHINXBUILD environment variable to point to the full path of the '$(SPHINXBUILD)' executable. Alternatively you can add the directory with the executable to your PATH. If you don't have Sphinx installed, grab it from http://sphinx-doc.org/)
 endif
 
-.PHONY: help clean html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest gettext
+.PHONY: help clean html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck gettext
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
@@ -37,11 +37,6 @@ html:
 
 html-rustdoc:
 	cd ../rust && cargo rustdoc --features untrusted,derive -- --html-in-header katex.html --document-private-items
-
-doctest: doctest-rust
-	@echo
-	@echo "TODO: python doctests now run by pytest; Remove this rule?"
-	@echo "Doctest finished. The output is in $(BUILDDIR)/doctest/output.txt."
 
 doctest-rust:
 	cd ../rust && $(CARGO) test --doc --features untrusted,ffi

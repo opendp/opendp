@@ -1,3 +1,10 @@
+'''
+The ``typing`` module provides utilities that bridge between Python and Rust types.
+OpenDP relies on precise descriptions of data types to make its security guarantees:
+These are more natural in Rust with its fine-grained type system,
+but they may feel out of place in Python. These utilities try to fill that gap.
+'''
+
 import sys
 import typing
 from collections.abc import Hashable
@@ -39,7 +46,7 @@ try:
         np.float64: 'f64',  # np.double, np.float_
     })
 except ImportError:
-    np = None
+    np = None  # type: ignore[assignment]
 
 INTEGER_TYPES = {"i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "usize"}
 NUMERIC_TYPES = INTEGER_TYPES | {"f32", "f64"}
@@ -154,10 +161,14 @@ class RuntimeType(object):
         :examples:
 
         >>> from opendp.typing import RuntimeType, L1Distance
-        >>> assert RuntimeType.parse(int) == "i32"
-        >>> assert RuntimeType.parse("i32") == "i32"
-        >>> assert RuntimeType.parse(L1Distance[int]) == "L1Distance<i32>"
-        >>> assert RuntimeType.parse(L1Distance["f32"]) == "L1Distance<f32>"
+        >>> RuntimeType.parse(int)
+        'i32'
+        >>> RuntimeType.parse("i32")
+        'i32'
+        >>> print(RuntimeType.parse(L1Distance[int]))
+        L1Distance<i32>
+        >>> print(RuntimeType.parse(L1Distance["f32"]))
+        L1Distance<f32>
         """
         generics = generics or []
         if isinstance(type_name, RuntimeType):
@@ -269,6 +280,11 @@ class RuntimeType(object):
         >>> assert RuntimeType.infer(12.) == "f64"
         >>> assert RuntimeType.infer(["A", "B"]) == "Vec<String>"
         >>> assert RuntimeType.infer((12., True, "A")) == "(f64,  bool,String)" # eq doesn't care about whitespace
+        
+        >>> print(RuntimeType.infer([]))
+        Traceback (most recent call last):
+        ...
+        opendp.mod.UnknownTypeException: attempted to create a type_name with an unknown type: cannot infer atomic type when empty
         """
         if type(public_example) in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type(public_example)]

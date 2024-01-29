@@ -40,6 +40,7 @@ on:
         description: Target Channel
         type: choice
         options:
+          - dev
           - nightly
           - beta
           - stable
@@ -78,7 +79,7 @@ jobs:
       channel: ${{ inputs.channel }}
       sync: ${{ inputs.sync }}
       counter: ${{ fromJSON(inputs.counter) }}
-      dry_run: ${{ env.dry_run }}
+      dry_run: ${{ inputs.dry_run || inputs.fake }}
 
   build:
     needs: prepare
@@ -109,12 +110,14 @@ jobs:
     uses: ./.github/workflows/sanity-test.yml
     with:
       channel: ${{ inputs.channel }}
-      # dry-runs go to TestPyPI instead of PyPI
-      python_repository: ${{ env.dry_run && 'testpypi' || 'pypi' }}
+      # dry-runs and fake went to TestPyPI instead of PyPI
+      python_repository: ${{ ( inputs.dry_run || inputs.fake ) && 'testpypi' || 'pypi'  }}
       fake: ${{ inputs.fake }}
 
   latex:
     needs: prepare
+    # don't build latex or docs for dev builds
+    if: ${{ inputs.channel != 'dev' }}
     uses: ./.github/workflows/latex-release.yml
     with:
       channel: ${{ inputs.channel }}
