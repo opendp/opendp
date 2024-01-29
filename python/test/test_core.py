@@ -66,10 +66,10 @@ def test_bisect_edge():
 
 def test_type_hinting():
     from opendp.mod import binary_search
-    assert binary_search(lambda x: x > 0, (0, 1), int, True) == 1
-    assert binary_search(lambda x: x > 0, (0, 1), T=int, return_sign=True) == 1
-    assert binary_search(lambda x: x > 0, bounds=(0, 1), return_sign=True) == 1
-    assert binary_search(lambda x: x > 0, return_sign=True) == 1
+    assert binary_search(lambda x: x > 0, (0, 1), int, True)[0] == 1
+    assert binary_search(lambda x: x > 0, (0, 1), T=int, return_sign=True)[0] == 1
+    assert binary_search(lambda x: x > 0, bounds=(0, 1), return_sign=True)[0] == 1
+    assert binary_search(lambda x: x > 0, return_sign=True)[0] == 5e-324
 
 
 def test_bisect_chain():
