@@ -25,6 +25,27 @@ The branch naming convention is the issue number followed by a short description
 Once you have opened your Pull Request, it will appear in the `list of open PRs <https://github.com/opendp/opendp/pulls>`_.
 Please check back later for feedback!
 
+Branch Philosophy
+-----------------
+OpenDP may have many open PRs at any given moment.
+Sometimes it's just a backlog, but also reflects our development process:
+
+When possible, we want PRs to be narrowly focused, and linked to a single issue.
+
+But bigger features will have multiple prerequisites...
+and there may be different ways of satisfying those prerequisites,
+and it may not be obvious at first what the best course is.
+Rather than merging those prerequisite PRs straight to ``main`` we'll stack other PRs on them,
+and those later PRs can test whether we made the right choices at the beginning.
+Industry contributors are also using their own forks of OpenDP in production,
+and this in-the-field experience leads to improvements in PRs,
+but it will take some time to integrate their contributions.
+Finally, we use `graphite <https://graphite.dev/>`_, which makes it easier to handle PR stacks.
+
+So, while we often do have a large number of open PRs, it is part of a process that has worked for our team,
+and it has given us the time to reflect on issues in algorithms and software engineering,
+and still make regular releases.
+
 
 Vetting Process
 ---------------
