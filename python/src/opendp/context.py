@@ -49,7 +49,9 @@ __all__ = [
     'loss_of',
     'unit_of',
     'Context',
-    'Query'
+    'Query',
+    'Chain',
+    'PartialChain'
 ]
 
 
