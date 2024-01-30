@@ -182,7 +182,7 @@ def sample_bernoulli(prob: Rational, constant_time : bool) -> bool:
         raise NotImplementedError("constant-time uniform sampling of rationals is not implemented")
     
     let (numer, denom) = prob.into_numer_denom();
-    return numer >= Integer.sample_uniform_int_below(denom)
+    return numer > Integer.sample_uniform_int_below(denom)
 \end{lstlisting}
 
 \subsubsection*{Postcondition}

@@ -144,7 +144,7 @@ impl SampleBernoulli<rug::Rational> for bool {
             );
         }
         let (numer, denom) = prob.into_numer_denom();
-        rug::Integer::sample_uniform_int_below(denom).map(|s| numer >= s)
+        rug::Integer::sample_uniform_int_below(denom).map(|s| numer > s)
     }
 }
 
