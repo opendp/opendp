@@ -105,6 +105,10 @@ where
                 return Ok((TV::zero(), TV::zero()));
             }
 
+            if scale.is_zero() {
+                return Ok((TV::infinity(), TV::one()));
+            }
+
             let d_in = d_in.inf_add(&relaxation)?;
             let epsilon = d_in.inf_div(&scale)?;
 

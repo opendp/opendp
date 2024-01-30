@@ -84,9 +84,6 @@ def test_count_by_threshold():
             dp.atom_domain(T=int), dp.l1_distance(T=float), scale=1.0, threshold=1e8
         )
 
-    extreme_vals = pre >> dp.m.then_base_laplace_threshold(
+    assert (pre >> dp.m.then_base_laplace_threshold(
         scale=0., threshold=threshold
-    )
-    print(extreme_vals.map(1))
-
-test_count_by_threshold()
+    )).map(1) == (float("inf"), 1.)

@@ -12,6 +12,15 @@ use dashu::{
     },
     integer::IBig,
 };
+use std::panic;
+
+fn catch_unwind_silent<R>(f: impl FnOnce() -> R + panic::UnwindSafe) -> std::thread::Result<R> {
+    let prev_hook = panic::take_hook();
+    panic::set_hook(Box::new(|_| {}));
+    let result = panic::catch_unwind(f);
+    panic::set_hook(prev_hook);
+    result
+}
 
 /// Fallible absolute value that returns an error if overflowing.
 ///
@@ -488,9 +497,12 @@ macro_rules! impl_float_inf_uni {
                 if !self.$op().is_finite() {
                     return Err(not_finite());
                 }
-                let this = FBig::<Up>::inf_cast(self)?.$op();
-                let this = Self::inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(not_finite)
+                let lhs = FBig::<Up>::inf_cast(self)?;
+                let Ok(output) = catch_unwind_silent(|| lhs.$op()) else {
+                    return Err(not_finite())
+                };
+                let output = Self::inf_cast(output)?;
+                output.is_finite().then(|| output).ok_or_else(not_finite)
             }
             fn $method_neg_inf(self) -> Fallible<Self> {
                 let not_finite = || err!(
@@ -500,9 +512,12 @@ macro_rules! impl_float_inf_uni {
                 if !self.$op().is_finite() {
                     return Err(not_finite());
                 }
-                let this = FBig::<Down>::neg_inf_cast(self)?.$op();
-                let this = Self::neg_inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(not_finite)
+                let lhs = FBig::<Down>::inf_cast(self)?;
+                let Ok(output) = catch_unwind_silent(|| lhs.$op()) else {
+                    return Err(not_finite())
+                };
+                let output = Self::neg_inf_cast(output)?;
+                output.is_finite().then(|| output).ok_or_else(not_finite)
             }
         })+
     }
@@ -558,9 +573,13 @@ macro_rules! impl_float_inf_bi {
                 if !self.$op(other).is_finite() {
                     return Err(not_finite());
                 }
-                let this = FBig::<Up>::try_from(*self)?.$op(&FBig::<Up>::try_from(*other)?);
-                let this = Self::inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(not_finite)
+                let lhs = FBig::<Up>::try_from(*self)?;
+                let rhs = FBig::<Up>::try_from(*other)?;
+                let Ok(output) = catch_unwind_silent(|| lhs.$op(rhs)) else {
+                    return Err(not_finite())
+                };
+                let output = Self::inf_cast(output)?;
+                output.is_finite().then(|| output).ok_or_else(not_finite)
             }
             fn $method_neg_inf(&self, other: &Self) -> Fallible<Self> {
                 let not_finite = || err!(
@@ -570,9 +589,13 @@ macro_rules! impl_float_inf_bi {
                 if !self.$op(other).is_finite() {
                     return Err(not_finite());
                 }
-                let this = FBig::<Down>::try_from(*self)?.$op(&FBig::<Down>::try_from(*other)?);
-                let this = Self::neg_inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(not_finite)
+                let lhs = FBig::<Down>::try_from(*self)?;
+                let rhs = FBig::<Down>::try_from(*other)?;
+                let Ok(output) = catch_unwind_silent(|| lhs.$op(rhs)) else {
+                    return Err(not_finite())
+                };
+                let output = Self::neg_inf_cast(output)?;
+                output.is_finite().then(|| output).ok_or_else(not_finite)
             }
         })+
     }
@@ -593,9 +616,12 @@ macro_rules! impl_float_inf_bi_ibig {
                 if !self.is_finite() {
                     return Err(not_finite());
                 }
-                let this = FBig::<Up>::try_from(*self)?.$op(other.clone());
-                let this = Self::inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(not_finite)
+                let lhs = FBig::<Up>::try_from(*self)?;
+                let Ok(output) = catch_unwind_silent(|| lhs.$op(other.clone())) else {
+                    return Err(not_finite())
+                };
+                let output = Self::inf_cast(output)?;
+                output.is_finite().then(|| output).ok_or_else(not_finite)
             }
             fn $method_neg_inf(&self, other: IBig) -> Fallible<Self> {
                 let not_finite = || err!(
@@ -605,9 +631,12 @@ macro_rules! impl_float_inf_bi_ibig {
                 if !self.is_finite() {
                     return Err(not_finite());
                 }
-                let this = FBig::<Down>::try_from(*self)?.$op(other.clone());
-                let this = Self::neg_inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(not_finite)
+                let lhs = FBig::<Down>::try_from(*self)?;
+                let Ok(output) = catch_unwind_silent(|| lhs.$op(other.clone())) else {
+                    return Err(not_finite())
+                };
+                let output = Self::neg_inf_cast(output)?;
+                output.is_finite().then(|| output).ok_or_else(not_finite)
             }
         })+
     }
