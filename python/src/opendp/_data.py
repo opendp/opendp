@@ -298,7 +298,7 @@ def str_free(
 @versioned
 def to_string(
     this: Any
-) -> str: # pragma: no cover
+) -> str:
     r"""Internal function. Convert the AnyObject to a string representation.
     
     [to_string in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.to_string.html)
