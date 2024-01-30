@@ -43,10 +43,16 @@ def make_private_np_eigenvector(
         # (2)
         A_eigvals = np.linalg.eigvalsh(A)
 
-        # Differs from the Amin et al.
-        #   In 3.6 of https://eprints.whiterose.ac.uk/123206/7/simbingham8.pdf,
+        # This algorithm first finds parameters for an angular central gaussian distribution (ACG),
+        #   which acts as an envelope distribution for rejection sampling.
+        # The rejection rate will be minimized when b is chosen optimally.
+        # b is chosen optimally when the ACG is least entropic, but is still an envelope.
+        # Criteria for being an envelope are given in 3.4 of https://eprints.whiterose.ac.uk/123206/7/simbingham8.pdf
+
+        # Differs from the Amin et al. in two ways:
+        # 1. In 3.6 of https://eprints.whiterose.ac.uk/123206/7/simbingham8.pdf,
         #   the equality is against 1 not 0
-        # Instead of using bounds of (1, d), increase the upper bound for numerical stability
+        # 2. Instead of using bounds of (1, d), decrease the lower bound for numerical stability
         b = dp.binary_search(
             lambda b: sum(1 / (b + 2 * A_eigvals)) >= 1, bounds=(0.9, float(d))
         )
@@ -67,6 +73,8 @@ def make_private_np_eigenvector(
             #       sample with sufficient precision where all components round to same float
             
             z = np_csprng.multivariate_normal(mean=np.zeros(d), cov=Omega_inv)
+            # u is a sample from the angular central gaussian distribution, 
+            #    an envelope for the bingham distribution
             u = z / np.linalg.norm(z)
             if np.exp(-u.T @ A @ u) / (M * (u.T @ Omega @ u) ** (d / 2)):
                 return u
