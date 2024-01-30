@@ -64,6 +64,14 @@ def test_bisect_edge():
     assert binary_search(lambda x: x > 5.0, bounds=(0.0, 10.0)) - 5.0 > -1e-8
 
 
+def test_type_hinting():
+    from opendp.mod import binary_search
+    assert binary_search(lambda x: x > 0, (0, 1), int, True)[0] == 1
+    assert binary_search(lambda x: x > 0, (0, 1), T=int, return_sign=True)[0] == 1
+    assert binary_search(lambda x: x > 0, bounds=(0, 1), return_sign=True)[0] == 1
+    assert binary_search(lambda x: x > 0, return_sign=True)[0] == 5e-324
+
+
 def test_bisect_chain():
     pre = (
         (dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance())

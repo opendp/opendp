@@ -6,6 +6,7 @@ as well as utilities for enabling features and finding parameter values.
 The classes here correspond to other top-level modules: For example,
 instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for functions in :py:mod:`opendp.domains`.
 '''
+from __future__ import annotations
 import ctypes
 from typing import Any, Literal, Type, TypeVar, Union, Tuple, Callable, Optional, overload, TYPE_CHECKING
 
@@ -652,13 +653,12 @@ def assert_features(*features: str) -> None:
         assert feature in GLOBAL_FEATURES, f"Attempted to use function that requires {feature}, but {feature} is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"{feature}\")"
 
 
-T = TypeVar("T", float, int)
 M = TypeVar("M", Transformation, Measurement)
 
 def binary_search_chain(
-        make_chain: Callable[[T], M],
+        make_chain: Callable[[float], M],
         d_in: Any, d_out: Any,
-        bounds: Union[Tuple[T, T], None] = None,
+        bounds: Tuple[float, float] | None = None,
         T=None) -> M:
     """Useful to find the Transformation or Measurement parameterized with the ideal constructor argument.
     
@@ -720,10 +720,10 @@ def binary_search_chain(
 
 
 def binary_search_param(
-        make_chain: Callable[[T], Union[Transformation, Measurement]],
+        make_chain: Callable[[float], Union[Transformation, Measurement]],
         d_in: Any, d_out: Any,
-        bounds: Optional[Tuple[T, T]] = None,
-        T=None) -> T:
+        bounds: Tuple[float, float] | None = None,
+        T=None) -> float:
     """Useful to solve for the ideal constructor argument.
     
     Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
@@ -786,28 +786,41 @@ def binary_search_param(
 
     return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, T)
 
+# when return sign is false, only return float
 @overload
-def binary_search( # type: ignore[overload-overlap]
-        predicate: Callable[[T], bool],
-        bounds: Optional[Tuple[T, T]] = None,
-        T: Optional[Type[T]] = None,
-        return_sign: Literal[False] = False) -> T:
+def binary_search(
+        predicate: Callable[[float], bool],
+        bounds: Tuple[float, float] | None = ...,
+        T: Type[float] | None = ...,
+        return_sign: Literal[False] = False) -> float:
     ...
 
 
+# when setting return sign to true as a keyword argument, return both
 @overload
 def binary_search(
-        predicate: Callable[[T], bool],
-        bounds: Optional[Tuple[T, T]] = None,
-        T: Optional[Type[T]] = None,
-        return_sign: Literal[True] = True) -> Tuple[T, int]:
+        predicate: Callable[[float], bool],
+        bounds: Tuple[float, float] | None = ...,
+        T: Type[float] | None = ...,
+        *, # see https://stackoverflow.com/questions/66435480/overload-following-optional-argument
+        return_sign: Literal[True]) -> Tuple[float, int]:
     ...
 
+# when setting return sign to true as a positional argument, return both
+@overload
 def binary_search(
-        predicate: Callable[[T], bool],
-        bounds: Optional[Tuple[T, T]] = None,
-        T: Optional[Type[T]] = None,
-        return_sign: bool = False) -> Union[T, Tuple[T, int]]:
+        predicate: Callable[[float], bool],
+        bounds: Tuple[float, float] | None,
+        T: Type[float] | None,
+        return_sign: Literal[True]) -> Tuple[float, int]:
+    ...
+
+
+def binary_search(
+        predicate: Callable[[float], bool],
+        bounds: Tuple[float, float] | None = None,
+        T: Type[float] | None = None,
+        return_sign: bool = False) -> float | Tuple[float, int]:
     """Find the closest passing value to the decision boundary of `predicate` within float or integer `bounds`.
 
     If bounds are not passed, conducts an exponential search.
