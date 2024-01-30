@@ -1,4 +1,4 @@
-use std::ffi::c_char;
+use std::{ffi::c_char, fmt::Debug};
 
 use opendp_derive::bootstrap;
 
@@ -309,21 +309,70 @@ pub extern "C" fn opendp_domains__map_domain(
     }.into()
 }
 
+/// A struct containing the essential metadata shared by extrinsic elements:
+/// UserDomain, UserMetric, UserMeasure.
+pub struct ExtrinsicElement {
+    /// The name of the element, used for display and partial equality
+    identifier: String,
+    /// Data stored inside the element native to a foreign (extrinsic) language
+    value: ExtrinsicObject,
+}
+
+impl Clone for ExtrinsicElement {
+    fn clone(&self) -> Self {
+        (self.value.count)(self.value.ptr, true);
+        Self {
+            identifier: self.identifier.clone(),
+            value: self.value.clone(),
+        }
+    }
+}
+
+impl ExtrinsicElement {
+    fn new(identifier: String, value: ExtrinsicObject) -> Self {
+        (value.count)(value.ptr, true);
+        ExtrinsicElement { value, identifier }
+    }
+}
+
+impl Debug for ExtrinsicElement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.identifier)
+    }
+}
+impl PartialEq for ExtrinsicElement {
+    fn eq(&self, other: &Self) -> bool {
+        self.identifier == other.identifier
+    }
+}
+impl Drop for ExtrinsicElement {
+    fn drop(&mut self) {
+        (self.value.count)(self.value.ptr, false);
+    }
+}
+
+/// Rust does not directly manipulate the data behind pointers,
+/// the bindings language enforces Send.
+unsafe impl Send for ExtrinsicElement {}
+/// Rust does not directly manipulate the data behind pointers,
+/// the bindings language enforces Sync.
+unsafe impl Sync for ExtrinsicElement {}
+
 #[derive(Clone)]
 pub struct UserDomain {
-    pub descriptor: String,
+    pub element: ExtrinsicElement,
     pub member: Function<ExtrinsicObject, bool>,
 }
 
 impl std::fmt::Debug for UserDomain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "UserDomain({:?})", self.descriptor)
+        write!(f, "{:?}", self.element)
     }
 }
 
 impl PartialEq for UserDomain {
     fn eq(&self, other: &Self) -> bool {
-        self.descriptor == other.descriptor
+        self.element == other.element
     }
 }
 
@@ -338,7 +387,11 @@ impl Domain for UserDomain {
 #[bootstrap(
     name = "user_domain",
     features("honest-but-curious"),
-    arguments(descriptor(rust_type = "String"), member(rust_type = "bool")),
+    arguments(
+        identifier(c_type = "char *", rust_type = b"null"),
+        member(rust_type = "bool"),
+        descriptor(default = b"null", rust_type = "ExtrinsicObject")
+    ),
     dependencies("c_member")
 )]
 /// Construct a new UserDomain.
@@ -346,21 +399,38 @@ impl Domain for UserDomain {
 /// Contains a function used to check if any value is a member of the domain.
 ///
 /// # Arguments
-/// * `descriptor` - A string description of the data domain.
+/// * `identifier` - A string description of the data domain.
 /// * `member` - A function used to test if a value is a member of the data domain.
+/// * `descriptor` - Additional constraints on the domain.
 #[no_mangle]
 pub extern "C" fn opendp_domains__user_domain(
-    descriptor: *mut c_char,
+    identifier: *mut c_char,
     member: CallbackFn,
+    descriptor: *mut ExtrinsicObject,
 ) -> FfiResult<*mut AnyDomain> {
-    let descriptor = try_!(to_str(descriptor)).to_string();
-    let func = move |arg: &ExtrinsicObject| -> Fallible<AnyObject> {
-        let res = member(AnyObject::new_raw(arg.clone()));
-        util::into_owned(res)?.into()
-    };
+    let identifier = try_!(to_str(identifier)).to_string();
+    let descriptor = try_as_ref!(descriptor).clone();
+    let element = ExtrinsicElement::new(identifier, descriptor);
     let member = Function::new_fallible(move |arg: &ExtrinsicObject| -> Fallible<bool> {
-        (func)(arg)?.downcast::<bool>()
+        let c_res = member(AnyObject::new_raw(arg.clone()));
+        Fallible::from(util::into_owned(c_res)?)?.downcast::<bool>()
     });
 
-    Ok(AnyDomain::new(UserDomain { descriptor, member })).into()
+    Ok(AnyDomain::new(UserDomain { element, member })).into()
+}
+
+#[bootstrap(
+    name = "_user_domain_descriptor",
+    returns(c_type = "FfiResult<ExtrinsicObject *>")
+)]
+/// Retrieve the descriptor value stored in a user domain.
+///
+/// # Arguments
+/// * `domain` - The UserDomain to extract the descriptor from
+#[no_mangle]
+pub extern "C" fn opendp_domains___user_domain_descriptor(
+    domain: *mut AnyDomain,
+) -> FfiResult<*mut ExtrinsicObject> {
+    let domain = try_!(try_as_ref!(domain).downcast_ref::<UserDomain>()).clone();
+    FfiResult::Ok(util::into_raw(domain.element.value.clone()))
 }

@@ -131,7 +131,7 @@ def test_function():
     pow = 4  # add noise 2^pow times
     for _ in range(pow):
         mechanism = mechanism >> mechanism.function
-    
+
     # Exercise postprocessing transformation
     transformation = make_identity(atom_domain(T=float), absolute_distance(T=float))
     mechanism = mechanism >> transformation
@@ -200,10 +200,29 @@ def test_new_domain():
 def test_user_domain():
     from datetime import datetime
 
-    domain = dp.user_domain("all datetimes", lambda x: isinstance(x, datetime))
-    assert str(domain) == 'UserDomain("all datetimes")'
-    assert domain.member(datetime.now())
+    def datetime_domain(months):
+        """The domain of datetimes, restricted by user-defined months"""
+        assert isinstance(months, set)
+        return dp.user_domain(
+            identifier=f"DatetimeDomain(months={months})",
+            member=lambda x: isinstance(x, datetime) and x.month in months,
+            descriptor=months,
+        )
+
+    domain = datetime_domain(months={1, 2, 3, 4})
+    assert str(domain).startswith("DatetimeDomain")
+
+    element = datetime.strptime("03/17/20 4:32:34", "%m/%d/%y %H:%M:%S")
+    assert domain.member(element)
     assert not domain.member("A")
+
+    # MEMORY CHECK: try to access data which would have fallen out-of-scope and been freed
+    import gc
+
+    gc.collect() # if refcount is incorrect, then accessing .descriptor will trigger a use-after-free
+
+    # can retrieve the descriptor for use in further analysis
+    assert domain.descriptor == {1, 2, 3, 4}
 
     # nest inside a vector domain
     vec_domain = dp.vector_domain(domain)
@@ -257,18 +276,19 @@ def test_extrinsic_free():
     # this test will pass if Queryable extends the lifetime of [] by holding a reference to it
 
 
-
 def test_user_distance():
     from datetime import datetime, timedelta
 
     # create custom transformation
     trans = dp.t.make_user_transformation(
-        dp.vector_domain(dp.user_domain("datetimes", lambda x: isinstance(x, datetime))),
+        dp.vector_domain(
+            dp.user_domain("datetimes", lambda x: isinstance(x, datetime))
+        ),
         dp.user_distance("sum of millisecond distances"),
         dp.atom_domain(T=float),
         dp.absolute_distance(T=float),
         lambda arg: sum(datetime.timestamp(x) for x in arg),
-        lambda d_in: d_in.total_seconds() * 1000
+        lambda d_in: d_in.total_seconds() * 1000,
     )
 
     data = [datetime.now(), datetime.now()]
@@ -277,17 +297,16 @@ def test_user_distance():
     d_in = timedelta(days=2.4, seconds=45.2)
     assert trans.map(d_in) == d_in.total_seconds() * 1000
 
-
     # create custom measurement
     meas = dp.m.make_user_measurement(
         dp.atom_domain(T=float),
         dp.absolute_distance(T=float),
         dp.user_divergence("tCDP"),
-        lambda _: 0.,
+        lambda _: 0.0,
         # clearly not actually tCDP
         lambda d_in: lambda omega: d_in * omega * 2,
-        TO="ExtrinsicObject"
+        TO="ExtrinsicObject",
     )
 
-    assert meas(2.) == 0.
-    assert meas.map(2.)(3.) == 12.
+    assert meas(2.0) == 0.0
+    assert meas.map(2.0)(3.0) == 12.0

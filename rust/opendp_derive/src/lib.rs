@@ -291,6 +291,31 @@ mod full;
 /// This is typically only useful on the innermost structural utilities,
 /// like when converting from an FfiSlice to an AnyObject or vice versa.
 ///
+/// ## Dependencies
+/// When the return value of the function contains data whose memory has been allocated by a foreign language,
+/// the data is at risk of being freed.
+/// This is because foreign languages may not know the return value is still holding a reference to the data.
+///
+/// For example, when you construct a domain that holds a member check function that was allocated in Python.
+/// ```no_run
+/// #[bootstrap(
+///     dependencies(member)
+/// )]
+/// fn example_user_domain<DI>(member: CallbackFn) -> AnyDomain {
+///     pack_function_into_domain(member)
+/// }
+/// ```
+///
+/// The generated code will add a reference to `member` to the return type, which keeps the refcount up.
+/// ```no_run
+/// def example_user_domain(
+///     member: Callable[[Any], bool]
+/// ):
+///     result = lib.example_user_domain(member)
+///     setattr(result, "_dependencies", member)
+///     return result
+/// ```
+///
 #[cfg(feature = "full")]
 #[proc_macro_attribute]
 pub fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStream {

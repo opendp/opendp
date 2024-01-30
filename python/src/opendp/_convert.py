@@ -7,7 +7,7 @@ from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 try:
     import numpy as np # type: ignore[import-not-found]
 except ImportError: # pragma: no cover
-    np = None  # type: ignore[assignment]
+    np = None # type: ignore[assignment]
 
 ATOM_MAP = {
     'f32': ctypes.c_float,
@@ -57,7 +57,7 @@ def check_similar_scalar(expected, value):
 def check_c_int_cast(v, type_name):
     lower, upper = INT_SIZES[type_name]
     if not (lower <= v <= upper):
-        raise ValueError(f"value is not representable by {type_name}")
+        raise ValueError(f"{v} is not representable by {type_name}")
 
 
 def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any: # type: ignore[assignment]
@@ -80,6 +80,12 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     
     if c_type == TransitionFn:
         return _wrap_py_transition(value, type_name)
+
+    if c_type == ExtrinsicObjectPtr:
+        # since the memory is allocated by python, 
+        #    don't actually return an ExtrinsicObjectPtr, 
+        #    which would call rust to free the Python-allocated ExtrinsicObject
+        return ctypes.pointer(ExtrinsicObject(ctypes.py_object(value), c_counter))
 
     # check that the type name is consistent with the value
     if type_name is not None:
@@ -161,9 +167,8 @@ def c_to_py(value: Any) -> Any:
         bool_free(value)
         return value_contents
 
-    if isinstance(value, (Transformation, Measurement)):
-        # these types are meant to pass through
-        return value
+    if isinstance(value, ctypes.POINTER(ExtrinsicObject)):
+        return value.contents.ptr
 
     if isinstance(value, ctypes.c_void_p):
         # returned void pointers are interpreted as None
