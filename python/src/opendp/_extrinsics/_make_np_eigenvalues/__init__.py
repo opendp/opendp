@@ -20,8 +20,10 @@ def make_np_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transform
 
     if input_metric != dp.symmetric_distance():
         raise ValueError("input metric must be symmetric distance")
+    
+    input_desc = input_domain.descriptor
 
-    if input_domain.size is None:
+    if input_desc.size is None:
         # implementation assumes dataset size is known
         # to loosen this limitation, when size is unknown, do: 
         # norm += np.linalg.norm(input_domain.origin, p=2)
@@ -32,12 +34,12 @@ def make_np_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transform
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        dp.vector_domain(dp.atom_domain(T=input_domain.T)),
-        dp.l1_distance(T=input_domain.T),
+        dp.vector_domain(dp.atom_domain(T=input_desc.T)),
+        dp.l1_distance(T=input_desc.T),
         np.linalg.eigvalsh,
         # http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=12
         # ‖Λ(XTX) − Λ(X'TX)‖_1 = tr(XTX) − tr(X'TX) = tr(xxT) = \sum x_i^2 = ‖x‖_2^2 ≤ norm^2
-        lambda d_in: d_in * input_domain.norm**2,
+        lambda d_in: d_in * input_desc.norm**2,
     )
 
 

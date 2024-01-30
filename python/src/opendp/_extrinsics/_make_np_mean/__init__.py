@@ -35,14 +35,15 @@ def make_private_np_mean(
         t_clamp = make_np_clamp(input_domain, input_metric, norm, p, origin)
         input_domain, input_metric = t_clamp.output_space
 
-    size = input_domain.size
+    input_desc = input_domain.descriptor
+    size = input_desc.size
     if size is None:
         raise ValueError("input_domain must consist of sized data")
 
     privacy_measure = {
-        1: dp.max_divergence(T=input_domain.T),
-        2: dp.zero_concentrated_divergence(T=input_domain.T),
-    }[input_domain.p]
+        1: dp.max_divergence(T=input_desc.T),
+        2: dp.zero_concentrated_divergence(T=input_desc.T),
+    }[input_desc.p]
 
     t_sum = make_private_np_sum(
         input_domain, input_metric, privacy_measure, scale * size

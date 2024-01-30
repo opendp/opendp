@@ -29,24 +29,25 @@ def make_private_np_eigendecomposition(
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "floating-point")
+    input_desc = input_domain.descriptor
 
-    if input_domain.size is None:
+    if input_desc.size is None:
         raise ValueError("input_domain's size must be known")
 
-    if input_domain.num_columns is None:
+    if input_desc.num_columns is None:
         raise ValueError("input_domain's num_columns must be known")
 
-    if input_domain.p != 2:
+    if input_desc.p != 2:
         raise ValueError("input_domain's norm must be an L2 norm")
 
-    if input_domain.num_columns < 1:
+    if input_desc.num_columns < 1:
         raise ValueError("input_domain's num_columns must be >= 1")
 
     if num_components is not None and num_components < 1:
         raise ValueError("num_components must be least one")
 
     # if number of components is not specified, default to num_columns
-    num_components = num_components or input_domain.num_columns
+    num_components = num_components or input_desc.num_columns
 
     t_sscp = make_np_sscp(
         input_domain, input_metric, dp.symmetric_distance()

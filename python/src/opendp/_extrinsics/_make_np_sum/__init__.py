@@ -18,15 +18,16 @@ def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
 
     dp.assert_features("contrib", "floating-point")
 
-    norm = input_domain.norm
+    input_desc = input_domain.descriptor
+    norm = input_desc.norm
     if norm is None:
         raise ValueError("input_domain must have bounds. See make_np_clamp")
 
-    output_metric = {1: dp.l1_distance, 2: dp.l2_distance}[input_domain.p]
+    output_metric = {1: dp.l1_distance, 2: dp.l2_distance}[input_desc.p]
 
-    if input_domain.size is None:
-        origin = np.atleast_1d(input_domain.origin)
-        norm += np.linalg.norm(origin, ord=input_domain.p)
+    if input_desc.size is None:
+        origin = np.atleast_1d(input_desc.origin)
+        norm += np.linalg.norm(origin, ord=input_desc.p)
         stability = lambda d_in: d_in * norm
     else:
         stability = lambda d_in: d_in // 2 * 2 * norm
@@ -34,8 +35,8 @@ def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        dp.vector_domain(dp.atom_domain(T=input_domain.T)),
-        output_metric(T=input_domain.T),
+        dp.vector_domain(dp.atom_domain(T=input_desc.T)),
+        output_metric(T=input_desc.T),
         lambda arg: arg.sum(axis=0),
         stability,
     )

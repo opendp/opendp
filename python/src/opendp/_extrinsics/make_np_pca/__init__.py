@@ -43,26 +43,27 @@ def make_private_np_pca(
         S: np.ndarray
         Vt: np.ndarray
 
-    if input_domain.size is None:
+    input_desc = input_domain.descriptor
+    if input_desc.size is None:
         raise ValueError("input_domain's size must be known")
 
-    if input_domain.num_columns is None:
+    if input_desc.num_columns is None:
         raise ValueError("input_domain's num_columns must be known")
 
-    if input_domain.p not in {None, 2}:
+    if input_desc.p not in {None, 2}:
         raise ValueError("input_domain's norm must be an L2 norm")
 
-    if input_domain.num_columns < 1:
+    if input_desc.num_columns < 1:
         raise ValueError("input_domain's num_columns must be >= 1")
 
     num_components = (
-        input_domain.num_columns if num_components is None else num_components
+        input_desc.num_columns if num_components is None else num_components
     )
 
     if isinstance(unit_epsilon, float):
-        num_eigvec_releases = min(num_components, input_domain.num_columns - 1)
+        num_eigvec_releases = min(num_components, input_desc.num_columns - 1)
         unit_epsilon = _split_pca_epsilon_evenly(
-            unit_epsilon, num_eigvec_releases, estimate_mean=input_domain.origin is None
+            unit_epsilon, num_eigvec_releases, estimate_mean=input_desc.origin is None
         )
 
     if not isinstance(unit_epsilon, PCAEpsilons):
@@ -83,12 +84,12 @@ def make_private_np_pca(
             >> (lambda out: PCAResult(origin, *eig_to_SVt(out)))
         )
 
-    if input_domain.norm is not None:
+    if input_desc.norm is not None:
         if mean_epsilon is not None:
             raise ValueError("mean_epsilon should be zero because origin is known")
-        norm = input_domain.norm if norm is None else norm
-        norm = min(input_domain.norm, norm)
-        return make_eigdecomp(norm, input_domain.origin)
+        norm = input_desc.norm if norm is None else norm
+        norm = min(input_desc.norm, norm)
+        return make_eigdecomp(norm, input_desc.origin)
     elif norm is None:
         raise ValueError("must have either bounded `input_domain` or specify `norm`")
 
@@ -99,7 +100,7 @@ def make_private_np_pca(
     compositor = dp.c.make_sequential_composition(
         input_domain,
         input_metric,
-        dp.max_divergence(T=input_domain.T),
+        dp.max_divergence(T=input_desc.T),
         d_in=unit_d_in,
         d_mids=[mean_epsilon, make_eigdecomp(norm, 0).map(unit_d_in)],
     )
@@ -162,17 +163,19 @@ def _make_center(input_domain, input_metric):
 
     dp.assert_features("contrib", "floating-point")
 
+    input_desc = input_domain.descriptor
+
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
         dp.np_array2_domain(
             **{
-                **input_domain.descriptor._asdict(),
-                "origin": np.zeros(input_domain.num_columns),
+                **input_desc._asdict(),
+                "origin": np.zeros(input_desc.num_columns),
             }  # type: ignore[arg-type]
         ),
         input_metric,
-        lambda arg: arg - input_domain.origin,
+        lambda arg: arg - input_desc.origin,
         lambda d_in: d_in,
     )
 

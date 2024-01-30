@@ -12,7 +12,7 @@ def make_np_count(input_domain: Domain, input_metric: Metric) -> Measurement:
     :param input_metric: instance of `symmetric_distance()`
     """
     dp.assert_features("contrib")
-    size = input_domain.size
+    size = input_domain.descriptor.size
 
     if input_metric != dp.symmetric_distance():
         raise ValueError("input metric must be symmetric distance")

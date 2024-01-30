@@ -21,19 +21,21 @@ def make_private_np_eigenvector(
 
     dp.assert_features("contrib", "floating-point")
 
-    if input_domain.p != 2:
+    input_desc = input_domain.descriptor
+
+    if input_desc.p != 2:
         raise ValueError("input_domain must have bounded L2-norm")
 
     if input_metric != dp.symmetric_distance():
         raise ValueError("expected symmetric distance input metric")
 
-    d = input_domain.num_features
+    d = input_desc.num_features
 
     def function(C):
         # Algorithm 2 Top Eigenvector Sampler
         # http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=15
         # scale norm down to at most 1
-        C = C / input_domain.norm**2
+        C = C / input_desc.norm**2
 
         # (1)
         A = unit_epsilon / 4 * (np.linalg.eigvalsh(C).max() * np.eye(d) - C)
@@ -75,7 +77,7 @@ def make_private_np_eigenvector(
         dp.max_divergence(T=float),
         function,
         lambda d_in: d_in / 2 * unit_epsilon,
-        TO=dp.Vec[input_domain.T],
+        TO=dp.Vec[input_desc.T],
     )
 
 
@@ -100,7 +102,9 @@ def make_np_sscp_projection(
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "floating-point")
-    if input_domain.num_features != P.shape[1]:
+    input_desc = input_domain.descriptor
+
+    if input_desc.num_features != P.shape[1]:
         raise ValueError(
             f"projection P (axis-1 size: {P.shape[1]}) does not conform with data in input_domain (num_features: {input_domain.num_features})"
         )
@@ -109,7 +113,7 @@ def make_np_sscp_projection(
         input_domain,
         input_metric,
         _np_sscp_domain(
-            **{**input_domain.descriptor._asdict(), "num_features": P.shape[0]}
+            **{**input_desc._asdict(), "num_features": P.shape[0]}
         ),
         input_metric,
         # http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=5
@@ -132,21 +136,21 @@ def make_private_np_eigenvectors(
 
     dp.assert_features("contrib", "floating-point")
 
-    if input_domain.p != 2:
+    input_desc = input_domain.descriptor
+    if input_desc.p != 2:
         raise ValueError("input_domain must have bounded L2 row norm")
 
-    if len(unit_epsilons) > input_domain.num_features - 1:
+    if len(unit_epsilons) > input_desc.num_features - 1:
         raise ValueError(
-            f"must specify at most {input_domain.num_features - 1} unit_epsilons"
+            f"must specify at most {input_desc.num_features - 1} unit_epsilons"
         )
 
-    privacy_measure = dp.max_divergence(T=input_domain.T)
+    privacy_measure = dp.max_divergence(T=input_desc.T)
     m_compose = dp.c.make_sequential_composition(
         input_domain, input_metric, privacy_measure, 2, unit_epsilons
     )
 
     def function(C):
-        nonlocal input_domain, input_metric
         # Algorithm 1: http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=5
 
         # 1.i Initialize C_1 = C inside compositor.
@@ -155,8 +159,8 @@ def make_private_np_eigenvectors(
         del C  # only the compositor has the data now
 
         # 1.ii initialize P_1 with the identity matrix
-        P = np.eye(input_domain.num_features)
-        theta = np.zeros((0, input_domain.num_features))
+        P = np.eye(input_desc.num_features)
+        theta = np.zeros((0, input_desc.num_features))
 
         # computation of eigenvalues (1.iii) happens in a separate constructor
 

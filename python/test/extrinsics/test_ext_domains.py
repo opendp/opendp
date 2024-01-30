@@ -29,15 +29,15 @@ def test_np_array2_domain():
         dp.np_array2_domain(norm=1, p=2, origin=np.array([True, False]))
 
     # origin defaults to zero
-    assert dp.np_array2_domain(norm=1, p=2, T=float).origin == 0
+    assert dp.np_array2_domain(norm=1, p=2, T=float).descriptor.origin == 0
     # when num columns known, origin defaults to zero vector
     domain = dp.np_array2_domain(norm=1, p=2, num_columns=4)
-    assert np.array_equal(domain.origin, np.zeros(4))
+    assert np.array_equal(domain.descriptor.origin, np.zeros(4))
     assert domain.member(np.array([[1.0, 0.0, 0.0, 0.0]]))
 
     domain = dp.np_array2_domain(norm=1, p=2, origin=np.array([1, 2]), T=float)
-    assert domain.num_columns == 2
-    assert domain.origin.dtype.kind == "f"
+    assert domain.descriptor.num_columns == 2
+    assert domain.descriptor.origin.dtype.kind == "f"
 
     assert dp.np_array2_domain(T=bool).member(np.array([[True, False]]))
 
