@@ -1,5 +1,3 @@
-use opendp_derive::bootstrap;
-
 use crate::{
     core::{FfiResult, Function, Measurement, PrivacyMap},
     error::Fallible,
@@ -10,30 +8,13 @@ use crate::{
     traits::TotalOrd,
 };
 
-#[bootstrap(
-    name = "make_sequential_composition",
-    features("contrib"),
-    arguments(
-        d_in(rust_type = "$get_distance_type(input_metric)", c_type = "AnyObject *"),
-        d_mids(rust_type = "Vec<QO>", c_type = "AnyObject *")
-    ),
-    derived_types(QO = "$get_distance_type(output_measure)")
-)]
-/// Construct a queryable that interactively composes interactive measurements.
-///
-/// # Arguments
-/// * `input_domain` - indicates the space of valid input datasets
-/// * `input_metric` - how distances are measured between members of the input domain
-/// * `output_measure` - how privacy is measured
-/// * `d_in` - maximum distance between adjacent input datasets
-/// * `d_mids` - maximum privacy expenditure of each query
 fn make_sequential_composition(
     input_domain: AnyDomain,
     input_metric: AnyMetric,
     output_measure: AnyMeasure,
     d_in: AnyObject,
     d_mids: Vec<AnyObject>,
-) -> Fallible<AnyMeasurement> {
+) -> Fallible<Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>> {
     fn monomorphize<
         QI: 'static + TotalOrd + Clone + Send + Sync,
         QO: 'static + TotalOrd + Clone + Send + Sync,

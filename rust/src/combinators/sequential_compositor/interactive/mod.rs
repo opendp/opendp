@@ -1,3 +1,5 @@
+use opendp_derive::bootstrap;
+
 use crate::{
     combinators::assert_components_match,
     core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
@@ -11,6 +13,42 @@ mod ffi;
 
 use super::BasicCompositionMeasure;
 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        d_in(rust_type = "$get_distance_type(input_metric)", c_type = "AnyObject *"),
+        d_mids(rust_type = "Vec<QO>", c_type = "AnyObject *"),
+        output_measure(c_type = "AnyMeasure *", rust_type = b"null")
+    ),
+    generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress)),
+    derived_types(QO = "$get_distance_type(output_measure)")
+)]
+/// Construct a Measurement that when invoked,
+/// returns a queryable that interactively composes measurements.
+///
+/// **Composition Properties**
+///
+/// * sequential: all measurements are applied to the same dataset
+/// * basic: the composition is the linear sum of the privacy usage of each query
+/// * interactive: mechanisms can be specified based on answers to previous queries
+/// * compositor: all privacy parameters specified up-front
+///
+/// If the privacy measure supports concurrency,
+/// this compositor allows you to spawn multiple interactive mechanisms
+/// and interleave your queries amongst them.
+///
+/// # Arguments
+/// * `input_domain` - indicates the space of valid input datasets
+/// * `input_metric` - how distances are measured between members of the input domain
+/// * `output_measure` - how privacy is measured
+/// * `d_in` - maximum distance between adjacent input datasets
+/// * `d_mids` - maximum privacy expenditure of each query
+///
+/// # Generics
+/// * `DI` - Input Domain.
+/// * `TO` - Output Type.
+/// * `MI` - Input Metric
+/// * `MO` - Output Metric
 pub fn make_sequential_composition<
     DI: Domain + 'static,
     TO: 'static,
@@ -94,25 +132,30 @@ where
                             return fallible!(FailedFunction, "insufficient budget for query");
                         }
 
-                        // if the answer contains a queryable,
-                        // wrap it so that when the child gets a query it sends an AskPermission query to this parent queryable
-                        // it gives this sequential composition queryable (or any parent of this queryable)
-                        // a chance to deny the child permission to execute
-                        let child_id = d_mids.len() - 1;
+                        let answer = if output_measure.concurrent()? {
+                            // evaluate the query directly; no wrapping is necessary
+                            measurement.invoke(&arg)
+                        } else {
+                            // if the answer contains a queryable,
+                            // wrap it so that when the child gets a query it sends an AskPermission query to this parent queryable
+                            // it gives this sequential composition queryable (or any parent of this queryable)
+                            // a chance to deny the child permission to execute
+                            let child_id = d_mids.len() - 1;
 
-                        let mut sc_qbl = sc_qbl.clone();
-                        let wrap_logic = WrapFn::new_pre_hook(move || {
-                            sc_qbl.eval_internal(&AskPermission(child_id))
-                        });
+                            let mut sc_qbl = sc_qbl.clone();
+                            let wrap_logic = WrapFn::new_pre_hook(move || {
+                                sc_qbl.eval_internal(&AskPermission(child_id))
+                            });
 
-                        // evaluate the query and wrap the answer
-                        let answer = measurement.invoke_wrap(&arg, wrap_logic.as_map());
+                            // evaluate the query and wrap the answer
+                            measurement.invoke_wrap(&arg, wrap_logic.as_map())
+                        }?;
 
                         // we've now consumed the last d_mid. This is our only state modification
                         d_mids.pop();
 
                         // done!
-                        return answer.map(Answer::External);
+                        return Ok(Answer::External(answer));
                     }
 
                     // if the query is internal (passed by the framework)

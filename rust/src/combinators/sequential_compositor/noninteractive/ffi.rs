@@ -24,11 +24,18 @@ use super::BasicCompositionMeasure;
 /// Construct the DP composition [`measurement0`, `measurement1`, ...].
 /// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
 ///
-/// All metrics and domains must be equivalent, except for the output domain.
+/// All metrics and domains must be equivalent.
+///
+/// **Composition Properties**
+///
+/// * sequential: all measurements are applied to the same dataset
+/// * basic: the composition is the linear sum of the privacy usage of each query
+/// * noninteractive: all mechanisms specified up-front (but each can be interactive)
+/// * compositor: all privacy parameters specified up-front (via the map)
 ///
 /// # Arguments
 /// * `measurements` - A vector of Measurements to compose.
-fn make_basic_composition(measurements: Vec<&AnyMeasurement>) -> Fallible<AnyMeasurement> {
+fn make_basic_composition(measurements: Vec<AnyMeasurement>) -> Fallible<AnyMeasurement> {
     super::make_basic_composition(measurements).map(Measurement::into_any_out)
 }
 
@@ -38,13 +45,31 @@ pub extern "C" fn opendp_combinators__make_basic_composition(
 ) -> FfiResult<*mut AnyMeasurement> {
     let meas_ptrs = try_!(try_as_ref!(measurements).downcast_ref::<Vec<AnyMeasurementPtr>>());
 
-    let measurements: Vec<&AnyMeasurement> =
-        try_!(meas_ptrs.iter().map(|ptr| Ok(try_as_ref!(*ptr))).collect());
-
+    let measurements: Vec<AnyMeasurement> = try_!(meas_ptrs
+        .iter()
+        .map(|ptr| Ok(try_as_ref!(*ptr).clone()))
+        .collect());
     make_basic_composition(measurements).into()
 }
 
 impl BasicCompositionMeasure for AnyMeasure {
+    fn concurrent(&self) -> Fallible<bool> {
+        fn monomorphize1<Q: 'static + Clone + InfAdd + Zero>(self_: &AnyMeasure) -> Fallible<bool> {
+            fn monomorphize2<M: 'static + BasicCompositionMeasure>(
+                self_: &AnyMeasure,
+            ) -> Fallible<bool>
+            where
+                M::Distance: Clone,
+            {
+                self_.downcast_ref::<M>()?.concurrent()
+            }
+            dispatch!(monomorphize2, [
+                (self_.type_, [MaxDivergence<Q>, FixedSmoothedMaxDivergence<Q>, ZeroConcentratedDivergence<Q>])
+            ], (self_))
+        }
+        let Q_Atom = self.type_.get_atom()?;
+        dispatch!(monomorphize1, [(Q_Atom, @floats)], (self))
+    }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         fn monomorphize1<Q: 'static + Clone + InfAdd + Zero>(
             self_: &AnyMeasure,
@@ -77,6 +102,9 @@ impl BasicCompositionMeasure for AnyMeasure {
 }
 
 impl<Q: 'static> BasicCompositionMeasure for TypedMeasure<Q> {
+    fn concurrent(&self) -> Fallible<bool> {
+        self.measure.concurrent()
+    }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         self.measure
             .compose(d_i.into_iter().map(AnyObject::new).collect())?
