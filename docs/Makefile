@@ -33,6 +33,7 @@ html:
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
+# In contrast to https://docs.rs/opendp, this will document all functions, including private functions.
 html-rustdoc:
 	cd ../rust && cargo rustdoc --features untrusted,derive -- --html-in-header katex.html --document-private-items
 
