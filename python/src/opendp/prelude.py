@@ -45,6 +45,6 @@ from opendp.measures import *
 from opendp.typing import *
 from opendp.accuracy import *
 from opendp.core import new_function, new_user_queryable
-from opendp.context import *
+from opendp.context import space_of, domain_of, metric_of, loss_of, unit_of, Context, Query
 
 __all__ = ["t", "m", "c"]
