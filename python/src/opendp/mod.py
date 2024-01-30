@@ -112,6 +112,10 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         if isinstance(other, Transformation):
             other = other.function
 
+        if not isinstance(other, Function):
+            from opendp.core import new_function
+            other = new_function(other, TO="ExtrinsicObject")
+
         if isinstance(other, Function):
             from opendp.combinators import make_chain_pm
             return make_chain_pm(other, self)

@@ -20,6 +20,7 @@ use crate::{
         function(rust_type = "$pass_through(TO)"),
         privacy_map(rust_type = "$measure_distance_type(output_measure)"),
     ),
+    generics(TO(default = "ExtrinsicObject")),
     dependencies(
         "input_domain",
         "input_metric",

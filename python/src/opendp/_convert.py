@@ -1,4 +1,5 @@
 from typing import Sequence, Tuple, List, Union, Dict, cast
+from inspect import signature
 
 from opendp._lib import *
 from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
@@ -486,6 +487,11 @@ TransitionFn = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr, ctypes.c_bool)
 
 def _wrap_py_transition(py_transition, A):
     from opendp._convert import c_to_py, py_to_c
+
+    # the indicator that a query is internal is oftentimes not needed
+    if len(signature(py_transition).parameters) == 1:
+        py_transition_old = py_transition
+        py_transition = lambda q, _=None: py_transition_old(q)
 
     def wrapper_func(c_query, c_is_internal: ctypes.c_bool):
         try:

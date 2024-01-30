@@ -88,8 +88,8 @@ def test_user_constructors():
         lambda x: [x] * 10,
         lambda d_in: d_in * 10
     )
-    print(trans(2))
-    print(trans.map(1))
+    assert trans(2) == [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+    assert trans.map(1) == 10
 
     meas = dp.m.make_user_measurement(
         dp.atom_domain((2, 10)),
@@ -99,9 +99,8 @@ def test_user_constructors():
         lambda d_in: float(d_in * 10),
         TO=dp.Vec[int],
     )
-    print(meas(2))
-    print(meas.map(1))
 
-    post = dp.new_function(lambda x: x[0], dp.i32)
+    assert meas(2) == [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+    assert meas.map(1) == 10
 
-    print((meas >> post)(2))
+    assert (meas >> (lambda x: x[0]))(2) == 2

@@ -1193,7 +1193,7 @@ def make_user_measurement(
     output_measure: Measure,
     function,
     privacy_map,
-    TO: RuntimeTypeDescriptor
+    TO: Optional[RuntimeTypeDescriptor] = "ExtrinsicObject"
 ) -> Measurement:
     r"""Construct a Measurement from user-defined callbacks.
     
@@ -1247,7 +1247,7 @@ def then_user_measurement(
     output_measure: Measure,
     function,
     privacy_map,
-    TO: RuntimeTypeDescriptor
+    TO: Optional[RuntimeTypeDescriptor] = "ExtrinsicObject"
 ):  
     r"""partial constructor of make_user_measurement
 

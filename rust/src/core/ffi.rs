@@ -813,9 +813,10 @@ fn wrap_transition(
 }
 
 #[bootstrap(
-    name = "new_user_queryable",
+    name = "new_queryable",
     features("contrib"),
     arguments(transition(rust_type = "$pass_through(A)")),
+    generics(Q(default = "ExtrinsicObject"), A(default = "ExtrinsicObject")),
     dependencies("c_transition")
 )]
 /// Construct a queryable from a user-defined transition function.
@@ -827,13 +828,13 @@ fn wrap_transition(
 /// * `Q` - Query Type
 /// * `A` - Output Type
 #[allow(dead_code)]
-fn new_user_queryable<Q, A>(transition: TransitionFn) -> Fallible<AnyObject> {
+fn new_queryable<Q, A>(transition: TransitionFn) -> Fallible<AnyObject> {
     let _ = transition;
     panic!("this signature only exists for code generation")
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__new_user_queryable(
+pub extern "C" fn opendp_core__new_queryable(
     transition: TransitionFn,
     Q: *const c_char,
     A: *const c_char,
