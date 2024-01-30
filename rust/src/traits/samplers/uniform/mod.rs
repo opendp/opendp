@@ -131,12 +131,12 @@ pub trait SampleUniformInt: Sized {
     fn sample_uniform_int() -> Fallible<Self>;
 }
 
-/// Sample an integer uniformly over `[Self::MIN, upper]`
+/// Sample an integer uniformly over `[Self::MIN, upper)`
 pub trait SampleUniformIntBelow: Sized {
     /// # Proof Definition
     /// For any setting of `upper`,
     /// return either `Err(e)` if there is insufficient system entropy,
-    /// or `Some(sample)`, where `sample` is uniformly distributed over `[Self::MIN, upper]`.
+    /// or `Some(sample)`, where `sample` is uniformly distributed over `[Self::MIN, upper)`.
     fn sample_uniform_int_below(upper: Self) -> Fallible<Self>;
 }
 
@@ -156,7 +156,7 @@ macro_rules! impl_sample_uniform_unsigned_int {
                 loop {
                     // algorithm is only valid when sample_uniform_int is non-negative
                     let v = Self::sample_uniform_int()?;
-                    if v <= Self::MAX - Self::MAX % upper {
+                    if v < Self::MAX - Self::MAX % upper {
                         return Ok(v % upper)
                     }
                 }

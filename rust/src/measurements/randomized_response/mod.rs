@@ -137,7 +137,7 @@ where
             // randomly sample a lie from among the categories with equal probability
             // if truth in categories, sample among n - 1 categories
             let mut sample = usize::sample_uniform_int_below(
-                categories.len() - if index.is_some() { 1 } else { 0 },
+                categories.len() + if index.is_some() { 0 } else { 1 },
             )?;
             // shift the sample by one if index is greater or equal to the index of truth
             if let Some(i) = index {
