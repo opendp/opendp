@@ -45,6 +45,9 @@ jobs:
       - name: Test
         run: cargo test --verbose --features untrusted,ffi
 
+      - name: Check that generated python is up to date
+        run: git diff --exit-code
+
       - name: Upload libs
         uses: actions/upload-artifact@v3
         with:
