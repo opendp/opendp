@@ -178,9 +178,9 @@ impl SampleUniformIntBelow for UBig {
         loop {
             fill_bytes(&mut buffer)?;
 
-            let sample = UBig::from_be_bytes(&buffer);
-            if sample < threshold {
-                return Ok(sample % &upper);
+            let v = UBig::from_be_bytes(&buffer);
+            if v < threshold {
+                return Ok(v % &upper);
             }
         }
     }
