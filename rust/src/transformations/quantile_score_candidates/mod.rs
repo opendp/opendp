@@ -357,8 +357,7 @@ mod test_scorer {
     }
 }
 
-// feature-gated because non-mpfr InfCast errors on numbers greater than 2^52
-#[cfg(all(test, feature = "use-mpfr", feature = "derive"))]
+#[cfg(all(test, feature = "derive"))]
 mod test_trans {
     use crate::{
         measurements::{make_report_noisy_max_gumbel, Optimize},

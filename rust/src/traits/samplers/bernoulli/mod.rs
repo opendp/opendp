@@ -1,3 +1,7 @@
+use dashu::{
+    integer::{Sign, UBig},
+    rational::RBig,
+};
 use num::{One, Zero};
 
 use crate::{
@@ -5,10 +9,7 @@ use crate::{
     traits::{ExactIntCast, Float, InfDiv},
 };
 
-use super::{fill_bytes, sample_geometric_buffer};
-
-#[cfg(feature = "use-mpfr")]
-use super::SampleUniformIntBelow;
+use super::{fill_bytes, sample_geometric_buffer, SampleUniformIntBelow};
 
 /// Sample from `Bernoulli(p=0.5)`.
 pub trait SampleStandardBernoulli: Sized {
@@ -134,17 +135,22 @@ where
     }
 }
 
-#[cfg(feature = "use-mpfr")]
-impl SampleBernoulli<rug::Rational> for bool {
-    fn sample_bernoulli(prob: rug::Rational, constant_time: bool) -> Fallible<bool> {
+impl SampleBernoulli<RBig> for bool {
+    fn sample_bernoulli(prob: RBig, constant_time: bool) -> Fallible<bool> {
         if constant_time {
             return fallible!(
                 FailedFunction,
                 "constant-time uniform sampling of rationals is not implemented"
             );
         }
-        let (numer, denom) = prob.into_numer_denom();
-        rug::Integer::sample_uniform_int_below(denom).map(|s| numer > s)
+        let (numer, denom) = prob.into_parts();
+        let (Sign::Positive, numer) = numer.into_parts() else {
+            return fallible!(FailedFunction, "numerator must not be negative");
+        };
+        if numer > denom {
+            return fallible!(FailedFunction, "prob must not be greater than one");
+        }
+        UBig::sample_uniform_int_below(denom).map(|s| numer > s)
     }
 }
 

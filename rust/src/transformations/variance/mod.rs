@@ -8,7 +8,7 @@ use crate::core::Transformation;
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
-use crate::traits::{AlertingSub, ExactIntCast, Float, InfDiv, InfMul, InfPow, InfSub};
+use crate::traits::{AlertingSub, ExactIntCast, Float, InfDiv, InfMul, InfPowI, InfSub};
 
 use super::{
     make_lipschitz_float_mul, make_sum_of_squared_deviations, LipschitzMulFloatDomain,
@@ -68,7 +68,6 @@ where
     }
 
     let constant = S::Item::exact_int_cast(size.alerting_sub(&ddof)?)?.recip();
-    let _2 = S::Item::exact_int_cast(2)?;
     let _4 = S::Item::exact_int_cast(4)?;
     let size_ = S::Item::exact_int_cast(size)?;
 
@@ -77,7 +76,7 @@ where
     // Therefore ssd <= variance * size <= (U - L)^2 / 4 * size
     let upper_var_bound = (bounds.1)
         .inf_sub(&bounds.0)?
-        .inf_pow(&_2)?
+        .inf_powi(2.into())?
         .inf_div(&_4)?
         .inf_mul(&size_)?;
 

@@ -38,7 +38,6 @@ To prove correctness of each \texttt{impl}, we prove correctness of the implemen
 \section{\texttt{impl} for Unsigned Integers}
 This corresponds to \texttt{impl SampleUniformIntBelow for \$ty} in Rust.
 \texttt{sample\_uniform\_int\_below} uses rejection sampling. 
-In each round, an unsigned integer is drawn uniformly at random
 In each round all bits of the integer are filled randomly, drawing an unsigned integer uniformly at random.
 The algorithm returns the sample, modulo the upper bound, so long as the sample is not one of the final "div" largest integers.
 
@@ -54,13 +53,14 @@ The algorithm returns the sample, modulo the upper bound, so long as the sample 
 
 \subsubsection*{Pseudocode}
 
-\lstinputlisting[language=Python,firstline=2]{./pseudocode/sample_uniform_int_below.py}
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/sample_uniform_int_below_native.py}
 
 \subsubsection*{Postcondition}
 The postcondition is supplied by \ref{sample-uniform-int-below}.
 
 \subsection{Proof}
 \begin{proof} 
+\label{unsigned-integer-proof}
 Assuming that \texttt{T.sample\_uniform\_int()} is correctly implemented,
 then \texttt{v} is a sample between zero and \texttt{T.MAX} inclusive, the greatest representable number of type \texttt{T}.
 
@@ -76,6 +76,43 @@ There are \texttt{T.MAX \% upper} remaining elements if you were to
 extend the acceptance region to the greatest multiple of \texttt{upper} that is less than \texttt{T.MAX}.
 Therefore conditioning \texttt{v} on being less than \texttt{T.MAX - T.MAX \% upper} 
 results in \texttt{v \% upper} being an unbiased, uniformly distributed sample.
+
+\noindent Therefore, for any value of \texttt{upper}, the function satisfies the postcondition.
+\end{proof}
+
+
+\section{\texttt{impl} for Big Integers}
+This corresponds to \texttt{impl SampleUniformIntBelow for UBig} in Rust.
+This algorithm uses the same algorithm and argument as used for unsigned native integers, 
+but this time the bit depth is dynamically chosen to fill the last byte of a series of bytes long enough to hold \texttt{upper}.
+
+\subsection{Hoare Triple}
+\subsubsection*{Preconditions}
+\begin{itemize}
+    \item \textbf{User-specified types:}
+    \begin{itemize}
+        \item Variable \texttt{upper} must be of type \texttt{UBig}
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/sample_uniform_int_below_ubig.py}
+
+\subsubsection*{Postcondition}
+The postcondition is supplied by \ref{sample-uniform-int-below}.
+
+\subsection{Proof}
+\begin{proof} 
+
+\texttt{byte\_len} is the fewest number of bytes necessary to represent \texttt{upper}, 
+which is $ceil(ceil(log_2(upper)) / 8)$.
+
+This proof follows the same logic as in \ref{unsigned-integer-proof},
+but the constants are generalized.
+\texttt{max} is the largest representable number in \texttt{byte\_len} bytes, corresponding to \texttt{T.MAX}.
+\texttt{v} is an integer sampled uniformly below \texttt{max} by randomly filling bits with bernoulli samples.
+The algorithm terminates when \texttt{v} is below the same threshold.
 
 \noindent Therefore, for any value of \texttt{upper}, the function satisfies the postcondition.
 \end{proof}

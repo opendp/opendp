@@ -8,7 +8,7 @@ use opendp_derive::bootstrap;
 
 use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
 use crate::domains::{AtomDomain, MapDomain};
-use crate::error::Fallible;
+use crate::error::{Error, ErrorVariant, Fallible};
 use crate::measures::FixedSmoothedMaxDivergence;
 use crate::metrics::L1Distance;
 use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
@@ -105,22 +105,45 @@ where
                 return Ok((TV::zero(), TV::zero()));
             }
 
-            if d_in > &threshold {
-                return fallible!(FailedMap, "d_in must not be greater than threshold");
+            if scale.is_zero() {
+                return Ok((TV::infinity(), TV::one()));
             }
 
             let d_in = d_in.inf_add(&relaxation)?;
             let epsilon = d_in.inf_div(&scale)?;
 
+            // delta is the probability that noise will push the count beyond the threshold
+            // δ = d_in / exp(distance_to_instability) / 2
+
+            // however, computing exp is unstable, so it is computed last
+            // δ = exp(ln(d_in / 2) - distance_to_instability)
+
             // compute the distance to instability, conservatively rounding down
-            // dist = (threshold - d_in) / scale
-            let dist = threshold.neg_inf_sub(&d_in)?.neg_inf_div(&scale)?;
+            //                         = (threshold -            d_in)             / scale
+            let distance_to_instability = threshold.neg_inf_sub(&d_in)?.neg_inf_div(&scale)?;
 
-            // delta based on the probability that noise will push the count beyond the threshold
-            // δ = d_in / exp(norm) / 2
-            let delta = d_in.inf_div(&dist.neg_inf_exp()?)?.inf_div(&_2)?;
+            if distance_to_instability <= TV::zero() {
+                return Ok((epsilon, TV::one()));
+            }
 
-            Ok((epsilon, delta))
+            // ln(delta) = ln(d_in / 2) - distance_to_instability
+            let ln_delta = d_in
+                .inf_div(&_2)?
+                .inf_ln()?
+                .inf_sub(&distance_to_instability)?;
+
+            // delta =        exp(ln(delta))
+            let delta = match ln_delta.inf_exp() {
+                // catch error on overflowing delta as just infinity
+                Err(Error {
+                    variant: ErrorVariant::Overflow,
+                    ..
+                }) => TV::infinity(),
+                result => result?,
+            };
+
+            // delta is only sensibly at most 1
+            Ok((epsilon, delta.min(TV::one())))
         }),
     )
 }

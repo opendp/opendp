@@ -1,6 +1,8 @@
 use std::convert::TryFrom;
 use std::os::raw::c_char;
 
+use dashu::integer::IBig;
+
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
@@ -8,7 +10,7 @@ use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::metrics::SymmetricDistance;
-use crate::traits::Float;
+use crate::traits::{Float, FloatBits};
 use crate::transformations::{make_sum_of_squared_deviations, Pairwise, Sequential, UncheckedSum};
 
 #[no_mangle]
@@ -24,6 +26,7 @@ pub extern "C" fn opendp_transformations__make_sum_of_squared_deviations(
     ) -> Fallible<AnyTransformation>
     where
         T: 'static + Float,
+        IBig: From<T::Bits>,
     {
         fn monomorphize2<S>(
             input_domain: &AnyDomain,
@@ -32,6 +35,7 @@ pub extern "C" fn opendp_transformations__make_sum_of_squared_deviations(
         where
             S: UncheckedSum,
             S::Item: 'static + Float,
+            IBig: From<<S::Item as FloatBits>::Bits>,
         {
             let input_domain = input_domain
                 .downcast_ref::<VectorDomain<AtomDomain<S::Item>>>()?
