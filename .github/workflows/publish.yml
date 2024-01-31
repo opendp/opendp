@@ -91,6 +91,11 @@ jobs:
     needs: credential-check
     runs-on: ubuntu-20.04
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.channel }}
+
       - name: Download R bindings
         uses: actions/download-artifact@v3
         with:

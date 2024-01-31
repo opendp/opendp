@@ -49,9 +49,9 @@ At this point, you should be good to go! You can confirm your installation in Py
     >>> import opendp
 
 Installing OpenDP for R from R-Universe
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-OpenDP is distributed as an `R package on R-Universe <https://opendp.r-universe.dev/builds>`_. 
+OpenDP is distributed as an `R package on R-Universe <https://opendp.r-universe.dev>`_. 
 You can install it using from an R session:
 
 .. code-block:: R

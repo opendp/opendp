@@ -1,8 +1,7 @@
-use std::{collections::HashMap, fs::canonicalize, path::Path, str::FromStr};
+use std::{collections::HashMap, path::Path, str::FromStr};
 
 use opendp_tooling::{
     bootstrap::docstring::{get_proof_path, insert_proof_attribute},
-    codegen,
     proven::filesystem::{find_proof_paths, get_src_dir, write_proof_paths},
     Function,
 };
@@ -31,8 +30,11 @@ pub fn main() {
     // if parse_crate returns none, then build script exits without updating bindings
     // the proc macros will render those errors in a way that integrates better with developer tooling
     if let Some(_modules) = parse_crate(&src_dir, proof_paths).unwrap() {
-        // generate and write language bindings based on collected metadata
-        if cfg!(feature = "bindings") {
+        #[cfg(feature = "bindings")]
+        {
+            use opendp_tooling::codegen;
+            use std::fs::canonicalize;
+            // generate and write language bindings based on collected metadata
             let base_dir = canonicalize("../python/src/opendp").unwrap();
             codegen::write_bindings(base_dir, codegen::python::generate_bindings(&_modules));
 

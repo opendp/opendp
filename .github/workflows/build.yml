@@ -295,7 +295,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: RcppTOML
+          packages: rlang,RcppTOML
       
       - name: Download R bindings
         uses: actions/download-artifact@v3

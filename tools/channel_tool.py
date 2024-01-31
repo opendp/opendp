@@ -6,7 +6,7 @@ import re
 import zoneinfo
 
 import tomlkit
-import debmutate
+from debmutate.control import ControlEditor
 
 from utils import *
 
@@ -122,7 +122,7 @@ def update_version(version):
     
     # R Package
 
-    with debmutate.control.ControlEditor(path='R/opendp/DESCRIPTION') as control:
+    with ControlEditor(path='R/opendp/DESCRIPTION') as control:
         # while it might not look like it, this mutates the DESCRIPTION file in-place
         control.version = r_version
     update_file(".binder/requirements.txt", io.IOBase.readlines, munge_binder_requirements, lambda data, f: f.writelines(data))
