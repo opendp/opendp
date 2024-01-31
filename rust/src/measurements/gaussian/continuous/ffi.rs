@@ -9,7 +9,7 @@ use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::Type;
 use crate::measurements::{make_base_gaussian, BaseGaussianDomain, GaussianMeasure};
-use crate::measures::ZeroConcentratedDivergence;
+use crate::measures::{RenyiDivergence, ZeroConcentratedDivergence};
 use crate::traits::samplers::{CastInternalRational, SampleDiscreteGaussianZ2k};
 use crate::traits::{ExactIntCast, Float, FloatBits};
 use crate::{err, try_, try_as_ref};
@@ -56,7 +56,7 @@ pub extern "C" fn opendp_measurements__make_base_gaussian(
 
         dispatch!(monomorphize2, [
             (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
-            (MO, [ZeroConcentratedDivergence<T>])
+            (MO, [ZeroConcentratedDivergence<T>, RenyiDivergence<T>])
         ], (input_domain, input_metric, scale, k))
     }
     let input_domain = try_as_ref!(input_domain);

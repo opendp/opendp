@@ -9,7 +9,8 @@ use crate::{
         util::AnyMeasurementPtr,
     },
     measures::{
-        ffi::TypedMeasure, FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence,
+        ffi::TypedMeasure, FixedSmoothedMaxDivergence, MaxDivergence, RenyiDivergence,
+        ZeroConcentratedDivergence,
     },
     traits::InfAdd,
 };
@@ -64,7 +65,7 @@ impl BasicCompositionMeasure for AnyMeasure {
                 self_.downcast_ref::<M>()?.concurrent()
             }
             dispatch!(monomorphize2, [
-                (self_.type_, [MaxDivergence<Q>, FixedSmoothedMaxDivergence<Q>, ZeroConcentratedDivergence<Q>])
+                (self_.type_, [MaxDivergence<Q>, FixedSmoothedMaxDivergence<Q>, RenyiDivergence<Q>, ZeroConcentratedDivergence<Q>])
             ], (self_))
         }
         let Q_Atom = self.type_.get_atom()?;
@@ -92,7 +93,7 @@ impl BasicCompositionMeasure for AnyMeasure {
                     .map(AnyObject::new)
             }
             dispatch!(monomorphize2, [
-                (self_.type_, [MaxDivergence<Q>, FixedSmoothedMaxDivergence<Q>, ZeroConcentratedDivergence<Q>])
+                (self_.type_, [MaxDivergence<Q>, FixedSmoothedMaxDivergence<Q>, RenyiDivergence<Q>, ZeroConcentratedDivergence<Q>])
             ], (self_, d_i))
         }
 

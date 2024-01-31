@@ -86,6 +86,13 @@ def test_base_vector_gaussian():
     print("base gaussian:", meas([80., 90., 100.]))
     assert meas.check(1., (0.6, delta))
 
+    m_rdp = dp.m.make_base_gaussian(*input_space, scale=10.5, MO="RenyiDivergence<T>")
+    curve = m_rdp.map(1.)
+    print(curve(3.))
+
+    εδ_meas = dp.c.make_RDP_to_approxDP(m_rdp)
+    print(εδ_meas.map(1.).epsilon(delta=1e-7))
+
 
 def test_base_geometric():
     input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)

@@ -4,7 +4,7 @@ use crate::{
     core::{Measure, Measurement, MetricSpace},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measures::ZeroConcentratedDivergence,
+    measures::{RenyiDivergence, ZeroConcentratedDivergence},
     traits::{cartesian, InfCast, Number},
 };
 
@@ -21,14 +21,26 @@ pub use discrete::*;
 #[cfg(feature = "ffi")]
 mod ffi;
 
-pub trait MakeGaussian<MO: Measure, QI>: BaseDiscreteGaussianDomain<QI>
+pub trait MeasureAtom: Measure {
+    type Atom;
+}
+
+impl<T> MeasureAtom for RenyiDivergence<T> {
+    type Atom = T;
+}
+
+impl<T> MeasureAtom for ZeroConcentratedDivergence<T> {
+    type Atom = T;
+}
+
+pub trait MakeGaussian<MO: MeasureAtom, QI>: BaseDiscreteGaussianDomain<QI>
 where
     (Self, Self::InputMetric): MetricSpace,
 {
     fn make_gaussian(
         input_domain: Self,
         input_metric: Self::InputMetric,
-        scale: MO::Distance,
+        scale: MO::Atom,
     ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MO>>;
 }
 
@@ -51,6 +63,28 @@ macro_rules! impl_make_gaussian_float {
                 input_metric: Self::InputMetric,
                 scale: $ty,
             ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, ZeroConcentratedDivergence<$ty>>>
+            {
+                make_base_gaussian(input_domain, input_metric, scale, None)
+            }
+        }
+
+        impl MakeGaussian<RenyiDivergence<$ty>, $ty> for AtomDomain<$ty> {
+            fn make_gaussian(
+                input_domain: Self,
+                input_metric: Self::InputMetric,
+                scale: $ty,
+            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, RenyiDivergence<$ty>>>
+            {
+                make_base_gaussian(input_domain, input_metric, scale, None)
+            }
+        }
+
+        impl MakeGaussian<RenyiDivergence<$ty>, $ty> for VectorDomain<AtomDomain<$ty>> {
+            fn make_gaussian(
+                input_domain: Self,
+                input_metric: Self::InputMetric,
+                scale: $ty,
+            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, RenyiDivergence<$ty>>>
             {
                 make_base_gaussian(input_domain, input_metric, scale, None)
             }
@@ -102,6 +136,34 @@ macro_rules! impl_make_gaussian_int {
                 make_base_discrete_gaussian(input_domain, input_metric, scale)
             }
         }
+
+        impl<QI: Number> MakeGaussian<RenyiDivergence<$QO>, QI> for AtomDomain<$T>
+        where
+            $QO: InfCast<QI>,
+        {
+            fn make_gaussian(
+                input_domain: Self,
+                input_metric: Self::InputMetric,
+                scale: $QO,
+            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, RenyiDivergence<$QO>>>
+            {
+                make_base_discrete_gaussian(input_domain, input_metric, scale)
+            }
+        }
+
+        impl<QI: Number> MakeGaussian<RenyiDivergence<$QO>, QI> for VectorDomain<AtomDomain<$T>>
+        where
+            $QO: InfCast<QI>,
+        {
+            fn make_gaussian(
+                input_domain: Self,
+                input_metric: Self::InputMetric,
+                scale: $QO,
+            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, RenyiDivergence<$QO>>>
+            {
+                make_base_discrete_gaussian(input_domain, input_metric, scale)
+            }
+        }
     };
 }
 cartesian! {[i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, usize], [f32, f64], impl_make_gaussian_int}
@@ -135,10 +197,10 @@ cartesian! {[i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, usize], [f32, f64
 /// * `D` - Domain of the data to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
 /// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
 /// * `QI` - Input distance. The type of sensitivities. Can be any integer or float.
-pub fn make_gaussian<D: MakeGaussian<MO, QI>, MO: 'static + Measure, QI: 'static>(
+pub fn make_gaussian<D: MakeGaussian<MO, QI>, MO: 'static + MeasureAtom, QI: 'static>(
     input_domain: D,
     input_metric: D::InputMetric,
-    scale: MO::Distance,
+    scale: MO::Atom,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MO>>
 where
     (D, D::InputMetric): MetricSpace,

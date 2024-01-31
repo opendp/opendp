@@ -7,7 +7,9 @@ use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     interactive::wrap,
-    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{
+        FixedSmoothedMaxDivergence, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence,
+    },
     traits::InfAdd,
 };
 
@@ -124,6 +126,19 @@ impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for FixedSmoothedMaxDiver
             .try_fold((Q::zero(), Q::zero()), |(e1, d1), (e2, d2)| {
                 Ok((e1.inf_add(e2)?, d1.inf_add(d2)?))
             })
+    }
+}
+
+impl<Q: 'static + InfAdd + Zero + Clone> BasicCompositionMeasure for RenyiDivergence<Q> {
+    fn concurrent(&self) -> Fallible<bool> {
+        Ok(true)
+    }
+    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        Ok(Function::new_fallible(move |alpha: &Q| {
+            d_i.iter()
+                .map(|f| f.eval(alpha))
+                .try_fold(Q::zero(), |sum, e2| sum.inf_add(&e2?))
+        }))
     }
 }
 

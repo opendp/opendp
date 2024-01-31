@@ -7,12 +7,13 @@ use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
+use crate::core::Function;
 use crate::domains::ffi::UserDomain;
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
 use crate::measures::{
-    FixedSmoothedMaxDivergence, MaxDivergence, SMDCurve, SmoothedMaxDivergence,
+    FixedSmoothedMaxDivergence, MaxDivergence, RenyiDivergence, SMDCurve, SmoothedMaxDivergence,
     ZeroConcentratedDivergence,
 };
 use crate::metrics::{
@@ -289,6 +290,7 @@ lazy_static! {
             // OptionDomain<AtomDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
             type_vec![Vec, <(f32, f32), (f64, f64)>],
+            vec![t!(Function<f64, f64>), t!(Function<f32, f32>)],
 
             type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyQueryable, AnyMeasurement],
             type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr>],
@@ -317,6 +319,7 @@ lazy_static! {
             type_vec![SmoothedMaxDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![FixedSmoothedMaxDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![ZeroConcentratedDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![RenyiDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
 
             // measure distances
             type_vec![SMDCurve, <f32, f64>],
