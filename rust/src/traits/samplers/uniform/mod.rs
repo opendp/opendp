@@ -153,9 +153,9 @@ macro_rules! impl_sample_uniform_unsigned_int {
                 // MAX - MAX % upper evenly folds into [0, upper) RAND_MAX/upper times
                 loop {
                     // algorithm is only valid when sample_uniform_int is non-negative
-                    let v = Self::sample_uniform_int()?;
-                    if v < Self::MAX - Self::MAX % upper {
-                        return Ok(v % upper)
+                    let sample = Self::sample_uniform_int()?;
+                    if sample < Self::MAX - Self::MAX % upper {
+                        return Ok(sample % upper)
                     }
                 }
             }
@@ -178,9 +178,9 @@ impl SampleUniformIntBelow for UBig {
         loop {
             fill_bytes(&mut buffer)?;
 
-            let v = UBig::from_be_bytes(&buffer);
-            if v < threshold {
-                return Ok(v % &upper);
+            let sample = UBig::from_be_bytes(&buffer);
+            if sample < threshold {
+                return Ok(sample % &upper);
             }
         }
     }
