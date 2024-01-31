@@ -12,7 +12,7 @@ CARGO_LINKER = x86_64-w64-mingw32.static.posix-gcc.exe
 STATLIB = libopendp.a
 
 # PKG_LIBS tells R where to find the static library (libopendp.a)
-PKG_LIBS = $(STATLIB) -lws2_32 -ladvapi32 -luserenv -lbcrypt -lntdll
+PKG_LIBS = $(STATLIB) -lws2_32 -ladvapi32 -luserenv -lbcrypt -lntdll -lcrypt32
 
 all: rust_build
 
@@ -33,7 +33,7 @@ rust_build:
 		echo "* building OpenDP Library (libopendp.a)"; \
 		@BEFORE_CARGO_BUILD@ cargo build --manifest-path rust/Cargo.toml --target=$(TARGET) --color always --release --jobs 2 --offline --features @RUST_FEATURES@; \
 		@AFTER_CARGO_BUILD@ \
-		cp rust/target/release/libopendp.a .; \
+		cp rust/target/$(TARGET)/release/libopendp.a .; \
 	elif [ ! -z "@OPENDP_LIB_DIR@" ]; then \
 		cp @OPENDP_LIB_DIR@/libopendp.a .; \
 	else \
