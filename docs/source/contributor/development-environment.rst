@@ -259,14 +259,14 @@ To run the same check manually, use:
     R CMD build R/opendp
     R CMD check opendp_*.tar.gz --as-cran
 
-It is important R CMD check is run on the `.tar.gz`, not on `R/opendp`, 
+It is important `R CMD check` is run on the `.tar.gz`, not on `R/opendp`, 
 because `check` depends on some of the changes `build` makes within the `.tar.gz`.
 
 
 R Documentation
 ---------------
-Uses roxygen to generate ``R/opendp/man`` pages from `#'` code comments.
-Then uses ``pkgdown`` to render the documentation website.
+This script uses roxygen to generate ``R/opendp/man`` pages from `#'` code comments,
+and then uses ``pkgdown`` to render the documentation website.
 
 .. code-block:: bash
 

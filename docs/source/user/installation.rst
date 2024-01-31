@@ -48,51 +48,15 @@ At this point, you should be good to go! You can confirm your installation in Py
 
     >>> import opendp
 
-Installing OpenDP for R from GitHub
+Installing OpenDP for R from R-Universe
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-OpenDP is distributed as an `R package on GitHub <https://github.com/opendp/opendp/releases>`_. 
-You can install it using ``install.packages``.
-
-**Linux**
+OpenDP is distributed as an `R package on R-Universe <https://opendp.r-universe.dev/builds>`_. 
+You can install it using from an R session:
 
 .. code-block:: R
 
-    install.packages(
-        "https://github.com/opendp/opendp/releases/latest/download/opendp__linux-gnu.tar.gz",
-        repos = NULL
-    )
-
-**Windows**
-
-.. code-block:: R
-
-    install.packages(
-        "https://github.com/opendp/opendp/releases/latest/download/opendp__pc-windows-gnu.tar.gz",
-        repos = NULL
-    )
-
-**macOS**
-
-.. code-block:: R
-
-    install.packages(
-        "https://github.com/opendp/opendp/releases/latest/download/opendp__apple-darwin.tar.gz",
-        repos = NULL
-    )
-
-.. note::
-
-    These OS-specific packages contain binaries for both arm64 and x86_64, so you don't need to worry about specifying a specific platform.
-
-**Source** (must install [a Rust toolchain](https://www.rust-lang.org/learn/get-started))
-
-.. code-block:: R
-
-    install.packages(
-        "https://github.com/opendp/opendp/releases/latest/download/opendp.tar.gz",
-        repos = NULL
-    )
+    install.packages("opendp", repos = "https://opendp.r-universe.dev")
 
 At this point, you should be good to go! You can confirm your installation in R by importing ``opendp``:
 

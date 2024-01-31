@@ -7,7 +7,7 @@ RUST_FEATURES=untrusted,ffi
 
 # Even when `cargo` is on `PATH`, `rustc` might not. We need to source
 # ~/.cargo/env to ensure PATH is configured correctly in some cases
-# (c.f. yutannihilation/string2path#4). However, this file is not always
+# (c.f. https://github.com/yutannihilation/string2path/issues/4). However, this file is not always
 # available (e.g. when Rust is installed via apt on Ubuntu), so it might be
 # more straightforward to add `PATH` directly.
 if [ -e "${HOME}/.cargo/env" ]; then

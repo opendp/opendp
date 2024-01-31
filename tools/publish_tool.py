@@ -84,32 +84,6 @@ def github(args):
     run_command("Creating GitHub release", cmd)
 
 
-def github_r(args):
-    log(f"*** PUBLISHING GITHUB R RELEASE ***")
-    version = get_version()
-
-    # TODO: don't hardcode channel
-    # channel = infer_channel(version)
-    # branch = get_current_branch()
-    # if branch != channel:
-    #     raise Exception(f"Version {version} implies channel {channel}, but current branch is {branch}")
-    channel = "365-r-bindings-iqss-gen"
-
-    tag = f"v{version}-R"
-    # Just in case, clear out any existing tag, so a new one will be created by GitHub.
-    run_command("Clearing tag", f"git push origin :refs/tags/{tag}")
-    title = f"OpenDP R {version}"
-    stripped_version = str(version).replace(".", "")
-    date = args.date or datetime.date.today()
-    notes = f"[{stripped_version} on {date}](https://github.com/opendp/opendp/pull/679)"
-    cmd = f"gh release create {tag} --target {channel} -t '{title}' -n '{notes}' opendp__pc-windows-gnu.tar.gz opendp__apple-darwin.tar.gz opendp__linux-gnu.tar.gz opendp.tar.gz"
-    if version.prerelease:
-        cmd += " -p"
-    if args.draft:
-        cmd += " -d"
-    run_command("Creating GitHub R release", cmd)
-
-
 def _main(argv):
     parser = argparse.ArgumentParser(description="OpenDP build tool")
     subparsers = parser.add_subparsers(dest="COMMAND", help="Command to run")
@@ -139,12 +113,6 @@ def _main(argv):
     subparser.set_defaults(func=github)
     subparser.add_argument("-d", "--date", type=datetime.date.fromisoformat, help="Release date")
     subparser.add_argument("--draft", action="store_true")
-
-    subparser = subparsers.add_parser("github-r", help="Publish GitHub R release")
-    subparser.set_defaults(func=github_r)
-    subparser.add_argument("-d", "--date", type=datetime.date.fromisoformat, help="Release date")
-    subparser.add_argument("-n", "--draft", dest="draft", action="store_true", default=False)
-    subparser.add_argument("-nn", "--no-draft", dest="draft", action="store_false")
 
     args = parser.parse_args(argv[1:])
     args.func(args)

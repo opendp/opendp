@@ -123,7 +123,7 @@ def update_version(version):
     # R Package
 
     with debmutate.control.ControlEditor(path='R/opendp/DESCRIPTION') as control:
-        # while it not look like it, this mutates the DESCRIPTION file in-place
+        # while it might not look like it, this mutates the DESCRIPTION file in-place
         control.version = r_version
     update_file(".binder/requirements.txt", io.IOBase.readlines, munge_binder_requirements, lambda data, f: f.writelines(data))
 
