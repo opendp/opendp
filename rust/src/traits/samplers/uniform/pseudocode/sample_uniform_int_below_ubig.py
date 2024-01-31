@@ -9,6 +9,6 @@ def sample_uniform_int_below(upper) -> int:
     while True:
         fill_bytes(buffer)
 
-        v = UBig.from_be_bytes(buffer)
-        if v < threshold:
-            return v % upper
+        sample = UBig.from_be_bytes(buffer)
+        if sample < threshold:
+            return sample % upper

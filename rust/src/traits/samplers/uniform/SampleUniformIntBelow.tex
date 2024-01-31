@@ -38,7 +38,6 @@ To prove correctness of each \texttt{impl}, we prove correctness of the implemen
 \section{\texttt{impl} for Unsigned Integers}
 This corresponds to \texttt{impl SampleUniformIntBelow for \$ty} in Rust.
 \texttt{sample\_uniform\_int\_below} uses rejection sampling. 
-In each round, an unsigned integer is drawn uniformly at random
 In each round all bits of the integer are filled randomly, drawing an unsigned integer uniformly at random.
 The algorithm returns the sample, modulo the upper bound, so long as the sample is not one of the final "div" largest integers.
 

@@ -33,18 +33,18 @@ def test_count_by_categories_float():
         "A", TOA=str
     )
 
-    t_hist = load >> dp.t.then_count_by_categories(
-        cats, MO=dp.L1Distance[float], TOA=float
-    )
-    assert t_hist(data) == [5.0, 20.0, 10.0, 5.0]
     # ensure that chaining works as expected
-    (t_hist >> dp.m.then_laplace(1.0))(data)
-
-    t_hist = load >> dp.t.then_count_by_categories(
-        cats, MO=dp.L2Distance[float], TOA=float
-    )
-    assert t_hist(data) == [5.0, 20.0, 10.0, 5.0]
-    (t_hist >> dp.m.then_gaussian(1.0))(data)
+    assert (
+        load
+        >> dp.t.then_count_by_categories(cats, MO=dp.L1Distance[float], TOA=float)
+        >> dp.m.then_laplace(0.0)
+    )(data) == [5.0, 20.0, 10.0, 5.0]
+    
+    assert (
+        load
+        >> dp.t.then_count_by_categories(cats, MO=dp.L2Distance[float], TOA=float)
+        >> dp.m.then_gaussian(0.0)
+    )(data) == [5.0, 20.0, 10.0, 5.0]
 
 
 def test_count_by_threshold():
@@ -84,6 +84,6 @@ def test_count_by_threshold():
             dp.atom_domain(T=int), dp.l1_distance(T=float), scale=1.0, threshold=1e8
         )
 
-    assert (pre >> dp.m.then_base_laplace_threshold(
-        scale=0., threshold=threshold
-    )).map(1) == (float("inf"), 1.)
+    assert (
+        pre >> dp.m.then_base_laplace_threshold(scale=0.0, threshold=threshold)
+    ).map(1) == (float("inf"), 1.0)
