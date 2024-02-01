@@ -1139,7 +1139,7 @@ def make_report_noisy_max_gumbel(
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
-    assert_features("contrib", "floating-point")
+    assert_features("contrib")
 
     # Standardize type arguments.
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)

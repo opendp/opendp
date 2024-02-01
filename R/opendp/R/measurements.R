@@ -1225,7 +1225,7 @@ make_report_noisy_max_gumbel <- function(
     optimize,
     .QO = NULL
 ) {
-    assert_features("contrib", "floating-point")
+    assert_features("contrib")
 
     # Standardize type arguments.
     .QO <- parse_or_infer(type_name = .QO, public_example = scale)
