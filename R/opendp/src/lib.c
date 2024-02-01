@@ -80,7 +80,7 @@ static R_CMethodDef R_CDef[] = {
     {"measurements__make_base_gaussian", (DL_FUNC) &measurements__make_base_gaussian, 7},
     {"measurements__make_base_geometric", (DL_FUNC) &measurements__make_base_geometric, 8},
     {"measurements__make_base_laplace", (DL_FUNC) &measurements__make_base_laplace, 6},
-    {"measurements__make_base_laplace_threshold", (DL_FUNC) &measurements__make_base_laplace_threshold, 7},
+    {"measurements__make_base_laplace_threshold", (DL_FUNC) &measurements__make_base_laplace_threshold, 6},
     {"measurements__make_gaussian", (DL_FUNC) &measurements__make_gaussian, 7},
     {"measurements__make_laplace", (DL_FUNC) &measurements__make_laplace, 6},
     {"measurements__make_randomized_response", (DL_FUNC) &measurements__make_randomized_response, 7},
