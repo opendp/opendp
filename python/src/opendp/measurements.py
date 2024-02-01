@@ -154,7 +154,7 @@ def make_base_discrete_gaussian(
     input_domain: Domain,
     input_metric: Metric,
     scale,
-    MO: Optional[RuntimeTypeDescriptor] = "ZeroConcentratedDivergence<QO>"
+    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<QO>"
 ) -> Measurement:
     r"""Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
 
@@ -210,7 +210,7 @@ def make_base_discrete_gaussian(
 
 def then_base_discrete_gaussian(
     scale,
-    MO: Optional[RuntimeTypeDescriptor] = "ZeroConcentratedDivergence<QO>"
+    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<QO>"
 ):  
     r"""partial constructor of make_base_discrete_gaussian
 
@@ -496,8 +496,8 @@ def make_base_gaussian(
     input_domain: Domain,
     input_metric: Metric,
     scale,
-    k: Optional[int] = -1074,
-    MO: Optional[RuntimeTypeDescriptor] = "ZeroConcentratedDivergence<T>"
+    k: int = -1074,
+    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<T>"
 ) -> Measurement:
     r"""Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
 
@@ -560,8 +560,8 @@ def make_base_gaussian(
 
 def then_base_gaussian(
     scale,
-    k: Optional[int] = -1074,
-    MO: Optional[RuntimeTypeDescriptor] = "ZeroConcentratedDivergence<T>"
+    k: int = -1074,
+    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<T>"
 ):  
     r"""partial constructor of make_base_gaussian
 
@@ -671,7 +671,7 @@ def make_base_laplace(
     input_domain: Domain,
     input_metric: Metric,
     scale,
-    k: Optional[int] = -1074
+    k: int = -1074
 ) -> Measurement:
     r"""Make a Measurement that adds noise from the Laplace(`scale`) distribution to a scalar value.
 
@@ -729,7 +729,7 @@ def make_base_laplace(
 
 def then_base_laplace(
     scale,
-    k: Optional[int] = -1074
+    k: int = -1074
 ):  
     r"""partial constructor of make_base_laplace
 
@@ -754,7 +754,7 @@ def make_base_laplace_threshold(
     input_metric: Metric,
     scale,
     threshold,
-    k: Optional[int] = -1074
+    k: int = -1074
 ) -> Measurement:
     r"""Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
 
@@ -808,7 +808,7 @@ def make_base_laplace_threshold(
 def then_base_laplace_threshold(
     scale,
     threshold,
-    k: Optional[int] = -1074
+    k: int = -1074
 ):  
     r"""partial constructor of make_base_laplace_threshold
 
@@ -834,7 +834,7 @@ def make_gaussian(
     input_domain: Domain,
     input_metric: Metric,
     scale,
-    MO: Optional[RuntimeTypeDescriptor] = "ZeroConcentratedDivergence<QO>"
+    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<QO>"
 ) -> Measurement:
     r"""Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
 
@@ -890,7 +890,7 @@ def make_gaussian(
 
 def then_gaussian(
     scale,
-    MO: Optional[RuntimeTypeDescriptor] = "ZeroConcentratedDivergence<QO>"
+    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<QO>"
 ):  
     r"""partial constructor of make_gaussian
 
@@ -914,7 +914,7 @@ def make_laplace(
     input_domain: Domain,
     input_metric: Metric,
     scale,
-    QO: Optional[RuntimeTypeDescriptor] = "float"
+    QO: RuntimeTypeDescriptor = "float"
 ) -> Measurement:
     r"""Make a Measurement that adds noise from the laplace(`scale`) distribution to the input.
 
@@ -975,7 +975,7 @@ def make_laplace(
 
 def then_laplace(
     scale,
-    QO: Optional[RuntimeTypeDescriptor] = "float"
+    QO: RuntimeTypeDescriptor = "float"
 ):  
     r"""partial constructor of make_laplace
 
@@ -998,7 +998,7 @@ def then_laplace(
 def make_randomized_response(
     categories: Any,
     prob,
-    constant_time: Optional[bool] = False,
+    constant_time: bool = False,
     T: Optional[RuntimeTypeDescriptor] = None,
     QO: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
@@ -1053,7 +1053,7 @@ def make_randomized_response(
 @versioned
 def make_randomized_response_bool(
     prob,
-    constant_time: Optional[bool] = False,
+    constant_time: bool = False,
     QO: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
     r"""Make a Measurement that implements randomized response on a boolean value.
@@ -1193,7 +1193,7 @@ def make_user_measurement(
     output_measure: Measure,
     function,
     privacy_map,
-    TO: Optional[RuntimeTypeDescriptor] = "ExtrinsicObject"
+    TO: RuntimeTypeDescriptor = "ExtrinsicObject"
 ) -> Measurement:
     r"""Construct a Measurement from user-defined callbacks.
 
@@ -1245,7 +1245,7 @@ def then_user_measurement(
     output_measure: Measure,
     function,
     privacy_map,
-    TO: Optional[RuntimeTypeDescriptor] = "ExtrinsicObject"
+    TO: RuntimeTypeDescriptor = "ExtrinsicObject"
 ):  
     r"""partial constructor of make_user_measurement
 

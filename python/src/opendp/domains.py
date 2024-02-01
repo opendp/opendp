@@ -77,7 +77,7 @@ def _user_domain_descriptor(
 @versioned
 def atom_domain(
     bounds: Optional[Any] = None,
-    nullable: Optional[bool] = False,
+    nullable: bool = False,
     T: Optional[RuntimeTypeDescriptor] = None
 ) -> Domain:
     r"""Construct an instance of `AtomDomain`.
