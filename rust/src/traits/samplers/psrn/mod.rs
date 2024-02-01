@@ -12,6 +12,9 @@ use dashu::{
 mod gumbel;
 pub use gumbel::GumbelPSRN;
 
+mod exponential;
+pub use exponential::ExponentialPSRN;
+
 mod laplace;
 pub use laplace::LaplacePSRN;
 
