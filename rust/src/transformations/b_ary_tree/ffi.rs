@@ -1,5 +1,3 @@
-use std::os::raw::c_uint;
-
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace},
     domains::{AtomDomain, VectorDomain},
@@ -19,14 +17,14 @@ use super::choose_branching_factor;
 pub extern "C" fn opendp_transformations__make_b_ary_tree(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
-    leaf_count: c_uint,
-    branching_factor: c_uint,
+    leaf_count: u32,
+    branching_factor: u32,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<Q>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-        leaf_count: usize,
-        branching_factor: usize,
+        leaf_count: u32,
+        branching_factor: u32,
         M: Type,
         TA: Type,
     ) -> Fallible<AnyTransformation>
@@ -36,8 +34,8 @@ pub extern "C" fn opendp_transformations__make_b_ary_tree(
         fn monomorphize2<M, TA>(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
-            leaf_count: usize,
-            branching_factor: usize,
+            leaf_count: u32,
+            branching_factor: u32,
         ) -> Fallible<AnyTransformation>
         where
             TA: Integer,
@@ -61,8 +59,6 @@ pub extern "C" fn opendp_transformations__make_b_ary_tree(
 
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
-    let leaf_count = leaf_count as usize;
-    let branching_factor = branching_factor as usize;
     let M = input_metric.type_.clone();
     let TA = try_!(input_domain.type_.get_atom());
     let Q = try_!(M.get_atom());
@@ -73,7 +69,6 @@ pub extern "C" fn opendp_transformations__make_b_ary_tree(
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_transformations__choose_branching_factor(size_guess: c_uint) -> c_uint {
-    let size_guess = size_guess as usize;
-    choose_branching_factor(size_guess) as c_uint
+pub extern "C" fn opendp_transformations__choose_branching_factor(size_guess: u32) -> u32 {
+    choose_branching_factor(size_guess)
 }

@@ -1,6 +1,8 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_long, c_void};
 
+use dashu::rational::RBig;
+
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
@@ -31,7 +33,7 @@ pub extern "C" fn opendp_measurements__make_base_gaussian(
     where
         T: Float + CastInternalRational + SampleDiscreteGaussianZ2k,
         i32: ExactIntCast<T::Bits>,
-        rug::Rational: TryFrom<T>,
+        RBig: TryFrom<T>,
     {
         let scale = *try_as_ref!(scale as *const T);
         fn monomorphize2<D, MO>(

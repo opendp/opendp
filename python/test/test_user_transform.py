@@ -1,4 +1,5 @@
 import opendp.prelude as dp
+import pytest
 
 dp.enable_features("contrib", "honest-but-curious")
 
@@ -88,8 +89,8 @@ def test_user_constructors():
         lambda x: [x] * 10,
         lambda d_in: d_in * 10
     )
-    print(trans(2))
-    print(trans.map(1))
+    assert trans(2) == [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+    assert trans.map(1) == 10
 
     meas = dp.m.make_user_measurement(
         dp.atom_domain((2, 10)),
@@ -99,9 +100,38 @@ def test_user_constructors():
         lambda d_in: float(d_in * 10),
         TO=dp.Vec[int],
     )
-    print(meas(2))
-    print(meas.map(1))
 
-    post = dp.new_function(lambda x: x[0], dp.i32)
+    assert meas(2) == [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+    assert meas.map(1) == 10
 
-    print((meas >> post)(2))
+    assert (meas >> (lambda x: x[0]))(2) == 2
+
+def test_hash():
+    def get_elements(mechanisms):
+        # ensure that all mechanisms have homogeneous...
+        input_domain, = {m.input_domain for m in mechanisms} # ...input domain,
+        input_metric, = {m.input_metric for m in mechanisms} # ...input metric,
+        output_measure, = {m.output_measure for m in mechanisms} # ...and measure
+
+        return input_domain, input_metric, output_measure
+    
+    def make_mock_basic_composition(mechanisms):
+        input_domain, input_metric, output_measure = get_elements(mechanisms)
+
+        # ensure that the privacy measure is pure-DP
+        assert output_measure == dp.max_divergence(T=float)
+
+        return dp.m.make_user_measurement(
+            input_domain, input_metric, output_measure,
+            function=lambda arg: [M(arg) for M in mechanisms], 
+            privacy_map=lambda d_in: sum(M.map(d_in) for M in mechanisms))
+    
+    make_mock_basic_composition([
+        dp.m.make_randomized_response_bool(.75)
+    ] * 3)
+
+    with pytest.raises(ValueError):
+        make_mock_basic_composition([
+            dp.m.make_randomized_response_bool(.75),
+            dp.m.make_gaussian(dp.atom_domain(T=float), dp.absolute_distance(T=float), 1.)
+        ])

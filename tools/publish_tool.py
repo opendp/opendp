@@ -31,7 +31,6 @@ def python(args):
 
     # Note, version naming will comply with:
     # https://packaging.python.org/en/latest/specifications/version-specifiers/
-    # (but don't enforce it here, enforce it in )
     wheel = f"opendp-{version}-py3-none-any.whl"
     run_command("Publishing opendp package", f"python -m twine upload -r {args.repository} --verbose python/wheelhouse/{wheel}")
     # Unfortunately, twine doesn't have an option to block until the index is propagated. Polling the index is unreliable,

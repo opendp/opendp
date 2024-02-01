@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::ops::{BitAnd, BitOr, Shl, Shr, Sub};
 
+use dashu::integer::IBig;
+use dashu::rational::RBig;
 use num::{One, Zero};
 
 use crate::domains::Bounds;
@@ -146,7 +148,8 @@ pub trait FloatBits: Copy + Sized + ExactIntCast<Self::Bits> {
         + BitAnd<Output = Self::Bits>
         + BitOr<Output = Self::Bits>
         + Sub<Output = Self::Bits>
-        + From<bool>;
+        + From<bool>
+        + Into<IBig>;
     /// # Proof Definition
     /// A constant equal to the number of bits in exponent.
     const EXPONENT_BITS: Self::Bits;
@@ -243,8 +246,7 @@ impl CheckAtom for (f64, f64) {
         bounds.member(self)
     }
 }
-#[cfg(feature = "use-mpfr")]
-impl_CheckAtom_number!(rug::Rational rug::Integer);
+impl_CheckAtom_number!(RBig IBig);
 
 macro_rules! impl_CheckAtom_simple {
     ($($ty:ty)+) => ($(impl CheckAtom for $ty {})+)
@@ -286,14 +288,12 @@ macro_rules! impl_CheckNull_for_float {
     }
 }
 impl_CheckNull_for_float!(f64, f32);
-#[cfg(feature = "use-mpfr")]
-impl CheckNull for rug::Rational {
+impl CheckNull for RBig {
     fn is_null(&self) -> bool {
-        self.denom().is_zero()
+        self.denominator().is_zero()
     }
 }
-#[cfg(feature = "use-mpfr")]
-impl CheckNull for rug::Integer {
+impl CheckNull for IBig {
     fn is_null(&self) -> bool {
         false
     }
@@ -322,8 +322,7 @@ macro_rules! impl_total_ord_for_ord {
 }
 impl_total_ord_for_ord!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
 
-#[cfg(feature = "use-mpfr")]
-impl_total_ord_for_ord!(rug::Rational, rug::Integer);
+impl_total_ord_for_ord!(RBig, IBig);
 
 macro_rules! impl_total_ord_for_float {
     ($($ty:ty),*) => {

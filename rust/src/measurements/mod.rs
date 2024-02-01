@@ -3,9 +3,9 @@
 //! The different [`crate::core::Measurement`] implementations in this module are accessed by calling the appropriate constructor function.
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Measurement` does.
 
-#[cfg(all(feature = "contrib", feature = "use-mpfr"))]
+#[cfg(all(feature = "contrib"))]
 mod gaussian;
-#[cfg(all(feature = "contrib", feature = "use-mpfr"))]
+#[cfg(all(feature = "contrib"))]
 pub use gaussian::*;
 
 #[cfg(feature = "contrib")]
@@ -33,7 +33,7 @@ mod randomized_response;
 #[cfg(feature = "contrib")]
 pub use randomized_response::*;
 
-#[cfg(all(feature = "use-mpfr", feature = "floating-point", feature = "contrib"))]
+#[cfg(all(feature = "floating-point", feature = "contrib"))]
 mod alp;
-#[cfg(all(feature = "use-mpfr", feature = "floating-point", feature = "contrib"))]
+#[cfg(all(feature = "floating-point", feature = "contrib"))]
 pub use alp::*;

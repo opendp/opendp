@@ -3,41 +3,25 @@
 mod bernoulli;
 pub use bernoulli::*;
 
-#[cfg(feature = "use-mpfr")]
 mod cks20;
-#[cfg(feature = "use-mpfr")]
 pub use cks20::*;
 
-#[cfg(feature = "use-mpfr")]
 mod discretize;
-#[cfg(feature = "use-mpfr")]
 pub use discretize::*;
 
 mod geometric;
 pub use geometric::*;
 
-#[cfg(feature = "use-mpfr")]
 mod psrn;
-#[cfg(feature = "use-mpfr")]
 pub use psrn::*;
 
 mod uniform;
 pub use uniform::*;
 
-// these samplers are only accessible if the library is compiled in an explicitly unsafe way
-#[cfg(not(feature = "use-mpfr"))]
-mod vulnerable_fallbacks;
-#[cfg(not(feature = "use-mpfr"))]
-pub use vulnerable_fallbacks::*;
-
 use rand::prelude::SliceRandom;
 use rand::RngCore;
-#[cfg(feature = "use-mpfr")]
-use rug::rand::ThreadRandGen;
 
 use crate::error::Fallible;
-#[cfg(any(not(feature = "use-mpfr"), not(feature = "use-openssl")))]
-use rand::Rng;
 
 /// Fill a byte buffer with random bits.
 ///
@@ -59,6 +43,7 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
 /// Enable `use-openssl` for a secure implementation.
 #[cfg(not(feature = "use-openssl"))]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
+    use rand::Rng;
     if let Err(e) = rand::thread_rng().try_fill(buffer) {
         fallible!(FailedFunction, "Rand error: {:?}", e)
     } else {
@@ -66,7 +51,7 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     }
 }
 
-/// A struct that aids in sampling from [`rug`] and [`rand`].
+/// An OpenDP random number generator that implements [`rand::RngCore`].
 pub(crate) struct GeneratorOpenDP {
     /// If an error happens while sampling, it is packed into this struct and thrown later.
     pub error: Fallible<()>,
@@ -80,17 +65,6 @@ impl GeneratorOpenDP {
 impl Default for GeneratorOpenDP {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-#[cfg(feature = "use-mpfr")]
-impl ThreadRandGen for GeneratorOpenDP {
-    fn gen(&mut self) -> u32 {
-        let mut buffer = [0u8; 4];
-        if let Err(e) = fill_bytes(&mut buffer) {
-            self.error = Err(e)
-        }
-        u32::from_ne_bytes(buffer)
     }
 }
 

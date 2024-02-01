@@ -1,9 +1,8 @@
 use std::convert::TryFrom;
 
-use az::{SaturatingAs, SaturatingCast};
-use num::{traits::Pow, Float as _, Zero};
+use dashu::{base::Signed, integer::IBig, rational::RBig, rbig};
+use num::{Float as _, Zero};
 use opendp_derive::bootstrap;
-use rug::{Integer, Rational};
 
 use crate::{
     core::{Measure, Measurement, Metric, MetricSpace, PrivacyMap},
@@ -12,7 +11,9 @@ use crate::{
     measurements::MappableDomain,
     measures::ZeroConcentratedDivergence,
     metrics::{AbsoluteDistance, L2Distance},
-    traits::{samplers::sample_discrete_gaussian, CheckAtom, Float, InfCast, Number},
+    traits::{
+        samplers::sample_discrete_gaussian, CheckAtom, Float, InfCast, Number, SaturatingCast,
+    },
 };
 
 #[cfg(feature = "ffi")]
@@ -43,7 +44,7 @@ where
     DI: BaseDiscreteGaussianDomain<QI>,
     QI: Number,
     QO: Float + InfCast<QI>,
-    Rational: TryFrom<QO>,
+    RBig: TryFrom<QO>,
 {
     type Atom = QO;
 
@@ -66,7 +67,7 @@ where
             }
 
             // (d_in / scale)^2 / 2
-            (d_in.inf_div(&scale)?).inf_pow(&_2)?.inf_div(&_2)
+            (d_in.inf_div(&scale)?).inf_powi(2.into())?.inf_div(&_2)
         }))
     }
 }
@@ -108,16 +109,17 @@ pub fn make_base_discrete_gaussian<D, MO, QI>(
 where
     D: BaseDiscreteGaussianDomain<QI>,
     (D, D::InputMetric): MetricSpace,
-    Integer: From<D::Atom> + SaturatingCast<D::Atom>,
+    D::Atom: SaturatingCast<IBig>,
+    IBig: From<D::Atom>,
 
     MO: DiscreteGaussianMeasure<D, QI>,
-    Rational: TryFrom<MO::Atom>,
+    RBig: TryFrom<MO::Atom>,
 {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
     let scale_rational =
-        Rational::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
+        RBig::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
 
     Measurement::new(
         input_domain,
@@ -126,12 +128,12 @@ where
         } else {
             D::new_map_function(move |arg: &D::Atom| {
                 // exact conversion to bignum int
-                let arg = Integer::from(arg.clone());
+                let arg = IBig::from(arg.clone());
                 // exact sampling of noise
                 let noise = sample_discrete_gaussian(scale_rational.clone())?;
                 // exact addition, and then postprocess by casting to D::Atom
                 //     clamp to the data type's bounds if out of range
-                Ok((arg + noise).saturating_as())
+                Ok(D::Atom::saturating_cast(arg + noise))
             })
         },
         input_metric,
@@ -140,36 +142,35 @@ where
     )
 }
 
-pub fn make_base_discrete_gaussian_rug<D>(
+pub fn make_base_rational_gaussian<D>(
     input_domain: D,
     input_metric: D::InputMetric,
-    scale: Rational,
-) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, ZeroConcentratedDivergence<Rational>>>
+    scale: RBig,
+) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, ZeroConcentratedDivergence<RBig>>>
 where
-    D: BaseDiscreteGaussianDomain<Rational, Atom = Integer>,
+    D: BaseDiscreteGaussianDomain<RBig, Atom = IBig>,
     (D, D::InputMetric): MetricSpace,
 {
-    if scale <= 0 {
+    if scale.is_negative() || scale.is_zero() {
         return fallible!(MakeMeasurement, "scale must be positive");
     }
 
     Measurement::new(
         input_domain,
-        D::new_map_function(enclose!(scale, move |arg: &Integer| {
+        D::new_map_function(enclose!(scale, move |arg: &IBig| {
             sample_discrete_gaussian(scale.clone()).map(|n| arg + n)
         })),
         input_metric,
         ZeroConcentratedDivergence::default(),
-        PrivacyMap::new(move |d_in: &Rational| (d_in.clone() / &scale).pow(2) / 2),
+        PrivacyMap::new(move |d_in: &RBig| (d_in.clone() / &scale).pow(2) / rbig!(2)),
     )
 }
 
 #[cfg(test)]
 mod test {
-    use num::{One, Zero};
 
     use super::*;
-    use crate::{domains::AtomDomain, error::ExplainUnwrap};
+    use crate::domains::AtomDomain;
 
     // there is a distributional test in the accuracy module
 
@@ -203,32 +204,32 @@ mod test {
     }
 
     #[test]
-    fn test_make_base_discrete_gaussian_rug() -> Fallible<()> {
-        let _1e30 = Rational::try_from(1e30f64).unwrap_test();
-        let meas = make_base_discrete_gaussian_rug(
+    fn test_make_base_rational_gaussian() -> Fallible<()> {
+        let _1e30 = RBig::try_from(1e30f64)?;
+        let meas = make_base_rational_gaussian(
             AtomDomain::default(),
             AbsoluteDistance::default(),
             _1e30.clone(),
         )?;
-        println!("{:?}", meas.invoke(&Integer::zero())?);
-        assert!(meas.check(&Rational::one(), &_1e30)?);
+        println!("{:?}", meas.invoke(&IBig::ZERO)?);
+        assert!(meas.check(&RBig::ONE, &_1e30)?);
 
-        assert!(make_base_discrete_gaussian_rug(
+        assert!(make_base_rational_gaussian(
             AtomDomain::default(),
             AbsoluteDistance::default(),
-            Rational::zero()
+            RBig::ZERO
         )
         .is_err());
 
-        let f64_max = Rational::try_from(f64::MAX).unwrap_test();
-        let meas = make_base_discrete_gaussian_rug(
+        let f64_max = RBig::try_from(f64::MAX).unwrap();
+        let meas = make_base_rational_gaussian(
             AtomDomain::default(),
             AbsoluteDistance::default(),
             f64_max,
         )?;
         println!(
             "sample with scale=f64::MAX: {:?}",
-            meas.invoke(&Integer::zero())?
+            meas.invoke(&IBig::ZERO)?
         );
 
         Ok(())

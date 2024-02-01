@@ -7,8 +7,8 @@ use crate::codegen::indent;
 
 use super::flatten_type_recipe;
 
-/// Top-level function to generate python bindings, including all modules.
-pub fn generate_bindings(modules: HashMap<String, Vec<Function>>) -> HashMap<PathBuf, String> {
+/// Top-level function to generate Python bindings, including all modules.
+pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<PathBuf, String> {
     let typemap: HashMap<String, String> =
         serde_json::from_str(&include_str!("python_typemap.json")).unwrap();
     let hierarchy: HashMap<String, Vec<String>> =
@@ -20,7 +20,7 @@ pub fn generate_bindings(modules: HashMap<String, Vec<Function>>) -> HashMap<Pat
             (
                 PathBuf::from(format!(
                     "{}.py",
-                    if &module_name == "data" {
+                    if module_name == "data" {
                         "_data"
                     } else {
                         module_name.as_str()
@@ -35,8 +35,8 @@ pub fn generate_bindings(modules: HashMap<String, Vec<Function>>) -> HashMap<Pat
 /// Generates all code for an opendp python module.
 /// Each call corresponds to one python file.
 fn generate_module(
-    module_name: String,
-    module: Vec<Function>,
+    module_name: &str,
+    module: &Vec<Function>,
     typemap: &HashMap<String, String>,
     hierarchy: &HashMap<String, Vec<String>>,
 ) -> String {
@@ -53,14 +53,14 @@ fn generate_module(
         .join(",\n");
     let functions = module
         .into_iter()
-        .map(|func| generate_function(&module_name, &func, typemap, hierarchy))
+        .map(|func| generate_function(module_name, &func, typemap, hierarchy))
         .collect::<Vec<String>>()
         .join("\n");
 
     // the comb module needs access to core functions for type introspection on measurements/transformations
     let constructor_mods = ["combinators", "measurements", "transformations"];
 
-    let extra_imports = if constructor_mods.contains(&module_name.as_str()) {
+    let extra_imports = if constructor_mods.contains(&module_name) {
         r#"from opendp.core import *
 from opendp.domains import *
 from opendp.metrics import *
@@ -69,7 +69,7 @@ from opendp.measures import *"#
         ""
     };
 
-    let module_docs = match module_name.as_str() {
+    let module_docs = match module_name {
         "accuracy" => "The ``accuracy`` module provides functions for converting between accuracy and scale parameters.",
         "combinators" => "The ``combinators`` module provides functions for combining transformations and measurements.",
         "core" => "The ``core`` module provides functions for accessing the fields of transformations and measurements.",
@@ -100,7 +100,7 @@ __all__ = [
 }
 
 fn generate_function(
-    module_name: &String,
+    module_name: &str,
     func: &Function,
     typemap: &HashMap<String, String>,
     hierarchy: &HashMap<String, Vec<String>>,
@@ -129,11 +129,27 @@ fn generate_function(
 
 def {then_name}(
 {then_args}
-):
+):  
+    r"""partial constructor of {func_name}
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.{module_name}.{func_name}`
+
+{doc_params}
+    """
     return PartialConstructor(lambda {dom_met}: {name}(
 {args}))
 "#,
             then_name = func.name.replacen("make_", "then_", 1),
+            func_name = func.name,
+            doc_params = indent(
+                func.args
+                    .iter()
+                    .skip(2)
+                    .map(|v| generate_docstring_arg(v, hierarchy))
+                    .collect::<Vec<String>>()
+                    .join("\n")
+            ),
             then_args = indent(args[2..].join(",\n")),
             dom_met = func.args[..2]
                 .iter()
@@ -192,12 +208,14 @@ fn generate_input_argument(
             name = arg.name(),
             hint = arg
                 .python_type_hint(hierarchy)
-                // make argument optional if there is a default
-                .map(|hint| if default.is_some() {
-                    format!("Optional[{}]", hint)
-                } else {
-                    hint
-                })
+                // Add `Optional` annotation only if there is a default and it is `None`.
+                .map(
+                    |hint| if default.as_ref().is_some_and(|v| v.as_str() == "None") {
+                        format!("Optional[{}]", hint)
+                    } else {
+                        hint
+                    }
+                )
                 // don't hint for args that are not converted
                 .filter(|_| !arg.do_not_convert)
                 .map(|hint| format!(": {}", hint))
@@ -289,11 +307,7 @@ fn generate_docstring_return_arg(
 /// - data converters convert from python to c representations according to the formatted type args
 /// - the call constructs and retrieves the ffi function name, sets ctypes,
 ///     makes the call, handles errors, and converts the response to python
-fn generate_body(
-    module_name: &String,
-    func: &Function,
-    typemap: &HashMap<String, String>,
-) -> String {
+fn generate_body(module_name: &str, func: &Function, typemap: &HashMap<String, String>) -> String {
     format!(
         r#"{flag_checker}{type_arg_formatter}
 {data_converter}
@@ -457,11 +471,7 @@ fn generate_data_converter(func: &Function, typemap: &HashMap<String, String>) -
 /// - makes the call assuming that the arguments have been converted to C
 /// - handles errors
 /// - converts the response to python
-fn generate_call(
-    module_name: &String,
-    func: &Function,
-    typemap: &HashMap<String, String>,
-) -> String {
+fn generate_call(module_name: &str, func: &Function, typemap: &HashMap<String, String>) -> String {
     let mut call = format!(
         r#"lib_function({args})"#,
         args = func
@@ -512,5 +522,33 @@ fn set_dependencies(dependencies: &Vec<TypeRecipe>) -> String {
             .collect::<Vec<String>>()
             .join(", ");
         format!("output._depends_on({dependencies})")
+    }
+}
+
+impl TypeRecipe {
+    /// translate the abstract derived_types info into python RuntimeType constructors
+    pub fn to_python(&self) -> String {
+        match self {
+            Self::Name(name) => name.clone(),
+            Self::Function { function, params } => format!(
+                "{function}({params})",
+                function = function,
+                params = params
+                    .iter()
+                    .map(|v| v.to_python())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            Self::Nest { origin, args } => format!(
+                "RuntimeType(origin='{origin}', args=[{args}])",
+                origin = origin,
+                args = args
+                    .iter()
+                    .map(|arg| arg.to_python())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            Self::None => "None".to_string(),
+        }
     }
 }

@@ -40,10 +40,10 @@
             },
             "args": [
                 "--features",
-                "untrusted bindings-python"
+                "untrusted bindings"
             ],
             "group": "build",
-            "label": "cargo build --features untrusted,bindings-python",
+            "label": "cargo build --features untrusted,bindings",
             "detail": "    run before testing in Python",
             "presentation": {
                 "clear": true
@@ -63,33 +63,8 @@
                 "cwd": "./rust"
             },
             "args": [
-                "--no-default-features",
                 "--features",
-                "bindings-python untrusted"
-            ],
-            "group": "build",
-            "label": "cargo test --no-default-features --features untrusted,bindings-python",
-            "detail": "    test a build without GMP/MPFR/OpenSSL (Windows)",
-            "presentation": {
-                "clear": true
-            }
-        },
-        {
-            "type": "cargo",
-            "command": "test",
-            "problemMatcher": {
-                "base": "$rustc",
-                "fileLocation": [
-                    "relative",
-                    "${workspaceFolder}/rust"
-                ]
-            },
-            "options": {
-                "cwd": "./rust"
-            },
-            "args": [
-                "--features",
-                "bindings-python untrusted"
+                "untrusted bindings"
             ],
             "group": "build",
             "label": "cargo test --features untrusted,ffi",
@@ -114,7 +89,7 @@
             },
             "args": [
                 "--features",
-                "bindings-python untrusted"
+                "untrusted bindings"
             ],
             "group": "build",
             "label": "cargo clippy --features ffi",
@@ -153,7 +128,7 @@
             "command": "rustdoc",
             "problemMatcher": {
                 "base": "$rustc",
-                "fileLocation": ["relative", "${workspaceFolder}/rust"],
+                "fileLocation": ["relative", "${workspaceFolder}/rust"]
             },
             "options": {
                 "cwd": "./rust"
@@ -167,6 +142,115 @@
             "presentation": {
                 "clear": true
             }
+        },
+
+        {
+            "label": "R/ stage",
+            "detail": "    stage an R package so that it can be built",
+            "type": "shell",
+            "command": "bash tools/r_stage.sh",
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ clean",
+            "detail": "    return a staged R package to developer mode",
+            "type": "shell",
+            "command": "bash tools/r_stage.sh -c",
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ pkgdown",
+            "detail": "    build a pkgdown site",
+            "type": "shell",
+            "command": "bash tools/r_stage.sh -d",
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ test",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "Rscript -e 'devtools::load_all(recompile=TRUE); devtools::test(reporter = c(\"progress\", \"fail\"))'",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ test file",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "Rscript -e 'devtools::load_all(recompile=TRUE); library(testthat); test_file(\"${file}\", reporter = c(\"location\"))'",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ document",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "Rscript -e 'devtools::document()'",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ check (devtools)",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "Rscript -e 'devtools::check()'",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ check (R CMD)",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "R CMD build . && R CMD check --as-cran opendp_*.tar.gz",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ install",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "Rscript -e 'devtools::install()'",
+            "presentation": {
+                "clear": true
+            }
         }
-    ]
+    ],
+    "options": {
+        "env": {
+            "OPENDP_LIB_DIR": "${workspaceFolder}/rust/target/debug",
+            "RUST_BACKTRACE": "1"
+        }
+    }
 }

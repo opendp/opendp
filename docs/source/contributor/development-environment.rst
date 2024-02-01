@@ -47,14 +47,14 @@ Now run ``cargo build`` in the ``rust`` subdirectory of the repo:
 .. code-block:: bash
 
     cd rust
-    cargo build --features untrusted,bindings-python
+    cargo build --features untrusted,bindings
 
 This will compile a debug build of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. 
 (The specific name of the library file will vary depending on your platform.)
 
 Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to run a lightweight check that the code is valid.
 
-In the above commands, the features ``untrusted`` and ``bindings-python`` are enabled.
+In the above commands, the features ``untrusted`` and ``bindings`` are enabled.
 
 Setting a feature changes how the crate compiles:
 
@@ -78,16 +78,12 @@ Setting a feature changes how the crate compiles:
      - Enable to include constructors that are only private if the constructor arguments are honest.
    * - ``floating-point``
      - Enable to include transformations/measurements with floating-point vulnerabilities.
-   * - ``bindings-python``
-     - Enables the ``ffi`` and ``derive`` feature and regenerates sources in the Python package.
+   * - ``bindings``
+     - Enables the ``ffi`` and ``derive`` feature and regenerates sources in the Python and R packages.
    * - ``ffi``
      - Enable to include C foreign function interfaces.
    * - ``derive``
      - Enable to embed links to proofs in the documentation.
-   * - ``use-system-libs``
-     - Enable to use the system installation of MPFR.
-   * - ``use-mpfr``
-     - Already enabled. Use MPFR for exact floating-point arithmetic.
    * - ``use-openssl``
      - Already enabled. Use OpenSSL for secure noise generation.
 
@@ -104,18 +100,6 @@ To use a release-mode binary from the Python bindings,
 set the environment variable ``OPENDP_TEST_RELEASE=1`` before importing OpenDP.
 
 If you run into problems, please contact us!
-
-.. note::
-
-    You may encounter the following build error on Windows:
-
-    .. code-block::
-
-        error: failed to run custom build command for `gmp-mpfr-sys v1.4.10`
-
-    There is a more involved `setup guide <https://github.com/opendp/opendp/tree/main/rust/windows>`_ for Windows users.
-    You can compromise to simple and vulnerable builds instead, by adding the ``--no-default-features`` flag to cargo commands.
-    Be advised this flag disables GMP's exact float handling, as well as OpenSSL's secure noise generation.
 
 
 Python Setup
@@ -177,8 +161,8 @@ At this point, you should be able import OpenDP as a locally installed package:
     This can occur if you are on a Mac M1 and have an x86_64 Python install.
     
 
-Testing Python
---------------
+Python Tests
+------------
 You can test that things are working by running OpenDP's Python test suite, using ``pytest``.
 Run the tests from the ``python`` directory. 
 
@@ -197,12 +181,96 @@ If pytest is not found, don't forget to activate your virtual environment!
 This is just a quick overview of building OpenDP. 
 If you're interested in porting OpenDP to a different platform, we'd be delighted to get your help; please :doc:`contact us <../contact>`!
 
-Documentation
--------------
+Python Documentation
+--------------------
 
 This documentation website is built with Sphinx.
 The source code and developer documentation is
 `here <https://github.com/opendp/opendp/tree/main/docs#readme>`_.
+
+
+
+R Setup
+-------
+
+You can also load an R package that uses your new OpenDP binary. 
+
+First, set an environment variable to the absolute path of the OpenDP Library binary directory:
+
+.. code-block:: bash
+
+    export OPENDP_RUST_LIB=/absolute/path/to/opendp/rust/target/debug/
+
+Then, install devtools in R:
+
+.. code-block:: R
+
+    install.packages("devtools", "RcppTOML")
+
+On Mac you may need to run ``brew install harfbuzz fribidi libgit2`` first.
+
+After each edit to the R or Rust source, run the following command in R to (re)load the R package:
+
+.. code-block:: R
+
+    devtools::load_all("R/opendp/", recompile=TRUE)
+
+.. This function...
+.. - runs `src/Makevars`
+..     - cargo builds `libopendp.a` (rust-lib) and `opendp.h` (rust-lib header file)
+.. - compiles the c files in `src/`, which statically links with `libopendp.a`
+.. - outputs `src/opendp.so`, which is used by all R functions
+.. - reloads all R functions
+
+To do a full package installation from local sources:
+
+.. prompt:: bash
+
+    tools/r_stage.sh && Rscript -e 'devtools::install("R/opendp")'
+
+To restore to a developer setup, run:
+
+.. prompt:: bash
+
+    tools/r_stage.sh -c
+
+
+
+R Tests
+-------
+
+Run tests (tests are located in ``R/opendp/tests/``):
+
+.. code-block:: R
+
+    devtools::test("R/opendp")
+
+
+R also has a built-in check function that runs tests and checks for common errors:
+
+.. code-block:: R
+    
+    devtools::check("R/opendp")
+
+To run the same check manually, use:
+
+.. code-block:: bash
+
+    R CMD build R/opendp
+    R CMD check opendp_*.tar.gz --as-cran
+
+It is important `R CMD check` is run on the `.tar.gz`, not on `R/opendp`, 
+because `check` depends on some of the changes `build` makes within the `.tar.gz`.
+
+
+R Documentation
+---------------
+This script uses roxygen to generate ``R/opendp/man`` pages from `#'` code comments,
+and then uses ``pkgdown`` to render the documentation website.
+
+.. code-block:: bash
+
+    tools/r_stage.sh -d
 
 
 Developer Tooling
@@ -220,7 +288,7 @@ Use whatever tooling you are comfortable with.
 A few notes on VS Code:
 
 * Be sure to install the `rust-analyzer <https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer>`_ plugin, not the Rust plugin
-* Open ``rust-analyzer``'s extension settings, search "features" and add ``"untrusted", "bindings-python"``
+* Open ``rust-analyzer``'s extension settings, search "features" and add ``"untrusted", "bindings"``
 * Look for ``Problems`` in the bottom panel for live compilation errors as you work
 * Other useful extensions are "Better Toml", "crates" and "LaTex Workshop"
 * To configure VS Code with suggested tasks and settings: ``cp -a .vscode-suggested .vscode``

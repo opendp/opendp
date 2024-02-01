@@ -34,12 +34,13 @@ mod ffi;
 /// * `TIA` - Atomic type of the input data. Should be an integer type.
 /// * `TOA` - Atomic type of the output data. Should be a float type.
 pub fn make_consistent_b_ary_tree<TIA, TOA>(
-    branching_factor: usize,
+    branching_factor: u32,
 ) -> Fallible<Function<Vec<TIA>, Vec<TOA>>>
 where
     TIA: CheckAtom + Clone,
     TOA: Float + RoundCast<TIA>,
 {
+    let branching_factor = branching_factor as usize;
     Ok(Function::new_fallible(move |arg: &Vec<TIA>| {
         let layers = num_layers_from_num_nodes(arg.len(), branching_factor);
 
