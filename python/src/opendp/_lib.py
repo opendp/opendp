@@ -74,6 +74,37 @@ def _load_library():
 
 lib = _load_library()
 
+
+np_csprng: "np.random.Generator" = None # type: ignore[assignment]
+try:
+    import numpy as np  # type: ignore[import-not-found]
+    from randomgen import UserBitGenerator  # type: ignore[import]
+
+    buffer_len = 1024
+    buffer = np.empty(buffer_len, dtype=np.uint64)
+    buffer_ptr = ctypes.cast(buffer.ctypes.data, ctypes.POINTER(ctypes.c_uint8))
+    buffer_pos = buffer_len
+
+    def next_raw(_voidp):
+        global buffer_pos
+        if buffer_len == buffer_pos:
+            from opendp._data import fill_bytes
+
+            # there are 8x as many u8s as there are u64s
+            if not fill_bytes(buffer_ptr, buffer_len * 8): # pragma: no cover
+                from opendp.mod import OpenDPException
+                raise OpenDPException("FailedFunction", "Failed to sample from CSPRNG")
+            buffer_pos = 0
+
+        out = buffer[buffer_pos]
+        buffer_pos += 1
+        return int(out)
+
+    np_csprng = np.random.Generator(bit_generator=UserBitGenerator(next_raw))
+
+except ImportError:  # pragma: no cover
+    pass
+
 # This enables backtraces in Rust by default.
 # It can be disabled by setting RUST_BACKTRACE=0.
 # Binary searches disable backtraces for performance reasons.

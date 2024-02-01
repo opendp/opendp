@@ -11,6 +11,7 @@ __all__ = [
     "bool_free",
     "extrinsic_object_free",
     "ffislice_of_anyobjectptrs",
+    "fill_bytes",
     "object_as_slice",
     "object_free",
     "object_type",
@@ -103,6 +104,38 @@ def ffislice_of_anyobjectptrs(
     lib_function.restype = FfiResult
     
     output = unwrap(lib_function(c_raw), FfiSlicePtr)
+    
+    return output
+
+
+@versioned
+def fill_bytes(
+    ptr,
+    len: int
+) -> bool:
+    r"""Internal function. Populate the buffer behind `ptr` with `len` random bytes
+    sampled from a cryptographically secure RNG.
+    
+    [fill_bytes in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.fill_bytes.html)
+    
+    :param ptr: 
+    :param len: 
+    :type len: int
+    :rtype: bool
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_ptr = ptr
+    c_len = py_to_c(len, c_type=ctypes.c_size_t, type_name=usize)
+    
+    # Call library function.
+    lib_function = lib.opendp_data__fill_bytes
+    lib_function.argtypes = [ctypes.POINTER(ctypes.c_uint8), ctypes.c_size_t]
+    lib_function.restype = ctypes.c_bool
+    
+    output = c_to_py(lib_function(c_ptr, c_len))
     
     return output
 

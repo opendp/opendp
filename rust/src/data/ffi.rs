@@ -15,7 +15,7 @@ use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
 use crate::ffi::util::{self, into_c_char_p, ExtrinsicObject};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 use crate::measures::SMDCurve;
-use crate::traits::samplers::Shuffle;
+use crate::traits::samplers::{fill_bytes, Shuffle};
 use crate::traits::TotalOrd;
 use crate::{err, fallible, try_, try_as_ref};
 
@@ -680,6 +680,18 @@ pub extern "C" fn ffiresult_err(
         message,
         backtrace: CString::new("").unwrap().into_raw(),
     })))
+}
+
+#[bootstrap(
+    name = "fill_bytes",
+    arguments(ptr(c_type = "uint8_t *", do_not_convert = true))
+)]
+/// Internal function. Populate the buffer behind `ptr` with `len` random bytes
+/// sampled from a cryptographically secure RNG.
+#[no_mangle]
+pub extern "C" fn opendp_data__fill_bytes(ptr: *mut u8, len: usize) -> bool {
+    let buffer = unsafe { slice::from_raw_parts_mut(ptr, len) };
+    fill_bytes(buffer).is_ok()
 }
 
 #[cfg(test)]
