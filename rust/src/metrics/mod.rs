@@ -431,6 +431,61 @@ impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
     }
 }
 
+/// The $L^0$, $L^1$, $L\infty$ norms of the per-partition distances between data sets.
+///
+/// The $L^0$ norm counts the number of partitions that have changed.
+/// The $L^1$ norm is the total change.
+/// The $L\infty$ norm is the greatest change in any one partition.
+///
+/// # Proof Definition
+///
+/// ### $d$-closeness
+/// For any two partitionings $u, v \in \texttt{D}$ and $d$ of type `(usize, M::Distance, M::Distance)`,
+/// we say that $u, v$ are $d$-close under the the $PM$ distance metric (abbreviated as $d_{PM}$) whenever
+///
+/// ```math
+/// d_{PM}(x, x') = |d_M(x, x')|_0, |d_M(x, x')|_1, |d_M(x, x')|_\infty \leq d
+/// ```
+///
+/// All three numbers in the triple must be less than their respective values in $d$ to be $d$-close.
+///
+#[derive(Clone, PartialEq)]
+pub struct PartitionDistance<M: Metric>(pub M);
+impl<M: Metric> Default for PartitionDistance<M> {
+    fn default() -> Self {
+        PartitionDistance(M::default())
+    }
+}
+
+impl<M: Metric> Debug for PartitionDistance<M> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "PartitionDistance({:?})", self.0)
+    }
+}
+
+impl<M: Metric> Metric for PartitionDistance<M> {
+    //               L^0          L^1          L^\infty
+    type Distance = (IntDistance, M::Distance, M::Distance);
+}
+
+impl<T: CheckAtom> MetricSpace
+    for (
+        VectorDomain<AtomDomain<T>>,
+        PartitionDistance<AbsoluteDistance<T>>,
+    )
+{
+    fn check_space(&self) -> Fallible<()> {
+        if self.0.element_domain.nullable() {
+            fallible!(
+                MetricSpace,
+                "PartitionDistance requires non-nullable elements"
+            )
+        } else {
+            Ok(())
+        }
+    }
+}
+
 /// Indicates if two elements are equal to each other.
 ///
 /// This is used in the context of randomized response,
