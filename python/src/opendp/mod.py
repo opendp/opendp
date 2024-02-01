@@ -677,17 +677,18 @@ def binary_search_chain(
         d_in: Any, d_out: Any,
         bounds: Tuple[float, float] | None = None,
         T=None) -> M:
-    """Useful to find the Transformation or Measurement parameterized with the ideal constructor argument.
+    """Find the highest-utility (`d_in`, `d_out`)-close Transformation or Measurement.
     
-    Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
-    subject to the chained relation being (`d_in`, `d_out`)-close.
+    Searches for the numeric parameter to `make_chain` that results in a computation
+    that most tightly satisfies `d_out` when datasets differ by at most `d_in`,
+    then returns the Transformation or Measurement corresponding to said parameter.
 
     See `binary_search_param` to retrieve the discovered parameter instead of the complete computation chain.
 
-    :param make_chain: a unary function that maps from a number to a Transformation or Measurement
-    :param d_in: desired input distance of the computation chain
-    :param d_out: desired output distance of the computation chain
-    :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
+    :param make_chain: a function that takes a number and returns a Transformation or Measurement
+    :param d_in: how far apart input datasets can be
+    :param d_out: how far apart output datasets or distributions can be
+    :param bounds: a 2-tuple of the lower and upper bounds on the input of `make_chain`
     :param T: type of argument to `make_chain`, one of {float, int}
     :return: a chain parameterized at the nearest passing value to the decision point of the relation
     :rtype: Union[Transformation, Measurement]
@@ -741,15 +742,15 @@ def binary_search_param(
         d_in: Any, d_out: Any,
         bounds: Tuple[float, float] | None = None,
         T=None) -> float:
-    """Useful to solve for the ideal constructor argument.
+    """Solve for the ideal constructor argument to `make_chain`.
     
     Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
-    :param make_chain: a unary function that maps from a number to a Transformation or Measurement
-    :param d_in: desired input distance of the computation chain
-    :param d_out: desired output distance of the computation chain
-    :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
+    :param make_chain: a function that takes a number and returns a Transformation or Measurement
+    :param d_in: how far apart input datasets can be
+    :param d_out: how far apart output datasets or distributions can be
+    :param bounds: a 2-tuple of the lower and upper bounds on the input of `make_chain`
     :param T: type of argument to `make_chain`, one of {float, int}
     :return: the nearest passing value to the decision point of the relation
     :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
@@ -838,7 +839,7 @@ def binary_search(
         bounds: Tuple[float, float] | None = None,
         T: Type[float] | None = None,
         return_sign: bool = False) -> float | Tuple[float, int]:
-    """Find the closest passing value to the decision boundary of `predicate` within float or integer `bounds`.
+    """Find the closest passing value to the decision boundary of `predicate`.
 
     If bounds are not passed, conducts an exponential search.
     

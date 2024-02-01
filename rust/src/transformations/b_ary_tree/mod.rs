@@ -27,8 +27,8 @@ use opendp_derive::bootstrap;
 pub fn make_b_ary_tree<M, TA>(
     input_domain: VectorDomain<AtomDomain<TA>>,
     input_metric: M,
-    leaf_count: usize,
-    branching_factor: usize,
+    leaf_count: u32,
+    branching_factor: u32,
 ) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, VectorDomain<AtomDomain<TA>>, M, M>>
 where
     TA: Integer,
@@ -42,6 +42,8 @@ where
     if branching_factor < 2 {
         return fallible!(MakeTransformation, "branching_factor must be at least two");
     }
+    let leaf_count = leaf_count as usize;
+    let branching_factor = branching_factor as usize;
 
     let num_layers = num_layers_from_num_leaves(leaf_count, branching_factor);
     // specifically, the number of leaves in a full tree
@@ -124,7 +126,7 @@ impl<const P: usize, T> BAryTreeMetric for LpDistance<P, T> {}
 ///
 /// # Arguments
 /// * `size_guess` - A guess at the size of your dataset.
-pub fn choose_branching_factor(size_guess: usize) -> usize {
+pub fn choose_branching_factor(size_guess: u32) -> u32 {
     // Formula (3) estimates variance
     fn v_star_avg(n: f64, b: f64) -> f64 {
         let h = n.log(b);

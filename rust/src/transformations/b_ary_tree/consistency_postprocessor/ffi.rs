@@ -1,7 +1,4 @@
-use std::{
-    convert::TryFrom,
-    os::raw::{c_char, c_uint},
-};
+use std::{convert::TryFrom, os::raw::c_char};
 
 use crate::{
     core::{FfiResult, IntoAnyFunctionFfiResultExt},
@@ -13,11 +10,11 @@ use crate::{
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_consistent_b_ary_tree(
-    branching_factor: c_uint,
+    branching_factor: u32,
     TIA: *const c_char,
     TOA: *const c_char,
 ) -> FfiResult<*mut AnyFunction> {
-    fn monomorphize<TIA, TOA>(branching_factor: usize) -> Fallible<AnyFunction>
+    fn monomorphize<TIA, TOA>(branching_factor: u32) -> Fallible<AnyFunction>
     where
         TIA: 'static + CheckAtom + Clone,
         TOA: Float + RoundCast<TIA>,
@@ -25,7 +22,6 @@ pub extern "C" fn opendp_transformations__make_consistent_b_ary_tree(
         make_consistent_b_ary_tree::<TIA, TOA>(branching_factor).into_any()
     }
 
-    let branching_factor = branching_factor as usize;
     let TIA = try_!(Type::try_from(TIA));
     let TOA = try_!(Type::try_from(TOA));
     dispatch!(monomorphize, [

@@ -279,11 +279,11 @@ def _slice_to_extrinsic(raw: FfiSlicePtr):
 def _string_to_slice(val: str) -> FfiSlicePtr:
     if np is not None and isinstance(val, np.ndarray):
         val = val.item() # pragma: no cover
-    return _wrap_in_slice(ctypes.c_char_p(val.encode()), len(val) + 1)
+    return _wrap_in_slice(ctypes.pointer(ctypes.c_char_p(val.encode())), 1)
 
 
 def _slice_to_string(raw: FfiSlicePtr) -> str:
-    return ctypes.cast(raw.contents.ptr, ctypes.c_char_p).value.decode() # type: ignore[reportOptionalMemberAccess,union-attr]
+    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p)).contents.value.decode()  # type: ignore[reportOptionalMemberAccess,union-attr]
 
 
 def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:

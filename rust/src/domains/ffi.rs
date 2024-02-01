@@ -224,7 +224,10 @@ pub extern "C" fn opendp_domains__option_domain(
 
 #[bootstrap(
     name = "vector_domain",
-    arguments(size(rust_type = "Option<i32>", default = b"null")),
+    arguments(
+        atom_domain(c_type = "AnyDomain *", rust_type = b"null"),
+        size(rust_type = "Option<i32>", default = b"null")
+    ),
     returns(c_type = "FfiResult<AnyDomain *>")
 )]
 /// Construct an instance of `VectorDomain`.
