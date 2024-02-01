@@ -94,6 +94,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install -r requirements-dev.txt
+          
+          # not installed via requirements-dev because pip-compile fixes the numpy version
+          # no fixed numpy version is compatible with both 3.8 and 3.12
+          python -m pip install scikit-learn
 
       - name: Type check with mypy
         run: |

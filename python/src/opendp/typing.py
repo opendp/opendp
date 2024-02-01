@@ -4,7 +4,7 @@ OpenDP relies on precise descriptions of data types to make its security guarant
 These are more natural in Rust with its fine-grained type system,
 but they may feel out of place in Python. These utilities try to fill that gap.
 '''
-
+from __future__ import annotations
 import sys
 import typing
 from collections.abc import Hashable
@@ -346,7 +346,7 @@ class RuntimeType(object):
     @classmethod
     def parse_or_infer(
             cls,
-            type_name: RuntimeTypeDescriptor = None, # type: ignore[assignment]
+            type_name: RuntimeTypeDescriptor | None = None,
             public_example: Any = None,
             generics: Optional[List[str]] = None
     ) -> Union["RuntimeType", str]:
@@ -490,7 +490,7 @@ def get_first(value):
         return None
     return next(iter(value))
 
-def parse_or_infer(type_name: RuntimeTypeDescriptor, example) -> Union[RuntimeType, str]:
+def parse_or_infer(type_name: RuntimeTypeDescriptor | None, example) -> Union[RuntimeType, str]:
     return RuntimeType.parse_or_infer(type_name, example)
 
 def pass_through(value: Any) -> Any:

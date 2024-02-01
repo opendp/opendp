@@ -259,7 +259,6 @@ def test_extrinsic_free():
         dp.max_divergence(T=float),
         lambda x: x,
         lambda _: 0.0,
-        TO="ExtrinsicObject",
     )
 
     import gc
@@ -278,9 +277,7 @@ def test_user_distance():
 
     # create custom transformation
     trans = dp.t.make_user_transformation(
-        dp.vector_domain(
-            dp.user_domain("datetimes", lambda x: isinstance(x, datetime))
-        ),
+        dp.vector_domain(dp.user_domain("DatetimeDomain()", lambda x: isinstance(x, datetime))),
         dp.user_distance("sum of millisecond distances"),
         dp.atom_domain(T=float),
         dp.absolute_distance(T=float),
@@ -302,7 +299,6 @@ def test_user_distance():
         lambda _: 0.0,
         # clearly not actually tCDP
         lambda d_in: lambda omega: d_in * omega * 2,
-        TO="ExtrinsicObject",
     )
 
     assert meas(2.0) == 0.0

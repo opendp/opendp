@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use crate::{
     core::{FfiResult, Function, Measurement, PrivacyMap},
     error::Fallible,
@@ -17,7 +19,7 @@ fn make_sequential_composition(
 ) -> Fallible<Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>> {
     fn monomorphize<
         QI: 'static + TotalOrd + Clone + Send + Sync,
-        QO: 'static + TotalOrd + Clone + Send + Sync,
+        QO: 'static + TotalOrd + Clone + Send + Sync + Debug,
     >(
         input_domain: AnyDomain,
         input_metric: AnyMetric,
