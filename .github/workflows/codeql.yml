@@ -60,6 +60,7 @@ jobs:
         # queries: security-extended,security-and-quality
         config: |
           # ignore pseudocode directories used for proofs
+          # This is an embedded string of yaml, and is intentional.
           paths-ignore:
             - '**/pseudocode'
 
