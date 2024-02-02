@@ -38,6 +38,7 @@ for line in binder_requirements:
             ".binder/requirements.txt opendp dependency is incorrect"
 
 with ControlEditor(path='R/opendp/DESCRIPTION') as control:
-    assert control.version == r_version
+    version = next(iter(control.paragraphs))["Version"]
+    assert version == r_version
 
 print("All version numbers are synchronized")
