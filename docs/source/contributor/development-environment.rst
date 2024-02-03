@@ -84,8 +84,6 @@ Setting a feature changes how the crate compiles:
      - Enable to include C foreign function interfaces.
    * - ``derive``
      - Enable to embed links to proofs in the documentation.
-   * - ``use-openssl``
-     - Already enabled. Use OpenSSL for secure noise generation.
 
 .. raw:: html
 

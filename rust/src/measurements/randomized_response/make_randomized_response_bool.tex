@@ -87,7 +87,7 @@ The following proof makes use of the following lemma that asserts the correctnes
 \end{note}
 \end{tcolorbox}
 
-    \texttt{sample\_bernoulli} can only fail when the OpenSSL pseudorandom byte generator used in its implementation fails due to lack of system entropy. 
+    \texttt{sample\_bernoulli} can only fail when the pseudorandom byte generator used in its implementation fails due to lack of system entropy. 
     This is usually related to the computer's physical environment and not the dataset. 
     The rest of this proof is conditioned on the assumption that \texttt{sample\_bernoulli} does not raise an exception. 
     
