@@ -1,14 +1,13 @@
 use std::convert::TryFrom;
 
-use az::{SaturatingAs, SaturatingCast};
+use dashu::{base::Signed, integer::IBig, rational::RBig};
 use opendp_derive::bootstrap;
-use rug::{Complete, Integer, Rational};
 
 use crate::{
     core::{Measurement, MetricSpace, PrivacyMap},
     error::Fallible,
     measures::MaxDivergence,
-    traits::{samplers::sample_discrete_laplace, InfCast},
+    traits::{samplers::sample_discrete_laplace, InfCast, SaturatingCast},
 };
 
 use super::BaseDiscreteLaplaceDomain;
@@ -47,17 +46,17 @@ pub fn make_base_discrete_laplace_cks20<D, QO>(
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
     D: BaseDiscreteLaplaceDomain,
-    D::Atom: crate::traits::Integer,
+    D::Atom: crate::traits::Integer + SaturatingCast<IBig>,
     (D, D::InputMetric): MetricSpace,
     QO: crate::traits::Float + InfCast<D::Atom>,
-    Rational: TryFrom<QO>,
-    Integer: From<D::Atom> + SaturatingCast<D::Atom>,
+    RBig: TryFrom<QO>,
+    IBig: From<D::Atom>,
 {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
     let scale_rational =
-        Rational::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
+        RBig::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
 
     Measurement::new(
         input_domain,
@@ -65,9 +64,9 @@ where
             D::new_map_function(move |arg: &D::Atom| Ok(*arg))
         } else {
             D::new_map_function(move |arg: &D::Atom| {
-                let arg = Integer::from(*arg);
+                let arg = IBig::from(*arg);
                 let noise = sample_discrete_laplace(scale_rational.clone())?;
-                Ok((arg + noise).saturating_as())
+                Ok(D::Atom::saturating_cast(arg + noise))
             })
         },
         input_metric,
@@ -90,7 +89,7 @@ where
 }
 
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
-/// directly using bignum types from [`rug`].
+/// directly using bignum rational types.
 ///
 /// Set `D` to change the input data type and input metric:
 ///
@@ -107,34 +106,33 @@ where
 ///
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<Integer>>` or `AtomDomain<Integer>`
-pub fn make_base_discrete_laplace_cks20_rug<D>(
-    scale: Rational,
-) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<Rational>>>
+pub fn make_base_rational_laplace_cks20<D>(
+    scale: RBig,
+) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<RBig>>>
 where
-    D: BaseDiscreteLaplaceDomain<Atom = Integer>,
+    D: BaseDiscreteLaplaceDomain<Atom = IBig>,
     (D, D::InputMetric): MetricSpace,
 {
-    if scale <= 0 {
+    if scale.is_negative() || scale.is_zero() {
         return fallible!(MakeMeasurement, "scale must be positive");
     }
 
     Measurement::new(
         D::default(),
-        D::new_map_function(enclose!(scale, move |arg: &Integer| {
+        D::new_map_function(enclose!(scale, move |arg: &IBig| {
             sample_discrete_laplace(scale.clone()).map(|n| arg + n)
         })),
         D::InputMetric::default(),
         MaxDivergence::default(),
-        PrivacyMap::new(move |d_in: &Integer| (d_in / &scale).complete()),
+        PrivacyMap::new(move |d_in: &IBig| (RBig::from(d_in.clone()) / &scale)),
     )
 }
 
 #[cfg(test)]
 mod test {
-    use num::{One, Zero};
 
     use super::*;
-    use crate::{domains::AtomDomain, error::ExplainUnwrap, metrics::AbsoluteDistance};
+    use crate::{domains::AtomDomain, metrics::AbsoluteDistance};
 
     // there is a distributional test in the accuracy module
 
@@ -168,19 +166,19 @@ mod test {
     }
 
     #[test]
-    fn test_make_base_discrete_laplace_cks20_rug() -> Fallible<()> {
-        let _1e30 = Rational::try_from(1e30f64).unwrap_test();
-        let meas = make_base_discrete_laplace_cks20_rug::<AtomDomain<_>>(_1e30.clone())?;
-        println!("{:?}", meas.invoke(&Integer::zero())?);
-        assert!(meas.check(&Integer::one(), &_1e30)?);
+    fn test_make_base_rational_laplace_cks20() -> Fallible<()> {
+        let _1e30 = RBig::try_from(1e30f64).unwrap();
+        let meas = make_base_rational_laplace_cks20::<AtomDomain<_>>(_1e30.clone())?;
+        println!("{:?}", meas.invoke(&IBig::ZERO)?);
+        assert!(meas.check(&IBig::ONE, &_1e30)?);
 
-        assert!(make_base_discrete_laplace_cks20_rug::<AtomDomain<_>>(Rational::zero()).is_err());
+        assert!(make_base_rational_laplace_cks20::<AtomDomain<_>>(RBig::ZERO).is_err());
 
-        let f64_max = Rational::try_from(f64::MAX).unwrap_test();
-        let meas = make_base_discrete_laplace_cks20_rug::<AtomDomain<_>>(f64_max)?;
+        let f64_max = RBig::try_from(f64::MAX).unwrap();
+        let meas = make_base_rational_laplace_cks20::<AtomDomain<_>>(f64_max)?;
         println!(
             "sample with scale=f64::MAX: {:?}",
-            meas.invoke(&Integer::zero())?
+            meas.invoke(&IBig::ZERO)?
         );
 
         Ok(())

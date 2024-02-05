@@ -199,6 +199,7 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                 i if i == "usize" => "size_t".to_string(),
                 i if i == "FfiSlice" => "FfiSlice *".to_string(),
                 i if i == "Transformation" => "AnyTransformation *".to_string(),
+                i if i == "ExtrinsicObject" => "ExtrinsicObject *".to_string(),
                 i if i == "Measurement" => "AnyMeasurement *".to_string(),
                 i if i == "Function" => "AnyFunction *".to_string(),
                 i if i == "AnyFunction" => "AnyFunction *".to_string(),

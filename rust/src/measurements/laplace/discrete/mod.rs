@@ -4,22 +4,17 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
     metrics::{AbsoluteDistance, L1Distance},
-    traits::{samplers::SampleDiscreteLaplaceLinear, CheckAtom},
+    traits::{samplers::SampleDiscreteLaplaceLinear, CheckAtom, SaturatingCast},
     traits::{Float, InfCast, Integer},
 };
 
-#[cfg(feature = "use-mpfr")]
+use dashu::{integer::IBig, rational::RBig};
 use opendp_derive::bootstrap;
-
-#[cfg(feature = "use-mpfr")]
-use az::SaturatingCast;
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
-#[cfg(feature = "use-mpfr")]
 mod cks20;
-#[cfg(feature = "use-mpfr")]
 pub use cks20::*;
 
 mod linear;
@@ -97,7 +92,6 @@ impl<T: Clone + CheckAtom> BaseDiscreteLaplaceDomain for VectorDomain<AtomDomain
 ///
 /// # Generics
 /// * `QO` - Data type of the output distance and scale. `f32` or `f64`.
-#[cfg(feature = "use-mpfr")]
 pub fn make_base_discrete_laplace<D, QO>(
     input_domain: D,
     input_metric: D::InputMetric,
@@ -105,11 +99,11 @@ pub fn make_base_discrete_laplace<D, QO>(
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
     D: BaseDiscreteLaplaceDomain,
-    D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
+    D::Atom: Integer + SampleDiscreteLaplaceLinear<QO> + SaturatingCast<IBig>,
     (D, D::InputMetric): MetricSpace,
     QO: Float + InfCast<D::Atom> + InfCast<D::Atom>,
-    rug::Rational: std::convert::TryFrom<QO>,
-    rug::Integer: From<D::Atom> + SaturatingCast<D::Atom>,
+    RBig: std::convert::TryFrom<QO>,
+    IBig: From<D::Atom>,
 {
     // benchmarking results at different levels of σ
     // src in /rust/benches/discrete_laplace/main.rs
@@ -143,21 +137,6 @@ where
     } else {
         make_base_discrete_laplace_linear(input_domain, input_metric, scale, None)
     }
-}
-
-#[cfg(not(feature = "use-mpfr"))]
-pub fn make_base_discrete_laplace<D, QO>(
-    input_domain: D,
-    input_metric: D::InputMetric,
-    scale: QO,
-) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
-where
-    D: BaseDiscreteLaplaceDomain,
-    (D, D::InputMetric): MetricSpace,
-    D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
-    QO: Float + InfCast<D::Atom>,
-{
-    make_base_discrete_laplace_linear(input_domain, input_metric, scale, None)
 }
 
 #[cfg(test)]

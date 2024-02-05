@@ -2,9 +2,10 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use dashu::float::round::mode::{Down, Up};
+use dashu::float::FBig;
 use num::ToPrimitive;
 use opendp_derive::bootstrap;
-use rug::{float::Round, ops::AddAssignRound, ops::DivAssignRound, Float as RugFloat};
 
 use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
 use crate::domains::{AtomDomain, MapDomain};
@@ -91,21 +92,28 @@ fn exponent_next_power_of_two(x: u64) -> u32 {
 fn scale_and_round<CI, CO>(x: CI, alpha: CO, scale: CO) -> Fallible<usize>
 where
     CI: Integer + ToPrimitive,
-    CO: InfCast<RugFloat>,
-    RugFloat: InfCast<CO>,
+    CO: InfCast<FBig>,
+    FBig: InfCast<CO>,
 {
-    let mut scale = RugFloat::neg_inf_cast(scale)?;
-    scale.div_assign_round(RugFloat::inf_cast(alpha)?, Round::Down);
-    // Truncate bits that represents values below 2^-53
-    scale.set_prec_round(
-        (f64::MANTISSA_DIGITS as i32 - scale.get_exp().unwrap()).max(1) as u32,
-        Round::Down,
-    );
+    let mut scale = FBig::neg_inf_cast(scale)?.with_rounding::<Down>();
+    scale /= FBig::inf_cast(alpha)?.with_rounding::<Down>();
 
-    let r = RugFloat::with_val(
-        f64::MANTISSA_DIGITS * 2,
-        x.max(CI::zero()).to_u64().unwrap_or_else(|| u64::MAX),
-    ) * scale;
+    // Truncate bits that represents values below 2^-53
+    scale = scale
+        .clone()
+        .with_precision(
+            (f64::MANTISSA_DIGITS as i32 - scale.exp())
+                .max(FBig::ONE)
+                .to_f64()
+                .value() as usize,
+        )
+        .value();
+
+    let r = FBig::from(x.max(CI::zero()).to_u64().unwrap_or_else(|| u64::MAX))
+        .with_precision(64)
+        .value()
+        * scale;
+
     let floored = f64::inf_cast(r.clone().floor())? as usize;
 
     match bool::sample_bernoulli(f64::inf_cast(r.fract())?, false)? {
@@ -115,13 +123,13 @@ where
 }
 
 // Probability of flipping bits = 1 / (alpha + 2)
-fn compute_prob<T: InfCast<RugFloat>>(alpha: T) -> f64
+fn compute_prob<T: InfCast<FBig>>(alpha: T) -> f64
 where
-    RugFloat: InfCast<T>,
+    FBig: InfCast<T>,
 {
-    let mut alpha = RugFloat::neg_inf_cast(alpha).expect("impl is infallible");
-    alpha.add_assign_round(2, Round::Down);
-    alpha.recip_round(Round::Up);
+    let alpha = FBig::neg_inf_cast(alpha).expect("impl is infallible");
+    let alpha: FBig<Down> = alpha.with_rounding() + 2;
+    let alpha = FBig::<Up>::ONE / alpha.with_rounding();
     // Round up to preserve privacy
     f64::inf_cast(alpha).expect("impl is infallible")
 }
@@ -129,13 +137,13 @@ where
 /// Reject any choice of `scale` or `alpha` such that `scale / alpha < 2^-52`
 ///
 /// Due to privacy concerns the current implementation discards bits with significance less than 2^-52 from scale/alpha
-fn are_parameters_invalid<T: InfCast<RugFloat>>(alpha: T, scale: T) -> bool
+fn are_parameters_invalid<T: InfCast<FBig>>(alpha: T, scale: T) -> bool
 where
-    RugFloat: InfCast<T>,
+    FBig: InfCast<T>,
 {
-    let scale = RugFloat::inf_cast(scale).expect("impl is infallible");
-    let alpha = RugFloat::neg_inf_cast(alpha).expect("impl is infallible");
-    scale * RugFloat::with_val(53, 52).exp2() < alpha
+    let scale = FBig::inf_cast(scale).expect("impl is infallible");
+    let alpha = FBig::neg_inf_cast(alpha).expect("impl is infallible");
+    scale * (1i64 << 52) < alpha
 }
 
 /// Computes the DP projection.
@@ -150,8 +158,8 @@ fn compute_projection<K, CI, CO>(
 ) -> Fallible<BitVector>
 where
     CI: Integer + ToPrimitive,
-    CO: Clone + InfCast<RugFloat>,
-    RugFloat: InfCast<CO>,
+    CO: Clone + InfCast<FBig>,
+    FBig: InfCast<CO>,
 {
     let mut z = vec![false; projection_size];
 
@@ -228,8 +236,8 @@ pub fn make_alp_state_with_hashers<K, CI, CO>(
 where
     K: 'static + Hashable,
     CI: 'static + Integer + ToPrimitive,
-    CO: 'static + Float + InfCast<RugFloat> + InfCast<CI>,
-    RugFloat: InfCast<CO>,
+    CO: 'static + Float + InfCast<FBig> + InfCast<CI>,
+    FBig: InfCast<CO>,
     (SparseDomain<K, CI>, L1Distance<CI>): MetricSpace,
 {
     if input_domain.value_domain.nullable() {
@@ -284,8 +292,8 @@ pub fn make_alp_state<K, CI, CO>(
 where
     K: 'static + Hashable,
     CI: 'static + Integer + InfCast<CO> + ToPrimitive,
-    CO: 'static + Float + InfCast<RugFloat> + InfCast<CI>,
-    RugFloat: InfCast<CO>,
+    CO: 'static + Float + InfCast<FBig> + InfCast<CI>,
+    FBig: InfCast<CO>,
     (SparseDomain<K, CI>, L1Distance<CI>): MetricSpace,
 {
     let value_limit: f64 = value_limit
@@ -392,8 +400,8 @@ pub fn make_alp_queryable<K, CI, CO>(
 where
     K: 'static + Hashable,
     CI: 'static + Integer + InfCast<CO> + ToPrimitive,
-    CO: 'static + Float + InfCast<RugFloat> + InfCast<CI>,
-    RugFloat: InfCast<CO>,
+    CO: 'static + Float + InfCast<FBig> + InfCast<CI>,
+    FBig: InfCast<CO>,
     (MapDomain<AtomDomain<K>, AtomDomain<CI>>, L1Distance<CI>): MetricSpace,
 {
     // this constructor is a simple wrapper for make_alp_state that adds a postprocessing step

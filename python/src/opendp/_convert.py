@@ -1,4 +1,5 @@
 from typing import Sequence, Tuple, List, Union, Dict, cast
+from inspect import signature
 
 from opendp._lib import *
 from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
@@ -57,7 +58,7 @@ def check_similar_scalar(expected, value):
 def check_c_int_cast(v, type_name):
     lower, upper = INT_SIZES[type_name]
     if not (lower <= v <= upper):
-        raise ValueError(f"value is not representable by {type_name}")
+        raise ValueError(f"{v} is not representable by {type_name}")
 
 
 def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any: # type: ignore[assignment]
@@ -80,6 +81,12 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     
     if c_type == TransitionFn:
         return _wrap_py_transition(value, type_name)
+
+    if c_type == ExtrinsicObjectPtr:
+        # since the memory is allocated by python, 
+        #    don't actually return an ExtrinsicObjectPtr, 
+        #    which would call rust to free the Python-allocated ExtrinsicObject
+        return ctypes.pointer(ExtrinsicObject(ctypes.py_object(value), c_counter))
 
     # check that the type name is consistent with the value
     if type_name is not None:
@@ -161,9 +168,8 @@ def c_to_py(value: Any) -> Any:
         bool_free(value)
         return value_contents
 
-    if isinstance(value, (Transformation, Measurement)):
-        # these types are meant to pass through
-        return value
+    if isinstance(value, ctypes.POINTER(ExtrinsicObject)):
+        return value.contents.ptr
 
     if isinstance(value, ctypes.c_void_p):
         # returned void pointers are interpreted as None
@@ -273,11 +279,11 @@ def _slice_to_extrinsic(raw: FfiSlicePtr):
 def _string_to_slice(val: str) -> FfiSlicePtr:
     if np is not None and isinstance(val, np.ndarray):
         val = val.item() # pragma: no cover
-    return _wrap_in_slice(ctypes.c_char_p(val.encode()), len(val) + 1)
+    return _wrap_in_slice(ctypes.pointer(ctypes.c_char_p(val.encode())), 1)
 
 
 def _slice_to_string(raw: FfiSlicePtr) -> str:
-    return ctypes.cast(raw.contents.ptr, ctypes.c_char_p).value.decode() # type: ignore[reportOptionalMemberAccess,union-attr]
+    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p)).contents.value.decode()  # type: ignore[reportOptionalMemberAccess,union-attr]
 
 
 def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
@@ -481,6 +487,11 @@ TransitionFn = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr, ctypes.c_bool)
 
 def _wrap_py_transition(py_transition, A):
     from opendp._convert import c_to_py, py_to_c
+
+    # the indicator that a query is internal is oftentimes not needed
+    if len(signature(py_transition).parameters) == 1:
+        py_transition_old = py_transition
+        py_transition = lambda q, _=None: py_transition_old(q)
 
     def wrapper_func(c_query, c_is_internal: ctypes.c_bool):
         try:

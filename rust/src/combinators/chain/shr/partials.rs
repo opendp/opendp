@@ -273,7 +273,7 @@ where
     }
 }
 
-#[cfg(all(test, feature = "use-mpfr"))]
+#[cfg(test)]
 mod tests_shr {
     use crate::measurements::then_base_discrete_laplace;
     use crate::transformations::{make_split_lines, then_cast_default, then_clamp, then_sum};

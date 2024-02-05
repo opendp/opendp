@@ -29,7 +29,6 @@ from opendp.metrics import (
     l2_distance,
     symmetric_distance,
 )
-
 from opendp.mod import (
     Domain,
     Measurement,
@@ -41,6 +40,20 @@ from opendp.mod import (
     binary_search_param,
 )
 from opendp.typing import RuntimeType
+
+
+__all__ = [
+    'space_of',
+    'domain_of',
+    'metric_of',
+    'loss_of',
+    'unit_of',
+    'Context',
+    'Query',
+    'Chain',
+    'PartialChain'
+]
+
 
 # a dictionary of "constructor name" -> (constructor_function, is_partial)
 # "constructor name" is the name of the constructor without the "make_" prefix

@@ -7,7 +7,7 @@
 The OpenDP Library is a modular collection of statistical algorithms that adhere to the definition of
 [differential privacy](https://en.wikipedia.org/wiki/Differential_privacy).
 It can be used to build applications of privacy-preserving computations, using a number of different models of privacy.
-OpenDP is implemented in Rust, with bindings for easy use from Python.
+OpenDP is implemented in Rust, with bindings for easy use from Python and R.
 
 The architecture of the OpenDP Library is based on a conceptual framework for expressing privacy-aware computations.
 This framework is described in the paper [A Programming Framework for OpenDP](https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf).
@@ -31,9 +31,13 @@ We welcome you to try it and look forward to feedback on the library! However, p
 
 ## Installation
 
-[OpenDP is on PyPI](https://pypi.org/project/opendp/) and can be installed with `pip` (the [package installer for Python](https://pypi.org/project/pip/)):
+Install OpenDP for Python with `pip` (the [package installer for Python](https://pypi.org/project/pip/)):
 
     $ pip install opendp
+
+Install OpenDP for R from an R session:
+
+    install.packages("opendp", repos = "https://opendp.r-universe.dev")
 
 More information can be found in the [Getting Started section of the User Guide](https://docs.opendp.org/en/stable/user/getting-started.html).
 

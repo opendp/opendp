@@ -1,4 +1,4 @@
-use num::Float;
+use dashu::integer::IBig;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
@@ -6,7 +6,7 @@ use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
-use crate::traits::{ExactIntCast, InfMul};
+use crate::traits::{ExactIntCast, Float, InfMul};
 use crate::transformations::{
     make_mean, LipschitzMulFloatDomain, LipschitzMulFloatMetric, MakeSum,
 };
@@ -26,6 +26,7 @@ pub extern "C" fn opendp_transformations__make_mean(
         AtomDomain<T>: LipschitzMulFloatDomain<Atom = T>,
         AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
         (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
+        IBig: From<T::Bits>,
     {
         let input_domain = input_domain
             .downcast_ref::<VectorDomain<AtomDomain<T>>>()?

@@ -16,6 +16,6 @@ def test_proven(monkeypatch):
     proven_fake = proven(fake)
     assert (
         '[(Proof Document)](https://docs.opendp.org/'
-        'en/latest/proofs/python/src/opendp/extrinsics/'
+        'en/latest/proofs/python/src/opendp/_extrinsics/'
         '../../../test/url-is-replaced.pdf)'
     ) in proven_fake.__doc__

@@ -38,6 +38,33 @@ At this point, you should be good to go! You can confirm your installation in Py
 
     >>> import opendp
 
+.. note::
+
+    The OpenDP Python package contains binaries for all supported platforms, so you don't need to worry about specifying a specific platform.
+
+At this point, you should be good to go! You can confirm your installation in Python by importing the top-level module ``opendp``:
+
+.. doctest::
+
+    >>> import opendp
+
+Installing OpenDP for R from R-Universe
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+OpenDP is distributed as an `R package on R-Universe <https://opendp.r-universe.dev>`_. 
+You can install it using from an R session:
+
+.. code-block:: R
+
+    install.packages("opendp", repos = "https://opendp.r-universe.dev")
+
+At this point, you should be good to go! You can confirm your installation in R by importing ``opendp``:
+
+.. code-block:: R
+
+    library(opendp)
+
+
 Installing OpenDP for Rust from crates.io
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -55,7 +82,6 @@ But if you need to use the Rust interface of OpenDP directly, you can just refer
     The actual version may differ depending on the `releases available <https://github.com/opendp/opendp/releases>`_.
 
 In the above snip, opting into the "contrib" feature includes code that has not yet completed the vetting process.
-Continuous noise samplers require explicit opt-in and are behind the "floating-point" feature.
 
 With that configured, the Rust dependency system will automatically download the crate as needed, and you can just ``use`` the ``opendp`` module:
 

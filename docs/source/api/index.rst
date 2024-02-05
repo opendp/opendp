@@ -12,4 +12,5 @@ API documentation entry points:
 
    Python API User Guide <user-guide/index>
    Python API Reference <python/index>
+   R API Reference <https://docs.opendp.org/en/stable/api/r>
    Rust API Reference <https://docs.rs/opendp>

@@ -1,5 +1,7 @@
 matplotlib
 numpy
+randomgen
 pandas
 seaborn
 scipy
+scikit-learn

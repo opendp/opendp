@@ -86,6 +86,38 @@ jobs:
           pip install -r tools/requirements-publish_tool.txt
           python tools/publish_tool.py python -r $REPOSITORY
 
+  publish-r:
+    if: 
+    needs: credential-check
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Download R bindings
+        uses: actions/download-artifact@v3
+        with:
+          name: r_package
+          path: R/opendp/
+
+      - name: Push to R branch
+        run: |
+          git fetch
+          git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git config --global user.name "$GITHUB_ACTOR"
+
+          # create brand new history each time
+          BRANCH=r-universe${{ (inputs.channel == 'stable') && '' || '-dev' }}
+          git checkout --orphan $BRANCH
+
+          git add R/opendp/ --force
+          echo "Push R package to $BRANCH branch"
+          git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
+          git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
+          git push --force origin $BRANCH
+
   publish-rust:
     needs: publish-python
     runs-on: ubuntu-20.04
@@ -132,3 +164,4 @@ jobs:
         run: |
           pip install -r tools/requirements-publish_tool.txt
           python tools/publish_tool.py github -d ${{ inputs.date }} $DRY_RUN_FLAG
+  

@@ -78,6 +78,9 @@ jobs:
     with:
       channel: ${{ inputs.channel }}
       sync: ${{ inputs.sync }}
+      # The inputs.counter is a string.
+      # To convert to integer, use fromJSON.
+      # https://docs.github.com/en/actions/learn-github-actions/expressions#example-returning-a-json-data-type
       counter: ${{ fromJSON(inputs.counter) }}
       dry_run: ${{ inputs.dry_run || inputs.fake }}
 

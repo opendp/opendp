@@ -1,13 +1,27 @@
-use crate::traits::ExactIntCast;
-#[cfg(feature = "use-mpfr")]
-use rug::{
-    ops::{AddAssignRound, DivAssignRound, MulAssignRound, PowAssignRound, SubAssignRound},
-    Float,
-};
+use std::ops::{Add, Div, Mul, Sub};
 
-use crate::error::Fallible;
-#[cfg(feature = "use-mpfr")]
-use crate::traits::InfCast;
+use crate::{
+    error::Fallible,
+    traits::{ExactIntCast, InfCast},
+};
+use dashu::{
+    base::{EstimatedLog2, SquareRoot},
+    float::{
+        round::mode::{Down, Up},
+        FBig,
+    },
+    integer::IBig,
+};
+use std::panic;
+
+// for context on why this is used, see conversation on https://github.com/cmpute/dashu/issues/29
+fn catch_unwind_silent<R>(f: impl FnOnce() -> R + panic::UnwindSafe) -> std::thread::Result<R> {
+    let prev_hook = panic::take_hook();
+    panic::set_hook(Box::new(|_| {}));
+    let result = panic::catch_unwind(f);
+    panic::set_hook(prev_hook);
+    result
+}
 
 /// Fallible absolute value that returns an error if overflowing.
 ///
@@ -176,12 +190,12 @@ pub trait InfLog2: Sized {
 pub trait InfSqrt: Sized {
     /// # Proof Definition
     /// For any `self` of type `Self`,
-    /// `self.inf_log2()` either returns `Ok(out)`,
+    /// `self.inf_sqrt()` either returns `Ok(out)`,
     /// where $out \ge \sqrt{self}$, or `Err(e)`.
     fn inf_sqrt(self) -> Fallible<Self>;
     /// # Proof Definition
     /// For any `self` of type `Self`,
-    /// `self.neg_inf_log2()` either returns `Ok(out)`,
+    /// `self.neg_inf_sqrt()` either returns `Ok(out)`,
     /// where $out \le \sqrt{self}$, or `Err(e)`.
     fn neg_inf_sqrt(self) -> Fallible<Self>;
 }
@@ -189,17 +203,17 @@ pub trait InfSqrt: Sized {
 /// Fallibly raise self to the power with specified rounding.
 ///
 /// Throws an error if the ideal output is not finite or representable.
-pub trait InfPow: Sized + AlertingPow {
+pub trait InfPowI: Sized + AlertingPow {
     /// # Proof Definition
     /// For any two values `self` and `p` of type `Self`,
-    /// `self.inf_pow(p)` either returns `Ok(out)`,
+    /// `self.inf_powi(p)` either returns `Ok(out)`,
     /// where $out \ge self^{p}$, or `Err(e)`.
-    fn inf_pow(&self, p: &Self) -> Fallible<Self>;
+    fn inf_powi(&self, p: IBig) -> Fallible<Self>;
     /// # Proof Definition
     /// For any two values `self` and `p` of type `Self`,
-    /// `self.neg_inf_pow(p)` either returns `Ok(out)`,
+    /// `self.neg_inf_powi(p)` either returns `Ok(out)`,
     /// where $out \le self^{p}$, or `Err(e)`.
-    fn neg_inf_pow(&self, p: &Self) -> Fallible<Self>;
+    fn neg_inf_powi(&self, p: IBig) -> Fallible<Self>;
 }
 
 /// Fallible addition with specified rounding.
@@ -303,7 +317,7 @@ pub trait InfLn1P: Sized {
 macro_rules! impl_alerting_abs_signed_int {
     ($($ty:ty),+) => ($(impl AlertingAbs for $ty {
         fn alerting_abs(&self) -> Fallible<Self> {
-            self.checked_abs().ok_or_else(|| err!(FailedFunction,
+            self.checked_abs().ok_or_else(|| err!(Overflow,
                 "the corresponding positive value for {} is out of range", self))
         }
     })+)
@@ -345,7 +359,7 @@ macro_rules! impl_alerting_int {
             #[inline]
             fn alerting_mul(&self, v: &Self) -> Fallible<Self> {
                 <$t>::checked_mul(*self, *v).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} * {} overflows. Consider tightening your parameters.",
                     self, v))
             }
@@ -354,7 +368,7 @@ macro_rules! impl_alerting_int {
             #[inline]
             fn alerting_div(&self, v: &Self) -> Fallible<Self> {
                 <$t>::checked_div(*self, *v).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} / {} overflows. Consider tightening your parameters.",
                     self, v))
             }
@@ -363,7 +377,7 @@ macro_rules! impl_alerting_int {
             #[inline]
             fn alerting_add(&self, v: &Self) -> Fallible<Self> {
                 <$t>::checked_add(*self, *v).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} + {} overflows. Consider tightening your parameters.",
                     self, v))
             }
@@ -372,7 +386,7 @@ macro_rules! impl_alerting_int {
             #[inline]
             fn alerting_sub(&self, v: &Self) -> Fallible<Self> {
                 <$t>::checked_sub(*self, *v).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} - {} overflows. Consider tightening your parameters.",
                     self, v))
             }
@@ -383,7 +397,7 @@ macro_rules! impl_alerting_int {
             fn alerting_pow(&self, p: &Self) -> Fallible<Self> {
                 let p = u32::exact_int_cast(*p)?;
                 <$t>::checked_pow(*self, p).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{}.pow({}) overflows. Consider tightening your parameters.",
                     self, p))
             }
@@ -407,7 +421,7 @@ macro_rules! impl_alerting_float {
             fn alerting_mul(&self, v: &Self) -> Fallible<Self> {
                 let y = self * v;
                 y.is_finite().then(|| y).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} * {} is not finite. Consider tightening your parameters.",
                     self, v))
             }
@@ -416,7 +430,7 @@ macro_rules! impl_alerting_float {
             fn alerting_div(&self, v: &Self) -> Fallible<Self> {
                 let y = self / v;
                 y.is_finite().then(|| y).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} / {} is not finite. Consider tightening your parameters.",
                     self, v))
             }
@@ -425,7 +439,7 @@ macro_rules! impl_alerting_float {
             fn alerting_add(&self, v: &Self) -> Fallible<Self> {
                 let y = self + v;
                 y.is_finite().then(|| y).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} + {} is not finite. Consider tightening your parameters.",
                     self, v))
             }
@@ -434,7 +448,7 @@ macro_rules! impl_alerting_float {
             fn alerting_sub(&self, v: &Self) -> Fallible<Self> {
                 let y = self - v;
                 y.is_finite().then(|| y).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} - {} is not finite. Consider tightening your parameters.",
                     self, v))
             }
@@ -443,7 +457,7 @@ macro_rules! impl_alerting_float {
             fn alerting_pow(&self, v: &Self) -> Fallible<Self> {
                 let y = self.powf(*v);
                 y.is_finite().then(|| y).ok_or_else(|| err!(
-                    FailedFunction,
+                    Overflow,
                     "{} - {} is not finite. Consider tightening your parameters.",
                     self, v))
             }
@@ -452,58 +466,69 @@ macro_rules! impl_alerting_float {
 }
 impl_alerting_float!(f32, f64);
 
+trait Log2 {
+    fn log2(self) -> Self;
+}
+
+impl Log2 for FBig<Down> {
+    fn log2(self) -> Self {
+        Self::try_from(self.log2_bounds().0).unwrap()
+        // If you implement via log rules, the bound is looser than dashu's EstimatedLog2.
+        //    However, dashu's EstimatedLog2 matches MPFR.
+        //    using log_b(x) = ln(x) / ln(b):
+        // self.ln() / FBig::<Up>::from(2).ln().with_rounding::<Down>()
+    }
+}
+impl Log2 for FBig<Up> {
+    fn log2(self) -> Self {
+        Self::try_from(self.log2_bounds().1).unwrap()
+    }
+}
+
 // TRAIT InfSqrt, InfLn, InfExp (univariate)
 macro_rules! impl_float_inf_uni {
-    ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident, $fallback:ident) => {
+    ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident) => {
         $(
-        #[cfg(feature="use-mpfr")]
         impl $name for $ty {
             fn $method_inf(self) -> Fallible<Self> {
-                use rug::float::Round::Up;
-                let mut this = Float::inf_cast(self)?;
-                this.$op(Up);
-                let this = Self::inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(|| err!(
-                    FailedFunction,
+                let not_finite = || err!(
+                    Overflow,
                     concat!("({}).", stringify!($method_inf), "() is not finite. Consider tightening your parameters."),
-                    self))
+                    self);
+                if !self.$op().is_finite() {
+                    return Err(not_finite());
+                }
+                let lhs = FBig::<Up>::inf_cast(self)?;
+                let Ok(output) = catch_unwind_silent(|| lhs.$op()) else {
+                    return Err(not_finite())
+                };
+                let output = Self::inf_cast(output)?;
+                output.is_finite().then(|| output).ok_or_else(not_finite)
             }
             fn $method_neg_inf(self) -> Fallible<Self> {
-                use rug::float::Round::Down;
-                let mut this = Float::neg_inf_cast(self)?;
-                this.$op(Down);
-                let this = Self::neg_inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(|| err!(
-                    FailedFunction,
+                let not_finite = || err!(
+                    Overflow,
                     concat!("({}).", stringify!($method_neg_inf), "() is not finite. Consider tightening your parameters."),
-                    self))
-            }
-        }
-        #[cfg(not(feature="use-mpfr"))]
-        impl $name for $ty {
-            fn $method_inf(self) -> Fallible<Self> {
-                let this = self.$fallback();
-                this.is_finite().then(|| this).ok_or_else(|| err!(
-                    FailedFunction,
-                    concat!("({}).", stringify!($method_inf), "() is not finite. Consider tightening your parameters."),
-                    self))
-            }
-            fn $method_neg_inf(self) -> Fallible<Self> {
-                let this = self.$fallback();
-                this.is_finite().then(|| this).ok_or_else(|| err!(
-                    FailedFunction,
-                    concat!("({}).", stringify!($method_neg_inf), "() is not finite. Consider tightening your parameters."),
-                    self))
+                    self);
+                if !self.$op().is_finite() {
+                    return Err(not_finite());
+                }
+                let lhs = FBig::<Down>::inf_cast(self)?;
+                let Ok(output) = catch_unwind_silent(|| lhs.$op()) else {
+                    return Err(not_finite())
+                };
+                let output = Self::neg_inf_cast(output)?;
+                output.is_finite().then(|| output).ok_or_else(not_finite)
             }
         })+
     }
 }
-impl_float_inf_uni!(f64, f32; InfLn, inf_ln, neg_inf_ln, ln_round, ln);
-impl_float_inf_uni!(f64, f32; InfLog2, inf_log2, neg_inf_log2, log2_round, log2);
-impl_float_inf_uni!(f64, f32; InfExp, inf_exp, neg_inf_exp, exp_round, exp);
-impl_float_inf_uni!(f64, f32; InfLn1P, inf_ln_1p, neg_inf_ln_1p, ln_1p_round, ln_1p);
-impl_float_inf_uni!(f64, f32; InfExpM1, inf_exp_m1, neg_inf_exp_m1, exp_m1_round, exp_m1);
-impl_float_inf_uni!(f64, f32; InfSqrt, inf_sqrt, neg_inf_sqrt, sqrt_round, sqrt);
+impl_float_inf_uni!(f64, f32; InfLn, inf_ln, neg_inf_ln, ln);
+impl_float_inf_uni!(f64, f32; InfLog2, inf_log2, neg_inf_log2, log2);
+impl_float_inf_uni!(f64, f32; InfExp, inf_exp, neg_inf_exp, exp);
+impl_float_inf_uni!(f64, f32; InfLn1P, inf_ln_1p, neg_inf_ln_1p, ln_1p);
+impl_float_inf_uni!(f64, f32; InfExpM1, inf_exp_m1, neg_inf_exp_m1, exp_m1);
+impl_float_inf_uni!(f64, f32; InfSqrt, inf_sqrt, neg_inf_sqrt, sqrt);
 
 // TRAIT InfAdd, InfSub, InfMul, InfDiv (bivariate)
 macro_rules! impl_int_inf {
@@ -523,13 +548,13 @@ macro_rules! impl_int_inf {
         $(impl InfDiv for $ty {
             fn inf_div(&self, other: &Self) -> Fallible<Self> {
                 if other == &0 {
-                    return fallible!(FailedFunction, "attempt to divide by zero");
+                    return fallible!(Overflow, "attempt to divide by zero");
                 }
                 Ok(num::Integer::div_ceil(self, other))
             }
             fn neg_inf_div(&self, other: &Self) -> Fallible<Self> {
                 if other == &0 {
-                    return fallible!(FailedFunction, "attempt to divide by zero");
+                    return fallible!(Overflow, "attempt to divide by zero");
                 }
                 Ok(num::Integer::div_floor(self, other))
             }
@@ -539,52 +564,82 @@ macro_rules! impl_int_inf {
 impl_int_inf!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
 
 macro_rules! impl_float_inf_bi {
-    ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident, $fallback:ident) => {
-        $(
-        #[cfg(feature="use-mpfr")]
-        impl $name for $ty {
+    ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident) => {
+        $(impl $name for $ty {
             fn $method_inf(&self, other: &Self) -> Fallible<Self> {
-                use rug::float::Round::Up;
-                let mut this = Float::inf_cast(*self)?;
-                this.$op(other, Up);
-                let this = Self::inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(|| err!(
-                    FailedFunction,
+                let not_finite = || err!(
+                    Overflow,
                     concat!("({}).", stringify!($method_inf), "({}) is not finite. Consider tightening your parameters."),
-                    self, other))
+                    self, other);
+                if !self.$op(other).is_finite() {
+                    return Err(not_finite());
+                }
+                let lhs = FBig::<Up>::try_from(*self)?;
+                let rhs = FBig::<Up>::try_from(*other)?;
+                let Ok(output) = catch_unwind_silent(|| lhs.$op(rhs)) else {
+                    return Err(not_finite())
+                };
+                let output = Self::inf_cast(output)?;
+                output.is_finite().then(|| output).ok_or_else(not_finite)
             }
             fn $method_neg_inf(&self, other: &Self) -> Fallible<Self> {
-                use rug::float::Round::Down;
-                let mut this = Float::neg_inf_cast(*self)?;
-                this.$op(other, Down);
-                let this = Self::neg_inf_cast(this)?;
-                this.is_finite().then(|| this).ok_or_else(|| err!(
-                    FailedFunction,
+                let not_finite = || err!(
+                    Overflow,
                     concat!("({}).", stringify!($method_neg_inf), "({}) is not finite. Consider tightening your parameters."),
-                    self, other))
-            }
-        }
-        #[cfg(not(feature="use-mpfr"))]
-        impl $name for $ty {
-            fn $method_inf(&self, other: &Self) -> Fallible<Self> {
-                let this = self.$fallback(other)?;
-                this.is_finite().then(|| this).ok_or_else(|| err!(
-                    FailedFunction,
-                    concat!("({}).", stringify!($method_inf), "({}) is not finite. Consider tightening your parameters."),
-                    self, other))
-            }
-            fn $method_neg_inf(&self, other: &Self) -> Fallible<Self> {
-                let this = self.$fallback(other)?;
-                this.is_finite().then(|| this).ok_or_else(|| err!(
-                    FailedFunction,
-                    concat!("({}).", stringify!($method_neg_inf), "({}) is not finite. Consider tightening your parameters."),
-                    self, other))
+                    self, other);
+                if !self.$op(other).is_finite() {
+                    return Err(not_finite());
+                }
+                let lhs = FBig::<Down>::try_from(*self)?;
+                let rhs = FBig::<Down>::try_from(*other)?;
+                let Ok(output) = catch_unwind_silent(|| lhs.$op(rhs)) else {
+                    return Err(not_finite())
+                };
+                let output = Self::neg_inf_cast(output)?;
+                output.is_finite().then(|| output).ok_or_else(not_finite)
             }
         })+
     }
 }
-impl_float_inf_bi!(f64, f32; InfAdd, inf_add, neg_inf_add, add_assign_round, alerting_add);
-impl_float_inf_bi!(f64, f32; InfSub, inf_sub, neg_inf_sub, sub_assign_round, alerting_sub);
-impl_float_inf_bi!(f64, f32; InfMul, inf_mul, neg_inf_mul, mul_assign_round, alerting_mul);
-impl_float_inf_bi!(f64, f32; InfDiv, inf_div, neg_inf_div, div_assign_round, alerting_div);
-impl_float_inf_bi!(f64, f32; InfPow, inf_pow, neg_inf_pow, pow_assign_round, alerting_pow);
+impl_float_inf_bi!(f64, f32; InfAdd, inf_add, neg_inf_add, add);
+impl_float_inf_bi!(f64, f32; InfSub, inf_sub, neg_inf_sub, sub);
+impl_float_inf_bi!(f64, f32; InfMul, inf_mul, neg_inf_mul, mul);
+impl_float_inf_bi!(f64, f32; InfDiv, inf_div, neg_inf_div, div);
+
+macro_rules! impl_float_inf_bi_ibig {
+    ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident) => {
+        $(impl $name for $ty {
+            fn $method_inf(&self, other: IBig) -> Fallible<Self> {
+                let not_finite = || err!(
+                    Overflow,
+                    concat!("({}).", stringify!($method_inf), "({}) is not finite. Consider tightening your parameters."),
+                    self, other);
+                if !self.is_finite() {
+                    return Err(not_finite());
+                }
+                let lhs = FBig::<Up>::try_from(*self)?;
+                let Ok(output) = catch_unwind_silent(|| lhs.$op(other.clone())) else {
+                    return Err(not_finite())
+                };
+                let output = Self::inf_cast(output)?;
+                output.is_finite().then(|| output).ok_or_else(not_finite)
+            }
+            fn $method_neg_inf(&self, other: IBig) -> Fallible<Self> {
+                let not_finite = || err!(
+                    Overflow,
+                    concat!("({}).", stringify!($method_neg_inf), "({}) is not finite. Consider tightening your parameters."),
+                    self, other);
+                if !self.is_finite() {
+                    return Err(not_finite());
+                }
+                let lhs = FBig::<Down>::try_from(*self)?;
+                let Ok(output) = catch_unwind_silent(|| lhs.$op(other.clone())) else {
+                    return Err(not_finite())
+                };
+                let output = Self::neg_inf_cast(output)?;
+                output.is_finite().then(|| output).ok_or_else(not_finite)
+            }
+        })+
+    }
+}
+impl_float_inf_bi_ibig!(f64, f32; InfPowI, inf_powi, neg_inf_powi, powi);

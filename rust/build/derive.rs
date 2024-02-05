@@ -2,7 +2,6 @@ use std::{collections::HashMap, path::Path, str::FromStr};
 
 use opendp_tooling::{
     bootstrap::docstring::{get_proof_path, insert_proof_attribute},
-    codegen,
     proven::filesystem::{find_proof_paths, get_src_dir, write_proof_paths},
     Function,
 };
@@ -23,16 +22,44 @@ pub fn main() {
     // write out a json file containing the proof paths. To be used by the proc macros later
     write_proof_paths(&proof_paths).unwrap();
 
+    #[cfg(feature = "ffi")]
+    generate_header();
+
     // parse crate into module metadata
     // this function returns None if code is malformed/unparseable
     // if parse_crate returns none, then build script exits without updating bindings
     // the proc macros will render those errors in a way that integrates better with developer tooling
     if let Some(_modules) = parse_crate(&src_dir, proof_paths).unwrap() {
-        // generate and write language bindings based on collected metadata
-        if cfg!(feature = "bindings-python") {
-            codegen::write_bindings(codegen::python::generate_bindings(_modules));
+        #[cfg(feature = "bindings")]
+        {
+            use opendp_tooling::codegen;
+            use std::fs::canonicalize;
+            // generate and write language bindings based on collected metadata
+            let base_dir = canonicalize("../python/src/opendp").unwrap();
+            codegen::write_bindings(base_dir, codegen::python::generate_bindings(&_modules));
+
+            let base_dir = canonicalize("../R/opendp").unwrap();
+            codegen::write_bindings(base_dir.clone(), codegen::r::generate_bindings(&_modules));
+            std::fs::copy("opendp.h", base_dir.join("src/opendp.h")).unwrap();
         }
     }
+}
+
+#[cfg(feature = "ffi")]
+fn generate_header() {
+    use cbindgen::{Config, Language};
+    use std::env;
+
+    // write `opendp.h`
+    let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+    let mut config = Config::default();
+    config.language = Language::C;
+    config.pragma_once = true;
+    match cbindgen::generate_with_config(&crate_dir, config) {
+        Ok(bindings) => bindings.write_to_file("opendp.h"),
+        Err(cbindgen::Error::ParseSyntaxError { .. }) => return, // ignore in favor of cargo's syntax check
+        Err(err) => panic!("{:?}", err),
+    };
 }
 
 /// Parses all modules in opendp crate

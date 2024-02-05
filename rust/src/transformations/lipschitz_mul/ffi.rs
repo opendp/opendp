@@ -1,5 +1,7 @@
 use std::{convert::TryFrom, ffi::c_void, os::raw::c_char};
 
+use dashu::integer::IBig;
+
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace},
     domains::AtomDomain,
@@ -10,7 +12,7 @@ use crate::{
     },
     metrics::AbsoluteDistance,
     traits::Float,
-    traits::SaturatingMul,
+    traits::{FloatBits, SaturatingMul},
     transformations::{make_lipschitz_float_mul, LipschitzMulFloatDomain, LipschitzMulFloatMetric},
 };
 
@@ -29,6 +31,7 @@ pub extern "C" fn opendp_transformations__make_lipschitz_float_mul(
     ) -> Fallible<AnyTransformation>
     where
         T: 'static + Float + SaturatingMul,
+        IBig: From<T::Bits>,
     {
         fn monomorphize2<D, M>(
             constant: D::Atom,
@@ -39,6 +42,7 @@ pub extern "C" fn opendp_transformations__make_lipschitz_float_mul(
             D::Atom: Float + SaturatingMul,
             M: 'static + LipschitzMulFloatMetric<Distance = D::Atom>,
             (D, M): MetricSpace,
+            IBig: From<<D::Atom as FloatBits>::Bits>,
         {
             make_lipschitz_float_mul::<D, M>(constant, bounds).into_any()
         }

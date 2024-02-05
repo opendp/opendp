@@ -1,8 +1,8 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
-use az::SaturatingCast;
-use rug::{Integer, Rational};
+use dashu::integer::IBig;
+use dashu::rational::RBig;
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
@@ -13,7 +13,7 @@ use crate::measurements::{
     make_base_discrete_gaussian, BaseDiscreteGaussianDomain, DiscreteGaussianMeasure,
 };
 use crate::measures::ZeroConcentratedDivergence;
-use crate::traits::{CheckAtom, Float, InfCast, Number};
+use crate::traits::{CheckAtom, Float, InfCast, Number, SaturatingCast};
 
 #[no_mangle]
 pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
@@ -31,12 +31,12 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
         QI: Type,
     ) -> Fallible<AnyMeasurement>
     where
-        T: 'static + CheckAtom + Clone,
-        Integer: From<T> + SaturatingCast<T>,
+        T: 'static + CheckAtom + Clone + SaturatingCast<IBig>,
+        IBig: From<T>,
 
         QI: Number,
         QO: Float + InfCast<QI>,
-        Rational: TryFrom<QO>,
+        RBig: TryFrom<QO>,
     {
         fn monomorphize2<D, MO, QI>(
             input_domain: &AnyDomain,
@@ -46,10 +46,11 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
         where
             D: 'static + BaseDiscreteGaussianDomain<QI>,
             (D, D::InputMetric): MetricSpace,
-            Integer: From<D::Atom> + SaturatingCast<D::Atom>,
+            D::Atom: SaturatingCast<IBig>,
+            IBig: From<D::Atom>,
 
             MO: 'static + DiscreteGaussianMeasure<D, QI>,
-            Rational: TryFrom<MO::Atom>,
+            RBig: TryFrom<MO::Atom>,
 
             QI: Number,
         {
