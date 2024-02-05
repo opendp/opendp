@@ -140,7 +140,7 @@ fn sample_geometric_exp_fast(x: RBig) -> Fallible<UBig> {
 /// `sample_discrete_laplace` either returns `Err(e)` due to a lack of system entropy,
 /// or `Ok(out)`, where `out` is distributed as $\mathcal{L}_\mathbb{Z}(0, scale)$.
 ///
-/// Specifically, the probability of returning any `x` of type [`rug::Integer`] is
+/// Specifically, the probability of returning any `x` of type [`dashu::integer::IBig`] is
 /// ```math
 /// \forall x \in \mathbb{Z}, \quad  
 /// P[X = x] = \frac{e^{-1/scale} - 1}{e^{-1/scale} + 1} e^{-|x|/scale}, \quad
@@ -174,7 +174,7 @@ pub fn sample_discrete_laplace(scale: RBig) -> Fallible<IBig> {
 /// `sample_discrete_gaussian` either returns `Err(e)` due to a lack of system entropy,
 /// or `Ok(out)`, where `out` is distributed as $\mathcal{N}_\mathbb{Z}(0, scale^2)$.
 ///
-/// Specifically, the probability of returning any `x` of type [`rug::Integer`] is
+/// Specifically, the probability of returning any `x` of type [`dashu::integer::IBig`] is
 /// ```math
 /// \forall x \in \mathbb{Z}, \quad  
 /// P[X = x] = \frac{e^{-\frac{x^2}{2\sigma^2}}}{\sum_{y\in\mathbb{Z}}e^{-\frac{y^2}{2\sigma^2}}}, \quad
