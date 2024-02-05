@@ -91,7 +91,7 @@ This is extremely powerful!
     ...         vector_domain(atom_domain(bounds=(-c, c))), 
     ...         symmetric_distance()) >> then_base_gaussian(scale=1.), 
     ...     d_in=2, d_out=1.)
-    0.3535533897700931
+    0.353553389770093
 
 The API documentation on these functions have more specific usage examples.
 
