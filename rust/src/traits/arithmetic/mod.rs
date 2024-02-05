@@ -1,18 +1,23 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::{
+    ops::{Add, Div, Mul, Sub},
+    vec,
+};
 
 use crate::{
     error::Fallible,
     traits::{ExactIntCast, InfCast},
 };
 use dashu::{
-    base::{EstimatedLog2, SquareRoot},
+    base::{EstimatedLog2, Signed, SquareRoot},
     float::{
         FBig,
         round::mode::{Down, Up},
     },
-    integer::IBig,
+    integer::{IBig, UBig},
 };
 use std::panic;
+
+use super::samplers::ODPRound;
 
 // for context on why this is used, see conversation on https://github.com/cmpute/dashu/issues/29
 fn catch_unwind_silent<R>(f: impl FnOnce() -> R + panic::UnwindSafe) -> std::thread::Result<R> {
@@ -484,6 +489,141 @@ impl Log2 for FBig<Down> {
 impl Log2 for FBig<Up> {
     fn log2(self) -> Self {
         Self::try_from(self.log2_bounds().1).unwrap()
+    }
+}
+
+trait Pi: Sized {
+    fn pi(precision: usize) -> Fallible<Self>;
+}
+
+impl<R: ODPRound> Pi for FBig<R> {
+    fn pi(precision: usize) -> Fallible<Self> {
+        if precision < 32 {
+            return fallible!(FailedFunction, "precision must be at least 32");
+        }
+        let _1 = FBig::from(1).with_precision(precision).value();
+        let _2c = FBig::<R::Complement>::from(2)
+            .with_precision(precision)
+            .value();
+        let _4 = FBig::from(4).with_precision(precision).value();
+
+        // https://en.wikipedia.org/wiki/Gauss%E2%80%93Legendre_algorithm
+        let mut a = _1.clone();
+        let mut b = _1 / _2c.sqrt().with_rounding();
+        let mut t = FBig::<R::Complement>::try_from(0.25)?;
+        let mut p = UBig::ONE;
+
+        let mut pi = FBig::ZERO;
+        loop {
+            let a_2: FBig<R> = (&a + &b) / 2;
+            b = (b * &a).sqrt();
+            t -= ((&a - &a_2).sqr() * &p).with_rounding::<R::Complement>();
+            p <<= 1;
+
+            a = a_2;
+
+            let pi_p = (&a + &b).sqr() / (&t * &_4).with_rounding::<R>();
+            // println!("pi: {}", pi_p.clone().with_base::<10>().value());
+            if pi_p == pi {
+                return Ok(pi);
+            } else {
+                pi = pi_p;
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test_pi {
+    use std::str::FromStr;
+
+    use dashu::float::DBig;
+
+    use super::*;
+
+    #[test]
+    fn test_pi() -> Fallible<()> {
+        let pi = DBig::from_str("3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664709384460955058223172535940812848111745028410270193852110555964462294895493038196").unwrap();
+        println!("pi: {}", pi);
+        for precision in 32..500 {
+            println!("precision: {}", precision);
+            assert!(FBig::<Up>::pi(precision)?.with_base::<10>().value() >= pi);
+            assert!(FBig::<Down>::pi(precision)?.with_base::<10>().value() <= pi);
+        }
+        Ok(())
+    }
+}
+
+fn c_k<R: ODPRound>(k: usize, c: &mut Vec<FBig<R>>) -> &FBig<R> {
+    if k < c.len() {
+        return &c[k];
+    }
+    // println!("c_k: {} {:?}", k, c);
+    if k != c.len() {
+        panic!("c_k called out of order");
+    }
+    let c_k = (0..k)
+        .map(|m| c_k(m, c).clone() * c_k(k - 1 - m, c) / ((m + 1) * (2 * m + 1)))
+        .sum();
+    c.push(c_k);
+    &c[k]
+}
+
+trait ErfInv: Sized {
+    fn erf_inv(self) -> Fallible<Self>;
+}
+
+impl<R: ODPRound> ErfInv for FBig<R> {
+    fn erf_inv(self) -> Fallible<Self> {
+        let _2 = FBig::from(2);
+        let _1 = FBig::ONE;
+        let mut c = vec![_1.clone()];
+
+        let mut erfinv = FBig::<R>::ZERO;
+        // http://www.mimirgames.com/articles/programming/approximations-of-the-inverse-error-function/
+        let mut k = 0;
+        let pisqrt = FBig::pi(self.precision())?.sqrt();
+        Ok(loop {
+            println!("k: {}", k);
+            let t = c_k(k, &mut c) / (2 * k + 1)
+                * (&pisqrt / &_2 * &self).powf(&(k * &_2 + &_1));
+            // println!("prec: {} {}", t.precision(), erfinv.precision());
+            // println!("t: {}", t.clone().with_precision(self.precision()).value().clone().with_base::<10>().value());
+            let erfinv_p = t + &erfinv;
+            // println!("erfinv_p: {}", erfinv_p.clone().with_base::<10>().value());
+            // println!("erfinv: {}", erfinv_p.clone().with_base::<10>().value());
+            if erfinv_p == erfinv {
+                break erfinv_p;
+            }
+            k += 1;
+            erfinv = erfinv_p;
+        })
+    }
+}
+
+#[cfg(test)]
+mod test_erfinv {
+    use std::str::FromStr;
+
+    use dashu::float::DBig;
+
+    use super::*;
+
+    #[test]
+    fn test_erfinv() -> Fallible<()> {
+        let erfinv = DBig::from_str("0.476936276204469873381418353643130559808969749059470644703882695919383447774646733488695915869989009948033038673470").unwrap();
+        let _05u = FBig::<Up>::try_from(0.5).unwrap();
+        let _05d = FBig::<Down>::try_from(0.5).unwrap();
+        println!("erfinv(.5): {}", erfinv);
+        for precision in 32..500 {
+            println!("precision: {}", precision);
+            let erfinv_u = _05u.clone().with_precision(precision).value().erf_inv()?;
+            assert!(erfinv_u.with_base::<10>().value() >= erfinv);
+
+            let erfinv_d = _05d.clone().with_precision(precision).value().erf_inv()?;
+            assert!(erfinv_d.with_base::<10>().value() <= erfinv);
+        }
+        Ok(())
     }
 }
 
