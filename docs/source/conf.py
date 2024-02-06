@@ -135,6 +135,10 @@ version = str(semver_version.replace(prerelease=None, build=None))
 # The full version, including alpha/beta/rc tags.
 release = str(semver_version)
 
+# nitpicky was first enabled in version 0.9
+if semver_version < (0, 9):
+    nitpicky = False
+
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = []
