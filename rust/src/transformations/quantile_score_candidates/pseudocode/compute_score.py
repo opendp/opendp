@@ -3,7 +3,7 @@ def compute_score(
     x: List[TIA], 
     candidates: List[TIA], 
     alpha_numer: usize,
-    alpha_denom: usize
+    alpha_denom: usize,
     size_limit: usize
 ) -> List[usize]:
 
