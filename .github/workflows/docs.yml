@@ -103,10 +103,10 @@ jobs:
           || cp en/stable/404.html
       
       - name: Download R Docs
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: r-docs
-          path: /en/stable/api/r
+          path: en/stable/api/r
       
       - name: Checkout artifacts
         uses: actions/checkout@v3
