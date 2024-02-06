@@ -28,14 +28,17 @@ showing the source changes from the previous version.
 - The OpenDP Rust crate is now thread-safe [#874](https://github.com/opendp/opendp/pull/874)
 - Documentation, Typing and CI improvements from Chuck McCallum
     - CI: MyPy type-checking, link-checking in docs, code coverage, Rust formatting
-    - Rust stack traces are now hidden by default
-- FFI module in Rust is now public, allowing you to write your own lightweight FFI
-- C dependencies on GMP/MPFR have been replaced with dashu
+    - Rust stack traces are now hidden by default [#1138](https://github.com/opendp/opendp/pull/1138)
+- FFI module in Rust is now public, allowing you to write your own lightweight FFI [#1150](https://github.com/opendp/opendp/pull/1150)
+- C dependencies on GMP/MPFR have been replaced with dashu [#1141](https://github.com/opendp/opendp/pull/1141)
     - The OpenDP Rust library can now be built easily on Windows and is a much more lightweight Rust dependency
 
-# Changed
+### Changed
 - `TO` argument on user-defined measurements is now optional [#1147](https://github.com/opendp/opendp/pull/1147)
 - raw functions can now be chained as postprocessors onto measurements
+
+### Fixed
+- Imports in the Python `context` module no longer pollute the prelude [#1187](https://github.com/opendp/opendp/pull/1187)
 
 
 ## [0.8.0](https://github.com/opendp/opendp/compare/v0.7.0...v0.8.0) - 2023-08-11
