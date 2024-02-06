@@ -111,13 +111,13 @@ fn x_mul_2k(x: IBig, k: i32) -> RBig {
 /// Casting between floating-point and rational values.
 pub trait CastInternalRational {
     /// # Proof Definition
-    /// For any [`Rational`] `v`, return `out`, the nearest representable value of type `Self`.
+    /// For any [`RBig`] `v`, return `out`, the nearest representable value of type `Self`.
     /// `out` may saturate to +/- infinity.
     fn from_rational(v: RBig) -> Self;
     /// # Proof Definition
     /// For any `self` of type `Self`, either return
     /// `Err(e)` if `self` is not finite, or
-    /// `Ok(out)`, where `out` is a [`Rational`] that exactly represents `self`.
+    /// `Ok(out)`, where `out` is a [`RBig`] that exactly represents `self`.
     fn into_rational(self) -> Fallible<RBig>;
 }
 
