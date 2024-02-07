@@ -1,16 +1,16 @@
-name: Weekly link check
+name: Weekly doc check
 
 on:
   # Runs every Sunday at midnight:
   schedule:
     - cron: '0 0 * * 0'
   # Or run manually:
-  # CLI: gh workflow run weekly-link-check.yml
-  # web: https://github.com/opendp/opendp/actions/workflows/weekly-link-check.yml
+  # CLI: gh workflow run weekly-doc-check.yml
+  # web: https://github.com/opendp/opendp/actions/workflows/weekly-doc-check.yml
   workflow_dispatch:
 
 jobs:
-  check-links:
+  check-docs:
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -27,7 +27,7 @@ jobs:
       - name: Install deps
         run: python -m pip install -r requirements.txt
 
-      - name: Check markdown
+      - name: Check markdown links
         run: |
           find .. | grep '.md$' | grep -v 'venv/\|.git/\|CHANGELOG' \
           | xargs linkchecker -f linkchecker-external.cfg
@@ -40,3 +40,6 @@ jobs:
 
       - name: Check links
         run: linkchecker -f linkchecker-external.cfg build/html/index.html
+
+      - name: Build Rust docs
+        run: make html-rustdoc
