@@ -104,7 +104,7 @@ def infer_channel(version):
 
 
 def get_current_branch():
-    return run_command(f"Determining current branch", "git branch --show-current", capture_output=True)
+    return run_command("Determining current branch", "git branch --show-current", capture_output=True)
 
 
 def main():

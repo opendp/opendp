@@ -50,11 +50,11 @@ def rust_container(args):
     mount_point = "/io"
     command = get_rust_build_command(True, args)
     docker_command = f"cd {mount_point} && {command}"
-    run_command(f"Building Rust library in a container", f"docker run --rm -v `pwd`:{mount_point} {docker_image} bash -c '{docker_command}'")
+    run_command("Building Rust library in a container", f"docker run --rm -v `pwd`:{mount_point} {docker_image} bash -c '{docker_command}'")
 
 
 def rust(args):
-    log(f"*** BUILDING RUST LIBRARY ***")
+    log("*** BUILDING RUST LIBRARY ***")
     if args.platform is None or args.platform == native_platform():
         rust_native(args)
     else:
@@ -62,7 +62,7 @@ def rust(args):
 
 
 def python(_args):
-    log(f"*** BUILDING PYTHON LIBRARY ***")
+    log("*** BUILDING PYTHON LIBRARY ***")
     command = "bash tools/python_build.sh"
     run_command("Running Python build", command)
 

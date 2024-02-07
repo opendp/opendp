@@ -44,8 +44,6 @@ extend-ignore =
     F403,
     # F405: '...' may be undefined, or defined from star imports: ...
     F405,
-    # F541: f-string is missing placeholders
-    F541,
     # F811: redefinition of unused 're' from line 4
     F811,
     # F821: undefined name '...'
