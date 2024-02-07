@@ -5,7 +5,7 @@ use crate::{
     Argument, Function, TypeRecipe,
 };
 
-/// Generate the R/src/lib.c file.
+/// Generate the r/src/lib.c file.
 /// This file registers all the C functions that R can interface with.
 pub fn generate_lib_c(modules: &HashMap<String, Vec<Function>>) -> String {
     // code generation should be deterministic- sort by module

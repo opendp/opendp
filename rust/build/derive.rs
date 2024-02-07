@@ -38,7 +38,7 @@ pub fn main() {
             let base_dir = canonicalize("../python/src/opendp").unwrap();
             codegen::write_bindings(base_dir, codegen::python::generate_bindings(&_modules));
 
-            let base_dir = canonicalize("../R/opendp").unwrap();
+            let base_dir = canonicalize("../r/opendp").unwrap();
             codegen::write_bindings(base_dir.clone(), codegen::r::generate_bindings(&_modules));
             std::fs::copy("opendp.h", base_dir.join("src/opendp.h")).unwrap();
         }

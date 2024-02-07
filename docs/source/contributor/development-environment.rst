@@ -213,7 +213,7 @@ After each edit to the R or Rust source, run the following command in R to (re)l
 
 .. code-block:: R
 
-    devtools::load_all("R/opendp/", recompile=TRUE)
+    devtools::load_all("r/opendp/", recompile=TRUE)
 
 .. This function...
 .. - runs `src/Makevars`
@@ -226,7 +226,7 @@ To do a full package installation from local sources:
 
 .. prompt:: bash
 
-    tools/r_stage.sh && Rscript -e 'devtools::install("R/opendp")'
+    tools/r_stage.sh && Rscript -e 'devtools::install("r/opendp")'
 
 To restore to a developer setup, run:
 
@@ -239,33 +239,33 @@ To restore to a developer setup, run:
 R Tests
 -------
 
-Run tests (tests are located in ``R/opendp/tests/``):
+Run tests (tests are located in ``r/opendp/tests/``):
 
 .. code-block:: R
 
-    devtools::test("R/opendp")
+    devtools::test("r/opendp")
 
 
 R also has a built-in check function that runs tests and checks for common errors:
 
 .. code-block:: R
     
-    devtools::check("R/opendp")
+    devtools::check("r/opendp")
 
 To run the same check manually, use:
 
 .. code-block:: bash
 
-    R CMD build R/opendp
+    R CMD build r/opendp
     R CMD check opendp_*.tar.gz --as-cran
 
-It is important `R CMD check` is run on the `.tar.gz`, not on `R/opendp`, 
+It is important `R CMD check` is run on the `.tar.gz`, not on `r/opendp`, 
 because `check` depends on some of the changes `build` makes within the `.tar.gz`.
 
 
 R Documentation
 ---------------
-This script uses roxygen to generate ``R/opendp/man`` pages from `#'` code comments,
+This script uses roxygen to generate ``r/opendp/man`` pages from `#'` code comments,
 and then uses ``pkgdown`` to render the documentation website.
 
 .. code-block:: bash

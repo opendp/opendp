@@ -145,7 +145,7 @@
         },
 
         {
-            "label": "R/ stage",
+            "label": "r/ stage",
             "detail": "    stage an R package so that it can be built",
             "type": "shell",
             "command": "bash tools/r_stage.sh",
@@ -155,7 +155,7 @@
             }
         },
         {
-            "label": "R/ clean",
+            "label": "r/ clean",
             "detail": "    return a staged R package to developer mode",
             "type": "shell",
             "command": "bash tools/r_stage.sh -c",
@@ -165,7 +165,7 @@
             }
         },
         {
-            "label": "R/ pkgdown",
+            "label": "r/ pkgdown",
             "detail": "    build a pkgdown site",
             "type": "shell",
             "command": "bash tools/r_stage.sh -d",
@@ -175,11 +175,11 @@
             }
         },
         {
-            "label": "R/ test",
+            "label": "r/ test",
             "type": "shell",
             "group": "build",
             "options": {
-                "cwd": "./R/opendp/"
+                "cwd": "./r/opendp/"
             },
             "command": "Rscript -e 'devtools::load_all(recompile=TRUE); devtools::test(reporter = c(\"progress\", \"fail\"))'",
             "presentation": {
@@ -187,11 +187,11 @@
             }
         },
         {
-            "label": "R/ test file",
+            "label": "r/ test file",
             "type": "shell",
             "group": "build",
             "options": {
-                "cwd": "./R/opendp/"
+                "cwd": "./r/opendp/"
             },
             "command": "Rscript -e 'devtools::load_all(recompile=TRUE); library(testthat); test_file(\"${file}\", reporter = c(\"location\"))'",
             "presentation": {
@@ -199,11 +199,11 @@
             }
         },
         {
-            "label": "R/ document",
+            "label": "r/ document",
             "type": "shell",
             "group": "build",
             "options": {
-                "cwd": "./R/opendp/"
+                "cwd": "./r/opendp/"
             },
             "command": "Rscript -e 'devtools::document()'",
             "presentation": {
@@ -211,11 +211,11 @@
             }
         },
         {
-            "label": "R/ check (devtools)",
+            "label": "r/ check (devtools)",
             "type": "shell",
             "group": "build",
             "options": {
-                "cwd": "./R/opendp/"
+                "cwd": "./r/opendp/"
             },
             "command": "Rscript -e 'devtools::check()'",
             "presentation": {
@@ -223,11 +223,11 @@
             }
         },
         {
-            "label": "R/ check (R CMD)",
+            "label": "r/ check (R CMD)",
             "type": "shell",
             "group": "build",
             "options": {
-                "cwd": "./R/opendp/"
+                "cwd": "./r/opendp/"
             },
             "command": "R CMD build . && R CMD check --as-cran opendp_*.tar.gz",
             "presentation": {
@@ -235,11 +235,11 @@
             }
         },
         {
-            "label": "R/ install",
+            "label": "r/ install",
             "type": "shell",
             "group": "build",
             "options": {
-                "cwd": "./R/opendp/"
+                "cwd": "./r/opendp/"
             },
             "command": "Rscript -e 'devtools::install()'",
             "presentation": {

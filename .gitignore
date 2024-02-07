@@ -173,7 +173,7 @@ out/
 /python/wheelhouse
 
 # R miscellanea
-R/opendp/man
+r/opendp/man
 .Rhistory
 .Rproj/
 .Rproj.user/
@@ -189,8 +189,8 @@ Makevars
 binary.tar.xz
 vendor.tar.xz
 source.tar.xz
-R/opendp/src/.cargo
+r/opendp/src/.cargo
 NEWS.md
-R/opendp/README.md
-R/opendp/docs
-R/opendp-docs
+r/opendp/README.md
+r/opendp/docs
+r/opendp-docs

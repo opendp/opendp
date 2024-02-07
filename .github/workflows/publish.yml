@@ -100,7 +100,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: r_package
-          path: R/opendp/
+          path: r/opendp/
 
       - name: Push to R branch
         run: |
@@ -112,7 +112,7 @@ jobs:
           BRANCH=r-universe${{ (inputs.channel == 'stable') && '' || '-dev' }}
           git checkout --orphan $BRANCH
 
-          git add R/opendp/ --force
+          git add r/opendp/ --force
           echo "Push R package to $BRANCH branch"
           git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
           git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"

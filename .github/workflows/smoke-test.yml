@@ -63,7 +63,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: vendor
-          path: R/opendp/src/vendor.tar.xz
+          path: r/opendp/src/vendor.tar.xz
 
   python-lint:
     runs-on: ubuntu-22.04
@@ -252,15 +252,15 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          working-directory: R/opendp
+          working-directory: r/opendp
           extra-packages: devtools,local::.,RcppTOML
 
       - name: Test
-        working-directory: R/opendp/
+        working-directory: r/opendp/
         run: Rscript -e 'devtools::test(reporter = c("summary", "fail"))'
 
       - name: Document
-        run: cd R/opendp/ && Rscript -e 'devtools::document()'
+        run: cd r/opendp/ && Rscript -e 'devtools::document()'
 
       - name: Check
-        run: cd R/opendp/ && Rscript -e 'devtools::check()'
+        run: cd r/opendp/ && Rscript -e 'devtools::check()'

@@ -189,7 +189,7 @@ jobs:
           mkdir -p rust/target/${{ env.TARGET }}/release/
           echo linux > rust/target/${{ env.TARGET }}/release/libopendp.so
           echo linux > rust/target/${{ env.TARGET }}/release/libopendp.a
-          echo fake > R/opendp/src/vendor.tar.xz
+          echo fake > r/opendp/src/vendor.tar.xz
 
       - name: Upload .so and .a
         uses: actions/upload-artifact@v3
@@ -241,7 +241,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: r_bindings
-          path: R/opendp/
+          path: r/opendp/
 
 
   python:
@@ -302,7 +302,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: r_bindings
-          path: R/opendp/
+          path: r/opendp/
 
       - name: Source tar
         run: bash tools/r_stage.sh -s
@@ -314,4 +314,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: r_package
-          path: R/opendp/
+          path: r/opendp/

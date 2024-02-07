@@ -37,7 +37,7 @@ for line in binder_requirements:
         assert line == f"opendp=={python_version}\n", \
             ".binder/requirements.txt opendp dependency is incorrect"
 
-with ControlEditor(path='R/opendp/DESCRIPTION') as control:
+with ControlEditor(path='r/opendp/DESCRIPTION') as control:
     version = next(iter(control.paragraphs))["Version"]
     assert version == r_version
 

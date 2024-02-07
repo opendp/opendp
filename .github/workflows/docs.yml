@@ -38,7 +38,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          working-directory: R/opendp
+          working-directory: r/opendp
           extra-packages: devtools
 
       - name: Build docs
@@ -48,7 +48,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: r-docs
-          path: R/opendp/docs
+          path: r/opendp/docs
 
   docs:
     needs: credential-check

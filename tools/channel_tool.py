@@ -121,7 +121,7 @@ def update_version(version):
         return [opendp_line if line.startswith("opendp==") else line for line in lines]
     
     # R Package
-    with ControlEditor(path='R/opendp/DESCRIPTION') as control:
+    with ControlEditor(path='r/opendp/DESCRIPTION') as control:
         # while it might not look like it, this mutates the DESCRIPTION file in-place
         next(iter(control.paragraphs))["Version"] = r_version
     update_file(".binder/requirements.txt", io.IOBase.readlines, munge_binder_requirements, lambda data, f: f.writelines(data))

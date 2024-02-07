@@ -54,7 +54,7 @@ pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<Pa
         .into_iter()
         .map(|(module_name, module)| {
             (
-                PathBuf::from(format!("R/{}.R", module_name)),
+                PathBuf::from(format!("r/{}.R", module_name)),
                 generate_r_module(module_name, module, &hierarchy),
             )
         })
