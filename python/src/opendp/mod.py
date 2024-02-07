@@ -1,11 +1,12 @@
 '''
 The ``mod`` module provides the classes which implement the
-`OpenDP Programming Framework <../../user/programming-framework/index.html>`_,
+`OpenDP Programming Framework <../../api/user-guide/programming-framework/index.html>`_,
 as well as utilities for enabling features and finding parameter values.
 
 The classes here correspond to other top-level modules: For example,
 instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for functions in :py:mod:`opendp.domains`.
 '''
+from __future__ import annotations
 import ctypes
 from typing import Any, Literal, Type, TypeVar, Union, Tuple, Callable, Optional, overload, TYPE_CHECKING
 
@@ -22,7 +23,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     The function releases a differentially-private release.
     The privacy relation maps from an input metric to an output measure.
 
-    See the `Measurement <../../user/programming-framework/core-structures.html#measurement>`_
+    See the `Measurement <../../api/user-guide/programming-framework/core-structures.html#measurement>`_
     section in the Programming Framework docs for more context.
 
     Functions for creating measurements are in :py:mod:`opendp.measurements`.
@@ -111,6 +112,10 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         if isinstance(other, Transformation):
             other = other.function # pragma: no cover
 
+        if not isinstance(other, Function):
+            from opendp.core import new_function
+            other = new_function(other, TO="ExtrinsicObject")
+
         if isinstance(other, Function):
             from opendp.combinators import make_chain_pm
             return make_chain_pm(other, self)
@@ -183,7 +188,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
             from opendp.core import _measurement_free
             _measurement_free(self)
         except (ImportError, TypeError):
-            # ImportError: sys.meta_path is None, Python is likely shutting down
+            # an example error that this catches:
+            #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
     
     def __str__(self) -> str:
@@ -196,7 +202,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     The function maps from an input domain to an output domain.
     The stability relation maps from an input metric to an output metric.
 
-    See the `Transformation <../../user/programming-framework/core-structures.html#transformation>`_
+    See the `Transformation <../../api/user-guide/programming-framework/core-structures.html#transformation>`_
     section in the Programming Framework docs for more context.
 
     Functions for creating transformations are in :py:mod:`opendp.transformations`.
@@ -384,7 +390,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
             from opendp.core import _transformation_free
             _transformation_free(self)
         except (ImportError, TypeError):
-            # ImportError: sys.meta_path is None, Python is likely shutting down
+            # an example error that this catches:
+            #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
     def __str__(self) -> str:
@@ -421,7 +428,7 @@ class Queryable(object):
 
 class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
     '''
-    See the `Function <../../user/programming-framework/supporting-elements.html#function>`_
+    See the `Function <../../api/user-guide/programming-framework/supporting-elements.html#function>`_
     section in the Programming Framework docs for more context.
     '''
     _type_ = AnyFunction
@@ -439,13 +446,14 @@ class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
             from opendp.core import _function_free
             _function_free(self)
         except (ImportError, TypeError):
-            # ImportError: sys.meta_path is None, Python is likely shutting down
+            # an example error that this catches:
+            #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
 
 class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     '''
-    See the `Domain <../../user/programming-framework/supporting-elements.html#domain>`_
+    See the `Domain <../../api/user-guide/programming-framework/supporting-elements.html#domain>`_
     section in the Programming Framework docs for more context.
 
     Functions for creating domains are in :py:mod:`opendp.domains`.
@@ -467,6 +475,11 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         from opendp.domains import domain_carrier_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(domain_carrier_type(self))
+    
+    @property
+    def descriptor(self) -> Any:
+        from opendp.domains import _user_domain_descriptor
+        return _user_domain_descriptor(self)
 
     def __str__(self):
         from opendp.domains import domain_debug
@@ -477,7 +490,8 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
             from opendp.domains import _domain_free
             _domain_free(self)
         except (ImportError, TypeError):
-            # ImportError: sys.meta_path is None, Python is likely shutting down
+            # an example error that this catches:
+            #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
     def __repr__(self) -> str:
@@ -487,14 +501,18 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         # TODO: consider adding ffi equality
         return str(self) == str(other)
     
+    def __hash__(self) -> int:
+        return hash(str(self))
+    
     def _depends_on(self, *args):
         """Extends the memory lifetime of args to the lifetime of self."""
         setattr(self, "_dependencies", args)
 
 
+
 class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     '''
-    See the `Metric <../../user/programming-framework/supporting-elements.html#metric>`_
+    See the `Metric <../../api/user-guide/programming-framework/supporting-elements.html#metric>`_
     section in the Programming Framework docs for more context.
 
     Functions for creating metrics are in :py:mod:`opendp.metrics`.
@@ -504,7 +522,8 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     @property
     def type(self):
         from opendp.metrics import metric_type
-        return metric_type(self)
+        from opendp.typing import RuntimeType
+        return RuntimeType.parse(metric_type(self))
     
     @property
     def distance_type(self) -> Union["RuntimeType", str]:
@@ -521,7 +540,8 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
             from opendp.metrics import _metric_free
             _metric_free(self)
         except (ImportError, TypeError):
-            # ImportError: sys.meta_path is None, Python is likely shutting down
+            # an example error that this catches:
+            #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
     def __repr__(self) -> str:
@@ -530,11 +550,14 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
         return str(self) == str(other)
+    
+    def __hash__(self) -> int:
+        return hash(str(self))
 
 
 class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     '''
-    See the `Measure <../../user/programming-framework/supporting-elements.html#measure>`_
+    See the `Measure <../../api/user-guide/programming-framework/supporting-elements.html#measure>`_
     section in the Programming Framework docs for more context.
 
     Functions for creating measures are in :py:mod:`opendp.measures`.
@@ -562,11 +585,15 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
             from opendp.measures import _measure_free
             _measure_free(self)
         except (ImportError, TypeError):
-            # ImportError: sys.meta_path is None, Python is likely shutting down
+            # an example error that this catches:
+            #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
     def __eq__(self, other):
         return str(self) == str(other)
+    
+    def __hash__(self) -> int:
+        return hash(str(self))
 
 
 class SMDCurve(object):
@@ -652,25 +679,25 @@ def assert_features(*features: str) -> None:
         assert feature in GLOBAL_FEATURES, f"Attempted to use function that requires {feature}, but {feature} is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"{feature}\")"
 
 
-T = TypeVar("T", float, int)
 M = TypeVar("M", Transformation, Measurement)
 
 def binary_search_chain(
-        make_chain: Callable[[T], M],
+        make_chain: Callable[[float], M],
         d_in: Any, d_out: Any,
-        bounds: Union[Tuple[T, T], None] = None,
+        bounds: Tuple[float, float] | None = None,
         T=None) -> M:
-    """Useful to find the Transformation or Measurement parameterized with the ideal constructor argument.
+    """Find the highest-utility (`d_in`, `d_out`)-close Transformation or Measurement.
     
-    Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
-    subject to the chained relation being (`d_in`, `d_out`)-close.
+    Searches for the numeric parameter to `make_chain` that results in a computation
+    that most tightly satisfies `d_out` when datasets differ by at most `d_in`,
+    then returns the Transformation or Measurement corresponding to said parameter.
 
     See `binary_search_param` to retrieve the discovered parameter instead of the complete computation chain.
 
-    :param make_chain: a unary function that maps from a number to a Transformation or Measurement
-    :param d_in: desired input distance of the computation chain
-    :param d_out: desired output distance of the computation chain
-    :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
+    :param make_chain: a function that takes a number and returns a Transformation or Measurement
+    :param d_in: how far apart input datasets can be
+    :param d_out: how far apart output datasets or distributions can be
+    :param bounds: a 2-tuple of the lower and upper bounds on the input of `make_chain`
     :param T: type of argument to `make_chain`, one of {float, int}
     :return: a chain parameterized at the nearest passing value to the decision point of the relation
     :rtype: Union[Transformation, Measurement]
@@ -720,19 +747,19 @@ def binary_search_chain(
 
 
 def binary_search_param(
-        make_chain: Callable[[T], Union[Transformation, Measurement]],
+        make_chain: Callable[[float], Union[Transformation, Measurement]],
         d_in: Any, d_out: Any,
-        bounds: Optional[Tuple[T, T]] = None,
-        T=None) -> T:
-    """Useful to solve for the ideal constructor argument.
+        bounds: Tuple[float, float] | None = None,
+        T=None) -> float:
+    """Solve for the ideal constructor argument to `make_chain`.
     
     Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
-    :param make_chain: a unary function that maps from a number to a Transformation or Measurement
-    :param d_in: desired input distance of the computation chain
-    :param d_out: desired output distance of the computation chain
-    :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
+    :param make_chain: a function that takes a number and returns a Transformation or Measurement
+    :param d_in: how far apart input datasets can be
+    :param d_out: how far apart output datasets or distributions can be
+    :param bounds: a 2-tuple of the lower and upper bounds on the input of `make_chain`
     :param T: type of argument to `make_chain`, one of {float, int}
     :return: the nearest passing value to the decision point of the relation
     :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
@@ -786,29 +813,42 @@ def binary_search_param(
 
     return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, T)
 
+# when return sign is false, only return float
 @overload
-def binary_search( # type: ignore[overload-overlap]
-        predicate: Callable[[T], bool],
-        bounds: Optional[Tuple[T, T]] = None,
-        T: Optional[Type[T]] = None,
-        return_sign: Literal[False] = False) -> T:
+def binary_search(
+        predicate: Callable[[float], bool],
+        bounds: Tuple[float, float] | None = ...,
+        T: Type[float] | None = ...,
+        return_sign: Literal[False] = False) -> float:
     ...
 
 
+# when setting return sign to true as a keyword argument, return both
 @overload
 def binary_search(
-        predicate: Callable[[T], bool],
-        bounds: Optional[Tuple[T, T]] = None,
-        T: Optional[Type[T]] = None,
-        return_sign: Literal[True] = True) -> Tuple[T, int]:
+        predicate: Callable[[float], bool],
+        bounds: Tuple[float, float] | None = ...,
+        T: Type[float] | None = ...,
+        *, # see https://stackoverflow.com/questions/66435480/overload-following-optional-argument
+        return_sign: Literal[True]) -> Tuple[float, int]:
     ...
 
+# when setting return sign to true as a positional argument, return both
+@overload
 def binary_search(
-        predicate: Callable[[T], bool],
-        bounds: Optional[Tuple[T, T]] = None,
-        T: Optional[Type[T]] = None,
-        return_sign: bool = False) -> Union[T, Tuple[T, int]]:
-    """Find the closest passing value to the decision boundary of `predicate` within float or integer `bounds`.
+        predicate: Callable[[float], bool],
+        bounds: Tuple[float, float] | None,
+        T: Type[float] | None,
+        return_sign: Literal[True]) -> Tuple[float, int]:
+    ...
+
+
+def binary_search(
+        predicate: Callable[[float], bool],
+        bounds: Tuple[float, float] | None = None,
+        T: Type[float] | None = None,
+        return_sign: bool = False) -> float | Tuple[float, int]:
+    """Find the closest passing value to the decision boundary of `predicate`.
 
     If bounds are not passed, conducts an exponential search.
     
@@ -977,8 +1017,9 @@ def exponential_bounds_search(
         at_center = predicate(center)
         # search positive bands, then negative bands
         return signed_band_search(center, at_center, 1) or signed_band_search(center, at_center, -1)
-    except:
+    except Exception:
         pass
+
 
     # predicate has thrown an exception
     # 1. Treat exceptions as a secondary decision boundary, and find the edge value
@@ -987,7 +1028,7 @@ def exponential_bounds_search(
         try:
             predicate(v)
             return True
-        except:
+        except Exception:
             return False
     exception_bounds = exponential_bounds_search(exception_predicate, T=T)
     if exception_bounds is None:

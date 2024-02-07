@@ -1,3 +1,4 @@
+use dashu::integer::IBig;
 use num::One;
 use opendp_derive::bootstrap;
 
@@ -7,8 +8,7 @@ use crate::{
     error::Fallible,
     metrics::{AbsoluteDistance, LpDistance},
     traits::{
-        AlertingAbs, CheckNull, ExactIntCast, Float, FloatBits, InfAdd, InfMul, InfPow, InfSub,
-        SaturatingMul, TotalOrd,
+        AlertingAbs, CheckNull, Float, FloatBits, InfAdd, InfMul, InfPowI, SaturatingMul, TotalOrd,
     },
 };
 
@@ -47,8 +47,6 @@ where
     M: LipschitzMulFloatMetric<Distance = D::Atom>,
     (D, M): MetricSpace,
 {
-    let mantissa_bits = D::Atom::exact_int_cast(D::Atom::MANTISSA_BITS)?;
-    let exponent_bias = D::Atom::exact_int_cast(D::Atom::EXPONENT_BIAS)?;
     let _2 = D::Atom::one() + D::Atom::one();
     let (lower, upper) = bounds;
 
@@ -71,11 +69,11 @@ where
     let output_mag = input_mag.inf_mul(&constant.alerting_abs()?)?;
 
     // retrieve the unbiased exponent from the largest output magnitude float w
-    let max_exponent = D::Atom::exact_int_cast(output_mag.raw_exponent())?;
-    let max_unbiased_exponent = max_exponent.neg_inf_sub(&exponent_bias)?;
+    let max_exponent: IBig = output_mag.raw_exponent().into();
+    let max_unbiased_exponent = max_exponent - D::Atom::EXPONENT_BIAS.into();
 
     // greatest possible error is the ulp of the greatest possible output
-    let output_ulp = _2.inf_pow(&max_unbiased_exponent.inf_sub(&mantissa_bits)?)?;
+    let output_ulp = _2.inf_powi(max_unbiased_exponent - D::Atom::MANTISSA_BITS.into())?;
 
     Transformation::new(
         D::default(),

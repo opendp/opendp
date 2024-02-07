@@ -4,7 +4,7 @@ OpenDP relies on precise descriptions of data types to make its security guarant
 These are more natural in Rust with its fine-grained type system,
 but they may feel out of place in Python. These utilities try to fill that gap.
 '''
-
+from __future__ import annotations
 import sys
 import typing
 from collections.abc import Hashable
@@ -46,7 +46,7 @@ try:
         np.float64: 'f64',  # np.double, np.float_
     })
 except ImportError:
-    np = None  # type: ignore[assignment]
+    np = None # type: ignore[assignment]
 
 INTEGER_TYPES = {"i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "usize"}
 NUMERIC_TYPES = INTEGER_TYPES | {"f32", "f64"}
@@ -125,8 +125,8 @@ class RuntimeType(object):
     def __eq__(self, other):
         if isinstance(other, str):
             other = RuntimeType.parse(other)
-        if isinstance(other, str):
-            return False # pragma: no cover
+        if not isinstance(other, RuntimeType):
+            return False
         return self.origin == other.origin and self.args == other.args
 
     def __str__(self):
@@ -346,7 +346,7 @@ class RuntimeType(object):
     @classmethod
     def parse_or_infer(
             cls,
-            type_name: RuntimeTypeDescriptor = None, # type: ignore[assignment]
+            type_name: RuntimeTypeDescriptor | None = None,
             public_example: Any = None,
             generics: Optional[List[str]] = None
     ) -> Union["RuntimeType", str]:
@@ -490,7 +490,7 @@ def get_first(value):
         return None
     return next(iter(value))
 
-def parse_or_infer(type_name: RuntimeTypeDescriptor, example) -> Union[RuntimeType, str]:
+def parse_or_infer(type_name: RuntimeTypeDescriptor | None, example) -> Union[RuntimeType, str]:
     return RuntimeType.parse_or_infer(type_name, example)
 
 def pass_through(value: Any) -> Any:

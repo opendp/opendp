@@ -276,7 +276,7 @@ fn dg_normalization_term(scale: f64) -> f64 {
     }
 }
 
-#[cfg(all(test, feature = "untrusted", feature = "use-mpfr"))]
+#[cfg(all(test, feature = "untrusted"))]
 pub mod test {
     use std::fmt::Debug;
     use std::ops::{Mul, Sub};
@@ -508,7 +508,7 @@ pub mod test {
         let base_laplace = make_base_laplace(input_domain, input_metric, scale, Some(-100))?;
         let n = 50_000;
         let empirical_alpha = (0..n)
-            .filter(|_| base_laplace.invoke(&0.0).unwrap_test().abs() > accuracy)
+            .filter(|_| base_laplace.invoke(&0.0).unwrap().abs() > accuracy)
             .count() as f64
             / n as f64;
 

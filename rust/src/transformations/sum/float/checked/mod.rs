@@ -8,6 +8,7 @@ use crate::{
     },
 };
 
+use dashu::integer::IBig;
 use num::{One, Zero};
 use opendp_derive::bootstrap;
 
@@ -277,20 +278,20 @@ where
         );
     }
 
-    let exponent_bias = T::exact_int_cast(T::EXPONENT_BIAS)?;
-    let exponent = T::exact_int_cast(x.raw_exponent())?;
+    let exponent_bias: IBig = T::EXPONENT_BIAS.into();
+    let exponent: IBig = x.raw_exponent().into();
     // this subtraction is on small whole integers, so is exact
     let exponent_unbiased = exponent - exponent_bias;
 
     let pow = exponent_unbiased
         + if x.mantissa().is_zero() {
-            T::zero()
+            IBig::ZERO
         } else {
-            T::one()
+            IBig::ONE
         };
 
     let _2 = T::one() + T::one();
-    _2.inf_pow(&pow)
+    _2.inf_powi(pow)
 }
 
 #[cfg(test)]
@@ -348,8 +349,6 @@ mod test_checks {
         Ok(())
     }
 
-    // feature-gated because non-mpfr InfCast errors on numbers greater than 2^52
-    #[cfg(feature = "use-mpfr")]
     #[test]
     fn test_float_sum_overflows_sequential() -> Fallible<()> {
         let almost_max = f64::from_bits(f64::MAX.to_bits() - 1);
@@ -370,8 +369,6 @@ mod test_checks {
         Ok(())
     }
 
-    // feature-gated because non-mpfr InfCast errors on numbers greater than 2^52
-    #[cfg(feature = "use-mpfr")]
     #[test]
     fn test_float_sum_overflows_pairwise() -> Fallible<()> {
         let almost_max = f64::from_bits(f64::MAX.to_bits() - 1);

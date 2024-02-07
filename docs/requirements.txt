@@ -45,6 +45,7 @@ docutils==0.20.1
     #   pydata-sphinx-theme
     #   sphinx
     #   sphinx-prompt
+    #   sphinx-tabs
 exceptiongroup==1.2.0
     # via ipython
 executing==2.0.1
@@ -137,6 +138,7 @@ pygments==2.17.2
     #   pydata-sphinx-theme
     #   sphinx
     #   sphinx-prompt
+    #   sphinx-tabs
 pypandoc==1.12
     # via -r requirements.in
 pyproject-hooks==1.0.0
@@ -175,9 +177,12 @@ sphinx==7.2.6
     #   pydata-sphinx-theme
     #   sphinx-multiversion
     #   sphinx-prompt
+    #   sphinx-tabs
 sphinx-multiversion @ git+https://github.com/samtygier-stfc/sphinx-multiversion.git@prebuild_command
     # via -r requirements.in
 sphinx-prompt==1.8.0
+    # via -r requirements.in
+sphinx-tabs==3.4.5
     # via -r requirements.in
 sphinxcontrib-applehelp==1.0.8
     # via sphinx

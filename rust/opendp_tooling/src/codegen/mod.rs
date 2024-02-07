@@ -1,15 +1,15 @@
 use std::collections::HashMap;
-use std::fs::{canonicalize, File};
+use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
 use crate::{Argument, TypeRecipe};
 
 pub mod python;
+pub mod r;
 
 #[allow(dead_code)]
-pub fn write_bindings(files: HashMap<PathBuf, String>) {
-    let base_dir = canonicalize("../python/src/opendp").unwrap();
+pub fn write_bindings(base_dir: PathBuf, files: HashMap<PathBuf, String>) {
     for (file_path, file_contents) in files {
         File::create(base_dir.join(file_path))
             .unwrap()
@@ -21,7 +21,13 @@ pub fn write_bindings(files: HashMap<PathBuf, String>) {
 #[allow(dead_code)]
 pub(crate) fn indent(text: String) -> String {
     text.split('\n')
-        .map(|v| format!("    {}", v))
+        .map(|v| {
+            if v.is_empty() {
+                String::new()
+            } else {
+                format!("    {}", v)
+            }
+        })
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -145,33 +151,5 @@ impl Argument {
     }
     pub fn c_type_origin(&self) -> String {
         self.c_type().split('<').next().unwrap().to_string()
-    }
-}
-
-impl TypeRecipe {
-    /// translate the abstract derived_types info into python RuntimeType constructors
-    pub fn to_python(&self) -> String {
-        match self {
-            Self::Name(name) => name.clone(),
-            Self::Function { function, params } => format!(
-                "{function}({params})",
-                function = function,
-                params = params
-                    .iter()
-                    .map(|v| v.to_python())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
-            Self::Nest { origin, args } => format!(
-                "RuntimeType(origin='{origin}', args=[{args}])",
-                origin = origin,
-                args = args
-                    .iter()
-                    .map(|arg| arg.to_python())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
-            Self::None => "None".to_string(),
-        }
     }
 }

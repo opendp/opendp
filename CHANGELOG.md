@@ -6,6 +6,40 @@ showing the source changes from the previous version.
 
 ## [0.9.0-dev](https://github.com/opendp/opendp/compare/v0.8.0...HEAD) - TBD
 
+### Added
+- R language bindings [#679](https://github.com/opendp/opendp/pull/679)
+    - All library functionality is available, except for defining your own library primitives in R code
+- New transformations/measurements
+    - DP PCA [#1045](https://github.com/opendp/opendp/pull/1045)
+    - Exponential mechanism via `make_report_noisy_max_gumbel` [#704](https://github.com/opendp/opendp/pull/704)
+    - Quantile scoring transformation `make_quantile_score_candidates` [#702](https://github.com/opendp/opendp/pull/702)
+    - `make_alp_queryable` may now be used from Python [#747](https://github.com/opendp/opendp/pull/747)
+    - All compositors now allow concurrent composition of interactive measurements [#958](https://github.com/opendp/opendp/pull/958)
+- Expanded functionality of user-defined library primitives
+    - Define your own domains, metrics and measures from Python [#871](https://github.com/opendp/opendp/pull/871) [#873](https://github.com/opendp/opendp/pull/873)
+    - Domains may carry arbitrary descriptors [#1044](https://github.com/opendp/opendp/pull/1044)
+    - Construct your own queryables from Python [#870](https://github.com/opendp/opendp/pull/870)
+- Proofs from Vicki Xu, Hanwen Zhang, Zachary Ratliff and Michael Shoemate
+    - `make_randomized_response_bool` [#490](https://github.com/opendp/opendp/pull/490)
+    - `SampleBernoulli` [#496](https://github.com/opendp/opendp/pull/496)
+    - `make_is_equal` [#514](https://github.com/opendp/opendp/pull/514)
+    - `SampleUniformIntBelow` [#1183](https://github.com/opendp/opendp/pull/1183)
+- The OpenDP Python package now supports PEP 561 type information [#738](https://github.com/opendp/opendp/pull/738)
+- The OpenDP Rust crate is now thread-safe [#874](https://github.com/opendp/opendp/pull/874)
+- Documentation, Typing and CI improvements from Chuck McCallum
+    - CI: MyPy type-checking, link-checking in docs, code coverage, Rust formatting
+    - Rust stack traces are now hidden by default [#1138](https://github.com/opendp/opendp/pull/1138)
+- FFI module in Rust is now public, allowing you to write your own lightweight FFI [#1150](https://github.com/opendp/opendp/pull/1150)
+- C dependencies on GMP/MPFR have been replaced with dashu [#1141](https://github.com/opendp/opendp/pull/1141)
+    - The OpenDP Rust library can now be built easily on Windows and is a much more lightweight Rust dependency
+
+### Changed
+- `TO` argument on user-defined measurements is now optional [#1147](https://github.com/opendp/opendp/pull/1147)
+- raw functions can now be chained as postprocessors onto measurements
+
+### Fixed
+- Imports in the Python `context` module no longer pollute the prelude [#1187](https://github.com/opendp/opendp/pull/1187)
+
 
 ## [0.8.0](https://github.com/opendp/opendp/compare/v0.7.0...v0.8.0) - 2023-08-11
 

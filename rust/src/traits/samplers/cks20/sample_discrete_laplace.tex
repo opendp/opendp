@@ -14,6 +14,7 @@ This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsec
 \subsection*{Vetting history}
 \begin{itemize}
     \item \vettingPR{519}
+    \item \vettingPR{1134}
 \end{itemize}
 
 \section{Hoare Triple}
@@ -51,7 +52,7 @@ or \texttt{Ok(out)}, where \texttt{out} is distributed as $\mathcal{L}_\mathbb{Z
     The discrete laplace distribution with location $\mu$ and scale $s$ is denoted $\mathcal{L}_\mathbb{Z}(\mu, s)$. 
     It is a probability distribution supported on the integers and defined by
     \begin{equation*}
-        \forall x \in \mathbb{Z} \quad  P[X = x] = \frac{e^{-1/s} - 1}{e^{-1/s} + 1} e^{-|x|/s} \quad \text{where } X \sim \mathcal{L}_\mathbb{Z}(\mu, s)
+        \forall x \in \mathbb{Z} \quad  P[X = x] = \frac{e^{1/s} - 1}{e^{1/s} + 1} e^{-|x|/s} \quad \text{where } X \sim \mathcal{L}_\mathbb{Z}(\mu, s)
     \end{equation*}
 \end{definition}
 
@@ -89,7 +90,7 @@ We now condition on not returning an error, and establish some helpful lemmas.
 \begin{lemma}\cite{CKS20}\label{P_Lx_BY_ne_T0}
     Given random variables $B \sim Bernoulli(1/2)$ and $Y \sim Geometric(1 - e^{-1/s})$, define $X|_{B=\top} = Y$, and $X|_{B=\bot} = -Y$. 
     If $(B, Y) \neq (\top, 0)$, then $X \sim \mathcal{L}_\mathbb{Z}(0, scale)$. 
-    That is, $P[X = x | (B, Y) \neq (\top, 0)] = \frac{1 - e^{-1/\sigma}}{1 + e^{-1/\sigma}} e^{-|x|/\sigma}$ for any $x \in \mathbb{Z}$.
+    That is, $P[X = x | (B, Y) \neq (\top, 0)] = \frac{e^{1/s} - 1}{e^{1/s} + 1} e^{-|x|/s}$ for any $x \in \mathbb{Z}$.
 \end{lemma}
 
 \begin{proof}
@@ -99,6 +100,7 @@ P[X = x | (B, Y) \neq (\top, 0)] &= \frac{P[X = x, (B, Y) \neq (\top, 0)]}{P[(B,
     &= \frac{P[X = |x|] P[B = \mathbb{I}[x < 0]]}{P[(B, Y) \neq (\top, 0)]} && \text{by independence of B, Y} \\
     &= \frac{P[X = |x|] \frac{1}{2}}{\frac{1}{2} (e^{-1/s} + 1)} && \text{by } \ref{P_B_Y_ne_T_0} \\
     &= \frac{1 - e^{-1/s}}{1 + e^{-1/s}} e^{-|x|/s} \\
+    &= \frac{e^{1/s} - 1}{e^{1/s} + 1} e^{-|x|/s} \\
 \end{align*}
 \end{proof}
 

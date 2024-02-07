@@ -15,7 +15,7 @@ use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
 use crate::ffi::util::{self, into_c_char_p, ExtrinsicObject};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 use crate::measures::SMDCurve;
-use crate::traits::samplers::Shuffle;
+use crate::traits::samplers::{fill_bytes, Shuffle};
 use crate::traits::TotalOrd;
 use crate::{err, fallible, try_, try_as_ref};
 
@@ -30,6 +30,10 @@ use crate::{err, fallible, try_, try_as_ref};
 )]
 /// Internal function. Load data from a `slice` into an AnyObject
 ///
+/// # Arguments
+/// * `raw` - A pointer to the slice with data.
+/// * `T` - The type of the data in the slice.
+/// 
 /// # Returns
 /// An AnyObject that contains the data in `slice`.
 /// The AnyObject also captures rust type information.
@@ -59,7 +63,8 @@ pub extern "C" fn opendp_data__slice_as_object(
         Ok(AnyObject::new(plain))
     }
     fn raw_to_string(raw: &FfiSlice) -> Fallible<AnyObject> {
-        let string = util::to_str(raw.ptr as *const c_char)?.to_owned();
+        let str_ptr = *util::as_ref(raw.ptr as *const *const c_char).ok_or_else(|| err!(FFI, "null pointer"))?;
+        let string = util::to_str(str_ptr)?.to_owned();
         Ok(AnyObject::new(string))
     }
     fn raw_to_vec_string(raw: &FfiSlice) -> Fallible<AnyObject> {
@@ -126,6 +131,7 @@ pub extern "C" fn opendp_data__slice_as_object(
                 "HashMap FfiSlice must have an equivalent number of keys and values"
             );
         };
+
         let map = keys
             .iter()
             .cloned()
@@ -199,6 +205,9 @@ pub extern "C" fn opendp_data__slice_as_object(
     returns(c_type = "FfiResult<const char *>")
 )]
 /// Internal function. Retrieve the type descriptor string of an AnyObject.
+///
+/// # Arguments
+/// * `this` - A pointer to the AnyObject.
 #[no_mangle]
 pub extern "C" fn opendp_data__object_type(this: *mut AnyObject) -> FfiResult<*mut c_char> {
     let obj: &AnyObject = try_as_ref!(this);
@@ -216,6 +225,9 @@ pub extern "C" fn opendp_data__object_type(this: *mut AnyObject) -> FfiResult<*m
 )]
 /// Internal function. Unload data from an AnyObject into an FfiSlicePtr.
 ///
+/// # Arguments
+/// * `obj` - A pointer to the AnyObject to unpack.
+///
 /// # Returns
 /// An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages.
 #[no_mangle]
@@ -229,8 +241,8 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         let string: &String = obj.downcast_ref()?;
         // FIXME: There's no way to get a CString without copying, so this leaks.
         Ok(FfiSlice::new(
-            util::into_c_char_p(string.clone())? as *mut c_void,
-            string.len() + 1,
+            util::into_raw(util::into_c_char_p(string.clone())? as *mut c_void) as *mut c_void,
+            1,
         ))
     }
     fn vec_string_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
@@ -326,6 +338,9 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     returns(do_not_convert = true)
 )]
 /// Internal function. Converts an FfiSlice of AnyObjects to an FfiSlice of AnyObjectPtrs.
+///
+/// # Arguments
+/// * `raw` - A pointer to the slice to free.
 #[no_mangle]
 pub extern "C" fn opendp_data__ffislice_of_anyobjectptrs(
     raw: *const FfiSlice,
@@ -353,6 +368,9 @@ pub extern "C" fn opendp_data__ffislice_of_anyobjectptrs(
     returns(c_type = "FfiResult<void *>")
 )]
 /// Internal function. Free the memory associated with `this`, an AnyObject.
+///
+/// # Arguments
+/// * `this` - A pointer to the AnyObject to free.
 #[no_mangle]
 pub extern "C" fn opendp_data__object_free(this: *mut AnyObject) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
@@ -366,6 +384,9 @@ pub extern "C" fn opendp_data__object_free(this: *mut AnyObject) -> FfiResult<*m
 /// Internal function. Free the memory associated with `this`, an FfiSlicePtr.
 /// Used to clean up after object_as_slice.
 /// Frees the slice, but not what the slice references!
+///
+/// # Arguments
+/// * `this` - A pointer to the FfiSlice to free.
 #[no_mangle]
 pub extern "C" fn opendp_data__slice_free(this: *mut FfiSlice) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
@@ -378,6 +399,9 @@ pub extern "C" fn opendp_data__slice_free(this: *mut FfiSlice) -> FfiResult<*mut
 )]
 /// Internal function. Free the memory associated with `this`, a string.
 /// Used to clean up after the type getter functions.
+///
+/// # Arguments
+/// * `this` - A pointer to the string to free.
 #[no_mangle]
 pub extern "C" fn opendp_data__str_free(this: *mut c_char) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
@@ -390,8 +414,25 @@ pub extern "C" fn opendp_data__str_free(this: *mut c_char) -> FfiResult<*mut ()>
 )]
 /// Internal function. Free the memory associated with `this`, a bool.
 /// Used to clean up after the relation check.
+///
+/// # Arguments
+/// * `this` - A pointer to the bool to free.
 #[no_mangle]
 pub extern "C" fn opendp_data__bool_free(this: *mut c_bool) -> FfiResult<*mut ()> {
+    util::into_owned(this).map(|_| ()).into()
+}
+
+#[bootstrap(
+    name = "extrinsic_object_free",
+    arguments(this(do_not_convert = true, c_type = "ExtrinsicObject *")),
+    returns(c_type = "FfiResult<void *>")
+)]
+/// Internal function. Free the memory associated with `this`, a string.
+/// Used to clean up after the type getter functions.
+#[no_mangle]
+pub extern "C" fn opendp_data__extrinsic_object_free(
+    this: *mut ExtrinsicObject,
+) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
@@ -606,6 +647,10 @@ impl Shuffle for AnyObject {
 )]
 /// Internal function. Use an SMDCurve to find epsilon at a given `delta`.
 ///
+/// # Arguments
+/// * `curve` - The SMDCurve.
+/// * `delta` - What to fix delta to compute epsilon.
+///
 /// # Returns
 /// Epsilon at a given `delta`.
 #[no_mangle]
@@ -631,6 +676,9 @@ pub extern "C" fn opendp_data__smd_curve_epsilon(
     returns(c_type = "FfiResult<char *>")
 )]
 /// Internal function. Convert the AnyObject to a string representation.
+///
+/// # Arguments
+/// * `this` - The AnyObject to convert to a string representation.
 #[no_mangle]
 pub extern "C" fn opendp_data__to_string(this: *const AnyObject) -> FfiResult<*mut c_char> {
     util::into_c_char_p(format!("{:?}", try_as_ref!(this))).map_or_else(
@@ -640,12 +688,19 @@ pub extern "C" fn opendp_data__to_string(this: *const AnyObject) -> FfiResult<*m
 }
 
 /// wrap an AnyObject in an FfiResult::Ok(this)
+///
+/// # Arguments
+/// * `this` - The AnyObject to wrap.
 #[no_mangle]
 pub extern "C" fn ffiresult_ok(this: *const AnyObject) -> *const FfiResult<*const AnyObject> {
     util::into_raw(FfiResult::Ok(this))
 }
 
 /// construct an FfiResult::Err(e)
+///
+/// # Arguments
+/// * `message` - The error message.
+/// * `backtrace` - The error backtrace.
 #[no_mangle]
 pub extern "C" fn ffiresult_err(
     message: *mut c_char,
@@ -666,6 +721,18 @@ pub extern "C" fn ffiresult_err(
         message,
         backtrace: CString::new("").unwrap().into_raw(),
     })))
+}
+
+#[bootstrap(
+    name = "fill_bytes",
+    arguments(ptr(c_type = "uint8_t *", do_not_convert = true))
+)]
+/// Internal function. Populate the buffer behind `ptr` with `len` random bytes
+/// sampled from a cryptographically secure RNG.
+#[no_mangle]
+pub extern "C" fn opendp_data__fill_bytes(ptr: *mut u8, len: usize) -> bool {
+    let buffer = unsafe { slice::from_raw_parts_mut(ptr, len) };
+    fill_bytes(buffer).is_ok()
 }
 
 #[cfg(test)]
@@ -691,8 +758,9 @@ mod tests {
     #[test]
     fn test_slice_as_object_string() -> Fallible<()> {
         let data = "Hello".to_owned();
-        let raw_ptr = util::into_c_char_p(data.clone()).unwrap_test() as *mut c_void;
-        let raw_len = data.len() + 1;
+        let raw_ptr = util::into_raw(util::into_c_char_p(data.clone()).unwrap_test() as *mut c_void)
+            as *mut c_void;
+        let raw_len = 1;
         let raw = util::into_raw(FfiSlice::new(raw_ptr, raw_len));
         let res = opendp_data__slice_as_object(raw, "String".to_char_p());
         let res: String = Fallible::from(res)?.downcast()?;
@@ -738,9 +806,9 @@ mod tests {
         let obj = AnyObject::new_raw("Hello".to_owned());
         let res = opendp_data__object_as_slice(obj);
         let res = Fallible::from(res)?;
-        assert_eq!(res.len, 6);
+        assert_eq!(res.len, 1);
         assert_eq!(
-            util::into_string(res.ptr as *mut c_char).unwrap_test(),
+            util::into_string(*util::as_ref(res.ptr as *mut *mut c_char).unwrap())?,
             "Hello"
         );
         Ok(())

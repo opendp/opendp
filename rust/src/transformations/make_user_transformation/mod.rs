@@ -16,7 +16,14 @@ use crate::{
         function(rust_type = "$domain_carrier_type(output_domain)"),
         stability_map(rust_type = "$metric_distance_type(output_metric)"),
     ),
-    dependencies("c_function", "c_stability_map")
+    dependencies(
+        "input_domain",
+        "input_metric",
+        "output_domain",
+        "output_metric",
+        "c_function",
+        "c_stability_map"
+    )
 )]
 /// Construct a Transformation from user-defined callbacks.
 ///

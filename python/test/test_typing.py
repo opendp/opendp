@@ -49,6 +49,7 @@ def test_sensitivity():
     assert isinstance(L1Distance[int], SensitivityMetric)
     assert not isinstance(RuntimeType.parse('(f32)'), SensitivityMetric)
     assert str(L1Distance[int]) == "L1Distance<i32>"
+    assert L1Distance[int] != {}
 
 
 def test_tuples():

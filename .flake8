@@ -4,7 +4,6 @@
 
 [flake8]
 exclude =
-	*/pseudocode/*
     .venv # python/
     venv # docs/
 

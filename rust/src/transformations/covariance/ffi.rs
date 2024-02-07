@@ -3,6 +3,8 @@ use std::{
     os::raw::{c_char, c_uint},
 };
 
+use dashu::integer::IBig;
+
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
     error::Fallible,
@@ -10,7 +12,7 @@ use crate::{
         any::{AnyObject, AnyTransformation, Downcast},
         util::Type,
     },
-    traits::{CheckAtom, Float},
+    traits::{CheckAtom, Float, FloatBits},
     transformations::{make_sized_bounded_covariance, Pairwise, Sequential, UncheckedSum},
 };
 
@@ -33,6 +35,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_covariance(
     where
         T: 'static + Float,
         (T, T): CheckAtom,
+        IBig: From<T::Bits>,
     {
         fn monomorphize2<S>(
             size: usize,
@@ -44,6 +47,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_covariance(
             S: UncheckedSum,
             S::Item: 'static + Float,
             (S::Item, S::Item): CheckAtom,
+            IBig: From<<S::Item as FloatBits>::Bits>,
         {
             make_sized_bounded_covariance::<S>(size, bounds_0, bounds_1, ddof).into_any()
         }

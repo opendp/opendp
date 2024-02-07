@@ -1,11 +1,13 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
-use az::SaturatingCast;
+use dashu::integer::IBig;
+use dashu::rational::RBig;
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
+use crate::traits::SaturatingCast;
 use crate::{
     domains::{AtomDomain, VectorDomain},
     ffi::util::Type,
@@ -28,10 +30,10 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
         QO: Type,
     ) -> Fallible<AnyMeasurement>
     where
-        T: crate::traits::Integer,
+        T: crate::traits::Integer + SaturatingCast<IBig>,
         QO: crate::traits::Float + InfCast<T>,
-        rug::Rational: TryFrom<QO>,
-        rug::Integer: From<T> + SaturatingCast<T>,
+        RBig: TryFrom<QO>,
+        IBig: From<T>,
     {
         fn monomorphize2<D, QO>(
             input_domain: &AnyDomain,
@@ -40,11 +42,11 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
         ) -> Fallible<AnyMeasurement>
         where
             D: 'static + BaseDiscreteLaplaceDomain,
-            D::Atom: crate::traits::Integer,
+            D::Atom: crate::traits::Integer + SaturatingCast<IBig>,
             (D, D::InputMetric): MetricSpace,
             QO: crate::traits::Float + InfCast<D::Atom>,
-            rug::Rational: TryFrom<QO>,
-            rug::Integer: From<D::Atom> + SaturatingCast<D::Atom>,
+            RBig: TryFrom<QO>,
+            IBig: From<D::Atom>,
         {
             let input_domain = input_domain.downcast_ref::<D>()?.clone();
             let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();

@@ -8,7 +8,7 @@
     },
     "rust-analyzer.cargo.features": [
         "untrusted",
-        "bindings-python"
+        "bindings"
     ],
     "latex-workshop.latex.outDir": "%DIR%/out/",
     "latex-workshop.latex.recipes": [

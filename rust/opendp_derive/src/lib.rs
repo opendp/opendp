@@ -190,7 +190,7 @@ mod full;
 /// We can communicate this to the bindings generation by setting the rust type manually.
 /// ```no_run
 /// #[bootstrap(
-///     arguments(bounds(rust_type = "(T, T)"))),
+///     arguments(bounds(rust_type = "(T, T)")),
 ///     generics(TA(example = "$get_first(bounds)"))
 /// )]
 /// fn make_unclamp<T>(bounds: (Bound<T>, Bound<T>)) -> S::Atom {
@@ -213,7 +213,7 @@ mod full;
 /// We can then use this inferred type to specify the rust type.
 /// ```no_run
 /// #[bootstrap(
-///     arguments(bounds(rust_type = "(T, T)"))),
+///     arguments(bounds(rust_type = "(T, T)")),
 ///     derived_types(T = "$get_first(bounds)")
 /// )]
 /// fn my_func<S: Summable>(bounds: (S::Atom, S::Atom)) -> S::Atom {
@@ -290,6 +290,31 @@ mod full;
 /// This can be disabled on individual arguments by specifying `do_not_convert = true`.
 /// This is typically only useful on the innermost structural utilities,
 /// like when converting from an FfiSlice to an AnyObject or vice versa.
+///
+/// ## Dependencies
+/// When the return value of the function contains data whose memory has been allocated by a foreign language,
+/// the data is at risk of being freed.
+/// This is because foreign languages may not know the return value is still holding a reference to the data.
+///
+/// For example, when you construct a domain that holds a member check function that was allocated in Python.
+/// ```no_run
+/// #[bootstrap(
+///     dependencies(member)
+/// )]
+/// fn example_user_domain<DI>(member: CallbackFn) -> AnyDomain {
+///     pack_function_into_domain(member)
+/// }
+/// ```
+///
+/// The generated code will add a reference to `member` to the return type, which keeps the refcount up.
+/// ```no_run
+/// def example_user_domain(
+///     member: Callable[[Any], bool]
+/// ):
+///     result = lib.example_user_domain(member)
+///     setattr(result, "_dependencies", member)
+///     return result
+/// ```
 ///
 #[cfg(feature = "full")]
 #[proc_macro_attribute]

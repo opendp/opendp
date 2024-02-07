@@ -44,12 +44,16 @@ import pypandoc
 import re
 py_attr_re = re.compile(r"\:py\:\w+\:(``[^:`]+``)")
 
+def is_rst(line):
+    """heuristic to determine where RST format begins"""
+    return line.startswith(":") or line.startswith(".. ")
+
 def docstring(app, what, name, obj, options, lines):
     path = name.split(".")
 
     if len(path) > 1 and path[1] in markdown_modules:
         # split docstring into description and params
-        param_index = next((i for i, line in enumerate(lines) if line.startswith(":")), len(lines))
+        param_index = next((i for i, line in enumerate(lines) if is_rst(line)), len(lines))
         description, params = lines[:param_index], lines[param_index:]
         
         # rust documentation is markdown, convert to rst
@@ -70,39 +74,6 @@ def docstring(app, what, name, obj, options, lines):
 
 def setup(app):
     app.connect('autodoc-process-docstring', docstring)
-
-nitpicky = True
-nitpick_ignore = [
-    # (no comment = single occurrence)
-
-    # Maybe the quoted name is to prevent a circular reference?
-    ('py:class', '"RuntimeType"'),  # 3 occurrences
-
-    # Rather than a class, this is defined by setting a variable to a `Union[]`,
-    # and we don't generate docs for variables, so there's nothing to point to.
-    # Can we selectively turn on documentation for module variables?
-    ('py:class', 'RuntimeTypeDescriptor'),  # 28 occurrences
-
-    # For each of these, to provide a base class, the Python `Any*` class
-    # is wrapped by ctypes.POINTER(), producing the `LP_*`,
-    # which Sphinx can't resolve.
-    ('py:class', 'opendp.mod.LP_AnyDomain'),
-    ('py:class', 'opendp.mod.LP_AnyFunction'),
-    ('py:class', 'opendp.mod.LP_AnyMeasure'),
-    ('py:class', 'opendp.mod.LP_AnyMeasurement'),
-    ('py:class', 'opendp.mod.LP_AnyMetric'),
-    ('py:class', 'opendp.mod.LP_AnyTransformation'),
-
-    # I think the problem is that Sphinx is making parameter list documentation,
-    # and it doesn't understand that `M` and `T` are type parameters, not actual types.
-    ('py:class', 'opendp.mod.M'),
-    ('py:class', 'opendp.mod.T'),  # 17 occurrences
-
-    # In a given version of Python, only one will apply,
-    # but we need them both for compatibility.
-    ('py:class', 'types.GenericAlias'),  # 56 occurrences
-    ('py:obj', 'typing._GenericAlias'),  # 56 occurrences
-]
 
 # This prevents the RuntimeTypeDescriptors from expanding and making the signatures on API docs unreadable
 autodoc_typehints = "description"
@@ -131,6 +102,43 @@ with open("../../VERSION") as f:
 version = str(semver_version.replace(prerelease=None, build=None))
 # The full version, including alpha/beta/rc tags.
 release = str(semver_version)
+
+# nitpicky was first enabled in version 0.9
+if semver_version < (0, 9):
+    nitpicky = False
+else:
+    nitpicky = True
+    nitpick_ignore = [
+        # (no comment = single occurrence)
+
+        # Maybe the quoted name is to prevent a circular reference?
+        ('py:class', '"RuntimeType"'),  # 3 occurrences
+
+        # Rather than a class, this is defined by setting a variable to a `Union[]`,
+        # and we don't generate docs for variables, so there's nothing to point to.
+        # Can we selectively turn on documentation for module variables?
+        ('py:class', 'RuntimeTypeDescriptor'),  # 28 occurrences
+
+        # For each of these, to provide a base class, the Python `Any*` class
+        # is wrapped by ctypes.POINTER(), producing the `LP_*`,
+        # which Sphinx can't resolve.
+        ('py:class', 'opendp.mod.LP_AnyDomain'),
+        ('py:class', 'opendp.mod.LP_AnyFunction'),
+        ('py:class', 'opendp.mod.LP_AnyMeasure'),
+        ('py:class', 'opendp.mod.LP_AnyMeasurement'),
+        ('py:class', 'opendp.mod.LP_AnyMetric'),
+        ('py:class', 'opendp.mod.LP_AnyTransformation'),
+
+        # I think the problem is that Sphinx is making parameter list documentation,
+        # and it doesn't understand that `M` and `T` are type parameters, not actual types.
+        ('py:class', 'opendp.mod.M'),
+        ('py:class', 'opendp.mod.T'),  # 17 occurrences
+
+        # In a given version of Python, only one will apply,
+        # but we need them both for compatibility.
+        ('py:class', 'types.GenericAlias'),  # 56 occurrences
+        ('py:obj', 'typing._GenericAlias'),  # 56 occurrences
+    ]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -191,10 +199,6 @@ smv_released_pattern = r'^tags/v\d+\.\d+\.\d+$'
 # Because we need values to be calculated for each version, we can't use Python variables, so we have the shell expand them.
 version_cmd = 'VERSION=`cat ../VERSION`'
 sphinx_apidoc_cmd = 'sphinx-apidoc -f -F -e -H "OpenDP" -A "The OpenDP Project" -V $VERSION -o source/api/python ../python/src/opendp --templatedir source/_templates'
-rustdoc_cmd = '(cd ../rust && cargo rustdoc --no-deps --target-dir ../docs/source/api/rust -- --html-in-header katex.html)'
-# Building the Rust docs locally takes forever, and is only necessary for latest branch (releases are automatically published to https://docs.rs).
-# TODO: Figure out how to use locally generated Rust docs for latest branch only.
-#smv_prebuild_command = '&&'.join([version_cmd, sphinx_apidoc_cmd, rustdoc_cmd])
 smv_prebuild_command = '&&'.join([version_cmd, sphinx_apidoc_cmd])
 
 # This is the file name suffix for HTML files (e.g. ".xhtml").

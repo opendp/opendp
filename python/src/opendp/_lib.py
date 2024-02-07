@@ -74,9 +74,39 @@ def _load_library():
 
 lib = _load_library()
 
+
+np_csprng: "np.random.Generator" = None # type: ignore[assignment]
+try:
+    import numpy as np  # type: ignore[import-not-found]
+    from randomgen import UserBitGenerator  # type: ignore[import]
+
+    buffer_len = 1024
+    buffer = np.empty(buffer_len, dtype=np.uint64)
+    buffer_ptr = ctypes.cast(buffer.ctypes.data, ctypes.POINTER(ctypes.c_uint8))
+    buffer_pos = buffer_len
+
+    def next_raw(_voidp):
+        global buffer_pos
+        if buffer_len == buffer_pos:
+            from opendp._data import fill_bytes
+
+            # there are 8x as many u8s as there are u64s
+            if not fill_bytes(buffer_ptr, buffer_len * 8): # pragma: no cover
+                from opendp.mod import OpenDPException
+                raise OpenDPException("FailedFunction", "Failed to sample from CSPRNG")
+            buffer_pos = 0
+
+        out = buffer[buffer_pos]
+        buffer_pos += 1
+        return int(out)
+
+    np_csprng = np.random.Generator(bit_generator=UserBitGenerator(next_raw))
+
+except ImportError:  # pragma: no cover
+    pass
+
 # This enables backtraces in Rust by default.
 # It can be disabled by setting RUST_BACKTRACE=0.
-# Binary searches disable backtraces for performance reasons.
 if "RUST_BACKTRACE" not in os.environ:
     os.environ["RUST_BACKTRACE"] = "1"
 
@@ -124,8 +154,12 @@ class AnyObjectPtr(ctypes.POINTER(AnyObject)): # type: ignore[misc]
     _type_ = AnyObject
 
     def __del__(self):
-        from opendp._data import object_free
-        object_free(self)
+        try:
+            from opendp._data import object_free
+            object_free(self)
+        except (ImportError, TypeError):
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
 
 
 class AnyQueryable(ctypes.Structure):
@@ -174,12 +208,24 @@ class ExtrinsicObject(ctypes.Structure):
     ]
 
 
+class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
+    _type_ = ExtrinsicObject
+
+    def __del__(self):
+        try: # pragma: no cover
+            from opendp._data import extrinsic_object_free
+            extrinsic_object_free(self)
+        except (ImportError, TypeError):
+            # an example error that this catches:
+            #   ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
+
 # def _str_to_c_char_p(s: Optional[str]) -> Optional[bytes]:
 #     return s and s.encode("utf-8")
 def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
     if s is not None:
         return s.decode("utf-8")
-    return None  # pragma: no cover
+    return None # pragma: no cover
 
 
 def unwrap(result, type_) -> Any:
@@ -246,14 +292,14 @@ def proven(function): # pragma: no cover
 
 
         # split the path at the extrinsics directory
-        extrinsics_path = os.path.join(os.path.dirname(__file__), "extrinsics")
+        extrinsics_path = os.path.join(os.path.dirname(__file__), "_extrinsics")
         relative_proof_path = os.path.relpath(absolute_proof_path, extrinsics_path)
 
         # create the link
         proof_url = make_proof_link(
             extrinsics_path,
             relative_path=relative_proof_path,
-            repo_path="python/src/opendp/extrinsics",
+            repo_path="python/src/opendp/_extrinsics",
         )
 
         # replace the path with the link

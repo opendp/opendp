@@ -26,6 +26,30 @@ jobs:
     with:
       assert_version: false
 
+  r-docs:
+    needs: credential-check
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: R/opendp
+          extra-packages: devtools
+
+      - name: Build docs
+        run: bash tools/r_stage.sh -d
+
+      - name: Upload docs
+        uses: actions/upload-artifact@v2
+        with:
+          name: r-docs
+          path: R/opendp/docs
+
   docs:
     needs: credential-check
     # fixed to ubuntu-22.04, which is currently newer than ubuntu-latest, because pandoc needs at least v2.6
@@ -77,6 +101,12 @@ jobs:
           cp en/nightly/404.html . \
           || cp en/beta/404.html . \
           || cp en/stable/404.html
+      
+      - name: Download R Docs
+        uses: actions/download-artifact@v3
+        with:
+          name: r-docs
+          path: en/stable/api/r
       
       - name: Checkout artifacts
         uses: actions/checkout@v3

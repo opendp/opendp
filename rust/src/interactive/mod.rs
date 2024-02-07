@@ -73,9 +73,9 @@ thread_local! {
     static WRAPPER: RefCell<Option<Rc<dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>>>> = RefCell::new(None);
 }
 
-pub(crate) fn wrap<T, F: FnOnce() -> T>(
+pub(crate) fn wrap<T>(
     wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static,
-    f: F,
+    f: impl FnOnce() -> T,
 ) -> T {
     let prev_wrapper = WRAPPER.with(|w| w.borrow_mut().take());
 

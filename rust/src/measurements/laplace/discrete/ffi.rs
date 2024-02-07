@@ -11,6 +11,9 @@ use crate::traits::samplers::SampleDiscreteLaplaceLinear;
 use crate::traits::{Float, InfCast, Integer};
 use crate::{err, try_, try_as_ref};
 
+use crate::traits::SaturatingCast;
+use dashu::{integer::IBig, rational::RBig};
+
 #[no_mangle]
 pub extern "C" fn opendp_measurements__make_base_discrete_laplace(
     input_domain: *const AnyDomain,
@@ -18,7 +21,6 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace(
     scale: *const c_void,
     QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    #[cfg(feature = "use-mpfr")]
     fn monomorphize<T, QO>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
@@ -26,10 +28,10 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace(
         QO: Type,
     ) -> Fallible<AnyMeasurement>
     where
-        T: Integer + SampleDiscreteLaplaceLinear<QO>,
+        T: Integer + SampleDiscreteLaplaceLinear<QO> + SaturatingCast<IBig>,
         QO: Float + InfCast<T> + InfCast<T>,
-        rug::Rational: TryFrom<QO>,
-        rug::Integer: From<T> + az::SaturatingCast<T>,
+        RBig: TryFrom<QO>,
+        IBig: From<T>,
     {
         fn monomorphize2<D, QO>(
             input_domain: &AnyDomain,
@@ -39,43 +41,10 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace(
         where
             D: 'static + BaseDiscreteLaplaceDomain,
             (D, D::InputMetric): MetricSpace,
-            D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
+            D::Atom: Integer + SampleDiscreteLaplaceLinear<QO> + SaturatingCast<IBig>,
             QO: Float + InfCast<D::Atom> + InfCast<D::Atom>,
-            rug::Rational: TryFrom<QO>,
-            rug::Integer: From<D::Atom> + az::SaturatingCast<D::Atom>,
-        {
-            let input_domain = input_domain.downcast_ref::<D>()?.clone();
-            let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
-            make_base_discrete_laplace::<D, QO>(input_domain, input_metric, scale).into_any()
-        }
-        let D = input_domain.type_.clone();
-        let scale = *try_as_ref!(scale as *const QO);
-        dispatch!(monomorphize2, [
-            (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
-            (QO, [QO])
-        ], (input_domain, input_metric, scale))
-    }
-    #[cfg(not(feature = "use-mpfr"))]
-    fn monomorphize<T, QO>(
-        input_domain: &AnyDomain,
-        input_metric: &AnyMetric,
-        scale: *const c_void,
-        QO: Type,
-    ) -> Fallible<AnyMeasurement>
-    where
-        T: Integer + SampleDiscreteLaplaceLinear<QO>,
-        QO: Float + InfCast<T>,
-    {
-        fn monomorphize2<D, QO>(
-            input_domain: &AnyDomain,
-            input_metric: &AnyMetric,
-            scale: QO,
-        ) -> Fallible<AnyMeasurement>
-        where
-            D: 'static + BaseDiscreteLaplaceDomain,
-            (D, D::InputMetric): MetricSpace,
-            D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
-            QO: Float + InfCast<D::Atom>,
+            RBig: TryFrom<QO>,
+            IBig: From<D::Atom>,
         {
             let input_domain = input_domain.downcast_ref::<D>()?.clone();
             let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
