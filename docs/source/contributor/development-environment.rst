@@ -199,7 +199,7 @@ First, set an environment variable to the absolute path of the OpenDP Library bi
 
 .. code-block:: bash
 
-    export OPENDP_RUST_LIB=/absolute/path/to/opendp/rust/target/debug/
+    export OPENDP_LIB_DIR=`realpath rust/target/debug`
 
 Then, install devtools in R:
 
