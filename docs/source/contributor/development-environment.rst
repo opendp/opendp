@@ -4,10 +4,10 @@ Development Environment
 =======================
 If you are writing code, the first task to tackle is setting up the development environment.
 
-Follow the steps below to set up an OpenDP Library development environment, including the ability to run tests in both Rust and Python.
+All developers should install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
 
-* Install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
-* Install `Python version 3.8 or higher <https://www.python.org>`_.
+Most developers will also install Python and/or R:
+After you've completed the Rust build, continue on to the sections below for Python and R developers.
 
 
 Clone the OpenDP Repo
@@ -31,8 +31,8 @@ If you have not `set up SSH <https://docs.github.com/en/authentication/connectin
     git clone https://github.com/opendp/opendp.git
 
 
-Build OpenDP
-------------
+Rust Build
+----------
 
 Next, you'll need to build the Rust binaries. 
 
@@ -105,6 +105,8 @@ If you run into problems, please contact us!
 Python Setup
 ------------
 
+If you have not already, install `Python version 3.8 or higher <https://www.python.org>`_.
+
 You can install a local Python package that uses your new OpenDP binary. 
 
 We recommend setting up a virtual environment first, but this is optional:
@@ -163,6 +165,7 @@ At this point, you should be able import OpenDP as a locally installed package:
 
 Python Tests
 ------------
+
 You can test that things are working by running OpenDP's Python test suite, using ``pytest``.
 Run the tests from the ``python`` directory. 
 
@@ -193,9 +196,9 @@ The source code and developer documentation is
 R Setup
 -------
 
-You can also load an R package that uses your new OpenDP binary. 
+If you have not already, `install R <https://cran.r-project.org/>`_.
 
-First, set an environment variable to the absolute path of the OpenDP Library binary directory:
+Then, set an environment variable to the absolute path of the OpenDP Library binary directory:
 
 .. code-block:: bash
 
