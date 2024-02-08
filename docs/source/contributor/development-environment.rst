@@ -164,7 +164,7 @@ At this point, you should be able import OpenDP as a locally installed package:
     
 
 Python Tests
-------------
+^^^^^^^^^^^^
 
 You can test that things are working by running OpenDP's Python test suite, using ``pytest``.
 Run the tests from the ``python`` directory. 
@@ -185,7 +185,7 @@ This is just a quick overview of building OpenDP.
 If you're interested in porting OpenDP to a different platform, we'd be delighted to get your help; please :doc:`contact us <../contact>`!
 
 Python Documentation
---------------------
+^^^^^^^^^^^^^^^^^^^^
 
 This documentation website is built with Sphinx.
 The source code and developer documentation is
@@ -244,7 +244,7 @@ To restore to a developer setup, run:
 
 
 R Tests
--------
+^^^^^^^
 
 Run tests (tests are located in ``R/opendp/tests/``):
 
@@ -266,12 +266,13 @@ To run the same check manually, use:
     R CMD build R/opendp
     R CMD check opendp_*.tar.gz --as-cran
 
-It is important `R CMD check` is run on the `.tar.gz`, not on `R/opendp`, 
-because `check` depends on some of the changes `build` makes within the `.tar.gz`.
+It is important ``R CMD check`` is run on the ``.tar.gz``, not on ``R/opendp``, 
+because ``check`` depends on some of the changes ``build`` makes within the ``.tar.gz``.
 
 
 R Documentation
----------------
+^^^^^^^^^^^^^^^
+
 This script uses roxygen to generate ``R/opendp/man`` pages from `#'` code comments,
 and then uses ``pkgdown`` to render the documentation website.
 
