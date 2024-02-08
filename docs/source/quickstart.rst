@@ -15,9 +15,13 @@ OpenDP is available for Python and R.
 
     .. group-tab:: R
 
-        .. prompt:: bash
+        Launch R and then use ``install.packages``:
 
-            TODO
+        .. highlight:: r
+        
+        ::
+
+            install.packages('opendp', repos = 'https://opendp-dev.r-universe.dev')
 
 This will make the OpenDP modules available to your local environment.
 
