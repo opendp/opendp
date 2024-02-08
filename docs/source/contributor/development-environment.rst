@@ -201,13 +201,17 @@ First, set an environment variable to the absolute path of the OpenDP Library bi
 
     export OPENDP_LIB_DIR=`realpath rust/target/debug`
 
+Additional dependencies may be needed for development. For homebrew on MacOS we suggest:
+
+.. code-block:: bash
+
+    brew install harfbuzz fribidi libgit2 xquartz
+
 Then, install devtools in R:
 
 .. code-block:: R
 
     install.packages("devtools", "RcppTOML")
-
-On Mac you may need to run ``brew install harfbuzz fribidi libgit2`` first.
 
 After each edit to the R or Rust source, run the following command in R to (re)load the R package:
 
