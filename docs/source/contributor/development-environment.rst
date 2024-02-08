@@ -274,7 +274,7 @@ because ``check`` depends on some of the changes ``build`` makes within the ``.t
 R Documentation
 ^^^^^^^^^^^^^^^
 
-This script uses roxygen to generate ``R/opendp/man`` pages from `#'` code comments,
+This script uses roxygen to generate ``R/opendp/man`` pages from ``#'`` code comments,
 and then uses ``pkgdown`` to render the documentation website.
 
 .. code-block:: bash
