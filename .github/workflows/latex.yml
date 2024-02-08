@@ -1,0 +1,71 @@
+name: Latex Build
+
+on:
+  pull_request:
+
+jobs:
+  pre-latex-build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Collect diffs
+        id: "diffs"
+        run: |
+          files=$(git --no-pager diff --name-only origin/${{ github.event.pull_request.base.ref }} -- '*.tex')
+          
+          # using syntax from: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
+          # construct list of .tex files
+          echo "tex<<EOF" >> $GITHUB_OUTPUT
+          echo "$files" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+    
+          # construct list of .pdf files
+          echo "pdf<<EOF" >> $GITHUB_OUTPUT
+          echo "${files//$'.tex'/.pdf}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "$files"
+
+    outputs:
+     tex: ${{ steps.diffs.outputs.tex }}
+     pdf: ${{ steps.diffs.outputs.pdf }}
+
+      
+  latex-build:
+    needs: [pre-latex-build]
+    if: ${{ needs.pre-latex-build.outputs.tex != '' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Compile LaTeX documents
+        uses: xu-cheng/latex-action@v2
+        with:
+          root_file: ${{ needs.pre-latex-build.outputs.tex }}
+          # so that cwd is relative to .tex file, not repository root
+          work_in_root_file_dir: true
+          # so that shell commands run in .tex files
+          latexmk_shell_escape: true
+          # git is necessary for some shell commands to run
+          extra_system_packages: git
+          # give permissions for git commands to run
+          pre_compile: git config --global --add safe.directory /github/workspace
+
+      - name: Pull request artifacts
+        uses: opendp/pull-request-artifacts@main
+        with:
+          commit: ${{ github.event.pull_request.head.sha }}
+          artifacts: ${{ needs.pre-latex-build.outputs.pdf }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts-token: ${{ secrets.ARTIFACTS_REPO_TOKEN }}
+          artifacts-repo: opendp/artifacts
+          artifacts-dir: PR/${{ github.event.number }}
+          inter-link: false
+          title: 🔖 Rendered Proofs

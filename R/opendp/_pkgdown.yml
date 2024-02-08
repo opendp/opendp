@@ -1,0 +1,8 @@
+url: https://docs.opendp.org
+template:
+  bootstrap: 5
+authors:
+  footer:
+    roles: [aut]
+  sidebar:
+    roles: [aut]

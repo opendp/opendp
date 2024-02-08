@@ -1,0 +1,53 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "./rust/Cargo.toml"
+    ],
+    "rust-analyzer.cargo.extraEnv": {
+        "OPENDP_SPHINX_PORTx": "8020",
+        "OPENDP_RUSTDOC_PORTx": "8021"
+    },
+    "rust-analyzer.cargo.features": [
+        "untrusted",
+        "bindings"
+    ],
+    "latex-workshop.latex.outDir": "%DIR%/out/",
+    "latex-workshop.latex.recipes": [
+        {
+            "name": "latexmk",
+            "tools": [
+                "latexmk"
+            ]
+        }
+    ],
+    "latex-workshop.latex.tools": [
+        {
+            "name": "latexmk",
+            "command": "latexmk",
+            "args": [
+                "--synctex=1",
+                "--interaction=nonstopmode",
+                "--file-line-error",
+                "--recorder",
+                "--pdf",
+                "--shell-escape",
+                "--aux-directory=out",
+                "--output-directory=out",
+                "%DOC%"
+            ]
+        },
+        {
+            "name": "pdflatex",
+            "command": "pdflatex",
+            "args": [
+                "--synctex=1",
+                "--interaction=nonstopmode",
+                "--file-line-error",
+                "--aux-directory=out",
+                "--output-directory=out",
+                "--shell-escape",
+                "%DOC%"
+            ]
+        }
+    ],
+    "latex-workshop.view.pdf.viewer": "tab"
+}

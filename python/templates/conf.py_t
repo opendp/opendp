@@ -1,0 +1,18 @@
+import os
+import sys
+sys.path.append(os.path.abspath('../../src'))
+
+project = {{ project | repr }}
+copyright = {{ copyright | repr }}
+author = {{ author | repr }}
+release = {{ release | repr }}
+extensions = [
+{%- for ext in extensions %}
+    '{{ ext }}',
+{%- endfor %}
+]
+templates_path = ['{{ dot }}templates']
+exclude_patterns = ['**/*_pb2.py']
+html_theme = 'sphinx_rtd_theme'
+html_static_path = ['{{ dot }}static']
+smartquotes = False
