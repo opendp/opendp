@@ -1,12 +1,23 @@
 Quickstart
 ==========
 
-The easiest way to get started with OpenDP is from Python.
-Use ``pip`` to install the `opendp <https://pypi.org/project/opendp/>`_ package from PyPI.
+OpenDP is available for Python and R.
 
-.. prompt:: bash
+.. tabs::
 
-    pip install opendp
+    .. group-tab:: Python
+
+        Use ``pip`` to install the `opendp <https://pypi.org/project/opendp/>`_ package from PyPI:
+
+        .. prompt:: bash
+
+            pip install opendp
+
+    .. group-tab:: R
+
+        .. prompt:: bash
+
+            TODO
 
 This will make the OpenDP modules available to your local environment.
 
