@@ -4,10 +4,11 @@ Development Environment
 =======================
 If you are writing code, the first task to tackle is setting up the development environment.
 
-All developers should install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
+You will need to check out the code, and at a minimum, build the Rust binaries.
 
 Most developers will also install Python and/or R:
-After you've completed the Rust build, continue on to the sections below for Python and R developers.
+If you are only interested in developing a feature in one of these languages,
+you will not need to set up the other.
 
 
 Clone the OpenDP Repo
@@ -34,7 +35,7 @@ If you have not `set up SSH <https://docs.github.com/en/authentication/connectin
 Rust Build
 ----------
 
-Next, you'll need to build the Rust binaries. 
+If you have not already, install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
 
 Make sure you are on the latest Rust version:
 
@@ -92,7 +93,7 @@ Setting a feature changes how the crate compiles:
    </details>
 
 
-To make the crate compile faster, ffi functions in debug builds support a reduced set of primitive types.
+To make the crate compile faster, FFI functions in debug builds support a reduced set of primitive types.
 Release-mode builds support the full set of primitive types and undergo compiler optimizations, but take longer to compile.
 You can compile a release build by adding the ``--release`` flag.
 In contrast to debug builds, release builds are located in ``opendp/rust/target/release``.
