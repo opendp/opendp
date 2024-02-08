@@ -29,11 +29,23 @@ The vetting process is currently underway for the code in the OpenDP Library.
 Any code that has not completed the vetting process is marked as "contrib" and will not run unless you opt-in.
 Enable ``contrib`` globally with the following snippet:
 
-.. doctest::
+.. tabs::
 
-    >>> from opendp.mod import enable_features
-    >>> enable_features('contrib')
+    .. group-tab:: Python
 
+        .. doctest::
+
+            >>> from opendp.mod import enable_features
+            >>> enable_features('contrib')
+
+    .. group-tab:: R
+
+        .. highlight:: r
+
+        ::
+
+            library(opendp)
+            enable_features("contrib")
 
 Hello, OpenDP!
 --------------
