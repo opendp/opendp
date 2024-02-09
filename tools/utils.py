@@ -13,7 +13,7 @@ def log(message, command=False):
 def run_command(description, cmd, capture_output=False, shell=True):
     if description:
         log(description)
-    printed_cmd = " ".join(cmd) if type(cmd) == list else cmd
+    printed_cmd = " ".join(cmd) if isinstance(cmd, list) else cmd
     log(printed_cmd, command=True)
     stdout = subprocess.PIPE if capture_output else None
     completed_process = subprocess.run(cmd, stdout=stdout, shell=shell, check=True, encoding="utf-8")
