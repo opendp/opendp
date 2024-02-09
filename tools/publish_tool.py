@@ -3,7 +3,7 @@ import configparser
 import datetime
 import os
 
-from utils import *
+from utils import get_current_branch, get_python_version, get_version, infer_channel, log, run_command, run_command_with_retries, sys
 
 
 def rust(args):
