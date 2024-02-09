@@ -38,10 +38,10 @@ Enable ``contrib`` globally with the following snippet:
 
     .. group-tab:: R
 
-        .. code:: r
-
-            library(opendp)
-            enable_features("contrib")
+        .. literalinclude:: quickstart.R
+            :language: r
+            :start-after: 1-library
+            :end-before: 2-use
 
 Hello, OpenDP!
 --------------
@@ -62,11 +62,9 @@ then invoke it on a scalar aggregate.
 
     .. group-tab:: R
 
-        .. code:: r
-
-            space <- c(atom_domain(.T = "f64"), absolute_distance(.T = "f64"))
-            base_laplace <- space |> then_base_laplace(1.)
-            dp_agg <- meas(arg = 23.4)
+        .. literalinclude:: quickstart.R
+            :language: r
+            :start-after: 2-use
 
 This code snip uses a number of OpenDP concepts:
 
