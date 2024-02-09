@@ -4,7 +4,12 @@ This file documents the version history of OpenDP. The links on each version num
 showing the source changes from the previous version.
 
 
-## [0.9.1-dev](https://github.com/opendp/opendp/compare/v0.9.0...HEAD) - TBD
+## [0.9.2-dev](https://github.com/opendp/opendp/compare/v0.9.1...HEAD) - TBD
+
+### Fixed
+- Ignore nitpicky Sphinx warnings on old library versions [#1218](https://github.com/opendp/opendp/pull/1218)
+
+## [0.9.1](https://github.com/opendp/opendp/compare/v0.9.0...v0.9.1) - 2024-02-07
 
 ### Fixed
 - Fix CI for GitHub release [#1215](https://github.com/opendp/opendp/pull/1215)
