@@ -79,11 +79,13 @@ Setting a feature changes how the crate compiles:
    * - ``floating-point``
      - Enable to include transformations/measurements with floating-point vulnerabilities.
    * - ``bindings``
-     - Enables the ``ffi`` and ``derive`` features and regenerates sources in the Python and R packages.
+     - Enable to generate Python and R source code. Depends on the ``ffi`` and ``derive`` features. 
+   * - ``partials``
+     - Enable to generate ``then_*`` functions from the corresponding ``make_*`` functions. Depends on the ``derive`` feature.
    * - ``ffi``
-     - Enable to include C foreign function interfaces.
+     - Enable to include C foreign function interfaces. Implicit in the ``bindings`` feature.
    * - ``derive``
-     - Alone, it enables links to proofs in generated documentation. Also a prerequisite for ``bindings`` feature.
+     - Enable to support code generation and links to proofs in documentation. Implicit in the  ``bindings`` and ``partials`` features.
    * - ``use-openssl``
      - Already enabled. Use OpenSSL for secure noise generation.
 
