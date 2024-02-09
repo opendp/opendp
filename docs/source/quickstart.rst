@@ -17,9 +17,7 @@ OpenDP is available for Python and R.
 
         Launch R and then use ``install.packages``:
 
-        .. highlight:: r
-        
-        ::
+        .. code:: r
 
             install.packages('opendp', repos = 'https://opendp-dev.r-universe.dev')
 
@@ -40,9 +38,7 @@ Enable ``contrib`` globally with the following snippet:
 
     .. group-tab:: R
 
-        .. highlight:: r
-
-        ::
+        .. code:: r
 
             library(opendp)
             enable_features("contrib")
@@ -66,9 +62,7 @@ then invoke it on a scalar aggregate.
 
     .. group-tab:: R
 
-        .. highlight:: r
-
-        ::
+        .. code:: r
 
             space <- c(atom_domain(.T = "f64"), absolute_distance(.T = "f64"))
             base_laplace <- space |> then_base_laplace(1.)
