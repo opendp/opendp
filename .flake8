@@ -30,8 +30,6 @@ extend-ignore =
     E402,
     # E501: line too long (... > 79 characters)
     E501,
-    # E721: do not compare types, for exact checks use `is` / `is not`, for instance checks use `isinstance()`
-    E721,
     # E722: do not use bare 'except'
     E722,
     # E731: do not assign a lambda expression, use a def
@@ -40,10 +38,6 @@ extend-ignore =
     E741,
     # F401: '...' imported but unused
     F401,
-    # F403: 'from ... import *' used; unable to detect undefined names
-    F403,
-    # F405: '...' may be undefined, or defined from star imports: ...
-    F405,
     # F541: f-string is missing placeholders
     F541,
     # F811: redefinition of unused 're' from line 4
