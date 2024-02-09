@@ -8,7 +8,7 @@ import zoneinfo
 import tomlkit
 from debmutate.control import ControlEditor
 
-from utils import *
+from utils import get_current_branch, get_python_version, get_r_version, get_version, infer_channel, log, run_command, semver, sys
 
 
 def ensure_branch(branch):
