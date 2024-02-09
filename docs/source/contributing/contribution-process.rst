@@ -37,7 +37,7 @@ and there may be different ways of satisfying those prerequisites,
 and it may not be obvious at first what the best course is.
 Rather than merging those prerequisite PRs straight to ``main`` we'll stack other PRs on them,
 and those later PRs can test whether we made the right choices at the beginning.
-Industry contributors are also using their own forks of OpenDP in production,
+Use-case partners are also using their own forks of OpenDP in production,
 and this in-the-field experience leads to improvements in PRs,
 but it will take some time to integrate their contributions.
 Finally, we use `graphite <https://graphite.dev/>`_, which makes it easier to handle PR stacks.
