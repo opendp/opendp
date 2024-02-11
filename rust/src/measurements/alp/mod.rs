@@ -276,7 +276,7 @@ where
         }),
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_from_constant(scale.recip()),
+        PrivacyMap::new_from_constant(scale),
     )
 }
 
