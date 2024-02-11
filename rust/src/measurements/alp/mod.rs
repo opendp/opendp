@@ -80,6 +80,9 @@ fn sample_hash_function<K: Hash>(l: u32) -> Fallible<Arc<dyn Fn(&K) -> usize + S
 
 /// Computes ceil(log_2(x))
 fn exponent_next_power_of_two(x: u64) -> u32 {
+    if x == 0 {
+        return 0;
+    }
     let exp = 63 - x.leading_zeros();
     if x > (1 << exp) {
         exp + 1
@@ -273,7 +276,7 @@ where
         }),
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_from_constant(scale),
+        PrivacyMap::new_from_constant(scale.recip()),
     )
 }
 
