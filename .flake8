@@ -38,8 +38,6 @@ extend-ignore =
     E741,
     # F401: '...' imported but unused
     F401,
-    # F541: f-string is missing placeholders
-    F541,
     # F811: redefinition of unused 're' from line 4
     F811,
     # F821: undefined name '...'
