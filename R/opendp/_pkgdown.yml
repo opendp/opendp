@@ -6,3 +6,35 @@ authors:
     roles: [aut]
   sidebar:
     roles: [aut]
+
+reference:
+- title: Accuracy
+- contents:
+  - has_concept("accuracy")
+- title: Combinators
+- contents:
+  - has_concept("combinators")
+- title: Core
+- contents:
+  - has_concept("core")
+- title: Data
+- contents:
+  - has_concept("data")
+- title: Domains
+- contents:
+  - has_concept("domains")
+- title: Measurements
+- contents:
+  - has_concept("measurements")
+- title: Measures
+- contents:
+  - has_concept("measures")
+- title: Metrics
+- contents:
+  - has_concept("metrics")
+- title: Transformations
+- contents:
+  - has_concept("transformations")
+- title: Other
+- contents:
+  - lacks_concepts(c("accuracy", "combinators", "core", "data", "domains", "measurements", "measures", "metrics", "transformations"))

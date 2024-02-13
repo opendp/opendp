@@ -8,6 +8,7 @@ NULL
 #'
 #' [fixed_smoothed_max_divergence in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.fixed_smoothed_max_divergence.html)
 #'
+#' @concept measures
 #' @param .T undocumented
 #' @return Measure
 #' @export
@@ -35,6 +36,7 @@ fixed_smoothed_max_divergence <- function(
 #'
 #' [max_divergence in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.max_divergence.html)
 #'
+#' @concept measures
 #' @param .T undocumented
 #' @return Measure
 #' @export
@@ -60,6 +62,7 @@ max_divergence <- function(
 
 #' Debug a `measure`.
 #'
+#' @concept measures
 #' @param this The measure to debug (stringify).
 #' @return str
 #' @export
@@ -83,6 +86,7 @@ measure_debug <- function(
 
 #' Get the distance type of a `measure`.
 #'
+#' @concept measures
 #' @param this The measure to retrieve the distance type from.
 #' @return str
 #' @export
@@ -106,6 +110,7 @@ measure_distance_type <- function(
 
 #' Get the type of a `measure`.
 #'
+#' @concept measures
 #' @param this The measure to retrieve the type from.
 #' @return str
 #' @export
@@ -131,6 +136,7 @@ measure_type <- function(
 #'
 #' [smoothed_max_divergence in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.smoothed_max_divergence.html)
 #'
+#' @concept measures
 #' @param .T undocumented
 #' @return Measure
 #' @export
@@ -157,6 +163,7 @@ smoothed_max_divergence <- function(
 #' Construct a new UserDivergence.
 #' Any two instances of an UserDivergence are equal if their string descriptors are equal.
 #'
+#' @concept measures
 #' @param descriptor A string description of the privacy measure.
 #' @return Measure
 #' @export
@@ -187,6 +194,7 @@ user_divergence <- function(
 #'
 #' [zero_concentrated_divergence in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn.zero_concentrated_divergence.html)
 #'
+#' @concept measures
 #' @param .T undocumented
 #' @return Measure
 #' @export
