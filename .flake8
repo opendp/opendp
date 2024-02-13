@@ -14,8 +14,6 @@ extend-ignore =
     E306,
     # E501: line too long (... > 79 characters)
     E501,
-    # F541: f-string is missing placeholders
-    F541,
     # F821: undefined name '...'
     F821,
     # W291: trailing whitespace
