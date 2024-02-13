@@ -47,6 +47,8 @@ graph TD
 
     subgraph docs.yml
         dcc[credential-check] --> docs
+        dcc[credential-check] --> r-docs
+        r-docs --> docs
     end
     docs.yml -.- rdocs[docs]
 
