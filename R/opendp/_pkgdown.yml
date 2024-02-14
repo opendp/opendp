@@ -9,32 +9,51 @@ authors:
 
 reference:
 - title: Accuracy
-- contents:
+  desc: The `accuracy` module provides functions for converting between accuracy and scale parameters.
+  contents:
   - has_concept("accuracy")
+
 - title: Combinators
-- contents:
+  desc: The `combinators` module provides functions for combining transformations and measurements.
+  contents:
   - has_concept("combinators")
+
 - title: Core
-- contents:
+  desc: The `core` module provides functions for accessing the fields of transformations and measurements.
+  contents:
   - has_concept("core")
+
 - title: Data
-- contents:
+  # desc: TODO
+  contents:
   - has_concept("data")
+
 - title: Domains
-- contents:
+  desc: The `domains` module provides functions for creating and using domains.
+  contents:
   - has_concept("domains")
+
 - title: Measurements
-- contents:
+  desc: The `measurements` module provides functions that apply calibrated noise to data to ensure differential privacy.
+  contents:
   - has_concept("measurements")
+
 - title: Measures
-- contents:
+  desc: The `measures` modules provides functions that measure the distance between probability distributions.
+  contents:
   - has_concept("measures")
+
 - title: Metrics
-- contents:
+  desc: The `metrics` module provides fuctions that measure the distance between two elements of a domain.
+  contents:
   - has_concept("metrics")
+
 - title: Transformations
-- contents:
+  desc: The ``transformations`` module provides functions that deterministicly transform datasets.
+  contents:
   - has_concept("transformations")
+
 - title: Other
-- contents:
+  # desc: TODO
+  contents:
   - lacks_concepts(c("accuracy", "combinators", "core", "data", "domains", "measurements", "measures", "metrics", "transformations"))
