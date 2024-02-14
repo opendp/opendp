@@ -94,6 +94,13 @@ pub fn signed_fallible_binary_search<T>(
     Ok((if minimize { upper } else { lower }, minimize))
 }
 
+#[test]
+fn test_binary_search_fail() -> Fallible<()> {
+    let result  = signed_fallible_binary_search(|_num| -> Fallible<bool> {fallible!(FailedFunction, "intentional fail")}  , (0, 1));
+    assert!(matches!(result, Err{..}));
+    Ok(())
+}
+
 pub trait Bands: Sized {
     fn bands(center: Self, positive: bool) -> Vec<Self>;
 }
