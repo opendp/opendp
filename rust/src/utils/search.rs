@@ -95,6 +95,19 @@ pub fn signed_fallible_binary_search<T>(
 }
 
 #[test]
+fn test_binary_search() -> Fallible<()> {
+    let result  = signed_fallible_binary_search(|num| -> Fallible<bool> {Ok(num <= &-5)}  , (-10, 10));
+    match result {
+        Ok((num, flag)) => {
+            assert_eq!(num, -5); // TODO: Currently num == 10; Bug?
+            assert!(flag); // TODO: Clarify what this boolean means. Should it be True here?
+        },
+        _ => panic!(), // TODO: Is there a more concise way of doing this?
+    }
+    Ok(())
+}
+
+#[test]
 fn test_binary_search_fail() -> Fallible<()> {
     let result  = signed_fallible_binary_search(|_num| -> Fallible<bool> {fallible!(FailedFunction, "intentional fail")}  , (0, 1));
     assert!(matches!(result, Err{..}));
