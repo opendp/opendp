@@ -68,8 +68,8 @@ pub fn signed_fallible_binary_search<T>(
         return fallible!(FailedFunction, "lower may not be greater than upper")
     }
 
-    let minimize = predicate(&lower)?;
-    let maximize = predicate(&upper)?;
+    let maximize = predicate(&lower)?; // if the lower bound passes, we should maximize
+    let minimize = predicate(&upper)?; // if the upper bound passes, we should minimize
 
     if maximize == minimize {
         return fallible!(FailedFunction, "the decision boundary of the predicate is outside the bounds")
@@ -96,14 +96,8 @@ pub fn signed_fallible_binary_search<T>(
 
 #[test]
 fn test_binary_search() -> Fallible<()> {
-    let result  = signed_fallible_binary_search(|num| -> Fallible<bool> {Ok(num <= &-5)}  , (-10, 10));
-    match result {
-        Ok((num, flag)) => {
-            assert_eq!(num, -5); // TODO: Currently num == 10; Bug?
-            assert!(flag); // TODO: Clarify what this boolean means. Should it be True here?
-        },
-        _ => panic!(), // TODO: Is there a more concise way of doing this?
-    }
+    let (num, _)  = signed_fallible_binary_search(|num| -> Fallible<bool> {Ok(num <= &-5)}  , (-10, 10))?;
+    assert_eq!(num, -5);
     Ok(())
 }
 
