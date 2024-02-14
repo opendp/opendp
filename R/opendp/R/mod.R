@@ -478,7 +478,7 @@ unbox2 <- function(x) {
 #' t_sum <- s_vec |> then_clamp(c(0., 1.)) |> then_sum()
 #'
 #' # find a measurement that satisfies epsilon = 1 when datasets differ by at most one record
-#' m_sum <- binary_search_chain(\(s) t_sum |> then_laplace(s), d_in = 1L, d_out = 1.)
+#' m_sum <- binary_search_chain(\(s) t_sum |> then_laplace(s), d_in = 1L, d_out = 1.
 binary_search_chain <- function(make_chain, d_in, d_out, bounds = NULL, .T = NULL) {
   return(make_chain(binary_search_param(make_chain, d_in, d_out, bounds, .T)))
 }
