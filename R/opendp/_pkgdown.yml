@@ -8,6 +8,13 @@ authors:
     roles: [aut]
 
 reference:
+- title: internal
+  # pkgdown will error if any functions are unreferenced,
+  # but if listed under "internal" they won't be included in output.
+  # https://pkgdown.r-lib.org/reference/build_reference.html#missing-topics
+  contents:
+  - has_concept("data")
+
 - title: Accuracy
   desc: The `accuracy` module provides functions for converting between accuracy and scale parameters.
   contents:
@@ -22,11 +29,6 @@ reference:
   desc: The `core` module provides functions for accessing the fields of transformations and measurements.
   contents:
   - has_concept("core")
-
-- title: Data
-  # desc: TODO
-  contents:
-  - has_concept("data")
 
 - title: Domains
   desc: The `domains` module provides functions for creating and using domains.
