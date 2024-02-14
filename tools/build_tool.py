@@ -12,7 +12,7 @@ def log(message, command=False):
 def run_command(description, args, capture_output=True, shell=True):
     if description:
         log(description)
-    printed_args = args.join(" ") if type(args) == list else args
+    printed_args = args.join(" ") if isinstance(args, list) else args
     log(printed_args, command=True)
     stdout = subprocess.PIPE if capture_output else None
     completed_process = subprocess.run(args, stdout=stdout, shell=shell, check=True, encoding="utf-8")
@@ -44,17 +44,17 @@ def rust_container(args):
     platform_to_docker_image = {
         "windows": "windows-latest",
         "macos": "macos-10.15",
-        "linux": "quay.io/pypa/manylinux2010_x86_64",
+        "linux": "quay.io/pypa/manylinux2014_x86_64",
     }
     docker_image = platform_to_docker_image[args.platform]
     mount_point = "/io"
     command = get_rust_build_command(True, args)
     docker_command = f"cd {mount_point} && {command}"
-    run_command(f"Building Rust library in a container", f"docker run --rm -v `pwd`:{mount_point} {docker_image} bash -c '{docker_command}'")
+    run_command("Building Rust library in a container", f"docker run --rm -v `pwd`:{mount_point} {docker_image} bash -c '{docker_command}'")
 
 
 def rust(args):
-    log(f"*** BUILDING RUST LIBRARY ***")
+    log("*** BUILDING RUST LIBRARY ***")
     if args.platform is None or args.platform == native_platform():
         rust_native(args)
     else:
@@ -62,7 +62,7 @@ def rust(args):
 
 
 def python(_args):
-    log(f"*** BUILDING PYTHON LIBRARY ***")
+    log("*** BUILDING PYTHON LIBRARY ***")
     command = "bash tools/python_build.sh"
     run_command("Running Python build", command)
 
@@ -85,10 +85,8 @@ def _main(argv):
     subparser.set_defaults(func=rust)
     subparser.add_argument("-p", "--platform", choices=["mac", "windows", "linux"])
     subparser.add_argument("-c", "--toolchain", default="stable")
-    subparser.add_argument("-r", "--release-mode", dest="release_mode", action="store_true", default=True)
-    subparser.add_argument("-nr", "--no-release-mode", dest="release_mode", action="store_false")
-    subparser.add_argument("-t", "--run-tests", dest="run_tests", action="store_true", default=True)
-    subparser.add_argument("-nt", "--no-run-tests", dest="run_tests", action="store_false")
+    subparser.add_argument("--release_mode", action="store_true")
+    subparser.add_argument("--run_tests", action="store_true")
     subparser.add_argument("-f", "--features", default="untrusted,ffi")
 
     subparser = subparsers.add_parser("python", help="Build Python library")

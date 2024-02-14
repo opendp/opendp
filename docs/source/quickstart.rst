@@ -24,19 +24,22 @@ Hello, OpenDP!
 --------------
 
 Once you've installed OpenDP, you can write your first program.
-In the example below, we'll construct an identity :class:`opendp.mod.Transformation`, then invoke it on a dataset of strings.
+In the example below, we'll construct a Laplace mechanism of type :class:`opendp.mod.Measurement`, 
+then invoke it on a scalar aggregate.
 
 .. doctest::
 
-    >>> from opendp.trans import make_identity
-    >>> from opendp.typing import SymmetricDistance, VectorDomain, AllDomain
-    ...
-    >>> identity = make_identity(D=VectorDomain[AllDomain[str]], M=SymmetricDistance)
-    >>> identity(["Hello, world!"])
-    ['Hello, world!']
+    >>> import opendp.prelude as dp
+    >>> base_laplace = dp.space_of(float) >> dp.m.then_base_laplace(scale=1.)
+    >>> dp_agg = base_laplace(23.4)
 
-There's a more thorough explanation in the :ref:`Getting Started <hello-opendp>` section.
+This code snip uses a number of OpenDP concepts:
+
+* Defining your metric space up-front with ``space_of``.
+* Chaining operators together with ``>>``.
+* Constructing a ``Measurement`` on your metric space with ``m.then_base_laplace``.
+* Invoking the ``base_laplace`` measurement on a value to get a DP release.
 
 If you would like to skip directly to a more complete example, see :ref:`putting-together`.
 
-Otherwise, continue on to the User Guide.
+Otherwise, continue on to the User Guide, where these concepts are explained in detail.

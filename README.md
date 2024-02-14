@@ -1,13 +1,13 @@
 # OpenDP
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8%20%7C%203.9-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11-blue)](https://www.python.org/)
 [![ci tests](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml?query=branch%3Amain)
 
 The OpenDP Library is a modular collection of statistical algorithms that adhere to the definition of
 [differential privacy](https://en.wikipedia.org/wiki/Differential_privacy).
 It can be used to build applications of privacy-preserving computations, using a number of different models of privacy.
-OpenDP is implemented in Rust, with bindings for easy use from Python.
+OpenDP is implemented in Rust, with bindings for easy use from Python and R.
 
 The architecture of the OpenDP Library is based on a conceptual framework for expressing privacy-aware computations.
 This framework is described in the paper [A Programming Framework for OpenDP](https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf).
@@ -31,9 +31,13 @@ We welcome you to try it and look forward to feedback on the library! However, p
 
 ## Installation
 
-The easiest way to install OpenDP is using `pip` (the [package installer for Python](https://pypi.org/project/pip/)):
+Install OpenDP for Python with `pip` (the [package installer for Python](https://pypi.org/project/pip/)):
 
     $ pip install opendp
+
+Install OpenDP for R from an R session:
+
+    install.packages("opendp", repos = "https://opendp.r-universe.dev")
 
 More information can be found in the [Getting Started section of the User Guide](https://docs.opendp.org/en/stable/user/getting-started.html).
 
@@ -43,7 +47,7 @@ The full documentation for OpenDP is located at https://docs.opendp.org. Here ar
 
 * [User Guide](https://docs.opendp.org/en/stable/user/index.html)
 * [Python API Docs](https://docs.opendp.org/en/stable/api/python/index.html)
-* [Developer Guide](https://docs.opendp.org/en/stable/developer/index.html)
+* [Contributor Guide](https://docs.opendp.org/en/stable/contributor/index.html)
 
 ## Getting Help
 
@@ -58,4 +62,4 @@ If you're having problems using OpenDP, or want to submit feedback, please reach
 ## Contributing
 
 OpenDP is a community effort, and we welcome your contributions to its development! 
-If you'd like to participate, please see the [Contributing section of the Developer Guide](https://docs.opendp.org/en/stable/developer/contribution-process.html)
+If you'd like to participate, please contact us! We also have a [contribution process section in the Contributor Guide](https://docs.opendp.org/en/stable/contributor/contribution-process.html).

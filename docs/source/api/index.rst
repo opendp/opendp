@@ -9,4 +9,5 @@ If you are looking for long-form, higher-level documentation, then please consul
    :maxdepth: 1
 
    Python API <python/index>
+   R API <https://docs.opendp.org/en/stable/api/r>
    Rust API <https://docs.rs/opendp>

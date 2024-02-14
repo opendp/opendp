@@ -1,0 +1,7 @@
+
+[tool.pyright]
+include = ["source"]
+# temporary until prelude becomes common
+reportWildcardImportFromLibrary = false
+# the last expression of cells is implicitly printed, not unused
+reportUnusedExpression = false

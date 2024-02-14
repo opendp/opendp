@@ -6,7 +6,7 @@
 //! * Domain
 //! * Metric/Measure
 //! * Function
-//! * PrivacyRelation/StabilityRelation
+//! * StabilityMap/PrivacyMap
 
 // Generic legend
 // M: Metric and Measure
@@ -20,458 +20,492 @@
 // Ordering of generic arguments
 // DI, DO, MI, MO, TI, TO, QI, QO
 
-#[cfg(feature="ffi")]
+#[cfg(feature = "ffi")]
 mod ffi;
-#[cfg(feature="ffi")]
+#[cfg(feature = "ffi")]
 pub use ffi::*;
 
-use std::rc::Rc;
+use std::sync::Arc;
 
-use crate::dom::PairDomain;
 use crate::error::*;
-use crate::traits::{DistanceConstant, InfCast, InfMul, InfDiv};
-use crate::dist::IntDistance;
+use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
+use num::Zero;
 use std::fmt::Debug;
 
 /// A set which constrains the input or output of a [`Function`].
 ///
 /// Domains capture the notion of what values are allowed to be the input or output of a `Function`.
-pub trait Domain: Clone + PartialEq + Debug {
+///
+/// # Proof Definition
+/// A type `Self` implements `Domain` iff it can represent a set of values that make up a domain.
+pub trait Domain: Clone + PartialEq + Debug + Send + Sync {
     /// The underlying type that the Domain specializes.
+    /// This is the type of a member of a domain, where a domain is any data type that implements this trait.
+    ///
+    /// On any type `D` for which the `Domain` trait is implemented,
+    /// the syntax `D::Carrier` refers to this associated type.
+    ///
+    /// For example, consider `D` to be `AtomDomain<T>`, the domain of all non-null values of type `T`.
+    /// The implementation of this trait for `AtomDomain<T>` designates that `type Carrier = T`.
+    /// Thus `AtomDomain<T>::Carrier` is `T`.
+    ///
+    /// # Proof Definition
+    /// `Self::Carrier` can represent all values in the set described by `Self`.
     type Carrier;
+
     /// Predicate to test an element for membership in the domain.
+    /// Not all possible values of `::Carrier` are a member of the domain.
+    ///
+    /// # Proof Definition
+    /// For all settings of the input parameters,
+    /// returns `Err(e)` if the member check failed,
+    /// or `Ok(out)`, where `out` is true if `val` is a member of `self`, otherwise false.
+    ///
+    /// # Notes
+    /// It generally suffices to treat `Err(e)` as if `val` is not a member of the domain.
+    /// It can be useful, however, to see richer debug information via `e` in the event of a failure.
     fn member(&self, val: &Self::Carrier) -> Fallible<bool>;
 }
 
 /// A mathematical function which maps values from an input [`Domain`] to an output [`Domain`].
-pub struct Function<DI: Domain, DO: Domain> {
-    pub function: Rc<dyn Fn(&DI::Carrier) -> Fallible<DO::Carrier>>,
+pub struct Function<TI, TO> {
+    pub function: Arc<dyn Fn(&TI) -> Fallible<TO> + Send + Sync>,
 }
-impl<DI: Domain, DO: Domain> Clone for Function<DI, DO> {
+impl<TI, TO> Clone for Function<TI, TO> {
     fn clone(&self) -> Self {
-        Function {function: self.function.clone()}
+        Function {
+            function: self.function.clone(),
+        }
     }
 }
 
-impl<DI: Domain, DO: Domain> Function<DI, DO> {
-    pub fn new(function: impl Fn(&DI::Carrier) -> DO::Carrier + 'static) -> Self {
+impl<TI, TO> Function<TI, TO> {
+    pub fn new(function: impl Fn(&TI) -> TO + 'static + Send + Sync) -> Self {
         Self::new_fallible(move |arg| Ok(function(arg)))
     }
 
-    pub fn new_fallible(function: impl Fn(&DI::Carrier) -> Fallible<DO::Carrier> + 'static) -> Self {
-        Self { function: Rc::new(function) }
+    pub fn new_fallible(function: impl Fn(&TI) -> Fallible<TO> + 'static + Send + Sync) -> Self {
+        Self {
+            function: Arc::new(function),
+        }
     }
 
-    pub fn eval(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
+    pub fn eval(&self, arg: &TI) -> Fallible<TO> {
         (self.function)(arg)
     }
 }
 
-impl<DI: 'static + Domain, DO: 'static + Domain> Function<DI, DO> {
-    pub fn make_chain<XD: 'static + Domain>(function1: &Function<XD, DO>, function0: &Function<DI, XD>) -> Function<DI, DO> {
+impl<TI: 'static, TO: 'static> Function<TI, TO> {
+    pub fn make_chain<TX: 'static>(
+        function1: &Function<TX, TO>,
+        function0: &Function<TI, TX>,
+    ) -> Function<TI, TO> {
         let function0 = function0.function.clone();
         let function1 = function1.function.clone();
         Self::new_fallible(move |arg| function1(&function0(arg)?))
     }
 }
 
-impl<DI: 'static + Domain, DO0: 'static + Domain, DO1: 'static + Domain> Function<DI, PairDomain<DO0, DO1>> {
-    pub fn make_basic_composition(function0: &Function<DI, DO0>, function1: &Function<DI, DO1>) -> Self {
-        let function0 = function0.function.clone();
-        let function1 = function1.function.clone();
-        Self::new_fallible(move |arg| Ok((function0(arg)?, function1(arg)?)))
-    }
-}
-
 /// A representation of the distance between two elements in a set.
-pub trait Metric: Default + Clone + PartialEq + Debug {
+///
+/// # Proof Definition
+/// A type `Self` has an implementation for `Metric` iff it can represent a metric for quantifying distances between values in a set.
+pub trait Metric: Default + Clone + PartialEq + Debug + Send + Sync {
+    /// # Proof Definition
+    /// `Self::Distance` is a type that represents distances in terms of a metric `Self`.
     type Distance;
 }
 
 /// A representation of the distance between two distributions.
-pub trait Measure: Default + Clone + PartialEq + Debug {
+///
+/// # Proof Definition
+/// A type `Self` has an implementation for `Measure` iff it can represent a measure for quantifying distances between distributions.
+
+pub trait Measure: Default + Clone + PartialEq + Debug + Send + Sync {
+    /// # Proof Definition
+    /// `Self::Distance` is a type that represents distances in terms of a measure `Self`.
     type Distance;
 }
 
-/// An indicator trait that is only implemented for dataset distances.
-pub trait DatasetMetric: Metric<Distance=IntDistance> {}
-
-/// An indicator trait that is only implemented for statistic distances.
-pub trait SensitivityMetric: Metric {}
-
-
-// HINTS
-#[derive(Clone)]
-pub struct HintMt<MI: Metric, MO: Measure, MX: Metric> {
-    pub hint: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<MX::Distance>>,
-}
-
-impl<MI: Metric, MO: Measure, MX: Metric> HintMt<MI, MO, MX> {
-    pub fn new(hint: impl Fn(&MI::Distance, &MO::Distance) -> Fallible<MX::Distance> + 'static) -> Self {
-        HintMt { hint: Rc::new(hint) }
-    }
-    pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<MX::Distance> {
-        (self.hint)(input_distance, output_distance)
-    }
-}
-
-#[derive(Clone)]
-pub struct HintTt<MI: Metric, MO: Metric, MX: Metric> {
-    pub hint: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<MX::Distance>>,
-}
-
-impl<MI: Metric, MO: Metric, MX: Metric> HintTt<MI, MO, MX> {
-    pub fn new_fallible(hint: impl Fn(&MI::Distance, &MO::Distance) -> Fallible<MX::Distance> + 'static) -> Self {
-        HintTt { hint: Rc::new(hint) }
-    }
-    pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<MX::Distance> {
-        (self.hint)(input_distance, output_distance)
-    }
-}
-
-
-/// A boolean relation evaluating the privacy of a [`Measurement`].
+/// A map evaluating the privacy of a [`Measurement`].
 ///
-/// A `PrivacyRelation` is implemented as a function that takes an input [`Metric::Distance`] and output [`Measure::Distance`],
-/// and returns a boolean indicating if the relation holds.
-pub struct PrivacyRelation<MI: Metric, MO: Measure> {
-    pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<bool>>,
-    pub backward_map: Option<Rc<dyn Fn(&MO::Distance) -> Fallible<MI::Distance>>>,
-}
+/// A `PrivacyMap` is implemented as a function that takes an input [`Metric::Distance`]
+/// and returns the smallest upper bound on distances between output distributions on neighboring input datasets.
+pub struct PrivacyMap<MI: Metric, MO: Measure>(
+    pub Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance> + Send + Sync>,
+);
 
-impl<MI: Metric, MO: Measure> Clone for PrivacyRelation<MI, MO> {
+impl<MI: Metric, MO: Measure> Clone for PrivacyMap<MI, MO> {
     fn clone(&self) -> Self {
-        PrivacyRelation {
-            relation: self.relation.clone(),
-            backward_map: self.backward_map.clone()
-        }
+        PrivacyMap(self.0.clone())
     }
 }
 
-impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
-    pub fn new(relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static) -> Self {
-        PrivacyRelation {
-            relation: Rc::new(move |d_in: &MI::Distance, d_out: &MO::Distance| Ok(relation(d_in, d_out))),
-            backward_map: None,
-        }
+impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
+    pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static + Send + Sync) -> Self {
+        PrivacyMap(Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
     }
-    pub fn new_fallible(relation: impl Fn(&MI::Distance, &MO::Distance) -> Fallible<bool> + 'static) -> Self {
-        PrivacyRelation {
-            relation: Rc::new(relation),
-            backward_map: None,
-        }
-    }
-    pub fn new_all(
-        relation: impl Fn(&MI::Distance, &MO::Distance) -> Fallible<bool> + 'static,
-        backward_map: Option<impl Fn(&MO::Distance) -> Fallible<MI::Distance> + 'static>,
+    pub fn new_fallible(
+        map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static + Send + Sync,
     ) -> Self {
-        PrivacyRelation {
-            relation: Rc::new(relation),
-            backward_map: backward_map.map(|h| Rc::new(h) as Rc<_>),
-        }
+        PrivacyMap(Arc::new(map))
     }
-    pub fn new_from_constant(c: MO::Distance) -> Self where
-        MI::Distance: InfCast<MO::Distance> + Clone,
-        MO::Distance: DistanceConstant<MI::Distance> {
-        PrivacyRelation::new_all(
-            enclose!(c, move |d_in: &MI::Distance, d_out: &MO::Distance|
-                Ok(d_out.clone() >= MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)?)),
-            Some(enclose!(c, move |d_out: &MO::Distance|
-                Ok(MI::Distance::inf_cast(d_out.inf_div(&c)?)?))))
+    pub fn new_from_constant(c: MO::Distance) -> Self
+    where
+        MI::Distance: Clone,
+        MO::Distance: DistanceConstant<MI::Distance>,
+    {
+        PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
+            if c < MO::Distance::zero() {
+                return fallible!(FailedMap, "constant must be non-negative");
+            }
+            MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
+        })
     }
-    pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<bool> {
-        (self.relation)(input_distance, output_distance)
-    }
-}
-
-fn chain_option_maps<QI, QX, QO>(
-    map1: &Option<Rc<dyn Fn(&QX) -> Fallible<QO>>>,
-    map0: &Option<Rc<dyn Fn(&QI) -> Fallible<QX>>>,
-) -> Option<impl Fn(&QI) -> Fallible<QO>> {
-    if let (Some(map0), Some(map1)) = (map0, map1) {
-        Some(enclose!((map0, map1), move |d_in: &QI| map1(&map0(d_in)?)))
-    } else {
-        None
+    pub fn eval(&self, input_distance: &MI::Distance) -> Fallible<MO::Distance> {
+        (self.0)(input_distance)
     }
 }
 
-impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyRelation<MI, MO> {
+impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
     pub fn make_chain<MX: 'static + Metric>(
-        relation1: &PrivacyRelation<MX, MO>,
-        relation0: &StabilityRelation<MI, MX>,
-        hint: Option<&HintMt<MI, MO, MX>>,
+        map1: &PrivacyMap<MX, MO>,
+        map0: &StabilityMap<MI, MX>,
     ) -> Self {
-        if let Some(hint) = hint {
-            Self::make_chain_hint(relation1, relation0, hint)
-        } else {
-            Self::make_chain_no_hint(relation1, relation0)
-        }
-    }
-
-    fn make_chain_no_hint<MX: 'static + Metric>(
-        relation1: &PrivacyRelation<MX, MO>,
-        relation0: &StabilityRelation<MI, MX>,
-    ) -> Self {
-        let hint = if let Some(forward_map) = &relation0.forward_map {
-            Some(HintMt::new(enclose!(forward_map, move |d_in, _d_out| forward_map(d_in))))
-        } else if let Some(backward_map) = &relation1.backward_map {
-            Some(HintMt::new(enclose!(backward_map, move |_d_in, d_out| backward_map(d_out))))
-        } else {
-            None
-        };
-        if let Some(hint) = hint {
-            Self::make_chain_hint(relation1, relation0, &hint)
-        } else {
-            // TODO: Implement binary search for hints.
-            unimplemented!("Binary search for hints not implemented, must have maps or supply explicit hint.")
-        }
-    }
-
-    fn make_chain_hint<MX: 'static + Metric>(relation1: &PrivacyRelation<MX, MO>, relation0: &StabilityRelation<MI, MX>, hint: &HintMt<MI, MO, MX>) -> Self {
-        let PrivacyRelation {
-            relation: relation1,
-            backward_map: backward_map1
-        } = relation1;
-
-        let StabilityRelation {
-            relation: relation0,
-            forward_map: _,
-            backward_map: backward_map0,
-        } = relation0;
-
-        let h = hint.hint.clone();
-
-        PrivacyRelation::new_all(
-            enclose!((relation1, relation0), move |d_in: &MI::Distance, d_out: &MO::Distance| {
-                let d_mid = h(d_in, d_out)?;
-                Ok(relation0(d_in, &d_mid)? && relation1(&d_mid, d_out)?)
-            }),
-            chain_option_maps(backward_map0, backward_map1))
+        let map1 = map1.0.clone();
+        let map0 = map0.0.clone();
+        PrivacyMap(Arc::new(move |d_in: &MI::Distance| map1(&map0(d_in)?)))
     }
 }
 
-/// A boolean relation evaluating the stability of a [`Transformation`].
+/// A map evaluating the stability of a [`Transformation`].
 ///
-/// A `StabilityRelation` is implemented as a function that takes an input and output [`Metric::Distance`],
-/// and returns a boolean indicating if the relation holds.
-pub struct StabilityRelation<MI: Metric, MO: Metric> {
-    pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<bool>>,
-    pub forward_map: Option<Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>>,
-    pub backward_map: Option<Rc<dyn Fn(&MO::Distance) -> Fallible<MI::Distance>>>,
-}
+/// A `StabilityMap` is implemented as a function that takes an input [`Metric::Distance`],
+/// and returns the smallest upper bound on distances between output datasets on neighboring input datasets.
+pub struct StabilityMap<MI: Metric, MO: Metric>(
+    pub Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance> + Send + Sync>,
+);
 
-impl<MI: Metric, MO: Metric> Clone for StabilityRelation<MI, MO> {
+impl<MI: Metric, MO: Metric> Clone for StabilityMap<MI, MO> {
     fn clone(&self) -> Self {
-        StabilityRelation {
-            relation: self.relation.clone(),
-            forward_map: self.forward_map.clone(),
-            backward_map: self.backward_map.clone()
-        }
+        StabilityMap(self.0.clone())
     }
 }
 
-impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
-    pub fn new(relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static) -> Self {
-        StabilityRelation {
-            relation: Rc::new(move |d_in: &MI::Distance, d_out: &MO::Distance| Ok(relation(d_in, d_out))),
-            forward_map: None,
-            backward_map: None,
-        }
+impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
+    pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static + Send + Sync) -> Self {
+        StabilityMap(Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
     }
-    pub fn new_fallible(relation: impl Fn(&MI::Distance, &MO::Distance) -> Fallible<bool> + 'static) -> Self {
-        StabilityRelation { relation: Rc::new(relation), forward_map: None, backward_map: None }
-    }
-    pub fn new_all(
-        relation: impl Fn(&MI::Distance, &MO::Distance) -> Fallible<bool> + 'static,
-        forward_map: Option<impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static>,
-        backward_map: Option<impl Fn(&MO::Distance) -> Fallible<MI::Distance> + 'static>,
+    pub fn new_fallible(
+        map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static + Send + Sync,
     ) -> Self {
-        StabilityRelation {
-            relation: Rc::new(relation),
-            forward_map: forward_map.map(|h| Rc::new(h) as Rc<_>),
-            backward_map: backward_map.map(|h| Rc::new(h) as Rc<_>),
-        }
+        StabilityMap(Arc::new(map))
     }
-    pub fn new_from_forward(
-        forward_map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + Clone + 'static
-    ) -> Self
-        where MI::Distance: 'static, MO::Distance: 'static + PartialOrd + Clone {
-        StabilityRelation::new_all(
-            enclose!(forward_map, move |d_in: &MI::Distance, d_out: &MO::Distance|
-                Ok(d_out.clone() >= forward_map(d_in)?)),
-            Some(forward_map),
-            None::<fn(&_)->_>
-        )
+    pub fn new_from_constant(c: MO::Distance) -> Self
+    where
+        MI::Distance: Clone,
+        MO::Distance: DistanceConstant<MI::Distance>,
+    {
+        StabilityMap::new_fallible(move |d_in: &MI::Distance| {
+            if c < MO::Distance::zero() {
+                return fallible!(FailedMap, "constant must be non-negative");
+            }
+            MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
+        })
     }
-    pub fn new_from_constant(c: MO::Distance) -> Self where
-        MI::Distance: InfCast<MO::Distance> + Clone,
-        MO::Distance: DistanceConstant<MI::Distance> {
-        StabilityRelation::new_all(
-            // relation
-            enclose!(c, move |d_in: &MI::Distance, d_out: &MO::Distance|
-                Ok(d_out.clone() >= MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)?)),
-            // forward map
-            Some(enclose!(c, move |d_in: &MI::Distance|
-                Ok(MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)?))),
-            // backward map
-            Some(enclose!(c, move |d_out: &MO::Distance|
-                Ok(MI::Distance::inf_cast(d_out.inf_div(&c)?)?))))
-    }
-    pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<bool> {
-        (self.relation)(input_distance, output_distance)
+    pub fn eval(&self, input_distance: &MI::Distance) -> Fallible<MO::Distance> {
+        (self.0)(input_distance)
     }
 }
 
-impl<MI: 'static + Metric, MO: 'static + Metric> StabilityRelation<MI, MO> {
-    pub fn make_chain<MX: 'static + Metric>(relation1: &StabilityRelation<MX, MO>, relation0: &StabilityRelation<MI, MX>, hint: Option<&HintTt<MI, MO, MX>>) -> Self {
-        if let Some(hint) = hint {
-            Self::make_chain_hint(relation1, relation0, hint)
-        } else {
-            Self::make_chain_no_hint(relation1, relation0)
-        }
-    }
-
-    fn make_chain_no_hint<MX: 'static + Metric>(relation1: &StabilityRelation<MX, MO>, relation0: &StabilityRelation<MI, MX>) -> Self {
-        let hint = if let Some(forward_map) = &relation0.forward_map {
-            let forward_map = forward_map.clone();
-            Some(HintTt::new_fallible(move |d_in, _d_out| forward_map(d_in)))
-        } else if let Some(backward_map) = &relation1.backward_map {
-            let backward_map = backward_map.clone();
-            Some(HintTt::new_fallible(move |_d_in, d_out| backward_map(d_out)))
-        } else {
-            None
-        };
-        if let Some(hint) = hint {
-            Self::make_chain_hint(relation1, relation0, &hint)
-        } else {
-            // TODO: Implement binary search for hints.
-            unimplemented!("Binary search for hints not implemented, must have maps or supply explicit hint.")
-        }
-    }
-
-    fn make_chain_hint<MX: 'static + Metric>(relation1: &StabilityRelation<MX, MO>, relation0: &StabilityRelation<MI, MX>, hint: &HintTt<MI, MO, MX>) -> Self {
-        let StabilityRelation {
-            relation: relation0,
-            forward_map: forward_map0,
-            backward_map: backward_map0
-        } = relation0;
-
-        let StabilityRelation {
-            relation: relation1,
-            forward_map: forward_map1,
-            backward_map: backward_map1
-        } = relation1;
-
-        let h = hint.hint.clone();
-        StabilityRelation::new_all(
-            enclose!((relation1, relation0), move |d_in: &MI::Distance, d_out: &MO::Distance| {
-                let d_mid = h(d_in, d_out)?;
-                Ok(relation0(d_in, &d_mid)? && relation1(&d_mid, d_out)?)
-            }),
-            chain_option_maps(forward_map1, forward_map0),
-            chain_option_maps(backward_map0, backward_map1))
+impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
+    pub fn make_chain<MX: 'static + Metric>(
+        map1: &StabilityMap<MX, MO>,
+        map0: &StabilityMap<MI, MX>,
+    ) -> Self {
+        let map1 = map1.0.clone();
+        let map0 = map0.0.clone();
+        StabilityMap(Arc::new(move |d_in: &MI::Distance| map1(&map0(d_in)?)))
     }
 }
-
 
 /// A randomized mechanism with certain privacy characteristics.
-#[derive(Clone)]
-pub struct Measurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
+///
+/// The trait bounds provided by the Rust type system guarantee that:
+/// * `input_domain` and `output_domain` are valid domains
+/// * `input_metric` is a valid metric
+/// * `output_measure` is a valid measure
+///
+/// It is, however, left to constructor functions to prove that:
+/// * `input_metric` is compatible with `input_domain`
+/// * `privacy_map` is a mapping from the input metric to the output measure
+#[readonly::make]
+pub struct Measurement<DI: Domain, TO, MI: Metric, MO: Measure> {
     pub input_domain: DI,
-    pub output_domain: DO,
-    pub function: Function<DI, DO>,
+    pub function: Function<DI::Carrier, TO>,
     pub input_metric: MI,
     pub output_measure: MO,
-    pub privacy_relation: PrivacyRelation<MI, MO>,
+    pub privacy_map: PrivacyMap<MI, MO>,
 }
 
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO> {
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, MO> {
+    fn clone(&self) -> Self {
+        Self {
+            input_domain: self.input_domain.clone(),
+            function: self.function.clone(),
+            input_metric: self.input_metric.clone(),
+            output_measure: self.output_measure.clone(),
+            privacy_map: self.privacy_map.clone(),
+        }
+    }
+}
+
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO>
+where
+    (DI, MI): MetricSpace,
+{
     pub fn new(
         input_domain: DI,
-        output_domain: DO,
-        function: Function<DI, DO>,
+        function: Function<DI::Carrier, TO>,
         input_metric: MI,
         output_measure: MO,
-        privacy_relation: PrivacyRelation<MI, MO>,
-    ) -> Self {
-        Self {
+        privacy_map: PrivacyMap<MI, MO>,
+    ) -> Fallible<Self> {
+        (input_domain.clone(), input_metric.clone()).check_space()?;
+        Ok(Self {
             input_domain,
-            output_domain,
             function,
             input_metric,
             output_measure,
-            privacy_relation,
-        }
+            privacy_map,
+        })
     }
 
-    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
+    #[allow(dead_code)]
+    pub(crate) fn with_map<MI2: Metric, MO2: Measure>(
+        &self,
+        input_metric: MI2,
+        output_metric: MO2,
+        privacy_map: PrivacyMap<MI2, MO2>,
+    ) -> Fallible<Measurement<DI, TO, MI2, MO2>>
+    where
+        (DI, MI2): MetricSpace,
+    {
+        Measurement::new(
+            self.input_domain.clone(),
+            self.function.clone(),
+            input_metric,
+            output_metric,
+            privacy_map,
+        )
+    }
+}
+
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
+    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<TO> {
         self.function.eval(arg)
     }
 
-    pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool> {
-        self.privacy_relation.eval(d_in, d_out)
+    pub fn map(&self, d_in: &MI::Distance) -> Fallible<MO::Distance> {
+        self.privacy_map.eval(d_in)
+    }
+
+    pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool>
+    where
+        MO::Distance: TotalOrd,
+    {
+        d_out.total_ge(&self.map(d_in)?)
     }
 }
 
+pub trait MetricSpace {
+    fn check_space(&self) -> Fallible<()>;
+}
+
 /// A data transformation with certain stability characteristics.
+///
+/// The trait bounds provided by the Rust type system guarantee that:
+/// * `input_domain` and `output_domain` are valid domains
+/// * `input_metric` and `output_metric` are valid metrics
+///
+/// It is, however, left to constructor functions to prove that:
+/// * metrics are compatible with domains
+/// * `function` is a mapping from the input domain to the output domain
+/// * `stability_map` is a mapping from the input metric to the output metric
 #[derive(Clone)]
+#[readonly::make]
 pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
     pub input_domain: DI,
     pub output_domain: DO,
-    pub function: Function<DI, DO>,
+    pub function: Function<DI::Carrier, DO::Carrier>,
     pub input_metric: MI,
     pub output_metric: MO,
-    pub stability_relation: StabilityRelation<MI, MO>,
+    pub stability_map: StabilityMap<MI, MO>,
 }
 
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, MO> {
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, MO>
+where
+    (DI, MI): MetricSpace,
+    (DO, MO): MetricSpace,
+{
     pub fn new(
         input_domain: DI,
         output_domain: DO,
-        function: Function<DI, DO>,
+        function: Function<DI::Carrier, DO::Carrier>,
         input_metric: MI,
         output_metric: MO,
-        stability_relation: StabilityRelation<MI, MO>,
-    ) -> Self {
-        Self {
+        stability_map: StabilityMap<MI, MO>,
+    ) -> Fallible<Self> {
+        (input_domain.clone(), input_metric.clone()).check_space()?;
+        (output_domain.clone(), output_metric.clone()).check_space()?;
+        Ok(Self {
             input_domain,
             output_domain,
             function,
             input_metric,
             output_metric,
-            stability_relation,
-        }
+            stability_map,
+        })
     }
 
+    #[allow(dead_code)]
+    pub(crate) fn with_map<MI2: Metric, MO2: Metric>(
+        &self,
+        input_metric: MI2,
+        output_metric: MO2,
+        privacy_map: StabilityMap<MI2, MO2>,
+    ) -> Fallible<Transformation<DI, DO, MI2, MO2>>
+    where
+        (DI, MI2): MetricSpace,
+        (DO, MO2): MetricSpace,
+    {
+        Transformation::new(
+            self.input_domain.clone(),
+            self.output_domain.clone(),
+            self.function.clone(),
+            input_metric,
+            output_metric,
+            privacy_map,
+        )
+    }
+}
+
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, MO> {
     pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
         self.function.eval(arg)
     }
 
-    pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool> {
-        self.stability_relation.eval(d_in, d_out)
+    pub fn map(&self, d_in: &MI::Distance) -> Fallible<MO::Distance> {
+        self.stability_map.eval(d_in)
+    }
+
+    pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool>
+    where
+        MO::Distance: TotalOrd,
+    {
+        d_out.total_ge(&self.map(d_in)?)
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::dist::L1Distance;
-    use crate::dom::AllDomain;
-    use crate::error::ExplainUnwrap;
+    use crate::domains::AtomDomain;
+    use crate::metrics::AbsoluteDistance;
 
     use super::*;
 
     #[test]
-    fn test_identity() {
-        let input_domain = AllDomain::<i32>::new();
-        let output_domain = AllDomain::<i32>::new();
+    #[cfg(feature = "ffi")]
+    fn test_threading() -> Fallible<()> {
+        use crate::{
+            measurements::make_randomized_response_bool, transformations::make_split_lines,
+        };
+
+        fn is_send_sync<T: Send + Sync>(_arg: &T) {}
+
+        let meas = make_randomized_response_bool(0.75, false)?;
+        is_send_sync(&meas);
+        is_send_sync(&meas.into_any());
+
+        let trans = make_split_lines()?;
+        is_send_sync(&trans);
+        is_send_sync(&trans.into_any());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_identity() -> Fallible<()> {
+        let input_domain = AtomDomain::<i32>::default();
+        let output_domain = AtomDomain::<i32>::default();
         let function = Function::new(|arg: &i32| arg.clone());
-        let input_metric = L1Distance::<i32>::default();
-        let output_metric = L1Distance::<i32>::default();
-        let stability_relation = StabilityRelation::new_from_constant(1);
-        let identity = Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation);
+        let input_metric = AbsoluteDistance::<i32>::default();
+        let output_metric = AbsoluteDistance::<i32>::default();
+        let stability_map = StabilityMap::new_from_constant(1);
+        let identity = Transformation::new(
+            input_domain,
+            output_domain,
+            function,
+            input_metric,
+            output_metric,
+            stability_map,
+        )?;
         let arg = 99;
-        let ret = identity.invoke(&arg).unwrap_test();
+        let ret = identity.invoke(&arg)?;
         assert_eq!(ret, 99);
+        Ok(())
     }
 }
+
+#[cfg(feature = "partials")]
+mod partials {
+    pub use super::*;
+
+    pub struct PartialTransformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric>(
+        Box<dyn FnOnce(DI, MI) -> Fallible<Transformation<DI, DO, MI, MO>>>,
+    );
+
+    impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> PartialTransformation<DI, DO, MI, MO>
+    where
+        (DI, MI): MetricSpace,
+        (DO, MO): MetricSpace,
+    {
+        pub fn new(
+            partial: impl FnOnce(DI, MI) -> Fallible<Transformation<DI, DO, MI, MO>> + 'static,
+        ) -> Self {
+            Self(Box::new(partial))
+        }
+        pub fn fix(
+            self,
+            input_domain: DI,
+            input_metric: MI,
+        ) -> Fallible<Transformation<DI, DO, MI, MO>> {
+            (self.0)(input_domain, input_metric)
+        }
+    }
+
+    pub struct PartialMeasurement<DI: Domain, TO, MI: Metric, MO: Measure>(
+        Box<dyn FnOnce(DI, MI) -> Fallible<Measurement<DI, TO, MI, MO>>>,
+    );
+
+    impl<DI: Domain, TO, MI: Metric, MO: Measure> PartialMeasurement<DI, TO, MI, MO>
+    where
+        (DI, MI): MetricSpace,
+    {
+        pub fn new(
+            partial: impl FnOnce(DI, MI) -> Fallible<Measurement<DI, TO, MI, MO>> + 'static,
+        ) -> Self {
+            Self(Box::new(partial))
+        }
+        pub fn fix(
+            self,
+            input_domain: DI,
+            input_metric: MI,
+        ) -> Fallible<Measurement<DI, TO, MI, MO>> {
+            (self.0)(input_domain, input_metric)
+        }
+    }
+}
+
+#[cfg(feature = "partials")]
+pub use partials::*;

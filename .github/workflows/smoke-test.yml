@@ -9,7 +9,7 @@ on:
 
 jobs:
   rust-build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     defaults:
       run:
         working-directory: rust
@@ -17,10 +17,10 @@ jobs:
       CARGO_TERM_COLOR: always
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry
@@ -29,43 +29,115 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
+      - name: Check Rust version
+        run: cargo --version
+
+      - name: Check Format
+        # fix formatting with: cargo fmt --manifest-path=rust/Cargo.toml --all
+        run: cargo fmt --manifest-path=Cargo.toml --all --check
+
       - name: Build
-        run: cargo build --verbose --features=untrusted,ffi
+        run: cargo build --verbose --features untrusted,bindings
+      
+      - name: Check --no-default-features
+        run: cargo check --verbose --no-default-features --features untrusted,ffi
 
       - name: Test
-        run: cargo test --verbose
+        run: cargo test --verbose --features untrusted,ffi
+
+      - name: Check that generated python is up to date
+        run: git diff --exit-code
 
       - name: Upload libs
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: libs
-          path: rust/target/debug/libopendp.so
+          path: |
+            rust/target/debug/libopendp.so
+            rust/target/debug/libopendp.a
+      
+      - name: Prepare vendored sources
+        run: cd .. && bash tools/r_stage.sh -v
+          
+      - name: Upload vendored sources
+        uses: actions/upload-artifact@v3
+        with:
+          name: vendor
+          path: R/opendp/src/vendor.tar.xz
 
+  python-lint:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements-dev.txt
+
+      - name: Lint with flake8
+        run: |
+          # There is a long ignore list in .flake8.
+          flake8 .. --count --show-source --statistics
+
+  python-type:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements-dev.txt
+          
+          # not installed via requirements-dev because pip-compile fixes the numpy version
+          # no fixed numpy version is compatible with both 3.8 and 3.12
+          python -m pip install scikit-learn
+
+      - name: Type check with mypy
+        run: |
+          mypy .
 
   python-test:
     needs: rust-build-and-test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     defaults:
       run:
         working-directory: python
     strategy:
       matrix:
-        python-version: [3.6]
+        python-version: [3.8, 3.12]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Get pip cache dir
         id: pip-cache
-        run: echo "::set-output name=dir::$(pip cache dir)"
+        run: echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
       - name: Cache pip dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ${{ steps.pip-cache.outputs.dir }}
           key: ${{ runner.os }}-pip-${{ hashFiles('python/setup.cfg') }}
@@ -74,32 +146,121 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install flake8 pytest
-
-      - name: Lint with flake8
-        run: |
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-      - name: Prepare for libs
-        run: mkdir -p src/opendp/v1/lib
+          python -m pip install -r requirements-dev.txt
 
       - name: Download libs
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
+        with:
+          name: libs
+          path: python/src/opendp/lib
+      
+      - name: Install package
+        run: python -m pip install -e .[scikit-learn]
+
+      - name: Test
+        run: coverage run -m pytest -v
+
+      - name: Test coverage
+        run: coverage report
+
+  docs-links:
+    needs: rust-build-and-test # TODO: Is this needed?
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Pandoc
+        run: sudo apt-get install -y pandoc
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Build docs
+        run: make html
+
+      - name: Check links
+        run: linkchecker -f linkchecker.cfg build/html/index.html
+
+  python-notebooks:
+    needs: rust-build-and-test
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.9
+
+      - name: Get pip cache dir
+        id: pip-cache
+        run: echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('python/setup.cfg') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install flake8 pytest nbmake pytest-xdist
+          python -m pip install -r requirements_notebooks.txt
+
+      - name: Download libs
+        uses: actions/download-artifact@v3
         with:
           name: libs
           path: python/src/opendp/lib
 
       - name: Install package
-        run: python -m pip install -e .
+        run: (cd ../python && python -m pip install -e .)
 
       - name: Test
-        run: pytest -v
-
-      - name: Test docs
         run: |
-          cd ../docs
-          python -m pip install -r requirements.txt
-          make doctest-python
+          shopt -s globstar
+          pytest --nbmake source/**/*.ipynb -n=auto
+
+
+  r-test:
+    needs: rust-build-and-test
+    runs-on: ubuntu-22.04
+    env:
+      OPENDP_LIB_DIR: ${{ github.workspace }}/libs
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download libs
+        uses: actions/download-artifact@v3
+        with:
+          name: libs
+          path: libs/
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: R/opendp
+          extra-packages: devtools,local::.,RcppTOML
+
+      - name: Test
+        working-directory: R/opendp/
+        run: Rscript -e 'devtools::test(reporter = c("summary", "fail"))'
+
+      - name: Document
+        run: cd R/opendp/ && Rscript -e 'devtools::document()'
+
+      - name: Check
+        run: cd R/opendp/ && Rscript -e 'devtools::check()'

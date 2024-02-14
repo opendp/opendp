@@ -2,25 +2,76 @@ use std::any;
 use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
+use std::ffi::{c_void, CString};
 use std::ffi::{CStr, IntoStringError, NulError};
-use std::ffi::CString;
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
-use crate::{err, fallible};
-use crate::dist::{SubstituteDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance, MaxDivergence, SmoothedMaxDivergence};
+use crate::domains::ffi::UserDomain;
+use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::*;
-use crate::ffi::any::AnyObject;
-use crate::dom::{VectorDomain, AllDomain, BoundedDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
+use crate::ffi::any::{AnyObject, AnyQueryable};
+use crate::measures::{
+    FixedSmoothedMaxDivergence, MaxDivergence, SMDCurve, SmoothedMaxDivergence,
+    ZeroConcentratedDivergence,
+};
+use crate::metrics::{
+    AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
+    L1Distance, L2Distance, SymmetricDistance,
+};
+use crate::transformations::DataFrameDomain;
+use crate::{err, fallible};
+
+use super::any::{AnyMeasurement, AnyTransformation};
+
+// If untrusted is not enabled, then these structs don't exist.
+#[cfg(feature = "untrusted")]
+use crate::transformations::{Pairwise, Sequential};
+#[cfg(not(feature = "untrusted"))]
+use std::marker::PhantomData;
+#[cfg(not(feature = "untrusted"))]
+pub struct Sequential<T>(PhantomData<T>);
+#[cfg(not(feature = "untrusted"))]
+pub struct Pairwise<T>(PhantomData<T>);
+
+pub type RefCountFn = extern "C" fn(*const c_void, bool) -> bool;
+
+#[repr(C)]
+pub struct ExtrinsicObject {
+    pub(crate) ptr: *const c_void,
+    pub(crate) count: RefCountFn,
+}
+
+impl Clone for ExtrinsicObject {
+    fn clone(&self) -> Self {
+        (self.count)(self.ptr, true);
+        Self {
+            ptr: self.ptr.clone(),
+            count: self.count.clone(),
+        }
+    }
+}
+
+impl Drop for ExtrinsicObject {
+    fn drop(&mut self) {
+        (self.count)(self.ptr, false);
+    }
+}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeContents {
     PLAIN(&'static str),
     TUPLE(Vec<TypeId>),
-    ARRAY { element_id: TypeId, len: usize },
+    ARRAY {
+        element_id: TypeId,
+        len: usize,
+    },
     SLICE(TypeId),
-    GENERIC { name: &'static str, args: Vec<TypeId> },
-    VEC(TypeId),  // This is a convenience specialization of GENERIC, used until we switch to slices.
+    GENERIC {
+        name: &'static str,
+        args: Vec<TypeId>,
+    },
+    VEC(TypeId), // This is a convenience specialization of GENERIC, used until we switch to slices.
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -32,7 +83,11 @@ pub struct Type {
 
 impl Type {
     pub fn new<S: AsRef<str>>(id: TypeId, descriptor: S, contents: TypeContents) -> Self {
-        Self { id, descriptor: descriptor.as_ref().to_string(), contents }
+        Self {
+            id,
+            descriptor: descriptor.as_ref().to_string(),
+            contents,
+        }
     }
 
     pub fn of<T: 'static + ?Sized>() -> Self {
@@ -44,33 +99,18 @@ impl Type {
 
     fn of_unregistered<T: 'static + ?Sized>() -> Self {
         let descriptor = any::type_name::<T>();
-        Self::new(TypeId::of::<T>(), descriptor, TypeContents::PLAIN(descriptor))
+        Self::new(
+            TypeId::of::<T>(),
+            descriptor,
+            TypeContents::PLAIN(descriptor),
+        )
     }
 
     pub fn of_id(id: &TypeId) -> Fallible<Self> {
-        TYPE_ID_TO_TYPE.get(id).cloned().ok_or_else(|| err!(TypeParse, "unrecognized type id"))
-    }
-
-    // Hacky special entry point for composition.
-    pub fn new_box_pair(type0: &Type, type1: &Type) -> Self {
-        #[allow(clippy::unnecessary_wraps)]
-        fn monomorphize<T0: 'static, T1: 'static>(type0: &Type, type1: &Type) -> Fallible<Type> {
-            let id = TypeId::of::<(Box<T0>, Box<T1>)>();
-            let descriptor = format!("(Box<{}>, Box<{}>)", type0.descriptor, type1.descriptor);
-            // Hacky way to get &'static str from String.
-            let descriptor = Box::leak(descriptor.into_boxed_str());
-            let contents = TypeContents::TUPLE(vec![TypeId::of::<Box<T0>>(), TypeId::of::<Box<T1>>()]);
-            Ok(Type::new(id, descriptor, contents))
-        }
-        dispatch!(
-            monomorphize,
-            // FIXME: The Box<f64> entries are here for demo use.
-            [
-                (type0, [bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, (Box<f64>, Box<f64>)]),
-                (type1, [bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, (Box<f64>, Box<f64>)])
-            ],
-            (type0, type1)
-        ).unwrap()
+        TYPE_ID_TO_TYPE
+            .get(id)
+            .cloned()
+            .ok_or_else(|| err!(TypeParse, "unrecognized type id"))
     }
 }
 
@@ -80,30 +120,43 @@ impl Type {
             TypeContents::PLAIN(_) => Ok(self.clone()),
             TypeContents::GENERIC { args, .. } => {
                 if args.len() != 1 {
-                    return fallible!(TypeParse, "Failed to extract atom type: expected one argument, got {:?} arguments", args.len())
+                    return fallible!(
+                        TypeParse,
+                        "Failed to extract atom type: expected one argument, got {:?} arguments",
+                        args.len()
+                    );
                 }
                 Type::of_id(&args[0])?.get_atom()
             }
-            _ => fallible!(TypeParse, "Failed to extract atom type: not a generic")
+            _ => fallible!(TypeParse, "Failed to extract atom type: not a generic"),
         }
     }
 }
 impl ToString for Type {
     fn to_string(&self) -> String {
-        let get_id_str = |type_id: &TypeId| Type::of_id(type_id)
-            .as_ref().map(ToString::to_string)
-            .unwrap_or_else(|_| "?".to_string());
+        let get_id_str = |type_id: &TypeId| {
+            Type::of_id(type_id)
+                .as_ref()
+                .map(ToString::to_string)
+                .unwrap_or_else(|_| format!("{:?} {:?}", type_id, TypeId::of::<f64>()))
+        };
 
         match &self.contents {
             TypeContents::PLAIN(v) => v.to_string(),
-            TypeContents::TUPLE(args) => format!("({})", args.iter()
-                .map(get_id_str).collect::<Vec<_>>().join(", ")),
-            TypeContents::ARRAY { element_id, len } =>
-                format!("[{}; {}]", get_id_str(element_id), len),
+            TypeContents::TUPLE(args) => format!(
+                "({})",
+                args.iter().map(get_id_str).collect::<Vec<_>>().join(", ")
+            ),
+            TypeContents::ARRAY { element_id, len } => {
+                format!("[{}; {}]", get_id_str(element_id), len)
+            }
             TypeContents::SLICE(type_id) => format!("&[{}]", get_id_str(type_id)),
-            TypeContents::GENERIC { name, args } => format!("{}<{}>", name, args.iter()
-                .map(get_id_str).collect::<Vec<_>>().join(", ")),
-            TypeContents::VEC(v) => format!("Vec<{}>", get_id_str(v))
+            TypeContents::GENERIC { name, args } => format!(
+                "{}<{}>",
+                name,
+                args.iter().map(get_id_str).collect::<Vec<_>>().join(", ")
+            ),
+            TypeContents::VEC(v) => format!("Vec<{}>", get_id_str(v)),
         }
     }
 }
@@ -133,7 +186,11 @@ macro_rules! nest {
     });
 }
 
-macro_rules! replace {($from:ident, $to:literal) => {$to};}
+macro_rules! replace {
+    ($from:ident, $to:literal) => {
+        $to
+    };
+}
 
 /// Builds a [`Type`] from a compact invocation, choosing an appropriate [`TypeContents`].
 /// * `t!(Foo)` => `TypeContents::PLAIN`
@@ -212,6 +269,9 @@ macro_rules! type_vec {
     ($($names:ty),*) => { vec![$(t!($names)),*] };
 }
 
+pub type AnyMeasurementPtr = *const AnyMeasurement;
+pub type AnyTransformationPtr = *const AnyTransformation;
+
 lazy_static! {
     /// The set of registered types. We don't need everything here, just the ones that will be looked up by descriptor
     /// (i.e., the ones that appear in FFI function generic args).
@@ -223,24 +283,31 @@ lazy_static! {
             type_vec![(bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject)],
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject]],
-            type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
-            type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, usize, String, AnyObject>],
-            // OptionNullDomain<AllDomain<_>>::Carrier
+            type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject, ExtrinsicObject>],
+            type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, usize, String, AnyObject, ExtrinsicObject>],
+            type_vec![ExtrinsicObject],
+            // OptionDomain<AtomDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
+            type_vec![Vec, <(f32, f32), (f64, f64)>],
+
+            type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyQueryable, AnyMeasurement],
+            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr>],
+
+            // sum algorithms
+            type_vec![Sequential, <f32, f64>],
+            type_vec![Pairwise, <f32, f64>],
 
             // domains
-            type_vec![AllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
-            type_vec![BoundedDomain, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64>],
-            type_vec![[InherentNullDomain AllDomain], <f32, f64>],
-            type_vec![[OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
-            type_vec![[VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
-            type_vec![[VectorDomain BoundedDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64>],
-            type_vec![[VectorDomain OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
-            type_vec![[SizedDomain VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
-            type_vec![[SizedDomain VectorDomain BoundedDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![AtomDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
+            type_vec![[OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
+            type_vec![[VectorDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
+            type_vec![[VectorDomain OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
+            type_vec![DataFrameDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>],
+            type_vec![UserDomain],
 
             // metrics
-            type_vec![SubstituteDistance, SymmetricDistance],
+            type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],
+            type_vec![DiscreteDistance],
             type_vec![AbsoluteDistance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L1Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L2Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
@@ -248,20 +315,27 @@ lazy_static! {
             // measures
             type_vec![MaxDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![SmoothedMaxDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![FixedSmoothedMaxDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![ZeroConcentratedDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+
+            // measure distances
+            type_vec![SMDCurve, <f32, f64>],
         ].into_iter().flatten().collect();
         let descriptors: HashSet<_> = types.iter().map(|e| &e.descriptor).collect();
-        assert_eq!(descriptors.len(), types.len());
+        assert_eq!(descriptors.len(), types.len(), "detected duplicate TYPES");
         types
     };
 }
 lazy_static! {
-    static ref TYPE_ID_TO_TYPE: HashMap<TypeId, Type> = {
-        TYPES.iter().map(|e| (e.id, e.clone())).collect()
-    };
+    static ref TYPE_ID_TO_TYPE: HashMap<TypeId, Type> =
+        TYPES.iter().map(|e| (e.id, e.clone())).collect();
 }
 lazy_static! {
     static ref DESCRIPTOR_TO_TYPE: HashMap<&'static str, Type> = {
-        TYPES.iter().map(|e| (e.descriptor.as_str(), e.clone())).collect()
+        TYPES
+            .iter()
+            .map(|e| (e.descriptor.as_str(), e.clone()))
+            .collect()
     };
 }
 
@@ -269,7 +343,9 @@ impl TryFrom<&str> for Type {
     type Error = Error;
     fn try_from(value: &str) -> Fallible<Self> {
         let type_ = DESCRIPTOR_TO_TYPE.get(value);
-        type_.cloned().ok_or_else(|| err!(TypeParse, "failed to parse type: `{}`", value))
+        type_
+            .cloned()
+            .ok_or_else(|| err!(TypeParse, "failed to parse type: {}", value))
     }
 }
 
@@ -280,13 +356,13 @@ impl TryFrom<*const c_char> for Type {
     }
 }
 
-
 pub fn into_raw<T>(o: T) -> *mut T {
     Box::into_raw(Box::<T>::new(o))
 }
 
 pub fn into_owned<T>(p: *mut T) -> Fallible<T> {
-    (!p.is_null()).then(|| *unsafe { Box::<T>::from_raw(p) })
+    (!p.is_null())
+        .then(|| *unsafe { Box::<T>::from_raw(p) })
         .ok_or_else(|| err!(FFI, "attempted to consume a null pointer"))
 }
 
@@ -294,11 +370,20 @@ pub fn as_ref<'a, T>(p: *const T) -> Option<&'a T> {
     (!p.is_null()).then(|| unsafe { &*p })
 }
 
+pub fn as_mut_ref<'a, T>(p: *mut T) -> Option<&'a mut T> {
+    (!p.is_null()).then(|| unsafe { &mut *p })
+}
+
 pub fn into_c_char_p(s: String) -> Fallible<*mut c_char> {
     CString::new(s)
         .map(CString::into_raw)
-        .map_err(|e: NulError|
-            err!(FFI, "Nul byte detected when reading C string at position {:?}", e.nul_position()))
+        .map_err(|e: NulError| {
+            err!(
+                FFI,
+                "Nul byte detected when reading C string at position {:?}",
+                e.nul_position()
+            )
+        })
 }
 
 pub fn into_string(p: *mut c_char) -> Fallible<String> {
@@ -306,7 +391,8 @@ pub fn into_string(p: *mut c_char) -> Fallible<String> {
         return fallible!(FFI, "Attempted to load a string from a null pointer");
     }
     let s = unsafe { CString::from_raw(p) };
-    s.into_string().map_err(|e: IntoStringError| err!(FFI, "{:?} ", e.utf8_error()))
+    s.into_string()
+        .map_err(|e: IntoStringError| err!(FFI, "{:?} ", e.utf8_error()))
 }
 
 pub fn to_str<'a>(p: *const c_char) -> Fallible<&'a str> {
@@ -326,16 +412,19 @@ pub fn to_option_str<'a>(p: *const c_char) -> Fallible<Option<&'a str>> {
 }
 
 #[allow(non_camel_case_types)]
-pub type c_bool = u8;  // PLATFORM DEPENDENT!!!
+pub type c_bool = u8; // PLATFORM DEPENDENT!!!
 
 pub fn to_bool(b: c_bool) -> bool {
     b != 0
 }
 
 pub fn from_bool(b: bool) -> c_bool {
-    if b {1} else {0}
+    if b {
+        1
+    } else {
+        0
+    }
 }
-
 
 #[cfg(test)]
 pub trait ToCharP {
@@ -352,11 +441,12 @@ impl<S: ToString> ToCharP for S {
 mod tests {
     use std::convert::TryInto;
 
-    use crate::dist::L1Distance;
+    use crate::metrics::L1Distance;
 
     use super::*;
 
     #[test]
+    #[rustfmt::skip]
     fn test_type_of() {
         let i32_t = TypeId::of::<i32>();
         assert_eq!(Type::of::<()>(), Type::new(TypeId::of::<()>(), "()", TypeContents::PLAIN("()")));
@@ -370,6 +460,7 @@ mod tests {
     }
 
     #[test]
+    #[rustfmt::skip]
     fn test_type_try_from() -> Fallible<()> {
         let i32_t = TypeId::of::<i32>();
         assert_eq!(TryInto::<Type>::try_into("()")?, Type::new(TypeId::of::<()>(), "()", TypeContents::PLAIN("()")));

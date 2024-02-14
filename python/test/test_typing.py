@@ -3,11 +3,11 @@ import sys
 from typing import List, Tuple, Any
 
 from opendp.mod import *
-from opendp.typing import RuntimeType, L1Distance, SensitivityMetric, L2Distance, DatasetMetric
+from opendp.typing import *
 
 
 try:
-    import numpy as np
+    import numpy as np  # type: ignore
 except ImportError:
     pass
 
@@ -22,21 +22,20 @@ def test_numpy_function():
 
 
 def test_typing_hint():
-    # python < 3.8 should raise a NotImplementedError
+    # Python < 3.8 should raise an exception
     if sys.version_info < (3, 8):
         try:
             assert str(RuntimeType.parse(Tuple[int, float])) == "(i32, f64)"
-            raise Exception("typing hints should fail with error below python 3.8")
-        except NotImplementedError:
-            # on python < 3.8 the remaining tests do not apply
+            raise Exception("typing hints should fail with error below Python 3.8")
+        except:
+            # on Python < 3.8 the remaining tests do not apply
             return
 
-    assert str(RuntimeType.parse(Tuple[int, float])) == "(i32, f64)"
-    assert str(RuntimeType.parse(Tuple[int, Tuple[str]])) == "(i32, (String))"
+    assert str(RuntimeType.parse(Tuple[int, float])) == "(i32, f64)" # type: ignore[arg-type]
+    assert str(RuntimeType.parse(Tuple[int, Tuple[str]])) == "(i32, (String))" # type: ignore[arg-type]
     assert str(RuntimeType.parse(List[int])) == "Vec<i32>"
     assert str(RuntimeType.parse(List[List[str]])) == "Vec<Vec<String>>"
     assert str(RuntimeType.parse((List[int], (int, bool)))) == '(Vec<i32>, (i32, bool))'
-    assert isinstance(RuntimeType.parse('SubstituteDistance'), DatasetMetric)
     assert isinstance(RuntimeType.parse('L1Distance<f64>'), SensitivityMetric)
 
     try:
@@ -50,6 +49,7 @@ def test_sensitivity():
     assert isinstance(L1Distance[int], SensitivityMetric)
     assert not isinstance(RuntimeType.parse('(f32)'), SensitivityMetric)
     assert str(L1Distance[int]) == "L1Distance<i32>"
+    assert L1Distance[int] != {}
 
 
 def test_tuples():
@@ -61,6 +61,7 @@ def test_tuples():
 def test_c():
     """test that c_type strings are not mangled"""
     rt_type = RuntimeType.parse('FfiResult<void *>')
+    assert isinstance(rt_type, RuntimeType)
     assert str(rt_type) == 'FfiResult<void *>'
     assert rt_type.args[0] == 'void *'
 
@@ -76,3 +77,33 @@ def test_set_feature():
 
     disable_features("A")
     assert "A" not in GLOBAL_FEATURES
+
+
+disallowed_int_default_types = set([i128, u128, isize])
+
+@pytest.mark.parametrize('integer_type', set(INTEGER_TYPES) - disallowed_int_default_types)
+def test_default_int_type(integer_type):
+    assert RuntimeType.parse(int) == i32
+
+    set_default_int_type(integer_type)
+    assert RuntimeType.parse(int) == integer_type
+
+    set_default_int_type(i32)
+
+
+@pytest.mark.parametrize('integer_type', disallowed_int_default_types)
+def test_disallowed_default_int_type(integer_type):
+    assert RuntimeType.parse(int) == i32
+
+    with pytest.raises(AssertionError):
+        set_default_int_type(integer_type)
+
+    set_default_int_type(i32)
+
+# for a more thorough manual test of the set_default_int_type and set_default_float_type functions:
+# 1. recompile with --release mode
+# 2. set OPENDP_TEST_RELEASE
+# 3. uncomment these commands
+#    set_default_int_type(i64)
+#    set_default_float_type(f32)
+# 4. run pytest, and sanity check the failures

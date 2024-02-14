@@ -47,6 +47,11 @@ function build() {
   for LIB in release/opendp.dll release/libopendp.dylib release/libopendp.so; do
     [[ -f rust/target/$LIB ]] && run cp rust/target/$LIB python/src/opendp/lib
   done
+  for ARCH in x86_64 aarch64; do
+    [[ -f rust/target/$ARCH-pc-windows-gnu/release/opendp.dll ]] && run cp rust/target/$ARCH-pc-windows-gnu/release/opendp.dll python/src/opendp/lib/opendp-$ARCH.dll
+    [[ -f rust/target/$ARCH-apple-darwin/release/libopendp.dylib ]] && run cp rust/target/$ARCH-apple-darwin/release/libopendp.dylib python/src/opendp/lib/libopendp-$ARCH.dylib
+    [[ -f rust/target/$ARCH-unknown-linux-gnu/release/libopendp.so ]] && run cp rust/target/$ARCH-unknown-linux-gnu/release/libopendp.so python/src/opendp/lib/libopendp-$ARCH.so
+  done
 
   log "Copy README.md"
   run cp README.md python/README.md

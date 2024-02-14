@@ -1,0 +1,64 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+% \externaldocument[trans_mod:]{../mod}
+% \ref{trans_mod:thrm:privacy-proof}
+
+\title{\texttt{fn compute\_score}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle  
+
+
+\contrib
+
+Proves soundness of \rustdoc{transformations/quantile\_score\_candidates/fn}{compute\_score} 
+in \asOfCommit{mod.rs}{f5bb719}.
+\texttt{compute\_score} returns a score for each candidate passed in, 
+where the score is the distance between the candidate and the ideal alpha-quantile.
+
+\subsection*{Vetting History}
+\begin{itemize}
+    \item \vettingPR{456}
+\end{itemize}
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\begin{itemize}
+    \item \texttt{TIA} (input atom type) is a type with trait \texttt{PartialOrd}.
+    \item \texttt{x} is non-null
+    \item \texttt{candidates} is strictly increasing
+    \item \texttt{alpha\_numer / alpha\_denom} is in $[0, 1]$
+    \item \texttt{size\_limit * alpha\_denom} does not overflow
+\end{itemize}
+
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/compute_score.py}
+
+
+\subsection*{Postcondition}
+Each element in the return value corresponds to the score of the candidate at the same index in \texttt{candidates}:
+
+\begin{equation}
+    \textrm{compute\_score}(X, c, \alpha_{num}, \alpha_{den}, l) = |\alpha_{den} \cdot \min(\#(X < c), l), \alpha_{num} \cdot \min(|X| - \#(X = c), l)|
+\end{equation}
+
+
+\section{Proof}
+
+By the preconditions on \texttt{compute\_count}, 
+and by sorting $x$, the preconditions on \texttt{count\_lt\_eq\_recursive} are satisfied.
+
+By the definition of \texttt{count\_lt\_eq\_recursive}, 
+\texttt{num\_lt} contains the number of values in $x$ less than $c$, for each candidate, 
+and similarly for \texttt{num\_eq}.
+
+Then the score is evaluated for each candidate in a loop.
+The scoring function cannot overflow or return null because the risk of overflow is protected 
+by the preconditions.
+The function is also completely non-negative due to the use of $\texttt{abs\_diff}$.
+
+
+\end{document}

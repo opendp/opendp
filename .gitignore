@@ -8,6 +8,7 @@ __pycache__/
 
 # C extensions
 *.so
+*.o 
 
 # Distribution / packaging
 .Python
@@ -31,7 +32,7 @@ share/python-wheels/
 MANIFEST
 
 # PyInstaller
-#  Usually these files are written by a python script from a template
+#  Usually these files are written by a Python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
@@ -73,9 +74,6 @@ instance/
 
 # Sphinx documentation
 docs/_build/
-
-# PyBuilder
-target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -138,6 +136,11 @@ dmypy.json
 # will have compiled files and executables
 debug/
 target/
+vendor/
+binary/
+
+# auto-generated header file
+rust/opendp.h
 
 # Remove Cargo.lock from gitignore if creating an executable, leave it for libraries
 # More information here https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
@@ -148,13 +151,46 @@ Cargo.lock
 
 # IDE projects
 .idea
+.vscode
 
 .DS_Store
 
-/python/example/pums/data
+# python/src/opendp/_data.py
+# python/src/opendp/accuracy.py
+# python/src/opendp/combinators.py
+# python/src/opendp/core.py
+# python/src/opendp/measurements.py
+# python/src/opendp/transformations.py
+
 /data_censored/
 
 /python/docs/
 /python/docs_temp/
+/python/opendp
+
+out/
 
 /python/wheelhouse
+
+# R miscellanea
+R/opendp/man
+.Rhistory
+.Rproj/
+.Rproj.user/
+*.tar.gz
+*.zip
+opendp.Rcheck
+..Rcheck
+*.rds
+.RData
+LICENSE.note
+AUTHORS
+Makevars
+binary.tar.xz
+vendor.tar.xz
+source.tar.xz
+R/opendp/src/.cargo
+NEWS.md
+R/opendp/README.md
+R/opendp/docs
+R/opendp-docs

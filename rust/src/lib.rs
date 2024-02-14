@@ -9,8 +9,8 @@
 //! [`Function`]: core::Function
 //! [`Metric`]: core::Metric
 //! [`Measure`]: core::Measure
-//! [`PrivacyRelation`]: core::PrivacyRelation
-//! [`StabilityRelation`]: core::StabilityRelation
+//! [`PrivacyMap`]: core::PrivacyMap
+//! [`StabilityMap`]: core::StabilityMap
 //! [`Measurement`]: core::Measurement
 //! [`Transformation`]: core::Transformation
 //!
@@ -21,9 +21,6 @@
 //! * Implementations of several common algorithms for statistical analysis and data manipulation, which can be used
 //! out-of-the-box to assemble DP applications.
 //! * Facilities for extending OpenDP with new algorithms, privacy models, etc.
-//!
-//! In addition, there's a companion crate, opendp-ffi, which provides FFI wrappers for opendp functionality.
-//! This can be used to implement bindings in languages other than Rust.
 //!
 //! # User Guide
 //!
@@ -39,87 +36,96 @@
 //! Here's a simple example of using OpenDP from Rust to create a private sum:
 //! ```
 //! use opendp::error::Fallible;
-//! use opendp::trans::{make_split_lines, make_cast_default, make_clamp, make_bounded_sum};
-//! use opendp::comb::{make_chain_tt, make_chain_mt};
-//! use opendp::meas::make_base_laplace;
 //!
+//! #[cfg(all(feature = "untrusted", feature = "partials"))]
 //! pub fn example() -> Fallible<()> {
+//!     use opendp::transformations::{make_split_lines, then_cast_default, make_cast_default, then_clamp, then_sum};
+//!     use opendp::combinators::{make_chain_tt, make_chain_mt};
+//!     use opendp::measurements::then_base_laplace;
+//!
 //!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
 //!     let bounds = (0.0, 100.0);
 //!     let epsilon = 1.0;
-//!     let sigma = (bounds.1 - bounds.0) / epsilon;
+//!     // remove some epsilon to account for floating-point error
+//!     let sigma = (bounds.1 - bounds.0) / (epsilon - 0.0001);
 //!
-//!     // Construct a Transformation to load the numbers.
+//!     // Construct a Transformation to parse a csv string.
 //!     let split_lines = make_split_lines()?;
-//!     let cast = make_cast_default::<String, f64>()?;
-//!     let load_numbers = make_chain_tt(&cast, &split_lines, None)?;
+//!
+//!     // The next transformation wants to conform with the output domain and metric from `split_lines`.
+//!     let cast = make_cast_default::<_, String, f64>(
+//!         split_lines.output_domain.clone(),
+//!         split_lines.output_metric.clone())?;
+//!
+//!     // Since the domain and metric conforms, these two transformations may be chained.
+//!     let load_numbers = make_chain_tt(&cast, &split_lines)?;
+//!      
+//!     // You can use the more convenient `>>` notation to chain instead.
+//!     // When you use the `then_` version of the constructor,
+//!     //     the `>>` operator will automatically fill the input domain and metric from the previous transformation.
+//!     let load_and_clamp = load_numbers >> then_clamp(bounds);
+//!     
+//!     // After chaining, the resulting transformation is wrapped in a `Result`.
+//!     let load_and_sum = (load_and_clamp >> then_sum())?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
-//!     let clamp = make_clamp(bounds)?;
-//!     let bounded_sum = make_bounded_sum(bounds)?;
-//!     let laplace = make_base_laplace(sigma)?;
-//!     let intermediate = make_chain_tt(&bounded_sum, &clamp, None)?;
-//!     let noisy_sum = make_chain_mt(&laplace, &intermediate, None)?;
+//!     let noisy_sum = load_and_sum >> then_base_laplace(sigma, None);
 //!
-//!     // Put it all together.
-//!     let pipeline = make_chain_mt(&noisy_sum, &load_numbers, None)?;
-//!
-//!     // Notice that you can write the same pipeline more succinctly with `>>`.
-//!     let pipeline = (
+//!     // The same measurement, written more succinctly:
+//!     let noisy_sum = (
 //!         make_split_lines()? >>
-//!         make_cast_default::<String, f64>()? >>
-//!         make_clamp(bounds)? >>
-//!         make_bounded_sum(bounds)? >>
-//!         make_base_laplace(sigma)?
+//!         then_cast_default() >>
+//!         then_clamp(bounds) >>
+//!         then_sum() >>
+//!         then_base_laplace(sigma, None)
 //!     )?;
 //!
 //!     // Check that the pipeline is (1, 1.0)-close
-//!     assert!(pipeline.check(&1, &epsilon)?);
+//!     assert!(noisy_sum.check(&1, &epsilon)?);
 //!
 //!     // Make a 1.0-epsilon-DP release
-//!     let release = pipeline.invoke(&data)?;
+//!     let release = noisy_sum.invoke(&data)?;
 //!     println!("release = {}", release);
 //!     Ok(())
 //! }
+//! #[cfg(all(feature = "untrusted", feature = "partials"))]
 //! example().unwrap();
 //! ```
 //!
 //! # Contributor Guide
 //!
-//! Contributions to OpenDP typically take the form of what we call "constructors."
-//! A constructor is a function that returns a [`Measurement`] or [`Transformation`].
-//!
-//! Before you submit your PR, please review the [Contribution Process](https://docs.opendp.org/en/latest/developer/contribution-process.html).
+//! A more thorough Contributor Guide [can be found on the docs website](https://docs.opendp.org/en/stable/contributor/index.html).
 //!
 //! ## Adding Constructors
 //!
-//! Measurement constructors go in the module [`meas`], and Transformation constructors
-//! in the module [`trans`].
+//! Measurement constructors go in the module [`crate::measurements`],
+//! Transformation constructors in the module [`crate::transformations`], and
+//! Combinator constructors in the module [`crate::combinators`].
 //!
 //! There are two code steps to adding a constructor function: Writing the function itself, and adding the FFI wrapper.
 //!
 //! ### Writing Constructors
 //!
-//! Constructors are functions that take configuration parameters and return an appropriately configured [`Measurement`] or [`Transformation`].
+//! Constructors are functions that take some parameters and return a valid [`Measurement`] or [`Transformation`].
 //! They typically follow a common pattern:
 //! 1. Choose the appropriate input and output [`Domain`].
 //! 2. Write a closure that implements the [`Function`].
 //! 3. Choose the appropriate input and output [`Metric`]/[`Measure`].
-//! 4. Write a closure that implements the [`PrivacyRelation`]/[`StabilityRelation`].
+//! 4. Write a closure that implements the [`PrivacyMap`]/[`StabilityMap`].
 //!
 //! #### Example Transformation Constructor
 //! ```
-//!# use opendp::core::{Transformation, StabilityRelation, Function};
-//!# use opendp::dist::AbsoluteDistance;
-//!# use opendp::dom::AllDomain;
-//! pub fn make_i32_identity() -> Transformation<AllDomain<i32>, AllDomain<i32>, AbsoluteDistance<i32>, AbsoluteDistance<i32>> {
-//!     let input_domain = AllDomain::new();
-//!     let output_domain = AllDomain::new();
+//!# use opendp::core::{Transformation, StabilityMap, Function};
+//!# use opendp::metrics::AbsoluteDistance;
+//!# use opendp::domains::AtomDomain;
+//! pub fn make_i32_identity() -> Transformation<AtomDomain<i32>, AtomDomain<i32>, AbsoluteDistance<i32>, AbsoluteDistance<i32>> {
+//!     let input_domain = AtomDomain::default();
+//!     let output_domain = AtomDomain::default();
 //!     let function = Function::new(|arg: &i32| -> i32 { *arg });
 //!     let input_metric = AbsoluteDistance::default();
 //!     let output_metric = AbsoluteDistance::default();
-//!     let stability_relation = StabilityRelation::new_from_constant(1);
-//!     Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation)
+//!     let stability_map = StabilityMap::new_from_constant(1);
+//!     Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_map).unwrap()
 //! }
 //! make_i32_identity();
 //! ```
@@ -139,13 +145,13 @@
 
 #![allow(clippy::just_underscores_and_digits)]
 #![allow(clippy::type_complexity)]
-
-#![cfg_attr(feature="ffi", allow(clippy::upper_case_acronyms))]
-#![cfg_attr(feature="ffi", allow(non_snake_case))]
-
-#![recursion_limit="512"]
+#![cfg_attr(feature = "ffi", allow(clippy::upper_case_acronyms))]
+#![cfg_attr(feature = "ffi", allow(non_snake_case))]
+#![recursion_limit = "512"]
 
 // create clones of variables that are free to be consumed by a closure
+// Once we have things using `enclose!` that are outside of `contrib`, this should specify `feature="ffi"`.
+#[cfg(feature = "contrib")]
 macro_rules! enclose {
     ( $x:ident, $y:expr ) => (enclose!(($x), $y));
     ( ($( $x:ident ),*), $y:expr ) => {
@@ -159,26 +165,26 @@ macro_rules! enclose {
 // #![feature(trace_macros)]
 // trace_macros!(true);
 
-#[cfg(feature="ffi")]
+#[cfg(feature = "ffi")]
 #[macro_use]
-mod ffi;
-#[cfg(feature="ffi")]
+pub mod ffi;
+#[cfg(feature = "ffi")]
 #[macro_use]
 extern crate lazy_static;
 
 #[macro_use]
 pub mod error;
 
+pub mod accuracy;
+pub mod combinators;
 pub mod core;
 pub mod data;
-pub mod dist;
-pub mod dom;
+pub mod domains;
+#[cfg(feature = "contrib")]
 pub mod interactive;
-pub mod meas;
-pub mod poly;
-pub mod samplers;
+pub mod measurements;
+pub mod measures;
+pub mod metrics;
 pub mod traits;
-pub mod trans;
-pub mod comb;
-pub mod accuracy;
 pub mod utils;
+pub mod transformations;

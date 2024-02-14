@@ -4,21 +4,23 @@
 set -e -u
 
 function usage() {
-  echo "Usage: $(basename "$0") [-irt] [-p <PLATFORM>] [-c <TOOLCHAIN>] [-g <TARGET>] [-f <FEATURES>]" >&2
+  echo "Usage: $(basename "$0") [-irtn] [-p <PLATFORM>] [-c <TOOLCHAIN>] [-g <TARGET>] [-f <FEATURES>]" >&2
 }
 
 INIT=false
 RELEASE_MODE=false
 TEST=false
+CHECK=false
 PLATFORM=UNSET
 TARGET=UNSET
 TOOLCHAIN=stable
 FEATURES=default
-while getopts ":irtp:c:g:f:" OPT; do
+while getopts ":irtnp:c:g:f:" OPT; do
   case "$OPT" in
   i) INIT=true ;;
   r) RELEASE_MODE=true ;;
   t) TEST=true ;;
+  n) CHECK=true ;;
   p) PLATFORM="$OPTARG" ;;
   c) TOOLCHAIN="$OPTARG" ;;
   g) TARGET="$OPTARG" ;;
@@ -54,25 +56,13 @@ function guess_platform() {
 
 function init_windows() {
   log "Install Rust toolchain"
-  export PATH="$PATH:/c/Rust/.cargo/bin"
+  # If we run rustup immediately, it sometimes fails with "/c/Users/runneradmin/.cargo/bin/rustup: Device or resource busy".
+  # So we hack around it by sleeping to let things settle. (Possible cause: https://github.com/rust-lang/rustup/issues/3189)
+  run sleep 5
   run rustup toolchain install stable-x86_64-pc-windows-gnu
+  run sleep 5
   run rustup set default-host x86_64-pc-windows-gnu
-
-# The lines below copy components from the platform installation of mingw into the Rust toolchain,
-# and build the gmp & mpfr native libraries manually. This isn't necessary anymore, as the build script
-# in the gmp-mpfr-sys crate works with the current version of msys2.
-#
-#  log "Patch the Rust compiler"
-#  run cp -rp "$RUSTUP_DIR"/toolchains/stable-x86_64-pc-windows-gnu rust/toolchain
-#  run rustup toolchain link "$TOOLCHAIN" rust/toolchain
-#  run cp -f /mingw64/x86_64-w64-mingw32/lib/{*.a,*.o} rust/toolchain/lib/rustlib/x86_64-pc-windows-gnu/lib/self-contained
-#
-#  log "Prepare patches for binary dependencies"
-#  run \(cd rust/windows '&&' bash 1_download_and_patch.sh\)
-#
-#  log "Build binary dependencies"
-#  export RUSTFLAGS="-L native=D:\a\opendp\opendp\rust\toolchain\lib\rustlib\x86_64-pc-windows-gnu\lib\self-contained"
-#  run \(cd rust/windows '&&' bash 2_build_dependencies.sh\)
+  run sleep 5
 }
 
 function init_macos() {
@@ -85,8 +75,6 @@ function init_linux() {
     run curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal
     source ~/.cargo/env
   fi
-  log "Install Perl IPC-CMD"
-  run yum -y install perl-IPC-Cmd
 }
 
 function run_cargo() {
@@ -121,5 +109,10 @@ if [[ $TEST == true ]]; then
   run_cargo test
 fi
 
-log "***** RUNNING BUILD *****"
-run_cargo build
+if [[ $CHECK == true ]]; then
+  log "***** RUNNING CHECK *****"
+  run_cargo check
+else
+  log "***** RUNNING BUILD *****"
+  run_cargo build
+fi

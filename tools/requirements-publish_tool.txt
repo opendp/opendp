@@ -1,1 +1,2 @@
-twine
+semver==3.0
+twine==4.0.2

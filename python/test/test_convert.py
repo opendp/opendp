@@ -4,10 +4,11 @@ from opendp._convert import (
     _vector_to_slice, _slice_to_vector,
     _hashmap_to_slice, _slice_to_hashmap,
 )
+from opendp.typing import *
 import pytest
 import sys
 try:
-    import numpy as np
+    import numpy as np  # type: ignore
 except ImportError:
     pass
 
@@ -48,10 +49,16 @@ def test_data_object_tuple():
     assert val_out == val_in
 
 
+def test_data_object_string_pointer():
+    val_in = "hello, world"
+    obj = py_to_c(val_in, c_type=ctypes.c_void_p, type_name='String')
+    assert obj.value == val_in.encode()
+
+
 def test_roundtrip_int():
     in_ = 23
     ptr = ctypes.POINTER(ctypes.c_int32)(ctypes.c_int32(in_))
-    ptr = ctypes.byref(ctypes.c_int32(in_))
+    ptr = ctypes.byref(ctypes.c_int32(in_))  # type: ignore[assignment]
 
     int_void = ctypes.cast(ptr, ctypes.c_void_p)
     out = ctypes.cast(int_void, ctypes.POINTER(ctypes.c_int32)).contents.value
@@ -88,8 +95,8 @@ def test_roundtrip_ffisliceptr_int_lib():
 def test_vec_str():
     data = ["a", "bbb", "c"]
     # partial roundtrip
-    slice = _vector_to_slice(data, type_name="Vec<String>")
-    assert _slice_to_vector(slice, type_name="Vec<String>") == data
+    slice = _vector_to_slice(data, type_name=Vec[str])
+    assert _slice_to_vector(slice, type_name=Vec[str]) == data
 
     # complete roundtrip
     any = py_to_c(data, c_type=AnyObjectPtr)
@@ -98,7 +105,7 @@ def test_vec_str():
 
 def test_hashmap():
     data = {"A": 23, "B": 12, "C": 234}
-    slice = _hashmap_to_slice(data, "HashMap<String, i32>")
+    slice = _hashmap_to_slice(data, HashMap[str, int])
     assert _slice_to_hashmap(slice) == data
 
     # complete roundtrip
@@ -121,7 +128,21 @@ def test_numpy_data():
 @pytest.mark.skipif('numpy' not in sys.modules,
                     reason="requires the Numpy library")
 def test_numpy_trans():
-    from opendp.trans import make_bounded_sum
-    from opendp.mod import enable_features
-    enable_features("contrib")
-    assert make_bounded_sum(bounds=(0, 10))(np.array([1, 2, 3], dtype=np.int32)) == 6
+    import opendp.prelude as dp
+    dp.enable_features("contrib")
+    assert dp.t.make_sum(
+        dp.vector_domain(dp.atom_domain(bounds=(0, 10))), 
+        dp.symmetric_distance(),
+    )(np.array([1, 2, 3], dtype=np.int32)) == 6
+
+
+def test_overflow():
+    import pytest
+    with pytest.raises(ValueError):
+        py_to_c(-1, AnyObjectPtr, u8)
+
+    with pytest.raises(ValueError):
+        py_to_c(256, AnyObjectPtr, u8)
+  
+    with pytest.raises(ValueError):
+        py_to_c(-129, AnyObjectPtr, i8)

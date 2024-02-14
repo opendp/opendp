@@ -1,40 +1,46 @@
+//! Error handling utilities.
+
 use std::fmt;
 use std::fmt::Debug;
 
-use backtrace::Backtrace as _Backtrace;
+use std::backtrace::Backtrace as _Backtrace;
 
-// create an instance of opendp::Fallible
+use dashu::base::ConversionError;
+
+/// Create an instance of [`Fallible`]
 #[macro_export]
 macro_rules! fallible {
     ($variant:ident) => (Err(err!($variant)));
     ($variant:ident, $($inner:expr),+) => (Err(err!($variant, $($inner),+)));
 }
-// create an instance of opendp::Error
 // "error" is shadowed, and breaks intellij macro resolution
+/// Create an instance of [`Error`]
 #[macro_export]
 macro_rules! err {
     // error without message
-    ($variant:ident) => (crate::error::Error {
-        variant: crate::error::ErrorVariant::$variant,
+    ($variant:ident) => ($crate::error::Error {
+        variant: $crate::error::ErrorVariant::$variant,
         message: None,
-        backtrace: backtrace::Backtrace::new_unresolved()
+        backtrace: err!(@backtrace)
     });
     // error with explicit message
-    ($variant:ident, $message:expr) => (crate::error::Error {
-        variant: crate::error::ErrorVariant::$variant,
+    ($variant:ident, $message:expr) => ($crate::error::Error {
+        variant: $crate::error::ErrorVariant::$variant,
         message: Some($message.to_string()), // ToString is impl'ed for String
-        backtrace: backtrace::Backtrace::new_unresolved()
+        backtrace: err!(@backtrace)
     });
     // args to format into message
     ($variant:ident, $template:expr, $($args:expr),+) =>
         (err!($variant, format!($template, $($args,)+)));
+
+    (@backtrace) => (std::backtrace::Backtrace::capture());
 }
 
 #[derive(thiserror::Error, Debug)]
 pub struct Error {
     pub variant: ErrorVariant,
     pub message: Option<String>,
-    pub backtrace: _Backtrace
+    pub backtrace: _Backtrace,
 }
 
 impl PartialEq for Error {
@@ -55,8 +61,8 @@ pub enum ErrorVariant {
     #[error("FailedFunction")]
     FailedFunction,
 
-    #[error("FailedRelation")]
-    FailedRelation,
+    #[error("FailedMap")]
+    FailedMap,
 
     #[error("RelationDebug")]
     RelationDebug,
@@ -82,8 +88,14 @@ pub enum ErrorVariant {
     #[error("MakeMeasurement")]
     MakeMeasurement,
 
+    #[error("MetricSpace")]
+    MetricSpace,
+
     #[error("InvalidDistance")]
     InvalidDistance,
+
+    #[error("Overflow")]
+    Overflow,
 
     #[error("NotImplemented")]
     NotImplemented,
@@ -96,7 +108,7 @@ impl fmt::Display for Error {
 }
 
 // simplify error creation from vega_lite_4
-#[cfg(all(test, feature="test-plot"))]
+#[cfg(all(test, feature = "test-plot"))]
 impl From<String> for Error {
     fn from(v: String) -> Self {
         err!(FailedFunction, v)
@@ -105,13 +117,27 @@ impl From<String> for Error {
 
 impl From<ErrorVariant> for Error {
     fn from(variant: ErrorVariant) -> Self {
-        Self { variant, message: None, backtrace: _Backtrace::new() }
+        Self {
+            variant,
+            message: None,
+            backtrace: std::backtrace::Backtrace::capture(),
+        }
     }
 }
 
 impl<T> From<Error> for Result<T, Error> {
     fn from(e: Error) -> Self {
         Err(e)
+    }
+}
+
+impl From<ConversionError> for Error {
+    fn from(err: ConversionError) -> Self {
+        Self {
+            variant: ErrorVariant::FailedCast,
+            message: Some(err.to_string()),
+            backtrace: std::backtrace::Backtrace::capture(),
+        }
     }
 }
 

@@ -1,5 +1,7 @@
 // DISPATCH MACROS
 
+use crate::{core::FfiResult, err, error::Fallible, fallible};
+
 // MAIN ENTRY POINT
 /*
 ONE TYPE ARG:
@@ -43,6 +45,9 @@ macro_rules! dispatch {
     ($function:ident, [$($rt_dispatch_types:tt),+], $args:tt) => {
         disp!($function, [$($rt_dispatch_types),+], (), $args)
     };
+    ($function:ident, [$($rt_dispatch_types:tt),+]) => {
+        dispatch!($function, [$($rt_dispatch_types),+], ())
+    };
 }
 
 // BUILDING BLOCK, could be moved inside dispatch! with @prefix trick.
@@ -73,30 +78,30 @@ macro_rules! disp {
 #[cfg(not(debug_assertions))]
 macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, @primitives),              $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, String]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [u32, u64, i32, i64, usize, f32, f64, bool, String]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @primitives_plus),         $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, String, AnyObject]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [u32, u64, i32, i64, usize, f32, f64, bool, String, AnyObject, ExtrinsicObject]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [u32, u64, i32, i64, usize, f32, f64]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @hashable),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, bool, String]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [u32, u64, i32, i64, usize, bool, String]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @floats),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [f32, f64]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @integers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [u32, u64, i32, i64, usize]), $rt_dispatch_types, $type_args, $args)
     };
-    ($function:ident, ($rt_type:expr, @dist_dataset),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [SubstituteDistance, SymmetricDistance]), $rt_dispatch_types, $type_args, $args)
+    ($function:ident, ($rt_type:expr, @dataset_metrics),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
+        disp_expand!($function, ($rt_type, [crate::metrics::SymmetricDistance, crate::metrics::InsertDeleteDistance]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {
             $(x if x == std::any::TypeId::of::<$dispatch_type>() => disp_1!($function, $rt_dispatch_types, $type_args, $dispatch_type, $args)),+,
-            _ => crate::err!(FFI, "No match for concrete type {}. See https://github.com/opendp/opendp/discussions/451.", $rt_type.descriptor).into()
+            _ => crate::ffi::dispatch::FailedDispatch::failed_dispatch($rt_type.descriptor.as_str())
         }
     };
 }
@@ -104,10 +109,10 @@ macro_rules! disp_expand {
 #[cfg(debug_assertions)]
 macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, @primitives),              $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [bool, i32, f64, String, usize]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [i32, f64, usize, bool, String]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @primitives_plus),         $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [i32, f64, String, usize, AnyObject]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [i32, f64, usize, bool, String, AnyObject, ExtrinsicObject]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [u32, i32, f64]), $rt_dispatch_types, $type_args, $args)
@@ -121,15 +126,45 @@ macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, @integers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [i32]), $rt_dispatch_types, $type_args, $args)
     };
-    ($function:ident, ($rt_type:expr, @dist_dataset),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [SubstituteDistance, SymmetricDistance]), $rt_dispatch_types, $type_args, $args)
+    ($function:ident, ($rt_type:expr, @dataset_metrics),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
+        disp_expand!($function, ($rt_type, [crate::metrics::SymmetricDistance]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {
             $(x if x == std::any::TypeId::of::<$dispatch_type>() => disp_1!($function, $rt_dispatch_types, $type_args, $dispatch_type, $args)),+,
-            _ => err!(FFI, "No match for concrete type {}. You've got a debug binary! Consult https://docs.opendp.org/en/stable/developer/developer-faq.html", $rt_type.descriptor).into()
+            _ => crate::ffi::dispatch::FailedDispatch::failed_dispatch($rt_type.descriptor.as_str())
         }
     };
+}
+
+pub trait FailedDispatch {
+    fn failed_dispatch(type_: &str) -> Self;
+}
+
+impl<T> FailedDispatch for Fallible<T> {
+    fn failed_dispatch(type_: &str) -> Self {
+        let debug_message = if cfg!(debug_assertions) {
+            "You've got a debug binary! Debug binaries support fewer types. Consult https://docs.opendp.org/en/stable/contributor/development-environment.html#build-opendp"
+        } else {
+            "See https://github.com/opendp/opendp/discussions/451."
+        };
+        fallible!(
+            FFI,
+            "No match for concrete type {}. {}",
+            type_,
+            debug_message
+        )
+    }
+}
+impl<T> FailedDispatch for FfiResult<*mut T> {
+    fn failed_dispatch(type_: &str) -> Self {
+        Fallible::<T>::failed_dispatch(type_).into()
+    }
+}
+impl<T> FailedDispatch for Option<T> {
+    fn failed_dispatch(_: &str) -> Self {
+        None
+    }
 }
 
 // BUILDING BLOCK, could be moved inside dispatch! with @prefix trick.
