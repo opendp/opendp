@@ -970,7 +970,7 @@ def exponential_bounds_search(
         def check_type(v):
             try:
                 predicate(v)
-            except TypeError as e:
+            except TypeError:
                 return False
             except OpenDPException as e:
                 if "No match for concrete type" in (e.message or ""):

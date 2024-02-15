@@ -17,10 +17,6 @@ extend-ignore =
     # E265: block comment should start with '# '
     E265,
 
-    # E305: expected 2 blank lines after class or function definition, found ...
-    E305,
-    # E306: expected 1 blank line before a nested definition, found ...
-    E306,
     # E402: module level import not at top of file
     E402,
     # E501: line too long (... > 79 characters)
@@ -31,16 +27,16 @@ extend-ignore =
     # For us, lambdas are often more clear. No fixes needed!
     # E731: do not assign a lambda expression, use a def
     E731,
+
+
     # F401: '...' imported but unused
     F401,
     # F403: 'from ... import *' used; unable to detect undefined names
     F403,
     # F405: '...' may be undefined, or defined from star imports: ...
     F405,
-    # F841: local variable '...' is assigned to but never used
-    F841,
 
-    # Wouldn't complain about whitespace during code review, so don't automate it. No fixes needed!
+    # Wouldn't complain about these during code review, so don't automate it. No fixes needed!
     # W291: trailing whitespace
     W291,
     # W292: no newline at end of file
@@ -57,13 +53,22 @@ extend-ignore =
     E251,
     # E261: at least two spaces before inline comment
     E261,
+    # E305: expected 2 blank lines after class or function definition, found ...
+    E305,
+    # E306: expected 1 blank line before a nested definition, found ...
+    E306,
 
 per-file-ignores =
-    # Pseudocode necessarily has a lot of undefined names. No fixes needed!
-    # F821: undefined name '...'
-    rust/*:F821
     # TODO: Bare 'except' should be fixed, but we'll typically want to be more strict,
     # and there could be unintended consequences, so approach this carefully.
     # E722: do not use bare 'except'
     python/src/opendp/_convert.py:E722
     python/test/test_typing.py:E722
+
+    # Pseudocode necessarily has a lot of undefined names. No fixes needed!
+    # F821: undefined name '...'
+    rust/*:F821
+
+    # Generated code. No fixes needed!
+    # F841: local variable '...' is assigned to but never used
+    python/src/opendp/transformations.py:F841
