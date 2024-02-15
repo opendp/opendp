@@ -38,8 +38,6 @@ extend-ignore =
     E722,
     # E731: do not assign a lambda expression, use a def
     E731,
-    # E741: ambiguous variable name '...'
-    E741,
     # F401: '...' imported but unused
     F401,
     # F403: 'from ... import *' used; unable to detect undefined names

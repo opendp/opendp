@@ -645,7 +645,7 @@ class OpenDPException(Exception):
     
     def frames(self): # pragma: no cover
         def format_frame(frame):
-            return "\n  ".join(l.strip() for l in frame.split("\n"))
+            return "\n  ".join(line.strip() for line in frame.split("\n"))
         return [format_frame(f) for f in self.raw_frames() if f.startswith("opendp") or f.startswith("<opendp")]
 
     def __str__(self) -> str: # pragma: no cover
