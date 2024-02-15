@@ -10,17 +10,17 @@ exclude =
     venv
 
 extend-ignore =
-    # For us, lambdas are often more clear. No fixes needed!
-    # E731: do not assign a lambda expression, use a def
-    E731,
-
-
-    # F401: '...' imported but unused
-    F401,
+    # TODO: Good to be more conservative, but "import *" is ubiquitous right now.
+    # If we wanted to fix this, could get list of all names from a file,
+    # import them all explicitly, and then remove the unused ones,
     # F403: 'from ... import *' used; unable to detect undefined names
     F403,
     # F405: '...' may be undefined, or defined from star imports: ...
     F405,
+
+    # For us, lambdas are often more clear. No fixes needed!
+    # E731: do not assign a lambda expression, use a def
+    E731,
 
     # Wouldn't complain about these during code review, so don't automate it. No fixes needed!
     # W291: trailing whitespace
@@ -64,3 +64,11 @@ per-file-ignores =
     # Generated code. No fixes needed!
     # F841: local variable '...' is assigned to but never used
     */transformations.py:F841
+
+    # Names are gathered here for convenience imports downstream. No fixes needed!
+    # F401: '...' imported but unused
+    */opendp/__init__.py:F401
+    prelude.py:F401
+    # TODO: Just have everything import directly?
+    # >>> from opendp._extrinsics.domains import np_array2_domain
+    */_extrinsics/__init__.py:F401
