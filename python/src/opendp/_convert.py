@@ -473,7 +473,7 @@ def _wrap_py_func(func, TO):
             lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
             lib.ffiresult_err.restype = ctypes.c_void_p
             return lib.ffiresult_err(
-                ctypes.c_char_p(f"Continued stack trace from Exception in user-defined function".encode()),
+                ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
                 ctypes.c_char_p(traceback.format_exc().encode()),
             )
 
@@ -519,7 +519,7 @@ def _wrap_py_transition(py_transition, A):
             lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
             lib.ffiresult_err.restype = ctypes.c_void_p
             return lib.ffiresult_err(
-                ctypes.c_char_p(f"Continued stack trace from Exception in user-defined function".encode()),
+                ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
                 ctypes.c_char_p(traceback.format_exc().encode()),
             )
 
