@@ -13,6 +13,7 @@ NULL
 #'
 #' * [QYL13 Understanding Hierarchical Methods for Differentially Private Histograms](http://www.vldb.org/pvldb/vol6/p1954-qardaji.pdf)
 #'
+#' @concept transformations
 #' @param size_guess A guess at the size of your dataset.
 #' @return int
 #' @export
@@ -53,6 +54,7 @@ choose_branching_factor <- function(
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @param leaf_count The number of leaf nodes in the b-ary tree.
@@ -148,6 +150,7 @@ then_b_ary_tree <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `AbsoluteDistance<S::Item>`
 #'
+#' @concept transformations
 #' @param size_limit Upper bound on number of records to keep in the input data.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .S Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
@@ -248,6 +251,7 @@ then_bounded_float_checked_sum <- function(
 #' * Input Metric:   `InsertDeleteDistance`
 #' * Output Metric:  `AbsoluteDistance<S::Item>`
 #'
+#' @concept transformations
 #' @param size_limit Upper bound on the number of records in input data. Used to bound sensitivity.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .S Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
@@ -334,6 +338,7 @@ then_bounded_float_ordered_sum <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `AbsoluteDistance<T>`
 #'
+#' @concept transformations
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
@@ -412,6 +417,7 @@ then_bounded_int_monotonic_sum <- function(
 #' * Input Metric:   `InsertDeleteDistance`
 #' * Output Metric:  `AbsoluteDistance<T>`
 #'
+#' @concept transformations
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
@@ -490,6 +496,7 @@ then_bounded_int_ordered_sum <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `AbsoluteDistance<T>`
 #'
+#' @concept transformations
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
@@ -565,6 +572,7 @@ then_bounded_int_split_sum <- function(
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @param .TOA Atomic Output Type to cast into
@@ -643,6 +651,7 @@ then_cast <- function(
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @param .TOA Atomic Output Type to cast into
@@ -719,6 +728,7 @@ then_cast_default <- function(
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @param .TOA Atomic Output Type to cast into
@@ -786,6 +796,7 @@ then_cast_inherent <- function(
 #' * Input Type:     `Vec<TA>`
 #' * Output Type:    `Vec<TA>`
 #'
+#' @concept transformations
 #' @param .TA Atomic Type. One of `f32` or `f64`
 #' @return Function
 #' @export
@@ -856,6 +867,7 @@ then_cdf <- function(
 #'
 #' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/clamp/make_clamp.pdf)
 #'
+#' @concept transformations
 #' @param input_domain Domain of input data.
 #' @param input_metric Metric on input domain.
 #' @param bounds Tuple of inclusive lower and upper bounds.
@@ -938,6 +950,7 @@ then_clamp <- function(
 #' * Input Type:     `Vec<TIA>`
 #' * Output Type:    `Vec<TOA>`
 #'
+#' @concept transformations
 #' @param branching_factor the maximum number of children
 #' @param .TIA Atomic type of the input data. Should be an integer type.
 #' @param .TOA Atomic type of the output data. Should be a float type.
@@ -1023,6 +1036,7 @@ then_consistent_b_ary_tree <- function(
 #'
 #' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/count/make_count.pdf)
 #'
+#' @concept transformations
 #' @param input_domain Domain of the data type to be privatized.
 #' @param input_metric Metric of the data type to be privatized.
 #' @param .TO Output Type. Must be numeric.
@@ -1097,6 +1111,7 @@ then_count <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `MO`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @param .MO Output Metric.
@@ -1178,6 +1193,7 @@ then_count_by <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `MO`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @param categories The set of categories to compute counts for.
@@ -1273,6 +1289,7 @@ then_count_by_categories <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `AbsoluteDistance<TO>`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @param .TO Output Type. Must be numeric.
@@ -1342,6 +1359,7 @@ then_count_distinct <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `SymmetricDistance`
 #'
+#' @concept transformations
 #' @param col_names Column names for each record entry.
 #' @param .K categorical/hashable data type of column names
 #' @return Transformation
@@ -1423,6 +1441,7 @@ then_create_dataframe <- function(
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @param column_name column name to be transformed
@@ -1508,6 +1527,7 @@ then_df_cast_default <- function(
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @param column_name Column name to be transformed
@@ -1599,6 +1619,7 @@ then_df_is_equal <- function(
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @return Transformation
@@ -1666,6 +1687,7 @@ then_drop_null <- function(
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
 #'
+#' @concept transformations
 #' @param input_domain The domain of the input vector.
 #' @param input_metric The metric of the input vector.
 #' @param categories The set of categories to find indexes from.
@@ -1747,6 +1769,7 @@ then_find <- function(
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
 #'
+#' @concept transformations
 #' @param input_domain The domain of the input vector.
 #' @param input_metric The metric of the input vector.
 #' @param edges The set of edges to split bins by.
@@ -1825,6 +1848,7 @@ then_find_bin <- function(
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
 #'
+#' @concept transformations
 #' @param domain undocumented
 #' @param metric undocumented
 #' @return Transformation
@@ -1896,6 +1920,7 @@ then_identity <- function(
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
 #'
+#' @concept transformations
 #' @param input_domain Domain of the input data. See table above.
 #' @param input_metric Metric of the input data. A dataset metric.
 #' @param constant Value to replace nulls with.
@@ -1968,6 +1993,7 @@ then_impute_constant <- function(
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
 #'
+#' @concept transformations
 #' @param input_domain Domain of the input.
 #' @param input_metric Metric of the input.
 #' @param bounds Tuple of inclusive lower and upper bounds.
@@ -2041,6 +2067,7 @@ then_impute_uniform_float <- function(
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
 #'
+#' @concept transformations
 #' @param input_domain The domain of the input vector.
 #' @param input_metric The metric of the input vector.
 #' @param categories The set of categories to index into.
@@ -2129,6 +2156,7 @@ then_index <- function(
 #'
 #' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/trans/manipulation/make_is_equal.pdf)
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @param value value to check against
@@ -2202,6 +2230,7 @@ then_is_equal <- function(
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @return Transformation
@@ -2267,6 +2296,7 @@ then_is_null <- function(
 #' * Input Metric:   `M`
 #' * Output Metric:  `M`
 #'
+#' @concept transformations
 #' @param constant The constant to multiply aggregates by.
 #' @param bounds Tuple of inclusive lower and upper bounds.
 #' @param .D Domain of the function. Must be `AtomDomain<T>` or `VectorDomain<AtomDomain<T>>`
@@ -2357,6 +2387,7 @@ then_lipschitz_float_mul <- function(
 #' * Input Metric:   `MI`
 #' * Output Metric:  `AbsoluteDistance<T>`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @return Transformation
@@ -2429,6 +2460,7 @@ then_mean <- function(
 #' * Input Metric:   `MI`
 #' * Output Metric:  `MI::BoundedMetric`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @return Transformation
@@ -2498,6 +2530,7 @@ then_metric_bounded <- function(
 #' * Input Metric:   `MI`
 #' * Output Metric:  `MI::UnboundedMetric`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @return Transformation
@@ -2567,6 +2600,7 @@ then_metric_unbounded <- function(
 #' * Input Metric:   `MI`
 #' * Output Metric:  `MI::OrderedMetric`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @return Transformation
@@ -2634,6 +2668,7 @@ then_ordered_random <- function(
 #'
 #' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/quantile_score_candidates/make_quantile_score_candidates.pdf)
 #'
+#' @concept transformations
 #' @param input_domain Uses a tighter sensitivity when the size of vectors in the input domain is known.
 #' @param input_metric Either SymmetricDistance or InsertDeleteDistance.
 #' @param candidates Potential quantiles to score
@@ -2711,6 +2746,7 @@ then_quantile_score_candidates <- function(
 #' * Input Type:     `Vec<TA>`
 #' * Output Type:    `Vec<TA>`
 #'
+#' @concept transformations
 #' @param bin_edges The edges that the input data was binned into before counting.
 #' @param alphas Return all specified `alpha`-quantiles.
 #' @param interpolation Must be one of `linear` or `nearest`
@@ -2803,6 +2839,7 @@ then_quantiles_from_counts <- function(
 #' * Input Metric:   `MI`
 #' * Output Metric:  `MO`
 #'
+#' @concept transformations
 #' @param input_domain Domain of input data.
 #' @param input_metric Metric of input data.
 #' @param size Number of records in output data.
@@ -2887,6 +2924,7 @@ then_resize <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `SymmetricDistance`
 #'
+#' @concept transformations
 #' @param key categorical/hashable data type of the key/column name
 #' @param .K data type of key
 #' @param .TOA Atomic Output Type to downcast vector to
@@ -2982,6 +3020,7 @@ then_select_column <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `AbsoluteDistance<S::Item>`
 #'
+#' @concept transformations
 #' @param size Number of records in input data.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .S Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
@@ -3082,6 +3121,7 @@ then_sized_bounded_float_checked_sum <- function(
 #' * Input Metric:   `InsertDeleteDistance`
 #' * Output Metric:  `AbsoluteDistance<S::Item>`
 #'
+#' @concept transformations
 #' @param size Number of records in input data.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .S Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
@@ -3168,6 +3208,7 @@ then_sized_bounded_float_ordered_sum <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `AbsoluteDistance<T>`
 #'
+#' @concept transformations
 #' @param size Number of records in input data.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
@@ -3252,6 +3293,7 @@ then_sized_bounded_int_checked_sum <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `AbsoluteDistance<T>`
 #'
+#' @concept transformations
 #' @param size Number of records in input data.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
@@ -3338,6 +3380,7 @@ then_sized_bounded_int_monotonic_sum <- function(
 #' * Input Metric:   `InsertDeleteDistance`
 #' * Output Metric:  `AbsoluteDistance<T>`
 #'
+#' @concept transformations
 #' @param size Number of records in input data.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
@@ -3424,6 +3467,7 @@ then_sized_bounded_int_ordered_sum <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `AbsoluteDistance<T>`
 #'
+#' @concept transformations
 #' @param size Number of records in input data.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
@@ -3503,6 +3547,7 @@ then_sized_bounded_int_split_sum <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `SymmetricDistance`
 #'
+#' @concept transformations
 #' @param separator The token(s) that separate entries in each record.
 #' @param col_names Column names for each record entry.
 #' @param .K categorical/hashable data type of column names
@@ -3580,6 +3625,7 @@ then_split_dataframe <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `SymmetricDistance`
 #'
+#' @concept transformations
 #'
 #' @return Transformation
 #' @export
@@ -3639,6 +3685,7 @@ then_split_lines <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `SymmetricDistance`
 #'
+#' @concept transformations
 #' @param separator The token(s) that separate entries in each record.
 #' @return Transformation
 #' @export
@@ -3700,6 +3747,7 @@ then_split_records <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `SymmetricDistance`
 #'
+#' @concept transformations
 #' @param indicator_column name of the boolean column that indicates inclusion in the subset
 #' @param keep_columns list of column names to apply subset to
 #' @param .TK Type of the column name
@@ -3786,6 +3834,7 @@ then_subset_by <- function(
 #' * Input Metric:   `MI`
 #' * Output Metric:  `AbsoluteDistance<T>`
 #'
+#' @concept transformations
 #' @param input_domain Domain of the input data.
 #' @param input_metric One of `SymmetricDistance` or `InsertDeleteDistance`.
 #' @return Transformation
@@ -3868,6 +3917,7 @@ then_sum <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `AbsoluteDistance<S::Item>`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @param .S Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
@@ -3945,6 +3995,7 @@ then_sum_of_squared_deviations <- function(
 #' * Input Metric:   `MI`
 #' * Output Metric:  `MI::UnorderedMetric`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @return Transformation
@@ -4015,6 +4066,7 @@ then_unordered <- function(
 #' * Input Metric:   `SymmetricDistance`
 #' * Output Metric:  `AbsoluteDistance<S::Item>`
 #'
+#' @concept transformations
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @param ddof Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.
