@@ -4,6 +4,8 @@ import sys
 import os
 from datetime import datetime
 import semver
+import pypandoc
+import re
 
 # docs should be built without needing import the library binary for the specified version
 os.environ["OPENDP_HEADLESS"] = "true"
@@ -39,8 +41,6 @@ markdown_modules = {
     "measures"
 }
 
-import pypandoc
-import re
 py_attr_re = re.compile(r"\:py\:\w+\:(``[^:`]+``)")
 
 def is_rst(line):

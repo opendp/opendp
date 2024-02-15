@@ -8,7 +8,7 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 '''
 from __future__ import annotations
 import ctypes
-from typing import Any, Literal, Type, TypeVar, Union, Tuple, Callable, Optional, overload, TYPE_CHECKING
+from typing import Any, Literal, Type, TypeVar, Union, Tuple, Callable, Optional, overload, TYPE_CHECKING, cast
 
 from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
 
@@ -397,7 +397,6 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     def __str__(self) -> str:
         return f"Transformation(\n    input_domain   = {self.input_domain},\n    output_domain  = {self.output_domain},\n    input_metric   = {self.input_metric},\n    output_metric  = {self.output_metric}\n)"
 
-from typing import cast
 Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
 
 class Queryable(object):
