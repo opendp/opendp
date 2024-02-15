@@ -1,6 +1,5 @@
 from opendp.transformations import *
 from opendp.measurements import *
-from opendp.domains import atom_domain, option_domain
 from opendp.mod import enable_features
 
 enable_features("floating-point", "contrib")
