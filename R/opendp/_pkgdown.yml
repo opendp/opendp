@@ -1,11 +1,24 @@
 url: https://docs.opendp.org
+title: 'R Documentation'
+
 template:
   bootstrap: 5
+  includes:
+    before_title: |
+      <a href="/">
+        <img src="https://docs.opendp.org/en/stable/_static/opendp-logo.png" alt="OpenDP logo" style="width: 183px; margin-right: 2em;">
+      </a>
+
 authors:
   footer:
     roles: [aut]
   sidebar:
     roles: [aut]
+
+navbar:
+  structure:
+    left:  [reference]
+    right: [search, github]
 
 reference:
 - title: internal
