@@ -141,7 +141,6 @@ where
     Ok((if minimize { upper } else { lower }, minimize))
 }
 
-
 #[cfg(test)]
 mod test_binary_search {
     use crate::error::Fallible;
