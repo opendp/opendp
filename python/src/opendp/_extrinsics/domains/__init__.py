@@ -175,8 +175,6 @@ def _np_sscp_domain(
         raise ValueError(f"T must be a float type")
 
     def member(x):
-        import numpy as np  # type: ignore[import]
-
         if not isinstance(x, np.ndarray):
             raise TypeError("must be a numpy ndarray")
         T_actual = ELEMENTARY_TYPES.get(x.dtype.type)

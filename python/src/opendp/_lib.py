@@ -4,7 +4,6 @@ import platform
 import re
 import sys
 from typing import Dict, List, Optional, Any
-import re
 
 
 # list all acceptable alternative types for each default type

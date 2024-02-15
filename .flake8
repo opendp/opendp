@@ -48,8 +48,6 @@ extend-ignore =
     F405,
     # F541: f-string is missing placeholders
     F541,
-    ; # F811: redefinition of unused 're' from line 4
-    ; F811,
     # F821: undefined name '...'
     F821,
     # F841: local variable '...' is assigned to but never used
