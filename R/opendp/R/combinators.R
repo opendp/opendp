@@ -20,6 +20,7 @@ NULL
 #'
 #' [make_basic_composition in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_basic_composition.html)
 #'
+#' @concept combinators
 #' @param measurements A vector of Measurements to compose.
 #' @return Measurement
 #' @export
@@ -80,6 +81,7 @@ then_basic_composition <- function(
 #'
 #' [make_chain_mt in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_chain_mt.html)
 #'
+#' @concept combinators
 #' @param measurement1 outer mechanism
 #' @param transformation0 inner transformation
 #' @return Measurement
@@ -141,6 +143,7 @@ then_chain_mt <- function(
 #'
 #' [make_chain_pm in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_chain_pm.html)
 #'
+#' @concept combinators
 #' @param postprocess1 outer postprocessor
 #' @param measurement0 inner measurement/mechanism
 #' @return Measurement
@@ -201,6 +204,7 @@ then_chain_pm <- function(
 #'
 #' [make_chain_tt in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_chain_tt.html)
 #'
+#' @concept combinators
 #' @param transformation1 outer transformation
 #' @param transformation0 inner transformation
 #' @return Transformation
@@ -260,6 +264,7 @@ then_chain_tt <- function(
 #'
 #' [make_fix_delta in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_fix_delta.html)
 #'
+#' @concept combinators
 #' @param measurement a measurement with a privacy curve to be fixed
 #' @param delta parameter to fix the privacy curve with
 #' @return Measurement
@@ -331,6 +336,7 @@ then_fix_delta <- function(
 #'
 #' [make_population_amplification in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_population_amplification.html)
 #'
+#' @concept combinators
 #' @param measurement the computation to amplify
 #' @param population_size the size of the population from which the input dataset is a simple sample
 #' @return Measurement
@@ -395,6 +401,7 @@ then_population_amplification <- function(
 #'
 #' [make_pureDP_to_fixed_approxDP in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_pureDP_to_fixed_approxDP.html)
 #'
+#' @concept combinators
 #' @param measurement a measurement with a privacy measure to be casted
 #' @return Measurement
 #' @export
@@ -457,6 +464,7 @@ then_pureDP_to_fixed_approxDP <- function(
 #'
 #' - [BS16 Concentrated Differential Privacy: Simplifications, Extensions, and Lower Bounds](https://arxiv.org/pdf/1605.02065.pdf#subsection.3.1)
 #'
+#' @concept combinators
 #' @param measurement a measurement with a privacy measure to be casted
 #' @return Measurement
 #' @export
@@ -533,6 +541,7 @@ then_pureDP_to_zCDP <- function(
 #' * Input Metric:   `MI`
 #' * Output Measure: `MO`
 #'
+#' @concept combinators
 #' @param input_domain indicates the space of valid input datasets
 #' @param input_metric how distances are measured between members of the input domain
 #' @param output_measure how privacy is measured
@@ -612,6 +621,7 @@ then_sequential_composition <- function(
 #'
 #' [make_zCDP_to_approxDP in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_zCDP_to_approxDP.html)
 #'
+#' @concept combinators
 #' @param measurement a measurement with a privacy measure to be casted
 #' @return Measurement
 #' @export

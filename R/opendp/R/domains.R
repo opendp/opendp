@@ -8,6 +8,7 @@ NULL
 #'
 #' [atom_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.atom_domain.html)
 #'
+#' @concept domains
 #' @param bounds undocumented
 #' @param nullable undocumented
 #' @param .T The type of the atom.
@@ -42,6 +43,7 @@ atom_domain <- function(
 
 #' Get the carrier type of a `domain`.
 #'
+#' @concept domains
 #' @param this The domain to retrieve the carrier type from.
 #' @return str
 #' @export
@@ -65,6 +67,7 @@ domain_carrier_type <- function(
 
 #' Debug a `domain`.
 #'
+#' @concept domains
 #' @param this The domain to debug (stringify).
 #' @return str
 #' @export
@@ -88,6 +91,7 @@ domain_debug <- function(
 
 #' Get the type of a `domain`.
 #'
+#' @concept domains
 #' @param this The domain to retrieve the type from.
 #' @return str
 #' @export
@@ -111,6 +115,7 @@ domain_type <- function(
 
 #' Construct an instance of `MapDomain`.
 #'
+#' @concept domains
 #' @param key_domain domain of keys in the hashmap
 #' @param value_domain domain of values in the hashmap
 #' @return Domain
@@ -140,6 +145,7 @@ map_domain <- function(
 
 #' Check membership in a `domain`.
 #'
+#' @concept domains
 #' @param this The domain to check membership in.
 #' @param val A potential element of the domain.
 #' @export
@@ -172,6 +178,7 @@ member <- function(
 #'
 #' [option_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.option_domain.html)
 #'
+#' @concept domains
 #' @param element_domain undocumented
 #' @param .D The type of the inner domain.
 #' @return Domain
@@ -202,6 +209,7 @@ option_domain <- function(
 
 #' Construct an instance of `VectorDomain`.
 #'
+#' @concept domains
 #' @param atom_domain The inner domain.
 #' @param size undocumented
 #' @return Domain

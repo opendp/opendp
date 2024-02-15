@@ -6,6 +6,7 @@ NULL
 
 #' Internal function. Retrieve the type descriptor string of an AnyObject.
 #'
+#' @concept data
 #' @param this A pointer to the AnyObject.
 #' @return str
 object_type <- function(
@@ -28,6 +29,7 @@ object_type <- function(
 
 #' Internal function. Use an SMDCurve to find epsilon at a given `delta`.
 #'
+#' @concept data
 #' @param curve The SMDCurve.
 #' @param delta What to fix delta to compute epsilon.
 #' @return Epsilon at a given `delta`.
@@ -57,6 +59,7 @@ smd_curve_epsilon <- function(
 
 #' Internal function. Convert the AnyObject to a string representation.
 #'
+#' @concept data
 #' @param this The AnyObject to convert to a string representation.
 #' @return str
 to_string <- function(
