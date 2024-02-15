@@ -40,6 +40,6 @@ def test_dp_mean():
         then_base_laplace(scale)
     )
     res = preprocessor(data)
-    assert type(res) == float
+    assert isinstance(res, float)
 
 
