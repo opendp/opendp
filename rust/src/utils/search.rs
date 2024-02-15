@@ -143,15 +143,39 @@ where
 
 
 #[cfg(test)]
-pub mod test_binary_search {
+mod test_binary_search {
     use crate::error::Fallible;
     use crate::utils::signed_fallible_binary_search;
 
     #[test]
-    fn test_binary_search() -> Fallible<()> {
+    fn test_binary_search_lt_neg() -> Fallible<()> {
         let (num, _) =
             signed_fallible_binary_search(|num| -> Fallible<bool> { Ok(num <= &-5) }, (-10, 10))?;
         assert_eq!(num, -5);
+        Ok(())
+    }
+
+    #[test]
+    fn test_binary_search_lt_pos() -> Fallible<()> {
+        let (num, _) =
+            signed_fallible_binary_search(|num| -> Fallible<bool> { Ok(num <= &5) }, (-10, 10))?;
+        assert_eq!(num, 5);
+        Ok(())
+    }
+
+    #[test]
+    fn test_binary_search_gt_neg() -> Fallible<()> {
+        let (num, _) =
+            signed_fallible_binary_search(|num| -> Fallible<bool> { Ok(num >= &-5) }, (-10, 10))?;
+        assert_eq!(num, -5);
+        Ok(())
+    }
+
+    #[test]
+    fn test_binary_search_gt_pos() -> Fallible<()> {
+        let (num, _) =
+            signed_fallible_binary_search(|num| -> Fallible<bool> { Ok(num >= &5) }, (-10, 10))?;
+        assert_eq!(num, 5);
         Ok(())
     }
 
