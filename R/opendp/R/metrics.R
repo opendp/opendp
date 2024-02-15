@@ -8,6 +8,7 @@ NULL
 #'
 #' [absolute_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.absolute_distance.html)
 #'
+#' @concept metrics
 #' @param .T undocumented
 #' @return Metric
 #' @export
@@ -33,6 +34,7 @@ absolute_distance <- function(
 
 #' Construct an instance of the `ChangeOneDistance` metric.
 #'
+#' @concept metrics
 #'
 #' @return Metric
 #' @export
@@ -55,6 +57,7 @@ change_one_distance <- function(
 
 #' Construct an instance of the `DiscreteDistance` metric.
 #'
+#' @concept metrics
 #'
 #' @return Metric
 #' @export
@@ -77,6 +80,7 @@ discrete_distance <- function(
 
 #' Construct an instance of the `HammingDistance` metric.
 #'
+#' @concept metrics
 #'
 #' @return Metric
 #' @export
@@ -99,6 +103,7 @@ hamming_distance <- function(
 
 #' Construct an instance of the `InsertDeleteDistance` metric.
 #'
+#' @concept metrics
 #'
 #' @return Metric
 #' @export
@@ -123,6 +128,7 @@ insert_delete_distance <- function(
 #'
 #' [l1_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.l1_distance.html)
 #'
+#' @concept metrics
 #' @param .T undocumented
 #' @return Metric
 #' @export
@@ -150,6 +156,7 @@ l1_distance <- function(
 #'
 #' [l2_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.l2_distance.html)
 #'
+#' @concept metrics
 #' @param .T undocumented
 #' @return Metric
 #' @export
@@ -177,6 +184,7 @@ l2_distance <- function(
 #'
 #' [linf_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.linf_distance.html)
 #'
+#' @concept metrics
 #' @param monotonic set to true if non-monotonicity implies infinite distance
 #' @param .T The type of the distance.
 #' @return Metric
@@ -207,6 +215,7 @@ linf_distance <- function(
 
 #' Debug a `metric`.
 #'
+#' @concept metrics
 #' @param this The metric to debug (stringify).
 #' @return str
 #' @export
@@ -230,6 +239,7 @@ metric_debug <- function(
 
 #' Get the distance type of a `metric`.
 #'
+#' @concept metrics
 #' @param this The metric to retrieve the distance type from.
 #' @return str
 #' @export
@@ -253,6 +263,7 @@ metric_distance_type <- function(
 
 #' Get the type of a `metric`.
 #'
+#' @concept metrics
 #' @param this The metric to retrieve the type from.
 #' @return str
 #' @export
@@ -276,6 +287,7 @@ metric_type <- function(
 
 #' Construct an instance of the `SymmetricDistance` metric.
 #'
+#' @concept metrics
 #'
 #' @return Metric
 #' @export
@@ -299,6 +311,7 @@ symmetric_distance <- function(
 #' Construct a new UserDistance.
 #' Any two instances of an UserDistance are equal if their string descriptors are equal.
 #'
+#' @concept metrics
 #' @param descriptor A string description of the metric.
 #' @return Metric
 #' @export
