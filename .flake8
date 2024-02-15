@@ -14,16 +14,9 @@ extend-ignore =
     E125,
     # E128: continuation line under-indented for visual indent
     E128,
-    # E251: unexpected spaces around keyword / parameter equals
-    E251,
-    # E261: at least two spaces before inline comment
-    E261,
     # E265: block comment should start with '# '
     E265,
-    # E302: expected 2 blank lines, found ...
-    E302,
-    # E303: too many blank lines (...)
-    E303,
+
     # E305: expected 2 blank lines after class or function definition, found ...
     E305,
     # E306: expected 1 blank line before a nested definition, found ...
@@ -34,8 +27,8 @@ extend-ignore =
     E501,
     # E721: do not compare types, for exact checks use `is` / `is not`, for instance checks use `isinstance()`
     E721,
-    # E722: do not use bare 'except'
-    E722,
+
+    # For us, lambdas are often more clear. No fixes needed!
     # E731: do not assign a lambda expression, use a def
     E731,
     # F401: '...' imported but unused
@@ -46,6 +39,8 @@ extend-ignore =
     F405,
     # F841: local variable '...' is assigned to but never used
     F841,
+
+    # Wouldn't complain about whitespace during code review, so don't automate it. No fixes needed!
     # W291: trailing whitespace
     W291,
     # W292: no newline at end of file
@@ -54,8 +49,21 @@ extend-ignore =
     W293,
     # W391: blank line at end of file
     W391
+    # E302: expected 2 blank lines, found ...
+    E302,
+    # E303: too many blank lines (...)
+    E303,
+    # E251: unexpected spaces around keyword / parameter equals
+    E251,
+    # E261: at least two spaces before inline comment
+    E261,
 
 per-file-ignores =
+    # Pseudocode necessarily has a lot of undefined names. No fixes needed!
     # F821: undefined name '...'
-    # Pseudocode necessarily has a lot of undefined names.
     rust/*:F821
+    # TODO: Bare 'except' should be fixed, but we'll typically want to be more strict,
+    # and there could be unintended consequences, so approach this carefully.
+    # E722: do not use bare 'except'
+    python/src/opendp/_convert.py:E722
+    python/test/test_typing.py:E722
