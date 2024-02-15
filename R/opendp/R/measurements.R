@@ -28,6 +28,7 @@ NULL
 #' * Input Metric:   `L1Distance<CI>`
 #' * Output Measure: `MaxDivergence<CO>`
 #'
+#' @concept measurements
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @param scale Privacy loss parameter. This is equal to epsilon/sensitivity.
@@ -140,6 +141,7 @@ then_alp_queryable <- function(
 #' * Input Metric:   `D::InputMetric`
 #' * Output Measure: `MO`
 #'
+#' @concept measurements
 #' @param input_domain Domain of the data type to be privatized.
 #' @param input_metric Metric of the data type to be privatized.
 #' @param scale Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
@@ -233,6 +235,7 @@ then_base_discrete_gaussian <- function(
 #' * Input Metric:   `D::InputMetric`
 #' * Output Measure: `MaxDivergence<QO>`
 #'
+#' @concept measurements
 #' @param input_domain Domain of the data type to be privatized.
 #' @param input_metric Metric of the data type to be privatized.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
@@ -322,6 +325,7 @@ then_base_discrete_laplace <- function(
 #' * Input Metric:   `D::InputMetric`
 #' * Output Measure: `MaxDivergence<QO>`
 #'
+#' @concept measurements
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
@@ -412,6 +416,7 @@ then_base_discrete_laplace_cks20 <- function(
 #' * Input Metric:   `D::InputMetric`
 #' * Output Measure: `MaxDivergence<QO>`
 #'
+#' @concept measurements
 #' @param input_domain Domain of the data type to be privatized.
 #' @param input_metric Metric of the data type to be privatized.
 #' @param scale Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
@@ -508,6 +513,7 @@ then_base_discrete_laplace_linear <- function(
 #' * Input Metric:   `D::InputMetric`
 #' * Output Measure: `MO`
 #'
+#' @concept measurements
 #' @param input_domain Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
 #' @param input_metric Metric of the data type to be privatized. Valid values are `AbsoluteDistance<T>` or `L2Distance<T>`.
 #' @param scale Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
@@ -595,6 +601,7 @@ then_base_gaussian <- function(
 #' * Input Metric:   `D::InputMetric`
 #' * Output Measure: `MaxDivergence<QO>`
 #'
+#' @concept measurements
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @param scale undocumented
@@ -691,6 +698,7 @@ then_base_geometric <- function(
 #' * Input Metric:   `D::InputMetric`
 #' * Output Measure: `MaxDivergence<D::Atom>`
 #'
+#' @concept measurements
 #' @param input_domain Domain of the data type to be privatized.
 #' @param input_metric Metric of the data type to be privatized.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
@@ -773,6 +781,7 @@ then_base_laplace <- function(
 #' * Input Metric:   `L1Distance<TV>`
 #' * Output Measure: `FixedSmoothedMaxDivergence<TV>`
 #'
+#' @concept measurements
 #' @param input_domain Domain of the input.
 #' @param input_metric Metric for the input domain.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
@@ -864,6 +873,7 @@ then_base_laplace_threshold <- function(
 #' * Input Metric:   `D::InputMetric`
 #' * Output Measure: `MO`
 #'
+#' @concept measurements
 #' @param input_domain Domain of the data type to be privatized.
 #' @param input_metric Metric of the data type to be privatized.
 #' @param scale Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
@@ -958,6 +968,7 @@ then_gaussian <- function(
 #' * Input Metric:   `D::InputMetric`
 #' * Output Measure: `MaxDivergence<QO>`
 #'
+#' @concept measurements
 #' @param input_domain Domain of the data type to be privatized.
 #' @param input_metric Metric of the data type to be privatized.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
@@ -1036,6 +1047,7 @@ then_laplace <- function(
 #' * Input Metric:   `DiscreteDistance`
 #' * Output Measure: `MaxDivergence<QO>`
 #'
+#' @concept measurements
 #' @param categories Set of valid outcomes
 #' @param prob Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
 #' @param constant_time Set to true to enable constant time. Slower.
@@ -1130,6 +1142,7 @@ then_randomized_response <- function(
 #'
 #' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/randomized_response/make_randomized_response_bool.pdf)
 #'
+#' @concept measurements
 #' @param prob Probability of returning the correct answer. Must be in `[0.5, 1)`
 #' @param constant_time Set to true to enable constant time. Slower.
 #' @param .QO Data type of probability and output distance.
@@ -1211,6 +1224,7 @@ then_randomized_response_bool <- function(
 #'
 #' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/gumbel_max/make_report_noisy_max_gumbel.pdf)
 #'
+#' @concept measurements
 #' @param input_domain Domain of the input vector. Must be a non-nullable VectorDomain.
 #' @param input_metric Metric on the input domain. Must be LInfDistance
 #' @param scale Higher scales are more private.

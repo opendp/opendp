@@ -6,6 +6,7 @@ NULL
 
 #' Eval the `function` with `arg`.
 #'
+#' @concept core
 #' @param this Function to invoke.
 #' @param arg Input data to supply to the measurement. A member of the measurement's input domain.
 #' @param TI Input Type.
@@ -38,6 +39,7 @@ function_eval <- function(
 
 #' Check the privacy relation of the `measurement` at the given `d_in`, `d_out`
 #'
+#' @concept core
 #' @param measurement Measurement to check the privacy relation of.
 #' @param distance_in undocumented
 #' @param distance_out undocumented
@@ -72,6 +74,7 @@ measurement_check <- function(
 
 #' Get the function from a measurement.
 #'
+#' @concept core
 #' @param this The measurement to retrieve the value from.
 #' @return Function
 #' @export
@@ -95,6 +98,7 @@ measurement_function <- function(
 
 #' Get the input (carrier) data type of `this`.
 #'
+#' @concept core
 #' @param this The measurement to retrieve the type from.
 #' @return str
 #' @export
@@ -118,6 +122,7 @@ measurement_input_carrier_type <- function(
 
 #' Get the input distance type of `measurement`.
 #'
+#' @concept core
 #' @param this The measurement to retrieve the type from.
 #' @return str
 #' @export
@@ -141,6 +146,7 @@ measurement_input_distance_type <- function(
 
 #' Get the input domain from a `measurement`.
 #'
+#' @concept core
 #' @param this The measurement to retrieve the value from.
 #' @return Domain
 #' @export
@@ -164,6 +170,7 @@ measurement_input_domain <- function(
 
 #' Get the input domain from a `measurement`.
 #'
+#' @concept core
 #' @param this The measurement to retrieve the value from.
 #' @return Metric
 #' @export
@@ -187,6 +194,7 @@ measurement_input_metric <- function(
 
 #' Invoke the `measurement` with `arg`. Returns a differentially private release.
 #'
+#' @concept core
 #' @param this Measurement to invoke.
 #' @param arg Input data to supply to the measurement. A member of the measurement's input domain.
 #' @return Any
@@ -217,6 +225,7 @@ measurement_invoke <- function(
 
 #' Use the `measurement` to map a given `d_in` to `d_out`.
 #'
+#' @concept core
 #' @param measurement Measurement to check the map distances with.
 #' @param distance_in Distance in terms of the input metric.
 #' @return Any
@@ -247,6 +256,7 @@ measurement_map <- function(
 
 #' Get the output distance type of `measurement`.
 #'
+#' @concept core
 #' @param this The measurement to retrieve the type from.
 #' @return str
 #' @export
@@ -270,6 +280,7 @@ measurement_output_distance_type <- function(
 
 #' Get the output domain from a `measurement`.
 #'
+#' @concept core
 #' @param this The measurement to retrieve the value from.
 #' @return Measure
 #' @export
@@ -293,6 +304,7 @@ measurement_output_measure <- function(
 
 #' Invoke the `queryable` with `query`. Returns a differentially private release.
 #'
+#' @concept core
 #' @param queryable Queryable to eval.
 #' @param query Input data to supply to the measurement. A member of the measurement's input domain.
 #' @return Any
@@ -323,6 +335,7 @@ queryable_eval <- function(
 
 #' Get the query type of `queryable`.
 #'
+#' @concept core
 #' @param this The queryable to retrieve the query type from.
 #' @return str
 #' @export
@@ -346,6 +359,7 @@ queryable_query_type <- function(
 
 #' Check the privacy relation of the `measurement` at the given `d_in`, `d_out`
 #'
+#' @concept core
 #' @param transformation undocumented
 #' @param distance_in undocumented
 #' @param distance_out undocumented
@@ -380,6 +394,7 @@ transformation_check <- function(
 
 #' Get the function from a transformation.
 #'
+#' @concept core
 #' @param this The transformation to retrieve the value from.
 #' @return Function
 #' @export
@@ -403,6 +418,7 @@ transformation_function <- function(
 
 #' Get the input (carrier) data type of `this`.
 #'
+#' @concept core
 #' @param this The transformation to retrieve the type from.
 #' @return str
 #' @export
@@ -426,6 +442,7 @@ transformation_input_carrier_type <- function(
 
 #' Get the input distance type of `transformation`.
 #'
+#' @concept core
 #' @param this The transformation to retrieve the type from.
 #' @return str
 #' @export
@@ -449,6 +466,7 @@ transformation_input_distance_type <- function(
 
 #' Get the input domain from a `transformation`.
 #'
+#' @concept core
 #' @param this The transformation to retrieve the value from.
 #' @return Domain
 #' @export
@@ -472,6 +490,7 @@ transformation_input_domain <- function(
 
 #' Get the input domain from a `transformation`.
 #'
+#' @concept core
 #' @param this The transformation to retrieve the value from.
 #' @return Metric
 #' @export
@@ -495,6 +514,7 @@ transformation_input_metric <- function(
 
 #' Invoke the `transformation` with `arg`. Returns a differentially private release.
 #'
+#' @concept core
 #' @param this Transformation to invoke.
 #' @param arg Input data to supply to the transformation. A member of the transformation's input domain.
 #' @return Any
@@ -525,6 +545,7 @@ transformation_invoke <- function(
 
 #' Use the `transformation` to map a given `d_in` to `d_out`.
 #'
+#' @concept core
 #' @param transformation Transformation to check the map distances with.
 #' @param distance_in Distance in terms of the input metric.
 #' @return Any
@@ -555,6 +576,7 @@ transformation_map <- function(
 
 #' Get the output distance type of `transformation`.
 #'
+#' @concept core
 #' @param this The transformation to retrieve the type from.
 #' @return str
 #' @export
@@ -578,6 +600,7 @@ transformation_output_distance_type <- function(
 
 #' Get the output domain from a `transformation`.
 #'
+#' @concept core
 #' @param this The transformation to retrieve the value from.
 #' @return Domain
 #' @export
@@ -601,6 +624,7 @@ transformation_output_domain <- function(
 
 #' Get the output domain from a `transformation`.
 #'
+#' @concept core
 #' @param this The transformation to retrieve the value from.
 #' @return Metric
 #' @export
