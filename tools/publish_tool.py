@@ -7,7 +7,7 @@ from utils import get_current_branch, get_python_version, get_version, infer_cha
 
 
 def rust(args):
-    log(f"*** PUBLISHING RUST CRATE ***")
+    log("*** PUBLISHING RUST CRATE ***")
     os.environ["CARGO_REGISTRY_TOKEN"] = os.environ["CRATES_IO_API_TOKEN"]
     # We can't do a dry run of everything, because dependencies won't be available for later crates,
     # but we can at least do any leaf nodes (i.e. opendp_tooling).
@@ -16,12 +16,12 @@ def rust(args):
     if not args.dry_run:
         # As of https://github.com/rust-lang/cargo/pull/11062, cargo publish blocks until the index is propagated,
         # so we don't have to wait here anymore.
-        run_command("Publishing opendp_derive crate", f"cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml")
-        run_command("Publishing opendp crate", f"cargo publish --verbose --manifest-path=rust/Cargo.toml")
+        run_command("Publishing opendp_derive crate", "cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml")
+        run_command("Publishing opendp crate", "cargo publish --verbose --manifest-path=rust/Cargo.toml")
 
 
 def python(args):
-    log(f"*** PUBLISHING PYTHON PACKAGE ***")
+    log("*** PUBLISHING PYTHON PACKAGE ***")
     # https://pypi.org/help/#apitoken
     os.environ["TWINE_USERNAME"] = "__token__"
     os.environ["TWINE_PASSWORD"] = os.environ["PYPI_API_TOKEN"]
@@ -39,7 +39,7 @@ def python(args):
 
 
 def sanity(args):
-    log(f"*** RUNNING SANITY TEST ***")
+    log("*** RUNNING SANITY TEST ***")
     if args.python_repository not in ("pypi", "testpypi", "local"):
         raise Exception(f"Unknown Python repository {args.python_repository}")
     version = get_version()
@@ -63,7 +63,7 @@ def sanity(args):
 
 
 def github(args):
-    log(f"*** PUBLISHING GITHUB RELEASE ***")
+    log("*** PUBLISHING GITHUB RELEASE ***")
     version = get_version()
     channel = infer_channel(version)
     branch = get_current_branch()
