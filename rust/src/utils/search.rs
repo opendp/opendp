@@ -141,22 +141,29 @@ where
     Ok((if minimize { upper } else { lower }, minimize))
 }
 
-#[test]
-fn test_binary_search() -> Fallible<()> {
-    let (num, _) =
-        signed_fallible_binary_search(|num| -> Fallible<bool> { Ok(num <= &-5) }, (-10, 10))?;
-    assert_eq!(num, -5);
-    Ok(())
-}
 
-#[test]
-fn test_binary_search_fail() -> Fallible<()> {
-    let result = signed_fallible_binary_search(
-        |_num| -> Fallible<bool> { fallible!(FailedFunction, "intentional fail") },
-        (0, 1),
-    );
-    assert!(matches!(result, Err { .. }));
-    Ok(())
+#[cfg(test)]
+pub mod test_binary_search {
+    use crate::error::Fallible;
+    use crate::utils::signed_fallible_binary_search;
+
+    #[test]
+    fn test_binary_search() -> Fallible<()> {
+        let (num, _) =
+            signed_fallible_binary_search(|num| -> Fallible<bool> { Ok(num <= &-5) }, (-10, 10))?;
+        assert_eq!(num, -5);
+        Ok(())
+    }
+
+    #[test]
+    fn test_binary_search_fail() -> Fallible<()> {
+        let result = signed_fallible_binary_search(
+            |_num| -> Fallible<bool> { fallible!(FailedFunction, "intentional fail") },
+            (0, 1),
+        );
+        assert!(matches!(result, Err { .. }));
+        Ok(())
+    }
 }
 
 pub trait Bands: Sized {
