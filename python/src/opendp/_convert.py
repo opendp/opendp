@@ -383,7 +383,8 @@ def _tuple_to_slice(val: Tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
         check_similar_scalar(inner_type_name, v)
     
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
-    ptr_data = (ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p) # type: ignore
+    ptr_data = (
+        ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p) # type: ignore
         for v, name in zip(val, inner_type_names))
 
     array = (ctypes.c_void_p * len(val))(*ptr_data)

@@ -10,13 +10,6 @@ exclude =
     venv
 
 extend-ignore =
-    # E125: continuation line with same indent as next logical line
-    E125,
-    # E128: continuation line under-indented for visual indent
-    E128,
-
-    # E501: line too long (... > 79 characters)
-    E501,
     # E721: do not compare types, for exact checks use `is` / `is not`, for instance checks use `isinstance()`
     E721,
 
@@ -53,6 +46,8 @@ extend-ignore =
     E305,
     # E306: expected 1 blank line before a nested definition, found ...
     E306,
+    # E501: line too long (... > 79 characters)
+    E501,
 
 per-file-ignores =
     # TODO: Bare 'except' should be fixed, but we'll typically want to be more strict,
