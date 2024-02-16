@@ -251,28 +251,6 @@ def unwrap(result, type_) -> Any:
     raise OpenDPException(variant, message, backtrace)
 
 
-def versioned(function):
-    """Decorator to update version numbers in docstrings.
-    This is shown in the help(*) and Sphinx documentation (like docs.opendp.org)."""
-
-    version = get_opendp_version()
-    channel = get_channel(version)
-
-    if channel != "dev": # pragma: no cover
-        # docs.rs keeps all releases, so we can use the full version.
-        function.__doc__ = function.__doc__.replace(
-            "https://docs.rs/opendp/latest/", f"https://docs.rs/opendp/{version}/"
-        )
-
-        docs_ref = get_docs_ref(version)
-        function.__doc__ = function.__doc__.replace(
-            "https://docs.opendp.org/en/latest/",
-            f"https://docs.opendp.org/en/{docs_ref}/",
-        )
-
-    return function
-
-
 proof_doc_re = re.compile(r"\[\(Proof Document\)\]\(([^)]+)\)")
 
 
