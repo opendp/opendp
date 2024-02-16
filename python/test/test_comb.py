@@ -55,7 +55,9 @@ def test_make_basic_composition_leak():
 
     # choose a vector-valued mechanism that should run quickly for large inputs
     # we want to add as little noise as possible, so that execution time is small
-    meas = dp.m.make_base_discrete_laplace(scale=1e-6, D=dp.VectorDomain[dp.AtomDomain[int]])
+    domain = dp.VectorDomain[dp.AtomDomain[int]]
+    metric = ... # TODO!
+    meas = dp.m.make_base_discrete_laplace(domain, metric, 1e-6)
 
     # memory usage remains the same when this line is commented,
     # supporting that AnyObject's free recursively frees children
