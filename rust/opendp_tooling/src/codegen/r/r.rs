@@ -214,6 +214,8 @@ fn generate_doc_block(
         .map(|v| format!("{title}{}\n", v))
         .unwrap_or_else(String::new);
 
+    let concept = format!("@concept {}\n", module_name);
+
     let doc_args = (func.args.iter())
         .map(|v| generate_docstring_arg(v))
         .collect::<Vec<String>>()
@@ -227,7 +229,8 @@ fn generate_doc_block(
 
     format!(
         r#"{description}
-{doc_args}{ret_arg}{export}"#,
+{concept}{doc_args}{ret_arg}{export}"#,
+        concept = concept,
         description = description,
         doc_args = doc_args,
         ret_arg = generate_docstring_return_arg(&func.ret, hierarchy)

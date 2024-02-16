@@ -272,4 +272,4 @@ jobs:
         run: cd R/opendp/ && Rscript -e 'devtools::document()'
 
       - name: Check
-        run: cd R/opendp/ && Rscript -e 'devtools::check()'
+        run: cd R/opendp/ && Rscript -e 'devtools::check(error_on="warning")'

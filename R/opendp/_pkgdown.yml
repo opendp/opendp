@@ -1,8 +1,74 @@
 url: https://docs.opendp.org
+title: 'R Documentation'
+
 template:
   bootstrap: 5
+  includes:
+    before_title: |
+      <a href="/">
+        <img src="https://docs.opendp.org/en/stable/_static/opendp-logo.png" alt="OpenDP logo" style="width: 183px; margin-right: 2em;">
+      </a>
+
 authors:
   footer:
     roles: [aut]
   sidebar:
     roles: [aut]
+
+navbar:
+  structure:
+    left:  [reference]
+    right: [search, github]
+
+reference:
+- title: internal
+  # pkgdown will error if any functions are unreferenced,
+  # but if listed under "internal" they won't be included in output.
+  # https://pkgdown.r-lib.org/reference/build_reference.html#missing-topics
+  contents:
+  - has_concept("data")
+
+- title: Accuracy
+  desc: The `accuracy` module provides functions for converting between accuracy and scale parameters.
+  contents:
+  - has_concept("accuracy")
+
+- title: Combinators
+  desc: The `combinators` module provides functions for combining transformations and measurements.
+  contents:
+  - has_concept("combinators")
+
+- title: Core
+  desc: The `core` module provides functions for accessing the fields of transformations and measurements.
+  contents:
+  - has_concept("core")
+
+- title: Domains
+  desc: The `domains` module provides functions for creating and using domains.
+  contents:
+  - has_concept("domains")
+
+- title: Measurements
+  desc: The `measurements` module provides functions that apply calibrated noise to data to ensure differential privacy.
+  contents:
+  - has_concept("measurements")
+
+- title: Measures
+  desc: The `measures` modules provides functions that measure the distance between probability distributions.
+  contents:
+  - has_concept("measures")
+
+- title: Metrics
+  desc: The `metrics` module provides fuctions that measure the distance between two elements of a domain.
+  contents:
+  - has_concept("metrics")
+
+- title: Transformations
+  desc: The ``transformations`` module provides functions that deterministicly transform datasets.
+  contents:
+  - has_concept("transformations")
+
+- title: Other
+  # desc: TODO
+  contents:
+  - lacks_concepts(c("accuracy", "combinators", "core", "data", "domains", "measurements", "measures", "metrics", "transformations"))

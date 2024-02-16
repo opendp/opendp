@@ -19,7 +19,7 @@ def ensure_branch(branch):
 
 
 def initialize(args):
-    log(f"*** INITIALIZING CHANNEL FROM UPSTREAM ***")
+    log("*** INITIALIZING CHANNEL FROM UPSTREAM ***")
     if args.channel not in ("dev", "nightly", "beta", "stable"):
         raise Exception(f"Unknown channel {args.channel}")
     if args.sync:
@@ -31,21 +31,21 @@ def initialize(args):
             # We're preserving channel history, so we need to do a merge.
             # git doesn't have a "theirs" merge strategy, so we have to simulate it.
             # Technique from https://stackoverflow.com/a/4912267
-            run_command(f"Creating temporary branch based on upstream", f"git switch -c tmp {upstream}")
-            run_command(f"Merging channel (keeping all upstream)", f"git merge -s ours {args.channel}")
-            run_command(f"Switching to channel", f"git switch {args.channel}")
-            run_command(f"Merging temporary branch", f"git merge tmp")
-            run_command(f"Deleting temporary branch", f"git branch -D tmp")
+            run_command("Creating temporary branch based on upstream", f"git switch -c tmp {upstream}")
+            run_command("Merging channel (keeping all upstream)", f"git merge -s ours {args.channel}")
+            run_command("Switching to channel", f"git switch {args.channel}")
+            run_command("Merging temporary branch", "git merge tmp")
+            run_command("Deleting temporary branch", "git branch -D tmp")
         else:
             # We're not preserving channel history, so we can just reset the branch.
-            run_command(f"Resetting channel to upstream", f"git switch -C {args.channel} {upstream}")
+            run_command("Resetting channel to upstream", f"git switch -C {args.channel} {upstream}")
     else:
         ensure_branch(args.channel)
-        run_command(f"Switching to channel", f"git switch {args.channel}")
+        run_command("Switching to channel", f"git switch {args.channel}")
 
 
 def date(args):
-    log(f"*** GENERATING RELEASE DATE ***")
+    log("*** GENERATING RELEASE DATE ***")
     if args.time_zone is not None:
         tz = zoneinfo.ZoneInfo(args.time_zone)
         date = datetime.datetime.now(tz).date()
@@ -121,7 +121,7 @@ def update_version(version):
         return [opendp_line if line.startswith("opendp==") else line for line in lines]
     
     # R Package
-    log(f"Updating R/opendp/DESCRIPTION")
+    log("Updating R/opendp/DESCRIPTION")
     with ControlEditor(path='R/opendp/DESCRIPTION') as control:
         # while it might not look like it, this mutates the DESCRIPTION file in-place
         next(iter(control.paragraphs))["Version"] = r_version
@@ -130,7 +130,7 @@ def update_version(version):
 
 
 def configure(args):
-    log(f"*** CONFIGURING CHANNEL ***")
+    log("*** CONFIGURING CHANNEL ***")
     if args.channel not in ("dev", "nightly", "beta", "stable"):
         raise Exception(f"Unknown channel {args.channel}")
     version = get_version()
@@ -157,12 +157,12 @@ def first_match(lines, pattern):
 
 
 def changelog(args):
-    log(f"*** UPDATING CHANGELOG ***")
+    log("*** UPDATING CHANGELOG ***")
     version = get_version()
     channel = infer_channel(version)
     date = args.date or datetime.date.today()
 
-    log(f"Reading CHANGELOG")
+    log("Reading CHANGELOG")
     with open("CHANGELOG.md") as f:
         lines = f.readlines()
     url_base = "https://github.com/opendp/opendp/compare/"
@@ -200,7 +200,7 @@ def changelog(args):
 
 
 def bump_version(args):
-    log(f"*** BUMPING VERSION NUMBER ***")
+    log("*** BUMPING VERSION NUMBER ***")
     if args.set:
         version = get_version(args.set)
     else:
