@@ -4,10 +4,11 @@ Development Environment
 =======================
 If you are writing code, the first task to tackle is setting up the development environment.
 
-Follow the steps below to set up an OpenDP Library development environment, including the ability to run tests in both Rust and Python.
+You will need to check out the code, and at a minimum, build the Rust binaries.
 
-* Install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
-* Install `Python version 3.8 or higher <https://www.python.org>`_.
+Most developers will also install Python and/or R:
+If you are only interested in developing a feature in one of these languages,
+you will not need to set up the other.
 
 
 Clone the OpenDP Repo
@@ -31,10 +32,10 @@ If you have not `set up SSH <https://docs.github.com/en/authentication/connectin
     git clone https://github.com/opendp/opendp.git
 
 
-Build OpenDP
-------------
+Rust Build
+----------
 
-Next, you'll need to build the Rust binaries. 
+If you have not already, install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
 
 Make sure you are on the latest Rust version:
 
@@ -79,11 +80,13 @@ Setting a feature changes how the crate compiles:
    * - ``floating-point``
      - Enable to include transformations/measurements with floating-point vulnerabilities.
    * - ``bindings``
-     - Enables the ``ffi`` and ``derive`` feature and regenerates sources in the Python and R packages.
+     - Enable to generate Python and R source code. Depends on the ``ffi`` and ``derive`` features. 
+   * - ``partials``
+     - Enable to generate ``then_*`` functions from the corresponding ``make_*`` functions. Depends on the ``derive`` feature.
    * - ``ffi``
-     - Enable to include C foreign function interfaces.
+     - Enable to include C foreign function interfaces. Implicit in the ``bindings`` feature.
    * - ``derive``
-     - Enable to embed links to proofs in the documentation.
+     - Enable to support code generation and links to proofs in documentation. Implicit in the  ``bindings`` and ``partials`` features.
    * - ``use-openssl``
      - Already enabled. Use OpenSSL for secure noise generation.
 
@@ -92,7 +95,7 @@ Setting a feature changes how the crate compiles:
    </details>
 
 
-To make the crate compile faster, ffi functions in debug builds support a reduced set of primitive types.
+To make the crate compile faster, FFI functions in debug builds support a reduced set of primitive types.
 Release-mode builds support the full set of primitive types and undergo compiler optimizations, but take longer to compile.
 You can compile a release build by adding the ``--release`` flag.
 In contrast to debug builds, release builds are located in ``opendp/rust/target/release``.
@@ -104,6 +107,8 @@ If you run into problems, please contact us!
 
 Python Setup
 ------------
+
+If you have not already, install `Python version 3.8 or higher <https://www.python.org>`_.
 
 You can install a local Python package that uses your new OpenDP binary. 
 
@@ -162,7 +167,8 @@ At this point, you should be able import OpenDP as a locally installed package:
     
 
 Python Tests
-------------
+^^^^^^^^^^^^
+
 You can test that things are working by running OpenDP's Python test suite, using ``pytest``.
 Run the tests from the ``python`` directory. 
 
@@ -181,7 +187,7 @@ If pytest is not found, don't forget to activate your virtual environment!
 This is just a quick overview of building OpenDP. 
 
 Python Documentation
---------------------
+^^^^^^^^^^^^^^^^^^^^
 
 This documentation website is built with Sphinx.
 The source code and developer documentation is
@@ -192,21 +198,25 @@ The source code and developer documentation is
 R Setup
 -------
 
-You can also load an R package that uses your new OpenDP binary. 
+If you have not already, `install R <https://cran.r-project.org/>`_.
 
-First, set an environment variable to the absolute path of the OpenDP Library binary directory:
+Then, set an environment variable to the absolute path of the OpenDP Library binary directory:
 
 .. code-block:: bash
 
-    export OPENDP_RUST_LIB=/absolute/path/to/opendp/rust/target/debug/
+    export OPENDP_LIB_DIR=`realpath rust/target/debug`
+
+Additional dependencies may be needed for development. For homebrew on MacOS we suggest:
+
+.. code-block:: bash
+
+    brew install harfbuzz fribidi libgit2 xquartz
 
 Then, install devtools in R:
 
 .. code-block:: R
 
     install.packages("devtools", "RcppTOML")
-
-On Mac you may need to run ``brew install harfbuzz fribidi libgit2`` first.
 
 After each edit to the R or Rust source, run the following command in R to (re)load the R package:
 
@@ -236,7 +246,7 @@ To restore to a developer setup, run:
 
 
 R Tests
--------
+^^^^^^^
 
 Run tests (tests are located in ``R/opendp/tests/``):
 
@@ -258,13 +268,14 @@ To run the same check manually, use:
     R CMD build R/opendp
     R CMD check opendp_*.tar.gz --as-cran
 
-It is important `R CMD check` is run on the `.tar.gz`, not on `R/opendp`, 
-because `check` depends on some of the changes `build` makes within the `.tar.gz`.
+It is important ``R CMD check`` is run on the ``.tar.gz``, not on ``R/opendp``, 
+because ``check`` depends on some of the changes ``build`` makes within the ``.tar.gz``.
 
 
 R Documentation
----------------
-This script uses roxygen to generate ``R/opendp/man`` pages from `#'` code comments,
+^^^^^^^^^^^^^^^
+
+This script uses roxygen to generate ``R/opendp/man`` pages from ``#'`` code comments,
 and then uses ``pkgdown`` to render the documentation website.
 
 .. code-block:: bash

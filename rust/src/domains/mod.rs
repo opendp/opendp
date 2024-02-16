@@ -26,8 +26,6 @@ use std::fmt::{Debug, Formatter};
 
 #[cfg(feature = "contrib")]
 mod poly;
-#[cfg(feature = "contrib")]
-pub use poly::*;
 
 /// # Proof Definition
 /// `AtomDomain(T)` is the domain of all values of an atomic type `T`.
