@@ -42,7 +42,6 @@ __all__ = [
 ]
 
 
-@versioned
 def make_alp_queryable(
     input_domain: Domain,
     input_metric: Metric,
@@ -149,7 +148,6 @@ def then_alp_queryable(
 
 
 
-@versioned
 def make_base_discrete_gaussian(
     input_domain: Domain,
     input_metric: Metric,
@@ -229,7 +227,6 @@ def then_base_discrete_gaussian(
 
 
 
-@versioned
 def make_base_discrete_laplace(
     input_domain: Domain,
     input_metric: Metric,
@@ -314,7 +311,6 @@ def then_base_discrete_laplace(
 
 
 
-@versioned
 def make_base_discrete_laplace_cks20(
     input_domain: Domain,
     input_metric: Metric,
@@ -397,7 +393,6 @@ def then_base_discrete_laplace_cks20(
 
 
 
-@versioned
 def make_base_discrete_laplace_linear(
     input_domain: Domain,
     input_metric: Metric,
@@ -491,7 +486,6 @@ def then_base_discrete_laplace_linear(
 
 
 
-@versioned
 def make_base_gaussian(
     input_domain: Domain,
     input_metric: Metric,
@@ -583,7 +577,6 @@ def then_base_gaussian(
 
 
 
-@versioned
 def make_base_geometric(
     input_domain: Domain,
     input_metric: Metric,
@@ -666,7 +659,6 @@ def then_base_geometric(
 
 
 
-@versioned
 def make_base_laplace(
     input_domain: Domain,
     input_metric: Metric,
@@ -748,7 +740,6 @@ def then_base_laplace(
 
 
 
-@versioned
 def make_base_laplace_threshold(
     input_domain: Domain,
     input_metric: Metric,
@@ -829,7 +820,6 @@ def then_base_laplace_threshold(
 
 
 
-@versioned
 def make_gaussian(
     input_domain: Domain,
     input_metric: Metric,
@@ -909,7 +899,6 @@ def then_gaussian(
 
 
 
-@versioned
 def make_laplace(
     input_domain: Domain,
     input_metric: Metric,
@@ -994,7 +983,6 @@ def then_laplace(
 
 
 
-@versioned
 def make_randomized_response(
     categories: Any,
     prob,
@@ -1050,7 +1038,6 @@ def make_randomized_response(
     return output
 
 
-@versioned
 def make_randomized_response_bool(
     prob,
     constant_time: bool = False,
@@ -1101,7 +1088,6 @@ def make_randomized_response_bool(
     return output
 
 
-@versioned
 def make_report_noisy_max_gumbel(
     input_domain: Domain,
     input_metric: Metric,
@@ -1186,7 +1172,6 @@ def then_report_noisy_max_gumbel(
 
 
 
-@versioned
 def make_user_measurement(
     input_domain: Domain,
     input_metric: Metric,

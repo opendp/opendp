@@ -25,7 +25,6 @@ __all__ = [
 ]
 
 
-@versioned
 def _metric_free(
     this
 ):
@@ -51,7 +50,6 @@ def _metric_free(
     return output
 
 
-@versioned
 def absolute_distance(
     T: RuntimeTypeDescriptor
 ) -> Metric:
@@ -82,7 +80,6 @@ def absolute_distance(
     return output
 
 
-@versioned
 def change_one_distance(
 
 ) -> Metric:
@@ -106,7 +103,6 @@ def change_one_distance(
     return output
 
 
-@versioned
 def discrete_distance(
 
 ) -> Metric:
@@ -130,7 +126,6 @@ def discrete_distance(
     return output
 
 
-@versioned
 def hamming_distance(
 
 ) -> Metric:
@@ -154,7 +149,6 @@ def hamming_distance(
     return output
 
 
-@versioned
 def insert_delete_distance(
 
 ) -> Metric:
@@ -178,7 +172,6 @@ def insert_delete_distance(
     return output
 
 
-@versioned
 def l1_distance(
     T: RuntimeTypeDescriptor
 ) -> Metric:
@@ -209,7 +202,6 @@ def l1_distance(
     return output
 
 
-@versioned
 def l2_distance(
     T: RuntimeTypeDescriptor
 ) -> Metric:
@@ -240,7 +232,6 @@ def l2_distance(
     return output
 
 
-@versioned
 def linf_distance(
     T: RuntimeTypeDescriptor,
     monotonic: bool = False
@@ -275,7 +266,6 @@ def linf_distance(
     return output
 
 
-@versioned
 def metric_debug(
     this: Metric
 ) -> str:
@@ -302,7 +292,6 @@ def metric_debug(
     return output
 
 
-@versioned
 def metric_distance_type(
     this: Metric
 ) -> str:
@@ -329,7 +318,6 @@ def metric_distance_type(
     return output
 
 
-@versioned
 def metric_type(
     this: Metric
 ) -> str:
@@ -356,7 +344,6 @@ def metric_type(
     return output
 
 
-@versioned
 def symmetric_distance(
 
 ) -> Metric:
@@ -380,7 +367,6 @@ def symmetric_distance(
     return output
 
 
-@versioned
 def user_distance(
     descriptor: str
 ) -> Metric:
