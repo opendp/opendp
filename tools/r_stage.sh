@@ -38,7 +38,6 @@ function clean() {
   run rm -rf R/opendp/opendp.Rcheck
   run rm -rf R/opendp/man
   run rm -f R/opendp/src/*.tar.xz
-  run rm -f R/opendp/README.md
   run rm -f R/opendp/inst/AUTHORS
   run rm -f R/opendp/LICENSE.note
   run rm -f R/opendp/src/*.o R/opendp/src/opendp.so
@@ -106,8 +105,7 @@ function docs() {
   run cp -r R/opendp R/opendp-docs
   run rm -rf R/opendp-docs/src
 
-  log "copy README and CHANGELOG into the docs"
-  run cp README.md R/opendp-docs/
+  log "copy CHANGELOG into the docs"
   # https://pkgdown.r-lib.org/reference/build_news.html
   sed "s|^## |# Version |" CHANGELOG.md > R/opendp-docs/NEWS.md
 
