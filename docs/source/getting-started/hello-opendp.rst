@@ -1,5 +1,5 @@
-Quickstart
-==========
+Hello OpenDP!
+=============
 
 OpenDP is available for Python and R.
 
@@ -42,9 +42,6 @@ Enable ``contrib`` globally with the following snippet:
             :language: r
             :start-after: 1-library
             :end-before: 2-use
-
-Hello, OpenDP!
---------------
 
 Once you've installed OpenDP, you can write your first program.
 In the example below, we'll construct a Laplace mechanism of type :class:`opendp.mod.Measurement`, 
