@@ -1,3 +1,7 @@
+:orphan:
+
+TODO: This is the documentation we want, when polars is available.
+
 Installation
 ============
 

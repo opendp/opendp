@@ -255,9 +255,18 @@ jobs:
           working-directory: R/opendp
           extra-packages: devtools,local::.,RcppTOML
 
-      - name: Test
+      - name: Unit tests
         working-directory: R/opendp/
         run: Rscript -e 'devtools::test(reporter = c("summary", "fail"))'
+
+      - name: Documentation examples
+        run: |
+          STATUS=0
+          for R in `find docs/source -type f -name '*.R'`; do
+            echo $R
+            Rscript "$R" || STATUS=1
+          done
+          exit $STATUS
 
       - name: Document
         run: cd R/opendp/ && Rscript -e 'devtools::document()'

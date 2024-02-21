@@ -178,6 +178,11 @@ sphinx==7.2.6
     #   sphinx-multiversion
     #   sphinx-prompt
     #   sphinx-tabs
+    #   sphinxcontrib-applehelp
+    #   sphinxcontrib-devhelp
+    #   sphinxcontrib-htmlhelp
+    #   sphinxcontrib-qthelp
+    #   sphinxcontrib-serializinghtml
 sphinx-multiversion @ git+https://github.com/samtygier-stfc/sphinx-multiversion.git@prebuild_command
     # via -r requirements.in
 sphinx-prompt==1.8.0

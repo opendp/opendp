@@ -1,55 +1,78 @@
+Quickstart
+==========
+
+OpenDP is available for Python and R.
+
+.. tabs::
+
+    .. group-tab:: Python
+
+        Use ``pip`` to install the `opendp <https://pypi.org/project/opendp/>`_ package from PyPI:
+
+        .. prompt:: bash
+
+            pip install opendp
+
+    .. group-tab:: R
+
+        Launch R and then use ``install.packages``:
+
+        .. code:: r
+
+            install.packages('opendp', repos = 'https://opendp-dev.r-universe.dev')
+
+This will make the OpenDP modules available to your local environment.
+
+The vetting process is currently underway for the code in the OpenDP Library.
+Any code that has not completed the vetting process is marked as "contrib" and will not run unless you opt-in.
+Enable ``contrib`` globally with the following snippet:
+
+.. tabs::
+
+    .. group-tab:: Python
+
+        .. doctest::
+
+            >>> from opendp.mod import enable_features
+            >>> enable_features('contrib')
+
+    .. group-tab:: R
+
+        .. literalinclude:: hello-opendp.R
+            :language: r
+            :start-after: 1-library
+            :end-before: 2-use
 
 Hello, OpenDP!
-==============
+--------------
 
 Once you've installed OpenDP, you can write your first program.
-In this example we'll make a private release from a `very` small dataset:
+In the example below, we'll construct a Laplace mechanism of type :class:`opendp.mod.Measurement`, 
+then invoke it on a scalar aggregate.
 
-.. doctest::
+.. tabs::
 
-    .. TODO
-    .. >>> import opendp.prelude as dp
-    .. >>> import polars as pl
-    .. >>> pf = dp.PrivateFrame(pl.DataFrame(
-    .. ...     "age": [20, 40, 60]
-    .. ... }))
-    .. >>> pf.select(
-    .. ...     pl.col("age").private_mean()
-    .. ... ) # doctest: +ELLIPSIS
-    .. shape: (1, 1)
-    .. ┌──────┐
-    .. │ age  │
-    .. │ ---  │
-    .. │ i64  │
-    .. ╞══════╡
-    .. │ ...  │
-    .. └──────┘
+    .. group-tab:: Python
 
-You should get a number that is near, but probably not equal to, 40,
-and if you re-evaluate you will probably get a different number.
+        .. doctest::
 
-Let's look at each line:
+            >>> import opendp.prelude as dp
+            >>> base_laplace = dp.space_of(float) >> dp.m.then_base_laplace(scale=1.)
+            >>> dp_agg = base_laplace(23.4)
 
-OpenDP's TODO:py:class:`PrivateFrame` wraps a
-`DataFrame <https://pola-rs.github.io/polars/py-polars/html/reference/dataframe/index.html>`_ from Polars.
-You can use any Polars method to initialize the DataFrame:
-For this example the data is inline, but it could also be read from disk or from a URL.
+    .. group-tab:: R
 
-The ``PrivateFrame`` offers a ``select`` analogous to the DataFrame ``select``.
-The difference is that the expression provided must end with a private release method.
-While Polars supports ``mean``, attempting the same thing in a ``PrivateFrame`` will cause an error:
+        .. literalinclude:: hello-opendp.R
+            :language: r
+            :start-after: 2-use
 
-.. doctest::
+This code snip uses a number of OpenDP concepts:
 
-    .. TODO
-    .. >>> pf.select(
-    .. ...     pl.col("age").mean()
-    .. ... )
-    .. Traceback:
-    .. ...
-    .. Last method in chain must be a private_* method
+* Defining your metric space up-front with ``space_of`` in Python.
+* Chaining operators together with ``>>`` in Python, or ``|>`` in R.
+* Constructing a ``Measurement`` on your metric space with ``then_base_laplace``.
+* Invoking the ``base_laplace`` measurement on a value to get a DP release.
 
-The ``PrivateFrame`` protects you from accidentally releasing data which is not differentially private.
+If you would like to skip directly to a more complete example, see :ref:`putting-together`.
 
-Typically, you won't provide your data inline, and you'll want to know more than the mean.
-Our next example looks at what else is possible.
+Otherwise, continue on to the User Guide, where these concepts are explained in detail.
