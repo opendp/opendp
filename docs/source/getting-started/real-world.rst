@@ -1,35 +1,45 @@
-
-First Look at Differential Privacy
-
-Differential Privacy (DP) is a technique used to release information about a population in a way that limits the exposure of any one individual's personal information. This notebook uses the OpenDP Library to demonstrate the basic concepts of DP.
-
-%pip install opendp
-
-The convention for accessing components in OpenDP is via the following import:
-
-import opendp.prelude as dp
-
-# we are also using library features that are marked "contrib":
-dp.enable_features("contrib")
-
-Steps of a DP Analysis
+Real World
+==========
 
 A differentially private analysis in OpenDP breaks down into the following steps:
 
-    Identify the unit of privacy
-    Set privacy loss parameters
-    Collect public information
-    Mediate access to data
-    Submit DP queries
+1. Identify the unit of privacy
+2. Set privacy loss parameters
+3. Collect public information
+4. Mediate access to data
+5. Submit DP queries
+
+OpenDP has two APIs and we'll demonstrate below how to use them both:
+
+* The *Context API* is simpler and helps to enforce best practices; Available currently only for Python.
+* The *Framework API* is lower-level; Available for Python and R, it mirrors the underlying Rust framework.
+
+Because the Context API is a wrapper around the Framework API, it is easier to use but less flexible: All calls ultimately pass through the Framework API.
 
 We'll illustrate these steps by doing a differentially-private analysis on a teacher survey (a tabular data set). The raw data consists of survey responses from teachers in primary and secondary schools in an unspecified U.S. state.
+
+Context API
+-----------
+
 1. Identify the Unit of Privacy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The first step in a differentially private analysis is to determine what you are protecting: the unit of privacy.
 
 Releases on the teacher survey should conceal the addition or removal of any one teacher's data, and each teacher contributes at most one row to the data set, so the unit of privacy corresponds to one row contribution.
 
-privacy_unit = dp.unit_of(contributions=1)
+.. tabs::
+
+    .. group-tab:: Python
+
+        .. doctest::
+
+            >>> import opendp.prelude as dp
+            >>>
+            >>> # we are also using library features that are marked "contrib":
+            >>> dp.enable_features("contrib")
+            >>>
+            >>> privacy_unit = dp.unit_of(contributions=1)
 
 Broadly speaking, differential privacy can be applied to any medium of data for which you can define a unit of privacy. In other contexts, the unit of privacy may correspond to multiple rows, a user ID, or nodes or edges in a graph.
 
