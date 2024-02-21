@@ -69,7 +69,3 @@ This code snip uses a number of OpenDP concepts:
 * Chaining operators together with ``>>`` in Python, or ``|>`` in R.
 * Constructing a ``Measurement`` on your metric space with ``then_base_laplace``.
 * Invoking the ``base_laplace`` measurement on a value to get a DP release.
-
-If you would like to skip directly to a more complete example, see :ref:`putting-together`.
-
-Otherwise, continue on to the User Guide, where these concepts are explained in detail.
