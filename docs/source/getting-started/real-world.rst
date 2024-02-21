@@ -229,7 +229,9 @@ Framework API
 -------------
 
 The following sections show how the prior analysis looks in the Framework API.
+
 1. Privacy Unit
+^^^^^^^^^^^^^^^
 
 The privacy unit is actually a 2-tuple:
 
@@ -241,7 +243,9 @@ assert input_metric == dp.symmetric_distance() # ...in terms of additions/remova
 The privacy unit tuple specifies how distances are computed between two data sets (input_metric), and how large the distance can be (
 
 ).
+
 2. Privacy Loss
+^^^^^^^^^^^^^^^
 
 The privacy loss is also a 2-tuple:
 
@@ -253,7 +257,14 @@ assert privacy_measure == dp.max_divergence(T=float) # ...in terms of pure-DP
 The privacy loss tuple specifies how distances are measured between distributions (privacy_measure), and how large the distance can be (
 
 ).
+
+3. Collect Public Information
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+TODO
+
 4. Mediate Access to Data
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 dp.Context.compositor creates a sequential composition measurement.
 
@@ -271,7 +282,9 @@ The measurement is called with the data to create a compositor queryable:
 qbl_sc = m_sc(data)
 
 You can now submit up to three queries to qbl_sc, in the form of measurements.
+
 5. Submit DP Queries
+^^^^^^^^^^^^^^^^^^^^
 
 First, create a count query.
 
