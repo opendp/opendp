@@ -187,7 +187,7 @@ so long as you pass the DA (atomic domain) type argument.
 Indexing
 --------
 Indexing operations provide a way to relabel categorical data, or bin numeric data into categorical data.
-These operations work with `usize` data types: an integer data type representing an index.
+These operations work with ``usize`` data types: an integer data type representing an index.
 :func:`opendp.transformations.make_find` finds the index of each input datum in a set of categories.
 In other words, it transforms a categorical data vector to a vector of numeric indices.
 
@@ -354,7 +354,7 @@ If the dataset has more records than the target size, a simple sample of the row
 
 In the case that a neighboring dataset adds one record to the dataset, and it causes one fewer imputation,
 the resulting dataset distance is 2.
-Therefore, the resize transformation is 2-stable: `map(d_in) = 2 * d_in`.
+Therefore, the resize transformation is 2-stable: ``map(d_in) = 2 * d_in``.
 
 Similarly to data bounds, many aggregators calibrate their stability map based on knowledge of a known dataset size.
 For example, the relation downstream for the :func:`opendp.transformations.make_mean` aggregator is ``map(d_in) = d_in // 2 * (U - L) / n``.

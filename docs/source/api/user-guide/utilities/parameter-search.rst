@@ -110,7 +110,7 @@ This is generally less likely to overflow than if you were to set large binary s
 :func:`opendp.mod.exponential_bounds_search` uses a number of heuristics that tend to work well on most problems.
 If the heuristics fail you, then pass your own bounds into the binary search utilities.
 
-A more in-depth explanation of this algorithm is hidden below:
+A more in-depth explanation of this algorithm is below:
 
 .. raw:: html
 

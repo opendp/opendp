@@ -96,7 +96,7 @@ In addition, domains may also be used to construct higher-level domains. For ins
       >>> assert bool_vector_domain.member([])
       >>> assert bool_vector_domain.member([True, False])
 
-In addition, a `size` parameter may be used. For example:
+In addition, a ``size`` parameter may be used. For example:
 
 * ``vector_domain(atom_domain(T=bool), size=2)`` describes the set of boolean vectors of size 2: ``{[True, True], [True, False], [False, True], [False, False]}``.
 
