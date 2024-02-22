@@ -35,10 +35,10 @@ Releases on the teacher survey should conceal the addition or removal of any one
         .. doctest::
 
             >>> import opendp.prelude as dp
-            >>>
+            
             >>> # we are also using library features that are marked "contrib":
             >>> dp.enable_features("contrib")
-            >>>
+            
             >>> privacy_unit = dp.unit_of(contributions=1)
 
 Broadly speaking, differential privacy can be applied to any medium of data for which you can define a unit of privacy. In other contexts, the unit of privacy may correspond to multiple rows, a user ID, or nodes or edges in a graph.
@@ -242,7 +242,7 @@ The privacy unit is actually a 2-tuple:
         .. doctest::
 
             >>> input_metric, d_in = privacy_unit
-            >>>
+            
             >>> assert d_in == 1 # neighboring data set distance is at most d_in...
             >>> assert input_metric == dp.symmetric_distance() # ...in terms of additions/removals
 
@@ -260,7 +260,7 @@ The privacy loss is also a 2-tuple:
         .. doctest::
 
             >>> privacy_measure, d_out = privacy_loss
-            >>>
+            
             >>> assert d_out == 1. # output distributions have distance at most d_out (ε)...
             >>> assert privacy_measure == dp.max_divergence(T=float) # ...in terms of pure-DP
 
