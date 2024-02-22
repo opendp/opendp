@@ -54,7 +54,7 @@ Let's apply Laplace noise to a value.
 
             >>> import opendp.prelude as dp
             >>> base_laplace = dp.space_of(float) >> dp.m.then_base_laplace(scale=1.)
-            >>> dp_value = base_laplace(123)
+            >>> dp_value = base_laplace(123.0)
 
     .. group-tab:: R
 
