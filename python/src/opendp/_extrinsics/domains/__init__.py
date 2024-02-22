@@ -103,7 +103,7 @@ def np_array2_domain(
         raise ValueError("must specify T, the type of data in the array")
     T = dp.RuntimeType.parse(T)
     if T not in ATOM_MAP:
-        raise ValueError(f"T must be in an elementary type")
+        raise ValueError("T must be in an elementary type")
 
     def member(x):
         if not isinstance(x, np.ndarray):
@@ -172,11 +172,9 @@ def _np_sscp_domain(
         raise ValueError("must specify T, the type of data in the array")
     T = dp.RuntimeType.parse(T)
     if T not in {dp.f32, dp.f64}:
-        raise ValueError(f"T must be a float type")
+        raise ValueError("T must be a float type")
 
     def member(x):
-        import numpy as np  # type: ignore[import]
-
         if not isinstance(x, np.ndarray):
             raise TypeError("must be a numpy ndarray")
         T_actual = ELEMENTARY_TYPES.get(x.dtype.type)
