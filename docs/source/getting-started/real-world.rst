@@ -16,7 +16,8 @@ OpenDP has two APIs and we'll demonstrate below how to use them both:
 
 Because the Context API is a wrapper around the Framework API, it is easier to use but less flexible: All calls ultimately pass through the Framework API.
 
-We'll illustrate these steps by doing a differentially-private analysis on a teacher survey (a tabular data set). The raw data consists of survey responses from teachers in primary and secondary schools in an unspecified U.S. state.
+
+We'll illustrate these steps by doing a differentially private analysis of a teacher survey, which is a tabular dataset. The raw data consists of survey responses from teachers in primary and secondary schools in an unspecified U.S. state.
 
 Context API
 -----------
@@ -72,9 +73,9 @@ A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending
 
 The next step is to identify public information about the data set.
 
-* information that is invariant across all potential input data sets (may include column names and per-column categories)
-* information that is publicly available from other sources
-* information from other DP releases
+* Information that is invariant across all potential input data sets (may include column names and per-column categories)
+* Information that is publicly available from other sources
+* Information from other DP releases
 
 .. tabs::
 
