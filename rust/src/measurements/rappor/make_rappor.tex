@@ -11,4 +11,20 @@
 
 \contrib
 
+Proves soundness of \rustdoc{measurements/fn}{make\_rappor} in \asOfCommit{mod.rs}{304ef9c2}.
+
+\section{Hoare Triple}
+\subsection{Preconditions}
+\begin{itemize}
+	\item Variable 
+\end{itemize}
+
+
+\section{Proof}
+\begin{lemma}
+	\rustdoc{measurements/fn}{make\_rappor} satisfies $\varepsilon$-DP where 
+	\begin{equation}
+		\varepsilon = 2m\log\left(\frac{2-f}{f}\right)
+	\end{equation}
+\end{lemma}
 \end{document}
