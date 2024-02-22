@@ -90,7 +90,7 @@ The next step is to identify public information about the data set.
 
 In this case (and in most cases), we consider column names public/invariant to the data because they weren't picked in response to the data, they were "fixed" before collecting the data.
 
-A data invariant is information about your data set that you are explicitly choosing not to protect, typically under the basis that it is already public or that it does not contain sensitive information. Be careful because, if an invariant does, indeed, contain sensitive information, then you risk violating the privacy of individuals in your data set.
+A data invariant is information about your data set that you are explicitly choosing not to protect, typically because it is already public or non-sensitive. Be careful, if an invariant does contain sensitive information, then you risk violating the privacy of individuals in your data set.
 
 On the other hand, using public information significantly improves the utility of your results.
 
