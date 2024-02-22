@@ -80,7 +80,7 @@ fn sample_hash_function<K: Hash>(l: u32) -> Fallible<Arc<dyn Fn(&K) -> usize + S
 
 /// Computes ceil(log_2(x))
 fn exponent_next_power_of_two(x: u64) -> u32 {
-    let exp = 63 - x.leading_zeros();
+    let exp = 63 - x.leading_zeros().min(63);
     if x > (1 << exp) {
         exp + 1
     } else {
@@ -306,16 +306,16 @@ where
         // if value limit is still None, return an error
         .ok_or_else(|| {
             err!(
-                MakeTransformation,
+                MakeMeasurement,
                 "value_limit is required when data is unbounded"
             )
         })?
         .to_f64()
-        .ok_or_else(|| err!(MakeTransformation, "failed to parse value_limit"))?;
+        .ok_or_else(|| err!(MakeMeasurement, "failed to parse value_limit"))?;
 
     let total_limit: f64 = total_limit
         .to_f64()
-        .ok_or_else(|| err!(MakeTransformation, "failed to parse total_limit"))?;
+        .ok_or_else(|| err!(MakeMeasurement, "failed to parse total_limit"))?;
 
     let size_factor = size_factor.unwrap_or(SIZE_FACTOR_DEFAULT) as f64;
 

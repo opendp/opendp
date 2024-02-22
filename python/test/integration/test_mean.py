@@ -1,6 +1,5 @@
 from opendp.transformations import *
 from opendp.measurements import *
-from opendp.domains import atom_domain, option_domain
 from opendp.mod import enable_features
 
 enable_features("floating-point", "contrib")
@@ -40,6 +39,6 @@ def test_dp_mean():
         then_base_laplace(scale)
     )
     res = preprocessor(data)
-    assert type(res) == float
+    assert isinstance(res, float)
 
 
