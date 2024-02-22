@@ -97,7 +97,7 @@ On the other hand, using public information significantly improves the utility o
 4. Mediate Access to Data
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-At this point, you ideally still haven't looked at the sensitive data set. This is the first and only point where we access the sensitive data set in this process. To ensure that your specified differential privacy protections are maintained, the OpenDP Library should mediate all access to the sensitive data set. This mediation is done via the Context API.
+Ideally, at this point, you have not yet accessed the sensitive data set. This is the only point in the process where we access the sensitive data set. To ensure that your specified differential privacy protections are maintained, the OpenDP Library should mediate all access to the sensitive data set. The OpenDP Library mediates this access through the Context API.
 
 .. tabs::
 
