@@ -39,8 +39,8 @@ What next?
 
 There are multiple tracks through the documentation:
 
-* New users of the Python library should begin with :doc:`getting-started/index`.
-* For users of other languages, and for more detail, see the :doc:`api/index`.
+* New users of the library should begin with :doc:`getting-started/index`.
+* For Python, R, and Rust references, see the :doc:`api/index`.
 * If you want to understand how the fundamentals of DP are applied in OpenDP, see :doc:`theory/index`.
 * Finally, if you're joining the project, see :doc:`contributing/index`.
 
