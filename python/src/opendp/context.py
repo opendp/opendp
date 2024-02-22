@@ -681,7 +681,7 @@ def _translate_measure_distance(d_from, from_measure, to_measure):
             d_out=d_from,
             T=float,
         )
-        return make_base_laplace(scale).map(constant)
+        return make_base_laplace(*space, scale).map(constant)
 
     if from_to == (
         "FixedSmoothedMaxDivergence",
