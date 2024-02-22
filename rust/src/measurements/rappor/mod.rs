@@ -10,6 +10,7 @@ use crate::traits::{InfSub, InfDiv, InfLn, InfMul, samplers::SampleBernoulli};
 /// 
 /// # Arguments
 /// * `f` - Per-bit flipping probability. Must be in $(0, 1]$.
+/// * `num_messages` - number of ones set in each boolean vector
 ///
 /// See paper for more details: https://arxiv.org/abs/1407.6981
 ///
@@ -18,6 +19,7 @@ pub fn make_rappor(
     input_domain: VectorDomain<AtomDomain<bool>>,
     input_metric: DiscreteDistance,
     f: f64,
+    num_messages: i32,
     constant_time: bool
 ) -> Fallible<Measurement<VectorDomain<AtomDomain<bool>>, Vec<bool>, DiscreteDistance, MaxDivergence<f64>>> {
     if input_domain.size.is_none() {
@@ -33,6 +35,9 @@ pub fn make_rappor(
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &Vec<bool>| {
+            if arg.into_iter().filter(|b| **b).count() != num_messages as usize {
+                return fallible!(FailedFunction, "number of bits set must be constant!")
+            }
             arg.iter().map(|b| {
                 Ok(*b ^ bool::sample_bernoulli(f_2, constant_time)?)
             }).collect::<Fallible<Vec<bool>>>()
@@ -95,6 +100,7 @@ mod test {
             VectorDomain::new(AtomDomain::default()).with_size(10),
             DiscreteDistance::default(),
             0.5,
+            1,
             false
         )?;
         rappor.invoke(&vec![true, false, true, false, true, false, true, false, true, false])?;
