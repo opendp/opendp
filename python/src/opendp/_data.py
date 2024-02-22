@@ -23,7 +23,6 @@ __all__ = [
 ]
 
 
-@versioned
 def bool_free(
     this
 ):
@@ -49,7 +48,6 @@ def bool_free(
     return output
 
 
-@versioned
 def extrinsic_object_free(
     this
 ):
@@ -75,7 +73,6 @@ def extrinsic_object_free(
     return output
 
 
-@versioned
 def ffislice_of_anyobjectptrs(
     raw: Any
 ) -> Any:
@@ -102,7 +99,6 @@ def ffislice_of_anyobjectptrs(
     return output
 
 
-@versioned
 def fill_bytes(
     ptr,
     len: int
@@ -132,7 +128,6 @@ def fill_bytes(
     return output
 
 
-@versioned
 def object_as_slice(
     obj: Any
 ) -> Any:
@@ -160,7 +155,6 @@ def object_as_slice(
     return output
 
 
-@versioned
 def object_free(
     this
 ):
@@ -186,7 +180,6 @@ def object_free(
     return output
 
 
-@versioned
 def object_type(
     this: Any
 ) -> str:
@@ -213,7 +206,6 @@ def object_type(
     return output
 
 
-@versioned
 def slice_as_object(
     raw: FfiSlicePtr,
     T: str
@@ -248,7 +240,6 @@ def slice_as_object(
     return output
 
 
-@versioned
 def slice_free(
     this
 ):
@@ -276,7 +267,6 @@ def slice_free(
     return output
 
 
-@versioned
 def smd_curve_epsilon(
     curve: Any,
     delta: Any
@@ -308,7 +298,6 @@ def smd_curve_epsilon(
     return output
 
 
-@versioned
 def str_free(
     this
 ):
@@ -335,7 +324,6 @@ def str_free(
     return output
 
 
-@versioned
 def to_string(
     this: Any
 ) -> str:

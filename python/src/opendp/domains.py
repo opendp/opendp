@@ -22,7 +22,6 @@ __all__ = [
 ]
 
 
-@versioned
 def _domain_free(
     this
 ):
@@ -48,7 +47,6 @@ def _domain_free(
     return output
 
 
-@versioned
 def _user_domain_descriptor(
     domain: Domain
 ):
@@ -74,7 +72,6 @@ def _user_domain_descriptor(
     return output
 
 
-@versioned
 def atom_domain(
     bounds: Optional[Any] = None,
     nullable: bool = False,
@@ -113,7 +110,6 @@ def atom_domain(
     return output
 
 
-@versioned
 def domain_carrier_type(
     this: Domain
 ) -> str:
@@ -140,7 +136,6 @@ def domain_carrier_type(
     return output
 
 
-@versioned
 def domain_debug(
     this: Domain
 ) -> str:
@@ -167,7 +162,6 @@ def domain_debug(
     return output
 
 
-@versioned
 def domain_type(
     this: Domain
 ) -> str:
@@ -194,7 +188,6 @@ def domain_type(
     return output
 
 
-@versioned
 def map_domain(
     key_domain: Domain,
     value_domain: Domain
@@ -225,7 +218,6 @@ def map_domain(
     return output
 
 
-@versioned
 def member(
     this: Domain,
     val: Any
@@ -255,7 +247,6 @@ def member(
     return output
 
 
-@versioned
 def option_domain(
     element_domain: Domain,
     D: Optional[RuntimeTypeDescriptor] = None
@@ -290,7 +281,6 @@ def option_domain(
     return output
 
 
-@versioned
 def user_domain(
     identifier: str,
     member,
@@ -327,7 +317,6 @@ def user_domain(
     return output
 
 
-@versioned
 def vector_domain(
     atom_domain: Domain,
     size: Optional[Any] = None
