@@ -57,7 +57,7 @@ Next, you should determine what level of privacy protection to provide to your u
 
 The level of privacy afforded to units of privacy in a data set is quantified by *privacy loss parameters*. Under *pure* differential privacy, there is a single privacy-loss parameter, typically denoted epsilon (ε). Epsilon is a non-negative number, where larger values afford less privacy. Epsilon can be viewed as a proxy for the worst-case risk to a unit of privacy. It is customary to refer to a data release with such bounded risk as epsilon-differentially private (ε-DP).
 
-A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending on the considerations mentioned above. See `Hsu et. al<https://arxiv.org/abs/1402.3329>`_ for a more elaborate discussion on setting epsilon.
+A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending on the considerations mentioned above. See `Hsu et. al <https://arxiv.org/abs/1402.3329>`_ for a more elaborate discussion on setting epsilon.
 
 .. tabs::
 
@@ -228,35 +228,43 @@ The OpenDP Library supports more statistics, like the variance, various ways to 
 Framework API
 -------------
 
-The following sections show how the prior analysis looks in the Framework API.
+Now let's do the same analysis using the Framework API.
 
 1. Privacy Unit
 ^^^^^^^^^^^^^^^
 
 The privacy unit is actually a 2-tuple:
 
-input_metric, d_in = privacy_unit
+.. tabs::
 
-assert d_in == 1 # neighboring data set distance is at most d_in...
-assert input_metric == dp.symmetric_distance() # ...in terms of additions/removals
+    .. group-tab:: Python
 
-The privacy unit tuple specifies how distances are computed between two data sets (input_metric), and how large the distance can be (
+        .. doctest::
 
-).
+            >>> input_metric, d_in = privacy_unit
+            >>>
+            >>> assert d_in == 1 # neighboring data set distance is at most d_in...
+            >>> assert input_metric == dp.symmetric_distance() # ...in terms of additions/removals
+
+The privacy unit tuple specifies how distances are computed between two data sets (``input_metric``), and how large the distance can be (``d_in``).
 
 2. Privacy Loss
 ^^^^^^^^^^^^^^^
 
 The privacy loss is also a 2-tuple:
 
-privacy_measure, d_out = privacy_loss
+.. tabs::
 
-assert d_out == 1. # output distributions have distance at most d_out (ε)...
-assert privacy_measure == dp.max_divergence(T=float) # ...in terms of pure-DP
+    .. group-tab:: Python
 
-The privacy loss tuple specifies how distances are measured between distributions (privacy_measure), and how large the distance can be (
+        .. doctest::
 
-).
+            >>> privacy_measure, d_out = privacy_loss
+            >>>
+            >>> assert d_out == 1. # output distributions have distance at most d_out (ε)...
+            >>> assert privacy_measure == dp.max_divergence(T=float) # ...in terms of pure-DP
+
+The privacy loss tuple specifies how distances are measured between distributions (``privacy_measure``), and how large the distance can be (``d_out``).
 
 3. Collect Public Information
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -266,69 +274,100 @@ TODO
 4. Mediate Access to Data
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-dp.Context.compositor creates a sequential composition measurement.
+``dp.Context.compositor`` creates a sequential composition measurement.
 
-m_sc = dp.c.make_sequential_composition(
-    # data set is a single string, with rows separated by linebreaks
-    input_domain=dp.atom_domain(T=str),
-    input_metric=input_metric,
-    output_measure=privacy_measure,
-    d_in=d_in,
-    d_mids=[d_out / 3] * 3,
-)
+.. tabs::
+
+    .. group-tab:: Python
+
+        .. doctest::
+
+            >>> m_sc = dp.c.make_sequential_composition(
+            ...     # data set is a single string, with rows separated by linebreaks
+            ...     input_domain=dp.atom_domain(T=str),
+            ...     input_metric=input_metric,
+            ...     output_measure=privacy_measure,
+            ...     d_in=d_in,
+            ...     d_mids=[d_out / 3] * 3,
+            ... )
 
 The measurement is called with the data to create a compositor queryable:
 
-qbl_sc = m_sc(data)
+.. tabs::
 
-You can now submit up to three queries to qbl_sc, in the form of measurements.
+    .. group-tab:: Python
+
+        .. doctest::
+
+            >>> qbl_sc = m_sc(data)
+
+You can now submit up to three queries to ``qbl_sc``, in the form of measurements.
 
 5. Submit DP Queries
 ^^^^^^^^^^^^^^^^^^^^
 
 First, create a count query.
 
-t_count = (
-    dp.t.make_split_dataframe(",", col_names=col_names)
-    >> dp.t.make_select_column("age", str)
-    >> dp.t.then_count()
-)
+.. tabs::
 
-    >> is a shorthand for chaining, or functional composition
-    then_* uses the input domain and input metric from the prior transformation
+    .. group-tab:: Python
+
+        .. doctest::
+
+            >>> t_count = (
+            ...     dp.t.make_split_dataframe(",", col_names=col_names)
+            ...     >> dp.t.make_select_column("age", str)
+            ...     >> dp.t.then_count()
+            ... )
+
+* ``>>`` is a shorthand for chaining, or functional composition.
+* ``then_*`` uses the input domain and input metric from the prior transformation.
 
 With this lower-level API you get greater flexibility. For instance, you can see the sensitivity of the count query:
 
-count_sensitivity = t_count.map(d_in)
-count_sensitivity
+.. tabs::
 
-1
+    .. group-tab:: Python
 
-A binary search is used to find the smallest noise scale that results in a measurement that satisfies
+        .. doctest::
 
-.
+            >>> count_sensitivity = t_count.map(d_in)
+            >>> count_sensitivity
+            1
 
-m_count = dp.binary_search_chain(
-    lambda scale: t_count >> dp.m.then_laplace(scale), d_in, d_out / 3
-)
-dp_count = qbl_sc(m_count)
+A binary search is used to find the smallest noise scale that results in a measurement that satisfies ε = 1/3.
+
+.. tabs::
+
+    .. group-tab:: Python
+
+        .. doctest::
+
+            >>> m_count = dp.binary_search_chain(
+            ...     lambda scale: t_count >> dp.m.then_laplace(scale), d_in, d_out / 3
+            ... )
+            >>> dp_count = qbl_sc(m_count)
 
 Similarly, construct a mean measurement and release it:
 
-t_mean = (
-    dp.t.make_split_dataframe(",", col_names=col_names) >>
-    dp.t.make_select_column("age", str) >>
-    dp.t.then_cast_default(float) >>
-    dp.t.then_clamp((18.0, 70.0)) >>  # a best-guess based on public information
-    dp.t.then_resize(size=dp_count, constant=42.0) >>
-    dp.t.then_mean()
-)
+.. tabs::
 
-m_mean = dp.binary_search_chain(
-    lambda scale: t_mean >> dp.m.then_laplace(scale), d_in, d_out / 3
-)
+    .. group-tab:: Python
 
-qbl_sc(m_mean)
+        .. doctest::
 
-37.347899010945284
+            >>> t_mean = (
+            ...     dp.t.make_split_dataframe(",", col_names=col_names) >>
+            ...     dp.t.make_select_column("age", str) >>
+            ...     dp.t.then_cast_default(float) >>
+            ...     dp.t.then_clamp((18.0, 70.0)) >>  # a best-guess based on public information
+            ...     dp.t.then_resize(size=dp_count, constant=42.0) >>
+            ...     dp.t.then_mean()
+            ... )
+
+            >>> m_mean = dp.binary_search_chain(
+            ...     lambda scale: t_mean >> dp.m.then_laplace(scale), d_in, d_out / 3
+            ... )
+
+Evaluating ``qbl_sc(m_mean)`` will return a DP mean.
 
