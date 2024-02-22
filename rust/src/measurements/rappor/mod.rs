@@ -19,7 +19,7 @@ pub fn make_rappor(
     input_domain: VectorDomain<AtomDomain<bool>>,
     input_metric: DiscreteDistance,
     f: f64,
-    num_messages: i32,
+    m: i32,
     constant_time: bool
 ) -> Fallible<Measurement<VectorDomain<AtomDomain<bool>>, Vec<bool>, DiscreteDistance, MaxDivergence<f64>>> {
     if input_domain.size.is_none() {
@@ -30,12 +30,12 @@ pub fn make_rappor(
         return fallible!(MakeMeasurement, "f must be in (0, 1].")
     }
 
-    let epsilon = (2.0f64).inf_sub(&f)?.inf_div(&f)?.inf_ln()?.inf_mul(&2.0)?;
+    let epsilon = (2.0f64).inf_sub(&f)?.inf_div(&f)?.inf_ln()?.inf_mul(&2.0)?.inf_mul(&f64::from(m))?;
     let f_2 = f.inf_div(&2.0)?;
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &Vec<bool>| {
-            if arg.into_iter().filter(|b| **b).count() != num_messages as usize {
+            if arg.into_iter().filter(|b| **b).count() != m as usize {
                 return fallible!(FailedFunction, "number of bits set must be constant!")
             }
             arg.iter().map(|b| {
