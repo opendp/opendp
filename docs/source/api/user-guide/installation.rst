@@ -42,7 +42,7 @@ Installing OpenDP for R from R-Universe
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 OpenDP is distributed as an `R package on R-Universe <https://opendp.r-universe.dev>`_. 
-You can install it using from an R session:
+You can install it from an R session:
 
 .. code-block:: R
 
