@@ -25,7 +25,6 @@ __all__ = [
 ]
 
 
-@versioned
 def make_basic_composition(
     measurements: Any
 ) -> Measurement:
@@ -66,7 +65,6 @@ def make_basic_composition(
     return output
 
 
-@versioned
 def make_chain_mt(
     measurement1: Measurement,
     transformation0: Transformation
@@ -102,7 +100,6 @@ def make_chain_mt(
     return output
 
 
-@versioned
 def make_chain_pm(
     postprocess1: Function,
     measurement0: Measurement
@@ -139,7 +136,6 @@ def make_chain_pm(
     return output
 
 
-@versioned
 def make_chain_tt(
     transformation1: Transformation,
     transformation0: Transformation
@@ -175,7 +171,6 @@ def make_chain_tt(
     return output
 
 
-@versioned
 def make_fix_delta(
     measurement: Measurement,
     delta: Any
@@ -210,7 +205,6 @@ def make_fix_delta(
     return output
 
 
-@versioned
 def make_population_amplification(
     measurement: Measurement,
     population_size: int
@@ -252,7 +246,6 @@ def make_population_amplification(
     return output
 
 
-@versioned
 def make_pureDP_to_fixed_approxDP(
     measurement: Measurement
 ) -> Measurement:
@@ -284,7 +277,6 @@ def make_pureDP_to_fixed_approxDP(
     return output
 
 
-@versioned
 def make_pureDP_to_zCDP(
     measurement: Measurement
 ) -> Measurement:
@@ -320,7 +312,6 @@ def make_pureDP_to_zCDP(
     return output
 
 
-@versioned
 def make_sequential_composition(
     input_domain: Domain,
     input_metric: Metric,
@@ -413,7 +404,6 @@ def then_sequential_composition(
 
 
 
-@versioned
 def make_zCDP_to_approxDP(
     measurement: Measurement
 ) -> Measurement:

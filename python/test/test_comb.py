@@ -55,7 +55,8 @@ def test_make_basic_composition_leak():
 
     # choose a vector-valued mechanism that should run quickly for large inputs
     # we want to add as little noise as possible, so that execution time is small
-    meas = dp.m.make_base_discrete_laplace(scale=1e-6, D=dp.VectorDomain[dp.AtomDomain[int]])
+    space = dp.vector_domain(dp.atom_domain(T=int)), dp.l1_distance(T=int)
+    meas = space >> dp.m.then_laplace(0.)
 
     # memory usage remains the same when this line is commented,
     # supporting that AnyObject's free recursively frees children
@@ -65,8 +66,8 @@ def test_make_basic_composition_leak():
     # memory would jump by ~40mb every iteration
     for i in range(1000):
         print('iteration', i)
-        meas([0] * 10_000_000)
-    
+        meas([0] * 1_000_000)
+
 
 def test_make_basic_composition_approx():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)

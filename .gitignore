@@ -191,6 +191,5 @@ vendor.tar.xz
 source.tar.xz
 R/opendp/src/.cargo
 NEWS.md
-R/opendp/README.md
 R/opendp/docs
 R/opendp-docs
