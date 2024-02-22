@@ -1,7 +1,7 @@
 Real World
 ==========
 
-A differentially private analysis in OpenDP breaks down into the following steps:
+A differentially private analysis in OpenDP typically has the following steps:
 
 1. Identify the unit of privacy
 2. Set privacy loss parameters
@@ -9,13 +9,12 @@ A differentially private analysis in OpenDP breaks down into the following steps
 4. Mediate access to data
 5. Submit DP queries
 
-OpenDP has two APIs and we'll demonstrate below how to use them both:
+OpenDP has two APIs and we'll demonstrate how to use both:
 
-* The *Context API* is simpler and helps to enforce best practices; Available currently only for Python.
-* The *Framework API* is lower-level; Available for Python and R, it mirrors the underlying Rust framework.
+* The **Context API** is simpler and helps to enforce best practices. Currently available only for Python.
+* The **Framework API** is lower-level. Available for Python and R, it mirrors the underlying Rust framework.
 
 Because the Context API is a wrapper around the Framework API, it is easier to use but less flexible: All calls ultimately pass through the Framework API.
-
 
 We'll illustrate these steps by doing a differentially private analysis of a teacher survey, which is a tabular dataset. The raw data consists of survey responses from teachers in primary and secondary schools in an unspecified U.S. state.
 
@@ -97,7 +96,7 @@ On the other hand, using public information significantly improves the utility o
 4. Mediate Access to Data
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Ideally, at this point, you have not yet accessed the sensitive data set. This is the only point in the process where we access the sensitive data set. To ensure that your specified differential privacy protections are maintained, the OpenDP Library should mediate all access to the sensitive data set. The OpenDP Library mediates this access through the Context API.
+Ideally, at this point, you have not yet accessed the sensitive data set. This is the only point in the process where we access the sensitive data set. To ensure that your specified differential privacy protections are maintained, the OpenDP Library should mediate all access to the sensitive data set. When using Python, use the Context API to mediate access.
 
 .. tabs::
 
