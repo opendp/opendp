@@ -74,10 +74,9 @@ In this example the chaining was successful because:
 * bounded_sum's output domain is equivalent to base_dl's input domain
 * bounded_sum's output metric is equivalent to base_dl's input metric
 
-Chaining fails if we were to adjust the domains such that they won't match.
+Chaining fails if we adjust the domains such that they don't match.
 In the below example, the adjustment is subtle, but the bounds were adjusted to floats.
-``make_sum`` is equally capable of summing floats,
-but the chaining fails because the sum emits floats and the discrete Laplace mechanism expects integers.
+``make_sum`` is equally capable of summing floats, but the chaining fails because the sum emits floats and the discrete Laplace mechanism expects integers.
 
 .. tabs::
 
@@ -101,7 +100,11 @@ but the chaining fails because the sum emits floats and the discrete Laplace mec
         ")
 
 Note that ``noisy_sum_trans``'s input domain and input metric come from ``sum_trans``'s input domain and input metric.
-This is intended to enable further chaining with preprocessors like :py:func:`make_cast <opendp.transformations.make_cast>`, :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`, :py:func:`make_clamp <opendp.transformations.make_clamp>` and :py:func:`make_resize <opendp.transformations.make_resize>`.
+This is intended to enable further chaining with preprocessors such as:
+* :py:func:`make_cast <opendp.transformations.make_cast>`
+* :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`
+* :py:func:`make_clamp <opendp.transformations.make_clamp>` 
+* :py:func:`make_resize <opendp.transformations.make_resize>`.
 See the section on :ref:`transformation-constructors` for more information on how to preprocess data in OpenDP.
 
 Composition
