@@ -34,12 +34,16 @@ The library provides the following functions for converting between noise scale 
 To demonstrate, the following snippet finds the necessary gaussian scale such that the input to 
 :code:`make_base_gaussian(input_domain, input_metric, scale=1.)` differs from the release by no more than 2 with 95% confidence.
 
-.. doctest::
+.. tabs::
 
-    >>> from opendp.accuracy import accuracy_to_gaussian_scale
-    >>> confidence = 95
-    >>> accuracy_to_gaussian_scale(accuracy=2., alpha=1. - confidence / 100)
-    1.020426913849308
+  .. group-tab:: Python
+
+    .. doctest::
+
+        >>> from opendp.accuracy import accuracy_to_gaussian_scale
+        >>> confidence = 95
+        >>> accuracy_to_gaussian_scale(accuracy=2., alpha=1. - confidence / 100)
+        1.020426913849308
 
 You can generally plug the distribution (Laplace or Gaussian), scale, accuracy and alpha
 into the following statement to interpret these functions:
