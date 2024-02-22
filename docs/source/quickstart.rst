@@ -31,17 +31,17 @@ Enable ``contrib`` globally with the following snippet:
 
     .. group-tab:: Python
 
-        .. doctest::
-
-            >>> from opendp.mod import enable_features
-            >>> enable_features('contrib')
+        .. literalinclude:: quickstart.R
+            :language: python
+            :start-after: py-init
+            :end-before: /py-init
 
     .. group-tab:: R
 
         .. literalinclude:: quickstart.R
             :language: r
-            :start-after: 1-library
-            :end-before: 2-use
+            :start-after: r-init
+            :end-before: /r-init
 
 Hello, OpenDP!
 --------------
@@ -54,17 +54,17 @@ then invoke it on a scalar aggregate.
 
     .. group-tab:: Python
 
-        .. doctest::
-
-            >>> import opendp.prelude as dp
-            >>> base_laplace = dp.space_of(float) >> dp.m.then_base_laplace(scale=1.)
-            >>> dp_agg = base_laplace(23.4)
+        .. literalinclude:: quickstart.R
+            :language: python
+            :start-after: py-demo
+            :end-before: /py-demo
 
     .. group-tab:: R
 
         .. literalinclude:: quickstart.R
             :language: r
-            :start-after: 2-use
+            :start-after: r-demo
+            :end-before: /r-demo
 
 This code snip uses a number of OpenDP concepts:
 
