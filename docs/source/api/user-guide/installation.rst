@@ -37,15 +37,6 @@ At this point, you should be good to go! You can confirm your installation in Py
 
     >>> import opendp
 
-.. note::
-
-    The OpenDP Python package contains binaries for all supported platforms, so you don't need to worry about specifying a specific platform.
-
-At this point, you should be good to go! You can confirm your installation in Python by importing the top-level module ``opendp``:
-
-.. doctest::
-
-    >>> import opendp
 
 Installing OpenDP for R from R-Universe
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
