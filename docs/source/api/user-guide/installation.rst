@@ -3,7 +3,7 @@ Installation
 
 This section will walk you through the process of getting started with OpenDP. By the end, you should have a working OpenDP installation, and you'll be ready to explore OpenDP programming.
 
-OpenDP is built with a layered architecture. The core consists of a native library, implemented in Rust. On top of this core are bindings for using OpenDP from other languages (currently only Python, but we hope to add bindings for more languages in the future).
+OpenDP is built with a layered architecture. The core consists of a native library, implemented in Rust. On top of this core are bindings for Python and R.
 
 In order to use OpenDP in your applications, the first step is installing the library so that it's accessible to your local environment. Depending on how you intend to use OpenDP, these steps may vary.
 
@@ -12,7 +12,6 @@ Platforms
 
 OpenDP is built for the following platforms:
 
-* Python 3.8-3.11
 * Linux, x86 64-bit, versions compatible with `manylinux <https://github.com/pypa/manylinux>`_ (others may work)
 * macOS, x86 64-bit, version 10.13 or later
 * Windows, x86 64-bit, version 7 or later
