@@ -184,7 +184,7 @@ The result is a random draw from the discrete Laplace distribution, centered at 
 
         .. doctest::
 
-            >>> dp_count - accuracy, dp_count + accuracy
+            >>> interval = (dp_count - accuracy, dp_count + accuracy)
 
 The exact count lies within the interval with 95% confidence.
 
