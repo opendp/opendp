@@ -43,7 +43,7 @@ Or ``invoke`` can be used equivalently:
       [5.0]
 
 A mathematical function associates each value in some input set with some value in the output set (or a distribution over such values, in the case of a randomized function).
-In OpenDP, we capture these sets with domains...
+In OpenDP, as discussed in the next section, we capture these sets with domains.
 
 .. _domains:
 
@@ -67,8 +67,9 @@ and checks that 1.0 is a member of the domain, but NaN is not.
       >>> assert f64_atom_domain.member(1.0)
       >>> assert not f64_atom_domain.member(float('nan'))
 
-Similarly, ``atom_domain(T=u8)`` consists of all possible non-null unsigned 8-bit integers: ``{0, 1, 2, 3, ..., 127}``,
-and ``atom_domain(bounds=(-2, 2))`` consists of all possible 32-bit signed integers bounded between -2 and 2: ``{-2, -1, 0, 1, 2}``.
+Other domains may be described in a similar way. For example:
+* ``atom_domain(T=u8)`` consists of all possible non-null unsigned 8-bit integers: ``{0, 1, 2, 3, ..., 127}``
+* ``atom_domain(bounds=(-2, 2))`` describes all possible 32-bit signed integers bounded between -2 and 2: ``{-2, -1, 0, 1, 2}``.
 
 .. tabs::
 
@@ -80,8 +81,8 @@ and ``atom_domain(bounds=(-2, 2))`` consists of all possible 32-bit signed integ
       >>> assert i32_bounded_domain.member(-2)
       >>> assert not i32_bounded_domain.member(3)
 
-Domains may also be used to construct higher-level domains.
-For instance, ``vector_domain(atom_domain(T=bool))`` describes the set of all boolean vectors: ``{[], [True], [False], [True, True], [True, False], ...}``.
+In addition, domains may also be used to construct higher-level domains. For instance:
+* ``vector_domain(atom_domain(T=bool))`` describes the set of all boolean vectors: ``{[], [True], [False], [True, True], [True, False], ...}``.
 
 .. tabs::
 
@@ -93,7 +94,8 @@ For instance, ``vector_domain(atom_domain(T=bool))`` describes the set of all bo
       >>> assert bool_vector_domain.member([])
       >>> assert bool_vector_domain.member([True, False])
 
-``vector_domain(atom_domain(T=bool), size=2)`` describes the set of boolean vectors of size 2: ``{[True, True], [True, False], [False, True], [False, False]}``.
+In addition, a ``size`` parameter may be used. For example:
+* ``vector_domain(atom_domain(T=bool), size=2)`` describes the set of boolean vectors of size 2: ``{[True, True], [True, False], [False, True], [False, False]}``.
 
 .. tabs::
 
