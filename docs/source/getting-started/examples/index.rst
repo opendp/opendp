@@ -3,14 +3,11 @@
 More Examples
 =============
 
-The Polars API we've used up to this point is only available for Python.
-
-The examples through the rest of the documentation use a lower-level API
-which is closer to the underlying Rust implementation.
-Although it is more verbose, it has the advantage of being available for Python, Rust, and R.
-We are updating our examples to cover all three languages,
-but even where we haven't yet completed the translation,
-Rust and R users should be able to follow the Python examples.
+Most of the examples that follow use the Framework API in Python.
+Although it is more verbose than the Context API,
+it has the advantage of being very similar to the Rust and R APIs,
+and Rust and R users should be able to follow the Python examples.
+We are planning to translate the Python examples to Rust and R.
 
 .. _notebooks:
 
