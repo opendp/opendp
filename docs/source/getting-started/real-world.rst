@@ -269,7 +269,7 @@ The privacy loss tuple specifies how distances are measured between distribution
 3. Collect Public Information
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The `col_names` are the same as in the Context API example.
+The ``col_names`` are the same as in the Context API example.
 
 .. tabs::
 
