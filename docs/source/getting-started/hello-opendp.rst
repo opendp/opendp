@@ -44,8 +44,7 @@ Enable ``contrib`` globally with the following snippet:
             :end-before: 2-use
 
 Once you've installed OpenDP, you can write your first program.
-In the example below, we'll construct a Laplace mechanism of type :class:`opendp.mod.Measurement`, 
-then invoke it on a scalar aggregate.
+Let's apply Laplace noise to a value.
 
 .. tabs::
 
@@ -55,7 +54,7 @@ then invoke it on a scalar aggregate.
 
             >>> import opendp.prelude as dp
             >>> base_laplace = dp.space_of(float) >> dp.m.then_base_laplace(scale=1.)
-            >>> dp_agg = base_laplace(23.4)
+            >>> dp_value = base_laplace(123)
 
     .. group-tab:: R
 
@@ -63,9 +62,10 @@ then invoke it on a scalar aggregate.
             :language: r
             :start-after: 2-use
 
-This code snip uses a number of OpenDP concepts:
+This is obviously not the easiest way to add noise to a number,
+but it demonstrates a number of OpenDP patterns:
 
-* Defining your metric space up-front with ``space_of`` in Python.
+* Defining your metric space with ``space_of`` in Python.
 * Chaining operators together with ``>>`` in Python, or ``|>`` in R.
-* Constructing a ``Measurement`` on your metric space with ``then_base_laplace``.
-* Invoking the ``base_laplace`` measurement on a value to get a DP release.
+* Constructing a ``Measurement`` function on your metric space with ``then_base_laplace``.
+* Invoking that measurement on a value to get a DP release.
