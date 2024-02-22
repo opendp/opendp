@@ -269,7 +269,18 @@ The privacy loss tuple specifies how distances are measured between distribution
 3. Collect Public Information
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-TODO
+The `col_names` are the same as in the Context API example.
+
+.. tabs::
+
+    .. group-tab:: Python
+
+        .. doctest::
+
+            >>> col_names = [
+            ...    "name", "sex", "age", "maritalStatus", "hasChildren", "highestEducationLevel", 
+            ...    "sourceOfStress", "smoker", "optimism", "lifeSatisfaction", "selfEsteem"
+            ... ]
 
 4. Mediate Access to Data
 ^^^^^^^^^^^^^^^^^^^^^^^^^
