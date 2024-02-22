@@ -10,7 +10,7 @@ use crate::traits::{InfSub, InfDiv, InfLn, InfMul, samplers::SampleBernoulli};
 /// 
 /// # Arguments
 /// * `f` - Per-bit flipping probability. Must be in $(0, 1]$.
-/// * `num_messages` - number of ones set in each boolean vector
+/// * `m` - number of ones set in each boolean vector (1 if one-hot encoding, more if using a bloom filter)
 ///
 /// See paper for more details: https://arxiv.org/abs/1407.6981
 ///
@@ -35,7 +35,7 @@ pub fn make_rappor(
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &Vec<bool>| {
-            if arg.into_iter().filter(|b| **b).count() != m as usize {
+            if arg.into_iter().filter(|b| **b).count() > m as usize {
                 return fallible!(FailedFunction, "number of bits set must be constant!")
             }
             arg.iter().map(|b| {
