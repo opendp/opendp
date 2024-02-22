@@ -481,6 +481,12 @@ impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
     }
 }
 
+impl<T: CheckAtom> MetricSpace for (VectorDomain<AtomDomain<T>>, DiscreteDistance) {
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
+    }
+}
+
 /// Distance between score vectors with monotonicity indicator.
 ///
 /// # Proof Definition
