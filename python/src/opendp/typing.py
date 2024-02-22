@@ -254,7 +254,7 @@ class RuntimeType(object):
             return ELEMENTARY_TYPES[type_name]
 
         if type_name == tuple:
-            raise UnknownTypeException(f"non-parameterized argument")
+            raise UnknownTypeException("non-parameterized argument")
 
         raise UnknownTypeException(f"unable to parse type: {type_name}")
 

@@ -5,7 +5,7 @@
 #
 # and then commit this file and requirements-dev.txt.
 
-flake8 ~= 6.1
+flake8 ~= 7.0
 pytest ~= 7.4
 wheel ~= 0.41
 coverage ~= 7.3

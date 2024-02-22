@@ -97,7 +97,6 @@ __all__ = [
 ]
 
 
-@versioned
 def choose_branching_factor(
     size_guess: int
 ) -> int:
@@ -132,7 +131,6 @@ def choose_branching_factor(
     return output
 
 
-@versioned
 def make_b_ary_tree(
     input_domain: Domain,
     input_metric: Metric,
@@ -204,7 +202,6 @@ def then_b_ary_tree(
 
 
 
-@versioned
 def make_bounded_float_checked_sum(
     size_limit: int,
     bounds: Tuple[Any, Any],
@@ -273,7 +270,6 @@ def make_bounded_float_checked_sum(
     return output
 
 
-@versioned
 def make_bounded_float_ordered_sum(
     size_limit: int,
     bounds: Tuple[Any, Any],
@@ -343,7 +339,6 @@ def make_bounded_float_ordered_sum(
     return output
 
 
-@versioned
 def make_bounded_int_monotonic_sum(
     bounds: Tuple[Any, Any],
     T: Optional[RuntimeTypeDescriptor] = None
@@ -393,7 +388,6 @@ def make_bounded_int_monotonic_sum(
     return output
 
 
-@versioned
 def make_bounded_int_ordered_sum(
     bounds: Tuple[Any, Any],
     T: Optional[RuntimeTypeDescriptor] = None
@@ -443,7 +437,6 @@ def make_bounded_int_ordered_sum(
     return output
 
 
-@versioned
 def make_bounded_int_split_sum(
     bounds: Tuple[Any, Any],
     T: Optional[RuntimeTypeDescriptor] = None
@@ -493,7 +486,6 @@ def make_bounded_int_split_sum(
     return output
 
 
-@versioned
 def make_cast(
     input_domain: Domain,
     input_metric: Metric,
@@ -561,7 +553,6 @@ def then_cast(
 
 
 
-@versioned
 def make_cast_default(
     input_domain: Domain,
     input_metric: Metric,
@@ -637,7 +628,6 @@ def then_cast_default(
 
 
 
-@versioned
 def make_cast_inherent(
     input_domain: Domain,
     input_metric: Metric,
@@ -707,7 +697,6 @@ def then_cast_inherent(
 
 
 
-@versioned
 def make_cdf(
     TA: RuntimeTypeDescriptor = "float"
 ) -> Function:
@@ -745,7 +734,6 @@ def make_cdf(
     return output
 
 
-@versioned
 def make_clamp(
     input_domain: Domain,
     input_metric: Metric,
@@ -817,7 +805,6 @@ def then_clamp(
 
 
 
-@versioned
 def make_consistent_b_ary_tree(
     branching_factor: int,
     TIA: RuntimeTypeDescriptor = "int",
@@ -875,7 +862,6 @@ def make_consistent_b_ary_tree(
     return output
 
 
-@versioned
 def make_count(
     input_domain: Domain,
     input_metric: Metric,
@@ -948,7 +934,6 @@ def then_count(
 
 
 
-@versioned
 def make_count_by(
     input_domain: Domain,
     input_metric: Metric,
@@ -1028,7 +1013,6 @@ def then_count_by(
 
 
 
-@versioned
 def make_count_by_categories(
     input_domain: Domain,
     input_metric: Metric,
@@ -1126,7 +1110,6 @@ def then_count_by_categories(
 
 
 
-@versioned
 def make_count_distinct(
     input_domain: Domain,
     input_metric: Metric,
@@ -1195,7 +1178,6 @@ def then_count_distinct(
 
 
 
-@versioned
 def make_create_dataframe(
     col_names: Any,
     K: Optional[RuntimeTypeDescriptor] = None
@@ -1239,7 +1221,6 @@ def make_create_dataframe(
     return output
 
 
-@versioned
 def make_df_cast_default(
     input_domain: Domain,
     input_metric: Metric,
@@ -1332,7 +1313,6 @@ def then_df_cast_default(
 
 
 
-@versioned
 def make_df_is_equal(
     input_domain: Domain,
     input_metric: Metric,
@@ -1415,7 +1395,6 @@ def then_df_is_equal(
 
 
 
-@versioned
 def make_drop_null(
     input_domain: Domain,
     input_metric: Metric
@@ -1478,7 +1457,6 @@ def then_drop_null(
 
 
 
-@versioned
 def make_find(
     input_domain: Domain,
     input_metric: Metric,
@@ -1547,7 +1525,6 @@ def then_find(
 
 
 
-@versioned
 def make_find_bin(
     input_domain: Domain,
     input_metric: Metric,
@@ -1620,7 +1597,6 @@ def then_find_bin(
 
 
 
-@versioned
 def make_identity(
     domain: Domain,
     metric: Metric
@@ -1682,7 +1658,6 @@ def then_identity(
 
 
 
-@versioned
 def make_impute_constant(
     input_domain: Domain,
     input_metric: Metric,
@@ -1753,7 +1728,6 @@ def then_impute_constant(
 
 
 
-@versioned
 def make_impute_uniform_float(
     input_domain: Domain,
     input_metric: Metric,
@@ -1818,7 +1792,6 @@ def then_impute_uniform_float(
 
 
 
-@versioned
 def make_index(
     input_domain: Domain,
     input_metric: Metric,
@@ -1899,7 +1872,6 @@ def then_index(
 
 
 
-@versioned
 def make_is_equal(
     input_domain: Domain,
     input_metric: Metric,
@@ -1969,7 +1941,6 @@ def then_is_equal(
 
 
 
-@versioned
 def make_is_null(
     input_domain: Domain,
     input_metric: Metric
@@ -2026,7 +1997,6 @@ def then_is_null(
 
 
 
-@versioned
 def make_lipschitz_float_mul(
     constant,
     bounds: Tuple[Any, Any],
@@ -2083,7 +2053,6 @@ def make_lipschitz_float_mul(
     return output
 
 
-@versioned
 def make_mean(
     input_domain: Domain,
     input_metric: Metric
@@ -2143,7 +2112,6 @@ def then_mean(
 
 
 
-@versioned
 def make_metric_bounded(
     input_domain: Domain,
     input_metric: Metric
@@ -2209,7 +2177,6 @@ def then_metric_bounded(
 
 
 
-@versioned
 def make_metric_unbounded(
     input_domain: Domain,
     input_metric: Metric
@@ -2272,7 +2239,6 @@ def then_metric_unbounded(
 
 
 
-@versioned
 def make_ordered_random(
     input_domain: Domain,
     input_metric: Metric
@@ -2335,7 +2301,6 @@ def then_ordered_random(
 
 
 
-@versioned
 def make_quantile_score_candidates(
     input_domain: Domain,
     input_metric: Metric,
@@ -2412,7 +2377,6 @@ def then_quantile_score_candidates(
 
 
 
-@versioned
 def make_quantiles_from_counts(
     bin_edges: Any,
     alphas: Any,
@@ -2467,7 +2431,6 @@ def make_quantiles_from_counts(
     return output
 
 
-@versioned
 def make_resize(
     input_domain: Domain,
     input_metric: Metric,
@@ -2550,7 +2513,6 @@ def then_resize(
 
 
 
-@versioned
 def make_select_column(
     key: Any,
     TOA: RuntimeTypeDescriptor,
@@ -2599,7 +2561,6 @@ def make_select_column(
     return output
 
 
-@versioned
 def make_sized_bounded_float_checked_sum(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2667,7 +2628,6 @@ def make_sized_bounded_float_checked_sum(
     return output
 
 
-@versioned
 def make_sized_bounded_float_ordered_sum(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2737,7 +2697,6 @@ def make_sized_bounded_float_ordered_sum(
     return output
 
 
-@versioned
 def make_sized_bounded_int_checked_sum(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2791,7 +2750,6 @@ def make_sized_bounded_int_checked_sum(
     return output
 
 
-@versioned
 def make_sized_bounded_int_monotonic_sum(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2845,7 +2803,6 @@ def make_sized_bounded_int_monotonic_sum(
     return output
 
 
-@versioned
 def make_sized_bounded_int_ordered_sum(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2901,7 +2858,6 @@ def make_sized_bounded_int_ordered_sum(
     return output
 
 
-@versioned
 def make_sized_bounded_int_split_sum(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2957,7 +2913,6 @@ def make_sized_bounded_int_split_sum(
     return output
 
 
-@versioned
 def make_split_dataframe(
     separator: str,
     col_names: Any,
@@ -3006,7 +2961,6 @@ def make_split_dataframe(
     return output
 
 
-@versioned
 def make_split_lines(
 
 ) -> Transformation:
@@ -3041,7 +2995,6 @@ def make_split_lines(
     return output
 
 
-@versioned
 def make_split_records(
     separator: str
 ) -> Transformation:
@@ -3079,7 +3032,6 @@ def make_split_records(
     return output
 
 
-@versioned
 def make_subset_by(
     indicator_column: Any,
     keep_columns: Any,
@@ -3127,7 +3079,6 @@ def make_subset_by(
     return output
 
 
-@versioned
 def make_sum(
     input_domain: Domain,
     input_metric: Metric
@@ -3192,7 +3143,6 @@ def then_sum(
 
 
 
-@versioned
 def make_sum_of_squared_deviations(
     input_domain: Domain,
     input_metric: Metric,
@@ -3278,7 +3228,6 @@ def then_sum_of_squared_deviations(
 
 
 
-@versioned
 def make_unordered(
     input_domain: Domain,
     input_metric: Metric
@@ -3341,7 +3290,6 @@ def then_unordered(
 
 
 
-@versioned
 def make_user_transformation(
     input_domain: Domain,
     input_metric: Metric,
@@ -3388,7 +3336,6 @@ def make_user_transformation(
     return output
 
 
-@versioned
 def make_variance(
     input_domain: Domain,
     input_metric: Metric,

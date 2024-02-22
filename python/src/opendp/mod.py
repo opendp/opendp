@@ -8,7 +8,7 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 '''
 from __future__ import annotations
 import ctypes
-from typing import Any, Literal, Type, TypeVar, Union, Tuple, Callable, Optional, overload, TYPE_CHECKING
+from typing import Any, Literal, Type, TypeVar, Union, Tuple, Callable, Optional, overload, TYPE_CHECKING, cast
 
 from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
 
@@ -397,7 +397,6 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     def __str__(self) -> str:
         return f"Transformation(\n    input_domain   = {self.input_domain},\n    output_domain  = {self.output_domain},\n    input_metric   = {self.input_metric},\n    output_metric  = {self.output_metric}\n)"
 
-from typing import cast
 Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
 
 class Queryable(object):
@@ -645,7 +644,7 @@ class OpenDPException(Exception):
     
     def frames(self): # pragma: no cover
         def format_frame(frame):
-            return "\n  ".join(l.strip() for l in frame.split("\n"))
+            return "\n  ".join(line.strip() for line in frame.split("\n"))
         return [format_frame(f) for f in self.raw_frames() if f.startswith("opendp") or f.startswith("<opendp")]
 
     def __str__(self) -> str: # pragma: no cover
@@ -950,8 +949,8 @@ def binary_search(
 
 
 def exponential_bounds_search(
-    predicate: Callable[[Union[float, int]], bool], 
-    T: Optional[Union[Type[float], Type[int]]]) -> Optional[Union[Tuple[float, float], Tuple[int, int]]]:
+        predicate: Callable[[Union[float, int]], bool], 
+        T: Optional[Union[Type[float], Type[int]]]) -> Optional[Union[Tuple[float, float], Tuple[int, int]]]:
     """Determine bounds for a binary search via an exponential search,
     in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
     Will attempt to recover once if `predicate` throws an exception, 
@@ -970,7 +969,7 @@ def exponential_bounds_search(
         def check_type(v):
             try:
                 predicate(v)
-            except TypeError as e:
+            except TypeError:
                 return False
             except OpenDPException as e:
                 if "No match for concrete type" in (e.message or ""):
