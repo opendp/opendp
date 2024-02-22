@@ -14,13 +14,17 @@ You can explicitly set the types via type arguments in the constructor.
 Each constructor has its own set of permissible types, based on the type of computation it is performing.
 For instance, the atom domain constructor accepts a type argument `T`:
 
-.. doctest::
+.. tabs::
 
-    >>> from opendp.domains import atom_domain
-    >>> from opendp.typing import *
-    ...
-    >>> str(atom_domain((0, 1), T=i32))
-    'AtomDomain(bounds=[0, 1], T=i32)'
+  .. group-tab:: Python
+
+    .. doctest::
+
+        >>> from opendp.domains import atom_domain
+        >>> from opendp.typing import *
+        ...
+        >>> str(atom_domain((0, 1), T=i32))
+        'AtomDomain(bounds=[0, 1], T=i32)'
 
 Many of the API docs indicate that parameters like `TIA` or `D` are type arguments.
 When you want to describe the type of a domain, metric, measure, or other elements, you can do so via a type descriptor.

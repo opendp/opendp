@@ -191,40 +191,52 @@ These operations work with `usize` data types: an integer data type representing
 :func:`opendp.transformations.make_find` finds the index of each input datum in a set of categories.
 In other words, it transforms a categorical data vector to a vector of numeric indices.
 
-.. doctest::
+.. tabs::
 
-    >>> import opendp.prelude as dp
-    >>> dp.enable_features('contrib')
-    >>> finder = (
-    ...     # define the input space
-    ...     (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()) >>
-    ...     # find the index of each input datum in the categories list
-    ...     dp.t.then_find(categories=["A", "B", "C"]) >>
-    ...     # impute any input datum that are not a part of the categories list as 3
-    ...     dp.t.then_impute_constant(3)
-    ... )
-    >>> finder(["A", "B", "C", "A", "D"])
-    [0, 1, 2, 0, 3]
+  .. group-tab:: Python
+
+    .. doctest::
+
+        >>> import opendp.prelude as dp
+        >>> dp.enable_features('contrib')
+        >>> finder = (
+        ...     # define the input space
+        ...     (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()) >>
+        ...     # find the index of each input datum in the categories list
+        ...     dp.t.then_find(categories=["A", "B", "C"]) >>
+        ...     # impute any input datum that are not a part of the categories list as 3
+        ...     dp.t.then_impute_constant(3)
+        ... )
+        >>> finder(["A", "B", "C", "A", "D"])
+        [0, 1, 2, 0, 3]
 
 :func:`opendp.transformations.make_find_bin` is a binning operation that transforms numerical input data to a vector of bin indices.
 
-.. doctest::
+.. tabs::
 
-    >>> binner = dp.t.make_find_bin(
-    ...     dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance(),
-    ...     edges=[1., 2., 10.])
-    >>> binner([0., 1., 3., 15.])
-    [0, 1, 2, 3]
+  .. group-tab:: Python
+
+    .. doctest::
+
+        >>> binner = dp.t.make_find_bin(
+        ...     dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance(),
+        ...     edges=[1., 2., 10.])
+        >>> binner([0., 1., 3., 15.])
+        [0, 1, 2, 3]
 
 :func:`opendp.transformations.make_index` uses each indicial input datum as an index into a category set.
 
-.. doctest::
+.. tabs::
 
-    >>> indexer = dp.t.make_index(
-    ...     dp.vector_domain(dp.atom_domain(T=dp.usize)), dp.symmetric_distance(),
-    ...     categories=["A", "B", "C"], null="D")
-    >>> indexer([0, 1, 2, 3, 2342])
-    ['A', 'B', 'C', 'D', 'D']
+  .. group-tab:: Python
+
+    .. doctest::
+
+        >>> indexer = dp.t.make_index(
+        ...     dp.vector_domain(dp.atom_domain(T=dp.usize)), dp.symmetric_distance(),
+        ...     categories=["A", "B", "C"], null="D")
+        >>> indexer([0, 1, 2, 3, 2342])
+        ['A', 'B', 'C', 'D', 'D']
 
 You can use combinations of the indicial transformers to map hashable data to integers, bin numeric types, relabel hashable types, and label bins.
 
@@ -553,46 +565,54 @@ Use :func:`opendp.transformations.make_user_transformation` to construct your ow
 
 In this example, we mock the typical API of the OpenDP library to make a transformation that duplicates each record `multiplicity` times:
 
-.. doctest::
+.. tabs::
 
-    >>> import opendp.prelude as dp
-    >>> from typing import List
-    ...
-    >>> def make_repeat(multiplicity):
-    ...     """Constructs a Transformation that duplicates each record `multiplicity` times"""
-    ...     def function(arg: List[int]) -> List[int]:
-    ...         return arg * multiplicity
-    ... 
-    ...     def stability_map(d_in: int) -> int:
-    ...         # if a user could influence at most `d_in` records before, 
-    ...         # they can now influence `d_in` * `multiplicity` records
-    ...         return d_in * multiplicity
-    ...
-    ...     return dp.t.make_user_transformation(
-    ...         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
-    ...         input_metric=dp.symmetric_distance(),
-    ...         output_domain=dp.vector_domain(dp.atom_domain(T=int)),
-    ...         output_metric=dp.symmetric_distance(),
-    ...         function=function,
-    ...         stability_map=stability_map,
-    ...     )
+  .. group-tab:: Python
+
+    .. doctest::
+
+        >>> import opendp.prelude as dp
+        >>> from typing import List
+        ...
+        >>> def make_repeat(multiplicity):
+        ...     """Constructs a Transformation that duplicates each record `multiplicity` times"""
+        ...     def function(arg: List[int]) -> List[int]:
+        ...         return arg * multiplicity
+        ... 
+        ...     def stability_map(d_in: int) -> int:
+        ...         # if a user could influence at most `d_in` records before, 
+        ...         # they can now influence `d_in` * `multiplicity` records
+        ...         return d_in * multiplicity
+        ...
+        ...     return dp.t.make_user_transformation(
+        ...         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+        ...         input_metric=dp.symmetric_distance(),
+        ...         output_domain=dp.vector_domain(dp.atom_domain(T=int)),
+        ...         output_metric=dp.symmetric_distance(),
+        ...         function=function,
+        ...         stability_map=stability_map,
+        ...     )
     
 The resulting Transformation may be used interchangeably with those constructed via the library:
 
-.. doctest::
+.. tabs::
 
-    >>> trans = (
-    ...     (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance())
-    ...     >> dp.t.then_cast_default(TOA=int)
-    ...     >> make_repeat(2)  # our custom transformation
-    ...     >> dp.t.then_clamp((1, 2))
-    ...     >> dp.t.then_sum()
-    ...     >> dp.m.then_base_discrete_laplace(1.0)
-    ... )
-    ...
-    >>> release = trans(["0", "1", "2", "3"])
-    >>> trans.map(1) # computes epsilon
-    4.0
+  .. group-tab:: Python
+
+    .. doctest::
+
+        >>> trans = (
+        ...     (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance())
+        ...     >> dp.t.then_cast_default(TOA=int)
+        ...     >> make_repeat(2)  # our custom transformation
+        ...     >> dp.t.then_clamp((1, 2))
+        ...     >> dp.t.then_sum()
+        ...     >> dp.m.then_base_discrete_laplace(1.0)
+        ... )
+        ...
+        >>> release = trans(["0", "1", "2", "3"])
+        >>> trans.map(1) # computes epsilon
+        4.0
 
 The code snip may form a basis for you to create your own data transformations, 
 and mix them into an OpenDP analysis.

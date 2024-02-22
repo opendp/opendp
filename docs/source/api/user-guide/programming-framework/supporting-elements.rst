@@ -15,11 +15,7 @@ To use the function, the Transformation or Measurement can be called directly:
 
 .. tabs::
 
-  .. group-tab:: Python (Polars)
-
-    TODO
-
-  .. group-tab:: Python (Classic)
+  .. group-tab:: Python
 
     .. doctest::
 
@@ -33,23 +29,11 @@ To use the function, the Transformation or Measurement can be called directly:
       >>> clamp([10.0])
       [5.0]
 
-  .. group-tab:: R
-
-    TODO
-
-  .. group-tab:: Rust
-
-    TODO
-
 Or ``invoke`` can be used equivalently:
 
 .. tabs::
 
-  .. group-tab:: Python (Polars)
-
-    TODO
-
-  .. group-tab:: Python (Classic)
+  .. group-tab:: Python
 
     .. doctest::
 
@@ -58,16 +42,8 @@ Or ``invoke`` can be used equivalently:
       >>> clamp.invoke([10.0])
       [5.0]
 
-  .. group-tab:: R
-
-    TODO
-
-  .. group-tab:: Rust
-
-    TODO
-
 A mathematical function associates each value in some input set with some value in the output set (or a distribution over such values, in the case of a randomized function).
-In OpenDP, we capture these sets with domains...
+In OpenDP, as discussed in the next section, we capture these sets with domains.
 
 .. _domains:
 
@@ -80,58 +56,87 @@ A commonly-used domain is ``atom_domain(T)``, which describes the set of all pos
 The following example creates a domain consisting of all possible non-null 64-bit floats, 
 and checks that 1.0 is a member of the domain, but NaN is not.
 
-.. doctest::
+.. tabs::
 
-  >>> import opendp.prelude as dp
-  >>> f64_atom_domain = dp.atom_domain(T=float)  # float defaults to f64, a double-precision 64-bit float
-  >>> assert f64_atom_domain.member(1.0)
-  >>> assert not f64_atom_domain.member(float('nan'))
+  .. group-tab:: Python
 
-Similarly, ``atom_domain(T=u8)`` consists of all possible non-null unsigned 8-bit integers: ``{0, 1, 2, 3, ..., 127}``,
-and ``atom_domain(bounds=(-2, 2))`` consists of all possible 32-bit signed integers bounded between -2 and 2: ``{-2, -1, 0, 1, 2}``.
+    .. doctest::
 
-.. doctest::
+      >>> import opendp.prelude as dp
+      >>> f64_atom_domain = dp.atom_domain(T=float)  # float defaults to f64, a double-precision 64-bit float
+      >>> assert f64_atom_domain.member(1.0)
+      >>> assert not f64_atom_domain.member(float('nan'))
 
-  >>> i32_bounded_domain = dp.atom_domain(bounds=(-2, 2))  # int defaults to i32, a 32-bit signed integer
-  >>> assert i32_bounded_domain.member(-2)
-  >>> assert not i32_bounded_domain.member(3)
+Other domains may be described in a similar way. For example:
 
-Domains may also be used to construct higher-level domains.
-For instance, ``vector_domain(atom_domain(T=bool))`` describes the set of all boolean vectors: ``{[], [True], [False], [True, True], [True, False], ...}``.
+* ``atom_domain(T=u8)`` consists of all possible non-null unsigned 8-bit integers: ``{0, 1, 2, 3, ..., 127}``
+* ``atom_domain(bounds=(-2, 2))`` describes all possible 32-bit signed integers bounded between -2 and 2: ``{-2, -1, 0, 1, 2}``.
 
-.. doctest::
+.. tabs::
 
-  >>> bool_vector_domain = dp.vector_domain(dp.atom_domain(T=bool))
-  >>> assert bool_vector_domain.member([])
-  >>> assert bool_vector_domain.member([True, False])
+  .. group-tab:: Python
 
-``vector_domain(atom_domain(T=bool), size=2)`` describes the set of boolean vectors of size 2: ``{[True, True], [True, False], [False, True], [False, False]}``.
+    .. doctest::
 
-.. doctest::
+      >>> i32_bounded_domain = dp.atom_domain(bounds=(-2, 2))  # int defaults to i32, a 32-bit signed integer
+      >>> assert i32_bounded_domain.member(-2)
+      >>> assert not i32_bounded_domain.member(3)
 
-  >>> bool_vector_2_domain = dp.vector_domain(dp.atom_domain(T=bool), size=2)
-  >>> assert bool_vector_2_domain.member([True, True])
-  >>> assert not bool_vector_2_domain.member([True, True, True])
+In addition, domains may also be used to construct higher-level domains. For instance:
+
+* ``vector_domain(atom_domain(T=bool))`` describes the set of all boolean vectors: ``{[], [True], [False], [True, True], [True, False], ...}``.
+
+.. tabs::
+
+  .. group-tab:: Python
+
+    .. doctest::
+
+      >>> bool_vector_domain = dp.vector_domain(dp.atom_domain(T=bool))
+      >>> assert bool_vector_domain.member([])
+      >>> assert bool_vector_domain.member([True, False])
+
+In addition, a `size` parameter may be used. For example:
+
+* ``vector_domain(atom_domain(T=bool), size=2)`` describes the set of boolean vectors of size 2: ``{[True, True], [True, False], [False, True], [False, False]}``.
+
+.. tabs::
+
+  .. group-tab:: Python
+
+    .. doctest::
+
+      >>> bool_vector_2_domain = dp.vector_domain(dp.atom_domain(T=bool), size=2)
+      >>> assert bool_vector_2_domain.member([True, True])
+      >>> assert not bool_vector_2_domain.member([True, True, True])
 
 Let's look at the Transformation returned from :py:func:`make_sum() <opendp.transformations.make_sum>`.
 
-.. doctest::
+.. tabs::
 
-  >>> dp.enable_features('contrib')
-  >>> bounded_sum = dp.t.make_sum(
-  ...     input_domain=dp.vector_domain(dp.atom_domain(bounds=(0, 1))), 
-  ...     input_metric=dp.symmetric_distance(),
-  ... )
-  >>> bounded_sum.input_domain
-  VectorDomain(AtomDomain(bounds=[0, 1], T=i32))
+  .. group-tab:: Python
+
+    .. doctest::
+
+      >>> dp.enable_features('contrib')
+      >>> bounded_sum = dp.t.make_sum(
+      ...     input_domain=dp.vector_domain(dp.atom_domain(bounds=(0, 1))), 
+      ...     input_metric=dp.symmetric_distance(),
+      ... )
+      >>> bounded_sum.input_domain
+      VectorDomain(AtomDomain(bounds=[0, 1], T=i32))
 
 We see that the input domain is the same as we passed in: 
 "the set of all vectors of 32-bit signed integers bounded between 0 and 1."
 
-.. doctest::
+.. tabs::
 
-  >>> bounded_sum.output_domain
-  AtomDomain(T=i32)
+  .. group-tab:: Python
+
+    .. doctest::
+
+      >>> bounded_sum.output_domain
+      AtomDomain(T=i32)
 
 The output domain is "the set of all 32-bit signed integers."
 
@@ -216,26 +221,34 @@ Maps are a useful tool to find stability or privacy properties directly.
 
 Putting this to practice, the following example invokes the stability map on a clamp transformation.
 
-.. doctest::
+.. tabs::
 
-    >>> from opendp.transformations import make_clamp
-    >>> from opendp.domains import vector_domain, atom_domain
-    >>> from opendp.metrics import symmetric_distance
-    ...
-    >>> clamper = make_clamp(vector_domain(atom_domain(T=int)), symmetric_distance(), bounds=(1, 10))
-    ...
-    >>> # The maximum number of records that any one individual may influence in your dataset
-    >>> in_symmetric_distance = 3
-    >>> # clamp is a 1-stable transformation, so this should pass for any symmetric_distance >= 3
-    >>> clamper.map(d_in=in_symmetric_distance)
-    3
+  .. group-tab:: Python
+
+    .. doctest::
+
+        >>> from opendp.transformations import make_clamp
+        >>> from opendp.domains import vector_domain, atom_domain
+        >>> from opendp.metrics import symmetric_distance
+        ...
+        >>> clamper = make_clamp(vector_domain(atom_domain(T=int)), symmetric_distance(), bounds=(1, 10))
+        ...
+        >>> # The maximum number of records that any one individual may influence in your dataset
+        >>> in_symmetric_distance = 3
+        >>> # clamp is a 1-stable transformation, so this should pass for any symmetric_distance >= 3
+        >>> clamper.map(d_in=in_symmetric_distance)
+        3
 
 There is also a relation check predicate function that simply compares the output of the map with ``d_out`` as follows: ``d_out >= map(d_in)``.
 
-.. doctest::
+.. tabs::
 
-    >>> # reusing the prior clamp transformation
-    >>> assert clamper.check(d_in=3, d_out=3)
+  .. group-tab:: Python
+
+    .. doctest::
+
+        >>> # reusing the prior clamp transformation
+        >>> assert clamper.check(d_in=3, d_out=3)
 
 This should be sufficient to make use of the library, but a more mathematical treatment may help give a more thorough understanding.
 Consider ``d_X`` the input metric, ``d_Y`` the output metric or measure,

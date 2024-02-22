@@ -28,15 +28,19 @@ OpenDP comes with some utility functions to make these binary searches easier to
 
 This is extremely powerful!
 
-.. doctest::
+.. tabs::
 
-    >>> from opendp.measurements import *
-    >>> from opendp.transformations import *
-    >>> from opendp.domains import atom_domain, vector_domain
-    >>> from opendp.metrics import absolute_distance, symmetric_distance
-    >>> from opendp.mod import *
-    >>> from opendp.mod import enable_features
-    >>> enable_features('contrib', 'floating-point')
+  .. group-tab:: Python
+
+    .. doctest::
+
+        >>> from opendp.measurements import *
+        >>> from opendp.transformations import *
+        >>> from opendp.domains import atom_domain, vector_domain
+        >>> from opendp.metrics import absolute_distance, symmetric_distance
+        >>> from opendp.mod import *
+        >>> from opendp.mod import enable_features
+        >>> enable_features('contrib', 'floating-point')
 
 * | If you have a bound on ``d_in`` and a budget ``d_out``, you can solve for the smallest noise scale that is still differentially private.
   | This is useful when you want to determine how accurate you can make a query with a given budget.
