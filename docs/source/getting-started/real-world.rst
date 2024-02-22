@@ -221,7 +221,7 @@ This measurement involves more preprocessing than the count did (casting, clampi
 
         .. doctest::
 
-            >>> mean_query.release()
+            >>> dp_mean = mean_query.release()
 
 The OpenDP Library supports more statistics, like the variance, various ways to compute histograms and quantiles, and PCA. The library also supports other mechanisms like the Gaussian Mechanism, which provides tighter privacy accounting when releasing a large number of queries, the Thresholded Laplace Mechanism, for releasing counts on data sets with unknown key sets, and variations of randomized response.
 
@@ -369,5 +369,4 @@ Similarly, construct a mean measurement and release it:
             ...     lambda scale: t_mean >> dp.m.then_laplace(scale), d_in, d_out / 3
             ... )
 
-Evaluating ``qbl_sc(m_mean)`` will return a DP mean.
-
+            >>> dp_mean = qbl_sc(m_mean)
