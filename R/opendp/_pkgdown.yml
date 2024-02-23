@@ -85,6 +85,6 @@ reference:
   - has_concept("typing")
 
 - title: Other
-  # desc: TODO
+  desc: This should be empty if correctly configured. Please file an issue if any functions are listed here.
   contents:
   - lacks_concepts(c("accuracy", "combinators", "core", "data", "domains", "measurements", "measures", "metrics", "mod", "transformations", "typing"))
