@@ -22,3 +22,5 @@
 ^check$
 
 ^update_notes\.R$
+
+pkgdown/
