@@ -1,0 +1,115 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+
+
+\title{\texttt{fn make\_scalar\_float\_laplace\_cks20}}
+\author{Michael Shoemate}
+\begin{document}
+
+\maketitle
+
+\contrib
+
+Proves soundness of \rustdoc{measurements/fn}{make\_scalar\_float\_laplace\_cks20} in \asOfCommit{mod.rs}{f5bb719}.
+The function on the resulting measurement takes in a data set \texttt{x} (a single float), 
+and returns a sample from the Discrete Laplace Distribution centered at \texttt{x}, with a fixed noise scale.
+
+\subsection*{PR History}
+\begin{itemize}
+    \item \vettingPR{490}
+\end{itemize}
+
+\section{Hoare Triple}
+
+\subsection*{Preconditions}
+\begin{itemize}
+    \item Variable \texttt{input\_domain}, of type \texttt{AtomDomain<T>}
+    \item Variable \texttt{input\_metric}, of type \texttt{AbsoluteDistance<T>}
+    \item Variable \texttt{scale}, of type \texttt{QO}
+    \item Variable \texttt{k}, of type \texttt{Option<i32>}
+    \item Type \texttt{T} must have trait \rustdoc{traits/trait}{Float} and \rustdoc{traits/trait}{CastInternalRational}
+    \item Type \texttt{i32} must be constructable from the bit representation of \texttt{T} (used to calibrate relaxation)
+\end{itemize}
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_scalar_float_laplace_cks20.py}
+
+\subsection*{Postcondition}
+
+\validMeasurement{\texttt{(input\_domain, input\_metric, scale, k, T)}}{\\\texttt{make\_scalar\_float\_laplace\_cks20}}
+
+\section{Proof}
+
+\begin{proof} 
+\textbf{(Privacy guarantee.)} 
+    
+\begin{tcolorbox}
+    The proof assumes the following lemma.
+    \begin{lemma}
+        \texttt{get\_discretization\_consts}, \texttt{sample\_discrete\_laplace\_Z2k} and \texttt{laplace\_map} each satisfy their postcondition.
+    \end{lemma}
+\end{tcolorbox}
+
+This mechanism can be thought of as a stable transformation from a floating-point number to a rational number,
+followed by a mechanism that adds noise to the rational number.
+
+\subsection{Rounding Transformation}
+
+The transformation rounds the input to the nearest rational number where the denominator is no greater than $2^k$.
+By the postcondition of \texttt{get\_discretization\_consts}, this rounding changes the input by at most \texttt{relaxation}.
+
+\begin{align*}
+    &\max_{x \sim x'} d_{Abs}(round(x), round(x')) \\
+    =& \max_{x \sim x'} \left| round(x) - round(x') \right| \\
+    \leq& \max_{x \sim x'} \left| x - x' \right| + \texttt{relaxation} &&\text{by postcondition of \texttt{get\_discretization\_consts}} \\
+    \leq& \din + \texttt{relaxation} &&\text{by definition of absolute distance}
+\end{align*}
+
+Therefore the rounding transformation is $\din + \texttt{relaxation}$-close under the absolute distance.
+
+\subsection{Noise Measurement}
+\texttt{sample\_discrete\_laplace\_Z2k} can only fail due to lack of system entropy. 
+This is usually related to the computer's physical environment and not the dataset. 
+The rest of this proof is conditioned on the assumption that this function does not raise an exception. 
+
+Let $x$ and $x'$ be datasets that are \texttt{d\_in}-close with respect to \texttt{input\_metric}.
+Here, the metric is \texttt{AbsoluteDistance<T>}.
+By the postcondition of \texttt{sample\_discrete\_laplace\_Z2k},
+the output of the function follows the Discrete Laplace Distribution with scale \texttt{scale}.
+
+\begin{align*}
+    & \max_{x \sim x'} D_{\infty}(M(x), M(x'))  \\
+    =& \max_{x \sim x'} \max_{z \in supp(M(\cdot))} \ln\left(\frac{\Pr\left[M(x) = z\right]}{\Pr\left[M(x') = z \right]}\right)
+        &&\text{substitute } D_{\infty}\\
+    =& \max_{x \sim x'} \max_{z \in \mathbb{Z}} \ln\left(\frac{\Pr\left[\mathrm{DLap}(x, b) = z \right]}{\Pr\left[\mathrm{DLap}(x', b) = z\right]}\right)
+        &&\text{where } b \text{ is the noise scale} \\
+    =& \max_{x \sim x'} \max_{z \in \mathbb{Z}} \ln\left(\frac{
+    \frac{\exp^{1/b} - 1}{\exp^{1/b} + 1} \exp \left( -\frac{|x - z|}{b} \right)
+    }{
+        \frac{\exp^{1/b} - 1}{\exp^{1/b} + 1} \exp \left( -\frac{|x' - z|}{b} \right)
+    }\right) 
+        &&\text{use pdf of Discrete Laplace} \\
+    =& \max_{x \sim x'} \max_{z \in \mathbb{Z}} \ln\left(\frac{
+    \exp \left( -\frac{|x - z|}{b} \right)
+    }{
+        \exp \left( -\frac{|x' - z|}{b} \right)
+    }\right) \\
+    =& \max_{x \sim x'} \max_{z \in \mathbb{Z}}\frac{|x' - z| - |x - z|}{b}&& \text{exp and ln cancel} \\
+    \leq& \frac{\max_{x \sim x'} |x - x'|}{b} &&\text{by reverse triangle inequality} \\
+    =& \frac{d_{in}}{b}  &&\text{by definition of absolute distance}
+\end{align*}
+
+Therefore it has been shown that for every pair of elements $x, x' \in \texttt{input\_domain}$ and every $d_{L1}(x, x') \le \din$ with $\din \ge 0$, 
+if $x, x'$ are $\din$-close then $\function(x),\function(x')$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_measure}$ (the Max-Divergence).
+
+\subsection{Chained Measurement}
+The chained map provides a guarantee that the output distributions are at most $\frac{d_{in} + \texttt{relaxation}}{b}$-close under the max-divergence.
+This is consistent with the postcondition of \texttt{laplace\_map}.
+
+Therefore it has been shown that for every pair of elements $x, x' \in \texttt{input\_domain}$ and every $d_{Abs}(x, x') \le \din$ with $\din \ge 0$, 
+if $x, x'$ are $\din$-close then $\function(x), \function(x')$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_measure}$ (the Max-Divergence).
+
+\end{proof}
+
+\end{document}
