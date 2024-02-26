@@ -44,11 +44,7 @@ $f/2$ refers to the probability of
 	\begin{align}
 		P[Y=y~|~X=x^*] &=%
 			\prod\limits_{i=1}^m \left(\frac{1}{2}f\right)^{1-y_i}\left(1-\frac{1}{2}f\right)^{y_i}%
-			\times \prod\limits_{i=m+1}^k\left(\frac{1}{2}f\right)^{y_i} \left(1-\frac{1}{2}f\right)^{1-y_i}\\
-	&= \left(\frac{1}{2}f\right)^{\sum_{i=1}^m 1-y_i}%
-		\times \left(1-\frac{1}{2}f\right)^{\sum_{i=1}^m y_i}%
-		\times \left(\frac{1}{2}f\right)^{\sum_{i=m+1}^k y_i}%
-		\times \left(\frac{1}{2}f\right)^{\sum_{i=m+1}^k 1-y_i}
+			\times \prod\limits_{i=m+1}^k\left(\frac{1}{2}f\right)^{y_i} \left(1-\frac{1}{2}f\right)^{1-y_i}
 	\end{align}
 	Then let $D$ be the ratio of two such conditional probabilities with distinct values $x_1$ and $x_2$, and let $S$ be the range of \rustdoc{measurements/fn}{make\_rappor}.
 	\begin{align}
@@ -93,6 +89,9 @@ $f/2$ refers to the probability of
 		\varepsilon = 2m\log\left(\frac{2-f}{f}\right)
 	\end{equation}
 \end{proof}
+
+\section{Performance}
+
 
 \bibliography{references.bib}
 \end{document}
