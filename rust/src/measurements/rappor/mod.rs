@@ -27,7 +27,7 @@ pub fn make_rappor(
         return fallible!(MakeMeasurement, "RAPPOR requires a known number of categories")
     }
 
-    if !(0.0..=1.0).contains(&f) {
+    if f <= 0.0 || f > 1.0 {
         return fallible!(MakeMeasurement, "f must be in (0, 1]")
     }
 
