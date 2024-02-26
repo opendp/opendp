@@ -1,13 +1,13 @@
 //! Traits for sampling from probability distributions.
 
+#[cfg(test)]
+pub(crate) mod test;
+
 mod bernoulli;
 pub use bernoulli::*;
 
 mod cks20;
 pub use cks20::*;
-
-mod discretize;
-pub use discretize::*;
 
 mod geometric;
 pub use geometric::*;
@@ -108,6 +108,3 @@ impl<T> Shuffle for Vec<T> {
         rng.error
     }
 }
-
-#[cfg(test)]
-mod test;

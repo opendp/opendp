@@ -49,15 +49,13 @@ fn test_make_count_by() -> Fallible<()> {
     let arg = vec![
         true, true, true, false, true, false, false, false, true, true,
     ];
-    let transformation = make_count_by::<L2Distance<f64>, bool, i8>(
-        VectorDomain::new(AtomDomain::default()),
-        SymmetricDistance,
-    )?;
+    let transformation =
+        make_count_by::<bool, i8>(VectorDomain::new(AtomDomain::default()), SymmetricDistance)?;
     let ret = transformation.invoke(&arg)?;
     let mut expected = HashMap::new();
     expected.insert(true, 6);
     expected.insert(false, 4);
     assert_eq!(ret, expected);
-    assert!(transformation.check(&6, &6.)?);
+    assert_eq!(transformation.map(&6)?, (6, 6, 6));
     Ok(())
 }
