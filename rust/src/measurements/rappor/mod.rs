@@ -62,10 +62,10 @@ pub fn make_rappor(
 
 pub fn debias_basic_rappor(answers: Vec<Vec<bool>>, f: f64) -> Fallible<Vec<f64>> {
     if answers.len() == 0 {
-        return fallible!(FailedFunction, "No answers provided.");
+        return fallible!(FailedFunction, "No answers provided");
     }
-    if !(0.0..=1.0).contains(&f) {
-        return fallible!(FailedFunction, "f must be in (0, 1].")
+    if f <= 0.0 || f > 1.0 {
+        return fallible!(FailedFunction, "f must be in (0, 1]")
     }
     
     let n = answers.len() as f64;
@@ -73,7 +73,7 @@ pub fn debias_basic_rappor(answers: Vec<Vec<bool>>, f: f64) -> Fallible<Vec<f64>
     let mut counts = vec![0.0; k];
 
     if answers.iter().any(|a| a.len() != k) {
-        return fallible!(FailedFunction, "Answers have inconsistent lengths.");
+        return fallible!(FailedFunction, "Answers have inconsistent lengths");
     }
 
     answers.into_iter().for_each(|answer| {
