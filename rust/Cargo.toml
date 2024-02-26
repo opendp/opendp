@@ -78,8 +78,8 @@ bindings = ["ffi", "derive"]
 partials = ["derive", "opendp_derive/partials"]
 
 [dev-dependencies]
-criterion = "0.4"
 cargo-tarpaulin = "0.27.3"
+criterion = "0.4"
 
 [lib]
 crate-type = ["rlib", "cdylib", "staticlib"]
