@@ -243,7 +243,11 @@ fn generate_doc_block(
 
 /// generate a documentation block for a then_* partial constructor, with the function description, args, and return
 /// in Roxygen format: https://mpn.metworx.com/packages/roxygen2/7.1.1/articles/rd-formatting.html
-fn generate_then_doc_block(module_name: &str, func: &Function, hierarchy: &HashMap<String, Vec<String>>) -> String {
+fn generate_then_doc_block(
+    module_name: &str,
+    func: &Function,
+    hierarchy: &HashMap<String, Vec<String>>,
+) -> String {
     let title = generate_constructor_title(&func.name);
     let offset = if func.supports_partial { 2 } else { 0 };
 
