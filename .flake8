@@ -49,12 +49,6 @@ extend-ignore =
 per-file-ignores =
     # Use globs here so it works whether it's run from root or from python/.
 
-    # TODO: Bare 'except' should be fixed, but we'll typically want to be more strict,
-    # and there could be unintended consequences, so approach this carefully.
-    # E722: do not use bare 'except'
-    */_convert.py:E722
-    */test_typing.py:E722
-
     # Pseudocode necessarily has a lot of undefined names. No fixes needed!
     # F821: undefined name '...'
     # TODO: Move cdp_epsilon.py to a pseudocode directory? 
