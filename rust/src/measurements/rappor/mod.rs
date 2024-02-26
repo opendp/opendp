@@ -8,11 +8,12 @@ use crate::traits::{InfSub, InfDiv, InfLn, InfMul, samplers::SampleBernoulli};
 
 /// Make a Measurement that implements Basic RAPPOR
 /// 
+/// # Citations
+/// * [RAPPOR: Randomized Aggregatable Privacy-Preserving Ordinal Response](https://arxiv.org/abs/1407.6981)
+///
 /// # Arguments
 /// * `f` - Per-bit flipping probability. Must be in $(0, 1]$.
 /// * `m` - number of ones set in each boolean vector (1 if one-hot encoding, more if using a bloom filter)
-///
-/// See paper for more details: https://arxiv.org/abs/1407.6981
 ///
 /// eps = ln((2-f)/f) 2
 pub fn make_rappor(
@@ -23,11 +24,11 @@ pub fn make_rappor(
     constant_time: bool
 ) -> Fallible<Measurement<VectorDomain<AtomDomain<bool>>, Vec<bool>, DiscreteDistance, MaxDivergence<f64>>> {
     if input_domain.size.is_none() {
-        return fallible!(MakeMeasurement, "RAPPOR requires a known number of categories.")
+        return fallible!(MakeMeasurement, "RAPPOR requires a known number of categories")
     }
 
     if !(0.0..=1.0).contains(&f) {
-        return fallible!(MakeMeasurement, "f must be in (0, 1].")
+        return fallible!(MakeMeasurement, "f must be in (0, 1]")
     }
 
     let epsilon = (2.0f64).inf_sub(&f)?.inf_div(&f)?.inf_ln()?.inf_mul(&2.0)?.inf_mul(&f64::from(m))?;
@@ -86,7 +87,6 @@ pub fn debias_basic_rappor(answers: Vec<Vec<bool>>, f: f64) -> Fallible<Vec<f64>
     Ok(counts.into_iter().map(|y_i| {
         (y_i - ((f / 2.0) * n)) / (1.0 - f)
     }).collect())
-    
 }
 
 
