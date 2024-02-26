@@ -292,7 +292,7 @@ pass_through <- function(x) x
 get_carrier_type <- function(value) rt_parse(value("carrier_type"))
 get_distance_type <- function(value) rt_parse(value("distance_type"))
 get_type <- function(value) rt_parse(value("type"))
-get_value_type <- function(value) rt_parse(value("type"))$args[[2]]
+get_value_type <- function(type) rt_parse(type)$args[[2]]
 
 #' type signature for an 8-bit signed integer
 #'

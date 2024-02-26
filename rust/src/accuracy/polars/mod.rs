@@ -82,7 +82,7 @@ struct UtilitySummary {
 /// # Arguments
 /// * `lazyframe` - computation from which you want to read noise scale parameters from
 /// * `alpha` - optional statistical significance to use to compute accuracy estimates
-pub fn summarize_lazyframe(lazyframe: &LazyFrame, alpha: Option<f64>) -> Fallible<DataFrame> {
+fn summarize_lazyframe(lazyframe: &LazyFrame, alpha: Option<f64>) -> Fallible<DataFrame> {
     let mut utility = summarize_logical_plan(&lazyframe.logical_plan, alpha, None)?;
 
     // only include the accuracy column if alpha is passed

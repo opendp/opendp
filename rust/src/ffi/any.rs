@@ -725,7 +725,7 @@ mod tests {
         let t5 = transformations::then_sum::<SymmetricDistance, f64>().into_any();
         let m1 = measurements::make_laplace(
             AtomDomain::<f64>::default(),
-            AbsoluteDistance::default(),
+            AbsoluteDistance::<f64>::default(),
             0.0,
             None,
         )?

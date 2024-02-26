@@ -10,8 +10,13 @@ use opendp_derive::bootstrap;
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, MapDomain, VectorDomain};
 use crate::error::*;
-use crate::metrics::{AbsoluteDistance, LpDistance, SymmetricDistance};
-use crate::traits::{CollectionSize, Hashable, Number, Primitive};
+use crate::metrics::{
+    AbsoluteDistance, L1Distance, LpDistance, PartitionDistance, SymmetricDistance,
+};
+use crate::traits::{CollectionSize, Hashable, InfCast, Integer, Number, Primitive};
+
+#[cfg(test)]
+mod test;
 
 #[bootstrap(features("contrib"), generics(TIA(suppress), TO(default = "int")))]
 /// Make a Transformation that computes a count of the number of records in data.
@@ -196,23 +201,7 @@ where
     )
 }
 
-#[doc(hidden)]
-pub trait CountByConstant<QO> {
-    fn get_stability_constant() -> Fallible<QO>;
-}
-impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
-    fn get_stability_constant() -> Fallible<Q> {
-        if P == 0 {
-            return fallible!(MakeTransformation, "P must be positive");
-        }
-        Ok(Q::one())
-    }
-}
-
-#[bootstrap(
-    features("contrib"),
-    generics(MO(hint = "SensitivityMetric"), TK(suppress), TV(default = "int"))
-)]
+#[bootstrap(features("contrib"), generics(TK(suppress), TV(default = "int")))]
 /// Make a Transformation that computes the count of each unique value in data.
 /// This assumes that the category set is unknown.
 ///
@@ -220,13 +209,12 @@ impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
 /// * [BV17 Differential Privacy on Finite Computers](https://arxiv.org/abs/1709.05396)
 ///
 /// # Generics
-/// * `MO` - Output Metric.
 /// * `TK` - Type of Key. Categorical/hashable input data type. Input data must be `Vec<TK>`.
 /// * `TV` - Type of Value. Express counts in terms of this integral type.
 ///
 /// # Returns
 /// The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
-pub fn make_count_by<MO, TK, TV>(
+pub fn make_count_by<TK: Hashable, TV: Integer>(
     input_domain: VectorDomain<AtomDomain<TK>>,
     input_metric: SymmetricDistance,
 ) -> Fallible<
@@ -234,17 +222,9 @@ pub fn make_count_by<MO, TK, TV>(
         VectorDomain<AtomDomain<TK>>,
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
         SymmetricDistance,
-        MO,
+        PartitionDistance<AbsoluteDistance<TV>>,
     >,
->
-where
-    MO: CountByConstant<MO::Distance> + Metric,
-    MO::Distance: Number,
-    TK: Hashable,
-    TV: Number,
-    (VectorDomain<AtomDomain<TK>>, SymmetricDistance): MetricSpace,
-    (MapDomain<AtomDomain<TK>, AtomDomain<TV>>, MO): MetricSpace,
-{
+> {
     Transformation::new(
         input_domain.clone(),
         MapDomain::new(input_domain.element_domain, AtomDomain::default()),
@@ -257,10 +237,25 @@ where
             counts
         }),
         input_metric,
-        MO::default(),
-        StabilityMap::new_from_constant(MO::get_stability_constant()?),
+        PartitionDistance::default(),
+        StabilityMap::new_fallible(move |d_in| {
+            Ok((*d_in, TV::inf_cast(*d_in)?, TV::inf_cast(*d_in)?))
+        }),
     )
 }
 
-#[cfg(test)]
-mod test;
+pub trait CountByMetric: Metric {
+    fn stability_map(d_in: u32) -> Fallible<Self::Distance>;
+}
+
+impl<Q: InfCast<u32>> CountByMetric for L1Distance<Q> {
+    fn stability_map(d_in: u32) -> Fallible<Self::Distance> {
+        Q::inf_cast(d_in)
+    }
+}
+
+impl<Q: InfCast<u32>> CountByMetric for PartitionDistance<AbsoluteDistance<Q>> {
+    fn stability_map(d_in: u32) -> Fallible<Self::Distance> {
+        Ok((d_in, Q::inf_cast(d_in)?, Q::inf_cast(d_in)?))
+    }
+}

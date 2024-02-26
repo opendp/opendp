@@ -7,7 +7,7 @@ use polars::{
         Field, Float32Type, Float64Type, Int16Type, Int32Type, Int64Type, Int8Type, PolarsDataType,
         StaticArray, UInt32Type, UInt64Type,
     },
-    error::{polars_bail, polars_err, PolarsResult},
+    error::{polars_bail, PolarsResult},
     series::Series,
 };
 use polars_arrow::{
@@ -20,8 +20,10 @@ use polars_plan::{
 };
 
 #[cfg(feature = "ffi")]
-use pyo3_polars::derive::polars_expr;
+use polars::error::polars_err;
 #[cfg(feature = "ffi")]
+use pyo3_polars::derive::polars_expr;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{polars::OpenDPPlugin, traits::RoundCast};
