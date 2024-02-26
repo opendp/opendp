@@ -268,9 +268,9 @@ def test_count_distinct():
 
 def test_count_by():
     input_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
-    query = input_space >> dp.t.then_count_by(MO=dp.L1Distance[float], TV=float)
+    query = input_space >> dp.t.then_count_by()
     assert query(STR_DATA) == {str(i + 1): 1 for i in range(9)}
-    assert query.check(1, 2.)
+    assert query.map(1) == (1, 1, 1)
 
 
 def test_count_by_categories():

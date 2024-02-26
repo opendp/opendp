@@ -6,7 +6,7 @@ use crate::core::{Function, Measurement, MetricSpace, StabilityMap, Transformati
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::make_private_expr;
-use crate::metrics::{GroupBounds, Multi, PartitionDistance};
+use crate::metrics::{GroupBounds, L0PI, L01I, Multi};
 use crate::transformations::StableDslPlan;
 use crate::transformations::traits::UnboundedMetric;
 use make_private_expr::PrivateExpr;
@@ -34,7 +34,7 @@ where
     MI: 'static + UnboundedMetric,
     MI::EventMetric: UnboundedMetric,
     MO: 'static + BasicCompositionMeasure,
-    Expr: PrivateExpr<PartitionDistance<MI::EventMetric>, MO>,
+    Expr: PrivateExpr<L01I<MI::EventMetric>, MO>,
     DslPlan: StableDslPlan<Multi<MI>, Multi<MI::EventMetric>>,
     (DslPlanDomain, Multi<MI>): MetricSpace,
     (DslPlanDomain, Multi<MI::EventMetric>): MetricSpace,
@@ -73,7 +73,7 @@ where
         expr_domain.clone(),
         Function::new(Clone::clone),
         middle_metric.clone(),
-        PartitionDistance(middle_metric.0.clone()),
+        L0PI(middle_metric.0.clone()),
         // the output distance triple consists of three numbers:
         // l0: number of changed partitions. Only one partition exists in select
         // l1: total number of contributions across all partitions
@@ -93,7 +93,7 @@ where
         .map(|expr| {
             make_private_expr(
                 expr_domain.clone(),
-                PartitionDistance(middle_metric.0.clone()),
+                L0PI(middle_metric.0.clone()),
                 output_measure.clone(),
                 expr.clone(),
                 global_scale,

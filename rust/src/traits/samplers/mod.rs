@@ -6,9 +6,6 @@ pub use bernoulli::*;
 mod cks20;
 pub use cks20::*;
 
-mod discretize;
-pub use discretize::*;
-
 mod geometric;
 pub use geometric::*;
 
