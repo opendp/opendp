@@ -1,0 +1,61 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn make\_gaussian}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/distribution/gaussian/fn}{make\_gaussian} in \asOfCommit{mod.rs}{f5bb719}.
+
+Perturbative noise mechanisms may be parameterized along many different axes:
+\begin{itemize}
+    \item domain: scalar or vector
+    \item domain dtype: i8, i16, i32, i64, u8, u16, u32, u64, f32, f64, UBig, IBig, RBig
+    \item metric: absolute distance, l1 distance, modular distance
+    \item metric dtype: i8, i16, i32, i64, u8, u16, u32, u64, f32, f64, UBig, IBig, RBig
+    \item measure: max divergence, zero concentrated divergence
+    \item distribution: laplace, gaussian
+\end{itemize}
+
+All parameterizations reduce to a single core mechanism that perturbs
+a vector of signed big integers with noise sampled from the appropriate discrete distribution.
+
+The implementation of this function constructs a random variable denoting the noise distribution to add, 
+and then dispatches to the \rustdoc{measurements/noise/trait}{MakeNoise}\texttt{<DI, MI, MO>} trait
+which constructs the core mechanism and wraps it in pre-processing transformations and post-processors to match the desired parameterization.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+\begin{itemize}
+    \item generic \texttt{DI} implements trait \rustdoc{measurements/noise/trait}{NoiseDomain}
+    \item generic \texttt{MI} implements trait \rustdoc{core/trait}{Metric}
+    \item generic \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
+    \item type \texttt{DI\_Atom\_RV2} (the random variable associated with the atom data type) implements trait \rustdoc{measurements/noise/trait}{MakeNoise}\texttt{<DI, MI, MO>}
+        This trait bound constrains the choice of input domain, input metric and output measure to those that can form valid measurements.
+    \item type \texttt{(DI, MI)} implements trait \rustdoc{core/trait}{MetricSpace}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_gaussian.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validMeasurement{(\texttt{input\_domain, input\_metric, scale, k, DI, MI, MO})}{\texttt{make\_gaussian}}
+\end{theorem}
+
+\begin{proof}
+    We first construct a random variable \rustdoc{measurements/noise/distribution/gaussian/struct}{DiscreteGaussian} representing the desired noise distribution.
+    Since \rustdoc{measurements/noise/trait}{MakeNoise}\texttt{.make\_noise} has no preconditions,
+    the postcondition follows, which matches the postcondition for this function.
+\end{proof}
+
+\end{document}

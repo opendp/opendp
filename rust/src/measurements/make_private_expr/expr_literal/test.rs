@@ -4,7 +4,7 @@ use polars_plan::dsl::lit;
 use crate::{
     measurements::{PrivateExpr, make_private_lazyframe},
     measures::MaxDivergence,
-    metrics::{FrameDistance, PartitionDistance, SymmetricDistance},
+    metrics::{FrameDistance, L0PI, SymmetricDistance},
     transformations::test_helper::get_test_data,
 };
 
@@ -15,12 +15,7 @@ fn test_make_expr_private_lit() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
     let expr_domain = lf_domain.select();
 
-    let m_lit = lit(1).make_private(
-        expr_domain,
-        PartitionDistance(SymmetricDistance),
-        MaxDivergence,
-        None,
-    )?;
+    let m_lit = lit(1).make_private(expr_domain, L0PI(SymmetricDistance), MaxDivergence, None)?;
 
     let actual = m_lit.invoke(&lf.logical_plan)?;
     assert_eq!(actual.expr, lit(1));

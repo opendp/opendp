@@ -45,7 +45,7 @@ This is extremely powerful!
 
     >>> input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     >>> dp.binary_search_param(lambda s: dp.m.make_gaussian(*input_space, scale=s), d_in=1., d_out=1.)
-    0.7071067811865477
+    0.7071067811865476
   
 * | If you have a bound on ``d_in`` and a noise scale, you can solve for the tightest budget ``d_out`` that is still differentially private.
   | This is useful when you want to find the smallest budget that will satisfy a target accuracy.

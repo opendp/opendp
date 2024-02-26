@@ -211,9 +211,7 @@ test_that("test_vector_discrete_gaussian", {
 
 test_that("test_laplace_threshold", {
   input_space <- c(vector_domain(atom_domain(.T = String)), symmetric_distance())
-  meas <- input_space |>
-    then_count_by(.MO = "L1Distance<f64>", .TV = f64) |>
-    then_laplace_threshold(scale = 2., threshold = 28.)
+  meas <- input_space |> then_count_by() |> then_laplace_threshold(scale = 2., threshold = 28L)
 
   meas(arg = c(rep("CAT_A", each = 20), rep("CAT_B", each = 10)))
 
