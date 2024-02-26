@@ -1047,6 +1047,10 @@ then_laplace <- function(
 #' * Input Metric:   `DiscreteDistance`
 #' * Output Measure: `MaxDivergence<QO>`
 #'
+#' **Proof Definition:**
+#'
+#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/randomized_response/make_randomized_response.pdf)
+#'
 #' @concept measurements
 #' @param categories Set of valid outcomes
 #' @param prob Probability of returning the correct answer. Must be in `[1/num_categories, 1)`

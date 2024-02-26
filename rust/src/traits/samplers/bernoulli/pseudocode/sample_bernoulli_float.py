@@ -13,9 +13,9 @@ def sample_bernoulli_float(prob: T, constant_time: bool) -> bool:
     buffer_len = max_coin_flips.inf_div(8)  # |\label{line:bufferlen}|
 
     # repeatedly flip fair coin and identify 0-based index of first heads
-    first_heads_index = sample_geometric_buffer(
+    first_heads_index = sample_geometric_buffer(  # |\label{line:sampling}|
         buffer_len, constant_time
-    )  # |\label{line:sampling}|
+    )
 
     # if no events occurred, return early
     if first_heads_index is None:  # |\label{line:noones}|
