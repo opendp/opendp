@@ -530,14 +530,3 @@ pub(crate) fn find_min_covering<T: Hash + Eq>(
     }
     Some(covered)
 }
-
-/// # Proof Definition
-/// Return the minimum of `a` and `b` if both are `Some`,
-/// or the `Some` value if only one is `Some`.
-pub(crate) fn option_min<T: Ord>(a: Option<T>, b: Option<T>) -> Option<T> {
-    match (a, b) {
-        (Some(a), Some(b)) => Some(a.min(b)),
-        (Some(x), _) | (_, Some(x)) => Some(x),
-        _ => None,
-    }
-}

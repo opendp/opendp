@@ -1,0 +1,96 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{MakeNoise<DI, MI, MO> for DiscreteLaplace}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{MakeNoise} 
+for \texttt{DiscreteLaplace} in \asOfCommit{mod.rs}{f5bb719}.
+
+This is an intermediary compile-time layer whose purpose is 
+to dispatch to either the integer or floating-point variations of the mechanism,
+depending on the type of data in the input domain.
+
+It does this through the use of the \rustdoc{measurements/noise/nature/trait}{Nature} trait,
+which has concrete implementations for each possible input type.
+This layer makes interior layers simpler to work with, and does not have privacy implications.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+\texttt{MakeNoise} is parameterized as follows:
+\begin{itemize}
+    \item \texttt{DI} is of type \texttt{VectorDomain<AtomDomain<T>>}
+    \item \texttt{MI} is of type \texttt{L1Distance<T>}
+    \item \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
+\end{itemize}
+
+The following trait bounds are also required:
+\begin{itemize}
+    \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{Integer}
+    \item Generic \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
+    \item Type \texttt{usize} implements trait \rustdoc{traits/trait}{ExactIntCast}\texttt{<T>}
+    \item Type \texttt{RBig} implements trait \texttt{TryFrom<T>}
+    \item Type \texttt{ZExpFamily<1>} implements trait \rustdoc{measurements/trait}{NoisePrivacyMap}\texttt{<L1Distance<RBig>, MO>}.
+        This bound requires that it must be possible to construct a privacy map for the combination of \texttt{ZExpFamily<1>} noise distribution, distance type and privacy measure.
+        Since the \texttt{ConstantTimeGeometric} distribution is equivalent to \texttt{ZExpFamily<1>},
+        maps built for \texttt{ZExpFamily<1>} can be used for \texttt{ConstantTimeGeometric}.
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/MakeNoise_VectorDomain_for_ConstantTimeGeometric.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validMeasurement{(\texttt{self, input\_space, T, MO})}{\texttt{make\_noise}}
+\end{theorem}
+
+\begin{proof}[Data-independent errors]
+    Due to the check on line \ref{line:check-bounds},
+    the preconditions for \rustdoc{traits/samplers/geometric/fn}{sample\_discrete\_laplace\_linear} are satisfied.
+    Therefore the postcondition guarantees data-independent errors.
+    Since this is the only source of errors in the function, errors from the function are data-independent.
+\end{proof}
+
+\begin{proof}[Privacy guarantee]
+    The privacy guarantee breaks down into three parts:
+    \begin{enumerate}
+        \item A 1-stable clamping pre-processor.
+        \item The noise perturbation mechanism.
+        \item A post-processing clamp.
+    \end{enumerate}
+
+    Clamping the inputs is necessary because, to make constant-time sampling tractable,
+    samples are only drawn up to the magnitude of the distance between the bounds.
+    In the extreme case, consider when a adjacent inputs are located at \texttt{L + U} and \texttt{L + U - 1} without input clamping:
+    then outputting \texttt{U - 1} is a distinguishing event.
+
+    This motivates the need for a clamping transformation.
+    \begin{align}
+        &\max_{x \sim x'} |\texttt{clamp}(x, L, U) - \texttt{clamp}(x', L, U)|_1 \\ 
+        &\leq \max_{x \sim x'} |x - x'|_1 \\
+        &= \texttt{d\_in}
+    \end{align}
+    The clamping transformation can only make datasets more similar,
+    so the clamp is a 1-stable transformation.
+
+    Similarly the perturbed value also needs to be clamped:
+    consider adjacent inputs at \texttt{L} and \texttt{L + 1},
+    then outputting \texttt{L - (U - L)} is a distinguishing event, 
+    due to the limited range of the noise distribution.
+
+    Notice that the output distribution is equivalent to sampling from the discrete laplace distribution with infinite support,
+    and then clamping as post-processing.
+    Therefore the privacy guarantee from \rustdoc{measurements/trait}{NoisePrivacyMap}\texttt{<L1Distance<RBig>, MO>} applies.
+\end{proof}
+
+\end{document}

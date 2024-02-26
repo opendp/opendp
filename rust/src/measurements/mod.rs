@@ -3,25 +3,10 @@
 //! The different [`crate::core::Measurement`] implementations in this module are accessed by calling the appropriate constructor function.
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Measurement` does.
 
-#[cfg(all(feature = "contrib"))]
-mod gaussian;
-#[cfg(all(feature = "contrib"))]
-pub use gaussian::*;
-
-#[cfg(feature = "contrib")]
-mod geometric;
-#[cfg(feature = "contrib")]
-pub use geometric::*;
-
 #[cfg(feature = "contrib")]
 mod gumbel_max;
 #[cfg(feature = "contrib")]
 pub use gumbel_max::*;
-
-#[cfg(feature = "contrib")]
-mod laplace;
-#[cfg(feature = "contrib")]
-pub use laplace::*;
 
 #[cfg(all(feature = "contrib", feature = "polars"))]
 mod make_private_expr;
@@ -43,10 +28,15 @@ mod private_quantile;
 #[cfg(feature = "contrib")]
 pub use private_quantile::*;
 
-#[cfg(all(feature = "floating-point", feature = "contrib"))]
-mod laplace_threshold;
-#[cfg(all(feature = "floating-point", feature = "contrib"))]
-pub use laplace_threshold::*;
+#[cfg(feature = "contrib")]
+mod noise;
+#[cfg(feature = "contrib")]
+pub use noise::*;
+
+#[cfg(feature = "contrib")]
+mod noise_threshold;
+#[cfg(feature = "contrib")]
+pub use noise_threshold::*;
 
 #[cfg(feature = "contrib")]
 mod randomized_response;

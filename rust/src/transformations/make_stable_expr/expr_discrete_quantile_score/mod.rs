@@ -1,6 +1,6 @@
 use crate::core::{StabilityMap, Transformation};
 use crate::domains::{Context, ExprDomain, Invariant, Margin, WildExprDomain};
-use crate::metrics::{LInfDistance, Parallel, PartitionDistance};
+use crate::metrics::{L0I, L01I, LInfDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::traits::{InfCast, Number};
 use crate::transformations::traits::UnboundedMetric;
@@ -32,14 +32,12 @@ pub mod test;
 /// * `expr` - The expression to which the Laplace noise will be added
 pub fn make_expr_discrete_quantile_score<MI>(
     input_domain: WildExprDomain,
-    input_metric: PartitionDistance<MI>,
+    input_metric: L01I<MI>,
     expr: Expr,
-) -> Fallible<
-    Transformation<WildExprDomain, ExprDomain, PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
->
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, L01I<MI>, L0I<LInfDistance<f64>>>>
 where
     MI: 'static + UnboundedMetric,
-    Expr: StableExpr<PartitionDistance<MI>, PartitionDistance<MI>>,
+    Expr: StableExpr<L01I<MI>, L01I<MI>>,
 {
     let Some((input, alpha, candidates)) = match_discrete_quantile_score(&expr)? else {
         return fallible!(
@@ -126,7 +124,7 @@ where
     };
 
     t_prior
-        >> Transformation::<_, _, PartitionDistance<MI>, Parallel<LInfDistance<_>>>::new(
+        >> Transformation::<_, _, L01I<MI>, L0I<LInfDistance<_>>>::new(
             middle_domain,
             output_domain,
             Function::then_expr(move |input_expr| {
@@ -142,7 +140,7 @@ where
             })
             .fill_with(fill_value),
             middle_metric,
-            Parallel(LInfDistance::new(false)),
+            L0I(LInfDistance::new(false)),
             StabilityMap::new_fallible(move |(l0, _, li)| {
                 let out_li = f64::inf_cast(score_candidates_map(
                     alpha_num,

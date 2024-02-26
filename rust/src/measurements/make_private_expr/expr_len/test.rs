@@ -5,7 +5,7 @@ use crate::{
     error::ErrorVariant,
     measurements::PrivateExpr,
     measures::MaxDivergence,
-    metrics::{PartitionDistance, SymmetricDistance},
+    metrics::{L0PI, SymmetricDistance},
     transformations::test_helper::get_test_data,
 };
 
@@ -15,12 +15,7 @@ fn test_make_count_expr_grouped() -> Fallible<()> {
     // This will succeed because there is a margin for "chunk_2_bool" that indicates that partition lengths are public.
     let expr_domain = lf_domain.aggregate(["chunk_2_bool"]);
 
-    let m_lap = len().make_private(
-        expr_domain,
-        PartitionDistance(SymmetricDistance),
-        MaxDivergence,
-        None,
-    )?;
+    let m_lap = len().make_private(expr_domain, L0PI(SymmetricDistance), MaxDivergence, None)?;
 
     let dp_expr = m_lap.invoke(&lf.logical_plan)?.expr;
 
@@ -45,12 +40,7 @@ fn test_make_count_expr_no_length() -> Fallible<()> {
     let expr_domain = lf_domain.aggregate(["cycle_5_alpha"]);
 
     let variant = len()
-        .make_private(
-            expr_domain,
-            PartitionDistance(SymmetricDistance),
-            MaxDivergence,
-            None,
-        )
+        .make_private(expr_domain, L0PI(SymmetricDistance), MaxDivergence, None)
         .map(|_| ())
         .unwrap_err()
         .variant;

@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use dashu::{
-    base::Approximation,
+    base::{Approximation, Sign},
     float::{
         FBig,
         round::{
@@ -679,6 +679,31 @@ impl<R: Round> InfCast<FBig<R>> for f64 {
         Ok(v.with_rounding::<Down>().to_f64_rounded())
     }
 }
+
+macro_rules! impl_InfCast_dashu {
+    ($($TI:ty),+; $TO:ty, $to:ident) => {
+        $(impl InfCast<$TI> for $TO {
+            fn inf_cast(v: $TI) -> Fallible<Self> {
+                use Approximation::*;
+                Ok(match v.$to() {
+                    Exact(v) | Inexact(v, Sign::Positive) => v,
+                    Inexact(v, _) => v.next_up_(),
+                })
+            }
+
+            fn neg_inf_cast(v: $TI) -> Fallible<Self> {
+                use Approximation::*;
+                Ok(match v.$to() {
+                    Exact(v) | Inexact(v, Sign::Negative) => v,
+                    Inexact(v, _) => v.next_down_(),
+                })
+            }
+        })+
+    }
+}
+
+impl_InfCast_dashu!(RBig, UBig, IBig; f64, to_f64);
+impl_InfCast_dashu!(RBig, UBig, IBig; f32, to_f32);
 
 macro_rules! impl_saturating_cast_ubig_int {
     ($($T:ty)+) => {$(

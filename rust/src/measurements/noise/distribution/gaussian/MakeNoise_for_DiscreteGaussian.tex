@@ -1,0 +1,67 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{MakeNoise<DI, MI, MO> for DiscreteGaussian}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{MakeNoise} 
+for \texttt{DiscreteGaussian} in \asOfCommit{mod.rs}{f5bb719}.
+
+This is an intermediary compile-time layer whose purpose is 
+to dispatch to either the integer or floating-point variations of the mechanism,
+depending on the type of data in the input domain.
+
+It does this through the use of the \rustdoc{measurements/noise/nature/trait}{Nature} trait,
+which has concrete implementations for each possible input type.
+This layer makes interior layers simpler to work with, and does not have privacy implications.
+It also makes \texttt{make\_gaussian} easier to call,
+by simplifying the type signature.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+\texttt{MakeNoise} is parameterized as follows:
+\begin{itemize}
+    \item \texttt{DI} implements trait \rustdoc{core/trait}{Domain}
+    \item \texttt{MI} implements trait \rustdoc{core/trait}{Metric}
+    \item \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
+\end{itemize}
+
+The following trait bounds are also required:
+\begin{itemize}
+    \item \texttt{(DI, MI)} implements trait \texttt{MetricSpace}
+    \item \texttt{DI\_Atom} implements trait \rustdoc{measurements/noise/nature/trait}{Nature}.
+        This trait encodes the relationship between the atomic data type 
+        and the type of the noise distribution that is compatible with it: \texttt{DI\_Atom\_RV2}.
+        In Rust, this corresponds to the (ugly) \texttt{<DI::Atom as Nature>::RV<2>} type.
+    \item \texttt{DI\_Atom\_RV2} implements trait \rustdoc{measurements/noise/trait}{MakeNoise}.
+        That is, it must be possible to build the mechanism from this new equivalent distribution.
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/MakeNoise_for_DiscreteGaussian.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validMeasurement{(\texttt{self, input\_space, DI, MI, MO})}{\texttt{make\_noise}}
+\end{theorem}
+
+\begin{proof}
+    On line \ref{line:make-noise}, \texttt{make\_noise} has no preconditions, 
+    so irregardless of any prior logic,
+    the postcondition of \texttt{make\_noise} follows that the output is a valid measurement.
+\end{proof}
+
+The complexity in the type system here is designed to be free of privacy implications,
+to help simplify the core, privacy-sensitive implementation.
+
+\end{document}

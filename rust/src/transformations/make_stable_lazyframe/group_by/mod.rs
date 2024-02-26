@@ -1,12 +1,10 @@
 use std::collections::HashSet;
 
 use crate::core::{Function, StabilityMap, Transformation};
-use crate::domains::{
-    Context, DslPlanDomain, FrameDomain, SeriesDomain, WildExprDomain, option_min,
-};
+use crate::domains::{Context, DslPlanDomain, FrameDomain, SeriesDomain, WildExprDomain};
 use crate::error::*;
-use crate::metrics::{Bound, Bounds, FrameDistance, PartitionDistance};
-use crate::traits::InfMul;
+use crate::metrics::{Bound, Bounds, FrameDistance, L0PI, L01I};
+use crate::traits::{InfMul, option_min};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use polars::chunked_array::cast::CastOptions;
@@ -71,11 +69,8 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
     // each expression must be stable row by row
     keys.iter().try_for_each(|key| {
         key.clone()
-            .make_stable(
-                expr_domain.clone(),
-                PartitionDistance(middle_metric.0.clone()),
-            )
-            .map(|_: Transformation<_, _, _, PartitionDistance<M>>| ())
+            .make_stable(expr_domain.clone(), L0PI(middle_metric.0.clone()))
+            .map(|_: Transformation<_, _, _, L01I<M>>| ())
     })?;
 
     // check that aggregations are infallible. Aggregations are allowed to resize data

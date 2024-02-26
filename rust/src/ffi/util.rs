@@ -19,7 +19,7 @@ use crate::measures::{
 };
 use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
-    L1Distance, L2Distance, PartitionDistance, SymmetricDistance,
+    L1Distance, L01I, L2Distance, L02I, SymmetricDistance,
 };
 
 #[cfg(feature = "polars")]
@@ -365,8 +365,18 @@ lazy_static! {
 
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],
-            type_vec![PartitionDistance, <SymmetricDistance, InsertDeleteDistance>],
+            type_vec![L01I, <SymmetricDistance, InsertDeleteDistance>],
             type_vec![DiscreteDistance],
+            type_vec![L01I, <
+                AbsoluteDistance<u8>, AbsoluteDistance<u16>, AbsoluteDistance<u32>, AbsoluteDistance<u64>, AbsoluteDistance<u128>,
+                AbsoluteDistance<i8>, AbsoluteDistance<i16>, AbsoluteDistance<i32>, AbsoluteDistance<i64>, AbsoluteDistance<i128>,
+                AbsoluteDistance<f32>, AbsoluteDistance<f64>
+            >],
+            type_vec![L02I, <
+                AbsoluteDistance<u8>, AbsoluteDistance<u16>, AbsoluteDistance<u32>, AbsoluteDistance<u64>, AbsoluteDistance<u128>,
+                AbsoluteDistance<i8>, AbsoluteDistance<i16>, AbsoluteDistance<i32>, AbsoluteDistance<i64>, AbsoluteDistance<i128>,
+                AbsoluteDistance<f32>, AbsoluteDistance<f64>
+            >],
             type_vec![AbsoluteDistance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L1Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L2Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],

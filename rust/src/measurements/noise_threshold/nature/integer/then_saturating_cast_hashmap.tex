@@ -1,0 +1,42 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn then\_saturating\_cast\_hashmap}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise_threshold/nature/integer/fn}{then\_saturating\_cast\_hashmap} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+
+\begin{itemize}
+    \item Generic \texttt{TK} implements trait \rustdoc{traits/trait}{Hashable}
+    \item Generic \texttt{TV} implements trait \rustdoc{traits/trait}{SaturatingCast}\texttt{<IBig>}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/then_saturating_cast_hashmap.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validPostprocessor{(\texttt{TK, TV})}{\texttt{then\_saturating\_cast\_hashmap}}
+\end{theorem}
+
+\begin{proof}
+    Since \texttt{T.saturating\_cast} is infallible, the function is infallible,
+    meaning that the function cannot raise data-dependent errors.
+    Therefore the function is a valid postprocessor.
+\end{proof}
+
+
+\end{document}
