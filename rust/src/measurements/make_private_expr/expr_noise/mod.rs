@@ -1,38 +1,37 @@
 use crate::core::{Measure, MetricSpace, PrivacyMap};
-use crate::domains::{ExprDomain, ExprPlan, OuterMetric, WildExprDomain};
-use crate::measurements::{gaussian_zcdp_map, get_discretization_consts, laplace_puredp_map};
-use crate::measures::ZeroConcentratedDivergence;
-use crate::metrics::{L1Distance, L2Distance, PartitionDistance};
-use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
-use crate::traits::samplers::{
-    sample_discrete_gaussian, sample_discrete_gaussian_Z2k, sample_discrete_laplace,
-    sample_discrete_laplace_Z2k,
+use crate::domains::{
+    AtomDomain, ExprDomain, ExprPlan, NumericDataType, OuterMetric, VectorDomain, WildExprDomain,
 };
-use crate::traits::{CastInternalRational, ExactIntCast, Float, FloatBits, InfCast, InfMul};
+use crate::measurements::{
+    DiscreteGaussian, DiscreteLaplace, MakeNoise, make_gaussian, make_laplace,
+};
+use crate::measures::ZeroConcentratedDivergence;
+use crate::metrics::{L1Distance, L01I, L2Distance};
+use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
+use crate::traits::{InfMul, Number};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use crate::{
     core::{Function, Measurement},
     error::Fallible,
     measures::MaxDivergence,
-    traits::SaturatingCast,
 };
-use dashu::{integer::IBig, rational::RBig};
-use polars::prelude::{Column, CompatLevel, IntoColumn};
+use dashu::rational::RBig;
+use polars::prelude::{Column, IntoColumn, PolarsNumericType};
+
+use polars_arrow::array::PrimitiveArray;
 use serde::de::value::Error;
 
 use polars::chunked_array::ChunkedArray;
-use polars::datatypes::{
-    ArrayFromIter, DataType, Field, Float32Type, Float64Type, Int8Type, Int16Type, Int32Type,
-    Int64Type, PolarsDataType, UInt32Type, UInt64Type,
-};
+use polars::datatypes::{ArrayFromIter, DataType, Field, PolarsDataType};
 use polars::error::PolarsResult;
-use polars::error::{polars_bail, polars_err};
+use polars::error::polars_bail;
 use polars::lazy::dsl::Expr;
 use polars::series::{IntoSeries, Series};
+#[cfg(feature = "ffi")]
+use polars::{datatypes::CompatLevel, error::polars_err};
 use polars_plan::dsl::{ColumnsUdf, GetOutput};
 use polars_plan::prelude::{ApplyOptions, FunctionOptions};
-use pyo3_polars::derive::polars_expr;
 use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 
@@ -128,21 +127,58 @@ pub enum Support {
 pub trait NoiseExprMeasure: 'static + Measure<Distance = f64> {
     type Metric: 'static + OuterMetric<Distance = f64>;
     const DISTRIBUTION: Distribution;
-    fn map_function(scale: f64) -> impl Fn(&f64) -> Fallible<f64> + 'static + Send + Sync;
+    type Dist;
+    fn map_function<T: Number>(
+        input_metric: &Self::Metric,
+        scale: f64,
+    ) -> Fallible<PrivacyMap<Self::Metric, Self>>
+    where
+        Self::Dist: MakeNoise<VectorDomain<AtomDomain<T>>, Self::Metric, Self>,
+        (VectorDomain<AtomDomain<T>>, Self::Metric): MetricSpace;
 }
+
 impl NoiseExprMeasure for MaxDivergence {
     type Metric = L1Distance<f64>;
     const DISTRIBUTION: Distribution = Distribution::Laplace;
-
-    fn map_function(scale: f64) -> impl Fn(&f64) -> Fallible<f64> {
-        laplace_puredp_map(scale, 0.)
+    type Dist = DiscreteLaplace;
+    fn map_function<T: Number>(
+        input_metric: &Self::Metric,
+        scale: f64,
+    ) -> Fallible<PrivacyMap<Self::Metric, Self>>
+    where
+        Self::Dist: MakeNoise<VectorDomain<AtomDomain<T>>, Self::Metric, Self>,
+        (VectorDomain<AtomDomain<T>>, Self::Metric): MetricSpace,
+    {
+        Ok(make_laplace(
+            VectorDomain::new(AtomDomain::<T>::new_non_nan()),
+            input_metric.clone(),
+            scale,
+            None,
+        )?
+        .privacy_map
+        .clone())
     }
 }
 impl NoiseExprMeasure for ZeroConcentratedDivergence {
     type Metric = L2Distance<f64>;
     const DISTRIBUTION: Distribution = Distribution::Gaussian;
-    fn map_function(scale: f64) -> impl Fn(&f64) -> Fallible<f64> {
-        gaussian_zcdp_map(scale, 0.)
+    type Dist = DiscreteGaussian;
+    fn map_function<T: Number>(
+        input_metric: &Self::Metric,
+        scale: f64,
+    ) -> Fallible<PrivacyMap<Self::Metric, Self>>
+    where
+        Self::Dist: MakeNoise<VectorDomain<AtomDomain<T>>, Self::Metric, Self>,
+        (VectorDomain<AtomDomain<T>>, Self::Metric): MetricSpace,
+    {
+        Ok(make_gaussian(
+            VectorDomain::new(AtomDomain::<T>::new_non_nan()),
+            input_metric.clone(),
+            scale,
+            None,
+        )?
+        .privacy_map
+        .clone())
     }
 }
 
@@ -155,13 +191,30 @@ impl NoiseExprMeasure for ZeroConcentratedDivergence {
 /// * `global_scale` - (Re)scale the noise parameter for the noise distribution
 pub fn make_expr_noise<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
     input_domain: WildExprDomain,
-    input_metric: PartitionDistance<MI>,
+    input_metric: L01I<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, PartitionDistance<MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, L01I<MI>, MO>>
 where
-    Expr: StableExpr<PartitionDistance<MI>, MO::Metric>,
+    Expr: StableExpr<L01I<MI>, MO::Metric>,
     (ExprDomain, MO::Metric): MetricSpace,
+    // This is ugly, but necessary because MO is generic
+    MO::Dist: MakeNoise<VectorDomain<AtomDomain<u32>>, MO::Metric, MO>
+        + MakeNoise<VectorDomain<AtomDomain<u64>>, MO::Metric, MO>
+        + MakeNoise<VectorDomain<AtomDomain<i8>>, MO::Metric, MO>
+        + MakeNoise<VectorDomain<AtomDomain<i16>>, MO::Metric, MO>
+        + MakeNoise<VectorDomain<AtomDomain<i32>>, MO::Metric, MO>
+        + MakeNoise<VectorDomain<AtomDomain<i64>>, MO::Metric, MO>
+        + MakeNoise<VectorDomain<AtomDomain<f32>>, MO::Metric, MO>
+        + MakeNoise<VectorDomain<AtomDomain<f64>>, MO::Metric, MO>,
+    (VectorDomain<AtomDomain<u32>>, MO::Metric): MetricSpace,
+    (VectorDomain<AtomDomain<u64>>, MO::Metric): MetricSpace,
+    (VectorDomain<AtomDomain<i8>>, MO::Metric): MetricSpace,
+    (VectorDomain<AtomDomain<i16>>, MO::Metric): MetricSpace,
+    (VectorDomain<AtomDomain<i32>>, MO::Metric): MetricSpace,
+    (VectorDomain<AtomDomain<i64>>, MO::Metric): MetricSpace,
+    (VectorDomain<AtomDomain<f32>>, MO::Metric): MetricSpace,
+    (VectorDomain<AtomDomain<f64>>, MO::Metric): MetricSpace,
 {
     let Some((input, distribution, scale)) = match_noise_shim(&expr)? else {
         return fallible!(MakeMeasurement, "Expected noise function");
@@ -206,7 +259,7 @@ where
         }
     };
 
-    let support = match &middle_domain.column.dtype() {
+    let support = match middle_domain.column.dtype() {
         dt if dt.is_integer() => Support::Integer,
         dt if dt.is_float() => Support::Float,
         dt => {
@@ -217,6 +270,25 @@ where
             );
         }
     };
+
+    use DataType::*;
+    let privacy_map = match middle_domain.column.dtype() {
+        UInt32 => MO::map_function::<u32>(&middle_metric, scale),
+        UInt64 => MO::map_function::<u64>(&middle_metric, scale),
+        Int8 => MO::map_function::<i8>(&middle_metric, scale),
+        Int16 => MO::map_function::<i16>(&middle_metric, scale),
+        Int32 => MO::map_function::<i32>(&middle_metric, scale),
+        Int64 => MO::map_function::<i64>(&middle_metric, scale),
+        Float32 => MO::map_function::<f32>(&middle_metric, scale),
+        Float64 => MO::map_function::<f64>(&middle_metric, scale),
+        dtype => {
+            return fallible!(
+                MakeMeasurement,
+                "Expected numeric data type, found {}",
+                dtype
+            );
+        }
+    }?;
 
     let m_noise = Measurement::<_, _, MO::Metric, _>::new(
         middle_domain,
@@ -233,7 +305,7 @@ where
         }),
         middle_metric,
         MO::default(),
-        PrivacyMap::new_fallible(MO::map_function(scale)),
+        privacy_map,
     )?;
 
     t_prior >> m_noise
@@ -289,90 +361,16 @@ fn noise_udf(inputs: &[Column], kwargs: NoisePlugin) -> PolarsResult<Column> {
         ..
     } = kwargs;
 
-    if scale.is_sign_negative() {
-        polars_bail!(InvalidOperation: "scale ({}) must be non-negative", scale);
-    }
-
-    let Ok(scale) = RBig::try_from(scale) else {
-        polars_bail!(InvalidOperation: "scale ({}) must be representable as a fraction", scale)
-    };
-
-    // PT stands for Polars Type
-    fn noise_impl_integer<PT: 'static + PolarsDataType>(
-        series: &Series,
-        scale: RBig,
-        distribution: Distribution,
-    ) -> PolarsResult<Series>
-    where
-        // the physical (rust) dtype must be able to be converted into a big integer (on the input side)
-        for<'a> IBig: From<PT::Physical<'a>>,
-        // a big integer must be able to be converted into the physical (rust) dtype (on the output side)
-        for<'a> PT::Physical<'a>: SaturatingCast<IBig>,
-        // must be able to construct the chunked array corresponding to the physical dtype from an iterator
-        for<'a> PT::Array:
-            ArrayFromIter<PT::Physical<'a>> + ArrayFromIter<Option<PT::Physical<'a>>>,
-        // must be able to convert the chunked array to a series
-        ChunkedArray<PT>: IntoSeries,
-    {
-        Ok(series
-            // unpack the series into a chunked array
-            .unpack::<PT>()?
-            // apply noise to the non-null values
-            .try_apply_nonnull_values_generic(|v| {
-                let v = IBig::from(v);
-                match distribution {
-                    Distribution::Laplace => sample_discrete_laplace(scale.clone()),
-                    Distribution::Gaussian => sample_discrete_gaussian(scale.clone()),
-                }
-                .map(|noise| PT::Physical::saturating_cast(v + noise))
-            })?
-            // convert the resulting chunked array back to a series
-            .into_series())
-    }
-
-    // PT stands for Polars Type
-    fn noise_impl_float<PT: 'static + PolarsDataType>(
-        series: &Series,
-        scale: RBig,
-        distribution: Distribution,
-    ) -> PolarsResult<Series>
-    where
-        // the physical (rust) dtype must be a float
-        for<'a> PT::Physical<'a>: Float + InfCast<f64>,
-        // for calibration of the discretization constant k
-        for<'a> i32: ExactIntCast<<PT::Physical<'a> as FloatBits>::Bits>,
-        // must be able to construct the chunked array corresponding to the physical dtype from an iterator
-        for<'a> PT::Array:
-            ArrayFromIter<PT::Physical<'a>> + ArrayFromIter<Option<PT::Physical<'a>>>,
-        // must be able to convert the chunked array to a series
-        ChunkedArray<PT>: IntoSeries,
-    {
-        let k = get_discretization_consts::<PT::Physical<'static>>(None)?.0;
-        Ok(series
-            // unpack the series into a chunked array
-            .unpack::<PT>()?
-            // apply noise to the non-null values
-            .try_apply_nonnull_values_generic(|v| {
-                let v = v.into_rational()?;
-                PolarsResult::Ok(PT::Physical::from_rational(match distribution {
-                    Distribution::Laplace => sample_discrete_laplace_Z2k(v, scale.clone(), k),
-                    Distribution::Gaussian => sample_discrete_gaussian_Z2k(v, scale.clone(), k),
-                }?))
-            })?
-            // convert the resulting chunked array back to a series
-            .into_series())
-    }
-
     use DataType::*;
     match series.dtype() {
-        UInt32 => noise_impl_integer::<UInt32Type>(series, scale, distribution),
-        UInt64 => noise_impl_integer::<UInt64Type>(series, scale, distribution),
-        Int8 => noise_impl_integer::<Int8Type>(series, scale, distribution),
-        Int16 => noise_impl_integer::<Int16Type>(series, scale, distribution),
-        Int32 => noise_impl_integer::<Int32Type>(series, scale, distribution),
-        Int64 => noise_impl_integer::<Int64Type>(series, scale, distribution),
-        Float32 => noise_impl_float::<Float32Type>(series, scale, distribution),
-        Float64 => noise_impl_float::<Float64Type>(series, scale, distribution),
+        UInt32 => noise_impl::<u32>(series, scale, distribution),
+        UInt64 => noise_impl::<u64>(series, scale, distribution),
+        Int8 => noise_impl::<i8>(series, scale, distribution),
+        Int16 => noise_impl::<i16>(series, scale, distribution),
+        Int32 => noise_impl::<i32>(series, scale, distribution),
+        Int64 => noise_impl::<i64>(series, scale, distribution),
+        Float32 => noise_impl::<f32>(series, scale, distribution),
+        Float64 => noise_impl::<f64>(series, scale, distribution),
         UInt8 | UInt16 => {
             polars_bail!(InvalidOperation: "u8 and u16 not supported in the OpenDP Polars plugin. Please use u32 or u64.")
         }
@@ -380,8 +378,49 @@ fn noise_udf(inputs: &[Column], kwargs: NoisePlugin) -> PolarsResult<Column> {
     }.map(|s| s.into_column())
 }
 
+// PT stands for Polars Type
+fn noise_impl<T: NumericDataType>(
+    series: &Series,
+    scale: f64,
+    distribution: Distribution,
+) -> PolarsResult<Series>
+where
+    T: Number,
+    T::NumericPolars: PolarsNumericType,
+    // must be able to construct the chunked array corresponding to the physical dtype from an iterator
+    <T::NumericPolars as PolarsDataType>::Array: ArrayFromIter<T> + ArrayFromIter<Option<T>>,
+    // must be able to convert the chunked array to a series
+    ChunkedArray<T::NumericPolars>: IntoSeries,
+    DiscreteLaplace: MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<f64>, MaxDivergence>,
+    DiscreteGaussian:
+        MakeNoise<VectorDomain<AtomDomain<T>>, L2Distance<f64>, ZeroConcentratedDivergence>,
+    RBig: TryFrom<T>,
+{
+    let domain = VectorDomain::new(AtomDomain::<T>::new_non_nan());
+    let function = match distribution {
+        Distribution::Laplace => make_laplace(domain, L1Distance::default(), scale, None)?
+            .function
+            .clone(),
+        Distribution::Gaussian => make_gaussian(domain, L2Distance::default(), scale, None)?
+            .function
+            .clone(),
+    };
+    let chunk_iter = series
+        // .i32()?.to_vec_null_aware()
+        // unpack the series into a chunked array
+        .unpack::<T::NumericPolars>()?
+        .downcast_iter()
+        .map(|chunk| {
+            function
+                .eval(&chunk.values().to_vec())
+                .map(PrimitiveArray::from_vec)
+        });
+
+    Ok(ChunkedArray::try_from_chunk_iter(series.name().clone(), chunk_iter)?.into_series())
+}
+
 #[cfg(feature = "ffi")]
-#[polars_expr(output_type=Null)]
+#[pyo3_polars::derive::polars_expr(output_type=Null)]
 fn noise(_: &[Series]) -> PolarsResult<Series> {
     polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
 }
@@ -413,7 +452,7 @@ pub(crate) fn noise_plugin_type_udf(input_fields: &[Field]) -> PolarsResult<Fiel
 
 // generate the FFI plugin for the noise expression
 #[cfg(feature = "ffi")]
-#[polars_expr(output_type_func=noise_plugin_type_udf)]
+#[pyo3_polars::derive::polars_expr(output_type_func=noise_plugin_type_udf)]
 fn noise_plugin(inputs: &[Series], kwargs: NoisePlugin) -> PolarsResult<Series> {
     let inputs: Vec<Column> = inputs.iter().cloned().map(Column::Series).collect();
     let out = noise_udf(inputs.as_slice(), kwargs)?;

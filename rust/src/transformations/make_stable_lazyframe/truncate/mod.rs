@@ -1,14 +1,12 @@
 use std::collections::HashSet;
 
 use crate::core::{Function, StabilityMap, Transformation};
-use crate::domains::{
-    Context, DslPlanDomain, FrameDomain, SeriesDomain, WildExprDomain, option_min,
-};
+use crate::domains::{Context, DslPlanDomain, FrameDomain, SeriesDomain, WildExprDomain};
 use crate::error::*;
 use crate::metrics::{
-    Bound, Bounds, FrameDistance, PartitionDistance, SymmetricDistance, SymmetricIdDistance,
+    Bound, Bounds, FrameDistance, L0PI, L01I, SymmetricDistance, SymmetricIdDistance,
 };
-use crate::traits::InfMul;
+use crate::traits::{InfMul, option_min};
 use crate::transformations::make_stable_expr;
 use matching::TruncatePlan;
 use polars::prelude::*;
@@ -68,12 +66,12 @@ pub fn make_stable_truncate(
                     TruncatePlan::GroupBy { keys, aggs } => {
                         // each key expression must be stable row by row
                         keys.iter().try_for_each(|key| {
-                            make_stable_expr::<_, PartitionDistance<SymmetricIdDistance>>(
+                            make_stable_expr::<_, L01I<SymmetricIdDistance>>(
                                 WildExprDomain {
                                     columns: middle_domain.series_domains.clone(),
                                     context: Context::RowByRow,
                                 },
-                                PartitionDistance(middle_metric.0.clone()),
+                                L0PI(middle_metric.0.clone()),
                                 key.clone(),
                             )
                             .map(|_| ())

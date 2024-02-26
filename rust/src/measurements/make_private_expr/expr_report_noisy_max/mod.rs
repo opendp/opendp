@@ -1,7 +1,7 @@
 use crate::core::PrivacyMap;
 use crate::domains::{ExprPlan, WildExprDomain};
 use crate::measurements::{Optimize, report_noisy_max_gumbel_map, select_score};
-use crate::metrics::{IntDistance, LInfDistance, Parallel, PartitionDistance};
+use crate::metrics::{IntDistance, L0I, L01I, LInfDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::traits::samplers::sample_uniform_uint_below;
 use crate::traits::{InfCast, InfMul, Number};
@@ -18,8 +18,10 @@ use polars::datatypes::{
     DataType, Field, Float32Type, Float64Type, Int8Type, Int16Type, Int32Type, Int64Type,
     PolarsDataType, UInt32Type, UInt64Type,
 };
+use polars::error::polars_bail;
+#[cfg(feature = "ffi")]
+use polars::error::polars_err;
 use polars::error::{PolarsError, PolarsResult};
-use polars::error::{polars_bail, polars_err};
 use polars::lazy::dsl::Expr;
 use polars::prelude::{Column, CompatLevel, IntoColumn};
 use polars::series::{IntoSeries, Series};
@@ -27,7 +29,6 @@ use polars_arrow::array::PrimitiveArray;
 use polars_arrow::types::NativeType;
 use polars_plan::dsl::{ColumnsUdf, GetOutput};
 use polars_plan::prelude::{ApplyOptions, FunctionOptions};
-use pyo3_polars::derive::polars_expr;
 use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 
@@ -45,19 +46,17 @@ mod test;
 /// * `global_scale` - (Re)scale the noise distribution
 pub fn make_expr_report_noisy_max<MI: 'static + UnboundedMetric>(
     input_domain: WildExprDomain,
-    input_metric: PartitionDistance<MI>,
+    input_metric: L01I<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, PartitionDistance<MI>, MaxDivergence>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, L01I<MI>, MaxDivergence>>
 where
-    Expr: StableExpr<PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
+    Expr: StableExpr<L01I<MI>, L0I<LInfDistance<f64>>>,
 {
     let (input, optimize, scale) = match_report_noisy_max(&expr)?
         .ok_or_else(|| err!(MakeMeasurement, "Expected {}", ReportNoisyMaxPlugin::NAME))?;
 
-    let t_prior = input
-        .clone()
-        .make_stable(input_domain.clone(), input_metric)?;
+    let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     if scale.is_none() && global_scale.is_none() {
@@ -123,7 +122,7 @@ where
     }
 
     t_prior
-        >> Measurement::<_, _, Parallel<LInfDistance<f64>>, _>::new(
+        >> Measurement::<_, _, L0I<LInfDistance<f64>>, _>::new(
             middle_domain,
             Function::then_expr(move |input_expr| {
                 apply_plugin(
@@ -333,7 +332,7 @@ fn report_noisy_max_gumbel_udf(
 }
 
 #[cfg(feature = "ffi")]
-#[polars_expr(output_type=Null)]
+#[pyo3_polars::derive::polars_expr(output_type=Null)]
 fn report_noisy_max(_: &[Series]) -> PolarsResult<Series> {
     polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
 }
@@ -373,7 +372,7 @@ pub(crate) fn report_noisy_max_plugin_type_udf(input_fields: &[Field]) -> Polars
 
 // generate the FFI plugin for the report_noisy_max_gumbel expression
 #[cfg(feature = "ffi")]
-#[polars_expr(output_type_func=report_noisy_max_plugin_type_udf)]
+#[pyo3_polars::derive::polars_expr(output_type_func=report_noisy_max_plugin_type_udf)]
 fn report_noisy_max_plugin(
     inputs: &[Series],
     kwargs: ReportNoisyMaxPlugin,

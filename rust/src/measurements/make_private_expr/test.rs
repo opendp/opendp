@@ -2,7 +2,7 @@ use polars::prelude::{col, lit};
 
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
-    metrics::{InsertDeleteDistance, L2Distance},
+    metrics::{InsertDeleteDistance, L0PI, L2Distance},
     transformations::StableExpr,
 };
 
@@ -19,7 +19,7 @@ fn test_approximate_c_stability_unbounded() -> Fallible<()> {
     let t_sum: Transformation<_, _, _, L2Distance<f64>> = col("A")
         .clip(lit(0), lit(2))
         .sum()
-        .make_stable(expr_domain, PartitionDistance(InsertDeleteDistance))?;
+        .make_stable(expr_domain, L0PI(InsertDeleteDistance))?;
 
     assert_eq!(approximate_c_stability(&t_sum)?, 2.0);
     Ok(())
@@ -40,7 +40,7 @@ fn test_approximate_c_stability_bounded() -> Fallible<()> {
     let t_sum: Transformation<_, _, _, L2Distance<f64>> = col("A")
         .clip(lit(4), lit(7))
         .sum()
-        .make_stable(expr_domain, PartitionDistance(InsertDeleteDistance))?;
+        .make_stable(expr_domain, L0PI(InsertDeleteDistance))?;
 
     assert_eq!(approximate_c_stability(&t_sum)?, 3.0);
     Ok(())

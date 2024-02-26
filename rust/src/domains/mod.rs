@@ -122,9 +122,6 @@ impl<T: CheckAtom> AtomDomain<T> {
         }
         Ok(())
     }
-    pub fn bounds(&self) -> Option<&Bounds<T>> {
-        self.bounds.as_ref()
-    }
 }
 impl<T: CheckAtom> AtomDomain<T> {
     pub fn new_non_nan() -> Self {
@@ -350,10 +347,10 @@ impl<DK: Domain, DV: Domain> MapDomain<DK, DV>
 where
     DK::Carrier: Eq + Hash,
 {
-    pub fn new(key_domain: DK, element_domain: DV) -> Self {
+    pub fn new(key_domain: DK, value_domain: DV) -> Self {
         MapDomain {
             key_domain,
-            value_domain: element_domain,
+            value_domain,
         }
     }
 }

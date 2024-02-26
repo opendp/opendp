@@ -1,6 +1,6 @@
 use crate::core::{Measure, PrivacyMap};
 use crate::domains::{ExprPlan, Invariant, WildExprDomain};
-use crate::metrics::PartitionDistance;
+use crate::metrics::L01I;
 use crate::transformations::traits::UnboundedMetric;
 use crate::{
     core::{Function, Measurement},
@@ -34,10 +34,10 @@ mod test;
 /// * `expr` - count expression
 pub fn make_expr_private_len<MI: 'static + UnboundedMetric, MO: 'static + Measure>(
     input_domain: WildExprDomain,
-    input_metric: PartitionDistance<MI>,
+    input_metric: L01I<MI>,
     output_measure: MO,
     expr: Expr,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, PartitionDistance<MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, L01I<MI>, MO>>
 where
     MO::Distance: Zero,
 {
