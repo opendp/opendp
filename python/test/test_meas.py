@@ -161,11 +161,10 @@ def test_vector_discrete_gaussian():
     assert not meas.check(1., 0.124)
 
 def test_make_count_by_ptr():
-    input_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
     meas = (
-        input_space >>
-        dp.t.then_count_by(MO=dp.L1Distance[float], TV=float) >> 
-        dp.m.then_laplace_threshold(scale=2., threshold=28.)
+        dp.space_of(list[str]) >>
+        dp.t.then_count_by() >> 
+        dp.m.then_laplace_threshold(scale=2., threshold=28)
     )
     print("stability histogram:", meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
     assert meas.map(1) == (0.5, 6.854795431920434e-07)
@@ -217,8 +216,7 @@ def test_report_noisy_max_gumbel():
 def test_alp_histogram():
     counter = dp.t.make_count_by(
         dp.vector_domain(dp.atom_domain(T=str)),
-        dp.symmetric_distance(),
-        MO=dp.L1Distance[int])
+        dp.symmetric_distance())
 
     alp_meas = counter >> dp.m.then_alp_queryable(
         scale=1.,

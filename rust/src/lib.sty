@@ -186,3 +186,14 @@
   \end{enumerate}
   \end{theorem}
 }
+
+\newcommand{\validPostprocessor}[2]{%
+  For every setting of the input parameters #1 to #2 such that the given preconditions
+  hold, #2 raises an exception (at compile time or run time) or returns a valid postprocessor. A valid postprocessor has the following property:
+  \begin{enumerate}
+      \item \textup{(Data-independent errors).}
+      For every pair of elements $x, x'$ in \texttt{input\_domain},
+      $\function(x), \function(x')$ either neither or both raise an error.
+      If both raise an error, then they both raise the same error.
+  \end{enumerate}
+}

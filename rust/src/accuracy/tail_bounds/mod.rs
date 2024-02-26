@@ -69,9 +69,9 @@ pub fn conservative_discrete_gaussian_tail_to_alpha(scale: f64, tail: u32) -> Fa
 /// ```
 pub fn conservative_continuous_gaussian_tail_to_alpha(scale: f64, tail: f64) -> Fallible<f64> {
     // the SQRT_2 constant is already rounded down
-    let SQRT_2_CEIL: f64 = std::f64::consts::SQRT_2.next_up_();
+    let sqrt_2_ceil: f64 = std::f64::consts::SQRT_2.next_up_();
 
-    let t = tail.neg_inf_div(&scale)?.neg_inf_div(&SQRT_2_CEIL)?;
+    let t = tail.neg_inf_div(&scale)?.neg_inf_div(&sqrt_2_ceil)?;
     // round down to nearest smaller f32
     let t = f32::neg_inf_cast(t)? as f64;
     // erfc error is at most 1 f32 ulp (see erfc_err_analysis.py)
