@@ -257,13 +257,7 @@ jobs:
         run: Rscript -e 'devtools::test(reporter = c("summary", "fail"))'
 
       - name: Documentation examples
-        run: |
-          STATUS=0
-          for R in `find docs/source -type f -name '*.R'`; do
-            echo $R
-            Rscript "$R" || STATUS=1
-          done
-          exit $STATUS
+        run: bash tools/r_examples.sh
 
       - name: Document
         run: cd R/opendp/ && Rscript -e 'devtools::document()'
