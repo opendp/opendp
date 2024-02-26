@@ -4,25 +4,23 @@ import opendp.prelude as dp
 dp.enable_features('floating-point', 'contrib')
 
 def test_base_gaussian_curve():
-    from opendp.measurements import make_base_gaussian
-    from opendp.combinators import make_zCDP_to_approxDP
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    meas = make_zCDP_to_approxDP(make_base_gaussian(*input_space, 4.))
+    meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.))
     curve = meas.map(d_in=1.)
     assert curve.epsilon(delta=0.) == float('inf')
     assert curve.epsilon(delta=1e-3) == 0.6880024554878086
     assert curve.epsilon(delta=1.) == 0.
 
-    curve = make_zCDP_to_approxDP(make_base_gaussian(*input_space, 4.)).map(d_in=0.0)
+    curve = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.)).map(d_in=0.0)
     assert curve.epsilon(0.0) == 0.0
     with pytest.raises(Exception):
         curve.epsilon(delta=-0.0)
 
-    curve = make_zCDP_to_approxDP(make_base_gaussian(*input_space, 0.)).map(d_in=1.0)
+    curve = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.)).map(d_in=1.0)
     assert curve.epsilon(delta=0.0) == float('inf')
     assert curve.epsilon(delta=0.1) == float('inf')
 
-    curve = make_zCDP_to_approxDP(make_base_gaussian(*input_space, 0.)).map(d_in=0.0)
+    curve = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.)).map(d_in=0.0)
     assert curve.epsilon(delta=0.0) == 0.0
     assert curve.epsilon(delta=0.1) == 0.0
 
@@ -31,7 +29,7 @@ def test_base_gaussian_search():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
 
     def make_smd_gauss(scale, delta):
-        return dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_base_gaussian(*input_space, scale)), delta)
+        return dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, scale)), delta)
 
     fixed_meas = make_smd_gauss(1., 1e-5)
     ideal_dist = fixed_meas.map(1.)
@@ -45,21 +43,21 @@ def test_base_gaussian_search():
 
 def test_base_laplace():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    meas = dp.m.make_base_laplace(*input_space, 10.5)
+    meas = dp.m.make_laplace(*input_space, 10.5)
     print("base laplace:", meas(100.))
     print("epsilon", meas.map(1.))
     assert meas.check(1., .096)
 
 def test_base_vector_laplace():
     input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.l1_distance(T=float)
-    meas = dp.m.make_base_laplace(*input_space, scale=10.5)
+    meas = dp.m.make_laplace(*input_space, scale=10.5)
     print("base laplace:", meas([80., 90., 100.]))
     assert meas.check(1., 1.3)
 
 
 def test_base_gaussian_smoothed_max_divergence():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    meas = dp.c.make_zCDP_to_approxDP(dp.m.make_base_gaussian(*input_space, scale=10.5))
+    meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, scale=10.5))
     print("base gaussian:", meas(100.))
 
     epsilon = meas.map(d_in=1.).epsilon(delta=.000001)
@@ -69,7 +67,7 @@ def test_base_gaussian_smoothed_max_divergence():
 
 def test_base_gaussian_zcdp():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    meas = input_space >> dp.m.then_base_gaussian(scale=1.5, MO=dp.ZeroConcentratedDivergence[float])
+    meas = input_space >> dp.m.then_gaussian(scale=1.5, MO=dp.ZeroConcentratedDivergence[float])
     print("base gaussian:", meas(100.))
 
     rho = meas.map(d_in=1.)
@@ -82,39 +80,39 @@ def test_base_vector_gaussian():
     input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.l2_distance(T=float)
     meas = dp.c.make_fix_delta(
         dp.c.make_zCDP_to_approxDP(
-            dp.m.make_base_gaussian(*input_space, scale=10.5)), delta)
+            dp.m.make_gaussian(*input_space, scale=10.5)), delta)
     print("base gaussian:", meas([80., 90., 100.]))
     assert meas.check(1., (0.6, delta))
 
 
 def test_base_geometric():
     input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
-    meas = input_space >> dp.m.then_base_geometric(scale=2., bounds=(1, 10))
+    meas = input_space >> dp.m.then_geometric(scale=2., bounds=(1, 10))
     print("base_geometric in constant time:", meas(100))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 
-    meas = input_space >> dp.m.then_base_geometric(scale=2.)
+    meas = input_space >> dp.m.then_geometric(scale=2.)
     print("base_geometric:", meas(100))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 
 
 def test_base_discrete_laplace():
-    meas = dp.m.make_base_discrete_laplace(dp.atom_domain(T=int), dp.absolute_distance(T=int), scale=2.)
+    meas = dp.m.make_laplace(dp.atom_domain(T=int), dp.absolute_distance(T=int), scale=2.)
     print("base_discrete_laplace:", meas(100))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 
 def test_base_discrete_laplace_cks20():
-    meas = dp.m.make_base_discrete_laplace_cks20(dp.atom_domain(T=int), dp.absolute_distance(T=int), scale=2.)
+    meas = dp.m.make_laplace(dp.atom_domain(T=int), dp.absolute_distance(T=int), scale=2.)
     print("base_discrete_laplace:", meas(100))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 
 def test_base_vector_discrete_laplace_cks20():
     input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.l1_distance(T=int)
-    meas = input_space >> dp.m.then_base_discrete_laplace_cks20(scale=2.)
+    meas = input_space >> dp.m.then_laplace(scale=2.)
     print("vector base_dl:", meas([100, 10, 12]))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
@@ -122,7 +120,7 @@ def test_base_vector_discrete_laplace_cks20():
 
 def test_base_discrete_laplace_linear():
     input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
-    meas = dp.m.make_base_discrete_laplace_linear(*input_space, scale=2., bounds=(1, 10))
+    meas = dp.m.make_geometric(*input_space, scale=2., bounds=(1, 10))
     print("base_discrete_laplace:", meas(100))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
@@ -130,21 +128,21 @@ def test_base_discrete_laplace_linear():
 
 def test_base_vector_discrete_laplace():
     input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.l1_distance(T=int)
-    meas = dp.m.make_base_discrete_laplace(*input_space, scale=2.)
+    meas = dp.m.make_laplace(*input_space, scale=2.)
     print("vector base_dl:", meas([100, 10, 12]))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 
 def test_base_discrete_gaussian():
     input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
-    meas = dp.m.make_base_discrete_gaussian(*input_space, scale=2.)
+    meas = dp.m.make_gaussian(*input_space, scale=2.)
     print("base_discrete_gaussian:", meas(100))
     assert meas.check(1, 0.5)
     assert meas.check(1, 0.125)
 
 def test_base_vector_discrete_gaussian():
     input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.l2_distance(T=float)
-    meas = dp.m.make_base_discrete_gaussian(*input_space, scale=2.)
+    meas = dp.m.make_gaussian(*input_space, scale=2.)
     print("vector base_dl:", meas([100, 10, 12]))
     assert meas.check(1., 0.125)
     assert not meas.check(1., 0.124)

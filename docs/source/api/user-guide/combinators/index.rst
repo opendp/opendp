@@ -25,7 +25,7 @@ Postprocessing functionality is provided by the :py:func:`opendp.combinators.mak
 Since the outer Transformation is postprocessing, the metrics and stability map of the outer Transformation are ignored.
 In this case, it is only necessary for the types to conform.
 
-In the following example we chain :py:func:`opendp.measurements.make_base_discrete_laplace` with :py:func:`opendp.transformations.make_sum`.
+In the following example we chain :py:func:`opendp.measurements.make_laplace` with :py:func:`opendp.transformations.make_sum`.
 
 .. tab-set::
 
@@ -84,7 +84,6 @@ In the below example, the adjustment is subtle, but the bounds were adjusted to 
 
     .. doctest::
 
-        >>> from opendp.mod import OpenDPException
         >>> # call a constructor to produce a transformation, but this time with float bounds
         >>> sum_trans = dp.t.make_sum(
         ...     dp.vector_domain(dp.atom_domain(bounds=(0., 1.))), 
@@ -167,14 +166,10 @@ This is useful if you want to compose pure-DP measurements with approximate-DP m
 
     .. doctest::
 
-        >>> from opendp.measurements import then_base_laplace
-        >>> from opendp.combinators import make_pureDP_to_fixed_approxDP
-        >>> from opendp.domains import atom_domain
-        >>> from opendp.metrics import absolute_distance
-        >>> input_space = atom_domain(T=float), absolute_distance(T=float)
-        >>> meas_pureDP = input_space >> then_base_laplace(scale=10.)
+        >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+        >>> meas_pureDP = input_space >> dp.m.then_laplace(scale=10.)
         >>> # convert the output measure to `FixedSmoothedMaxDivergence`
-        >>> meas_fixed_approxDP = make_pureDP_to_fixed_approxDP(meas_pureDP)
+        >>> meas_fixed_approxDP = dp.c.make_pureDP_to_fixed_approxDP(meas_pureDP)
         ...
         >>> # FixedSmoothedMaxDivergence distances are (ε, δ) tuples
         >>> meas_fixed_approxDP.map(d_in=1.)
@@ -191,11 +186,9 @@ Similarly, :func:`opendp.combinators.make_pureDP_to_zCDP` is used for casting an
 
     .. doctest::
 
-        >>> from opendp.measurements import then_base_gaussian
-        >>> from opendp.combinators import make_zCDP_to_approxDP
-        >>> meas_zCDP = input_space >> then_base_gaussian(scale=0.5)
+        >>> meas_zCDP = input_space >> dp.m.then_gaussian(scale=0.5)
         >>> # convert the output measure to `SmoothedMaxDivergence`
-        >>> meas_approxDP = make_zCDP_to_approxDP(meas_zCDP)
+        >>> meas_approxDP = dp.c.make_zCDP_to_approxDP(meas_zCDP)
         ...
         >>> # SmoothedMaxDivergence distances are ε(δ) curves
         >>> curve = meas_approxDP.map(d_in=1.)
@@ -211,9 +204,8 @@ It fixes the delta parameter in the curve, so that the resulting measurement can
 
     .. doctest::
 
-        >>> from opendp.combinators import make_fix_delta
         >>> # convert the output measure to `FixedSmoothedMaxDivergence`
-        >>> meas_fixed_approxDP = make_fix_delta(meas_approxDP, delta=1e-8)
+        >>> meas_fixed_approxDP = dp.c.make_fix_delta(meas_approxDP, delta=1e-8)
         ...
         >>> # FixedSmoothedMaxDivergence distances are (ε, δ) tuples
         >>> meas_fixed_approxDP.map(d_in=1.)
@@ -236,8 +228,7 @@ you can make the privacy relation more permissive by wrapping your measurement w
     .. doctest::
 
 
-        >>> from opendp.mod import enable_features
-        >>> enable_features("honest-but-curious")
+        >>> dp.enable_features("honest-but-curious")
 
 
 In order to demonstrate this API, we'll first create a measurement with a sized input domain.
@@ -262,9 +253,8 @@ The function on the amplified measurement is identical to the standard measureme
   .. tab-item:: Python
 
     .. doctest::
-
-        >>> from opendp.combinators import make_population_amplification
-        >>> amplified = make_population_amplification(meas, population_size=100)
+      
+        >>> amplified = dp.c.make_population_amplification(meas, population_size=100)
         >>> print("amplified mean:", amplified([1.] * 10)) # -> .97 # doctest: +ELLIPSIS
         amplified mean: ...
 

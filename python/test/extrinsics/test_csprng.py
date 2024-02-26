@@ -12,3 +12,4 @@ def test_np_rng():
     n_samples = 100_000
     counts = np.unique(np_csprng.integers(n_cats, size=n_samples), return_counts=True)[1]
     assert chisquare(counts).pvalue > .0001
+test_np_rng()
