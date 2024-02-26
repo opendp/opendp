@@ -1,0 +1,81 @@
+\documentclass{article}
+\input{../../../../../../rust/src/lib.sty}
+
+\title{\texttt{fn make\_np\_sum}}
+\author{Michael Shoemate}
+\begin{document}
+
+\maketitle
+
+\contrib
+
+Proves soundness of \texttt{make\_np\_sum} in \asOfCommit{__init__.py}{f5bb719}.
+
+\texttt{make\_np\_sum} accepts an \texttt{input\_domain} and \texttt{input\_metric},
+and returns a stable Transformation that computes the vector-valued sum with bounded $L_p$ sensitivity.
+
+\section{Hoare Triple}
+
+\subsection*{Preconditions}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,escapechar=|,firstline=8,lastline=48]{./__init__.py}
+
+\subsection*{Postcondition}
+
+\validTransformation{\texttt{(input\_domain, input\_metric)}}{\\ \texttt{make\_np\_sum}}
+
+\section{Proof}
+
+\begin{proof} 
+
+Let $u$ and $v$ be datasets that are \texttt{d\_in}-close with respect to \texttt{input\_metric}.
+By \ref{domain-check}, the input domain is \texttt{NPArray2Domain},
+and by \ref{metric-check} input metric is the \texttt{SymmetricDistance}. 
+By \ref{norm-check} and \ref{p-check}, the input data has row-p-norm bounded by at most $R$.
+
+
+\subsection{Appropriate Output Domain}
+
+Since the input data is a 2-dimensional numpy array, then the output is a 1-dimensional numpy array of the same type.
+Therefore the output is a member of the output vector domain.
+
+\subsection{Stability Guarantee}
+
+Now consider two cases: when the data set size is known, and when it is not known.
+
+\subsubsection{Known Size}
+    WLOG, assume $u, v$ only differ on the leading $\lfloor d_{in} / 2 \rfloor$ elements.
+
+    \begin{align}
+        & \ \max_{x \sim x'} d_{Lp}(\mathrm{sum}(x), \mathrm{sum}(x')) && \quad \text{by definition of stability}\\
+        =&\ \max_{x \sim x'} \lVert\sum_{i = 1}^N x_i - \sum_{i = 1}^{N} x'_i \rVert_p && \quad \text{substitute the function and metric} \\
+        =&\ \max_{x \sim x'} \lVert\sum_{i = 1}^{\lfloor d_{in} / 2 \rfloor} x_{i} - \sum_{i = 1}^{\lfloor d_{in} / 2 \rfloor} x'_{i}\rVert_p && \quad\text{all trailing terms cancel} \\
+        \le&\ \max_{x \sim x'} \sum_{i = 1}^{\lfloor d_{in} / 2 \rfloor} \lVert x_i - x'_{i} \rVert_p && \quad \text{by triangle inequality} \\
+        \le&\ \sum_{i = 1}^{\lfloor d_{in} / 2 \rfloor} 2 \cdot R && \quad\text{each row has bounded p-norm of } R \\
+        =&\ \lfloor d_{in} / 2 \rfloor \cdot 2 \cdot R
+    \end{align}
+
+    Therefore we've shown that for every pair of elements $u, v \in \texttt{input\_domain}$ and every $d_{Sym}(u, v) \le \din$, 
+    if $u, v$ are $\din$-close then $\function(u),\function(v)$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_metric}$ (the $L^p$ distance).
+
+\subsubsection{Unknown Size}
+
+    WLOG, assume $v$ has an additional $d_{in}$ trailing rows.
+
+    \begin{align}
+        & \ \max_{x \sim x'} d_{Lp}(\mathrm{sum}(x), \mathrm{sum}(x')) && \quad \text{by definition of stability}\\
+        =&\ \max_{x \sim x'} \lVert\sum_{i = 1}^N x_i - \sum_{i = 1}^{N'} x'_i \rVert_p && \quad \text{substitute the function and metric} \\
+        =&\ \max_{x \sim x'} \lVert\sum_{i = 1}^{d_{in}} x'_{N + i}\rVert_p && \quad\text{all but the last terms cancel} \\
+        \le&\ \max_{x \sim x'} \sum_{i = 1}^{d_{in}} \lVert x'_{N + i} \rVert_p && \quad \text{by triangle inequality} \\
+        \le&\ \sum_{i = 1}^{d_{in}} (\lVert O \rVert_p + R) && \quad\text{each row has bounded p-norm of } R \text{ at } O \\
+        =&\ d_{in} \cdot (\lVert O \rVert_p + R)
+    \end{align}
+    
+    Therefore we've shown that for every pair of elements $u, v \in \texttt{input\_domain}$ and every $d_{Sym}(u, v) \le \din$, 
+    if $u, v$ are $\din$-close then $\function(u),\function(v)$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_metric}$ (the $L^p$ distance).
+
+\end{proof}
+
+\end{document}
