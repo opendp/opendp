@@ -177,6 +177,7 @@ where
         )
     }
 
+    #[allow(dead_code)]
     pub(crate) fn new_raw_external(
         mut transition: impl FnMut(&Q) -> Fallible<A> + 'static,
     ) -> Self {

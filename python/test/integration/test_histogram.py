@@ -1,4 +1,3 @@
-import pytest
 import opendp.prelude as dp
 
 
@@ -51,12 +50,12 @@ def test_count_by_threshold():
     pre = (
         dp.t.make_split_dataframe(",", ["A", "B"])
         >> dp.t.make_select_column("A", TOA=str)
-        >> dp.t.then_count_by(MO=dp.L1Distance[float], TV=float)
+        >> dp.t.then_count_by()
     )
     budget = (1.0, 1e-8)
 
     scale = dp.binary_search(
-        lambda s: (pre >> dp.m.then_laplace_threshold(scale=s, threshold=1e8)).map(1)[0] <= budget[0]
+        lambda s: (pre >> dp.m.then_laplace_threshold(scale=s, threshold=100_000)).map(1)[0] <= budget[0]
     )
     threshold = dp.binary_search(
         lambda t: (pre >> dp.m.then_laplace_threshold(scale=scale, threshold=t)).map(1)[1] <= budget[1],
@@ -73,12 +72,7 @@ def test_count_by_threshold():
     assert pre(data) == {"a": 500, "b": 200, "other": 100}
     print("laplace_histogram_from_dataframe", laplace_histogram_from_dataframe(data))
     assert scale == 1.0
-    assert threshold == 18.727533563392424
-
-    with pytest.raises(dp.OpenDPException):
-        dp.m.make_laplace_threshold(
-            dp.atom_domain(T=int), dp.l1_distance(T=float), scale=1.0, threshold=1e8
-        )
+    assert threshold == 19
 
     assert (
         pre >> dp.m.then_laplace_threshold(scale=0.0, threshold=threshold)

@@ -2,7 +2,7 @@ use crate::core::{Function, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, Context, Margin, WildExprDomain};
 use crate::domains::{ExprDomain, Invariant::Lengths, NumericDataType, SeriesDomain};
 use crate::error::*;
-use crate::metrics::{IntDistance, LpDistance, PartitionDistance};
+use crate::metrics::{IntDistance, L01I, LpDistance};
 use crate::traits::{
     AlertingAbs, CheckAtom, ExactIntCast, InfAdd, InfCast, InfMul, InfSqrt, InfSub, Number,
     ProductOrd,
@@ -30,12 +30,12 @@ use super::StableExpr;
 /// * `expr` - an expression ending with sum
 pub fn make_expr_sum<MI, const P: usize>(
     input_domain: WildExprDomain,
-    input_metric: PartitionDistance<MI>,
+    input_metric: L01I<MI>,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, PartitionDistance<MI>, LpDistance<P, f64>>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, L01I<MI>, LpDistance<P, f64>>>
 where
     MI: 'static + UnboundedMetric,
-    Expr: StableExpr<PartitionDistance<MI>, PartitionDistance<MI>>,
+    Expr: StableExpr<L01I<MI>, L01I<MI>>,
 {
     let Expr::Agg(AggExpr::Sum(input)) = expr else {
         return fallible!(MakeTransformation, "expected sum expression");
@@ -115,7 +115,7 @@ where
     };
 
     t_prior
-        >> Transformation::<_, _, PartitionDistance<MI>, LpDistance<P, _>>::new(
+        >> Transformation::<_, _, L01I<MI>, LpDistance<P, _>>::new(
             middle_domain,
             output_domain,
             Function::then_expr(Expr::sum).fill_with(fill_value),
@@ -138,7 +138,7 @@ where
 
 fn sum_stability_map<MI, const P: usize, TI>(
     domain: &ExprDomain,
-) -> Fallible<StabilityMap<PartitionDistance<MI>, LpDistance<P, f64>>>
+) -> Fallible<StabilityMap<L01I<MI>, LpDistance<P, f64>>>
 where
     MI: UnboundedMetric,
     TI: Summand,
