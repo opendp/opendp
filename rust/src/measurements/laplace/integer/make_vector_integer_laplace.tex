@@ -1,0 +1,94 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+
+
+\title{\texttt{fn make\_vector\_integer\_laplace}}
+\author{Michael Shoemate}
+\begin{document}
+
+\maketitle
+
+\contrib
+
+Proves soundness of \rustdoc{measurements/fn}{make\_vector\_integer\_laplace} in \asOfCommit{mod.rs}{f5bb719}.
+The function on the resulting measurement takes in a data set \texttt{x} (an integer vector), 
+and returns a sample from the Vector Discrete Laplace Distribution centered at \texttt{x}, with a fixed noise scale.
+
+\subsection*{PR History}
+\begin{itemize}
+    \item \vettingPR{490}
+\end{itemize}
+
+\section{Hoare Triple}
+
+\subsection*{Preconditions}
+\begin{itemize}
+    \item Variable \texttt{input\_domain}, of type \texttt{VectorDomain<AtomDomain<T>>}
+    \item Variable \texttt{input\_metric}, of type \texttt{L1Distance<T>}
+    \item Variable \texttt{scale}, of type \texttt{QO}
+    \item Type \texttt{T} must have trait \rustdoc{traits/trait}{Integer} and support saturating cast from \texttt{IBig} (for postprocessing a noisy big integer back to \texttt{T})
+    \item Type \texttt{QO} must have trait \rustdoc{traits/trait}{Float} and support casting with controlled rounding from \texttt{T} (for converting $d_{in}$ to type \texttt{QO})
+    \item Type \texttt{IBig} must be constructable from \texttt{T} (to convert the data into a big integer)
+    \item Type \texttt{RBig} must be fallibly constructable from \texttt{QO} (to convert scale into a rational)
+\end{itemize}
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_vector_integer_laplace.py}
+
+\subsection*{Postcondition}
+
+\validMeasurement{\texttt{(input\_domain, input\_metric, scale, T, QO)}}{\\\texttt{make\_vector\_integer\_laplace}}
+
+\section{Proof}
+
+\begin{proof} 
+\textbf{(Privacy guarantee.)} 
+    
+\begin{tcolorbox}
+    The proof assumes the following lemma.
+    \begin{lemma}
+        \texttt{sample\_integer\_laplace} and \texttt{laplace\_map} each satisfy their postcondition.
+    \end{lemma}
+\end{tcolorbox}
+
+\texttt{sample\_integer\_laplace} can only fail due to lack of system entropy. 
+This is usually related to the computer's physical environment and not the dataset. 
+The rest of this proof is conditioned on the assumption that this function does not raise an exception. 
+
+Let $x$ and $x'$ be datasets that are \texttt{d\_in}-close with respect to \texttt{input\_metric}.
+Here, the metric is \texttt{AbsoluteDistance<T>}.
+
+By the postcondition of \texttt{sample\_integer\_laplace},
+the output of each call of the function follows the Discrete Laplace Distribution with scale \texttt{scale}.
+
+\begin{align*}
+    & \max_{x \sim x'} D_{\infty}(M(x), M(x'))  \\
+    =& \max_{x \sim x'} \max_{z \in supp(M(\cdot))} \ln\left(\frac{\Pr\left[M(x) = z\right]}{\Pr\left[M(x') = z \right]}\right)
+        &&\text{substitute } D_{\infty}\\
+    =& \max_{x \sim x'} \max_{z \in \mathbb{Z^d}} \ln\left(\frac{\Pr\left[\mathrm{DLap}(x, b) = z \right]}{\Pr\left[\mathrm{DLap}(x', b) = z\right]}\right)
+        &&\text{where } b \text{ is the noise scale} \\
+    =& \max_{x \sim x'} \max_{z \in \mathbb{Z^d}} \ln\left(\frac{
+        \prod_i^d \frac{\exp^{1/b} - 1}{\exp^{1/b} + 1} \exp \left( -\frac{|x_i - z_i|}{b} \right)
+    }{
+        \prod_i^d \frac{\exp^{1/b} - 1}{\exp^{1/b} + 1} \exp \left( -\frac{|x'_i - z_i|}{b} \right)
+    }\right) 
+        &&\text{use pdf of Discrete Laplace} \\
+    =& \max_{x \sim x'} \max_{z \in \mathbb{Z^d}} \sum_i^d \ln\left(\frac{
+    \exp \left( -\frac{|x_i - z_i|}{b} \right)
+    }{
+        \exp \left( -\frac{|x'_i - z_i|}{b} \right)
+    }\right) &&\text{pull product out by log rules}\\
+    =& \max_{x \sim x'} \max_{z \in \mathbb{Z^d}} \sum_i^d \frac{|x'_i - z_i| - |x_i - z_i|}{b}&& \text{exp and ln cancel} \\
+    \leq& \frac{\max_{x \sim x'} \sum_i^d |x_i - x'_i|}{b} &&\text{by reverse triangle inequality} \\
+    =& \frac{d_{in}}{b}  &&\text{by definition of } L^1 \text{ distance}
+\end{align*}
+
+This bound satisfies the postcondition of \texttt{laplace\_map}.
+The saturating conversion to \texttt{T} is a post-processing step.
+
+Therefore it has been shown that for every pair of elements $x, x' \in \texttt{input\_domain}$ and every $d_{L1}(x, x') \le \din$ with $\din \ge 0$, 
+if $x, x'$ are $\din$-close then $\function(x),\function(x')$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_measure}$ (the Max-Divergence).
+\end{proof}
+
+\end{document}
