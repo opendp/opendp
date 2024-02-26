@@ -5,7 +5,7 @@ use crate::transformations::make_stable_lazyframe;
 use super::*;
 
 #[test]
-fn test_make_expr_cast_String() -> Fallible<()> {
+fn test_make_expr_cast_string() -> Fallible<()> {
     let lf_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
         "String",
         AtomDomain::<String>::default(),

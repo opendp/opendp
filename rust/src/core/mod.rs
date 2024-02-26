@@ -332,6 +332,8 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Debug for Measurement<DI, TO, MI, 
 }
 
 pub trait MetricSpace {
+    /// # Proof Definition
+    /// Returns Ok(()) if self forms a valid metric space.
     fn check_space(&self) -> Fallible<()>;
 }
 

@@ -32,9 +32,9 @@ fn test_make_basic_composition() -> Fallible<()> {
 
 #[test]
 fn test_make_basic_composition_2() -> Fallible<()> {
-    let input_domain = AtomDomain::new_non_nan();
+    let input_domain = AtomDomain::<f64>::new_non_nan();
     let input_metric = AbsoluteDistance::default();
-    let laplace = make_laplace(input_domain, input_metric, 1.0f64, None)?;
+    let laplace = make_laplace::<_, _, MaxDivergence>(input_domain, input_metric, 1.0f64, None)?;
     let measurements = vec![laplace; 2];
     let composition = make_basic_composition(measurements)?;
     let arg = 99.;

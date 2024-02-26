@@ -1,0 +1,80 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{NoisePrivacyMap<L2Distance<RBig>, ZeroConcentratedDivergence> for ZExpFamily<2>}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{NoisePrivacyMap} for \texttt{ZExpFamily<2>} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+\texttt{NoisePrivacyMap} is parameterized as follows:
+\begin{itemize}
+    \item \texttt{MI}, the input metric, is of type \rustdoc{metrics/type}{L2Distance<RBig>}
+    \item \texttt{MO}, the output measure, is of type \rustdoc{measures/struct}{ZeroConcentratedDivergence}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/NoisePrivacyMap_for_ZExpFamily2.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    Given a distribution \texttt{self},
+    returns \texttt{Err(e)} if \texttt{self} is not a valid distribution.
+    Otherwise the output is \texttt{Ok(privacy\_map)}
+    where \texttt{privacy\_map} observes the following:
+
+    Define \texttt{function(x) = x + Z} where \texttt{Z} is a vector of iid samples from \texttt{self}.
+
+    For every pair of elements $x, x'$ in \texttt{VectorDomain<AtomDomain<IBig>{}>},
+    and for every pair (\texttt{d\_in}, \texttt{d\_out}),
+    where \texttt{d\_in} has the associated type for \texttt{input\_metric} and \texttt{d\_out} has the associated type for \texttt{output\_measure},
+    if $x, x'$ are \texttt{d\_in}-close under \texttt{input\_metric}, \texttt{privacy\_map(d\_in)} does not raise an exception,
+    and $\texttt{privacy\_map(d\_in)} \leq \texttt{d\_out}$,
+    then \texttt{function(x)}, \texttt{function(x')} are \texttt{d\_out}-close under \texttt{output\_measure}.
+\end{theorem}
+
+\begin{proof}
+    Line \ref{line:neg-scale} rejects \texttt{self} if \texttt{self} does not represent a valid distribution,
+    satisfying the error conditions of the postcondition.
+
+    We now construct the privacy map.
+    First consider the extreme values of the scale and sensitivity parameters.
+    The sensitivity \texttt{d\_in}, a bound on distances, must not be negative, as checked on line \ref{line:neg-sens}.
+    In the case where sensitivity is zero (line \ref{line:zero-sens}), the privacy loss is zero, regardless the choice of scale parameter (even zero).
+    This is because the privacy loss when adjacent datasets are always identical is zero.
+    Otherwise, in the case where the scale is zero, the privacy loss is infinite.
+    To avoid a rational division overflow, line \ref{line:zero-scale} returns infinity.
+
+    By line \ref{line:map}, both the sensitivity and scale are positive rationals.
+    Recall Theorem~14 from \cite{CKS20}.
+
+    \begin{theorem}[Multivariate Discrete Gaussian Satisfies Concentrated Differential Privacy]
+        Let $\sigma_1, \ldots, \sigma_d > 0$ and $\varepsilon > 0$. 
+        Let $q: \mathcal{X}^n \rightarrow \mathbb{Z}^d$ satisfy $\sum_{j \in [d]} (q_j(x) - q_j(x'))^2 / \sigma^2_j \leq \varepsilon^2$ 
+        for all $x, x' \in \mathcal{X}^n$ differing on a single entry.
+        Define a randomized algorithm $M: \mathcal{X}^n \rightarrow \mathbb{Z}^d$ by $M(x) = q(x) + Y$ where $Y_j \leftarrow \mathcal{N}_\mathbb{Z}(0, \sigma^2_j)$
+        independently for all $j \in [d]$.
+        Then $M$ satisfies $\frac{1}{2}\varepsilon^2$-concentrated differential privacy.
+    \end{theorem}
+
+    Assuming that $\sigma_1, \ldots, \sigma_d = \sigma$, and re-defining $q(x)$ as $x$ and $q(x')$ as $x'$, 
+    then if $||x - x'||_2 / \sigma \leq \varepsilon$ then $M$ satisfies $\frac{1}{2}\varepsilon^2$-concentrated differential privacy.
+
+    Therefore, for all $\alpha > 1$, $D_\alpha(M(x), M(x')) \leq \alpha \cdot (\texttt{d\_in} / \sigma)^2 / 2$.
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+
+\end{document}

@@ -1,0 +1,59 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn make\_gaussian\_threshold}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise_threshold/distribution/gaussian/fn}{make\_gaussian\_threshold} in \asOfCommit{mod.rs}{f5bb719}.
+
+Thresholded noise mechanisms may be parameterized along many different axes:
+\begin{itemize}
+    \item key dtype: i8, i16, i32, i64, u8, u16, u32, u64, f32, f64, UBig, IBig, RBig
+    \item metric dtype: i8, i16, i32, i64, u8, u16, u32, u64, f32, f64, UBig, IBig, RBig
+    \item measure: max divergence, zero concentrated divergence
+    \item distribution: laplace, gaussian
+\end{itemize}
+
+All parameterizations reduce to a single core mechanism that perturbs
+a signed big integers with noise sampled from the appropriate discrete distribution,
+and then thresholds and shuffles the result.
+
+The implementation of this function constructs a random variable denoting the noise distribution to add, 
+and then dispatches to the \rustdoc{measurements/noise_threshold/trait}{MakeNoiseThreshold}\texttt{<DI, MI, MO>} trait
+which constructs the core mechanism and wraps it in pre-processing transformations and post-processors to match the desired parameterization.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+\begin{itemize}
+    \item generic \texttt{DI} implements trait \rustdoc{measurements/noise/trait}{NoiseDomain}
+    \item generic \texttt{MI} implements trait \rustdoc{core/trait}{Metric}
+    \item generic \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
+    \item generic \texttt{DiscreteGaussian} implements trait \rustdoc{measurements/noise_threshold/trait}{MakeNoiseThreshold}
+    \item type \texttt{(DI, MI)} implements trait \rustdoc{core/trait}{MetricSpace}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_gaussian_threshold.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validMeasurement{(\texttt{input\_domain, input\_metric, scale, threshold, k, DI, MI, MO})}{\texttt{make\_gaussian\_threshold}}
+\end{theorem}
+
+\begin{proof}
+    We first construct a random variable \rustdoc{measurements/noise/distribution/gaussian/struct}{DiscreteGaussian} representing the desired noise distribution.
+    Since \rustdoc{measurements/noise_threshold/trait}{MakeNoiseThreshold}\texttt{.make\_noise\_threshold} has no preconditions,
+    the postcondition follows, which matches the postcondition for this function.
+\end{proof}
+
+\end{document}

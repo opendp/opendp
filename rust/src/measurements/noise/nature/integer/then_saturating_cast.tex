@@ -1,0 +1,41 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn then\_saturating\_cast}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/nature/fn}{then\_saturating\_cast} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+
+\begin{itemize}
+    \item Generic \texttt{TO} implements trait \rustdoc{traits/trait}{SaturatingCast}\texttt{<IBig>}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/then_saturating_cast.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validPostprocessor{(\texttt{TO})}{\texttt{then\_saturating\_cast}}
+\end{theorem}
+
+\begin{proof}
+    Since \texttt{TO.saturating\_cast} is infallible, the function is infallible,
+    meaning that the function cannot raise data-dependent errors.
+    Therefore the function is a valid postprocessor.
+\end{proof}
+
+
+\end{document}

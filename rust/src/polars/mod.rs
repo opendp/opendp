@@ -1,4 +1,4 @@
-use std::{env, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     core::Function,
@@ -19,11 +19,14 @@ use polars::{
     prelude::{DslPlan, GetOutput, LazySerde, NamedFrom, len, repeat},
     series::Series,
 };
+#[cfg(feature = "ffi")]
+use polars_plan::dsl::FunctionExpr;
 use polars_plan::{
-    dsl::{ColumnsUdf, Expr, FunctionExpr, SpecialEq, lit},
+    dsl::{ColumnsUdf, Expr, SpecialEq, lit},
     plans::{Literal, LiteralValue, Null},
     prelude::FunctionOptions,
 };
+#[cfg(feature = "ffi")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
@@ -45,6 +48,7 @@ pub(crate) trait OpenDPPlugin:
     fn get_output(&self) -> Option<GetOutput>;
 }
 
+#[cfg(feature = "ffi")]
 static OPENDP_LIB_NAME: &str = "opendp";
 
 pub(crate) fn match_plugin<'e, KW>(expr: &'e Expr) -> Fallible<Option<&'e Vec<Expr>>>
@@ -158,7 +162,7 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
                 kwargs,
             } = &mut function
             {
-                if let Ok(path) = env::var("OPENDP_POLARS_LIB_PATH") {
+                if let Ok(path) = std::env::var("OPENDP_POLARS_LIB_PATH") {
                     *lib = path.into();
                 }
                 *symbol = KW::NAME.into();

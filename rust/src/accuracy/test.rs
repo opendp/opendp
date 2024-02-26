@@ -4,11 +4,8 @@ use std::ops::{Mul, Sub};
 use super::*;
 use crate::domains::AtomDomain;
 use crate::error::ExplainUnwrap;
-use crate::measurements::{
-    make_gaussian, make_scalar_float_gaussian, make_scalar_float_laplace,
-    make_scalar_integer_laplace,
-};
-use crate::measures::ZeroConcentratedDivergence;
+use crate::measurements::{make_gaussian, make_laplace};
+use crate::measures::{MaxDivergence, ZeroConcentratedDivergence};
 use crate::metrics::AbsoluteDistance;
 
 #[test]
@@ -223,9 +220,10 @@ pub fn test_empirical_laplace_accuracy() -> Fallible<()> {
     let accuracy = 1.0;
     let theoretical_alpha = 0.05;
     let scale = accuracy_to_laplacian_scale(accuracy, theoretical_alpha)?;
-    let input_domain = AtomDomain::new_non_nan();
-    let input_metric = AbsoluteDistance::default();
-    let laplace = make_scalar_float_laplace(input_domain, input_metric, scale, Some(-100))?;
+    let input_domain = AtomDomain::<f64>::new_non_nan();
+    let input_metric = AbsoluteDistance::<i32>::default();
+    let laplace =
+        make_laplace::<_, _, MaxDivergence>(input_domain, input_metric, scale, Some(-100))?;
     let n = 50_000;
     let empirical_alpha = (0..n)
         .filter(|_| laplace.invoke(&0.0).unwrap().abs() > accuracy)
@@ -245,9 +243,9 @@ pub fn test_empirical_gaussian_accuracy() -> Fallible<()> {
     let accuracy = 1.0;
     let theoretical_alpha = 0.05;
     let scale = accuracy_to_gaussian_scale(accuracy, theoretical_alpha)?;
-    let base_gaussian = make_scalar_float_gaussian::<ZeroConcentratedDivergence, _>(
-        AtomDomain::new_non_nan(),
-        AbsoluteDistance::default(),
+    let base_gaussian = make_gaussian::<_, _, ZeroConcentratedDivergence>(
+        AtomDomain::<f64>::new_non_nan(),
+        AbsoluteDistance::<u32>::default(),
         scale,
         Some(-100),
     )?;
@@ -272,8 +270,8 @@ pub fn test_empirical_discrete_laplace_accuracy() -> Fallible<()> {
     let scale = accuracy_to_discrete_laplacian_scale(accuracy as f64, theoretical_alpha)?;
     println!("scale: {scale}");
     let input_domain = AtomDomain::<i32>::default();
-    let input_metric = AbsoluteDistance::default();
-    let base_dl = make_scalar_integer_laplace(input_domain, input_metric, scale)?;
+    let input_metric = AbsoluteDistance::<i32>::default();
+    let base_dl = make_laplace::<_, _, MaxDivergence>(input_domain, input_metric, scale, None)?;
     let n = 50_000;
     let empirical_alpha = (0..n)
         .filter(|_| base_dl.invoke(&0).unwrap().clamp(-127, 127).abs() >= accuracy)
@@ -296,9 +294,9 @@ pub fn test_empirical_discrete_gaussian_accuracy() -> Fallible<()> {
     // let scale = 12.503562372734077;
 
     println!("scale: {}", scale);
-    let base_dg = make_gaussian::<_, ZeroConcentratedDivergence, i32>(
+    let base_dg = make_gaussian::<_, _, ZeroConcentratedDivergence>(
         AtomDomain::<i8>::default(),
-        AbsoluteDistance::default(),
+        AbsoluteDistance::<i32>::default(),
         scale,
         None,
     )?;

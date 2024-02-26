@@ -10,7 +10,7 @@ use crate::{
     },
     measurements::PrivateExpr,
     measures::{MaxDivergence, ZeroConcentratedDivergence},
-    metrics::{PartitionDistance, SymmetricDistance},
+    metrics::{L01I, SymmetricDistance},
 };
 
 use super::make_private_expr;
@@ -25,8 +25,7 @@ pub extern "C" fn opendp_measurements__make_private_expr(
 ) -> FfiResult<*mut AnyMeasurement> {
     let input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<WildExprDomain>()).clone();
     let input_metric =
-        try_!(try_as_ref!(input_metric).downcast_ref::<PartitionDistance<SymmetricDistance>>())
-            .clone();
+        try_!(try_as_ref!(input_metric).downcast_ref::<L01I<SymmetricDistance>>()).clone();
 
     let output_measure = try_as_ref!(output_measure);
     let MO_ = output_measure.type_.clone();
@@ -41,13 +40,13 @@ pub extern "C" fn opendp_measurements__make_private_expr(
 
     fn monomorphize<MO: 'static + Measure>(
         input_domain: WildExprDomain,
-        input_metric: PartitionDistance<SymmetricDistance>,
+        input_metric: L01I<SymmetricDistance>,
         output_measure: &AnyMeasure,
         expr: Expr,
         global_scale: Option<f64>,
     ) -> Fallible<AnyMeasurement>
     where
-        Expr: PrivateExpr<PartitionDistance<SymmetricDistance>, MO>,
+        Expr: PrivateExpr<L01I<SymmetricDistance>, MO>,
     {
         let output_measure = output_measure.downcast_ref::<MO>()?.clone();
         make_private_expr(

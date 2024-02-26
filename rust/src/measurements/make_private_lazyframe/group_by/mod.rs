@@ -6,16 +6,17 @@ use crate::accuracy::{
 };
 use crate::combinators::{BasicCompositionMeasure, make_basic_composition};
 use crate::core::{Function, Measurement, PrivacyMap};
-use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain, option_min};
+use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::expr_noise::Distribution;
 use crate::measurements::make_private_expr;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
-use crate::metrics::{Bounds, FrameDistance, PartitionDistance};
-use crate::traits::{InfAdd, InfMul, InfPowI, InfSub};
+use crate::metrics::{Bounds, FrameDistance, L0PI, L01I};
+use crate::traits::{InfAdd, InfMul, InfPowI, InfSub, option_min};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{StableDslPlan, StableExpr};
-use dashu::integer::IBig;
+use dashu::integer::{IBig, UBig};
+use dashu::rational::RBig;
 use make_private_expr::PrivateExpr;
 use matching::find_len_expr;
 use polars::prelude::{JoinType, LazyFrame, len};
@@ -50,8 +51,8 @@ where
     MI: 'static + UnboundedMetric,
     MI::EventMetric: UnboundedMetric,
     MO: 'static + ApproximateMeasure,
-    Expr: PrivateExpr<PartitionDistance<MI::EventMetric>, MO>
-        + StableExpr<PartitionDistance<MI::EventMetric>, PartitionDistance<MI::EventMetric>>,
+    Expr: PrivateExpr<L01I<MI::EventMetric>, MO>
+        + StableExpr<L01I<MI::EventMetric>, L01I<MI::EventMetric>>,
     DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
 {
     let is_truncated = input_metric.0.identifier().is_some();
@@ -77,10 +78,8 @@ where
     let t_group_by = group_by
         .iter()
         .map(|expr| {
-            expr.clone().make_stable(
-                expr_domain.clone(),
-                PartitionDistance(middle_metric.0.clone()),
-            )
+            expr.clone()
+                .make_stable(expr_domain.clone(), L0PI(middle_metric.0.clone()))
         })
         .collect::<Fallible<Vec<_>>>()?;
 
@@ -123,7 +122,7 @@ where
             .map(|expr| {
                 make_private_expr(
                     expr_domain.clone(),
-                    PartitionDistance(middle_metric.0.clone()),
+                    L0PI(middle_metric.0.clone()),
                     output_measure.clone(),
                     expr,
                     global_scale,
@@ -274,7 +273,7 @@ where
                     return fallible!(FailedMap, "threshold must be greater than {:?}", li);
                 }
 
-                let d_instability = threshold_value.inf_sub(&li)?;
+                let d_instability = threshold_value.neg_inf_sub(&li)?;
                 let delta_single =
                     integrate_discrete_noise_tail(noise.distribution, noise.scale, d_instability)?;
                 let delta_joint = (1.0).inf_sub(
@@ -346,6 +345,8 @@ fn integrate_discrete_noise_tail(
     scale: f64,
     tail_bound: u32,
 ) -> Fallible<f64> {
+    let scale = RBig::try_from(scale)?;
+    let tail_bound = UBig::from(tail_bound);
     match distribution {
         Distribution::Laplace => conservative_discrete_laplacian_tail_to_alpha(scale, tail_bound),
         Distribution::Gaussian => conservative_discrete_gaussian_tail_to_alpha(scale, tail_bound),
