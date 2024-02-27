@@ -51,9 +51,13 @@ pub extern "C" fn opendp_measurements__make_randomized_response(
         usize: ExactIntCast<<QO as FloatBits>::Bits>,
     {
         let categories = try_as_ref!(categories).downcast_ref::<Vec<T>>()?.clone();
+        let num_categories = categories.len();
+        let categories_set = HashSet::from_iter(categories.into_iter());
+        if categories_set.len() != num_categories {
+            return fallible!(MakeMeasurement, "all categories must be unique");
+        }
         let prob = *try_as_ref!(prob as *const QO);
-        make_randomized_response::<T, QO>(HashSet::from_iter(categories.into_iter()), prob)
-            .into_any()
+        make_randomized_response::<T, QO>(categories_set, prob).into_any()
     }
     let T = try_!(Type::try_from(T));
     let QO = try_!(Type::try_from(QO));

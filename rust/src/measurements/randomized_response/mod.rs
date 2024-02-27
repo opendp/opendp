@@ -49,7 +49,7 @@ where
 {
     // number of categories t is 2, and probability is bounded below by 1/t
     if !(QO::exact_int_cast(2)?.recip()..QO::one()).contains(&prob) {
-        return fallible!(MakeTransformation, "probability must be within [0.5, 1)");
+        return fallible!(MakeMeasurement, "probability must be within [0.5, 1)");
     }
 
     // d_out = min(d_in, 1) * ln(p / p')
@@ -104,16 +104,13 @@ where
 {
     let categories = categories.into_iter().collect::<Vec<_>>();
     if categories.len() < 2 {
-        return fallible!(
-            MakeTransformation,
-            "length of categories must be at least two"
-        );
+        return fallible!(MakeMeasurement, "length of categories must be at least two");
     }
     let num_categories = QO::exact_int_cast(categories.len())?;
 
     if !(num_categories.recip()..QO::one()).contains(&prob) {
         return fallible!(
-            MakeTransformation,
+            MakeMeasurement,
             "probability must be within [1/num_categories, 1)"
         );
     }
