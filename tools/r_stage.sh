@@ -95,10 +95,6 @@ function docs() {
   run cp -r R/opendp R/opendp-docs
   run rm -rf R/opendp-docs/src
 
-  log "copy CHANGELOG into the docs"
-  # https://pkgdown.r-lib.org/reference/build_news.html
-  sed "s|^## |# Version |" CHANGELOG.md > R/opendp-docs/NEWS.md
-
   log "remove all traces of compiled code from the package"
   sed "/#' @useDynLib opendp, .registration = TRUE/d" R/opendp-docs/R/opendp-package.R > R/opendp-docs/R/opendp-package.R
   rm -f R/opendp-docs/configure
