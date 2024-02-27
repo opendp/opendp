@@ -43,6 +43,8 @@ pub fn make_randomized_response_bool<QO>(
 ) -> Fallible<Measurement<AtomDomain<bool>, bool, DiscreteDistance, MaxDivergence<QO>>>
 where
     QO: Float,
+    usize: ExactIntCast<<QO as FloatBits>::Bits>,
+    <QO as FloatBits>::Bits: ExactIntCast<usize>,
     (AtomDomain<bool>, DiscreteDistance): MetricSpace,
     <QO as FloatBits>::Bits: ExactIntCast<usize>,
     usize: ExactIntCast<<QO as FloatBits>::Bits>,
