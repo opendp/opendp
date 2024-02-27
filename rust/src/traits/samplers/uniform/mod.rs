@@ -1,8 +1,7 @@
 use std::{mem::size_of, ops::Sub};
 
 use crate::{
-    error::Fallible,
-    traits::{ExactIntCast, FloatBits, InfDiv},
+    error::Fallible, traits::{ExactIntCast, FloatBits, InfDiv}
 };
 
 use super::{fill_bytes, sample_geometric_buffer};
