@@ -1,5 +1,5 @@
-Hello OpenDP!
-=============
+Quickstart
+==========
 
 OpenDP is available for Python and R.
 
@@ -19,7 +19,7 @@ OpenDP is available for Python and R.
 
         .. code:: r
 
-            install.packages('opendp', repos = 'https://opendp-dev.r-universe.dev')
+            install.packages('opendp', repos = 'https://opendp.r-universe.dev/')
 
 This will make the OpenDP modules available to your local environment.
 
@@ -38,7 +38,7 @@ Enable ``contrib`` globally with the following snippet:
 
     .. group-tab:: R
 
-        .. literalinclude:: hello-opendp.R
+        .. literalinclude:: quickstart.R
             :language: r
             :start-after: 1-library
             :end-before: 2-use
@@ -58,7 +58,7 @@ Let's apply Laplace noise to a value.
 
     .. group-tab:: R
 
-        .. literalinclude:: hello-opendp.R
+        .. literalinclude:: quickstart.R
             :language: r
             :start-after: 2-use
 

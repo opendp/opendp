@@ -1,14 +1,14 @@
 Getting Started
 ===============
 
-In this introduction, we present a differential privacy "Hello World" using OpenDP's Python and R APIs.
+This is a quick introduction to OpenDP's Python and R APIs.
 
-For a more conceptual introduction to differential privacy see the :doc:`../theory/index` section,
-and for an overview of the OpenDP libraries for Python, R, and Rust see the :doc:`../api/index` documentation.
+For a more conceptual overview of differential privacy see the :doc:`../theory/index` section,
+and for Python, R, and Rust library reference see the :doc:`../api/index` documentation.
 
 .. toctree::
   :titlesonly:
 
-  hello-opendp
+  quickstart
   real-world
   examples/index

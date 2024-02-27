@@ -2,8 +2,8 @@
 
 TODO: This is the documentation we want, when polars is available.
 
-Hello, OpenDP!
-==============
+Quickstart
+==========
 
 Once you've installed OpenDP, you can write your first program.
 In this example we'll make a private release from a `very` small dataset:
