@@ -297,76 +297,91 @@ get_value_type <- function(value) rt_parse(value("type"))$args[[2]]
 
 #' type signature for an 8-bit signed integer
 #'
+#' @concept typing
 #' @export
 i8 <- new_runtime_type("i8")
 
 #' type signature for a 16-bit signed integer
 #'
+#' @concept typing
 #' @export
 i16 <- new_runtime_type("i16")
 
 #' type signature for a 32-bit signed integer
 #'
+#' @concept typing
 #' @export
 i32 <- new_runtime_type("i32")
 
 #' type signature for a 64-bit signed integer
 #'
+#' @concept typing
 #' @export
 i64 <- new_runtime_type("i64")
 
 #' type signature for a 128-bit signed integer
 #'
+#' @concept typing
 #' @export
 i128 <- new_runtime_type("i128")
 
 #' type signature for an 8-bit unsigned integer
 #'
+#' @concept typing
 #' @export
 u8 <- new_runtime_type("u8")
 
 #' type signature for a 16-bit unsigned integer
 #'
+#' @concept typing
 #' @export
 u16 <- new_runtime_type("u16")
 
 #' type signature for a 32-bit unsigned integer
 #'
+#' @concept typing
 #' @export
 u32 <- new_runtime_type("u32")
 
 #' type signature for a 64-bit unsigned integer
 #'
+#' @concept typing
 #' @export
 u64 <- new_runtime_type("u64")
 
 #' type signature for a 128-bit unsigned integer
 #'
+#' @concept typing
 #' @export
 u128 <- new_runtime_type("u128")
 
 #' type signature for a pointer-sized unsigned integer
 #'
+#' @concept typing
 #' @export
 usize <- new_runtime_type("usize")
 
 #' type signature for a 32-bit floating point number
 #'
+#' @concept typing
 #' @export
 f32 <- new_runtime_type("f32")
 
 #' type signature for a 64-bit floating point number
 #'
+#' @concept typing
 #' @export
 f64 <- new_runtime_type("f64")
 
 #' type signature for a string
 #'
+#' @concept typing
 #' @export
 String <- new_runtime_type("String")
 
 #' type signature for a boolean
 #'
+#' @concept typing
 #' @export
 bool <- new_runtime_type("bool")
 
