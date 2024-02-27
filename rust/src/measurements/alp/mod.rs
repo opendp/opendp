@@ -13,7 +13,7 @@ use crate::error::Fallible;
 use crate::interactive::Queryable;
 use crate::measures::MaxDivergence;
 use crate::metrics::L1Distance;
-use crate::traits::samplers::{fill_bytes, SampleBernoulli};
+use crate::traits::samplers::{fill_bytes, sample_bernoulli_float};
 use crate::traits::{Float, Hashable, InfCast, Integer};
 use std::collections::hash_map::DefaultHasher;
 
@@ -116,7 +116,7 @@ where
 
     let floored = f64::inf_cast(r.clone().floor())? as usize;
 
-    match bool::sample_bernoulli(f64::inf_cast(r.fract())?, false)? {
+    match sample_bernoulli_float(f64::inf_cast(r.fract())?, false)? {
         true => Ok(floored + 1),
         false => Ok(floored),
     }
@@ -172,7 +172,7 @@ where
     let p = compute_prob(alpha);
 
     z.iter()
-        .map(|b| bool::sample_bernoulli(p, false).map(|flip| b ^ flip))
+        .map(|b| sample_bernoulli_float(p, false).map(|flip| b ^ flip))
         .collect()
 }
 

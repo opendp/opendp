@@ -10,7 +10,9 @@ use dashu::{
     rational::RBig,
 };
 
-use crate::{error::Fallible, traits::samplers::SampleStandardBernoulli};
+use crate::error::Fallible;
+
+use super::sample_standard_bernoulli;
 
 pub trait ODPRound: ErrorBounds {
     const UBIG: UBig;
@@ -48,7 +50,7 @@ impl UniformPSRN {
     fn refine(&mut self) -> Fallible<()> {
         self.numer <<= 1;
         self.denom_pow += 1;
-        if bool::sample_standard_bernoulli()? {
+        if sample_standard_bernoulli()? {
             self.numer += UBig::ONE;
         }
         Ok(())
