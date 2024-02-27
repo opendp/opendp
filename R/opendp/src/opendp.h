@@ -886,7 +886,6 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_respons
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_response(const struct AnyObject *categories,
                                                                                   const void *prob,
-                                                                                  c_bool constant_time,
                                                                                   const char *T,
                                                                                   const char *QO);
 
