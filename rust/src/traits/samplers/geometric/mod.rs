@@ -1,5 +1,6 @@
 use std::ops::{AddAssign, SubAssign};
 
+use dashu::{base::ConversionError, rational::RBig};
 use num::{One, Zero};
 
 use crate::{
@@ -7,7 +8,9 @@ use crate::{
     traits::{AlertingSub, ExactIntCast, FiniteBounds, Float, TotalOrd},
 };
 
-use super::{fill_bytes, sample_bernoulli_float, sample_standard_bernoulli};
+use super::{
+    fill_bytes, sample_bernoulli_float, sample_bernoulli_rational, sample_standard_bernoulli,
+};
 
 /// Sample from the censored geometric distribution.
 pub trait SampleGeometric<P>: Sized {
@@ -45,7 +48,7 @@ pub trait SampleGeometric<P>: Sized {
         shift: Self,
         positive: bool,
         prob: P,
-        trials: Option<Self>,
+        trials: Option<usize>,
     ) -> Fallible<Self>;
 }
 
@@ -60,7 +63,7 @@ where
         mut shift: Self,
         positive: bool,
         prob: P,
-        mut trials: Option<Self>,
+        mut trials: Option<usize>,
     ) -> Fallible<Self> {
         // ensure that prob is a valid probability
         if !(P::zero()..=P::one()).contains(&prob) {
@@ -93,7 +96,7 @@ where
                 if trials.is_zero() {
                     break;
                 }
-                *trials -= T::one();
+                *trials -= 1;
             } else if success {
                 // otherwise break on first success
                 break;
@@ -143,8 +146,10 @@ pub trait SampleDiscreteLaplaceLinear<P>: SampleGeometric<P> {
 
 impl<T, P> SampleDiscreteLaplaceLinear<P> for T
 where
-    T: Copy + SampleGeometric<P> + One + TotalOrd + AlertingSub,
+    T: Copy + SampleGeometric<P> + One + AddAssign + SubAssign + TotalOrd + AlertingSub,
     P: Float,
+    RBig: TryFrom<P, Error = ConversionError>,
+    usize: ExactIntCast<T>,
 {
     /// When no bounds are given, there are no protections against timing attacks.
     ///     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.
@@ -167,17 +172,19 @@ where
         if scale.is_zero() {
             return Ok(shift);
         }
-        let trials: Option<T> = if let Some((lower, upper)) = bounds {
+        let trials: Option<usize> = if let Some((lower, upper)) = bounds {
             // if the output interval is a point
             if lower == upper {
                 return Ok(lower);
             }
-            Some(upper.alerting_sub(&lower)?.alerting_sub(&T::one())?)
+            let trials = upper.alerting_sub(&lower)?.alerting_sub(&T::one())?;
+            Some(usize::exact_int_cast(trials)?)
         } else {
             None
         };
 
         // make prob conservatively smaller, because a smaller probability means greater noise
+        // p     = 1 - e^(-1/scale)
         let prob = P::one().neg_inf_sub(&(-scale.recip()).inf_exp()?)?;
 
         // It should be possible to drop the input clamp at a cost of `delta = 2^(-(upper - lower))`.
@@ -186,20 +193,25 @@ where
             shift = shift.total_clamp(lower, upper)?;
         }
 
-        let noised = loop {
-            let direction = sample_standard_bernoulli()?;
-            let sample = T::sample_geometric(shift, direction, prob, trials)?;
-            // reject sampling no noise in the negative direction, to avoid double-drawing zero
-            if direction || sample != shift {
-                break sample;
-            }
-        };
+        let direction = sample_standard_bernoulli()?;
+        let r_prob = RBig::try_from(prob)?;
+        let is_zero_prob = (RBig::ONE - &r_prob) / (RBig::ONE + r_prob);
+
+        let is_zero = sample_bernoulli_rational(is_zero_prob, Some(1000))?;
+
+        let mut discrete_laplace = T::sample_geometric(shift, direction, prob, trials)?;
+
+        if direction {
+            discrete_laplace += T::one();
+        } else {
+            discrete_laplace -= T::one();
+        }
 
         if let Some((lower, upper)) = bounds {
-            noised.total_clamp(lower, upper)
-        } else {
-            Ok(noised)
+            discrete_laplace = discrete_laplace.total_clamp(lower, upper)?;
         }
+
+        Ok(if is_zero { shift } else { discrete_laplace })
     }
 }
 
