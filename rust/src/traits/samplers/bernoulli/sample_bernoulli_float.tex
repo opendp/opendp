@@ -1,7 +1,7 @@
 \documentclass{article}
 \input{../../../lib.sty}
 
-\title{\texttt{trait SampleBernoulli}}
+\title{\texttt{fn sample\_bernoulli\_float}}
 \author{Vicki Xu, Hanwen Zhang, Zachary Ratliff}
 
 \begin{document}
@@ -10,7 +10,7 @@
 \contrib
 \begin{tcolorbox}
     \begin{warning}[Code is not constant-time]
-     \texttt{sample\_bernoulli} takes in a boolean \texttt{constant\_time} parameter to protect against timing attacks on the Bernoulli sampling procedure. However, the current implementation does not guard against other types of timing side-channels that can break differential privacy, e.g., non-constant time code execution due to branching.
+     \texttt{sample\_bernoulli\_float} takes in a boolean \texttt{constant\_time} parameter to protect against timing attacks on the Bernoulli sampling procedure. However, the current implementation does not guard against other types of timing side-channels that can break differential privacy, e.g., non-constant time code execution due to branching.
     \end{warning}
 \end{tcolorbox}
 
@@ -19,34 +19,10 @@
     \item \vettingPR{473}
 \end{itemize}
 
-This document proves that the implementations of \rustdoc{traits/samplers/bernoulli/trait}{SampleBernoulli} in \asOfCommit{mod.rs}{f5bb719} 
-satisfy the definition of the \texttt{SampleBernoulli} trait.
+This document proves that the implementation of \rustdoc{traits/samplers/bernoulli/fn}{sample\_bernoulli\_float} in \asOfCommit{mod.rs}{f5bb719} 
+satisfies its proof definition.
 
-\begin{definition}
-    \label{sample-bernoulli}
-
-    The \texttt{SampleBernoulli<T>} trait defines a function \texttt{sample\_bernoulli},
-    where the data type of the probability is \texttt{T}.
-
-    For any setting of the input parameters  
-    \texttt{prob} of type \texttt{T} restricted to $[0, 1]$,
-    and \texttt{constant\_time} of type \texttt{bool},
-    \texttt{sample\_bernoulli} either
-    \begin{itemize}
-        \item raises an exception if there is a lack of system entropy or \texttt{constant\_time} is not supported,
-        \item returns \texttt{out} where \texttt{out} is $\top$ with probability \texttt{prob}, otherwise $\bot$.
-    \end{itemize}
-     If \texttt{constant\_time} is set, the implementation's runtime is constant.    
-\end{definition}
-
-There are two \texttt{impl}'s (implementations): one for float probabilities, and one for rational probabilities.
-To prove correctness of each \texttt{impl}, we prove correctness of the implementation of \texttt{sample\_bernoulli}.
-
-\tableofcontents
-
-\section{\texttt{impl} for Float Probability}
-This corresponds to \texttt{impl<T> SampleBernoulli<T> for bool where T: Float} in Rust.
-At a high level, \texttt{sample\_bernoulli} considers the binary expansion of \texttt{prob} into an infinite sequence $\texttt{a\_i}$, 
+\texttt{sample\_bernoulli\_float} considers the binary expansion of \texttt{prob} into an infinite sequence $\texttt{a\_i}$, 
 like so: $\texttt{prob} = \sum_{i = 0}^{\infty} \frac{a_i}{2^{i + 1}}$. 
 The algorithm samples $I \sim Geom(0.5)$ using an internal function \rustdoc{traits/samplers/geometric/fn}{sample\_geometric\_buffer}, then returns $a_I$. 
 
@@ -66,48 +42,22 @@ The algorithm samples $I \sim Geom(0.5)$ using an internal function \rustdoc{tra
 
 \subsubsection*{Pseudocode}
 
-\begin{lstlisting}[language=Python, escapechar=|]
-# returns a single bit with some probability of success
-def sample_bernoulli(prob : T, constant_time : bool) -> bool:
-    if prob == 1: |\label{line:1check}|
-        return True
-        
-    # prepare for sampling first heads index by coin flipping
-    max_coin_flips = usize.exact_int_cast(T::EXPONENT_BIAS) + \
-                     usize.exact_int_cast(T::MANTISSA_BITS) |\label{line:maxcoinflips}|
-    
-    # find number of bits to sample, rounding up to nearest byte (smallest sample size)
-    buffer_len = max_count_flips.inf_div(8) |\label{line:bufferlen}|
-    
-    # repeatedly flip fair coin and identify 0-based index of first heads
-    first_heads_index = sample_geometric_buffer(buffer_len, constant_time) |\label{line:sampling}|
-    
-    # if no events occurred, return early
-    if first_heads_index is None: |\label{line:noones}|
-        return False
-    
-    # find number of zeroes in binary rep. of prob
-    leading_zeroes = T::EXPONENT_BIAS - 1 - prob.raw_exponent() |\label{line:leadingzeroes}|
-
-    # case 1: index into the leading zeroes
-    if first_heads_index < leading_zeros: |\label{line:case1}|
-        return False
-    
-    # case 2: index into implicit bit directly to left of mantissa
-    if first_heads_index == leading_zeroes: |\label{line:case2}|
-        return prob.raw_exponent() != 0
-    
-    # case 3: index into out-of-bounds/implicitly-zero bits
-    if first_heads_index > leading_zeroes + MANTISSA_BITS: |\label{line:case3}|
-        return False
-    
-    # case 4: index into mantissa |\label{line:case4}|
-    mask = (1 << (T::MANTISSA_BITS + leading_zeroes - first_heads_index))
-    return (prob.to_bits() & mask) != 0
-\end{lstlisting}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_bernoulli_float.py}
 
 \subsubsection*{Postcondition}
-The postcondition is supplied by \ref{sample-bernoulli}.
+
+\begin{definition}
+    \label{sample-bernoulli}
+    For any setting of the input parameters
+    \texttt{prob} of type \texttt{T} restricted to $[0, 1]$,
+    and \texttt{constant\_time} of type \texttt{bool},
+    \texttt{sample\_bernoulli\_float} either
+    \begin{itemize}
+        \item raises an exception if there is a lack of system entropy,
+        \item returns \texttt{out} where \texttt{out} is $\top$ with probability \texttt{prob}, otherwise $\bot$.
+    \end{itemize}
+     If \texttt{constant\_time} is set, the implementation's runtime is constant.    
+\end{definition}
 
 \subsection{Proof}
 \begin{proof} 
@@ -156,40 +106,5 @@ Assuming that \texttt{sample\_geometric\_buffer} returns some $I < j$,  \texttt{
 
 \noindent Therefore, for any value of \texttt{prob}, the function \texttt{sample\_bernoulli} either raises an exception or returns the value \texttt{true} with probability exactly $\texttt{prob}$.  
 \end{proof}
-
-
-
-\section{\texttt{impl} for Rational Probability}
-
-This corresponds to \texttt{impl SampleBernoulli<Rational> for bool} in Rust.
-
-\subsection{Hoare Triple}
-\subsubsection*{Preconditions}
-\begin{itemize}
-    \item \textbf{User-specified types:}
-    \begin{itemize}
-        \item Variable \texttt{prob} must be of type \texttt{Rational}
-        \item Variable \texttt{constant\_time} must be of type \texttt{bool}
-    \end{itemize}
-\end{itemize}
-
-\subsubsection*{Pseudocode}
-
-\begin{lstlisting}[language=Python, escapechar=|]
-# returns a single bit with some probability of success
-def sample_bernoulli(prob: Rational, constant_time : bool) -> bool:
-    if constant_time:
-        raise NotImplementedError("constant-time uniform sampling of rationals is not implemented")
-    
-    let (numer, denom) = prob.into_numer_denom();
-    return numer > Integer.sample_uniform_int_below(denom)
-\end{lstlisting}
-
-\subsubsection*{Postcondition}
-The postcondition is supplied by \ref{sample-bernoulli}.
-
-\subsection{Proof}
-\emph{This proof has not been written.}
-
 
 \end{document}
