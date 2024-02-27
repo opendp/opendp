@@ -91,6 +91,7 @@ make_b_ary_tree <- function(
 #'
 #' See documentation for [make_b_ary_tree()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param leaf_count The number of leaf nodes in the b-ary tree.
 #' @param branching_factor The number of children on each branch of the resulting tree. Larger branching factors result in shallower trees.
@@ -190,6 +191,7 @@ make_bounded_float_checked_sum <- function(
 #'
 #' See documentation for [make_bounded_float_checked_sum()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param size_limit Upper bound on number of records to keep in the input data.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
@@ -291,6 +293,7 @@ make_bounded_float_ordered_sum <- function(
 #'
 #' See documentation for [make_bounded_float_ordered_sum()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param size_limit Upper bound on the number of records in input data. Used to bound sensitivity.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
@@ -373,6 +376,7 @@ make_bounded_int_monotonic_sum <- function(
 #'
 #' See documentation for [make_bounded_int_monotonic_sum()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
@@ -452,6 +456,7 @@ make_bounded_int_ordered_sum <- function(
 #'
 #' See documentation for [make_bounded_int_ordered_sum()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
@@ -531,6 +536,7 @@ make_bounded_int_split_sum <- function(
 #'
 #' See documentation for [make_bounded_int_split_sum()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
@@ -605,6 +611,7 @@ make_cast <- function(
 #'
 #' See documentation for [make_cast()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param .TOA Atomic Output Type to cast into
 #' @return Transformation
@@ -686,6 +693,7 @@ make_cast_default <- function(
 #'
 #' See documentation for [make_cast_default()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param .TOA Atomic Output Type to cast into
 #' @return Transformation
@@ -761,6 +769,7 @@ make_cast_inherent <- function(
 #'
 #' See documentation for [make_cast_inherent()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param .TOA Atomic Output Type to cast into
 #' @return Transformation
@@ -825,6 +834,7 @@ make_cdf <- function(
 #'
 #' See documentation for [make_cdf()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param .TA Atomic Type. One of `f32` or `f64`
 #' @return Function
@@ -904,6 +914,7 @@ make_clamp <- function(
 #'
 #' See documentation for [make_clamp()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param bounds Tuple of inclusive lower and upper bounds.
 #' @return Transformation
@@ -987,6 +998,7 @@ make_consistent_b_ary_tree <- function(
 #'
 #' See documentation for [make_consistent_b_ary_tree()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param branching_factor the maximum number of children
 #' @param .TIA Atomic type of the input data. Should be an integer type.
@@ -1069,6 +1081,7 @@ make_count <- function(
 #'
 #' See documentation for [make_count()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param .TO Output Type. Must be numeric.
 #' @return Transformation
@@ -1147,6 +1160,7 @@ make_count_by <- function(
 #'
 #' See documentation for [make_count_by()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param .MO Output Metric.
 #' @param .TV Type of Value. Express counts in terms of this integral type.
@@ -1239,6 +1253,7 @@ make_count_by_categories <- function(
 #'
 #' See documentation for [make_count_by_categories()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param categories The set of categories to compute counts for.
 #' @param null_category Include a count of the number of elements that were not in the category set at the end of the vector.
@@ -1322,6 +1337,7 @@ make_count_distinct <- function(
 #'
 #' See documentation for [make_count_distinct()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param .TO Output Type. Must be numeric.
 #' @return Transformation
@@ -1394,6 +1410,7 @@ make_create_dataframe <- function(
 #'
 #' See documentation for [make_create_dataframe()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param col_names Column names for each record entry.
 #' @param .K categorical/hashable data type of column names
@@ -1484,6 +1501,7 @@ make_df_cast_default <- function(
 #'
 #' See documentation for [make_df_cast_default()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param column_name column name to be transformed
 #' @param .TIA Atomic Input Type to cast from
@@ -1570,6 +1588,7 @@ make_df_is_equal <- function(
 #'
 #' See documentation for [make_df_is_equal()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param column_name Column name to be transformed
 #' @param value Value to check for equality
@@ -1648,6 +1667,7 @@ make_drop_null <- function(
 #'
 #' See documentation for [make_drop_null()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
@@ -1724,6 +1744,7 @@ make_find <- function(
 #'
 #' See documentation for [make_find()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param categories The set of categories to find indexes from.
 #' @return Transformation
@@ -1806,6 +1827,7 @@ make_find_bin <- function(
 #'
 #' See documentation for [make_find_bin()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param edges The set of edges to split bins by.
 #' @return Transformation
@@ -1877,6 +1899,7 @@ make_identity <- function(
 #'
 #' See documentation for [make_identity()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
@@ -1956,6 +1979,7 @@ make_impute_constant <- function(
 #'
 #' See documentation for [make_impute_constant()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param constant Value to replace nulls with.
 #' @return Transformation
@@ -2030,6 +2054,7 @@ make_impute_uniform_float <- function(
 #'
 #' See documentation for [make_impute_uniform_float()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param bounds Tuple of inclusive lower and upper bounds.
 #' @return Transformation
@@ -2109,6 +2134,7 @@ make_index <- function(
 #'
 #' See documentation for [make_index()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param categories The set of categories to index into.
 #' @param null Category to return if the index is out-of-range of the category set.
@@ -2193,6 +2219,7 @@ make_is_equal <- function(
 #'
 #' See documentation for [make_is_equal()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param value value to check against
 #' @return Transformation
@@ -2259,6 +2286,7 @@ make_is_null <- function(
 #'
 #' See documentation for [make_is_null()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
@@ -2340,6 +2368,7 @@ make_lipschitz_float_mul <- function(
 #'
 #' See documentation for [make_lipschitz_float_mul()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param constant The constant to multiply aggregates by.
 #' @param bounds Tuple of inclusive lower and upper bounds.
@@ -2416,6 +2445,7 @@ make_mean <- function(
 #'
 #' See documentation for [make_mean()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
@@ -2489,6 +2519,7 @@ make_metric_bounded <- function(
 #'
 #' See documentation for [make_metric_bounded()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
@@ -2559,6 +2590,7 @@ make_metric_unbounded <- function(
 #'
 #' See documentation for [make_metric_unbounded()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
@@ -2629,6 +2661,7 @@ make_ordered_random <- function(
 #'
 #' See documentation for [make_ordered_random()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
@@ -2708,6 +2741,7 @@ make_quantile_score_candidates <- function(
 #'
 #' See documentation for [make_quantile_score_candidates()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param candidates Potential quantiles to score
 #' @param alpha a value in \eqn{[0, 1]}. Choose 0.5 for median
@@ -2791,6 +2825,7 @@ make_quantiles_from_counts <- function(
 #'
 #' See documentation for [make_quantiles_from_counts()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param bin_edges The edges that the input data was binned into before counting.
 #' @param alphas Return all specified `alpha`-quantiles.
@@ -2881,6 +2916,7 @@ make_resize <- function(
 #'
 #' See documentation for [make_resize()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param size Number of records in output data.
 #' @param constant Value to impute with.
@@ -2961,6 +2997,7 @@ make_select_column <- function(
 #'
 #' See documentation for [make_select_column()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param key categorical/hashable data type of the key/column name
 #' @param .K data type of key
@@ -3060,6 +3097,7 @@ make_sized_bounded_float_checked_sum <- function(
 #'
 #' See documentation for [make_sized_bounded_float_checked_sum()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param size Number of records in input data.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
@@ -3161,6 +3199,7 @@ make_sized_bounded_float_ordered_sum <- function(
 #'
 #' See documentation for [make_sized_bounded_float_ordered_sum()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param size Number of records in input data.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
@@ -3246,6 +3285,7 @@ make_sized_bounded_int_checked_sum <- function(
 #'
 #' See documentation for [make_sized_bounded_int_checked_sum()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param size Number of records in input data.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
@@ -3331,6 +3371,7 @@ make_sized_bounded_int_monotonic_sum <- function(
 #'
 #' See documentation for [make_sized_bounded_int_monotonic_sum()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param size Number of records in input data.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
@@ -3418,6 +3459,7 @@ make_sized_bounded_int_ordered_sum <- function(
 #'
 #' See documentation for [make_sized_bounded_int_ordered_sum()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param size Number of records in input data.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
@@ -3505,6 +3547,7 @@ make_sized_bounded_int_split_sum <- function(
 #'
 #' See documentation for [make_sized_bounded_int_split_sum()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param size Number of records in input data.
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
@@ -3584,6 +3627,7 @@ make_split_dataframe <- function(
 #'
 #' See documentation for [make_split_dataframe()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param separator The token(s) that separate entries in each record.
 #' @param col_names Column names for each record entry.
@@ -3651,6 +3695,7 @@ make_split_lines <- function(
 #'
 #' See documentation for [make_split_lines()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
@@ -3712,6 +3757,7 @@ make_split_records <- function(
 #'
 #' See documentation for [make_split_records()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param separator The token(s) that separate entries in each record.
 #' @return Transformation
@@ -3785,6 +3831,7 @@ make_subset_by <- function(
 #'
 #' See documentation for [make_subset_by()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param indicator_column name of the boolean column that indicates inclusion in the subset
 #' @param keep_columns list of column names to apply subset to
@@ -3863,6 +3910,7 @@ make_sum <- function(
 #'
 #' See documentation for [make_sum()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
@@ -3952,6 +4000,7 @@ make_sum_of_squared_deviations <- function(
 #'
 #' See documentation for [make_sum_of_squared_deviations()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param .S Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
 #' @return Transformation
@@ -4024,6 +4073,7 @@ make_unordered <- function(
 #'
 #' See documentation for [make_unordered()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
@@ -4106,6 +4156,7 @@ make_variance <- function(
 #'
 #' See documentation for [make_variance()] for details.
 #'
+#' @concept transformations
 #' @param lhs The prior transformation or metric space.
 #' @param ddof Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.
 #' @param .S Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
