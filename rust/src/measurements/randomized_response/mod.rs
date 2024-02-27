@@ -88,7 +88,6 @@ where
 /// # Arguments
 /// * `categories` - Set of valid outcomes
 /// * `prob` - Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
-/// * `constant_time` - Set to true to enable constant time. Slower.
 ///
 /// # Generics
 /// * `T` - Data type of a category.
@@ -96,7 +95,6 @@ where
 pub fn make_randomized_response<T, QO>(
     categories: HashSet<T>,
     prob: QO,
-    constant_time: bool,
 ) -> Fallible<Measurement<AtomDomain<T>, T, DiscreteDistance, MaxDivergence<QO>>>
 where
     T: Hashable,
@@ -151,7 +149,7 @@ where
             let lie = &categories[sample];
 
             // return the truth if we chose to be honest and the truth is in the category set
-            let be_honest = sample_bernoulli_float(prob, constant_time)?;
+            let be_honest = sample_bernoulli_float(prob, false)?;
             let is_member = index.is_some();
             Ok(if be_honest && is_member { truth } else { lie }.clone())
         }),
@@ -193,11 +191,8 @@ mod test {
     }
     #[test]
     fn test_cat() -> Fallible<()> {
-        let ran_res = make_randomized_response(
-            HashSet::from_iter(vec![2, 3, 5, 6].into_iter()),
-            0.75,
-            false,
-        )?;
+        let ran_res =
+            make_randomized_response(HashSet::from_iter(vec![2, 3, 5, 6].into_iter()), 0.75)?;
         let res = ran_res.invoke(&3)?;
         println!("{:?}", res);
         // (.75 * 3 / .25) = 9
@@ -207,18 +202,13 @@ mod test {
     }
     #[test]
     fn test_cat_extremes() -> Fallible<()> {
-        let ran_res = make_randomized_response(
-            HashSet::from_iter(vec![2, 3, 5, 7, 8].into_iter()),
-            1. / 5.,
-            false,
-        )?;
+        let ran_res =
+            make_randomized_response(HashSet::from_iter(vec![2, 3, 5, 7, 8].into_iter()), 1. / 5.)?;
         assert!(ran_res.check(&1, &1e-10)?);
-        assert!(make_randomized_response(
-            HashSet::from_iter(vec![2, 3, 5, 7].into_iter()),
-            1.,
-            false
-        )
-        .is_err());
+        assert!(
+            make_randomized_response(HashSet::from_iter(vec![2, 3, 5, 7].into_iter()), 1.,)
+                .is_err()
+        );
         Ok(())
     }
 }
