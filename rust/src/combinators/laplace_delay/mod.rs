@@ -1,9 +1,24 @@
-use crate::{
-    core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap, Function},
-    error::Fallible,
-    measures::{FixedSmoothedMaxDivergence, SmoothedMaxDivergence},
-    traits::samplers::SampleDiscreteLaplaceZ2k,
+use std::{thread::sleep, time::Duration};
+
+use dashu::{
+    base::Sign,
+    float::{round::mode::Up, FBig},
+    integer::IBig,
+    rational::RBig,
 };
+
+use crate::{
+    core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
+    error::Fallible,
+    measures::{FixedSmoothedMaxDivergence, MaxDivergence},
+    traits::samplers::sample_discrete_laplace,
+};
+
+use super::BasicCompositionMeasure;
+
+
+#[cfg(test)]
+mod test;
 
 /// Make a non-time-safe measurement time-safe by adding a delay.
 ///
@@ -16,39 +31,66 @@ use crate::{
 /// * `TO` - Output Type
 /// * `MI` - Input Metric.
 /// * `MO` - Output Measure of the input argument. Must be `SmoothedMaxDivergence<Q>`
-pub fn make_laplace_delay<DI, TO, MI, MO>(
-    m: &Measurement<DI, TO, MI, MO>,
-    shift: f64,
+pub fn make_laplace_delay<DI, TO, MI>(
+    m: &Measurement<DI, TO, MI, MaxDivergence<f64>>,
+    shift: u64,
     scale: f64,
-) -> Fallible<Measurement<DI, TO, MI, MO>>
+) -> Fallible<Measurement<DI, TO, MI, FixedSmoothedMaxDivergence<f64>>>
 where
     DI: Domain,
+    DI::Carrier: 'static,
+    TO: 'static,
     MI: 'static + Metric,
-    MO: 'static + Measure,
     (DI, MI): MetricSpace,
 {
     if m.time_safe {
         return fallible!(MakeTransformation, "Measurement is already time-safe");
     }
 
+    let i_shift = IBig::from(shift);
+    let f_shift = FBig::from(shift);
+    let r_scale = RBig::try_from(scale)?;
+    let f_scale = FBig::try_from(scale)?;
+    let function = m.function.clone();
+    let privacy_map = m.privacy_map.clone();
+    let output_metric = FixedSmoothedMaxDivergence::default();
+
     Measurement::new(
-        m.input_domain,
+        m.input_domain.clone(),
         Function::new_fallible(move |arg: &DI::Carrier| {
-            let output = m.function.eval(arg)?;
-            let delay = f64::sample_discrete_laplace_Z2k(shift, scale, 1074)?;
-            sleep(delay);
+            let output = function.eval(arg)?;
+            let delay = i_shift.clone() + sample_discrete_laplace(r_scale.clone())?;
+            let (sign, mag) = delay.into_parts();
+            match sign {
+                Sign::Positive => sleep(Duration::from_millis(
+                    u64::try_from(mag).unwrap_or(u64::MAX),
+                )),
+                Sign::Negative => (),
+            };
 
             Ok(output)
         }),
         m.input_metric.clone(),
-        m.output_measure.clone(),
-        // TODO: this should add a delta into the map (based on shift/scale?). 
-        // Will need a new trait on MO for this.
-        // Maybe also refactor the measures:
-        //     SmoothedMaxDivergence<Q> -> Smoothed<MaxDivergence<Q>>
-        // so as to also support, for example:
-        //     Smoothed<ZeroConcentratedDivergence<Q>>, with distance (ρ, δ)?
-        // Then the output measure is of type Smoothed<MO::InnerMeasure>
-        m.privacy_map.clone(),
-    ).map(|m| m.with_time_safe(true))
+        output_metric.clone(),
+        PrivacyMap::new_fallible(move |d_in| {
+            let (eps_0, del_0) = (privacy_map.eval(d_in)?, 0.);
+
+            let Some(ref time_map) = privacy_map.time else {
+                return fallible!(FailedMap, "PrivacyMap does not have a time component");
+            };
+
+            let t_in = time_map(d_in)?;
+            if shift < t_in {
+                return fallible!(FailedFunction, "Shift is less than the input time");
+            }
+
+            let t_in = FBig::<Up>::from(t_in);
+            let f_eps_t = &t_in / &f_scale;
+            let f_del_t = (-&f_eps_t * (&f_shift - &t_in) / t_in).exp();
+            let (eps_t, del_t) = (f_eps_t.to_f64().value(), f_del_t.to_f64().value());
+
+            output_metric.compose(vec![(eps_0, del_0), (eps_t, del_t)])
+        }),
+    )
+    .map(|m| m.with_time_safe(true))
 }
