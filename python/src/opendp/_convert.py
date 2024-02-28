@@ -264,7 +264,7 @@ def _refcounter(ptr, increment):
             ctypes.pythonapi.Py_IncRef(ctypes.py_object(ptr))
         else:
             ctypes.pythonapi.Py_DecRef(ctypes.py_object(ptr))
-    except:
+    except Exception:
         return False
     return True
 
