@@ -1,0 +1,654 @@
+{
+ "cells": [
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Additive Noise Mechanisms\n",
+    "\n",
+    "This notebook documents the variations on additive noise mechanisms in OpenDP:\n",
+    "\n",
+    "* Distribution: Laplace vs. Gaussian\n",
+    "* Support: float vs. integer\n",
+    "* Domain: scalar vs. vector\n",
+    "* Bit-depth"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "----\n",
+    "Any constructors that have not completed the proof-writing and vetting process may still be accessed if you opt-in to \"contrib\".\n",
+    "Please contact us if you are interested in proof-writing. Thank you!"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from opendp.mod import enable_features\n",
+    "enable_features(\"contrib\")"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Distribution: Laplace vs. Gaussian\n",
+    "\n",
+    "The Laplace mechanism is a ubiquitous algorithm in the DP ecosystem that is used to privatize an aggregate, like a sum or mean.\n",
+    "\n",
+    "An instance of the Laplace mechanism is captured by a _measurement_ containing the following five elements:\n",
+    "\n",
+    "<details>\n",
+    "  <summary>Elements of a Laplace Measurement</summary>\n",
+    "\n",
+    "1. We first define the **function** $f(\\cdot)$, that applies the Laplace mechanism to some argument $x$. This function simply samples from the Laplace distribution centered at $x$, with a fixed noise scale.\n",
+    "\n",
+    "$$f(x) = Laplace(\\mu=x, b=scale)$$\n",
+    "\n",
+    "2. Importantly, $f(\\cdot)$ is only well-defined for any finite float input. This set of permitted inputs is described by the **input domain** (denoted `AtomDomain<f64>`).\n",
+    "\n",
+    "3. The Laplace mechanism has a privacy guarantee in terms of epsilon. \n",
+    "This guarantee is represented by a **privacy map**, a function that computes the privacy loss $\\epsilon$ for any choice of sensitivity $\\Delta$.\n",
+    "\n",
+    "$$map(\\Delta) = \\Delta / scale <= \\epsilon$$\n",
+    "\n",
+    "4. This map only promises that the privacy loss will be at most $\\epsilon$ if inputs from any two neighboring datasets may differ by no more than some quantity $\\Delta$ under the absolute distance **input metric** (`AbsoluteDistance<f64>`).\n",
+    "\n",
+    "5. We similarly describe units on the output ($\\epsilon$) via the **output measure** (`MaxDivergence<f64>`).\n",
+    "</details>\n",
+    "\n",
+    "\n",
+    "The `make_base_laplace` constructor function returns the equivalent of the Laplace measurement described above."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "noisy aggregate: -3.1135951257672723\n",
+      "epsilon: 0.5\n"
+     ]
+    }
+   ],
+   "source": [
+    "from opendp.measurements import make_base_laplace\n",
+    "\n",
+    "# call the constructor to produce the measurement `base_lap`\n",
+    "base_lap = make_base_laplace(scale=2.)\n",
+    "\n",
+    "# invoke the measurement on some aggregate x, to sample Laplace(x, 1.) noise\n",
+    "aggregated = 0.\n",
+    "print(\"noisy aggregate:\", base_lap(aggregated))\n",
+    "\n",
+    "# we must know the sensitivity of `aggregated` to determine epsilon\n",
+    "sensitivity = 1.\n",
+    "print(\"epsilon:\", base_lap.map(d_in=sensitivity))"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The analogous constructor for gaussian noise is `make_base_gaussian`: "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "noisy aggregate: -2.713640944017099\n",
+      "rho: 0.125\n"
+     ]
+    }
+   ],
+   "source": [
+    "from opendp.measurements import make_base_gaussian\n",
+    "\n",
+    "# call the constructor to produce the measurement `base_gauss`\n",
+    "base_gauss = make_base_gaussian(scale=2.)\n",
+    "\n",
+    "# invoke the measurement on some aggregate x, to sample Gaussian(x, 1.) noise\n",
+    "aggregated = 0.\n",
+    "print(\"noisy aggregate:\", base_gauss(aggregated))\n",
+    "\n",
+    "# we must know the sensitivity of `aggregated` to determine epsilon\n",
+    "sensitivity = 1.\n",
+    "print(\"rho:\", base_gauss.map(d_in=sensitivity))"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Notice that `base_lap` measures privacy with epsilon (in the `MaxDivergence` measure), and `base_gauss` measures privacy with rho (in the `ZeroConcentratedDivergence` measure).\n"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Support: Float vs. Integer\n",
+    "\n",
+    "There are also discrete analogues of the continuous Laplace and Gaussian measurements.\n",
+    "The continuous measurements accept and emit floats, while the discrete measurements accept and emit integers.\n",
+    "Measurements with distributions supported on the integers expect integer sensitivities by default.\n",
+    "\n",
+    "`make_base_discrete_laplace` is equivalent to the geometric mechanism:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 34,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "noisy aggregate: 0\n",
+      "epsilon: 1.0\n"
+     ]
+    }
+   ],
+   "source": [
+    "from opendp.measurements import make_base_discrete_laplace\n",
+    "\n",
+    "# call the constructor to produce the measurement `base_discrete_lap`\n",
+    "base_discrete_lap = make_base_discrete_laplace(scale=1.)\n",
+    "\n",
+    "# invoke the measurement on some integer aggregate x, to sample DiscreteLaplace(x, 1.) noise\n",
+    "aggregated = 0\n",
+    "print(\"noisy aggregate:\", base_discrete_lap(aggregated))\n",
+    "\n",
+    "# in this case, the sensitivity is integral:\n",
+    "sensitivity = 1\n",
+    "print(\"epsilon:\", base_discrete_lap.map(d_in=sensitivity))"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "`make_base_discrete_gaussian` is the analogous measurement for Gaussian noise:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 35,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "noisy aggregate: -1\n",
+      "rho: 0.5\n"
+     ]
+    }
+   ],
+   "source": [
+    "from opendp.measurements import make_base_discrete_gaussian\n",
+    "\n",
+    "# call the constructor to produce the measurement `base_discrete_gauss`\n",
+    "base_discrete_gauss = make_base_discrete_gaussian(scale=1.)\n",
+    "\n",
+    "# invoke the measurement on some aggregate x, to sample DiscreteGaussian(x, 1.) noise\n",
+    "aggregated = 0\n",
+    "print(\"noisy aggregate:\", base_discrete_gauss(aggregated))\n",
+    "\n",
+    "# we must know the sensitivity of `aggregated` to determine epsilon\n",
+    "sensitivity = 1\n",
+    "print(\"rho:\", base_discrete_gauss.map(d_in=sensitivity))"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The continuous mechanisms use these discrete samplers internally.\n",
+    "More information on this can be found at the end of this notebook."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Domain: Scalar vs. Vector"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Measurements covered thus far have accepted scalar inputs and emitted scalar outputs, \n",
+    "and sensitivities have been expressed in terms of the absolute distance.\n",
+    "\n",
+    "All constructors have an additional argument `D` (short for \"Domain\"), which can be used to configure the shape of the domain that the mechanism operates over.\n",
+    "`D` defaults to `AtomDomain<T>`, which represents the space of all (non-null) elements of some type `T` (where `T` is `float` or `int`, depending on the support of the distribution).\n",
+    "\n",
+    "You can instead set `D` to `\"VectorDomain<AtomDomain<T>>\"`, (where `T` is `float` or `int`) which indicates that the measurement should be vector-valued."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 36,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "inferred type is f64, expected Vec<f64>. See https://github.com/opendp/opendp/discussions/298\n"
+     ]
+    }
+   ],
+   "source": [
+    "# call again, but this time indicate that the measurement should operate over a vector domain\n",
+    "base_lap_vec = make_base_laplace(\n",
+    "    scale=1., D=\"VectorDomain<AtomDomain<float>>\"\n",
+    ")\n",
+    "\n",
+    "aggregated = 1.\n",
+    "# If we try to pass the wrong data type into our vector laplace measurement, \n",
+    "# the error shows that our float argument should be a vector of floats.\n",
+    "try:\n",
+    "    print(\"noisy aggregate:\", base_lap_vec(aggregated))\n",
+    "except TypeError as e:\n",
+    "    # The error messages will often point to a discussion page with more info.\n",
+    "    print(e)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 37,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "noisy aggregate: [0.13960776943015754, 1.9918326778096607, 1.7100959620394025]\n"
+     ]
+    }
+   ],
+   "source": [
+    "# actually pass a vector-valued input, as expected\n",
+    "aggregated = [0., 2., 2.]\n",
+    "print(\"noisy aggregate:\", base_lap_vec(aggregated))\n"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The resulting measurement expects sensitivity in terms of the appropriate Lp-distance: the vector Laplace measurement expects sensitivity in terms of an `\"L1Distance<T>\"`, while the vector Gaussian measurement expects a sensitivity in terms of an `\"L2Distance<T>\"`. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 38,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "epsilon: 1.0\n"
+     ]
+    }
+   ],
+   "source": [
+    "sensitivity = 1.\n",
+    "print(\"epsilon:\", base_lap_vec.map(d_in=sensitivity))"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The documentation for each constructor also reflects the relationship between `D` and the resulting input metric in a table:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 39,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Help on function make_base_laplace in module opendp.measurements:\n",
+      "\n",
+      "make_base_laplace(scale, k: int = -1074, D: Union[ForwardRef('RuntimeType'), _GenericAlias, str, Type[Union[List, Tuple, int, float, str, bool]], tuple] = 'AtomDomain<T>') -> opendp.mod.Measurement\n",
+      "    Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.\n",
+      "    \n",
+      "    Set `D` to change the input data type and input metric:\n",
+      "    \n",
+      "    | `D`                          | input type   | `D::InputMetric`       |\n",
+      "    | ---------------------------- | ------------ | ---------------------- |\n",
+      "    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |\n",
+      "    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |\n",
+      "    \n",
+      "    \n",
+      "    This function takes a noise granularity in terms of 2^k. \n",
+      "    Larger granularities are more computationally efficient, but have a looser privacy map. \n",
+      "    If k is not set, k defaults to the smallest granularity.\n",
+      "    \n",
+      "    [make_base_laplace in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_laplace.html)\n",
+      "    \n",
+      "    **Supporting Elements:**\n",
+      "    \n",
+      "    * Input Domain:   `D`\n",
+      "    * Output Domain:  `D`\n",
+      "    * Input Metric:   `D::InputMetric`\n",
+      "    * Output Measure: `MaxDivergence<D::Atom>`\n",
+      "    \n",
+      "    :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.\n",
+      "    :param k: The noise granularity in terms of 2^k.\n",
+      "    :type k: int\n",
+      "    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`\n",
+      "    :type D: :py:ref:`RuntimeTypeDescriptor`\n",
+      "    :rtype: Measurement\n",
+      "    :raises TypeError: if an argument's type differs from the expected type\n",
+      "    :raises UnknownTypeError: if a type argument fails to parse\n",
+      "    :raises OpenDPException: packaged error from the core OpenDP library\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "help(make_base_laplace)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Regardless of the choice of `D`, the discrete versions of the measurements still expect integral sensitivities.\n",
+    "A special affordance is made for the vector-valued discrete Gaussian mechanism, which can be configured to expect a float sensitivity instead:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 40,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.999698"
+      ]
+     },
+     "execution_count": 40,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# call again, but this time indicate that the measurement should operate over a vector domain\n",
+    "base_gauss_vec = make_base_discrete_gaussian(\n",
+    "    scale=1., D=\"VectorDomain<AtomDomain<int>>\", QI=float\n",
+    ")\n",
+    "\n",
+    "base_gauss_vec.map(d_in=1.414)\n"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Throughout the library, types for distances are labeled with `Q` (because `D` is already taken for domains). The type argument `QI` stands for \"input distance\"."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Bit depth\n",
+    "\n",
+    "By default, all floating-point data types default to 64-bit double-precision (denoted `\"f64\"`), and all integral data types default to 32-bit (denoted `\"i32\"`).\n",
+    "The atomic data type expected by the function and privacy units can be further configured to operate over specific bit-depths by explicitly specifying `\"f32\"` instead of `\"float\"`, or `\"i64\"` instead of `\"int\"`. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 41,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# explicitly specify that the...\n",
+    "# * computation should be handled with 32-bit integers, and the\n",
+    "# * privacy analysis be conducted with 64-bit floats\n",
+    "base_discrete_lap_i32 = make_base_discrete_laplace(\n",
+    "    scale=1., D=\"AtomDomain<i32>\", QO=\"f64\"\n",
+    ")"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "More information on acceptable data types can be found in the _Utilities > Typing_ section of the User Guide."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Desideratum: Floating-Point Granularity\n",
+    "\n",
+    "The \"continuous\" Laplace and Gaussian measurements convert their float arguments to a rational representation, and then add integer noise to the numerator via the respective discrete distribution. \n",
+    "In the OpenDP Library's default configuration, this rational representation of a float is exact.\n",
+    "Therefore the privacy analysis is as tight as if you were to sample truly continuous noise and then postprocess by rounding to the nearest float. \n",
+    "\n",
+    "For most use-cases the sampling algorithm is sufficiently fast when the rational representation is exact.\n",
+    "That is, when noise is sampled with a granularity of $2^{-1074}$, the same granularity as the distance between subnormal 64-bit floats.\n",
+    "However, the granularity can be adjusted to $2^k$, for some choice of k, for a faster runtime.\n",
+    "Adjusting this parameter comes with a small penalty to the sensitivity (to account for rounding to the nearest rational), and subsequently, to the privacy parameters.\n",
+    "\n",
+    "The following plot shows the resulting distribution for some large choices of k:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 42,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "image/png": "iVBORw0KGgoAAAANSUhEUgAAAmEAAADRCAYAAACEoGUXAAAAOXRFWHRTb2Z0d2FyZQBNYXRwbG90bGliIHZlcnNpb24zLjMuMSwgaHR0cHM6Ly9tYXRwbG90bGliLm9yZy/d3fzzAAAACXBIWXMAAAsTAAALEwEAmpwYAAAoCElEQVR4nO3de7gcVZnv8e+PhIBIgADxAiQEBVRQBN2Ac0TEMWAQuXjl6gCiGVQcPaiIghDwFmQEnSMzEjUiKiCgYhxAkPugRhIuhkkQCRBIYoBIIISLYMh7/lhrx0rT3bv3TlfX7r1/n+fpJ11Va1W/3btW+u1aq2opIjAzMzOzzlqn6gDMzMzMhiMnYWZmZmYVcBJmZmZmVgEnYWZmZmYVcBJmZmZmVgEnYWZmZmYVcBJm1oSk8yR9ebDub21IukHSh9uwn70kLWpHTP14zRdJ+pWk5ZIuKek1QtK2+fl3JH2xsO2jkh6W9KSkzSS9WdI9efmgMuIpg6Qpkn48wLprfCZVkvQqSXdIWiHp3+psb8uxbtZuI6sOwMxsAN4HvBTYLCJWlv1iEXFs73NJ6wJnAW+KiD/mdacD346Ib5UdSy1J5wGLIuLkTr5u8TMZBE4Aro+InasOxKw/fCbMzLrR1sCfB5KASVrbH58vBdYH5tbEM7d+8dLjsbX4/M2q5CTMhhxJCyR9VtIcSU9J+r6kl0q6MndXXCNpTKH8JZIeyl1bN0nascF+R0u6XtJ/KHm1pN9IWibpbkkfaDHEzXO9FZJulLR14TW+JWmhpCck3SrpLYVtu0manbc9LOmswrY3SfqdpMcl/VHSXv38zF4p6TpJj0r6q6SfSNqksH2BpM9LmifpMUk/kLR+g32dKOne/P7mSXp3zfaPSLqrsP0Nef0Wkn4maamk++t1K+VypwGnAAfn7r9jJK0j6WRJD0h6RNL5kjbO5SfkrsVjJD0IXNdgv5+VtETSXyR9qGbbeZK+LGl74O68+vH8md0LvAL4VY5nPUkb5+NuiaTFue6IvK+jJP1W0tmSHgWm5Dr/LunB/Lf9jqQX5fJ7SVok6dP5vS2RdHTeNhk4HDghv/avGry3HQvH6sOSvlDYPCp/XiskzZXUU6j3GqWuvMfztgNqP5PC8oFKXYJP5L//pLy+2WexbW4Dy/Nx99N68eeyB+QYHs8xvSavvw54G/Dt/Bls32gfufzLlf5v+GyzcmYdERF++DGkHsACYCbpjMWWwCPAbcAupDMY1wGnFsp/CBgNrAd8E7ijsO084MvAZsAtwJfz+hcDC4GjSd36uwB/BXboI7bzgBXAnvn1vgXcXNh+RH6tkcCngYeA9fO23wMfzM83JHWHkd/jo8A7ST+s9s7LY/uI5Qbgw/n5trneesBY4CbgmzWf6f8C44BNgd8WPou9SN1hvWXfD2yRYzkYeAp4eWHbYmBXQPl1t85lbyUlV6NISc19wDsaxD4F+HHN33B+rrch8HPgR3nbBCCA8/Pf7UV19jcJeBh4bS5zQa6zbfE4qNnfyJrPZ2Jh+RfAuXlfL8nHzr/mbUcBK4FP5L/zi4CzgRn5sx0N/Ar4WuHzXQmcDqyb/85PA2NqY2vwWY0GlpCOp/Xz8u6Fz/FveZ8jgK8BM/O2dfNn+oX8N/ln0rH7qjqfyW7ActIxtA7pmHx1C5/FhcBJuc76wB4N3sP2pONo7xzXCTm2UbXHcrNjHdgG+DMwuer/p/zwIyKchPkx9B75C/HwwvLPgP8qLH8CuKxB3U3yF+zGefk8YDopAflsodzBwP/U1D2XQnLXYP/nARcVljcEngfGNSj/GPD6/Pwm4DRg85oynyMnHIV1VwFH9hFLwy8u4CDg9prP9NjC8juBe/PzvSgkYXX2dQdwYCGuT9YpszvwYM26zwM/aLDPKayZhF0LfKyw/Crg76QkZ0L+m76iSYzTgamF5e0ZYBJGSv6fpZDsAYeSxixBSsIeLGwTKcF4ZWHdPwH3Fz7fZ2pe7xH+kYSvjq3Bezu0+Les8zleU1jeAXgmP38L6UfAOoXtFwJT6nwm5wJn19l/X5/F+cA0YKs+jtUvAhcXltchJfN79XUsF7aflf9OhzZ7LT/86OTD3ZE2VD1ceP5MneUNASSNkDQ1d588QfpPGmDzQvn9SGcrvlNYtzWwe+4aeVzS46RuoZe1ENvC3icR8SSwjHTmCEmfyV11y/M+Ny7EcgwpOfiTpFmS3lWI5f01sewBvLyFWMiv+1JJF+XuoieAH9d8BmvEDTzQG3Odff1L7pbqjeW1hX2NA+6tU21rYIua9/AF0pd4K7bIMRXjG1lTfyGNbcEL399AbU06W7Ok8F7OJZ0FqhfLWGAD4NZC+V/n9b0ejTXHvz1NPoZb0Ogz7/VQzX7XVxqntgWwMCJWFbY/QDrL1epr9PVZnEBKQm/JXY0fqrMPqPn75pgWNoilkcNJidul/ahjVioPCLXh7jDgQGAiKQHbmHT2SYUy3wXGAFdImhQRT5G+AG6MiL0H8Jrjep9I2pDUBfUXpfFfJwBvB+ZGxCpJq2OJiHuAQyWtA7wHuFTSZjmWH0XERwYQS6+vks7uvC4ilindZuHbjeIGxgN/qd2J0vi27+b38PuIeF7SHfzj81wIvLLO6y8knfnZboDx/4X0hV+MbyUp+d4qr4sm9Zfwwvc3UAtJZ382j8YXDhRj+Svph8GOEbF4AK/X7H31xnPIAPb7F2CcpHUKidh4Undevddo9Hdt+FlExEPARwAk7QFcI+mmiJhfJ5bX9S5IEunv1Z/Pawqp2/kCSYdExPP9qGtWCp8Js+FuNOlL4lHS2YivNih3HGlA9q/ygOn/BraX9EFJ6+bHrr2DhfvwTkl7SBoFfIk0BmdhjmUlsBQYKekUYKPeSpKOkDQ2fyE+nlevIp212l/SO/KZvfXzYO6taN1o4ElguaQtgXqDlj8uaStJm5LG8dQbRP1iUlKwNMd8NOlMWK/vAZ+R9EYl2+bE7RZghaTPKd0DbISk10ratcX4LwT+r6RtcmL7VeCnTZKgWhcDR0naQdIGwKkt1nuBiFgCXA18Q9JGShcNvFLSWxuUX0VKXM+W9BIASVtKekeLL/kwaSxcI/8NvFzSp5QuABgtafcW9vsH0pmxE/LxvRewP3BRnbLfB46W9Pb8freU9Oq+PgtJ7y8cp4+Rjp1VdfZ/MbBf3v+6pPFtzwK/a+F99Po7aUzii4Hz848Zs0r5ILTh7nxSN8diYB5pQP8LREQAk4FFwC9J/6HvQzrD8BdSl84ZpIHtfbmA9CW/DHgjaTA+pPFSvyadaXiANGC62G01CZgr6UnSgP5DIuKZnMAdSOq+W5rrfJb+te/TgDeQBldfThrYXi/uq0kD5u8lXbCwhoiYB3yDdBHBw6SzF78tbL8E+Ere1wrgMmDTfFbiXcDOwP2ks0PfI52ZbMV04EekcXP3kz67T7RYl4i4knRRxnWkAd91r6Dsh38hDWafR0ouLqV59/Dn8uvOzN3B15DGtbXi+8AOubvvstqNEbGCNKB9f9Jxeg/pasKmIuK5XGdf0t/jP4F/iYg/1Sl7C+kilbNJx9CN/OPMZLPPYlfgD/mYnkEaL3hfnf3fTWon/y/Hsj+wf46xZbn8e0jd1NOdiFnVlL5bzMwak7SANPD5mqpjMTMbKvwrwMzMzKwCTsLM2ixf5fVkncfhFcRSL44nVbgJrJmZVcPdkWZmZmYV8JkwMzMzswo4CTMzMzOrgJMwMzMzswo4CWsjSQskTaw6DrPBwm3Chhsf89YfTsK6jKRpku6WtErSUVXH006Stpf0S0lLJS2TdJWkVm9YacOUpJ0l3Srp6fzvzlXH1C6SRkm6NH+xR75rvdkaJH1A0u9yG7ih6njaLc/0MF3SE5IeknR8k7JHSXq+5mrwvToXbf84Ces+fwQ+BtxWdSAl2IR01+xXke5ofQvp7vRmdeWpn35JmrppDPBD4Jd5/VBxM+lu8Q/1VdCGrWWkGR+mVhxHWaYA25FmYXgbaSqtSU3K/z4iNiw8buhAjAPiJKwkkl4j6X5Jh7ZzvxFxTkRcS5qWpfY195D0eJOYNpP0q/xrYpakL0u6ubD9W5IW5u23Fu8lJWlK/kX+U0krJN0m6fVtfm+3RMT3I2JZRPydNAXKq5QmqbYuV1Kb2AsYCXwzIp6NiP8gTRb+z/k1D5M0p0lM20i6KR/T10g6R9KPC9svyb+8l+dyOxa2nSfpO5J+k+vfqDQPZttExHMR8c2IuBnwhNNdpqzvgVoRcU1EXEyaQq1eHHMkHdaovqQTJC2R9BdJH85nXbfN2/aTdHv+XlgoaUqh3oRcdnKuu0TSZ9r9/oAjgS9FxGMRcRdprtWjSnidjnMSVgJJbyDNA/iJiLiwQZk5SnO91Xv850BeNyJujohNmhQ5B3gKeBnpoD6yZvss0tx9m5Lm9rtE0vqF7QcClxS2X6Y0me4LtOn97Qk8FBGPtljeBqkS28SOwJxY84aHc/J6IuKCiNipSWgXkM64bkb6tf3Bmu1Xkn6Bv4R09vknNdsPJ03CvjlwR53txffX6L09LunEJjFaF6rqe6CeiNgpIi5oEMMk4HhgIrAt6YdN0VOk+T83AfYDPirpoJoybyO1k32Az6nBmDhJJzZrBw3qjCHNNfrHwuo/ktt4A7tI+qukP0v6oqSRTcpWatAG1sXeAhwDHNHsFGgfXwxtJ2kE8F7gtRHxNDBP0g8pNLiI+HGhyjcknUzqGuw9+G+NiEvz/s4CPg28Cfif2tdb2/cnaStS0tiw79+6RpltYkPShNFFy4HRfVWUNJ40gfTb88TON0uaURPT9EL5KcBjkjaOiN7XvDwibsrbTwKWSxqXJ1WnZl+btPyurNsNyu+BBj4A/CAi5sLq43z17B418c+RdCHwVuCywvrTIuIp4E5JPwAOJU1Cv4aImEr/u0w3zP8W23mzNn4T8FrgAVKi9lNgJfC1fr5uR/hMWPsdC/xuEPZBjyUl3cUvhzW+KCR9RtJduevlcWBj0i/8F5SPiFXAImCLdgcqaSxwNfCfjX5BWlcps008CWxUs24jYEULdbcAluUfJb1WH+OSRkiaKuleSU8AC/KmRm3iSdLYnLa3Ces6pR3zuQu8d8D5F9qwyy1o/r2wu6TrlS6YWk56b8U2UFvnAdrbBp7M/xbbecM2HhH3RcT9EbEqIu4ETgfe18Z42spJWPsdC4yXdHazQmo8v+CTkr5TQlxLSb8GtiqsG1eI5y3ACaRfRWPyr/blpPE19cqvk/fVaAzCgN5fPvV8NTAjIr7S3zdpg1KZbWIusJOk4nG6U17flyXAppI2KKwbV3h+GKkLfiLpB8mE3lDrlZe0IamrvlGbaPTe2vVlaoNHacd8RBxbGHD+1TbEuoQG3wvZBaQLpsZFxMbAd1izDdTWGU/jNvCFZu2gXp2IeCzHWByD/Hpaa+MAUSfeQcNJWPutACYBe0pqeNo1InasuXqj+Di2UT2lS9bXJx1U60paPydESNpLUt3JQCPieeDnwBRJG0h6Namfv9doUpK2FBgp6RReeIbhjZLek/vXPwU8C8xs1/uTtBFpDMVvI8JjZIaOMtvEDaQB6/+mdBn7cXn9dbD6cvUFDV7vAWA2qU2MkvRPwP6FIqNJx/ijwAZAvS+8dypdEDOKNDZsZr2uyPx6jd5b0y/T/L56x2aOym1+0H6pGFDy90CtfNZ2fVJvxzr5GFm3sH2BGt/S6GLgaKWLCDYAvlizfTTpjPHfJO1G+nFS64v5e2VH4GhSF2C99/vVZu2gyVs8HzhZ0pj83fUR4Lx6BSXtK+ml+fmr8/sZtFfZOwkrQUQ8DuwN7CvpS23e/dXAM8D/Aabl53vmbeOA3zWpexzpF/1DwI+AC0lfMpCSn18DfyadTv4bNaelSQfywcBjpAHM78lXMbbLu0ljdI6u+YU0vo2vYRUoq03ksVwHkX5QPA58CDgor4fUJn7bZBeHA/9ESrS+TPry6G0T55PawmJgHvV/cFwAnErqhnwj6VYS7XY3qZ1vSWqnz5Au1bdBrOTvgVofJB0X/0Uaj/YM6QrC3tu4bEbjH8xXAv8BXA/ML5TrbQcfA06XtAI4hZS01box170W+PeIuHrt39IaTgXuJbXHG4EzI+LXkMZ21nxPvJ00du0p4ArSyYd2nDEshda8qMi6maTvAZdExFUtlj8DeFlE1F4lWa/sFGDbiCjjS8asFJKuBj6ZL2tvpfxPgT9FxKktlD0PWBQRJ69dlGblkbQH8PGIaOk2GZJeA/wvsF5ErOyj7ATgfmDdvspafb46cgiJiA83255PzY4C7iSdcToGaFrHrJtFxD7NtkvalXQW637S5fUHMnRveGnDUKR7zN3crIykd5POGm0AnAH8yklVZ7g7cngZTTo1+xSp2+UbDOK+crMOeBlpXNmTpC6Zj0bE7ZVGZNZ5/wo8Quryex74aLXhDB/ujjQzMzOrgM+EmZmZmVWg68aEbb755jFhwoSqwzAD4NZbb/1rRIytMga3CRtM3CbM1tSsTXRdEjZhwgRmz55ddRhmAEh6oOoY3CZsMHGbMFtTszbh7kgzMzOzCjgJMzOzUkmaJOluSfMlvWA2DEnHS5onaY6kayVtXdj2vKQ78mNGbV2zbtZ13ZFmZtY9JI0AziHdPX4RMEvSjIiYVyh2O9ATEU9L+ijwddLsHADPRMTOnYzZrFN8JszMzMq0GzA/Iu7L00ldRLop7moRcX1EPJ0XZ7LmhNJmQ5aTMDMzK9OWrDkP7aK8rpFjgCsLy+tLmi1ppqSDGlWSNDmXm7106dK1CtisU9wdOYRMOPHyuusXTN2vw5GYdYdGbQbcbqog6QigB3hrYfXWEbFY0iuA6yTdGRH31taNiGnANICenh7fhbxN3EbK5TNhZmZWpsXAuMLyVnndGiRNBE4CDoiIZ3vXR8Ti/O99pCmmdikzWLNOchJmZmZlmgVsJ2kbSaOAQ4A1rnKUtAtwLikBe6Swfoyk9fLzzYE3A8UB/WZdzd2RZmZWmohYKek44CpgBDA9IuZKOh2YHREzgDOBDYFLJAE8GBEHAK8BzpW0inTSYGrNVZVmXc1JmJmZlSoirgCuqFl3SuH5xAb1fge8rtzozKrj7kgzMzOzCjgJMzMzM6uAkzAzMzOzCjgJMzMzM6uAkzAzMzOzCjgJMzMzM6uAkzAzMzOzCjgJMzMzM6uAkzAzMzOzCjgJM+sgSZMk3S1pvqQTm5R7r6SQ1NPJ+MzMrHOchJl1iKQRwDnAvsAOwKGSdqhTbjTwSeAPnY3QzMw6yUmYWefsBsyPiPsi4jngIuDAOuW+BJwB/K2TwZmZWWc5CTPrnC2BhYXlRXndapLeAIyLiMub7UjSZEmzJc1eunRp+yM1M7PSOQkzGyQkrQOcBXy6r7IRMS0ieiKiZ+zYseUHZ2ZmbeckzKxzFgPjCstb5XW9RgOvBW6QtAB4EzDDg/PNzIYmJ2FmnTML2E7SNpJGAYcAM3o3RsTyiNg8IiZExARgJnBARMyuJlwzMyuTkzCzDomIlcBxwFXAXcDFETFX0umSDqg2OjMz67SRVQdgNpxExBXAFTXrTmlQdq9OxGRmZtXwmTAzMzOzCjgJMzOzUvU1U4Sk4yXNkzRH0rWSti5sO1LSPflxZGcjNyuXkzAzMytNizNF3A70RMROwKXA13PdTYFTgd1JNzs+VdKYTsVuVrZSk7BW5smT9IH8C2iupAvKjMfMzDquz5kiIuL6iHg6L84k3b4F4B3AbyJiWUQ8BvwGmNShuM1KV9rA/MKvn71JdwafJWlGRMwrlNkO+Dzw5oh4TNJLyorHzMwqUW+miN2blD8GuLJJ3S1fUIM0iwQwGWD8+PEDjdWso8o8E9bKPHkfAc7Jv3CIiEdKjMfMzAYxSUcAPcCZ/a3rWSSsG5WZhLXyC2Z7YHtJv5U0U1Ld08yeJ8/MrGv1NVMEAJImAieRblD8bH/qmnWrqgfmjwS2A/YCDgW+K2mT2kL+hWNm1rWazhQBIGkX4FxSAlbsEbkK2EfSmDwgf5+8zmxIKPNmra38glkE/CEi/g7cL+nPpKRsVolxmZlZh0TESkm9M0WMAKb3zhQBzI6IGaTuxw2BSyQBPBgRB0TEMklf4h/fCadHxLIK3oZZKcpMwlb/+iElX4cAh9WUuYx0BuwHkjYndU/eV2JMZmbWYX3NFBERE5vUnQ5MLy86s+qU1h3Z4jx5VwGPSpoHXA98NiIeLSsmMzMzs8Gi1LkjW/j1E8Dx+WFmZmY2bFQ9MN/MzMxsWHISZmZmZlYBJ2FmZmZmFXASZmZmZlYBJ2FmZmZmFXASZmZmZlYBJ2FmZmZmFXASZmZmZlYBJ2FmZmZmFXASZtZBkiZJulvSfEkn1tl+rKQ7Jd0h6WZJO1QRp5mZlc9JmFmHSBoBnAPsC+wAHFonybogIl4XETsDXwfO6myUZmbWKU7CzDpnN2B+RNwXEc8BFwEHFgtExBOFxRcD0cH4zMysg0qdwNvM1rAlsLCwvAjYvbaQpI+TJrUfBfxzZ0IzM7NO85kws0EmIs6JiFcCnwNOrldG0mRJsyXNXrp0aWcDNDOztnASZtY5i4FxheWt8rpGLgIOqrchIqZFRE9E9IwdO7Z9EZqZWce0lIRJ2l+SEzaztTML2E7SNpJGAYcAM4oFJG1XWNwPuKeD8ZmZWQe1mlgdDNwj6euSXl1mQGZDVUSsBI4DrgLuAi6OiLmSTpd0QC52nKS5ku4gjQs7sppozcysbC0NzI+IIyRtBBwKnCcpgB8AF0bEijIDNBtKIuIK4IqadacUnn+y40GZlUzSJOBbwAjgexExtWb7nsA3gZ2AQyLi0sK254E78+KDEXEAZkNEy12M+dL5S0njVF4OvBu4TdInSorNzMy6XIv3x3sQOAq4oM4unomInfPDCZgNKa2OCTtQ0i+AG4B1gd0iYl/g9cCnywvPzMy6XCv3x1sQEXOAVVUEaFaVVu8T9h7g7Ii4qbgyIp6WdEz7wzIzsyGipfvjNbG+pNnASmBqRFxWr5CkycBkgPHjxw8sUrMOazUJe6g2AZN0RkR8LiKuLSEuMzMzgK0jYrGkVwDXSbozIu6tLRQR04BpAD09PZ5pogMmnHj5GssLpu5XUSTdq9UxYXvXWbdvOwMxM7Mhqb/3x1tDRCzO/95HGhKzSzuDM6tS0zNhkj4KfAx4paQ5hU2jgd+WGZiZmQ0Jq++PR0q+DgEOa6WipDHA0xHxrKTNgTeTJra3EtSe2bLy9dUdeQFwJfA14MTC+hURsay0qMzMbEiIiJWSeu+PNwKY3nt/PGB2RMyQtCvwC2AMsL+k0yJiR+A1wLmSVpF6bqZGxLyK3opZ2/WVhEVELMgTCq9B0qZOxMzMrC8t3B9vFqmbsrbe74DXlR6gWUVaORP2LuBWIAAVtgXwipLiMjMzMxvSmg7Mj4h35X+3iYhX5H97H30mYJImSbpb0nxJJzYp915JIamn/2/BzMzMrPu0erPWN0t6cX5+hKSzJDW9EUuLd0lG0mjgk8Af+hu8mZmZWbdq9RYV/wU8Lan3Dvn3Aj/qo06fd0nOvgScAfytxVjMzMzMul6rSdjKiAhSEvXtiDiHdJuKZurdJXnLYgFJbwDGRYSvizUzM7NhpdU75q+Q9HngCGBPSeuQ5pAcsLyPs0iTtvZV1tNRmJmZ2ZDS6pmwg4FngWMi4iHSpcRn9lGnr7skjwZeC9wgaQHwJmBGvcH5ETEtInoiomfs2LEthmxmZmY2eLV0JiwnXmcVlh8Ezu+jWtO7JEfEcmDz3mVJNwCfiYjZrQZvZmZm1q1avTryPZLukbRc0hOSVkh6olmdiFgJ9N4l+S7g4t67JEs6YO1DNzMzM+terY4J+zqwf0Tc1Z+d93WX5Jr1e/Vn32ZmZmbdrNUxYQ/3NwEzMzMzs8ZaPRM2W9JPgctIA/QBiIiflxGUmZmZ2VDXahK2EfA0sE9hXQBOwszMzMwGoNWrI48uOxAzMzOz4aTVqyO3l3StpP/NyztJOrnc0MyGnr4mtZd0vKR5kubkNrd1FXGamVn5Wh2Y/13g88DfASJiDum+X2bWohYntb8d6ImInYBLSVcmm5nZENRqErZBRNxSs25lu4MxG+L6nNQ+Iq6PiKfz4kzSTBNmZjYEtZqE/VXSK0mD8ZH0PmBJaVGZDU19Tmpf4xjgynobJE2WNFvS7KVLl7YxRDMz65RWr478ODANeLWkxcD9wOGlRWU2zEk6AugB3lpve0RMI7VJenp6ooOhmZlZmzQ9E5YHCR8PHES68/1XgO+Qbk3x3tKjMxta+prUHgBJE4GTgAMi4tna7WbdpoULUvaUdJuklbmnpbjtyDxt3j2Sjuxc1Gbl6+tM2Oj876uAXYFfAgI+CNSOETOz5ppOag8gaRfgXGBSRDzS+RDN2qtwQcrepC74WZJmRMS8QrEHgaOAz9TU3RQ4lXRWOIBbc93HOhG7WdmaJmERcRqApJuAN0TEirw8Bbi89OjMhpCIWCmpd1L7EcD03kntgdkRMQM4E9gQuEQSwIMR4QnvrZutviAFQFLvBSmrk7CIWJC3raqp+w7gNxGxLG//DTAJuLD8sM3K1+qYsJcCzxWWn8vrzKwf+prUPiImdjwos3LVuyBl97WoW/diFkmTgckA48eP73+UZhVoNQk7H7hF0i/y8kHAeWUEZGZm1l++WMW6UUu3qIiIrwBHA4/lx9ER8bUyAzMzsyGhpQtSSqhrNui1eiaMiLgNuK3EWMzM2mbCiY2HrS6Yul8HIxn2+rwgpYmrgK9KGpOX9yHN3mI2JLSchJmZDTfNEjlwMteKVi5IkbQr8AtgDLC/pNMiYseIWCbpS6REDuD03kH6ZkOBkzAzMytVCxekzKLBFF0RMR2YXmqAZhVpddoiMzMzM2sjnwkzMzMbhvrqbm/H/txl35zPhJmZmZlVwEmYmZmZWQWchJmZmZlVwEmYmZmZWQWchJmZmZlVwEmYmZmZWQWchJmZmZlVwEmYmZmZWQVKTcIkTZJ0t6T5kk6ss/14SfMkzZF0raSty4zHzMzMbLAoLQmTNAI4B9gX2AE4VNIONcVuB3oiYifgUuDrZcVjZmZmNpiUeSZsN2B+RNwXEc8BFwEHFgtExPUR8XRenEmDCVzNzMzMhpoyk7AtgYWF5UV5XSPHAFfW2yBpsqTZkmYvXbq0jSGamZmZVWNQDMyXdATQA5xZb3tETIuInojoGTt2bGeDMzMzMyvByBL3vRgYV1jeKq9bg6SJwEnAWyPi2RLjMTMzMxs0yjwTNgvYTtI2kkYBhwAzigUk7QKcCxwQEY+UGIvZoNDCFcN7SrpN0kpJ76siRjMz64zSkrCIWAkcB1wF3AVcHBFzJZ0u6YBc7ExgQ+ASSXdImtFgd2Zdr8Urhh8EjgIu6Gx0ZmbWaWV2RxIRVwBX1Kw7pfB8YpmvbzbIrL5iGEBS7xXD83oLRMSCvG1VFQGambXThBMvX2N5wdT9KopkcCo1CTOzNdS7Ynj3gexI0mRgMsD48ePXPjKzEkmaBHwLGAF8LyKm1mxfDzgfeCPwKHBwRCyQNIHUk3J3LjozIo7tWOBDTG1CZNUbFFdHmln/+Iph6xYtdsMfAzwWEdsCZwNnFLbdGxE754cTMBtSnISZdU5LVwybDTF93rg7L/8wP78UeLskdTBGs0o4CTPrnD6vGDYbglq5cffqMvmiruXAZnnbNpJul3SjpLc0ehHf1Nu6kZMwsw5p5YphSbtKWgS8HzhX0tzqIjar3BJgfETsAhwPXCBpo3oF3UVv3cgD8806qIUrhmfhOVRtaGmlG763zCJJI4GNgUcjIoBnASLiVkn3AtsDs0uP2qwDfCbMzMzK1Eo3/AzgyPz8fcB1ERGSxuaB/Uh6BbAdcF+H4jYrnc+EmZlZaSJipaTebvgRwPTebnhgdkTMAL4P/EjSfGAZKVED2BM4XdLfgVXAsRGxrPPvwqwcTsLMzKxULXTD/400DrK23s+An5UeoFlF3B1pZmZmVgEnYWZmZmYVcBJmZmZmVgGPCRtEms3r1YlJTxu9vidctcGm6rZSNJhiMRvs6rWX4dxOnISZmZkNMZ6suzu4O9LMzMysAk7CzMzMzCrgJMzMzMysAk7CzMzMzCrggflmZmZdzgPxu5PPhJmZmZlVwEmYmZmZWQXcHWlmZmaVqe1KHU43b/WZMDMzM7MKOAkzMzMzq4C7I81sUBmKczEOxfdkVpbhNL+kkzAzM7Mu4ttRDB3ujjQzMzOrQKlnwiRNAr4FjAC+FxFTa7avB5wPvBF4FDg4IhaUGZNZldwmbLham2Nf0ueBY4DngX+LiKs6GHrlfOZr6F5BWVoSJmkEcA6wN7AImCVpRkTMKxQ7BngsIraVdAhwBnBwWTGVbbiP+2j0/ofDe2/FcGwTtYZ7G2lmKH82a3PsS9oBOATYEdgCuEbS9hHxfGffRWc44WrNUBk3VuaZsN2A+RFxH4Cki4ADgWKjOxCYkp9fCnxbkiIiSozLrCpuEzZcDfjYz+sviohngfslzc/7+32HYi+Vk6726rYfM2UmYVsCCwvLi4DdG5WJiJWSlgObAX8tMa6Guu2PZ12n69pEr1bahttP+br477A2x/6WwMyauluWF2p9a/vZW/n6+vxb+ft0uo10xdWRkiYDk/Pik5Lu7ngMZ3S8/uYUvnjXpv4AY1/b+qutbf1BbusqXnQwtInVsbTw9y25TL/bSqf2Mwg+m36XaYNh1ya65P+4NY7vCvfRzv20XUl/y4ZtoswkbDEwrrC8VV5Xr8wiSSOBjUkDMtcQEdOAaSXFOShJmh0RPd1a3+pymyhBu47VwbafIWZtjv1W6rpN9KEdx6XbSPuVeYuKWcB2kraRNIo0sHJGTZkZwJH5+fuA6zz2xYYwtwkbrtbm2J8BHCJpPUnbANsBt3QobrNSlXYmLPfpHwdcRbokeXpEzJV0OjA7ImYA3wd+lAdaLiM1TLMhyW3Chqu1OfZzuYtJg/hXAh8fqldG2vAj/8genCRNzqfXu7K+Wae061gdbPsxa6d2HJduI+3nJMzMzMysAp62yMzMzKwCTsIGMUlnSvqTpDmSfiFpkxbrTZJ0t6T5kk7s52uOk3S9pHmS5kr65ICCN+uggbaVQv0Bt5lc3+3GBrWq20jeh9tJDXdHDmKS9iFdIbRSSncviYjP9VFnBPBnCtODAIfWTA/SrP7LgZdHxG2SRgO3Age1Wt+sCgNpK4W6a9Vm8j7cbmxQq7qN5P24ndTwmbBBLCKujoiVeXEm6f44fVk9PUhEPAf0Tg/S6msuiYjb8vMVwF1UcHdqs/4YYFvptVZtJr++240NalW3kRyD20kNJ2Hd40PAlS2Uqzc9yIAOckkTgF2APwykvllFWm0rvdrWZsDtxrpCpW0E3E56dcW0RUOZpGuAl9XZdFJE/DKXOYl0f5yfdDCuDYGfAZ+KiCc69bpmjQzWtlLkdmNV6oY2kmNwO8mchFUsIiY22y7pKOBdwNtbvHN6S1N89PGa65IayE8i4uf9qWtWlhLaSq+1bjP59d1urFKDvY3kGNxOCjwwfxCTNAk4C3hrRCxtsc5I0gDKt5MaySzgsIiY22J9AT8ElkXEpwYSt1mnDaStFOquVZvJ+3C7sUGt6jaS9+N2UsNJ2CCWp+9Yj39M4DwzIo5tod47gW/yj+lBvtKP19wD+B/gTmBVXv2FiLiiH6GbddRA20qh/oDbTK7vdmODWtVtJO/D7aSGkzAzMzOzCvjqSDMzM7MKOAkzMzMzq4CTMDMzM7MKOAkzMzMzq4CTMDMzM7MKOAkzMzMzq4CTMDMzM7MKOAkzMzMzq8D/B5nFWPLtGMf6AAAAAElFTkSuQmCC",
+      "text/plain": [
+       "<Figure size 720x216 with 3 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "num_samples = 10_000\n",
+    "fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 3))\n",
+    "fig.subplots_adjust(top=0.8)\n",
+    "for axis, k in zip(axes, [1, 0, -1]):\n",
+    "    base_lap_vec = make_base_laplace(1., k=k, D=\"VectorDomain<AtomDomain<float>>\")\n",
+    "    support, counts = np.unique(base_lap_vec([0.] * num_samples), return_counts=True)\n",
+    "    axis.bar(support, counts / num_samples)\n",
+    "    axis.set_xticks([-2, 0, 2])\n",
+    "    axis.set_title(f\"k = {k}; gap = {2**k}\")\n",
+    "axes[0].set_ylabel(\"density\")\n",
+    "fig.suptitle('make_base_laplace for different choices of k', y=0.95);"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The distribution becomes increasingly smooth as k approaches the default value (`-1074`).\n",
+    "\n",
+    "The privacy map still adds a penalization when the sensitivity is zero. \n",
+    "The following table uses this behavior to show the increase in epsilon for some choices of k:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 50,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>ε penalty</th>\n",
+       "      <th>detail</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>k</th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>-1074</th>\n",
+       "      <td>0.000000e+00</td>\n",
+       "      <td>no penalty</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>-1073</th>\n",
+       "      <td>4.940656e-324</td>\n",
+       "      <td>~min float</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>-100</th>\n",
+       "      <td>7.888609e-31</td>\n",
+       "      <td>~2^-100</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>-1</th>\n",
+       "      <td>5.000000e-01</td>\n",
+       "      <td>~2^-1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>1.000000e+00</td>\n",
+       "      <td>~2^0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>2.000000e+00</td>\n",
+       "      <td>~2^1</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "           ε penalty      detail\n",
+       "k                               \n",
+       "-1074   0.000000e+00  no penalty\n",
+       "-1073  4.940656e-324  ~min float\n",
+       "-100    7.888609e-31     ~2^-100\n",
+       "-1      5.000000e-01       ~2^-1\n",
+       " 0      1.000000e+00        ~2^0\n",
+       " 1      2.000000e+00        ~2^1"
+      ]
+     },
+     "execution_count": 50,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "k = [-1074, -1073, -100, -1, 0, 1]\n",
+    "ε_penalty = [make_base_laplace(scale=1., k=k_i).map(d_in=0.) for k_i in k]\n",
+    "detail = [\"no penalty\", \"~min float\", \"~2^-100\", \"~2^-1\", \"~2^0\", \"~2^1\"]\n",
+    "\n",
+    "import pandas as pd\n",
+    "pd.DataFrame({\"k\": k, \"ε penalty\": ε_penalty, \"detail\": detail}).set_index(\"k\")"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "psi",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.13"
+  },
+  "orig_nbformat": 4,
+  "vscode": {
+   "interpreter": {
+    "hash": "3220da548452ac41acb293d0d6efded0f046fab635503eb911c05f743e930f34"
+   }
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

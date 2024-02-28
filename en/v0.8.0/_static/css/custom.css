@@ -1,0 +1,23 @@
+div.bd-sidebar {
+    max-height: 100%;
+    overflow-y: auto;
+}
+
+/* invert the opendp logo in dark mode */
+.logo__image.only-dark {
+    filter: invert();
+}
+
+/* make titles of spoilers in nbsphinx notebooks render inline */
+details summary p { display: inline }
+
+/* fix rendering of pandas dataframe tables in chrome and safari */
+div.rendered_html table { width: 100% }
+
+/* default <pre> blocks in tab looks clunky */
+.sphinx-tabs-panel div.highlight pre {
+    border: unset;
+    background-color: unset;
+    padding: 0;
+    margin: -1em 0;
+}

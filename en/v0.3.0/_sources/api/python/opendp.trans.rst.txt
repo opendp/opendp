@@ -1,0 +1,7 @@
+opendp.trans module
+===================
+
+.. automodule:: opendp.trans
+   :members:
+   :undoc-members:
+   :show-inheritance:
