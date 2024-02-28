@@ -107,5 +107,24 @@ mod test {
         assert_eq!(rappor.map(&1)?, 2.1972245773362196);
         Ok(())
     }
+    #[test]
+    fn test_debias_rappor() -> Fallible<()> {
+
+        let f = 0.1;
+        let mut answer = vec![0.0;10];
+        answer[0] = 1.0;
+        
+        let mut answers = vec![vec![false;10]; 10];
+        // dist is [10; 0x9]
+        answers.iter_mut().for_each(|a| a[0] = true);
+        
+        let high = 10.555555555555555;
+        let low = -0.5555555555555556;
+        
+        let expected_dist = vec![high, low, low, low, low, low, low, low, low, low];
+        assert_eq!(debias_basic_rappor(answers, f)?, expected_dist);
+
+        Ok(())
+    }
 }
 
