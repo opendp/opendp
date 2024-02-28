@@ -49,7 +49,7 @@ pub fn sample_standard_bernoulli() -> Fallible<bool> {
 /// returns `Err(e)` if there is a lack of system entropy or `constant_time` is not supported,
 /// or `Ok(out)` where `out` is `true` with probability `prob`, otherwise `false`.
 ///
-/// If `trials` is set, the implementation's runtime is constant.
+/// If `constant_time` is set, the implementation's runtime is constant.
 pub fn sample_bernoulli_float<T>(prob: T, constant_time: bool) -> Fallible<bool>
 where
     T: Float,

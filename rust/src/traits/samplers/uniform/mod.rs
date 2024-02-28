@@ -237,6 +237,19 @@ mod test_uniform_int {
     use std::collections::HashMap;
 
     #[test]
+    fn test_uniform_int_below() -> Fallible<()> {
+        assert!(u32::sample_uniform_int_below(7, Some(0)).is_err());
+
+        let sample = u32::sample_uniform_int_below(7, None)?;
+        assert!(sample < 7);
+
+        // odds of failing this test are 1 in 1/64^1000
+        let sample = u32::sample_uniform_int_below(7, Some(1000))?;
+        assert!(sample < 7);
+        Ok(())
+    }
+
+    #[test]
     #[ignore]
     fn test_sample_uniform_int_below() -> Fallible<()> {
         let mut counts = HashMap::new();
