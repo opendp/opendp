@@ -1,5 +1,5 @@
-Real World
-==========
+Typical Workflow
+================
 
 A differentially private analysis in OpenDP typically has the following steps:
 
