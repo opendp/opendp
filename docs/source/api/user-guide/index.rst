@@ -9,7 +9,6 @@ it complements the bottom-up view provided by the `Python API Reference <../pyth
    :maxdepth: 1
 
    limitations
-   installation
    programming-framework/index
    transformations/index
    measurements/index
