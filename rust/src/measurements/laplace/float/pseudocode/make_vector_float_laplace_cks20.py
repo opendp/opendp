@@ -1,12 +1,12 @@
 # type: ignore
 def make_vector_float_laplace_cks20(input_domain, input_metric, scale: QO, k):
-    if scale.is_sign_negative():
+    if scale < 0:
         raise ValueError("scale must not be negative")
     
     k, relaxation = get_discretization_consts(k)
 
     # each value in the input is rounded
-    if not relaxation.is_zero():
+    if relaxation != 0:
         if input_domain.size is None:
             raise ValueError("domain size must be known if discretization is not exact")
         relaxation = relaxation.inf_mul(T.inf_cast(input_domain.size))
