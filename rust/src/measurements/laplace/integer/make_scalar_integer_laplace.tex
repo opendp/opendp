@@ -1,5 +1,5 @@
 \documentclass{article}
-\input{../../../../lib.sty}
+\input{../../../lib.sty}
 
 
 
@@ -73,7 +73,7 @@ the output of the function follows the Discrete Laplace Distribution with scale 
     }{
         \frac{\exp^{1/b} - 1}{\exp^{1/b} + 1} \exp \left( -\frac{|x' - z|}{b} \right)
     }\right) 
-        &&\text{use pdf of Discrete Laplace} \\
+        &&\text{use PMF of Discrete Laplace} \\
     =& \max_{x \sim x'} \max_{z \in \mathbb{Z}} \ln\left(\frac{
     \exp \left( -\frac{|x - z|}{b} \right)
     }{
