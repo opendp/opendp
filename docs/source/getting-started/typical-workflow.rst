@@ -48,7 +48,7 @@ Releases on the teacher survey should conceal the addition or removal of any one
 
             >>> import opendp.prelude as dp
 
-            >>>> # we are also using library features that are marked "contrib":
+            >>> # we are also using library features that are marked "contrib":
             >>> dp.enable_features("contrib")
 
             >>> input_metric, d_in = privacy_unit
