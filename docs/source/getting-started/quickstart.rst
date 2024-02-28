@@ -21,6 +21,16 @@ OpenDP is available for Python and R.
 
             install.packages('opendp', repos = 'https://opendp.r-universe.dev/')
 
+    .. group-tab:: Rust
+
+        Reference the ``opendp`` `crate <https://crates.io/crates/opendp>`_ in your ``Cargo.toml`` file:
+
+        .. code:: toml
+
+            [dependencies]
+            opendp = { version = "0.9.2", features = ["contrib"] }
+
+
 This will make the OpenDP modules available to your local environment.
 
 The vetting process is currently underway for the code in the OpenDP Library.
@@ -43,6 +53,10 @@ Enable ``contrib`` globally with the following snippet:
             :start-after: 1-library
             :end-before: 2-use
 
+    .. group-tab:: Rust
+
+        In Rust, ``contrib`` features are enabled in your ``Cargo.toml`` in the previous step.
+
 Once you've installed OpenDP, you can write your first program.
 Let's apply Laplace noise to a value.
 
@@ -60,6 +74,12 @@ Let's apply Laplace noise to a value.
 
         .. literalinclude:: quickstart.R
             :language: r
+            :start-after: 2-use
+
+    .. group-tab:: Rust
+
+        .. literalinclude:: quickstart.rs
+            :language: rust
             :start-after: 2-use
 
 This is obviously not the easiest way to add noise to a number,
