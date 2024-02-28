@@ -176,14 +176,21 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
 
         You can now submit up to three queries to ``qbl_sc``, in the form of measurements.
 
-5. Submit DP Queries (Context API)
-----------------------------------
+5. Submit DP Queries
+--------------------
 
-It is now time to create differentially private releases. The following query counts the number of records in the data set:
+It is now time to create differentially private releases. 
+At this point our discussions of the Context API and the Framework APIs will diverge:
+Each has its own strengths.
+
+Context API
+^^^^^^^^^^^
+
+The following query counts the number of records in the data set:
 
 .. tabs::
 
-    .. group-tab:: Python
+    .. group-tab:: Context API
 
         .. doctest::
 
@@ -199,7 +206,7 @@ The library uses the privacy unit and the query itself to determine the smallest
 
 .. tabs::
 
-    .. group-tab:: Python
+    .. group-tab:: Context API
 
         .. doctest::
 
@@ -213,7 +220,7 @@ You can also create an accuracy estimate that is true at a (1 - α)100% confiden
 
 .. tabs::
 
-    .. group-tab:: Python
+    .. group-tab:: Context API
 
         .. doctest::
 
@@ -227,7 +234,7 @@ If the accuracy of the query seems reasonable, then make a private release. Keep
 
 .. tabs::
 
-    .. group-tab:: Python
+    .. group-tab:: Context API
 
         .. doctest::
 
@@ -237,7 +244,7 @@ The result is a random draw from the discrete Laplace distribution, centered at 
 
 .. tabs::
 
-    .. group-tab:: Python
+    .. group-tab:: Context API
 
         .. doctest::
 
@@ -251,7 +258,7 @@ Let's repeat this process more briefly for estimating the mean age. This time we
 
 .. tabs::
 
-    .. group-tab:: Python
+    .. group-tab:: Context API
 
         .. doctest::
 
@@ -274,20 +281,20 @@ This measurement involves more preprocessing than the count did (casting, clampi
 
 .. tabs::
 
-    .. group-tab:: Python
+    .. group-tab:: Context API
 
         .. doctest::
 
             >>> dp_mean = mean_query.release()
 
-5. Submit DP Queries (Framework API)
-------------------------------------
+Framework API
+^^^^^^^^^^^^^
 
 First, create a count query.
 
 .. tabs::
 
-    .. group-tab:: Python
+    .. group-tab:: Framework API
 
         .. doctest::
 
@@ -304,7 +311,7 @@ With this lower-level API you get greater flexibility. For instance, you can see
 
 .. tabs::
 
-    .. group-tab:: Python
+    .. group-tab:: Framework API
 
         .. doctest::
 
@@ -316,7 +323,7 @@ A binary search is used to find the smallest noise scale that results in a measu
 
 .. tabs::
 
-    .. group-tab:: Python
+    .. group-tab:: Framework API
 
         .. doctest::
 
@@ -329,7 +336,7 @@ Similarly, construct a mean measurement and release it:
 
 .. tabs::
 
-    .. group-tab:: Python
+    .. group-tab:: Framework API
 
         .. doctest::
 
