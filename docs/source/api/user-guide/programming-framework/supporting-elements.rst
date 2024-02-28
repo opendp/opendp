@@ -13,9 +13,9 @@ The function member stored in a Transformation or Measurement struct is straight
 
 To use the function, the Transformation or Measurement can be called directly:
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -31,9 +31,9 @@ To use the function, the Transformation or Measurement can be called directly:
 
 Or ``invoke`` can be used equivalently:
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -56,9 +56,9 @@ A commonly-used domain is ``atom_domain(T)``, which describes the set of all pos
 The following example creates a domain consisting of all possible non-null 64-bit floats, 
 and checks that 1.0 is a member of the domain, but NaN is not.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -72,9 +72,9 @@ Other domains may be described in a similar way. For example:
 * ``atom_domain(T=u8)`` consists of all possible non-null unsigned 8-bit integers: ``{0, 1, 2, 3, ..., 127}``
 * ``atom_domain(bounds=(-2, 2))`` describes all possible 32-bit signed integers bounded between -2 and 2: ``{-2, -1, 0, 1, 2}``.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -86,9 +86,9 @@ In addition, domains may also be used to construct higher-level domains. For ins
 
 * ``vector_domain(atom_domain(T=bool))`` describes the set of all boolean vectors: ``{[], [True], [False], [True, True], [True, False], ...}``.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -100,9 +100,9 @@ In addition, a ``size`` parameter may be used. For example:
 
 * ``vector_domain(atom_domain(T=bool), size=2)`` describes the set of boolean vectors of size 2: ``{[True, True], [True, False], [False, True], [False, False]}``.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -112,9 +112,9 @@ In addition, a ``size`` parameter may be used. For example:
 
 Let's look at the Transformation returned from :py:func:`make_sum() <opendp.transformations.make_sum>`.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -129,9 +129,9 @@ Let's look at the Transformation returned from :py:func:`make_sum() <opendp.tran
 We see that the input domain is the same as we passed in: 
 "the set of all vectors of 32-bit signed integers bounded between 0 and 1."
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -221,9 +221,9 @@ Maps are a useful tool to find stability or privacy properties directly.
 
 Putting this to practice, the following example invokes the stability map on a clamp transformation.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -241,9 +241,9 @@ Putting this to practice, the following example invokes the stability map on a c
 
 There is also a relation check predicate function that simply compares the output of the map with ``d_out`` as follows: ``d_out >= map(d_in)``.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 

@@ -213,9 +213,9 @@ Use :func:`opendp.measurements.make_user_measurement` to construct a measurement
 
     This requires a looser trust model, as we cannot verify any privacy or stability properties of user-defined functions.
 
-    .. tabs::
+    .. tab-set::
 
-      .. group-tab:: Python
+      .. tab-item:: Python
 
         .. doctest::
 
@@ -224,9 +224,9 @@ Use :func:`opendp.measurements.make_user_measurement` to construct a measurement
 
 This example mocks the typical API of the OpenDP library to make the *most private* DP mechanism ever!
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -249,9 +249,9 @@ This example mocks the typical API of the OpenDP library to make the *most priva
     
 The resulting Measurement may be used interchangeably with those constructed via the library:
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 

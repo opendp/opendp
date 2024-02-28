@@ -33,9 +33,9 @@ Our transformation will
 :func:`resize <opendp.transformations.make_resize>` and then aggregate with the
 :func:`mean <opendp.transformations.make_mean>`.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -81,9 +81,9 @@ The :func:`base_laplace <opendp.measurements.make_base_laplace>` measurement qua
 Referencing the :ref:`parameter-search` section, :func:`binary_search_param <opendp.mod.binary_search_param>`
 will help us find a noise scale parameter that satisfies our given budget.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -111,9 +111,9 @@ We also wanted an accuracy estimate.
 Referencing the :ref:`determining-accuracy` section, :func:`laplacian_scale_to_accuracy <opendp.accuracy.laplacian_scale_to_accuracy>`
 can be used to convert the earlier discovered noise scale parameter into an accuracy estimate.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 

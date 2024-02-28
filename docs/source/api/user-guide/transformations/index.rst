@@ -191,9 +191,9 @@ These operations work with ``usize`` data types: an integer data type representi
 :func:`opendp.transformations.make_find` finds the index of each input datum in a set of categories.
 In other words, it transforms a categorical data vector to a vector of numeric indices.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -212,9 +212,9 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
 :func:`opendp.transformations.make_find_bin` is a binning operation that transforms numerical input data to a vector of bin indices.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -226,9 +226,9 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
 :func:`opendp.transformations.make_index` uses each indicial input datum as an index into a category set.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -565,9 +565,9 @@ Use :func:`opendp.transformations.make_user_transformation` to construct your ow
 
 In this example, we mock the typical API of the OpenDP library to make a transformation that duplicates each record `multiplicity` times:
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -595,9 +595,9 @@ In this example, we mock the typical API of the OpenDP library to make a transfo
     
 The resulting Transformation may be used interchangeably with those constructed via the library:
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 

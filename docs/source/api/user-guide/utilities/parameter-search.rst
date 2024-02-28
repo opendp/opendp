@@ -28,9 +28,9 @@ OpenDP comes with some utility functions to make these binary searches easier to
 
 This is extremely powerful!
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 

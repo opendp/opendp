@@ -34,9 +34,9 @@ The library provides the following functions for converting between noise scale 
 To demonstrate, the following snippet finds the necessary gaussian scale such that the input to 
 :code:`make_base_gaussian(input_domain, input_metric, scale=1.)` differs from the release by no more than 2 with 95% confidence.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 

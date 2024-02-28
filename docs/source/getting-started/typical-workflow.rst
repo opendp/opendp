@@ -25,9 +25,9 @@ The first step in a differentially private analysis is to determine what you are
 
 Releases on the teacher survey should conceal the addition or removal of any one teacher's data, and each teacher contributes at most one row to the data set, so the unit of privacy corresponds to one row contribution.
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Context API
+    .. tab-item:: Context API
 
         .. doctest::
 
@@ -38,7 +38,7 @@ Releases on the teacher survey should conceal the addition or removal of any one
             
             >>> privacy_unit = dp.unit_of(contributions=1)
 
-    .. group-tab:: Framework API
+    .. tab-item:: Framework API
 
         The privacy unit is actually a 2-tuple:
 
@@ -69,15 +69,15 @@ The level of privacy afforded to units of privacy in a data set is quantified by
 
 A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending on the considerations mentioned above. See `Hsu et. al <https://arxiv.org/abs/1402.3329>`_ for a more elaborate discussion on setting epsilon.
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Context API
+    .. tab-item:: Context API
 
         .. doctest::
 
             >>> privacy_loss = dp.loss_of(epsilon=1.)
 
-    .. group-tab:: Framework API
+    .. tab-item:: Framework API
 
         The privacy loss is also a 2-tuple:
 
@@ -99,9 +99,9 @@ The next step is to identify public information about the data set.
 * Information that is publicly available from other sources
 * Information from other DP releases
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Context API
+    .. tab-item:: Context API
 
         .. doctest::
 
@@ -110,7 +110,7 @@ The next step is to identify public information about the data set.
             ...    "sourceOfStress", "smoker", "optimism", "lifeSatisfaction", "selfEsteem"
             ... ]
 
-    .. group-tab:: Framework API
+    .. tab-item:: Framework API
 
         No difference:
 
@@ -132,9 +132,9 @@ On the other hand, using public information significantly improves the utility o
 
 Ideally, at this point, you have not yet accessed the sensitive data set. This is the only point in the process where we access the sensitive data set. To ensure that your specified differential privacy protections are maintained, the OpenDP Library should mediate all access to the sensitive data set. When using Python, use the Context API to mediate access.
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Context API
+    .. tab-item:: Context API
 
         .. doctest::
 
@@ -153,7 +153,7 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
 
         Since the privacy loss budget is at most ε = 1, and we are partitioning our budget evenly amongst three queries, then each query will be calibrated to satisfy ε = 1/3.
 
-    .. group-tab:: Framework API
+    .. tab-item:: Framework API
 
         ``dp.Context.compositor`` creates a sequential composition measurement.
 
@@ -188,9 +188,9 @@ Context API
 
 The following query counts the number of records in the data set:
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Context API
+    .. tab-item:: Context API
 
         .. doctest::
 
@@ -204,9 +204,9 @@ The following query counts the number of records in the data set:
 
 The library uses the privacy unit and the query itself to determine the smallest amount of noise to add that will still satisfy the per-query privacy loss. Given these constraints, noise will be added to the count query with a scale of 3 (standard deviation of ~4.2).
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Context API
+    .. tab-item:: Context API
 
         .. doctest::
 
@@ -218,9 +218,9 @@ Here is the underlying mathematics that leads to this noise scale: if a teacher 
 
 You can also create an accuracy estimate that is true at a (1 - α)100% confidence level:
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Context API
+    .. tab-item:: Context API
 
         .. doctest::
 
@@ -232,9 +232,9 @@ When the discrete Laplace distribution's scale is 3, the DP estimate differs fro
 
 If the accuracy of the query seems reasonable, then make a private release. Keep in mind, this action will permanently consume one of ``context``'s three queries we allocated when we launched the context API (each of which uses 1/3 of our privacy-loss budget).
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Context API
+    .. tab-item:: Context API
 
         .. doctest::
 
@@ -242,9 +242,9 @@ If the accuracy of the query seems reasonable, then make a private release. Keep
 
 The result is a random draw from the discrete Laplace distribution, centered at the true count of the number of records in the underlying data set (7000). Your previous accuracy estimate can now be used to create a confidence interval:
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Context API
+    .. tab-item:: Context API
 
         .. doctest::
 
@@ -256,9 +256,9 @@ This concludes the process of making a DP release.
 
 Let's repeat this process more briefly for estimating the mean age. This time we benefit from having a DP count estimate in our public information: It is used to help calibrate the privacy guarantees for the mean.
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Context API
+    .. tab-item:: Context API
 
         .. doctest::
 
@@ -279,9 +279,9 @@ Let's repeat this process more briefly for estimating the mean age. This time we
 
 This measurement involves more preprocessing than the count did (casting, clamping, and resizing). The purpose of this preprocessing is to bound the sensitivity of the mean: the mean should only ever change by a small amount when any teacher is added or removed from the data set.
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Context API
+    .. tab-item:: Context API
 
         .. doctest::
 
@@ -292,9 +292,9 @@ Framework API
 
 First, create a count query.
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Framework API
+    .. tab-item:: Framework API
 
         .. doctest::
 
@@ -309,9 +309,9 @@ First, create a count query.
 
 With this lower-level API you get greater flexibility. For instance, you can see the sensitivity of the count query:
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Framework API
+    .. tab-item:: Framework API
 
         .. doctest::
 
@@ -321,9 +321,9 @@ With this lower-level API you get greater flexibility. For instance, you can see
 
 A binary search is used to find the smallest noise scale that results in a measurement that satisfies ε = 1/3.
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Framework API
+    .. tab-item:: Framework API
 
         .. doctest::
 
@@ -334,9 +334,9 @@ A binary search is used to find the smallest noise scale that results in a measu
 
 Similarly, construct a mean measurement and release it:
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Framework API
+    .. tab-item:: Framework API
 
         .. doctest::
 

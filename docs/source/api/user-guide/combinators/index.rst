@@ -27,9 +27,9 @@ In this case, it is only necessary for the types to conform.
 
 In the following example we chain :py:func:`opendp.measurements.make_base_discrete_laplace` with :py:func:`opendp.transformations.make_sum`.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -59,9 +59,9 @@ The syntax automatically chooses between :func:`make_chain_mt <opendp.combinator
 :func:`make_chain_tt <opendp.combinators.make_chain_tt>`, 
 and :func:`make_chain_pm <opendp.combinators.make_chain_pm>`.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -78,9 +78,9 @@ Chaining fails if we adjust the domains such that they don't match.
 In the below example, the adjustment is subtle, but the bounds were adjusted to floats.
 ``make_sum`` is equally capable of summing floats, but the chaining fails because the sum emits floats and the discrete Laplace mechanism expects integers.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -161,9 +161,9 @@ These combinators are used to cast the output measure of a Measurement.
 :func:`opendp.combinators.make_pureDP_to_fixed_approxDP` is used for casting an output measure from ``MaxDivergence`` to ``FixedSmoothedMaxDivergence``.
 This is useful if you want to compose pure-DP measurements with approximate-DP measurements.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -185,9 +185,9 @@ Similarly, :func:`opendp.combinators.make_pureDP_to_zCDP` is used for casting an
 
 :func:`opendp.combinators.make_zCDP_to_approxDP` is used for casting an output measure from ``ZeroConcentratedDivergence`` to ``SmoothedMaxDivergence``.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -205,9 +205,9 @@ Similarly, :func:`opendp.combinators.make_pureDP_to_zCDP` is used for casting an
 :func:`opendp.combinators.make_fix_delta` changes the output measure from ``SmoothedMaxDivergence`` to ``FixedSmoothedMaxDivergence``.
 It fixes the delta parameter in the curve, so that the resulting measurement can be composed with other ``FixedSmoothedMaxDivergence`` measurements.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -243,9 +243,9 @@ you can make the privacy relation more permissive by wrapping your measurement w
 In order to demonstrate this API, we'll first create a measurement with a sized input domain.
 The resulting measurement expects the size of the input dataset to be 10.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -257,9 +257,9 @@ The resulting measurement expects the size of the input dataset to be 10.
 We can now use the amplification combinator to construct an amplified measurement.
 The function on the amplified measurement is identical to the standard measurement.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
@@ -271,9 +271,9 @@ The function on the amplified measurement is identical to the standard measureme
 The privacy relation on the amplified measurement takes into account that the input dataset of size 10
 is a simple sample of individuals from a theoretical larger dataset that captures the entire population, with 100 rows.
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 

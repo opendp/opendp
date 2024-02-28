@@ -3,9 +3,9 @@ Quickstart
 
 OpenDP is available for Python and R.
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Python
+    .. tab-item:: Python
 
         Use ``pip`` to install the `opendp <https://pypi.org/project/opendp/>`_ package from PyPI:
 
@@ -13,7 +13,7 @@ OpenDP is available for Python and R.
 
             pip install opendp
 
-    .. group-tab:: R
+    .. tab-item:: R
 
         Launch R and then use ``install.packages``:
 
@@ -21,7 +21,7 @@ OpenDP is available for Python and R.
 
             install.packages('opendp', repos = 'https://opendp.r-universe.dev/')
 
-    .. group-tab:: Rust
+    .. tab-item:: Rust
 
         Reference the ``opendp`` `crate <https://crates.io/crates/opendp>`_ in your ``Cargo.toml`` file:
 
@@ -37,32 +37,32 @@ The vetting process is currently underway for the code in the OpenDP Library.
 Any code that has not completed the vetting process is marked as "contrib" and will not run unless you opt-in.
 Enable ``contrib`` globally with the following snippet:
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Python
+    .. tab-item:: Python
 
         .. doctest::
 
             >>> from opendp.mod import enable_features
             >>> enable_features('contrib')
 
-    .. group-tab:: R
+    .. tab-item:: R
 
         .. literalinclude:: quickstart.R
             :language: r
             :start-after: 1-library
             :end-before: 2-use
 
-    .. group-tab:: Rust
+    .. tab-item:: Rust
 
         In Rust, ``contrib`` features are enabled in your ``Cargo.toml`` in the previous step.
 
 Once you've installed OpenDP, you can write your first program.
 Let's apply Laplace noise to a value.
 
-.. tabs::
+.. tab-set::
 
-    .. group-tab:: Python
+    .. tab-item:: Python
 
         .. doctest::
 
@@ -70,13 +70,13 @@ Let's apply Laplace noise to a value.
             >>> base_laplace = dp.space_of(float) >> dp.m.then_base_laplace(scale=1.)
             >>> dp_value = base_laplace(123.0)
 
-    .. group-tab:: R
+    .. tab-item:: R
 
         .. literalinclude:: quickstart.R
             :language: r
             :start-after: 2-use
 
-    .. group-tab:: Rust
+    .. tab-item:: Rust
 
         .. literalinclude:: quickstart.rs
             :language: rust

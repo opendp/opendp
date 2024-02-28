@@ -14,9 +14,9 @@ You can explicitly set the types via type arguments in the constructor.
 Each constructor has its own set of permissible types, based on the type of computation it is performing.
 For instance, the atom domain constructor accepts a type argument `T`:
 
-.. tabs::
+.. tab-set::
 
-  .. group-tab:: Python
+  .. tab-item:: Python
 
     .. doctest::
 
