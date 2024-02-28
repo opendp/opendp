@@ -11,7 +11,7 @@ def make_vector_float_laplace_cks20(input_domain, input_metric, scale: QO, k):
             raise ValueError("domain size must be known if discretization is not exact")
         relaxation = relaxation.inf_mul(T.inf_cast(input_domain.size))
 
-    if scale.is_zero():
+    if scale == 0.:
         def function(x: list[T]):
             return x
     else:
@@ -19,9 +19,9 @@ def make_vector_float_laplace_cks20(input_domain, input_metric, scale: QO, k):
             return [sample_discrete_laplace_Z2k(x_i, scale, k) for x_i in x]
     
     return Measurement(
-        input_domain,
-        function,
-        input_metric,
-        MaxDivergence(QO),
+        input_domain=input_domain,
+        function=function,
+        input_metric=input_metric,
+        output_measure=MaxDivergence(QO),
         privacy_map=laplace_map(scale, relaxation=relaxation)
     )

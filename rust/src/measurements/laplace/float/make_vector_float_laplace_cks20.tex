@@ -60,8 +60,8 @@ By the postcondition of \texttt{get\_discretization\_consts}, this rounding chan
 
 \begin{align*}
     &\max_{x \sim x'} d_{L1}(round(x), round(x')) \\
-    =& \max_{x \sim x'} \sum_i^d \left| round(x_i) - round(x'_i) \right| \\
-    \leq& \max_{x \sim x'} \sum_i^d \left(\left| x_i - x'_i \right| + \texttt{relaxation} \right) &&\text{by postcondition of \texttt{get\_discretization\_consts}} \\
+    =& \max_{x \sim x'} \sum_{i=1}^d \left| round(x_i) - round(x'_i) \right| \\
+    \leq& \max_{x \sim x'} \sum_{i=1}^d \left(\left| x_i - x'_i \right| + \texttt{relaxation} \right) &&\text{by postcondition of \texttt{get\_discretization\_consts}} \\
     \leq& \din + d \cdot \texttt{relaxation} &&\text{by definition of } L_1 \text{ distance}
 \end{align*}
 
@@ -91,13 +91,13 @@ the output of the function follows the Discrete Laplace Distribution with scale 
         \prod_i^d \frac{\exp^{1/b} - 1}{\exp^{1/b} + 1} \exp \left( -\frac{|x'_i - z_i|}{b} \right)
     }\right) 
         &&\text{use pdf of Discrete Laplace} \\
-    =& \max_{x \sim x'} \max_{z \in \mathbb{Z}} \sum_i^d \ln\left(\frac{
+    =& \max_{x \sim x'} \max_{z \in \mathbb{Z}} \sum_{i=1}^d \ln\left(\frac{
         \exp \left( -\frac{|x_i - z_i|}{b} \right)
     }{
         \exp \left( -\frac{|x'_i - z_i|}{b} \right)
     }\right) \\
-    =& \max_{x \sim x'} \max_{z \in \mathbb{Z}^d} \frac{\sum_i^d |x'_i - z_i| - |x_i - z_i|}{b}&& \text{exp and ln cancel} \\
-    \leq& \frac{\max_{x \sim x'} \sum_i^d |x_i - x'_i|}{b} &&\text{by reverse triangle inequality} \\
+    =& \max_{x \sim x'} \max_{z \in \mathbb{Z}^d} \frac{\sum_{i=1}^d |x'_i - z_i| - |x_i - z_i|}{b}&& \text{exp and ln cancel} \\
+    \leq& \frac{\max_{x \sim x'} \sum_{i=1}^d |x_i - x'_i|}{b} &&\text{by reverse triangle inequality} \\
     =& \frac{d_{in}}{b}  &&\text{by definition of } L^1 { distance}
 \end{align*}
 

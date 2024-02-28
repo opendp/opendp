@@ -5,7 +5,7 @@ def make_scalar_float_laplace_cks20(input_domain, input_metric, scale: QO, k):
     
     k, relaxation = get_discretization_consts(k)
 
-    if scale.is_zero():
+    if scale == 0.:
         def function(x: T):
             return x
     else:
@@ -13,10 +13,9 @@ def make_scalar_float_laplace_cks20(input_domain, input_metric, scale: QO, k):
             return sample_discrete_laplace_Z2k(x, scale, k)
     
     return Measurement(
-        input_domain,
-        function,
-        input_metric,
-        MaxDivergence(QO),
+        input_domain=input_domain,
+        function=function,
+        input_metric=input_metric,
+        output_measure=MaxDivergence(QO),
         privacy_map=laplace_map(scale, relaxation=relaxation)
     )
-        
