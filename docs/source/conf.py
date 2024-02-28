@@ -27,7 +27,7 @@ extensions = [
     'sphinx-prompt',
     'sphinx_multiversion',
     'nbsphinx',
-    'sphinx_tabs.tabs',
+    'sphinx_design',
 ]
 
 # convert markdown to rst when rendering with sphinx

@@ -6,6 +6,7 @@ OpenDP is available for Python and R.
 .. tab-set::
 
     .. tab-item:: Python
+        :sync: python
 
         Use ``pip`` to install the `opendp <https://pypi.org/project/opendp/>`_ package from PyPI:
 
@@ -14,6 +15,7 @@ OpenDP is available for Python and R.
             pip install opendp
 
     .. tab-item:: R
+        :sync: r
 
         Launch R and then use ``install.packages``:
 
@@ -22,6 +24,7 @@ OpenDP is available for Python and R.
             install.packages('opendp', repos = 'https://opendp.r-universe.dev/')
 
     .. tab-item:: Rust
+        :sync: rust
 
         Reference the ``opendp`` `crate <https://crates.io/crates/opendp>`_ in your ``Cargo.toml`` file:
 
@@ -40,6 +43,7 @@ Enable ``contrib`` globally with the following snippet:
 .. tab-set::
 
     .. tab-item:: Python
+        :sync: python
 
         .. doctest::
 
@@ -47,6 +51,7 @@ Enable ``contrib`` globally with the following snippet:
             >>> enable_features('contrib')
 
     .. tab-item:: R
+        :sync: r
 
         .. literalinclude:: quickstart.R
             :language: r
@@ -54,6 +59,7 @@ Enable ``contrib`` globally with the following snippet:
             :end-before: 2-use
 
     .. tab-item:: Rust
+        :sync: rust
 
         In Rust, ``contrib`` features are enabled in your ``Cargo.toml`` in the previous step.
 
@@ -63,6 +69,7 @@ Let's apply Laplace noise to a value.
 .. tab-set::
 
     .. tab-item:: Python
+        :sync: python
 
         .. doctest::
 
@@ -71,12 +78,14 @@ Let's apply Laplace noise to a value.
             >>> dp_value = base_laplace(123.0)
 
     .. tab-item:: R
+        :sync: r
 
         .. literalinclude:: quickstart.R
             :language: r
             :start-after: 2-use
 
     .. tab-item:: Rust
+        :sync: rust
 
         .. literalinclude:: quickstart.rs
             :language: rust

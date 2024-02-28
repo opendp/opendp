@@ -28,6 +28,7 @@ Releases on the teacher survey should conceal the addition or removal of any one
 .. tab-set::
 
     .. tab-item:: Context API
+        :sync: context
 
         .. doctest::
 
@@ -39,10 +40,16 @@ Releases on the teacher survey should conceal the addition or removal of any one
             >>> privacy_unit = dp.unit_of(contributions=1)
 
     .. tab-item:: Framework API
+        :sync: framework
 
         The privacy unit is actually a 2-tuple:
 
         .. doctest::
+
+            >>> import opendp.prelude as dp
+
+            >>>> # we are also using library features that are marked "contrib":
+            >>> dp.enable_features("contrib")
 
             >>> input_metric, d_in = privacy_unit
             
@@ -72,12 +79,14 @@ A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending
 .. tab-set::
 
     .. tab-item:: Context API
+        :sync: context
 
         .. doctest::
 
             >>> privacy_loss = dp.loss_of(epsilon=1.)
 
     .. tab-item:: Framework API
+        :sync: framework
 
         The privacy loss is also a 2-tuple:
 
@@ -102,6 +111,7 @@ The next step is to identify public information about the data set.
 .. tab-set::
 
     .. tab-item:: Context API
+        :sync: context
 
         .. doctest::
 
@@ -111,6 +121,7 @@ The next step is to identify public information about the data set.
             ... ]
 
     .. tab-item:: Framework API
+        :sync: framework
 
         No difference:
 
@@ -135,6 +146,7 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
 .. tab-set::
 
     .. tab-item:: Context API
+        :sync: context
 
         .. doctest::
 
@@ -154,6 +166,7 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
         Since the privacy loss budget is at most ε = 1, and we are partitioning our budget evenly amongst three queries, then each query will be calibrated to satisfy ε = 1/3.
 
     .. tab-item:: Framework API
+        :sync: framework
 
         ``dp.Context.compositor`` creates a sequential composition measurement.
 
