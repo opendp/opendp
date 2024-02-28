@@ -1,13 +1,12 @@
-use crate::error::Fallible;
-use crate::metrics::DiscreteDistance;
-use crate::measures::MaxDivergence;
-use crate::domains::{AtomDomain, VectorDomain};
 use crate::core::{Function, Measurement, PrivacyMap};
-use crate::traits::{InfSub, InfDiv, InfLn, InfMul, samplers::SampleBernoulli};
-
+use crate::domains::{AtomDomain, VectorDomain};
+use crate::error::Fallible;
+use crate::measures::MaxDivergence;
+use crate::metrics::DiscreteDistance;
+use crate::traits::{samplers::SampleBernoulli, InfDiv, InfLn, InfMul, InfSub};
 
 /// Make a Measurement that implements Basic RAPPOR
-/// 
+///
 /// # Citations
 /// * [RAPPOR: Randomized Aggregatable Privacy-Preserving Ordinal Response](https://arxiv.org/abs/1407.6981)
 ///
@@ -21,27 +20,37 @@ pub fn make_rappor(
     input_metric: DiscreteDistance,
     f: f64,
     m: u32,
-    constant_time: bool
-) -> Fallible<Measurement<VectorDomain<AtomDomain<bool>>, Vec<bool>, DiscreteDistance, MaxDivergence<f64>>> {
+    constant_time: bool,
+) -> Fallible<
+    Measurement<VectorDomain<AtomDomain<bool>>, Vec<bool>, DiscreteDistance, MaxDivergence<f64>>,
+> {
     if input_domain.size.is_none() {
-        return fallible!(MakeMeasurement, "RAPPOR requires a known number of categories")
+        return fallible!(
+            MakeMeasurement,
+            "RAPPOR requires a known number of categories"
+        );
     }
 
     if f <= 0.0 || f > 1.0 {
-        return fallible!(MakeMeasurement, "f must be in (0, 1]")
+        return fallible!(MakeMeasurement, "f must be in (0, 1]");
     }
 
-    let epsilon = (2.0f64).inf_sub(&f)?.inf_div(&f)?.inf_ln()?.inf_mul(&2.0)?.inf_mul(&f64::from(m))?;
+    let epsilon = (2.0f64)
+        .inf_sub(&f)?
+        .inf_div(&f)?
+        .inf_ln()?
+        .inf_mul(&2.0)?
+        .inf_mul(&f64::from(m))?;
     let f_2 = f.inf_div(&2.0)?;
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &Vec<bool>| {
             if arg.into_iter().filter(|b| **b).count() > m as usize {
-                return fallible!(FailedFunction, "number of bits set must be constant!")
+                return fallible!(FailedFunction, "number of bits set must be constant!");
             }
-            arg.iter().map(|b| {
-                Ok(*b ^ bool::sample_bernoulli(f_2, constant_time)?)
-            }).collect::<Fallible<Vec<bool>>>()
+            arg.iter()
+                .map(|b| Ok(*b ^ bool::sample_bernoulli(f_2, constant_time)?))
+                .collect::<Fallible<Vec<bool>>>()
         }),
         input_metric,
         MaxDivergence::default(),
@@ -53,21 +62,18 @@ pub fn make_rappor(
                 return fallible!(FailedFunction, "d_in must be 0 or 1.");
             }
             Ok(epsilon)
-        })
+        }),
     )
 }
-
-
-
 
 pub fn debias_basic_rappor(answers: Vec<Vec<bool>>, f: f64) -> Fallible<Vec<f64>> {
     if answers.len() == 0 {
         return fallible!(FailedFunction, "No answers provided");
     }
     if f <= 0.0 || f > 1.0 {
-        return fallible!(FailedFunction, "f must be in (0, 1]")
+        return fallible!(FailedFunction, "f must be in (0, 1]");
     }
-    
+
     let n = answers.len() as f64;
     let k = answers[0].len();
     let mut counts = vec![0.0; k];
@@ -84,11 +90,11 @@ pub fn debias_basic_rappor(answers: Vec<Vec<bool>>, f: f64) -> Fallible<Vec<f64>
         });
     });
 
-    Ok(counts.into_iter().map(|y_i| {
-        (y_i - ((f / 2.0) * n)) / (1.0 - f)
-    }).collect())
+    Ok(counts
+        .into_iter()
+        .map(|y_i| (y_i - ((f / 2.0) * n)) / (1.0 - f))
+        .collect())
 }
-
 
 #[cfg(test)]
 mod test {
@@ -101,30 +107,30 @@ mod test {
             DiscreteDistance::default(),
             0.5,
             1,
-            false
+            false,
         )?;
-        rappor.invoke(&vec![true, false, false, false, false, false, false, false, false, false])?;
+        rappor.invoke(&vec![
+            true, false, false, false, false, false, false, false, false, false,
+        ])?;
         assert_eq!(rappor.map(&1)?, 2.1972245773362196);
         Ok(())
     }
     #[test]
     fn test_debias_rappor() -> Fallible<()> {
-
         let f = 0.1;
-        let mut answer = vec![0.0;10];
+        let mut answer = vec![0.0; 10];
         answer[0] = 1.0;
-        
-        let mut answers = vec![vec![false;10]; 10];
+
+        let mut answers = vec![vec![false; 10]; 10];
         // dist is [10; 0x9]
         answers.iter_mut().for_each(|a| a[0] = true);
-        
+
         let high = 10.555555555555555;
         let low = -0.5555555555555556;
-        
+
         let expected_dist = vec![high, low, low, low, low, low, low, low, low, low];
         assert_eq!(debias_basic_rappor(answers, f)?, expected_dist);
 
         Ok(())
     }
 }
-
