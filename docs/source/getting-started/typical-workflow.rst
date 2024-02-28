@@ -18,11 +18,8 @@ Because the Context API is a wrapper around the Framework API, it is easier to u
 
 We'll illustrate these steps by doing a differentially private analysis of a teacher survey, which is a tabular dataset. The raw data consists of survey responses from teachers in primary and secondary schools in an unspecified U.S. state.
 
-Context API
------------
-
 1. Identify the Unit of Privacy
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------------
 
 The first step in a differentially private analysis is to determine what you are protecting: the unit of privacy.
 
@@ -30,7 +27,7 @@ Releases on the teacher survey should conceal the addition or removal of any one
 
 .. tabs::
 
-    .. group-tab:: Python
+    .. group-tab:: Context API
 
         .. doctest::
 
@@ -40,6 +37,19 @@ Releases on the teacher survey should conceal the addition or removal of any one
             >>> dp.enable_features("contrib")
             
             >>> privacy_unit = dp.unit_of(contributions=1)
+
+    .. group-tab:: Framework API
+
+        The privacy unit is actually a 2-tuple:
+
+        .. doctest::
+
+            >>> input_metric, d_in = privacy_unit
+            
+            >>> assert d_in == 1 # neighboring data set distance is at most d_in...
+            >>> assert input_metric == dp.symmetric_distance() # ...in terms of additions/removals
+
+        The privacy unit tuple specifies how distances are computed between two data sets (``input_metric``), and how large the distance can be (``d_in``).
 
 Broadly speaking, differential privacy can be applied to any medium of data for which you can define a unit of privacy. In other contexts, the unit of privacy may correspond to multiple rows, a user ID, or nodes or edges in a graph.
 
@@ -51,7 +61,7 @@ The unit of privacy may also be more general or more precise than a single indiv
 It is highly recommended to choose a unit of privacy that is at least as general as an individual.
 
 2. Set Privacy Loss Parameters
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------------
 
 Next, you should determine what level of privacy protection to provide to your units of privacy. This choice may be governed by a variety of factors, such as the amount of harm that individuals could experience if their data were revealed, and your ethical and legal obligations as a data custodian.
 
@@ -61,14 +71,27 @@ A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending
 
 .. tabs::
 
-    .. group-tab:: Python
+    .. group-tab:: Context API
 
         .. doctest::
 
             >>> privacy_loss = dp.loss_of(epsilon=1.)
 
+    .. group-tab:: Framework API
+
+        The privacy loss is also a 2-tuple:
+
+        .. doctest::
+
+            >>> privacy_measure, d_out = privacy_loss
+            
+            >>> assert d_out == 1. # output distributions have distance at most d_out (ε)...
+            >>> assert privacy_measure == dp.max_divergence(T=float) # ...in terms of pure-DP
+
+        The privacy loss tuple specifies how distances are measured between distributions (``privacy_measure``), and how large the distance can be (``d_out``).
+
 3. Collect Public Information
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------------
 
 The next step is to identify public information about the data set.
 
@@ -78,7 +101,18 @@ The next step is to identify public information about the data set.
 
 .. tabs::
 
-    .. group-tab:: Python
+    .. group-tab:: Context API
+
+        .. doctest::
+
+            >>> col_names = [
+            ...    "name", "sex", "age", "maritalStatus", "hasChildren", "highestEducationLevel", 
+            ...    "sourceOfStress", "smoker", "optimism", "lifeSatisfaction", "selfEsteem"
+            ... ]
+
+    .. group-tab:: Framework API
+
+        No difference:
 
         .. doctest::
 
@@ -94,13 +128,13 @@ A data invariant is information about your data set that you are explicitly choo
 On the other hand, using public information significantly improves the utility of your results.
 
 4. Mediate Access to Data
-^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
 
 Ideally, at this point, you have not yet accessed the sensitive data set. This is the only point in the process where we access the sensitive data set. To ensure that your specified differential privacy protections are maintained, the OpenDP Library should mediate all access to the sensitive data set. When using Python, use the Context API to mediate access.
 
 .. tabs::
 
-    .. group-tab:: Python
+    .. group-tab:: Context API
 
         .. doctest::
 
@@ -117,10 +151,33 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
             ...     split_evenly_over=3
             ... )
 
-Since the privacy loss budget is at most ε = 1, and we are partitioning our budget evenly amongst three queries, then each query will be calibrated to satisfy ε = 1/3.
+        Since the privacy loss budget is at most ε = 1, and we are partitioning our budget evenly amongst three queries, then each query will be calibrated to satisfy ε = 1/3.
 
-5. Submit DP Queries
-^^^^^^^^^^^^^^^^^^^^
+    .. group-tab:: Framework API
+
+        ``dp.Context.compositor`` creates a sequential composition measurement.
+
+        .. doctest::
+
+            >>> m_sc = dp.c.make_sequential_composition(
+            ...     # data set is a single string, with rows separated by linebreaks
+            ...     input_domain=dp.atom_domain(T=str),
+            ...     input_metric=input_metric,
+            ...     output_measure=privacy_measure,
+            ...     d_in=d_in,
+            ...     d_mids=[d_out / 3] * 3,
+            ... )
+
+        The measurement is called with the data to create a compositor queryable:
+
+        .. doctest::
+
+            >>> qbl_sc = m_sc(data)
+
+        You can now submit up to three queries to ``qbl_sc``, in the form of measurements.
+
+5. Submit DP Queries (Context API)
+----------------------------------
 
 It is now time to create differentially private releases. The following query counts the number of records in the data set:
 
@@ -223,99 +280,8 @@ This measurement involves more preprocessing than the count did (casting, clampi
 
             >>> dp_mean = mean_query.release()
 
-The OpenDP Library supports more statistics, like the variance, various ways to compute histograms and quantiles, and PCA. The library also supports other mechanisms like the Gaussian Mechanism, which provides tighter privacy accounting when releasing a large number of queries, the Thresholded Laplace Mechanism, for releasing counts on data sets with unknown key sets, and variations of randomized response.
-
-Framework API
--------------
-
-Now let's do the same analysis using the Framework API.
-
-1. Privacy Unit
-^^^^^^^^^^^^^^^
-
-The privacy unit is actually a 2-tuple:
-
-.. tabs::
-
-    .. group-tab:: Python
-
-        .. doctest::
-
-            >>> input_metric, d_in = privacy_unit
-            
-            >>> assert d_in == 1 # neighboring data set distance is at most d_in...
-            >>> assert input_metric == dp.symmetric_distance() # ...in terms of additions/removals
-
-The privacy unit tuple specifies how distances are computed between two data sets (``input_metric``), and how large the distance can be (``d_in``).
-
-2. Privacy Loss
-^^^^^^^^^^^^^^^
-
-The privacy loss is also a 2-tuple:
-
-.. tabs::
-
-    .. group-tab:: Python
-
-        .. doctest::
-
-            >>> privacy_measure, d_out = privacy_loss
-            
-            >>> assert d_out == 1. # output distributions have distance at most d_out (ε)...
-            >>> assert privacy_measure == dp.max_divergence(T=float) # ...in terms of pure-DP
-
-The privacy loss tuple specifies how distances are measured between distributions (``privacy_measure``), and how large the distance can be (``d_out``).
-
-3. Collect Public Information
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The ``col_names`` are the same as in the Context API example.
-
-.. tabs::
-
-    .. group-tab:: Python
-
-        .. doctest::
-
-            >>> col_names = [
-            ...    "name", "sex", "age", "maritalStatus", "hasChildren", "highestEducationLevel", 
-            ...    "sourceOfStress", "smoker", "optimism", "lifeSatisfaction", "selfEsteem"
-            ... ]
-
-4. Mediate Access to Data
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-``dp.Context.compositor`` creates a sequential composition measurement.
-
-.. tabs::
-
-    .. group-tab:: Python
-
-        .. doctest::
-
-            >>> m_sc = dp.c.make_sequential_composition(
-            ...     # data set is a single string, with rows separated by linebreaks
-            ...     input_domain=dp.atom_domain(T=str),
-            ...     input_metric=input_metric,
-            ...     output_measure=privacy_measure,
-            ...     d_in=d_in,
-            ...     d_mids=[d_out / 3] * 3,
-            ... )
-
-The measurement is called with the data to create a compositor queryable:
-
-.. tabs::
-
-    .. group-tab:: Python
-
-        .. doctest::
-
-            >>> qbl_sc = m_sc(data)
-
-You can now submit up to three queries to ``qbl_sc``, in the form of measurements.
-
-5. Submit DP Queries
-^^^^^^^^^^^^^^^^^^^^
+5. Submit DP Queries (Framework API)
+------------------------------------
 
 First, create a count query.
 
@@ -381,3 +347,8 @@ Similarly, construct a mean measurement and release it:
             ... )
 
             >>> dp_mean = qbl_sc(m_mean)
+
+Other features
+--------------
+
+The OpenDP Library supports more statistics, like the variance, various ways to compute histograms and quantiles, and PCA. The library also supports other mechanisms like the Gaussian Mechanism, which provides tighter privacy accounting when releasing a large number of queries, the Thresholded Laplace Mechanism, for releasing counts on data sets with unknown key sets, and variations of randomized response.
