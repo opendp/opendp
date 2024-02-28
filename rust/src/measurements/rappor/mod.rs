@@ -20,7 +20,7 @@ pub fn make_rappor(
     input_domain: VectorDomain<AtomDomain<bool>>,
     input_metric: DiscreteDistance,
     f: f64,
-    m: i32,
+    m: u32,
     constant_time: bool
 ) -> Fallible<Measurement<VectorDomain<AtomDomain<bool>>, Vec<bool>, DiscreteDistance, MaxDivergence<f64>>> {
     if input_domain.size.is_none() {
@@ -103,7 +103,7 @@ mod test {
             1,
             false
         )?;
-        rappor.invoke(&vec![true, false, true, false, true, false, true, false, true, false])?;
+        rappor.invoke(&vec![true, false, false, false, false, false, false, false, false, false])?;
         assert_eq!(rappor.map(&1)?, 2.1972245773362196);
         Ok(())
     }

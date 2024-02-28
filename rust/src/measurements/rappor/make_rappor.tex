@@ -18,12 +18,52 @@ TODO: algorithm outline
 \section{Hoare Triple}
 \subsection{Preconditions}
 \begin{itemize}
-	\item Variable 
+	\item Variable \texttt{f} must be of type \texttt{f64}
+	\item Variable \texttt{m} must be of type \texttt{u32} 
+    \item Variable \texttt{constant\_time} must be of type \texttt{bool}
 \end{itemize}
+
+\subsection*{Pseudocode}
+\begin{lstlisting}[language=Python, escapechar=|]
+def make_rappor(f: f64, constant_time: bool):
+    input_domain: VectorDomain<AtomDomain<bool>>,
+    input_metric: DiscreteDistance,
+    output_domain = VectorDomain<AtomDomain<bool>>
+    output_measure = MaxDivergence
+    
+    if (f <= 0.0 or f > 1): |\label{line:range}|
+        raise Exception("probability must be in (0.0, 1]")
+
+    eps = (2*m)*log((2-f)/f)
+    def privacy_map(d_in: IntDistance): |\label{line:map}|
+        return eps
+
+    def function(arg: Vec<bool>) -> Vec<bool>: |\label{line:fn}|
+        for b in arg:
+        	b = b |$\veebar$| bool.sample_bernoulli(f/2, constant_time)
+        return arg
+    
+    return Measurement(input_domain, function, input_metric, output_measure, privacy_map)
+\end{lstlisting}
+
+\subsection*{Postcondition}
+% not exactly accurate as stated now: have to figure out a way to make the distance metric work as expected
+\validMeasurement{\texttt{(f, m, constant\_time)}}{\\ \texttt{make\_rappor}}
 
 
 \section{Proof}
-$f/2$ refers to the probability of 
+\begin{enumerate}
+	\item Privacy guarantee
+\begin{tcolorbox}
+\begin{note}[Proof relies on correctness of Bernoulli sampler]
+The following proof makes use of the following lemma that asserts the correctness of the Bernoulli sampler function.
+    \begin{lemma}
+    If system entropy is not sufficient, \texttt{sample\_bernoulli} raises an error. 
+    Otherwise, \texttt{sample\_bernoulli(f/2, constant\_time)}, the Bernoulli sampler function used in \texttt{make\_randomized\_response\_bool}, 
+    returns \texttt{true} with probability (\texttt{prob}) and returns  \texttt{false} with probability (1 - \texttt{f/2}).
+    \end{lemma}
+\end{note}
+\end{tcolorbox}
 \begin{theorem}~\cite{rappor}
 	\rustdoc{measurements/fn}{make\_rappor} satisfies $\varepsilon$-DP where 
 	\begin{equation}
@@ -79,7 +119,7 @@ $f/2$ refers to the probability of
 	\end{align}
 	\ref{eq:maximise-product} is maximised when $y_1=1,...,y_m=1$, and $y_{m+1},...,y_{2m}=0$, giving
 	\begin{align}
-		D &= \left(1-\frac{1}{2}f\right)^{2m}\times\left(\frac{1}{2}f\right)^{-2m}\\
+		D &\leq \left(1-\frac{1}{2}f\right)^{2m}\times\left(\frac{1}{2}f\right)^{-2m}\\
 			&= \left(\frac{2-f}{f}\right)^{2m}
 	\end{align}
 	Therefore,
@@ -87,9 +127,38 @@ $f/2$ refers to the probability of
 		\varepsilon = 2m\log\left(\frac{2-f}{f}\right)
 	\end{equation}
 \end{proof}
-
-\section{Performance}
-
+\item Utility
+\begin{theorem}
+\label{thm:unbiased-estimator}
+	The expected value of \rustdoc{measurements/fn}{debias\_basic\_rappor} is $N$.
+\end{theorem}
+\begin{proof} Let $Y$ be the sum of received randomised outputs of \rustdoc{measurements/fn}{make\_rappor}, where $Y_i$ is the number of received bits at index $i\in [k]$. Let $N_i$ be the true number of times bit $i$ was set.
+\begin{align*}
+\mathbb{E}[Y_i] &= N_i\left(1-\frac{1}{2}f\right) + (n-N_i)\frac{f}{2}\\
+	&= N_i(1-f) + n\frac{1}{2}f\\
+	\intertext{Therefore the estimator $\hat{N_i}$, given by}
+\hat{N_i} &= \frac{Y_i-n\frac{f}{2}}{1-f}\\
+\intertext{is unbiased as,}
+\mathbb{E}[\hat{N_i}] &= N_i
+\end{align*}
+\end{proof}
+\begin{theorem}
+	\rustdoc{measurements/fn}{debias\_basic\_rappor} has average squared error
+	\begin{equation}
+		l_2^2(N-\hat{N}) = kn\left(\frac{f}{2}-\frac{f^2}{4}\right)
+	\end{equation}
+\end{theorem}
+\begin{proof}\hfill
+Notice that each $\hat{N_i}$ is a sum of $n$ Bernoullis with probability $1-\frac{1}{2}f$ or $\frac{1}{2}f$, which both have $\sigma^2 = \frac{1}{2}f\left(1-\frac{1}{2}f\right) = \frac{f}{2}-\frac{f^2}{4}$
+	\begin{align*}
+		\mathbb{E}[|\hat{N}-N|] &= \mathbb{E}[\sum\limits_{i=1}^k(\hat{N_i}-N_i)^2] = \sum\limits_{i=1}^k\mathbb{E}[(\hat{N_i}-N_i)^2] &&\\
+			&= \sum\limits_{i=1}^k\mathbb{E}[(\hat{N_i}-\mathbb{E}[\hat{N_i}])^2] && \text{by Theorem~\ref{thm:unbiased-estimator}}\\
+			&= \sum\limits_{i=1}^k\text{Var}(\hat{N_i}) &&\\
+			&= \sum\limits_{i=1}^kn\left(\frac{f}{2}-\frac{f^2}{4}\right) &&\\
+			&= kn\left(\frac{f}{2}-\frac{f^2}{4}\right)
+	\end{align*}
+\end{proof}
+\end{enumerate}
 
 \bibliography{references.bib}
 \end{document}
