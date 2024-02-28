@@ -89,7 +89,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'OpenDP'
-html_favicon = u'favicon.ico'
+html_favicon = u'../../R/opendp/pkgdown/favicon/favicon.ico'
 copyright = u'%d' % datetime.now().year
 
 with open("../../VERSION") as f:
