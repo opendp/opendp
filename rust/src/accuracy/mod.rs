@@ -286,7 +286,7 @@ pub mod test {
     use crate::error::ExplainUnwrap;
     use crate::measurements::{
         make_gaussian, make_scalar_float_gaussian, make_scalar_float_laplace,
-        make_scalar_integer_laplace_cks20,
+        make_scalar_integer_laplace,
     };
     use crate::measures::ZeroConcentratedDivergence;
     use crate::metrics::AbsoluteDistance;
@@ -552,7 +552,7 @@ pub mod test {
         println!("scale: {scale}");
         let input_domain = AtomDomain::<i32>::default();
         let input_metric = AbsoluteDistance::default();
-        let base_dl = make_scalar_integer_laplace_cks20(input_domain, input_metric, scale)?;
+        let base_dl = make_scalar_integer_laplace(input_domain, input_metric, scale)?;
         let n = 50_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_dl.invoke(&0).unwrap().clamp(-127, 127).abs() >= accuracy)

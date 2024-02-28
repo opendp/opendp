@@ -214,7 +214,7 @@ then_base_laplace_threshold <- function(
 
 #' gaussian constructor
 #'
-#' Make a asdf Measurement that adds noise from the gaussian(`scale`) distribution to the input.
+#' Make a Measurement that adds noise from the Gaussian(`scale`) distribution to the input.
 #'
 #' Valid inputs for `input_domain` and `input_metric` are:
 #'
@@ -313,6 +313,10 @@ then_gaussian <- function(
 #' Can specify `bounds` to run the algorithm in near constant-time.
 #'
 #' [make_geometric in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_geometric.html)
+#'
+#' **Citations:**
+#'
+#' * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 #'
 #' **Supporting Elements:**
 #'

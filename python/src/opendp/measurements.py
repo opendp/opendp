@@ -223,7 +223,7 @@ def make_gaussian(
     k = None,
     MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<QO>"
 ) -> Measurement:
-    r"""Make a asdf Measurement that adds noise from the gaussian(`scale`) distribution to the input.
+    r"""Make a Measurement that adds noise from the Gaussian(`scale`) distribution to the input.
 
     Valid inputs for `input_domain` and `input_metric` are:
 
@@ -312,6 +312,10 @@ def make_geometric(
     Can specify `bounds` to run the algorithm in near constant-time.
 
     [make_geometric in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_geometric.html)
+
+    **Citations:**
+
+    * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 
     **Supporting Elements:**
 

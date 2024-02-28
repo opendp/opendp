@@ -174,7 +174,7 @@ macro_rules! impl_make_gaussian_int {
         }
     };
 }
-cartesian! {[i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, usize], [f32, f64], impl_make_gaussian_int}
+cartesian! {[i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize], [f32, f64], impl_make_gaussian_int}
 
 #[bootstrap(
     features("contrib"),
@@ -186,7 +186,7 @@ cartesian! {[i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, usize], [f32, f64
     ),
     derived_types(QO = "$get_atom_or_infer(MO, scale)")
 )]
-/// Make a asdf Measurement that adds noise from the gaussian(`scale`) distribution to the input.
+/// Make a Measurement that adds noise from the Gaussian(`scale`) distribution to the input.
 ///
 /// Valid inputs for `input_domain` and `input_metric` are:
 ///

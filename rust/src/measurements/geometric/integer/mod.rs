@@ -4,7 +4,7 @@ use crate::{
     core::{Function, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measurements::laplace::laplace_map,
+    measurements::laplace_map,
     measures::MaxDivergence,
     metrics::{AbsoluteDistance, L1Distance},
     traits::{samplers::sample_discrete_laplace_linear, ExactIntCast, Float, InfCast, Integer},
@@ -14,10 +14,6 @@ use crate::{
 /// using a linear-time algorithm on finite data types.
 ///
 /// This algorithm can be executed in constant time if bounds are passed.
-/// Valid inputs for `input_domain` and `input_metric` are:
-///
-/// # Citations
-/// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 ///
 /// # Arguments
 /// * `input_domain` - Domain of the data type to be privatized.
@@ -28,7 +24,7 @@ use crate::{
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `QO` - Data type of the scale and output distance.
-pub fn make_scalar_integer_laplace_linear<T, QO>(
+pub(crate) fn make_scalar_geometric<T, QO>(
     input_domain: AtomDomain<T>,
     input_metric: AbsoluteDistance<T>,
     scale: QO,
@@ -65,7 +61,6 @@ where
 /// using a linear-time algorithm on finite data types.
 ///
 /// This algorithm can be executed in constant time if bounds are passed.
-/// Valid inputs for `input_domain` and `input_metric` are:
 ///
 /// # Citations
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
@@ -79,7 +74,7 @@ where
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `QO` - Data type of the scale and output distance.
-pub fn make_vector_integer_laplace_linear<T, QO>(
+pub(crate) fn make_vector_geometric<T, QO>(
     input_domain: VectorDomain<AtomDomain<T>>,
     input_metric: L1Distance<T>,
     scale: QO,
@@ -126,8 +121,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_discrete_laplace_mechanism_bounded() -> Fallible<()> {
-        let measurement = make_scalar_integer_laplace_linear(
+    fn test_make_geometric_bounded() -> Fallible<()> {
+        let measurement = make_scalar_geometric(
             AtomDomain::<i32>::default(),
             AbsoluteDistance::<i32>::default(),
             10.0,
@@ -142,8 +137,8 @@ mod tests {
     }
 
     #[test]
-    fn test_make_vector_discrete_laplace_mechanism_bounded() -> Fallible<()> {
-        let measurement = make_vector_integer_laplace_linear(
+    fn test_make_vector_geometric_bounded() -> Fallible<()> {
+        let measurement = make_vector_geometric(
             VectorDomain::new(AtomDomain::default()),
             Default::default(),
             10.0,
@@ -158,13 +153,9 @@ mod tests {
     }
 
     #[test]
-    fn test_make_discrete_laplace_mechanism() -> Fallible<()> {
-        let measurement = make_scalar_integer_laplace_linear(
-            AtomDomain::default(),
-            Default::default(),
-            10.0,
-            None,
-        )?;
+    fn test_make_geometric_mechanism() -> Fallible<()> {
+        let measurement =
+            make_scalar_geometric(AtomDomain::default(), Default::default(), 10.0, None)?;
         let arg = 205;
         let _ret = measurement.invoke(&arg)?;
         println!("{:?}", _ret);
@@ -174,8 +165,8 @@ mod tests {
     }
 
     #[test]
-    fn test_make_vector_discrete_laplace_mechanism() -> Fallible<()> {
-        let measurement = make_vector_integer_laplace_linear(
+    fn test_make_vector_geometric_mechanism() -> Fallible<()> {
+        let measurement = make_vector_geometric(
             VectorDomain::new(AtomDomain::default()),
             Default::default(),
             10.0,

@@ -6,7 +6,7 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
     metrics::{AbsoluteDistance, L1Distance},
-    traits::{cartesian, ExactIntCast, Float, InfCast},
+    traits::{cartesian, Float, InfCast},
 };
 
 #[cfg(feature = "contrib")]
@@ -22,7 +22,7 @@ pub use integer::*;
 #[cfg(feature = "ffi")]
 mod ffi;
 
-fn laplace_map<QI, QO>(scale: QO, relaxation: QO) -> impl Fn(&QI) -> Fallible<QO>
+pub(crate) fn laplace_map<QI, QO>(scale: QO, relaxation: QO) -> impl Fn(&QI) -> Fallible<QO>
 where
     QI: Clone,
     QO: Float + InfCast<QI>,
@@ -97,32 +97,8 @@ macro_rules! impl_make_laplace_float {
 
 impl_make_laplace_float!(f32 f64);
 
-// benchmarking results at different levels of σ
+// you can benchmark performance at different levels of σ
 // src in /rust/benches/discrete_laplace/main.rs
-
-// execute bench via:
-//     cargo bench --bench discrete_laplace --features untrusted
-
-// σ  linear cks20
-// 1   4.907  9.176
-// 2   5.614 10.565
-// 3   6.585 11.592
-// 4   7.450 10.742
-// 5   8.320 12.364
-// 6   9.213 11.722
-// 7  10.106 11.216
-// 8  11.061 10.737
-// 9  11.836 12.884
-// 10 12.653 12.482
-// 11 13.605 12.248
-// 12 14.465 13.320
-// 13 16.545 11.767
-// 14 31.647 15.229
-// 15 25.852 15.177
-// 16 20.179 11.465
-// 17 19.120 13.478
-// 18 19.768 12.982
-// 19 20.777 12.977
 
 macro_rules! impl_make_laplace_int {
     ($T:ty, $QO:ty) => {
@@ -138,11 +114,7 @@ macro_rules! impl_make_laplace_int {
                 if k.is_some() {
                     return fallible!(MakeMeasurement, "k is only valid for domains over floats");
                 }
-                if scale > <$QO>::exact_int_cast(10)? {
-                    make_scalar_integer_laplace_cks20(input_domain, input_metric, scale)
-                } else {
-                    make_scalar_integer_laplace_linear(input_domain, input_metric, scale, None)
-                }
+                make_scalar_integer_laplace(input_domain, input_metric, scale)
             }
         }
 
@@ -158,16 +130,12 @@ macro_rules! impl_make_laplace_int {
                 if k.is_some() {
                     return fallible!(MakeMeasurement, "k is only valid for domains over floats");
                 }
-                if scale > <$QO>::exact_int_cast(10)? {
-                    make_vector_integer_laplace_cks20(input_domain, input_metric, scale)
-                } else {
-                    make_vector_integer_laplace_linear(input_domain, input_metric, scale, None)
-                }
+                make_vector_integer_laplace(input_domain, input_metric, scale)
             }
         }
     };
 }
-cartesian! {[i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, usize], [f32, f64], impl_make_laplace_int}
+cartesian! {[i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize], [f32, f64], impl_make_laplace_int}
 
 #[bootstrap(
     features("contrib"),

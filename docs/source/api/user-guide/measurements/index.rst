@@ -28,13 +28,10 @@ Notice that there is a symmetric structure to the additive noise measurements:
    :header-rows: 1
 
    * - Vector Input Metric
-     - Integer
-     - Float
+     - Constructor
    * - ``L1Distance<T>``
      - :func:`make_laplace <opendp.measurements.make_laplace>`
-     - :func:`make_laplace <opendp.measurements.make_laplace>`
    * - ``L2Distance<T>``
-     - :func:`make_gaussian <opendp.measurements.make_gaussian>`
      - :func:`make_gaussian <opendp.measurements.make_gaussian>`
 
 In the following sections, scalar-valued and vector-valued versions of each measurement are listed separately.
@@ -57,21 +54,13 @@ Use the :func:`opendp.accuracy.laplacian_scale_to_accuracy` and :func:`opendp.ac
      - Input Metric
      - Output Measure
    * - :func:`opendp.measurements.make_laplace`
-     - ``AtomDomain<int>``
-     - ``AbsoluteDistance<int>``
+     - ``AtomDomain<T>``
+     - ``AbsoluteDistance<T>``
      - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_laplace`
-     - ``VectorDomain<AtomDomain<int>>``
-     - ``L1Distance<int>``
+     - ``VectorDomain<AtomDomain<T>>``
+     - ``L1Distance<T>``
      - ``MaxDivergence<QO>``
-   * - :func:`opendp.measurements.make_laplace`
-     - ``AtomDomain<float>``
-     - ``AbsoluteDistance<float>``
-     - ``MaxDivergence<float>``
-   * - :func:`opendp.measurements.make_laplace`
-     - ``VectorDomain<AtomDomain<float>>``
-     - ``L1Distance<float>``
-     - ``MaxDivergence<float>``
 
 
 Gaussian Noise
@@ -89,21 +78,13 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
      - Input Metric
      - Output Measure
    * - :func:`opendp.measurements.make_gaussian`
-     - ``AtomDomain<int>``
+     - ``AtomDomain<T>``
      - ``AbsoluteDistance<QI>``
      - ``ZeroConcentratedDivergence<QO>``
    * - :func:`opendp.measurements.make_gaussian`
-     - ``VectorDomain<AtomDomain<int>>``
+     - ``VectorDomain<AtomDomain<T>>``
      - ``L2Distance<QI>``
      - ``ZeroConcentratedDivergence<QO>``
-   * - :func:`opendp.measurements.make_gaussian`
-     - ``AtomDomain<float>``
-     - ``AbsoluteDistance<float>``
-     - ``ZeroConcentratedDivergence<float>``
-   * - :func:`opendp.measurements.make_gaussian`
-     - ``VectorDomain<AtomDomain<float>>``
-     - ``L2Distance<float>``
-     - ``ZeroConcentratedDivergence<float>``
 
 
 Geometric Noise

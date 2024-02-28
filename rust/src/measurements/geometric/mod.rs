@@ -4,10 +4,12 @@ use crate::{
     core::{Measurement, Metric, MetricSpace},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measurements::{make_scalar_integer_laplace_linear, make_vector_integer_laplace_linear},
     measures::MaxDivergence,
     traits::cartesian,
 };
+
+mod integer;
+use integer::{make_scalar_geometric, make_vector_geometric};
 
 use super::LaplaceDomain;
 
@@ -43,7 +45,7 @@ macro_rules! impl_make_geometric_int {
             ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence<$QO>>>
             {
                 if bounds.is_some() {
-                    make_scalar_integer_laplace_linear(input_domain, input_metric, scale, bounds)
+                    make_scalar_geometric(input_domain, input_metric, scale, bounds)
                 } else {
                     Self::make_laplace(input_domain, input_metric, scale, None)
                 }
@@ -62,7 +64,7 @@ macro_rules! impl_make_geometric_int {
             ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence<$QO>>>
             {
                 if bounds.is_some() {
-                    make_vector_integer_laplace_linear(input_domain, input_metric, scale, bounds)
+                    make_vector_geometric(input_domain, input_metric, scale, bounds)
                 } else {
                     Self::make_laplace(input_domain, input_metric, scale, None)
                 }
@@ -70,7 +72,7 @@ macro_rules! impl_make_geometric_int {
         }
     };
 }
-cartesian! {[i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, usize], [f32, f64], impl_make_geometric_int}
+cartesian! {[i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize], [f32, f64], impl_make_geometric_int}
 
 #[bootstrap(
     features("contrib"),
@@ -86,6 +88,9 @@ cartesian! {[i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, usize], [f32, f64
 )]
 /// Equivalent to `make_laplace` but restricted to an integer support.
 /// Can specify `bounds` to run the algorithm in near constant-time.
+///
+/// # Citations
+/// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 ///
 /// # Arguments
 /// * `input_domain` - Domain of the data type to be privatized.

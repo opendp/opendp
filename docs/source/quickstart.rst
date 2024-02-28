@@ -57,8 +57,8 @@ then invoke it on a scalar aggregate.
         .. doctest::
 
             >>> import opendp.prelude as dp
-            >>> base_laplace = dp.space_of(float) >> dp.m.then_laplace(scale=1.)
-            >>> dp_agg = base_laplace(23.4)
+            >>> m_laplace = dp.space_of(float) >> dp.m.then_laplace(scale=1.)
+            >>> dp_agg = m_laplace(23.4)
 
     .. group-tab:: R
 

@@ -128,7 +128,7 @@ mod test {
     // there is a distributional test in the accuracy module
 
     #[test]
-    fn test_make_base_discrete_gaussian() -> Fallible<()> {
+    fn test_make_scalar_integer_gaussian() -> Fallible<()> {
         let meas = make_scalar_integer_gaussian::<_, ZeroConcentratedDivergence<_>, f32>(
             AtomDomain::default(),
             AbsoluteDistance::default(),
@@ -136,7 +136,11 @@ mod test {
         )?;
         println!("{:?}", meas.invoke(&0)?);
         assert!(meas.check(&1., &1e30f64.recip().powi(2))?);
+        Ok(())
+    }
 
+    #[test]
+    fn test_make_scalar_integer_gaussian_zero_scale() -> Fallible<()> {
         let meas = make_scalar_integer_gaussian::<_, ZeroConcentratedDivergence<_>, i32>(
             AtomDomain::default(),
             AbsoluteDistance::default(),
@@ -145,7 +149,11 @@ mod test {
         assert_eq!(meas.invoke(&0)?, 0);
         assert_eq!(meas.map(&0)?, 0.);
         assert_eq!(meas.map(&1)?, f64::INFINITY);
+        Ok(())
+    }
 
+    #[test]
+    fn test_make_scalar_integer_gaussian_max_scale() -> Fallible<()> {
         let meas = make_scalar_integer_gaussian::<_, ZeroConcentratedDivergence<_>, f64>(
             AtomDomain::default(),
             AbsoluteDistance::default(),

@@ -12,7 +12,7 @@ use crate::{
 
 use super::GaussianMeasure;
 
-/// Make a Measurement that adds noise from the gaussian(`scale`) distribution to a scalar-valued float input.
+/// Make a Measurement that adds noise from the Gaussian(`scale`) distribution to a scalar-valued float input.
 ///
 /// This function takes a noise granularity in terms of 2^k.
 /// Larger granularities are more computationally efficient, but have a looser privacy map.
@@ -53,7 +53,7 @@ where
     )
 }
 
-/// Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
+/// Make a Measurement that adds noise from the Gaussian(`scale`) distribution to the input.
 ///
 /// This function takes a noise granularity in terms of 2^k.
 /// Larger granularities are more computationally efficient, but have a looser privacy map.
@@ -115,7 +115,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_gaussian_mechanism() -> Fallible<()> {
+    fn test_make_scalar_float_gaussian() -> Fallible<()> {
         let measurement = make_scalar_float_gaussian::<ZeroConcentratedDivergence<_>, _>(
             AtomDomain::default(),
             AbsoluteDistance::default(),
@@ -130,7 +130,7 @@ mod tests {
     }
 
     #[test]
-    fn test_make_gaussian_vec_mechanism() -> Fallible<()> {
+    fn test_make_vector_float_gaussian() -> Fallible<()> {
         let measurement = make_vector_float_gaussian::<ZeroConcentratedDivergence<_>, _>(
             VectorDomain::new(AtomDomain::default()),
             L2Distance::default(),
