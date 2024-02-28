@@ -171,7 +171,6 @@ def {then_name}(
 
     format!(
         r#"
-@versioned
 def {func_name}(
 {args}
 ){sig_return}:

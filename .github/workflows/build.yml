@@ -154,7 +154,7 @@ jobs:
       matrix:
         architecture: [x86_64, aarch64]
     env:
-      DOCKER_IMAGE: messense/manylinux2014-cross:${{ matrix.architecture }}
+      DOCKER_IMAGE: messense/manylinux_2_24-cross:${{ matrix.architecture }}
       TARGET: ${{ matrix.architecture }}-unknown-linux-gnu
     steps:
       - name: Checkout repository

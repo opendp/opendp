@@ -1,5 +1,4 @@
 from opendp.mod import enable_features
-from opendp.typing import AtomDomain
 
 enable_features('contrib')
 
