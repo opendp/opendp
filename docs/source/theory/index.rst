@@ -11,7 +11,7 @@ For that, see :doc:`../getting-started/index` or :doc:`../api/index`.
   :titlesonly:
 
   a-framework-to-understand-dp
-  getting-started
+  dp-with-opendp
   accuracy-pitfalls
   attacks/index
   resources
