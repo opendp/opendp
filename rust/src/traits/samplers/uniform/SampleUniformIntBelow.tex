@@ -28,6 +28,11 @@ satisfy the definition of the \texttt{SampleUniformIntBelow} trait.
         \item raises an exception if there is a lack of system entropy,
         \item returns \texttt{out} where \texttt{out} is uniformly distributed between $[0, upper)$.
     \end{itemize}
+
+    If \texttt{trials} is specified, the function will attempt to sample uniformly at random \texttt{trials} times,
+    and will raise an exception if it fails to do so.
+    If \texttt{trials} is not specified, the function will attempt to sample uniformly at random indefinitely.
+    Setting \texttt{trials} causes the function to run in constant time.
 \end{definition}
 
 There are two \texttt{impl}'s (implementations): one for unsigned integers, and one for big integers.
@@ -47,6 +52,7 @@ The algorithm returns the sample, modulo the upper bound, so long as the sample 
     \item \textbf{User-specified types:}
     \begin{itemize}
         \item Variable \texttt{upper} must be of type \texttt{T}
+        \item Variable \texttt{trials} is optional of type \texttt{int}, and is non-negative
         \item Type \texttt{T} is the type the trait is implemented for (one of u8, u16, u32, u64, u128, usize)
     \end{itemize}
 \end{itemize}
@@ -77,6 +83,10 @@ extend the acceptance region to the greatest multiple of \texttt{upper} that is 
 Therefore conditioning \texttt{v} on being less than \texttt{T.MAX - T.MAX \% upper} 
 results in \texttt{v \% upper} being an unbiased, uniformly distributed sample.
 
+When \texttt{trials} is specified, the algorithm will attempt to sample uniformly at random \texttt{trials} times,
+and will raise an exception if it fails to do so.
+Only the first successful sample is kept.
+
 \noindent Therefore, for any value of \texttt{upper}, the function satisfies the postcondition.
 \end{proof}
 
@@ -92,6 +102,7 @@ but this time the bit depth is dynamically chosen to fill the last byte of a ser
     \item \textbf{User-specified types:}
     \begin{itemize}
         \item Variable \texttt{upper} must be of type \texttt{UBig}
+        \item Variable \texttt{trials} is optional of type \texttt{int}, and is non-negative
     \end{itemize}
 \end{itemize}
 
@@ -113,6 +124,10 @@ but the constants are generalized.
 \texttt{max} is the largest representable number in \texttt{byte\_len} bytes, corresponding to \texttt{T.MAX}.
 \texttt{v} is an integer sampled uniformly below \texttt{max} by randomly filling bits with bernoulli samples.
 The algorithm terminates when \texttt{v} is below the same threshold.
+
+When \texttt{trials} is specified, the algorithm will attempt to sample uniformly at random \texttt{trials} times,
+and will raise an exception if it fails to do so.
+Only the first successful sample is kept.
 
 \noindent Therefore, for any value of \texttt{upper}, the function satisfies the postcondition.
 \end{proof}
