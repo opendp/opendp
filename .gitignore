@@ -200,3 +200,9 @@ R/opendp-docs
 *.out
 *.synctex.gz
 *.pdf
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.run.xml
+*.toc
