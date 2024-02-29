@@ -48,26 +48,26 @@
 
 
 # count
->>> t_count = (
+>>> count_transformation = (
 ...     dp.t.make_split_dataframe(",", col_names=col_names)
 ...     >> dp.t.make_select_column("age", str)
 ...     >> dp.t.then_count()
 ... )
 
->>> count_sensitivity = t_count.map(d_in)
+>>> count_sensitivity = count_transformation.map(d_in)
 >>> count_sensitivity
 1
 
->>> m_count = dp.binary_search_chain(
-...     lambda scale: t_count >> dp.m.then_laplace(scale), d_in, d_out / 3
+>>> count_measurement = dp.binary_search_chain(
+...     lambda scale: count_transformation >> dp.m.then_laplace(scale), d_in, d_out / 3
 ... )
->>> dp_count = qbl_sc(m_count)
+>>> dp_count = qbl_sc(count_measurement)
 
 # /count
 
 
 # mean
->>> t_mean = (
+>>> mean_transformation = (
 ...     dp.t.make_split_dataframe(",", col_names=col_names) >>
 ...     dp.t.make_select_column("age", str) >>
 ...     dp.t.then_cast_default(float) >>
@@ -76,10 +76,10 @@
 ...     dp.t.then_mean()
 ... )
 
->>> m_mean = dp.binary_search_chain(
-...     lambda scale: t_mean >> dp.m.then_laplace(scale), d_in, d_out / 3
+>>> mean_measurement = dp.binary_search_chain(
+...     lambda scale: mean_transformation >> dp.m.then_laplace(scale), d_in, d_out / 3
 ... )
 
->>> dp_mean = qbl_sc(m_mean)
+>>> dp_mean = qbl_sc(mean_measurement)
 
 # /mean
