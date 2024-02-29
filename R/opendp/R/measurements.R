@@ -82,6 +82,7 @@ make_alp_queryable <- function(
 #'
 #' See documentation for [make_alp_queryable()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Privacy loss parameter. This is equal to epsilon/sensitivity.
 #' @param total_limit Either the true value or an upper bound estimate of the sum of all values in the input.
@@ -181,6 +182,7 @@ make_base_discrete_gaussian <- function(
 #'
 #' See documentation for [make_base_discrete_gaussian()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
 #' @param .MO Output measure. The only valid measure is `ZeroConcentratedDivergence<QO>`, but QO can be any float.
@@ -273,6 +275,7 @@ make_base_discrete_laplace <- function(
 #'
 #' See documentation for [make_base_discrete_laplace()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 #' @param .QO Data type of the output distance and scale. `f32` or `f64`.
@@ -363,6 +366,7 @@ make_base_discrete_laplace_cks20 <- function(
 #'
 #' See documentation for [make_base_discrete_laplace_cks20()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 #' @param .QO Data type of the output distance and scale.
@@ -459,6 +463,7 @@ make_base_discrete_laplace_linear <- function(
 #'
 #' See documentation for [make_base_discrete_laplace_linear()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
 #' @param bounds Set bounds on the count to make the algorithm run in constant-time.
@@ -556,6 +561,7 @@ make_base_gaussian <- function(
 #'
 #' See documentation for [make_base_gaussian()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
 #' @param k The noise granularity in terms of 2^k.
@@ -644,6 +650,7 @@ make_base_geometric <- function(
 #'
 #' See documentation for [make_base_geometric()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale undocumented
 #' @param bounds undocumented
@@ -737,6 +744,7 @@ make_base_laplace <- function(
 #'
 #' See documentation for [make_base_laplace()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 #' @param k The noise granularity in terms of 2^k.
@@ -823,6 +831,7 @@ make_base_laplace_threshold <- function(
 #'
 #' See documentation for [make_base_laplace_threshold()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 #' @param threshold Exclude counts that are less than this minimum value.
@@ -914,6 +923,7 @@ make_gaussian <- function(
 #'
 #' See documentation for [make_gaussian()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
 #' @param .MO Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
@@ -1007,6 +1017,7 @@ make_laplace <- function(
 #'
 #' See documentation for [make_laplace()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 #' @param .QO Data type of the output distance and scale. `f32` or `f64`.
@@ -1091,6 +1102,7 @@ make_randomized_response <- function(
 #'
 #' See documentation for [make_randomized_response()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param categories Set of valid outcomes
 #' @param prob Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
@@ -1179,6 +1191,7 @@ make_randomized_response_bool <- function(
 #'
 #' See documentation for [make_randomized_response_bool()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param prob Probability of returning the correct answer. Must be in `[0.5, 1)`
 #' @param constant_time Set to true to enable constant time. Slower.
@@ -1265,6 +1278,7 @@ make_report_noisy_max_gumbel <- function(
 #'
 #' See documentation for [make_report_noisy_max_gumbel()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Higher scales are more private.
 #' @param optimize Indicate whether to privately return the "Max" or "Min"
