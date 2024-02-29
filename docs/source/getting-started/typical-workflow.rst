@@ -30,24 +30,18 @@ Releases on the teacher survey should conceal the addition or removal of any one
     .. tab-item:: Context API
         :sync: context
 
-        .. doctest::
-
-            >>> import opendp.prelude as dp
-            >>> dp.enable_features("contrib")
-            
-            >>> privacy_unit = dp.unit_of(contributions=1)
-            >>> input_metric, d_in = privacy_unit
+        .. literalinclude:: typical-workflow-context.rst
+            :language: python
+            :start-after: unit-of-privacy
+            :end-before: /unit-of-privacy
 
     .. tab-item:: Framework API
         :sync: framework
 
-        .. doctest::
-
-            >>> import opendp.prelude as dp
-            >>> dp.enable_features("contrib")
-
-            >>> d_in == 1 # neighboring data set distance is at most d_in...
-            >>> input_metric == dp.symmetric_distance() # ...in terms of additions/removals
+        .. literalinclude:: typical-workflow-framework.rst
+            :language: python
+            :start-after: unit-of-privacy
+            :end-before: /unit-of-privacy
 
 The privacy unit specifies how distances are computed between two data sets (``input_metric``), and how large the distance can be (``d_in``).
 
@@ -74,18 +68,18 @@ A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending
     .. tab-item:: Context API
         :sync: context
 
-        .. doctest::
-
-            >>> privacy_loss = dp.loss_of(epsilon=1.)
-            >>> privacy_measure, d_out = privacy_loss
+        .. literalinclude:: typical-workflow-context.rst
+            :language: python
+            :start-after: privacy-loss
+            :end-before: /privacy-loss
 
     .. tab-item:: Framework API
         :sync: framework
 
-        .. doctest::
-
-            >>> d_out = 1. # output distributions have distance at most d_out (ε)...
-            >>> privacy_measure = dp.max_divergence(T=float) # ...in terms of pure-DP
+        .. literalinclude:: typical-workflow-framework.rst
+            :language: python
+            :start-after: privacy-loss
+            :end-before: /privacy-loss
 
 The privacy loss specifies how distances are measured between distributions (``privacy_measure``), and how large the distance can be (``d_out``).
 
@@ -105,22 +99,18 @@ This is the same under either API.
     .. tab-item:: Context API
         :sync: context
 
-        .. doctest::
-
-            >>> col_names = [
-            ...    "name", "sex", "age", "maritalStatus", "hasChildren", "highestEducationLevel", 
-            ...    "sourceOfStress", "smoker", "optimism", "lifeSatisfaction", "selfEsteem"
-            ... ]
+        .. literalinclude:: typical-workflow-context.rst
+            :language: python
+            :start-after: public-info
+            :end-before: /public-info
 
     .. tab-item:: Framework API
         :sync: framework
 
-        .. doctest::
-
-            >>> col_names = [
-            ...    "name", "sex", "age", "maritalStatus", "hasChildren", "highestEducationLevel", 
-            ...    "sourceOfStress", "smoker", "optimism", "lifeSatisfaction", "selfEsteem"
-            ... ]
+        .. literalinclude:: typical-workflow-framework.rst
+            :language: python
+            :start-after: public-info
+            :end-before: /public-info
 
 In this case (and in most cases), we consider column names public/invariant to the data because they weren't picked in response to the data, they were "fixed" before collecting the data.
 
@@ -138,226 +128,46 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
     .. tab-item:: Context API
         :sync: context
 
-        .. doctest::
-
-            >>> import urllib.request
-            >>> data_url = "https://raw.githubusercontent.com/opendp/opendp/sydney/teacher_survey.csv"
-            >>> with urllib.request.urlopen(data_url) as data_req:
-            ...     data = data_req.read().decode('utf-8')
-
-            >>> context = dp.Context.compositor(
-            ...     data=data,
-            ...     privacy_unit=privacy_unit,
-            ...     privacy_loss=privacy_loss,
-            ...     split_evenly_over=3
-            ... )
+        .. literalinclude:: typical-workflow-context.rst
+            :language: python
+            :start-after: mediate
+            :end-before: /mediate
 
         Since the privacy loss budget is at most ε = 1, and we are partitioning our budget evenly amongst three queries, then each query will be calibrated to satisfy ε = 1/3.
 
     .. tab-item:: Framework API
         :sync: framework
 
+        .. literalinclude:: typical-workflow-framework.rst
+            :language: python
+            :start-after: mediate
+            :end-before: /mediate
+
         ``dp.Context.compositor`` creates a sequential composition measurement.
-
-        .. doctest::
-
-            >>> import urllib.request
-            >>> data_url = "https://raw.githubusercontent.com/opendp/opendp/sydney/teacher_survey.csv"
-            >>> with urllib.request.urlopen(data_url) as data_req:
-            ...     data = data_req.read().decode('utf-8')
-
-            >>> m_sc = dp.c.make_sequential_composition(
-            ...     # data set is a single string, with rows separated by linebreaks
-            ...     input_domain=dp.atom_domain(T=str),
-            ...     input_metric=input_metric,
-            ...     output_measure=privacy_measure,
-            ...     d_in=d_in,
-            ...     d_mids=[d_out / 3] * 3,
-            ... )
-
-            >>> # Call measurement with data to create a queryable:
-            >>> qbl_sc = m_sc(data)
-
         You can now submit up to three queries to ``qbl_sc``, in the form of measurements.
 
 5. Submit DP Queries
 --------------------
 
-It is now time to create differentially private releases. 
-At this point our discussions of the Context API and the Framework APIs will diverge:
-Each has its own strengths.
-
-Context API
-^^^^^^^^^^^
-
-The following query counts the number of records in the data set:
+You can now create differentially private releases. 
 
 .. tab-set::
 
     .. tab-item:: Context API
+        :sync: context
 
-        .. doctest::
-
-            >>> count_query = (
-            ...     context.query()
-            ...     .split_dataframe(",", col_names=col_names)
-            ...     .select_column("age", str) # temporary until OpenDP 0.10 (Polars dataframe)
-            ...     .count()
-            ...     .laplace()
-            ... )
-
-The library uses the privacy unit and the query itself to determine the smallest amount of noise to add that will still satisfy the per-query privacy loss. Given these constraints, noise will be added to the count query with a scale of 3 (standard deviation of ~4.2).
-
-.. tab-set::
-
-    .. tab-item:: Context API
-
-        .. doctest::
-
-            >>> scale = count_query.param()
-            >>> scale
-            3.0000000000000004
-
-Here is the underlying mathematics that leads to this noise scale: if a teacher contributes at most one row, then the sensitivity of the count is one, because the addition or removal of a teacher can change the count by at most one. With the Laplace Mechanism, the noise scale (3) is the sensitivity (1) divided by the per-query privacy loss (ε = 1/3).
-
-You can also create an accuracy estimate that is true at a (1 - α)100% confidence level:
-
-.. tab-set::
-
-    .. tab-item:: Context API
-
-        .. doctest::
-
-            >>> accuracy = dp.discrete_laplacian_scale_to_accuracy(scale=scale, alpha=0.05)
-            >>> accuracy
-            9.445721638273584
-
-When the discrete Laplace distribution's scale is 3, the DP estimate differs from the exact estimate by no more than 9.45 with 95% confidence.
-
-If the accuracy of the query seems reasonable, then make a private release. Keep in mind, this action will permanently consume one of ``context``'s three queries we allocated when we launched the context API (each of which uses 1/3 of our privacy-loss budget).
-
-.. tab-set::
-
-    .. tab-item:: Context API
-
-        .. doctest::
-
-            >>> dp_count = count_query.release()
-
-The result is a random draw from the discrete Laplace distribution, centered at the true count of the number of records in the underlying data set (7000). Your previous accuracy estimate can now be used to create a confidence interval:
-
-.. tab-set::
-
-    .. tab-item:: Context API
-
-        .. doctest::
-
-            >>> interval = (dp_count - accuracy, dp_count + accuracy)
-
-The exact count lies within the interval with 95% confidence.
-
-This concludes the process of making a DP release.
-
-Let's repeat this process more briefly for estimating the mean age. This time we benefit from having a DP count estimate in our public information: It is used to help calibrate the privacy guarantees for the mean.
-
-.. tab-set::
-
-    .. tab-item:: Context API
-
-        .. doctest::
-
-            >>> mean_query = (
-            ...     context.query()
-            ...     .split_dataframe(",", col_names=col_names)
-            ...     .select_column("age", str)
-            ...     .cast_default(float)
-            ...     .clamp((18.0, 70.0))  # a best-guess based on public information
-            ...     # Explanation for `constant=42`:
-            ...     #    since dp_count may be larger than the true size, 
-            ...     #    imputed rows will be given an age of 42.0 
-            ...     #    (also a best guess based on public information)
-            ...     .resize(size=dp_count, constant=42.0)
-            ...     .mean()
-            ...     .laplace()
-            ... )
-
-This measurement involves more preprocessing than the count did (casting, clamping, and resizing). The purpose of this preprocessing is to bound the sensitivity of the mean: the mean should only ever change by a small amount when any teacher is added or removed from the data set.
-
-.. tab-set::
-
-    .. tab-item:: Context API
-
-        .. doctest::
-
-            >>> dp_mean = mean_query.release()
-
-Framework API
-^^^^^^^^^^^^^
-
-First, create a count query.
-
-.. tab-set::
+        .. literalinclude:: typical-workflow-context.rst
+            :language: python
+            :start-after: todo
+            :end-before: /todo
 
     .. tab-item:: Framework API
+        :sync: framework
 
-        .. doctest::
-
-            >>> t_count = (
-            ...     dp.t.make_split_dataframe(",", col_names=col_names)
-            ...     >> dp.t.make_select_column("age", str)
-            ...     >> dp.t.then_count()
-            ... )
-
-* ``>>`` is a shorthand for chaining, or functional composition.
-* ``then_*`` uses the input domain and input metric from the prior transformation.
-
-With this lower-level API you get greater flexibility. For instance, you can see the sensitivity of the count query:
-
-.. tab-set::
-
-    .. tab-item:: Framework API
-
-        .. doctest::
-
-            >>> count_sensitivity = t_count.map(d_in)
-            >>> count_sensitivity
-            1
-
-A binary search is used to find the smallest noise scale that results in a measurement that satisfies ε = 1/3.
-
-.. tab-set::
-
-    .. tab-item:: Framework API
-
-        .. doctest::
-
-            >>> m_count = dp.binary_search_chain(
-            ...     lambda scale: t_count >> dp.m.then_laplace(scale), d_in, d_out / 3
-            ... )
-            >>> dp_count = qbl_sc(m_count)
-
-Similarly, construct a mean measurement and release it:
-
-.. tab-set::
-
-    .. tab-item:: Framework API
-
-        .. doctest::
-
-            >>> t_mean = (
-            ...     dp.t.make_split_dataframe(",", col_names=col_names) >>
-            ...     dp.t.make_select_column("age", str) >>
-            ...     dp.t.then_cast_default(float) >>
-            ...     dp.t.then_clamp((18.0, 70.0)) >>  # a best-guess based on public information
-            ...     dp.t.then_resize(size=dp_count, constant=42.0) >>
-            ...     dp.t.then_mean()
-            ... )
-
-            >>> m_mean = dp.binary_search_chain(
-            ...     lambda scale: t_mean >> dp.m.then_laplace(scale), d_in, d_out / 3
-            ... )
-
-            >>> dp_mean = qbl_sc(m_mean)
+        .. literalinclude:: typical-workflow-framework.rst
+            :language: python
+            :start-after: todo
+            :end-before: /todo
 
 Other features
 --------------

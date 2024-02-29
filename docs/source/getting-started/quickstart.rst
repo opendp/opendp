@@ -35,7 +35,7 @@ Enable ``contrib`` globally with the following snippet:
     .. tab-item:: Python
         :sync: python
 
-        .. literalinclude:: quickstart.doctest
+        .. literalinclude:: quickstart-context.rst
             :language: python
             :start-after: init
             :end-before: /init
@@ -56,7 +56,7 @@ Let's apply Laplace noise to a value.
     .. tab-item:: Python
         :sync: python
 
-        .. literalinclude:: quickstart.doctest
+        .. literalinclude:: quickstart-context.rst
             :language: python
             :start-after: demo
             :end-before: /demo
