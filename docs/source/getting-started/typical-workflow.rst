@@ -33,30 +33,23 @@ Releases on the teacher survey should conceal the addition or removal of any one
         .. doctest::
 
             >>> import opendp.prelude as dp
-            
-            >>> # we are also using library features that are marked "contrib":
             >>> dp.enable_features("contrib")
             
             >>> privacy_unit = dp.unit_of(contributions=1)
+            >>> input_metric, d_in = privacy_unit
 
     .. tab-item:: Framework API
         :sync: framework
 
-        The privacy unit is actually a 2-tuple:
-
         .. doctest::
 
             >>> import opendp.prelude as dp
-
-            >>> # we are also using library features that are marked "contrib":
             >>> dp.enable_features("contrib")
 
-            >>> input_metric, d_in = privacy_unit
-            
-            >>> assert d_in == 1 # neighboring data set distance is at most d_in...
-            >>> assert input_metric == dp.symmetric_distance() # ...in terms of additions/removals
+            >>> d_in == 1 # neighboring data set distance is at most d_in...
+            >>> input_metric == dp.symmetric_distance() # ...in terms of additions/removals
 
-        The privacy unit tuple specifies how distances are computed between two data sets (``input_metric``), and how large the distance can be (``d_in``).
+The privacy unit specifies how distances are computed between two data sets (``input_metric``), and how large the distance can be (``d_in``).
 
 Broadly speaking, differential privacy can be applied to any medium of data for which you can define a unit of privacy. In other contexts, the unit of privacy may correspond to multiple rows, a user ID, or nodes or edges in a graph.
 
@@ -84,20 +77,17 @@ A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending
         .. doctest::
 
             >>> privacy_loss = dp.loss_of(epsilon=1.)
+            >>> privacy_measure, d_out = privacy_loss
 
     .. tab-item:: Framework API
         :sync: framework
 
-        The privacy loss is also a 2-tuple:
-
         .. doctest::
 
-            >>> privacy_measure, d_out = privacy_loss
-            
-            >>> assert d_out == 1. # output distributions have distance at most d_out (ε)...
-            >>> assert privacy_measure == dp.max_divergence(T=float) # ...in terms of pure-DP
+            >>> d_out = 1. # output distributions have distance at most d_out (ε)...
+            >>> privacy_measure = dp.max_divergence(T=float) # ...in terms of pure-DP
 
-        The privacy loss tuple specifies how distances are measured between distributions (``privacy_measure``), and how large the distance can be (``d_out``).
+The privacy loss specifies how distances are measured between distributions (``privacy_measure``), and how large the distance can be (``d_out``).
 
 3. Collect Public Information
 -----------------------------
@@ -107,6 +97,8 @@ The next step is to identify public information about the data set.
 * Information that is invariant across all potential input data sets (may include column names and per-column categories)
 * Information that is publicly available from other sources
 * Information from other DP releases
+
+This is the same under either API.
 
 .. tab-set::
 
@@ -122,8 +114,6 @@ The next step is to identify public information about the data set.
 
     .. tab-item:: Framework API
         :sync: framework
-
-        No difference:
 
         .. doctest::
 
@@ -155,7 +145,6 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
             >>> with urllib.request.urlopen(data_url) as data_req:
             ...     data = data_req.read().decode('utf-8')
 
-
             >>> context = dp.Context.compositor(
             ...     data=data,
             ...     privacy_unit=privacy_unit,
@@ -172,6 +161,11 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
 
         .. doctest::
 
+            >>> import urllib.request
+            >>> data_url = "https://raw.githubusercontent.com/opendp/opendp/sydney/teacher_survey.csv"
+            >>> with urllib.request.urlopen(data_url) as data_req:
+            ...     data = data_req.read().decode('utf-8')
+
             >>> m_sc = dp.c.make_sequential_composition(
             ...     # data set is a single string, with rows separated by linebreaks
             ...     input_domain=dp.atom_domain(T=str),
@@ -181,10 +175,7 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
             ...     d_mids=[d_out / 3] * 3,
             ... )
 
-        The measurement is called with the data to create a compositor queryable:
-
-        .. doctest::
-
+            >>> # Call measurement with data to create a queryable:
             >>> qbl_sc = m_sc(data)
 
         You can now submit up to three queries to ``qbl_sc``, in the form of measurements.
