@@ -149,7 +149,8 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
 5. Submit DP Queries
 --------------------
 
-You can now create differentially private releases. 
+You can now create differentially private releases.
+Here's a differentially private count:
 
 .. tab-set::
 
@@ -158,16 +159,36 @@ You can now create differentially private releases.
 
         .. literalinclude:: typical-workflow-context.rst
             :language: python
-            :start-after: todo
-            :end-before: /todo
+            :start-after: count
+            :end-before: /count
 
     .. tab-item:: Framework API
         :sync: framework
 
         .. literalinclude:: typical-workflow-framework.rst
             :language: python
-            :start-after: todo
-            :end-before: /todo
+            :start-after: count
+            :end-before: /count
+
+Here's a differentially private mean:
+
+.. tab-set::
+
+    .. tab-item:: Context API
+        :sync: context
+
+        .. literalinclude:: typical-workflow-context.rst
+            :language: python
+            :start-after: mean
+            :end-before: /mean
+
+    .. tab-item:: Framework API
+        :sync: framework
+
+        .. literalinclude:: typical-workflow-framework.rst
+            :language: python
+            :start-after: mean
+            :end-before: /mean
 
 Other features
 --------------

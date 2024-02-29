@@ -41,7 +41,7 @@
 # /mediate
 
 
-# todo
+# count
 >>> count_query = (
 ...     context.query()
 ...     .split_dataframe(",", col_names=col_names)
@@ -59,9 +59,12 @@
 9.445721638273584
 
 >>> dp_count = count_query.release()
-
 >>> interval = (dp_count - accuracy, dp_count + accuracy)
 
+# /count
+
+
+# mean
 >>> mean_query = (
 ...     context.query()
 ...     .split_dataframe(",", col_names=col_names)
@@ -79,4 +82,4 @@
 
 >>> dp_mean = mean_query.release()
 
-# /todo
+# /mean

@@ -47,25 +47,26 @@
 # /mediate
 
 
-# todo
+# count
 >>> t_count = (
 ...     dp.t.make_split_dataframe(",", col_names=col_names)
 ...     >> dp.t.make_select_column("age", str)
 ...     >> dp.t.then_count()
 ... )
 
-
 >>> count_sensitivity = t_count.map(d_in)
 >>> count_sensitivity
 1
-
 
 >>> m_count = dp.binary_search_chain(
 ...     lambda scale: t_count >> dp.m.then_laplace(scale), d_in, d_out / 3
 ... )
 >>> dp_count = qbl_sc(m_count)
 
+# /count
 
+
+# mean
 >>> t_mean = (
 ...     dp.t.make_split_dataframe(",", col_names=col_names) >>
 ...     dp.t.make_select_column("age", str) >>
@@ -81,4 +82,4 @@
 
 >>> dp_mean = qbl_sc(m_mean)
 
-# /todo
+# /mean
