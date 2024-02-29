@@ -193,3 +193,10 @@ R/opendp/src/.cargo
 NEWS.md
 R/opendp/docs
 R/opendp-docs
+
+# LaTeX cache, temp, and output files
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.pdf
