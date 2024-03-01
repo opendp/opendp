@@ -4,10 +4,10 @@ use num::{One, Zero};
 
 use crate::{
     error::Fallible,
-    traits::{AlertingSub, FiniteBounds, Float, TotalOrd},
+    traits::{AlertingSub, ExactIntCast, FiniteBounds, Float, TotalOrd},
 };
 
-use super::{fill_bytes, SampleBernoulli, SampleStandardBernoulli};
+use super::{fill_bytes, sample_bernoulli_float, sample_standard_bernoulli};
 
 /// Sample from the censored geometric distribution.
 pub trait SampleGeometric<P>: Sized {
@@ -53,7 +53,8 @@ impl<T, P> SampleGeometric<P> for T
 where
     T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + FiniteBounds,
     P: Float,
-    bool: SampleBernoulli<P>,
+    usize: ExactIntCast<P::Bits>,
+    P::Bits: ExactIntCast<usize>,
 {
     fn sample_geometric(
         mut shift: Self,
@@ -75,7 +76,7 @@ where
 
         loop {
             // run a trial-- is this our last step?
-            success |= bool::sample_bernoulli(prob, trials.is_some())?;
+            success |= sample_bernoulli_float(prob, trials.is_some())?;
 
             // make steps on `shift` until there is a successful trial or have reached the boundary
             if !success && shift != bound {
@@ -144,7 +145,6 @@ impl<T, P> SampleDiscreteLaplaceLinear<P> for T
 where
     T: Copy + SampleGeometric<P> + One + TotalOrd + AlertingSub,
     P: Float,
-    bool: SampleBernoulli<P>,
 {
     /// When no bounds are given, there are no protections against timing attacks.
     ///     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.
@@ -187,7 +187,7 @@ where
         }
 
         let noised = loop {
-            let direction = bool::sample_standard_bernoulli()?;
+            let direction = sample_standard_bernoulli()?;
             let sample = T::sample_geometric(shift, direction, prob, trials)?;
             // reject sampling no noise in the negative direction, to avoid double-drawing zero
             if direction || sample != shift {

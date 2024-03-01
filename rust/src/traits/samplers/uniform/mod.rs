@@ -135,7 +135,7 @@ pub trait SampleUniformIntBelow: Sized {
     /// For any setting of `upper`,
     /// return either `Err(e)` if there is insufficient system entropy,
     /// or `Some(sample)`, where `sample` is uniformly distributed over `[Self::MIN, upper)`.
-    fn sample_uniform_int_below(upper: Self) -> Fallible<Self>;
+    fn sample_uniform_int_below(upper: Self, trials: Option<usize>) -> Fallible<Self>;
 }
 
 macro_rules! impl_sample_uniform_unsigned_int {
@@ -148,14 +148,31 @@ macro_rules! impl_sample_uniform_unsigned_int {
             }
         }
         impl SampleUniformIntBelow for $ty {
-            fn sample_uniform_int_below(upper: Self) -> Fallible<Self> {
-                // v % upper is unbiased for any v < MAX - MAX % upper, because
-                // MAX - MAX % upper evenly folds into [0, upper) RAND_MAX/upper times
+            fn sample_uniform_int_below(upper: Self, mut trials: Option<usize>) -> Fallible<Self> {
+                let mut found = None;
+                let threshold = Self::MAX - Self::MAX % upper;
+
                 loop {
+                    if trials == Some(0) {
+                        return found.ok_or_else(|| {
+                            err!(
+                                FailedFunction,
+                                "failed to sample a number below the upper bound"
+                            )
+                        });
+                    }
+                    trials.as_mut().map(|t| *t -= 1);
+
                     // algorithm is only valid when sample_uniform_int is non-negative
                     let sample = Self::sample_uniform_int()?;
-                    if sample < Self::MAX - Self::MAX % upper {
-                        return Ok(sample % upper)
+                    if sample < threshold && found.is_none() {
+                        found = Some(sample % &upper);
+                    }
+
+                    if found.is_some() && trials.is_none() {
+                        // v % upper is unbiased for any v < MAX - MAX % upper, because
+                        // MAX - MAX % upper evenly folds into [0, upper) RAND_MAX/upper times
+                        return Ok(found.unwrap());
                     }
                 }
             }
@@ -165,7 +182,7 @@ macro_rules! impl_sample_uniform_unsigned_int {
 impl_sample_uniform_unsigned_int!(u8, u16, u32, u64, u128, usize);
 
 impl SampleUniformIntBelow for UBig {
-    fn sample_uniform_int_below(upper: Self) -> Fallible<Self> {
+    fn sample_uniform_int_below(upper: Self, mut trials: Option<usize>) -> Fallible<Self> {
         // ceil(ceil(log_2(upper)) / 8)
         let byte_len = Integer::div_ceil(&upper.bit_len(), &8);
 
@@ -175,25 +192,41 @@ impl SampleUniformIntBelow for UBig {
         let threshold = &max - &max % &upper;
 
         let mut buffer = vec![0; byte_len];
+        let mut found = None;
+
         loop {
+            if trials == Some(0) {
+                return found.ok_or_else(|| {
+                    err!(
+                        FailedFunction,
+                        "failed to sample a number below the upper bound"
+                    )
+                });
+            }
+            trials.as_mut().map(|t| *t -= 1);
+
             fill_bytes(&mut buffer)?;
 
             let sample = UBig::from_be_bytes(&buffer);
-            if sample < threshold {
-                return Ok(sample % &upper);
+            if sample < threshold && found.is_none() {
+                found = Some(sample % &upper);
+            }
+
+            if found.is_some() && trials.is_none() {
+                return Ok(found.unwrap());
             }
         }
     }
 }
 
 impl SampleUniformIntBelow for IBig {
-    fn sample_uniform_int_below(upper: Self) -> Fallible<Self> {
+    fn sample_uniform_int_below(upper: Self, trials: Option<usize>) -> Fallible<Self> {
         if upper.is_negative() {
             return fallible!(FailedFunction, "upper bound must not be negative");
         }
 
         let upper = UBig::try_from(upper)?;
-        let sample = UBig::sample_uniform_int_below(upper)?;
+        let sample = UBig::sample_uniform_int_below(upper, trials)?;
         Ok(sample.into())
     }
 }
@@ -204,12 +237,25 @@ mod test_uniform_int {
     use std::collections::HashMap;
 
     #[test]
+    fn test_uniform_int_below() -> Fallible<()> {
+        assert!(u32::sample_uniform_int_below(7, Some(0)).is_err());
+
+        let sample = u32::sample_uniform_int_below(7, None)?;
+        assert!(sample < 7);
+
+        // odds of failing this test are 1 in 1/64^1000
+        let sample = u32::sample_uniform_int_below(7, Some(1000))?;
+        assert!(sample < 7);
+        Ok(())
+    }
+
+    #[test]
     #[ignore]
     fn test_sample_uniform_int_below() -> Fallible<()> {
         let mut counts = HashMap::new();
         // this checks that the output distribution of each number is uniform
         (0..10000).try_for_each(|_| {
-            let sample = u32::sample_uniform_int_below(7)?;
+            let sample = u32::sample_uniform_int_below(7, None)?;
             *counts.entry(sample).or_insert(0) += 1;
             Fallible::Ok(())
         })?;
@@ -223,7 +269,7 @@ mod test_uniform_int {
         let mut counts = HashMap::new();
         // this checks that the output distribution of each number is uniform
         (0..10000).try_for_each(|_| {
-            let sample = UBig::sample_uniform_int_below(UBig::from(255u8))?;
+            let sample = UBig::sample_uniform_int_below(UBig::from(255u8), None)?;
             *counts.entry(sample).or_insert(0) += 1;
             Fallible::Ok(())
         })?;

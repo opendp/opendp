@@ -8,6 +8,7 @@ exclude =
     .venv
     # suggested virtualenv for docs/
     venv
+    out
 
 extend-ignore =
     # TODO: Good to be more conservative, but "import *" is ubiquitous right now.
