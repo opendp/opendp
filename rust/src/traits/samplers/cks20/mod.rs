@@ -43,7 +43,6 @@
 //     https://github.com/IBM/discrete-gaussian-differential-privacy/blob/cb190d2a990a78eff6e21159203bc888e095f01b/discretegauss.py
 
 use crate::error::Fallible;
-use crate::traits::samplers::SampleBernoulli;
 use dashu::{
     base::Abs,
     integer::{IBig, UBig},
@@ -52,7 +51,7 @@ use dashu::{
 };
 use opendp_derive::proven;
 
-use super::{SampleStandardBernoulli, SampleUniformIntBelow};
+use super::{sample_bernoulli_rational, sample_standard_bernoulli, SampleUniformIntBelow};
 
 #[proven]
 /// Sample exactly from the Bernoulli(exp(-x)) distribution, where $x \in [0, 1]$.
@@ -64,7 +63,7 @@ use super::{SampleStandardBernoulli, SampleUniformIntBelow};
 fn sample_bernoulli_exp1(x: RBig) -> Fallible<bool> {
     let mut k = UBig::ONE;
     loop {
-        if bool::sample_bernoulli(x.clone() / &k, false)? {
+        if sample_bernoulli_rational(x.clone() / &k, None)? {
             k += UBig::ONE;
         } else {
             return Ok(k % 2u8 == 1);
@@ -124,9 +123,9 @@ fn sample_geometric_exp_fast(x: RBig) -> Fallible<UBig> {
     }
 
     let (numer, denom) = x.into_parts();
-    let mut u = UBig::sample_uniform_int_below(denom.clone())?;
+    let mut u = UBig::sample_uniform_int_below(denom.clone(), None)?;
     while !sample_bernoulli_exp(RBig::from_parts(u.as_ibig().clone(), denom.clone()))? {
-        u = UBig::sample_uniform_int_below(denom.clone())?;
+        u = UBig::sample_uniform_int_below(denom.clone(), None)?;
     }
     let v2 = sample_geometric_exp_slow(RBig::ONE)?;
     Ok((v2 * denom + u) / numer.into_parts().1)
@@ -157,7 +156,7 @@ pub fn sample_discrete_laplace(scale: RBig) -> Fallible<IBig> {
     let inv_scale = RBig::from_parts(denom.as_ibig().clone(), numer.into_parts().1);
 
     loop {
-        let positive = bool::sample_standard_bernoulli()?;
+        let positive = sample_standard_bernoulli()?;
         let magnitude = sample_geometric_exp_fast(inv_scale.clone())?
             .as_ibig()
             .clone();

@@ -149,7 +149,8 @@ pub trait FloatBits: Copy + Sized + ExactIntCast<Self::Bits> {
         + BitOr<Output = Self::Bits>
         + Sub<Output = Self::Bits>
         + From<bool>
-        + Into<IBig>;
+        + Into<IBig>
+        + PartialOrd;
     /// # Proof Definition
     /// A constant equal to the number of bits in exponent.
     const EXPONENT_BITS: Self::Bits;
