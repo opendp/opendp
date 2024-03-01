@@ -253,9 +253,8 @@ jobs:
           extra-packages: devtools, local::., RcppTOML, lintr
 
       - name: Lint
-        run: lintr::lint_package()
-        shell: Rscript {0}
-        working-directory: R/opendp
+        working-directory: R/opendp/
+        run: Rscript -e 'lintr::lint_package()'
         env:
           LINTR_ERROR_ON_LINT: true
 
