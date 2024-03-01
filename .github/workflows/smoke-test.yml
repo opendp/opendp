@@ -272,12 +272,6 @@ jobs:
           working-directory: R/opendp
           extra-packages: devtools, local::., RcppTOML, lintr
 
-      # - name: Lint
-      #   working-directory: R/opendp/
-      #   run: Rscript -e 'lintr::lint_package()'
-      #   env:
-      #     LINTR_ERROR_ON_LINT: true
-
       - name: Unit tests
         working-directory: R/opendp/
         run: Rscript -e 'devtools::test(reporter = c("summary", "fail"))'
