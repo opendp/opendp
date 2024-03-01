@@ -250,7 +250,13 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: R/opendp
-          extra-packages: devtools,local::.,RcppTOML
+          extra-packages: devtools, local::., RcppTOML, lintr
+
+      - name: Lint
+        run: lintr::lint_package()
+        shell: Rscript {0}
+        env:
+          LINTR_ERROR_ON_LINT: true
 
       - name: Unit tests
         working-directory: R/opendp/
