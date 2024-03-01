@@ -1,2 +1,10 @@
-linters: linters_with_defaults() # see vignette("lintr")
+linters: linters_with_defaults(
+    commented_code_linter = NULL, # Commented code should be removed.
+    cyclocomp_linter = NULL, # Functions should have cyclomatic complexity of less than 15,
+    indentation_linter = NULL, # Indentation should be ... spaces but is ... spaces.
+    line_length_linter = NULL, # Lines should not be more than 80 characters.
+    object_length_linter = NULL, # Variable and function names should not be longer than 30 characters.
+    object_name_linter = NULL, # Variable and function name style should match snake_case or symbols.
+    trailing_blank_lines_linter = NULL # Missing terminal newline.
+  )
 encoding: "UTF-8"
