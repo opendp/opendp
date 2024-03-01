@@ -12,3 +12,4 @@ coverage ~= 7.3
 mypy ~= 1.7
 pip-tools==7.3.0
 randomgen==1.26.1
+numpy==1.24.4

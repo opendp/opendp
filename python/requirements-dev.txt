@@ -24,8 +24,10 @@ mypy==1.7.1
     # via -r requirements-dev.in
 mypy-extensions==1.0.0
     # via mypy
-numpy==1.26.4
-    # via randomgen
+numpy==1.24.4
+    # via
+    #   -r requirements-dev.in
+    #   randomgen
 packaging==23.2
     # via
     #   build
