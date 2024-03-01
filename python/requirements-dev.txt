@@ -10,8 +10,12 @@ click==8.1.7
     # via pip-tools
 coverage==7.3.2
     # via -r requirements-dev.in
+exceptiongroup==1.2.0
+    # via pytest
 flake8==7.0.0
     # via -r requirements-dev.in
+importlib-metadata==7.0.1
+    # via build
 iniconfig==2.0.0
     # via pytest
 mccabe==0.7.0
@@ -20,6 +24,8 @@ mypy==1.7.1
     # via -r requirements-dev.in
 mypy-extensions==1.0.0
     # via mypy
+numpy==1.26.4
+    # via randomgen
 packaging==23.2
     # via
     #   build
@@ -36,12 +42,23 @@ pyproject-hooks==1.0.0
     # via build
 pytest==7.4.3
     # via -r requirements-dev.in
+randomgen==1.26.1
+    # via -r requirements-dev.in
+tomli==2.0.1
+    # via
+    #   build
+    #   mypy
+    #   pip-tools
+    #   pyproject-hooks
+    #   pytest
 typing-extensions==4.8.0
     # via mypy
 wheel==0.42.0
     # via
     #   -r requirements-dev.in
     #   pip-tools
+zipp==3.17.0
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip
