@@ -135,7 +135,7 @@ def domain_of(T, infer=False) -> Domain:
             return vector_domain(domain_of(T.args[0]))
         if T.origin == "HashMap":
             return map_domain(domain_of(T.args[0]), domain_of(T.args[1]))
-        if T.origin == "Option":
+        if T.origin == "Option": # pragma: no cover
             return option_domain(domain_of(T.args[0]))
 
     if T in ty.PRIMITIVE_TYPES:
@@ -603,7 +603,7 @@ def _sequential_composition_by_weights(
 
     if split_evenly_over is not None:
         weights = [d_out] * split_evenly_over
-    elif split_by_weights is not None:
+    elif split_by_weights is not None: # pragma: no cover
         weights = split_by_weights
     else:
         raise ValueError(

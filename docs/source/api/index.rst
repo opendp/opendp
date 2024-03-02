@@ -1,13 +1,16 @@
 API
 ===
 
-The API documentation consists of lower-level docstrings on each constructor, function and structure.
+* If you're new to OpenDP, please go back to :doc:`../getting-started/index`.
+* If you're interested in the theory behind differential privacy and how OpenDP implements it,
+  feel free to jump ahead to :doc:`../theory/index`.
 
-If you are looking for long-form, higher-level documentation, then please consult the :doc:`../user/index`.
+API documentation entry points:
 
 .. toctree::
    :maxdepth: 1
 
-   Python API <python/index>
-   R API <https://docs.opendp.org/en/stable/api/r>
-   Rust API <https://docs.rs/opendp>
+   API User Guide <user-guide/index>
+   Python API Reference <python/index>
+   R API Reference <https://docs.opendp.org/en/stable/api/r>
+   Rust API Reference <https://docs.rs/opendp>
