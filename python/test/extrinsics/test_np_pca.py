@@ -127,7 +127,7 @@ def flaky_test_pca_compare_sklearn():
     print(model_odp.explained_variance_)
 
 
-@pytest.mark.skipif("sklearn" not in sys.modules, reason="Scikit-Learn needed")
+@pytest.mark.skipif(not {'numpy', 'randomgen'} <= sys.modules.keys(), reason="Optional dependencies needed")
 def test_pca_compare_sklearn():
     for _ in range(5):
         try:
