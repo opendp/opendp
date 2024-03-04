@@ -6,7 +6,7 @@ import pytest
 dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 
-@pytest.mark.skipif('numpy' not in sys.modules, reason="Numpy needed")
+@pytest.mark.skipif('numpy' not in sys.modules or 'randomgen' not in sys.modules, reason="Numpy and randomgen needed")
 def test_private_np_eigenvector():
     import numpy as np
     from opendp._extrinsics._make_np_eigenvector import then_private_eigenvector
@@ -28,7 +28,7 @@ def test_private_np_eigenvector():
     assert meas.map(2) == 100_000.0
 
 
-@pytest.mark.skipif('numpy' not in sys.modules, reason="Numpy needed")
+@pytest.mark.skipif('numpy' not in sys.modules or 'randomgen' not in sys.modules, reason="Numpy and randomgen needed")
 def test_eigenvector_integration():
     import numpy as np
     from opendp._extrinsics.make_np_clamp import then_np_clamp
