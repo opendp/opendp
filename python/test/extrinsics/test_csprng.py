@@ -3,7 +3,7 @@ import pytest
 import sys
 
 
-@pytest.mark.skipif(not {'numpy', 'scipy', 'randomgen'} <= sys.modules, reason="Optional dependencies needed")
+@pytest.mark.skipif(not {'numpy', 'scipy', 'randomgen'} <= sys.modules.keys(), reason="Optional dependencies needed")
 def test_np_rng():
     import numpy as np # type: ignore[import-not-found] 
     from scipy.stats import chisquare # type: ignore[import]
