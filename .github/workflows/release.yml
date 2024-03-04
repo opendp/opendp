@@ -84,7 +84,7 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       channel: ${{ inputs.channel }}
-      fake: ${{ inputs.dry_run || inputs.fake }}
+      fake: ${{ inputs.fake }}
 
   sanity-test-pre:
     needs: build
@@ -92,7 +92,7 @@ jobs:
     with:
       channel: ${{ inputs.channel }}
       python_repository: local
-      fake: ${{ inputs.dry_run || inputs.fake }}
+      fake: ${{ inputs.fake }}
 
   publish:
     needs: [ prepare, sanity-test-pre ]
