@@ -87,7 +87,6 @@ def flip_row_signs(a, b):
     return a, b * signs[:, None]
 
 
-@pytest.mark.skipif(not {'sklearn', 'randomgen'} <= sys.modules.keys(), reason="Optional dependencies needed")
 def flaky_test_pca_compare_sklearn():
     import numpy as np
     from sklearn.decomposition import PCA  # type: ignore[import]
@@ -127,7 +126,7 @@ def flaky_test_pca_compare_sklearn():
     print(model_odp.explained_variance_)
 
 
-@pytest.mark.skipif(not {'numpy', 'randomgen'} <= sys.modules.keys(), reason="Optional dependencies needed")
+@pytest.mark.skipif(not {'numpy', 'randomgen', 'sklearn'} <= sys.modules.keys(), reason="Optional dependencies needed")
 def test_pca_compare_sklearn():
     for _ in range(5):
         try:
