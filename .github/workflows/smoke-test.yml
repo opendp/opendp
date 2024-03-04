@@ -166,6 +166,8 @@ jobs:
         run: coverage run -m pytest -v
 
       - name: Test coverage
+        # We only expect test coverage with all optional dependencies.
+        if: ${{ matrix.optional-numpy && matrix.optional-randomgen && matrix.optional-scikit-learn }}
         run: coverage report
 
   docs-links:
