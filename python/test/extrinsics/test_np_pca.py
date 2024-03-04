@@ -23,7 +23,7 @@ def sample_covariance(num_features):
     return A.T @ A
 
 
-@pytest.mark.skipif("scipy" not in sys.modules, reason="Scipy needed")
+@pytest.mark.skipif(not {'numpy', 'scipy', 'randomgen'} <= sys.modules, reason="Optional dependencies needed")
 def test_pca():
     from opendp._extrinsics.make_np_pca import then_private_np_pca
 
@@ -39,7 +39,7 @@ def test_pca():
     assert m_pca.check(2, 1.0)
 
 
-@pytest.mark.skipif("sklearn" not in sys.modules, reason="Scikit-Learn needed")
+@pytest.mark.skipif(not {'sklearn', 'randomgen'} <= sys.modules, reason="Optional dependencies needed")
 def test_pca_skl():
     num_columns = 4
     num_rows = 10_000
@@ -87,6 +87,7 @@ def flip_row_signs(a, b):
     return a, b * signs[:, None]
 
 
+@pytest.mark.skipif(not {'sklearn', 'randomgen'} <= sys.modules, reason="Optional dependencies needed")
 def flaky_test_pca_compare_sklearn():
     import numpy as np
     from sklearn.decomposition import PCA  # type: ignore[import]

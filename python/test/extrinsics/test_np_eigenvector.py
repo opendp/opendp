@@ -51,7 +51,7 @@ def test_eigenvector_integration():
     print(meas(data))
 
 
-@pytest.mark.skipif('scipy' not in sys.modules, reason="Scipy needed")
+@pytest.mark.skipif(not {'numpy', 'scipy', 'randomgen'} <= sys.modules, reason="Optional dependencies needed")
 def test_eigenvectors():
     import numpy as np
     from opendp._extrinsics.make_np_clamp import then_np_clamp
