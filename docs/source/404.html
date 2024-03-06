@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+    <!--
+        Since this will be copied up to the top level, we don't want to depend on any static assets.
+        Easiest just to write raw HTML and skip Sphinx altogether.
+    -->
+    <head>
+        <title>404 &mdash; OpenDP</title>
+        <style>
+            * {
+                font-family: -apple-system, BlinkMacSystemFont, Segoe UI, "Helvetica Neue", Arial, sans-serif;
+            }
+            
+        </style>
+    </head>
+    <body>
+        <h1>404</h1>
+        <p>
+            The page you are looking for doesn't exist.
+        </p>
+        <script>
+            (function(){
+                // For demonstration, try "404.html#redirect_demo" 
+                const url = document.location.toString();
+    
+                Object.entries({
+                    redirect_demo: 'http://example.com',
+                    'user/index.html': 'TODO',
+                    'user/getting-started.html': 'TODO'
+                }).forEach(([match, newUrl]) => {
+                    if (url.includes(match)) {
+                        warnAndRedirect(newUrl);
+                    }
+                });
+    
+                function warnAndRedirect(url) {
+                    document.write("<p>Our site structure has changed: Redirecting in five seconds...</p>");
+                    setTimeout(function() {
+                        document.location = url
+                    }, 5000);
+                }
+            })();
+        </script>
+    </body>
+</html>

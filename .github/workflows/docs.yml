@@ -84,6 +84,7 @@ jobs:
           echo "Create docs."
           make versions
           cp -r build /tmp
+          cp 404.html /tmp
           cd ..
           git fetch
           git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
@@ -97,12 +98,6 @@ jobs:
           echo docs.opendp.org > CNAME
           echo "for underscore directories" > .nojekyll
           cp -r /tmp/build/html/* .
-
-          # ghpages needs 404.html at the top level for it to work,
-          # but the source location depends on the channel.
-          cp en/nightly/404.html . \
-          || cp en/beta/404.html . \
-          || cp en/stable/404.html
       
       - name: Download R Docs
         uses: actions/download-artifact@v3
