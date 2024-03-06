@@ -110,7 +110,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
 
     def __rshift__(self, other: Union["Function", "Transformation", Callable]) -> "Measurement":
         if isinstance(other, Transformation):
-            other = other.function # pragma: no cover
+            other = other.function
 
         if not isinstance(other, Function):
             from opendp.core import new_function
