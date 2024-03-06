@@ -40,9 +40,14 @@ def test_make_user_transformation():
 
 
 def test_make_custom_transformation_error():
-    import pytest
     with pytest.raises(Exception):
         make_duplicate(2, raises=True)([1, 2, 3])
+
+
+def test_new_function_on_non_function():
+    not_a_function = 'not a function'
+    with pytest.raises(ValueError, match='Expected a callable'):
+        dp.new_function(not_a_function, float)
 
 
 def make_constant_mechanism(constant):
