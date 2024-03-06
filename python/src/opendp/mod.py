@@ -108,7 +108,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
                 return False
             raise
 
-    def __rshift__(self, other: Union["Function", "Transformation"]) -> "Measurement":
+    def __rshift__(self, other: Union["Function", "Transformation", Callable]) -> "Measurement":
         if isinstance(other, Transformation):
             other = other.function # pragma: no cover
 
@@ -116,11 +116,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
             from opendp.core import new_function
             other = new_function(other, TO="ExtrinsicObject")
 
-        if isinstance(other, Function):
-            from opendp.combinators import make_chain_pm
-            return make_chain_pm(other, self)
-
-        raise ValueError(f"rshift expected a postprocessing transformation, got {other}")
+        from opendp.combinators import make_chain_pm
+        return make_chain_pm(other, self)
 
     @property
     def input_domain(self) -> "Domain":
