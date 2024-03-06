@@ -20,25 +20,34 @@
         </p>
         <script>
             (function(){
-                // For demonstration, try "404.html#redirect_demo" 
                 const url = document.location.toString();
     
-                Object.entries({
-                    redirect_demo: 'http://example.com',
-                    'user/index.html': 'TODO',
-                    'user/getting-started.html': 'TODO'
-                }).forEach(([match, newUrl]) => {
-                    if (url.includes(match)) {
-                        warnAndRedirect(newUrl);
-                    }
+                const pairs = Object.entries({
+                    // Check longer, more precise patterns first:
+
+                    '/user/utilities/accuracy/accuracy-pitfalls.html': '/theory/accuracy-pitfalls.html',
+                    '/user/': '/api/user-guide/',
+
+                    '/contact.html': '/contributing/contact.html',
+                    '/contributor/': '/contributing/',
+
+                    '/examples/': '/getting-started/examples/',
+                    '/quickstart.html': '/getting-started/quickstart.html',
+
+                    '/resources/index.html': '/theory/resources.html',
+                    '/examples/attacks/': '/theory/attacks/',
                 });
-    
-                function warnAndRedirect(url) {
-                    document.write("<p>Our site structure has changed: Redirecting in five seconds...</p>");
-                    setTimeout(function() {
-                        document.location = url
-                    }, 5000);
-                }
+                
+                for ([old_fragment, new_fragment] of pairs) {
+                    if (url.includes(old_fragment)) {
+                        const new_url = url.replace(old_fragment, new_fragment)
+                        document.write(`<p>Our site structure has changed: Redirecting to <code>${new_url}</code> in five seconds...</p>`);
+                        setTimeout(function() {
+                            document.location = new_url;
+                        }, 5000);
+                        break;
+                    }
+                };
             })();
         </script>
     </body>
