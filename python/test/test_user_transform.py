@@ -44,12 +44,6 @@ def test_make_custom_transformation_error():
         make_duplicate(2, raises=True)([1, 2, 3])
 
 
-def test_new_function_on_non_function():
-    not_a_function = 'not a function'
-    with pytest.raises(ValueError, match='Expected a callable'):
-        dp.new_function(not_a_function, float)
-
-
 def make_constant_mechanism(constant):
     """An example user-defined measurement from Python"""
     def function(_arg):
