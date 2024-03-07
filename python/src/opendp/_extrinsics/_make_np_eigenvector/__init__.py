@@ -20,6 +20,9 @@ def make_private_np_eigenvector(
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "floating-point")
+    
+    if np_csprng is None:
+        raise Exception('optional install "randomgen" is required by this function')
 
     input_desc = input_domain.descriptor
 
@@ -139,8 +142,11 @@ def make_private_np_eigenvectors(
     input_domain: Domain, input_metric: Metric, unit_epsilons: List[float]
 ) -> Measurement:
     import numpy as np  # type: ignore[import]
-    from scipy.linalg import null_space  # type: ignore[import]
     import opendp.prelude as dp
+    try:
+        from scipy.linalg import null_space  # type: ignore[import]
+    except ModuleNotFoundError:
+        raise Exception('optional install "scipy" is required by this function')
 
     dp.assert_features("contrib", "floating-point")
 

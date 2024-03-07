@@ -51,7 +51,7 @@ def test_eigenvector_integration():
     print(meas(data))
 
 
-@pytest.mark.skipif(not {'numpy', 'scipy', 'randomgen'} <= sys.modules.keys(), reason="Optional dependencies needed")
+@pytest.mark.skipif('numpy' not in sys.modules, reason="Optional dependencies needed")
 def test_eigenvectors():
     import numpy as np
     from opendp._extrinsics.make_np_clamp import then_np_clamp
@@ -63,11 +63,19 @@ def test_eigenvectors():
         dp.np_array2_domain(num_columns=num_columns, T=float),
         dp.symmetric_distance(),
     )
-    meas = (
+    sp_sscp = (
         space
         >> then_np_clamp(norm=4.0, p=2)
         >> then_np_sscp(dp.symmetric_distance())
-        >> then_private_np_eigenvectors([1.0] * 3)
     )
+    try:
+        meas = sp_sscp >> then_private_np_eigenvectors([1.0] * 3)
+    except Exception as e:
+        assert 'optional install "scipy" is required by this function' in str(e)
+        return
+
     data = np.random.normal(size=(1000, num_columns))
-    print(meas(data))
+    try:
+        print(meas(data))
+    except Exception as e:
+        assert 'optional install "randomgen" is required by this function' in str(e)
