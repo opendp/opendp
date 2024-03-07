@@ -453,7 +453,7 @@ def measurement_output_measure(
 
 
 def new_function(
-    function: Callable,
+    function,
     TO: RuntimeTypeDescriptor
 ) -> Function:
     r"""Construct a Function from a user-defined callback.
@@ -468,9 +468,6 @@ def new_function(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
-
-    if not callable(function):
-        raise ValueError(f'Expected a callable instead of {function}')
 
     # Standardize type arguments.
     TO = RuntimeType.parse(type_name=TO)
