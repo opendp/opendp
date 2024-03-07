@@ -113,8 +113,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
             other = other.function
 
         if not isinstance(other, Function):
-            if not callable(function):
-                raise ValueError(f'Expected a callable instead of {function}')
+            if not callable(other):
+                raise ValueError(f'Expected a callable instead of {other}')
             from opendp.core import new_function
             other = new_function(other, TO="ExtrinsicObject")
 
