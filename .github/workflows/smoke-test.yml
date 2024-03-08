@@ -65,6 +65,20 @@ jobs:
           name: vendor
           path: R/opendp/src/vendor.tar.xz
 
+  rust-examples:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: docs/source/getting-started
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Cargo run
+        run: cargo run
+
   python-lint:
     runs-on: ubuntu-22.04
     steps:
