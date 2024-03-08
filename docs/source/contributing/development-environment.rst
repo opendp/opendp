@@ -60,39 +60,32 @@ In the above commands, the features ``untrusted`` and ``bindings`` are enabled.
 Setting a feature changes how the crate compiles:
 
 
-.. raw:: html
+.. dropdown:: Feature List
 
-   <details style="margin:-1em 0 2em 2em">
-   <summary><a>Feature List</a></summary>
+    .. list-table::
+        :widths: 25 75
+        :header-rows: 1
 
-.. list-table::
-   :widths: 25 75
-   :header-rows: 1
-
-   * - Name
-     - Description
-   * - ``untrusted``
-     - Enables untrusted features ``contrib`` and ``floating-point``.
-   * - ``contrib``
-     - Enable to include constructors that have not passed the vetting process.
-   * - ``honest-but-curious``
-     - Enable to include constructors that are only private if the constructor arguments are honest.
-   * - ``floating-point``
-     - Enable to include transformations/measurements with floating-point vulnerabilities.
-   * - ``bindings``
-     - Enable to generate Python and R source code. Depends on the ``ffi`` and ``derive`` features. 
-   * - ``partials``
-     - Enable to generate ``then_*`` functions from the corresponding ``make_*`` functions. Depends on the ``derive`` feature.
-   * - ``ffi``
-     - Enable to include C foreign function interfaces. Implicit in the ``bindings`` feature.
-   * - ``derive``
-     - Enable to support code generation and links to proofs in documentation. Implicit in the  ``bindings`` and ``partials`` features.
-   * - ``use-openssl``
-     - Already enabled. Use OpenSSL for secure noise generation.
-
-.. raw:: html
-
-   </details>
+        * - Name
+          - Description
+        * - ``untrusted``
+          - Enables untrusted features ``contrib`` and ``floating-point``.
+        * - ``contrib``
+          - Enable to include constructors that have not passed the vetting process.
+        * - ``honest-but-curious``
+          - Enable to include constructors that are only private if the constructor arguments are honest.
+        * - ``floating-point``
+          - Enable to include transformations/measurements with floating-point vulnerabilities.
+        * - ``bindings``
+          - Enable to generate Python and R source code. Depends on the ``ffi`` and ``derive`` features. 
+        * - ``partials``
+          - Enable to generate ``then_*`` functions from the corresponding ``make_*`` functions. Depends on the ``derive`` feature.
+        * - ``ffi``
+          - Enable to include C foreign function interfaces. Implicit in the ``bindings`` feature.
+        * - ``derive``
+          - Enable to support code generation and links to proofs in documentation. Implicit in the  ``bindings`` and ``partials`` features.
+        * - ``use-openssl``
+          - Already enabled. Use OpenSSL for secure noise generation.
 
 
 To make the crate compile faster, FFI functions in debug builds support a reduced set of primitive types.
@@ -112,23 +105,17 @@ If you have not already, install `Python version 3.8 or higher <https://www.pyth
 
 You can install a local Python package that uses your new OpenDP binary. 
 
-We recommend setting up a virtual environment first, but this is optional:
+.. dropdown:: Optional Virtual Environment
 
-.. raw:: html
+    We recommend setting up a virtual environment first, but this is optional:
 
-   <details style="margin:-1em 0 2em 2em">
-   <summary><a>Virtual Environment</a></summary>
+    .. code-block:: bash
 
-.. code-block:: bash
+        # recommended. conda is just as valid
+        cd opendp
+        python3 -m venv .venv
+        source .venv/bin/activate
 
-    # recommended. conda is just as valid
-    cd opendp
-    python3 -m venv .venv
-    source .venv/bin/activate
-
-.. raw:: html
-
-   </details>
 
 Change to the ``python`` directory, install dependencies, and then install the Python OpenDP library itself.
 
