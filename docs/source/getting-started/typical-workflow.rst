@@ -9,6 +9,12 @@ A differentially private analysis in OpenDP typically has the following steps:
 4. Mediate access to data
 5. Submit DP queries
 
+.. Diagram source: https://docs.google.com/drawings/d/1W4l9x3UM3hbVLWlC0nzijqgaQ31wY5ERebp8jkYy1yc/edit
+
+.. image:: typical-workflow.svg
+    :width: 60%
+    :alt: Diagram representing typical data flow with OpenDP, from a raw CSV to a differentially private release. 
+
 OpenDP has two APIs and we'll demonstrate how to use both:
 
 * The **Context API** is simpler and helps to enforce best practices. Currently available only for Python.
