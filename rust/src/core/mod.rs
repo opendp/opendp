@@ -27,7 +27,9 @@ pub use ffi::*;
 
 use std::sync::Arc;
 
+use crate::combinators::{OdometerAnswer, OdometerQuery};
 use crate::error::*;
+use crate::interactive::Queryable;
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
 use num::Zero;
 use std::fmt::Debug;
@@ -404,6 +406,54 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
         MO::Distance: TotalOrd,
     {
         d_out.total_ge(&self.map(d_in)?)
+    }
+}
+
+pub struct Odometer<DI: Domain, TO, MI: Metric, MO: Measure> {
+    pub input_domain: DI,
+    pub function: Function<DI::Carrier, TO>,
+    pub input_metric: MI,
+    pub output_measure: MO,
+}
+
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Odometer<DI, TO, MI, MO> {
+    fn clone(&self) -> Self {
+        Self {
+            input_domain: self.input_domain.clone(),
+            function: self.function.clone(),
+            input_metric: self.input_metric.clone(),
+            output_measure: self.output_measure.clone(),
+        }
+    }
+}
+
+impl<DI: Domain, Q, A, MI: Metric, MO: Measure>
+    Odometer<DI, Queryable<OdometerQuery<Q, MI::Distance>, OdometerAnswer<A, MO::Distance>>, MI, MO>
+where
+    (DI, MI): MetricSpace,
+{
+    pub fn new(
+        input_domain: DI,
+        function: Function<
+            DI::Carrier,
+            Queryable<OdometerQuery<Q, MI::Distance>, OdometerAnswer<A, MO::Distance>>,
+        >,
+        input_metric: MI,
+        output_measure: MO,
+    ) -> Fallible<Self> {
+        (input_domain.clone(), input_metric.clone()).assert_compatible()?;
+        Ok(Self {
+            input_domain,
+            function,
+            input_metric,
+            output_measure,
+        })
+    }
+}
+
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Odometer<DI, TO, MI, MO> {
+    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<TO> {
+        self.function.eval(arg)
     }
 }
 
