@@ -9,7 +9,6 @@ linters: all_linters(
     expect_identical_linter = NULL, # Use expect_identical(x, y) by default; resort to expect_equal() only when needed, e.g. when setting ignore_attr= or tolerance=.
     expect_s3_class_linter = NULL, # expect_s3_class(x, k) is better than expect_equal(class(x), k). Note also expect_s4_class() available for testing S4 objects.
     expect_true_false_linter = NULL, # expect_true(x) is better than expect_equal(x, TRUE)
-    expect_type_linter = NULL, # expect_type(x, t) is better than expect_equal(typeof(x), t)
     extraction_operator_linter = NULL, # Use `[[` instead of `$` to extract an element.
     fixed_regex_linter = NULL, # This regular expression is static, i.e., its matches can be expressed as a fixed substring expression, which is faster to compute.
     implicit_integer_linter = NULL, # Integers should not be implicit. Use the form 1L for integers or 1.0 for doubles.
