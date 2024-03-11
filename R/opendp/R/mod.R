@@ -597,6 +597,7 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
   return(value)
 }
 
+# nolint start: cyclocomp_linter
 exponential_bounds_search <- function(predicate, .T) {
   # try to infer T
   if (is.null(.T)) {
@@ -683,3 +684,4 @@ exponential_bounds_search <- function(predicate, .T) {
   at_center <- predicate(center)
   return(signed_band_search(center, at_center, sign))
 }
+# nolint end
