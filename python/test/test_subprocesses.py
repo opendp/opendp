@@ -1,4 +1,9 @@
 import subprocess
+import pytest
 
-def test_subprocess():
-    subprocess.run('cd .. && flake8 . --count --show-source --statistics', shell=True, check=True)
+
+@pytest.mark.parametrize("cmd", [
+    'cd .. && flake8 . --count --show-source --statistics'
+])
+def test_subprocess(cmd):
+    subprocess.run(cmd, shell=True, check=True)
