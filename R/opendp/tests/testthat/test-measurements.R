@@ -4,14 +4,14 @@ enable_features("contrib", "floating-point")
 test_that("make_randomized_response_bool", {
     meas <- make_randomized_response_bool(0.75)
 
-    expect_equal(typeof(meas(arg = TRUE)), "logical")
+    expect_type(meas(arg = TRUE), "logical")
     expect_equal(meas(d_in = 1L), 1.0986122886681098)
 })
 
 test_that("make_laplace", {
     space <- c(atom_domain(.T = "i32"), absolute_distance(.T = "i32"))
     meas <- space |> then_laplace(1.)
-    expect_equal(typeof(meas(arg = 0L)), "integer")
+    expect_type(meas(arg = 0L), "integer")
     expect_equal(meas(d_in = 1L), 1.0)
 
     space <- c(atom_domain(.T = "f64"), absolute_distance(.T = "f64"))
@@ -27,21 +27,21 @@ test_that("make_laplace", {
 test_that("make_base_geometric", {
     space <- c(atom_domain(.T = "i32"), absolute_distance(.T = "i32"))
     meas <- space |> then_base_geometric(1., bounds = c(0L, 2L))
-    expect_equal(typeof(meas(arg = 0L)), "integer")
+    expect_type(meas(arg = 0L), "integer")
     expect_equal(meas(d_in = 1L), 1.0)
 })
 
 test_that("make_base_laplace", {
     space <- c(atom_domain(.T = "f64"), absolute_distance(.T = "f64"))
     meas <- space |> then_base_laplace(1., k = -40L)
-    expect_equal(typeof(meas(arg = 0)), "double")
+    expect_type(meas(arg = 0), "double")
     expect_equal(meas(d_in = 1), 1.0)
 })
 
 test_that("make_base_discrete_laplace", {
     space <- c(atom_domain(.T = "i32"), absolute_distance(.T = "i32"))
     meas <- space |> then_base_discrete_laplace(1.)
-    expect_equal(typeof(meas(arg = 0L)), "integer")
+    expect_type(meas(arg = 0L), "integer")
     expect_equal(meas(d_in = 1L), 1.0)
 })
 

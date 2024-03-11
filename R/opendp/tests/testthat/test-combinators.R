@@ -23,17 +23,17 @@ test_that("make_chain_mt", {
 
     meas <- make_chain_mt(meas_lap, trans_sum)
 
-    expect_equal(typeof(meas(arg = c(1L, 3L))), "integer")
+    expect_type(meas(arg = c(1L, 3L)), "integer")
     expect_equal(meas(d_in = 1L), 2)
 
     meas <- trans_sum |> then_laplace(scale = 1.)
 
-    expect_equal(typeof(meas(arg = c(1L, 3L))), "integer")
+    expect_type(meas(arg = c(1L, 3L)), "integer")
     expect_equal(meas(d_in = 1L), 2)
 
     meas <- make_sum(domain, metric) |> then_laplace(scale = 1.)
 
-    expect_equal(typeof(meas(arg = c(1L, 3L))), "integer")
+    expect_type(meas(arg = c(1L, 3L)), "integer")
     expect_equal(meas(d_in = 1L), 2)
 })
 
@@ -56,7 +56,7 @@ test_that("make_chain_tt", {
 
     meas <- c(domain, metric) |> then_clamp(c(0L, 2L)) |> then_sum() |> then_laplace(scale = 1.)
 
-    expect_equal(typeof(meas(arg = c(1L, 3L))), "integer")
+    expect_type(meas(arg = c(1L, 3L)), "integer")
     expect_equal(meas(d_in = 1L), 2)
 })
 
@@ -89,7 +89,7 @@ test_that("make_sequential_composition", {
     )
 
     sc_qbl <- meas_sc(arg = TRUE)
-    expect_equal(typeof(sc_qbl(query = meas_rr)), "logical")
-    expect_equal(typeof(sc_qbl(query = meas_rr)), "logical")
+    expect_type(sc_qbl(query = meas_rr), "logical")
+    expect_type(sc_qbl(query = meas_rr), "logical")
     expect_error(sc_qbl(query = meas_rr))
 })
