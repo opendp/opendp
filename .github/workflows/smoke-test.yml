@@ -228,6 +228,26 @@ jobs:
           shopt -s globstar
           pytest --nbmake source/**/*.ipynb -n=auto
 
+  r-lint:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: R/opendp
+          extra-packages: lintr
+
+      - name: Lint
+        working-directory: R/opendp/
+        run: Rscript -e 'lintr::lint_package()'
+        env:
+          LINTR_ERROR_ON_LINT: true
+
 
   r-test:
     needs: rust-build-and-test
@@ -250,7 +270,7 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: R/opendp
-          extra-packages: devtools,local::.,RcppTOML
+          extra-packages: devtools, local::., RcppTOML, lintr
 
       - name: Unit tests
         working-directory: R/opendp/
