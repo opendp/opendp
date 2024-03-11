@@ -21,7 +21,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
-use crate::traits::{CheckAtom, InherentNull, TotalOrd};
+use crate::traits::{CheckAtom, InherentNull, ProductOrd};
 use std::fmt::{Debug, Formatter};
 
 #[cfg(feature = "contrib")]
@@ -127,7 +127,7 @@ impl<T: CheckAtom + InherentNull> AtomDomain<T> {
         }
     }
 }
-impl<T: CheckAtom + TotalOrd> AtomDomain<T> {
+impl<T: CheckAtom + ProductOrd> AtomDomain<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Ok(AtomDomain {
             bounds: Some(Bounds::new_closed(bounds)?),
@@ -191,7 +191,7 @@ impl<T> Debug for Null<T> {
 ///
 /// # Notes
 /// The bounds may be inclusive, exclusive, or unbounded (for half-open intervals).
-/// For a type `T` to be valid, it must be totally ordered ([`crate::traits::TotalOrd`]).
+/// For a type `T` to be valid, it must be totally ordered ([`crate::traits::ProductOrd`]).
 ///
 /// It is impossible to construct an instance of `Bounds` with inconsistent bounds.
 /// The constructors for this struct return an error if `lower > upper`, or if the bounds both exclude and include a value.
@@ -200,7 +200,7 @@ pub struct Bounds<T> {
     lower: Bound<T>,
     upper: Bound<T>,
 }
-impl<T: TotalOrd> Bounds<T> {
+impl<T: ProductOrd> Bounds<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Self::new((Bound::Included(bounds.0), Bound::Included(bounds.1)))
     }
@@ -273,7 +273,7 @@ impl<T: Debug> Debug for Bounds<T> {
         write!(f, "{}, {}", lower, upper)
     }
 }
-impl<T: Clone + TotalOrd> Bounds<T> {
+impl<T: Clone + ProductOrd> Bounds<T> {
     pub fn member(&self, val: &T) -> Fallible<bool> {
         Ok(match &self.lower {
             Bound::Included(bound) => val.total_ge(bound)?,
