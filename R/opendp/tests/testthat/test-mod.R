@@ -1,5 +1,3 @@
-
-
 test_that("binary search", {
     enable_features("contrib")
     s_vec <- c(vector_domain(atom_domain(.T = "float")), symmetric_distance())

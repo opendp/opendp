@@ -5,7 +5,6 @@ linters: all_linters(
     line_length_linter = NULL, # Lines should not be more than 80 characters.
     object_length_linter = NULL, # Variable and function names should not be longer than 30 characters.
     object_name_linter = NULL, # Variable and function name style should match snake_case or symbols.
-    trailing_blank_lines_linter = NULL, # Missing terminal newline.
     # With "all_linters", these problems are also reported:
     condition_message_linter = NULL, # Don't use paste0 to build stop strings. Instead use the fact that these functions build condition message strings from their input (using "" as a separator). For translatable strings, prefer using gettextf().
     expect_comparison_linter = NULL, # expect_lt(x, y) is better than expect_true(x < y)
