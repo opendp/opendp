@@ -106,8 +106,8 @@ test_that("test_impute_uniform", {
         symmetric_distance(),
         bounds = c(-1., 2.)
     )
-    expect_true(-1. <= caster(arg = NaN))
-    expect_true(caster(arg = NaN) <= 2.)
+    expect_lte(-1., caster(arg = NaN))
+    expect_lte(caster(arg = NaN), 2.)
 })
 
 test_that("test_is_equal", {
@@ -155,8 +155,8 @@ test_that("test_inherent_cast__impute_uniform", {
 
     res <- casted(arg = "a\n23.23\n12")
     expect_equal(tail(res, -1), c(23.23, 12.0))
-    expect_true(23.0 <= res[[1]])
-    expect_true(res[[1]] <= 32.5)
+    expect_lte(23.0, res[[1]])
+    expect_lte(res[[1]], 32.5)
 
     expect_equal(casted(d_in = 1L), 1L)
 })
@@ -176,13 +176,13 @@ test_that("test_clamp", {
 test_that("test_bounded_mean", {
     query <- make_mean(vector_domain(atom_domain(bounds = c(0.0, 10.0)), size = 9L), symmetric_distance())
     expect_equal(query(arg = FLOAT_DATA), 5.)
-    expect_true(query(d_in = 2L) < 10. / 9. + 1e-6)
+    expect_lt(query(d_in = 2L), 10. / 9. + 1e-6)
 })
 
 test_that("test_bounded_sum", {
     query <- make_sum(vector_domain(atom_domain(bounds = c(0., 10.))), symmetric_distance())
     expect_equal(query(arg = FLOAT_DATA), 45.)
-    expect_true(query(d_in = 1L) < 20.)
+    expect_lt(query(d_in = 1L), 20.)
 
     query <- make_sum(vector_domain(atom_domain(bounds = c(0L, 10L))), symmetric_distance())
     expect_equal(query(arg = INT_DATA), 45L)
