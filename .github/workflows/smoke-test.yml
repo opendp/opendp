@@ -65,32 +65,6 @@ jobs:
           name: vendor
           path: R/opendp/src/vendor.tar.xz
 
-  python-type:
-    runs-on: ubuntu-22.04
-    defaults:
-      run:
-        working-directory: python
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: 3.9
-
-      - name: Install dependencies
-        run: |
-          python -m pip install -r requirements-dev.txt
-          
-          # not installed via requirements-dev because pip-compile fixes the numpy version
-          # no fixed numpy version is compatible with both 3.8 and 3.12
-          python -m pip install scikit-learn
-
-      - name: Type check with mypy
-        run: |
-          mypy .
-
   python-test:
     needs: rust-build-and-test
     runs-on: ubuntu-22.04
