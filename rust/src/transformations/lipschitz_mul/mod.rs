@@ -8,7 +8,7 @@ use crate::{
     error::Fallible,
     metrics::{AbsoluteDistance, LpDistance},
     traits::{
-        AlertingAbs, CheckNull, Float, FloatBits, InfAdd, InfMul, InfPowI, SaturatingMul, ProductOrd,
+        AlertingAbs, CheckNull, Float, FloatBits, InfAdd, InfMul, InfPowI, ProductOrd, SaturatingMul,
     },
 };
 
