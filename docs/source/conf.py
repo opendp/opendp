@@ -27,7 +27,7 @@ extensions = [
     'sphinx-prompt',
     'sphinx_multiversion',
     'nbsphinx',
-    'sphinx_tabs.tabs',
+    'sphinx_design',
 ]
 
 # convert markdown to rst when rendering with sphinx
@@ -176,14 +176,6 @@ html_last_updated_fmt = '%b %d, %Y'
 
 # Custom sidebar templates, maps document names to template names.
 html_theme_options = {
-    "icon_links": [
-        {
-            "name": "GitHub Discussions",
-            "url": "https://github.com/opendp/opendp/discussions",
-            "icon": "far fa-comments",
-        },
-    ],
-    "twitter_url": "https://twitter.com/opendp_org",
     "github_url": "https://github.com/opendp"
 }
 
@@ -219,10 +211,6 @@ smv_released_pattern = r'^tags/v\d+\.\d+\.\d+$'
 # Because we need values to be calculated for each version, we can't use Python variables, so we have the shell expand them.
 version_cmd = 'VERSION=`cat ../VERSION`'
 sphinx_apidoc_cmd = 'sphinx-apidoc -f -F -e -H "OpenDP" -A "The OpenDP Project" -V $VERSION -o source/api/python ../python/src/opendp --templatedir source/_templates'
-rustdoc_cmd = '(cd ../rust && cargo rustdoc --no-deps --target-dir ../docs/source/api/rust -- --html-in-header katex.html)'
-# Building the Rust docs locally takes forever, and is only necessary for latest branch (releases are automatically published to https://docs.rs).
-# TODO: Figure out how to use locally generated Rust docs for latest branch only.
-# smv_prebuild_command = '&&'.join([version_cmd, sphinx_apidoc_cmd, rustdoc_cmd])
 smv_prebuild_command = '&&'.join([version_cmd, sphinx_apidoc_cmd])
 
 # This is the file name suffix for HTML files (e.g. ".xhtml").

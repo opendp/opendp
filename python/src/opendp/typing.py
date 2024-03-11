@@ -299,7 +299,7 @@ class RuntimeType(object):
             types = {cls.infer(v, py_object=py_object) for v in value}
 
             if len(types) == 0:
-                return UnknownType("cannot infer atomic type when empty")
+                return UnknownType("cannot infer atomic type when empty") # pragma: no cover
             if len(types) == 1:
                 return next(iter(types))
             if py_object: # pragma: no cover
@@ -387,7 +387,7 @@ class UnknownType(RuntimeType):
     origin: None # type: ignore[assignment]
     args: None # type: ignore[assignment]
 
-    def __init__(self, reason):
+    def __init__(self, reason): # pragma: no cover
         self.origin = None
         self.args = None
         self.reason = reason
