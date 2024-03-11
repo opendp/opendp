@@ -40,7 +40,6 @@ def test_make_user_transformation():
 
 
 def test_make_custom_transformation_error():
-    import pytest
     with pytest.raises(Exception):
         make_duplicate(2, raises=True)([1, 2, 3])
 
