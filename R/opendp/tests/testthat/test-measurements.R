@@ -29,7 +29,6 @@ test_that("make_base_geometric", {
     meas <- space |> then_base_geometric(1., bounds = c(0L, 2L))
     expect_equal(typeof(meas(arg = 0L)), "integer")
     expect_equal(meas(d_in = 1L), 1.0)
-    # print(jsonlite::toJSON(to_ast(meas), pretty = TRUE))
 })
 
 test_that("make_base_laplace", {

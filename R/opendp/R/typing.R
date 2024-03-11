@@ -169,8 +169,6 @@ rt_assert_is_similar <- function(expected, inferred) {
         inferred <- rt_parse(inferred)
     }
 
-    # print(paste("expected:", rt_to_string(expected)))
-    # print(paste("inferred:", rt_to_string(inferred)))
     is_option <- function(rt) rt$origin == "Option"
     if (is_option(expected)) {
         expected <- expected$args[[1]]

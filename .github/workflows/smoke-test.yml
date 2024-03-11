@@ -239,11 +239,11 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          working-directory: R
+          working-directory: R/opendp
           extra-packages: lintr
 
       - name: Lint
-        working-directory: R
+        working-directory: R/opendp/
         run: Rscript -e 'lintr::lint_package()'
         env:
           LINTR_ERROR_ON_LINT: true

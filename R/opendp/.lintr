@@ -1,6 +1,5 @@
 linters: all_linters(
     # If "linters_with_defaults" is used then only these problems are reported:
-    commented_code_linter = NULL, # Commented code should be removed.
     cyclocomp_linter = NULL, # Functions should have cyclomatic complexity of less than 15,
     indentation_linter = NULL, # Indentation should be ... spaces but is ... spaces.
     line_length_linter = NULL, # Lines should not be more than 80 characters.
