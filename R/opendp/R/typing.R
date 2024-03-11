@@ -71,6 +71,7 @@ rt_infer <- function(public_example) {
     stop(paste("unrecognized type:", class(public_example)))
 }
 
+# nolint start: cyclocomp_linter
 rt_parse <- function(type_name, generics = list()) {
     if (inherits(type_name, "runtime_type")) {
         return(type_name)
@@ -115,6 +116,7 @@ rt_parse <- function(type_name, generics = list()) {
         new_runtime_type(origin, args)
     })
 }
+# nolint end
 
 parse_args_ <- function(args, generics = list()) {
     args <- strsplit(args, ",\\s*(?![^()<>]*\\))", perl = TRUE)
@@ -159,6 +161,7 @@ rt_to_string <- function(rt) {
 #' @export
 `print.runtime_type` <- function(x, ...) print(rt_to_string(x), ...)
 
+# nolint start: cyclocomp_linter
 rt_assert_is_similar <- function(expected, inferred) {
     ERROR_URL_298 <- "https://github.com/opendp/opendp/discussions/298"
 
@@ -225,6 +228,7 @@ rt_assert_is_similar <- function(expected, inferred) {
         stop(paste0("inferred type is ", rt_to_string(inferred), ", expected ", rt_to_string(expected), ". See ", ERROR_URL_298))
     }
 }
+# nolint end
 
 rt_substitute <- function(rt, ...) {
     generics <- list(...)
