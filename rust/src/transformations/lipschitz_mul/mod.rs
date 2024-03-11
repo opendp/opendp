@@ -8,7 +8,7 @@ use crate::{
     error::Fallible,
     metrics::{AbsoluteDistance, LpDistance},
     traits::{
-        AlertingAbs, CheckNull, Float, FloatBits, InfAdd, InfMul, InfPowI, SaturatingMul, TotalOrd,
+        AlertingAbs, CheckNull, Float, FloatBits, InfAdd, InfMul, InfPowI, SaturatingMul, ProductOrd,
     },
 };
 
@@ -109,7 +109,7 @@ where
 
 impl<D: LipschitzMulFloatDomain> LipschitzMulFloatDomain for VectorDomain<D>
 where
-    D::Atom: Copy + SaturatingMul + CheckNull + TotalOrd,
+    D::Atom: Copy + SaturatingMul + CheckNull + ProductOrd,
 {
     type Atom = D::Atom;
     fn transform(

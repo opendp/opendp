@@ -5,7 +5,7 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, InsertDeleteDistance, IntDistance},
-    traits::{AlertingAbs, InfAdd, InfCast, InfMul, InfSub, TotalOrd},
+    traits::{AlertingAbs, InfAdd, InfCast, InfMul, InfSub, ProductOrd},
 };
 
 use super::{Float, Pairwise, Sequential, SumRelaxation};
