@@ -9,7 +9,7 @@ use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util::Type;
 use crate::measures::{FixedSmoothedMaxDivergence, MaxDivergence};
-use crate::traits::{CheckAtom, ExactIntCast, InfDiv, InfExpM1, InfLn1P, InfMul, TotalOrd};
+use crate::traits::{CheckAtom, ExactIntCast, InfDiv, InfExpM1, InfLn1P, InfMul, ProductOrd};
 
 impl AmplifiableMeasure for AnyMeasure {
     fn amplify(
@@ -52,7 +52,7 @@ impl IsSizedDomain for AnyDomain {
     fn get_size(&self) -> Fallible<usize> {
         fn monomorphize1<TIA>(domain: &AnyDomain, DIA: Type) -> Fallible<usize>
         where
-            TIA: 'static + Clone + TotalOrd + CheckAtom,
+            TIA: 'static + Clone + ProductOrd + CheckAtom,
         {
             fn monomorphize2<DIA: IsSizedDomain>(domain: &AnyDomain) -> Fallible<usize>
             where

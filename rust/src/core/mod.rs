@@ -28,7 +28,7 @@ pub use ffi::*;
 use std::sync::Arc;
 
 use crate::error::*;
-use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
+use crate::traits::{DistanceConstant, InfCast, InfMul, ProductOrd};
 use num::Zero;
 use std::fmt::Debug;
 
@@ -312,7 +312,7 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
 
     pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool>
     where
-        MO::Distance: TotalOrd,
+        MO::Distance: ProductOrd,
     {
         d_out.total_ge(&self.map(d_in)?)
     }
@@ -401,7 +401,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
 
     pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool>
     where
-        MO::Distance: TotalOrd,
+        MO::Distance: ProductOrd,
     {
         d_out.total_ge(&self.map(d_in)?)
     }
