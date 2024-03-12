@@ -144,13 +144,13 @@ rt_to_string <- function(rt) {
         return(rt$origin)
     }
 
-    args <- paste0(lapply(rt$args, function(v) {
+    args <- toString(lapply(rt$args, function(v) {
         if (is.list(v)) {
             rt_to_string(v)
         } else {
             v
         }
-    }), collapse = ", ")
+    }))
 
     if (rt$origin == "Tuple") {
         return(paste0("(", args, ")"))
