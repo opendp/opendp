@@ -1,7 +1,7 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use dashu::integer::Sign;
+use dashu::rational::RBig;
 use opendp_derive::bootstrap;
 
 use crate::{
@@ -18,7 +18,7 @@ use crate::traits::{
     DistanceConstant,
 };
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Optimize {
     Max,
     Min,
@@ -63,21 +63,7 @@ where
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &Vec<TIA>| {
-            (arg.iter().cloned().enumerate())
-                .map(|(i, v)| {
-                    let shift = v.into_rational()?
-                        * match optimize {
-                            Optimize::Max => Sign::Positive,
-                            Optimize::Min => Sign::Negative,
-                        };
-                    Ok((i, GumbelPSRN::new(shift, scale_frac.clone())))
-                })
-                .reduce(|l, r| {
-                    let (mut l, mut r) = (l?, r?);
-                    Ok(if l.1.greater_than(&mut r.1)? { l } else { r })
-                })
-                .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
-                .map(|v| v.0)
+            select_score(arg, optimize.clone(), scale_frac.clone())
         }),
         input_metric.clone(),
         MaxDivergence::default(),
@@ -102,6 +88,32 @@ where
     )
 }
 
+
+pub fn select_score<TIA>(
+    arg: &Vec<TIA>,
+    optimize: Optimize,
+    scale: RBig,
+) -> Fallible<usize>
+where
+    TIA: Number + CastInternalRational,
+{
+    (arg.iter().cloned().enumerate())
+        .map(|(i, v)| {
+            let mut shift = v.into_rational()?;
+            if optimize == Optimize::Min {
+                shift = -shift;
+            }
+            Ok((i, GumbelPSRN::new(shift, scale.clone())))
+        })
+        .reduce(|l, r| {
+            let (mut l, mut r) = (l?, r?);
+            Ok(if l.1.greater_than(&mut r.1)? { l } else { r })
+        })
+        .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
+        .map(|v| v.0)
+}
+
+#[cfg(feature = "floating-point")]
 #[cfg(test)]
 pub mod test_exponential {
     use crate::error::Fallible;

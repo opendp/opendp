@@ -91,9 +91,11 @@ SEXP measurements__make_laplace(SEXP input_domain, SEXP input_metric, SEXP scale
 SEXP measurements__make_laplace_expr(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP MI, SEXP QO, SEXP log);
 SEXP measurements__make_private_agg(SEXP input_domain, SEXP input_metric, SEXP measurement, SEXP log);
 SEXP measurements__make_private_mean_expr(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP QO, SEXP log);
+SEXP measurements__make_private_quantile_expr(SEXP input_domain, SEXP input_metric, SEXP candidates, SEXP temperature, SEXP alpha, SEXP QO, SEXP TIA, SEXP T_candidates, SEXP log);
 SEXP measurements__make_randomized_response(SEXP categories, SEXP prob, SEXP constant_time, SEXP T, SEXP QO, SEXP T_categories, SEXP log);
 SEXP measurements__make_randomized_response_bool(SEXP prob, SEXP constant_time, SEXP QO, SEXP log);
 SEXP measurements__make_report_noisy_max_gumbel(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP optimize, SEXP QO, SEXP log);
+SEXP measurements__make_report_noisy_max_gumbel_expr(SEXP input_domain, SEXP input_metric, SEXP scale, SEXP optimize, SEXP MI, SEXP QI, SEXP QO, SEXP log);
 SEXP measures__fixed_smoothed_max_divergence(SEXP T, SEXP log);
 SEXP measures__max_divergence(SEXP T, SEXP log);
 SEXP measures__measure_debug(SEXP this, SEXP log);

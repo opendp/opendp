@@ -5,7 +5,7 @@ use polars::lazy::dsl::{col, cols, len};
 use polars::prelude::*;
 
 use crate::core::Domain;
-use crate::metrics::AbsoluteDistance;
+use crate::metrics::{AbsoluteDistance, LInfDistance};
 use crate::traits::TotalOrd;
 use crate::transformations::{item, DatasetMetric};
 use crate::{
@@ -149,6 +149,12 @@ impl<F: Frame, Q: TotalOrd> MetricSpace for (FrameDomain<F>, AbsoluteDistance<Q>
             return fallible!(MetricSpace, "absolute distance must be over a single row");
         }
 
+        Ok(())
+    }
+}
+
+impl<Q> MetricSpace for (LazyFrameDomain, LInfDistance<Q>) {
+    fn check_space(&self) -> Fallible<()> {
         Ok(())
     }
 }

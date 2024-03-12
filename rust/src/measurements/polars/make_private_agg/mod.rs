@@ -124,10 +124,10 @@ mod test_make_agg_meas {
 
     use crate::combinators::make_basic_composition;
     use crate::domains::{AtomDomain, LazyFrameDomain, LazyGroupByContext, SeriesDomain};
+    use crate::measurements::make_laplace_expr;
     use crate::measurements::polars::make_private_agg;
-    use crate::measurements::{make_laplace_expr, then_laplace_expr};
     use crate::metrics::L1Distance;
-    use crate::transformations::{make_col, then_col};
+    use crate::transformations::make_col;
 
     use super::*;
 
@@ -182,7 +182,10 @@ mod test_make_agg_meas {
     #[test]
     #[cfg(feature = "partials")]
     fn test_private_agg_partials() -> Fallible<()> {
-        use crate::{combinators::then_basic_composition, metrics::L1Distance};
+        use crate::{
+            combinators::then_basic_composition, measurements::then_laplace_expr,
+            metrics::L1Distance, transformations::then_col,
+        };
 
         let (lf_gb_domain, lazy_gb) = get_private_agg_test_data()?;
 

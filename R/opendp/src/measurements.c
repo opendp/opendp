@@ -409,6 +409,38 @@ SEXP measurements__make_private_mean_expr(
 }
 
 
+SEXP measurements__make_private_quantile_expr(
+    SEXP input_domain, SEXP input_metric, SEXP candidates, SEXP temperature, SEXP alpha, SEXP QO, SEXP TIA, SEXP T_candidates, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(candidates);
+    PROTECT(temperature);
+    PROTECT(alpha);
+    PROTECT(QO);
+    PROTECT(TIA);
+    PROTECT(T_candidates);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    AnyObject * c_candidates = sexp_to_anyobjectptr(candidates, T_candidates);
+    void * c_temperature = sexp_to_voidptr(temperature, QO);
+    double c_alpha = Rf_asReal(alpha);
+    char * c_QO = rt_to_string(QO);
+
+    // Call library function.
+    FfiResult_____AnyMeasurement _result = opendp_measurements__make_private_quantile_expr(c_input_domain, c_input_metric, c_candidates, c_temperature, c_alpha, c_QO);
+
+    UNPROTECT(9);
+    if(_result.tag == Err_____AnyMeasurement)
+        return(extract_error(_result.err));
+    AnyMeasurement* _return_value = _result.ok;
+    return(anymeasurementptr_to_sexp(_return_value, log));
+}
+
+
 SEXP measurements__make_randomized_response(
     SEXP categories, SEXP prob, SEXP constant_time, SEXP T, SEXP QO, SEXP T_categories, SEXP log
 ) {
@@ -483,6 +515,38 @@ SEXP measurements__make_report_noisy_max_gumbel(
     FfiResult_____AnyMeasurement _result = opendp_measurements__make_report_noisy_max_gumbel(c_input_domain, c_input_metric, c_scale, c_optimize, c_QO);
 
     UNPROTECT(6);
+    if(_result.tag == Err_____AnyMeasurement)
+        return(extract_error(_result.err));
+    AnyMeasurement* _return_value = _result.ok;
+    return(anymeasurementptr_to_sexp(_return_value, log));
+}
+
+
+SEXP measurements__make_report_noisy_max_gumbel_expr(
+    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP optimize, SEXP MI, SEXP QI, SEXP QO, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(scale);
+    PROTECT(optimize);
+    PROTECT(MI);
+    PROTECT(QI);
+    PROTECT(QO);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    AnyObject * c_scale = sexp_to_anyobjectptr(scale, QO);
+    char * c_optimize = (char *)CHAR(STRING_ELT(optimize, 0));
+    char * c_MI = rt_to_string(MI);
+    char * c_QI = rt_to_string(QI);
+    char * c_QO = rt_to_string(QO);
+
+    // Call library function.
+    FfiResult_____AnyMeasurement _result = opendp_measurements__make_report_noisy_max_gumbel_expr(c_input_domain, c_input_metric, c_scale, c_optimize, c_MI, c_QI, c_QO);
+
+    UNPROTECT(8);
     if(_result.tag == Err_____AnyMeasurement)
         return(extract_error(_result.err));
     AnyMeasurement* _return_value = _result.ok;

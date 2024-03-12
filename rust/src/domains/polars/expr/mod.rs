@@ -5,8 +5,8 @@ use std::fmt::{Debug, Formatter};
 use crate::core::{Metric, MetricSpace};
 use crate::domains::LazyFrameDomain;
 use crate::metrics::{
-    AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, L1Distance, Lp,
-    SymmetricDistance,
+    AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, L1Distance,
+    LInfDistance, Lp, SymmetricDistance, L1,
 };
 use crate::traits::TotalOrd;
 use crate::transformations::DatasetMetric;
@@ -191,15 +191,22 @@ impl_expr_metric_select!(InsertDeleteDistance SymmetricDistance HammingDistance 
 impl<Q: 'static + Send + Sync> OuterMetric for AbsoluteDistance<Q> {
     type InnerMetric = Self;
     type LazyDomain = LazyFrameDomain;
-
     fn inner_metric(&self) -> Self::InnerMetric {
         self.clone()
     }
 }
+
+impl<Q: 'static + Send + Sync> OuterMetric for LInfDistance<Q> {
+    type InnerMetric = Self;
+    type LazyDomain = LazyFrameDomain;
+    fn inner_metric(&self) -> Self::InnerMetric {
+        self.clone()
+    }
+}
+
 impl<M: 'static + Metric + Send + Sync> OuterMetric for Lp<1, M> {
     type InnerMetric = M;
     type LazyDomain = LazyGroupByDomain;
-
     fn inner_metric(&self) -> Self::InnerMetric {
         self.0.clone()
     }
@@ -217,6 +224,12 @@ impl<Q: TotalOrd> MetricSpace for (ExprDomain<LazyFrameDomain>, AbsoluteDistance
     }
 }
 
+impl<Q: TotalOrd> MetricSpace for (ExprDomain<LazyFrameDomain>, LInfDistance<Q>) {
+    fn check_space(&self) -> Fallible<()> {
+        (self.0.lazy_frame_domain.clone(), self.1.clone()).check_space()
+    }
+}
+
 impl<M: DatasetMetric> MetricSpace for (ExprDomain<LazyGroupByDomain>, Lp<1, M>) {
     fn check_space(&self) -> Fallible<()> {
         let lgb_domain = LazyGroupByDomain {
@@ -228,6 +241,16 @@ impl<M: DatasetMetric> MetricSpace for (ExprDomain<LazyGroupByDomain>, Lp<1, M>)
 }
 
 impl<Q: TotalOrd> MetricSpace for (ExprDomain<LazyGroupByDomain>, L1Distance<Q>) {
+    fn check_space(&self) -> Fallible<()> {
+        let lgb_domain = LazyGroupByDomain {
+            lazy_frame_domain: self.0.lazy_frame_domain.clone(),
+            grouping_columns: self.0.context.columns.clone(),
+        };
+        (lgb_domain, self.1.clone()).check_space()
+    }
+}
+
+impl<Q: TotalOrd> MetricSpace for (ExprDomain<LazyGroupByDomain>, L1<LInfDistance<Q>>) {
     fn check_space(&self) -> Fallible<()> {
         let lgb_domain = LazyGroupByDomain {
             lazy_frame_domain: self.0.lazy_frame_domain.clone(),

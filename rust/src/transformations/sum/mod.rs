@@ -222,11 +222,10 @@ mod tests {
     fn test_make_sum() -> Fallible<()> {
         macro_rules! test_sum {
             ($bounds:expr, $data:expr, $expected:expr, $metric:expr) => {{
-                let input_space = (
+                let transformation = make_sum(
                     VectorDomain::new(AtomDomain::new_closed($bounds)?),
-                    SymmetricDistance::default(),
-                );
-                let transformation = (input_space >> then_sum())?;
+                    SymmetricDistance,
+                )?;
                 let ret = transformation.invoke(&$data)?;
                 assert_eq!(ret, $expected);
             }};

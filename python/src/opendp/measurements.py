@@ -24,9 +24,11 @@ __all__ = [
     "make_laplace",
     "make_private_agg",
     "make_private_mean_expr",
+    "make_private_quantile_expr",
     "make_randomized_response",
     "make_randomized_response_bool",
     "make_report_noisy_max_gumbel",
+    "make_report_noisy_max_gumbel_expr",
     "make_user_measurement",
     "then_alp_queryable",
     "then_base_discrete_gaussian",
@@ -41,7 +43,9 @@ __all__ = [
     "then_laplace",
     "then_private_agg",
     "then_private_mean_expr",
+    "then_private_quantile_expr",
     "then_report_noisy_max_gumbel",
+    "then_report_noisy_max_gumbel_expr",
     "then_user_measurement"
 ]
 
@@ -1127,6 +1131,95 @@ def then_private_mean_expr(
 
 
 
+def make_private_quantile_expr(
+    input_domain: Domain,
+    input_metric: Metric,
+    candidates: Any,
+    temperature,
+    alpha: float,
+    QO: RuntimeTypeDescriptor = "float"
+) -> Measurement:
+    r"""Makes a Measurement to compute DP quantiles with Polars.
+    Based on a list of candidates, first compute scores, then use exponential mechanism
+    to get the maximum index of the quantile.
+
+    [make_private_quantile_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_private_quantile_expr.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `ExprDomain<MI::LazyDomain>`
+    * Output Type:    `Expr`
+    * Input Metric:   `MI`
+    * Output Measure: `MaxDivergence<QO>`
+
+    :param input_domain: ExprDomain
+    :type input_domain: Domain
+    :param input_metric: The metric space under which neighboring LazyFrames are compared
+    :type input_metric: Metric
+    :param candidates: Potential quantile to score
+    :type candidates: Any
+    :param temperature: Higher temperatures are more private.
+    :param alpha: Quantile value in [0, 1]. Choose 0.5 for median
+    :type alpha: float
+    :param QO: Output Distance Type.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=temperature)
+    TIA = get_active_column_type(input_domain) # type: ignore
+
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_candidates = py_to_c(candidates, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
+    c_temperature = py_to_c(temperature, c_type=ctypes.c_void_p, type_name=QO)
+    c_alpha = py_to_c(alpha, c_type=ctypes.c_double, type_name=f64)
+    c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
+
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_private_quantile_expr
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr, ctypes.c_void_p, ctypes.c_double, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_candidates, c_temperature, c_alpha, c_QO), Measurement))
+
+    return output
+
+def then_private_quantile_expr(
+    candidates: Any,
+    temperature,
+    alpha: float,
+    QO: RuntimeTypeDescriptor = "float"
+):  
+    r"""partial constructor of make_private_quantile_expr
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_private_quantile_expr`
+
+    :param candidates: Potential quantile to score
+    :type candidates: Any
+    :param temperature: Higher temperatures are more private.
+    :param alpha: Quantile value in [0, 1]. Choose 0.5 for median
+    :type alpha: float
+    :param QO: Output Distance Type.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_private_quantile_expr(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        candidates=candidates,
+        temperature=temperature,
+        alpha=alpha,
+        QO=QO))
+
+
+
 def make_randomized_response(
     categories: Any,
     prob,
@@ -1312,6 +1405,105 @@ def then_report_noisy_max_gumbel(
         input_metric=input_metric,
         scale=scale,
         optimize=optimize,
+        QO=QO))
+
+
+
+def make_report_noisy_max_gumbel_expr(
+    input_domain: Domain,
+    input_metric: Metric,
+    scale: Any,
+    optimize: str,
+    MI: RuntimeTypeDescriptor,
+    QI: RuntimeTypeDescriptor,
+    QO: Optional[RuntimeTypeDescriptor] = None
+) -> Measurement:
+    r"""Makes a Measurement to implement the discrete exponential mechanism with Polars.
+    Takes a series of scores and privately selects the index of the highest score.
+
+    [make_report_noisy_max_gumbel_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_report_noisy_max_gumbel_expr.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `ExprDomain<MI::LazyDomain>`
+    * Output Type:    `Expr`
+    * Input Metric:   `MI`
+    * Output Measure: `MaxDivergence<QO>`
+
+    :param input_domain: ExprDomain
+    :type input_domain: Domain
+    :param input_metric: The metric space under which neighboring LazyFrames are compared
+    :type input_metric: Metric
+    :param scale: 
+    :type scale: Any
+    :param optimize: Indicate whether to privately return the "Max" or "Min"
+    :type optimize: str
+    :param MI: Input Metric.
+    :type MI: :py:ref:`RuntimeTypeDescriptor`
+    :param QI: 
+    :type QI: :py:ref:`RuntimeTypeDescriptor`
+    :param QO: Output Distance Type.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
+    QI = RuntimeType.parse(type_name=QI)
+    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
+
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_scale = py_to_c(scale, c_type=AnyObjectPtr, type_name=QO)
+    c_optimize = py_to_c(optimize, c_type=ctypes.c_char_p, type_name=None)
+    c_MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    c_QI = py_to_c(QI, c_type=ctypes.c_char_p)
+    c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
+
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_report_noisy_max_gumbel_expr
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_optimize, c_MI, c_QI, c_QO), Measurement))
+
+    return output
+
+def then_report_noisy_max_gumbel_expr(
+    scale: Any,
+    optimize: str,
+    MI: RuntimeTypeDescriptor,
+    QI: RuntimeTypeDescriptor,
+    QO: Optional[RuntimeTypeDescriptor] = None
+):  
+    r"""partial constructor of make_report_noisy_max_gumbel_expr
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_report_noisy_max_gumbel_expr`
+
+    :param scale: 
+    :type scale: Any
+    :param optimize: Indicate whether to privately return the "Max" or "Min"
+    :type optimize: str
+    :param MI: Input Metric.
+    :type MI: :py:ref:`RuntimeTypeDescriptor`
+    :param QI: 
+    :type QI: :py:ref:`RuntimeTypeDescriptor`
+    :param QO: Output Distance Type.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_report_noisy_max_gumbel_expr(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        optimize=optimize,
+        MI=MI,
+        QI=QI,
         QO=QO))
 
 

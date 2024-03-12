@@ -59,6 +59,16 @@ mod make_clamp;
 #[cfg(feature = "contrib")]
 pub use make_clamp::*;
 
+#[cfg(feature = "contrib")]
+mod make_quantile_score_candidates_expr;
+#[cfg(feature = "contrib")]
+pub use make_quantile_score_candidates_expr::*;
+
+// #[cfg(feature = "contrib")]
+// mod make_quantile_scores_continuous_expr;
+// #[cfg(feature = "contrib")]
+// pub use make_quantile_scores_continuous_expr::*;
+
 #[cfg(test)]
 pub mod polars_test {
     use crate::domains::{

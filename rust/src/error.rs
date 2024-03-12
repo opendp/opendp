@@ -163,6 +163,11 @@ impl From<PolarsError> for Error {
         }
     }
 }
+impl From<Error> for PolarsError {
+    fn from(error: Error) -> Self {
+        PolarsError::ComputeError(format!("{:?}", error).into())
+    }
+}
 
 pub type Fallible<T> = Result<T, Error>;
 
