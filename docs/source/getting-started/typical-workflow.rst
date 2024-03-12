@@ -11,7 +11,7 @@ A differentially private analysis in OpenDP typically has the following steps:
 
 .. Diagram source: https://docs.google.com/drawings/d/1W4l9x3UM3hbVLWlC0nzijqgaQ31wY5ERebp8jkYy1yc/edit
 
-.. image:: typical-workflow.svg
+.. image:: typical-workflow/diagram.svg
     :width: 60%
     :alt: Diagram representing typical data flow with OpenDP, from a raw CSV to a differentially private release. 
 
@@ -36,7 +36,7 @@ Releases on the teacher survey should conceal the addition or removal of any one
     .. tab-item:: Context API
         :sync: context
 
-        .. literalinclude:: typical-workflow-context.rst
+        .. literalinclude:: typical-workflow/context.rst
             :language: python
             :start-after: unit-of-privacy
             :end-before: /unit-of-privacy
@@ -44,7 +44,7 @@ Releases on the teacher survey should conceal the addition or removal of any one
     .. tab-item:: Framework API
         :sync: framework
 
-        .. literalinclude:: typical-workflow-framework.rst
+        .. literalinclude:: typical-workflow/framework.rst
             :language: python
             :start-after: unit-of-privacy
             :end-before: /unit-of-privacy
@@ -74,7 +74,7 @@ A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending
     .. tab-item:: Context API
         :sync: context
 
-        .. literalinclude:: typical-workflow-context.rst
+        .. literalinclude:: typical-workflow/context.rst
             :language: python
             :start-after: privacy-loss
             :end-before: /privacy-loss
@@ -82,7 +82,7 @@ A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending
     .. tab-item:: Framework API
         :sync: framework
 
-        .. literalinclude:: typical-workflow-framework.rst
+        .. literalinclude:: typical-workflow/framework.rst
             :language: python
             :start-after: privacy-loss
             :end-before: /privacy-loss
@@ -105,7 +105,7 @@ This is the same under either API.
     .. tab-item:: Context API
         :sync: context
 
-        .. literalinclude:: typical-workflow-context.rst
+        .. literalinclude:: typical-workflow/context.rst
             :language: python
             :start-after: public-info
             :end-before: /public-info
@@ -113,7 +113,7 @@ This is the same under either API.
     .. tab-item:: Framework API
         :sync: framework
 
-        .. literalinclude:: typical-workflow-framework.rst
+        .. literalinclude:: typical-workflow/framework.rst
             :language: python
             :start-after: public-info
             :end-before: /public-info
@@ -134,7 +134,7 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
     .. tab-item:: Context API
         :sync: context
 
-        .. literalinclude:: typical-workflow-context.rst
+        .. literalinclude:: typical-workflow/context.rst
             :language: python
             :start-after: mediate
             :end-before: /mediate
@@ -144,7 +144,7 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
     .. tab-item:: Framework API
         :sync: framework
 
-        .. literalinclude:: typical-workflow-framework.rst
+        .. literalinclude:: typical-workflow/framework.rst
             :language: python
             :start-after: mediate
             :end-before: /mediate
@@ -163,7 +163,7 @@ Here's a differentially private count:
     .. tab-item:: Context API
         :sync: context
 
-        .. literalinclude:: typical-workflow-context.rst
+        .. literalinclude:: typical-workflow/context.rst
             :language: python
             :start-after: count
             :end-before: /count
@@ -171,7 +171,7 @@ Here's a differentially private count:
     .. tab-item:: Framework API
         :sync: framework
 
-        .. literalinclude:: typical-workflow-framework.rst
+        .. literalinclude:: typical-workflow/framework.rst
             :language: python
             :start-after: count
             :end-before: /count
@@ -183,7 +183,7 @@ Here's a differentially private mean:
     .. tab-item:: Context API
         :sync: context
 
-        .. literalinclude:: typical-workflow-context.rst
+        .. literalinclude:: typical-workflow/context.rst
             :language: python
             :start-after: mean
             :end-before: /mean
@@ -191,7 +191,7 @@ Here's a differentially private mean:
     .. tab-item:: Framework API
         :sync: framework
 
-        .. literalinclude:: typical-workflow-framework.rst
+        .. literalinclude:: typical-workflow/framework.rst
             :language: python
             :start-after: mean
             :end-before: /mean
