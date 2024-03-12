@@ -22,14 +22,17 @@ pub fn make_rappor(
     input_metric: DiscreteDistance,
     f: f64,
     constant_time: bool,
-) -> Fallible<
-    Measurement<BitVectorDomain, BitVector, DiscreteDistance, MaxDivergence<f64>>,
-> {
+) -> Fallible<Measurement<BitVectorDomain, BitVector, DiscreteDistance, MaxDivergence<f64>>> {
     let m = match input_domain.max_weight {
         Some(m) => m,
-        None => return fallible!(MakeMeasurement, "RAPPOR requires a maximum number of set bits!")
+        None => {
+            return fallible!(
+                MakeMeasurement,
+                "RAPPOR requires a maximum number of set bits!"
+            )
+        }
     };
-    
+
     if f <= 0.0 || f > 1.0 {
         return fallible!(MakeMeasurement, "f must be in (0, 1]");
     };
@@ -46,10 +49,11 @@ pub fn make_rappor(
         input_domain,
         Function::new_fallible(move |arg: &BitVector| {
             let n = arg.len();
-            let noise_vector = (1..n).into_iter().map(|_|
-                sample_bernoulli_float(f_2, constant_time)
-            ).collect::<Fallible<BitVector>>()?;
-            // I wanted to avoid cloning here but the closure makes it necessary 
+            let noise_vector = (1..n)
+                .into_iter()
+                .map(|_| sample_bernoulli_float(f_2, constant_time))
+                .collect::<Fallible<BitVector>>()?;
+            // I wanted to avoid cloning here but the closure makes it necessary
             // Shouldn't use much memory anyway given bit-vecs
             Ok(arg.clone() ^ noise_vector) // xor on bit vectors
         }),
@@ -63,7 +67,7 @@ pub fn make_rappor(
                 return fallible!(FailedFunction, "d_in must be 0 or 1.");
             }
             Ok(epsilon)
-        })
+        }),
     )
 }
 

@@ -452,11 +452,11 @@ impl<D: Domain> Domain for VectorDomain<D> {
 pub type BitVector = BitVec<usize, Lsb0>;
 
 /// A domain that contains vectors of boolean values
-/// 
-/// If a size is specified then it 
+///
+/// If a size is specified then it
 #[derive(Clone, PartialEq)]
 pub struct BitVectorDomain {
-    pub max_weight: Option<u32>
+    pub max_weight: Option<u32>,
 }
 impl Debug for BitVectorDomain {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
@@ -474,11 +474,9 @@ impl Default for BitVectorDomain {
 }
 impl BitVectorDomain {
     pub fn new() -> Self {
-        BitVectorDomain {
-            max_weight: None
-        }
+        BitVectorDomain { max_weight: None }
     }
-    pub fn with_max_weight(mut self, max_weight:u32) -> Self {
+    pub fn with_max_weight(mut self, max_weight: u32) -> Self {
         self.max_weight = Some(max_weight);
         self
     }
@@ -488,20 +486,18 @@ impl BitVectorDomain {
     }
 }
 impl Domain for BitVectorDomain {
-    type Carrier = BitVector; // 
+    type Carrier = BitVector; //
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         if let Some(max_weight) = self.max_weight {
             let weight = match u32::try_from(val.count_ones()) {
                 Ok(weight) => weight,
-                Err(_) => return fallible!(FailedFunction, "Too many 1's to fit in u32!")
+                Err(_) => return fallible!(FailedFunction, "Too many 1's to fit in u32!"),
             };
             return Ok(weight <= max_weight);
         }
         Ok(true)
     }
 }
-
-
 
 /// A domain that represents nullity via the Option type.
 ///
