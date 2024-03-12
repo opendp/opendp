@@ -125,10 +125,7 @@ mod test {
         let mut answer = vec![0.0; 10];
         answer[0] = 1.0;
 
-        let answers = vec![
-            bitvec![usize, Lsb0; 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]; 
-            10
-        ];
+        let answers = vec![bitvec![usize, Lsb0; 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]; 10];
 
         let high = 10.555555555555555;
         let low = -0.5555555555555556;
