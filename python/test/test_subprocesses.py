@@ -10,4 +10,5 @@ tests = {
 @pytest.mark.skipif(sys.version_info < (3, 11), reason='mypy will fail on 3.8')
 @pytest.mark.parametrize("cmd", tests.values(), ids=tests.keys())
 def test_subprocess(cmd):
-    subprocess.run(cmd, shell=True, check=True)
+    result = subprocess.run(cmd, shell=True)
+    assert result.returncode == 0, f'"{cmd}" failed'
