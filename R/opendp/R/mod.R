@@ -411,7 +411,7 @@ new_hashtab <- function(keys, vals) {
 to_str <- function(x, depth) UseMethod("to_str")
 `to_str.default` <- function(x, depth) format(x)
 `to_str.hashtab` <- function(x, depth = 0L) {
-  spacer <- paste(rep("  ", depth), collapse = "")
+  spacer <- strrep("  ", depth)
   val <- "hashtab(\n"
   utils::maphash(x, function(k, v) {
     val <<- c(val, paste0(spacer, "  ", k, ": ", to_str(v, depth = depth + 1), ",\n"))
