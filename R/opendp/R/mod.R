@@ -1,7 +1,7 @@
 assert_features <- function(...) {
   for (feature in list(...)) {
     if (!feature %in% getOption("opendp_features")) {
-      stop(paste0("Attempted to use function that requires ", feature, " but ", feature, " is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"", feature, "\")"))
+      stop("Attempted to use function that requires ", feature, " but ", feature, " is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"", feature, "\")")
     }
   }
 }
@@ -40,7 +40,7 @@ output_domain <- function(x) {
     return(x[[1]])
   }
 
-  stop(paste("expected a transformation or metric space. Got", class(x)))
+  stop("expected a transformation or metric space. Got ", class(x))
 }
 
 output_metric <- function(x) {
@@ -71,7 +71,7 @@ make_chain_dyn <- function(rhs, lhs, log) {
   if (inherits(rhs, "opendp_function")) {
     return(new_measurement(make_chain_pm(rhs, lhs)("ptr"), log))
   }
-  stop(paste("cannot chain lhs and rhs", class(lhs), class(rhs)))
+  stop("cannot chain lhs and rhs: ", class(lhs), ", ", class(rhs))
 }
 
 #' new transformation
