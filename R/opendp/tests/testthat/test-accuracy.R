@@ -3,7 +3,7 @@ test_that("test_laplacian_scale_to_accuracy", {
 })
 
 test_that("test_accuracy_to_laplacian_scale", {
-    expect_lt(accuracy_to_laplacian_scale(accuracy = 1., alpha = 0.05), .334)
+    expect_lt(accuracy_to_laplacian_scale(accuracy = 1., alpha = 0.05), 0.334)
 })
 
 
