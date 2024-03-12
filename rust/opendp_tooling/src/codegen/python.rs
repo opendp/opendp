@@ -157,15 +157,13 @@ def {then_name}(
                 .collect::<Vec<_>>()
                 .join(", "),
             name = func.name,
-            args = tab_py(
-                tab_py(
-                    func.args
-                        .iter()
-                        .map(|arg| format!("{name}={name}", name = arg.name()))
-                        .collect::<Vec<_>>()
-                        .join(",\n")
-                )
-            )
+            args = tab_py(tab_py(
+                func.args
+                    .iter()
+                    .map(|arg| format!("{name}={name}", name = arg.name()))
+                    .collect::<Vec<_>>()
+                    .join(",\n")
+            ))
         )
     } else {
         String::new()

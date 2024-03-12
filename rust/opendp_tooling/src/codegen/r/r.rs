@@ -79,31 +79,27 @@ fn generate_r_function(
             ),
             then_log = tab_r(generate_logger(module_name, func, true)),
             name = func.name,
-            args = tab_r(
-                tab_r(
-                    tab_r(
-                        if func.supports_partial {
-                            vec![
-                                "output_domain(lhs)".to_string(),
-                                "output_metric(lhs)".to_string(),
-                            ]
-                        } else {
-                            vec![]
-                        }
-                        .into_iter()
-                        .chain(func.args[offset..].iter().map(|arg| {
-                            let name = if arg.is_type {
-                                format!(".{}", arg.name())
-                            } else {
-                                sanitize_r(arg.name(), arg.is_type)
-                            };
-                            format!("{name} = {name}")
-                        }))
-                        .collect::<Vec<_>>()
-                        .join(",\n")
-                    )
-                )
-            )
+            args = tab_r(tab_r(tab_r(
+                if func.supports_partial {
+                    vec![
+                        "output_domain(lhs)".to_string(),
+                        "output_metric(lhs)".to_string(),
+                    ]
+                } else {
+                    vec![]
+                }
+                .into_iter()
+                .chain(func.args[offset..].iter().map(|arg| {
+                    let name = if arg.is_type {
+                        format!(".{}", arg.name())
+                    } else {
+                        sanitize_r(arg.name(), arg.is_type)
+                    };
+                    format!("{name} = {name}")
+                }))
+                .collect::<Vec<_>>()
+                .join(",\n")
+            )))
         )
     } else {
         String::default()

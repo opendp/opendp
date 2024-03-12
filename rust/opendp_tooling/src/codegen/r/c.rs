@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    codegen::{tab_c, r::BLACKLIST},
+    codegen::{r::BLACKLIST, tab_c},
     Argument, Function, TypeRecipe,
 };
 
