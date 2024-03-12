@@ -94,8 +94,6 @@ impl SeriesDomain {
     }
 
     pub fn drop_bounds(&mut self) -> Fallible<()> {
-
-
         macro_rules! drop_bounds {
             ($ty:ty) => {{
                 let mut element_domain = (self.element_domain.as_any())
@@ -118,7 +116,13 @@ impl SeriesDomain {
             DataType::Int64 => drop_bounds!(i64),
             DataType::Float32 => drop_bounds!(f32),
             DataType::Float64 => drop_bounds!(f64),
-            _ => return fallible!(FailedFunction, "cannot drop bounds on: {:?}", self.field.dtype),
+            _ => {
+                return fallible!(
+                    FailedFunction,
+                    "cannot drop bounds on: {:?}",
+                    self.field.dtype
+                )
+            }
         }
         Ok(())
     }
@@ -194,7 +198,9 @@ impl PartialEq for dyn DynSeriesAtomDomain + '_ {
 }
 
 /// Utility trait to construct the Polars runtime data-type indicator from an atomic type.
-pub trait NumericDataType: NumericNative<PolarsType = Self::NumericPolars> + PrimitiveDataType {
+pub trait NumericDataType:
+    NumericNative<PolarsType = Self::NumericPolars> + PrimitiveDataType
+{
     type NumericPolars: PolarsDataType + PolarsNumericType<Native = Self>;
 }
 
