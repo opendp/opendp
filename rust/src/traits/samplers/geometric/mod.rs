@@ -4,7 +4,7 @@ use num::{One, Zero};
 
 use crate::{
     error::Fallible,
-    traits::{AlertingSub, ExactIntCast, FiniteBounds, Float, TotalOrd},
+    traits::{AlertingSub, ExactIntCast, FiniteBounds, Float, ProductOrd},
 };
 
 use super::{fill_bytes, sample_bernoulli_float, sample_standard_bernoulli};
@@ -143,7 +143,7 @@ pub trait SampleDiscreteLaplaceLinear<P>: SampleGeometric<P> {
 
 impl<T, P> SampleDiscreteLaplaceLinear<P> for T
 where
-    T: Copy + SampleGeometric<P> + One + TotalOrd + AlertingSub,
+    T: Copy + SampleGeometric<P> + One + ProductOrd + AlertingSub,
     P: Float,
 {
     /// When no bounds are given, there are no protections against timing attacks.

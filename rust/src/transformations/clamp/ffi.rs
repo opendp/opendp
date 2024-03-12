@@ -3,7 +3,7 @@ use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
-use crate::traits::{CheckAtom, TotalOrd};
+use crate::traits::{CheckAtom, ProductOrd};
 use crate::transformations::{make_clamp, DatasetMetric};
 
 #[no_mangle]
@@ -24,7 +24,7 @@ pub extern "C" fn opendp_transformations__make_clamp(
         bounds: &AnyObject,
     ) -> Fallible<AnyTransformation>
     where
-        TA: 'static + Clone + TotalOrd + CheckAtom,
+        TA: 'static + Clone + ProductOrd + CheckAtom,
         M: 'static + DatasetMetric,
         (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
     {
