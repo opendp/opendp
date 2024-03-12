@@ -3,7 +3,7 @@ use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
-use crate::traits::{samplers::SampleBernoulli, InfDiv, InfLn, InfMul, InfSub};
+use crate::traits::{samplers::sample_bernoulli_float, InfDiv, InfLn, InfMul, InfSub};
 
 /// Make a Measurement that implements Basic RAPPOR
 ///
@@ -49,7 +49,7 @@ pub fn make_rappor(
                 return fallible!(FailedFunction, "number of bits set must be constant!");
             }
             arg.iter()
-                .map(|b| Ok(*b ^ bool::sample_bernoulli(f_2, constant_time)?))
+                .map(|b| Ok(*b ^ sample_bernoulli_float(f_2, constant_time)?))
                 .collect::<Fallible<Vec<bool>>>()
         }),
         input_metric,
