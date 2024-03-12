@@ -293,8 +293,14 @@ class RuntimeType(object):
         if isinstance(public_example, (Domain, Metric, Measure)):
             return RuntimeType.parse(public_example.type) # pragma: no cover
         
+        if isinstance(public_example, pl.LazyFrame):
+            return LazyFrame
+        
+        if isinstance(public_example, pl.DataFrame):
+            return DataFrame
+        
         if isinstance(public_example, pl.Series):
-            return "Series"
+            return Series
 
         if isinstance(public_example, tuple):
             return RuntimeType('Tuple', [cls.infer(e, py_object) for e in public_example])
@@ -458,9 +464,13 @@ usize: str = 'usize'
 f32: str = 'f32'
 f64: str = 'f64'
 String: str = 'String'
+LazyFrame: str = 'LazyFrame'
+DataFrame: str = 'DataFrame'
+Series: str = 'Series'
 AnyMeasurementPtr: str = "AnyMeasurementPtr"
 AnyTransformationPtr: str = "AnyTransformationPtr"
-
+AnyDomainPtr: str = "AnyDomainPtr"
+SeriesDomain: str = "SeriesDomain"
 
 class DomainDescriptor(RuntimeType):
     def __getitem__(self, subdomain):

@@ -41,6 +41,66 @@ atom_domain <- function(
 }
 
 
+#' Construct an instance of `DataFrameDomain`.
+#'
+#' [dataframe_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.dataframe_domain.html)
+#'
+#' @concept domains
+#' @param series_domains Domain of each series in the dataframe.
+#' @return Domain
+#' @export
+dataframe_domain <- function(
+    series_domains
+) {
+    # Standardize type arguments.
+    .T.series_domains <- new_runtime_type(origin = "Vec", args = list(SeriesDomain))
+
+    log <- new_constructor_log("dataframe_domain", "domains", new_hashtab(
+        list("series_domains"),
+        list(series_domains)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = .T.series_domains, inferred = rt_infer(series_domains))
+
+    # Call wrapper function.
+    output <- .Call(
+        "domains__dataframe_domain",
+        series_domains, rt_parse(.T.series_domains),
+        log, PACKAGE = "opendp")
+    output
+}
+
+
+#'
+#'
+#' @concept domains
+#' @param dataframe_domain undocumented
+#' @param counts undocumented
+#' @return Domain
+#' @export
+dataframe_domain_with_counts <- function(
+    dataframe_domain,
+    counts
+) {
+    # No type arguments to standardize.
+    log <- new_constructor_log("dataframe_domain_with_counts", "domains", new_hashtab(
+        list("dataframe_domain", "counts"),
+        list(dataframe_domain, counts)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = DataFrame, inferred = rt_infer(counts))
+
+    # Call wrapper function.
+    output <- .Call(
+        "domains__dataframe_domain_with_counts",
+        dataframe_domain, counts,
+        log, PACKAGE = "opendp")
+    output
+}
+
+
 #' Get the carrier type of a `domain`.
 #'
 #' @concept domains
@@ -108,6 +168,66 @@ domain_type <- function(
     output <- .Call(
         "domains__domain_type",
         this,
+        log, PACKAGE = "opendp")
+    output
+}
+
+
+#' Construct an instance of `LazyFrameDomain`.
+#'
+#' [lazyframe_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.lazyframe_domain.html)
+#'
+#' @concept domains
+#' @param series_domains Domain of each series in the lazyframe.
+#' @return Domain
+#' @export
+lazyframe_domain <- function(
+    series_domains
+) {
+    # Standardize type arguments.
+    .T.series_domains <- new_runtime_type(origin = "Vec", args = list(SeriesDomain))
+
+    log <- new_constructor_log("lazyframe_domain", "domains", new_hashtab(
+        list("series_domains"),
+        list(series_domains)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = .T.series_domains, inferred = rt_infer(series_domains))
+
+    # Call wrapper function.
+    output <- .Call(
+        "domains__lazyframe_domain",
+        series_domains, rt_parse(.T.series_domains),
+        log, PACKAGE = "opendp")
+    output
+}
+
+
+#'
+#'
+#' @concept domains
+#' @param lazyframe_domain undocumented
+#' @param counts undocumented
+#' @return Domain
+#' @export
+lazyframe_domain_with_counts <- function(
+    lazyframe_domain,
+    counts
+) {
+    # No type arguments to standardize.
+    log <- new_constructor_log("lazyframe_domain_with_counts", "domains", new_hashtab(
+        list("lazyframe_domain", "counts"),
+        list(lazyframe_domain, counts)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = LazyFrame, inferred = rt_infer(counts))
+
+    # Call wrapper function.
+    output <- .Call(
+        "domains__lazyframe_domain_with_counts",
+        lazyframe_domain, counts,
         log, PACKAGE = "opendp")
     output
 }

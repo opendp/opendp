@@ -813,6 +813,16 @@ struct FfiResult_____AnyDomain opendp_domains__user_domain(char *identifier,
  */
 struct FfiResult_____ExtrinsicObject opendp_domains___user_domain_descriptor(struct AnyDomain *domain);
 
+struct FfiResult_____AnyDomain opendp_domains__lazyframe_domain(struct AnyObject *series_domains);
+
+struct FfiResult_____AnyDomain opendp_domains__dataframe_domain(struct AnyObject *series_domains);
+
+struct FfiResult_____AnyDomain opendp_domains__lazyframe_domain_with_counts(struct AnyDomain *lazyframe_domain,
+                                                                            struct AnyObject *counts);
+
+struct FfiResult_____AnyDomain opendp_domains__dataframe_domain_with_counts(struct AnyDomain *dataframe_domain,
+                                                                            struct AnyObject *counts);
+
 struct FfiResult_____AnyDomain opendp_domains__series_domain(char *name,
                                                              const struct AnyDomain *element_domain);
 

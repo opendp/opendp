@@ -11,9 +11,13 @@ __all__ = [
     "_domain_free",
     "_user_domain_descriptor",
     "atom_domain",
+    "dataframe_domain",
+    "dataframe_domain_with_counts",
     "domain_carrier_type",
     "domain_debug",
     "domain_type",
+    "lazyframe_domain",
+    "lazyframe_domain_with_counts",
     "map_domain",
     "member",
     "option_domain",
@@ -111,6 +115,64 @@ def atom_domain(
     return output
 
 
+def dataframe_domain(
+    series_domains: Any
+) -> Domain:
+    r"""Construct an instance of `DataFrameDomain`.
+
+    [dataframe_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.dataframe_domain.html)
+
+    :param series_domains: Domain of each series in the dataframe.
+    :type series_domains: Any
+    :rtype: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_series_domains = py_to_c(series_domains, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[SeriesDomain]))
+
+    # Call library function.
+    lib_function = lib.opendp_domains__dataframe_domain
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_series_domains), Domain))
+
+    return output
+
+
+def dataframe_domain_with_counts(
+    dataframe_domain: Domain,
+    counts: Any
+) -> Domain:
+    r"""
+
+    :param dataframe_domain: 
+    :type dataframe_domain: Domain
+    :param counts: 
+    :type counts: Any
+    :rtype: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_dataframe_domain = py_to_c(dataframe_domain, c_type=Domain, type_name=None)
+    c_counts = py_to_c(counts, c_type=AnyObjectPtr, type_name=DataFrame)
+
+    # Call library function.
+    lib_function = lib.opendp_domains__dataframe_domain_with_counts
+    lib_function.argtypes = [Domain, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_dataframe_domain, c_counts), Domain))
+
+    return output
+
+
 def domain_carrier_type(
     this: Domain
 ) -> str:
@@ -185,6 +247,64 @@ def domain_type(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+
+    return output
+
+
+def lazyframe_domain(
+    series_domains: Any
+) -> Domain:
+    r"""Construct an instance of `LazyFrameDomain`.
+
+    [lazyframe_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.lazyframe_domain.html)
+
+    :param series_domains: Domain of each series in the lazyframe.
+    :type series_domains: Any
+    :rtype: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_series_domains = py_to_c(series_domains, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[SeriesDomain]))
+
+    # Call library function.
+    lib_function = lib.opendp_domains__lazyframe_domain
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_series_domains), Domain))
+
+    return output
+
+
+def lazyframe_domain_with_counts(
+    lazyframe_domain: Domain,
+    counts: Any
+) -> Domain:
+    r"""
+
+    :param lazyframe_domain: 
+    :type lazyframe_domain: Domain
+    :param counts: 
+    :type counts: Any
+    :rtype: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_lazyframe_domain = py_to_c(lazyframe_domain, c_type=Domain, type_name=None)
+    c_counts = py_to_c(counts, c_type=AnyObjectPtr, type_name=LazyFrame)
+
+    # Call library function.
+    lib_function = lib.opendp_domains__lazyframe_domain_with_counts
+    lib_function.argtypes = [Domain, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_lazyframe_domain, c_counts), Domain))
 
     return output
 
