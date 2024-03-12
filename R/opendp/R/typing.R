@@ -70,7 +70,7 @@ rt_infer <- function(public_example) {
         return(new_runtime_type("Option", list(new_runtime_type(is_unknown = TRUE))))
     }
 
-    stop(paste("unrecognized type:", class(public_example)))
+    stop("unrecognized type: ", class(public_example))
 }
 
 # nolint start: cyclocomp_linter

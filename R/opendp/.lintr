@@ -5,7 +5,6 @@ linters: all_linters(
     object_length_linter = NULL, # Variable and function names should not be longer than 30 characters.
     object_name_linter = NULL, # Variable and function name style should match snake_case or symbols.
     # With "all_linters", these problems are also reported:
-    condition_message_linter = NULL, # Don't use paste0 to build stop strings. Instead use the fact that these functions build condition message strings from their input (using "" as a separator). For translatable strings, prefer using gettextf().
     expect_identical_linter = NULL, # Use expect_identical(x, y) by default; resort to expect_equal() only when needed, e.g. when setting ignore_attr= or tolerance=.
     expect_s3_class_linter = NULL, # expect_s3_class(x, k) is better than expect_equal(class(x), k). Note also expect_s4_class() available for testing S4 objects.
     extraction_operator_linter = NULL, # Use `[[` instead of `$` to extract an element.
