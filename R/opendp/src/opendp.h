@@ -971,6 +971,11 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_private_select(con
                                                                              const struct AnyMetric *input_metric,
                                                                              const AnyMeasurement *measurement);
 
+struct FfiResult_____AnyMeasurement opendp_measurements__make_private_sum_expr(const struct AnyDomain *input_domain,
+                                                                               const struct AnyMetric *input_metric,
+                                                                               const void *scale,
+                                                                               const char *QO);
+
 /**
  * Internal function. Free the memory associated with `this`.
  */

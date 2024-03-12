@@ -32,3 +32,8 @@ pub use make_private_quantile::*;
 mod make_private_select;
 #[cfg(feature = "contrib")]
 pub use make_private_select::*;
+
+#[cfg(all(feature = "contrib", feature = "partials"))]
+mod make_sum;
+#[cfg(all(feature = "contrib", feature = "partials"))]
+pub use make_sum::*;

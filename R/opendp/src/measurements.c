@@ -465,6 +465,32 @@ SEXP measurements__make_private_select(
 }
 
 
+SEXP measurements__make_private_sum_expr(
+    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP QO, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(scale);
+    PROTECT(QO);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    void * c_scale = sexp_to_voidptr(scale, QO);
+    char * c_QO = rt_to_string(QO);
+
+    // Call library function.
+    FfiResult_____AnyMeasurement _result = opendp_measurements__make_private_sum_expr(c_input_domain, c_input_metric, c_scale, c_QO);
+
+    UNPROTECT(5);
+    if(_result.tag == Err_____AnyMeasurement)
+        return(extract_error(_result.err));
+    AnyMeasurement* _return_value = _result.ok;
+    return(anymeasurementptr_to_sexp(_return_value, log));
+}
+
+
 SEXP measurements__make_randomized_response(
     SEXP categories, SEXP prob, SEXP constant_time, SEXP T, SEXP QO, SEXP T_categories, SEXP log
 ) {
