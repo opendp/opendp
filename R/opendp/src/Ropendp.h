@@ -151,6 +151,7 @@ SEXP transformations__make_quantile_score_candidates(SEXP input_domain, SEXP inp
 SEXP transformations__make_quantiles_from_counts(SEXP bin_edges, SEXP alphas, SEXP interpolation, SEXP TA, SEXP F, SEXP T_bin_edges, SEXP T_alphas, SEXP log);
 SEXP transformations__make_resize(SEXP input_domain, SEXP input_metric, SEXP size, SEXP constant, SEXP MO, SEXP T_constant, SEXP log);
 SEXP transformations__make_scan_csv(SEXP input_domain, SEXP input_metric, SEXP cache, SEXP low_memory, SEXP rechunk, SEXP log);
+SEXP transformations__make_scan_parquet(SEXP input_domain, SEXP input_metric, SEXP log);
 SEXP transformations__make_select_column(SEXP key, SEXP K, SEXP TOA, SEXP log);
 SEXP transformations__make_series_to_option_vec(SEXP input_domain, SEXP input_metric, SEXP T, SEXP log);
 SEXP transformations__make_series_to_vec(SEXP input_domain, SEXP input_metric, SEXP T, SEXP log);

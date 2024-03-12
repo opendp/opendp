@@ -6,3 +6,6 @@ pub use lazyframe::*;
 
 mod series;
 pub use series::*;
+
+mod parquet;
+pub use parquet::*;

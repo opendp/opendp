@@ -19,3 +19,11 @@ pub use make_unpack::*;
 mod write_csv;
 #[cfg(feature = "contrib")]
 pub use write_csv::*;
+#[cfg(feature = "contrib")]
+mod scan_parquet;
+#[cfg(feature = "contrib")]
+pub use scan_parquet::*;
+#[cfg(feature = "contrib")]
+mod sink_parquet;
+#[cfg(feature = "contrib")]
+pub use sink_parquet::*;
