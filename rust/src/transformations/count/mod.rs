@@ -10,7 +10,7 @@ use opendp_derive::bootstrap;
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, MapDomain, VectorDomain};
 use crate::error::*;
-use crate::metrics::{AbsoluteDistance, LpDistance, SymmetricDistance};
+use crate::metrics::{AbsoluteDistance, Lp, SymmetricDistance};
 use crate::traits::{CollectionSize, Hashable, Number, Primitive};
 
 #[bootstrap(features("contrib"), generics(TIA(suppress), TO(default = "int")))]
@@ -99,7 +99,7 @@ where
 pub trait CountByCategoriesConstant<QO> {
     fn get_stability_constant() -> QO;
 }
-impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
+impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for Lp<P, AbsoluteDistance<Q>> {
     fn get_stability_constant() -> Q {
         Q::one()
     }
@@ -200,7 +200,7 @@ where
 pub trait CountByConstant<QO> {
     fn get_stability_constant() -> Fallible<QO>;
 }
-impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
+impl<const P: usize, Q: One> CountByConstant<Q> for Lp<P, AbsoluteDistance<Q>> {
     fn get_stability_constant() -> Fallible<Q> {
         if P == 0 {
             return fallible!(MakeTransformation, "P must be positive");

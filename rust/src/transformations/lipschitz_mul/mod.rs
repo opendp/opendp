@@ -6,7 +6,7 @@ use crate::{
     core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    metrics::{AbsoluteDistance, LpDistance},
+    metrics::{AbsoluteDistance, Lp},
     traits::{
         AlertingAbs, CheckNull, Float, FloatBits, InfAdd, InfMul, InfPowI, SaturatingMul, TotalOrd,
     },
@@ -126,7 +126,7 @@ where
 /// Implemented for any metric that supports multiplication lipschitz extensions
 pub trait LipschitzMulFloatMetric: Metric {}
 
-impl<const P: usize, Q> LipschitzMulFloatMetric for LpDistance<P, Q> {}
+impl<const P: usize, Q> LipschitzMulFloatMetric for Lp<P, AbsoluteDistance<Q>> {}
 impl<Q> LipschitzMulFloatMetric for AbsoluteDistance<Q> {}
 
 #[cfg(test)]

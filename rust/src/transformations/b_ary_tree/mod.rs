@@ -2,7 +2,7 @@ use crate::{
     core::{Function, Metric, MetricSpace, StabilityMap, Transformation},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    metrics::LpDistance,
+    metrics::{AbsoluteDistance, Lp},
     traits::{InfCast, Integer, Number},
 };
 
@@ -115,7 +115,7 @@ fn num_nodes_from_num_layers(num_layers: usize, b: usize) -> usize {
 }
 
 pub trait BAryTreeMetric: Metric {}
-impl<const P: usize, T> BAryTreeMetric for LpDistance<P, T> {}
+impl<const P: usize, T> BAryTreeMetric for Lp<P, AbsoluteDistance<T>> {}
 
 #[bootstrap(features("contrib"))]
 /// Returns an approximation to the ideal `branching_factor` for a dataset of a given size,
