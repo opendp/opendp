@@ -298,6 +298,30 @@ SEXP transformations__make_clamp(
 }
 
 
+SEXP transformations__make_col(
+    SEXP input_domain, SEXP input_metric, SEXP col_name, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(col_name);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    AnyObject * c_col_name = sexp_to_anyobjectptr(col_name, String);
+
+    // Call library function.
+    FfiResult_____AnyTransformation _result = opendp_transformations__make_col(c_input_domain, c_input_metric, c_col_name);
+
+    UNPROTECT(4);
+    if(_result.tag == Err_____AnyTransformation)
+        return(extract_error(_result.err));
+    AnyTransformation* _return_value = _result.ok;
+    return(anytransformationptr_to_sexp(_return_value, log));
+}
+
+
 SEXP transformations__make_collect(
     SEXP input_domain, SEXP input_metric, SEXP log
 ) {

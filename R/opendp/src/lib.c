@@ -128,6 +128,7 @@ static R_CMethodDef R_CDef[] = {
     {"transformations__make_cast_inherent", (DL_FUNC) &transformations__make_cast_inherent, 4},
     {"transformations__make_cdf", (DL_FUNC) &transformations__make_cdf, 2},
     {"transformations__make_clamp", (DL_FUNC) &transformations__make_clamp, 6},
+    {"transformations__make_col", (DL_FUNC) &transformations__make_col, 4},
     {"transformations__make_collect", (DL_FUNC) &transformations__make_collect, 3},
     {"transformations__make_column", (DL_FUNC) &transformations__make_column, 4},
     {"transformations__make_consistent_b_ary_tree", (DL_FUNC) &transformations__make_consistent_b_ary_tree, 4},
