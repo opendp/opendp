@@ -2712,7 +2712,7 @@ def make_scan_csv(
 
     **Supporting Elements:**
 
-    * Input Domain:   `CsvDomain`
+    * Input Domain:   `CsvDomain<LazyFrame>`
     * Output Domain:  `LazyFrameDomain`
     * Input Metric:   `M`
     * Output Metric:  `M`

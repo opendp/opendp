@@ -1,7 +1,10 @@
+use std::fmt::{Debug, Formatter};
+use std::fs::File;
 use std::path::PathBuf;
 
 use polars::prelude::*;
 
+use crate::domains::{Frame, FrameDomain};
 use crate::{
     core::{Domain, MetricSpace},
     error::Fallible,
@@ -10,8 +13,6 @@ use crate::{
 
 #[cfg(feature = "ffi")]
 mod ffi;
-
-use super::LazyFrameDomain;
 
 /// # Proof Definition
 /// `CsvDomain(F)` is the domain of all CSV files holding data represented by `FrameDomain(F)`.
@@ -31,29 +32,31 @@ use super::LazyFrameDomain;
 /// let csv_domain = CsvDomain::new(lazy_frame_domain);
 /// # opendp::error::Fallible::Ok(())
 /// ```
-#[derive(Clone, PartialEq, Debug)]
-pub struct CsvDomain {
-    pub lazyframe_domain: LazyFrameDomain,
+#[derive(Clone)]
+pub struct CsvDomain<F: Frame> {
+    pub frame_domain: FrameDomain<F>,
     pub separator: char,
-    pub has_header: bool,
+    pub include_header: bool,
     pub skip_rows: usize,
     pub comment_char: Option<char>,
     pub quote_char: Option<char>,
     pub eol_char: char,
     pub null_values: Option<NullValues>,
+    pub null_value_repr: String,
 }
 
-impl CsvDomain {
-    pub fn new(lazyframe_domain: LazyFrameDomain) -> Self {
+impl<F: Frame> CsvDomain<F> {
+    pub fn new(frame_domain: FrameDomain<F>) -> Self {
         CsvDomain {
-            lazyframe_domain,
+            frame_domain,
             separator: ',',
-            has_header: true,
+            include_header: true,
             skip_rows: 0,
             comment_char: None,
             quote_char: Some('"'),
             eol_char: '\n',
             null_values: None,
+            null_value_repr: "".to_string(),
         }
     }
 
@@ -67,7 +70,7 @@ impl CsvDomain {
     /// Set whether the CSV file has headers
     #[must_use]
     pub fn has_header(mut self, has_header: bool) -> Self {
-        self.has_header = has_header;
+        self.include_header = has_header;
         self
     }
 
@@ -106,36 +109,90 @@ impl CsvDomain {
         self
     }
 
+    /// Set the file’s null value representation.
+    pub fn with_null_value_repr(mut self, null_value_repr: String) -> Self {
+        self.null_value_repr = null_value_repr;
+        self
+    }
+
     pub fn new_reader<'a>(&self, path: PathBuf) -> LazyCsvReader<'a> {
         LazyCsvReader::new(path)
             // parsing errors are a side-channel
             .with_ignore_errors(true)
             // fill missing columns with null
             .with_missing_is_null(true)
-            .with_schema(Some(Arc::new(self.lazyframe_domain.schema())))
+            .with_schema(Some(Arc::new(self.frame_domain.schema())))
             .with_separator(self.separator as u8)
-            .has_header(self.has_header)
+            .has_header(self.include_header)
             .with_skip_rows(self.skip_rows)
             .with_quote_char(self.quote_char.map(|v| v as u8))
             .with_end_of_line_char(self.eol_char as u8)
             .with_null_values(self.null_values.clone())
     }
+
+    pub fn new_writer(&self, path: PathBuf) -> Fallible<CsvWriter<File>> {
+        let file = File::create(path).map_err(|e| err!(FailedFunction, e.to_string()))?;
+
+        Ok(CsvWriter::new(file)
+            .with_separator(self.separator as u8)
+            .include_header(self.include_header)
+            .with_quote_char(self.quote_char.map(|v| v as u8).unwrap_or(b'\"'))
+            .with_null_value(self.null_value_repr.clone()))
+    }
 }
 
-impl Domain for CsvDomain {
+impl<F: Frame> PartialEq for CsvDomain<F> {
+    fn eq(&self, other: &Self) -> bool {
+        return self.frame_domain == other.frame_domain
+            && self.separator == other.separator
+            && self.include_header == other.include_header
+            && self.skip_rows == other.skip_rows
+            && self.comment_char == other.comment_char
+            && self.quote_char == other.quote_char
+            && self.eol_char == other.eol_char
+            && self.null_values == other.null_values
+            && self.null_value_repr == other.null_value_repr;
+    }
+}
+
+impl<F: Frame> Debug for CsvDomain<F> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "CsvDomain({})",
+            self.frame_domain
+                .series_domains
+                .iter()
+                .map(|s| format!("{}: {}", s.field.name, s.field.dtype))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+}
+
+impl Domain for CsvDomain<LazyFrame> {
     type Carrier = PathBuf;
 
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        self.lazyframe_domain
+        self.frame_domain
             .member(&self.new_reader(val.clone()).finish()?)
     }
 }
 
-impl<D: DatasetMetric> MetricSpace for (CsvDomain, D)
+impl Domain for CsvDomain<DataFrame> {
+    type Carrier = PathBuf;
+
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        self.frame_domain
+            .member(&self.new_reader(val.clone()).finish()?.collect()?)
+    }
+}
+
+impl<F: Frame, D: DatasetMetric> MetricSpace for (CsvDomain<F>, D)
 where
-    (LazyFrameDomain, D): MetricSpace,
+    (FrameDomain<F>, D): MetricSpace,
 {
     fn check_space(&self) -> Fallible<()> {
-        (self.0.lazyframe_domain.clone(), self.1.clone()).check_space()
+        (self.0.frame_domain.clone(), self.1.clone()).check_space()
     }
 }
