@@ -368,6 +368,26 @@ where
         })
     }
 
+    pub fn decompose(
+        self,
+    ) -> (
+        DI,
+        DO,
+        Function<DI::Carrier, DO::Carrier>,
+        MI,
+        MO,
+        StabilityMap<MI, MO>,
+    ) {
+        (
+            self.input_domain,
+            self.output_domain,
+            self.function,
+            self.input_metric,
+            self.output_metric,
+            self.stability_map,
+        )
+    }
+
     #[allow(dead_code)]
     pub(crate) fn with_map<MI2: Metric, MO2: Metric>(
         &self,

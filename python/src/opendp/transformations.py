@@ -23,6 +23,7 @@ __all__ = [
     "make_cast_inherent",
     "make_cdf",
     "make_clamp",
+    "make_collect",
     "make_consistent_b_ary_tree",
     "make_count",
     "make_count_by",
@@ -40,6 +41,7 @@ __all__ = [
     "make_index",
     "make_is_equal",
     "make_is_null",
+    "make_lazy",
     "make_lipschitz_float_mul",
     "make_mean",
     "make_metric_bounded",
@@ -70,6 +72,7 @@ __all__ = [
     "then_cast_default",
     "then_cast_inherent",
     "then_clamp",
+    "then_collect",
     "then_count",
     "then_count_by",
     "then_count_by_categories",
@@ -85,6 +88,7 @@ __all__ = [
     "then_index",
     "then_is_equal",
     "then_is_null",
+    "then_lazy",
     "then_mean",
     "then_metric_bounded",
     "then_metric_unbounded",
@@ -804,6 +808,62 @@ def then_clamp(
         input_domain=input_domain,
         input_metric=input_metric,
         bounds=bounds))
+
+
+
+def make_collect(
+    input_domain: Domain,
+    input_metric: Metric
+) -> Transformation:
+    r"""Converts a LazyFrame to a DataFrame
+
+    [make_collect in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_collect.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `LazyFrameDomain`
+    * Output Domain:  `DataFrameDomain`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+
+    :param input_domain: 
+    :type input_domain: Domain
+    :param input_metric: 
+    :type input_metric: Metric
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_collect
+    lib_function.argtypes = [Domain, Metric]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric), Transformation))
+
+    return output
+
+def then_collect(
+
+):  
+    r"""partial constructor of make_collect
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_collect`
+
+
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_collect(
+        input_domain=input_domain,
+        input_metric=input_metric))
 
 
 
@@ -1994,6 +2054,62 @@ def then_is_null(
 
     """
     return PartialConstructor(lambda input_domain, input_metric: make_is_null(
+        input_domain=input_domain,
+        input_metric=input_metric))
+
+
+
+def make_lazy(
+    input_domain: Domain,
+    input_metric: Metric
+) -> Transformation:
+    r"""Converts a DataFrame to a LazyFrame
+
+    [make_lazy in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_lazy.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `DataFrameDomain`
+    * Output Domain:  `LazyFrameDomain`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+
+    :param input_domain: 
+    :type input_domain: Domain
+    :param input_metric: 
+    :type input_metric: Metric
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_lazy
+    lib_function.argtypes = [Domain, Metric]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric), Transformation))
+
+    return output
+
+def then_lazy(
+
+):  
+    r"""partial constructor of make_lazy
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_lazy`
+
+
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_lazy(
         input_domain=input_domain,
         input_metric=input_metric))
 
