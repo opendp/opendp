@@ -76,6 +76,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Install nightly
+        run: rustup update nightly
+
       - name: Cargo run
         run: cargo +nightly -Zscript getting-started/quickstart.rs
 
