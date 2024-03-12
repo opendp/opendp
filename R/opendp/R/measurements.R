@@ -1045,6 +1045,174 @@ then_laplace <- function(
 }
 
 
+#' laplace expr constructor
+#'
+#' Polars operator to make the Laplace noise measurement
+#'
+#' [make_laplace_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_laplace_expr.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `ExprDomain<MI::LazyDomain>`
+#' * Output Type:    `Expr`
+#' * Input Metric:   `MI`
+#' * Output Measure: `MaxDivergence<QO>`
+#'
+#' @concept measurements
+#' @param input_domain ExprDomain
+#' @param input_metric The metric space under which neighboring LazyFrames are compared
+#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+#' @param .MI undocumented
+#' @param .QO undocumented
+#' @return Measurement
+#' @export
+make_laplace_expr <- function(
+    input_domain,
+    input_metric,
+    scale,
+    .MI,
+    .QO = NULL
+) {
+    # Standardize type arguments.
+    .MI <- rt_parse(type_name = .MI)
+    .QO <- parse_or_infer(type_name = .QO, public_example = scale)
+
+    log <- new_constructor_log("make_laplace_expr", "measurements", new_hashtab(
+        list("input_domain", "input_metric", "scale", "MI", "QO"),
+        list(input_domain, input_metric, scale, .MI, .QO)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
+
+    # Call wrapper function.
+    output <- .Call(
+        "measurements__make_laplace_expr",
+        input_domain, input_metric, scale, .MI, .QO,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial laplace expr constructor
+#'
+#' See documentation for [make_laplace_expr()] for details.
+#'
+#' @concept measurements
+#' @param lhs The prior transformation or metric space.
+#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+#' @param .MI undocumented
+#' @param .QO undocumented
+#' @return Measurement
+#' @export
+then_laplace_expr <- function(
+    lhs,
+    scale,
+    .MI,
+    .QO = NULL
+) {
+
+    log <- new_constructor_log("then_laplace_expr", "measurements", new_hashtab(
+        list("scale", "MI", "QO"),
+        list(scale, .MI, .QO)
+    ))
+
+    make_chain_dyn(
+        make_laplace_expr(
+            output_domain(lhs),
+            output_metric(lhs),
+            scale = scale,
+            .MI = .MI,
+            .QO = .QO),
+        lhs,
+        log)
+}
+
+
+#' private mean expr constructor
+#'
+#' Polars operator to compute the private mean of a column in a LazyFrame or LazyGroupBy
+#'
+#' [make_private_mean_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_private_mean_expr.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `ExprDomain<MI::LazyDomain>`
+#' * Output Type:    `Expr`
+#' * Input Metric:   `MI`
+#' * Output Measure: `MaxDivergence<QO>`
+#'
+#' @concept measurements
+#' @param input_domain ExprDomain
+#' @param input_metric The metric under which neighboring LazyFrames are compared
+#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+#' @param .TI Data type of the input data
+#' @param .QO Output data type of the scale and epsilon
+#' @return Measurement
+#' @export
+make_private_mean_expr <- function(
+    input_domain,
+    input_metric,
+    scale,
+    .TI,
+    .QO = "float"
+) {
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    .TI <- rt_parse(type_name = .TI)
+    .QO <- parse_or_infer(type_name = .QO, public_example = scale)
+
+    log <- new_constructor_log("make_private_mean_expr", "measurements", new_hashtab(
+        list("input_domain", "input_metric", "scale", "TI", "QO"),
+        list(input_domain, input_metric, scale, .TI, .QO)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
+
+    # Call wrapper function.
+    output <- .Call(
+        "measurements__make_private_mean_expr",
+        input_domain, input_metric, scale, .TI, .QO,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial private mean expr constructor
+#'
+#' See documentation for [make_private_mean_expr()] for details.
+#'
+#' @concept measurements
+#' @param lhs The prior transformation or metric space.
+#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+#' @param .TI Data type of the input data
+#' @param .QO Output data type of the scale and epsilon
+#' @return Measurement
+#' @export
+then_private_mean_expr <- function(
+    lhs,
+    scale,
+    .TI,
+    .QO = "float"
+) {
+
+    log <- new_constructor_log("then_private_mean_expr", "measurements", new_hashtab(
+        list("scale", "TI", "QO"),
+        list(scale, .TI, .QO)
+    ))
+
+    make_chain_dyn(
+        make_private_mean_expr(
+            output_domain(lhs),
+            output_metric(lhs),
+            scale = scale,
+            .TI = .TI,
+            .QO = .QO),
+        lhs,
+        log)
+}
+
+
 #' randomized response constructor
 #'
 #' Make a Measurement that implements randomized response on a categorical value.
