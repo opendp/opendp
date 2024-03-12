@@ -4,6 +4,7 @@ use std::ffi::{c_void, CString};
 use std::fmt::Formatter;
 use std::hash::Hash;
 use std::os::raw::c_char;
+use std::path::PathBuf;
 use std::slice;
 
 use arrow::ffi::{ArrowArray, ArrowSchema};
@@ -69,6 +70,10 @@ pub extern "C" fn opendp_data__slice_as_object(
         let str_ptr = *util::as_ref(raw.ptr as *const *const c_char).ok_or_else(|| err!(FFI, "null pointer"))?;
         let string = util::to_str(str_ptr)?.to_owned();
         Ok(AnyObject::new(string))
+    }
+    fn raw_to_pathbuf(raw: &FfiSlice) -> Fallible<AnyObject> {
+        let string = util::to_str(raw.ptr as *const c_char)?.to_owned();
+        Ok(AnyObject::new(PathBuf::from(string)))
     }
     fn raw_to_vec_string(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_char, raw.len) };
@@ -201,6 +206,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         TypeContents::PLAIN("DataFrame") => raw_to_dataframe(raw),
         TypeContents::PLAIN("Series") => raw_to_series(raw),
         TypeContents::PLAIN("SeriesDomain") => raw_to_series(raw),
+        TypeContents::PLAIN("PathBuf") => raw_to_pathbuf(raw),
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(&element_id));
             dispatch!(raw_to_slice, [(element, @primitives)], (raw))

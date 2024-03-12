@@ -62,6 +62,7 @@ SEXP data__object_type(SEXP this, SEXP log);
 SEXP data__smd_curve_epsilon(SEXP curve, SEXP delta, SEXP T_delta, SEXP log);
 SEXP data__to_string(SEXP this, SEXP log);
 SEXP domains__atom_domain(SEXP bounds, SEXP nullable, SEXP T, SEXP T_bounds, SEXP log);
+SEXP domains__csv_domain(SEXP lazyframe_domain, SEXP separator, SEXP has_header, SEXP skip_rows, SEXP quote_char, SEXP eol_char, SEXP T_quote_char, SEXP log);
 SEXP domains__dataframe_domain(SEXP series_domains, SEXP T_series_domains, SEXP log);
 SEXP domains__dataframe_domain_with_counts(SEXP dataframe_domain, SEXP counts, SEXP log);
 SEXP domains__domain_carrier_type(SEXP this, SEXP log);
@@ -146,6 +147,7 @@ SEXP transformations__make_ordered_random(SEXP input_domain, SEXP input_metric, 
 SEXP transformations__make_quantile_score_candidates(SEXP input_domain, SEXP input_metric, SEXP candidates, SEXP alpha, SEXP TIA, SEXP T_candidates, SEXP log);
 SEXP transformations__make_quantiles_from_counts(SEXP bin_edges, SEXP alphas, SEXP interpolation, SEXP TA, SEXP F, SEXP T_bin_edges, SEXP T_alphas, SEXP log);
 SEXP transformations__make_resize(SEXP input_domain, SEXP input_metric, SEXP size, SEXP constant, SEXP MO, SEXP T_constant, SEXP log);
+SEXP transformations__make_scan_csv(SEXP input_domain, SEXP input_metric, SEXP cache, SEXP low_memory, SEXP rechunk, SEXP log);
 SEXP transformations__make_select_column(SEXP key, SEXP K, SEXP TOA, SEXP log);
 SEXP transformations__make_sized_bounded_float_checked_sum(SEXP size, SEXP bounds, SEXP S, SEXP T, SEXP T_bounds, SEXP log);
 SEXP transformations__make_sized_bounded_float_ordered_sum(SEXP size, SEXP bounds, SEXP S, SEXP T, SEXP T_bounds, SEXP log);
