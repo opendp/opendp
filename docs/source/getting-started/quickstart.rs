@@ -1,9 +1,12 @@
 #!/usr/bin/env -S cargo +nightly -Zscript
 ```cargo
+# init
 [dependencies]
 opendp = { version = "0.9.2", features = ["contrib", "honest-but-curious"] }
+# /init
 ```
 
+// demo
 use opendp::{
     domains::AtomDomain,
     measurements::then_base_laplace,
@@ -16,3 +19,4 @@ fn main() {
     let dp_value = base_laplace.expect("unexpected error").invoke(&123.0);
     println!("DP value: {}", dp_value.expect("unexpected error"));
 }
+// /demo
