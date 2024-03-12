@@ -120,8 +120,8 @@ fn generate_function(
         .map(|v| format!(" -> {}", v))
         .unwrap_or_else(String::new);
 
-    let docstring = indent(generate_docstring(func, hierarchy));
-    let body = indent(generate_body(module_name, func, typemap));
+    let docstring = indent(4, generate_docstring(func, hierarchy));
+    let body = indent(4, generate_body(module_name, func, typemap));
 
     let then_func = if func.supports_partial {
         format!(
@@ -143,6 +143,7 @@ def {then_name}(
             then_name = func.name.replacen("make_", "then_", 1),
             func_name = func.name,
             doc_params = indent(
+                4,
                 func.args
                     .iter()
                     .skip(2)
@@ -150,20 +151,24 @@ def {then_name}(
                     .collect::<Vec<String>>()
                     .join("\n")
             ),
-            then_args = indent(args[2..].join(",\n")),
+            then_args = indent(4, args[2..].join(",\n")),
             dom_met = func.args[..2]
                 .iter()
                 .map(|arg| arg.name())
                 .collect::<Vec<_>>()
                 .join(", "),
             name = func.name,
-            args = indent(indent(
-                func.args
-                    .iter()
-                    .map(|arg| format!("{name}={name}", name = arg.name()))
-                    .collect::<Vec<_>>()
-                    .join(",\n")
-            ))
+            args = indent(
+                4,
+                indent(
+                    4,
+                    func.args
+                        .iter()
+                        .map(|arg| format!("{name}={name}", name = arg.name()))
+                        .collect::<Vec<_>>()
+                        .join(",\n")
+                )
+            )
         )
     } else {
         String::new()
@@ -178,7 +183,7 @@ def {func_name}(
 {body}{then_func}
 "#,
         func_name = func.name,
-        args = indent(args.join(",\n"))
+        args = indent(4, args.join(",\n"))
     )
 }
 

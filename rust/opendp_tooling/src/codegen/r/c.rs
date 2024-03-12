@@ -170,8 +170,8 @@ SEXP {module_name}__{func_name}(
 }}
 "#,
         func_name = func.name,
-        args = indent(format!("{args}SEXP log")),
-        body = indent(generate_c_body(module_name, func))
+        args = indent(4, format!("{args}SEXP log")),
+        body = indent(4, generate_c_body(module_name, func))
     )
 }
 

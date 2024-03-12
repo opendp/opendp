@@ -72,34 +72,42 @@ fn generate_r_function(
             then_docs = generate_then_doc_block(module_name, func, hierarchy),
             then_name = func.name.replacen("make_", "then_", 1),
             then_args = indent(
+                4,
                 once("lhs".to_string())
                     .chain(args[offset..].to_owned())
                     .collect::<Vec<_>>()
                     .join(",\n")
             ),
-            then_log = indent(generate_logger(module_name, func, true)),
+            then_log = indent(4, generate_logger(module_name, func, true)),
             name = func.name,
-            args = indent(indent(indent(
-                if func.supports_partial {
-                    vec![
-                        "output_domain(lhs)".to_string(),
-                        "output_metric(lhs)".to_string(),
-                    ]
-                } else {
-                    vec![]
-                }
-                .into_iter()
-                .chain(func.args[offset..].iter().map(|arg| {
-                    let name = if arg.is_type {
-                        format!(".{}", arg.name())
-                    } else {
-                        sanitize_r(arg.name(), arg.is_type)
-                    };
-                    format!("{name} = {name}")
-                }))
-                .collect::<Vec<_>>()
-                .join(",\n")
-            )))
+            args = indent(
+                4,
+                indent(
+                    4,
+                    indent(
+                        4,
+                        if func.supports_partial {
+                            vec![
+                                "output_domain(lhs)".to_string(),
+                                "output_metric(lhs)".to_string(),
+                            ]
+                        } else {
+                            vec![]
+                        }
+                        .into_iter()
+                        .chain(func.args[offset..].iter().map(|arg| {
+                            let name = if arg.is_type {
+                                format!(".{}", arg.name())
+                            } else {
+                                sanitize_r(arg.name(), arg.is_type)
+                            };
+                            format!("{name} = {name}")
+                        }))
+                        .collect::<Vec<_>>()
+                        .join(",\n")
+                    )
+                )
+            )
         )
     } else {
         String::default()
@@ -116,8 +124,8 @@ fn generate_r_function(
 "#,
         doc_block = generate_doc_block(module_name, func, hierarchy),
         func_name = func.name.trim_start_matches("_"),
-        args = indent(args.join(",\n")),
-        body = indent(generate_r_body(module_name, func))
+        args = indent(4, args.join(",\n")),
+        body = indent(4, generate_r_body(module_name, func))
     )
 }
 

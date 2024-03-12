@@ -19,13 +19,13 @@ pub fn write_bindings(base_dir: PathBuf, files: HashMap<PathBuf, String>) {
 }
 
 #[allow(dead_code)]
-pub(crate) fn indent(text: String) -> String {
+pub(crate) fn indent(number_of_spaces: usize, text: String) -> String {
     text.split('\n')
         .map(|v| {
             if v.is_empty() {
                 String::new()
             } else {
-                format!("    {}", v)
+                format!("{}{}", " ".repeat(number_of_spaces), v)
             }
         })
         .collect::<Vec<_>>()
