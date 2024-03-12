@@ -96,6 +96,7 @@ static R_CMethodDef R_CDef[] = {
     {"measurements__make_private_agg", (DL_FUNC) &measurements__make_private_agg, 4},
     {"measurements__make_private_mean_expr", (DL_FUNC) &measurements__make_private_mean_expr, 5},
     {"measurements__make_private_quantile_expr", (DL_FUNC) &measurements__make_private_quantile_expr, 9},
+    {"measurements__make_private_select", (DL_FUNC) &measurements__make_private_select, 4},
     {"measurements__make_randomized_response", (DL_FUNC) &measurements__make_randomized_response, 7},
     {"measurements__make_randomized_response_bool", (DL_FUNC) &measurements__make_randomized_response_bool, 4},
     {"measurements__make_report_noisy_max_gumbel", (DL_FUNC) &measurements__make_report_noisy_max_gumbel, 6},

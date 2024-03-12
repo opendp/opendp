@@ -1379,6 +1379,83 @@ then_private_quantile_expr <- function(
 }
 
 
+#' private select constructor
+#'
+#' Make a Transformation that returns a Measurement in select context.
+#'
+#' Valid inputs for `input_domain` and `input_metric` are:
+#'
+#' | `input_domain`                  | `input_metric`                             |
+#' | ------------------------------- | ------------------------------------------ |
+#' | `LazyFrameDomain`               | `SymmetricDistance`                        |
+#' | `LazyFrameDomain`               | `InsertDeleteDistance`                     |
+#' | `LazyFrameDomain`               | `ChangeOneDistance` if Margins provided    |
+#' | `LazyFrameDomain`               | `HammingDistance` if Margins provided      |
+#' | `LazyFrameDomain`               | `AbsoluteDistance`                         |
+#'
+#' [make_private_select in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_private_select.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `LazyFrameDomain`
+#' * Output Type:    `LazyFrame`
+#' * Input Metric:   `T::InputMetric`
+#' * Output Measure: `T::OutputMeasure`
+#'
+#' @concept measurements
+#' @param input_domain LazyFrameDomain.
+#' @param input_metric The metric space under which neighboring LazyFrame frames are compared.
+#' @param measurement undocumented
+#' @return Measurement
+#' @export
+make_private_select <- function(
+    input_domain,
+    input_metric,
+    measurement
+) {
+    # No type arguments to standardize.
+    log <- new_constructor_log("make_private_select", "measurements", new_hashtab(
+        list("input_domain", "input_metric", "measurement"),
+        list(input_domain, input_metric, measurement)
+    ))
+
+    # Call wrapper function.
+    output <- .Call(
+        "measurements__make_private_select",
+        input_domain, input_metric, measurement,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial private select constructor
+#'
+#' See documentation for [make_private_select()] for details.
+#'
+#' @concept measurements
+#' @param lhs The prior transformation or metric space.
+#' @param measurement undocumented
+#' @return Measurement
+#' @export
+then_private_select <- function(
+    lhs,
+    measurement
+) {
+
+    log <- new_constructor_log("then_private_select", "measurements", new_hashtab(
+        list("measurement"),
+        list(measurement)
+    ))
+
+    make_chain_dyn(
+        make_private_select(
+            output_domain(lhs),
+            output_metric(lhs),
+            measurement = measurement),
+        lhs,
+        log)
+}
+
+
 #' randomized response constructor
 #'
 #' Make a Measurement that implements randomized response on a categorical value.
