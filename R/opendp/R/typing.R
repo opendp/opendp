@@ -161,7 +161,7 @@ rt_to_string <- function(rt) {
 }
 
 #' @export
-`print.runtime_type` <- function(x, ...) print(rt_to_string(x), ...)
+print.runtime_type <- function(x, ...) print(rt_to_string(x), ...)
 
 # nolint start: cyclocomp_linter
 rt_assert_is_similar <- function(expected, inferred) {
