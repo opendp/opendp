@@ -24,6 +24,7 @@ __all__ = [
     "make_cdf",
     "make_clamp",
     "make_collect",
+    "make_column",
     "make_consistent_b_ary_tree",
     "make_count",
     "make_count_by",
@@ -52,6 +53,8 @@ __all__ = [
     "make_resize",
     "make_scan_csv",
     "make_select_column",
+    "make_series_to_option_vec",
+    "make_series_to_vec",
     "make_sized_bounded_float_checked_sum",
     "make_sized_bounded_float_ordered_sum",
     "make_sized_bounded_int_checked_sum",
@@ -73,6 +76,7 @@ __all__ = [
     "then_cast_inherent",
     "then_clamp",
     "then_collect",
+    "then_column",
     "then_count",
     "then_count_by",
     "then_count_by_categories",
@@ -96,6 +100,8 @@ __all__ = [
     "then_quantile_score_candidates",
     "then_resize",
     "then_scan_csv",
+    "then_series_to_option_vec",
+    "then_series_to_vec",
     "then_sum",
     "then_sum_of_squared_deviations",
     "then_unordered",
@@ -864,6 +870,68 @@ def then_collect(
     return PartialConstructor(lambda input_domain, input_metric: make_collect(
         input_domain=input_domain,
         input_metric=input_metric))
+
+
+
+def make_column(
+    input_domain: Domain,
+    input_metric: Metric,
+    column_name: Any
+) -> Transformation:
+    r"""Extract a Series from a DataFrame
+
+    [make_column in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_column.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `DataFrameDomain`
+    * Output Domain:  `SeriesDomain`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+
+    :param input_domain: 
+    :type input_domain: Domain
+    :param input_metric: 
+    :type input_metric: Metric
+    :param column_name: 
+    :type column_name: Any
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_column_name = py_to_c(column_name, c_type=AnyObjectPtr, type_name=String)
+
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_column
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_column_name), Transformation))
+
+    return output
+
+def then_column(
+    column_name: Any
+):  
+    r"""partial constructor of make_column
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_column`
+
+    :param column_name: 
+    :type column_name: Any
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_column(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        column_name=column_name))
 
 
 
@@ -2755,6 +2823,134 @@ def make_select_column(
     output = c_to_py(unwrap(lib_function(c_key, c_K, c_TOA), Transformation))
 
     return output
+
+
+def make_series_to_option_vec(
+    input_domain: Domain,
+    input_metric: Metric,
+    T: RuntimeTypeDescriptor
+) -> Transformation:
+    r"""Unpack a Series from a DataFrame
+
+    [make_series_to_option_vec in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_series_to_option_vec.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `SeriesDomain`
+    * Output Domain:  `VectorDomain<OptionDomain<AtomDomain<T>>>`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+
+    :param input_domain: 
+    :type input_domain: Domain
+    :param input_metric: 
+    :type input_metric: Metric
+    :param T: 
+    :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    T = RuntimeType.parse(type_name=T)
+
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_T = py_to_c(T, c_type=ctypes.c_char_p)
+
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_series_to_option_vec
+    lib_function.argtypes = [Domain, Metric, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_T), Transformation))
+
+    return output
+
+def then_series_to_option_vec(
+    T: RuntimeTypeDescriptor
+):  
+    r"""partial constructor of make_series_to_option_vec
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_series_to_option_vec`
+
+    :param T: 
+    :type T: :py:ref:`RuntimeTypeDescriptor`
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_series_to_option_vec(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        T=T))
+
+
+
+def make_series_to_vec(
+    input_domain: Domain,
+    input_metric: Metric,
+    T: RuntimeTypeDescriptor
+) -> Transformation:
+    r"""Unpack a Series from a DataFrame
+
+    [make_series_to_vec in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_series_to_vec.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `SeriesDomain`
+    * Output Domain:  `VectorDomain<AtomDomain<T>>`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+
+    :param input_domain: 
+    :type input_domain: Domain
+    :param input_metric: 
+    :type input_metric: Metric
+    :param T: 
+    :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    T = RuntimeType.parse(type_name=T)
+
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_T = py_to_c(T, c_type=ctypes.c_char_p)
+
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_series_to_vec
+    lib_function.argtypes = [Domain, Metric, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_T), Transformation))
+
+    return output
+
+def then_series_to_vec(
+    T: RuntimeTypeDescriptor
+):  
+    r"""partial constructor of make_series_to_vec
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_series_to_vec`
+
+    :param T: 
+    :type T: :py:ref:`RuntimeTypeDescriptor`
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_series_to_vec(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        T=T))
+
 
 
 def make_sized_bounded_float_checked_sum(

@@ -25,12 +25,12 @@ def dataframe_domain():
     return dp.dataframe_domain(domains), pl.DataFrame(data)
 
 def lazyframe_domain_with_counts():
-    counts = pl.LazyFrame({"B": [1], "counts": [50]}, schema_overrides={"B": pl.Int32})
+    counts = pl.LazyFrame({"B": [1], "counts": [50]}, schema_overrides={"B": pl.Int32, "counts": pl.UInt32})
     domain, data = lazyframe_domain()
     return domain.with_counts(counts), data
 
 def dataframe_domain_with_counts():
-    counts = pl.DataFrame({"B": [1], "counts": [50]}, schema_overrides={"B": pl.Int32})
+    counts = pl.DataFrame({"B": [1], "counts": [50]}, schema_overrides={"B": pl.Int32, "counts": pl.UInt32})
     domain, data = dataframe_domain()
     return domain.with_counts(counts), data
 

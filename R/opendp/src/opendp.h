@@ -1198,6 +1198,10 @@ struct FfiResult_____AnyTransformation opendp_transformations__make_scan_csv(con
 struct FfiResult_____AnyTransformation opendp_transformations__make_collect(const struct AnyDomain *input_domain,
                                                                             const struct AnyMetric *input_metric);
 
+struct FfiResult_____AnyTransformation opendp_transformations__make_column(const struct AnyDomain *input_domain,
+                                                                           const struct AnyMetric *input_metric,
+                                                                           char *column_name);
+
 struct FfiResult_____AnyTransformation opendp_transformations__make_lazy(const struct AnyDomain *input_domain,
                                                                          const struct AnyMetric *input_metric);
 

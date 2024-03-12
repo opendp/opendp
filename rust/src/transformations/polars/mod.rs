@@ -6,5 +6,11 @@ pub use scan_csv::*;
 mod make_collect;
 pub use make_collect::*;
 
+mod make_column;
+pub use make_column::*;
+
 mod make_lazy;
 pub use make_lazy::*;
+
+mod make_unpack;
+pub use make_unpack::*;

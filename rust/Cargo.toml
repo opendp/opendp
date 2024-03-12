@@ -42,6 +42,7 @@ openssl = { version = "0.10.29", features = ["vendored"], optional = true }
 opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.9.2-dev" }
 readonly = "0.2"
 polars = { version = "=0.37.0", features = ["lazy", "csv", "dtype-struct", "parquet", "serde-lazy", "streaming"] }
+polars-arrow = { version = "0.38.0" }
 ciborium = "0.2.1"
 lazy_static = { version = "1.4.0", optional = true }
 vega_lite_4 = { version = "0.6.0", optional = true }

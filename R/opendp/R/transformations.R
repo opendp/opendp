@@ -1004,6 +1004,78 @@ then_collect <- function(
 }
 
 
+#' column constructor
+#'
+#' Extract a Series from a DataFrame
+#'
+#' [make_column in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_column.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `DataFrameDomain`
+#' * Output Domain:  `SeriesDomain`
+#' * Input Metric:   `M`
+#' * Output Metric:  `M`
+#'
+#' @concept transformations
+#' @param input_domain undocumented
+#' @param input_metric undocumented
+#' @param column_name undocumented
+#' @return Transformation
+#' @export
+make_column <- function(
+    input_domain,
+    input_metric,
+    column_name
+) {
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    log <- new_constructor_log("make_column", "transformations", new_hashtab(
+        list("input_domain", "input_metric", "column_name"),
+        list(input_domain, input_metric, unbox2(column_name))
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = String, inferred = rt_infer(column_name))
+
+    # Call wrapper function.
+    output <- .Call(
+        "transformations__make_column",
+        input_domain, input_metric, column_name,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial column constructor
+#'
+#' See documentation for [make_column()] for details.
+#'
+#' @concept transformations
+#' @param lhs The prior transformation or metric space.
+#' @param column_name undocumented
+#' @return Transformation
+#' @export
+then_column <- function(
+    lhs,
+    column_name
+) {
+
+    log <- new_constructor_log("then_column", "transformations", new_hashtab(
+        list("column_name"),
+        list(unbox2(column_name))
+    ))
+
+    make_chain_dyn(
+        make_column(
+            output_domain(lhs),
+            output_metric(lhs),
+            column_name = column_name),
+        lhs,
+        log)
+}
+
+
 #' consistent b ary tree constructor
 #'
 #' Postprocessor that makes a noisy b-ary tree internally consistent, and returns the leaf layer.
@@ -3235,6 +3307,148 @@ then_select_column <- function(
             key = key,
             .K = .K,
             .TOA = .TOA),
+        lhs,
+        log)
+}
+
+
+#' series to option vec constructor
+#'
+#' Unpack a Series from a DataFrame
+#'
+#' [make_series_to_option_vec in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_series_to_option_vec.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `SeriesDomain`
+#' * Output Domain:  `VectorDomain<OptionDomain<AtomDomain<T>>>`
+#' * Input Metric:   `M`
+#' * Output Metric:  `M`
+#'
+#' @concept transformations
+#' @param input_domain undocumented
+#' @param input_metric undocumented
+#' @param .T undocumented
+#' @return Transformation
+#' @export
+make_series_to_option_vec <- function(
+    input_domain,
+    input_metric,
+    .T
+) {
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    .T <- rt_parse(type_name = .T)
+
+    log <- new_constructor_log("make_series_to_option_vec", "transformations", new_hashtab(
+        list("input_domain", "input_metric", "T"),
+        list(input_domain, input_metric, .T)
+    ))
+
+    # Call wrapper function.
+    output <- .Call(
+        "transformations__make_series_to_option_vec",
+        input_domain, input_metric, .T,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial series to option vec constructor
+#'
+#' See documentation for [make_series_to_option_vec()] for details.
+#'
+#' @concept transformations
+#' @param lhs The prior transformation or metric space.
+#' @param .T undocumented
+#' @return Transformation
+#' @export
+then_series_to_option_vec <- function(
+    lhs,
+    .T
+) {
+
+    log <- new_constructor_log("then_series_to_option_vec", "transformations", new_hashtab(
+        list("T"),
+        list(.T)
+    ))
+
+    make_chain_dyn(
+        make_series_to_option_vec(
+            output_domain(lhs),
+            output_metric(lhs),
+            .T = .T),
+        lhs,
+        log)
+}
+
+
+#' series to vec constructor
+#'
+#' Unpack a Series from a DataFrame
+#'
+#' [make_series_to_vec in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_series_to_vec.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `SeriesDomain`
+#' * Output Domain:  `VectorDomain<AtomDomain<T>>`
+#' * Input Metric:   `M`
+#' * Output Metric:  `M`
+#'
+#' @concept transformations
+#' @param input_domain undocumented
+#' @param input_metric undocumented
+#' @param .T undocumented
+#' @return Transformation
+#' @export
+make_series_to_vec <- function(
+    input_domain,
+    input_metric,
+    .T
+) {
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    .T <- rt_parse(type_name = .T)
+
+    log <- new_constructor_log("make_series_to_vec", "transformations", new_hashtab(
+        list("input_domain", "input_metric", "T"),
+        list(input_domain, input_metric, .T)
+    ))
+
+    # Call wrapper function.
+    output <- .Call(
+        "transformations__make_series_to_vec",
+        input_domain, input_metric, .T,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial series to vec constructor
+#'
+#' See documentation for [make_series_to_vec()] for details.
+#'
+#' @concept transformations
+#' @param lhs The prior transformation or metric space.
+#' @param .T undocumented
+#' @return Transformation
+#' @export
+then_series_to_vec <- function(
+    lhs,
+    .T
+) {
+
+    log <- new_constructor_log("then_series_to_vec", "transformations", new_hashtab(
+        list("T"),
+        list(.T)
+    ))
+
+    make_chain_dyn(
+        make_series_to_vec(
+            output_domain(lhs),
+            output_metric(lhs),
+            .T = .T),
         lhs,
         log)
 }
