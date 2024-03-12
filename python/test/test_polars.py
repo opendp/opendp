@@ -18,11 +18,11 @@ def series_domain():
 
 def lazyframe_domain():
     domains, data = series_domain()
-    return dp.lazyframe_domain(domains), pl.LazyFrame(data)
+    return dp.lazyframe_domain(domains), pl.LazyFrame(data, schema_overrides={"B": pl.Int32})
 
 def dataframe_domain():
     domains, data = series_domain()
-    return dp.dataframe_domain(domains), pl.DataFrame(data)
+    return dp.dataframe_domain(domains), pl.DataFrame(data, schema_overrides={"B": pl.Int32})
 
 def lazyframe_domain_with_counts():
     counts = pl.LazyFrame({"B": [1], "counts": [50]}, schema_overrides={"B": pl.Int32, "counts": pl.UInt32})
@@ -98,3 +98,45 @@ def test_make_with_columns():
         (expr_domain, metric) >> dp.t.then_col("A") >> dp.t.then_clamp_expr((1., 2.))
     ])
     trans_lazy(data)
+
+def test_private_mean_expr():
+    domain, data = lazyframe_domain()
+    metric = dp.symmetric_distance()
+    expr_domain = dp.expr_domain(domain, context="with_columns")
+    expr_metric = dp.l1(dp.symmetric_distance())
+
+    # Fail because no margin
+    with pytest.raises(dp.OpenDPException):
+        meas_lazy = (domain, metric) >> dp.t.then_with_columns([
+            (expr_domain, metric) >> dp.t.then_col("A") >> dp.m.then_private_mean_expr(0.5)
+        ])
+
+    # now add margins, it should pass
+    a_counts = pl.LazyFrame(
+        {"A": [1.0], "counts": [50]},
+        schema_overrides={"A": pl.Float64, "counts": pl.UInt32},
+    )
+    b_counts = pl.LazyFrame(
+        {"B": [1], "counts": [50]},
+        schema_overrides={"B": pl.Int32, "counts": pl.UInt32},
+    )
+
+    domain = domain.with_counts(a_counts).with_counts(b_counts)
+    expr_domain = dp.expr_domain(domain, grouping_columns=["A"])
+    meas_lazy = (
+        (domain, metric)
+        >> dp.t.then_group_by_stable(["A"])
+        >> dp.m.then_private_agg(
+            dp.c.make_basic_composition(
+                [
+                    (expr_domain, expr_metric)
+                    >> dp.t.then_col("B")
+                    >> dp.t.then_clamp_expr((2, 3))
+                    >> dp.m.then_private_mean_expr(0.5)
+                ]
+            )
+        )
+        >> dp.t.make_collect(domain, metric)
+    )
+
+    print(meas_lazy(data))

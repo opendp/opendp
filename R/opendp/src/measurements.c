@@ -359,27 +359,49 @@ SEXP measurements__make_laplace_expr(
 }
 
 
+SEXP measurements__make_private_agg(
+    SEXP input_domain, SEXP input_metric, SEXP measurement, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(measurement);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    AnyMeasurement * c_measurement = sexp_to_anymeasurementptr(measurement);
+
+    // Call library function.
+    FfiResult_____AnyMeasurement _result = opendp_measurements__make_private_agg(c_input_domain, c_input_metric, c_measurement);
+
+    UNPROTECT(4);
+    if(_result.tag == Err_____AnyMeasurement)
+        return(extract_error(_result.err));
+    AnyMeasurement* _return_value = _result.ok;
+    return(anymeasurementptr_to_sexp(_return_value, log));
+}
+
+
 SEXP measurements__make_private_mean_expr(
-    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP TI, SEXP QO, SEXP log
+    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP QO, SEXP log
 ) {
     // Convert arguments to c types.
     PROTECT(input_domain);
     PROTECT(input_metric);
     PROTECT(scale);
-    PROTECT(TI);
     PROTECT(QO);
     PROTECT(log);
 
     AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
     AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
     void * c_scale = sexp_to_voidptr(scale, QO);
-    char * c_TI = rt_to_string(TI);
     char * c_QO = rt_to_string(QO);
 
     // Call library function.
-    FfiResult_____AnyMeasurement _result = opendp_measurements__make_private_mean_expr(c_input_domain, c_input_metric, c_scale, c_TI, c_QO);
+    FfiResult_____AnyMeasurement _result = opendp_measurements__make_private_mean_expr(c_input_domain, c_input_metric, c_scale, c_QO);
 
-    UNPROTECT(6);
+    UNPROTECT(5);
     if(_result.tag == Err_____AnyMeasurement)
         return(extract_error(_result.err));
     AnyMeasurement* _return_value = _result.ok;
