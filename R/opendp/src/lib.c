@@ -140,6 +140,7 @@ static R_CMethodDef R_CDef[] = {
     {"transformations__make_drop_null", (DL_FUNC) &transformations__make_drop_null, 3},
     {"transformations__make_find", (DL_FUNC) &transformations__make_find, 6},
     {"transformations__make_find_bin", (DL_FUNC) &transformations__make_find_bin, 6},
+    {"transformations__make_group_by_stable", (DL_FUNC) &transformations__make_group_by_stable, 5},
     {"transformations__make_identity", (DL_FUNC) &transformations__make_identity, 3},
     {"transformations__make_impute_constant", (DL_FUNC) &transformations__make_impute_constant, 5},
     {"transformations__make_impute_uniform_float", (DL_FUNC) &transformations__make_impute_uniform_float, 6},

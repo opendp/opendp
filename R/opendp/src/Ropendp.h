@@ -136,6 +136,7 @@ SEXP transformations__make_df_is_equal(SEXP input_domain, SEXP input_metric, SEX
 SEXP transformations__make_drop_null(SEXP input_domain, SEXP input_metric, SEXP log);
 SEXP transformations__make_find(SEXP input_domain, SEXP input_metric, SEXP categories, SEXP TIA, SEXP T_categories, SEXP log);
 SEXP transformations__make_find_bin(SEXP input_domain, SEXP input_metric, SEXP edges, SEXP TIA, SEXP T_edges, SEXP log);
+SEXP transformations__make_group_by_stable(SEXP input_domain, SEXP input_metric, SEXP grouping_columns, SEXP T_grouping_columns, SEXP log);
 SEXP transformations__make_identity(SEXP domain, SEXP metric, SEXP log);
 SEXP transformations__make_impute_constant(SEXP input_domain, SEXP input_metric, SEXP constant, SEXP T_constant, SEXP log);
 SEXP transformations__make_impute_uniform_float(SEXP input_domain, SEXP input_metric, SEXP bounds, SEXP TA, SEXP T_bounds, SEXP log);

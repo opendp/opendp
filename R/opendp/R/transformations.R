@@ -1989,6 +1989,76 @@ then_find_bin <- function(
 }
 
 
+#' group by stable constructor
+#'
+#' [make_group_by_stable in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_group_by_stable.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `LazyFrameDomain`
+#' * Output Domain:  `LazyGroupByDomain`
+#' * Input Metric:   `M`
+#' * Output Metric:  `L1<M>`
+#'
+#' @concept transformations
+#' @param input_domain undocumented
+#' @param input_metric undocumented
+#' @param grouping_columns undocumented
+#' @return Transformation
+#' @export
+make_group_by_stable <- function(
+    input_domain,
+    input_metric,
+    grouping_columns
+) {
+    # Standardize type arguments.
+    .T.grouping_columns <- new_runtime_type(origin = "Vec", args = list(String))
+
+    log <- new_constructor_log("make_group_by_stable", "transformations", new_hashtab(
+        list("input_domain", "input_metric", "grouping_columns"),
+        list(input_domain, input_metric, grouping_columns)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = .T.grouping_columns, inferred = rt_infer(grouping_columns))
+
+    # Call wrapper function.
+    output <- .Call(
+        "transformations__make_group_by_stable",
+        input_domain, input_metric, grouping_columns, rt_parse(.T.grouping_columns),
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial group by stable constructor
+#'
+#' See documentation for [make_group_by_stable()] for details.
+#'
+#' @concept transformations
+#' @param lhs The prior transformation or metric space.
+#' @param grouping_columns undocumented
+#' @return Transformation
+#' @export
+then_group_by_stable <- function(
+    lhs,
+    grouping_columns
+) {
+
+    log <- new_constructor_log("then_group_by_stable", "transformations", new_hashtab(
+        list("grouping_columns"),
+        list(grouping_columns)
+    ))
+
+    make_chain_dyn(
+        make_group_by_stable(
+            output_domain(lhs),
+            output_metric(lhs),
+            grouping_columns = grouping_columns),
+        lhs,
+        log)
+}
+
+
 #' identity constructor
 #'
 #' Make a Transformation representing the identity function.

@@ -9,3 +9,6 @@ pub use series::*;
 
 mod parquet;
 pub use parquet::*;
+
+mod lazygroupby;
+pub use lazygroupby::*;
