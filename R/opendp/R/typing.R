@@ -122,7 +122,7 @@ rt_parse <- function(type_name, generics = list()) {
 
 parse_args_ <- function(args, generics = list()) {
     args <- strsplit(args, ",\\s*(?![^()<>]*\\))", perl = TRUE)
-    return(lapply(args[[1]], function(x) rt_parse(x, generics)))
+    return(lapply(args[[1]], function(x) rt_parse(x, generics))) # nolint: unnecessary_lambda_linter.
 }
 
 new_runtime_type <- function(origin = NULL, args = NULL, is_generic = FALSE, is_unknown = FALSE) {
@@ -246,7 +246,7 @@ rt_substitute <- function(rt, ...) {
         return(rt)
     }
 
-    args <- lapply(rt$args, function(arg) rt_substitute(arg, ...))
+    args <- lapply(rt$args, function(arg) rt_substitute(arg, ...)) # nolint: unnecessary_lambda_linter.
     new_runtime_type(rt$origin, args)
 }
 
