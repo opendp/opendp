@@ -1,3 +1,9 @@
+#!/usr/bin/env -S cargo +nightly -Zscript
+```cargo
+[dependencies]
+opendp = { version = "0.9.2", features = ["contrib", "honest-but-curious"] }
+```
+
 use opendp::{
     domains::AtomDomain,
     measurements::then_base_laplace,
