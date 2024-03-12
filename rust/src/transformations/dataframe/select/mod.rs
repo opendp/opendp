@@ -8,7 +8,7 @@ use crate::{
     traits::{Hashable, Primitive},
 };
 
-use super::{DataFrame, DataFrameDomain};
+use super::{DataFrame, OldFrameDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -26,7 +26,7 @@ pub fn make_select_column<K, TOA>(
     key: K,
 ) -> Fallible<
     Transformation<
-        DataFrameDomain<K>,
+        OldFrameDomain<K>,
         VectorDomain<AtomDomain<TOA>>,
         SymmetricDistance,
         SymmetricDistance,
@@ -37,7 +37,7 @@ where
     TOA: Primitive,
 {
     Transformation::new(
-        DataFrameDomain::new(),
+        OldFrameDomain::new(),
         VectorDomain::new(AtomDomain::default()),
         Function::new_fallible(move |arg: &DataFrame<K>| -> Fallible<Vec<TOA>> {
             // retrieve column from dataframe and handle error

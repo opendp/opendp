@@ -166,6 +166,28 @@ SEXP domains__option_domain(
 }
 
 
+SEXP domains__series_domain(
+    SEXP name, SEXP element_domain, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(name);
+    PROTECT(element_domain);
+    PROTECT(log);
+
+    char * c_name = (char *)CHAR(STRING_ELT(name, 0));
+    AnyDomain * c_element_domain = sexp_to_anydomainptr(element_domain);
+
+    // Call library function.
+    FfiResult_____AnyDomain _result = opendp_domains__series_domain(c_name, c_element_domain);
+
+    UNPROTECT(3);
+    if(_result.tag == Err_____AnyDomain)
+        return(extract_error(_result.err));
+    AnyDomain* _return_value = _result.ok;
+    return(anydomainptr_to_sexp(_return_value, log));
+}
+
+
 SEXP domains__vector_domain(
     SEXP atom_domain, SEXP size, SEXP T_size, SEXP log
 ) {

@@ -111,7 +111,7 @@ def test_hashmap():
     # complete roundtrip
     any = py_to_c(data, c_type=AnyObjectPtr)
     assert c_to_py(any) == data
-
+test_hashmap()
 
 @pytest.mark.skipif('numpy' not in sys.modules,
                     reason="requires the Numpy library")

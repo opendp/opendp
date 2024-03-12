@@ -393,8 +393,7 @@ impl<F: Frame> Margin<F> {
         // 2. count number of unique combinations after an outer join with metadata
         let on_expr: Vec<_> = col_names.iter().map(|v| col(v.as_str())).collect();
 
-        let actual_margins =
-            (value.clone().lazyframe().group_by([cols(&col_names)])).agg([len()]);
+        let actual_margins = (value.clone().lazyframe().group_by([cols(&col_names)])).agg([len()]);
         let joined = (self.data.clone().lazyframe()).join(
             actual_margins,
             on_expr.clone(),

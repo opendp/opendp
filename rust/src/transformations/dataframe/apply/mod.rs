@@ -9,14 +9,14 @@ use crate::{
     transformations::{make_cast_default, make_is_equal, DatasetMetric},
 };
 
-use super::{DataFrame, DataFrameDomain};
+use super::{DataFrame, OldFrameDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
 /// Internal function to map a transformation onto a column of a dataframe.
 fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive, M>(
-    input_domain: DataFrameDomain<K>,
+    input_domain: OldFrameDomain<K>,
     input_metric: M,
     column_name: K,
     transformation: Transformation<
@@ -25,10 +25,10 @@ fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive
         M,
         M,
     >,
-) -> Fallible<Transformation<DataFrameDomain<K>, DataFrameDomain<K>, M, M>>
+) -> Fallible<Transformation<OldFrameDomain<K>, OldFrameDomain<K>, M, M>>
 where
     M: DatasetMetric,
-    (DataFrameDomain<K>, M): MetricSpace,
+    (OldFrameDomain<K>, M): MetricSpace,
     (VectorDomain<AtomDomain<VI>>, M): MetricSpace,
     (VectorDomain<AtomDomain<VO>>, M): MetricSpace,
 {
@@ -86,16 +86,16 @@ where
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into
 pub fn make_df_cast_default<TK, TIA, TOA, M>(
-    input_domain: DataFrameDomain<TK>,
+    input_domain: OldFrameDomain<TK>,
     input_metric: M,
     column_name: TK,
-) -> Fallible<Transformation<DataFrameDomain<TK>, DataFrameDomain<TK>, M, M>>
+) -> Fallible<Transformation<OldFrameDomain<TK>, OldFrameDomain<TK>, M, M>>
 where
     TK: Hashable,
     TIA: Primitive,
     TOA: Primitive + RoundCast<TIA>,
     M: DatasetMetric,
-    (DataFrameDomain<TK>, M): MetricSpace,
+    (OldFrameDomain<TK>, M): MetricSpace,
     (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
     (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
 {
@@ -129,16 +129,16 @@ where
 /// * `TK` - Type of the column name
 /// * `TIA` - Atomic Input Type to cast from
 pub fn make_df_is_equal<TK, TIA, M>(
-    input_domain: DataFrameDomain<TK>,
+    input_domain: OldFrameDomain<TK>,
     input_metric: M,
     column_name: TK,
     value: TIA,
-) -> Fallible<Transformation<DataFrameDomain<TK>, DataFrameDomain<TK>, M, M>>
+) -> Fallible<Transformation<OldFrameDomain<TK>, OldFrameDomain<TK>, M, M>>
 where
     TK: Hashable,
     TIA: Primitive,
     M: DatasetMetric,
-    (DataFrameDomain<TK>, M): MetricSpace,
+    (OldFrameDomain<TK>, M): MetricSpace,
     (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
     (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
 {

@@ -9,6 +9,7 @@ import sys
 import typing
 from collections.abc import Hashable
 from typing import Dict, Optional, Union, Any, Type, List
+import polars as pl
 
 from opendp.mod import Function, UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES
@@ -291,6 +292,9 @@ class RuntimeType(object):
         
         if isinstance(public_example, (Domain, Metric, Measure)):
             return RuntimeType.parse(public_example.type) # pragma: no cover
+        
+        if isinstance(public_example, pl.Series):
+            return "Series"
 
         if isinstance(public_example, tuple):
             return RuntimeType('Tuple', [cls.infer(e, py_object) for e in public_example])

@@ -7,7 +7,7 @@ use crate::{
     traits::Hashable,
 };
 
-use super::{DataFrame, DataFrameDomain};
+use super::{DataFrame, OldFrameDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -25,11 +25,11 @@ pub fn make_subset_by<TK: Hashable>(
     indicator_column: TK,
     keep_columns: Vec<TK>,
 ) -> Fallible<
-    Transformation<DataFrameDomain<TK>, DataFrameDomain<TK>, SymmetricDistance, SymmetricDistance>,
+    Transformation<OldFrameDomain<TK>, OldFrameDomain<TK>, SymmetricDistance, SymmetricDistance>,
 > {
     Transformation::new(
-        DataFrameDomain::new(),
-        DataFrameDomain::new(),
+        OldFrameDomain::new(),
+        OldFrameDomain::new(),
         Function::new_fallible(move |data: &DataFrame<TK>| {
             // the partition to move each row into
             let indicator = (data.get(&indicator_column))
