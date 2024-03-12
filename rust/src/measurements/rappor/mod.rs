@@ -19,15 +19,15 @@ use crate::traits::{samplers::sample_bernoulli_float, InfDiv, InfLn, InfMul, Inf
 /// eps = 2mln((2-f)/f)
 pub fn make_rappor(
     input_domain: BitVectorDomain,
-    input_metric: HammingDistance,
+    input_metric: DiscreteDistance,
     f: f64,
     constant_time: bool,
 ) -> Fallible<
-    Measurement<BitVectorDomain, BitVector, HammingDistance, MaxDivergence<f64>>,
+    Measurement<BitVectorDomain, BitVector, DiscreteDistance, MaxDivergence<f64>>,
 > {
     let m = match input_domain.max_weight {
         Some(m) => m,
-        None => return fallible!(MakeMeasurement, "RAPPOR requires a known number of categories")
+        None => return fallible!(MakeMeasurement, "RAPPOR requires a maximum number of set bits!")
     };
     
     if f <= 0.0 || f > 1.0 {
@@ -49,7 +49,9 @@ pub fn make_rappor(
             let noise_vector = (1..n).into_iter().map(|_|
                 sample_bernoulli_float(f_2, constant_time)
             ).collect::<Fallible<BitVector>>()?;
-            Ok(noise_vector ^ *arg) // xor on bit vectors
+            // I wanted to avoid cloning here but the closure makes it necessary 
+            // Shouldn't use much memory anyway given bit-vecs
+            Ok(arg.clone() ^ noise_vector) // xor on bit vectors
         }),
         input_metric,
         MaxDivergence::default(),
@@ -61,7 +63,7 @@ pub fn make_rappor(
                 return fallible!(FailedFunction, "d_in must be 0 or 1.");
             }
             Ok(epsilon)
-        }),
+        })
     )
 }
 
@@ -102,8 +104,8 @@ mod test {
     #[test]
     fn test_make_rappor() -> Fallible<()> {
         let rappor = make_rappor(
-            BitVectorDomain::new().with_size(10).with_max_weight(1),
-            HammingDistance::default(),
+            BitVectorDomain::new().with_max_weight(1),
+            DiscreteDistance::default(),
             0.5,
             false,
         )?;

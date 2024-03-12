@@ -456,20 +456,15 @@ pub type BitVector = BitVec<usize, Lsb0>;
 /// If a size is specified then it 
 #[derive(Clone, PartialEq)]
 pub struct BitVectorDomain {
-    pub size: Option<usize>,
     pub max_weight: Option<u32>
 }
 impl Debug for BitVectorDomain {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        let size_str = self
-            .size
-            .map(|weight| format!("size={:?}", weight))
-            .unwrap_or_default();
         let weight_str = self
             .max_weight
-            .map(|weight| format!(", weight={:?}", weight))
+            .map(|max_weight| format!("weight={:?}", max_weight))
             .unwrap_or_default();
-        write!(f, "BitVectorDomain({}{})", size_str, weight_str)
+        write!(f, "BitVectorDomain({})", weight_str)
     }
 }
 impl Default for BitVectorDomain {
@@ -480,23 +475,14 @@ impl Default for BitVectorDomain {
 impl BitVectorDomain {
     pub fn new() -> Self {
         BitVectorDomain {
-            size: None,
             max_weight: None
         }
-    }
-    pub fn with_size(mut self, size:usize) -> Self {
-        self.size = Some(size);
-        self
-    }
-    pub fn without_size(mut self, size:usize) -> Self {
-        self.size = None;
-        self
     }
     pub fn with_max_weight(mut self, max_weight:u32) -> Self {
         self.max_weight = Some(max_weight);
         self
     }
-    pub fn without_max_weight(mut self, max_weight:u32) -> Self {
+    pub fn without_max_weight(mut self) -> Self {
         self.max_weight = None;
         self
     }
@@ -505,12 +491,11 @@ impl Domain for BitVectorDomain {
     type Carrier = BitVector; // 
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         if let Some(max_weight) = self.max_weight {
-            if u32::try_from(val.count_ones())
-            .unwrap_or_else(|_| 
-                return fallible!(FailedFunction, "Number of ones exceeded u32 size")
-            ) > max_weight {
-                return Ok(false)
-            }
+            let weight = match u32::try_from(val.count_ones()) {
+                Ok(weight) => weight,
+                Err(_) => return fallible!(FailedFunction, "Too many 1's to fit in u32!")
+            };
+            return Ok(weight <= max_weight);
         }
         Ok(true)
     }
