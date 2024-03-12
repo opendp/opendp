@@ -101,7 +101,6 @@ pub fn debias_basic_rappor(answers: Vec<Vec<bool>>, f: f64) -> Fallible<Vec<f64>
         .collect())
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
