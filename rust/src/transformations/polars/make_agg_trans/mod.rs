@@ -203,7 +203,7 @@ mod test_make_agg_trans {
             .agg([col("B")])
             .collect()?;
 
-        assert!(lf_exp.frame_equal(&lf_res));
+        assert!(lf_exp.equals(&lf_res));
 
         Ok(())
     }
@@ -231,7 +231,7 @@ mod test_make_agg_trans {
             .agg([col("B")])
             .collect()?;
 
-        assert!(lf_exp.frame_equal(&lf_res));
+        assert!(lf_exp.equals(&lf_res));
         Ok(())
     }
 }

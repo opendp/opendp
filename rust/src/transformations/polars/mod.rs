@@ -48,6 +48,10 @@ pub use make_with_columns::*;
 mod make_agg_trans;
 #[cfg(feature = "contrib")]
 pub use make_agg_trans::*;
+#[cfg(feature = "contrib")]
+mod make_clamp;
+#[cfg(feature = "contrib")]
+pub use make_clamp::*;
 
 #[cfg(test)]
 pub mod polars_test {

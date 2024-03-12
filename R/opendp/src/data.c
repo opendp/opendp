@@ -14,6 +14,26 @@
 #include "opendp_extras.h"
 
 
+SEXP data__get_active_column_type(
+    SEXP domain, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(domain);
+    PROTECT(log);
+
+    AnyDomain * c_domain = sexp_to_anydomainptr(domain);
+
+    // Call library function.
+    FfiResult_____c_char _result = opendp_data__get_active_column_type(c_domain);
+
+    UNPROTECT(2);
+    if(_result.tag == Err_____c_char)
+        return(extract_error(_result.err));
+    c_char* _return_value = _result.ok;
+    return(ScalarString(mkChar(_return_value)));
+}
+
+
 SEXP data__new_arrow_array(
     SEXP name, SEXP log
 ) {

@@ -23,6 +23,7 @@ __all__ = [
     "make_cast_inherent",
     "make_cdf",
     "make_clamp",
+    "make_clamp_expr",
     "make_col",
     "make_collect",
     "make_column",
@@ -79,6 +80,7 @@ __all__ = [
     "then_cast_default",
     "then_cast_inherent",
     "then_clamp",
+    "then_clamp_expr",
     "then_col",
     "then_collect",
     "then_column",
@@ -819,6 +821,68 @@ def then_clamp(
     :type bounds: Tuple[Any, Any]
     """
     return PartialConstructor(lambda input_domain, input_metric: make_clamp(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        bounds=bounds))
+
+
+
+def make_clamp_expr(
+    input_domain: Domain,
+    input_metric: Metric,
+    bounds: Tuple[Any, Any]
+) -> Transformation:
+    r"""Make a Transformation that returns a `clip(bounds)` expression for a LazyFrame.
+
+    [make_clamp_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_clamp_expr.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `ExprDomain<M::LazyDomain>`
+    * Output Domain:  `ExprDomain<M::LazyDomain>`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+
+    :param input_domain: Expr domain
+    :type input_domain: Domain
+    :param input_metric: The metric under which neighboring LazyFrames are compared
+    :type input_metric: Metric
+    :param bounds: bounds to be applied in clamp operation.
+    :type bounds: Tuple[Any, Any]
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # Standardize type arguments.
+    TA = get_active_column_type(input_domain) # type: ignore
+
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
+
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_clamp_expr
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_bounds), Transformation))
+
+    return output
+
+def then_clamp_expr(
+    bounds: Tuple[Any, Any]
+):  
+    r"""partial constructor of make_clamp_expr
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_clamp_expr`
+
+    :param bounds: bounds to be applied in clamp operation.
+    :type bounds: Tuple[Any, Any]
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_clamp_expr(
         input_domain=input_domain,
         input_metric=input_metric,
         bounds=bounds))
@@ -3998,32 +4062,31 @@ def then_variance(
 
 
 
-@versioned
 def make_with_columns(
     input_domain: Domain,
     input_metric: Metric,
     transformations: Any
 ) -> Transformation:
     r"""Make a Transformation that applies list of transformations in the `with_columns`` context to a Lazy Frame.
-    
+
     Valid inputs for `input_domain` and `input_metric` are:
-    
+
     | `input_domain`                  | `input_metric`                             |
     | ------------------------------- | ------------------------------------------ |
     | `LazyFrameDomain`               | `SymmetricDistance`                        |
     | `LazyFrameDomain`               | `InsertDeleteDistance`                     |
     | `LazyFrameDomain`               | `ChangeOneDistance` if Margins provided    |
     | `LazyFrameDomain`               | `HammingDistance` if Margins provided      |
-    
+
     [make_with_columns in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_with_columns.html)
-    
+
     **Supporting Elements:**
-    
+
     * Input Domain:   `LazyFrameDomain`
     * Output Domain:  `LazyFrameDomain`
     * Input Metric:   `T::Metric`
     * Output Metric:  `T::Metric`
-    
+
     :param input_domain: Domain of the Lazy Frame.
     :type input_domain: Domain
     :param input_metric: DatasetMetric under which neighboring LazyFrames are compared.
@@ -4036,25 +4099,33 @@ def make_with_columns(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
-    
+
     # No type arguments to standardize.
     # Convert arguments to c types.
     c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
     c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_transformations = py_to_c(transformations, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[AnyTransformationPtr]))
-    
+
     # Call library function.
     lib_function = lib.opendp_transformations__make_with_columns
     lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
     lib_function.restype = FfiResult
-    
+
     output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_transformations), Transformation))
     output._depends_on(get_dependencies_iterable(transformations))
     return output
 
 def then_with_columns(
     transformations: Any
-):
+):  
+    r"""partial constructor of make_with_columns
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_with_columns`
+
+    :param transformations: 
+    :type transformations: Any
+    """
     return PartialConstructor(lambda input_domain, input_metric: make_with_columns(
         input_domain=input_domain,
         input_metric=input_metric,
