@@ -18,7 +18,7 @@ test_that("vector data loaders", {
     expect_equal((vector_space_of(i32) |> then_identity())(arg = 1L), 1L)
     expect_equal((vector_space_of(usize) |> then_identity())(arg = 1L), 1L)
     expect_true((vector_space_of(bool) |> then_identity())(arg = TRUE))
-    expect_equal((vector_space_of(String) |> then_identity())(arg = c("A")), "A")
+    expect_equal((vector_space_of(String) |> then_identity())(arg = "A"), "A")
 })
 
 test_that("scalar data loaders", {
@@ -26,7 +26,7 @@ test_that("scalar data loaders", {
     expect_equal((scalar_space_of(i32) |> then_identity())(arg = 1L), 1L)
     expect_equal((scalar_space_of(usize) |> then_identity())(arg = 1L), 1L)
     expect_true((scalar_space_of(bool) |> then_identity())(arg = TRUE))
-    expect_equal((scalar_space_of(String) |> then_identity())(arg = c("A")), "A")
+    expect_equal((scalar_space_of(String) |> then_identity())(arg = "A"), "A")
 })
 
 test_that("hashmap data loaders", {

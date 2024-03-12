@@ -1,3 +1,4 @@
+# nolint start: unnecessary_concatenation_linter.
 ATOM_EQUIVALENCE_CLASSES <- list(
     i32 = c("u32", "u64", "i32", "i64", "usize"),
     f64 = c("f32", "f64"),
@@ -5,6 +6,7 @@ ATOM_EQUIVALENCE_CLASSES <- list(
     AnyMeasurement = c("AnyMeasurementPtr", "AnyMeasurement"),
     AnyTransformation = c("AnyTransformationPtr")
 )
+# nolint end
 
 RUST_TO_R <- list(
     u32 = "integer",
