@@ -14,7 +14,7 @@ use crate::traits::{samplers::sample_bernoulli_float, InfDiv, InfLn, InfMul, Inf
 /// * `f` - Per-bit flipping probability. Must be in $(0, 1]$.
 /// * `m` - number of ones set in each boolean vector (1 if one-hot encoding, more if using a bloom filter)
 ///
-/// eps = ln((2-f)/f) 2
+/// eps = 2mln((2-f)/f)
 pub fn make_rappor(
     input_domain: VectorDomain<AtomDomain<bool>>,
     input_metric: DiscreteDistance,
@@ -35,6 +35,7 @@ pub fn make_rappor(
         return fallible!(MakeMeasurement, "f must be in (0, 1]");
     }
 
+    // priv = 2mln((2-f)/f)
     let epsilon = (2.0f64)
         .inf_sub(&f)?
         .inf_div(&f)?
