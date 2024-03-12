@@ -11,7 +11,6 @@ linters: all_linters(
     extraction_operator_linter = NULL, # Use `[[` instead of `$` to extract an element.
     implicit_integer_linter = NULL, # Integers should not be implicit. Use the form 1L for integers or 1.0 for doubles.
     keyword_quote_linter = NULL, # Only quote targets of assignment if necessary, i.e., if the name is not a valid R symbol (see ?make.names).
-    numeric_leading_zero_linter = NULL, # Include the leading zero for fractional numeric constants.
     routine_registration_linter = NULL, # Register your native code routines with useDynLib and R_registerRoutines().
     todo_comment_linter = NULL, # TODO comments should be removed.
     undesirable_function_linter = NULL, # Function "library" is undesirable. As an alternative, use roxygen2's @importFrom statement in packages and `::` in scripts, instead of modifying the global search path.

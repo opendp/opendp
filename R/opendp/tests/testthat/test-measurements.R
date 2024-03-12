@@ -87,7 +87,7 @@ test_that("test_base_laplace", {
     input_space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
     meas <- input_space |> then_base_laplace(10.5)
     meas(arg = 100.)
-    expect_lt(meas(d_in = 1.), .096)
+    expect_lt(meas(d_in = 1.), 0.096)
 })
 
 test_that("test_base_vector_laplace", {
@@ -102,8 +102,8 @@ test_that("test_base_gaussian_smoothed_max_divergence", {
     meas <- make_zCDP_to_approxDP(input_space |> then_base_gaussian(scale = 10.5))
     meas(arg = 100.)
 
-    epsilon <- meas(d_in = 1.)(delta = .000001)
-    expect_gt(epsilon, .4)
+    epsilon <- meas(d_in = 1.)(delta = 0.000001)
+    expect_gt(epsilon, 0.4)
 })
 
 test_that("test_base_gaussian_zcdp", {
@@ -115,7 +115,7 @@ test_that("test_base_gaussian_zcdp", {
 })
 
 test_that("test_base_vector_gaussian", {
-    delta <- .000001
+    delta <- 0.000001
     input_space <- c(vector_domain(atom_domain(.T = f64)), l2_distance(.T = f64))
     meas <- make_fix_delta(
         make_zCDP_to_approxDP(

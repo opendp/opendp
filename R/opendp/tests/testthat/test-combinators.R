@@ -78,7 +78,7 @@ test_that("make_fix_delta", {
 
 
 test_that("make_sequential_composition", {
-    meas_rr <- make_randomized_response_bool(prob = .75)
+    meas_rr <- make_randomized_response_bool(prob = 0.75)
 
     meas_sc <- make_sequential_composition(
         input_domain = meas_rr("input_domain"),

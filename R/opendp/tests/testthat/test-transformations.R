@@ -324,7 +324,7 @@ test_that("test_lipschitz_b_ary_tree", {
     meas_cdf <- meas_base |> then_cdf()
     meas_quantiles <- meas_base |> then_quantiles_from_counts(
         bin_edges = c(0., 10., 13., 17., 26., 70., 84., 100.),
-        alphas = c(0., .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.)
+        alphas = c(0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.)
     )
 
     data <- c(rep("A", each = 34), rep("B", each = 23), rep("C", each = 12), rep("D", each = 84), rep("E", each = 34), rep("F", each = 85), rep("G", each = 75))
