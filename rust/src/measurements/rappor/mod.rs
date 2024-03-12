@@ -1,10 +1,8 @@
-use bitvec::prelude::{bitvec, Lsb0};
-
 use crate::core::{Function, Measurement, PrivacyMap};
-use crate::domains::{AtomDomain, BitVector, BitVectorDomain, VectorDomain};
+use crate::domains::{BitVector, BitVectorDomain};
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
-use crate::metrics::{DiscreteDistance, HammingDistance};
+use crate::metrics::DiscreteDistance;
 use crate::traits::{samplers::sample_bernoulli_float, InfDiv, InfLn, InfMul, InfSub};
 
 /// Make a Measurement that implements Basic RAPPOR
