@@ -9,7 +9,7 @@ use std::slice;
 
 use arrow::ffi::{ArrowArray, ArrowSchema};
 use opendp_derive::bootstrap;
-use polars::export::arrow;
+use polars::{export::arrow, lazy::dsl::Expr};
 use polars::prelude::*;
 
 use crate::core::{FfiError, FfiResult, FfiSlice};
@@ -188,6 +188,16 @@ pub extern "C" fn opendp_data__slice_as_object(
         
         Ok(AnyObject::new(DataFrame::new(series)?))
     }
+    pub fn raw_to_expr(
+        raw: &FfiSlice
+    ) -> Fallible<AnyObject> {
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len) };
+        // https://github.com/pola-rs/pyo3-polars/blob/5150d4ca27c287ff4be5cafef243d9a878a8879d/pyo3-polars/src/lib.rs#L147-L153
+        let expr: Expr = ciborium::de::from_reader(slice).map_err(
+            |e| err!(FFI, "Error when deserializing Expr. This may be due to mismatched polars versions. {}", e)
+        )?;
+        Ok(AnyObject::new(expr))
+    }
     pub fn raw_to_lazyframe(
         raw: &FfiSlice
     ) -> Fallible<AnyObject> {
@@ -202,6 +212,7 @@ pub extern "C" fn opendp_data__slice_as_object(
     match T.contents {
         TypeContents::PLAIN("String") => raw_to_string(raw),
         TypeContents::PLAIN("ExtrinsicObject") => raw_to_plain::<ExtrinsicObject>(raw),
+        TypeContents::PLAIN("Expr") => raw_to_expr(raw),
         TypeContents::PLAIN("LazyFrame") => raw_to_lazyframe(raw),
         TypeContents::PLAIN("DataFrame") => raw_to_dataframe(raw),
         TypeContents::PLAIN("Series") => raw_to_series(raw),

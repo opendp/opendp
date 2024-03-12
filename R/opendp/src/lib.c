@@ -149,6 +149,7 @@ static R_CMethodDef R_CDef[] = {
     {"transformations__make_df_cast_default", (DL_FUNC) &transformations__make_df_cast_default, 8},
     {"transformations__make_df_is_equal", (DL_FUNC) &transformations__make_df_is_equal, 8},
     {"transformations__make_drop_null", (DL_FUNC) &transformations__make_drop_null, 3},
+    {"transformations__make_filter", (DL_FUNC) &transformations__make_filter, 4},
     {"transformations__make_find", (DL_FUNC) &transformations__make_find, 6},
     {"transformations__make_find_bin", (DL_FUNC) &transformations__make_find_bin, 6},
     {"transformations__make_group_by_stable", (DL_FUNC) &transformations__make_group_by_stable, 5},

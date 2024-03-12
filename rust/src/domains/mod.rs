@@ -80,7 +80,7 @@ mod poly;
 #[derive(Clone, PartialEq)]
 pub struct AtomDomain<T: CheckAtom> {
     pub bounds: Option<Bounds<T>>,
-    nullable: bool,
+    pub nullable: bool,
 }
 
 impl<T: CheckAtom> Debug for AtomDomain<T> {

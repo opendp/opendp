@@ -2053,6 +2053,83 @@ then_drop_null <- function(
 }
 
 
+#' filter constructor
+#'
+#' Make a Transformation that filters a LazyFrame.
+#'
+#' Valid inputs for `input_domain` and `input_metric` are:
+#'
+#' | `input_domain`                  | `input_metric`         |
+#' | ------------------------------- | ---------------------- |
+#' | `LazyFrameDomain`               | `SymmetricDistance`    |
+#' | `LazyFrameDomain`               | `InsertDeleteDistance` |
+#'
+#' [make_filter in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_filter.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `LazyFrameDomain`
+#' * Output Domain:  `LazyFrameDomain`
+#' * Input Metric:   `M`
+#' * Output Metric:  `M`
+#'
+#' @concept transformations
+#' @param input_domain LazyFrameDomain.
+#' @param input_metric The metric space under which neighboring LazyFrame frames are compared.
+#' @param expr undocumented
+#' @return Transformation
+#' @export
+make_filter <- function(
+    input_domain,
+    input_metric,
+    expr
+) {
+    # No type arguments to standardize.
+    log <- new_constructor_log("make_filter", "transformations", new_hashtab(
+        list("input_domain", "input_metric", "expr"),
+        list(input_domain, input_metric, expr)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = Expr, inferred = rt_infer(expr))
+
+    # Call wrapper function.
+    output <- .Call(
+        "transformations__make_filter",
+        input_domain, input_metric, expr,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial filter constructor
+#'
+#' See documentation for [make_filter()] for details.
+#'
+#' @concept transformations
+#' @param lhs The prior transformation or metric space.
+#' @param expr undocumented
+#' @return Transformation
+#' @export
+then_filter <- function(
+    lhs,
+    expr
+) {
+
+    log <- new_constructor_log("then_filter", "transformations", new_hashtab(
+        list("expr"),
+        list(expr)
+    ))
+
+    make_chain_dyn(
+        make_filter(
+            output_domain(lhs),
+            output_metric(lhs),
+            expr = expr),
+        lhs,
+        log)
+}
+
+
 #' find constructor
 #'
 #' Find the index of a data value in a set of categories.

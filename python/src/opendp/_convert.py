@@ -247,8 +247,8 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
         if type_name in ATOM_EQUIVALENCE_CLASSES["String"]:
             return _string_to_slice(value)
         
-        if type_name == "Series":
-            return _series_to_slice(value)
+        if type_name == "Expr":
+            return _expr_to_slice(value)
         
         if type_name == "LazyFrame":
             return _lazyframe_to_slice(value)
@@ -465,6 +465,13 @@ def _slice_to_hashmap(raw: FfiSlicePtr) -> Dict[Any, Any]:
     keys.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
     vals.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
     return result
+
+
+def _expr_to_slice(val: pl.Expr) -> FfiSlicePtr:
+    state = val.__getstate__()
+    raw = _wrap_in_slice(state, len(state))
+    raw.depends_on(state)
+    return raw
 
 
 def _lazyframe_to_slice(val: pl.LazyFrame) -> FfiSlicePtr:
