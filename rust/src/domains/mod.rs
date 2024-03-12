@@ -448,21 +448,28 @@ impl<D: Domain> Domain for VectorDomain<D> {
     }
 }
 
+// Type alias for BitVec<usize, Lsb0> which is indicated to be the fastest by the bitvec documentation
+pub type BitVector = BitVec<usize, Lsb0>;
 
 /// A domain that contains vectors of boolean values
 /// 
 /// If a size is specified then it 
 #[derive(Clone, PartialEq)]
 pub struct BitVectorDomain {
+    pub size: Option<usize>,
     pub max_weight: Option<u32>
 }
 impl Debug for BitVectorDomain {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        let size_str = self
+            .size
+            .map(|weight| format!("size={:?}", weight))
+            .unwrap_or_default();
         let weight_str = self
             .max_weight
-            .map(|weight| format!("weight={:?}", weight))
+            .map(|weight| format!(", weight={:?}", weight))
             .unwrap_or_default();
-        write!(f, "BitVectorDomain({})", weight_str)
+        write!(f, "BitVectorDomain({}{})", size_str, weight_str)
     }
 }
 impl Default for BitVectorDomain {
@@ -473,14 +480,23 @@ impl Default for BitVectorDomain {
 impl BitVectorDomain {
     pub fn new() -> Self {
         BitVectorDomain {
+            size: None,
             max_weight: None
         }
+    }
+    pub fn with_size(mut self, size:usize) -> Self {
+        self.size = Some(size);
+        self
+    }
+    pub fn without_size(mut self, size:usize) -> Self {
+        self.size = None;
+        self
     }
     pub fn with_max_weight(mut self, max_weight:u32) -> Self {
         self.max_weight = Some(max_weight);
         self
     }
-    pub fn without_max_weight(mut self, max_weight:usize) -> Self {
+    pub fn without_max_weight(mut self, max_weight:u32) -> Self {
         self.max_weight = None;
         self
     }
@@ -500,8 +516,7 @@ impl Domain for BitVectorDomain {
     }
 }
 
-// Type alias for BitVec<usize, Lsb0> which is indicated to be the fastest by the bitvec documentation
-pub type BitVector = BitVec<usize, Lsb0>;
+
 
 /// A domain that represents nullity via the Option type.
 ///

@@ -1,4 +1,4 @@
-use bitvec::prelude::{BitVec, bitvec, Lsb0};
+use bitvec::prelude::{bitvec, Lsb0};
 
 use crate::core::{Function, Measurement, PrivacyMap};
 use crate::domains::{AtomDomain, BitVector, BitVectorDomain, VectorDomain};
@@ -18,27 +18,17 @@ use crate::traits::{samplers::sample_bernoulli_float, InfDiv, InfLn, InfMul, Inf
 ///
 /// eps = 2mln((2-f)/f)
 pub fn make_rappor(
-    input_domain: VectorDomain<BitVectorDomain>,
+    input_domain: BitVectorDomain,
     input_metric: HammingDistance,
     f: f64,
     constant_time: bool,
 ) -> Fallible<
-    Measurement<VectorDomain<BitVectorDomain>, BitVectorDomain, HammingDistance, MaxDivergence<f64>>,
+    Measurement<BitVectorDomain, BitVector, HammingDistance, MaxDivergence<f64>>,
 > {
-
-    if input_domain.size.is_none() && input_domain.element_domain.size.is_none(){
-        return fallible!(
-            MakeMeasurement,
-            "RAPPOR requires a known number of categories"
-        );
-    }
-
-    let m = input_domain.element_domain.max_weight.unwrap_or_else(||
-        return fallible!(
-            MakeMeasurement,
-            "RAPPOR requires a known number of categories"
-        )
-    );
+    let m = match input_domain.max_weight {
+        Some(m) => m,
+        None => return fallible!(MakeMeasurement, "RAPPOR requires a known number of categories")
+    };
     
     if f <= 0.0 || f > 1.0 {
         return fallible!(MakeMeasurement, "f must be in (0, 1]");
@@ -54,10 +44,12 @@ pub fn make_rappor(
     let f_2 = f.inf_div(&2.0)?;
     Measurement::new(
         input_domain,
-        Function::new_fallible(move |arg: &Vec<BitVector>| {
-            arg.iter()
-                .map(|b| Ok(*b ^ sample_bernoulli_float(f_2, constant_time)?))
-                .collect::<Fallible<Vec<BitVector>>>()
+        Function::new_fallible(move |arg: &BitVector| {
+            let n = arg.len();
+            let noise_vector = (1..n).into_iter().map(|_|
+                sample_bernoulli_float(f_2, constant_time)
+            ).collect::<Fallible<BitVector>>()?;
+            Ok(noise_vector ^ *arg) // xor on bit vectors
         }),
         input_metric,
         MaxDivergence::default(),
@@ -110,14 +102,14 @@ mod test {
     #[test]
     fn test_make_rappor() -> Fallible<()> {
         let rappor = make_rappor(
-            VectorDomain::new(BitVectorDomain::new().with_size(10).with_max_weight(1)).with_size(10),
+            BitVectorDomain::new().with_size(10).with_max_weight(1),
             HammingDistance::default(),
             0.5,
             false,
         )?;
-        rappor.invoke(&vec![bitvec![usize, Lsb0;
+        rappor.invoke(&bitvec![usize, Lsb0;
             1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        ]])?;
+        ])?;
         assert_eq!(rappor.map(&1)?, 2.1972245773362196);
         Ok(())
     }
