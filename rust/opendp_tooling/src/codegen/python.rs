@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use crate::{Argument, Function, TypeRecipe, Value};
 
-use crate::codegen::indent;
+use crate::codegen::tab_py;
 
 use super::flatten_type_recipe;
 
@@ -120,8 +120,8 @@ fn generate_function(
         .map(|v| format!(" -> {}", v))
         .unwrap_or_else(String::new);
 
-    let docstring = indent(4, generate_docstring(func, hierarchy));
-    let body = indent(4, generate_body(module_name, func, typemap));
+    let docstring = tab_py(generate_docstring(func, hierarchy));
+    let body = tab_py(generate_body(module_name, func, typemap));
 
     let then_func = if func.supports_partial {
         format!(
@@ -142,8 +142,7 @@ def {then_name}(
 "#,
             then_name = func.name.replacen("make_", "then_", 1),
             func_name = func.name,
-            doc_params = indent(
-                4,
+            doc_params = tab_py(
                 func.args
                     .iter()
                     .skip(2)
@@ -151,17 +150,15 @@ def {then_name}(
                     .collect::<Vec<String>>()
                     .join("\n")
             ),
-            then_args = indent(4, args[2..].join(",\n")),
+            then_args = tab_py(args[2..].join(",\n")),
             dom_met = func.args[..2]
                 .iter()
                 .map(|arg| arg.name())
                 .collect::<Vec<_>>()
                 .join(", "),
             name = func.name,
-            args = indent(
-                4,
-                indent(
-                    4,
+            args = tab_py(
+                tab_py(
                     func.args
                         .iter()
                         .map(|arg| format!("{name}={name}", name = arg.name()))
@@ -183,7 +180,7 @@ def {func_name}(
 {body}{then_func}
 "#,
         func_name = func.name,
-        args = indent(4, args.join(",\n"))
+        args = tab_py(args.join(",\n"))
     )
 }
 

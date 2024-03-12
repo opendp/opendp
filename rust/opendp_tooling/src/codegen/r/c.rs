@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    codegen::{indent, r::BLACKLIST},
+    codegen::{tab_c, r::BLACKLIST},
     Argument, Function, TypeRecipe,
 };
 
@@ -170,8 +170,8 @@ SEXP {module_name}__{func_name}(
 }}
 "#,
         func_name = func.name,
-        args = indent(4, format!("{args}SEXP log")),
-        body = indent(4, generate_c_body(module_name, func))
+        args = tab_c(format!("{args}SEXP log")),
+        body = tab_c(generate_c_body(module_name, func))
     )
 }
 
