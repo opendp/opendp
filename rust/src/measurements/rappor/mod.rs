@@ -5,6 +5,8 @@ use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
 use crate::traits::{samplers::sample_bernoulli_float, InfDiv, InfLn, InfMul, InfSub};
 
+use bitvec::prelude::bitvec;
+
 /// Make a Measurement that implements Basic RAPPOR
 ///
 /// # Citations
@@ -98,6 +100,7 @@ pub fn debias_basic_rappor(answers: Vec<Vec<bool>>, f: f64) -> Fallible<Vec<f64>
         .map(|y_i| (y_i - ((f / 2.0) * n)) / (1.0 - f))
         .collect())
 }
+
 
 #[cfg(test)]
 mod test {
