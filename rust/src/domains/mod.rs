@@ -18,11 +18,14 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::Bound;
+use std::sync::atomic::AtomicBool;
 
 use crate::core::Domain;
 use crate::error::Fallible;
 use crate::traits::{CheckAtom, InherentNull, ProductOrd};
 use std::fmt::{Debug, Formatter};
+
+use bitvec::prelude::{BitVec, Lsb0};
 
 #[cfg(feature = "contrib")]
 mod poly;
@@ -444,6 +447,78 @@ impl<D: Domain> Domain for VectorDomain<D> {
         Ok(true)
     }
 }
+
+
+/// A domain that contains vectors of boolean values
+/// 
+/// If a size is specified then it 
+#[derive(Clone, PartialEq)]
+pub struct BitVectorDomain {
+    pub size: Option<usize>,
+    pub max_weight: Option<u32>
+}
+impl Debug for BitVectorDomain {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        let size_str = self
+            .size
+            .map(|size| format!(", size={:?}", size))
+            .unwrap_or_default();
+        let weight_str = self
+            .max_weight
+            .map(|weight| format!(", weight={:?}", weight))
+            .unwrap_or_default();
+        write!(f, "BitVectorDomain({}{})", size_str, weight_str)
+    }
+}
+impl Default for BitVectorDomain {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl BitVectorDomain {
+    pub fn new() -> Self {
+        BitVectorDomain {
+            size: None,
+            max_weight: None
+        }
+    }
+    pub fn with_size(mut self, size:usize) -> Self {
+        self.size = Some(size);
+        self
+    }
+    pub fn without_size(mut self, size:usize) -> Self {
+        self.size = None;
+        self
+    }
+    pub fn with_max_weight(mut self, max_weight:u32) -> Self {
+        self.max_weight = Some(max_weight);
+        self
+    }
+    pub fn without_max_weight(mut self, max_weight:usize) -> Self {
+        self.max_weight = None;
+        self
+    }
+}
+impl Domain for BitVectorDomain {
+    type Carrier = BitVector; // 
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        if let Some(max_weight) = self.max_weight {
+            if u32::try_from(val.count_ones())
+            .unwrap_or_else(|_| return fallible!(FailedFunction, "Number of ones exceeded u32 size")) > max_weight {
+                return Ok(false)
+            }
+        }
+        if let Some(size) = self.size {
+            if size != val.len() {
+                return Ok(false)
+            }
+        }
+        Ok(true)
+    }
+}
+
+// Type alias for BitVec<usize, Lsb0> which is indicated to be the fastest by the bitvec documentation
+pub type BitVector = BitVec<usize, Lsb0>;
 
 /// A domain that represents nullity via the Option type.
 ///

@@ -19,7 +19,7 @@ use std::marker::PhantomData;
 
 use crate::{
     core::{Domain, Metric, MetricSpace},
-    domains::{type_name, AtomDomain, MapDomain, VectorDomain},
+    domains::{type_name, AtomDomain, BitVectorDomain, MapDomain, VectorDomain},
     error::Fallible,
     traits::{CheckAtom, InfAdd},
 };
@@ -293,6 +293,11 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, HammingDistance) {
                 "Hamming distance requires a known dataset size"
             )
         })
+    }
+}
+impl MetricSpace for (BitVectorDomain, HammingDistance) {
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
