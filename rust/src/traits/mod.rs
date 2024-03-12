@@ -1,7 +1,7 @@
 //! Traits that enable building stable and private algorithms.
 
 use crate::metrics::IntDistance;
-use num::{One, Zero};
+use num::{NumCast, One, Zero};
 use std::hash::Hash;
 use std::ops::{AddAssign, DivAssign, MulAssign, SubAssign};
 
@@ -152,6 +152,7 @@ impl<T> Hashable for T where T: Primitive + Eq + Hash {}
 pub trait Number:
     Primitive
     + Copy
+    + NumCast
     + AlertingAbs
     + num::traits::NumOps
     + SaturatingAdd
@@ -181,6 +182,7 @@ pub trait Number:
 impl<T> Number for T where
     T: Primitive
         + Copy
+        + NumCast
         + AlertingAbs
         + num::traits::NumOps
         + SaturatingAdd

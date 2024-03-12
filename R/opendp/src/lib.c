@@ -177,6 +177,7 @@ static R_CMethodDef R_CDef[] = {
     {"transformations__make_split_records", (DL_FUNC) &transformations__make_split_records, 2},
     {"transformations__make_subset_by", (DL_FUNC) &transformations__make_subset_by, 5},
     {"transformations__make_sum", (DL_FUNC) &transformations__make_sum, 3},
+    {"transformations__make_sum_expr", (DL_FUNC) &transformations__make_sum_expr, 5},
     {"transformations__make_sum_of_squared_deviations", (DL_FUNC) &transformations__make_sum_of_squared_deviations, 5},
     {"transformations__make_unordered", (DL_FUNC) &transformations__make_unordered, 3},
     {"transformations__make_variance", (DL_FUNC) &transformations__make_variance, 6},

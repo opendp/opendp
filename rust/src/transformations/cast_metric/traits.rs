@@ -3,9 +3,10 @@ use crate::{
     metrics::{
         ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance, SymmetricDistance,
     },
+    transformations::DatasetMetric,
 };
 
-pub trait UnorderedMetric: Metric<Distance = IntDistance> {
+pub trait UnorderedMetric: DatasetMetric<Distance = IntDistance> {
     type OrderedMetric: Metric<Distance = Self::Distance>;
 }
 impl UnorderedMetric for SymmetricDistance {
@@ -15,7 +16,7 @@ impl UnorderedMetric for ChangeOneDistance {
     type OrderedMetric = HammingDistance;
 }
 
-pub trait OrderedMetric: Metric<Distance = IntDistance> {
+pub trait OrderedMetric: DatasetMetric<Distance = IntDistance> {
     type UnorderedMetric: Metric<Distance = Self::Distance>;
 }
 impl OrderedMetric for InsertDeleteDistance {
@@ -25,7 +26,7 @@ impl OrderedMetric for HammingDistance {
     type UnorderedMetric = ChangeOneDistance;
 }
 
-pub trait BoundedMetric: Metric<Distance = IntDistance> {
+pub trait BoundedMetric: DatasetMetric<Distance = IntDistance> {
     type UnboundedMetric: Metric<Distance = Self::Distance>;
 }
 impl BoundedMetric for ChangeOneDistance {
@@ -35,7 +36,7 @@ impl BoundedMetric for HammingDistance {
     type UnboundedMetric = InsertDeleteDistance;
 }
 
-pub trait UnboundedMetric: Metric<Distance = IntDistance> {
+pub trait UnboundedMetric: DatasetMetric<Distance = IntDistance> {
     type BoundedMetric: Metric<Distance = Self::Distance>;
 }
 impl UnboundedMetric for SymmetricDistance {

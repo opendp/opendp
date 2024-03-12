@@ -173,6 +173,7 @@ SEXP transformations__make_split_lines(SEXP log);
 SEXP transformations__make_split_records(SEXP separator, SEXP log);
 SEXP transformations__make_subset_by(SEXP indicator_column, SEXP keep_columns, SEXP TK, SEXP T_keep_columns, SEXP log);
 SEXP transformations__make_sum(SEXP input_domain, SEXP input_metric, SEXP log);
+SEXP transformations__make_sum_expr(SEXP input_domain, SEXP input_metric, SEXP MI, SEXP TI, SEXP log);
 SEXP transformations__make_sum_of_squared_deviations(SEXP input_domain, SEXP input_metric, SEXP S, SEXP T, SEXP log);
 SEXP transformations__make_unordered(SEXP input_domain, SEXP input_metric, SEXP log);
 SEXP transformations__make_variance(SEXP input_domain, SEXP input_metric, SEXP ddof, SEXP S, SEXP T, SEXP log);

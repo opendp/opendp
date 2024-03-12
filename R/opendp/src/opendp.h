@@ -1234,6 +1234,9 @@ struct FfiResult_____AnyTransformation opendp_transformations__make_column(const
 struct FfiResult_____AnyTransformation opendp_transformations__make_lazy(const struct AnyDomain *input_domain,
                                                                          const struct AnyMetric *input_metric);
 
+struct FfiResult_____AnyTransformation opendp_transformations__make_sum_expr(const struct AnyDomain *input_domain,
+                                                                             const struct AnyMetric *input_metric);
+
 struct FfiResult_____AnyTransformation opendp_transformations__make_group_by_stable(const struct AnyDomain *input_domain,
                                                                                     const struct AnyMetric *input_metric,
                                                                                     const struct AnyObject *grouping_columns);

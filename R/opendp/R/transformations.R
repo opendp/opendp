@@ -4722,6 +4722,88 @@ then_sum <- function(
 }
 
 
+#' sum expr constructor
+#'
+#' Polars operator to sum the active column in a LazyFrame
+#'
+#' | input_metric               | input_domain                     |
+#' | -------------------------- | -------------------------------- |
+#' | `SymmetricDistance`        | `ExprDomain<LazyFrameDomain>`   |
+#' | `InsertDeleteDistance`     | `ExprDomain<LazyFrameDomain>`   |
+#' | `L1<SymmetricDistance>`    | `ExprDomain<LazyGroupByDomain>` |
+#' | `L1<InsertDeleteDistance>` | `ExprDomain<LazyGroupByDomain>` |
+#'
+#' [make_sum_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sum_expr.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `ExprDomain<MI::LazyDomain>`
+#' * Output Domain:  `ExprDomain<MI::LazyDomain>`
+#' * Input Metric:   `MI`
+#' * Output Metric:  `MI::SumMetric`
+#'
+#' @concept transformations
+#' @param input_domain ExprDomain
+#' @param input_metric valid selections shown in table above
+#' @param .MI undocumented
+#' @param .TI undocumented
+#' @return Transformation
+#' @export
+make_sum_expr <- function(
+    input_domain,
+    input_metric,
+    .MI,
+    .TI
+) {
+    # Standardize type arguments.
+    .MI <- rt_parse(type_name = .MI)
+    .TI <- rt_parse(type_name = .TI)
+
+    log <- new_constructor_log("make_sum_expr", "transformations", new_hashtab(
+        list("input_domain", "input_metric", "MI", "TI"),
+        list(input_domain, input_metric, .MI, .TI)
+    ))
+
+    # Call wrapper function.
+    output <- .Call(
+        "transformations__make_sum_expr",
+        input_domain, input_metric, .MI, .TI,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial sum expr constructor
+#'
+#' See documentation for [make_sum_expr()] for details.
+#'
+#' @concept transformations
+#' @param lhs The prior transformation or metric space.
+#' @param .MI undocumented
+#' @param .TI undocumented
+#' @return Transformation
+#' @export
+then_sum_expr <- function(
+    lhs,
+    .MI,
+    .TI
+) {
+
+    log <- new_constructor_log("then_sum_expr", "transformations", new_hashtab(
+        list("MI", "TI"),
+        list(.MI, .TI)
+    ))
+
+    make_chain_dyn(
+        make_sum_expr(
+            output_domain(lhs),
+            output_metric(lhs),
+            .MI = .MI,
+            .TI = .TI),
+        lhs,
+        log)
+}
+
+
 #' sum of squared deviations constructor
 #'
 #' Make a Transformation that computes the sum of squared deviations of bounded data.

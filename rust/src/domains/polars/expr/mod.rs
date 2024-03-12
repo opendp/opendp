@@ -5,7 +5,7 @@ use std::fmt::{Debug, Formatter};
 use crate::core::{Metric, MetricSpace};
 use crate::domains::LazyFrameDomain;
 use crate::metrics::{
-    AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, Lp,
+    AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, L1Distance, Lp,
     SymmetricDistance,
 };
 use crate::traits::TotalOrd;
@@ -223,7 +223,7 @@ impl<M: DatasetMetric> MetricSpace for (ExprDomain<LazyFrameDomain>, M) {
     }
 }
 
-impl<M: DatasetMetric, const P: usize> MetricSpace for (ExprDomain<LazyGroupByDomain>, Lp<P, M>) {
+impl<M: DatasetMetric> MetricSpace for (ExprDomain<LazyGroupByDomain>, Lp<1, M>) {
     fn check_space(&self) -> Fallible<()> {
         (self.0.lazy_frame_domain.clone(), self.1 .0.clone()).check_space()
     }
@@ -232,5 +232,15 @@ impl<M: DatasetMetric, const P: usize> MetricSpace for (ExprDomain<LazyGroupByDo
 impl<Q: TotalOrd> MetricSpace for (ExprDomain<LazyFrameDomain>, AbsoluteDistance<Q>) {
     fn check_space(&self) -> Fallible<()> {
         (self.0.lazy_frame_domain.clone(), self.1.clone()).check_space()
+    }
+}
+
+impl<Q: TotalOrd> MetricSpace for (ExprDomain<LazyGroupByDomain>, L1Distance<Q>) {
+    fn check_space(&self) -> Fallible<()> {
+        let lgb_domain = LazyGroupByDomain {
+            lazy_frame_domain: self.0.lazy_frame_domain.clone(),
+            grouping_columns: self.0.context.columns.clone(),
+        };
+        (lgb_domain, self.1.clone()).check_space()
     }
 }
