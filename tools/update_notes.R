@@ -1,9 +1,8 @@
 # This file is adapted from https://github.com/yutannihilation/string2path, under MIT license
 # Based on https://github.com/yutannihilation/string2path/blob/main/update_authors.R
 
-rlang::check_installed("RcppTOML")
-
 library(RcppTOML)
+library(stringr)
 
 ## Update inst/AUTHORS
 
