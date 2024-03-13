@@ -13,22 +13,22 @@ NULL
 #' @return Measure
 #' @export
 fixed_smoothed_max_divergence <- function(
-    .T
+  .T
 ) {
-    # Standardize type arguments.
-    .T <- rt_parse(type_name = .T)
+  # Standardize type arguments.
+  .T <- rt_parse(type_name = .T)
 
-    log <- new_constructor_log("fixed_smoothed_max_divergence", "measures", new_hashtab(
-        list("T"),
-        list(.T)
-    ))
+  log <- new_constructor_log("fixed_smoothed_max_divergence", "measures", new_hashtab(
+      list("T"),
+      list(.T)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measures__fixed_smoothed_max_divergence",
-        .T,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measures__fixed_smoothed_max_divergence",
+      .T,
+      log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -41,22 +41,22 @@ fixed_smoothed_max_divergence <- function(
 #' @return Measure
 #' @export
 max_divergence <- function(
-    .T
+  .T
 ) {
-    # Standardize type arguments.
-    .T <- rt_parse(type_name = .T)
+  # Standardize type arguments.
+  .T <- rt_parse(type_name = .T)
 
-    log <- new_constructor_log("max_divergence", "measures", new_hashtab(
-        list("T"),
-        list(.T)
-    ))
+  log <- new_constructor_log("max_divergence", "measures", new_hashtab(
+      list("T"),
+      list(.T)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measures__max_divergence",
-        .T,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measures__max_divergence",
+      .T,
+      log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -67,20 +67,20 @@ max_divergence <- function(
 #' @return str
 #' @export
 measure_debug <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("measure_debug", "measures", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("measure_debug", "measures", new_hashtab(
+      list("this"),
+      list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measures__measure_debug",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measures__measure_debug",
+      this,
+      log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -91,20 +91,20 @@ measure_debug <- function(
 #' @return str
 #' @export
 measure_distance_type <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("measure_distance_type", "measures", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("measure_distance_type", "measures", new_hashtab(
+      list("this"),
+      list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measures__measure_distance_type",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measures__measure_distance_type",
+      this,
+      log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -115,20 +115,20 @@ measure_distance_type <- function(
 #' @return str
 #' @export
 measure_type <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("measure_type", "measures", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("measure_type", "measures", new_hashtab(
+      list("this"),
+      list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measures__measure_type",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measures__measure_type",
+      this,
+      log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -141,22 +141,22 @@ measure_type <- function(
 #' @return Measure
 #' @export
 smoothed_max_divergence <- function(
-    .T
+  .T
 ) {
-    # Standardize type arguments.
-    .T <- rt_parse(type_name = .T)
+  # Standardize type arguments.
+  .T <- rt_parse(type_name = .T)
 
-    log <- new_constructor_log("smoothed_max_divergence", "measures", new_hashtab(
-        list("T"),
-        list(.T)
-    ))
+  log <- new_constructor_log("smoothed_max_divergence", "measures", new_hashtab(
+      list("T"),
+      list(.T)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measures__smoothed_max_divergence",
-        .T,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measures__smoothed_max_divergence",
+      .T,
+      log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -168,25 +168,25 @@ smoothed_max_divergence <- function(
 #' @return Measure
 #' @export
 user_divergence <- function(
-    descriptor
+  descriptor
 ) {
-    assert_features("honest-but-curious")
+  assert_features("honest-but-curious")
 
-    # No type arguments to standardize.
-    log <- new_constructor_log("user_divergence", "measures", new_hashtab(
-        list("descriptor"),
-        list(unbox2(descriptor))
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("user_divergence", "measures", new_hashtab(
+      list("descriptor"),
+      list(unbox2(descriptor))
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = String, inferred = rt_infer(descriptor))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = String, inferred = rt_infer(descriptor))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measures__user_divergence",
-        descriptor,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measures__user_divergence",
+      descriptor,
+      log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -199,20 +199,20 @@ user_divergence <- function(
 #' @return Measure
 #' @export
 zero_concentrated_divergence <- function(
-    .T
+  .T
 ) {
-    # Standardize type arguments.
-    .T <- rt_parse(type_name = .T)
+  # Standardize type arguments.
+  .T <- rt_parse(type_name = .T)
 
-    log <- new_constructor_log("zero_concentrated_divergence", "measures", new_hashtab(
-        list("T"),
-        list(.T)
-    ))
+  log <- new_constructor_log("zero_concentrated_divergence", "measures", new_hashtab(
+      list("T"),
+      list(.T)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measures__zero_concentrated_divergence",
-        .T,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measures__zero_concentrated_divergence",
+      .T,
+      log, PACKAGE = "opendp")
+  output
 }

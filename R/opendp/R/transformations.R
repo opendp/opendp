@@ -18,25 +18,25 @@ NULL
 #' @return int
 #' @export
 choose_branching_factor <- function(
-    size_guess
+  size_guess
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # No type arguments to standardize.
-    log <- new_constructor_log("choose_branching_factor", "transformations", new_hashtab(
-        list("size_guess"),
-        list(unbox2(size_guess))
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("choose_branching_factor", "transformations", new_hashtab(
+      list("size_guess"),
+      list(unbox2(size_guess))
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = u32, inferred = rt_infer(size_guess))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = u32, inferred = rt_infer(size_guess))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__choose_branching_factor",
-        size_guess,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__choose_branching_factor",
+      size_guess,
+      log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -62,29 +62,29 @@ choose_branching_factor <- function(
 #' @return Transformation
 #' @export
 make_b_ary_tree <- function(
-    input_domain,
-    input_metric,
-    leaf_count,
-    branching_factor
+  input_domain,
+  input_metric,
+  leaf_count,
+  branching_factor
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # No type arguments to standardize.
-    log <- new_constructor_log("make_b_ary_tree", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "leaf_count", "branching_factor"),
-        list(input_domain, input_metric, unbox2(leaf_count), unbox2(branching_factor))
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("make_b_ary_tree", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "leaf_count", "branching_factor"),
+      list(input_domain, input_metric, unbox2(leaf_count), unbox2(branching_factor))
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = u32, inferred = rt_infer(leaf_count))
-    rt_assert_is_similar(expected = u32, inferred = rt_infer(branching_factor))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = u32, inferred = rt_infer(leaf_count))
+  rt_assert_is_similar(expected = u32, inferred = rt_infer(branching_factor))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_b_ary_tree",
-        input_domain, input_metric, leaf_count, branching_factor,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_b_ary_tree",
+      input_domain, input_metric, leaf_count, branching_factor,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial b ary tree constructor
@@ -98,22 +98,22 @@ make_b_ary_tree <- function(
 #' @return Transformation
 #' @export
 then_b_ary_tree <- function(
-    lhs,
-    leaf_count,
-    branching_factor
+  lhs,
+  leaf_count,
+  branching_factor
 ) {
 
-    log <- new_constructor_log("then_b_ary_tree", "transformations", new_hashtab(
-        list("leaf_count", "branching_factor"),
-        list(unbox2(leaf_count), unbox2(branching_factor))
-    ))
+  log <- new_constructor_log("then_b_ary_tree", "transformations", new_hashtab(
+      list("leaf_count", "branching_factor"),
+      list(unbox2(leaf_count), unbox2(branching_factor))
+  ))
 
     make_chain_dyn(
         make_b_ary_tree(
-            output_domain(lhs),
-            output_metric(lhs),
-            leaf_count = leaf_count,
-            branching_factor = branching_factor),
+      output_domain(lhs),
+      output_metric(lhs),
+      leaf_count = leaf_count,
+      branching_factor = branching_factor),
         lhs,
         log)
 }
@@ -158,33 +158,33 @@ then_b_ary_tree <- function(
 #' @return Transformation
 #' @export
 make_bounded_float_checked_sum <- function(
-    size_limit,
-    bounds,
-    .S = "Pairwise<.T>"
+  size_limit,
+  bounds,
+  .S = "Pairwise<.T>"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .S <- rt_parse(type_name = .S, generics = list(".T"))
-    .T <- get_atom_or_infer(.S, get_first(bounds))
-    .S <- rt_substitute(.S, .T = .T)
-    .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
+  # Standardize type arguments.
+  .S <- rt_parse(type_name = .S, generics = list(".T"))
+  .T <- get_atom_or_infer(.S, get_first(bounds))
+  .S <- rt_substitute(.S, .T = .T)
+  .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
 
-    log <- new_constructor_log("make_bounded_float_checked_sum", "transformations", new_hashtab(
-        list("size_limit", "bounds", "S"),
-        list(unbox2(size_limit), lapply(bounds, unbox2), .S)
-    ))
+  log <- new_constructor_log("make_bounded_float_checked_sum", "transformations", new_hashtab(
+      list("size_limit", "bounds", "S"),
+      list(unbox2(size_limit), lapply(bounds, unbox2), .S)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = usize, inferred = rt_infer(size_limit))
-    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = usize, inferred = rt_infer(size_limit))
+  rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_bounded_float_checked_sum",
-        size_limit, bounds, .S, .T, rt_parse(.T.bounds),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_bounded_float_checked_sum",
+      size_limit, bounds, .S, .T, rt_parse(.T.bounds),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial bounded float checked sum constructor
@@ -199,22 +199,22 @@ make_bounded_float_checked_sum <- function(
 #' @return Transformation
 #' @export
 then_bounded_float_checked_sum <- function(
-    lhs,
-    size_limit,
-    bounds,
-    .S = "Pairwise<.T>"
+  lhs,
+  size_limit,
+  bounds,
+  .S = "Pairwise<.T>"
 ) {
 
-    log <- new_constructor_log("then_bounded_float_checked_sum", "transformations", new_hashtab(
-        list("size_limit", "bounds", "S"),
-        list(unbox2(size_limit), lapply(bounds, unbox2), .S)
-    ))
+  log <- new_constructor_log("then_bounded_float_checked_sum", "transformations", new_hashtab(
+      list("size_limit", "bounds", "S"),
+      list(unbox2(size_limit), lapply(bounds, unbox2), .S)
+  ))
 
     make_chain_dyn(
         make_bounded_float_checked_sum(
-            size_limit = size_limit,
-            bounds = bounds,
-            .S = .S),
+      size_limit = size_limit,
+      bounds = bounds,
+      .S = .S),
         lhs,
         log)
 }
@@ -260,33 +260,33 @@ then_bounded_float_checked_sum <- function(
 #' @return Transformation
 #' @export
 make_bounded_float_ordered_sum <- function(
-    size_limit,
-    bounds,
-    .S = "Pairwise<.T>"
+  size_limit,
+  bounds,
+  .S = "Pairwise<.T>"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .S <- rt_parse(type_name = .S, generics = list(".T"))
-    .T <- get_atom_or_infer(.S, get_first(bounds))
-    .S <- rt_substitute(.S, .T = .T)
-    .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
+  # Standardize type arguments.
+  .S <- rt_parse(type_name = .S, generics = list(".T"))
+  .T <- get_atom_or_infer(.S, get_first(bounds))
+  .S <- rt_substitute(.S, .T = .T)
+  .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
 
-    log <- new_constructor_log("make_bounded_float_ordered_sum", "transformations", new_hashtab(
-        list("size_limit", "bounds", "S"),
-        list(unbox2(size_limit), lapply(bounds, unbox2), .S)
-    ))
+  log <- new_constructor_log("make_bounded_float_ordered_sum", "transformations", new_hashtab(
+      list("size_limit", "bounds", "S"),
+      list(unbox2(size_limit), lapply(bounds, unbox2), .S)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = usize, inferred = rt_infer(size_limit))
-    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = usize, inferred = rt_infer(size_limit))
+  rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_bounded_float_ordered_sum",
-        size_limit, bounds, .S, .T, rt_parse(.T.bounds),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_bounded_float_ordered_sum",
+      size_limit, bounds, .S, .T, rt_parse(.T.bounds),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial bounded float ordered sum constructor
@@ -301,22 +301,22 @@ make_bounded_float_ordered_sum <- function(
 #' @return Transformation
 #' @export
 then_bounded_float_ordered_sum <- function(
-    lhs,
-    size_limit,
-    bounds,
-    .S = "Pairwise<.T>"
+  lhs,
+  size_limit,
+  bounds,
+  .S = "Pairwise<.T>"
 ) {
 
-    log <- new_constructor_log("then_bounded_float_ordered_sum", "transformations", new_hashtab(
-        list("size_limit", "bounds", "S"),
-        list(unbox2(size_limit), lapply(bounds, unbox2), .S)
-    ))
+  log <- new_constructor_log("then_bounded_float_ordered_sum", "transformations", new_hashtab(
+      list("size_limit", "bounds", "S"),
+      list(unbox2(size_limit), lapply(bounds, unbox2), .S)
+  ))
 
     make_chain_dyn(
         make_bounded_float_ordered_sum(
-            size_limit = size_limit,
-            bounds = bounds,
-            .S = .S),
+      size_limit = size_limit,
+      bounds = bounds,
+      .S = .S),
         lhs,
         log)
 }
@@ -347,29 +347,29 @@ then_bounded_float_ordered_sum <- function(
 #' @return Transformation
 #' @export
 make_bounded_int_monotonic_sum <- function(
-    bounds,
-    .T = NULL
+  bounds,
+  .T = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
-    .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
+  .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
 
-    log <- new_constructor_log("make_bounded_int_monotonic_sum", "transformations", new_hashtab(
-        list("bounds", "T"),
-        list(lapply(bounds, unbox2), .T)
-    ))
+  log <- new_constructor_log("make_bounded_int_monotonic_sum", "transformations", new_hashtab(
+      list("bounds", "T"),
+      list(lapply(bounds, unbox2), .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_bounded_int_monotonic_sum",
-        bounds, .T, rt_parse(.T.bounds),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_bounded_int_monotonic_sum",
+      bounds, .T, rt_parse(.T.bounds),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial bounded int monotonic sum constructor
@@ -383,20 +383,20 @@ make_bounded_int_monotonic_sum <- function(
 #' @return Transformation
 #' @export
 then_bounded_int_monotonic_sum <- function(
-    lhs,
-    bounds,
-    .T = NULL
+  lhs,
+  bounds,
+  .T = NULL
 ) {
 
-    log <- new_constructor_log("then_bounded_int_monotonic_sum", "transformations", new_hashtab(
-        list("bounds", "T"),
-        list(lapply(bounds, unbox2), .T)
-    ))
+  log <- new_constructor_log("then_bounded_int_monotonic_sum", "transformations", new_hashtab(
+      list("bounds", "T"),
+      list(lapply(bounds, unbox2), .T)
+  ))
 
     make_chain_dyn(
         make_bounded_int_monotonic_sum(
-            bounds = bounds,
-            .T = .T),
+      bounds = bounds,
+      .T = .T),
         lhs,
         log)
 }
@@ -427,29 +427,29 @@ then_bounded_int_monotonic_sum <- function(
 #' @return Transformation
 #' @export
 make_bounded_int_ordered_sum <- function(
-    bounds,
-    .T = NULL
+  bounds,
+  .T = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
-    .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
+  .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
 
-    log <- new_constructor_log("make_bounded_int_ordered_sum", "transformations", new_hashtab(
-        list("bounds", "T"),
-        list(lapply(bounds, unbox2), .T)
-    ))
+  log <- new_constructor_log("make_bounded_int_ordered_sum", "transformations", new_hashtab(
+      list("bounds", "T"),
+      list(lapply(bounds, unbox2), .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_bounded_int_ordered_sum",
-        bounds, .T, rt_parse(.T.bounds),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_bounded_int_ordered_sum",
+      bounds, .T, rt_parse(.T.bounds),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial bounded int ordered sum constructor
@@ -463,20 +463,20 @@ make_bounded_int_ordered_sum <- function(
 #' @return Transformation
 #' @export
 then_bounded_int_ordered_sum <- function(
-    lhs,
-    bounds,
-    .T = NULL
+  lhs,
+  bounds,
+  .T = NULL
 ) {
 
-    log <- new_constructor_log("then_bounded_int_ordered_sum", "transformations", new_hashtab(
-        list("bounds", "T"),
-        list(lapply(bounds, unbox2), .T)
-    ))
+  log <- new_constructor_log("then_bounded_int_ordered_sum", "transformations", new_hashtab(
+      list("bounds", "T"),
+      list(lapply(bounds, unbox2), .T)
+  ))
 
     make_chain_dyn(
         make_bounded_int_ordered_sum(
-            bounds = bounds,
-            .T = .T),
+      bounds = bounds,
+      .T = .T),
         lhs,
         log)
 }
@@ -507,29 +507,29 @@ then_bounded_int_ordered_sum <- function(
 #' @return Transformation
 #' @export
 make_bounded_int_split_sum <- function(
-    bounds,
-    .T = NULL
+  bounds,
+  .T = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
-    .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
+  .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
 
-    log <- new_constructor_log("make_bounded_int_split_sum", "transformations", new_hashtab(
-        list("bounds", "T"),
-        list(lapply(bounds, unbox2), .T)
-    ))
+  log <- new_constructor_log("make_bounded_int_split_sum", "transformations", new_hashtab(
+      list("bounds", "T"),
+      list(lapply(bounds, unbox2), .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_bounded_int_split_sum",
-        bounds, .T, rt_parse(.T.bounds),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_bounded_int_split_sum",
+      bounds, .T, rt_parse(.T.bounds),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial bounded int split sum constructor
@@ -543,20 +543,20 @@ make_bounded_int_split_sum <- function(
 #' @return Transformation
 #' @export
 then_bounded_int_split_sum <- function(
-    lhs,
-    bounds,
-    .T = NULL
+  lhs,
+  bounds,
+  .T = NULL
 ) {
 
-    log <- new_constructor_log("then_bounded_int_split_sum", "transformations", new_hashtab(
-        list("bounds", "T"),
-        list(lapply(bounds, unbox2), .T)
-    ))
+  log <- new_constructor_log("then_bounded_int_split_sum", "transformations", new_hashtab(
+      list("bounds", "T"),
+      list(lapply(bounds, unbox2), .T)
+  ))
 
     make_chain_dyn(
         make_bounded_int_split_sum(
-            bounds = bounds,
-            .T = .T),
+      bounds = bounds,
+      .T = .T),
         lhs,
         log)
 }
@@ -585,26 +585,26 @@ then_bounded_int_split_sum <- function(
 #' @return Transformation
 #' @export
 make_cast <- function(
-    input_domain,
-    input_metric,
-    .TOA
+  input_domain,
+  input_metric,
+  .TOA
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TOA <- rt_parse(type_name = .TOA)
+  # Standardize type arguments.
+  .TOA <- rt_parse(type_name = .TOA)
 
-    log <- new_constructor_log("make_cast", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "TOA"),
-        list(input_domain, input_metric, .TOA)
-    ))
+  log <- new_constructor_log("make_cast", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "TOA"),
+      list(input_domain, input_metric, .TOA)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_cast",
-        input_domain, input_metric, .TOA,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_cast",
+      input_domain, input_metric, .TOA,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial cast constructor
@@ -617,20 +617,20 @@ make_cast <- function(
 #' @return Transformation
 #' @export
 then_cast <- function(
-    lhs,
-    .TOA
+  lhs,
+  .TOA
 ) {
 
-    log <- new_constructor_log("then_cast", "transformations", new_hashtab(
-        list("TOA"),
-        list(.TOA)
-    ))
+  log <- new_constructor_log("then_cast", "transformations", new_hashtab(
+      list("TOA"),
+      list(.TOA)
+  ))
 
     make_chain_dyn(
         make_cast(
-            output_domain(lhs),
-            output_metric(lhs),
-            .TOA = .TOA),
+      output_domain(lhs),
+      output_metric(lhs),
+      .TOA = .TOA),
         lhs,
         log)
 }
@@ -665,28 +665,28 @@ then_cast <- function(
 #' @return Transformation
 #' @export
 make_cast_default <- function(
-    input_domain,
-    input_metric,
-    .TOA
+  input_domain,
+  input_metric,
+  .TOA
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TOA <- rt_parse(type_name = .TOA)
-    .TIA <- get_atom(get_type(input_domain))
-    .M <- get_type(input_metric)
+  # Standardize type arguments.
+  .TOA <- rt_parse(type_name = .TOA)
+  .TIA <- get_atom(get_type(input_domain))
+  .M <- get_type(input_metric)
 
-    log <- new_constructor_log("make_cast_default", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "TOA"),
-        list(input_domain, input_metric, .TOA)
-    ))
+  log <- new_constructor_log("make_cast_default", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "TOA"),
+      list(input_domain, input_metric, .TOA)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_cast_default",
-        input_domain, input_metric, .TOA, .TIA, .M,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_cast_default",
+      input_domain, input_metric, .TOA, .TIA, .M,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial cast default constructor
@@ -699,20 +699,20 @@ make_cast_default <- function(
 #' @return Transformation
 #' @export
 then_cast_default <- function(
-    lhs,
-    .TOA
+  lhs,
+  .TOA
 ) {
 
-    log <- new_constructor_log("then_cast_default", "transformations", new_hashtab(
-        list("TOA"),
-        list(.TOA)
-    ))
+  log <- new_constructor_log("then_cast_default", "transformations", new_hashtab(
+      list("TOA"),
+      list(.TOA)
+  ))
 
     make_chain_dyn(
         make_cast_default(
-            output_domain(lhs),
-            output_metric(lhs),
-            .TOA = .TOA),
+      output_domain(lhs),
+      output_metric(lhs),
+      .TOA = .TOA),
         lhs,
         log)
 }
@@ -743,26 +743,26 @@ then_cast_default <- function(
 #' @return Transformation
 #' @export
 make_cast_inherent <- function(
-    input_domain,
-    input_metric,
-    .TOA
+  input_domain,
+  input_metric,
+  .TOA
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TOA <- rt_parse(type_name = .TOA)
+  # Standardize type arguments.
+  .TOA <- rt_parse(type_name = .TOA)
 
-    log <- new_constructor_log("make_cast_inherent", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "TOA"),
-        list(input_domain, input_metric, .TOA)
-    ))
+  log <- new_constructor_log("make_cast_inherent", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "TOA"),
+      list(input_domain, input_metric, .TOA)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_cast_inherent",
-        input_domain, input_metric, .TOA,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_cast_inherent",
+      input_domain, input_metric, .TOA,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial cast inherent constructor
@@ -775,20 +775,20 @@ make_cast_inherent <- function(
 #' @return Transformation
 #' @export
 then_cast_inherent <- function(
-    lhs,
-    .TOA
+  lhs,
+  .TOA
 ) {
 
-    log <- new_constructor_log("then_cast_inherent", "transformations", new_hashtab(
-        list("TOA"),
-        list(.TOA)
-    ))
+  log <- new_constructor_log("then_cast_inherent", "transformations", new_hashtab(
+      list("TOA"),
+      list(.TOA)
+  ))
 
     make_chain_dyn(
         make_cast_inherent(
-            output_domain(lhs),
-            output_metric(lhs),
-            .TOA = .TOA),
+      output_domain(lhs),
+      output_metric(lhs),
+      .TOA = .TOA),
         lhs,
         log)
 }
@@ -810,24 +810,24 @@ then_cast_inherent <- function(
 #' @return Function
 #' @export
 make_cdf <- function(
-    .TA = "float"
+  .TA = "float"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TA <- rt_parse(type_name = .TA)
+  # Standardize type arguments.
+  .TA <- rt_parse(type_name = .TA)
 
-    log <- new_constructor_log("make_cdf", "transformations", new_hashtab(
-        list("TA"),
-        list(.TA)
-    ))
+  log <- new_constructor_log("make_cdf", "transformations", new_hashtab(
+      list("TA"),
+      list(.TA)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_cdf",
-        .TA,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_cdf",
+      .TA,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial cdf constructor
@@ -840,18 +840,18 @@ make_cdf <- function(
 #' @return Function
 #' @export
 then_cdf <- function(
-    lhs,
-    .TA = "float"
+  lhs,
+  .TA = "float"
 ) {
 
-    log <- new_constructor_log("then_cdf", "transformations", new_hashtab(
-        list("TA"),
-        list(.TA)
-    ))
+  log <- new_constructor_log("then_cdf", "transformations", new_hashtab(
+      list("TA"),
+      list(.TA)
+  ))
 
     make_chain_dyn(
         make_cdf(
-            .TA = .TA),
+      .TA = .TA),
         lhs,
         log)
 }
@@ -884,30 +884,30 @@ then_cdf <- function(
 #' @return Transformation
 #' @export
 make_clamp <- function(
-    input_domain,
-    input_metric,
-    bounds
+  input_domain,
+  input_metric,
+  bounds
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TA <- get_atom(get_type(input_domain))
-    .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.TA, .TA))
+  # Standardize type arguments.
+  .TA <- get_atom(get_type(input_domain))
+  .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.TA, .TA))
 
-    log <- new_constructor_log("make_clamp", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "bounds"),
-        list(input_domain, input_metric, lapply(bounds, unbox2))
-    ))
+  log <- new_constructor_log("make_clamp", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "bounds"),
+      list(input_domain, input_metric, lapply(bounds, unbox2))
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_clamp",
-        input_domain, input_metric, bounds, .TA, rt_parse(.T.bounds),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_clamp",
+      input_domain, input_metric, bounds, .TA, rt_parse(.T.bounds),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial clamp constructor
@@ -920,20 +920,20 @@ make_clamp <- function(
 #' @return Transformation
 #' @export
 then_clamp <- function(
-    lhs,
-    bounds
+  lhs,
+  bounds
 ) {
 
-    log <- new_constructor_log("then_clamp", "transformations", new_hashtab(
-        list("bounds"),
-        list(lapply(bounds, unbox2))
-    ))
+  log <- new_constructor_log("then_clamp", "transformations", new_hashtab(
+      list("bounds"),
+      list(lapply(bounds, unbox2))
+  ))
 
     make_chain_dyn(
         make_clamp(
-            output_domain(lhs),
-            output_metric(lhs),
-            bounds = bounds),
+      output_domain(lhs),
+      output_metric(lhs),
+      bounds = bounds),
         lhs,
         log)
 }
@@ -968,30 +968,30 @@ then_clamp <- function(
 #' @return Function
 #' @export
 make_consistent_b_ary_tree <- function(
-    branching_factor,
-    .TIA = "int",
-    .TOA = "float"
+  branching_factor,
+  .TIA = "int",
+  .TOA = "float"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TIA <- rt_parse(type_name = .TIA)
-    .TOA <- rt_parse(type_name = .TOA)
+  # Standardize type arguments.
+  .TIA <- rt_parse(type_name = .TIA)
+  .TOA <- rt_parse(type_name = .TOA)
 
-    log <- new_constructor_log("make_consistent_b_ary_tree", "transformations", new_hashtab(
-        list("branching_factor", "TIA", "TOA"),
-        list(unbox2(branching_factor), .TIA, .TOA)
-    ))
+  log <- new_constructor_log("make_consistent_b_ary_tree", "transformations", new_hashtab(
+      list("branching_factor", "TIA", "TOA"),
+      list(unbox2(branching_factor), .TIA, .TOA)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = u32, inferred = rt_infer(branching_factor))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = u32, inferred = rt_infer(branching_factor))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_consistent_b_ary_tree",
-        branching_factor, .TIA, .TOA,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_consistent_b_ary_tree",
+      branching_factor, .TIA, .TOA,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial consistent b ary tree constructor
@@ -1006,22 +1006,22 @@ make_consistent_b_ary_tree <- function(
 #' @return Function
 #' @export
 then_consistent_b_ary_tree <- function(
-    lhs,
-    branching_factor,
-    .TIA = "int",
-    .TOA = "float"
+  lhs,
+  branching_factor,
+  .TIA = "int",
+  .TOA = "float"
 ) {
 
-    log <- new_constructor_log("then_consistent_b_ary_tree", "transformations", new_hashtab(
-        list("branching_factor", "TIA", "TOA"),
-        list(unbox2(branching_factor), .TIA, .TOA)
-    ))
+  log <- new_constructor_log("then_consistent_b_ary_tree", "transformations", new_hashtab(
+      list("branching_factor", "TIA", "TOA"),
+      list(unbox2(branching_factor), .TIA, .TOA)
+  ))
 
     make_chain_dyn(
         make_consistent_b_ary_tree(
-            branching_factor = branching_factor,
-            .TIA = .TIA,
-            .TOA = .TOA),
+      branching_factor = branching_factor,
+      .TIA = .TIA,
+      .TOA = .TOA),
         lhs,
         log)
 }
@@ -1055,26 +1055,26 @@ then_consistent_b_ary_tree <- function(
 #' @return Transformation
 #' @export
 make_count <- function(
-    input_domain,
-    input_metric,
-    .TO = "int"
+  input_domain,
+  input_metric,
+  .TO = "int"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TO <- rt_parse(type_name = .TO)
+  # Standardize type arguments.
+  .TO <- rt_parse(type_name = .TO)
 
-    log <- new_constructor_log("make_count", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "TO"),
-        list(input_domain, input_metric, .TO)
-    ))
+  log <- new_constructor_log("make_count", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "TO"),
+      list(input_domain, input_metric, .TO)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_count",
-        input_domain, input_metric, .TO,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_count",
+      input_domain, input_metric, .TO,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial count constructor
@@ -1087,20 +1087,20 @@ make_count <- function(
 #' @return Transformation
 #' @export
 then_count <- function(
-    lhs,
-    .TO = "int"
+  lhs,
+  .TO = "int"
 ) {
 
-    log <- new_constructor_log("then_count", "transformations", new_hashtab(
-        list("TO"),
-        list(.TO)
-    ))
+  log <- new_constructor_log("then_count", "transformations", new_hashtab(
+      list("TO"),
+      list(.TO)
+  ))
 
     make_chain_dyn(
         make_count(
-            output_domain(lhs),
-            output_metric(lhs),
-            .TO = .TO),
+      output_domain(lhs),
+      output_metric(lhs),
+      .TO = .TO),
         lhs,
         log)
 }
@@ -1132,28 +1132,28 @@ then_count <- function(
 #' @return The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
 #' @export
 make_count_by <- function(
-    input_domain,
-    input_metric,
-    .MO,
-    .TV = "int"
+  input_domain,
+  input_metric,
+  .MO,
+  .TV = "int"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .MO <- rt_parse(type_name = .MO)
-    .TV <- rt_parse(type_name = .TV)
+  # Standardize type arguments.
+  .MO <- rt_parse(type_name = .MO)
+  .TV <- rt_parse(type_name = .TV)
 
-    log <- new_constructor_log("make_count_by", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "MO", "TV"),
-        list(input_domain, input_metric, .MO, .TV)
-    ))
+  log <- new_constructor_log("make_count_by", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "MO", "TV"),
+      list(input_domain, input_metric, .MO, .TV)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_count_by",
-        input_domain, input_metric, .MO, .TV,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_count_by",
+      input_domain, input_metric, .MO, .TV,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial count by constructor
@@ -1167,22 +1167,22 @@ make_count_by <- function(
 #' @return The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
 #' @export
 then_count_by <- function(
-    lhs,
-    .MO,
-    .TV = "int"
+  lhs,
+  .MO,
+  .TV = "int"
 ) {
 
-    log <- new_constructor_log("then_count_by", "transformations", new_hashtab(
-        list("MO", "TV"),
-        list(.MO, .TV)
-    ))
+  log <- new_constructor_log("then_count_by", "transformations", new_hashtab(
+      list("MO", "TV"),
+      list(.MO, .TV)
+  ))
 
     make_chain_dyn(
         make_count_by(
-            output_domain(lhs),
-            output_metric(lhs),
-            .MO = .MO,
-            .TV = .TV),
+      output_domain(lhs),
+      output_metric(lhs),
+      .MO = .MO,
+      .TV = .TV),
         lhs,
         log)
 }
@@ -1217,36 +1217,36 @@ then_count_by <- function(
 #' @return The carrier type is `Vec<TOA>`, a vector of the counts (`TOA`).
 #' @export
 make_count_by_categories <- function(
-    input_domain,
-    input_metric,
-    categories,
-    null_category = TRUE,
-    .MO = "L1Distance<int>",
-    .TOA = "int"
+  input_domain,
+  input_metric,
+  categories,
+  null_category = TRUE,
+  .MO = "L1Distance<int>",
+  .TOA = "int"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .MO <- rt_parse(type_name = .MO)
-    .TOA <- rt_parse(type_name = .TOA)
-    .TIA <- get_atom(get_type(input_domain))
-    .T.categories <- new_runtime_type(origin = "Vec", args = list(.TIA))
+  # Standardize type arguments.
+  .MO <- rt_parse(type_name = .MO)
+  .TOA <- rt_parse(type_name = .TOA)
+  .TIA <- get_atom(get_type(input_domain))
+  .T.categories <- new_runtime_type(origin = "Vec", args = list(.TIA))
 
-    log <- new_constructor_log("make_count_by_categories", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "categories", "null_category", "MO", "TOA"),
-        list(input_domain, input_metric, categories, unbox2(null_category), .MO, .TOA)
-    ))
+  log <- new_constructor_log("make_count_by_categories", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "categories", "null_category", "MO", "TOA"),
+      list(input_domain, input_metric, categories, unbox2(null_category), .MO, .TOA)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.categories, inferred = rt_infer(categories))
-    rt_assert_is_similar(expected = bool, inferred = rt_infer(null_category))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.categories, inferred = rt_infer(categories))
+  rt_assert_is_similar(expected = bool, inferred = rt_infer(null_category))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_count_by_categories",
-        input_domain, input_metric, categories, null_category, .MO, .TOA, .TIA, rt_parse(.T.categories),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_count_by_categories",
+      input_domain, input_metric, categories, null_category, .MO, .TOA, .TIA, rt_parse(.T.categories),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial count by categories constructor
@@ -1262,26 +1262,26 @@ make_count_by_categories <- function(
 #' @return The carrier type is `Vec<TOA>`, a vector of the counts (`TOA`).
 #' @export
 then_count_by_categories <- function(
-    lhs,
-    categories,
-    null_category = TRUE,
-    .MO = "L1Distance<int>",
-    .TOA = "int"
+  lhs,
+  categories,
+  null_category = TRUE,
+  .MO = "L1Distance<int>",
+  .TOA = "int"
 ) {
 
-    log <- new_constructor_log("then_count_by_categories", "transformations", new_hashtab(
-        list("categories", "null_category", "MO", "TOA"),
-        list(categories, unbox2(null_category), .MO, .TOA)
-    ))
+  log <- new_constructor_log("then_count_by_categories", "transformations", new_hashtab(
+      list("categories", "null_category", "MO", "TOA"),
+      list(categories, unbox2(null_category), .MO, .TOA)
+  ))
 
     make_chain_dyn(
         make_count_by_categories(
-            output_domain(lhs),
-            output_metric(lhs),
-            categories = categories,
-            null_category = null_category,
-            .MO = .MO,
-            .TOA = .TOA),
+      output_domain(lhs),
+      output_metric(lhs),
+      categories = categories,
+      null_category = null_category,
+      .MO = .MO,
+      .TOA = .TOA),
         lhs,
         log)
 }
@@ -1311,26 +1311,26 @@ then_count_by_categories <- function(
 #' @return Transformation
 #' @export
 make_count_distinct <- function(
-    input_domain,
-    input_metric,
-    .TO = "int"
+  input_domain,
+  input_metric,
+  .TO = "int"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TO <- rt_parse(type_name = .TO)
+  # Standardize type arguments.
+  .TO <- rt_parse(type_name = .TO)
 
-    log <- new_constructor_log("make_count_distinct", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "TO"),
-        list(input_domain, input_metric, .TO)
-    ))
+  log <- new_constructor_log("make_count_distinct", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "TO"),
+      list(input_domain, input_metric, .TO)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_count_distinct",
-        input_domain, input_metric, .TO,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_count_distinct",
+      input_domain, input_metric, .TO,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial count distinct constructor
@@ -1343,20 +1343,20 @@ make_count_distinct <- function(
 #' @return Transformation
 #' @export
 then_count_distinct <- function(
-    lhs,
-    .TO = "int"
+  lhs,
+  .TO = "int"
 ) {
 
-    log <- new_constructor_log("then_count_distinct", "transformations", new_hashtab(
-        list("TO"),
-        list(.TO)
-    ))
+  log <- new_constructor_log("then_count_distinct", "transformations", new_hashtab(
+      list("TO"),
+      list(.TO)
+  ))
 
     make_chain_dyn(
         make_count_distinct(
-            output_domain(lhs),
-            output_metric(lhs),
-            .TO = .TO),
+      output_domain(lhs),
+      output_metric(lhs),
+      .TO = .TO),
         lhs,
         log)
 }
@@ -1381,29 +1381,29 @@ then_count_distinct <- function(
 #' @return Transformation
 #' @export
 make_create_dataframe <- function(
-    col_names,
-    .K = NULL
+  col_names,
+  .K = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .K <- parse_or_infer(type_name = .K, public_example = get_first(col_names))
-    .T.col_names <- new_runtime_type(origin = "Vec", args = list(.K))
+  # Standardize type arguments.
+  .K <- parse_or_infer(type_name = .K, public_example = get_first(col_names))
+  .T.col_names <- new_runtime_type(origin = "Vec", args = list(.K))
 
-    log <- new_constructor_log("make_create_dataframe", "transformations", new_hashtab(
-        list("col_names", "K"),
-        list(col_names, .K)
-    ))
+  log <- new_constructor_log("make_create_dataframe", "transformations", new_hashtab(
+      list("col_names", "K"),
+      list(col_names, .K)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.col_names, inferred = rt_infer(col_names))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.col_names, inferred = rt_infer(col_names))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_create_dataframe",
-        col_names, .K, rt_parse(.T.col_names),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_create_dataframe",
+      col_names, .K, rt_parse(.T.col_names),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial create dataframe constructor
@@ -1417,20 +1417,20 @@ make_create_dataframe <- function(
 #' @return Transformation
 #' @export
 then_create_dataframe <- function(
-    lhs,
-    col_names,
-    .K = NULL
+  lhs,
+  col_names,
+  .K = NULL
 ) {
 
-    log <- new_constructor_log("then_create_dataframe", "transformations", new_hashtab(
-        list("col_names", "K"),
-        list(col_names, .K)
-    ))
+  log <- new_constructor_log("then_create_dataframe", "transformations", new_hashtab(
+      list("col_names", "K"),
+      list(col_names, .K)
+  ))
 
     make_chain_dyn(
         make_create_dataframe(
-            col_names = col_names,
-            .K = .K),
+      col_names = col_names,
+      .K = .K),
         lhs,
         log)
 }
@@ -1467,34 +1467,34 @@ then_create_dataframe <- function(
 #' @return Transformation
 #' @export
 make_df_cast_default <- function(
-    input_domain,
-    input_metric,
-    column_name,
-    .TIA,
-    .TOA
+  input_domain,
+  input_metric,
+  column_name,
+  .TIA,
+  .TOA
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TIA <- rt_parse(type_name = .TIA)
-    .TOA <- rt_parse(type_name = .TOA)
-    .TK <- get_atom(get_type(input_domain))
-    .M <- get_type(input_metric)
+  # Standardize type arguments.
+  .TIA <- rt_parse(type_name = .TIA)
+  .TOA <- rt_parse(type_name = .TOA)
+  .TK <- get_atom(get_type(input_domain))
+  .M <- get_type(input_metric)
 
-    log <- new_constructor_log("make_df_cast_default", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "column_name", "TIA", "TOA"),
-        list(input_domain, input_metric, column_name, .TIA, .TOA)
-    ))
+  log <- new_constructor_log("make_df_cast_default", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "column_name", "TIA", "TOA"),
+      list(input_domain, input_metric, column_name, .TIA, .TOA)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .TK, inferred = rt_infer(column_name))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .TK, inferred = rt_infer(column_name))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_df_cast_default",
-        input_domain, input_metric, column_name, .TIA, .TOA, .TK, .M,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_df_cast_default",
+      input_domain, input_metric, column_name, .TIA, .TOA, .TK, .M,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial df cast default constructor
@@ -1509,24 +1509,24 @@ make_df_cast_default <- function(
 #' @return Transformation
 #' @export
 then_df_cast_default <- function(
-    lhs,
-    column_name,
-    .TIA,
-    .TOA
+  lhs,
+  column_name,
+  .TIA,
+  .TOA
 ) {
 
-    log <- new_constructor_log("then_df_cast_default", "transformations", new_hashtab(
-        list("column_name", "TIA", "TOA"),
-        list(column_name, .TIA, .TOA)
-    ))
+  log <- new_constructor_log("then_df_cast_default", "transformations", new_hashtab(
+      list("column_name", "TIA", "TOA"),
+      list(column_name, .TIA, .TOA)
+  ))
 
     make_chain_dyn(
         make_df_cast_default(
-            output_domain(lhs),
-            output_metric(lhs),
-            column_name = column_name,
-            .TIA = .TIA,
-            .TOA = .TOA),
+      output_domain(lhs),
+      output_metric(lhs),
+      column_name = column_name,
+      .TIA = .TIA,
+      .TOA = .TOA),
         lhs,
         log)
 }
@@ -1554,34 +1554,34 @@ then_df_cast_default <- function(
 #' @return Transformation
 #' @export
 make_df_is_equal <- function(
-    input_domain,
-    input_metric,
-    column_name,
-    value,
-    .TIA = NULL
+  input_domain,
+  input_metric,
+  column_name,
+  value,
+  .TIA = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TIA <- parse_or_infer(type_name = .TIA, public_example = value)
-    .TK <- get_atom(get_type(input_domain))
-    .M <- get_type(input_metric)
+  # Standardize type arguments.
+  .TIA <- parse_or_infer(type_name = .TIA, public_example = value)
+  .TK <- get_atom(get_type(input_domain))
+  .M <- get_type(input_metric)
 
-    log <- new_constructor_log("make_df_is_equal", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "column_name", "value", "TIA"),
-        list(input_domain, input_metric, column_name, value, .TIA)
-    ))
+  log <- new_constructor_log("make_df_is_equal", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "column_name", "value", "TIA"),
+      list(input_domain, input_metric, column_name, value, .TIA)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .TK, inferred = rt_infer(column_name))
-    rt_assert_is_similar(expected = .TIA, inferred = rt_infer(value))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .TK, inferred = rt_infer(column_name))
+  rt_assert_is_similar(expected = .TIA, inferred = rt_infer(value))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_df_is_equal",
-        input_domain, input_metric, column_name, value, .TIA, .TK, .M,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_df_is_equal",
+      input_domain, input_metric, column_name, value, .TIA, .TK, .M,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial df is equal constructor
@@ -1596,24 +1596,24 @@ make_df_is_equal <- function(
 #' @return Transformation
 #' @export
 then_df_is_equal <- function(
-    lhs,
-    column_name,
-    value,
-    .TIA = NULL
+  lhs,
+  column_name,
+  value,
+  .TIA = NULL
 ) {
 
-    log <- new_constructor_log("then_df_is_equal", "transformations", new_hashtab(
-        list("column_name", "value", "TIA"),
-        list(column_name, value, .TIA)
-    ))
+  log <- new_constructor_log("then_df_is_equal", "transformations", new_hashtab(
+      list("column_name", "value", "TIA"),
+      list(column_name, value, .TIA)
+  ))
 
     make_chain_dyn(
         make_df_is_equal(
-            output_domain(lhs),
-            output_metric(lhs),
-            column_name = column_name,
-            value = value,
-            .TIA = .TIA),
+      output_domain(lhs),
+      output_metric(lhs),
+      column_name = column_name,
+      value = value,
+      .TIA = .TIA),
         lhs,
         log)
 }
@@ -1644,23 +1644,23 @@ then_df_is_equal <- function(
 #' @return Transformation
 #' @export
 make_drop_null <- function(
-    input_domain,
-    input_metric
+  input_domain,
+  input_metric
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # No type arguments to standardize.
-    log <- new_constructor_log("make_drop_null", "transformations", new_hashtab(
-        list("input_domain", "input_metric"),
-        list(input_domain, input_metric)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("make_drop_null", "transformations", new_hashtab(
+      list("input_domain", "input_metric"),
+      list(input_domain, input_metric)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_drop_null",
-        input_domain, input_metric,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_drop_null",
+      input_domain, input_metric,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial drop null constructor
@@ -1673,18 +1673,18 @@ make_drop_null <- function(
 #' @return Transformation
 #' @export
 then_drop_null <- function(
-    lhs
+  lhs
 ) {
 
-    log <- new_constructor_log("then_drop_null", "transformations", new_hashtab(
-        list(),
-        list()
-    ))
+  log <- new_constructor_log("then_drop_null", "transformations", new_hashtab(
+      list(),
+      list()
+  ))
 
     make_chain_dyn(
         make_drop_null(
-            output_domain(lhs),
-            output_metric(lhs)),
+      output_domain(lhs),
+      output_metric(lhs)),
         lhs,
         log)
 }
@@ -1714,30 +1714,30 @@ then_drop_null <- function(
 #' @return Transformation
 #' @export
 make_find <- function(
-    input_domain,
-    input_metric,
-    categories
+  input_domain,
+  input_metric,
+  categories
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TIA <- get_atom(get_type(input_domain))
-    .T.categories <- new_runtime_type(origin = "Vec", args = list(.TIA))
+  # Standardize type arguments.
+  .TIA <- get_atom(get_type(input_domain))
+  .T.categories <- new_runtime_type(origin = "Vec", args = list(.TIA))
 
-    log <- new_constructor_log("make_find", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "categories"),
-        list(input_domain, input_metric, categories)
-    ))
+  log <- new_constructor_log("make_find", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "categories"),
+      list(input_domain, input_metric, categories)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.categories, inferred = rt_infer(categories))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.categories, inferred = rt_infer(categories))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_find",
-        input_domain, input_metric, categories, .TIA, rt_parse(.T.categories),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_find",
+      input_domain, input_metric, categories, .TIA, rt_parse(.T.categories),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial find constructor
@@ -1750,20 +1750,20 @@ make_find <- function(
 #' @return Transformation
 #' @export
 then_find <- function(
-    lhs,
-    categories
+  lhs,
+  categories
 ) {
 
-    log <- new_constructor_log("then_find", "transformations", new_hashtab(
-        list("categories"),
-        list(categories)
-    ))
+  log <- new_constructor_log("then_find", "transformations", new_hashtab(
+      list("categories"),
+      list(categories)
+  ))
 
     make_chain_dyn(
         make_find(
-            output_domain(lhs),
-            output_metric(lhs),
-            categories = categories),
+      output_domain(lhs),
+      output_metric(lhs),
+      categories = categories),
         lhs,
         log)
 }
@@ -1797,30 +1797,30 @@ then_find <- function(
 #' @return Transformation
 #' @export
 make_find_bin <- function(
-    input_domain,
-    input_metric,
-    edges
+  input_domain,
+  input_metric,
+  edges
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TIA <- get_atom(get_type(input_domain))
-    .T.edges <- new_runtime_type(origin = "Vec", args = list(.TIA))
+  # Standardize type arguments.
+  .TIA <- get_atom(get_type(input_domain))
+  .T.edges <- new_runtime_type(origin = "Vec", args = list(.TIA))
 
-    log <- new_constructor_log("make_find_bin", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "edges"),
-        list(input_domain, input_metric, edges)
-    ))
+  log <- new_constructor_log("make_find_bin", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "edges"),
+      list(input_domain, input_metric, edges)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.edges, inferred = rt_infer(edges))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.edges, inferred = rt_infer(edges))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_find_bin",
-        input_domain, input_metric, edges, .TIA, rt_parse(.T.edges),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_find_bin",
+      input_domain, input_metric, edges, .TIA, rt_parse(.T.edges),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial find bin constructor
@@ -1833,20 +1833,20 @@ make_find_bin <- function(
 #' @return Transformation
 #' @export
 then_find_bin <- function(
-    lhs,
-    edges
+  lhs,
+  edges
 ) {
 
-    log <- new_constructor_log("then_find_bin", "transformations", new_hashtab(
-        list("edges"),
-        list(edges)
-    ))
+  log <- new_constructor_log("then_find_bin", "transformations", new_hashtab(
+      list("edges"),
+      list(edges)
+  ))
 
     make_chain_dyn(
         make_find_bin(
-            output_domain(lhs),
-            output_metric(lhs),
-            edges = edges),
+      output_domain(lhs),
+      output_metric(lhs),
+      edges = edges),
         lhs,
         log)
 }
@@ -1876,23 +1876,23 @@ then_find_bin <- function(
 #' @return Transformation
 #' @export
 make_identity <- function(
-    domain,
-    metric
+  domain,
+  metric
 ) {
-    assert_features("contrib", "honest-but-curious")
+  assert_features("contrib", "honest-but-curious")
 
-    # No type arguments to standardize.
-    log <- new_constructor_log("make_identity", "transformations", new_hashtab(
-        list("domain", "metric"),
-        list(domain, metric)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("make_identity", "transformations", new_hashtab(
+      list("domain", "metric"),
+      list(domain, metric)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_identity",
-        domain, metric,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_identity",
+      domain, metric,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial identity constructor
@@ -1905,18 +1905,18 @@ make_identity <- function(
 #' @return Transformation
 #' @export
 then_identity <- function(
-    lhs
+  lhs
 ) {
 
-    log <- new_constructor_log("then_identity", "transformations", new_hashtab(
-        list(),
-        list()
-    ))
+  log <- new_constructor_log("then_identity", "transformations", new_hashtab(
+      list(),
+      list()
+  ))
 
     make_chain_dyn(
         make_identity(
-            output_domain(lhs),
-            output_metric(lhs)),
+      output_domain(lhs),
+      output_metric(lhs)),
         lhs,
         log)
 }
@@ -1950,29 +1950,29 @@ then_identity <- function(
 #' @return Transformation
 #' @export
 make_impute_constant <- function(
-    input_domain,
-    input_metric,
-    constant
+  input_domain,
+  input_metric,
+  constant
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .T.constant <- get_atom(get_type(input_domain))
+  # Standardize type arguments.
+  .T.constant <- get_atom(get_type(input_domain))
 
-    log <- new_constructor_log("make_impute_constant", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "constant"),
-        list(input_domain, input_metric, constant)
-    ))
+  log <- new_constructor_log("make_impute_constant", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "constant"),
+      list(input_domain, input_metric, constant)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.constant, inferred = rt_infer(constant))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.constant, inferred = rt_infer(constant))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_impute_constant",
-        input_domain, input_metric, constant, rt_parse(.T.constant),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_impute_constant",
+      input_domain, input_metric, constant, rt_parse(.T.constant),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial impute constant constructor
@@ -1985,20 +1985,20 @@ make_impute_constant <- function(
 #' @return Transformation
 #' @export
 then_impute_constant <- function(
-    lhs,
-    constant
+  lhs,
+  constant
 ) {
 
-    log <- new_constructor_log("then_impute_constant", "transformations", new_hashtab(
-        list("constant"),
-        list(constant)
-    ))
+  log <- new_constructor_log("then_impute_constant", "transformations", new_hashtab(
+      list("constant"),
+      list(constant)
+  ))
 
     make_chain_dyn(
         make_impute_constant(
-            output_domain(lhs),
-            output_metric(lhs),
-            constant = constant),
+      output_domain(lhs),
+      output_metric(lhs),
+      constant = constant),
         lhs,
         log)
 }
@@ -2024,30 +2024,30 @@ then_impute_constant <- function(
 #' @return Transformation
 #' @export
 make_impute_uniform_float <- function(
-    input_domain,
-    input_metric,
-    bounds
+  input_domain,
+  input_metric,
+  bounds
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TA <- get_atom(get_type(input_domain))
-    .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.TA, .TA))
+  # Standardize type arguments.
+  .TA <- get_atom(get_type(input_domain))
+  .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.TA, .TA))
 
-    log <- new_constructor_log("make_impute_uniform_float", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "bounds"),
-        list(input_domain, input_metric, lapply(bounds, unbox2))
-    ))
+  log <- new_constructor_log("make_impute_uniform_float", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "bounds"),
+      list(input_domain, input_metric, lapply(bounds, unbox2))
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_impute_uniform_float",
-        input_domain, input_metric, bounds, .TA, rt_parse(.T.bounds),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_impute_uniform_float",
+      input_domain, input_metric, bounds, .TA, rt_parse(.T.bounds),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial impute uniform float constructor
@@ -2060,20 +2060,20 @@ make_impute_uniform_float <- function(
 #' @return Transformation
 #' @export
 then_impute_uniform_float <- function(
-    lhs,
-    bounds
+  lhs,
+  bounds
 ) {
 
-    log <- new_constructor_log("then_impute_uniform_float", "transformations", new_hashtab(
-        list("bounds"),
-        list(lapply(bounds, unbox2))
-    ))
+  log <- new_constructor_log("then_impute_uniform_float", "transformations", new_hashtab(
+      list("bounds"),
+      list(lapply(bounds, unbox2))
+  ))
 
     make_chain_dyn(
         make_impute_uniform_float(
-            output_domain(lhs),
-            output_metric(lhs),
-            bounds = bounds),
+      output_domain(lhs),
+      output_metric(lhs),
+      bounds = bounds),
         lhs,
         log)
 }
@@ -2101,33 +2101,33 @@ then_impute_uniform_float <- function(
 #' @return Transformation
 #' @export
 make_index <- function(
-    input_domain,
-    input_metric,
-    categories,
-    null,
-    .TOA = NULL
+  input_domain,
+  input_metric,
+  categories,
+  null,
+  .TOA = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TOA <- parse_or_infer(type_name = .TOA, public_example = get_first(categories))
-    .T.categories <- new_runtime_type(origin = "Vec", args = list(.TOA))
+  # Standardize type arguments.
+  .TOA <- parse_or_infer(type_name = .TOA, public_example = get_first(categories))
+  .T.categories <- new_runtime_type(origin = "Vec", args = list(.TOA))
 
-    log <- new_constructor_log("make_index", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "categories", "null", "TOA"),
-        list(input_domain, input_metric, categories, null, .TOA)
-    ))
+  log <- new_constructor_log("make_index", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "categories", "null", "TOA"),
+      list(input_domain, input_metric, categories, null, .TOA)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.categories, inferred = rt_infer(categories))
-    rt_assert_is_similar(expected = .TOA, inferred = rt_infer(null))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.categories, inferred = rt_infer(categories))
+  rt_assert_is_similar(expected = .TOA, inferred = rt_infer(null))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_index",
-        input_domain, input_metric, categories, null, .TOA, rt_parse(.T.categories),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_index",
+      input_domain, input_metric, categories, null, .TOA, rt_parse(.T.categories),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial index constructor
@@ -2142,24 +2142,24 @@ make_index <- function(
 #' @return Transformation
 #' @export
 then_index <- function(
-    lhs,
-    categories,
-    null,
-    .TOA = NULL
+  lhs,
+  categories,
+  null,
+  .TOA = NULL
 ) {
 
-    log <- new_constructor_log("then_index", "transformations", new_hashtab(
-        list("categories", "null", "TOA"),
-        list(categories, null, .TOA)
-    ))
+  log <- new_constructor_log("then_index", "transformations", new_hashtab(
+      list("categories", "null", "TOA"),
+      list(categories, null, .TOA)
+  ))
 
     make_chain_dyn(
         make_index(
-            output_domain(lhs),
-            output_metric(lhs),
-            categories = categories,
-            null = null,
-            .TOA = .TOA),
+      output_domain(lhs),
+      output_metric(lhs),
+      categories = categories,
+      null = null,
+      .TOA = .TOA),
         lhs,
         log)
 }
@@ -2189,30 +2189,30 @@ then_index <- function(
 #' @return Transformation
 #' @export
 make_is_equal <- function(
-    input_domain,
-    input_metric,
-    value
+  input_domain,
+  input_metric,
+  value
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TIA <- get_atom(get_type(input_domain))
-    .M <- get_type(input_metric)
+  # Standardize type arguments.
+  .TIA <- get_atom(get_type(input_domain))
+  .M <- get_type(input_metric)
 
-    log <- new_constructor_log("make_is_equal", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "value"),
-        list(input_domain, input_metric, value)
-    ))
+  log <- new_constructor_log("make_is_equal", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "value"),
+      list(input_domain, input_metric, value)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .TIA, inferred = rt_infer(value))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .TIA, inferred = rt_infer(value))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_is_equal",
-        input_domain, input_metric, value, .TIA, .M,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_is_equal",
+      input_domain, input_metric, value, .TIA, .M,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial is equal constructor
@@ -2225,20 +2225,20 @@ make_is_equal <- function(
 #' @return Transformation
 #' @export
 then_is_equal <- function(
-    lhs,
-    value
+  lhs,
+  value
 ) {
 
-    log <- new_constructor_log("then_is_equal", "transformations", new_hashtab(
-        list("value"),
-        list(value)
-    ))
+  log <- new_constructor_log("then_is_equal", "transformations", new_hashtab(
+      list("value"),
+      list(value)
+  ))
 
     make_chain_dyn(
         make_is_equal(
-            output_domain(lhs),
-            output_metric(lhs),
-            value = value),
+      output_domain(lhs),
+      output_metric(lhs),
+      value = value),
         lhs,
         log)
 }
@@ -2263,23 +2263,23 @@ then_is_equal <- function(
 #' @return Transformation
 #' @export
 make_is_null <- function(
-    input_domain,
-    input_metric
+  input_domain,
+  input_metric
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # No type arguments to standardize.
-    log <- new_constructor_log("make_is_null", "transformations", new_hashtab(
-        list("input_domain", "input_metric"),
-        list(input_domain, input_metric)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("make_is_null", "transformations", new_hashtab(
+      list("input_domain", "input_metric"),
+      list(input_domain, input_metric)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_is_null",
-        input_domain, input_metric,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_is_null",
+      input_domain, input_metric,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial is null constructor
@@ -2292,18 +2292,18 @@ make_is_null <- function(
 #' @return Transformation
 #' @export
 then_is_null <- function(
-    lhs
+  lhs
 ) {
 
-    log <- new_constructor_log("then_is_null", "transformations", new_hashtab(
-        list(),
-        list()
-    ))
+  log <- new_constructor_log("then_is_null", "transformations", new_hashtab(
+      list(),
+      list()
+  ))
 
     make_chain_dyn(
         make_is_null(
-            output_domain(lhs),
-            output_metric(lhs)),
+      output_domain(lhs),
+      output_metric(lhs)),
         lhs,
         log)
 }
@@ -2332,36 +2332,36 @@ then_is_null <- function(
 #' @return Transformation
 #' @export
 make_lipschitz_float_mul <- function(
-    constant,
-    bounds,
-    .D = "AtomDomain<.T>",
-    .M = "AbsoluteDistance<.T>"
+  constant,
+  bounds,
+  .D = "AtomDomain<.T>",
+  .M = "AbsoluteDistance<.T>"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .D <- rt_parse(type_name = .D, generics = list(".T"))
-    .M <- rt_parse(type_name = .M, generics = list(".T"))
-    .T <- get_atom_or_infer(.D, constant)
-    .D <- rt_substitute(.D, .T = .T)
-    .M <- rt_substitute(.M, .T = .T)
-    .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
+  # Standardize type arguments.
+  .D <- rt_parse(type_name = .D, generics = list(".T"))
+  .M <- rt_parse(type_name = .M, generics = list(".T"))
+  .T <- get_atom_or_infer(.D, constant)
+  .D <- rt_substitute(.D, .T = .T)
+  .M <- rt_substitute(.M, .T = .T)
+  .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
 
-    log <- new_constructor_log("make_lipschitz_float_mul", "transformations", new_hashtab(
-        list("constant", "bounds", "D", "M"),
-        list(constant, lapply(bounds, unbox2), .D, .M)
-    ))
+  log <- new_constructor_log("make_lipschitz_float_mul", "transformations", new_hashtab(
+      list("constant", "bounds", "D", "M"),
+      list(constant, lapply(bounds, unbox2), .D, .M)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(constant))
-    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(constant))
+  rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_lipschitz_float_mul",
-        constant, bounds, .D, .M, .T, rt_parse(.T.bounds),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_lipschitz_float_mul",
+      constant, bounds, .D, .M, .T, rt_parse(.T.bounds),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial lipschitz float mul constructor
@@ -2377,24 +2377,24 @@ make_lipschitz_float_mul <- function(
 #' @return Transformation
 #' @export
 then_lipschitz_float_mul <- function(
-    lhs,
-    constant,
-    bounds,
-    .D = "AtomDomain<.T>",
-    .M = "AbsoluteDistance<.T>"
+  lhs,
+  constant,
+  bounds,
+  .D = "AtomDomain<.T>",
+  .M = "AbsoluteDistance<.T>"
 ) {
 
-    log <- new_constructor_log("then_lipschitz_float_mul", "transformations", new_hashtab(
-        list("constant", "bounds", "D", "M"),
-        list(constant, lapply(bounds, unbox2), .D, .M)
-    ))
+  log <- new_constructor_log("then_lipschitz_float_mul", "transformations", new_hashtab(
+      list("constant", "bounds", "D", "M"),
+      list(constant, lapply(bounds, unbox2), .D, .M)
+  ))
 
     make_chain_dyn(
         make_lipschitz_float_mul(
-            constant = constant,
-            bounds = bounds,
-            .D = .D,
-            .M = .M),
+      constant = constant,
+      bounds = bounds,
+      .D = .D,
+      .M = .M),
         lhs,
         log)
 }
@@ -2422,23 +2422,23 @@ then_lipschitz_float_mul <- function(
 #' @return Transformation
 #' @export
 make_mean <- function(
-    input_domain,
-    input_metric
+  input_domain,
+  input_metric
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # No type arguments to standardize.
-    log <- new_constructor_log("make_mean", "transformations", new_hashtab(
-        list("input_domain", "input_metric"),
-        list(input_domain, input_metric)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("make_mean", "transformations", new_hashtab(
+      list("input_domain", "input_metric"),
+      list(input_domain, input_metric)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_mean",
-        input_domain, input_metric,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_mean",
+      input_domain, input_metric,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial mean constructor
@@ -2451,18 +2451,18 @@ make_mean <- function(
 #' @return Transformation
 #' @export
 then_mean <- function(
-    lhs
+  lhs
 ) {
 
-    log <- new_constructor_log("then_mean", "transformations", new_hashtab(
-        list(),
-        list()
-    ))
+  log <- new_constructor_log("then_mean", "transformations", new_hashtab(
+      list(),
+      list()
+  ))
 
     make_chain_dyn(
         make_mean(
-            output_domain(lhs),
-            output_metric(lhs)),
+      output_domain(lhs),
+      output_metric(lhs)),
         lhs,
         log)
 }
@@ -2496,23 +2496,23 @@ then_mean <- function(
 #' @return Transformation
 #' @export
 make_metric_bounded <- function(
-    input_domain,
-    input_metric
+  input_domain,
+  input_metric
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # No type arguments to standardize.
-    log <- new_constructor_log("make_metric_bounded", "transformations", new_hashtab(
-        list("input_domain", "input_metric"),
-        list(input_domain, input_metric)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("make_metric_bounded", "transformations", new_hashtab(
+      list("input_domain", "input_metric"),
+      list(input_domain, input_metric)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_metric_bounded",
-        input_domain, input_metric,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_metric_bounded",
+      input_domain, input_metric,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial metric bounded constructor
@@ -2525,18 +2525,18 @@ make_metric_bounded <- function(
 #' @return Transformation
 #' @export
 then_metric_bounded <- function(
-    lhs
+  lhs
 ) {
 
-    log <- new_constructor_log("then_metric_bounded", "transformations", new_hashtab(
-        list(),
-        list()
-    ))
+  log <- new_constructor_log("then_metric_bounded", "transformations", new_hashtab(
+      list(),
+      list()
+  ))
 
     make_chain_dyn(
         make_metric_bounded(
-            output_domain(lhs),
-            output_metric(lhs)),
+      output_domain(lhs),
+      output_metric(lhs)),
         lhs,
         log)
 }
@@ -2567,23 +2567,23 @@ then_metric_bounded <- function(
 #' @return Transformation
 #' @export
 make_metric_unbounded <- function(
-    input_domain,
-    input_metric
+  input_domain,
+  input_metric
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # No type arguments to standardize.
-    log <- new_constructor_log("make_metric_unbounded", "transformations", new_hashtab(
-        list("input_domain", "input_metric"),
-        list(input_domain, input_metric)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("make_metric_unbounded", "transformations", new_hashtab(
+      list("input_domain", "input_metric"),
+      list(input_domain, input_metric)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_metric_unbounded",
-        input_domain, input_metric,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_metric_unbounded",
+      input_domain, input_metric,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial metric unbounded constructor
@@ -2596,18 +2596,18 @@ make_metric_unbounded <- function(
 #' @return Transformation
 #' @export
 then_metric_unbounded <- function(
-    lhs
+  lhs
 ) {
 
-    log <- new_constructor_log("then_metric_unbounded", "transformations", new_hashtab(
-        list(),
-        list()
-    ))
+  log <- new_constructor_log("then_metric_unbounded", "transformations", new_hashtab(
+      list(),
+      list()
+  ))
 
     make_chain_dyn(
         make_metric_unbounded(
-            output_domain(lhs),
-            output_metric(lhs)),
+      output_domain(lhs),
+      output_metric(lhs)),
         lhs,
         log)
 }
@@ -2638,23 +2638,23 @@ then_metric_unbounded <- function(
 #' @return Transformation
 #' @export
 make_ordered_random <- function(
-    input_domain,
-    input_metric
+  input_domain,
+  input_metric
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # No type arguments to standardize.
-    log <- new_constructor_log("make_ordered_random", "transformations", new_hashtab(
-        list("input_domain", "input_metric"),
-        list(input_domain, input_metric)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("make_ordered_random", "transformations", new_hashtab(
+      list("input_domain", "input_metric"),
+      list(input_domain, input_metric)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_ordered_random",
-        input_domain, input_metric,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_ordered_random",
+      input_domain, input_metric,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial ordered random constructor
@@ -2667,18 +2667,18 @@ make_ordered_random <- function(
 #' @return Transformation
 #' @export
 then_ordered_random <- function(
-    lhs
+  lhs
 ) {
 
-    log <- new_constructor_log("then_ordered_random", "transformations", new_hashtab(
-        list(),
-        list()
-    ))
+  log <- new_constructor_log("then_ordered_random", "transformations", new_hashtab(
+      list(),
+      list()
+  ))
 
     make_chain_dyn(
         make_ordered_random(
-            output_domain(lhs),
-            output_metric(lhs)),
+      output_domain(lhs),
+      output_metric(lhs)),
         lhs,
         log)
 }
@@ -2709,32 +2709,32 @@ then_ordered_random <- function(
 #' @return Transformation
 #' @export
 make_quantile_score_candidates <- function(
-    input_domain,
-    input_metric,
-    candidates,
-    alpha
+  input_domain,
+  input_metric,
+  candidates,
+  alpha
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TIA <- get_atom(get_type(input_domain))
-    .T.candidates <- new_runtime_type(origin = "Vec", args = list(.TIA))
+  # Standardize type arguments.
+  .TIA <- get_atom(get_type(input_domain))
+  .T.candidates <- new_runtime_type(origin = "Vec", args = list(.TIA))
 
-    log <- new_constructor_log("make_quantile_score_candidates", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "candidates", "alpha"),
-        list(input_domain, input_metric, candidates, unbox2(alpha))
-    ))
+  log <- new_constructor_log("make_quantile_score_candidates", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "candidates", "alpha"),
+      list(input_domain, input_metric, candidates, unbox2(alpha))
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.candidates, inferred = rt_infer(candidates))
-    rt_assert_is_similar(expected = f64, inferred = rt_infer(alpha))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.candidates, inferred = rt_infer(candidates))
+  rt_assert_is_similar(expected = f64, inferred = rt_infer(alpha))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_quantile_score_candidates",
-        input_domain, input_metric, candidates, alpha, .TIA, rt_parse(.T.candidates),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_quantile_score_candidates",
+      input_domain, input_metric, candidates, alpha, .TIA, rt_parse(.T.candidates),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial quantile score candidates constructor
@@ -2748,22 +2748,22 @@ make_quantile_score_candidates <- function(
 #' @return Transformation
 #' @export
 then_quantile_score_candidates <- function(
-    lhs,
-    candidates,
-    alpha
+  lhs,
+  candidates,
+  alpha
 ) {
 
-    log <- new_constructor_log("then_quantile_score_candidates", "transformations", new_hashtab(
-        list("candidates", "alpha"),
-        list(candidates, unbox2(alpha))
-    ))
+  log <- new_constructor_log("then_quantile_score_candidates", "transformations", new_hashtab(
+      list("candidates", "alpha"),
+      list(candidates, unbox2(alpha))
+  ))
 
     make_chain_dyn(
         make_quantile_score_candidates(
-            output_domain(lhs),
-            output_metric(lhs),
-            candidates = candidates,
-            alpha = alpha),
+      output_domain(lhs),
+      output_metric(lhs),
+      candidates = candidates,
+      alpha = alpha),
         lhs,
         log)
 }
@@ -2789,36 +2789,36 @@ then_quantile_score_candidates <- function(
 #' @return Function
 #' @export
 make_quantiles_from_counts <- function(
-    bin_edges,
-    alphas,
-    interpolation = "linear",
-    .TA = NULL,
-    .F = "float"
+  bin_edges,
+  alphas,
+  interpolation = "linear",
+  .TA = NULL,
+  .F = "float"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TA <- parse_or_infer(type_name = .TA, public_example = get_first(bin_edges))
-    .F <- parse_or_infer(type_name = .F, public_example = get_first(alphas))
-    .T.bin_edges <- new_runtime_type(origin = "Vec", args = list(.TA))
-    .T.alphas <- new_runtime_type(origin = "Vec", args = list(.F))
+  # Standardize type arguments.
+  .TA <- parse_or_infer(type_name = .TA, public_example = get_first(bin_edges))
+  .F <- parse_or_infer(type_name = .F, public_example = get_first(alphas))
+  .T.bin_edges <- new_runtime_type(origin = "Vec", args = list(.TA))
+  .T.alphas <- new_runtime_type(origin = "Vec", args = list(.F))
 
-    log <- new_constructor_log("make_quantiles_from_counts", "transformations", new_hashtab(
-        list("bin_edges", "alphas", "interpolation", "TA", "F"),
-        list(bin_edges, alphas, unbox2(interpolation), .TA, .F)
-    ))
+  log <- new_constructor_log("make_quantiles_from_counts", "transformations", new_hashtab(
+      list("bin_edges", "alphas", "interpolation", "TA", "F"),
+      list(bin_edges, alphas, unbox2(interpolation), .TA, .F)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.bin_edges, inferred = rt_infer(bin_edges))
-    rt_assert_is_similar(expected = .T.alphas, inferred = rt_infer(alphas))
-    rt_assert_is_similar(expected = String, inferred = rt_infer(interpolation))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.bin_edges, inferred = rt_infer(bin_edges))
+  rt_assert_is_similar(expected = .T.alphas, inferred = rt_infer(alphas))
+  rt_assert_is_similar(expected = String, inferred = rt_infer(interpolation))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_quantiles_from_counts",
-        bin_edges, alphas, interpolation, .TA, .F, rt_parse(.T.bin_edges), rt_parse(.T.alphas),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_quantiles_from_counts",
+      bin_edges, alphas, interpolation, .TA, .F, rt_parse(.T.bin_edges), rt_parse(.T.alphas),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial quantiles from counts constructor
@@ -2835,26 +2835,26 @@ make_quantiles_from_counts <- function(
 #' @return Function
 #' @export
 then_quantiles_from_counts <- function(
-    lhs,
-    bin_edges,
-    alphas,
-    interpolation = "linear",
-    .TA = NULL,
-    .F = "float"
+  lhs,
+  bin_edges,
+  alphas,
+  interpolation = "linear",
+  .TA = NULL,
+  .F = "float"
 ) {
 
-    log <- new_constructor_log("then_quantiles_from_counts", "transformations", new_hashtab(
-        list("bin_edges", "alphas", "interpolation", "TA", "F"),
-        list(bin_edges, alphas, unbox2(interpolation), .TA, .F)
-    ))
+  log <- new_constructor_log("then_quantiles_from_counts", "transformations", new_hashtab(
+      list("bin_edges", "alphas", "interpolation", "TA", "F"),
+      list(bin_edges, alphas, unbox2(interpolation), .TA, .F)
+  ))
 
     make_chain_dyn(
         make_quantiles_from_counts(
-            bin_edges = bin_edges,
-            alphas = alphas,
-            interpolation = interpolation,
-            .TA = .TA,
-            .F = .F),
+      bin_edges = bin_edges,
+      alphas = alphas,
+      interpolation = interpolation,
+      .TA = .TA,
+      .F = .F),
         lhs,
         log)
 }
@@ -2883,33 +2883,33 @@ then_quantiles_from_counts <- function(
 #' @return A vector of the same type `TA`, but with the provided `size`.
 #' @export
 make_resize <- function(
-    input_domain,
-    input_metric,
-    size,
-    constant,
-    .MO = "SymmetricDistance"
+  input_domain,
+  input_metric,
+  size,
+  constant,
+  .MO = "SymmetricDistance"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .MO <- rt_parse(type_name = .MO)
-    .T.constant <- get_atom(get_type(input_domain))
+  # Standardize type arguments.
+  .MO <- rt_parse(type_name = .MO)
+  .T.constant <- get_atom(get_type(input_domain))
 
-    log <- new_constructor_log("make_resize", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "size", "constant", "MO"),
-        list(input_domain, input_metric, unbox2(size), constant, .MO)
-    ))
+  log <- new_constructor_log("make_resize", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "size", "constant", "MO"),
+      list(input_domain, input_metric, unbox2(size), constant, .MO)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = usize, inferred = rt_infer(size))
-    rt_assert_is_similar(expected = .T.constant, inferred = rt_infer(constant))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = usize, inferred = rt_infer(size))
+  rt_assert_is_similar(expected = .T.constant, inferred = rt_infer(constant))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_resize",
-        input_domain, input_metric, size, constant, .MO, rt_parse(.T.constant),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_resize",
+      input_domain, input_metric, size, constant, .MO, rt_parse(.T.constant),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial resize constructor
@@ -2924,24 +2924,24 @@ make_resize <- function(
 #' @return A vector of the same type `TA`, but with the provided `size`.
 #' @export
 then_resize <- function(
-    lhs,
-    size,
-    constant,
-    .MO = "SymmetricDistance"
+  lhs,
+  size,
+  constant,
+  .MO = "SymmetricDistance"
 ) {
 
-    log <- new_constructor_log("then_resize", "transformations", new_hashtab(
-        list("size", "constant", "MO"),
-        list(unbox2(size), constant, .MO)
-    ))
+  log <- new_constructor_log("then_resize", "transformations", new_hashtab(
+      list("size", "constant", "MO"),
+      list(unbox2(size), constant, .MO)
+  ))
 
     make_chain_dyn(
         make_resize(
-            output_domain(lhs),
-            output_metric(lhs),
-            size = size,
-            constant = constant,
-            .MO = .MO),
+      output_domain(lhs),
+      output_metric(lhs),
+      size = size,
+      constant = constant,
+      .MO = .MO),
         lhs,
         log)
 }
@@ -2967,30 +2967,30 @@ then_resize <- function(
 #' @return Transformation
 #' @export
 make_select_column <- function(
-    key,
-    .TOA,
-    .K = NULL
+  key,
+  .TOA,
+  .K = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .K <- parse_or_infer(type_name = .K, public_example = key)
-    .TOA <- rt_parse(type_name = .TOA)
+  # Standardize type arguments.
+  .K <- parse_or_infer(type_name = .K, public_example = key)
+  .TOA <- rt_parse(type_name = .TOA)
 
-    log <- new_constructor_log("make_select_column", "transformations", new_hashtab(
-        list("key", "K", "TOA"),
-        list(key, .K, .TOA)
-    ))
+  log <- new_constructor_log("make_select_column", "transformations", new_hashtab(
+      list("key", "K", "TOA"),
+      list(key, .K, .TOA)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .K, inferred = rt_infer(key))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .K, inferred = rt_infer(key))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_select_column",
-        key, .K, .TOA,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_select_column",
+      key, .K, .TOA,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial select column constructor
@@ -3005,22 +3005,22 @@ make_select_column <- function(
 #' @return Transformation
 #' @export
 then_select_column <- function(
-    lhs,
-    key,
-    .TOA,
-    .K = NULL
+  lhs,
+  key,
+  .TOA,
+  .K = NULL
 ) {
 
-    log <- new_constructor_log("then_select_column", "transformations", new_hashtab(
-        list("key", "K", "TOA"),
-        list(key, .K, .TOA)
-    ))
+  log <- new_constructor_log("then_select_column", "transformations", new_hashtab(
+      list("key", "K", "TOA"),
+      list(key, .K, .TOA)
+  ))
 
     make_chain_dyn(
         make_select_column(
-            key = key,
-            .K = .K,
-            .TOA = .TOA),
+      key = key,
+      .K = .K,
+      .TOA = .TOA),
         lhs,
         log)
 }
@@ -3064,33 +3064,33 @@ then_select_column <- function(
 #' @return Transformation
 #' @export
 make_sized_bounded_float_checked_sum <- function(
-    size,
-    bounds,
-    .S = "Pairwise<.T>"
+  size,
+  bounds,
+  .S = "Pairwise<.T>"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .S <- rt_parse(type_name = .S, generics = list(".T"))
-    .T <- get_atom_or_infer(.S, get_first(bounds))
-    .S <- rt_substitute(.S, .T = .T)
-    .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
+  # Standardize type arguments.
+  .S <- rt_parse(type_name = .S, generics = list(".T"))
+  .T <- get_atom_or_infer(.S, get_first(bounds))
+  .S <- rt_substitute(.S, .T = .T)
+  .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
 
-    log <- new_constructor_log("make_sized_bounded_float_checked_sum", "transformations", new_hashtab(
-        list("size", "bounds", "S"),
-        list(unbox2(size), lapply(bounds, unbox2), .S)
-    ))
+  log <- new_constructor_log("make_sized_bounded_float_checked_sum", "transformations", new_hashtab(
+      list("size", "bounds", "S"),
+      list(unbox2(size), lapply(bounds, unbox2), .S)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = usize, inferred = rt_infer(size))
-    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = usize, inferred = rt_infer(size))
+  rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_sized_bounded_float_checked_sum",
-        size, bounds, .S, .T, rt_parse(.T.bounds),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_sized_bounded_float_checked_sum",
+      size, bounds, .S, .T, rt_parse(.T.bounds),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial sized bounded float checked sum constructor
@@ -3105,22 +3105,22 @@ make_sized_bounded_float_checked_sum <- function(
 #' @return Transformation
 #' @export
 then_sized_bounded_float_checked_sum <- function(
-    lhs,
-    size,
-    bounds,
-    .S = "Pairwise<.T>"
+  lhs,
+  size,
+  bounds,
+  .S = "Pairwise<.T>"
 ) {
 
-    log <- new_constructor_log("then_sized_bounded_float_checked_sum", "transformations", new_hashtab(
-        list("size", "bounds", "S"),
-        list(unbox2(size), lapply(bounds, unbox2), .S)
-    ))
+  log <- new_constructor_log("then_sized_bounded_float_checked_sum", "transformations", new_hashtab(
+      list("size", "bounds", "S"),
+      list(unbox2(size), lapply(bounds, unbox2), .S)
+  ))
 
     make_chain_dyn(
         make_sized_bounded_float_checked_sum(
-            size = size,
-            bounds = bounds,
-            .S = .S),
+      size = size,
+      bounds = bounds,
+      .S = .S),
         lhs,
         log)
 }
@@ -3166,33 +3166,33 @@ then_sized_bounded_float_checked_sum <- function(
 #' @return Transformation
 #' @export
 make_sized_bounded_float_ordered_sum <- function(
-    size,
-    bounds,
-    .S = "Pairwise<.T>"
+  size,
+  bounds,
+  .S = "Pairwise<.T>"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .S <- rt_parse(type_name = .S, generics = list(".T"))
-    .T <- get_atom_or_infer(.S, get_first(bounds))
-    .S <- rt_substitute(.S, .T = .T)
-    .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
+  # Standardize type arguments.
+  .S <- rt_parse(type_name = .S, generics = list(".T"))
+  .T <- get_atom_or_infer(.S, get_first(bounds))
+  .S <- rt_substitute(.S, .T = .T)
+  .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
 
-    log <- new_constructor_log("make_sized_bounded_float_ordered_sum", "transformations", new_hashtab(
-        list("size", "bounds", "S"),
-        list(unbox2(size), lapply(bounds, unbox2), .S)
-    ))
+  log <- new_constructor_log("make_sized_bounded_float_ordered_sum", "transformations", new_hashtab(
+      list("size", "bounds", "S"),
+      list(unbox2(size), lapply(bounds, unbox2), .S)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = usize, inferred = rt_infer(size))
-    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = usize, inferred = rt_infer(size))
+  rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_sized_bounded_float_ordered_sum",
-        size, bounds, .S, .T, rt_parse(.T.bounds),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_sized_bounded_float_ordered_sum",
+      size, bounds, .S, .T, rt_parse(.T.bounds),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial sized bounded float ordered sum constructor
@@ -3207,22 +3207,22 @@ make_sized_bounded_float_ordered_sum <- function(
 #' @return Transformation
 #' @export
 then_sized_bounded_float_ordered_sum <- function(
-    lhs,
-    size,
-    bounds,
-    .S = "Pairwise<.T>"
+  lhs,
+  size,
+  bounds,
+  .S = "Pairwise<.T>"
 ) {
 
-    log <- new_constructor_log("then_sized_bounded_float_ordered_sum", "transformations", new_hashtab(
-        list("size", "bounds", "S"),
-        list(unbox2(size), lapply(bounds, unbox2), .S)
-    ))
+  log <- new_constructor_log("then_sized_bounded_float_ordered_sum", "transformations", new_hashtab(
+      list("size", "bounds", "S"),
+      list(unbox2(size), lapply(bounds, unbox2), .S)
+  ))
 
     make_chain_dyn(
         make_sized_bounded_float_ordered_sum(
-            size = size,
-            bounds = bounds,
-            .S = .S),
+      size = size,
+      bounds = bounds,
+      .S = .S),
         lhs,
         log)
 }
@@ -3254,31 +3254,31 @@ then_sized_bounded_float_ordered_sum <- function(
 #' @return Transformation
 #' @export
 make_sized_bounded_int_checked_sum <- function(
-    size,
-    bounds,
-    .T = NULL
+  size,
+  bounds,
+  .T = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
-    .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
+  .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
 
-    log <- new_constructor_log("make_sized_bounded_int_checked_sum", "transformations", new_hashtab(
-        list("size", "bounds", "T"),
-        list(unbox2(size), lapply(bounds, unbox2), .T)
-    ))
+  log <- new_constructor_log("make_sized_bounded_int_checked_sum", "transformations", new_hashtab(
+      list("size", "bounds", "T"),
+      list(unbox2(size), lapply(bounds, unbox2), .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = usize, inferred = rt_infer(size))
-    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = usize, inferred = rt_infer(size))
+  rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_sized_bounded_int_checked_sum",
-        size, bounds, .T, rt_parse(.T.bounds),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_sized_bounded_int_checked_sum",
+      size, bounds, .T, rt_parse(.T.bounds),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial sized bounded int checked sum constructor
@@ -3293,22 +3293,22 @@ make_sized_bounded_int_checked_sum <- function(
 #' @return Transformation
 #' @export
 then_sized_bounded_int_checked_sum <- function(
-    lhs,
-    size,
-    bounds,
-    .T = NULL
+  lhs,
+  size,
+  bounds,
+  .T = NULL
 ) {
 
-    log <- new_constructor_log("then_sized_bounded_int_checked_sum", "transformations", new_hashtab(
-        list("size", "bounds", "T"),
-        list(unbox2(size), lapply(bounds, unbox2), .T)
-    ))
+  log <- new_constructor_log("then_sized_bounded_int_checked_sum", "transformations", new_hashtab(
+      list("size", "bounds", "T"),
+      list(unbox2(size), lapply(bounds, unbox2), .T)
+  ))
 
     make_chain_dyn(
         make_sized_bounded_int_checked_sum(
-            size = size,
-            bounds = bounds,
-            .T = .T),
+      size = size,
+      bounds = bounds,
+      .T = .T),
         lhs,
         log)
 }
@@ -3340,31 +3340,31 @@ then_sized_bounded_int_checked_sum <- function(
 #' @return Transformation
 #' @export
 make_sized_bounded_int_monotonic_sum <- function(
-    size,
-    bounds,
-    .T = NULL
+  size,
+  bounds,
+  .T = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
-    .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
+  .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
 
-    log <- new_constructor_log("make_sized_bounded_int_monotonic_sum", "transformations", new_hashtab(
-        list("size", "bounds", "T"),
-        list(unbox2(size), lapply(bounds, unbox2), .T)
-    ))
+  log <- new_constructor_log("make_sized_bounded_int_monotonic_sum", "transformations", new_hashtab(
+      list("size", "bounds", "T"),
+      list(unbox2(size), lapply(bounds, unbox2), .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = usize, inferred = rt_infer(size))
-    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = usize, inferred = rt_infer(size))
+  rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_sized_bounded_int_monotonic_sum",
-        size, bounds, .T, rt_parse(.T.bounds),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_sized_bounded_int_monotonic_sum",
+      size, bounds, .T, rt_parse(.T.bounds),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial sized bounded int monotonic sum constructor
@@ -3379,22 +3379,22 @@ make_sized_bounded_int_monotonic_sum <- function(
 #' @return Transformation
 #' @export
 then_sized_bounded_int_monotonic_sum <- function(
-    lhs,
-    size,
-    bounds,
-    .T = NULL
+  lhs,
+  size,
+  bounds,
+  .T = NULL
 ) {
 
-    log <- new_constructor_log("then_sized_bounded_int_monotonic_sum", "transformations", new_hashtab(
-        list("size", "bounds", "T"),
-        list(unbox2(size), lapply(bounds, unbox2), .T)
-    ))
+  log <- new_constructor_log("then_sized_bounded_int_monotonic_sum", "transformations", new_hashtab(
+      list("size", "bounds", "T"),
+      list(unbox2(size), lapply(bounds, unbox2), .T)
+  ))
 
     make_chain_dyn(
         make_sized_bounded_int_monotonic_sum(
-            size = size,
-            bounds = bounds,
-            .T = .T),
+      size = size,
+      bounds = bounds,
+      .T = .T),
         lhs,
         log)
 }
@@ -3428,31 +3428,31 @@ then_sized_bounded_int_monotonic_sum <- function(
 #' @return Transformation
 #' @export
 make_sized_bounded_int_ordered_sum <- function(
-    size,
-    bounds,
-    .T = NULL
+  size,
+  bounds,
+  .T = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
-    .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
+  .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
 
-    log <- new_constructor_log("make_sized_bounded_int_ordered_sum", "transformations", new_hashtab(
-        list("size", "bounds", "T"),
-        list(unbox2(size), lapply(bounds, unbox2), .T)
-    ))
+  log <- new_constructor_log("make_sized_bounded_int_ordered_sum", "transformations", new_hashtab(
+      list("size", "bounds", "T"),
+      list(unbox2(size), lapply(bounds, unbox2), .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = usize, inferred = rt_infer(size))
-    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = usize, inferred = rt_infer(size))
+  rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_sized_bounded_int_ordered_sum",
-        size, bounds, .T, rt_parse(.T.bounds),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_sized_bounded_int_ordered_sum",
+      size, bounds, .T, rt_parse(.T.bounds),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial sized bounded int ordered sum constructor
@@ -3467,22 +3467,22 @@ make_sized_bounded_int_ordered_sum <- function(
 #' @return Transformation
 #' @export
 then_sized_bounded_int_ordered_sum <- function(
-    lhs,
-    size,
-    bounds,
-    .T = NULL
+  lhs,
+  size,
+  bounds,
+  .T = NULL
 ) {
 
-    log <- new_constructor_log("then_sized_bounded_int_ordered_sum", "transformations", new_hashtab(
-        list("size", "bounds", "T"),
-        list(unbox2(size), lapply(bounds, unbox2), .T)
-    ))
+  log <- new_constructor_log("then_sized_bounded_int_ordered_sum", "transformations", new_hashtab(
+      list("size", "bounds", "T"),
+      list(unbox2(size), lapply(bounds, unbox2), .T)
+  ))
 
     make_chain_dyn(
         make_sized_bounded_int_ordered_sum(
-            size = size,
-            bounds = bounds,
-            .T = .T),
+      size = size,
+      bounds = bounds,
+      .T = .T),
         lhs,
         log)
 }
@@ -3516,31 +3516,31 @@ then_sized_bounded_int_ordered_sum <- function(
 #' @return Transformation
 #' @export
 make_sized_bounded_int_split_sum <- function(
-    size,
-    bounds,
-    .T = NULL
+  size,
+  bounds,
+  .T = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
-    .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
+  .T.bounds <- new_runtime_type(origin = "Tuple", args = list(.T, .T))
 
-    log <- new_constructor_log("make_sized_bounded_int_split_sum", "transformations", new_hashtab(
-        list("size", "bounds", "T"),
-        list(unbox2(size), lapply(bounds, unbox2), .T)
-    ))
+  log <- new_constructor_log("make_sized_bounded_int_split_sum", "transformations", new_hashtab(
+      list("size", "bounds", "T"),
+      list(unbox2(size), lapply(bounds, unbox2), .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = usize, inferred = rt_infer(size))
-    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = usize, inferred = rt_infer(size))
+  rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_sized_bounded_int_split_sum",
-        size, bounds, .T, rt_parse(.T.bounds),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_sized_bounded_int_split_sum",
+      size, bounds, .T, rt_parse(.T.bounds),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial sized bounded int split sum constructor
@@ -3555,22 +3555,22 @@ make_sized_bounded_int_split_sum <- function(
 #' @return Transformation
 #' @export
 then_sized_bounded_int_split_sum <- function(
-    lhs,
-    size,
-    bounds,
-    .T = NULL
+  lhs,
+  size,
+  bounds,
+  .T = NULL
 ) {
 
-    log <- new_constructor_log("then_sized_bounded_int_split_sum", "transformations", new_hashtab(
-        list("size", "bounds", "T"),
-        list(unbox2(size), lapply(bounds, unbox2), .T)
-    ))
+  log <- new_constructor_log("then_sized_bounded_int_split_sum", "transformations", new_hashtab(
+      list("size", "bounds", "T"),
+      list(unbox2(size), lapply(bounds, unbox2), .T)
+  ))
 
     make_chain_dyn(
         make_sized_bounded_int_split_sum(
-            size = size,
-            bounds = bounds,
-            .T = .T),
+      size = size,
+      bounds = bounds,
+      .T = .T),
         lhs,
         log)
 }
@@ -3597,30 +3597,30 @@ then_sized_bounded_int_split_sum <- function(
 #' @return Transformation
 #' @export
 make_split_dataframe <- function(
-    separator,
-    col_names,
-    .K = NULL
+  separator,
+  col_names,
+  .K = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .K <- parse_or_infer(type_name = .K, public_example = get_first(col_names))
-    .T.col_names <- new_runtime_type(origin = "Vec", args = list(.K))
+  # Standardize type arguments.
+  .K <- parse_or_infer(type_name = .K, public_example = get_first(col_names))
+  .T.col_names <- new_runtime_type(origin = "Vec", args = list(.K))
 
-    log <- new_constructor_log("make_split_dataframe", "transformations", new_hashtab(
-        list("separator", "col_names", "K"),
-        list(separator, col_names, .K)
-    ))
+  log <- new_constructor_log("make_split_dataframe", "transformations", new_hashtab(
+      list("separator", "col_names", "K"),
+      list(separator, col_names, .K)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.col_names, inferred = rt_infer(col_names))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.col_names, inferred = rt_infer(col_names))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_split_dataframe",
-        separator, col_names, .K, rt_parse(.T.col_names),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_split_dataframe",
+      separator, col_names, .K, rt_parse(.T.col_names),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial split dataframe constructor
@@ -3635,22 +3635,22 @@ make_split_dataframe <- function(
 #' @return Transformation
 #' @export
 then_split_dataframe <- function(
-    lhs,
-    separator,
-    col_names,
-    .K = NULL
+  lhs,
+  separator,
+  col_names,
+  .K = NULL
 ) {
 
-    log <- new_constructor_log("then_split_dataframe", "transformations", new_hashtab(
-        list("separator", "col_names", "K"),
-        list(separator, col_names, .K)
-    ))
+  log <- new_constructor_log("then_split_dataframe", "transformations", new_hashtab(
+      list("separator", "col_names", "K"),
+      list(separator, col_names, .K)
+  ))
 
     make_chain_dyn(
         make_split_dataframe(
-            separator = separator,
-            col_names = col_names,
-            .K = .K),
+      separator = separator,
+      col_names = col_names,
+      .K = .K),
         lhs,
         log)
 }
@@ -3676,19 +3676,19 @@ then_split_dataframe <- function(
 make_split_lines <- function(
 
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # No type arguments to standardize.
-    log <- new_constructor_log("make_split_lines", "transformations", new_hashtab(
-        list(),
-        list()
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("make_split_lines", "transformations", new_hashtab(
+      list(),
+      list()
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_split_lines",
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_split_lines",
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial split lines constructor
@@ -3701,13 +3701,13 @@ make_split_lines <- function(
 #' @return Transformation
 #' @export
 then_split_lines <- function(
-    lhs
+  lhs
 ) {
 
-    log <- new_constructor_log("then_split_lines", "transformations", new_hashtab(
-        list(),
-        list()
-    ))
+  log <- new_constructor_log("then_split_lines", "transformations", new_hashtab(
+      list(),
+      list()
+  ))
 
     make_chain_dyn(
         make_split_lines(
@@ -3735,22 +3735,22 @@ then_split_lines <- function(
 #' @return Transformation
 #' @export
 make_split_records <- function(
-    separator
+  separator
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # No type arguments to standardize.
-    log <- new_constructor_log("make_split_records", "transformations", new_hashtab(
-        list("separator"),
-        list(separator)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("make_split_records", "transformations", new_hashtab(
+      list("separator"),
+      list(separator)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_split_records",
-        separator,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_split_records",
+      separator,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial split records constructor
@@ -3763,18 +3763,18 @@ make_split_records <- function(
 #' @return Transformation
 #' @export
 then_split_records <- function(
-    lhs,
-    separator
+  lhs,
+  separator
 ) {
 
-    log <- new_constructor_log("then_split_records", "transformations", new_hashtab(
-        list("separator"),
-        list(separator)
-    ))
+  log <- new_constructor_log("then_split_records", "transformations", new_hashtab(
+      list("separator"),
+      list(separator)
+  ))
 
     make_chain_dyn(
         make_split_records(
-            separator = separator),
+      separator = separator),
         lhs,
         log)
 }
@@ -3800,31 +3800,31 @@ then_split_records <- function(
 #' @return Transformation
 #' @export
 make_subset_by <- function(
-    indicator_column,
-    keep_columns,
-    .TK = NULL
+  indicator_column,
+  keep_columns,
+  .TK = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .TK <- parse_or_infer(type_name = .TK, public_example = indicator_column)
-    .T.keep_columns <- new_runtime_type(origin = "Vec", args = list(.TK))
+  # Standardize type arguments.
+  .TK <- parse_or_infer(type_name = .TK, public_example = indicator_column)
+  .T.keep_columns <- new_runtime_type(origin = "Vec", args = list(.TK))
 
-    log <- new_constructor_log("make_subset_by", "transformations", new_hashtab(
-        list("indicator_column", "keep_columns", "TK"),
-        list(indicator_column, keep_columns, .TK)
-    ))
+  log <- new_constructor_log("make_subset_by", "transformations", new_hashtab(
+      list("indicator_column", "keep_columns", "TK"),
+      list(indicator_column, keep_columns, .TK)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .TK, inferred = rt_infer(indicator_column))
-    rt_assert_is_similar(expected = .T.keep_columns, inferred = rt_infer(keep_columns))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .TK, inferred = rt_infer(indicator_column))
+  rt_assert_is_similar(expected = .T.keep_columns, inferred = rt_infer(keep_columns))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_subset_by",
-        indicator_column, keep_columns, .TK, rt_parse(.T.keep_columns),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_subset_by",
+      indicator_column, keep_columns, .TK, rt_parse(.T.keep_columns),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial subset by constructor
@@ -3839,22 +3839,22 @@ make_subset_by <- function(
 #' @return Transformation
 #' @export
 then_subset_by <- function(
-    lhs,
-    indicator_column,
-    keep_columns,
-    .TK = NULL
+  lhs,
+  indicator_column,
+  keep_columns,
+  .TK = NULL
 ) {
 
-    log <- new_constructor_log("then_subset_by", "transformations", new_hashtab(
-        list("indicator_column", "keep_columns", "TK"),
-        list(indicator_column, keep_columns, .TK)
-    ))
+  log <- new_constructor_log("then_subset_by", "transformations", new_hashtab(
+      list("indicator_column", "keep_columns", "TK"),
+      list(indicator_column, keep_columns, .TK)
+  ))
 
     make_chain_dyn(
         make_subset_by(
-            indicator_column = indicator_column,
-            keep_columns = keep_columns,
-            .TK = .TK),
+      indicator_column = indicator_column,
+      keep_columns = keep_columns,
+      .TK = .TK),
         lhs,
         log)
 }
@@ -3887,23 +3887,23 @@ then_subset_by <- function(
 #' @return Transformation
 #' @export
 make_sum <- function(
-    input_domain,
-    input_metric
+  input_domain,
+  input_metric
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # No type arguments to standardize.
-    log <- new_constructor_log("make_sum", "transformations", new_hashtab(
-        list("input_domain", "input_metric"),
-        list(input_domain, input_metric)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("make_sum", "transformations", new_hashtab(
+      list("input_domain", "input_metric"),
+      list(input_domain, input_metric)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_sum",
-        input_domain, input_metric,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_sum",
+      input_domain, input_metric,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial sum constructor
@@ -3916,18 +3916,18 @@ make_sum <- function(
 #' @return Transformation
 #' @export
 then_sum <- function(
-    lhs
+  lhs
 ) {
 
-    log <- new_constructor_log("then_sum", "transformations", new_hashtab(
-        list(),
-        list()
-    ))
+  log <- new_constructor_log("then_sum", "transformations", new_hashtab(
+      list(),
+      list()
+  ))
 
     make_chain_dyn(
         make_sum(
-            output_domain(lhs),
-            output_metric(lhs)),
+      output_domain(lhs),
+      output_metric(lhs)),
         lhs,
         log)
 }
@@ -3972,28 +3972,28 @@ then_sum <- function(
 #' @return Transformation
 #' @export
 make_sum_of_squared_deviations <- function(
-    input_domain,
-    input_metric,
-    .S = "Pairwise<.T>"
+  input_domain,
+  input_metric,
+  .S = "Pairwise<.T>"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .S <- rt_parse(type_name = .S, generics = list(".T"))
-    .T <- get_atom(get_type(input_domain))
-    .S <- rt_substitute(.S, .T = .T)
+  # Standardize type arguments.
+  .S <- rt_parse(type_name = .S, generics = list(".T"))
+  .T <- get_atom(get_type(input_domain))
+  .S <- rt_substitute(.S, .T = .T)
 
-    log <- new_constructor_log("make_sum_of_squared_deviations", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "S"),
-        list(input_domain, input_metric, .S)
-    ))
+  log <- new_constructor_log("make_sum_of_squared_deviations", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "S"),
+      list(input_domain, input_metric, .S)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_sum_of_squared_deviations",
-        input_domain, input_metric, .S, .T,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_sum_of_squared_deviations",
+      input_domain, input_metric, .S, .T,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial sum of squared deviations constructor
@@ -4006,20 +4006,20 @@ make_sum_of_squared_deviations <- function(
 #' @return Transformation
 #' @export
 then_sum_of_squared_deviations <- function(
-    lhs,
-    .S = "Pairwise<.T>"
+  lhs,
+  .S = "Pairwise<.T>"
 ) {
 
-    log <- new_constructor_log("then_sum_of_squared_deviations", "transformations", new_hashtab(
-        list("S"),
-        list(.S)
-    ))
+  log <- new_constructor_log("then_sum_of_squared_deviations", "transformations", new_hashtab(
+      list("S"),
+      list(.S)
+  ))
 
     make_chain_dyn(
         make_sum_of_squared_deviations(
-            output_domain(lhs),
-            output_metric(lhs),
-            .S = .S),
+      output_domain(lhs),
+      output_metric(lhs),
+      .S = .S),
         lhs,
         log)
 }
@@ -4050,23 +4050,23 @@ then_sum_of_squared_deviations <- function(
 #' @return Transformation
 #' @export
 make_unordered <- function(
-    input_domain,
-    input_metric
+  input_domain,
+  input_metric
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # No type arguments to standardize.
-    log <- new_constructor_log("make_unordered", "transformations", new_hashtab(
-        list("input_domain", "input_metric"),
-        list(input_domain, input_metric)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("make_unordered", "transformations", new_hashtab(
+      list("input_domain", "input_metric"),
+      list(input_domain, input_metric)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_unordered",
-        input_domain, input_metric,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_unordered",
+      input_domain, input_metric,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial unordered constructor
@@ -4079,18 +4079,18 @@ make_unordered <- function(
 #' @return Transformation
 #' @export
 then_unordered <- function(
-    lhs
+  lhs
 ) {
 
-    log <- new_constructor_log("then_unordered", "transformations", new_hashtab(
-        list(),
-        list()
-    ))
+  log <- new_constructor_log("then_unordered", "transformations", new_hashtab(
+      list(),
+      list()
+  ))
 
     make_chain_dyn(
         make_unordered(
-            output_domain(lhs),
-            output_metric(lhs)),
+      output_domain(lhs),
+      output_metric(lhs)),
         lhs,
         log)
 }
@@ -4124,32 +4124,32 @@ then_unordered <- function(
 #' @return Transformation
 #' @export
 make_variance <- function(
-    input_domain,
-    input_metric,
-    ddof = 1L,
-    .S = "Pairwise<.T>"
+  input_domain,
+  input_metric,
+  ddof = 1L,
+  .S = "Pairwise<.T>"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .S <- rt_parse(type_name = .S, generics = list(".T"))
-    .T <- get_atom(get_type(input_domain))
-    .S <- rt_substitute(.S, .T = .T)
+  # Standardize type arguments.
+  .S <- rt_parse(type_name = .S, generics = list(".T"))
+  .T <- get_atom(get_type(input_domain))
+  .S <- rt_substitute(.S, .T = .T)
 
-    log <- new_constructor_log("make_variance", "transformations", new_hashtab(
-        list("input_domain", "input_metric", "ddof", "S"),
-        list(input_domain, input_metric, unbox2(ddof), .S)
-    ))
+  log <- new_constructor_log("make_variance", "transformations", new_hashtab(
+      list("input_domain", "input_metric", "ddof", "S"),
+      list(input_domain, input_metric, unbox2(ddof), .S)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = usize, inferred = rt_infer(ddof))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = usize, inferred = rt_infer(ddof))
 
-    # Call wrapper function.
-    output <- .Call(
-        "transformations__make_variance",
-        input_domain, input_metric, ddof, .S, .T,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "transformations__make_variance",
+      input_domain, input_metric, ddof, .S, .T,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial variance constructor
@@ -4163,22 +4163,22 @@ make_variance <- function(
 #' @return Transformation
 #' @export
 then_variance <- function(
-    lhs,
-    ddof = 1L,
-    .S = "Pairwise<.T>"
+  lhs,
+  ddof = 1L,
+  .S = "Pairwise<.T>"
 ) {
 
-    log <- new_constructor_log("then_variance", "transformations", new_hashtab(
-        list("ddof", "S"),
-        list(unbox2(ddof), .S)
-    ))
+  log <- new_constructor_log("then_variance", "transformations", new_hashtab(
+      list("ddof", "S"),
+      list(unbox2(ddof), .S)
+  ))
 
     make_chain_dyn(
         make_variance(
-            output_domain(lhs),
-            output_metric(lhs),
-            ddof = ddof,
-            .S = .S),
+      output_domain(lhs),
+      output_metric(lhs),
+      ddof = ddof,
+      .S = .S),
         lhs,
         log)
 }

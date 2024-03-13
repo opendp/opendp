@@ -32,7 +32,7 @@ fn tab(number_of_spaces: usize, text: String) -> String {
 }
 
 pub(crate) fn tab_r(text: String) -> String {
-    tab(4, text) // TODO: Reduce to 2, and regenerate.
+    tab(2, text)
 }
 
 pub(crate) fn tab_py(text: String) -> String {
