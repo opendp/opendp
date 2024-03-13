@@ -89,7 +89,7 @@ jobs:
           echo windows > rust/target/release/libopendp.a
 
       - name: Upload .dll and .a
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: libs
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
@@ -139,7 +139,7 @@ jobs:
           echo macos > rust/target/${{ env.TARGET }}/release/libopendp.dylib
 
       - name: Upload .dylib and .a
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: libs
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
@@ -192,7 +192,7 @@ jobs:
           echo fake > R/opendp/src/vendor.tar.xz
 
       - name: Upload .so and .a
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: libs
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
@@ -228,7 +228,7 @@ jobs:
         run: bash tools/rust_build.sh -r -n -f "$FEATURES,bindings"
 
       - name: Upload Python bindings
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -238,7 +238,7 @@ jobs:
         run: bash tools/r_stage.sh -v
   
       - name: Upload R bindings
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: r_bindings
           path: R/opendp/
@@ -260,14 +260,14 @@ jobs:
           cache: pip
 
       - name: Download libs
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: libs
           # Artifact contains all libs with leading paths starting at target
           path: rust/
 
       - name: Download Python bindings
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -276,7 +276,7 @@ jobs:
         run: bash tools/python_build.sh -i
 
       - name: Upload Python wheel
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python_wheel
           path: python/wheelhouse/opendp-*-py3-none-any.whl
@@ -299,7 +299,7 @@ jobs:
           packages: rlang,RcppTOML
       
       - name: Download R bindings
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: r_bindings
           path: R/opendp/
@@ -311,7 +311,7 @@ jobs:
         run: bash tools/r_stage.sh -n
 
       - name: Upload R package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: r_package
           path: R/opendp/

@@ -100,7 +100,7 @@ jobs:
           cp -r /tmp/build/html/* .
       
       - name: Download R Docs
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: r-docs
           path: en/stable/api/r

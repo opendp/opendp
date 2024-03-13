@@ -73,7 +73,7 @@ jobs:
           cache: pip
 
       - name: Download Python wheel
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: python_wheel
           path: python/wheelhouse
@@ -97,7 +97,7 @@ jobs:
           ref: ${{ inputs.channel }}
 
       - name: Download R bindings
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: r_package
           path: R/opendp/

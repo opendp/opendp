@@ -56,7 +56,7 @@ jobs:
 
       - name: Download Python wheel
         if: ${{ inputs.python_repository == 'local' }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: python_wheel
           path: python/wheelhouse
