@@ -21,8 +21,8 @@ function_eval <- function(
   .T.arg <- parse_or_infer(TI, arg)
 
   log <- new_constructor_log("function_eval", "core", new_hashtab(
-      list("this", "arg", "TI"),
-      list(this, arg, TI)
+    list("this", "arg", "TI"),
+    list(this, arg, TI)
   ))
 
   # Assert that arguments are correctly typed.
@@ -32,7 +32,7 @@ function_eval <- function(
   output <- .Call(
       "core__function_eval",
       this, arg, TI, rt_parse(.T.arg),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -55,8 +55,8 @@ measurement_check <- function(
   .T.distance_out <- measurement_output_distance_type(measurement)
 
   log <- new_constructor_log("measurement_check", "core", new_hashtab(
-      list("measurement", "distance_in", "distance_out"),
-      list(measurement, distance_in, distance_out)
+    list("measurement", "distance_in", "distance_out"),
+    list(measurement, distance_in, distance_out)
   ))
 
   # Assert that arguments are correctly typed.
@@ -67,7 +67,7 @@ measurement_check <- function(
   output <- .Call(
       "core__measurement_check",
       measurement, distance_in, distance_out, rt_parse(.T.distance_in), rt_parse(.T.distance_out),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -83,15 +83,15 @@ measurement_function <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("measurement_function", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__measurement_function",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -107,15 +107,15 @@ measurement_input_carrier_type <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("measurement_input_carrier_type", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__measurement_input_carrier_type",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -131,15 +131,15 @@ measurement_input_distance_type <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("measurement_input_distance_type", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__measurement_input_distance_type",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -155,15 +155,15 @@ measurement_input_domain <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("measurement_input_domain", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__measurement_input_domain",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -179,15 +179,15 @@ measurement_input_metric <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("measurement_input_metric", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__measurement_input_metric",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -207,8 +207,8 @@ measurement_invoke <- function(
   .T.arg <- measurement_input_carrier_type(this)
 
   log <- new_constructor_log("measurement_invoke", "core", new_hashtab(
-      list("this", "arg"),
-      list(this, arg)
+    list("this", "arg"),
+    list(this, arg)
   ))
 
   # Assert that arguments are correctly typed.
@@ -218,7 +218,7 @@ measurement_invoke <- function(
   output <- .Call(
       "core__measurement_invoke",
       this, arg, rt_parse(.T.arg),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -238,8 +238,8 @@ measurement_map <- function(
   .T.distance_in <- measurement_input_distance_type(measurement)
 
   log <- new_constructor_log("measurement_map", "core", new_hashtab(
-      list("measurement", "distance_in"),
-      list(measurement, distance_in)
+    list("measurement", "distance_in"),
+    list(measurement, distance_in)
   ))
 
   # Assert that arguments are correctly typed.
@@ -249,7 +249,7 @@ measurement_map <- function(
   output <- .Call(
       "core__measurement_map",
       measurement, distance_in, rt_parse(.T.distance_in),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -265,15 +265,15 @@ measurement_output_distance_type <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("measurement_output_distance_type", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__measurement_output_distance_type",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -289,15 +289,15 @@ measurement_output_measure <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("measurement_output_measure", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__measurement_output_measure",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -317,8 +317,8 @@ queryable_eval <- function(
   .T.query <- queryable_query_type(queryable)
 
   log <- new_constructor_log("queryable_eval", "core", new_hashtab(
-      list("queryable", "query"),
-      list(queryable, query)
+    list("queryable", "query"),
+    list(queryable, query)
   ))
 
   # Assert that arguments are correctly typed.
@@ -328,7 +328,7 @@ queryable_eval <- function(
   output <- .Call(
       "core__queryable_eval",
       queryable, query, rt_parse(.T.query),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -344,15 +344,15 @@ queryable_query_type <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("queryable_query_type", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__queryable_query_type",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -375,8 +375,8 @@ transformation_check <- function(
   .T.distance_out <- transformation_output_distance_type(transformation)
 
   log <- new_constructor_log("transformation_check", "core", new_hashtab(
-      list("transformation", "distance_in", "distance_out"),
-      list(transformation, distance_in, distance_out)
+    list("transformation", "distance_in", "distance_out"),
+    list(transformation, distance_in, distance_out)
   ))
 
   # Assert that arguments are correctly typed.
@@ -387,7 +387,7 @@ transformation_check <- function(
   output <- .Call(
       "core__transformation_check",
       transformation, distance_in, distance_out, rt_parse(.T.distance_in), rt_parse(.T.distance_out),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -403,15 +403,15 @@ transformation_function <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("transformation_function", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__transformation_function",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -427,15 +427,15 @@ transformation_input_carrier_type <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("transformation_input_carrier_type", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__transformation_input_carrier_type",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -451,15 +451,15 @@ transformation_input_distance_type <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("transformation_input_distance_type", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__transformation_input_distance_type",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -475,15 +475,15 @@ transformation_input_domain <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("transformation_input_domain", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__transformation_input_domain",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -499,15 +499,15 @@ transformation_input_metric <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("transformation_input_metric", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__transformation_input_metric",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -527,8 +527,8 @@ transformation_invoke <- function(
   .T.arg <- transformation_input_carrier_type(this)
 
   log <- new_constructor_log("transformation_invoke", "core", new_hashtab(
-      list("this", "arg"),
-      list(this, arg)
+    list("this", "arg"),
+    list(this, arg)
   ))
 
   # Assert that arguments are correctly typed.
@@ -538,7 +538,7 @@ transformation_invoke <- function(
   output <- .Call(
       "core__transformation_invoke",
       this, arg, rt_parse(.T.arg),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -558,8 +558,8 @@ transformation_map <- function(
   .T.distance_in <- transformation_input_distance_type(transformation)
 
   log <- new_constructor_log("transformation_map", "core", new_hashtab(
-      list("transformation", "distance_in"),
-      list(transformation, distance_in)
+    list("transformation", "distance_in"),
+    list(transformation, distance_in)
   ))
 
   # Assert that arguments are correctly typed.
@@ -569,7 +569,7 @@ transformation_map <- function(
   output <- .Call(
       "core__transformation_map",
       transformation, distance_in, rt_parse(.T.distance_in),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -585,15 +585,15 @@ transformation_output_distance_type <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("transformation_output_distance_type", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__transformation_output_distance_type",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -609,15 +609,15 @@ transformation_output_domain <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("transformation_output_domain", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__transformation_output_domain",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -633,14 +633,14 @@ transformation_output_metric <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("transformation_output_metric", "core", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "core__transformation_output_metric",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }

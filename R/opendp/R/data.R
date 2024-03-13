@@ -14,15 +14,15 @@ object_type <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("object_type", "data", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "data__object_type",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -41,8 +41,8 @@ smd_curve_epsilon <- function(
   .T.delta <- get_atom(object_type(curve))
 
   log <- new_constructor_log("smd_curve_epsilon", "data", new_hashtab(
-      list("curve", "delta"),
-      list(curve, delta)
+    list("curve", "delta"),
+    list(curve, delta)
   ))
 
   # Assert that arguments are correctly typed.
@@ -52,7 +52,7 @@ smd_curve_epsilon <- function(
   output <- .Call(
       "data__smd_curve_epsilon",
       curve, delta, rt_parse(.T.delta),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -67,14 +67,14 @@ to_string <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("to_string", "data", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "data__to_string",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }

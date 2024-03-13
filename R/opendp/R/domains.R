@@ -24,8 +24,8 @@ atom_domain <- function(
   .T.bounds <- new_runtime_type(origin = "Option", args = list(new_runtime_type(origin = "Tuple", args = list(.T, .T))))
 
   log <- new_constructor_log("atom_domain", "domains", new_hashtab(
-      list("bounds", "nullable", "T"),
-      list(bounds, unbox2(nullable), .T)
+    list("bounds", "nullable", "T"),
+    list(bounds, unbox2(nullable), .T)
   ))
 
   # Assert that arguments are correctly typed.
@@ -36,7 +36,7 @@ atom_domain <- function(
   output <- .Call(
       "domains__atom_domain",
       bounds, nullable, .T, rt_parse(.T.bounds),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -52,15 +52,15 @@ domain_carrier_type <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("domain_carrier_type", "domains", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "domains__domain_carrier_type",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -76,15 +76,15 @@ domain_debug <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("domain_debug", "domains", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "domains__domain_debug",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -100,15 +100,15 @@ domain_type <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("domain_type", "domains", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "domains__domain_type",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -126,8 +126,8 @@ map_domain <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("map_domain", "domains", new_hashtab(
-      list("key_domain", "value_domain"),
-      list(key_domain, value_domain)
+    list("key_domain", "value_domain"),
+    list(key_domain, value_domain)
   ))
 
   # Assert that arguments are correctly typed.
@@ -138,7 +138,7 @@ map_domain <- function(
   output <- .Call(
       "domains__map_domain",
       key_domain, value_domain,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -157,8 +157,8 @@ member <- function(
   .T.val <- domain_carrier_type(this)
 
   log <- new_constructor_log("member", "domains", new_hashtab(
-      list("this", "val"),
-      list(this, val)
+    list("this", "val"),
+    list(this, val)
   ))
 
   # Assert that arguments are correctly typed.
@@ -169,7 +169,7 @@ member <- function(
   output <- .Call(
       "domains__member",
       this, val, rt_parse(.T.val),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -191,8 +191,8 @@ option_domain <- function(
   .D <- parse_or_infer(type_name = .D, public_example = element_domain)
 
   log <- new_constructor_log("option_domain", "domains", new_hashtab(
-      list("element_domain", "D"),
-      list(element_domain, .D)
+    list("element_domain", "D"),
+    list(element_domain, .D)
   ))
 
   # Assert that arguments are correctly typed.
@@ -202,7 +202,7 @@ option_domain <- function(
   output <- .Call(
       "domains__option_domain",
       element_domain, .D,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -222,8 +222,8 @@ vector_domain <- function(
   .T.size <- new_runtime_type(origin = "Option", args = list(i32))
 
   log <- new_constructor_log("vector_domain", "domains", new_hashtab(
-      list("atom_domain", "size"),
-      list(atom_domain, size)
+    list("atom_domain", "size"),
+    list(atom_domain, size)
   ))
 
   # Assert that arguments are correctly typed.
@@ -233,6 +233,6 @@ vector_domain <- function(
   output <- .Call(
       "domains__vector_domain",
       atom_domain, size, rt_parse(.T.size),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }

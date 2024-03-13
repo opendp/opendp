@@ -19,15 +19,15 @@ fixed_smoothed_max_divergence <- function(
   .T <- rt_parse(type_name = .T)
 
   log <- new_constructor_log("fixed_smoothed_max_divergence", "measures", new_hashtab(
-      list("T"),
-      list(.T)
+    list("T"),
+    list(.T)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "measures__fixed_smoothed_max_divergence",
       .T,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -47,15 +47,15 @@ max_divergence <- function(
   .T <- rt_parse(type_name = .T)
 
   log <- new_constructor_log("max_divergence", "measures", new_hashtab(
-      list("T"),
-      list(.T)
+    list("T"),
+    list(.T)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "measures__max_divergence",
       .T,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -71,15 +71,15 @@ measure_debug <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("measure_debug", "measures", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "measures__measure_debug",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -95,15 +95,15 @@ measure_distance_type <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("measure_distance_type", "measures", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "measures__measure_distance_type",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -119,15 +119,15 @@ measure_type <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("measure_type", "measures", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "measures__measure_type",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -147,15 +147,15 @@ smoothed_max_divergence <- function(
   .T <- rt_parse(type_name = .T)
 
   log <- new_constructor_log("smoothed_max_divergence", "measures", new_hashtab(
-      list("T"),
-      list(.T)
+    list("T"),
+    list(.T)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "measures__smoothed_max_divergence",
       .T,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -174,8 +174,8 @@ user_divergence <- function(
 
   # No type arguments to standardize.
   log <- new_constructor_log("user_divergence", "measures", new_hashtab(
-      list("descriptor"),
-      list(unbox2(descriptor))
+    list("descriptor"),
+    list(unbox2(descriptor))
   ))
 
   # Assert that arguments are correctly typed.
@@ -185,7 +185,7 @@ user_divergence <- function(
   output <- .Call(
       "measures__user_divergence",
       descriptor,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -205,14 +205,14 @@ zero_concentrated_divergence <- function(
   .T <- rt_parse(type_name = .T)
 
   log <- new_constructor_log("zero_concentrated_divergence", "measures", new_hashtab(
-      list("T"),
-      list(.T)
+    list("T"),
+    list(.T)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "measures__zero_concentrated_divergence",
       .T,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
