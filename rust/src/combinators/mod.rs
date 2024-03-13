@@ -11,7 +11,6 @@ mod chain;
 pub use crate::combinators::chain::*;
 
 mod sequential_compositor;
-pub use crate::combinators::sequential_compositor::*;
 
 #[cfg(feature = "contrib")]
 mod measure_cast;
