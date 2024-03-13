@@ -4,6 +4,40 @@
 NULL
 
 
+#' [debias_basic_rappor in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.debias_basic_rappor.html)
+#'
+#' @concept measurements
+#' @param answers undocumented
+#' @param f undocumented
+#' @return Any
+#' @export
+debias_basic_rappor <- function(
+    answers,
+    f
+) {
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    .T.answers <- new_runtime_type(origin = "Vec", args = list(BitVector))
+
+    log <- new_constructor_log("debias_basic_rappor", "measurements", new_hashtab(
+        list("answers", "f"),
+        list(answers, unbox2(f))
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = .T.answers, inferred = rt_infer(answers))
+    rt_assert_is_similar(expected = f64, inferred = rt_infer(f))
+
+    # Call wrapper function.
+    output <- .Call(
+        "measurements__debias_basic_rappor",
+        answers, f, rt_parse(.T.answers),
+        log, PACKAGE = "opendp")
+    output
+}
+
+
 #' alp queryable constructor
 #'
 #' Measurement to release a queryable containing a DP projection of bounded sparse data.
@@ -1215,6 +1249,92 @@ then_randomized_response_bool <- function(
             prob = prob,
             constant_time = constant_time,
             .QO = .QO),
+        lhs,
+        log)
+}
+
+
+#' rappor constructor
+#'
+#' Make a Measurement that implements Basic RAPPOR
+#'
+#' [make_rappor in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_rappor.html)
+#'
+#' **Citations:**
+#'
+#' * [RAPPOR: Randomized Aggregatable Privacy-Preserving Ordinal Response](https://arxiv.org/abs/1407.6981)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `BitVectorDomain`
+#' * Output Type:    `BitVector`
+#' * Input Metric:   `DiscreteDistance`
+#' * Output Measure: `MaxDivergence<f64>`
+#'
+#' **Proof Definition:**
+#'
+#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/rappor/make_rappor.pdf)
+#'
+#' @concept measurements
+#' @param input_domain undocumented
+#' @param input_metric undocumented
+#' @param f Per-bit flipping probability. Must be in \eqn{(0, 1]}.
+#' @param constant_time undocumented
+#' @return Measurement
+#' @export
+make_rappor <- function(
+    input_domain,
+    input_metric,
+    f,
+    constant_time = FALSE
+) {
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    log <- new_constructor_log("make_rappor", "measurements", new_hashtab(
+        list("input_domain", "input_metric", "f", "constant_time"),
+        list(input_domain, input_metric, unbox2(f), unbox2(constant_time))
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = f64, inferred = rt_infer(f))
+    rt_assert_is_similar(expected = bool, inferred = rt_infer(constant_time))
+
+    # Call wrapper function.
+    output <- .Call(
+        "measurements__make_rappor",
+        input_domain, input_metric, f, constant_time,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial rappor constructor
+#'
+#' See documentation for [make_rappor()] for details.
+#'
+#' @concept measurements
+#' @param lhs The prior transformation or metric space.
+#' @param f Per-bit flipping probability. Must be in \eqn{(0, 1]}.
+#' @param constant_time undocumented
+#' @return Measurement
+#' @export
+then_rappor <- function(
+    lhs,
+    f,
+    constant_time = FALSE
+) {
+
+    log <- new_constructor_log("then_rappor", "measurements", new_hashtab(
+        list("f", "constant_time"),
+        list(unbox2(f), unbox2(constant_time))
+    ))
+
+    make_chain_dyn(
+        make_rappor(
+            output_domain(lhs),
+            output_metric(lhs),
+            f = f,
+            constant_time = constant_time),
         lhs,
         log)
 }

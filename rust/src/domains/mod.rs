@@ -18,7 +18,6 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::Bound;
-use std::sync::atomic::AtomicBool;
 
 use crate::core::Domain;
 use crate::error::Fallible;
@@ -448,8 +447,7 @@ impl<D: Domain> Domain for VectorDomain<D> {
     }
 }
 
-// Type alias for BitVec<usize, Lsb0> which is indicated to be the fastest by the bitvec documentation
-pub type BitVector = BitVec<usize, Lsb0>;
+pub type BitVector = BitVec<u8, Lsb0>;
 
 /// A domain that contains vectors of boolean values
 ///

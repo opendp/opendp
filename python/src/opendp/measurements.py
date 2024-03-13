@@ -11,6 +11,7 @@ from opendp.domains import *
 from opendp.metrics import *
 from opendp.measures import *
 __all__ = [
+    "debias_basic_rappor",
     "make_alp_queryable",
     "make_base_discrete_gaussian",
     "make_base_discrete_laplace",
@@ -24,6 +25,7 @@ __all__ = [
     "make_laplace",
     "make_randomized_response",
     "make_randomized_response_bool",
+    "make_rappor",
     "make_report_noisy_max_gumbel",
     "make_user_measurement",
     "then_alp_queryable",
@@ -37,9 +39,42 @@ __all__ = [
     "then_base_laplace_threshold",
     "then_gaussian",
     "then_laplace",
+    "then_rappor",
     "then_report_noisy_max_gumbel",
     "then_user_measurement"
 ]
+
+
+def debias_basic_rappor(
+    answers: Any,
+    f: float
+) -> Any:
+    r"""[debias_basic_rappor in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.debias_basic_rappor.html)
+
+    :param answers: 
+    :type answers: Any
+    :param f: 
+    :type f: float
+    :rtype: Any
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_answers = py_to_c(answers, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[BitVector]))
+    c_f = py_to_c(f, c_type=ctypes.c_double, type_name=f64)
+
+    # Call library function.
+    lib_function = lib.opendp_measurements__debias_basic_rappor
+    lib_function.argtypes = [AnyObjectPtr, ctypes.c_double]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_answers, c_f), AnyObjectPtr))
+
+    return output
 
 
 def make_alp_queryable(
@@ -1086,6 +1121,84 @@ def make_randomized_response_bool(
     output = c_to_py(unwrap(lib_function(c_prob, c_constant_time, c_QO), Measurement))
 
     return output
+
+
+def make_rappor(
+    input_domain: Domain,
+    input_metric: Metric,
+    f: float,
+    constant_time: bool = False
+) -> Measurement:
+    r"""Make a Measurement that implements Basic RAPPOR
+
+    [make_rappor in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_rappor.html)
+
+    **Citations:**
+
+    * [RAPPOR: Randomized Aggregatable Privacy-Preserving Ordinal Response](https://arxiv.org/abs/1407.6981)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `BitVectorDomain`
+    * Output Type:    `BitVector`
+    * Input Metric:   `DiscreteDistance`
+    * Output Measure: `MaxDivergence<f64>`
+
+    **Proof Definition:**
+
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/rappor/make_rappor.pdf)
+
+    :param input_domain: 
+    :type input_domain: Domain
+    :param input_metric: 
+    :type input_metric: Metric
+    :param f: Per-bit flipping probability. Must be in $(0, 1]$.
+    :type f: float
+    :param constant_time: 
+    :type constant_time: bool
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_f = py_to_c(f, c_type=ctypes.c_double, type_name=f64)
+    c_constant_time = py_to_c(constant_time, c_type=ctypes.c_bool, type_name=bool)
+
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_rappor
+    lib_function.argtypes = [Domain, Metric, ctypes.c_double, ctypes.c_bool]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_f, c_constant_time), Measurement))
+
+    return output
+
+def then_rappor(
+    f: float,
+    constant_time: bool = False
+):  
+    r"""partial constructor of make_rappor
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_rappor`
+
+    :param f: Per-bit flipping probability. Must be in $(0, 1]$.
+    :type f: float
+    :param constant_time: 
+    :type constant_time: bool
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_rappor(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        f=f,
+        constant_time=constant_time))
+
 
 
 def make_report_noisy_max_gumbel(

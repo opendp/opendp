@@ -8,7 +8,7 @@ use std::os::raw::c_char;
 use std::str::Utf8Error;
 
 use crate::domains::ffi::UserDomain;
-use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
+use crate::domains::{AtomDomain, BitVector, OptionDomain, VectorDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
 use crate::measures::{
@@ -285,10 +285,10 @@ lazy_static! {
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject]],
             type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject, ExtrinsicObject>],
             type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, usize, String, AnyObject, ExtrinsicObject>],
-            type_vec![ExtrinsicObject],
+            type_vec![ExtrinsicObject, BitVector],
             // OptionDomain<AtomDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
-            type_vec![Vec, <(f32, f32), (f64, f64)>],
+            type_vec![Vec, <(f32, f32), (f64, f64), BitVector>],
 
             type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyQueryable, AnyMeasurement],
             type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr>],

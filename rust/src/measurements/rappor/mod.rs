@@ -1,3 +1,5 @@
+use opendp_derive::bootstrap;
+
 use crate::core::{Function, Measurement, PrivacyMap};
 use crate::domains::{BitVector, BitVectorDomain};
 use crate::error::Fallible;
@@ -5,8 +7,10 @@ use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
 use crate::traits::{samplers::sample_bernoulli_float, InfDiv, InfLn, InfMul, InfSub};
 
-use bitvec::prelude::{bitvec, Lsb0};
+#[cfg(feature = "ffi")]
+mod ffi;
 
+#[bootstrap(features("contrib"), arguments(constant_time(default = false)))]
 /// Make a Measurement that implements Basic RAPPOR
 ///
 /// # Citations
@@ -71,6 +75,7 @@ pub fn make_rappor(
     )
 }
 
+#[bootstrap(features("contrib"))]
 pub fn debias_basic_rappor(answers: Vec<BitVector>, f: f64) -> Fallible<Vec<f64>> {
     if answers.len() == 0 {
         return fallible!(FailedFunction, "No answers provided");
@@ -104,6 +109,7 @@ pub fn debias_basic_rappor(answers: Vec<BitVector>, f: f64) -> Fallible<Vec<f64>
 #[cfg(test)]
 mod test {
     use super::*;
+    use bitvec::prelude::{bitvec, Lsb0};
 
     #[test]
     fn test_make_rappor() -> Fallible<()> {
@@ -113,7 +119,7 @@ mod test {
             0.5,
             false,
         )?;
-        rappor.invoke(&bitvec![usize, Lsb0;
+        rappor.invoke(&bitvec![u8, Lsb0;
             1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ])?;
         assert_eq!(rappor.map(&1)?, 2.1972245773362196);
@@ -125,7 +131,7 @@ mod test {
         let mut answer = vec![0.0; 10];
         answer[0] = 1.0;
 
-        let answers = vec![bitvec![usize, Lsb0; 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]; 10];
+        let answers = vec![bitvec![u8, Lsb0; 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]; 10];
 
         let high = 10.555555555555555;
         let low = -0.5555555555555556;
