@@ -33,8 +33,8 @@ choose_branching_factor <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__choose_branching_factor",
-      size_guess,
+    "transformations__choose_branching_factor",
+    size_guess,
     log, PACKAGE = "opendp")
   output
 }
@@ -81,8 +81,8 @@ make_b_ary_tree <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_b_ary_tree",
-      input_domain, input_metric, leaf_count, branching_factor,
+    "transformations__make_b_ary_tree",
+    input_domain, input_metric, leaf_count, branching_factor,
     log, PACKAGE = "opendp")
   output
 }
@@ -181,8 +181,8 @@ make_bounded_float_checked_sum <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_bounded_float_checked_sum",
-      size_limit, bounds, .S, .T, rt_parse(.T.bounds),
+    "transformations__make_bounded_float_checked_sum",
+    size_limit, bounds, .S, .T, rt_parse(.T.bounds),
     log, PACKAGE = "opendp")
   output
 }
@@ -283,8 +283,8 @@ make_bounded_float_ordered_sum <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_bounded_float_ordered_sum",
-      size_limit, bounds, .S, .T, rt_parse(.T.bounds),
+    "transformations__make_bounded_float_ordered_sum",
+    size_limit, bounds, .S, .T, rt_parse(.T.bounds),
     log, PACKAGE = "opendp")
   output
 }
@@ -366,8 +366,8 @@ make_bounded_int_monotonic_sum <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_bounded_int_monotonic_sum",
-      bounds, .T, rt_parse(.T.bounds),
+    "transformations__make_bounded_int_monotonic_sum",
+    bounds, .T, rt_parse(.T.bounds),
     log, PACKAGE = "opendp")
   output
 }
@@ -446,8 +446,8 @@ make_bounded_int_ordered_sum <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_bounded_int_ordered_sum",
-      bounds, .T, rt_parse(.T.bounds),
+    "transformations__make_bounded_int_ordered_sum",
+    bounds, .T, rt_parse(.T.bounds),
     log, PACKAGE = "opendp")
   output
 }
@@ -526,8 +526,8 @@ make_bounded_int_split_sum <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_bounded_int_split_sum",
-      bounds, .T, rt_parse(.T.bounds),
+    "transformations__make_bounded_int_split_sum",
+    bounds, .T, rt_parse(.T.bounds),
     log, PACKAGE = "opendp")
   output
 }
@@ -601,8 +601,8 @@ make_cast <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_cast",
-      input_domain, input_metric, .TOA,
+    "transformations__make_cast",
+    input_domain, input_metric, .TOA,
     log, PACKAGE = "opendp")
   output
 }
@@ -683,8 +683,8 @@ make_cast_default <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_cast_default",
-      input_domain, input_metric, .TOA, .TIA, .M,
+    "transformations__make_cast_default",
+    input_domain, input_metric, .TOA, .TIA, .M,
     log, PACKAGE = "opendp")
   output
 }
@@ -759,8 +759,8 @@ make_cast_inherent <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_cast_inherent",
-      input_domain, input_metric, .TOA,
+    "transformations__make_cast_inherent",
+    input_domain, input_metric, .TOA,
     log, PACKAGE = "opendp")
   output
 }
@@ -824,8 +824,8 @@ make_cdf <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_cdf",
-      .TA,
+    "transformations__make_cdf",
+    .TA,
     log, PACKAGE = "opendp")
   output
 }
@@ -904,8 +904,8 @@ make_clamp <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_clamp",
-      input_domain, input_metric, bounds, .TA, rt_parse(.T.bounds),
+    "transformations__make_clamp",
+    input_domain, input_metric, bounds, .TA, rt_parse(.T.bounds),
     log, PACKAGE = "opendp")
   output
 }
@@ -988,8 +988,8 @@ make_consistent_b_ary_tree <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_consistent_b_ary_tree",
-      branching_factor, .TIA, .TOA,
+    "transformations__make_consistent_b_ary_tree",
+    branching_factor, .TIA, .TOA,
     log, PACKAGE = "opendp")
   output
 }
@@ -1071,8 +1071,8 @@ make_count <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_count",
-      input_domain, input_metric, .TO,
+    "transformations__make_count",
+    input_domain, input_metric, .TO,
     log, PACKAGE = "opendp")
   output
 }
@@ -1150,8 +1150,8 @@ make_count_by <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_count_by",
-      input_domain, input_metric, .MO, .TV,
+    "transformations__make_count_by",
+    input_domain, input_metric, .MO, .TV,
     log, PACKAGE = "opendp")
   output
 }
@@ -1243,8 +1243,8 @@ make_count_by_categories <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_count_by_categories",
-      input_domain, input_metric, categories, null_category, .MO, .TOA, .TIA, rt_parse(.T.categories),
+    "transformations__make_count_by_categories",
+    input_domain, input_metric, categories, null_category, .MO, .TOA, .TIA, rt_parse(.T.categories),
     log, PACKAGE = "opendp")
   output
 }
@@ -1327,8 +1327,8 @@ make_count_distinct <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_count_distinct",
-      input_domain, input_metric, .TO,
+    "transformations__make_count_distinct",
+    input_domain, input_metric, .TO,
     log, PACKAGE = "opendp")
   output
 }
@@ -1400,8 +1400,8 @@ make_create_dataframe <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_create_dataframe",
-      col_names, .K, rt_parse(.T.col_names),
+    "transformations__make_create_dataframe",
+    col_names, .K, rt_parse(.T.col_names),
     log, PACKAGE = "opendp")
   output
 }
@@ -1491,8 +1491,8 @@ make_df_cast_default <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_df_cast_default",
-      input_domain, input_metric, column_name, .TIA, .TOA, .TK, .M,
+    "transformations__make_df_cast_default",
+    input_domain, input_metric, column_name, .TIA, .TOA, .TK, .M,
     log, PACKAGE = "opendp")
   output
 }
@@ -1578,8 +1578,8 @@ make_df_is_equal <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_df_is_equal",
-      input_domain, input_metric, column_name, value, .TIA, .TK, .M,
+    "transformations__make_df_is_equal",
+    input_domain, input_metric, column_name, value, .TIA, .TK, .M,
     log, PACKAGE = "opendp")
   output
 }
@@ -1657,8 +1657,8 @@ make_drop_null <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_drop_null",
-      input_domain, input_metric,
+    "transformations__make_drop_null",
+    input_domain, input_metric,
     log, PACKAGE = "opendp")
   output
 }
@@ -1734,8 +1734,8 @@ make_find <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_find",
-      input_domain, input_metric, categories, .TIA, rt_parse(.T.categories),
+    "transformations__make_find",
+    input_domain, input_metric, categories, .TIA, rt_parse(.T.categories),
     log, PACKAGE = "opendp")
   output
 }
@@ -1817,8 +1817,8 @@ make_find_bin <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_find_bin",
-      input_domain, input_metric, edges, .TIA, rt_parse(.T.edges),
+    "transformations__make_find_bin",
+    input_domain, input_metric, edges, .TIA, rt_parse(.T.edges),
     log, PACKAGE = "opendp")
   output
 }
@@ -1889,8 +1889,8 @@ make_identity <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_identity",
-      domain, metric,
+    "transformations__make_identity",
+    domain, metric,
     log, PACKAGE = "opendp")
   output
 }
@@ -1969,8 +1969,8 @@ make_impute_constant <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_impute_constant",
-      input_domain, input_metric, constant, rt_parse(.T.constant),
+    "transformations__make_impute_constant",
+    input_domain, input_metric, constant, rt_parse(.T.constant),
     log, PACKAGE = "opendp")
   output
 }
@@ -2044,8 +2044,8 @@ make_impute_uniform_float <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_impute_uniform_float",
-      input_domain, input_metric, bounds, .TA, rt_parse(.T.bounds),
+    "transformations__make_impute_uniform_float",
+    input_domain, input_metric, bounds, .TA, rt_parse(.T.bounds),
     log, PACKAGE = "opendp")
   output
 }
@@ -2124,8 +2124,8 @@ make_index <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_index",
-      input_domain, input_metric, categories, null, .TOA, rt_parse(.T.categories),
+    "transformations__make_index",
+    input_domain, input_metric, categories, null, .TOA, rt_parse(.T.categories),
     log, PACKAGE = "opendp")
   output
 }
@@ -2209,8 +2209,8 @@ make_is_equal <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_is_equal",
-      input_domain, input_metric, value, .TIA, .M,
+    "transformations__make_is_equal",
+    input_domain, input_metric, value, .TIA, .M,
     log, PACKAGE = "opendp")
   output
 }
@@ -2276,8 +2276,8 @@ make_is_null <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_is_null",
-      input_domain, input_metric,
+    "transformations__make_is_null",
+    input_domain, input_metric,
     log, PACKAGE = "opendp")
   output
 }
@@ -2358,8 +2358,8 @@ make_lipschitz_float_mul <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_lipschitz_float_mul",
-      constant, bounds, .D, .M, .T, rt_parse(.T.bounds),
+    "transformations__make_lipschitz_float_mul",
+    constant, bounds, .D, .M, .T, rt_parse(.T.bounds),
     log, PACKAGE = "opendp")
   output
 }
@@ -2435,8 +2435,8 @@ make_mean <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_mean",
-      input_domain, input_metric,
+    "transformations__make_mean",
+    input_domain, input_metric,
     log, PACKAGE = "opendp")
   output
 }
@@ -2509,8 +2509,8 @@ make_metric_bounded <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_metric_bounded",
-      input_domain, input_metric,
+    "transformations__make_metric_bounded",
+    input_domain, input_metric,
     log, PACKAGE = "opendp")
   output
 }
@@ -2580,8 +2580,8 @@ make_metric_unbounded <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_metric_unbounded",
-      input_domain, input_metric,
+    "transformations__make_metric_unbounded",
+    input_domain, input_metric,
     log, PACKAGE = "opendp")
   output
 }
@@ -2651,8 +2651,8 @@ make_ordered_random <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_ordered_random",
-      input_domain, input_metric,
+    "transformations__make_ordered_random",
+    input_domain, input_metric,
     log, PACKAGE = "opendp")
   output
 }
@@ -2731,8 +2731,8 @@ make_quantile_score_candidates <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_quantile_score_candidates",
-      input_domain, input_metric, candidates, alpha, .TIA, rt_parse(.T.candidates),
+    "transformations__make_quantile_score_candidates",
+    input_domain, input_metric, candidates, alpha, .TIA, rt_parse(.T.candidates),
     log, PACKAGE = "opendp")
   output
 }
@@ -2815,8 +2815,8 @@ make_quantiles_from_counts <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_quantiles_from_counts",
-      bin_edges, alphas, interpolation, .TA, .F, rt_parse(.T.bin_edges), rt_parse(.T.alphas),
+    "transformations__make_quantiles_from_counts",
+    bin_edges, alphas, interpolation, .TA, .F, rt_parse(.T.bin_edges), rt_parse(.T.alphas),
     log, PACKAGE = "opendp")
   output
 }
@@ -2906,8 +2906,8 @@ make_resize <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_resize",
-      input_domain, input_metric, size, constant, .MO, rt_parse(.T.constant),
+    "transformations__make_resize",
+    input_domain, input_metric, size, constant, .MO, rt_parse(.T.constant),
     log, PACKAGE = "opendp")
   output
 }
@@ -2987,8 +2987,8 @@ make_select_column <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_select_column",
-      key, .K, .TOA,
+    "transformations__make_select_column",
+    key, .K, .TOA,
     log, PACKAGE = "opendp")
   output
 }
@@ -3087,8 +3087,8 @@ make_sized_bounded_float_checked_sum <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_sized_bounded_float_checked_sum",
-      size, bounds, .S, .T, rt_parse(.T.bounds),
+    "transformations__make_sized_bounded_float_checked_sum",
+    size, bounds, .S, .T, rt_parse(.T.bounds),
     log, PACKAGE = "opendp")
   output
 }
@@ -3189,8 +3189,8 @@ make_sized_bounded_float_ordered_sum <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_sized_bounded_float_ordered_sum",
-      size, bounds, .S, .T, rt_parse(.T.bounds),
+    "transformations__make_sized_bounded_float_ordered_sum",
+    size, bounds, .S, .T, rt_parse(.T.bounds),
     log, PACKAGE = "opendp")
   output
 }
@@ -3275,8 +3275,8 @@ make_sized_bounded_int_checked_sum <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_sized_bounded_int_checked_sum",
-      size, bounds, .T, rt_parse(.T.bounds),
+    "transformations__make_sized_bounded_int_checked_sum",
+    size, bounds, .T, rt_parse(.T.bounds),
     log, PACKAGE = "opendp")
   output
 }
@@ -3361,8 +3361,8 @@ make_sized_bounded_int_monotonic_sum <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_sized_bounded_int_monotonic_sum",
-      size, bounds, .T, rt_parse(.T.bounds),
+    "transformations__make_sized_bounded_int_monotonic_sum",
+    size, bounds, .T, rt_parse(.T.bounds),
     log, PACKAGE = "opendp")
   output
 }
@@ -3449,8 +3449,8 @@ make_sized_bounded_int_ordered_sum <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_sized_bounded_int_ordered_sum",
-      size, bounds, .T, rt_parse(.T.bounds),
+    "transformations__make_sized_bounded_int_ordered_sum",
+    size, bounds, .T, rt_parse(.T.bounds),
     log, PACKAGE = "opendp")
   output
 }
@@ -3537,8 +3537,8 @@ make_sized_bounded_int_split_sum <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_sized_bounded_int_split_sum",
-      size, bounds, .T, rt_parse(.T.bounds),
+    "transformations__make_sized_bounded_int_split_sum",
+    size, bounds, .T, rt_parse(.T.bounds),
     log, PACKAGE = "opendp")
   output
 }
@@ -3617,8 +3617,8 @@ make_split_dataframe <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_split_dataframe",
-      separator, col_names, .K, rt_parse(.T.col_names),
+    "transformations__make_split_dataframe",
+    separator, col_names, .K, rt_parse(.T.col_names),
     log, PACKAGE = "opendp")
   output
 }
@@ -3686,7 +3686,7 @@ make_split_lines <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_split_lines",
+    "transformations__make_split_lines",
     log, PACKAGE = "opendp")
   output
 }
@@ -3747,8 +3747,8 @@ make_split_records <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_split_records",
-      separator,
+    "transformations__make_split_records",
+    separator,
     log, PACKAGE = "opendp")
   output
 }
@@ -3821,8 +3821,8 @@ make_subset_by <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_subset_by",
-      indicator_column, keep_columns, .TK, rt_parse(.T.keep_columns),
+    "transformations__make_subset_by",
+    indicator_column, keep_columns, .TK, rt_parse(.T.keep_columns),
     log, PACKAGE = "opendp")
   output
 }
@@ -3900,8 +3900,8 @@ make_sum <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_sum",
-      input_domain, input_metric,
+    "transformations__make_sum",
+    input_domain, input_metric,
     log, PACKAGE = "opendp")
   output
 }
@@ -3990,8 +3990,8 @@ make_sum_of_squared_deviations <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_sum_of_squared_deviations",
-      input_domain, input_metric, .S, .T,
+    "transformations__make_sum_of_squared_deviations",
+    input_domain, input_metric, .S, .T,
     log, PACKAGE = "opendp")
   output
 }
@@ -4063,8 +4063,8 @@ make_unordered <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_unordered",
-      input_domain, input_metric,
+    "transformations__make_unordered",
+    input_domain, input_metric,
     log, PACKAGE = "opendp")
   output
 }
@@ -4146,8 +4146,8 @@ make_variance <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "transformations__make_variance",
-      input_domain, input_metric, ddof, .S, .T,
+    "transformations__make_variance",
+    input_domain, input_metric, ddof, .S, .T,
     log, PACKAGE = "opendp")
   output
 }

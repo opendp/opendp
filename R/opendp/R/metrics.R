@@ -25,8 +25,8 @@ absolute_distance <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "metrics__absolute_distance",
-      .T,
+    "metrics__absolute_distance",
+    .T,
     log, PACKAGE = "opendp")
   output
 }
@@ -49,7 +49,7 @@ change_one_distance <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "metrics__change_one_distance",
+    "metrics__change_one_distance",
     log, PACKAGE = "opendp")
   output
 }
@@ -72,7 +72,7 @@ discrete_distance <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "metrics__discrete_distance",
+    "metrics__discrete_distance",
     log, PACKAGE = "opendp")
   output
 }
@@ -95,7 +95,7 @@ hamming_distance <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "metrics__hamming_distance",
+    "metrics__hamming_distance",
     log, PACKAGE = "opendp")
   output
 }
@@ -118,7 +118,7 @@ insert_delete_distance <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "metrics__insert_delete_distance",
+    "metrics__insert_delete_distance",
     log, PACKAGE = "opendp")
   output
 }
@@ -145,8 +145,8 @@ l1_distance <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "metrics__l1_distance",
-      .T,
+    "metrics__l1_distance",
+    .T,
     log, PACKAGE = "opendp")
   output
 }
@@ -173,8 +173,8 @@ l2_distance <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "metrics__l2_distance",
-      .T,
+    "metrics__l2_distance",
+    .T,
     log, PACKAGE = "opendp")
   output
 }
@@ -206,8 +206,8 @@ linf_distance <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "metrics__linf_distance",
-      monotonic, .T,
+    "metrics__linf_distance",
+    monotonic, .T,
     log, PACKAGE = "opendp")
   output
 }
@@ -230,8 +230,8 @@ metric_debug <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "metrics__metric_debug",
-      this,
+    "metrics__metric_debug",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -254,8 +254,8 @@ metric_distance_type <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "metrics__metric_distance_type",
-      this,
+    "metrics__metric_distance_type",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -278,8 +278,8 @@ metric_type <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "metrics__metric_type",
-      this,
+    "metrics__metric_type",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -302,7 +302,7 @@ symmetric_distance <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "metrics__symmetric_distance",
+    "metrics__symmetric_distance",
     log, PACKAGE = "opendp")
   output
 }
@@ -331,8 +331,8 @@ user_distance <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "metrics__user_distance",
-      descriptor,
+    "metrics__user_distance",
+    descriptor,
     log, PACKAGE = "opendp")
   output
 }

@@ -20,8 +20,8 @@ object_type <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "data__object_type",
-      this,
+    "data__object_type",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -50,8 +50,8 @@ smd_curve_epsilon <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "data__smd_curve_epsilon",
-      curve, delta, rt_parse(.T.delta),
+    "data__smd_curve_epsilon",
+    curve, delta, rt_parse(.T.delta),
     log, PACKAGE = "opendp")
   output
 }
@@ -73,8 +73,8 @@ to_string <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "data__to_string",
-      this,
+    "data__to_string",
+    this,
     log, PACKAGE = "opendp")
   output
 }

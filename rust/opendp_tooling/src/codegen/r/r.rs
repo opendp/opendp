@@ -532,12 +532,12 @@ fn generate_wrapper_call(module_name: &str, func: &Function) -> String {
     let args_str = if args.is_empty() {
         "".to_string()
     } else {
-        format!("\n    {args}")
+        format!("\n  {args}")
     };
 
     let call = format!(
         r#".Call(
-    "{module_name}__{name}",{args_str}
+  "{module_name}__{name}",{args_str}
   log, PACKAGE = "opendp")"#,
         name = func.name
     );

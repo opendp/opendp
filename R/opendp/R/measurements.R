@@ -72,8 +72,8 @@ make_alp_queryable <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measurements__make_alp_queryable",
-      input_domain, input_metric, scale, total_limit, value_limit, size_factor, alpha, .CO, .CI, rt_parse(.T.value_limit), rt_parse(.T.size_factor), rt_parse(.T.alpha),
+    "measurements__make_alp_queryable",
+    input_domain, input_metric, scale, total_limit, value_limit, size_factor, alpha, .CO, .CI, rt_parse(.T.value_limit), rt_parse(.T.size_factor), rt_parse(.T.alpha),
     log, PACKAGE = "opendp")
   output
 }
@@ -172,8 +172,8 @@ make_base_discrete_gaussian <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measurements__make_base_discrete_gaussian",
-      input_domain, input_metric, scale, .MO, .QO,
+    "measurements__make_base_discrete_gaussian",
+    input_domain, input_metric, scale, .MO, .QO,
     log, PACKAGE = "opendp")
   output
 }
@@ -265,8 +265,8 @@ make_base_discrete_laplace <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measurements__make_base_discrete_laplace",
-      input_domain, input_metric, scale, .QO,
+    "measurements__make_base_discrete_laplace",
+    input_domain, input_metric, scale, .QO,
     log, PACKAGE = "opendp")
   output
 }
@@ -356,8 +356,8 @@ make_base_discrete_laplace_cks20 <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measurements__make_base_discrete_laplace_cks20",
-      input_domain, input_metric, scale, .QO,
+    "measurements__make_base_discrete_laplace_cks20",
+    input_domain, input_metric, scale, .QO,
     log, PACKAGE = "opendp")
   output
 }
@@ -453,8 +453,8 @@ make_base_discrete_laplace_linear <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measurements__make_base_discrete_laplace_linear",
-      input_domain, input_metric, scale, bounds, .QO, .T, .OptionT,
+    "measurements__make_base_discrete_laplace_linear",
+    input_domain, input_metric, scale, bounds, .QO, .T, .OptionT,
     log, PACKAGE = "opendp")
   output
 }
@@ -551,8 +551,8 @@ make_base_gaussian <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measurements__make_base_gaussian",
-      input_domain, input_metric, scale, k, .MO, .T,
+    "measurements__make_base_gaussian",
+    input_domain, input_metric, scale, k, .MO, .T,
     log, PACKAGE = "opendp")
   output
 }
@@ -640,8 +640,8 @@ make_base_geometric <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measurements__make_base_geometric",
-      input_domain, input_metric, scale, bounds, .QO, .T, .OptionT,
+    "measurements__make_base_geometric",
+    input_domain, input_metric, scale, bounds, .QO, .T, .OptionT,
     log, PACKAGE = "opendp")
   output
 }
@@ -734,8 +734,8 @@ make_base_laplace <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measurements__make_base_laplace",
-      input_domain, input_metric, scale, k, .T,
+    "measurements__make_base_laplace",
+    input_domain, input_metric, scale, k, .T,
     log, PACKAGE = "opendp")
   output
 }
@@ -821,8 +821,8 @@ make_base_laplace_threshold <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measurements__make_base_laplace_threshold",
-      input_domain, input_metric, scale, threshold, k, .TV,
+    "measurements__make_base_laplace_threshold",
+    input_domain, input_metric, scale, threshold, k, .TV,
     log, PACKAGE = "opendp")
   output
 }
@@ -913,8 +913,8 @@ make_gaussian <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measurements__make_gaussian",
-      input_domain, input_metric, scale, .MO, .QO, rt_parse(.T.scale),
+    "measurements__make_gaussian",
+    input_domain, input_metric, scale, .MO, .QO, rt_parse(.T.scale),
     log, PACKAGE = "opendp")
   output
 }
@@ -1007,8 +1007,8 @@ make_laplace <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measurements__make_laplace",
-      input_domain, input_metric, scale, .QO, rt_parse(.T.scale),
+    "measurements__make_laplace",
+    input_domain, input_metric, scale, .QO, rt_parse(.T.scale),
     log, PACKAGE = "opendp")
   output
 }
@@ -1092,8 +1092,8 @@ make_randomized_response <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measurements__make_randomized_response",
-      categories, prob, constant_time, .T, .QO, rt_parse(.T.categories),
+    "measurements__make_randomized_response",
+    categories, prob, constant_time, .T, .QO, rt_parse(.T.categories),
     log, PACKAGE = "opendp")
   output
 }
@@ -1181,8 +1181,8 @@ make_randomized_response_bool <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measurements__make_randomized_response_bool",
-      prob, constant_time, .QO,
+    "measurements__make_randomized_response_bool",
+    prob, constant_time, .QO,
     log, PACKAGE = "opendp")
   output
 }
@@ -1268,8 +1268,8 @@ make_report_noisy_max_gumbel <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measurements__make_report_noisy_max_gumbel",
-      input_domain, input_metric, scale, optimize, .QO,
+    "measurements__make_report_noisy_max_gumbel",
+    input_domain, input_metric, scale, optimize, .QO,
     log, PACKAGE = "opendp")
   output
 }

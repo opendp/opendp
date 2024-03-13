@@ -34,8 +34,8 @@ atom_domain <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "domains__atom_domain",
-      bounds, nullable, .T, rt_parse(.T.bounds),
+    "domains__atom_domain",
+    bounds, nullable, .T, rt_parse(.T.bounds),
     log, PACKAGE = "opendp")
   output
 }
@@ -58,8 +58,8 @@ domain_carrier_type <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "domains__domain_carrier_type",
-      this,
+    "domains__domain_carrier_type",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -82,8 +82,8 @@ domain_debug <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "domains__domain_debug",
-      this,
+    "domains__domain_debug",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -106,8 +106,8 @@ domain_type <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "domains__domain_type",
-      this,
+    "domains__domain_type",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -136,8 +136,8 @@ map_domain <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "domains__map_domain",
-      key_domain, value_domain,
+    "domains__map_domain",
+    key_domain, value_domain,
     log, PACKAGE = "opendp")
   output
 }
@@ -167,8 +167,8 @@ member <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "domains__member",
-      this, val, rt_parse(.T.val),
+    "domains__member",
+    this, val, rt_parse(.T.val),
     log, PACKAGE = "opendp")
   output
 }
@@ -200,8 +200,8 @@ option_domain <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "domains__option_domain",
-      element_domain, .D,
+    "domains__option_domain",
+    element_domain, .D,
     log, PACKAGE = "opendp")
   output
 }
@@ -231,8 +231,8 @@ vector_domain <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "domains__vector_domain",
-      atom_domain, size, rt_parse(.T.size),
+    "domains__vector_domain",
+    atom_domain, size, rt_parse(.T.size),
     log, PACKAGE = "opendp")
   output
 }
