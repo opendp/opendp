@@ -19,15 +19,15 @@ absolute_distance <- function(
   .T <- rt_parse(type_name = .T)
 
   log <- new_constructor_log("absolute_distance", "metrics", new_hashtab(
-      list("T"),
-      list(.T)
+    list("T"),
+    list(.T)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "metrics__absolute_distance",
       .T,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -43,14 +43,14 @@ change_one_distance <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("change_one_distance", "metrics", new_hashtab(
-      list(),
-      list()
+    list(),
+    list()
   ))
 
   # Call wrapper function.
   output <- .Call(
       "metrics__change_one_distance",
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -66,14 +66,14 @@ discrete_distance <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("discrete_distance", "metrics", new_hashtab(
-      list(),
-      list()
+    list(),
+    list()
   ))
 
   # Call wrapper function.
   output <- .Call(
       "metrics__discrete_distance",
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -89,14 +89,14 @@ hamming_distance <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("hamming_distance", "metrics", new_hashtab(
-      list(),
-      list()
+    list(),
+    list()
   ))
 
   # Call wrapper function.
   output <- .Call(
       "metrics__hamming_distance",
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -112,14 +112,14 @@ insert_delete_distance <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("insert_delete_distance", "metrics", new_hashtab(
-      list(),
-      list()
+    list(),
+    list()
   ))
 
   # Call wrapper function.
   output <- .Call(
       "metrics__insert_delete_distance",
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -139,15 +139,15 @@ l1_distance <- function(
   .T <- rt_parse(type_name = .T)
 
   log <- new_constructor_log("l1_distance", "metrics", new_hashtab(
-      list("T"),
-      list(.T)
+    list("T"),
+    list(.T)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "metrics__l1_distance",
       .T,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -167,15 +167,15 @@ l2_distance <- function(
   .T <- rt_parse(type_name = .T)
 
   log <- new_constructor_log("l2_distance", "metrics", new_hashtab(
-      list("T"),
-      list(.T)
+    list("T"),
+    list(.T)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "metrics__l2_distance",
       .T,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -197,8 +197,8 @@ linf_distance <- function(
   .T <- rt_parse(type_name = .T)
 
   log <- new_constructor_log("linf_distance", "metrics", new_hashtab(
-      list("monotonic", "T"),
-      list(unbox2(monotonic), .T)
+    list("monotonic", "T"),
+    list(unbox2(monotonic), .T)
   ))
 
   # Assert that arguments are correctly typed.
@@ -208,7 +208,7 @@ linf_distance <- function(
   output <- .Call(
       "metrics__linf_distance",
       monotonic, .T,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -224,15 +224,15 @@ metric_debug <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("metric_debug", "metrics", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "metrics__metric_debug",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -248,15 +248,15 @@ metric_distance_type <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("metric_distance_type", "metrics", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "metrics__metric_distance_type",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -272,15 +272,15 @@ metric_type <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("metric_type", "metrics", new_hashtab(
-      list("this"),
-      list(this)
+    list("this"),
+    list(this)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "metrics__metric_type",
       this,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -296,14 +296,14 @@ symmetric_distance <- function(
 ) {
   # No type arguments to standardize.
   log <- new_constructor_log("symmetric_distance", "metrics", new_hashtab(
-      list(),
-      list()
+    list(),
+    list()
   ))
 
   # Call wrapper function.
   output <- .Call(
       "metrics__symmetric_distance",
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -322,8 +322,8 @@ user_distance <- function(
 
   # No type arguments to standardize.
   log <- new_constructor_log("user_distance", "metrics", new_hashtab(
-      list("descriptor"),
-      list(unbox2(descriptor))
+    list("descriptor"),
+    list(unbox2(descriptor))
   ))
 
   # Assert that arguments are correctly typed.
@@ -333,6 +333,6 @@ user_distance <- function(
   output <- .Call(
       "metrics__user_distance",
       descriptor,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }

@@ -33,8 +33,8 @@ make_basic_composition <- function(
   .T.measurements <- new_runtime_type(origin = "Vec", args = list(AnyMeasurementPtr))
 
   log <- new_constructor_log("make_basic_composition", "combinators", new_hashtab(
-      list("measurements"),
-      list(measurements)
+    list("measurements"),
+    list(measurements)
   ))
 
   # Assert that arguments are correctly typed.
@@ -44,7 +44,7 @@ make_basic_composition <- function(
   output <- .Call(
       "combinators__make_basic_composition",
       measurements, rt_parse(.T.measurements),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -63,15 +63,15 @@ then_basic_composition <- function(
 ) {
 
   log <- new_constructor_log("then_basic_composition", "combinators", new_hashtab(
-      list("measurements"),
-      list(measurements)
+    list("measurements"),
+    list(measurements)
   ))
 
-    make_chain_dyn(
-        make_basic_composition(
+  make_chain_dyn(
+    make_basic_composition(
       measurements = measurements),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -95,15 +95,15 @@ make_chain_mt <- function(
 
   # No type arguments to standardize.
   log <- new_constructor_log("make_chain_mt", "combinators", new_hashtab(
-      list("measurement1", "transformation0"),
-      list(measurement1, transformation0)
+    list("measurement1", "transformation0"),
+    list(measurement1, transformation0)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "combinators__make_chain_mt",
       measurement1, transformation0,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -124,16 +124,16 @@ then_chain_mt <- function(
 ) {
 
   log <- new_constructor_log("then_chain_mt", "combinators", new_hashtab(
-      list("measurement1", "transformation0"),
-      list(measurement1, transformation0)
+    list("measurement1", "transformation0"),
+    list(measurement1, transformation0)
   ))
 
-    make_chain_dyn(
-        make_chain_mt(
+  make_chain_dyn(
+    make_chain_mt(
       measurement1 = measurement1,
       transformation0 = transformation0),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -158,15 +158,15 @@ make_chain_pm <- function(
 
   # No type arguments to standardize.
   log <- new_constructor_log("make_chain_pm", "combinators", new_hashtab(
-      list("postprocess1", "measurement0"),
-      list(postprocess1, measurement0)
+    list("postprocess1", "measurement0"),
+    list(postprocess1, measurement0)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "combinators__make_chain_pm",
       postprocess1, measurement0,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -187,16 +187,16 @@ then_chain_pm <- function(
 ) {
 
   log <- new_constructor_log("then_chain_pm", "combinators", new_hashtab(
-      list("postprocess1", "measurement0"),
-      list(postprocess1, measurement0)
+    list("postprocess1", "measurement0"),
+    list(postprocess1, measurement0)
   ))
 
-    make_chain_dyn(
-        make_chain_pm(
+  make_chain_dyn(
+    make_chain_pm(
       postprocess1 = postprocess1,
       measurement0 = measurement0),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -220,15 +220,15 @@ make_chain_tt <- function(
 
   # No type arguments to standardize.
   log <- new_constructor_log("make_chain_tt", "combinators", new_hashtab(
-      list("transformation1", "transformation0"),
-      list(transformation1, transformation0)
+    list("transformation1", "transformation0"),
+    list(transformation1, transformation0)
   ))
 
   # Call wrapper function.
   output <- .Call(
       "combinators__make_chain_tt",
       transformation1, transformation0,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -249,16 +249,16 @@ then_chain_tt <- function(
 ) {
 
   log <- new_constructor_log("then_chain_tt", "combinators", new_hashtab(
-      list("transformation1", "transformation0"),
-      list(transformation1, transformation0)
+    list("transformation1", "transformation0"),
+    list(transformation1, transformation0)
   ))
 
-    make_chain_dyn(
-        make_chain_tt(
+  make_chain_dyn(
+    make_chain_tt(
       transformation1 = transformation1,
       transformation0 = transformation0),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -283,8 +283,8 @@ make_fix_delta <- function(
   .T.delta <- get_atom(measurement_output_distance_type(measurement))
 
   log <- new_constructor_log("make_fix_delta", "combinators", new_hashtab(
-      list("measurement", "delta"),
-      list(measurement, delta)
+    list("measurement", "delta"),
+    list(measurement, delta)
   ))
 
   # Assert that arguments are correctly typed.
@@ -294,7 +294,7 @@ make_fix_delta <- function(
   output <- .Call(
       "combinators__make_fix_delta",
       measurement, delta, rt_parse(.T.delta),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -315,16 +315,16 @@ then_fix_delta <- function(
 ) {
 
   log <- new_constructor_log("then_fix_delta", "combinators", new_hashtab(
-      list("measurement", "delta"),
-      list(measurement, delta)
+    list("measurement", "delta"),
+    list(measurement, delta)
   ))
 
-    make_chain_dyn(
-        make_fix_delta(
+  make_chain_dyn(
+    make_fix_delta(
       measurement = measurement,
       delta = delta),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -354,8 +354,8 @@ make_population_amplification <- function(
 
   # No type arguments to standardize.
   log <- new_constructor_log("make_population_amplification", "combinators", new_hashtab(
-      list("measurement", "population_size"),
-      list(measurement, unbox2(population_size))
+    list("measurement", "population_size"),
+    list(measurement, unbox2(population_size))
   ))
 
   # Assert that arguments are correctly typed.
@@ -366,7 +366,7 @@ make_population_amplification <- function(
   output <- .Call(
       "combinators__make_population_amplification",
       measurement, population_size,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -387,16 +387,16 @@ then_population_amplification <- function(
 ) {
 
   log <- new_constructor_log("then_population_amplification", "combinators", new_hashtab(
-      list("measurement", "population_size"),
-      list(measurement, unbox2(population_size))
+    list("measurement", "population_size"),
+    list(measurement, unbox2(population_size))
   ))
 
-    make_chain_dyn(
-        make_population_amplification(
+  make_chain_dyn(
+    make_population_amplification(
       measurement = measurement,
       population_size = population_size),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -418,8 +418,8 @@ make_pureDP_to_fixed_approxDP <- function(
 
   # No type arguments to standardize.
   log <- new_constructor_log("make_pureDP_to_fixed_approxDP", "combinators", new_hashtab(
-      list("measurement"),
-      list(measurement)
+    list("measurement"),
+    list(measurement)
   ))
 
   # Assert that arguments are correctly typed.
@@ -429,7 +429,7 @@ make_pureDP_to_fixed_approxDP <- function(
   output <- .Call(
       "combinators__make_pureDP_to_fixed_approxDP",
       measurement,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -448,15 +448,15 @@ then_pureDP_to_fixed_approxDP <- function(
 ) {
 
   log <- new_constructor_log("then_pureDP_to_fixed_approxDP", "combinators", new_hashtab(
-      list("measurement"),
-      list(measurement)
+    list("measurement"),
+    list(measurement)
   ))
 
-    make_chain_dyn(
-        make_pureDP_to_fixed_approxDP(
+  make_chain_dyn(
+    make_pureDP_to_fixed_approxDP(
       measurement = measurement),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -482,8 +482,8 @@ make_pureDP_to_zCDP <- function(
 
   # No type arguments to standardize.
   log <- new_constructor_log("make_pureDP_to_zCDP", "combinators", new_hashtab(
-      list("measurement"),
-      list(measurement)
+    list("measurement"),
+    list(measurement)
   ))
 
   # Assert that arguments are correctly typed.
@@ -493,7 +493,7 @@ make_pureDP_to_zCDP <- function(
   output <- .Call(
       "combinators__make_pureDP_to_zCDP",
       measurement,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -512,15 +512,15 @@ then_pureDP_to_zCDP <- function(
 ) {
 
   log <- new_constructor_log("then_pureDP_to_zCDP", "combinators", new_hashtab(
-      list("measurement"),
-      list(measurement)
+    list("measurement"),
+    list(measurement)
   ))
 
-    make_chain_dyn(
-        make_pureDP_to_zCDP(
+  make_chain_dyn(
+    make_pureDP_to_zCDP(
       measurement = measurement),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -572,8 +572,8 @@ make_sequential_composition <- function(
   .T.d_mids <- new_runtime_type(origin = "Vec", args = list(.QO))
 
   log <- new_constructor_log("make_sequential_composition", "combinators", new_hashtab(
-      list("input_domain", "input_metric", "output_measure", "d_in", "d_mids"),
-      list(input_domain, input_metric, output_measure, d_in, d_mids)
+    list("input_domain", "input_metric", "output_measure", "d_in", "d_mids"),
+    list(input_domain, input_metric, output_measure, d_in, d_mids)
   ))
 
   # Assert that arguments are correctly typed.
@@ -584,7 +584,7 @@ make_sequential_composition <- function(
   output <- .Call(
       "combinators__make_sequential_composition",
       input_domain, input_metric, output_measure, d_in, d_mids, .QO, rt_parse(.T.d_in), rt_parse(.T.d_mids),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -607,19 +607,19 @@ then_sequential_composition <- function(
 ) {
 
   log <- new_constructor_log("then_sequential_composition", "combinators", new_hashtab(
-      list("output_measure", "d_in", "d_mids"),
-      list(output_measure, d_in, d_mids)
+    list("output_measure", "d_in", "d_mids"),
+    list(output_measure, d_in, d_mids)
   ))
 
-    make_chain_dyn(
-        make_sequential_composition(
+  make_chain_dyn(
+    make_sequential_composition(
       output_domain(lhs),
       output_metric(lhs),
       output_measure = output_measure,
       d_in = d_in,
       d_mids = d_mids),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -641,8 +641,8 @@ make_zCDP_to_approxDP <- function(
 
   # No type arguments to standardize.
   log <- new_constructor_log("make_zCDP_to_approxDP", "combinators", new_hashtab(
-      list("measurement"),
-      list(measurement)
+    list("measurement"),
+    list(measurement)
   ))
 
   # Assert that arguments are correctly typed.
@@ -652,7 +652,7 @@ make_zCDP_to_approxDP <- function(
   output <- .Call(
       "combinators__make_zCDP_to_approxDP",
       measurement,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -671,13 +671,13 @@ then_zCDP_to_approxDP <- function(
 ) {
 
   log <- new_constructor_log("then_zCDP_to_approxDP", "combinators", new_hashtab(
-      list("measurement"),
-      list(measurement)
+    list("measurement"),
+    list(measurement)
   ))
 
-    make_chain_dyn(
-        make_zCDP_to_approxDP(
+  make_chain_dyn(
+    make_zCDP_to_approxDP(
       measurement = measurement),
-        lhs,
-        log)
+    lhs,
+    log)
 }

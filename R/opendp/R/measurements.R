@@ -59,8 +59,8 @@ make_alp_queryable <- function(
   .T.alpha <- new_runtime_type(origin = "Option", args = list(u32))
 
   log <- new_constructor_log("make_alp_queryable", "measurements", new_hashtab(
-      list("input_domain", "input_metric", "scale", "total_limit", "value_limit", "size_factor", "alpha", "CO"),
-      list(input_domain, input_metric, scale, total_limit, value_limit, size_factor, alpha, .CO)
+    list("input_domain", "input_metric", "scale", "total_limit", "value_limit", "size_factor", "alpha", "CO"),
+    list(input_domain, input_metric, scale, total_limit, value_limit, size_factor, alpha, .CO)
   ))
 
   # Assert that arguments are correctly typed.
@@ -74,7 +74,7 @@ make_alp_queryable <- function(
   output <- .Call(
       "measurements__make_alp_queryable",
       input_domain, input_metric, scale, total_limit, value_limit, size_factor, alpha, .CO, .CI, rt_parse(.T.value_limit), rt_parse(.T.size_factor), rt_parse(.T.alpha),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -103,12 +103,12 @@ then_alp_queryable <- function(
 ) {
 
   log <- new_constructor_log("then_alp_queryable", "measurements", new_hashtab(
-      list("scale", "total_limit", "value_limit", "size_factor", "alpha", "CO"),
-      list(scale, total_limit, value_limit, size_factor, alpha, .CO)
+    list("scale", "total_limit", "value_limit", "size_factor", "alpha", "CO"),
+    list(scale, total_limit, value_limit, size_factor, alpha, .CO)
   ))
 
-    make_chain_dyn(
-        make_alp_queryable(
+  make_chain_dyn(
+    make_alp_queryable(
       output_domain(lhs),
       output_metric(lhs),
       scale = scale,
@@ -117,8 +117,8 @@ then_alp_queryable <- function(
       size_factor = size_factor,
       alpha = alpha,
       .CO = .CO),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -163,8 +163,8 @@ make_base_discrete_gaussian <- function(
   .MO <- rt_substitute(.MO, .QO = .QO)
 
   log <- new_constructor_log("make_base_discrete_gaussian", "measurements", new_hashtab(
-      list("input_domain", "input_metric", "scale", "MO"),
-      list(input_domain, input_metric, scale, .MO)
+    list("input_domain", "input_metric", "scale", "MO"),
+    list(input_domain, input_metric, scale, .MO)
   ))
 
   # Assert that arguments are correctly typed.
@@ -174,7 +174,7 @@ make_base_discrete_gaussian <- function(
   output <- .Call(
       "measurements__make_base_discrete_gaussian",
       input_domain, input_metric, scale, .MO, .QO,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -195,18 +195,18 @@ then_base_discrete_gaussian <- function(
 ) {
 
   log <- new_constructor_log("then_base_discrete_gaussian", "measurements", new_hashtab(
-      list("scale", "MO"),
-      list(scale, .MO)
+    list("scale", "MO"),
+    list(scale, .MO)
   ))
 
-    make_chain_dyn(
-        make_base_discrete_gaussian(
+  make_chain_dyn(
+    make_base_discrete_gaussian(
       output_domain(lhs),
       output_metric(lhs),
       scale = scale,
       .MO = .MO),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -256,8 +256,8 @@ make_base_discrete_laplace <- function(
   .QO <- parse_or_infer(type_name = .QO, public_example = scale)
 
   log <- new_constructor_log("make_base_discrete_laplace", "measurements", new_hashtab(
-      list("input_domain", "input_metric", "scale", "QO"),
-      list(input_domain, input_metric, scale, .QO)
+    list("input_domain", "input_metric", "scale", "QO"),
+    list(input_domain, input_metric, scale, .QO)
   ))
 
   # Assert that arguments are correctly typed.
@@ -267,7 +267,7 @@ make_base_discrete_laplace <- function(
   output <- .Call(
       "measurements__make_base_discrete_laplace",
       input_domain, input_metric, scale, .QO,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -288,18 +288,18 @@ then_base_discrete_laplace <- function(
 ) {
 
   log <- new_constructor_log("then_base_discrete_laplace", "measurements", new_hashtab(
-      list("scale", "QO"),
-      list(scale, .QO)
+    list("scale", "QO"),
+    list(scale, .QO)
   ))
 
-    make_chain_dyn(
-        make_base_discrete_laplace(
+  make_chain_dyn(
+    make_base_discrete_laplace(
       output_domain(lhs),
       output_metric(lhs),
       scale = scale,
       .QO = .QO),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -347,8 +347,8 @@ make_base_discrete_laplace_cks20 <- function(
   .QO <- parse_or_infer(type_name = .QO, public_example = scale)
 
   log <- new_constructor_log("make_base_discrete_laplace_cks20", "measurements", new_hashtab(
-      list("input_domain", "input_metric", "scale", "QO"),
-      list(input_domain, input_metric, scale, .QO)
+    list("input_domain", "input_metric", "scale", "QO"),
+    list(input_domain, input_metric, scale, .QO)
   ))
 
   # Assert that arguments are correctly typed.
@@ -358,7 +358,7 @@ make_base_discrete_laplace_cks20 <- function(
   output <- .Call(
       "measurements__make_base_discrete_laplace_cks20",
       input_domain, input_metric, scale, .QO,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -379,18 +379,18 @@ then_base_discrete_laplace_cks20 <- function(
 ) {
 
   log <- new_constructor_log("then_base_discrete_laplace_cks20", "measurements", new_hashtab(
-      list("scale", "QO"),
-      list(scale, .QO)
+    list("scale", "QO"),
+    list(scale, .QO)
   ))
 
-    make_chain_dyn(
-        make_base_discrete_laplace_cks20(
+  make_chain_dyn(
+    make_base_discrete_laplace_cks20(
       output_domain(lhs),
       output_metric(lhs),
       scale = scale,
       .QO = .QO),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -443,8 +443,8 @@ make_base_discrete_laplace_linear <- function(
   .OptionT <- new_runtime_type(origin = "Option", args = list(new_runtime_type(origin = "Tuple", args = list(.T, .T))))
 
   log <- new_constructor_log("make_base_discrete_laplace_linear", "measurements", new_hashtab(
-      list("input_domain", "input_metric", "scale", "bounds", "QO"),
-      list(input_domain, input_metric, scale, bounds, .QO)
+    list("input_domain", "input_metric", "scale", "bounds", "QO"),
+    list(input_domain, input_metric, scale, bounds, .QO)
   ))
 
   # Assert that arguments are correctly typed.
@@ -455,7 +455,7 @@ make_base_discrete_laplace_linear <- function(
   output <- .Call(
       "measurements__make_base_discrete_laplace_linear",
       input_domain, input_metric, scale, bounds, .QO, .T, .OptionT,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -478,19 +478,19 @@ then_base_discrete_laplace_linear <- function(
 ) {
 
   log <- new_constructor_log("then_base_discrete_laplace_linear", "measurements", new_hashtab(
-      list("scale", "bounds", "QO"),
-      list(scale, bounds, .QO)
+    list("scale", "bounds", "QO"),
+    list(scale, bounds, .QO)
   ))
 
-    make_chain_dyn(
-        make_base_discrete_laplace_linear(
+  make_chain_dyn(
+    make_base_discrete_laplace_linear(
       output_domain(lhs),
       output_metric(lhs),
       scale = scale,
       bounds = bounds,
       .QO = .QO),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -541,8 +541,8 @@ make_base_gaussian <- function(
   .MO <- rt_substitute(.MO, .T = .T)
 
   log <- new_constructor_log("make_base_gaussian", "measurements", new_hashtab(
-      list("input_domain", "input_metric", "scale", "k", "MO"),
-      list(input_domain, input_metric, scale, unbox2(k), .MO)
+    list("input_domain", "input_metric", "scale", "k", "MO"),
+    list(input_domain, input_metric, scale, unbox2(k), .MO)
   ))
 
   # Assert that arguments are correctly typed.
@@ -553,7 +553,7 @@ make_base_gaussian <- function(
   output <- .Call(
       "measurements__make_base_gaussian",
       input_domain, input_metric, scale, k, .MO, .T,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -576,19 +576,19 @@ then_base_gaussian <- function(
 ) {
 
   log <- new_constructor_log("then_base_gaussian", "measurements", new_hashtab(
-      list("scale", "k", "MO"),
-      list(scale, unbox2(k), .MO)
+    list("scale", "k", "MO"),
+    list(scale, unbox2(k), .MO)
   ))
 
-    make_chain_dyn(
-        make_base_gaussian(
+  make_chain_dyn(
+    make_base_gaussian(
       output_domain(lhs),
       output_metric(lhs),
       scale = scale,
       k = k,
       .MO = .MO),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -630,8 +630,8 @@ make_base_geometric <- function(
   .OptionT <- new_runtime_type(origin = "Option", args = list(new_runtime_type(origin = "Tuple", args = list(.T, .T))))
 
   log <- new_constructor_log("make_base_geometric", "measurements", new_hashtab(
-      list("input_domain", "input_metric", "scale", "bounds", "QO"),
-      list(input_domain, input_metric, scale, bounds, .QO)
+    list("input_domain", "input_metric", "scale", "bounds", "QO"),
+    list(input_domain, input_metric, scale, bounds, .QO)
   ))
 
   # Assert that arguments are correctly typed.
@@ -642,7 +642,7 @@ make_base_geometric <- function(
   output <- .Call(
       "measurements__make_base_geometric",
       input_domain, input_metric, scale, bounds, .QO, .T, .OptionT,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -665,19 +665,19 @@ then_base_geometric <- function(
 ) {
 
   log <- new_constructor_log("then_base_geometric", "measurements", new_hashtab(
-      list("scale", "bounds", "QO"),
-      list(scale, bounds, .QO)
+    list("scale", "bounds", "QO"),
+    list(scale, bounds, .QO)
   ))
 
-    make_chain_dyn(
-        make_base_geometric(
+  make_chain_dyn(
+    make_base_geometric(
       output_domain(lhs),
       output_metric(lhs),
       scale = scale,
       bounds = bounds,
       .QO = .QO),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -724,8 +724,8 @@ make_base_laplace <- function(
   .T <- get_atom_or_infer(get_carrier_type(input_domain), scale)
 
   log <- new_constructor_log("make_base_laplace", "measurements", new_hashtab(
-      list("input_domain", "input_metric", "scale", "k"),
-      list(input_domain, input_metric, scale, unbox2(k))
+    list("input_domain", "input_metric", "scale", "k"),
+    list(input_domain, input_metric, scale, unbox2(k))
   ))
 
   # Assert that arguments are correctly typed.
@@ -736,7 +736,7 @@ make_base_laplace <- function(
   output <- .Call(
       "measurements__make_base_laplace",
       input_domain, input_metric, scale, k, .T,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -757,18 +757,18 @@ then_base_laplace <- function(
 ) {
 
   log <- new_constructor_log("then_base_laplace", "measurements", new_hashtab(
-      list("scale", "k"),
-      list(scale, unbox2(k))
+    list("scale", "k"),
+    list(scale, unbox2(k))
   ))
 
-    make_chain_dyn(
-        make_base_laplace(
+  make_chain_dyn(
+    make_base_laplace(
       output_domain(lhs),
       output_metric(lhs),
       scale = scale,
       k = k),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -810,8 +810,8 @@ make_base_laplace_threshold <- function(
   .TV <- get_distance_type(input_metric)
 
   log <- new_constructor_log("make_base_laplace_threshold", "measurements", new_hashtab(
-      list("input_domain", "input_metric", "scale", "threshold", "k"),
-      list(input_domain, input_metric, scale, threshold, unbox2(k))
+    list("input_domain", "input_metric", "scale", "threshold", "k"),
+    list(input_domain, input_metric, scale, threshold, unbox2(k))
   ))
 
   # Assert that arguments are correctly typed.
@@ -823,7 +823,7 @@ make_base_laplace_threshold <- function(
   output <- .Call(
       "measurements__make_base_laplace_threshold",
       input_domain, input_metric, scale, threshold, k, .TV,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -846,19 +846,19 @@ then_base_laplace_threshold <- function(
 ) {
 
   log <- new_constructor_log("then_base_laplace_threshold", "measurements", new_hashtab(
-      list("scale", "threshold", "k"),
-      list(scale, threshold, unbox2(k))
+    list("scale", "threshold", "k"),
+    list(scale, threshold, unbox2(k))
   ))
 
-    make_chain_dyn(
-        make_base_laplace_threshold(
+  make_chain_dyn(
+    make_base_laplace_threshold(
       output_domain(lhs),
       output_metric(lhs),
       scale = scale,
       threshold = threshold,
       k = k),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -904,8 +904,8 @@ make_gaussian <- function(
   .T.scale <- get_atom(.MO)
 
   log <- new_constructor_log("make_gaussian", "measurements", new_hashtab(
-      list("input_domain", "input_metric", "scale", "MO"),
-      list(input_domain, input_metric, scale, .MO)
+    list("input_domain", "input_metric", "scale", "MO"),
+    list(input_domain, input_metric, scale, .MO)
   ))
 
   # Assert that arguments are correctly typed.
@@ -915,7 +915,7 @@ make_gaussian <- function(
   output <- .Call(
       "measurements__make_gaussian",
       input_domain, input_metric, scale, .MO, .QO, rt_parse(.T.scale),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -936,18 +936,18 @@ then_gaussian <- function(
 ) {
 
   log <- new_constructor_log("then_gaussian", "measurements", new_hashtab(
-      list("scale", "MO"),
-      list(scale, .MO)
+    list("scale", "MO"),
+    list(scale, .MO)
   ))
 
-    make_chain_dyn(
-        make_gaussian(
+  make_chain_dyn(
+    make_gaussian(
       output_domain(lhs),
       output_metric(lhs),
       scale = scale,
       .MO = .MO),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -998,8 +998,8 @@ make_laplace <- function(
   .T.scale <- get_atom(.QO)
 
   log <- new_constructor_log("make_laplace", "measurements", new_hashtab(
-      list("input_domain", "input_metric", "scale", "QO"),
-      list(input_domain, input_metric, scale, .QO)
+    list("input_domain", "input_metric", "scale", "QO"),
+    list(input_domain, input_metric, scale, .QO)
   ))
 
   # Assert that arguments are correctly typed.
@@ -1009,7 +1009,7 @@ make_laplace <- function(
   output <- .Call(
       "measurements__make_laplace",
       input_domain, input_metric, scale, .QO, rt_parse(.T.scale),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -1030,18 +1030,18 @@ then_laplace <- function(
 ) {
 
   log <- new_constructor_log("then_laplace", "measurements", new_hashtab(
-      list("scale", "QO"),
-      list(scale, .QO)
+    list("scale", "QO"),
+    list(scale, .QO)
   ))
 
-    make_chain_dyn(
-        make_laplace(
+  make_chain_dyn(
+    make_laplace(
       output_domain(lhs),
       output_metric(lhs),
       scale = scale,
       .QO = .QO),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -1081,8 +1081,8 @@ make_randomized_response <- function(
   .T.categories <- new_runtime_type(origin = "Vec", args = list(.T))
 
   log <- new_constructor_log("make_randomized_response", "measurements", new_hashtab(
-      list("categories", "prob", "constant_time", "T", "QO"),
-      list(categories, prob, unbox2(constant_time), .T, .QO)
+    list("categories", "prob", "constant_time", "T", "QO"),
+    list(categories, prob, unbox2(constant_time), .T, .QO)
   ))
 
   # Assert that arguments are correctly typed.
@@ -1094,7 +1094,7 @@ make_randomized_response <- function(
   output <- .Call(
       "measurements__make_randomized_response",
       categories, prob, constant_time, .T, .QO, rt_parse(.T.categories),
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -1121,19 +1121,19 @@ then_randomized_response <- function(
 ) {
 
   log <- new_constructor_log("then_randomized_response", "measurements", new_hashtab(
-      list("categories", "prob", "constant_time", "T", "QO"),
-      list(categories, prob, unbox2(constant_time), .T, .QO)
+    list("categories", "prob", "constant_time", "T", "QO"),
+    list(categories, prob, unbox2(constant_time), .T, .QO)
   ))
 
-    make_chain_dyn(
-        make_randomized_response(
+  make_chain_dyn(
+    make_randomized_response(
       categories = categories,
       prob = prob,
       constant_time = constant_time,
       .T = .T,
       .QO = .QO),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -1171,8 +1171,8 @@ make_randomized_response_bool <- function(
   .QO <- parse_or_infer(type_name = .QO, public_example = prob)
 
   log <- new_constructor_log("make_randomized_response_bool", "measurements", new_hashtab(
-      list("prob", "constant_time", "QO"),
-      list(prob, unbox2(constant_time), .QO)
+    list("prob", "constant_time", "QO"),
+    list(prob, unbox2(constant_time), .QO)
   ))
 
   # Assert that arguments are correctly typed.
@@ -1183,7 +1183,7 @@ make_randomized_response_bool <- function(
   output <- .Call(
       "measurements__make_randomized_response_bool",
       prob, constant_time, .QO,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -1206,17 +1206,17 @@ then_randomized_response_bool <- function(
 ) {
 
   log <- new_constructor_log("then_randomized_response_bool", "measurements", new_hashtab(
-      list("prob", "constant_time", "QO"),
-      list(prob, unbox2(constant_time), .QO)
+    list("prob", "constant_time", "QO"),
+    list(prob, unbox2(constant_time), .QO)
   ))
 
-    make_chain_dyn(
-        make_randomized_response_bool(
+  make_chain_dyn(
+    make_randomized_response_bool(
       prob = prob,
       constant_time = constant_time,
       .QO = .QO),
-        lhs,
-        log)
+    lhs,
+    log)
 }
 
 
@@ -1258,8 +1258,8 @@ make_report_noisy_max_gumbel <- function(
   .QO <- parse_or_infer(type_name = .QO, public_example = scale)
 
   log <- new_constructor_log("make_report_noisy_max_gumbel", "measurements", new_hashtab(
-      list("input_domain", "input_metric", "scale", "optimize", "QO"),
-      list(input_domain, input_metric, scale, unbox2(optimize), .QO)
+    list("input_domain", "input_metric", "scale", "optimize", "QO"),
+    list(input_domain, input_metric, scale, unbox2(optimize), .QO)
   ))
 
   # Assert that arguments are correctly typed.
@@ -1270,7 +1270,7 @@ make_report_noisy_max_gumbel <- function(
   output <- .Call(
       "measurements__make_report_noisy_max_gumbel",
       input_domain, input_metric, scale, optimize, .QO,
-      log, PACKAGE = "opendp")
+    log, PACKAGE = "opendp")
   output
 }
 
@@ -1293,17 +1293,17 @@ then_report_noisy_max_gumbel <- function(
 ) {
 
   log <- new_constructor_log("then_report_noisy_max_gumbel", "measurements", new_hashtab(
-      list("scale", "optimize", "QO"),
-      list(scale, unbox2(optimize), .QO)
+    list("scale", "optimize", "QO"),
+    list(scale, unbox2(optimize), .QO)
   ))
 
-    make_chain_dyn(
-        make_report_noisy_max_gumbel(
+  make_chain_dyn(
+    make_report_noisy_max_gumbel(
       output_domain(lhs),
       output_metric(lhs),
       scale = scale,
       optimize = optimize,
       .QO = .QO),
-        lhs,
-        log)
+    lhs,
+    log)
 }
