@@ -1,5 +1,6 @@
 linters: all_linters(
     # If "linters_with_defaults" is used then only these problems are reported:
+    indentation_linter = indentation_linter(hanging_indent_style = "never"),
     line_length_linter = NULL, # Lines should not be more than 80 characters.
     object_length_linter = NULL, # Variable and function names should not be longer than 30 characters.
     object_name_linter = NULL, # Variable and function name style should match snake_case or symbols.
