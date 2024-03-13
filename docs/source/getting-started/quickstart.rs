@@ -2,7 +2,7 @@
 ```cargo
 # init
 [dependencies]
-opendp = { version = "0.9.2", features = ["contrib", "honest-but-curious"] }
+opendp = { path = "../../../rust/", features = ["contrib", "honest-but-curious"] }
 # /init
 ```
 
