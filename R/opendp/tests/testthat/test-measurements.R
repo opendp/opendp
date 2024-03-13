@@ -219,7 +219,9 @@ test_that("test_randomized_response_bool", {
 
 test_that("test_gaussian", {
   input_space <- c(atom_domain(.T = i32), absolute_distance(.T = f64))
-  expect_equal(class((input_space |> then_gaussian(1.))(arg = 1L)), "integer")
+  expect_equal(class((input_space |> then_gaussian(1.))(arg = 1L)), "integer") # nolint: expect_s3_class_linter.
+  # Both expect_s3_class and expect_s4_class failed.
+  # Not sure which we are using, and which we expect to pass.
 
   input_space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
   (input_space |> then_gaussian(1.))(arg = 1.)

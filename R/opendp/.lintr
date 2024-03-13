@@ -6,7 +6,6 @@ linters: all_linters(
     object_name_linter = NULL, # Variable and function name style should match snake_case or symbols.
     # With "all_linters", these problems are also reported:
     expect_identical_linter = NULL, # Use expect_identical(x, y) by default; resort to expect_equal() only when needed, e.g. when setting ignore_attr= or tolerance=.
-    expect_s3_class_linter = NULL, # expect_s3_class(x, k) is better than expect_equal(class(x), k). Note also expect_s4_class() available for testing S4 objects.
     extraction_operator_linter = NULL, # Use `[[` instead of `$` to extract an element.
     implicit_integer_linter = NULL, # Integers should not be implicit. Use the form 1L for integers or 1.0 for doubles.
     routine_registration_linter = NULL, # Register your native code routines with useDynLib and R_registerRoutines().
