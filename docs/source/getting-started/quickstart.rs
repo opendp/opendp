@@ -1,10 +1,19 @@
 #!/usr/bin/env -S cargo +nightly -Zscript
 ```cargo
-# init
 [dependencies]
 opendp = { path = "../../../rust/", features = ["contrib", "honest-but-curious"] }
-# /init
 ```
+
+/*
+Any other Rust examples will only have the cargo block above,
+but for quickstart we want to also give an example that will work for the user.
+
+# init
+[dependencies]
+opendp = { features = ["contrib", "honest-but-curious"] }
+# Optionally pin the version number.
+# /init
+*/
 
 // demo
 use opendp::{
