@@ -297,7 +297,7 @@ def _bitvector_to_slice(val: Sequence[Any]) -> FfiSlicePtr:
         val = val.tobytes()
     
     if not isinstance(val, (bytes, bytearray)):
-        raise TypeError(f"Expected type is BitVector but input data is not bytes or bytearray.")
+        raise TypeError("Expected type is BitVector but input data is not bytes or bytearray.")
 
     array = (ctypes.c_uint8 * len(val)).from_buffer_copy(val) # type: ignore[operator]
     return _wrap_in_slice(array, len(val))
