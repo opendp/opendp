@@ -9,14 +9,16 @@ opendp = { version = "0.9.2", features = ["contrib", "honest-but-curious"] }
 // demo
 use opendp::{
     domains::AtomDomain,
-    measurements::then_base_laplace,
+    error::Fallible,
+    measurements::then_laplace,
     metrics::AbsoluteDistance,
 };
 
-fn main() {
+fn main() -> Fallible<()> {
     let space = (AtomDomain::default(), AbsoluteDistance::default());
-    let base_laplace = space >> then_base_laplace(1.0, None);
-    let dp_value = base_laplace.expect("unexpected error").invoke(&123.0);
-    println!("DP value: {}", dp_value.expect("unexpected error"));
+    let laplace_mechanism = (space >> then_laplace(1.0))?;
+    let dp_value = laplace_mechanism.invoke(&123.0)?;
+    println!("DP value: {}", dp_value);
+    Ok(())
 }
 // /demo
