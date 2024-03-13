@@ -42,8 +42,8 @@ make_basic_composition <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "combinators__make_basic_composition",
-      measurements, rt_parse(.T.measurements),
+    "combinators__make_basic_composition",
+    measurements, rt_parse(.T.measurements),
     log, PACKAGE = "opendp")
   output
 }
@@ -101,8 +101,8 @@ make_chain_mt <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "combinators__make_chain_mt",
-      measurement1, transformation0,
+    "combinators__make_chain_mt",
+    measurement1, transformation0,
     log, PACKAGE = "opendp")
   output
 }
@@ -164,8 +164,8 @@ make_chain_pm <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "combinators__make_chain_pm",
-      postprocess1, measurement0,
+    "combinators__make_chain_pm",
+    postprocess1, measurement0,
     log, PACKAGE = "opendp")
   output
 }
@@ -226,8 +226,8 @@ make_chain_tt <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "combinators__make_chain_tt",
-      transformation1, transformation0,
+    "combinators__make_chain_tt",
+    transformation1, transformation0,
     log, PACKAGE = "opendp")
   output
 }
@@ -292,8 +292,8 @@ make_fix_delta <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "combinators__make_fix_delta",
-      measurement, delta, rt_parse(.T.delta),
+    "combinators__make_fix_delta",
+    measurement, delta, rt_parse(.T.delta),
     log, PACKAGE = "opendp")
   output
 }
@@ -364,8 +364,8 @@ make_population_amplification <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "combinators__make_population_amplification",
-      measurement, population_size,
+    "combinators__make_population_amplification",
+    measurement, population_size,
     log, PACKAGE = "opendp")
   output
 }
@@ -427,8 +427,8 @@ make_pureDP_to_fixed_approxDP <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "combinators__make_pureDP_to_fixed_approxDP",
-      measurement,
+    "combinators__make_pureDP_to_fixed_approxDP",
+    measurement,
     log, PACKAGE = "opendp")
   output
 }
@@ -491,8 +491,8 @@ make_pureDP_to_zCDP <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "combinators__make_pureDP_to_zCDP",
-      measurement,
+    "combinators__make_pureDP_to_zCDP",
+    measurement,
     log, PACKAGE = "opendp")
   output
 }
@@ -582,8 +582,8 @@ make_sequential_composition <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "combinators__make_sequential_composition",
-      input_domain, input_metric, output_measure, d_in, d_mids, .QO, rt_parse(.T.d_in), rt_parse(.T.d_mids),
+    "combinators__make_sequential_composition",
+    input_domain, input_metric, output_measure, d_in, d_mids, .QO, rt_parse(.T.d_in), rt_parse(.T.d_mids),
     log, PACKAGE = "opendp")
   output
 }
@@ -650,8 +650,8 @@ make_zCDP_to_approxDP <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "combinators__make_zCDP_to_approxDP",
-      measurement,
+    "combinators__make_zCDP_to_approxDP",
+    measurement,
     log, PACKAGE = "opendp")
   output
 }

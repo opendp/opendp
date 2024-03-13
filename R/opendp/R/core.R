@@ -30,8 +30,8 @@ function_eval <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__function_eval",
-      this, arg, TI, rt_parse(.T.arg),
+    "core__function_eval",
+    this, arg, TI, rt_parse(.T.arg),
     log, PACKAGE = "opendp")
   output
 }
@@ -65,8 +65,8 @@ measurement_check <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__measurement_check",
-      measurement, distance_in, distance_out, rt_parse(.T.distance_in), rt_parse(.T.distance_out),
+    "core__measurement_check",
+    measurement, distance_in, distance_out, rt_parse(.T.distance_in), rt_parse(.T.distance_out),
     log, PACKAGE = "opendp")
   output
 }
@@ -89,8 +89,8 @@ measurement_function <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__measurement_function",
-      this,
+    "core__measurement_function",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -113,8 +113,8 @@ measurement_input_carrier_type <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__measurement_input_carrier_type",
-      this,
+    "core__measurement_input_carrier_type",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -137,8 +137,8 @@ measurement_input_distance_type <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__measurement_input_distance_type",
-      this,
+    "core__measurement_input_distance_type",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -161,8 +161,8 @@ measurement_input_domain <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__measurement_input_domain",
-      this,
+    "core__measurement_input_domain",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -185,8 +185,8 @@ measurement_input_metric <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__measurement_input_metric",
-      this,
+    "core__measurement_input_metric",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -216,8 +216,8 @@ measurement_invoke <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__measurement_invoke",
-      this, arg, rt_parse(.T.arg),
+    "core__measurement_invoke",
+    this, arg, rt_parse(.T.arg),
     log, PACKAGE = "opendp")
   output
 }
@@ -247,8 +247,8 @@ measurement_map <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__measurement_map",
-      measurement, distance_in, rt_parse(.T.distance_in),
+    "core__measurement_map",
+    measurement, distance_in, rt_parse(.T.distance_in),
     log, PACKAGE = "opendp")
   output
 }
@@ -271,8 +271,8 @@ measurement_output_distance_type <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__measurement_output_distance_type",
-      this,
+    "core__measurement_output_distance_type",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -295,8 +295,8 @@ measurement_output_measure <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__measurement_output_measure",
-      this,
+    "core__measurement_output_measure",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -326,8 +326,8 @@ queryable_eval <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__queryable_eval",
-      queryable, query, rt_parse(.T.query),
+    "core__queryable_eval",
+    queryable, query, rt_parse(.T.query),
     log, PACKAGE = "opendp")
   output
 }
@@ -350,8 +350,8 @@ queryable_query_type <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__queryable_query_type",
-      this,
+    "core__queryable_query_type",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -385,8 +385,8 @@ transformation_check <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__transformation_check",
-      transformation, distance_in, distance_out, rt_parse(.T.distance_in), rt_parse(.T.distance_out),
+    "core__transformation_check",
+    transformation, distance_in, distance_out, rt_parse(.T.distance_in), rt_parse(.T.distance_out),
     log, PACKAGE = "opendp")
   output
 }
@@ -409,8 +409,8 @@ transformation_function <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__transformation_function",
-      this,
+    "core__transformation_function",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -433,8 +433,8 @@ transformation_input_carrier_type <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__transformation_input_carrier_type",
-      this,
+    "core__transformation_input_carrier_type",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -457,8 +457,8 @@ transformation_input_distance_type <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__transformation_input_distance_type",
-      this,
+    "core__transformation_input_distance_type",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -481,8 +481,8 @@ transformation_input_domain <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__transformation_input_domain",
-      this,
+    "core__transformation_input_domain",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -505,8 +505,8 @@ transformation_input_metric <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__transformation_input_metric",
-      this,
+    "core__transformation_input_metric",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -536,8 +536,8 @@ transformation_invoke <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__transformation_invoke",
-      this, arg, rt_parse(.T.arg),
+    "core__transformation_invoke",
+    this, arg, rt_parse(.T.arg),
     log, PACKAGE = "opendp")
   output
 }
@@ -567,8 +567,8 @@ transformation_map <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__transformation_map",
-      transformation, distance_in, rt_parse(.T.distance_in),
+    "core__transformation_map",
+    transformation, distance_in, rt_parse(.T.distance_in),
     log, PACKAGE = "opendp")
   output
 }
@@ -591,8 +591,8 @@ transformation_output_distance_type <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__transformation_output_distance_type",
-      this,
+    "core__transformation_output_distance_type",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -615,8 +615,8 @@ transformation_output_domain <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__transformation_output_domain",
-      this,
+    "core__transformation_output_domain",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -639,8 +639,8 @@ transformation_output_metric <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "core__transformation_output_metric",
-      this,
+    "core__transformation_output_metric",
+    this,
     log, PACKAGE = "opendp")
   output
 }

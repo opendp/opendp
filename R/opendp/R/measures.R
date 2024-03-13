@@ -25,8 +25,8 @@ fixed_smoothed_max_divergence <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measures__fixed_smoothed_max_divergence",
-      .T,
+    "measures__fixed_smoothed_max_divergence",
+    .T,
     log, PACKAGE = "opendp")
   output
 }
@@ -53,8 +53,8 @@ max_divergence <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measures__max_divergence",
-      .T,
+    "measures__max_divergence",
+    .T,
     log, PACKAGE = "opendp")
   output
 }
@@ -77,8 +77,8 @@ measure_debug <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measures__measure_debug",
-      this,
+    "measures__measure_debug",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -101,8 +101,8 @@ measure_distance_type <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measures__measure_distance_type",
-      this,
+    "measures__measure_distance_type",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -125,8 +125,8 @@ measure_type <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measures__measure_type",
-      this,
+    "measures__measure_type",
+    this,
     log, PACKAGE = "opendp")
   output
 }
@@ -153,8 +153,8 @@ smoothed_max_divergence <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measures__smoothed_max_divergence",
-      .T,
+    "measures__smoothed_max_divergence",
+    .T,
     log, PACKAGE = "opendp")
   output
 }
@@ -183,8 +183,8 @@ user_divergence <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measures__user_divergence",
-      descriptor,
+    "measures__user_divergence",
+    descriptor,
     log, PACKAGE = "opendp")
   output
 }
@@ -211,8 +211,8 @@ zero_concentrated_divergence <- function(
 
   # Call wrapper function.
   output <- .Call(
-      "measures__zero_concentrated_divergence",
-      .T,
+    "measures__zero_concentrated_divergence",
+    .T,
     log, PACKAGE = "opendp")
   output
 }
