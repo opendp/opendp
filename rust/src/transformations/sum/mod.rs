@@ -12,7 +12,7 @@ use crate::core::{Metric, MetricSpace, Transformation};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::*;
 use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
-use crate::traits::{CheckAtom, TotalOrd};
+use crate::traits::{CheckAtom, ProductOrd};
 use crate::transformations::{make_ordered_random, make_unordered};
 
 #[bootstrap(features("contrib"), generics(MI(suppress), T(suppress)))]
@@ -53,7 +53,7 @@ where
 // make_(sized_)?bounded_float_(checked|ordered)_sum
 
 #[doc(hidden)]
-pub trait MakeSum<MI: Metric>: Sized + CheckAtom + Clone + TotalOrd
+pub trait MakeSum<MI: Metric>: Sized + CheckAtom + Clone + ProductOrd
 where
     (VectorDomain<AtomDomain<Self>>, MI): MetricSpace,
     (AtomDomain<Self>, AbsoluteDistance<Self>): MetricSpace,

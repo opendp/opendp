@@ -16,7 +16,7 @@ use crate::ffi::util::{self, into_c_char_p, ExtrinsicObject};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 use crate::measures::SMDCurve;
 use crate::traits::samplers::{fill_bytes, Shuffle};
-use crate::traits::TotalOrd;
+use crate::traits::ProductOrd;
 use crate::{err, fallible, try_, try_as_ref};
 
 #[bootstrap(
@@ -489,10 +489,10 @@ impl PartialOrd for AnyObject {
     }
 }
 
-impl TotalOrd for AnyObject {
+impl ProductOrd for AnyObject {
     #[rustfmt::skip]
     fn total_cmp(&self, other: &Self) -> Fallible<std::cmp::Ordering> {
-        fn monomorphize<T: 'static + TotalOrd>(
+        fn monomorphize<T: 'static + ProductOrd>(
             this: &AnyObject,
             other: &AnyObject,
         ) -> Fallible<std::cmp::Ordering> {
