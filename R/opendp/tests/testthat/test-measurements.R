@@ -155,7 +155,7 @@ test_that("test_vector_discrete_laplace_cks20", {
     expect_gt(meas(d_in = 1L), 0.49999)
 })
 
-test_that("test_discrete_laplace_linear", {
+test_that("test_geometric", {
     input_space <- c(atom_domain(.T = i32), absolute_distance(.T = i32))
     meas <- input_space |> then_geometric(scale = 2., bounds = c(1L, 10L))
     meas(arg = 100L)

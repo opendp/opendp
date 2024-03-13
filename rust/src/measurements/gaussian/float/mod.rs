@@ -53,7 +53,7 @@ where
     )
 }
 
-/// Make a Measurement that adds noise from the Gaussian(`scale`) distribution to the input.
+/// Make a Measurement that adds noise from the Gaussian(`scale`) distribution to the vector-valued input.
 ///
 /// This function takes a noise granularity in terms of 2^k.
 /// Larger granularities are more computationally efficient, but have a looser privacy map.

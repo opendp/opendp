@@ -33,8 +33,8 @@ Enable ``contrib`` globally with the following snippet:
 
         .. doctest::
 
-            >>> from opendp.mod import enable_features
-            >>> enable_features('contrib')
+            >>> import opendp.prelude as dp
+            >>> dp.enable_features('contrib')
 
     .. group-tab:: R
 
@@ -56,9 +56,8 @@ then invoke it on a scalar aggregate.
 
         .. doctest::
 
-            >>> import opendp.prelude as dp
-            >>> m_laplace = dp.space_of(float) >> dp.m.then_laplace(scale=1.)
-            >>> dp_agg = m_laplace(23.4)
+            >>> laplace_mechanism = dp.space_of(float) >> dp.m.then_laplace(scale=1.)
+            >>> dp_agg = laplace_mechanism(23.4)
 
     .. group-tab:: R
 
@@ -71,7 +70,7 @@ This code snip uses a number of OpenDP concepts:
 * Defining your metric space up-front with ``space_of`` in Python.
 * Chaining operators together with ``>>`` in Python, or ``|>`` in R.
 * Constructing a ``Measurement`` on your metric space with ``then_laplace``.
-* Invoking the ``laplace`` measurement on a value to get a DP release.
+* Invoking ``laplace_mechanism`` on a value to get a DP release.
 
 If you would like to skip directly to a more complete example, see :ref:`putting-together`.
 
