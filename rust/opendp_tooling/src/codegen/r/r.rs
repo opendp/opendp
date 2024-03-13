@@ -55,6 +55,7 @@ fn generate_r_function(
 
     let then_func = if func.name.starts_with("make_") {
         let offset = if func.supports_partial { 2 } else { 0 };
+        let pre_args_nl = if args.len() > 0 { "\n" } else { "" };
         format!(
             r#"
 
@@ -64,8 +65,7 @@ fn generate_r_function(
 ) {{
 {then_log}
   make_chain_dyn(
-    {name}(
-{args}),
+    {name}({pre_args_nl}{args}),
     lhs,
     log)
 }}"#,

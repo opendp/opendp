@@ -3710,8 +3710,7 @@ then_split_lines <- function(
   ))
 
   make_chain_dyn(
-    make_split_lines(
-),
+    make_split_lines(),
     lhs,
     log)
 }
