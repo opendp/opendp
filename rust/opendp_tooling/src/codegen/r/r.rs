@@ -63,11 +63,11 @@ fn generate_r_function(
 {then_args}
 ) {{
 {then_log}
-    make_chain_dyn(
-        {name}(
+  make_chain_dyn(
+    {name}(
 {args}),
-        lhs,
-        log)
+    lhs,
+    log)
 }}"#,
             then_docs = generate_then_doc_block(module_name, func, hierarchy),
             then_name = func.name.replacen("make_", "then_", 1),
@@ -495,8 +495,8 @@ fn generate_logger(module_name: &str, func: &Function, then: bool) -> String {
     format!(
         r#"
 log <- new_constructor_log("{func_name}", "{module_name}", new_hashtab(
-    list({keys}),
-    list({vals})
+  list({keys}),
+  list({vals})
 ))
 "#
     )
@@ -538,7 +538,7 @@ fn generate_wrapper_call(module_name: &str, func: &Function) -> String {
     let call = format!(
         r#".Call(
     "{module_name}__{name}",{args_str}
-    log, PACKAGE = "opendp")"#,
+  log, PACKAGE = "opendp")"#,
         name = func.name
     );
     format!(
