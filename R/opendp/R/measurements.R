@@ -40,42 +40,42 @@ NULL
 #' @return Measurement
 #' @export
 make_alp_queryable <- function(
-    input_domain,
-    input_metric,
-    scale,
-    total_limit,
-    value_limit = NULL,
-    size_factor = 50L,
-    alpha = 4L,
-    .CO = NULL
+  input_domain,
+  input_metric,
+  scale,
+  total_limit,
+  value_limit = NULL,
+  size_factor = 50L,
+  alpha = 4L,
+  .CO = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .CO <- parse_or_infer(type_name = .CO, public_example = scale)
-    .CI <- get_value_type(get_carrier_type(input_domain))
-    .T.value_limit <- new_runtime_type(origin = "Option", args = list(.CI))
-    .T.size_factor <- new_runtime_type(origin = "Option", args = list(u32))
-    .T.alpha <- new_runtime_type(origin = "Option", args = list(u32))
+  # Standardize type arguments.
+  .CO <- parse_or_infer(type_name = .CO, public_example = scale)
+  .CI <- get_value_type(get_carrier_type(input_domain))
+  .T.value_limit <- new_runtime_type(origin = "Option", args = list(.CI))
+  .T.size_factor <- new_runtime_type(origin = "Option", args = list(u32))
+  .T.alpha <- new_runtime_type(origin = "Option", args = list(u32))
 
-    log <- new_constructor_log("make_alp_queryable", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "total_limit", "value_limit", "size_factor", "alpha", "CO"),
-        list(input_domain, input_metric, scale, total_limit, value_limit, size_factor, alpha, .CO)
-    ))
+  log <- new_constructor_log("make_alp_queryable", "measurements", new_hashtab(
+      list("input_domain", "input_metric", "scale", "total_limit", "value_limit", "size_factor", "alpha", "CO"),
+      list(input_domain, input_metric, scale, total_limit, value_limit, size_factor, alpha, .CO)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .CO, inferred = rt_infer(scale))
-    rt_assert_is_similar(expected = .CI, inferred = rt_infer(total_limit))
-    rt_assert_is_similar(expected = .T.value_limit, inferred = rt_infer(value_limit))
-    rt_assert_is_similar(expected = .T.size_factor, inferred = rt_infer(size_factor))
-    rt_assert_is_similar(expected = .T.alpha, inferred = rt_infer(alpha))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .CO, inferred = rt_infer(scale))
+  rt_assert_is_similar(expected = .CI, inferred = rt_infer(total_limit))
+  rt_assert_is_similar(expected = .T.value_limit, inferred = rt_infer(value_limit))
+  rt_assert_is_similar(expected = .T.size_factor, inferred = rt_infer(size_factor))
+  rt_assert_is_similar(expected = .T.alpha, inferred = rt_infer(alpha))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_alp_queryable",
-        input_domain, input_metric, scale, total_limit, value_limit, size_factor, alpha, .CO, .CI, rt_parse(.T.value_limit), rt_parse(.T.size_factor), rt_parse(.T.alpha),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measurements__make_alp_queryable",
+      input_domain, input_metric, scale, total_limit, value_limit, size_factor, alpha, .CO, .CI, rt_parse(.T.value_limit), rt_parse(.T.size_factor), rt_parse(.T.alpha),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial alp queryable constructor
@@ -93,30 +93,30 @@ make_alp_queryable <- function(
 #' @return Measurement
 #' @export
 then_alp_queryable <- function(
-    lhs,
-    scale,
-    total_limit,
-    value_limit = NULL,
-    size_factor = 50L,
-    alpha = 4L,
-    .CO = NULL
+  lhs,
+  scale,
+  total_limit,
+  value_limit = NULL,
+  size_factor = 50L,
+  alpha = 4L,
+  .CO = NULL
 ) {
 
-    log <- new_constructor_log("then_alp_queryable", "measurements", new_hashtab(
-        list("scale", "total_limit", "value_limit", "size_factor", "alpha", "CO"),
-        list(scale, total_limit, value_limit, size_factor, alpha, .CO)
-    ))
+  log <- new_constructor_log("then_alp_queryable", "measurements", new_hashtab(
+      list("scale", "total_limit", "value_limit", "size_factor", "alpha", "CO"),
+      list(scale, total_limit, value_limit, size_factor, alpha, .CO)
+  ))
 
     make_chain_dyn(
         make_alp_queryable(
-            output_domain(lhs),
-            output_metric(lhs),
-            scale = scale,
-            total_limit = total_limit,
-            value_limit = value_limit,
-            size_factor = size_factor,
-            alpha = alpha,
-            .CO = .CO),
+      output_domain(lhs),
+      output_metric(lhs),
+      scale = scale,
+      total_limit = total_limit,
+      value_limit = value_limit,
+      size_factor = size_factor,
+      alpha = alpha,
+      .CO = .CO),
         lhs,
         log)
 }
@@ -148,33 +148,33 @@ then_alp_queryable <- function(
 #' @return Measurement
 #' @export
 make_base_laplace_threshold <- function(
-    input_domain,
-    input_metric,
-    scale,
-    threshold,
-    k = -1074L
+  input_domain,
+  input_metric,
+  scale,
+  threshold,
+  k = -1074L
 ) {
-    assert_features("contrib", "floating-point")
+  assert_features("contrib", "floating-point")
 
-    # Standardize type arguments.
-    .TV <- get_distance_type(input_metric)
+  # Standardize type arguments.
+  .TV <- get_distance_type(input_metric)
 
-    log <- new_constructor_log("make_base_laplace_threshold", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "threshold", "k"),
-        list(input_domain, input_metric, scale, threshold, unbox2(k))
-    ))
+  log <- new_constructor_log("make_base_laplace_threshold", "measurements", new_hashtab(
+      list("input_domain", "input_metric", "scale", "threshold", "k"),
+      list(input_domain, input_metric, scale, threshold, unbox2(k))
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .TV, inferred = rt_infer(scale))
-    rt_assert_is_similar(expected = .TV, inferred = rt_infer(threshold))
-    rt_assert_is_similar(expected = i32, inferred = rt_infer(k))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .TV, inferred = rt_infer(scale))
+  rt_assert_is_similar(expected = .TV, inferred = rt_infer(threshold))
+  rt_assert_is_similar(expected = i32, inferred = rt_infer(k))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_base_laplace_threshold",
-        input_domain, input_metric, scale, threshold, k, .TV,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measurements__make_base_laplace_threshold",
+      input_domain, input_metric, scale, threshold, k, .TV,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial base laplace threshold constructor
@@ -189,24 +189,24 @@ make_base_laplace_threshold <- function(
 #' @return Measurement
 #' @export
 then_base_laplace_threshold <- function(
-    lhs,
-    scale,
-    threshold,
-    k = -1074L
+  lhs,
+  scale,
+  threshold,
+  k = -1074L
 ) {
 
-    log <- new_constructor_log("then_base_laplace_threshold", "measurements", new_hashtab(
-        list("scale", "threshold", "k"),
-        list(scale, threshold, unbox2(k))
-    ))
+  log <- new_constructor_log("then_base_laplace_threshold", "measurements", new_hashtab(
+      list("scale", "threshold", "k"),
+      list(scale, threshold, unbox2(k))
+  ))
 
     make_chain_dyn(
         make_base_laplace_threshold(
-            output_domain(lhs),
-            output_metric(lhs),
-            scale = scale,
-            threshold = threshold,
-            k = k),
+      output_domain(lhs),
+      output_metric(lhs),
+      scale = scale,
+      threshold = threshold,
+      k = k),
         lhs,
         log)
 }
@@ -241,35 +241,35 @@ then_base_laplace_threshold <- function(
 #' @return Measurement
 #' @export
 make_gaussian <- function(
-    input_domain,
-    input_metric,
-    scale,
-    k = NULL,
-    .MO = "ZeroConcentratedDivergence<.QO>"
+  input_domain,
+  input_metric,
+  scale,
+  k = NULL,
+  .MO = "ZeroConcentratedDivergence<.QO>"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .MO <- rt_parse(type_name = .MO, generics = list(".QO"))
-    .QO <- get_atom_or_infer(.MO, scale)
-    .MO <- rt_substitute(.MO, .QO = .QO)
-    .T.k <- new_runtime_type(origin = "Option", args = list(i32))
+  # Standardize type arguments.
+  .MO <- rt_parse(type_name = .MO, generics = list(".QO"))
+  .QO <- get_atom_or_infer(.MO, scale)
+  .MO <- rt_substitute(.MO, .QO = .QO)
+  .T.k <- new_runtime_type(origin = "Option", args = list(i32))
 
-    log <- new_constructor_log("make_gaussian", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "k", "MO"),
-        list(input_domain, input_metric, scale, k, .MO)
-    ))
+  log <- new_constructor_log("make_gaussian", "measurements", new_hashtab(
+      list("input_domain", "input_metric", "scale", "k", "MO"),
+      list(input_domain, input_metric, scale, k, .MO)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
-    rt_assert_is_similar(expected = .T.k, inferred = rt_infer(k))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
+  rt_assert_is_similar(expected = .T.k, inferred = rt_infer(k))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_gaussian",
-        input_domain, input_metric, scale, k, .MO, .QO, rt_parse(.T.k),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measurements__make_gaussian",
+      input_domain, input_metric, scale, k, .MO, .QO, rt_parse(.T.k),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial gaussian constructor
@@ -284,24 +284,24 @@ make_gaussian <- function(
 #' @return Measurement
 #' @export
 then_gaussian <- function(
-    lhs,
-    scale,
-    k = NULL,
-    .MO = "ZeroConcentratedDivergence<.QO>"
+  lhs,
+  scale,
+  k = NULL,
+  .MO = "ZeroConcentratedDivergence<.QO>"
 ) {
 
-    log <- new_constructor_log("then_gaussian", "measurements", new_hashtab(
-        list("scale", "k", "MO"),
-        list(scale, k, .MO)
-    ))
+  log <- new_constructor_log("then_gaussian", "measurements", new_hashtab(
+      list("scale", "k", "MO"),
+      list(scale, k, .MO)
+  ))
 
     make_chain_dyn(
         make_gaussian(
-            output_domain(lhs),
-            output_metric(lhs),
-            scale = scale,
-            k = k,
-            .MO = .MO),
+      output_domain(lhs),
+      output_metric(lhs),
+      scale = scale,
+      k = k,
+      .MO = .MO),
         lhs,
         log)
 }
@@ -334,34 +334,34 @@ then_gaussian <- function(
 #' @return Measurement
 #' @export
 make_geometric <- function(
-    input_domain,
-    input_metric,
-    scale,
-    bounds = NULL,
-    .QO = NULL
+  input_domain,
+  input_metric,
+  scale,
+  bounds = NULL,
+  .QO = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .QO <- parse_or_infer(type_name = .QO, public_example = scale)
-    .T <- get_atom(get_carrier_type(input_domain))
-    .OptionT <- new_runtime_type(origin = "Option", args = list(new_runtime_type(origin = "Tuple", args = list(.T, .T))))
+  # Standardize type arguments.
+  .QO <- parse_or_infer(type_name = .QO, public_example = scale)
+  .T <- get_atom(get_carrier_type(input_domain))
+  .OptionT <- new_runtime_type(origin = "Option", args = list(new_runtime_type(origin = "Tuple", args = list(.T, .T))))
 
-    log <- new_constructor_log("make_geometric", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "bounds", "QO"),
-        list(input_domain, input_metric, scale, bounds, .QO)
-    ))
+  log <- new_constructor_log("make_geometric", "measurements", new_hashtab(
+      list("input_domain", "input_metric", "scale", "bounds", "QO"),
+      list(input_domain, input_metric, scale, bounds, .QO)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
-    rt_assert_is_similar(expected = .OptionT, inferred = rt_infer(bounds))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
+  rt_assert_is_similar(expected = .OptionT, inferred = rt_infer(bounds))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_geometric",
-        input_domain, input_metric, scale, bounds, .QO, .T, .OptionT,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measurements__make_geometric",
+      input_domain, input_metric, scale, bounds, .QO, .T, .OptionT,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial geometric constructor
@@ -376,24 +376,24 @@ make_geometric <- function(
 #' @return Measurement
 #' @export
 then_geometric <- function(
-    lhs,
-    scale,
-    bounds = NULL,
-    .QO = NULL
+  lhs,
+  scale,
+  bounds = NULL,
+  .QO = NULL
 ) {
 
-    log <- new_constructor_log("then_geometric", "measurements", new_hashtab(
-        list("scale", "bounds", "QO"),
-        list(scale, bounds, .QO)
-    ))
+  log <- new_constructor_log("then_geometric", "measurements", new_hashtab(
+      list("scale", "bounds", "QO"),
+      list(scale, bounds, .QO)
+  ))
 
     make_chain_dyn(
         make_geometric(
-            output_domain(lhs),
-            output_metric(lhs),
-            scale = scale,
-            bounds = bounds,
-            .QO = .QO),
+      output_domain(lhs),
+      output_metric(lhs),
+      scale = scale,
+      bounds = bounds,
+      .QO = .QO),
         lhs,
         log)
 }
@@ -435,34 +435,34 @@ then_geometric <- function(
 #' @return Measurement
 #' @export
 make_laplace <- function(
-    input_domain,
-    input_metric,
-    scale,
-    k = NULL,
-    .QO = "float"
+  input_domain,
+  input_metric,
+  scale,
+  k = NULL,
+  .QO = "float"
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .QO <- rt_parse(type_name = .QO)
-    .T.scale <- get_atom(.QO)
-    .T.k <- new_runtime_type(origin = "Option", args = list(i32))
+  # Standardize type arguments.
+  .QO <- rt_parse(type_name = .QO)
+  .T.scale <- get_atom(.QO)
+  .T.k <- new_runtime_type(origin = "Option", args = list(i32))
 
-    log <- new_constructor_log("make_laplace", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "k", "QO"),
-        list(input_domain, input_metric, scale, k, .QO)
-    ))
+  log <- new_constructor_log("make_laplace", "measurements", new_hashtab(
+      list("input_domain", "input_metric", "scale", "k", "QO"),
+      list(input_domain, input_metric, scale, k, .QO)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.scale, inferred = rt_infer(scale))
-    rt_assert_is_similar(expected = .T.k, inferred = rt_infer(k))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.scale, inferred = rt_infer(scale))
+  rt_assert_is_similar(expected = .T.k, inferred = rt_infer(k))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_laplace",
-        input_domain, input_metric, scale, k, .QO, rt_parse(.T.scale), rt_parse(.T.k),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measurements__make_laplace",
+      input_domain, input_metric, scale, k, .QO, rt_parse(.T.scale), rt_parse(.T.k),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial laplace constructor
@@ -477,24 +477,24 @@ make_laplace <- function(
 #' @return Measurement
 #' @export
 then_laplace <- function(
-    lhs,
-    scale,
-    k = NULL,
-    .QO = "float"
+  lhs,
+  scale,
+  k = NULL,
+  .QO = "float"
 ) {
 
-    log <- new_constructor_log("then_laplace", "measurements", new_hashtab(
-        list("scale", "k", "QO"),
-        list(scale, k, .QO)
-    ))
+  log <- new_constructor_log("then_laplace", "measurements", new_hashtab(
+      list("scale", "k", "QO"),
+      list(scale, k, .QO)
+  ))
 
     make_chain_dyn(
         make_laplace(
-            output_domain(lhs),
-            output_metric(lhs),
-            scale = scale,
-            k = k,
-            .QO = .QO),
+      output_domain(lhs),
+      output_metric(lhs),
+      scale = scale,
+      k = k,
+      .QO = .QO),
         lhs,
         log)
 }
@@ -522,35 +522,35 @@ then_laplace <- function(
 #' @return Measurement
 #' @export
 make_randomized_response <- function(
-    categories,
-    prob,
-    constant_time = FALSE,
-    .T = NULL,
-    .QO = NULL
+  categories,
+  prob,
+  constant_time = FALSE,
+  .T = NULL,
+  .QO = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = get_first(categories))
-    .QO <- parse_or_infer(type_name = .QO, public_example = prob)
-    .T.categories <- new_runtime_type(origin = "Vec", args = list(.T))
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = get_first(categories))
+  .QO <- parse_or_infer(type_name = .QO, public_example = prob)
+  .T.categories <- new_runtime_type(origin = "Vec", args = list(.T))
 
-    log <- new_constructor_log("make_randomized_response", "measurements", new_hashtab(
-        list("categories", "prob", "constant_time", "T", "QO"),
-        list(categories, prob, unbox2(constant_time), .T, .QO)
-    ))
+  log <- new_constructor_log("make_randomized_response", "measurements", new_hashtab(
+      list("categories", "prob", "constant_time", "T", "QO"),
+      list(categories, prob, unbox2(constant_time), .T, .QO)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.categories, inferred = rt_infer(categories))
-    rt_assert_is_similar(expected = .QO, inferred = rt_infer(prob))
-    rt_assert_is_similar(expected = bool, inferred = rt_infer(constant_time))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.categories, inferred = rt_infer(categories))
+  rt_assert_is_similar(expected = .QO, inferred = rt_infer(prob))
+  rt_assert_is_similar(expected = bool, inferred = rt_infer(constant_time))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_randomized_response",
-        categories, prob, constant_time, .T, .QO, rt_parse(.T.categories),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measurements__make_randomized_response",
+      categories, prob, constant_time, .T, .QO, rt_parse(.T.categories),
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial randomized response constructor
@@ -567,26 +567,26 @@ make_randomized_response <- function(
 #' @return Measurement
 #' @export
 then_randomized_response <- function(
-    lhs,
-    categories,
-    prob,
-    constant_time = FALSE,
-    .T = NULL,
-    .QO = NULL
+  lhs,
+  categories,
+  prob,
+  constant_time = FALSE,
+  .T = NULL,
+  .QO = NULL
 ) {
 
-    log <- new_constructor_log("then_randomized_response", "measurements", new_hashtab(
-        list("categories", "prob", "constant_time", "T", "QO"),
-        list(categories, prob, unbox2(constant_time), .T, .QO)
-    ))
+  log <- new_constructor_log("then_randomized_response", "measurements", new_hashtab(
+      list("categories", "prob", "constant_time", "T", "QO"),
+      list(categories, prob, unbox2(constant_time), .T, .QO)
+  ))
 
     make_chain_dyn(
         make_randomized_response(
-            categories = categories,
-            prob = prob,
-            constant_time = constant_time,
-            .T = .T,
-            .QO = .QO),
+      categories = categories,
+      prob = prob,
+      constant_time = constant_time,
+      .T = .T,
+      .QO = .QO),
         lhs,
         log)
 }
@@ -616,30 +616,30 @@ then_randomized_response <- function(
 #' @return Measurement
 #' @export
 make_randomized_response_bool <- function(
-    prob,
-    constant_time = FALSE,
-    .QO = NULL
+  prob,
+  constant_time = FALSE,
+  .QO = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .QO <- parse_or_infer(type_name = .QO, public_example = prob)
+  # Standardize type arguments.
+  .QO <- parse_or_infer(type_name = .QO, public_example = prob)
 
-    log <- new_constructor_log("make_randomized_response_bool", "measurements", new_hashtab(
-        list("prob", "constant_time", "QO"),
-        list(prob, unbox2(constant_time), .QO)
-    ))
+  log <- new_constructor_log("make_randomized_response_bool", "measurements", new_hashtab(
+      list("prob", "constant_time", "QO"),
+      list(prob, unbox2(constant_time), .QO)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .QO, inferred = rt_infer(prob))
-    rt_assert_is_similar(expected = bool, inferred = rt_infer(constant_time))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .QO, inferred = rt_infer(prob))
+  rt_assert_is_similar(expected = bool, inferred = rt_infer(constant_time))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_randomized_response_bool",
-        prob, constant_time, .QO,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measurements__make_randomized_response_bool",
+      prob, constant_time, .QO,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial randomized response bool constructor
@@ -654,22 +654,22 @@ make_randomized_response_bool <- function(
 #' @return Measurement
 #' @export
 then_randomized_response_bool <- function(
-    lhs,
-    prob,
-    constant_time = FALSE,
-    .QO = NULL
+  lhs,
+  prob,
+  constant_time = FALSE,
+  .QO = NULL
 ) {
 
-    log <- new_constructor_log("then_randomized_response_bool", "measurements", new_hashtab(
-        list("prob", "constant_time", "QO"),
-        list(prob, unbox2(constant_time), .QO)
-    ))
+  log <- new_constructor_log("then_randomized_response_bool", "measurements", new_hashtab(
+      list("prob", "constant_time", "QO"),
+      list(prob, unbox2(constant_time), .QO)
+  ))
 
     make_chain_dyn(
         make_randomized_response_bool(
-            prob = prob,
-            constant_time = constant_time,
-            .QO = .QO),
+      prob = prob,
+      constant_time = constant_time,
+      .QO = .QO),
         lhs,
         log)
 }
@@ -701,32 +701,32 @@ then_randomized_response_bool <- function(
 #' @return Measurement
 #' @export
 make_report_noisy_max_gumbel <- function(
-    input_domain,
-    input_metric,
-    scale,
-    optimize,
-    .QO = NULL
+  input_domain,
+  input_metric,
+  scale,
+  optimize,
+  .QO = NULL
 ) {
-    assert_features("contrib")
+  assert_features("contrib")
 
-    # Standardize type arguments.
-    .QO <- parse_or_infer(type_name = .QO, public_example = scale)
+  # Standardize type arguments.
+  .QO <- parse_or_infer(type_name = .QO, public_example = scale)
 
-    log <- new_constructor_log("make_report_noisy_max_gumbel", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "optimize", "QO"),
-        list(input_domain, input_metric, scale, unbox2(optimize), .QO)
-    ))
+  log <- new_constructor_log("make_report_noisy_max_gumbel", "measurements", new_hashtab(
+      list("input_domain", "input_metric", "scale", "optimize", "QO"),
+      list(input_domain, input_metric, scale, unbox2(optimize), .QO)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
-    rt_assert_is_similar(expected = String, inferred = rt_infer(optimize))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
+  rt_assert_is_similar(expected = String, inferred = rt_infer(optimize))
 
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_report_noisy_max_gumbel",
-        input_domain, input_metric, scale, optimize, .QO,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+      "measurements__make_report_noisy_max_gumbel",
+      input_domain, input_metric, scale, optimize, .QO,
+      log, PACKAGE = "opendp")
+  output
 }
 
 #' partial report noisy max gumbel constructor
@@ -741,24 +741,24 @@ make_report_noisy_max_gumbel <- function(
 #' @return Measurement
 #' @export
 then_report_noisy_max_gumbel <- function(
-    lhs,
-    scale,
-    optimize,
-    .QO = NULL
+  lhs,
+  scale,
+  optimize,
+  .QO = NULL
 ) {
 
-    log <- new_constructor_log("then_report_noisy_max_gumbel", "measurements", new_hashtab(
-        list("scale", "optimize", "QO"),
-        list(scale, unbox2(optimize), .QO)
-    ))
+  log <- new_constructor_log("then_report_noisy_max_gumbel", "measurements", new_hashtab(
+      list("scale", "optimize", "QO"),
+      list(scale, unbox2(optimize), .QO)
+  ))
 
     make_chain_dyn(
         make_report_noisy_max_gumbel(
-            output_domain(lhs),
-            output_metric(lhs),
-            scale = scale,
-            optimize = optimize,
-            .QO = .QO),
+      output_domain(lhs),
+      output_metric(lhs),
+      scale = scale,
+      optimize = optimize,
+      .QO = .QO),
         lhs,
         log)
 }
