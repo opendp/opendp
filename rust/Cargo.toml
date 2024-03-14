@@ -77,9 +77,6 @@ bindings = ["ffi", "derive"]
 # generate "then_xxx" functions in Rust for "make_xxx" functions whose first two arguments are the metric space
 partials = ["derive", "opendp_derive/partials"]
 
-[dev-dependencies]
-criterion = "0.4"
-
 [lib]
 crate-type = ["rlib", "cdylib", "staticlib"]
 
@@ -92,7 +89,3 @@ rustdoc-args = [
     # so that proof documents are visible
     "--document-private-items"
 ]
-
-[[bench]]
-name = "discrete_laplace"
-harness = false

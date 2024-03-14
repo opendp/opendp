@@ -141,7 +141,7 @@ impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for ZeroConcentratedDiver
 mod tests {
     use crate::core::*;
     use crate::domains::AtomDomain;
-    use crate::measurements::make_base_laplace;
+    use crate::measurements::make_laplace;
     use crate::measures::MaxDivergence;
     use crate::metrics::AbsoluteDistance;
 
@@ -185,7 +185,7 @@ mod tests {
     fn test_make_basic_composition_2() -> Fallible<()> {
         let input_domain = AtomDomain::default();
         let input_metric = AbsoluteDistance::default();
-        let laplace = make_base_laplace(input_domain, input_metric, 1.0f64, None)?;
+        let laplace = make_laplace(input_domain, input_metric, 1.0f64, None)?;
         let measurements = vec![laplace; 2];
         let composition = make_basic_composition(measurements)?;
         let arg = 99.;

@@ -296,7 +296,7 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           # overrides packages so that dependencies for package in cwd are not installed
-          packages: rlang,RcppTOML
+          packages: RcppTOML,stringr
       
       - name: Download R bindings
         uses: actions/download-artifact@v3
