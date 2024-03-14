@@ -212,7 +212,7 @@ fn compute_estimate<K, C: num::Float>(state: &AlpState<K, C>, key: &K) -> C {
 /// Measurement to compute a DP projection of bounded sparse data.
 ///
 /// This function allows the user to create custom hash functions. The mechanism provides no utility guarantees
-/// if hash functions are chosen poorly. It is recommended to use make_base_alp.
+/// if hash functions are chosen poorly. It is recommended to use [`make_alp_queryable`].
 ///
 /// # Citations
 /// * [ALP21 Differentially Private Sparse Vectors with Low Error, Optimal Space, and Fast Access](https://arxiv.org/abs/2106.10068)

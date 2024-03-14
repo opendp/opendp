@@ -108,11 +108,11 @@ def test_supporting_elements():
     print(clamper.output_metric)
     print(clamper.output_metric.distance_type)
 
-    from opendp.measurements import make_base_laplace
+    from opendp.measurements import make_laplace
     from opendp.domains import atom_domain
     from opendp.metrics import absolute_distance
 
-    mechanism = make_base_laplace(atom_domain(T=float), absolute_distance(T=float), 1.0)
+    mechanism = make_laplace(atom_domain(T=float), absolute_distance(T=float), 1.0)
     print(mechanism.input_domain)
     print(mechanism.input_domain.carrier_type)
     print(mechanism.input_metric)
@@ -122,12 +122,12 @@ def test_supporting_elements():
 
 
 def test_function():
-    from opendp.measurements import make_base_laplace
+    from opendp.measurements import make_laplace
     from opendp.domains import atom_domain
     from opendp.metrics import absolute_distance
     from opendp.transformations import make_identity
 
-    mechanism = make_base_laplace(atom_domain(T=float), absolute_distance(T=float), 1.0)
+    mechanism = make_laplace(atom_domain(T=float), absolute_distance(T=float), 1.0)
     pow = 4  # add noise 2^pow times
     for _ in range(pow):
         mechanism = mechanism >> mechanism.function
@@ -151,11 +151,11 @@ def test_member():
     assert clamper.input_domain.member([1])
     assert not clamper.output_domain.member([4, 1])
 
-    from opendp.measurements import make_base_laplace
+    from opendp.measurements import make_laplace
     from opendp.domains import atom_domain
     from opendp.metrics import absolute_distance
 
-    mechanism = make_base_laplace(atom_domain(T=float), absolute_distance(T=float), 1.0)
+    mechanism = make_laplace(atom_domain(T=float), absolute_distance(T=float), 1.0)
     assert not mechanism.input_domain.member(float("NaN"))
 
 

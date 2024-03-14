@@ -18,18 +18,29 @@ pub fn write_bindings(base_dir: PathBuf, files: HashMap<PathBuf, String>) {
     }
 }
 
-#[allow(dead_code)]
-pub(crate) fn indent(text: String) -> String {
+fn tab(number_of_spaces: usize, text: String) -> String {
     text.split('\n')
         .map(|v| {
             if v.is_empty() {
                 String::new()
             } else {
-                format!("    {}", v)
+                format!("{}{}", " ".repeat(number_of_spaces), v)
             }
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+pub(crate) fn tab_r(text: String) -> String {
+    tab(4, text) // TODO: Reduce to 2, and regenerate.
+}
+
+pub(crate) fn tab_py(text: String) -> String {
+    tab(4, text)
+}
+
+pub(crate) fn tab_c(text: String) -> String {
+    tab(4, text)
 }
 
 /// resolve references to derived types

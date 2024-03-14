@@ -1,46 +1,16 @@
-#[cfg(feature = "ffi")]
-mod ffi;
-
-use num::{Float as _, Zero};
-use opendp_derive::bootstrap;
-
-use crate::core::{Measurement, Metric, MetricSpace, PrivacyMap};
+use crate::core::{Function, Measurement, PrivacyMap};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::*;
-use crate::measurements::MappableDomain;
 use crate::measures::MaxDivergence;
 use crate::metrics::{AbsoluteDistance, L1Distance};
-use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
-use crate::traits::{CheckAtom, ExactIntCast, Float, FloatBits, InfAdd, InfDiv};
+use crate::traits::samplers::{sample_discrete_laplace_Z2k, CastInternalRational};
+use crate::traits::{ExactIntCast, Float, FloatBits};
 
-#[doc(hidden)]
-pub trait BaseLaplaceDomain: MappableDomain + Default {
-    type InputMetric: Metric<Distance = Self::Atom> + Default;
-}
-impl<T: Clone + CheckAtom> BaseLaplaceDomain for AtomDomain<T> {
-    type InputMetric = AbsoluteDistance<T>;
-}
-impl<T: Clone + CheckAtom> BaseLaplaceDomain for VectorDomain<AtomDomain<T>> {
-    type InputMetric = L1Distance<T>;
-}
+use super::laplace_map;
 
-#[bootstrap(
-    features("contrib"),
-    arguments(
-        scale(rust_type = "T", c_type = "void *"),
-        k(default = -1074, rust_type = "i32", c_type = "uint32_t")),
-    generics(
-        D(suppress)),
-    derived_types(T = "$get_atom_or_infer(get_carrier_type(input_domain), scale)")
-)]
 /// Make a Measurement that adds noise from the Laplace(`scale`) distribution to a scalar value.
 ///
 /// Valid inputs for `input_domain` and `input_metric` are:
-///
-/// | `input_domain`                  | input type   | `input_metric`         |
-/// | ------------------------------- | ------------ | ---------------------- |
-/// | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
-/// | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |
 ///
 /// This function takes a noise granularity in terms of 2^k.
 /// Larger granularities are more computationally efficient, but have a looser privacy map.
@@ -51,17 +21,15 @@ impl<T: Clone + CheckAtom> BaseLaplaceDomain for VectorDomain<AtomDomain<T>> {
 /// * `input_metric` - Metric of the data type to be privatized.
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 /// * `k` - The noise granularity in terms of 2^k.
-pub fn make_base_laplace<D>(
-    input_domain: D,
-    input_metric: D::InputMetric,
-    scale: D::Atom,
+pub fn make_scalar_float_laplace<T>(
+    input_domain: AtomDomain<T>,
+    input_metric: AbsoluteDistance<T>,
+    scale: T,
     k: Option<i32>,
-) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<D::Atom>>>
+) -> Fallible<Measurement<AtomDomain<T>, T, AbsoluteDistance<T>, MaxDivergence<T>>>
 where
-    D: BaseLaplaceDomain,
-    (D, D::InputMetric): MetricSpace,
-    D::Atom: Float + SampleDiscreteLaplaceZ2k,
-    i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
+    T: Float + CastInternalRational,
+    i32: ExactIntCast<<T as FloatBits>::Bits>,
 {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative");
@@ -71,30 +39,60 @@ where
 
     Measurement::new(
         input_domain,
-        D::new_map_function(move |arg: &D::Atom| {
-            D::Atom::sample_discrete_laplace_Z2k(*arg, scale, k)
+        Function::new_fallible(move |shift: &T| sample_discrete_laplace_Z2k(*shift, scale, k)),
+        input_metric,
+        MaxDivergence::default(),
+        PrivacyMap::new_fallible(laplace_map(scale, relaxation)),
+    )
+}
+
+/// Make a Measurement that adds noise from the Laplace(`scale`) distribution to a vector value.
+///
+/// This function takes a noise granularity in terms of 2^k.
+/// Larger granularities are more computationally efficient, but have a looser privacy map.
+/// If k is not set, k defaults to the smallest granularity.
+///
+/// # Arguments
+/// * `input_domain` - Domain of the data type to be privatized.
+/// * `input_metric` - Metric of the data type to be privatized.
+/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+/// * `k` - The noise granularity in terms of 2^k.
+pub fn make_vector_float_laplace<T>(
+    input_domain: VectorDomain<AtomDomain<T>>,
+    input_metric: L1Distance<T>,
+    scale: T,
+    k: Option<i32>,
+) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, L1Distance<T>, MaxDivergence<T>>>
+where
+    T: Float + CastInternalRational,
+    i32: ExactIntCast<<T as FloatBits>::Bits>,
+{
+    if scale.is_sign_negative() {
+        return fallible!(MakeMeasurement, "scale must not be negative");
+    }
+
+    let (k, mut relaxation): (i32, T) = get_discretization_consts(k)?;
+
+    if !relaxation.is_zero() {
+        let size = input_domain.size.ok_or_else(|| {
+            err!(
+                MakeMeasurement,
+                "domain size must be known if discretization is not exact"
+            )
+        })?;
+        relaxation = relaxation.inf_mul(&T::inf_cast(size)?)?;
+    }
+
+    Measurement::new(
+        input_domain,
+        Function::new_fallible(move |arg: &Vec<T>| {
+            arg.iter()
+                .map(|shift| sample_discrete_laplace_Z2k(*shift, scale, k))
+                .collect()
         }),
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(move |d_in: &D::Atom| {
-            if d_in.is_sign_negative() {
-                return fallible!(InvalidDistance, "sensitivity must be non-negative");
-            }
-
-            if d_in.is_zero() {
-                return Ok(D::Atom::zero());
-            }
-
-            if scale.is_zero() {
-                return Ok(D::Atom::infinity());
-            }
-
-            // increase d_in by the worst-case rounding of the discretization
-            let d_in = d_in.inf_add(&relaxation)?;
-
-            // d_in / scale
-            d_in.inf_div(&scale)
-        }),
+        PrivacyMap::new_fallible(laplace_map(scale, relaxation)),
     )
 }
 
@@ -134,14 +132,19 @@ mod tests {
         let chain = (make_mean(
             VectorDomain::new(AtomDomain::new_closed((10., 12.))?).with_size(3),
             SymmetricDistance::default(),
-        )? >> then_base_laplace(1.0, None))?;
+        )? >> make_scalar_float_laplace(
+            AtomDomain::default(),
+            AbsoluteDistance::default(),
+            1.0,
+            None,
+        )?)?;
         let _ret = chain.invoke(&vec![10.0, 11.0, 12.0])?;
         Ok(())
     }
 
     #[test]
     fn test_big_laplace() -> Fallible<()> {
-        let chain = make_base_laplace(
+        let chain = make_scalar_float_laplace(
             AtomDomain::default(),
             AbsoluteDistance::default(),
             f64::MAX,
@@ -153,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_make_laplace_mechanism() -> Fallible<()> {
-        let measurement = make_base_laplace(
+        let measurement = make_scalar_float_laplace(
             AtomDomain::default(),
             AbsoluteDistance::default(),
             1.0,
@@ -167,7 +170,7 @@ mod tests {
 
     #[test]
     fn test_make_vector_laplace_mechanism() -> Fallible<()> {
-        let measurement = make_base_laplace(
+        let measurement = make_vector_float_laplace(
             VectorDomain::new(AtomDomain::default()),
             L1Distance::default(),
             1.0,

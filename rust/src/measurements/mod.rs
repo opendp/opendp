@@ -9,6 +9,11 @@ mod gaussian;
 pub use gaussian::*;
 
 #[cfg(feature = "contrib")]
+mod geometric;
+#[cfg(feature = "contrib")]
+pub use geometric::*;
+
+#[cfg(feature = "contrib")]
 mod gumbel_max;
 #[cfg(feature = "contrib")]
 pub use gumbel_max::*;

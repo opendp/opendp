@@ -52,201 +52,6 @@ SEXP measurements__make_alp_queryable(
 }
 
 
-SEXP measurements__make_base_discrete_gaussian(
-    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP MO, SEXP QO, SEXP log
-) {
-    // Convert arguments to c types.
-    PROTECT(input_domain);
-    PROTECT(input_metric);
-    PROTECT(scale);
-    PROTECT(MO);
-    PROTECT(QO);
-    PROTECT(log);
-
-    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
-    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
-    void * c_scale = sexp_to_voidptr(scale, QO);
-    char * c_MO = rt_to_string(MO);
-
-    // Call library function.
-    FfiResult_____AnyMeasurement _result = opendp_measurements__make_base_discrete_gaussian(c_input_domain, c_input_metric, c_scale, c_MO);
-
-    UNPROTECT(6);
-    if(_result.tag == Err_____AnyMeasurement)
-        return(extract_error(_result.err));
-    AnyMeasurement* _return_value = _result.ok;
-    return(anymeasurementptr_to_sexp(_return_value, log));
-}
-
-
-SEXP measurements__make_base_discrete_laplace(
-    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP QO, SEXP log
-) {
-    // Convert arguments to c types.
-    PROTECT(input_domain);
-    PROTECT(input_metric);
-    PROTECT(scale);
-    PROTECT(QO);
-    PROTECT(log);
-
-    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
-    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
-    void * c_scale = sexp_to_voidptr(scale, QO);
-    char * c_QO = rt_to_string(QO);
-
-    // Call library function.
-    FfiResult_____AnyMeasurement _result = opendp_measurements__make_base_discrete_laplace(c_input_domain, c_input_metric, c_scale, c_QO);
-
-    UNPROTECT(5);
-    if(_result.tag == Err_____AnyMeasurement)
-        return(extract_error(_result.err));
-    AnyMeasurement* _return_value = _result.ok;
-    return(anymeasurementptr_to_sexp(_return_value, log));
-}
-
-
-SEXP measurements__make_base_discrete_laplace_cks20(
-    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP QO, SEXP log
-) {
-    // Convert arguments to c types.
-    PROTECT(input_domain);
-    PROTECT(input_metric);
-    PROTECT(scale);
-    PROTECT(QO);
-    PROTECT(log);
-
-    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
-    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
-    void * c_scale = sexp_to_voidptr(scale, QO);
-    char * c_QO = rt_to_string(QO);
-
-    // Call library function.
-    FfiResult_____AnyMeasurement _result = opendp_measurements__make_base_discrete_laplace_cks20(c_input_domain, c_input_metric, c_scale, c_QO);
-
-    UNPROTECT(5);
-    if(_result.tag == Err_____AnyMeasurement)
-        return(extract_error(_result.err));
-    AnyMeasurement* _return_value = _result.ok;
-    return(anymeasurementptr_to_sexp(_return_value, log));
-}
-
-
-SEXP measurements__make_base_discrete_laplace_linear(
-    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP bounds, SEXP QO, SEXP T, SEXP OptionT, SEXP log
-) {
-    // Convert arguments to c types.
-    PROTECT(input_domain);
-    PROTECT(input_metric);
-    PROTECT(scale);
-    PROTECT(bounds);
-    PROTECT(QO);
-    PROTECT(T);
-    PROTECT(OptionT);
-    PROTECT(log);
-
-    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
-    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
-    void * c_scale = sexp_to_voidptr(scale, QO);
-    AnyObject * c_bounds = sexp_to_anyobjectptr(bounds, OptionT);
-    char * c_QO = rt_to_string(QO);
-
-    // Call library function.
-    FfiResult_____AnyMeasurement _result = opendp_measurements__make_base_discrete_laplace_linear(c_input_domain, c_input_metric, c_scale, c_bounds, c_QO);
-
-    UNPROTECT(8);
-    if(_result.tag == Err_____AnyMeasurement)
-        return(extract_error(_result.err));
-    AnyMeasurement* _return_value = _result.ok;
-    return(anymeasurementptr_to_sexp(_return_value, log));
-}
-
-
-SEXP measurements__make_base_gaussian(
-    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP k, SEXP MO, SEXP T, SEXP log
-) {
-    // Convert arguments to c types.
-    PROTECT(input_domain);
-    PROTECT(input_metric);
-    PROTECT(scale);
-    PROTECT(k);
-    PROTECT(MO);
-    PROTECT(T);
-    PROTECT(log);
-
-    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
-    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
-    void * c_scale = sexp_to_voidptr(scale, T);
-    uint32_t c_k = (unsigned int)Rf_asInteger(k);
-    char * c_MO = rt_to_string(MO);
-
-    // Call library function.
-    FfiResult_____AnyMeasurement _result = opendp_measurements__make_base_gaussian(c_input_domain, c_input_metric, c_scale, c_k, c_MO);
-
-    UNPROTECT(7);
-    if(_result.tag == Err_____AnyMeasurement)
-        return(extract_error(_result.err));
-    AnyMeasurement* _return_value = _result.ok;
-    return(anymeasurementptr_to_sexp(_return_value, log));
-}
-
-
-SEXP measurements__make_base_geometric(
-    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP bounds, SEXP QO, SEXP T, SEXP OptionT, SEXP log
-) {
-    // Convert arguments to c types.
-    PROTECT(input_domain);
-    PROTECT(input_metric);
-    PROTECT(scale);
-    PROTECT(bounds);
-    PROTECT(QO);
-    PROTECT(T);
-    PROTECT(OptionT);
-    PROTECT(log);
-
-    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
-    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
-    void * c_scale = sexp_to_voidptr(scale, QO);
-    AnyObject * c_bounds = sexp_to_anyobjectptr(bounds, OptionT);
-    char * c_QO = rt_to_string(QO);
-
-    // Call library function.
-    FfiResult_____AnyMeasurement _result = opendp_measurements__make_base_geometric(c_input_domain, c_input_metric, c_scale, c_bounds, c_QO);
-
-    UNPROTECT(8);
-    if(_result.tag == Err_____AnyMeasurement)
-        return(extract_error(_result.err));
-    AnyMeasurement* _return_value = _result.ok;
-    return(anymeasurementptr_to_sexp(_return_value, log));
-}
-
-
-SEXP measurements__make_base_laplace(
-    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP k, SEXP T, SEXP log
-) {
-    // Convert arguments to c types.
-    PROTECT(input_domain);
-    PROTECT(input_metric);
-    PROTECT(scale);
-    PROTECT(k);
-    PROTECT(T);
-    PROTECT(log);
-
-    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
-    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
-    void * c_scale = sexp_to_voidptr(scale, T);
-    uint32_t c_k = (unsigned int)Rf_asInteger(k);
-
-    // Call library function.
-    FfiResult_____AnyMeasurement _result = opendp_measurements__make_base_laplace(c_input_domain, c_input_metric, c_scale, c_k);
-
-    UNPROTECT(6);
-    if(_result.tag == Err_____AnyMeasurement)
-        return(extract_error(_result.err));
-    AnyMeasurement* _return_value = _result.ok;
-    return(anymeasurementptr_to_sexp(_return_value, log));
-}
-
-
 SEXP measurements__make_base_laplace_threshold(
     SEXP input_domain, SEXP input_metric, SEXP scale, SEXP threshold, SEXP k, SEXP TV, SEXP log
 ) {
@@ -277,26 +82,58 @@ SEXP measurements__make_base_laplace_threshold(
 
 
 SEXP measurements__make_gaussian(
-    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP MO, SEXP QO, SEXP T_scale, SEXP log
+    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP k, SEXP MO, SEXP QO, SEXP T_k, SEXP log
 ) {
     // Convert arguments to c types.
     PROTECT(input_domain);
     PROTECT(input_metric);
     PROTECT(scale);
+    PROTECT(k);
     PROTECT(MO);
     PROTECT(QO);
-    PROTECT(T_scale);
+    PROTECT(T_k);
     PROTECT(log);
 
     AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
     AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
-    void * c_scale = sexp_to_voidptr(scale, T_scale);
+    void * c_scale = sexp_to_voidptr(scale, QO);
+    void * c_k = sexp_to_voidptr(k, T_k);
     char * c_MO = rt_to_string(MO);
 
     // Call library function.
-    FfiResult_____AnyMeasurement _result = opendp_measurements__make_gaussian(c_input_domain, c_input_metric, c_scale, c_MO);
+    FfiResult_____AnyMeasurement _result = opendp_measurements__make_gaussian(c_input_domain, c_input_metric, c_scale, c_k, c_MO);
 
-    UNPROTECT(7);
+    UNPROTECT(8);
+    if(_result.tag == Err_____AnyMeasurement)
+        return(extract_error(_result.err));
+    AnyMeasurement* _return_value = _result.ok;
+    return(anymeasurementptr_to_sexp(_return_value, log));
+}
+
+
+SEXP measurements__make_geometric(
+    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP bounds, SEXP QO, SEXP T, SEXP OptionT, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(scale);
+    PROTECT(bounds);
+    PROTECT(QO);
+    PROTECT(T);
+    PROTECT(OptionT);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    void * c_scale = sexp_to_voidptr(scale, QO);
+    AnyObject * c_bounds = sexp_to_anyobjectptr(bounds, OptionT);
+    char * c_QO = rt_to_string(QO);
+
+    // Call library function.
+    FfiResult_____AnyMeasurement _result = opendp_measurements__make_geometric(c_input_domain, c_input_metric, c_scale, c_bounds, c_QO);
+
+    UNPROTECT(8);
     if(_result.tag == Err_____AnyMeasurement)
         return(extract_error(_result.err));
     AnyMeasurement* _return_value = _result.ok;
@@ -305,25 +142,28 @@ SEXP measurements__make_gaussian(
 
 
 SEXP measurements__make_laplace(
-    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP QO, SEXP T_scale, SEXP log
+    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP k, SEXP QO, SEXP T_scale, SEXP T_k, SEXP log
 ) {
     // Convert arguments to c types.
     PROTECT(input_domain);
     PROTECT(input_metric);
     PROTECT(scale);
+    PROTECT(k);
     PROTECT(QO);
     PROTECT(T_scale);
+    PROTECT(T_k);
     PROTECT(log);
 
     AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
     AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
     void * c_scale = sexp_to_voidptr(scale, T_scale);
+    void * c_k = sexp_to_voidptr(k, T_k);
     char * c_QO = rt_to_string(QO);
 
     // Call library function.
-    FfiResult_____AnyMeasurement _result = opendp_measurements__make_laplace(c_input_domain, c_input_metric, c_scale, c_QO);
+    FfiResult_____AnyMeasurement _result = opendp_measurements__make_laplace(c_input_domain, c_input_metric, c_scale, c_k, c_QO);
 
-    UNPROTECT(6);
+    UNPROTECT(8);
     if(_result.tag == Err_____AnyMeasurement)
         return(extract_error(_result.err));
     AnyMeasurement* _return_value = _result.ok;
