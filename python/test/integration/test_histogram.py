@@ -15,7 +15,7 @@ def test_count_by_categories():
     )
 
     noisy_histogram_from_dataframe = dp.binary_search_chain(
-        lambda s: preprocess >> dp.m.then_base_discrete_laplace(s), d_in=1, d_out=1.0
+        lambda s: preprocess >> dp.m.then_laplace(s), d_in=1, d_out=1.0
     )
 
     assert noisy_histogram_from_dataframe.check(1, 1.0)

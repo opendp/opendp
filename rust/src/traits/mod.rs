@@ -31,7 +31,7 @@ pub mod samplers;
 ///
 /// - `InfCast<TI>` is for casting where the distance after the cast is gte the distance before the cast
 /// - `InfMul` is to multiply with the constant `c` in a way that doesn't round down
-/// - `TotalOrd` is now only for convenience
+/// - `ProductOrd` is now only for convenience
 ///
 /// # Example
 /// ```
@@ -46,12 +46,12 @@ pub mod samplers;
 /// assert_eq!(example_map::<f32, i8>(3.14159, 2).ok(), Some(8));
 /// ```
 pub trait DistanceConstant<TI>:
-    'static + InfCast<TI> + InfMul + TotalOrd + Zero + Send + Sync
+    'static + InfCast<TI> + InfMul + ProductOrd + Zero + Send + Sync
 {
 }
 
 impl<TI, TO> DistanceConstant<TI> for TO where
-    TO: 'static + InfCast<TI> + InfMul + TotalOrd + Zero + Send + Sync
+    TO: 'static + InfCast<TI> + InfMul + ProductOrd + Zero + Send + Sync
 {
 }
 
@@ -158,7 +158,7 @@ pub trait Number:
     + InfSub
     + InfMul
     + InfDiv
-    + TotalOrd
+    + ProductOrd
     + Zero
     + One
     + PartialEq
@@ -187,7 +187,7 @@ impl<T> Number for T where
         + InfSub
         + InfMul
         + InfDiv
-        + TotalOrd
+        + ProductOrd
         + Zero
         + One
         + PartialEq

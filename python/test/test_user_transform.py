@@ -32,7 +32,7 @@ def test_make_user_transformation():
         >> make_duplicate(2)
         >> dp.t.then_clamp((1, 2))
         >> dp.t.then_sum()
-        >> dp.m.then_base_discrete_laplace(1.0)
+        >> dp.m.then_laplace(1.0)
     )
 
     print(trans(["0", "1", "2", "3"]))
@@ -40,7 +40,6 @@ def test_make_user_transformation():
 
 
 def test_make_custom_transformation_error():
-    import pytest
     with pytest.raises(Exception):
         make_duplicate(2, raises=True)([1, 2, 3])
 

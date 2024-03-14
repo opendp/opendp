@@ -14,7 +14,7 @@ from opendp.combinators import (
     make_zCDP_to_approxDP,
 )
 from opendp.domains import atom_domain
-from opendp.measurements import make_base_laplace, make_gaussian
+from opendp.measurements import make_laplace, make_gaussian
 from opendp.measures import (
     fixed_smoothed_max_divergence,
     max_divergence,
@@ -676,12 +676,12 @@ def _translate_measure_distance(d_from, from_measure, to_measure):
     if from_to == ("ZeroConcentratedDivergence", "MaxDivergence"): # pragma: no cover
         space = atom_domain(T=T), absolute_distance(T=T)
         scale = binary_search_param(
-            lambda eps: make_pureDP_to_zCDP(make_base_laplace(*space, eps)),
+            lambda eps: make_pureDP_to_zCDP(make_laplace(*space, eps)),
             d_in=constant,
             d_out=d_from,
             T=float,
         )
-        return make_base_laplace(*space, scale).map(constant)
+        return make_laplace(*space, scale).map(constant)
 
     if from_to == (
         "FixedSmoothedMaxDivergence",

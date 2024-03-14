@@ -34,13 +34,8 @@ This is extremely powerful!
 
     .. doctest::
 
-        >>> from opendp.measurements import *
-        >>> from opendp.transformations import *
-        >>> from opendp.domains import atom_domain, vector_domain
-        >>> from opendp.metrics import absolute_distance, symmetric_distance
-        >>> from opendp.mod import *
-        >>> from opendp.mod import enable_features
-        >>> enable_features('contrib', 'floating-point')
+        >>> import opendp.prelude as dp
+        >>> dp.enable_features('contrib', 'floating-point')
 
 * | If you have a bound on ``d_in`` and a budget ``d_out``, you can solve for the smallest noise scale that is still differentially private.
   | This is useful when you want to determine how accurate you can make a query with a given budget.
@@ -48,8 +43,8 @@ This is extremely powerful!
 
   .. doctest::
 
-    >>> input_space = atom_domain(T=float), absolute_distance(T=float)
-    >>> binary_search_param(lambda s: make_gaussian(*input_space, scale=s), d_in=1., d_out=1.)
+    >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    >>> dp.binary_search_param(lambda s: dp.m.make_gaussian(*input_space, scale=s), d_in=1., d_out=1.)
     0.7071067811865477
   
 * | If you have a bound on ``d_in`` and a noise scale, you can solve for the tightest budget ``d_out`` that is still differentially private.
@@ -58,7 +53,7 @@ This is extremely powerful!
   .. doctest::
 
     >>> # in this case, a search is unnecessary. We can just use the map:
-    >>> make_gaussian(*input_space, scale=1.).map(d_in=1.)
+    >>> dp.m.make_gaussian(*input_space, scale=1.).map(d_in=1.)
     0.5
 
 * | If you have a noise scale and a budget ``d_out``, you can solve for the largest bound on ``d_in`` that is still differentially private.
@@ -67,7 +62,7 @@ This is extremely powerful!
   .. doctest::
 
     >>> # finds the largest permissible d_in, a sensitivity
-    >>> binary_search(lambda d_in: make_gaussian(*input_space, scale=1.).check(d_in=d_in, d_out=1.))
+    >>> dp.binary_search(lambda d_in: dp.m.make_gaussian(*input_space, scale=1.).check(d_in=d_in, d_out=1.))
     1.414213562373095
 
 
@@ -77,10 +72,10 @@ This is extremely powerful!
   .. doctest::
 
     >>> # finds the smallest n
-    >>> binary_search_param(
-    ...     lambda n: make_mean(
-    ...         vector_domain(atom_domain((0., 10.)), n), 
-    ...         symmetric_distance()) >> then_gaussian(scale=1.), 
+    >>> dp.binary_search_param(
+    ...     lambda n: dp.t.make_mean(
+    ...         dp.vector_domain(dp.atom_domain((0., 10.)), n), 
+    ...         dp.symmetric_distance()) >> dp.m.then_gaussian(scale=1.), 
     ...     d_in=2, d_out=1.)
     8
 
@@ -90,10 +85,10 @@ This is extremely powerful!
   .. doctest::
 
     >>> # finds the largest clipping bounds
-    >>> binary_search_param(
-    ...     lambda c: make_sum(
-    ...         vector_domain(atom_domain(bounds=(-c, c))), 
-    ...         symmetric_distance()) >> then_base_gaussian(scale=1.), 
+    >>> dp.binary_search_param(
+    ...     lambda c: dp.t.make_sum(
+    ...         dp.vector_domain(dp.atom_domain(bounds=(-c, c))), 
+    ...         dp.symmetric_distance()) >> dp.m.then_gaussian(scale=1.), 
     ...     d_in=2, d_out=1.)
     0.353553389770093
 
@@ -110,34 +105,25 @@ This is generally less likely to overflow than if you were to set large binary s
 :func:`opendp.mod.exponential_bounds_search` uses a number of heuristics that tend to work well on most problems.
 If the heuristics fail you, then pass your own bounds into the binary search utilities.
 
-A more in-depth explanation of this algorithm is below:
+.. dropdown:: Algorithm Details
 
-.. raw:: html
+  If it is unkown whether the algorithm needs integer or float bounds, the algorithm first checks the predicate at a float zero. 
+  If a type error is thrown, it similarly checks the predicate function at an integer zero.
+  If the predicate function fails both times, you'll have to pass a type argument ``T`` of either ``float`` or ``int``.
+  This heuristic can fail if the predicate function is invalid at zero.
 
-   <details style="margin:-1em 0 2em 4em">
-   <summary><a>Expand Me</a></summary>
+  The integer bounds search doesn't actually take exponential steps, it checks the predicate function along zero, one, and eight even steps of size 2^16.
+  On the other hand, since floats are logarithmically distributed, 8 steps are made along 2^(k^2).
+  This explores a parameter regime that is unlikely to overflow, even when the origin is offset.
 
-If it is unkown whether the algorithm needs integer or float bounds, the algorithm first checks the predicate at a float zero. 
-If a type error is thrown, it similarly checks the predicate function at an integer zero.
-If the predicate function fails both times, you'll have to pass a type argument ``T`` of either ``float`` or ``int``.
-This heuristic can fail if the predicate function is invalid at zero.
+  If the positive band search fails to find a change in sign, then the same procedure is run in the negative direction.
+  In the case that no acceptance region crosses the edge of a search band, the algorithm gives up, 
+  and you'll have to work out a reasonable set of bounds that intersect the acceptance region on your own.
+  Luckily, most predicate functions are monotonic, so this is unlikely to happen.
 
-The integer bounds search doesn't actually take exponential steps, it checks the predicate function along zero, one, and eight even steps of size 2^16.
-On the other hand, since floats are logarithmically distributed, 8 steps are made along 2^(k^2).
-This explores a parameter regime that is unlikely to overflow, even when the origin is offset.
+  If at any time the predicate function throws an exception, then a search is run for the decision boundary of the exception.
+  We can safely consider the exception region invalid, and attempt to exclude it from the search space.
+  An example of this is when searching for a suitable size, n, for which the predicate function outright throws an exception if negative due to being malformed.
 
-If the positive band search fails to find a change in sign, then the same procedure is run in the negative direction.
-In the case that no acceptance region crosses the edge of a search band, the algorithm gives up, 
-and you'll have to work out a reasonable set of bounds that intersect the acceptance region on your own.
-Luckily, most predicate functions are monotonic, so this is unlikely to happen.
-
-If at any time the predicate function throws an exception, then a search is run for the decision boundary of the exception.
-We can safely consider the exception region invalid, and attempt to exclude it from the search space.
-An example of this is when searching for a suitable size, n, for which the predicate function outright throws an exception if negative due to being malformed.
-
-If this search fails to find an edge to the exception region, we give up, and claim that the predicate function always fails.
-Otherwise, we shift the origin of the bounds search to the exception boundary, and try one more directional bounds search away from the exception.
-
-.. raw:: html
-
-   </details>
+  If this search fails to find an edge to the exception region, we give up, and claim that the predicate function always fails.
+  Otherwise, we shift the origin of the bounds search to the exception boundary, and try one more directional bounds search away from the exception.

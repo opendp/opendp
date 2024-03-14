@@ -25,7 +25,7 @@ def test_sized_bounded_variance():
     )
 
     noisy_known_n_variance_from_dataframe = dp.binary_search_chain(
-        lambda s: preprocess >> dp.m.then_base_laplace(s),
+        lambda s: preprocess >> dp.m.then_laplace(s),
         d_in=1, d_out=1.)
 
     assert noisy_known_n_variance_from_dataframe.check(1, 1.)
