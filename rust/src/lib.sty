@@ -158,14 +158,14 @@
   hold, #2 raises an exception (at compile time or run time) or returns a valid transformation. A valid transformation has the following properties:
   \begin{enumerate}
       \item \textup{(Appropriate output domain).} 
-      For every element $v$ in \texttt{input\_domain}, $\function(v)$ is in \texttt{output\_domain} or raises a data-independent runtime exception.
+      For every element $x$ in \texttt{input\_domain}, $\function(x)$ is in \texttt{output\_domain} or raises a data-independent runtime exception.
       
       \item \textup{(Stability guarantee).} 
-      For every pair of elements $u, v$ in \texttt{input\_domain} and for every pair $(\din, \dout)$, 
+      For every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$, 
       where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_metric}, 
-      if $u, v$ are \din-close under \texttt{input\_metric}, $\texttt{stability\_map}(\din)$ does not raise an exception,
+      if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{stability\_map}(\din)$ does not raise an exception,
       and $\texttt{stability\_map}(\din) \leq \dout$, 
-      then $\function(u), \function(v)$ are $\dout$-close under \texttt{output\_metric}.
+      then $\function(x), \function(x')$ are $\dout$-close under \texttt{output\_metric}.
   \end{enumerate}
 }
 
@@ -175,10 +175,10 @@
   hold, #2 raises an exception (at compile time or run time) or returns a valid measurement. A valid measurement has the following property:
   \begin{enumerate}
       \item \textup{(Privacy guarantee).}
-      For every pair of elements $u, v$ in \texttt{input\_domain} and for every pair $(\din, \dout)$,
+      For every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$,
       where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_measure},
-      if $u, v$ are \din-close under \texttt{input\_metric}, $\texttt{privacy\_map}(\din)$ does not raise an exception,
+      if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{privacy\_map}(\din)$ does not raise an exception,
       and $\texttt{privacy\_map}(\din) \leq \dout$,
-      then $\function(u), \function(v)$ are $\dout$-close under \texttt{output\_measure}.
+      then $\function(x), \function(x')$ are $\dout$-close under \texttt{output\_measure}.
   \end{enumerate}
 }
