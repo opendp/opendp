@@ -49,11 +49,18 @@ def debias_basic_rappor(
     answers: Any,
     f: float
 ) -> Any:
-    r"""[debias_basic_rappor in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.debias_basic_rappor.html)
+    r"""Convert a vector of RAPPOR responses to a frequency estimate
 
-    :param answers: 
+    [debias_basic_rappor in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.debias_basic_rappor.html)
+
+    :param answers: A vector of BitVectors with consistent size
     :type answers: Any
-    :param f: 
+    :param f: The per bit flipping probability used to encode `answers`
+
+    Computes the sum of the answers into a $k$-length vector $Y$ and returns
+    ```math
+    Y\frac{Y-\frac{f}{2}}{1-f}
+    ```
     :type f: float
     :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
@@ -1148,13 +1155,13 @@ def make_rappor(
 
     [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/rappor/make_rappor.pdf)
 
-    :param input_domain: 
+    :param input_domain: BitVectorDomain with max_weight
     :type input_domain: Domain
-    :param input_metric: 
+    :param input_metric: DiscreteDistance
     :type input_metric: Metric
     :param f: Per-bit flipping probability. Must be in $(0, 1]$.
     :type f: float
-    :param constant_time: 
+    :param constant_time: Whether to run the Bernoulli samplers in constant time, this is likely to be extremely slow.
     :type constant_time: bool
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
@@ -1190,7 +1197,7 @@ def then_rappor(
 
     :param f: Per-bit flipping probability. Must be in $(0, 1]$.
     :type f: float
-    :param constant_time: 
+    :param constant_time: Whether to run the Bernoulli samplers in constant time, this is likely to be extremely slow.
     :type constant_time: bool
     """
     return PartialConstructor(lambda input_domain, input_metric: make_rappor(

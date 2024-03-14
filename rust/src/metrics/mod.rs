@@ -295,11 +295,7 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, HammingDistance) {
         })
     }
 }
-impl MetricSpace for (BitVectorDomain, HammingDistance) {
-    fn check_space(&self) -> Fallible<()> {
-        Ok(())
-    }
-}
+
 
 /// The $L_p$ distance between two vector-valued aggregates.
 ///

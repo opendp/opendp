@@ -4,11 +4,18 @@
 NULL
 
 
+#' Convert a vector of RAPPOR responses to a frequency estimate
+#'
 #' [debias_basic_rappor in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.debias_basic_rappor.html)
 #'
 #' @concept measurements
-#' @param answers undocumented
-#' @param f undocumented
+#' @param answers A vector of BitVectors with consistent size
+#' @param f The per bit flipping probability used to encode `answers`
+#'
+#' Computes the sum of the answers into a \eqn{k}-length vector \eqn{Y} and returns
+#' ```math
+#' Y\frac{Y-\frac{f}{2}}{1-f}
+#' ```
 #' @return Any
 #' @export
 debias_basic_rappor <- function(
@@ -1276,10 +1283,10 @@ then_randomized_response_bool <- function(
 #' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/rappor/make_rappor.pdf)
 #'
 #' @concept measurements
-#' @param input_domain undocumented
-#' @param input_metric undocumented
+#' @param input_domain BitVectorDomain with max_weight
+#' @param input_metric DiscreteDistance
 #' @param f Per-bit flipping probability. Must be in \eqn{(0, 1]}.
-#' @param constant_time undocumented
+#' @param constant_time Whether to run the Bernoulli samplers in constant time, this is likely to be extremely slow.
 #' @return Measurement
 #' @export
 make_rappor <- function(
@@ -1315,7 +1322,7 @@ make_rappor <- function(
 #' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param f Per-bit flipping probability. Must be in \eqn{(0, 1]}.
-#' @param constant_time undocumented
+#' @param constant_time Whether to run the Bernoulli samplers in constant time, this is likely to be extremely slow.
 #' @return Measurement
 #' @export
 then_rappor <- function(

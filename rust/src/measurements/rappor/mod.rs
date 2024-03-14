@@ -17,10 +17,10 @@ mod ffi;
 /// * [RAPPOR: Randomized Aggregatable Privacy-Preserving Ordinal Response](https://arxiv.org/abs/1407.6981)
 ///
 /// # Arguments
+/// * `input_domain` - BitVectorDomain with max_weight
+/// * `input_metric` - DiscreteDistance
 /// * `f` - Per-bit flipping probability. Must be in $(0, 1]$.
-/// * `m` - number of ones set in each boolean vector (1 if one-hot encoding, more if using a bloom filter)
-///
-/// eps = 2mln((2-f)/f)
+/// * `constant_time` - Whether to run the Bernoulli samplers in constant time, this is likely to be extremely slow.
 pub fn make_rappor(
     input_domain: BitVectorDomain,
     input_metric: DiscreteDistance,
@@ -76,6 +76,16 @@ pub fn make_rappor(
 }
 
 #[bootstrap(features("contrib"))]
+/// Convert a vector of RAPPOR responses to a frequency estimate
+/// 
+/// # Arguments
+/// * `answers` - A vector of BitVectors with consistent size
+/// * `f` - The per bit flipping probability used to encode `answers`
+/// 
+/// Computes the sum of the answers into a $k$-length vector $Y$ and returns
+/// ```math
+/// Y\frac{Y-\frac{f}{2}}{1-f} 
+/// ```
 pub fn debias_basic_rappor(answers: Vec<BitVector>, f: f64) -> Fallible<Vec<f64>> {
     if answers.len() == 0 {
         return fallible!(FailedFunction, "No answers provided");
