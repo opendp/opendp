@@ -23,7 +23,6 @@ pub use integer::*;
 #[cfg(feature = "ffi")]
 mod ffi;
 
-#[doc(hidden)]
 pub trait GaussianMeasure<MI>: Measure + Default
 where
     MI: Metric,

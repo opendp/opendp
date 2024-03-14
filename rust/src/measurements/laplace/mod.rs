@@ -97,9 +97,6 @@ macro_rules! impl_make_laplace_float {
 
 impl_make_laplace_float!(f32 f64);
 
-// you can benchmark performance at different levels of σ
-// src in /rust/benches/discrete_laplace/main.rs
-
 macro_rules! impl_make_laplace_int {
     ($T:ty, $QO:ty) => {
         impl LaplaceDomain<$QO> for AtomDomain<$T> {
