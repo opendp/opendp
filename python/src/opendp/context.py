@@ -115,7 +115,46 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
 
 
 def domain_of(T, infer=False) -> Domain:
-    """Constructs an instance of a domain from carrier type `T`.
+    """Constructs an instance of a domain from carrier type ``T``, or from an example.
+
+    Accepts a limited set of Python type expressions:
+
+    >>> domain_of(list[int])
+    VectorDomain(AtomDomain(T=i32))
+    
+    As well as strings representing types in the underlying Rust syntax:
+
+    >>> domain_of('Vec<int>')
+    VectorDomain(AtomDomain(T=i32))
+
+    Dictionaries, optional types, and primitive types are also supported:
+
+    >>> domain_of(dict[str, int])
+    MapDomain { key_domain: AtomDomain(T=String), value_domain: AtomDomain(T=i32) }
+    
+    .. TODO
+    .. >>> domain_of(Optional[int])
+    .. errors!
+
+    >>> domain_of('Option<int>')
+    OptionDomain(AtomDomain(T=i32))
+    
+    >>> domain_of(int)
+    AtomDomain(T=i32)
+
+    More complex types are not supported:
+
+    .. >>> domain_of(List[List[int]])
+    .. TODO: Ellipsis not working as expected.
+    Traceback (most recent call last):
+    ...
+    opendp.mod.OpenDPException:
+      FFI("VectorDomain constructor only supports AtomDomain or UserDomain inner domains")
+
+    Alternatively, an example of the data can be provided, but note that passing sensitive data may result in a privacy violation:
+
+    >>> domain_of([1, 2, 3], infer=True)
+    VectorDomain(AtomDomain(T=i32))
 
     :param T: carrier type
     :param infer: if True, `T` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
@@ -239,7 +278,7 @@ def unit_of(
 
 
 class Context(object):
-    """A Context coordinates queries to an instance of a privacy `accountant`."""
+    """A Context coordinates queries to an instance of a privacy ``accountant``."""
 
     accountant: Measurement  # union Odometer once merged
     """The accountant is the measurement used to spawn the queryable.
@@ -320,7 +359,7 @@ class Context(object):
         If the context has been constructed with a sequence of privacy losses,
         the next loss will be used. Otherwise, the loss will be computed from the kwargs.
 
-        :param kwargs: The privacy loss to use for the query. Passed directly into `loss_of`.
+        :param kwargs: The privacy loss to use for the query. Passed directly into :py:func:`loss_of`.
         """
         d_query = None
         if self.d_mids is not None:
