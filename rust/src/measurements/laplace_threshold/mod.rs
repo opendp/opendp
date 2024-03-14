@@ -11,7 +11,7 @@ use crate::domains::{AtomDomain, MapDomain};
 use crate::error::{Error, ErrorVariant, Fallible};
 use crate::measures::FixedSmoothedMaxDivergence;
 use crate::metrics::L1Distance;
-use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
+use crate::traits::samplers::{sample_discrete_laplace_Z2k, CastInternalRational};
 use crate::traits::{ExactIntCast, Float, Hashable};
 
 use super::get_discretization_consts;
@@ -57,7 +57,7 @@ pub fn make_base_laplace_threshold<TK, TV>(
 >
 where
     TK: Hashable,
-    TV: Float + SampleDiscreteLaplaceZ2k,
+    TV: Float + CastInternalRational,
     i32: ExactIntCast<TV::Bits>,
     (MapDomain<AtomDomain<TK>, AtomDomain<TV>>, L1Distance<TV>): MetricSpace,
 {
@@ -84,7 +84,7 @@ where
             data.clone()
                 .into_iter()
                 // noise output count
-                .map(|(key, v)| TV::sample_discrete_laplace_Z2k(v, scale, k).map(|v| (key, v)))
+                .map(|(key, v)| sample_discrete_laplace_Z2k(v, scale, k).map(|v| (key, v)))
                 // only keep keys with values gte threshold
                 .filter(|res| {
                     res.as_ref()

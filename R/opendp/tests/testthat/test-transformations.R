@@ -313,6 +313,7 @@ test_that("test_lipschitz_b_ary_tree", {
 
   suggested_factor <- choose_branching_factor(size_guess = 10000L)
 
+<<<<<<< HEAD
   # the categories are bin names!
   meas_base <-
     c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
@@ -320,6 +321,15 @@ test_that("test_lipschitz_b_ary_tree", {
     then_b_ary_tree(leaf_count, branching_factor) |>
     then_base_geometric(1.) |>
     then_consistent_b_ary_tree(branching_factor)
+=======
+    # the categories are bin names!
+    meas_base <-
+        c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
+        then_count_by_categories(categories = c("A", "B", "C", "D", "E", "F")) |>
+        then_b_ary_tree(leaf_count, branching_factor) |>
+        then_geometric(1.) |>
+        then_consistent_b_ary_tree(branching_factor)
+>>>>>>> main
 
   meas_cdf <- meas_base |> then_cdf()
   meas_quantiles <- meas_base |> then_quantiles_from_counts(

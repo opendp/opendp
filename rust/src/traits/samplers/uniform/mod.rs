@@ -157,7 +157,7 @@ macro_rules! impl_sample_uniform_unsigned_int {
                         return found.ok_or_else(|| {
                             err!(
                                 FailedFunction,
-                                "failed to sample a number below the upper bound"
+                                "failed to sample a number within the allotted number of trials"
                             )
                         });
                     }
@@ -199,7 +199,7 @@ impl SampleUniformIntBelow for UBig {
                 return found.ok_or_else(|| {
                     err!(
                         FailedFunction,
-                        "failed to sample a number below the upper bound"
+                        "failed to sample a number within the allotted number of trials"
                     )
                 });
             }

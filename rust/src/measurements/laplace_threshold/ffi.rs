@@ -8,7 +8,7 @@ use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::{Type, TypeContents};
 use crate::measurements::make_base_laplace_threshold;
 use crate::metrics::L1Distance;
-use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
+use crate::traits::samplers::CastInternalRational;
 use crate::traits::{ExactIntCast, Float, Hashable};
 
 #[no_mangle]
@@ -28,7 +28,7 @@ pub extern "C" fn opendp_measurements__make_base_laplace_threshold(
     ) -> Fallible<AnyMeasurement>
     where
         TK: Hashable,
-        TV: Float + SampleDiscreteLaplaceZ2k,
+        TV: Float + CastInternalRational,
         i32: ExactIntCast<TV::Bits>,
     {
         let input_domain = input_domain

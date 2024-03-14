@@ -721,8 +721,8 @@ mod tests {
         let t3 = transformations::then_cast_default::<SymmetricDistance, String, f64>().into_any();
         let t4 = transformations::then_clamp::<_, SymmetricDistance>((0.0, 10.0)).into_any();
         let t5 = transformations::then_sum::<SymmetricDistance, f64>().into_any();
-        let m1 = measurements::make_base_laplace(
-            AtomDomain::default(),
+        let m1 = measurements::make_laplace(
+            AtomDomain::<f64>::default(),
             AbsoluteDistance::default(),
             0.0,
             None,

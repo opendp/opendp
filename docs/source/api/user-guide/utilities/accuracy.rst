@@ -17,12 +17,10 @@ or derive the necessary noise scale to meet a given target accuracy and statisti
 The noise distribution may be either Laplace or Gaussian.
 
 :Laplacian: | Applies to any L1 noise addition mechanism.
-  | :func:`make_base_laplace() <opendp.measurements.make_base_laplace>`
-  | :func:`make_base_discrete_laplace() <opendp.measurements.make_base_discrete_laplace>`
+  | :func:`make_laplace() <opendp.measurements.make_laplace>`
   | :func:`make_base_laplace_threshold() <opendp.measurements.make_base_laplace_threshold>`
 :Gaussian: | Applies to any L2 noise addition mechanism.
-  | :func:`make_base_gaussian() <opendp.measurements.make_base_gaussian>`
-  | :func:`make_base_discrete_gaussian() <opendp.measurements.make_base_discrete_gaussian>`
+  | :func:`make_gaussian() <opendp.measurements.make_gaussian>`
 
 The library provides the following functions for converting between noise scale and accuracy:
 
@@ -32,7 +30,7 @@ The library provides the following functions for converting between noise scale 
 * :func:`opendp.accuracy.accuracy_to_gaussian_scale`
 
 To demonstrate, the following snippet finds the necessary gaussian scale such that the input to 
-:code:`make_base_gaussian(input_domain, input_metric, scale=1.)` differs from the release by no more than 2 with 95% confidence.
+:code:`make_gaussian(input_domain, input_metric, scale=1.)` differs from the release by no more than 2 with 95% confidence.
 
 .. tab-set::
 

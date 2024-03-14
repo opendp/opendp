@@ -17,11 +17,11 @@ def test_amplification():
 
 def test_fix_delta():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    base_gaussian = dp.c.make_zCDP_to_approxDP(dp.m.make_base_gaussian(*input_space, 10.))
-    print(base_gaussian.map(1.).epsilon(1e-6))
-    fixed_base_gaussian = dp.c.make_fix_delta(base_gaussian, 1e-6)
+    m_gauss = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 10.))
+    print(m_gauss.map(1.).epsilon(1e-6))
+    m_gauss_fixed = dp.c.make_fix_delta(m_gauss, 1e-6)
 
-    print(fixed_base_gaussian.map(1.))
+    print(m_gauss_fixed.map(1.))
 
 
 def test_make_basic_composition():
@@ -40,7 +40,7 @@ def test_make_basic_composition():
             (
                 input_space >> dp.t.then_cast_default(str) >> 
                 dp.t.then_count_by_categories(categories=["0", "12", "22"]) >> 
-                dp.m.then_base_discrete_laplace(scale=2.)
+                dp.m.then_laplace(scale=2.)
             )
         ])
     ])
@@ -72,7 +72,7 @@ def test_make_basic_composition_leak():
 def test_make_basic_composition_approx():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
     composed_fixed = dp.c.make_basic_composition([
-        dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_base_gaussian(*input_space, 1.)), 1e-7)
+        dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 1.)), 1e-7)
     ] * 2)
     print(composed_fixed.map(1.))
 
@@ -92,8 +92,8 @@ def test_make_pureDP_to_fixed_approxDP():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
 
     meas = dp.c.make_basic_composition([
-        dp.c.make_pureDP_to_fixed_approxDP(dp.m.make_base_laplace(*input_space, 10.)),
-        dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_base_gaussian(*input_space, 10.)), delta=1e-6)
+        dp.c.make_pureDP_to_fixed_approxDP(dp.m.make_laplace(*input_space, 10.)),
+        dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 10.)), delta=1e-6)
     ])
 
     print(meas.map(1.))
@@ -102,8 +102,8 @@ def test_make_pureDP_to_fixed_approxDP():
 def test_make_pureDP_to_zCDP():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
     meas = dp.c.make_basic_composition([
-        dp.c.make_pureDP_to_zCDP(dp.m.make_base_laplace(*input_space, 10.)),
-        dp.m.make_base_gaussian(*input_space, 10.)
+        dp.c.make_pureDP_to_zCDP(dp.m.make_laplace(*input_space, 10.)),
+        dp.m.make_gaussian(*input_space, 10.)
     ])
 
     print(meas.map(1.))
