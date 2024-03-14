@@ -28,14 +28,11 @@ Notice that there is a symmetric structure to the additive noise measurements:
    :header-rows: 1
 
    * - Vector Input Metric
-     - Integer
-     - Float
+     - Constructor
    * - ``L1Distance<T>``
-     - :func:`make_base_discrete_laplace <opendp.measurements.make_base_discrete_laplace>`
-     - :func:`make_base_laplace <opendp.measurements.make_base_laplace>`
+     - :func:`make_laplace <opendp.measurements.make_laplace>`
    * - ``L2Distance<T>``
-     - :func:`make_base_discrete_gaussian <opendp.measurements.make_base_discrete_gaussian>`
-     - :func:`make_base_gaussian <opendp.measurements.make_base_gaussian>`
+     - :func:`make_gaussian <opendp.measurements.make_gaussian>`
 
 In the following sections, scalar-valued and vector-valued versions of each measurement are listed separately.
 You can choose whether to construct scalar or vector-valued versions by setting the ``D`` type argument when calling the constructor.
@@ -56,63 +53,14 @@ Use the :func:`opendp.accuracy.laplacian_scale_to_accuracy` and :func:`opendp.ac
      - Input Domain
      - Input Metric
      - Output Measure
-   * - :func:`opendp.measurements.make_base_discrete_laplace`
-     - ``AtomDomain<int>``
-     - ``AbsoluteDistance<int>``
+   * - :func:`opendp.measurements.make_laplace`
+     - ``AtomDomain<T>``
+     - ``AbsoluteDistance<T>``
      - ``MaxDivergence<QO>``
-   * - :func:`opendp.measurements.make_base_discrete_laplace`
-     - ``VectorDomain<AtomDomain<int>>``
-     - ``L1Distance<int>``
+   * - :func:`opendp.measurements.make_laplace`
+     - ``VectorDomain<AtomDomain<T>>``
+     - ``L1Distance<T>``
      - ``MaxDivergence<QO>``
-   * - :func:`opendp.measurements.make_base_laplace`
-     - ``AtomDomain<float>``
-     - ``AbsoluteDistance<float>``
-     - ``MaxDivergence<float>``
-   * - :func:`opendp.measurements.make_base_laplace`
-     - ``VectorDomain<AtomDomain<float>>``
-     - ``L1Distance<float>``
-     - ``MaxDivergence<float>``
-
-
-There are more granular versions of these constructors, should you need them:
-
-.. raw:: html
-
-   <details style="margin:-1em 0 2em 4em">
-   <summary><a>Expand Me</a></summary>
-
-The primary constructors above switch between the cks20 and linear-time sampling algorithms depending on the noise scale. 
-If the noise scale is greater than 10, the cks20 algorithm is more efficient.
-You can use these constructors to invoke the underlying algorithm directly.
-In addition, the linear-time algorithm supports a constant-time execution mode if noise bounds are passed.
-
-.. list-table::
-   :header-rows: 1
-
-   * - Measurement
-     - Input Domain
-     - Input Metric
-     - Output Measure
-   * - :func:`opendp.measurements.make_base_discrete_laplace_cks20`
-     - ``AtomDomain<int>``
-     - ``AbsoluteDistance<int>``
-     - ``MaxDivergence<QO>``
-   * - :func:`opendp.measurements.make_base_discrete_laplace_cks20`
-     - ``VectorDomain<AtomDomain<int>>``
-     - ``L1Distance<int>``
-     - ``MaxDivergence<QO>``
-   * - :func:`opendp.measurements.make_base_discrete_laplace_linear`
-     - ``AtomDomain<int>``
-     - ``AbsoluteDistance<int>``
-     - ``MaxDivergence<QO>``
-   * - :func:`opendp.measurements.make_base_discrete_laplace_linear`
-     - ``VectorDomain<AtomDomain<int>>``
-     - ``L1Distance<int>``
-     - ``MaxDivergence<QO>``
-
-.. raw:: html
-
-   </details>
 
 
 Gaussian Noise
@@ -129,28 +77,20 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
      - Input Domain
      - Input Metric
      - Output Measure
-   * - :func:`opendp.measurements.make_base_discrete_gaussian`
-     - ``AtomDomain<int>``
+   * - :func:`opendp.measurements.make_gaussian`
+     - ``AtomDomain<T>``
      - ``AbsoluteDistance<QI>``
      - ``ZeroConcentratedDivergence<QO>``
-   * - :func:`opendp.measurements.make_base_discrete_gaussian`
-     - ``VectorDomain<AtomDomain<int>>``
+   * - :func:`opendp.measurements.make_gaussian`
+     - ``VectorDomain<AtomDomain<T>>``
      - ``L2Distance<QI>``
      - ``ZeroConcentratedDivergence<QO>``
-   * - :func:`opendp.measurements.make_base_gaussian`
-     - ``AtomDomain<float>``
-     - ``AbsoluteDistance<float>``
-     - ``ZeroConcentratedDivergence<float>``
-   * - :func:`opendp.measurements.make_base_gaussian`
-     - ``VectorDomain<AtomDomain<float>>``
-     - ``L2Distance<float>``
-     - ``ZeroConcentratedDivergence<float>``
 
 
 Geometric Noise
 ***************
-The geometric mechanism (:func:`make_base_geometric <opendp.measurements.make_base_geometric>`) is an alias for the discrete laplace (:func:`make_base_discrete_laplace <opendp.measurements.make_base_discrete_laplace>`).
-If you need constant-time execution to protect against timing side-channels, use :func:`opendp.measurements.make_base_discrete_laplace_linear`, which is equivalent to the previous algorithm.
+The geometric mechanism (:func:`make_geometric <opendp.measurements.make_geometric>`) is an alias for the discrete Laplace (:func:`make_laplace <opendp.measurements.make_laplace>`).
+If you need constant-time execution to protect against timing side-channels, specify bounds!
 
 
 Noise Addition with Thresholding
