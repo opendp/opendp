@@ -451,7 +451,7 @@ impl<D: Domain> Domain for VectorDomain<D> {
 pub type BitVector = BitVec<u8, Lsb0>;
 
 /// A domain that contains all vectors of only Boolean values
-/// 
+///
 /// If a maximum weight is specified, then it is restricted to all vectors up to a specified Hamming weight
 #[derive(Clone, PartialEq)]
 pub struct BitVectorDomain {

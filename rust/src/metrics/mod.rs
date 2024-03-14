@@ -296,7 +296,6 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, HammingDistance) {
     }
 }
 
-
 /// The $L_p$ distance between two vector-valued aggregates.
 ///
 /// # Proof Definition

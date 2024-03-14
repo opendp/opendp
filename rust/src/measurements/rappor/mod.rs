@@ -77,14 +77,14 @@ pub fn make_rappor(
 
 #[bootstrap(features("contrib"))]
 /// Convert a vector of RAPPOR responses to a frequency estimate
-/// 
+///
 /// # Arguments
 /// * `answers` - A vector of BitVectors with consistent size
 /// * `f` - The per bit flipping probability used to encode `answers`
-/// 
+///
 /// Computes the sum of the answers into a $k$-length vector $Y$ and returns
 /// ```math
-/// Y\frac{Y-\frac{f}{2}}{1-f} 
+/// Y\frac{Y-\frac{f}{2}}{1-f}
 /// ```
 pub fn debias_basic_rappor(answers: Vec<BitVector>, f: f64) -> Fallible<Vec<f64>> {
     if answers.len() == 0 {
