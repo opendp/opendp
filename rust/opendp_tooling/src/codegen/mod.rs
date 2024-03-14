@@ -8,7 +8,6 @@ use crate::{Argument, TypeRecipe};
 pub mod python;
 pub mod r;
 
-#[allow(dead_code)]
 pub fn write_bindings(base_dir: PathBuf, files: HashMap<PathBuf, String>) {
     for (file_path, file_contents) in files {
         File::create(base_dir.join(file_path))
@@ -44,7 +43,6 @@ pub(crate) fn tab_c(text: String) -> String {
 }
 
 /// resolve references to derived types
-#[allow(dead_code)]
 fn flatten_type_recipe(type_recipe: &TypeRecipe, derived_types: &Vec<Argument>) -> TypeRecipe {
     let resolve_name = |name: &String| {
         derived_types
