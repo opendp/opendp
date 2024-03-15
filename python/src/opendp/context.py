@@ -181,7 +181,7 @@ def domain_of(T, infer=False) -> Domain:
 
 
 def _metric_of(M) -> Metric:
-    """Constructs an instance of a metric from metric type `M`."""
+    """Constructs an instance of a metric from metric type ``M``."""
     import opendp.typing as ty
     import opendp.metrics as metrics
 
@@ -279,7 +279,15 @@ def unit_of(
 
 
 class Context(object):
-    """A Context coordinates queries to an instance of a privacy ``accountant``."""
+    """A Context coordinates queries to an instance of a privacy :py:attr:`accountant`.
+
+    It is recommended to use the :py:func:`make_sequential_composition <opendp.combinators.make_sequential_composition>` constructor instead of this one.
+
+    :param accountant: The measurement used to spawn the queryable.
+    :param queryable: Executes the queries and tracks the privacy expenditure.
+    :param d_in: An upper bound on the distance between adjacent datasets.
+    :param d_mids: A sequence of privacy losses for each query to be sent to the queryable. Used for compositors.
+    :param d_out: An upper bound on the overall privacy loss. Used for filters."""
 
     accountant: Measurement  # union Odometer once merged
     """The accountant is the measurement used to spawn the queryable.
@@ -296,13 +304,6 @@ class Context(object):
         d_mids=None,
         d_out=None,
     ):
-        """Initializes the context with the given accountant and queryable.
-
-        It is recommended to use the `sequential_composition` constructor instead of this one.
-
-        :param d_in: An upper bound on the distance between adjacent datasets.
-        :param d_mids: A sequence of privacy losses for each query to be sent to the queryable. Used for compositors.
-        :param d_out: An upper bound on the overall privacy loss. Used for filters."""
         self.accountant = accountant
         self.queryable = queryable
         self.d_in = d_in
@@ -323,13 +324,13 @@ class Context(object):
         If the domain is not specified, it will be inferred from the data.
         This makes the assumption that the structure of the data is public information.
 
-        The weights may be a list of numerics, corresponding to how `privacy_loss` should be distributed to each query.
+        The weights may be a list of numerics, corresponding to how ``privacy_loss`` should be distributed to each query.
         Alternatively, pass a single integer to distribute the loss evenly.
 
         :param data: The data to be analyzed.
         :param privacy_unit: The privacy unit of the compositor.
         :param privacy_loss: The privacy loss of the compositor.
-        :param weights: How to distribute `privacy_loss` among the queries.
+        :param weights: How to distribute ``privacy_loss`` among the queries.
         :param domain: The domain of the data."""
         if domain is None:
             domain = domain_of(data, infer=True)
@@ -396,10 +397,10 @@ class Query(object):
     _output_measure: Measure
     """The output measure of the query."""
     _context: Optional["Context"]
-    """The context that the query is part of. `query.release()` submits `_chain` to `_context`."""
+    """The context that the query is part of. ``query.release()`` submits ``_chain`` to ``_context``."""
     _wrap_release: Optional[Callable[[Any], Any]]
     """For internal use. A function that wraps the release of the query. 
-    Used to wrap the response of compositor/odometer queries in another `Analysis`."""
+    Used to wrap the response of compositor/odometer queries in another ``Analysis``."""
 
     def __init__(
         self,
@@ -412,7 +413,7 @@ class Query(object):
     ) -> None:
         """Initializes the query with the given chain and output measure.
 
-        It is more convenient to use the `context.query()` constructor than this one.
+        It is more convenient to use the ``context.query()`` constructor than this one.
         However, this can be used stand-alone to help build a transformation/measurement that is not part of a context.
 
         :param chain: an initial metric space (tuple of domain and metric) or transformation
@@ -435,9 +436,9 @@ class Query(object):
             raise AttributeError(f"Unrecognized constructor: '{name}'")
 
         def make(*args, **kwargs) -> "Query":
-            """Wraps the `make_{name}` constructor to allow one optional parameter and chains it to the current query.
+            """Wraps the ``make_{name}`` constructor to allow one optional parameter and chains it to the current query.
 
-            This function will be called when the user calls `query.{name}(...)`.
+            This function will be called when the user calls ``query.{name}(...)``.
             """
             constructor, is_partial = constructors[name]
 
@@ -675,9 +676,9 @@ def _sequential_composition_by_weights(
 
 
 def _cast_measure(chain, to_measure=None, d_to=None):
-    """Casts the output measure of a given `chain` to `to_measure`.
+    """Casts the output measure of a given ``chain`` to ``to_measure``.
 
-    If provided, `d_to` is the privacy loss wrt the new measure.
+    If provided, ``d_to`` is the privacy loss wrt the new measure.
     """
     if to_measure is None or chain.output_measure == to_measure:
         return chain
@@ -700,7 +701,7 @@ def _cast_measure(chain, to_measure=None, d_to=None):
 
 
 def _translate_measure_distance(d_from, from_measure, to_measure):
-    """Translate a privacy loss `d_from` from `from_measure` to `to_measure`.
+    """Translate a privacy loss ``d_from`` from ``from_measure`` to ``to_measure``.
     """
     if from_measure == to_measure:
         return d_from # pragma: no cover
