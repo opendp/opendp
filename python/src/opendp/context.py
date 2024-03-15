@@ -118,7 +118,8 @@ def domain_of(T, infer=False) -> Domain:
 
     Accepts a limited set of Python type expressions:
 
-    >>> domain_of(list[int])
+    >>> from typing import List  # Or just use regular "list" after python 3.8.
+    >>> domain_of(List[int])
     VectorDomain(AtomDomain(T=i32))
     
     As well as strings representing types in the underlying Rust syntax:
