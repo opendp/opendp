@@ -77,8 +77,6 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
 
     A metric space consists of a domain and a metric.
 
-    :example:
-
     >>> import opendp.prelude as dp
     >>> from typing import List # in Python 3.9, can just write list[int] below
     ...
@@ -250,8 +248,19 @@ def unit_of(
     U=None,
 ) -> Tuple[Metric, float]:
     """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
+    The parameters are mutually exclusive.
 
-    :param ordered: Set to true to use InsertDeleteDistance instead of SymmetricDistance, or HammingDistance instead of ChangeOneDistance.
+    >>> unit_of(contributions=3)
+    (SymmetricDistance(), 3)
+    >>> unit_of(l1=2.0)
+    (L1Distance(f64), 2.0)
+
+    :param contributions: TODO
+    :param changes: TODO
+    :param absolute: TODO
+    :param l1: TODO
+    :param l2: TODO
+    :param ordered: Set to ``True`` to use ``InsertDeleteDistance`` instead of ``SymmetricDistance``, or ``HammingDistance`` instead of ``ChangeOneDistance``.
     :param U: The type of the dataset distance."""
 
     def _is_distance(p, v):
@@ -324,13 +333,13 @@ class Context(object):
         If the domain is not specified, it will be inferred from the data.
         This makes the assumption that the structure of the data is public information.
 
-        The weights may be a list of numerics, corresponding to how ``privacy_loss`` should be distributed to each query.
-        Alternatively, pass a single integer to distribute the loss evenly.
+        ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.
 
         :param data: The data to be analyzed.
         :param privacy_unit: The privacy unit of the compositor.
         :param privacy_loss: The privacy loss of the compositor.
-        :param weights: How to distribute ``privacy_loss`` among the queries.
+        :param split_evenly_over: The number of parts to evenly distribute the privacy loss
+        :param split_by_weights: A list of weights for each intermediate privacy loss
         :param domain: The domain of the data."""
         if domain is None:
             domain = domain_of(data, infer=True)
@@ -626,13 +635,16 @@ def _sequential_composition_by_weights(
     split_evenly_over: Optional[int] = None,
     split_by_weights: Optional[List[float]] = None,
 ) -> Tuple[Measurement, List[Any]]:
-    """constructs a sequential composition measurement
-    where the d_mids are proportional to the weights
+    """Constructs a sequential composition measurement
+    where the ``d_mids`` are proportional to the weights.
+
+    ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.
 
     :param domain: the domain of the data
-    :param privacy_unit: a tuple of the input metric and the data distance (d_in)
-    :param privacy_loss: a tuple of the output measure and the privacy loss (d_out)
-    :param weights: either a list of weights for each intermediate privacy loss, or the number of ways to evenly distribute the privacy loss
+    :param privacy_unit: a tuple of the input metric and the data distance (``d_in``)
+    :param privacy_loss: a tuple of the output measure and the privacy loss (``d_out``)
+    :param split_evenly_over: The number of parts to evenly distribute the privacy loss
+    :param split_by_weights: A list of weights for each intermediate privacy loss
     """
     input_metric, d_in = privacy_unit
     output_measure, d_out = privacy_loss
