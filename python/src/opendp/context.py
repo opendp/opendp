@@ -127,29 +127,25 @@ def domain_of(T, infer=False) -> Domain:
     >>> domain_of('Vec<int>')
     VectorDomain(AtomDomain(T=i32))
 
-    Dictionaries, optional types, and primitive types are also supported:
+    Dictionaries, optional types, and a range of primitive types are supported:
 
     >>> domain_of(dict[str, int])
     MapDomain { key_domain: AtomDomain(T=String), value_domain: AtomDomain(T=i32) }
     
-    .. TODO
-    .. >>> domain_of(Optional[int])
-    .. errors!
-
+    .. TODO: Support python syntax: https://github.com/opendp/opendp/issues/1389
     >>> domain_of('Option<int>')
     OptionDomain(AtomDomain(T=i32))
     
-    >>> domain_of(int)
+    >>> import opendp.prelude as dp
+    >>> domain_of(dp.i32)
     AtomDomain(T=i32)
 
     More complex types are not supported:
 
-    .. >>> domain_of(List[List[int]])
-    .. TODO: Ellipsis not working as expected.
+    >>> domain_of(List[List[int]])
     Traceback (most recent call last):
     ...
-    opendp.mod.OpenDPException:
-      FFI("VectorDomain constructor only supports AtomDomain or UserDomain inner domains")
+    opendp.mod.OpenDPException
 
     Alternatively, an example of the data can be provided, but note that passing sensitive data may result in a privacy violation:
 
