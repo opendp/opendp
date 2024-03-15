@@ -6,6 +6,7 @@ from datetime import datetime
 import semver
 import pypandoc
 import re
+from sphinx.ext import autodoc
 
 # docs should be built without needing import the library binary for the specified version
 os.environ["OPENDP_HEADLESS"] = "true"
@@ -243,3 +244,15 @@ nbsphinx_prolog = r"""
       <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp/{{ frag|e }}?filepath={{ docname|e }}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
     </div>
 """
+
+class CustomClassDocumenter(autodoc.ClassDocumenter):
+    '''
+    Removes unneeded note from base classes.
+    From https://stackoverflow.com/a/75041544/10727889
+    '''
+    def add_line(self, line: str, source: str, *lineno: int) -> None:
+        if line == "   Bases: :py:class:`object`":
+            return
+        super().add_line(line, source, *lineno)
+
+autodoc.ClassDocumenter = CustomClassDocumenter
