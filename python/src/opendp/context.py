@@ -91,7 +91,7 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
 
     :param T: carrier type (the type of members in the domain)
     :param M: metric type
-    :param infer: if True, `T` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
+    :param infer: if True, ``T`` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
     """
     import opendp.typing as ty
 
@@ -133,6 +133,7 @@ def domain_of(T, infer=False) -> Domain:
     MapDomain { key_domain: AtomDomain(T=String), value_domain: AtomDomain(T=i32) }
     
     .. TODO: Support python syntax: https://github.com/opendp/opendp/issues/1389
+
     >>> domain_of('Option<int>')
     OptionDomain(AtomDomain(T=i32))
     
@@ -153,7 +154,7 @@ def domain_of(T, infer=False) -> Domain:
     VectorDomain(AtomDomain(T=i32))
 
     :param T: carrier type
-    :param infer: if True, `T` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
+    :param infer: if True, ``T`` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
     """
     import opendp.typing as ty
     from opendp.domains import vector_domain, atom_domain, option_domain, map_domain
@@ -215,10 +216,14 @@ def loss_of(*, epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, flo
 
     :param U: The type of the privacy parameter.
 
-    >>> from opendp.context import loss_of
-    >>> measure, distance = loss_of(epsilon=1.0)
-    >>> measure, distance = loss_of(epsilon=1.0, delta=1e-9)
-    >>> measure, distance = loss_of(rho=1.0)
+    .. TODO: repr for Measure: https://github.com/opendp/opendp/issues/1390
+
+    >>> loss_of(epsilon=1.0)  # doctest: +ELLIPSIS
+    (<opendp.mod.Measure object at ...>, 1.0)
+    >>> loss_of(epsilon=1.0, delta=1e-9)  # doctest: +ELLIPSIS
+    (<opendp.mod.Measure object at ...>, (1.0, 1e-09))
+    >>> loss_of(rho=1.0)  # doctest: +ELLIPSIS
+    (<opendp.mod.Measure object at ...>, 1.0)
     """
     if epsilon is None and rho is None:
         raise ValueError("Either epsilon or rho must be specified.")
