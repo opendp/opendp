@@ -96,7 +96,7 @@ Let's apply Laplace noise to a value.
 This is obviously not the easiest way to add noise to a number,
 but it demonstrates a number of OpenDP patterns:
 
-* Defining your metric space with ``space_of`` with Python's Context API, or a (domain, distance) tuple in any language.
+* Defining your metric space with ``space_of`` in Python's Context API, or a (domain, distance) tuple in any language..
 * Chaining operators together with ``>>`` in Python and Rust, or ``|>`` in R.
-* Constructing a ``Measurement`` function on your metric space with ``then_base_laplace``.
+* Constructing a ``Measurement`` function on your metric space with ``then_laplace``.
 * Invoking that measurement on a value to get a DP release.

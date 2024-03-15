@@ -23,7 +23,7 @@ def main():
         dp.t.then_cast_default(TOA=int) >>
         dp.t.then_clamp(bounds=(0, 10)) >>
         dp.t.then_sum() >>
-        dp.m.then_base_discrete_laplace(scale=1.0)
+        dp.m.then_laplace(scale=1.0)
     )
 
     # Count, col 2
@@ -31,7 +31,7 @@ def main():
         dp.t.make_select_column(key="C", TOA=str) >>
         dp.t.then_cast_default(TOA=float) >>
         dp.t.then_count() >>
-        dp.m.then_base_discrete_laplace(scale=1.0)
+        dp.m.then_laplace(scale=1.0)
     )
 
     arg = "ant, 1, 1.1\nbat, 2, 2.2\ncat, 3, 3.3"

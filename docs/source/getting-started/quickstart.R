@@ -5,6 +5,6 @@ enable_features("contrib")
 
 # demo
 space <- c(atom_domain(.T = "f64"), absolute_distance(.T = "f64"))
-base_laplace <- space |> then_base_laplace(1.)
-dp_value <- base_laplace(arg = 123.0)
+laplace_mechanism <- space |> then_laplace(1.)
+dp_value <- laplace_mechanism(arg = 123.0)
 # /demo
