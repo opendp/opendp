@@ -84,7 +84,6 @@ jobs:
           echo "Create docs."
           make versions
           cp -r build /tmp
-          cp 404.html /tmp
           cd ..
           git fetch
           git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
