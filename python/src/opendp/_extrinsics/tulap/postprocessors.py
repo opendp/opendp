@@ -1,17 +1,17 @@
 import opendp.prelude as dp
 import math
-import numpy as np  # type: ignore[import]
-from scipy.stats import binom  # type: ignore[import]
-import scipy  # type: ignore[import]
-
+import numpy as np
+from scipy.stats import binom
+import scipy
 dp.enable_features("contrib")
 
-
-def _ptulap(t, m=0, b=0, q=0):
+def _ptulap(t, m=0, epsilon=0, delta=0):
+    t = np.atleast_1d(t)
+    b = math.exp(-epsilon)  
+    q = (2 * delta * b) / (1 - b + 2 * delta * b)  
     lcut = q / 2
     rcut = q / 2
     t = t - m  # normalize
-    # split the positive and negative t calculations, and factor out stuff
     r = np.rint(t)
     g = -math.log(b)
     l = math.log(1 + b)
@@ -37,29 +37,45 @@ def _ptulap(t, m=0, b=0, q=0):
 
 # define a public API. How about this one?
 class Tulap(object):
-    def __init__(self, data, epsilon, delta) -> None:
+    def __init__(self, data, epsilon, delta, theta, size) -> None:
         self.data = data
         self.epsilon = epsilon
         self.delta = delta
+        self.theta = theta
+        self.size = size
 
-    def ump_test(self, theta, size, alpha, tail):
-        postprocessor = make_ump_test(theta, size, alpha, self.epsilon, self.delta, tail)
+
+    def ump_test(self, alpha, tail):
+        postprocessor = _make_ump_test(self.theta, self.size, alpha, self.epsilon, self.delta, tail)
         return postprocessor(self.data)
 
-    def p_value():
-        pass
+    def CI(self, alpha, tail=None):
+        if tail is None:
+            postprocessor = _make_CI_twoside(alpha, self.size, self.epsilon, self.delta)
+        elif tail in {"lower", "upper"}:
+            postprocessor = _make_CI_oneside(alpha, self.size, self.epsilon, self.delta, tail)
+        else:
+            raise ValueError("tail must be None, left or right")
+
+        return postprocessor(self.data)
+
+    def p_value(self, tail=None):
+        if tail is None:
+            postprocessor = _make_twoside_pvalue(self.theta, self.size, self.epsilon, self.delta)
+        elif tail in {"left", "right"}:
+            postprocessor = _make_oneside_pvalue(self.theta, self.size, self.epsilon, self.delta, tail)
+        else:
+            raise ValueError("tail must be None, left or right")
+
+        return postprocessor(self.data)
 
 
-def make_tulap_analysis(input_domain, input_metric, epsilon, delta) -> dp.Measurement:
+def make_binomial_tulap(input_domain, input_metric, epsilon, delta) -> dp.Measurement:
     from opendp.measurements import make_tulap
     return make_tulap(input_domain, input_metric, epsilon, delta) >> (lambda data: Tulap(data, epsilon, delta))
 
 
-# meas = make_tulap_analysis(...)
-# tulap = meas(data)
-# tulap.p_value(...)
-
-def make_ump_test(theta, size, alpha, epsilon, delta, tail):
+def _make_ump_test(theta, size, alpha, epsilon, delta, tail):
     def function(data):
         b = math.exp(-epsilon)
         q = 2 * delta * b / (1 - b + 2 * delta * b)
@@ -68,7 +84,7 @@ def make_ump_test(theta, size, alpha, epsilon, delta, tail):
 
         def obj(s):
             values_array = np.array(values)
-            phi = _ptulap(t=values_array - s, m=0, b=b, q=q)
+            phi = _ptulap(t=values_array - s, m=0, epsilon=epsilon, delta=delta)
             return np.dot(B, phi) - alpha
 
         lower = -1
@@ -81,17 +97,17 @@ def make_ump_test(theta, size, alpha, epsilon, delta, tail):
         root = scipy.optimize.brentq(obj, lower, upper)
         s = root
         values_array = np.array(values)
-        phi = _ptulap(t=values_array - s, m=0, b=b, q=q)
+        phi = _ptulap(t=values_array - s, m=0, epsilon=epsilon, delta=delta)
 
         if data and tail == "left":
             return phi
         elif data and tail == "right":
             return 1 - phi
 
-    return dp.new_function(function, TO=dp.Vec[float])
+    return function
 
-
-def make_oneside_pvalue(theta, size, b, q, tail):
+# should take in Z
+def _make_oneside_pvalue(theta, size, epsilon, delta, tail):
     """Right tailed p-value
 
     :param theta: true probability of binomial distribution
@@ -99,12 +115,13 @@ def make_oneside_pvalue(theta, size, b, q, tail):
     :param b
     :param q: tulap parameters
     """
-
+    b = math.exp(-epsilon)  
+    q = (2 * delta * b) / (1 - b + 2 * delta * b)  
     def function(Z):
         """
         :param Z: tulap random variables
         """
-        Z = np.array(Z)
+        Z = np.array(Z) 
         reps = Z.size  # sample size
         if reps > 1:
             pval = [0] * reps
@@ -114,9 +131,9 @@ def make_oneside_pvalue(theta, size, b, q, tail):
 
             for r in range(reps):
                 if tail == "right":
-                    F = _ptulap(t=values - Z[r], m=0, b=b, q=q)
+                    F = _ptulap(t=values - Z[r], m=0, epsilon=epsilon, delta=delta)
                 elif tail == "left":
-                    F = 1 - _ptulap(t=values - Z[r], m=0, b=b, q=q)
+                    F = 1 - _ptulap(t=values - Z[r], m=0, epsilon=epsilon, delta=delta)
                 pval[r] = np.dot(F.T, B)
             return pval
 
@@ -125,31 +142,35 @@ def make_oneside_pvalue(theta, size, b, q, tail):
             values = np.array(range(size))
             B = binom.pmf(k=values, n=size, p=theta)
             if tail == "right":
-                F = _ptulap(t=values - Z, m=0, b=b, q=q)
+                F = _ptulap(t=values - Z, m=0, epsilon=epsilon, delta=delta)
             elif tail == "left":
-                F = 1 - _ptulap(t=values - Z, m=0, b=b, q=q)
+                F = 1 - _ptulap(t=values - Z, m=0, epsilon=epsilon, delta=delta)
             pval[0] = np.dot(F.T, B)
             return pval[0]
 
-    return dp.new_function(function, TO=dp.Vec[float])
+    return function
 
 
-def make_twoside_pvalue(theta, size, b, q):
+def _make_twoside_pvalue(theta, size, epsilon, delta):
+    b = math.exp(-epsilon)  
+    q = (2 * delta * b) / (1 - b + 2 * delta * b)  
     def function(Z):
         Z = np.array(Z) if not isinstance(Z, np.ndarray) else Z
 
         T = abs(Z - size * theta)
-        pval_right = make_oneside_pvalue(theta, size, b, q, "right")(T + size * theta)
-        pval_left = make_oneside_pvalue(theta, size, b, q, "right")(size * theta - T)
+        pval_right = _make_oneside_pvalue(theta, size,epsilon, delta, "right")(T + size * theta)
+        pval_left = _make_oneside_pvalue(theta, size, epsilon, delta, "right")(size * theta - T)
 
         pval = np.subtract(pval_right, pval_left) + 1
 
         return pval  # Ensure this is a vector if Z is a vector
 
-    return dp.new_function(function, TO=dp.Vec[float])
+    return function
 
 
-def make_CI(alpha, size, b, q, tail):
+def _make_CI_oneside(alpha, size, epsilon, delta, tail):
+    b = math.exp(-epsilon)  
+    q = (2 * delta * b) / (1 - b + 2 * delta * b)  
     from scipy.optimize import OptimizeResult, minimize_scalar  # type: ignore[import]
 
     def custmin(
@@ -210,26 +231,29 @@ def make_CI(alpha, size, b, q, tail):
             fun=besty, x=bestx, nit=niter, nfev=funcalls, success=(niter > 1)
         )
 
-    def function(Z):
+    def function(Z): # should not take a vector
         Z = np.array(Z) if not isinstance(Z, np.ndarray) else Z
         if tail == "lower":
-            CIobj = lambda x: (
-                (make_oneside_pvalue(x, size=size, b=b, q=q, tail="right")(Z)) - alpha
-            )
+            CIobj = lambda x: (_make_oneside_pvalue(x, size=size, epsilon=epsilon, delta=delta, tail="right")(Z)[0]) - alpha
+
         elif tail == "upper":
             CIobj = lambda x: (
-                (make_oneside_pvalue(x, size=size, b=b, q=q, tail="right")(Z))
+                (_make_oneside_pvalue(x, size=size, epsilon=epsilon, delta=delta, tail="right")(Z))
                 - (1 - alpha)
             )
         L = minimize_scalar(
             fun=CIobj, method=custmin, bracket=(0, 1)
-        )  # args already set in CIobj
+        )  
         return L.x
 
-    return dp.new_function(function, TO=dp.Vec[float])
+    return function
+# the postprocessor should take a vector and return the funtion without the vector
 
 
-def make_CI_twoside(alpha, size, b, q):
+## this doesn't work
+def _make_CI_twoside(alpha, size, epsilon, delta):
+    b = math.exp(-epsilon)  
+    q = (2 * delta * b) / (1 - b + 2 * delta * b)  
     from scipy.optimize import OptimizeResult, minimize_scalar
 
     def custmin(
@@ -256,46 +280,53 @@ def make_CI_twoside(alpha, size, b, q):
 
         while lower <= upper:
             mid = (lower + upper) / 2.00
-            # print("low: ", lower, "up: ", upper)
-            # print("mid: ", mid)
-            # print("diff: ", fun(mid, *args))
+            print("low: ", lower, "up: ", upper)
+            print("mid: ", mid)
+            print("diff: ", fun(mid, *args))
             funcalls += 1
             niter += 1
             if fun(mid, *args) == 0:
-                # print("diff = 0")
+                print("diff = 0")
                 besty = fun(mid, *args)
                 bestx = mid
                 return OptimizeResult(
                     fun=besty, x=bestx, nit=niter, nfev=funcalls, success=(niter > 1)
                 )
             elif abs(fun(mid, *args)) <= min_diff:
-                # print("diff <= min_diff")
+                print("diff <= min_diff")
                 besty = fun(mid, *args)
                 bestx = mid
                 return OptimizeResult(
                     fun=besty, x=bestx, nit=niter, nfev=funcalls, success=(niter > 1)
                 )
             elif fun(mid, *args) > 0:  # mid > alpha
-                # print("diff > 0")
+                print("diff > 0")
                 upper = mid - stepsize
             elif fun(mid, *args) < 0:  # mid < alpha
-                # print("diff < 0")
+                print("diff < 0")
                 lower = mid + stepsize
 
         bestx = mid
         besty = fun(mid, *args)
-        # print("while loop break")
-        # print("low and up: ", lower, upper)
+        print("while loop break")
+        print("low and up: ", lower, upper)
         return OptimizeResult(
             fun=besty, x=bestx, nit=niter, nfev=funcalls, success=(niter > 1)
         )
 
     def function(Z):
+        print ("step 1: inside function z")
         Z = np.array(Z) if not isinstance(Z, np.ndarray) else Z
         mle = Z / size
         mle = max(min(mle, 1), 0)
-        twoside_pvalue_func = make_twoside_pvalue(theta=mle, size=size, b=b, q=q)
-        CIobj2 = lambda x: (twoside_pvalue_func(np.array([Z]))[0] - alpha)
+        print ("step 2: calc z")
+        #twoside_pvalue_func = make_twoside_pvalue(theta=mle, size=size, epsilon=epsilon, delta=delta)
+        print ("step 3: calc twoside_pvalue_func")
+        #CIobj2 = lambda x: (twoside_pvalue_func(np.array([Z]))[0] - alpha)
+        CIobj2 = lambda x: (
+            _make_twoside_pvalue(theta=mle, size=size, epsilon=epsilon, delta=delta)(np.array([x]))[0]
+            - alpha
+        )
 
         if mle > 0:
             L = minimize_scalar(fun=CIobj2, method=custmin, bracket=(0, mle))
@@ -311,5 +342,4 @@ def make_CI_twoside(alpha, size, b, q):
 
         CI = [L, U]
         return CI
-
-    return dp.new_function(function, TO=dp.Vec[float])
+    return function
