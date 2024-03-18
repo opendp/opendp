@@ -198,7 +198,11 @@ jobs:
 
       - name: Lint
         working-directory: R/opendp/
-        run: Rscript -e 'lintr::lint_package()'
+        # Some linters may fail if the package is not pre-loaded with `load_all()`.
+        #   see: https://lintr.r-lib.org/articles/continuous-integration.html#for-packages
+        run: Rscript -e 'pkgload::load_all(); lintr::lint_package()'
+        # `lint_package()` by itself does not fail if there are lints: envvar is needed.
+        #   see: https://github.com/r-lib/actions/issues/537
         env:
           LINTR_ERROR_ON_LINT: true
 
