@@ -18,30 +18,31 @@ TODO: algorithm outline
 \section{Hoare Triple}
 \subsection{Preconditions}
 \begin{itemize}
-	\item Variable \texttt{f} must be of type \texttt{f64}
-	\item Variable \texttt{m} must be of type \texttt{u32} 
-    \item Variable \texttt{constant\_time} must be of type \texttt{bool}
+	\item Variable \texttt{input\_domain} must be of type \rustdoc{domains/struct}{BitVectorDomain}, with \texttt{max\_weight}.
+	\item Variable \texttt{input\_metric} must be of type \rustdoc{metrics/struct}{DiscreteDistance}.
+	\item Variable \texttt{f} must be of type \texttt{f64}.
+    \item Variable \texttt{constant\_time} must be of type \texttt{bool}.
 \end{itemize}
 
 \subsection*{Pseudocode}
 \begin{lstlisting}[language=Python, escapechar=|]
-def make_rappor(f: f64, constant_time: bool):
-    input_domain: VectorDomain<AtomDomain<bool>>,
-    input_metric: DiscreteDistance,
-    output_domain = VectorDomain<AtomDomain<bool>>
-    output_measure = MaxDivergence
+def make_rappor(f: float64, constant_time: bool):
+    input_domain: BitVectorDomain
+    input_metric: DiscreteDistance
+    output_domain = BitVectorDomain
+    output_measure = MaxDivergence(f64)
     
     if (f <= 0.0 or f > 1): |\label{line:range}|
-        raise Exception("probability must be in (0.0, 1]")
-
+        raise Exception("Probability must be in (0.0, 1]")
+    if input_domain.max_weight == None: 
+        raise Exception("RAPPOR requires a maximum number of set bits")
     eps = (2*m)*log((2-f)/f)
     def privacy_map(d_in: IntDistance): |\label{line:map}|
         return eps
-
-    def function(arg: Vec<bool>) -> Vec<bool>: |\label{line:fn}|
-        for b in arg:
-        	b = b |$\veebar$| bool.sample_bernoulli(f/2, constant_time)
-        return arg
+    def function(arg: BitVector) -> BitVector: |\label{line:fn}|
+    	k = len(arg)
+    	noise_vector = [bool.sample_bernoulli(f/2, constant_time) for _ in range(k)]
+    	return xor(arg, noise_vector)
     
     return Measurement(input_domain, function, input_metric, output_measure, privacy_map)
 \end{lstlisting}
