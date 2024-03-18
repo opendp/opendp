@@ -558,7 +558,14 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     See the `Measure <../../api/user-guide/programming-framework/supporting-elements.html#measure>`_
     section in the Programming Framework docs for more context.
 
-    Functions for creating measures are in :py:mod:`opendp.measures`.
+    Measures should be created with the functions in :py:mod:`opendp.measures`
+    or :py:mod:`opendp.context`, for a higher-level interface:
+
+    >>> import opendp.prelude as dp
+    >>> measure, distance = dp.loss_of(epsilon=1.0)
+    >>> measure, distance
+    (MaxDivergence(f64), 1.0)
+
     '''
     _type_ = AnyMeasure
 
@@ -574,7 +581,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
         from opendp.typing import RuntimeType
         return RuntimeType.parse(measure_distance_type(self))
 
-    def __str__(self):
+    def __repr__(self):
         from opendp.measures import measure_debug
         return measure_debug(self)
     
