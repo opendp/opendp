@@ -1,8 +1,8 @@
 # Creates a build for a channel:
-# * Compiles for all platforms, uploads to the lib artifact
+# * Compiles for all platforms, uploads to the lib-{windows,macos,linux} artifacts
 # * Creates Python and R bindings, uploads to the python_bindings and r_bindings artifacts
-# * Downloads the lib and python_bindings artifacts, creates a Python wheel, uploads to the python_wheel artifact
-# * Downloads the lib and r_bindings artifacts, creates an R package, uploads to the r_package artifact
+# * Downloads the lib-* and python_bindings artifacts, creates a Python wheel, uploads to the python_wheel artifact
+# * Downloads the lib-* and r_bindings artifacts, creates an R package, uploads to the r_package artifact
 #
 # INPUTS
 # * channel:  The release channel
@@ -91,7 +91,7 @@ jobs:
       - name: Upload .dll and .a
         uses: actions/upload-artifact@v4
         with:
-          name: libs
+          name: libs-windows
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: |
             rust/target*/release/opendp.dll
@@ -141,7 +141,7 @@ jobs:
       - name: Upload .dylib and .a
         uses: actions/upload-artifact@v4
         with:
-          name: libs
+          name: libs-macos
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: |
             rust/target*/${{ env.TARGET }}/release/libopendp.dylib
@@ -194,7 +194,7 @@ jobs:
       - name: Upload .so and .a
         uses: actions/upload-artifact@v4
         with:
-          name: libs
+          name: libs-linux
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: |
             rust/target*/${{ env.TARGET }}/release/libopendp.so
@@ -262,8 +262,8 @@ jobs:
       - name: Download libs
         uses: actions/download-artifact@v4
         with:
-          name: libs
-          # Artifact contains all libs with leading paths starting at target
+          pattern: libs-*
+          merge-multiple: true
           path: rust/
 
       - name: Download Python bindings
