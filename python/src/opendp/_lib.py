@@ -99,7 +99,7 @@ try:
         buffer_pos += 1
         return int(out)
 
-    np_csprng = np.random.Generator(bit_generator=UserBitGenerator(next_raw))
+    np_csprng = np.random.Generator(bit_generator=UserBitGenerator(next_raw)) # type:ignore
 
 except ImportError:  # pragma: no cover
     pass

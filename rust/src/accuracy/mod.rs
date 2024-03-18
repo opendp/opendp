@@ -285,8 +285,8 @@ pub mod test {
     use crate::domains::AtomDomain;
     use crate::error::ExplainUnwrap;
     use crate::measurements::{
-        make_base_discrete_gaussian, make_base_discrete_laplace, make_base_gaussian,
-        make_base_laplace,
+        make_gaussian, make_scalar_float_gaussian, make_scalar_float_laplace,
+        make_scalar_integer_laplace,
     };
     use crate::measures::ZeroConcentratedDivergence;
     use crate::metrics::AbsoluteDistance;
@@ -505,7 +505,8 @@ pub mod test {
         let scale = accuracy_to_laplacian_scale(accuracy, theoretical_alpha)?;
         let input_domain = AtomDomain::default();
         let input_metric = AbsoluteDistance::default();
-        let base_laplace = make_base_laplace(input_domain, input_metric, scale, Some(-100))?;
+        let base_laplace =
+            make_scalar_float_laplace(input_domain, input_metric, scale, Some(-100))?;
         let n = 50_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_laplace.invoke(&0.0).unwrap().abs() > accuracy)
@@ -524,7 +525,7 @@ pub mod test {
         let accuracy = 1.0;
         let theoretical_alpha = 0.05;
         let scale = accuracy_to_gaussian_scale(accuracy, theoretical_alpha)?;
-        let base_gaussian = make_base_gaussian::<_, ZeroConcentratedDivergence<_>>(
+        let base_gaussian = make_scalar_float_gaussian::<ZeroConcentratedDivergence<f64>, _>(
             AtomDomain::default(),
             AbsoluteDistance::default(),
             scale,
@@ -551,7 +552,7 @@ pub mod test {
         println!("scale: {scale}");
         let input_domain = AtomDomain::<i32>::default();
         let input_metric = AbsoluteDistance::default();
-        let base_dl = make_base_discrete_laplace(input_domain, input_metric, scale)?;
+        let base_dl = make_scalar_integer_laplace(input_domain, input_metric, scale)?;
         let n = 50_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_dl.invoke(&0).unwrap().clamp(-127, 127).abs() >= accuracy)
@@ -573,14 +574,15 @@ pub mod test {
         // let scale = 12.503562372734077;
 
         println!("scale: {}", scale);
-        let base_dg = make_base_discrete_gaussian::<_, ZeroConcentratedDivergence<f64>, i32>(
+        let base_dg = make_gaussian::<_, ZeroConcentratedDivergence<f64>, i32>(
             AtomDomain::<i8>::default(),
             AbsoluteDistance::default(),
             scale,
+            None,
         )?;
         let n = 50_000;
         let empirical_alpha = (0..n)
-            .filter(|_| base_dg.invoke(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
+            .filter(|_| base_dg.invoke(&0).unwrap().clamp(-127, 127).abs() >= accuracy)
             .count() as f64
             / n as f64;
 

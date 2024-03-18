@@ -268,7 +268,7 @@ macro_rules! impl_inf_cast_int_float {
 
 cartesian!([u8, u16, i8, i16], [f32, f64], impl_inf_cast_from);
 cartesian!(
-    [u64, u128, i64, i128, usize],
+    [u64, u128, i64, i128, usize, isize],
     [f32, f64],
     impl_inf_cast_int_float
 );

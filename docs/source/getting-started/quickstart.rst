@@ -74,5 +74,5 @@ but it demonstrates a number of OpenDP patterns:
 
 * Defining your metric space with ``space_of`` in Python.
 * Chaining operators together with ``>>`` in Python, or ``|>`` in R.
-* Constructing a ``Measurement`` function on your metric space with ``then_base_laplace``.
+* Constructing a ``Measurement`` function on your metric space with ``then_laplace``.
 * Invoking that measurement on a value to get a DP release.

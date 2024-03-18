@@ -318,7 +318,7 @@ test_that("test_lipschitz_b_ary_tree", {
         c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
         then_count_by_categories(categories = c("A", "B", "C", "D", "E", "F")) |>
         then_b_ary_tree(leaf_count, branching_factor) |>
-        then_base_geometric(1.) |>
+        then_geometric(1.) |>
         then_consistent_b_ary_tree(branching_factor)
 
     meas_cdf <- meas_base |> then_cdf()

@@ -34,7 +34,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     >>> dp.enable_features("contrib")
 
     >>> # create an instance of Measurement using a constructor from the meas module
-    >>> base_dl: dp.Measurement = dp.m.make_base_discrete_laplace(
+    >>> base_dl: dp.Measurement = dp.m.make_laplace(
     ...     dp.atom_domain(T=int), dp.absolute_distance(T=int),
     ...     scale=2.)
 
@@ -722,7 +722,7 @@ def binary_search_chain(
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.
     >>> # The lambda function returns the complete computation chain when given a single numeric parameter.
     >>> chain = dp.binary_search_chain(
-    ...     lambda s: pre >> dp.m.then_base_laplace(scale=s), 
+    ...     lambda s: pre >> dp.m.then_laplace(scale=s), 
     ...     d_in=1, d_out=1.)
     ...
     >>> # The resulting computation chain is always (`d_in`, `d_out`)-close, but we can still double-check:
@@ -773,7 +773,7 @@ def binary_search_param(
     ...
     >>> def make_fixed_laplace(scale):
     ...     # fixes the input domain and metric, but parameterizes the noise scale
-    ...     return dp.m.make_base_laplace(dp.atom_domain(T=float), dp.absolute_distance(T=float), scale)
+    ...     return dp.m.make_laplace(dp.atom_domain(T=float), dp.absolute_distance(T=float), scale)
     ...
     >>> scale = dp.binary_search_param(make_fixed_laplace, d_in=0.1, d_out=1.)
     >>> assert scale == 0.1
@@ -794,7 +794,7 @@ def binary_search_param(
     ...    return (
     ...        (dp.vector_domain(dp.atom_domain(bounds=(0., 500_000.)), data_size), dp.symmetric_distance()) >>
     ...        dp.t.then_mean() >> 
-    ...        dp.m.then_base_laplace(necessary_scale)
+    ...        dp.m.then_laplace(necessary_scale)
     ...    )
     ...
     >>> # solve for the smallest dataset size that admits a (2 neighboring, 1. epsilon)-close measurement
