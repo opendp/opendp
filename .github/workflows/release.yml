@@ -53,7 +53,7 @@ on:
         required: false
         default: 0
       kind:
-        description: \"dry-run\" is a complete build without deploy; \"fake\" skips every slow step.
+        description: A "dry-run" is a complete build except for deploy, while "fake" skips every slow step.
         type: choice
         options:
           - real
