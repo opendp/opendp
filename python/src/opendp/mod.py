@@ -34,24 +34,30 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     >>> dp.enable_features("contrib")
 
     >>> # create an instance of Measurement using a constructor from the meas module
-    >>> base_dl: dp.Measurement = dp.m.make_laplace(
+    >>> laplace = dp.m.make_laplace(
     ...     dp.atom_domain(T=int), dp.absolute_distance(T=int),
     ...     scale=2.)
+    >>> laplace
+    Measurement(
+        input_domain   = AtomDomain(T=i32),
+        input_metric   = AbsoluteDistance(i32),
+        output_measure = MaxDivergence(f64)
+    )
 
     >>> # invoke the measurement (invoke and __call__ are equivalent)
-    >>> print('explicit: ', base_dl.invoke(100))  # -> 101   # doctest: +ELLIPSIS
+    >>> print('explicit: ', laplace.invoke(100))  # -> 101   # doctest: +ELLIPSIS
     explicit: ...
-    >>> print('concise: ', base_dl(100))  # -> 99            # doctest: +ELLIPSIS
+    >>> print('concise: ', laplace(100))  # -> 99            # doctest: +ELLIPSIS
     concise: ...
     >>> # check the measurement's relation at
     >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence)
-    >>> assert base_dl.check(1, 0.5)
+    >>> assert laplace.check(1, 0.5)
 
     >>> # chain with a transformation from the trans module
     >>> chained = (
     ...     (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()) >>
     ...     dp.t.then_count() >>
-    ...     base_dl
+    ...     laplace
     ... )
 
     >>> # the resulting measurement has the same features
@@ -191,8 +197,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
     
-    def __str__(self) -> str:
-        return f"Measurement(\n    input_domain   = {self.input_domain}, \n    input_metric   = {self.input_metric}, \n    output_measure = {self.output_measure}\n)" # pragma: no cover
+    def __repr__(self) -> str:
+        return f"Measurement(\n    input_domain   = {self.input_domain},\n    input_metric   = {self.input_metric},\n    output_measure = {self.output_measure}\n)" # pragma: no cover
 
 
 class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
@@ -213,7 +219,14 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
 
     >>> # create an instance of Transformation using a constructor from the trans module
     >>> input_space = (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
-    >>> count: dp.Transformation = input_space >> dp.t.then_count()
+    >>> count = input_space >> dp.t.then_count()
+    >>> count
+    Transformation(
+        input_domain   = VectorDomain(AtomDomain(T=i32)),
+        output_domain  = AtomDomain(T=i32),
+        input_metric   = SymmetricDistance(),
+        output_metric  = AbsoluteDistance(i32)
+    )
 
     >>> # invoke the transformation (invoke and __call__ are equivalent)
     >>> count.invoke([1, 2, 3])
@@ -393,7 +406,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         return f"Transformation(\n    input_domain   = {self.input_domain},\n    output_domain  = {self.output_domain},\n    input_metric   = {self.input_metric},\n    output_metric  = {self.output_metric}\n)"
 
 Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
