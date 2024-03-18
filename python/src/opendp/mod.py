@@ -429,7 +429,7 @@ class Queryable(object):
         from opendp.typing import RuntimeType
         return RuntimeType.parse(queryable_query_type(self.value))
 
-    def __str__(self):
+    def __repr__(self) -> str:
         return f"Queryable(Q={self.query_type})"
 
     def _depends_on(self, *args):
@@ -492,7 +492,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         from opendp.domains import _user_domain_descriptor
         return _user_domain_descriptor(self)
 
-    def __str__(self):
+    def __repr__(self) -> str:
         from opendp.domains import domain_debug
         return domain_debug(self)
     
@@ -504,9 +504,6 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
-
-    def __repr__(self) -> str:
-        return str(self) # pragma: no cover
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
@@ -542,7 +539,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
         from opendp.typing import RuntimeType
         return RuntimeType.parse(metric_distance_type(self))
 
-    def __str__(self):
+    def __repr__(self) -> str:
         from opendp.metrics import metric_debug
         return metric_debug(self)
     
@@ -554,9 +551,6 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
-
-    def __repr__(self) -> str:
-        return str(self) # pragma: no cover
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
