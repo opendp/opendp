@@ -150,7 +150,7 @@ The following proof makes use of the following lemma that asserts the correctnes
 	\end{equation*}
 \end{theorem}
 \begin{proof}\hfill
-Notice that each $\hat{N_i}$ is a sum of $n$ Bernoullis with probability $1-\frac{1}{2}f$ or $\frac{1}{2}f$, which both have $\sigma^2 = \frac{1}{2}f\left(1-\frac{1}{2}f\right) = \frac{f}{2}-\frac{f^2}{4}$
+Notice that each $\hat{Y_i}$ is a sum of $n$ Bernoullis with probability $1-\frac{1}{2}f$ or $\frac{1}{2}f$, which both have $\sigma^2 = \frac{1}{2}f\left(1-\frac{1}{2}f\right) = \frac{f}{2}-\frac{f^2}{4}$
 	\begin{align*}
 		\mathbb{E}[|\hat{N}-N|] &= \mathbb{E}[\sum\limits_{i=1}^k(\hat{N_i}-N_i)^2] = \sum\limits_{i=1}^k\mathbb{E}[(\hat{N_i}-N_i)^2] &&\\
 			&= \sum\limits_{i=1}^k\mathbb{E}[(\hat{N_i}-\mathbb{E}[\hat{N_i}])^2] && \text{by Theorem~\ref{thm:unbiased-estimator}}\\
