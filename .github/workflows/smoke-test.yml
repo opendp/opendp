@@ -65,6 +65,23 @@ jobs:
           name: vendor
           path: R/opendp/src/vendor.tar.xz
 
+  rust-examples:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: docs/source
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install nightly
+        run: rustup update nightly
+
+      - name: Cargo run
+        run: cargo +nightly -Zscript getting-started/quickstart.rs
+
   python-test:
     needs: rust-build-and-test
     runs-on: ubuntu-22.04
