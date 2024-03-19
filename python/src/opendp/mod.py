@@ -1,6 +1,6 @@
 '''
 The ``mod`` module provides the classes which implement the
-`OpenDP Programming Framework <../../user/programming-framework/index.html>`_,
+`OpenDP Programming Framework <../../api/user-guide/programming-framework/index.html>`_,
 as well as utilities for enabling features and finding parameter values.
 
 The classes here correspond to other top-level modules: For example,
@@ -23,7 +23,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     The function releases a differentially-private release.
     The privacy relation maps from an input metric to an output measure.
 
-    See the `Measurement <../../user/programming-framework/core-structures.html#measurement>`_
+    See the `Measurement <../../api/user-guide/programming-framework/core-structures.html#measurement>`_
     section in the Programming Framework docs for more context.
 
     Functions for creating measurements are in :py:mod:`opendp.measurements`.
@@ -34,7 +34,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     >>> dp.enable_features("contrib")
 
     >>> # create an instance of Measurement using a constructor from the meas module
-    >>> base_dl: dp.Measurement = dp.m.make_base_discrete_laplace(
+    >>> base_dl: dp.Measurement = dp.m.make_laplace(
     ...     dp.atom_domain(T=int), dp.absolute_distance(T=int),
     ...     scale=2.)
 
@@ -108,19 +108,18 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
                 return False
             raise
 
-    def __rshift__(self, other: Union["Function", "Transformation"]) -> "Measurement":
+    def __rshift__(self, other: Union["Function", "Transformation", Callable]) -> "Measurement":
         if isinstance(other, Transformation):
             other = other.function
 
         if not isinstance(other, Function):
+            if not callable(other):
+                raise ValueError(f'Expected a callable instead of {other}')
             from opendp.core import new_function
             other = new_function(other, TO="ExtrinsicObject")
 
-        if isinstance(other, Function):
-            from opendp.combinators import make_chain_pm
-            return make_chain_pm(other, self)
-
-        raise ValueError(f"rshift expected a postprocessing transformation, got {other}")
+        from opendp.combinators import make_chain_pm
+        return make_chain_pm(other, self)
 
     @property
     def input_domain(self) -> "Domain":
@@ -202,7 +201,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     The function maps from an input domain to an output domain.
     The stability relation maps from an input metric to an output metric.
 
-    See the `Transformation <../../user/programming-framework/core-structures.html#transformation>`_
+    See the `Transformation <../../api/user-guide/programming-framework/core-structures.html#transformation>`_
     section in the Programming Framework docs for more context.
 
     Functions for creating transformations are in :py:mod:`opendp.transformations`.
@@ -427,7 +426,7 @@ class Queryable(object):
 
 class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
     '''
-    See the `Function <../../user/programming-framework/supporting-elements.html#function>`_
+    See the `Function <../../api/user-guide/programming-framework/supporting-elements.html#function>`_
     section in the Programming Framework docs for more context.
     '''
     _type_ = AnyFunction
@@ -452,7 +451,7 @@ class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
 
 class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     '''
-    See the `Domain <../../user/programming-framework/supporting-elements.html#domain>`_
+    See the `Domain <../../api/user-guide/programming-framework/supporting-elements.html#domain>`_
     section in the Programming Framework docs for more context.
 
     Functions for creating domains are in :py:mod:`opendp.domains`.
@@ -494,7 +493,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
             pass
 
     def __repr__(self) -> str:
-        return str(self)
+        return str(self) # pragma: no cover
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
@@ -511,7 +510,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
 
 class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     '''
-    See the `Metric <../../user/programming-framework/supporting-elements.html#metric>`_
+    See the `Metric <../../api/user-guide/programming-framework/supporting-elements.html#metric>`_
     section in the Programming Framework docs for more context.
 
     Functions for creating metrics are in :py:mod:`opendp.metrics`.
@@ -544,7 +543,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
             pass
 
     def __repr__(self) -> str:
-        return str(self)
+        return str(self) # pragma: no cover
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
@@ -556,7 +555,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
 
 class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     '''
-    See the `Measure <../../user/programming-framework/supporting-elements.html#measure>`_
+    See the `Measure <../../api/user-guide/programming-framework/supporting-elements.html#measure>`_
     section in the Programming Framework docs for more context.
 
     Functions for creating measures are in :py:mod:`opendp.measures`.
@@ -723,7 +722,7 @@ def binary_search_chain(
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.
     >>> # The lambda function returns the complete computation chain when given a single numeric parameter.
     >>> chain = dp.binary_search_chain(
-    ...     lambda s: pre >> dp.m.then_base_laplace(scale=s), 
+    ...     lambda s: pre >> dp.m.then_laplace(scale=s), 
     ...     d_in=1, d_out=1.)
     ...
     >>> # The resulting computation chain is always (`d_in`, `d_out`)-close, but we can still double-check:
@@ -774,7 +773,7 @@ def binary_search_param(
     ...
     >>> def make_fixed_laplace(scale):
     ...     # fixes the input domain and metric, but parameterizes the noise scale
-    ...     return dp.m.make_base_laplace(dp.atom_domain(T=float), dp.absolute_distance(T=float), scale)
+    ...     return dp.m.make_laplace(dp.atom_domain(T=float), dp.absolute_distance(T=float), scale)
     ...
     >>> scale = dp.binary_search_param(make_fixed_laplace, d_in=0.1, d_out=1.)
     >>> assert scale == 0.1
@@ -795,7 +794,7 @@ def binary_search_param(
     ...    return (
     ...        (dp.vector_domain(dp.atom_domain(bounds=(0., 500_000.)), data_size), dp.symmetric_distance()) >>
     ...        dp.t.then_mean() >> 
-    ...        dp.m.then_base_laplace(necessary_scale)
+    ...        dp.m.then_laplace(necessary_scale)
     ...    )
     ...
     >>> # solve for the smallest dataset size that admits a (2 neighboring, 1. epsilon)-close measurement
@@ -1031,7 +1030,7 @@ def exponential_bounds_search(
             return False
     exception_bounds = exponential_bounds_search(exception_predicate, T=T)
     if exception_bounds is None:
-        try:
+        try: # pragma: no cover
             predicate(center)
         except Exception:
             raise ValueError(f"predicate always fails. An example traceback is shown above at {center}.")

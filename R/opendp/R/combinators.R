@@ -52,6 +52,7 @@ make_basic_composition <- function(
 #'
 #' See documentation for [make_basic_composition()] for details.
 #'
+#' @concept combinators
 #' @param lhs The prior transformation or metric space.
 #' @param measurements A vector of Measurements to compose.
 #' @return Measurement
@@ -110,6 +111,7 @@ make_chain_mt <- function(
 #'
 #' See documentation for [make_chain_mt()] for details.
 #'
+#' @concept combinators
 #' @param lhs The prior transformation or metric space.
 #' @param measurement1 outer mechanism
 #' @param transformation0 inner transformation
@@ -172,6 +174,7 @@ make_chain_pm <- function(
 #'
 #' See documentation for [make_chain_pm()] for details.
 #'
+#' @concept combinators
 #' @param lhs The prior transformation or metric space.
 #' @param postprocess1 outer postprocessor
 #' @param measurement0 inner measurement/mechanism
@@ -233,6 +236,7 @@ make_chain_tt <- function(
 #'
 #' See documentation for [make_chain_tt()] for details.
 #'
+#' @concept combinators
 #' @param lhs The prior transformation or metric space.
 #' @param transformation1 outer transformation
 #' @param transformation0 inner transformation
@@ -298,6 +302,7 @@ make_fix_delta <- function(
 #'
 #' See documentation for [make_fix_delta()] for details.
 #'
+#' @concept combinators
 #' @param lhs The prior transformation or metric space.
 #' @param measurement a measurement with a privacy curve to be fixed
 #' @param delta parameter to fix the privacy curve with
@@ -369,6 +374,7 @@ make_population_amplification <- function(
 #'
 #' See documentation for [make_population_amplification()] for details.
 #'
+#' @concept combinators
 #' @param lhs The prior transformation or metric space.
 #' @param measurement the computation to amplify
 #' @param population_size the size of the population from which the input dataset is a simple sample
@@ -431,6 +437,7 @@ make_pureDP_to_fixed_approxDP <- function(
 #'
 #' See documentation for [make_pureDP_to_fixed_approxDP()] for details.
 #'
+#' @concept combinators
 #' @param lhs The prior transformation or metric space.
 #' @param measurement a measurement with a privacy measure to be casted
 #' @return Measurement
@@ -494,6 +501,7 @@ make_pureDP_to_zCDP <- function(
 #'
 #' See documentation for [make_pureDP_to_zCDP()] for details.
 #'
+#' @concept combinators
 #' @param lhs The prior transformation or metric space.
 #' @param measurement a measurement with a privacy measure to be casted
 #' @return Measurement
@@ -584,6 +592,7 @@ make_sequential_composition <- function(
 #'
 #' See documentation for [make_sequential_composition()] for details.
 #'
+#' @concept combinators
 #' @param lhs The prior transformation or metric space.
 #' @param output_measure how privacy is measured
 #' @param d_in maximum distance between adjacent input datasets
@@ -651,6 +660,7 @@ make_zCDP_to_approxDP <- function(
 #'
 #' See documentation for [make_zCDP_to_approxDP()] for details.
 #'
+#' @concept combinators
 #' @param lhs The prior transformation or metric space.
 #' @param measurement a measurement with a privacy measure to be casted
 #' @return Measurement

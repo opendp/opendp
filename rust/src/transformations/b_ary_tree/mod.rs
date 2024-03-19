@@ -143,7 +143,7 @@ pub fn choose_branching_factor(size_guess: u32) -> u32 {
 
 #[cfg(all(test, feature = "partials"))]
 pub mod test_b_trees {
-    use crate::{measurements::then_base_discrete_laplace, metrics::L1Distance};
+    use crate::{measurements::then_laplace, metrics::L1Distance};
 
     use super::*;
 
@@ -234,7 +234,7 @@ pub mod test_b_trees {
     #[test]
     fn test_noise_b_ary_tree() -> Fallible<()> {
         let meas = (make_b_ary_tree::<_, i32>(Default::default(), L1Distance::default(), 10, 2)?
-            >> then_base_discrete_laplace(1.))?;
+            >> then_laplace(1., None))?;
         println!("noised {:?}", meas.invoke(&vec![1; 10])?);
 
         Ok(())
@@ -244,7 +244,7 @@ pub mod test_b_trees {
     fn test_identity() -> Fallible<()> {
         let b = 2;
         let trans = make_b_ary_tree::<_, i32>(Default::default(), L1Distance::default(), 10, b)?;
-        let meas = (trans.clone() >> then_base_discrete_laplace(0.))?;
+        let meas = (trans.clone() >> then_laplace(0., None))?;
         let post = make_consistent_b_ary_tree::<i32, f64>(b)?;
 
         let noisy_tree = meas.invoke(&vec![1; 10])?;

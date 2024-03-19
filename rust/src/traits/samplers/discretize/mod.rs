@@ -7,70 +7,66 @@ use crate::traits::samplers::sample_discrete_laplace;
 
 use super::sample_discrete_gaussian;
 
+#[allow(non_snake_case)]
 /// Sample from the discrete laplace distribution on $\mathbb{Z} \cdot 2^k$.
 ///
 /// Implemented for floating-point types f32 and f64.
 ///
 /// k can be chosen to be very negative,
 /// to get an arbitrarily fine approximation to continuous laplacian noise.
-pub trait SampleDiscreteLaplaceZ2k: Sized {
-    #![allow(non_snake_case)]
-    /// # Proof Definition
-    /// For any setting of the input arguments, return either
-    /// `Err(e)` if there is insufficient system entropy, or
-    /// `Ok(sample)`, where `sample` is distributed according to a modified discrete_laplace(`shift`, `scale`).
-    ///
-    /// The modifications to the discrete laplace are as follows:
-    /// - the `shift` is rounded to the nearest multiple of $2^k$
-    /// - the `sample` is rounded to the nearest value of type `Self`.
-    /// - the noise granularity is in increments of $2^k$.
-    fn sample_discrete_laplace_Z2k(shift: Self, scale: Self, k: i32) -> Fallible<Self>;
+///
+/// # Proof Definition
+/// For any setting of the input arguments, return either
+/// `Err(e)` if there is insufficient system entropy, or
+/// `Ok(sample)`, where `sample` is distributed according to a modified discrete_laplace(`shift`, `scale`).
+///
+/// The modifications to the discrete laplace are as follows:
+/// - the `shift` is rounded to the nearest multiple of $2^k$
+/// - the `sample` is rounded to the nearest value of type `T`.
+/// - the noise granularity is in increments of $2^k$.
+pub fn sample_discrete_laplace_Z2k<T>(shift: T, scale: T, k: i32) -> Fallible<T>
+where
+    T: CastInternalRational,
+{
+    // integerize
+    let mut i = find_nearest_multiple_of_2k(shift.into_rational()?, k);
+
+    // sample from the discrete laplace on ℤ*2^k
+    i += sample_discrete_laplace(shr(scale.into_rational()?, k))?;
+
+    // postprocess! int -> rational -> T
+    Ok(T::from_rational(x_mul_2k(i, k)))
 }
 
-impl<T: CastInternalRational> SampleDiscreteLaplaceZ2k for T {
-    fn sample_discrete_laplace_Z2k(shift: Self, scale: Self, k: i32) -> Fallible<Self> {
-        // integerize
-        let mut i = find_nearest_multiple_of_2k(shift.into_rational()?, k);
-
-        // sample from the discrete laplace on ℤ*2^k
-        i += sample_discrete_laplace(shr(scale.into_rational()?, k))?;
-
-        // postprocess! int -> rational -> T
-        Ok(Self::from_rational(x_mul_2k(i, k)))
-    }
-}
-
+#[allow(non_snake_case)]
 /// Sample from the discrete gaussian distribution on $\mathbb{Z} \cdot 2^k$.
 ///
 /// Implemented for floating-point types f32 and f64.
 ///
 /// k can be chosen to be very negative,
 /// to get an arbitrarily fine approximation to continuous gaussian noise.
-pub trait SampleDiscreteGaussianZ2k: Sized {
-    #![allow(non_snake_case)]
-    /// # Proof Definition
-    /// For any setting of the input arguments, return either
-    /// `Err(e)` if there is insufficient system entropy, or
-    /// `Ok(sample)`, where `sample` is distributed according to a modified discrete_gaussian(`shift`, `scale`).
-    ///
-    /// The modifications to the discrete gaussian are as follows:
-    /// - the `shift` is rounded to the nearest multiple of $2^k$
-    /// - the `sample` is rounded to the nearest value of type `Self`.
-    /// - the noise granularity is in increments of $2^k$.
-    fn sample_discrete_gaussian_Z2k(shift: Self, scale: Self, k: i32) -> Fallible<Self>;
-}
+///
+/// # Proof Definition
+/// For any setting of the input arguments, return either
+/// `Err(e)` if there is insufficient system entropy, or
+/// `Ok(sample)`, where `sample` is distributed according to a modified discrete_gaussian(`shift`, `scale`).
+///
+/// The modifications to the discrete gaussian are as follows:
+/// - the `shift` is rounded to the nearest multiple of $2^k$
+/// - the `sample` is rounded to the nearest value of type `T`.
+/// - the noise granularity is in increments of $2^k$.
+pub fn sample_discrete_gaussian_Z2k<T>(shift: T, scale: T, k: i32) -> Fallible<T>
+where
+    T: CastInternalRational,
+{
+    // integerize
+    let mut i = find_nearest_multiple_of_2k(shift.into_rational()?, k);
 
-impl<T: CastInternalRational> SampleDiscreteGaussianZ2k for T {
-    fn sample_discrete_gaussian_Z2k(shift: Self, scale: Self, k: i32) -> Fallible<Self> {
-        // integerize
-        let mut i = find_nearest_multiple_of_2k(shift.into_rational()?, k);
+    // sample from the discrete gaussian on ℤ*2^k
+    i += sample_discrete_gaussian(shr(scale.into_rational()?, k))?;
 
-        // sample from the discrete gaussian on ℤ*2^k
-        i += sample_discrete_gaussian(shr(scale.into_rational()?, k))?;
-
-        // postprocess! int -> rational -> T
-        Ok(Self::from_rational(x_mul_2k(i, k)))
-    }
+    // postprocess! int -> rational -> T
+    Ok(T::from_rational(x_mul_2k(i, k)))
 }
 
 fn shr(lhs: RBig, rhs: i32) -> RBig {
@@ -158,7 +154,7 @@ mod test {
     use super::*;
     #[test]
     fn test_sample_discrete_laplace() -> Fallible<()> {
-        let dgeo: f64 = f64::sample_discrete_laplace_Z2k(0f64, 1f64, 50)?;
+        let dgeo: f64 = sample_discrete_laplace_Z2k(0f64, 1f64, 50)?;
         println!("final: {:?}", dgeo);
 
         // let dgeo: f64 = f64::sample_discrete_laplace(0f64, 20f64, 14)?;
@@ -169,59 +165,50 @@ mod test {
     #[test]
     fn test_sample_discrete_laplace_pos_k() -> Fallible<()> {
         // check rounding of negative arguments
-        assert_eq!(f64::sample_discrete_laplace_Z2k(-4., 0f64, 2)?, -4.0);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(-3., 0f64, 2)?, -4.0);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(-2., 0f64, 2)?, -4.0);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(-1., 0f64, 2)?, 0.0);
+        assert_eq!(sample_discrete_laplace_Z2k(-4., 0f64, 2)?, -4.0);
+        assert_eq!(sample_discrete_laplace_Z2k(-3., 0f64, 2)?, -4.0);
+        assert_eq!(sample_discrete_laplace_Z2k(-2., 0f64, 2)?, -4.0);
+        assert_eq!(sample_discrete_laplace_Z2k(-1., 0f64, 2)?, 0.0);
         assert_eq!(
-            f64::sample_discrete_laplace_Z2k(-3.6522343492937, 0f64, 2)?,
+            sample_discrete_laplace_Z2k(-3.6522343492937, 0f64, 2)?,
             -4.0
         );
 
-        assert_eq!(f64::sample_discrete_laplace_Z2k(0., 0f64, 2)?, 0.0);
+        assert_eq!(sample_discrete_laplace_Z2k(0., 0f64, 2)?, 0.0);
 
         // check rounding of positive arguments
-        assert_eq!(f64::sample_discrete_laplace_Z2k(1., 0f64, 2)?, 0.0);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(2., 0f64, 2)?, 4.0);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(3., 0f64, 2)?, 4.0);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(4., 0f64, 2)?, 4.0);
-        assert_eq!(
-            f64::sample_discrete_laplace_Z2k(3.6522343492937, 0f64, 2)?,
-            4.0
-        );
+        assert_eq!(sample_discrete_laplace_Z2k(1., 0f64, 2)?, 0.0);
+        assert_eq!(sample_discrete_laplace_Z2k(2., 0f64, 2)?, 4.0);
+        assert_eq!(sample_discrete_laplace_Z2k(3., 0f64, 2)?, 4.0);
+        assert_eq!(sample_discrete_laplace_Z2k(4., 0f64, 2)?, 4.0);
+        assert_eq!(sample_discrete_laplace_Z2k(3.6522343492937, 0f64, 2)?, 4.0);
 
         // check that noise is applied in increments of 4
-        assert_eq!(f64::sample_discrete_laplace_Z2k(4., 23f64, 2)? % 4., 0.);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(4., 2f64, 2)? % 4., 0.);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(4., 456e3f64, 2)? % 4., 0.);
+        assert_eq!(sample_discrete_laplace_Z2k(4., 23f64, 2)? % 4., 0.);
+        assert_eq!(sample_discrete_laplace_Z2k(4., 2f64, 2)? % 4., 0.);
+        assert_eq!(sample_discrete_laplace_Z2k(4., 456e3f64, 2)? % 4., 0.);
 
         Ok(())
     }
 
     #[test]
     fn test_sample_discrete_laplace_neg_k() -> Fallible<()> {
-        assert_eq!(
-            f64::sample_discrete_laplace_Z2k(-100.23, 0f64, -2)?,
-            -100.25
-        );
-        assert_eq!(f64::sample_discrete_laplace_Z2k(-34.29, 0f64, -2)?, -34.25);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(-0.1, 0f64, -2)?, 0.0);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(0., 0f64, -2)?, 0.0);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(0.1, 0f64, -2)?, 0.0);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(0.125, 0f64, -2)?, 0.25);
-        assert_eq!(f64::sample_discrete_laplace_Z2k(0.13, 0f64, -2)?, 0.25);
+        assert_eq!(sample_discrete_laplace_Z2k(-100.23, 0f64, -2)?, -100.25);
+        assert_eq!(sample_discrete_laplace_Z2k(-34.29, 0f64, -2)?, -34.25);
+        assert_eq!(sample_discrete_laplace_Z2k(-0.1, 0f64, -2)?, 0.0);
+        assert_eq!(sample_discrete_laplace_Z2k(0., 0f64, -2)?, 0.0);
+        assert_eq!(sample_discrete_laplace_Z2k(0.1, 0f64, -2)?, 0.0);
+        assert_eq!(sample_discrete_laplace_Z2k(0.125, 0f64, -2)?, 0.25);
+        assert_eq!(sample_discrete_laplace_Z2k(0.13, 0f64, -2)?, 0.25);
 
         // check that noise is applied in increments of .25
         assert_eq!(
-            f64::sample_discrete_laplace_Z2k(2342.234532, 23f64, -2)? % 0.25,
+            sample_discrete_laplace_Z2k(2342.234532, 23f64, -2)? % 0.25,
             0.
         );
+        assert_eq!(sample_discrete_laplace_Z2k(2.8954, 2f64, -2)? % 0.25, 0.);
         assert_eq!(
-            f64::sample_discrete_laplace_Z2k(2.8954, 2f64, -2)? % 0.25,
-            0.
-        );
-        assert_eq!(
-            f64::sample_discrete_laplace_Z2k(834.349, 456e3f64, -2)? % 0.25,
+            sample_discrete_laplace_Z2k(834.349, 456e3f64, -2)? % 0.25,
             0.
         );
 

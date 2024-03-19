@@ -106,7 +106,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         if rust_type in ATOM_MAP:
             return ctypes.byref(ATOM_MAP[rust_type](value))
 
-        if rust_type == "String":
+        if rust_type == "String": # pragma: no cover
             return ctypes.c_char_p(value.encode())
 
         raise UnknownTypeException(rust_type)

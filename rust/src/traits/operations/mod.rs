@@ -57,12 +57,12 @@ pub trait InherentNull: CheckNull {
     const NULL: Self;
 }
 
-/// TotalOrd is well-defined on types that are Ord on their non-null values.
+/// ProductOrd is well-defined on types that are Ord on their non-null values.
 ///
 /// The framework provides a way to ensure values are non-null at runtime.
 /// This trait should only be used when the framework can rely on these assurances.
-/// TotalOrd shares the same interface as Ord, but with a total_ prefix on methods
-pub trait TotalOrd: PartialOrd + Sized {
+/// ProductOrd shares the same interface as Ord, but with a total_ prefix on methods
+pub trait ProductOrd: PartialOrd + Sized {
     /// # Proof Definition
     /// For any two values `self` and `other` of type `Self`, returns `Ok(out)` or `Err(e)`.
     /// The implementation returns `Err(e)` if either `self` or `other` are null.
@@ -74,7 +74,7 @@ pub trait TotalOrd: PartialOrd + Sized {
     /// The implementation returns `Err(e)` if either `self` or `other` are null.
     /// Otherwise returns `Some(out)` where `out` is the greater of `self` and `other` as defined by [`PartialOrd`].
     fn total_max(self, other: Self) -> Fallible<Self> {
-        max_by(self, other, TotalOrd::total_cmp)
+        max_by(self, other, ProductOrd::total_cmp)
     }
 
     /// # Proof Definition
@@ -82,7 +82,7 @@ pub trait TotalOrd: PartialOrd + Sized {
     /// The implementation returns `Err(e)` if either `self` or `other` are null.
     /// Otherwise returns `Some(out)` where `out` is the lesser of `self` and `other` as defined by [`PartialOrd`].
     fn total_min(self, other: Self) -> Fallible<Self> {
-        min_by(self, other, TotalOrd::total_cmp)
+        min_by(self, other, ProductOrd::total_cmp)
     }
 
     /// # Proof Definition
@@ -149,7 +149,8 @@ pub trait FloatBits: Copy + Sized + ExactIntCast<Self::Bits> {
         + BitOr<Output = Self::Bits>
         + Sub<Output = Self::Bits>
         + From<bool>
-        + Into<IBig>;
+        + Into<IBig>
+        + PartialOrd;
     /// # Proof Definition
     /// A constant equal to the number of bits in exponent.
     const EXPONENT_BITS: Self::Bits;
@@ -314,9 +315,9 @@ macro_rules! impl_inherent_null_float {
 }
 impl_inherent_null_float!(f64, f32);
 
-// TRAIT TotalOrd
+// TRAIT ProductOrd
 macro_rules! impl_total_ord_for_ord {
-    ($($ty:ty),*) => {$(impl TotalOrd for $ty {
+    ($($ty:ty),*) => {$(impl ProductOrd for $ty {
         fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {Ok(Ord::cmp(self, other))}
     })*}
 }
@@ -326,7 +327,7 @@ impl_total_ord_for_ord!(RBig, IBig);
 
 macro_rules! impl_total_ord_for_float {
     ($($ty:ty),*) => {
-        $(impl TotalOrd for $ty {
+        $(impl ProductOrd for $ty {
             fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {
                 PartialOrd::partial_cmp(self, other)
                     .ok_or_else(|| err!(FailedFunction, concat!(stringify!($ty), " cannot not be null when clamping.")))
@@ -350,7 +351,7 @@ fn min_by<T, F: FnOnce(&T, &T) -> Fallible<Ordering>>(v1: T, v2: T, compare: F) 
     })
 }
 
-impl<T1: TotalOrd, T2: TotalOrd> TotalOrd for (T1, T2) {
+impl<T1: ProductOrd, T2: ProductOrd> ProductOrd for (T1, T2) {
     fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {
         let cmp = self.0.total_cmp(&other.0)?;
         if Ordering::Equal == cmp {

@@ -99,7 +99,7 @@ try:
         buffer_pos += 1
         return int(out)
 
-    np_csprng = np.random.Generator(bit_generator=UserBitGenerator(next_raw))
+    np_csprng = np.random.Generator(bit_generator=UserBitGenerator(next_raw)) # type:ignore
 
 except ImportError:  # pragma: no cover
     pass
@@ -253,7 +253,7 @@ def unwrap(result, type_) -> Any:
 proof_doc_re = re.compile(r"\[\(Proof Document\)\]\(([^)]+)\)")
 
 
-def proven(function):
+def proven(function): # pragma: no cover
     """Decorator for functions that have an associated proof document.
     Locates the proof document and edits the docstring with a link.
     """
@@ -289,7 +289,7 @@ def make_proof_link(
     source_dir,
     relative_path,
     repo_path,
-) -> str:
+) -> str: # pragma: no cover
     # construct absolute path
     absolute_path = os.path.join(source_dir, relative_path)
 
@@ -399,4 +399,4 @@ def get_channel(version):
     if match:
         channel = match.group(2)
         return channel or "stable"
-    return "unknown"
+    return "unknown" # pragma: no cover

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, iter::once};
 
 use crate::{
-    codegen::{flatten_type_recipe, indent},
+    codegen::{flatten_type_recipe, tab_r},
     Argument, Function, TypeRecipe, Value,
 };
 
@@ -69,17 +69,17 @@ fn generate_r_function(
         lhs,
         log)
 }}"#,
-            then_docs = generate_then_doc_block(func, hierarchy),
+            then_docs = generate_then_doc_block(module_name, func, hierarchy),
             then_name = func.name.replacen("make_", "then_", 1),
-            then_args = indent(
+            then_args = tab_r(
                 once("lhs".to_string())
                     .chain(args[offset..].to_owned())
                     .collect::<Vec<_>>()
                     .join(",\n")
             ),
-            then_log = indent(generate_logger(module_name, func, true)),
+            then_log = tab_r(generate_logger(module_name, func, true)),
             name = func.name,
-            args = indent(indent(indent(
+            args = tab_r(tab_r(tab_r(
                 if func.supports_partial {
                     vec![
                         "output_domain(lhs)".to_string(),
@@ -116,8 +116,8 @@ fn generate_r_function(
 "#,
         doc_block = generate_doc_block(module_name, func, hierarchy),
         func_name = func.name.trim_start_matches("_"),
-        args = indent(args.join(",\n")),
-        body = indent(generate_r_body(module_name, func))
+        args = tab_r(args.join(",\n")),
+        body = tab_r(generate_r_body(module_name, func))
     )
 }
 
@@ -243,7 +243,11 @@ fn generate_doc_block(
 
 /// generate a documentation block for a then_* partial constructor, with the function description, args, and return
 /// in Roxygen format: https://mpn.metworx.com/packages/roxygen2/7.1.1/articles/rd-formatting.html
-fn generate_then_doc_block(func: &Function, hierarchy: &HashMap<String, Vec<String>>) -> String {
+fn generate_then_doc_block(
+    module_name: &str,
+    func: &Function,
+    hierarchy: &HashMap<String, Vec<String>>,
+) -> String {
     let title = generate_constructor_title(&func.name);
     let offset = if func.supports_partial { 2 } else { 0 };
 
@@ -255,6 +259,7 @@ fn generate_then_doc_block(func: &Function, hierarchy: &HashMap<String, Vec<Stri
     format!(
         r#"partial {title}See documentation for [{func_name}()] for details.
 
+@concept {module_name}
 @param lhs The prior transformation or metric space.
 {doc_args}{ret_arg}
 @export"#,

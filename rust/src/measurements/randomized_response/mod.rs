@@ -10,8 +10,8 @@ use crate::domains::AtomDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
-use crate::traits::samplers::{SampleBernoulli, SampleUniformIntBelow};
-use crate::traits::{Float, Hashable};
+use crate::traits::samplers::{sample_bernoulli_float, SampleUniformIntBelow};
+use crate::traits::{ExactIntCast, Float, FloatBits, Hashable};
 
 // There are two constructors:
 // 1. make_randomized_response_bool
@@ -42,9 +42,10 @@ pub fn make_randomized_response_bool<QO>(
     constant_time: bool,
 ) -> Fallible<Measurement<AtomDomain<bool>, bool, DiscreteDistance, MaxDivergence<QO>>>
 where
-    bool: SampleBernoulli<QO>,
     QO: Float,
     (AtomDomain<bool>, DiscreteDistance): MetricSpace,
+    <QO as FloatBits>::Bits: ExactIntCast<usize>,
+    usize: ExactIntCast<<QO as FloatBits>::Bits>,
 {
     // number of categories t is 2, and probability is bounded below by 1/t
     if !(QO::exact_int_cast(2)?.recip()..QO::one()).contains(&prob) {
@@ -59,7 +60,7 @@ where
     Measurement::new(
         AtomDomain::default(),
         Function::new_fallible(move |arg: &bool| {
-            Ok(arg ^ !bool::sample_bernoulli(prob, constant_time)?)
+            Ok(arg ^ !sample_bernoulli_float(prob, constant_time)?)
         }),
         DiscreteDistance::default(),
         MaxDivergence::default(),
@@ -99,8 +100,9 @@ pub fn make_randomized_response<T, QO>(
 ) -> Fallible<Measurement<AtomDomain<T>, T, DiscreteDistance, MaxDivergence<QO>>>
 where
     T: Hashable,
-    bool: SampleBernoulli<QO>,
     QO: Float,
+    <QO as FloatBits>::Bits: ExactIntCast<usize>,
+    usize: ExactIntCast<<QO as FloatBits>::Bits>,
 {
     let categories = categories.into_iter().collect::<Vec<_>>();
     if categories.len() < 2 {
@@ -138,6 +140,7 @@ where
             // if truth in categories, sample among n - 1 categories
             let mut sample = usize::sample_uniform_int_below(
                 categories.len() - if index.is_some() { 1 } else { 0 },
+                None,
             )?;
             // shift the sample by one if index is greater or equal to the index of truth
             if let Some(i) = index {
@@ -148,7 +151,7 @@ where
             let lie = &categories[sample];
 
             // return the truth if we chose to be honest and the truth is in the category set
-            let be_honest = bool::sample_bernoulli(prob, constant_time)?;
+            let be_honest = sample_bernoulli_float(prob, constant_time)?;
             let is_member = index.is_some();
             Ok(if be_honest && is_member { truth } else { lie }.clone())
         }),

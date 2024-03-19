@@ -93,7 +93,3 @@ rustdoc-args = [
     # so that proof documents are visible
     "--document-private-items"
 ]
-
-[[bench]]
-name = "discrete_laplace"
-harness = false

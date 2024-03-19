@@ -82,6 +82,7 @@ make_alp_queryable <- function(
 #'
 #' See documentation for [make_alp_queryable()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Privacy loss parameter. This is equal to epsilon/sensitivity.
 #' @param total_limit Either the true value or an upper bound estimate of the sum of all values in the input.
@@ -116,649 +117,6 @@ then_alp_queryable <- function(
             size_factor = size_factor,
             alpha = alpha,
             .CO = .CO),
-        lhs,
-        log)
-}
-
-
-#' base discrete gaussian constructor
-#'
-#' Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
-#'
-#' Valid inputs for `input_domain` and `input_metric` are:
-#'
-#' | `input_domain`                  | input type   | `input_metric`         |
-#' | ------------------------------- | ------------ | ---------------------- |
-#' | `atom_domain(T)`                | `T`          | `absolute_distance(QI)` |
-#' | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l2_distance(QI)`       |
-#'
-#' [make_base_discrete_gaussian in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_gaussian.html)
-#'
-#' **Supporting Elements:**
-#'
-#' * Input Domain:   `D`
-#' * Output Type:    `D::Carrier`
-#' * Input Metric:   `D::InputMetric`
-#' * Output Measure: `MO`
-#'
-#' @concept measurements
-#' @param input_domain Domain of the data type to be privatized.
-#' @param input_metric Metric of the data type to be privatized.
-#' @param scale Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
-#' @param .MO Output measure. The only valid measure is `ZeroConcentratedDivergence<QO>`, but QO can be any float.
-#' @return Measurement
-#' @export
-make_base_discrete_gaussian <- function(
-    input_domain,
-    input_metric,
-    scale,
-    .MO = "ZeroConcentratedDivergence<.QO>"
-) {
-    assert_features("contrib")
-
-    # Standardize type arguments.
-    .MO <- rt_parse(type_name = .MO, generics = list(".QO"))
-    .QO <- get_atom_or_infer(.MO, scale)
-    .MO <- rt_substitute(.MO, .QO = .QO)
-
-    log <- new_constructor_log("make_base_discrete_gaussian", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "MO"),
-        list(input_domain, input_metric, scale, .MO)
-    ))
-
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
-
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_base_discrete_gaussian",
-        input_domain, input_metric, scale, .MO, .QO,
-        log, PACKAGE = "opendp")
-    output
-}
-
-#' partial base discrete gaussian constructor
-#'
-#' See documentation for [make_base_discrete_gaussian()] for details.
-#'
-#' @param lhs The prior transformation or metric space.
-#' @param scale Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
-#' @param .MO Output measure. The only valid measure is `ZeroConcentratedDivergence<QO>`, but QO can be any float.
-#' @return Measurement
-#' @export
-then_base_discrete_gaussian <- function(
-    lhs,
-    scale,
-    .MO = "ZeroConcentratedDivergence<.QO>"
-) {
-
-    log <- new_constructor_log("then_base_discrete_gaussian", "measurements", new_hashtab(
-        list("scale", "MO"),
-        list(scale, .MO)
-    ))
-
-    make_chain_dyn(
-        make_base_discrete_gaussian(
-            output_domain(lhs),
-            output_metric(lhs),
-            scale = scale,
-            .MO = .MO),
-        lhs,
-        log)
-}
-
-
-#' base discrete laplace constructor
-#'
-#' Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
-#'
-#' Valid inputs for `input_domain` and `input_metric` are:
-#'
-#' | `input_domain`                  | input type   | `input_metric`         |
-#' | ------------------------------- | ------------ | ---------------------- |
-#' | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
-#' | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |
-#'
-#' This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
-#'
-#' [make_base_discrete_laplace in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace.html)
-#'
-#' **Citations:**
-#'
-#' * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
-#' * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
-#'
-#' **Supporting Elements:**
-#'
-#' * Input Domain:   `D`
-#' * Output Type:    `D::Carrier`
-#' * Input Metric:   `D::InputMetric`
-#' * Output Measure: `MaxDivergence<QO>`
-#'
-#' @concept measurements
-#' @param input_domain Domain of the data type to be privatized.
-#' @param input_metric Metric of the data type to be privatized.
-#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-#' @param .QO Data type of the output distance and scale. `f32` or `f64`.
-#' @return Measurement
-#' @export
-make_base_discrete_laplace <- function(
-    input_domain,
-    input_metric,
-    scale,
-    .QO = NULL
-) {
-    assert_features("contrib")
-
-    # Standardize type arguments.
-    .QO <- parse_or_infer(type_name = .QO, public_example = scale)
-
-    log <- new_constructor_log("make_base_discrete_laplace", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "QO"),
-        list(input_domain, input_metric, scale, .QO)
-    ))
-
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
-
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_base_discrete_laplace",
-        input_domain, input_metric, scale, .QO,
-        log, PACKAGE = "opendp")
-    output
-}
-
-#' partial base discrete laplace constructor
-#'
-#' See documentation for [make_base_discrete_laplace()] for details.
-#'
-#' @param lhs The prior transformation or metric space.
-#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-#' @param .QO Data type of the output distance and scale. `f32` or `f64`.
-#' @return Measurement
-#' @export
-then_base_discrete_laplace <- function(
-    lhs,
-    scale,
-    .QO = NULL
-) {
-
-    log <- new_constructor_log("then_base_discrete_laplace", "measurements", new_hashtab(
-        list("scale", "QO"),
-        list(scale, .QO)
-    ))
-
-    make_chain_dyn(
-        make_base_discrete_laplace(
-            output_domain(lhs),
-            output_metric(lhs),
-            scale = scale,
-            .QO = .QO),
-        lhs,
-        log)
-}
-
-
-#' base discrete laplace cks20 constructor
-#'
-#' Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
-#' using an efficient algorithm on rational bignums.
-#'
-#' Valid inputs for `input_domain` and `input_metric` are:
-#'
-#' | `input_domain`                  | input type   | `input_metric`         |
-#' | ------------------------------- | ------------ | ---------------------- |
-#' | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
-#' | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |
-#'
-#' [make_base_discrete_laplace_cks20 in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace_cks20.html)
-#'
-#' **Citations:**
-#'
-#' * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
-#'
-#' **Supporting Elements:**
-#'
-#' * Input Domain:   `D`
-#' * Output Type:    `D::Carrier`
-#' * Input Metric:   `D::InputMetric`
-#' * Output Measure: `MaxDivergence<QO>`
-#'
-#' @concept measurements
-#' @param input_domain undocumented
-#' @param input_metric undocumented
-#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-#' @param .QO Data type of the output distance and scale.
-#' @return Measurement
-#' @export
-make_base_discrete_laplace_cks20 <- function(
-    input_domain,
-    input_metric,
-    scale,
-    .QO = NULL
-) {
-    assert_features("contrib")
-
-    # Standardize type arguments.
-    .QO <- parse_or_infer(type_name = .QO, public_example = scale)
-
-    log <- new_constructor_log("make_base_discrete_laplace_cks20", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "QO"),
-        list(input_domain, input_metric, scale, .QO)
-    ))
-
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
-
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_base_discrete_laplace_cks20",
-        input_domain, input_metric, scale, .QO,
-        log, PACKAGE = "opendp")
-    output
-}
-
-#' partial base discrete laplace cks20 constructor
-#'
-#' See documentation for [make_base_discrete_laplace_cks20()] for details.
-#'
-#' @param lhs The prior transformation or metric space.
-#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-#' @param .QO Data type of the output distance and scale.
-#' @return Measurement
-#' @export
-then_base_discrete_laplace_cks20 <- function(
-    lhs,
-    scale,
-    .QO = NULL
-) {
-
-    log <- new_constructor_log("then_base_discrete_laplace_cks20", "measurements", new_hashtab(
-        list("scale", "QO"),
-        list(scale, .QO)
-    ))
-
-    make_chain_dyn(
-        make_base_discrete_laplace_cks20(
-            output_domain(lhs),
-            output_metric(lhs),
-            scale = scale,
-            .QO = .QO),
-        lhs,
-        log)
-}
-
-
-#' base discrete laplace linear constructor
-#'
-#' Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
-#' using a linear-time algorithm on finite data types.
-#'
-#' This algorithm can be executed in constant time if bounds are passed.
-#' Valid inputs for `input_domain` and `input_metric` are:
-#'
-#' | `input_domain`                  | input type   | `input_metric`         |
-#' | ------------------------------- | ------------ | ---------------------- |
-#' | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
-#' | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |
-#'
-#' [make_base_discrete_laplace_linear in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace_linear.html)
-#'
-#' **Citations:**
-#'
-#' * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
-#'
-#' **Supporting Elements:**
-#'
-#' * Input Domain:   `D`
-#' * Output Type:    `D::Carrier`
-#' * Input Metric:   `D::InputMetric`
-#' * Output Measure: `MaxDivergence<QO>`
-#'
-#' @concept measurements
-#' @param input_domain Domain of the data type to be privatized.
-#' @param input_metric Metric of the data type to be privatized.
-#' @param scale Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
-#' @param bounds Set bounds on the count to make the algorithm run in constant-time.
-#' @param .QO Data type of the scale and output distance.
-#' @return Measurement
-#' @export
-make_base_discrete_laplace_linear <- function(
-    input_domain,
-    input_metric,
-    scale,
-    bounds = NULL,
-    .QO = NULL
-) {
-    assert_features("contrib")
-
-    # Standardize type arguments.
-    .QO <- parse_or_infer(type_name = .QO, public_example = scale)
-    .T <- get_atom(get_carrier_type(input_domain))
-    .OptionT <- new_runtime_type(origin = "Option", args = list(new_runtime_type(origin = "Tuple", args = list(.T, .T))))
-
-    log <- new_constructor_log("make_base_discrete_laplace_linear", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "bounds", "QO"),
-        list(input_domain, input_metric, scale, bounds, .QO)
-    ))
-
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
-    rt_assert_is_similar(expected = .OptionT, inferred = rt_infer(bounds))
-
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_base_discrete_laplace_linear",
-        input_domain, input_metric, scale, bounds, .QO, .T, .OptionT,
-        log, PACKAGE = "opendp")
-    output
-}
-
-#' partial base discrete laplace linear constructor
-#'
-#' See documentation for [make_base_discrete_laplace_linear()] for details.
-#'
-#' @param lhs The prior transformation or metric space.
-#' @param scale Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
-#' @param bounds Set bounds on the count to make the algorithm run in constant-time.
-#' @param .QO Data type of the scale and output distance.
-#' @return Measurement
-#' @export
-then_base_discrete_laplace_linear <- function(
-    lhs,
-    scale,
-    bounds = NULL,
-    .QO = NULL
-) {
-
-    log <- new_constructor_log("then_base_discrete_laplace_linear", "measurements", new_hashtab(
-        list("scale", "bounds", "QO"),
-        list(scale, bounds, .QO)
-    ))
-
-    make_chain_dyn(
-        make_base_discrete_laplace_linear(
-            output_domain(lhs),
-            output_metric(lhs),
-            scale = scale,
-            bounds = bounds,
-            .QO = .QO),
-        lhs,
-        log)
-}
-
-
-#' base gaussian constructor
-#'
-#' Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
-#'
-#' Valid inputs for `input_domain` and `input_metric` are:
-#'
-#' | `input_domain`                  | input type   | `input_metric`         |
-#' | ------------------------------- | ------------ | ---------------------- |
-#' | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
-#' | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l2_distance(T)`       |
-#'
-#' This function takes a noise granularity in terms of 2^k.
-#' Larger granularities are more computationally efficient, but have a looser privacy map.
-#' If k is not set, k defaults to the smallest granularity.
-#'
-#' [make_base_gaussian in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_gaussian.html)
-#'
-#' **Supporting Elements:**
-#'
-#' * Input Domain:   `D`
-#' * Output Type:    `D::Carrier`
-#' * Input Metric:   `D::InputMetric`
-#' * Output Measure: `MO`
-#'
-#' @concept measurements
-#' @param input_domain Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
-#' @param input_metric Metric of the data type to be privatized. Valid values are `AbsoluteDistance<T>` or `L2Distance<T>`.
-#' @param scale Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
-#' @param k The noise granularity in terms of 2^k.
-#' @param .MO Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
-#' @return Measurement
-#' @export
-make_base_gaussian <- function(
-    input_domain,
-    input_metric,
-    scale,
-    k = -1074L,
-    .MO = "ZeroConcentratedDivergence<.T>"
-) {
-    assert_features("contrib")
-
-    # Standardize type arguments.
-    .MO <- rt_parse(type_name = .MO, generics = list(".T"))
-    .T <- get_atom_or_infer(get_carrier_type(input_domain), scale)
-    .MO <- rt_substitute(.MO, .T = .T)
-
-    log <- new_constructor_log("make_base_gaussian", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "k", "MO"),
-        list(input_domain, input_metric, scale, unbox2(k), .MO)
-    ))
-
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(scale))
-    rt_assert_is_similar(expected = i32, inferred = rt_infer(k))
-
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_base_gaussian",
-        input_domain, input_metric, scale, k, .MO, .T,
-        log, PACKAGE = "opendp")
-    output
-}
-
-#' partial base gaussian constructor
-#'
-#' See documentation for [make_base_gaussian()] for details.
-#'
-#' @param lhs The prior transformation or metric space.
-#' @param scale Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
-#' @param k The noise granularity in terms of 2^k.
-#' @param .MO Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
-#' @return Measurement
-#' @export
-then_base_gaussian <- function(
-    lhs,
-    scale,
-    k = -1074L,
-    .MO = "ZeroConcentratedDivergence<.T>"
-) {
-
-    log <- new_constructor_log("then_base_gaussian", "measurements", new_hashtab(
-        list("scale", "k", "MO"),
-        list(scale, unbox2(k), .MO)
-    ))
-
-    make_chain_dyn(
-        make_base_gaussian(
-            output_domain(lhs),
-            output_metric(lhs),
-            scale = scale,
-            k = k,
-            .MO = .MO),
-        lhs,
-        log)
-}
-
-
-#' base geometric constructor
-#'
-#' An alias for `make_base_discrete_laplace_linear`.
-#' If you don't need timing side-channel protections via `bounds`,
-#' `make_base_discrete_laplace` is more efficient.
-#'
-#' [make_base_geometric in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_geometric.html)
-#'
-#' **Supporting Elements:**
-#'
-#' * Input Domain:   `D`
-#' * Output Type:    `D::Carrier`
-#' * Input Metric:   `D::InputMetric`
-#' * Output Measure: `MaxDivergence<QO>`
-#'
-#' @concept measurements
-#' @param input_domain undocumented
-#' @param input_metric undocumented
-#' @param scale undocumented
-#' @param bounds undocumented
-#' @param .QO undocumented
-#' @return Measurement
-#' @export
-make_base_geometric <- function(
-    input_domain,
-    input_metric,
-    scale,
-    bounds = NULL,
-    .QO = NULL
-) {
-    assert_features("contrib")
-
-    # Standardize type arguments.
-    .QO <- parse_or_infer(type_name = .QO, public_example = scale)
-    .T <- get_atom(get_carrier_type(input_domain))
-    .OptionT <- new_runtime_type(origin = "Option", args = list(new_runtime_type(origin = "Tuple", args = list(.T, .T))))
-
-    log <- new_constructor_log("make_base_geometric", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "bounds", "QO"),
-        list(input_domain, input_metric, scale, bounds, .QO)
-    ))
-
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
-    rt_assert_is_similar(expected = .OptionT, inferred = rt_infer(bounds))
-
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_base_geometric",
-        input_domain, input_metric, scale, bounds, .QO, .T, .OptionT,
-        log, PACKAGE = "opendp")
-    output
-}
-
-#' partial base geometric constructor
-#'
-#' See documentation for [make_base_geometric()] for details.
-#'
-#' @param lhs The prior transformation or metric space.
-#' @param scale undocumented
-#' @param bounds undocumented
-#' @param .QO undocumented
-#' @return Measurement
-#' @export
-then_base_geometric <- function(
-    lhs,
-    scale,
-    bounds = NULL,
-    .QO = NULL
-) {
-
-    log <- new_constructor_log("then_base_geometric", "measurements", new_hashtab(
-        list("scale", "bounds", "QO"),
-        list(scale, bounds, .QO)
-    ))
-
-    make_chain_dyn(
-        make_base_geometric(
-            output_domain(lhs),
-            output_metric(lhs),
-            scale = scale,
-            bounds = bounds,
-            .QO = .QO),
-        lhs,
-        log)
-}
-
-
-#' base laplace constructor
-#'
-#' Make a Measurement that adds noise from the Laplace(`scale`) distribution to a scalar value.
-#'
-#' Valid inputs for `input_domain` and `input_metric` are:
-#'
-#' | `input_domain`                  | input type   | `input_metric`         |
-#' | ------------------------------- | ------------ | ---------------------- |
-#' | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
-#' | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |
-#'
-#' This function takes a noise granularity in terms of 2^k.
-#' Larger granularities are more computationally efficient, but have a looser privacy map.
-#' If k is not set, k defaults to the smallest granularity.
-#'
-#' [make_base_laplace in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_laplace.html)
-#'
-#' **Supporting Elements:**
-#'
-#' * Input Domain:   `D`
-#' * Output Type:    `D::Carrier`
-#' * Input Metric:   `D::InputMetric`
-#' * Output Measure: `MaxDivergence<D::Atom>`
-#'
-#' @concept measurements
-#' @param input_domain Domain of the data type to be privatized.
-#' @param input_metric Metric of the data type to be privatized.
-#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-#' @param k The noise granularity in terms of 2^k.
-#' @return Measurement
-#' @export
-make_base_laplace <- function(
-    input_domain,
-    input_metric,
-    scale,
-    k = -1074L
-) {
-    assert_features("contrib")
-
-    # Standardize type arguments.
-    .T <- get_atom_or_infer(get_carrier_type(input_domain), scale)
-
-    log <- new_constructor_log("make_base_laplace", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "k"),
-        list(input_domain, input_metric, scale, unbox2(k))
-    ))
-
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(scale))
-    rt_assert_is_similar(expected = i32, inferred = rt_infer(k))
-
-    # Call wrapper function.
-    output <- .Call(
-        "measurements__make_base_laplace",
-        input_domain, input_metric, scale, k, .T,
-        log, PACKAGE = "opendp")
-    output
-}
-
-#' partial base laplace constructor
-#'
-#' See documentation for [make_base_laplace()] for details.
-#'
-#' @param lhs The prior transformation or metric space.
-#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-#' @param k The noise granularity in terms of 2^k.
-#' @return Measurement
-#' @export
-then_base_laplace <- function(
-    lhs,
-    scale,
-    k = -1074L
-) {
-
-    log <- new_constructor_log("then_base_laplace", "measurements", new_hashtab(
-        list("scale", "k"),
-        list(scale, unbox2(k))
-    ))
-
-    make_chain_dyn(
-        make_base_laplace(
-            output_domain(lhs),
-            output_metric(lhs),
-            scale = scale,
-            k = k),
         lhs,
         log)
 }
@@ -823,6 +181,7 @@ make_base_laplace_threshold <- function(
 #'
 #' See documentation for [make_base_laplace_threshold()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 #' @param threshold Exclude counts that are less than this minimum value.
@@ -855,7 +214,7 @@ then_base_laplace_threshold <- function(
 
 #' gaussian constructor
 #'
-#' Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
+#' Make a Measurement that adds noise from the Gaussian(`scale`) distribution to the input.
 #'
 #' Valid inputs for `input_domain` and `input_metric` are:
 #'
@@ -877,6 +236,7 @@ then_base_laplace_threshold <- function(
 #' @param input_domain Domain of the data type to be privatized.
 #' @param input_metric Metric of the data type to be privatized.
 #' @param scale Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
+#' @param k The noise granularity in terms of 2^k.
 #' @param .MO Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
 #' @return Measurement
 #' @export
@@ -884,6 +244,7 @@ make_gaussian <- function(
     input_domain,
     input_metric,
     scale,
+    k = NULL,
     .MO = "ZeroConcentratedDivergence<.QO>"
 ) {
     assert_features("contrib")
@@ -892,20 +253,21 @@ make_gaussian <- function(
     .MO <- rt_parse(type_name = .MO, generics = list(".QO"))
     .QO <- get_atom_or_infer(.MO, scale)
     .MO <- rt_substitute(.MO, .QO = .QO)
-    .T.scale <- get_atom(.MO)
+    .T.k <- new_runtime_type(origin = "Option", args = list(i32))
 
     log <- new_constructor_log("make_gaussian", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "MO"),
-        list(input_domain, input_metric, scale, .MO)
+        list("input_domain", "input_metric", "scale", "k", "MO"),
+        list(input_domain, input_metric, scale, k, .MO)
     ))
 
     # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.scale, inferred = rt_infer(scale))
+    rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
+    rt_assert_is_similar(expected = .T.k, inferred = rt_infer(k))
 
     # Call wrapper function.
     output <- .Call(
         "measurements__make_gaussian",
-        input_domain, input_metric, scale, .MO, .QO, rt_parse(.T.scale),
+        input_domain, input_metric, scale, k, .MO, .QO, rt_parse(.T.k),
         log, PACKAGE = "opendp")
     output
 }
@@ -914,20 +276,23 @@ make_gaussian <- function(
 #'
 #' See documentation for [make_gaussian()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
+#' @param k The noise granularity in terms of 2^k.
 #' @param .MO Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
 #' @return Measurement
 #' @export
 then_gaussian <- function(
     lhs,
     scale,
+    k = NULL,
     .MO = "ZeroConcentratedDivergence<.QO>"
 ) {
 
     log <- new_constructor_log("then_gaussian", "measurements", new_hashtab(
-        list("scale", "MO"),
-        list(scale, .MO)
+        list("scale", "k", "MO"),
+        list(scale, k, .MO)
     ))
 
     make_chain_dyn(
@@ -935,7 +300,100 @@ then_gaussian <- function(
             output_domain(lhs),
             output_metric(lhs),
             scale = scale,
+            k = k,
             .MO = .MO),
+        lhs,
+        log)
+}
+
+
+#' geometric constructor
+#'
+#' Equivalent to `make_laplace` but restricted to an integer support.
+#' Can specify `bounds` to run the algorithm in near constant-time.
+#'
+#' [make_geometric in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_geometric.html)
+#'
+#' **Citations:**
+#'
+#' * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `D`
+#' * Output Type:    `D::Carrier`
+#' * Input Metric:   `D::InputMetric`
+#' * Output Measure: `MaxDivergence<QO>`
+#'
+#' @concept measurements
+#' @param input_domain undocumented
+#' @param input_metric undocumented
+#' @param scale undocumented
+#' @param bounds undocumented
+#' @param .QO undocumented
+#' @return Measurement
+#' @export
+make_geometric <- function(
+    input_domain,
+    input_metric,
+    scale,
+    bounds = NULL,
+    .QO = NULL
+) {
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    .QO <- parse_or_infer(type_name = .QO, public_example = scale)
+    .T <- get_atom(get_carrier_type(input_domain))
+    .OptionT <- new_runtime_type(origin = "Option", args = list(new_runtime_type(origin = "Tuple", args = list(.T, .T))))
+
+    log <- new_constructor_log("make_geometric", "measurements", new_hashtab(
+        list("input_domain", "input_metric", "scale", "bounds", "QO"),
+        list(input_domain, input_metric, scale, bounds, .QO)
+    ))
+
+    # Assert that arguments are correctly typed.
+    rt_assert_is_similar(expected = .QO, inferred = rt_infer(scale))
+    rt_assert_is_similar(expected = .OptionT, inferred = rt_infer(bounds))
+
+    # Call wrapper function.
+    output <- .Call(
+        "measurements__make_geometric",
+        input_domain, input_metric, scale, bounds, .QO, .T, .OptionT,
+        log, PACKAGE = "opendp")
+    output
+}
+
+#' partial geometric constructor
+#'
+#' See documentation for [make_geometric()] for details.
+#'
+#' @concept measurements
+#' @param lhs The prior transformation or metric space.
+#' @param scale undocumented
+#' @param bounds undocumented
+#' @param .QO undocumented
+#' @return Measurement
+#' @export
+then_geometric <- function(
+    lhs,
+    scale,
+    bounds = NULL,
+    .QO = NULL
+) {
+
+    log <- new_constructor_log("then_geometric", "measurements", new_hashtab(
+        list("scale", "bounds", "QO"),
+        list(scale, bounds, .QO)
+    ))
+
+    make_chain_dyn(
+        make_geometric(
+            output_domain(lhs),
+            output_metric(lhs),
+            scale = scale,
+            bounds = bounds,
+            .QO = .QO),
         lhs,
         log)
 }
@@ -943,7 +401,7 @@ then_gaussian <- function(
 
 #' laplace constructor
 #'
-#' Make a Measurement that adds noise from the laplace(`scale`) distribution to the input.
+#' Make a Measurement that adds noise from the Laplace(`scale`) distribution to the input.
 #'
 #' Valid inputs for `input_domain` and `input_metric` are:
 #'
@@ -952,7 +410,7 @@ then_gaussian <- function(
 #' | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
 #' | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |
 #'
-#' This uses `make_base_laplace` if `T` is float, otherwise it uses `make_base_discrete_laplace`.
+#' Internally, all sampling is done using the discrete Laplace distribution.
 #'
 #' [make_laplace in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_laplace.html)
 #'
@@ -971,7 +429,8 @@ then_gaussian <- function(
 #' @concept measurements
 #' @param input_domain Domain of the data type to be privatized.
 #' @param input_metric Metric of the data type to be privatized.
-#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+#' @param scale Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
+#' @param k The noise granularity in terms of 2^k, only valid for domains over floats.
 #' @param .QO Data type of the output distance and scale. `f32` or `f64`.
 #' @return Measurement
 #' @export
@@ -979,6 +438,7 @@ make_laplace <- function(
     input_domain,
     input_metric,
     scale,
+    k = NULL,
     .QO = "float"
 ) {
     assert_features("contrib")
@@ -986,19 +446,21 @@ make_laplace <- function(
     # Standardize type arguments.
     .QO <- rt_parse(type_name = .QO)
     .T.scale <- get_atom(.QO)
+    .T.k <- new_runtime_type(origin = "Option", args = list(i32))
 
     log <- new_constructor_log("make_laplace", "measurements", new_hashtab(
-        list("input_domain", "input_metric", "scale", "QO"),
-        list(input_domain, input_metric, scale, .QO)
+        list("input_domain", "input_metric", "scale", "k", "QO"),
+        list(input_domain, input_metric, scale, k, .QO)
     ))
 
     # Assert that arguments are correctly typed.
     rt_assert_is_similar(expected = .T.scale, inferred = rt_infer(scale))
+    rt_assert_is_similar(expected = .T.k, inferred = rt_infer(k))
 
     # Call wrapper function.
     output <- .Call(
         "measurements__make_laplace",
-        input_domain, input_metric, scale, .QO, rt_parse(.T.scale),
+        input_domain, input_metric, scale, k, .QO, rt_parse(.T.scale), rt_parse(.T.k),
         log, PACKAGE = "opendp")
     output
 }
@@ -1007,20 +469,23 @@ make_laplace <- function(
 #'
 #' See documentation for [make_laplace()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
-#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+#' @param scale Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
+#' @param k The noise granularity in terms of 2^k, only valid for domains over floats.
 #' @param .QO Data type of the output distance and scale. `f32` or `f64`.
 #' @return Measurement
 #' @export
 then_laplace <- function(
     lhs,
     scale,
+    k = NULL,
     .QO = "float"
 ) {
 
     log <- new_constructor_log("then_laplace", "measurements", new_hashtab(
-        list("scale", "QO"),
-        list(scale, .QO)
+        list("scale", "k", "QO"),
+        list(scale, k, .QO)
     ))
 
     make_chain_dyn(
@@ -1028,6 +493,7 @@ then_laplace <- function(
             output_domain(lhs),
             output_metric(lhs),
             scale = scale,
+            k = k,
             .QO = .QO),
         lhs,
         log)
@@ -1091,6 +557,7 @@ make_randomized_response <- function(
 #'
 #' See documentation for [make_randomized_response()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param categories Set of valid outcomes
 #' @param prob Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
@@ -1179,6 +646,7 @@ make_randomized_response_bool <- function(
 #'
 #' See documentation for [make_randomized_response_bool()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param prob Probability of returning the correct answer. Must be in `[0.5, 1)`
 #' @param constant_time Set to true to enable constant time. Slower.
@@ -1265,6 +733,7 @@ make_report_noisy_max_gumbel <- function(
 #'
 #' See documentation for [make_report_noisy_max_gumbel()] for details.
 #'
+#' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Higher scales are more private.
 #' @param optimize Indicate whether to privately return the "Max" or "Min"

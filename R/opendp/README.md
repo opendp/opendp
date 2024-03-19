@@ -8,3 +8,5 @@ These hints will help you apply the Python examples to R.
 - The chaining operator in R is `|>`, as opposed to `>>` in Python.
 - Type arguments like `.T` are prefixed with a period in R to avoid name conflicts, while in Python it is plain `T`.
 - All portions of the Python API that are derived from Rust have parallels in the R API, but packages like `context` that exist only in Python have not yet been implemented in R.
+
+Next: [Reference](reference/index.html)

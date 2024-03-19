@@ -8,8 +8,7 @@ use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util::{c_bool, to_bool, Type};
 use crate::measurements::{make_randomized_response, make_randomized_response_bool};
-use crate::traits::samplers::SampleBernoulli;
-use crate::traits::{Float, Hashable};
+use crate::traits::{ExactIntCast, Float, FloatBits, Hashable};
 
 #[no_mangle]
 pub extern "C" fn opendp_measurements__make_randomized_response_bool(
@@ -19,8 +18,9 @@ pub extern "C" fn opendp_measurements__make_randomized_response_bool(
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<QO>(prob: *const c_void, constant_time: bool) -> Fallible<AnyMeasurement>
     where
-        bool: SampleBernoulli<QO>,
         QO: Float,
+        <QO as FloatBits>::Bits: ExactIntCast<usize>,
+        usize: ExactIntCast<<QO as FloatBits>::Bits>,
     {
         let prob = *try_as_ref!(prob as *const QO);
         make_randomized_response_bool::<QO>(prob, constant_time).into_any()
@@ -48,8 +48,9 @@ pub extern "C" fn opendp_measurements__make_randomized_response(
     ) -> Fallible<AnyMeasurement>
     where
         T: Hashable,
-        bool: SampleBernoulli<QO>,
         QO: Float,
+        <QO as FloatBits>::Bits: ExactIntCast<usize>,
+        usize: ExactIntCast<<QO as FloatBits>::Bits>,
     {
         let categories = try_as_ref!(categories).downcast_ref::<Vec<T>>()?.clone();
         let prob = *try_as_ref!(prob as *const QO);

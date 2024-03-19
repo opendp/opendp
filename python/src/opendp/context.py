@@ -14,7 +14,7 @@ from opendp.combinators import (
     make_zCDP_to_approxDP,
 )
 from opendp.domains import atom_domain
-from opendp.measurements import make_base_laplace, make_gaussian
+from opendp.measurements import make_laplace, make_gaussian
 from opendp.measures import (
     fixed_smoothed_max_divergence,
     max_divergence,
@@ -135,7 +135,7 @@ def domain_of(T, infer=False) -> Domain:
             return vector_domain(domain_of(T.args[0]))
         if T.origin == "HashMap":
             return map_domain(domain_of(T.args[0]), domain_of(T.args[1]))
-        if T.origin == "Option":
+        if T.origin == "Option": # pragma: no cover
             return option_domain(domain_of(T.args[0]))
 
     if T in ty.PRIMITIVE_TYPES:
@@ -603,7 +603,7 @@ def _sequential_composition_by_weights(
 
     if split_evenly_over is not None:
         weights = [d_out] * split_evenly_over
-    elif split_by_weights is not None:
+    elif split_by_weights is not None: # pragma: no cover
         weights = split_by_weights
     else:
         raise ValueError(
@@ -676,12 +676,12 @@ def _translate_measure_distance(d_from, from_measure, to_measure):
     if from_to == ("ZeroConcentratedDivergence", "MaxDivergence"): # pragma: no cover
         space = atom_domain(T=T), absolute_distance(T=T)
         scale = binary_search_param(
-            lambda eps: make_pureDP_to_zCDP(make_base_laplace(*space, eps)),
+            lambda eps: make_pureDP_to_zCDP(make_laplace(*space, eps)),
             d_in=constant,
             d_out=d_from,
             T=float,
         )
-        return make_base_laplace(*space, scale).map(constant)
+        return make_laplace(*space, scale).map(constant)
 
     if from_to == (
         "FixedSmoothedMaxDivergence",

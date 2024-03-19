@@ -63,12 +63,28 @@ reference:
   contents:
   - has_concept("metrics")
 
+- title: Mod
+  desc: |
+    The `mod` module provides the classes which implement the [OpenDP Programming Framework](https://docs.opendp.org/en/stable/user/programming-framework/index.html),
+    as well as utilities for enabling features and finding parameter values.
+  contents:
+  - has_concept("mod")
+
 - title: Transformations
-  desc: The ``transformations`` module provides functions that deterministicly transform datasets.
+  desc: The `transformations` module provides functions that deterministicly transform datasets.
   contents:
   - has_concept("transformations")
 
-- title: Other
-  # desc: TODO
+- title: Typing
+  desc: |
+    The `typing` module provides utilities that bridge between R and Rust types.
+    OpenDP relies on precise descriptions of data types to make its security guarantees:
+    These are more natural in Rust with its fine-grained type system, but they may feel out of place in R.
+    These utilities try to fill that gap.
   contents:
-  - lacks_concepts(c("accuracy", "combinators", "core", "data", "domains", "measurements", "measures", "metrics", "transformations"))
+  - has_concept("typing")
+
+- title: Other
+  desc: This should be empty if correctly configured. Please file an issue if any functions are listed here.
+  contents:
+  - lacks_concepts(c("accuracy", "combinators", "core", "data", "domains", "measurements", "measures", "metrics", "mod", "transformations", "typing"))

@@ -7,7 +7,7 @@
 
 sphinx
 sphinx-prompt
-sphinx-tabs
+sphinx-design
 git+https://github.com/samtygier-stfc/sphinx-multiversion.git@prebuild_command
 pydata-sphinx-theme
 nbsphinx

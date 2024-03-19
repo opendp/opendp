@@ -96,6 +96,15 @@ void *sexp_to_voidptr(SEXP input, SEXP rust_type)
     PROTECT(input);
     PROTECT(rust_type);
 
+    if (str_equal(sexp_to_charptr(get_origin(rust_type)), "Option")) {
+        if (input == R_NilValue) {
+            UNPROTECT(2);
+            return NULL;
+        } else {
+            rust_type = VECTOR_ELT(get_args(rust_type), 0);
+        }
+    }
+
     void *output;
     const char *c_rust_type = sexp_to_charptr(rust_type);
 
