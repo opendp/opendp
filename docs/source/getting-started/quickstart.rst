@@ -28,7 +28,7 @@ OpenDP is available for Python, R, and Rust.
 
         In a new directory run ``cargo init`` and then specify OpenDP as a dependency in ``Cargo.toml``:
 
-        .. literalinclude:: quickstart.rs
+        .. literalinclude:: code/quickstart-framework.rs
             :language: toml
             :start-after: init
             :end-before: /init
@@ -88,7 +88,7 @@ Let's apply Laplace noise to a value.
     .. tab-item:: Rust
         :sync: rust
 
-        .. literalinclude:: quickstart.rs
+        .. literalinclude:: code/quickstart-framework
             :language: rust
             :start-after: demo
             :end-before: /demo
