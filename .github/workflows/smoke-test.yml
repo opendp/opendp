@@ -36,11 +36,18 @@ jobs:
         # fix formatting with: cargo fmt --manifest-path=rust/Cargo.toml --all
         run: cargo fmt --manifest-path=Cargo.toml --all --check
 
+      # TODO: Reenable when ready for review
       # - name: Build
       #   run: cargo build --verbose --features untrusted,bindings
       
       - name: Check --no-default-features
         run: cargo check --verbose --no-default-features --features untrusted,ffi
+
+      # TODO: When https://github.com/opendp/opendp/pull/1356 is merged,
+      # consider putting tarpaulin and the doc example run in the same job,
+      # so all the rust testing is together, and nightly only needs to be installed once.
+      - name: Install nightly
+        run: rustup update nightly
 
       - name: Test
         run: cargo tarpaulin --verbose --features untrusted,ffi --fail-under 100
