@@ -643,7 +643,7 @@ def _sequential_composition_by_weights(
 
     :param domain: the domain of the data
     :param privacy_unit: a tuple of the input metric and the data distance (``d_in``)
-    :param privacy_loss: a tuple of the output measure and the privacy loss (``d_out``)
+    :param privacy_loss: a tuple of the output measure and the privacy parameter (``d_out``)
     :param split_evenly_over: The number of parts to evenly distribute the privacy loss
     :param split_by_weights: A list of weights for each intermediate privacy loss
     """
