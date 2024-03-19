@@ -45,6 +45,7 @@ from opendp.typing import RuntimeType
 __all__ = [
     'space_of',
     'domain_of',
+    'metric_of',
     'loss_of',
     'unit_of',
     'Context',
@@ -108,7 +109,7 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
     if isinstance(M, ty.RuntimeType) and not M.args:
         M = M[ty.get_atom(D)] # type: ignore[index]
 
-    return domain, _metric_of(M)
+    return domain, metric_of(M)
 
 
 def domain_of(T, infer=False) -> Domain:
@@ -179,7 +180,7 @@ def domain_of(T, infer=False) -> Domain:
     raise TypeError(f"unrecognized carrier type: {T}")
 
 
-def _metric_of(M) -> Metric:
+def metric_of(M) -> Metric:
     """Constructs an instance of a metric from metric type ``M``."""
     import opendp.typing as ty
     import opendp.metrics as metrics
