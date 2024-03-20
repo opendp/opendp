@@ -6,9 +6,7 @@ import pytest
 dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 
-@pytest.mark.skipif("numpy" not in sys.modules, reason="Numpy needed")
 def test_np_eigenvalues():
-    import numpy as np
     from opendp._extrinsics._make_np_eigenvalues import (
         then_np_eigenvalues,
         then_private_np_eigenvalues,
@@ -19,6 +17,7 @@ def test_np_eigenvalues():
         dp.symmetric_distance(),
     )
     trans = space >> then_np_eigenvalues()
+    np = pytest.importorskip('numpy')
     data = np.random.normal(size=(4, 4))
     data += data.T
     assert np.array_equal(trans(data), np.linalg.eigvalsh(data))

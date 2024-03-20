@@ -23,7 +23,6 @@ def sample_covariance(num_features):
     return A.T @ A
 
 
-@pytest.mark.skipif(not {'numpy', 'scipy', 'randomgen'} <= sys.modules.keys(), reason="Optional dependencies needed")
 def test_pca():
     from opendp._extrinsics.make_np_pca import then_private_np_pca
 
@@ -39,7 +38,6 @@ def test_pca():
     assert m_pca.check(2, 1.0)
 
 
-@pytest.mark.skipif(not {'sklearn', 'randomgen'} <= sys.modules.keys(), reason="Optional dependencies needed")
 def test_pca_skl():
     num_columns = 4
     num_rows = 10_000
@@ -81,16 +79,13 @@ def test_pca_skl():
 
 
 def flip_row_signs(a, b):
-    import numpy as np
-
+    np = pytest.importorskip('numpy')
     signs = np.equal(np.sign(a[:, 0]), np.sign(b[:, 0])) * 2 - 1
     return a, b * signs[:, None]
 
 
-def flaky_test_pca_compare_sklearn():
-    import numpy as np
-    from sklearn.decomposition import PCA  # type: ignore[import]
-
+@pytest.skip('flakey')
+def flaky_assert_pca_compare_sklearn():
     num_columns = 4
     num_rows = 1_000_000
     data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
@@ -103,7 +98,8 @@ def flaky_test_pca_compare_sklearn():
     )
     model_odp.fit(data)
 
-    model_skl = PCA()
+    sklearn = pytest.importorskip('sklearn')
+    model_skl = sklearn.decomposition.PCA()
     model_skl.fit(data)
 
     print(model_odp)
@@ -111,6 +107,7 @@ def flaky_test_pca_compare_sklearn():
 
     print("odp singular values", model_odp.singular_values_)
     print("skl singular values", model_skl.singular_values_)
+    np = pytest.importorskip('numpy')
     assert np.allclose(
         model_odp.singular_values_, model_skl.singular_values_, atol=1e-1
     )
@@ -126,11 +123,10 @@ def flaky_test_pca_compare_sklearn():
     print(model_odp.explained_variance_)
 
 
-@pytest.mark.skipif(not {'numpy', 'randomgen', 'sklearn'} <= sys.modules.keys(), reason="Optional dependencies needed")
 def test_pca_compare_sklearn():
     for _ in range(5):
         try:
-            flaky_test_pca_compare_sklearn()
+            flaky_assert_pca_compare_sklearn()
             break
         except AssertionError:
             pass

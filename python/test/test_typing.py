@@ -11,9 +11,9 @@ try:
 except ImportError:
     pass
 
-@pytest.mark.skipif('numpy' not in sys.modules,
-                    reason="requires the Numpy library")
+
 def test_numpy_function():
+    np = pytest.importorskip('numpy')
     print(RuntimeType.infer(np.array([1, 2, 3])))
     print(RuntimeType.infer(np.array(1)))
     print(RuntimeType.infer(np.array(1.)))

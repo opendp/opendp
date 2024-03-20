@@ -6,9 +6,7 @@ import pytest
 dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 
-@pytest.mark.skipif('numpy' not in sys.modules or 'randomgen' not in sys.modules, reason="Numpy and randomgen needed")
 def test_private_np_eigenvector():
-    import numpy as np
     from opendp._extrinsics._make_np_eigenvector import then_private_eigenvector
 
     space = (
@@ -16,6 +14,7 @@ def test_private_np_eigenvector():
         dp.symmetric_distance(),
     )
     meas = space >> then_private_eigenvector(unit_epsilon=100_000.0)
+    np = pytest.importorskip('numpy')
     data = np.random.normal(size=(4, 4))
     data += data.T
     noisy = meas(data)
@@ -28,9 +27,7 @@ def test_private_np_eigenvector():
     assert meas.map(2) == 100_000.0
 
 
-@pytest.mark.skipif('numpy' not in sys.modules or 'randomgen' not in sys.modules, reason="Numpy and randomgen needed")
 def test_eigenvector_integration():
-    import numpy as np
     from opendp._extrinsics.make_np_clamp import then_np_clamp
     from opendp._extrinsics._make_np_sscp import then_np_sscp
     from opendp._extrinsics._make_np_eigenvector import then_private_eigenvector
@@ -47,13 +44,12 @@ def test_eigenvector_integration():
         >> then_private_eigenvector(1.0)
     )
 
+    np = pytest.importorskip('numpy')
     data = np.random.normal(size=(1000, num_columns))
     print(meas(data))
 
 
-@pytest.mark.skipif('numpy' not in sys.modules, reason="Optional dependencies needed")
 def test_eigenvectors():
-    import numpy as np
     from opendp._extrinsics.make_np_clamp import then_np_clamp
     from opendp._extrinsics._make_np_sscp import then_np_sscp
     from opendp._extrinsics._make_np_eigenvector import then_private_np_eigenvectors
@@ -74,6 +70,7 @@ def test_eigenvectors():
         assert 'optional install "scipy" is required by this function' in str(e)
         return
 
+    np = pytest.importorskip('numpy')
     data = np.random.normal(size=(1000, num_columns))
     try:
         print(meas(data))

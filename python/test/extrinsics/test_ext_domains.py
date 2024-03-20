@@ -6,10 +6,7 @@ import pytest
 dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 
-@pytest.mark.skipif("numpy" not in sys.modules, reason="Numpy needed")
 def test_np_array2_domain():
-    import numpy as np
-
     # missing norm
     with pytest.raises(ValueError):
         dp.np_array2_domain(p=2, T=float)
@@ -19,6 +16,8 @@ def test_np_array2_domain():
     # scalar origin must be at zero
     with pytest.raises(ValueError):
         dp.np_array2_domain(norm=1, p=2, origin=2, T=float)
+
+    np = pytest.importorskip('numpy')
     # origin must be consistent with num_columns
     with pytest.raises(ValueError):
         dp.np_array2_domain(
@@ -42,11 +41,10 @@ def test_np_array2_domain():
     assert dp.np_array2_domain(T=bool).member(np.array([[True, False]]))
 
 
-@pytest.mark.skipif("numpy" not in sys.modules, reason="Numpy needed")
 def test_np_sscp_domain():
-    import numpy as np
-
     domain = _np_sscp_domain(num_features=4, T=float)
+
+    np = pytest.importorskip('numpy')
     domain.member(np.random.normal(size=(4, 4)))
 
     domain = _np_sscp_domain(num_features=4, T=dp.f32)
