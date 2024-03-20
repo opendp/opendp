@@ -15,29 +15,29 @@ NULL
 #' @return Domain
 #' @export
 atom_domain <- function(
-    bounds = NULL,
-    nullable = FALSE,
-    .T = NULL
+  bounds = NULL,
+  nullable = FALSE,
+  .T = NULL
 ) {
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
-    .T.bounds <- new_runtime_type(origin = "Option", args = list(new_runtime_type(origin = "Tuple", args = list(.T, .T))))
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = get_first(bounds))
+  .T.bounds <- new_runtime_type(origin = "Option", args = list(new_runtime_type(origin = "Tuple", args = list(.T, .T))))
 
-    log <- new_constructor_log("atom_domain", "domains", new_hashtab(
-        list("bounds", "nullable", "T"),
-        list(bounds, unbox2(nullable), .T)
-    ))
+  log <- new_constructor_log("atom_domain", "domains", new_hashtab(
+    list("bounds", "nullable", "T"),
+    list(bounds, unbox2(nullable), .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
-    rt_assert_is_similar(expected = bool, inferred = rt_infer(nullable))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.bounds, inferred = rt_infer(bounds))
+  rt_assert_is_similar(expected = bool, inferred = rt_infer(nullable))
 
-    # Call wrapper function.
-    output <- .Call(
-        "domains__atom_domain",
-        bounds, nullable, .T, rt_parse(.T.bounds),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "domains__atom_domain",
+    bounds, nullable, .T, rt_parse(.T.bounds),
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -48,20 +48,20 @@ atom_domain <- function(
 #' @return str
 #' @export
 domain_carrier_type <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("domain_carrier_type", "domains", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("domain_carrier_type", "domains", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "domains__domain_carrier_type",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "domains__domain_carrier_type",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -72,20 +72,20 @@ domain_carrier_type <- function(
 #' @return str
 #' @export
 domain_debug <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("domain_debug", "domains", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("domain_debug", "domains", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "domains__domain_debug",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "domains__domain_debug",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -96,20 +96,20 @@ domain_debug <- function(
 #' @return str
 #' @export
 domain_type <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("domain_type", "domains", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("domain_type", "domains", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "domains__domain_type",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "domains__domain_type",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -121,25 +121,25 @@ domain_type <- function(
 #' @return Domain
 #' @export
 map_domain <- function(
-    key_domain,
-    value_domain
+  key_domain,
+  value_domain
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("map_domain", "domains", new_hashtab(
-        list("key_domain", "value_domain"),
-        list(key_domain, value_domain)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("map_domain", "domains", new_hashtab(
+    list("key_domain", "value_domain"),
+    list(key_domain, value_domain)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = AnyDomain, inferred = rt_infer(key_domain))
-    rt_assert_is_similar(expected = AnyDomain, inferred = rt_infer(value_domain))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = AnyDomain, inferred = rt_infer(key_domain))
+  rt_assert_is_similar(expected = AnyDomain, inferred = rt_infer(value_domain))
 
-    # Call wrapper function.
-    output <- .Call(
-        "domains__map_domain",
-        key_domain, value_domain,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "domains__map_domain",
+    key_domain, value_domain,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -150,27 +150,27 @@ map_domain <- function(
 #' @param val A potential element of the domain.
 #' @export
 member <- function(
-    this,
-    val
+  this,
+  val
 ) {
-    # Standardize type arguments.
-    .T.val <- domain_carrier_type(this)
+  # Standardize type arguments.
+  .T.val <- domain_carrier_type(this)
 
-    log <- new_constructor_log("member", "domains", new_hashtab(
-        list("this", "val"),
-        list(this, val)
-    ))
+  log <- new_constructor_log("member", "domains", new_hashtab(
+    list("this", "val"),
+    list(this, val)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = AnyDomain, inferred = rt_infer(this))
-    rt_assert_is_similar(expected = .T.val, inferred = rt_infer(val))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = AnyDomain, inferred = rt_infer(this))
+  rt_assert_is_similar(expected = .T.val, inferred = rt_infer(val))
 
-    # Call wrapper function.
-    output <- .Call(
-        "domains__member",
-        this, val, rt_parse(.T.val),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "domains__member",
+    this, val, rt_parse(.T.val),
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -184,26 +184,26 @@ member <- function(
 #' @return Domain
 #' @export
 option_domain <- function(
-    element_domain,
-    .D = NULL
+  element_domain,
+  .D = NULL
 ) {
-    # Standardize type arguments.
-    .D <- parse_or_infer(type_name = .D, public_example = element_domain)
+  # Standardize type arguments.
+  .D <- parse_or_infer(type_name = .D, public_example = element_domain)
 
-    log <- new_constructor_log("option_domain", "domains", new_hashtab(
-        list("element_domain", "D"),
-        list(element_domain, .D)
-    ))
+  log <- new_constructor_log("option_domain", "domains", new_hashtab(
+    list("element_domain", "D"),
+    list(element_domain, .D)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .D, inferred = rt_infer(element_domain))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .D, inferred = rt_infer(element_domain))
 
-    # Call wrapper function.
-    output <- .Call(
-        "domains__option_domain",
-        element_domain, .D,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "domains__option_domain",
+    element_domain, .D,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -215,24 +215,24 @@ option_domain <- function(
 #' @return Domain
 #' @export
 vector_domain <- function(
-    atom_domain,
-    size = NULL
+  atom_domain,
+  size = NULL
 ) {
-    # Standardize type arguments.
-    .T.size <- new_runtime_type(origin = "Option", args = list(i32))
+  # Standardize type arguments.
+  .T.size <- new_runtime_type(origin = "Option", args = list(i32))
 
-    log <- new_constructor_log("vector_domain", "domains", new_hashtab(
-        list("atom_domain", "size"),
-        list(atom_domain, size)
-    ))
+  log <- new_constructor_log("vector_domain", "domains", new_hashtab(
+    list("atom_domain", "size"),
+    list(atom_domain, size)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.size, inferred = rt_infer(size))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.size, inferred = rt_infer(size))
 
-    # Call wrapper function.
-    output <- .Call(
-        "domains__vector_domain",
-        atom_domain, size, rt_parse(.T.size),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "domains__vector_domain",
+    atom_domain, size, rt_parse(.T.size),
+    log, PACKAGE = "opendp")
+  output
 }
