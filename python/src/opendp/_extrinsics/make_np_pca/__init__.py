@@ -34,7 +34,12 @@ def make_private_np_pca(
     :returns a Measurement that computes a tuple of (mean, S, Vt)
     """
     import opendp.prelude as dp
-    import numpy as np
+    try:
+        import numpy as np
+    except ImportError:
+        raise ImportError(
+            "The optional install numpy is required for this functionality"
+        )
 
     dp.assert_features("contrib", "floating-point")
 
@@ -137,7 +142,12 @@ then_private_np_pca = register_measurement(make_private_np_pca)
 
 def _smaller(v):
     """returns the next non-negative float closer to zero"""
-    import numpy as np
+    try:
+        import numpy as np
+    except ImportError:
+        raise ImportError(
+            "The optional install numpy is required for this functionality"
+        )
 
     if v < 0:
         raise ValueError("expected non-negative value")
@@ -159,7 +169,12 @@ def _split_pca_epsilon_evenly(unit_epsilon, num_eigvec_releases, estimate_mean=F
 
 def _make_center(input_domain, input_metric):
     import opendp.prelude as dp
-    import numpy as np
+    try:
+        import numpy as np
+    except ImportError:
+        raise ImportError(
+            "The optional install numpy is required for this functionality"
+        )
 
     dp.assert_features("contrib", "floating-point")
 

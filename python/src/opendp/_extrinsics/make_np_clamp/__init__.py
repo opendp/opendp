@@ -14,7 +14,12 @@ def make_np_clamp(
     :param origin: norm clamping is centered on this point. Defaults to zero
     """
     import opendp.prelude as dp
-    import numpy as np  # type: ignore[import]
+    try:
+        import numpy as np
+    except ImportError:
+        raise ImportError(
+            "The optional install numpy is required for this functionality"
+        )
 
     dp.assert_features("contrib")
 

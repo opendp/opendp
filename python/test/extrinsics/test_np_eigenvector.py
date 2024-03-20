@@ -9,10 +9,11 @@ dp.enable_features("honest-but-curious", "contrib", "floating-point")
 def test_private_np_eigenvector():
     from opendp._extrinsics._make_np_eigenvector import then_private_eigenvector
 
-    space = (
-        _np_sscp_domain(num_features=4, norm=1.0, p=2, T=float),
-        dp.symmetric_distance(),
-    )
+    with optional_dependency('numpy'):
+        space = (
+            _np_sscp_domain(num_features=4, norm=1.0, p=2, T=float),
+            dp.symmetric_distance(),
+        )
     meas = space >> then_private_eigenvector(unit_epsilon=100_000.0)
     np = pytest.importorskip('numpy')
     data = np.random.normal(size=(4, 4))
@@ -57,8 +58,10 @@ def test_eigenvectors():
     from opendp._extrinsics._make_np_eigenvector import then_private_np_eigenvectors
 
     num_columns = 4
+    with optional_dependency('numpy'):
+        domain = dp.np_array2_domain(num_columns=num_columns, T=float)
     space = (
-        dp.np_array2_domain(num_columns=num_columns, T=float),
+        domain,
         dp.symmetric_distance(),
     )
     sp_sscp = (

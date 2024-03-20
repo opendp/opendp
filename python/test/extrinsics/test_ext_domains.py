@@ -43,7 +43,8 @@ def test_np_array2_domain():
 
 
 def test_np_sscp_domain():
-    domain = _np_sscp_domain(num_features=4, T=float)
+    with optional_dependency('numpy'):
+        domain = _np_sscp_domain(num_features=4, T=float)
 
     np = pytest.importorskip('numpy')
     domain.member(np.random.normal(size=(4, 4)))

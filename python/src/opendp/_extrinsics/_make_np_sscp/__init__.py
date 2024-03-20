@@ -17,7 +17,12 @@ def make_np_sscp(
     :returns a Measurement that computes the DP sum
     """
     import opendp.prelude as dp
-    import numpy as np  # type: ignore[import]
+    try:
+        import numpy as np
+    except ImportError:
+        raise ImportError(
+            "The optional install numpy is required for this functionality"
+        )
 
     dp.assert_features("contrib", "floating-point")
 

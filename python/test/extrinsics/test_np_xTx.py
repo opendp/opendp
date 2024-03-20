@@ -1,5 +1,6 @@
 import opendp.prelude as dp
 import pytest
+from ..helpers import optional_dependency
 
 dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
@@ -7,7 +8,8 @@ dp.enable_features("honest-but-curious", "contrib", "floating-point")
 def test_np_sscp_sym():
     from opendp._extrinsics._make_np_sscp import then_np_sscp
 
-    space = dp.np_array2_domain(num_columns=4, T=float), dp.symmetric_distance()
+    with optional_dependency('numpy'):
+        space = dp.np_array2_domain(num_columns=4, T=float), dp.symmetric_distance()
     trans = space >> then_np_sscp(dp.symmetric_distance())
     np = pytest.importorskip('numpy')
     data = np.random.normal(size=(1000, 4))
@@ -18,10 +20,11 @@ def test_np_sscp_sym():
 def test_np_sscp_l2():
     from opendp._extrinsics._make_np_sscp import then_np_sscp
 
-    space = (
-        dp.np_array2_domain(num_columns=4, norm=2.0, p=2, T=float),
-        dp.symmetric_distance(),
-    )
+    with optional_dependency('numpy'):
+        space = (
+            dp.np_array2_domain(num_columns=4, norm=2.0, p=2, T=float),
+            dp.symmetric_distance(),
+        )
     trans = space >> then_np_sscp(dp.l2_distance(T=float))
     np = pytest.importorskip('numpy')
     data = np.random.normal(size=(1000, 4))

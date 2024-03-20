@@ -167,7 +167,12 @@ def _np_sscp_domain(
     :param num_features: number of rows/columns in the matrix
     """
     import opendp.prelude as dp
-    import numpy as np  # type: ignore[import]
+    try:
+        import numpy as np
+    except ImportError:
+        raise ImportError(
+            "The optional install numpy is required for this functionality"
+        )
 
     _check_norm_and_p(norm, p)
     _check_nonnegative_int(size, "size")

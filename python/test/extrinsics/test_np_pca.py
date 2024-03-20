@@ -6,7 +6,12 @@ dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 
 def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
-    import numpy as np
+    try:
+        import numpy as np
+    except ImportError:
+        raise ImportError(
+            "The optional install numpy is required for this functionality"
+        )
 
     cov = cov or sample_covariance(num_columns)
     microdata = np.random.multivariate_normal(
@@ -17,7 +22,12 @@ def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
 
 
 def sample_covariance(num_features):
-    import numpy as np
+    try:
+        import numpy as np
+    except ImportError:
+        raise ImportError(
+            "The optional install numpy is required for this functionality"
+        )
 
     A = np.random.uniform(0, num_features, size=(num_features, num_features))
     return A.T @ A
@@ -28,8 +38,10 @@ def test_pca():
 
     num_columns = 4
     num_rows = 10_000
+    with optional_dependency('numpy'):
+        domain = dp.np_array2_domain(norm=1, p=2, origin=0, num_columns=num_columns, size=num_rows, T=float),
     space = (
-        dp.np_array2_domain(norm=1, p=2, origin=0, num_columns=num_columns, size=num_rows, T=float),
+        domain,
         dp.symmetric_distance(),
     )
     m_pca = space >> then_private_np_pca(unit_epsilon=1.0)
@@ -41,7 +53,8 @@ def test_pca():
 def test_pca_skl():
     num_columns = 4
     num_rows = 10_000
-    data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
+    with optional_dependency('numpy'):
+        data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
 
     with optional_dependency('sklearn'):
         model = dp.sklearn.PCA(
@@ -88,7 +101,8 @@ def flip_row_signs(a, b):
 def flaky_assert_pca_compare_sklearn():
     num_columns = 4
     num_rows = 1_000_000
-    data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
+    with optional_dependency('numpy'):
+        data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
 
     with optional_dependency("sklearn"):
         model_odp = dp.sklearn.PCA(

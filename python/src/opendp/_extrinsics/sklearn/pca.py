@@ -73,7 +73,12 @@ class PCA(SKLPCA):
 
     def _postprocess(self, values):
         """A function that applies a release of the mean and eigendecomposition to self"""
-        import numpy as np
+        try:
+            import numpy as np
+        except ImportError:
+            raise ImportError(
+                "The optional install numpy is required for this functionality"
+            )
         from sklearn.utils.extmath import stable_cumsum, svd_flip # type: ignore[import]
         from sklearn.decomposition._pca import _infer_dimension # type: ignore[import]
 

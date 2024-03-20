@@ -27,7 +27,12 @@ def make_private_np_mean(
     :returns a Measurement that computes the DP mean
     """
     import opendp.prelude as dp
-    import numpy as np  # type: ignore[import]
+    try:
+        import numpy as np
+    except ImportError:
+        raise ImportError(
+            "The optional install numpy is required for this functionality"
+        )
 
     dp.assert_features("contrib", "floating-point")
 

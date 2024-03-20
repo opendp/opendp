@@ -23,7 +23,12 @@ ELEMENTARY_TYPES: Dict[Any, str] = {
     Transformation: 'AnyTransformationPtr'
 }
 try:
-    import numpy as np # type: ignore[import-not-found]
+    try:
+        import numpy as np
+    except ImportError:
+        raise ImportError(
+            "The optional install numpy is required for this functionality"
+        )
     # https://numpy.org/doc/stable/reference/arrays.scalars.html#sized-aliases
     ELEMENTARY_TYPES.update({  # pragma: no cover
         # np.bytes_: '&[u8]',  # np.string_ # not used in OpenDP

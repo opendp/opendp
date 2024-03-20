@@ -10,7 +10,12 @@ def make_np_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transform
     :param input_domain: instance of `_np_sscp_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
     """
-    import numpy as np  # type: ignore[import]
+    try:
+        import numpy as np
+    except ImportError:
+        raise ImportError(
+            "The optional install numpy is required for this functionality"
+        )
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "floating-point")

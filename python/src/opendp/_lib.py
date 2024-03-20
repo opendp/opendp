@@ -76,7 +76,12 @@ lib = _load_library()
 
 np_csprng: "np.random.Generator" = None # type: ignore[assignment]
 try:
-    import numpy as np  # type: ignore[import-not-found]
+    try:
+        import numpy as np
+    except ImportError:
+        raise ImportError(
+            "The optional install numpy is required for this functionality"
+        )
     from randomgen import UserBitGenerator  # type: ignore[import]
 
     buffer_len = 1024
