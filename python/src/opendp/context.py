@@ -264,11 +264,11 @@ def unit_of(
     >>> unit_of(l1=2.0)
     (L1Distance(f64), 2.0)
 
-    :param contributions: TODO
-    :param changes: TODO
-    :param absolute: TODO
-    :param l1: TODO
-    :param l2: TODO
+    :param contributions: Greatest number of records a privacy unit may contribute to microdata
+    :param changes: Greatest number of records a privacy unit may change in microdata
+    :param absolute: Greatest absolute distance a privacy unit can influence a scalar aggregate data set
+    :param l1: Greatest l1 distance a privacy unit can influence a vector aggregate data set
+    :param l2: Greatest l2 distance a privacy unit can influence a vector aggregate data set
     :param ordered: Set to ``True`` to use ``InsertDeleteDistance`` instead of ``SymmetricDistance``, or ``HammingDistance`` instead of ``ChangeOneDistance``.
     :param U: The type of the dataset distance."""
 
