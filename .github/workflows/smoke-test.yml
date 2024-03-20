@@ -17,10 +17,10 @@ jobs:
       CARGO_TERM_COLOR: always
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -49,7 +49,7 @@ jobs:
         run: git diff --exit-code
 
       - name: Upload libs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: libs
           path: |
@@ -60,7 +60,7 @@ jobs:
         run: cd .. && bash tools/r_stage.sh -v
           
       - name: Upload vendored sources
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vendor
           path: R/opendp/src/vendor.tar.xz
@@ -93,10 +93,10 @@ jobs:
         python-version: [3.8, 3.12]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -105,7 +105,7 @@ jobs:
         run: echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
       - name: Cache pip dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ steps.pip-cache.outputs.dir }}
           key: ${{ runner.os }}-pip-${{ hashFiles('python/setup.cfg') }}
@@ -117,7 +117,7 @@ jobs:
           python -m pip install -r requirements-dev.txt
 
       - name: Download libs
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: libs
           path: python/src/opendp/lib
@@ -139,7 +139,7 @@ jobs:
         working-directory: docs
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Pandoc
         run: sudo apt-get install -y pandoc
@@ -161,10 +161,10 @@ jobs:
         working-directory: docs
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: 3.9
 
@@ -173,7 +173,7 @@ jobs:
         run: echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
       - name: Cache pip dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ steps.pip-cache.outputs.dir }}
           key: ${{ runner.os }}-pip-${{ hashFiles('python/setup.cfg') }}
@@ -186,7 +186,7 @@ jobs:
           python -m pip install -r requirements_notebooks.txt
 
       - name: Download libs
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: libs
           path: python/src/opendp/lib
@@ -207,10 +207,10 @@ jobs:
       LINTR_ERROR_ON_LINT: true
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download libs
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: libs
           path: libs/
