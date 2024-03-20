@@ -211,22 +211,28 @@ def metric_of(M) -> Metric:
     raise TypeError(f"unrecognized metric: {M}")
 
 
-def loss_of(*, epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]:
+def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
-    :param U: The type of the privacy parameter.
+    :param epsilon: Parameter for pure ε-DP.
+    :param delta: Parameter for approximate (ε,δ)-DP.
+    :param rho: Parameter for zero-concentrated ρ-DP.
+    :param U: The type of the privacy parameter; Inferred if not provided.
 
-    .. TODO: repr for Measure: https://github.com/opendp/opendp/issues/1390
+    :example:
 
-    >>> loss_of(epsilon=1.0)  # doctest: +ELLIPSIS
-    (<opendp.mod.Measure object at ...>, 1.0)
-    >>> loss_of(epsilon=1.0, delta=1e-9)  # doctest: +ELLIPSIS
-    (<opendp.mod.Measure object at ...>, (1.0, 1e-09))
-    >>> loss_of(rho=1.0)  # doctest: +ELLIPSIS
-    (<opendp.mod.Measure object at ...>, 1.0)
+    >>> loss_of(epsilon=1.0)
+    (MaxDivergence(f64), 1.0)
+    >>> loss_of(epsilon=1.0, delta=1e-9)
+    (FixedSmoothedMaxDivergence(f64), (1.0, 1e-09))
+    >>> loss_of(rho=1.0)
+    (ZeroConcentratedDivergence(f64), 1.0)
+
     """
     if epsilon is None and rho is None:
         raise ValueError("Either epsilon or rho must be specified.")
+    if epsilon is None and delta is not None:
+        raise ValueError("Epsilon must be specified if delta is given.")
 
     if rho:
         U = RuntimeType.parse_or_infer(U, rho)
