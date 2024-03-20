@@ -5,12 +5,6 @@ from opendp.mod import *
 from opendp.typing import *
 
 
-try:
-    import numpy as np  # type: ignore
-except ImportError:
-    pass
-
-
 def test_numpy_function():
     np = pytest.importorskip('numpy')
     print(RuntimeType.infer(np.array([1, 2, 3])))
