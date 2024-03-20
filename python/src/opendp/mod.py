@@ -34,24 +34,30 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     >>> dp.enable_features("contrib")
 
     >>> # create an instance of Measurement using a constructor from the meas module
-    >>> base_dl: dp.Measurement = dp.m.make_base_discrete_laplace(
+    >>> laplace = dp.m.make_laplace(
     ...     dp.atom_domain(T=int), dp.absolute_distance(T=int),
     ...     scale=2.)
+    >>> laplace
+    Measurement(
+        input_domain   = AtomDomain(T=i32),
+        input_metric   = AbsoluteDistance(i32),
+        output_measure = MaxDivergence(f64)
+    )
 
     >>> # invoke the measurement (invoke and __call__ are equivalent)
-    >>> print('explicit: ', base_dl.invoke(100))  # -> 101   # doctest: +ELLIPSIS
+    >>> print('explicit: ', laplace.invoke(100))  # -> 101   # doctest: +ELLIPSIS
     explicit: ...
-    >>> print('concise: ', base_dl(100))  # -> 99            # doctest: +ELLIPSIS
+    >>> print('concise: ', laplace(100))  # -> 99            # doctest: +ELLIPSIS
     concise: ...
     >>> # check the measurement's relation at
     >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence)
-    >>> assert base_dl.check(1, 0.5)
+    >>> assert laplace.check(1, 0.5)
 
     >>> # chain with a transformation from the trans module
     >>> chained = (
     ...     (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()) >>
     ...     dp.t.then_count() >>
-    ...     base_dl
+    ...     laplace
     ... )
 
     >>> # the resulting measurement has the same features
@@ -191,8 +197,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
     
-    def __str__(self) -> str:
-        return f"Measurement(\n    input_domain   = {self.input_domain}, \n    input_metric   = {self.input_metric}, \n    output_measure = {self.output_measure}\n)" # pragma: no cover
+    def __repr__(self) -> str:
+        return f"Measurement(\n    input_domain   = {self.input_domain},\n    input_metric   = {self.input_metric},\n    output_measure = {self.output_measure}\n)" # pragma: no cover
 
 
 class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
@@ -213,7 +219,14 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
 
     >>> # create an instance of Transformation using a constructor from the trans module
     >>> input_space = (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
-    >>> count: dp.Transformation = input_space >> dp.t.then_count()
+    >>> count = input_space >> dp.t.then_count()
+    >>> count
+    Transformation(
+        input_domain   = VectorDomain(AtomDomain(T=i32)),
+        output_domain  = AtomDomain(T=i32),
+        input_metric   = SymmetricDistance(),
+        output_metric  = AbsoluteDistance(i32)
+    )
 
     >>> # invoke the transformation (invoke and __call__ are equivalent)
     >>> count.invoke([1, 2, 3])
@@ -393,7 +406,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         return f"Transformation(\n    input_domain   = {self.input_domain},\n    output_domain  = {self.output_domain},\n    input_metric   = {self.input_metric},\n    output_metric  = {self.output_metric}\n)"
 
 Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
@@ -416,7 +429,7 @@ class Queryable(object):
         from opendp.typing import RuntimeType
         return RuntimeType.parse(queryable_query_type(self.value))
 
-    def __str__(self):
+    def __repr__(self) -> str:
         return f"Queryable(Q={self.query_type})"
 
     def _depends_on(self, *args):
@@ -479,7 +492,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         from opendp.domains import _user_domain_descriptor
         return _user_domain_descriptor(self)
 
-    def __str__(self):
+    def __repr__(self) -> str:
         from opendp.domains import domain_debug
         return domain_debug(self)
     
@@ -491,9 +504,6 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
-
-    def __repr__(self) -> str:
-        return str(self) # pragma: no cover
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
@@ -529,7 +539,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
         from opendp.typing import RuntimeType
         return RuntimeType.parse(metric_distance_type(self))
 
-    def __str__(self):
+    def __repr__(self) -> str:
         from opendp.metrics import metric_debug
         return metric_debug(self)
     
@@ -541,9 +551,6 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
-
-    def __repr__(self) -> str:
-        return str(self) # pragma: no cover
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
@@ -558,7 +565,14 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     See the `Measure <../../api/user-guide/programming-framework/supporting-elements.html#measure>`_
     section in the Programming Framework docs for more context.
 
-    Functions for creating measures are in :py:mod:`opendp.measures`.
+    Measures should be created with the functions in :py:mod:`opendp.measures`
+    or :py:mod:`opendp.context`, for a higher-level interface:
+
+    >>> import opendp.prelude as dp
+    >>> measure, distance = dp.loss_of(epsilon=1.0)
+    >>> measure, distance
+    (MaxDivergence(f64), 1.0)
+
     '''
     _type_ = AnyMeasure
 
@@ -574,7 +588,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
         from opendp.typing import RuntimeType
         return RuntimeType.parse(measure_distance_type(self))
 
-    def __str__(self):
+    def __repr__(self):
         from opendp.measures import measure_debug
         return measure_debug(self)
     
@@ -722,7 +736,7 @@ def binary_search_chain(
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.
     >>> # The lambda function returns the complete computation chain when given a single numeric parameter.
     >>> chain = dp.binary_search_chain(
-    ...     lambda s: pre >> dp.m.then_base_laplace(scale=s), 
+    ...     lambda s: pre >> dp.m.then_laplace(scale=s), 
     ...     d_in=1, d_out=1.)
     ...
     >>> # The resulting computation chain is always (`d_in`, `d_out`)-close, but we can still double-check:
@@ -773,7 +787,7 @@ def binary_search_param(
     ...
     >>> def make_fixed_laplace(scale):
     ...     # fixes the input domain and metric, but parameterizes the noise scale
-    ...     return dp.m.make_base_laplace(dp.atom_domain(T=float), dp.absolute_distance(T=float), scale)
+    ...     return dp.m.make_laplace(dp.atom_domain(T=float), dp.absolute_distance(T=float), scale)
     ...
     >>> scale = dp.binary_search_param(make_fixed_laplace, d_in=0.1, d_out=1.)
     >>> assert scale == 0.1
@@ -794,7 +808,7 @@ def binary_search_param(
     ...    return (
     ...        (dp.vector_domain(dp.atom_domain(bounds=(0., 500_000.)), data_size), dp.symmetric_distance()) >>
     ...        dp.t.then_mean() >> 
-    ...        dp.m.then_base_laplace(necessary_scale)
+    ...        dp.m.then_laplace(necessary_scale)
     ...    )
     ...
     >>> # solve for the smallest dataset size that admits a (2 neighboring, 1. epsilon)-close measurement

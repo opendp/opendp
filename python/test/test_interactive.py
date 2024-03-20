@@ -21,7 +21,7 @@ def test_sequential_composition():
         sc_meas.input_space
         >> dp.t.then_clamp((0, 10))
         >> dp.t.then_sum()
-        >> dp.m.then_base_discrete_laplace(100.0)
+        >> dp.m.then_laplace(100.0)
     )
 
     print("evaluating")
@@ -43,7 +43,7 @@ def test_sequential_composition():
             d_mids=[0.2, 0.09],
         )
     )
-    noise_query = exact_sum.output_space >> dp.m.then_base_discrete_laplace(200.0)
+    noise_query = exact_sum.output_space >> dp.m.then_laplace(200.0)
 
     print("child release:", exact_sum_sc_qbl(noise_query))
     print("child release:", exact_sum_sc_qbl(noise_query))
@@ -68,7 +68,7 @@ def test_sequential_composition_approxdp():
         input_space
         >> dp.t.then_clamp((0, 10))
         >> dp.t.then_sum()
-        >> dp.m.then_base_discrete_gaussian(100.0)
+        >> dp.m.then_gaussian(100.0)
     )
     sum_meas = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(sum_meas), 1e-6)
     sc_qbl(sum_meas)

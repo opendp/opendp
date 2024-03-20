@@ -1,7 +1,7 @@
 Quickstart
 ==========
 
-OpenDP is available for Python and R.
+OpenDP is available for Python, R, and Rust.
 
 .. tab-set::
 
@@ -22,6 +22,16 @@ OpenDP is available for Python and R.
         .. code:: r
 
             install.packages('opendp', repos = 'https://opendp.r-universe.dev/')
+
+    .. tab-item:: Rust
+        :sync: rust
+
+        In a new directory run ``cargo init`` and then specify OpenDP as a dependency in ``Cargo.toml``:
+
+        .. literalinclude:: quickstart.rs
+            :language: toml
+            :start-after: init
+            :end-before: /init
 
 
 This will make the OpenDP modules available to your local environment.
@@ -48,6 +58,12 @@ Enable ``contrib`` globally with the following snippet:
             :start-after: init
             :end-before: /init
 
+    .. tab-item:: Rust
+        :sync: rust
+
+        In Rust, ``contrib`` is specified in ``Cargo.toml``.
+
+
 Once you've installed OpenDP, you can write your first program.
 Let's apply Laplace noise to a value.
 
@@ -69,10 +85,18 @@ Let's apply Laplace noise to a value.
             :start-after: demo
             :end-before: /demo
 
+    .. tab-item:: Rust
+        :sync: rust
+
+        .. literalinclude:: quickstart.rs
+            :language: rust
+            :start-after: demo
+            :end-before: /demo
+
 This is obviously not the easiest way to add noise to a number,
 but it demonstrates a number of OpenDP patterns:
 
-* Defining your metric space with ``space_of`` in Python.
-* Chaining operators together with ``>>`` in Python, or ``|>`` in R.
-* Constructing a ``Measurement`` function on your metric space with ``then_base_laplace``.
+* Defining your metric space with ``space_of`` in Python's Context API, or a (domain, distance) tuple in any language..
+* Chaining operators together with ``>>`` in Python and Rust, or ``|>`` in R.
+* Constructing a ``Measurement`` function on your metric space with ``then_laplace``.
 * Invoking that measurement on a value to get a DP release.

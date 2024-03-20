@@ -14,7 +14,7 @@ from opendp.combinators import (
     make_zCDP_to_approxDP,
 )
 from opendp.domains import atom_domain
-from opendp.measurements import make_base_laplace, make_gaussian
+from opendp.measurements import make_laplace, make_gaussian
 from opendp.measures import (
     fixed_smoothed_max_divergence,
     max_divergence,
@@ -180,10 +180,15 @@ def loss_of(*, epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, flo
 
     :param U: The type of the privacy parameter.
 
-    >>> from opendp.context import loss_of
-    >>> measure, distance = loss_of(epsilon=1.0)
-    >>> measure, distance = loss_of(epsilon=1.0, delta=1e-9)
-    >>> measure, distance = loss_of(rho=1.0)
+    :example:
+
+    >>> loss_of(epsilon=1.0)
+    (MaxDivergence(f64), 1.0)
+    >>> loss_of(epsilon=1.0, delta=1e-9)
+    (FixedSmoothedMaxDivergence(f64), (1.0, 1e-09))
+    >>> loss_of(rho=1.0)
+    (ZeroConcentratedDivergence(f64), 1.0)
+
     """
     if epsilon is None and rho is None:
         raise ValueError("Either epsilon or rho must be specified.")
@@ -676,12 +681,12 @@ def _translate_measure_distance(d_from, from_measure, to_measure):
     if from_to == ("ZeroConcentratedDivergence", "MaxDivergence"): # pragma: no cover
         space = atom_domain(T=T), absolute_distance(T=T)
         scale = binary_search_param(
-            lambda eps: make_pureDP_to_zCDP(make_base_laplace(*space, eps)),
+            lambda eps: make_pureDP_to_zCDP(make_laplace(*space, eps)),
             d_in=constant,
             d_out=d_from,
             T=float,
         )
-        return make_base_laplace(*space, scale).map(constant)
+        return make_laplace(*space, scale).map(constant)
 
     if from_to == (
         "FixedSmoothedMaxDivergence",
