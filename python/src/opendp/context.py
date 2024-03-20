@@ -143,10 +143,11 @@ def domain_of(T, infer=False) -> Domain:
 
     More complex types are not supported:
 
-    >>> domain_of(List[List[int]])
+    >>> domain_of(List[List[int]]) # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ...
-    opendp.mod.OpenDPException
+    opendp.mod.OpenDPException:
+      FFI("VectorDomain constructor only supports AtomDomain or UserDomain inner domains")
 
     Alternatively, an example of the data can be provided, but note that passing sensitive data may result in a privacy violation:
 
