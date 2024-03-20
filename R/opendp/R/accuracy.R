@@ -19,28 +19,28 @@ NULL
 #' @return Any
 #' @export
 accuracy_to_discrete_gaussian_scale <- function(
-    accuracy,
-    alpha,
-    .T = NULL
+  accuracy,
+  alpha,
+  .T = NULL
 ) {
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = accuracy)
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = accuracy)
 
-    log <- new_constructor_log("accuracy_to_discrete_gaussian_scale", "accuracy", new_hashtab(
-        list("accuracy", "alpha", "T"),
-        list(accuracy, alpha, .T)
-    ))
+  log <- new_constructor_log("accuracy_to_discrete_gaussian_scale", "accuracy", new_hashtab(
+    list("accuracy", "alpha", "T"),
+    list(accuracy, alpha, .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(accuracy))
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(accuracy))
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
 
-    # Call wrapper function.
-    output <- .Call(
-        "accuracy__accuracy_to_discrete_gaussian_scale",
-        accuracy, alpha, .T,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "accuracy__accuracy_to_discrete_gaussian_scale",
+    accuracy, alpha, .T,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -59,28 +59,28 @@ accuracy_to_discrete_gaussian_scale <- function(
 #' @return Discrete laplacian noise scale that meets the `accuracy` requirement at a given level-`alpha`.
 #' @export
 accuracy_to_discrete_laplacian_scale <- function(
-    accuracy,
-    alpha,
-    .T = NULL
+  accuracy,
+  alpha,
+  .T = NULL
 ) {
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = accuracy)
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = accuracy)
 
-    log <- new_constructor_log("accuracy_to_discrete_laplacian_scale", "accuracy", new_hashtab(
-        list("accuracy", "alpha", "T"),
-        list(accuracy, alpha, .T)
-    ))
+  log <- new_constructor_log("accuracy_to_discrete_laplacian_scale", "accuracy", new_hashtab(
+    list("accuracy", "alpha", "T"),
+    list(accuracy, alpha, .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(accuracy))
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(accuracy))
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
 
-    # Call wrapper function.
-    output <- .Call(
-        "accuracy__accuracy_to_discrete_laplacian_scale",
-        accuracy, alpha, .T,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "accuracy__accuracy_to_discrete_laplacian_scale",
+    accuracy, alpha, .T,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -95,28 +95,28 @@ accuracy_to_discrete_laplacian_scale <- function(
 #' @return Any
 #' @export
 accuracy_to_gaussian_scale <- function(
-    accuracy,
-    alpha,
-    .T = NULL
+  accuracy,
+  alpha,
+  .T = NULL
 ) {
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = accuracy)
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = accuracy)
 
-    log <- new_constructor_log("accuracy_to_gaussian_scale", "accuracy", new_hashtab(
-        list("accuracy", "alpha", "T"),
-        list(accuracy, alpha, .T)
-    ))
+  log <- new_constructor_log("accuracy_to_gaussian_scale", "accuracy", new_hashtab(
+    list("accuracy", "alpha", "T"),
+    list(accuracy, alpha, .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(accuracy))
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(accuracy))
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
 
-    # Call wrapper function.
-    output <- .Call(
-        "accuracy__accuracy_to_gaussian_scale",
-        accuracy, alpha, .T,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "accuracy__accuracy_to_gaussian_scale",
+    accuracy, alpha, .T,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -131,28 +131,28 @@ accuracy_to_gaussian_scale <- function(
 #' @return Laplacian noise scale that meets the `accuracy` requirement at a given level-`alpha`.
 #' @export
 accuracy_to_laplacian_scale <- function(
-    accuracy,
-    alpha,
-    .T = NULL
+  accuracy,
+  alpha,
+  .T = NULL
 ) {
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = accuracy)
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = accuracy)
 
-    log <- new_constructor_log("accuracy_to_laplacian_scale", "accuracy", new_hashtab(
-        list("accuracy", "alpha", "T"),
-        list(accuracy, alpha, .T)
-    ))
+  log <- new_constructor_log("accuracy_to_laplacian_scale", "accuracy", new_hashtab(
+    list("accuracy", "alpha", "T"),
+    list(accuracy, alpha, .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(accuracy))
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(accuracy))
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
 
-    # Call wrapper function.
-    output <- .Call(
-        "accuracy__accuracy_to_laplacian_scale",
-        accuracy, alpha, .T,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "accuracy__accuracy_to_laplacian_scale",
+    accuracy, alpha, .T,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -171,28 +171,28 @@ accuracy_to_laplacian_scale <- function(
 #' @return Any
 #' @export
 discrete_gaussian_scale_to_accuracy <- function(
-    scale,
-    alpha,
-    .T = NULL
+  scale,
+  alpha,
+  .T = NULL
 ) {
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = scale)
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = scale)
 
-    log <- new_constructor_log("discrete_gaussian_scale_to_accuracy", "accuracy", new_hashtab(
-        list("scale", "alpha", "T"),
-        list(scale, alpha, .T)
-    ))
+  log <- new_constructor_log("discrete_gaussian_scale_to_accuracy", "accuracy", new_hashtab(
+    list("scale", "alpha", "T"),
+    list(scale, alpha, .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(scale))
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(scale))
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
 
-    # Call wrapper function.
-    output <- .Call(
-        "accuracy__discrete_gaussian_scale_to_accuracy",
-        scale, alpha, .T,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "accuracy__discrete_gaussian_scale_to_accuracy",
+    scale, alpha, .T,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -217,28 +217,28 @@ discrete_gaussian_scale_to_accuracy <- function(
 #' @return Any
 #' @export
 discrete_laplacian_scale_to_accuracy <- function(
-    scale,
-    alpha,
-    .T = NULL
+  scale,
+  alpha,
+  .T = NULL
 ) {
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = scale)
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = scale)
 
-    log <- new_constructor_log("discrete_laplacian_scale_to_accuracy", "accuracy", new_hashtab(
-        list("scale", "alpha", "T"),
-        list(scale, alpha, .T)
-    ))
+  log <- new_constructor_log("discrete_laplacian_scale_to_accuracy", "accuracy", new_hashtab(
+    list("scale", "alpha", "T"),
+    list(scale, alpha, .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(scale))
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(scale))
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
 
-    # Call wrapper function.
-    output <- .Call(
-        "accuracy__discrete_laplacian_scale_to_accuracy",
-        scale, alpha, .T,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "accuracy__discrete_laplacian_scale_to_accuracy",
+    scale, alpha, .T,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -253,28 +253,28 @@ discrete_laplacian_scale_to_accuracy <- function(
 #' @return Any
 #' @export
 gaussian_scale_to_accuracy <- function(
-    scale,
-    alpha,
-    .T = NULL
+  scale,
+  alpha,
+  .T = NULL
 ) {
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = scale)
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = scale)
 
-    log <- new_constructor_log("gaussian_scale_to_accuracy", "accuracy", new_hashtab(
-        list("scale", "alpha", "T"),
-        list(scale, alpha, .T)
-    ))
+  log <- new_constructor_log("gaussian_scale_to_accuracy", "accuracy", new_hashtab(
+    list("scale", "alpha", "T"),
+    list(scale, alpha, .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(scale))
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(scale))
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
 
-    # Call wrapper function.
-    output <- .Call(
-        "accuracy__gaussian_scale_to_accuracy",
-        scale, alpha, .T,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "accuracy__gaussian_scale_to_accuracy",
+    scale, alpha, .T,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -289,26 +289,26 @@ gaussian_scale_to_accuracy <- function(
 #' @return Any
 #' @export
 laplacian_scale_to_accuracy <- function(
-    scale,
-    alpha,
-    .T = NULL
+  scale,
+  alpha,
+  .T = NULL
 ) {
-    # Standardize type arguments.
-    .T <- parse_or_infer(type_name = .T, public_example = scale)
+  # Standardize type arguments.
+  .T <- parse_or_infer(type_name = .T, public_example = scale)
 
-    log <- new_constructor_log("laplacian_scale_to_accuracy", "accuracy", new_hashtab(
-        list("scale", "alpha", "T"),
-        list(scale, alpha, .T)
-    ))
+  log <- new_constructor_log("laplacian_scale_to_accuracy", "accuracy", new_hashtab(
+    list("scale", "alpha", "T"),
+    list(scale, alpha, .T)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(scale))
-    rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(scale))
+  rt_assert_is_similar(expected = .T, inferred = rt_infer(alpha))
 
-    # Call wrapper function.
-    output <- .Call(
-        "accuracy__laplacian_scale_to_accuracy",
-        scale, alpha, .T,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "accuracy__laplacian_scale_to_accuracy",
+    scale, alpha, .T,
+    log, PACKAGE = "opendp")
+  output
 }

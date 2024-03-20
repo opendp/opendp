@@ -45,7 +45,8 @@ versions:
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 	cp redirect.html $(BUILDDIR)/html/index.html
-	@echo "Redirect page copied into $(BUILDDIR)/html."
+	cp 404.html      $(BUILDDIR)/html/
+	@echo "Redirect and 404 pages copied into $(BUILDDIR)/html."
 
 latex:
 	rm -rf build/html/proofs

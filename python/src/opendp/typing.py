@@ -129,7 +129,7 @@ class RuntimeType(object):
             return False
         return self.origin == other.origin and self.args == other.args
 
-    def __str__(self):
+    def __repr__(self):
         result = self.origin or ''
         if result == 'Tuple':
             return f'({", ".join(map(str, self.args))})'
@@ -376,7 +376,7 @@ class RuntimeType(object):
     
 
 class GenericType(RuntimeType):
-    def __str__(self):
+    def __repr__(self):
         raise UnknownTypeException(f"attempted to create a type_name with an unknown generic: {self.origin}")
 
 
@@ -392,7 +392,7 @@ class UnknownType(RuntimeType):
         self.args = None
         self.reason = reason
 
-    def __str__(self):
+    def __repr__(self):
         raise UnknownTypeException(f"attempted to create a type_name with an unknown type: {self.reason}")
 
 
