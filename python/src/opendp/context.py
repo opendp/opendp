@@ -534,7 +534,10 @@ class Query(object):
     ) -> "Context":
         """Constructs a new context containing a sequential compositor with the given weights.
 
-        :param weights: A list of weights corresponding to the privacy budget allocated to a sequence of queries.
+        ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.
+
+        :param split_evenly_over: The number of parts to evenly distribute the privacy loss
+        :param split_by_weights: A list of weights for each intermediate privacy loss
         """
 
         if d_out is not None and self._d_out is not None:
