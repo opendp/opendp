@@ -1,7 +1,7 @@
 assert_features <- function(...) {
   for (feature in list(...)) {
     if (!feature %in% getOption("opendp_features")) {
-      stop(paste0("Attempted to use function that requires ", feature, " but ", feature, " is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"", feature, "\")"))
+      stop("Attempted to use function that requires ", feature, " but ", feature, " is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"", feature, "\")")
     }
   }
 }
@@ -40,7 +40,7 @@ output_domain <- function(x) {
     return(x[[1]])
   }
 
-  stop(paste("expected a transformation or metric space. Got", class(x)))
+  stop("expected a transformation or metric space. Got ", class(x))
 }
 
 output_metric <- function(x) {
@@ -71,7 +71,7 @@ make_chain_dyn <- function(rhs, lhs, log) {
   if (inherits(rhs, "opendp_function")) {
     return(new_measurement(make_chain_pm(rhs, lhs)("ptr"), log))
   }
-  stop(paste("cannot chain lhs and rhs", class(lhs), class(rhs)))
+  stop("cannot chain lhs and rhs: ", class(lhs), ", ", class(rhs))
 }
 
 #' new transformation
@@ -409,9 +409,9 @@ new_hashtab <- function(keys, vals) {
 }
 
 to_str <- function(x, depth) UseMethod("to_str")
-`to_str.default` <- function(x, depth) format(x)
-`to_str.hashtab` <- function(x, depth = 0L) {
-  spacer <- paste(rep("  ", depth), collapse = "")
+to_str.default <- function(x, depth) format(x)
+to_str.hashtab <- function(x, depth = 0L) {
+  spacer <- strrep("  ", depth)
   val <- "hashtab(\n"
   utils::maphash(x, function(k, v) {
     val <<- c(val, paste0(spacer, "  ", k, ": ", to_str(v, depth = depth + 1), ",\n"))
@@ -422,7 +422,7 @@ to_str <- function(x, depth) UseMethod("to_str")
 
 #' @concept mod
 #' @export
-`print.hashtab` <- function(x, ...) {
+print.hashtab <- function(x, ...) {
   cat(to_str(x, ...))
 }
 
@@ -597,6 +597,7 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
   return(value)
 }
 
+# nolint start: cyclocomp_linter
 exponential_bounds_search <- function(predicate, .T) {
   # try to infer T
   if (is.null(.T)) {
@@ -683,3 +684,4 @@ exponential_bounds_search <- function(predicate, .T) {
   at_center <- predicate(center)
   return(signed_band_search(center, at_center, sign))
 }
+# nolint end
