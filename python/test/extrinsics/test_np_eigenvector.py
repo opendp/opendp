@@ -1,6 +1,7 @@
 import opendp.prelude as dp
 from opendp._extrinsics.domains import _np_sscp_domain
 import pytest
+from ..helpers import optional_dependency
 
 dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
@@ -32,8 +33,10 @@ def test_eigenvector_integration():
     from opendp._extrinsics._make_np_eigenvector import then_private_eigenvector
 
     num_columns = 4
+    with optional_dependency('numpy'):
+        domain = dp.np_array2_domain(num_columns=num_columns, T=float)
     space = (
-        dp.np_array2_domain(num_columns=num_columns, T=float),
+        domain,
         dp.symmetric_distance(),
     )
     meas = (

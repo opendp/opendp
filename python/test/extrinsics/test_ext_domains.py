@@ -1,6 +1,7 @@
 from opendp._extrinsics.domains import _np_sscp_domain
 import opendp.prelude as dp
 import pytest
+from ..helpers import optional_dependency
 
 dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
@@ -8,7 +9,8 @@ dp.enable_features("honest-but-curious", "contrib", "floating-point")
 def test_np_array2_domain():
     # missing norm
     with pytest.raises(ValueError):
-        dp.np_array2_domain(p=2, T=float)
+        with optional_dependency('numpy'):
+            dp.np_array2_domain(p=2, T=float)
     # origin is wrong type
     with pytest.raises(ValueError):
         dp.np_array2_domain(norm=1, p=2, origin="a", T=float)

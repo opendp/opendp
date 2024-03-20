@@ -1,5 +1,6 @@
 import pytest
 import opendp.prelude as dp
+from ..helpers import optional_dependency
 
 dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
@@ -42,12 +43,13 @@ def test_pca_skl():
     num_rows = 10_000
     data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
 
-    model = dp.sklearn.PCA(
-        epsilon=1.0,
-        row_norm=1.0,
-        n_samples=num_rows,
-        n_features=4,
-    )
+    with optional_dependency('sklearn'):
+        model = dp.sklearn.PCA(
+            epsilon=1.0,
+            row_norm=1.0,
+            n_samples=num_rows,
+            n_features=4,
+        )
 
     model.fit(data)
     print(model)
@@ -88,12 +90,13 @@ def flaky_assert_pca_compare_sklearn():
     num_rows = 1_000_000
     data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
 
-    model_odp = dp.sklearn.PCA(
-        epsilon=1_000_000.0,
-        row_norm=64.0,
-        n_samples=num_rows,
-        n_features=4,
-    )
+    with optional_dependency("sklearn"):
+        model_odp = dp.sklearn.PCA(
+            epsilon=1_000_000.0,
+            row_norm=64.0,
+            n_samples=num_rows,
+            n_features=4,
+        )
     model_odp.fit(data)
 
     sklearn = pytest.importorskip('sklearn')

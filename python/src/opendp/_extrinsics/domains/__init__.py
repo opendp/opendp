@@ -52,7 +52,12 @@ def np_array2_domain(
     :param num_columns: number of columns in the data
     :param T: atom type
     """
-    import numpy as np  # type: ignore[import]
+    try:
+        import numpy as np  # type: ignore[import]
+    except ImportError:
+        raise ImportError(
+                "The optional install numpy is required for this functionality"
+            )
     import opendp.prelude as dp
 
     _check_norm_and_p(norm, p)

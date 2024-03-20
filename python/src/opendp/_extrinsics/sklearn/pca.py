@@ -10,7 +10,7 @@ except ImportError:
     class SKLPCA(object):  # type: ignore[no-redef]
         def __init__(*args, **kwargs):
             raise ImportError(
-                "please install scikit-learn to use the sklearn API: https://scikit-learn.org/stable/install.html"
+                "The optional install scikit-learn is required for this functionality"
             )
 
 
