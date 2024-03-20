@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use dashu::{
     float::{
         round::{
-            mode::{Down, Up},
+            mode::{Down, HalfEven, Up},
             Round,
         },
         FBig,
@@ -417,6 +417,18 @@ impl RoundCast<String> for bool {
 impl RoundCast<bool> for String {
     fn round_cast(v: bool) -> Fallible<Self> {
         Ok(v.to_string())
+    }
+}
+
+impl<R: Round> RoundCast<FBig<R>> for f32 {
+    fn round_cast(v: FBig<R>) -> Fallible<Self> {
+        Ok(v.with_rounding::<HalfEven>().to_f32().value())
+    }
+}
+
+impl<R: Round> RoundCast<FBig<R>> for f64 {
+    fn round_cast(v: FBig<R>) -> Fallible<Self> {
+        Ok(v.with_rounding::<HalfEven>().to_f64().value())
     }
 }
 
