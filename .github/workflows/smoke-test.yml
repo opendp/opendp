@@ -80,7 +80,7 @@ jobs:
         run: rustup update nightly
 
       - name: Cargo run
-        run: cargo +nightly -Zscript getting-started/quickstart.rs
+        run: cargo +nightly -Zscript getting-started/code/quickstart-framework.rs
 
   python-test:
     needs: rust-build-and-test
@@ -132,7 +132,6 @@ jobs:
         run: coverage report
 
   docs-links:
-    needs: rust-build-and-test # TODO: Is this needed?
     runs-on: ubuntu-22.04
     defaults:
       run:
