@@ -28,7 +28,7 @@ OpenDP is available for Python, R, and Rust.
 
         In a new directory run ``cargo init`` and then specify OpenDP as a dependency in ``Cargo.toml``:
 
-        .. literalinclude:: quickstart.rs
+        .. literalinclude:: code/quickstart-framework.rs
             :language: toml
             :start-after: init
             :end-before: /init
@@ -45,7 +45,7 @@ Enable ``contrib`` globally with the following snippet:
     .. tab-item:: Python
         :sync: python
 
-        .. literalinclude:: quickstart-context.rst
+        .. literalinclude:: code/quickstart-context.rst
             :language: python
             :start-after: init
             :end-before: /init
@@ -53,7 +53,7 @@ Enable ``contrib`` globally with the following snippet:
     .. tab-item:: R
         :sync: r
 
-        .. literalinclude:: quickstart.R
+        .. literalinclude:: code/quickstart-framework.R
             :language: r
             :start-after: init
             :end-before: /init
@@ -72,7 +72,7 @@ Let's apply Laplace noise to a value.
     .. tab-item:: Python
         :sync: python
 
-        .. literalinclude:: quickstart-context.rst
+        .. literalinclude:: code/quickstart-context.rst
             :language: python
             :start-after: demo
             :end-before: /demo
@@ -80,7 +80,7 @@ Let's apply Laplace noise to a value.
     .. tab-item:: R
         :sync: r
 
-        .. literalinclude:: quickstart.R
+        .. literalinclude:: code/quickstart-framework.R
             :language: r
             :start-after: demo
             :end-before: /demo
@@ -88,7 +88,7 @@ Let's apply Laplace noise to a value.
     .. tab-item:: Rust
         :sync: rust
 
-        .. literalinclude:: quickstart.rs
+        .. literalinclude:: code/quickstart-framework.rs
             :language: rust
             :start-after: demo
             :end-before: /demo

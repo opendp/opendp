@@ -1,7 +1,7 @@
 #!/usr/bin/env -S cargo +nightly -Zscript
 ```cargo
 [dependencies]
-opendp = { path = "../../../rust/", features = ["contrib", "honest-but-curious"] }
+opendp = { path = "../../../../rust/", features = ["contrib", "honest-but-curious"] }
 # Make sure the features here are in sync with the features just below.
 ```
 
