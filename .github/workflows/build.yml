@@ -1,8 +1,8 @@
 # Creates a build for a channel:
-# * Compiles for all platforms, uploads to the lib artifact
+# * Compiles for all platforms, uploads to the lib-{windows,macos,linux} artifacts
 # * Creates Python and R bindings, uploads to the python_bindings and r_bindings artifacts
-# * Downloads the lib and python_bindings artifacts, creates a Python wheel, uploads to the python_wheel artifact
-# * Downloads the lib and r_bindings artifacts, creates an R package, uploads to the r_package artifact
+# * Downloads the lib-* and python_bindings artifacts, creates a Python wheel, uploads to the python_wheel artifact
+# * Downloads the lib-* and r_bindings artifacts, creates an R package, uploads to the r_package artifact
 #
 # INPUTS
 # * channel:  The release channel
@@ -60,13 +60,13 @@ jobs:
 
       - name: Checkout repository
         if: ${{ !inputs.fake }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.channel }}
 
       - name: Cache Rust dependencies
         if: ${{ !inputs.fake }}
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~\.cargo\bin
@@ -89,9 +89,9 @@ jobs:
           echo windows > rust/target/release/libopendp.a
 
       - name: Upload .dll and .a
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: libs
+          name: libs-windows
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: |
             rust/target*/release/opendp.dll
@@ -108,13 +108,13 @@ jobs:
     steps:
       - name: Checkout repository
         if: ${{ !inputs.fake }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.channel }}
 
       - name: Cache Rust dependencies
         if: ${{ !inputs.fake }}
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin
@@ -139,9 +139,9 @@ jobs:
           echo macos > rust/target/${{ env.TARGET }}/release/libopendp.dylib
 
       - name: Upload .dylib and .a
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: libs
+          name: libs-macos-${{ matrix.architecture }}
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: |
             rust/target*/${{ env.TARGET }}/release/libopendp.dylib
@@ -159,13 +159,13 @@ jobs:
     steps:
       - name: Checkout repository
         if: ${{ !inputs.fake }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.channel }}
 
       - name: Cache Rust dependencies
         if: ${{ !inputs.fake }}
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin
@@ -192,9 +192,9 @@ jobs:
           echo fake > R/opendp/src/vendor.tar.xz
 
       - name: Upload .so and .a
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: libs
+          name: libs-linux-${{ matrix.architecture }}
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: |
             rust/target*/${{ env.TARGET }}/release/libopendp.so
@@ -206,13 +206,13 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.channel }}
 
       - name: Cache Rust dependencies
         if: ${{ !inputs.fake }}
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin
@@ -228,7 +228,7 @@ jobs:
         run: bash tools/rust_build.sh -r -n -f "$FEATURES,bindings"
 
       - name: Upload Python bindings
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -238,7 +238,7 @@ jobs:
         run: bash tools/r_stage.sh -v
   
       - name: Upload R bindings
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: r_bindings
           path: R/opendp/
@@ -249,25 +249,25 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.channel }}
 
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: 3.12
           cache: pip
 
       - name: Download libs
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: libs
-          # Artifact contains all libs with leading paths starting at target
+          pattern: libs-*
+          merge-multiple: true
           path: rust/
 
       - name: Download Python bindings
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -276,7 +276,7 @@ jobs:
         run: bash tools/python_build.sh -i
 
       - name: Upload Python wheel
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python_wheel
           path: python/wheelhouse/opendp-*-py3-none-any.whl
@@ -286,7 +286,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.channel }}
 
@@ -299,7 +299,7 @@ jobs:
           packages: RcppTOML,stringr
       
       - name: Download R bindings
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: r_bindings
           path: R/opendp/
@@ -311,7 +311,7 @@ jobs:
         run: bash tools/r_stage.sh -n
 
       - name: Upload R package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: r_package
           path: R/opendp/

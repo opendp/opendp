@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
@@ -63,7 +63,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # Make sure we get all refs needed to build docs for different versions
           fetch-depth: 0
@@ -84,7 +84,6 @@ jobs:
           echo "Create docs."
           make versions
           cp -r build /tmp
-          cp 404.html /tmp
           cd ..
           git fetch
           git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
@@ -100,13 +99,13 @@ jobs:
           cp -r /tmp/build/html/* .
       
       - name: Download R Docs
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: r-docs
           path: en/stable/api/r
       
       - name: Checkout artifacts
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: 'opendp/artifacts'
           path: ./artifacts

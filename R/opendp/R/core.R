@@ -13,27 +13,27 @@ NULL
 #' @return Any
 #' @export
 function_eval <- function(
-    this,
-    arg,
-    TI = NULL
+  this,
+  arg,
+  TI = NULL
 ) {
-    # Standardize type arguments.
-    .T.arg <- parse_or_infer(TI, arg)
+  # Standardize type arguments.
+  .T.arg <- parse_or_infer(TI, arg)
 
-    log <- new_constructor_log("function_eval", "core", new_hashtab(
-        list("this", "arg", "TI"),
-        list(this, arg, TI)
-    ))
+  log <- new_constructor_log("function_eval", "core", new_hashtab(
+    list("this", "arg", "TI"),
+    list(this, arg, TI)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.arg, inferred = rt_infer(arg))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.arg, inferred = rt_infer(arg))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__function_eval",
-        this, arg, TI, rt_parse(.T.arg),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__function_eval",
+    this, arg, TI, rt_parse(.T.arg),
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -46,29 +46,29 @@ function_eval <- function(
 #' @return True indicates that the relation passed at the given distance.
 #' @export
 measurement_check <- function(
-    measurement,
-    distance_in,
-    distance_out
+  measurement,
+  distance_in,
+  distance_out
 ) {
-    # Standardize type arguments.
-    .T.distance_in <- measurement_input_distance_type(measurement)
-    .T.distance_out <- measurement_output_distance_type(measurement)
+  # Standardize type arguments.
+  .T.distance_in <- measurement_input_distance_type(measurement)
+  .T.distance_out <- measurement_output_distance_type(measurement)
 
-    log <- new_constructor_log("measurement_check", "core", new_hashtab(
-        list("measurement", "distance_in", "distance_out"),
-        list(measurement, distance_in, distance_out)
-    ))
+  log <- new_constructor_log("measurement_check", "core", new_hashtab(
+    list("measurement", "distance_in", "distance_out"),
+    list(measurement, distance_in, distance_out)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.distance_in, inferred = rt_infer(distance_in))
-    rt_assert_is_similar(expected = .T.distance_out, inferred = rt_infer(distance_out))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.distance_in, inferred = rt_infer(distance_in))
+  rt_assert_is_similar(expected = .T.distance_out, inferred = rt_infer(distance_out))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__measurement_check",
-        measurement, distance_in, distance_out, rt_parse(.T.distance_in), rt_parse(.T.distance_out),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__measurement_check",
+    measurement, distance_in, distance_out, rt_parse(.T.distance_in), rt_parse(.T.distance_out),
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -79,20 +79,20 @@ measurement_check <- function(
 #' @return Function
 #' @export
 measurement_function <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("measurement_function", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("measurement_function", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__measurement_function",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__measurement_function",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -103,20 +103,20 @@ measurement_function <- function(
 #' @return str
 #' @export
 measurement_input_carrier_type <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("measurement_input_carrier_type", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("measurement_input_carrier_type", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__measurement_input_carrier_type",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__measurement_input_carrier_type",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -127,20 +127,20 @@ measurement_input_carrier_type <- function(
 #' @return str
 #' @export
 measurement_input_distance_type <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("measurement_input_distance_type", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("measurement_input_distance_type", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__measurement_input_distance_type",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__measurement_input_distance_type",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -151,20 +151,20 @@ measurement_input_distance_type <- function(
 #' @return Domain
 #' @export
 measurement_input_domain <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("measurement_input_domain", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("measurement_input_domain", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__measurement_input_domain",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__measurement_input_domain",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -175,20 +175,20 @@ measurement_input_domain <- function(
 #' @return Metric
 #' @export
 measurement_input_metric <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("measurement_input_metric", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("measurement_input_metric", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__measurement_input_metric",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__measurement_input_metric",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -200,26 +200,26 @@ measurement_input_metric <- function(
 #' @return Any
 #' @export
 measurement_invoke <- function(
-    this,
-    arg
+  this,
+  arg
 ) {
-    # Standardize type arguments.
-    .T.arg <- measurement_input_carrier_type(this)
+  # Standardize type arguments.
+  .T.arg <- measurement_input_carrier_type(this)
 
-    log <- new_constructor_log("measurement_invoke", "core", new_hashtab(
-        list("this", "arg"),
-        list(this, arg)
-    ))
+  log <- new_constructor_log("measurement_invoke", "core", new_hashtab(
+    list("this", "arg"),
+    list(this, arg)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.arg, inferred = rt_infer(arg))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.arg, inferred = rt_infer(arg))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__measurement_invoke",
-        this, arg, rt_parse(.T.arg),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__measurement_invoke",
+    this, arg, rt_parse(.T.arg),
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -231,26 +231,26 @@ measurement_invoke <- function(
 #' @return Any
 #' @export
 measurement_map <- function(
-    measurement,
-    distance_in
+  measurement,
+  distance_in
 ) {
-    # Standardize type arguments.
-    .T.distance_in <- measurement_input_distance_type(measurement)
+  # Standardize type arguments.
+  .T.distance_in <- measurement_input_distance_type(measurement)
 
-    log <- new_constructor_log("measurement_map", "core", new_hashtab(
-        list("measurement", "distance_in"),
-        list(measurement, distance_in)
-    ))
+  log <- new_constructor_log("measurement_map", "core", new_hashtab(
+    list("measurement", "distance_in"),
+    list(measurement, distance_in)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.distance_in, inferred = rt_infer(distance_in))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.distance_in, inferred = rt_infer(distance_in))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__measurement_map",
-        measurement, distance_in, rt_parse(.T.distance_in),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__measurement_map",
+    measurement, distance_in, rt_parse(.T.distance_in),
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -261,20 +261,20 @@ measurement_map <- function(
 #' @return str
 #' @export
 measurement_output_distance_type <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("measurement_output_distance_type", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("measurement_output_distance_type", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__measurement_output_distance_type",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__measurement_output_distance_type",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -285,20 +285,20 @@ measurement_output_distance_type <- function(
 #' @return Measure
 #' @export
 measurement_output_measure <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("measurement_output_measure", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("measurement_output_measure", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__measurement_output_measure",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__measurement_output_measure",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -310,26 +310,26 @@ measurement_output_measure <- function(
 #' @return Any
 #' @export
 queryable_eval <- function(
-    queryable,
-    query
+  queryable,
+  query
 ) {
-    # Standardize type arguments.
-    .T.query <- queryable_query_type(queryable)
+  # Standardize type arguments.
+  .T.query <- queryable_query_type(queryable)
 
-    log <- new_constructor_log("queryable_eval", "core", new_hashtab(
-        list("queryable", "query"),
-        list(queryable, query)
-    ))
+  log <- new_constructor_log("queryable_eval", "core", new_hashtab(
+    list("queryable", "query"),
+    list(queryable, query)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.query, inferred = rt_infer(query))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.query, inferred = rt_infer(query))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__queryable_eval",
-        queryable, query, rt_parse(.T.query),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__queryable_eval",
+    queryable, query, rt_parse(.T.query),
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -340,20 +340,20 @@ queryable_eval <- function(
 #' @return str
 #' @export
 queryable_query_type <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("queryable_query_type", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("queryable_query_type", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__queryable_query_type",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__queryable_query_type",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -366,29 +366,29 @@ queryable_query_type <- function(
 #' @return True indicates that the relation passed at the given distance.
 #' @export
 transformation_check <- function(
-    transformation,
-    distance_in,
-    distance_out
+  transformation,
+  distance_in,
+  distance_out
 ) {
-    # Standardize type arguments.
-    .T.distance_in <- transformation_input_distance_type(transformation)
-    .T.distance_out <- transformation_output_distance_type(transformation)
+  # Standardize type arguments.
+  .T.distance_in <- transformation_input_distance_type(transformation)
+  .T.distance_out <- transformation_output_distance_type(transformation)
 
-    log <- new_constructor_log("transformation_check", "core", new_hashtab(
-        list("transformation", "distance_in", "distance_out"),
-        list(transformation, distance_in, distance_out)
-    ))
+  log <- new_constructor_log("transformation_check", "core", new_hashtab(
+    list("transformation", "distance_in", "distance_out"),
+    list(transformation, distance_in, distance_out)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.distance_in, inferred = rt_infer(distance_in))
-    rt_assert_is_similar(expected = .T.distance_out, inferred = rt_infer(distance_out))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.distance_in, inferred = rt_infer(distance_in))
+  rt_assert_is_similar(expected = .T.distance_out, inferred = rt_infer(distance_out))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__transformation_check",
-        transformation, distance_in, distance_out, rt_parse(.T.distance_in), rt_parse(.T.distance_out),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__transformation_check",
+    transformation, distance_in, distance_out, rt_parse(.T.distance_in), rt_parse(.T.distance_out),
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -399,20 +399,20 @@ transformation_check <- function(
 #' @return Function
 #' @export
 transformation_function <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("transformation_function", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("transformation_function", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__transformation_function",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__transformation_function",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -423,20 +423,20 @@ transformation_function <- function(
 #' @return str
 #' @export
 transformation_input_carrier_type <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("transformation_input_carrier_type", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("transformation_input_carrier_type", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__transformation_input_carrier_type",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__transformation_input_carrier_type",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -447,20 +447,20 @@ transformation_input_carrier_type <- function(
 #' @return str
 #' @export
 transformation_input_distance_type <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("transformation_input_distance_type", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("transformation_input_distance_type", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__transformation_input_distance_type",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__transformation_input_distance_type",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -471,20 +471,20 @@ transformation_input_distance_type <- function(
 #' @return Domain
 #' @export
 transformation_input_domain <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("transformation_input_domain", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("transformation_input_domain", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__transformation_input_domain",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__transformation_input_domain",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -495,20 +495,20 @@ transformation_input_domain <- function(
 #' @return Metric
 #' @export
 transformation_input_metric <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("transformation_input_metric", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("transformation_input_metric", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__transformation_input_metric",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__transformation_input_metric",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -520,26 +520,26 @@ transformation_input_metric <- function(
 #' @return Any
 #' @export
 transformation_invoke <- function(
-    this,
-    arg
+  this,
+  arg
 ) {
-    # Standardize type arguments.
-    .T.arg <- transformation_input_carrier_type(this)
+  # Standardize type arguments.
+  .T.arg <- transformation_input_carrier_type(this)
 
-    log <- new_constructor_log("transformation_invoke", "core", new_hashtab(
-        list("this", "arg"),
-        list(this, arg)
-    ))
+  log <- new_constructor_log("transformation_invoke", "core", new_hashtab(
+    list("this", "arg"),
+    list(this, arg)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.arg, inferred = rt_infer(arg))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.arg, inferred = rt_infer(arg))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__transformation_invoke",
-        this, arg, rt_parse(.T.arg),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__transformation_invoke",
+    this, arg, rt_parse(.T.arg),
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -551,26 +551,26 @@ transformation_invoke <- function(
 #' @return Any
 #' @export
 transformation_map <- function(
-    transformation,
-    distance_in
+  transformation,
+  distance_in
 ) {
-    # Standardize type arguments.
-    .T.distance_in <- transformation_input_distance_type(transformation)
+  # Standardize type arguments.
+  .T.distance_in <- transformation_input_distance_type(transformation)
 
-    log <- new_constructor_log("transformation_map", "core", new_hashtab(
-        list("transformation", "distance_in"),
-        list(transformation, distance_in)
-    ))
+  log <- new_constructor_log("transformation_map", "core", new_hashtab(
+    list("transformation", "distance_in"),
+    list(transformation, distance_in)
+  ))
 
-    # Assert that arguments are correctly typed.
-    rt_assert_is_similar(expected = .T.distance_in, inferred = rt_infer(distance_in))
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.distance_in, inferred = rt_infer(distance_in))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__transformation_map",
-        transformation, distance_in, rt_parse(.T.distance_in),
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__transformation_map",
+    transformation, distance_in, rt_parse(.T.distance_in),
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -581,20 +581,20 @@ transformation_map <- function(
 #' @return str
 #' @export
 transformation_output_distance_type <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("transformation_output_distance_type", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("transformation_output_distance_type", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__transformation_output_distance_type",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__transformation_output_distance_type",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -605,20 +605,20 @@ transformation_output_distance_type <- function(
 #' @return Domain
 #' @export
 transformation_output_domain <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("transformation_output_domain", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("transformation_output_domain", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__transformation_output_domain",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__transformation_output_domain",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
 
 
@@ -629,18 +629,18 @@ transformation_output_domain <- function(
 #' @return Metric
 #' @export
 transformation_output_metric <- function(
-    this
+  this
 ) {
-    # No type arguments to standardize.
-    log <- new_constructor_log("transformation_output_metric", "core", new_hashtab(
-        list("this"),
-        list(this)
-    ))
+  # No type arguments to standardize.
+  log <- new_constructor_log("transformation_output_metric", "core", new_hashtab(
+    list("this"),
+    list(this)
+  ))
 
-    # Call wrapper function.
-    output <- .Call(
-        "core__transformation_output_metric",
-        this,
-        log, PACKAGE = "opendp")
-    output
+  # Call wrapper function.
+  output <- .Call(
+    "core__transformation_output_metric",
+    this,
+    log, PACKAGE = "opendp")
+  output
 }
