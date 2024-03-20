@@ -88,7 +88,7 @@ Let's apply Laplace noise to a value.
     .. tab-item:: Rust
         :sync: rust
 
-        .. literalinclude:: code/quickstart-framework
+        .. literalinclude:: code/quickstart-framework.rs
             :language: rust
             :start-after: demo
             :end-before: /demo
