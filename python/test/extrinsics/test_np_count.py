@@ -1,4 +1,3 @@
-import sys
 import opendp.prelude as dp
 import pytest
 

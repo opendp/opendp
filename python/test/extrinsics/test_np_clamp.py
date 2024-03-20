@@ -1,4 +1,3 @@
-import sys
 import opendp.prelude as dp
 from opendp._extrinsics.make_np_clamp import then_np_clamp
 import pytest

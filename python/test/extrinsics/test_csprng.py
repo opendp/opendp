@@ -1,6 +1,5 @@
 from opendp._lib import np_csprng
 import pytest
-import sys
 
 
 def test_np_rng():

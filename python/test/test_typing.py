@@ -1,5 +1,4 @@
 import pytest
-import sys
 from typing import List, Tuple, Any
 
 from opendp.mod import *

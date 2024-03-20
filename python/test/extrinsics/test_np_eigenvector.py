@@ -1,4 +1,3 @@
-import sys
 import opendp.prelude as dp
 from opendp._extrinsics.domains import _np_sscp_domain
 import pytest

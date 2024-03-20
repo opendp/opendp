@@ -1,4 +1,3 @@
-import sys
 import pytest
 import opendp.prelude as dp
 
@@ -84,7 +83,6 @@ def flip_row_signs(a, b):
     return a, b * signs[:, None]
 
 
-@pytest.skip('flakey')
 def flaky_assert_pca_compare_sklearn():
     num_columns = 4
     num_rows = 1_000_000
