@@ -134,7 +134,7 @@ def domain_of(T, infer=False) -> Domain:
     
     .. TODO: Support python syntax for Option: https://github.com/opendp/opendp/issues/1389
 
-    >>> domain_of('Option<int>')
+    >>> domain_of('Option<int>')  # Python's `Optional` is not supported.
     OptionDomain(AtomDomain(T=i32))
     
     >>> import opendp.prelude as dp
@@ -215,19 +215,17 @@ def metric_of(M) -> Metric:
 def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
-    :param epsilon: Parameter for pure ε-DP.
-    :param delta: Parameter for approximate (ε,δ)-DP.
-    :param rho: Parameter for zero-concentrated ρ-DP.
-    :param U: The type of the privacy parameter; Inferred if not provided.
-
-    :example:
-
     >>> loss_of(epsilon=1.0)
     (MaxDivergence(f64), 1.0)
     >>> loss_of(epsilon=1.0, delta=1e-9)
     (FixedSmoothedMaxDivergence(f64), (1.0, 1e-09))
     >>> loss_of(rho=1.0)
     (ZeroConcentratedDivergence(f64), 1.0)
+
+    :param epsilon: Parameter for pure ε-DP.
+    :param delta: Parameter for approximate (ε,δ)-DP.
+    :param rho: Parameter for zero-concentrated ρ-DP.
+    :param U: The type of the privacy parameter; Inferred if not provided.
 
     """
     if epsilon is None and rho is None:
@@ -500,7 +498,7 @@ class Query(object):
         return super().__dir__() + list(constructors.keys())  # type: ignore[operator] # pragma: no cover
 
     def resolve(self, allow_transformations=False):
-        """Resolve the query into a measurement."
+        """Resolve the query into a measurement.
 
         :param allow_transformations: If true, allow the response to be a transformation instead of a measurement.
         """
@@ -522,7 +520,7 @@ class Query(object):
         return answer
 
     def param(self):
-        """Returns the discovered parameter, if there is one"""
+        """Returns the discovered parameter, if there is one."""
         return getattr(self.resolve(), "param", None) # pragma: no cover
 
     def compositor(
