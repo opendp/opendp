@@ -212,7 +212,10 @@ def metric_of(M) -> Metric:
     raise TypeError(f"unrecognized metric: {M}")
 
 
-def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]:
+LossParameter = float | Tuple[float, float]
+
+
+def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, LossParameter]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
     >>> loss_of(epsilon=1.0)
@@ -241,7 +244,7 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]
         return max_divergence(T=U), epsilon
     else:
         U = RuntimeType.parse_or_infer(U, epsilon)
-        return fixed_smoothed_max_divergence(T=U), (epsilon, delta) # type: ignore[return-value]
+        return fixed_smoothed_max_divergence(T=U), (epsilon, delta)
 
 
 def unit_of(
@@ -423,7 +426,7 @@ class Query(object):
         chain: Chain,
         output_measure: Measure = None, # type: ignore[assignment]
         d_in=None,
-        d_out=None,
+        d_out: Optional[LossParameter] = None,
         context: "Context" = None, # type: ignore[assignment]
         _wrap_release=None,
     ) -> None:
@@ -722,7 +725,7 @@ def _cast_measure(chain, to_measure=None, d_to=None):
     raise ValueError(f"Unable to cast measure from {from_to[0]} to {from_to[1]}")
 
 
-def _translate_measure_distance(d_from, from_measure, to_measure):
+def _translate_measure_distance(d_from: LossParameter, from_measure, to_measure):
     """Translate a privacy loss ``d_from`` from ``from_measure`` to ``to_measure``.
     """
     if from_measure == to_measure:
@@ -750,6 +753,7 @@ def _translate_measure_distance(d_from, from_measure, to_measure):
         "FixedSmoothedMaxDivergence",
         "ZeroConcentratedDivergence",
     ):
+        assert isinstance(d_from, tuple)
         def caster(measurement):
             return make_fix_delta(make_zCDP_to_approxDP(measurement), delta=d_from[1])
 
