@@ -22,21 +22,28 @@ def optional_dependency(*module_names):
     If "optional_dependency('numpy')" and "pytest.importorskip('numpy')"
     are used in the same test, it is redundant, but doesn't do any harm. 
     '''
+    # Proceed normally if installed:
     if all(name in sys.modules for name in module_names): 
-        # Proceed normally if installed:
         yield
-    else:
-        name_map = {
-            'sklearn': 'scikit-learn',
-        }
-        install_names = [name_map.get(name) or name for name in module_names]
-        expected_messages = [
-            f'The optional install {name} is required for this functionality'
-            for name in install_names
-        ]
-        expected_messages_re = '|'.join(re.escape(message) for message in expected_messages)
-        # Otherwise, check that one of the expected errors is raised...
-        with pytest.raises(Exception, match=expected_messages_re):
-            yield
-        # ... and then skip the rest of the test.
-        raise pytest.skip('Saw expected OpenDPException; skipping rest of test')
+        return
+    
+    # Otherwise, check that it's an expected name:
+    name_map = {
+        'sklearn': 'scikit-learn',
+        'numpy': 'numpy',
+        'randomgen': 'randomgen'
+    }
+    for name in module_names:
+        if name not in name_map:
+            raise ValueError(f'Expected one of {"/".join(name_map)}, not {name}')
+    install_names = [name_map[name] for name in module_names]
+    expected_messages = [
+        f'The optional install {name} is required for this functionality'
+        for name in install_names
+    ]
+    expected_messages_re = '|'.join(re.escape(message) for message in expected_messages)
+    # Confirm that one of the expected errors is raised...
+    with pytest.raises(Exception, match=expected_messages_re):
+        yield
+    # ... and then skip the rest of the test.
+    raise pytest.skip('Saw expected OpenDPException; skipping rest of test')

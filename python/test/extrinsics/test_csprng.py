@@ -8,5 +8,6 @@ def test_np_rng():
 
     np = pytest.importorskip('numpy')
     counts = np.unique(np_csprng.integers(n_cats, size=n_samples), return_counts=True)[1]
+    pytest.importorskip('sklearn')
     scipy = pytest.importorskip('scipy')
     assert scipy.stats.chisquare(counts).pvalue > .0001
