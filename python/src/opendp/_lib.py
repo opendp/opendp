@@ -82,7 +82,7 @@ try:
         raise ImportError(
             "The optional install numpy is required for this functionality"
         )
-    from randomgen import UserBitGenerator  # type: ignore[import]
+    from randomgen import UserBitGenerator  # type: ignore[import-not-found]
 
     buffer_len = 1024
     buffer = np.empty(buffer_len, dtype=np.uint64)
