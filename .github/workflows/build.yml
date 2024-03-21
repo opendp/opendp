@@ -1,8 +1,14 @@
 # Creates a build for a channel:
-# * Compiles for all platforms, uploads to the lib-{windows,macos,linux} artifacts
+# * Compiles Rust for all platforms, and uploads lib-* artifacts
 # * Creates Python and R bindings, uploads to the python_bindings and r_bindings artifacts
-# * Downloads the lib-* and python_bindings artifacts, creates a Python wheel, uploads to the python_wheel artifact
-# * Downloads the lib-* and r_bindings artifacts, creates an R package, uploads to the r_package artifact
+# * For Python:
+#   * Downloads the lib-* and python_bindings artifacts,
+#   * creates a Python wheel,
+#   * and uploads to the python_wheel artifact
+# * For R:
+#   * Downloads ONLY the r_bindings artifact,
+#   * creates an R package
+#   * uploads to the r_package artifact
 #
 # INPUTS
 # * channel:  The release channel
