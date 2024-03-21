@@ -71,11 +71,8 @@ def test_eigenvectors():
         >> then_np_clamp(norm=4.0, p=2)
         >> then_np_sscp(dp.symmetric_distance())
     )
-    try:
+    with optional_dependency('scikit-learn'):
         meas = sp_sscp >> then_private_np_eigenvectors([1.0] * 3)
-    except Exception as e:
-        assert 'optional install "scipy" is required by this function' in str(e)
-        return
 
     np = pytest.importorskip('numpy')
     data = np.random.normal(size=(1000, num_columns))
