@@ -5,7 +5,7 @@ import pytest
 
 
 @contextmanager
-def optional_dependency(module_name):
+def optional_dependency(*module_names):
     '''
     A number of opendp functions rely on optional dependencies.
     If a user calls one of these functions without the appropriate installs,
@@ -22,17 +22,21 @@ def optional_dependency(module_name):
     If "optional_dependency('numpy')" and "pytest.importorskip('numpy')"
     are used in the same test, it is redundant, but doesn't do any harm. 
     '''
-    if module_name in sys.modules:
+    if all(name in sys.modules for name in module_names): 
         # Proceed normally if installed:
         yield
     else:
-        install_names = {
+        name_map = {
             'sklearn': 'scikit-learn',
         }
-        install_name = install_names.get(module_name) or module_name
-        expected_message = f'The optional install {install_name} is required for this functionality'
-        # Otherwise, check that the expected error is raised...
-        with pytest.raises(ImportError, match=re.escape(expected_message)):
+        install_names = [name_map.get(name) or name for name in module_names]
+        expected_messages = [
+            f'The optional install {name} is required for this functionality'
+            for name in install_names
+        ]
+        expected_messages_re = '|'.join(re.escape(message) for message in expected_messages)
+        # Otherwise, check that one of the expected errors is raised...
+        with pytest.raises(Exception, match=expected_messages_re):
             yield
         # ... and then skip the rest of the test.
-        raise pytest.skip('Saw expected ImportError; skipping rest of test')
+        raise pytest.skip('Saw expected OpenDPException; skipping rest of test')

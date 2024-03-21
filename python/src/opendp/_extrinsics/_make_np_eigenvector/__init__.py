@@ -27,7 +27,7 @@ def make_private_np_eigenvector(
     dp.assert_features("contrib", "floating-point")
     
     if np_csprng is None:
-        raise Exception('optional install "randomgen" is required by this function')
+        raise ImportError('The optional install randomgen is required for this functionality')
 
     input_desc = input_domain.descriptor
 
@@ -155,8 +155,8 @@ def make_private_np_eigenvectors(
     import opendp.prelude as dp
     try:
         from scipy.linalg import null_space  # type: ignore[import]
-    except ModuleNotFoundError:
-        raise Exception('optional install "scipy" is required by this function')
+    except ImportError:
+        raise ImportError('The optional install scipy is required for this functionality')
 
     dp.assert_features("contrib", "floating-point")
 

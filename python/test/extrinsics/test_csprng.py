@@ -1,7 +1,7 @@
 from opendp._lib import np_csprng
 import pytest
 
-
+@pytest.mark.skipif(np_csprng is None, reason='randomgen not installed')
 def test_np_rng():
     n_cats = 100
     n_samples = 100_000

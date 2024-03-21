@@ -14,7 +14,8 @@ def test_private_np_eigenvector():
             _np_sscp_domain(num_features=4, norm=1.0, p=2, T=float),
             dp.symmetric_distance(),
         )
-    meas = space >> then_private_eigenvector(unit_epsilon=100_000.0)
+    with optional_dependency('randomgen'):
+        meas = space >> then_private_eigenvector(unit_epsilon=100_000.0)
     np = pytest.importorskip('numpy')
     data = np.random.normal(size=(4, 4))
     data += data.T
@@ -40,12 +41,13 @@ def test_eigenvector_integration():
         domain,
         dp.symmetric_distance(),
     )
-    meas = (
-        space
-        >> then_np_clamp(norm=1.0, p=2)
-        >> then_np_sscp(dp.symmetric_distance())
-        >> then_private_eigenvector(1.0)
-    )
+    with optional_dependency('randomgen'):
+        meas = (
+            space
+            >> then_np_clamp(norm=1.0, p=2)
+            >> then_np_sscp(dp.symmetric_distance())
+            >> then_private_eigenvector(1.0)
+        )
 
     np = pytest.importorskip('numpy')
     data = np.random.normal(size=(1000, num_columns))
@@ -77,7 +79,5 @@ def test_eigenvectors():
 
     np = pytest.importorskip('numpy')
     data = np.random.normal(size=(1000, num_columns))
-    try:
+    with optional_dependency('randomgen'):
         print(meas(data))
-    except Exception as e:
-        assert 'optional install "randomgen" is required by this function' in str(e)
