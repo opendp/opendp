@@ -77,7 +77,7 @@ lib = _load_library()
 np_csprng: "np.random.Generator" = None # type: ignore[assignment]
 try:
     try:
-        import numpy as np
+        import numpy as np # type: ignore[import-not-found]
     except ImportError:
         raise ImportError(
             "The optional install numpy is required for this functionality"

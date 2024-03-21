@@ -74,7 +74,7 @@ class PCA(SKLPCA):
     def _postprocess(self, values):
         """A function that applies a release of the mean and eigendecomposition to self"""
         try:
-            import numpy as np
+            import numpy as np # type: ignore[import-not-found]
         except ImportError:
             raise ImportError(
                 "The optional install numpy is required for this functionality"

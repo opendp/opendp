@@ -17,7 +17,7 @@ def make_private_np_eigenvector(
     :param unit_epsilon: ε-expenditure per changed record in the input data
     """
     try:
-        import numpy as np
+        import numpy as np # type: ignore[import-not-found]
     except ImportError:
         raise ImportError(
             "The optional install numpy is required for this functionality"
@@ -147,7 +147,7 @@ def make_private_np_eigenvectors(
     input_domain: Domain, input_metric: Metric, unit_epsilons: List[float]
 ) -> Measurement:
     try:
-        import numpy as np
+        import numpy as np # type: ignore[import-not-found]
     except ImportError:
         raise ImportError(
             "The optional install numpy is required for this functionality"

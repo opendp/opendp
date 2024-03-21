@@ -8,7 +8,7 @@ dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
     try:
-        import numpy as np
+        import numpy as np # type: ignore[import-not-found]
     except ImportError:
         raise ImportError(
             "The optional install numpy is required for this functionality"
@@ -24,7 +24,7 @@ def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
 
 def sample_covariance(num_features):
     try:
-        import numpy as np
+        import numpy as np # type: ignore[import-not-found]
     except ImportError:
         raise ImportError(
             "The optional install numpy is required for this functionality"

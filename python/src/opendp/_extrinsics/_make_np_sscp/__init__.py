@@ -18,7 +18,7 @@ def make_np_sscp(
     """
     import opendp.prelude as dp
     try:
-        import numpy as np
+        import numpy as np # type: ignore[import-not-found]
     except ImportError:
         raise ImportError(
             "The optional install numpy is required for this functionality"
