@@ -78,8 +78,6 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
 
     A metric space consists of a domain and a metric.
 
-    :example:
-
     >>> import opendp.prelude as dp
     >>> from typing import List # in Python 3.9, can just write list[int] below
     ...
@@ -91,7 +89,7 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
 
     :param T: carrier type (the type of members in the domain)
     :param M: metric type
-    :param infer: if True, `T` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
+    :param infer: if True, ``T`` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
     """
     import opendp.typing as ty
 
@@ -115,10 +113,49 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
 
 
 def domain_of(T, infer=False) -> Domain:
-    """Constructs an instance of a domain from carrier type `T`.
+    """Constructs an instance of a domain from carrier type ``T``, or from an example.
+
+    Accepts a limited set of Python type expressions:
+
+    >>> from typing import List  # Or just use regular "list" after python 3.8.
+    >>> domain_of(List[int])
+    VectorDomain(AtomDomain(T=i32))
+    
+    As well as strings representing types in the underlying Rust syntax:
+
+    >>> domain_of('Vec<int>')
+    VectorDomain(AtomDomain(T=i32))
+
+    Dictionaries, optional types, and a range of primitive types are supported:
+
+    >>> from typing import Dict  # Or just use regular "dict" after python 3.8.
+    >>> domain_of(Dict[str, int])
+    MapDomain { key_domain: AtomDomain(T=String), value_domain: AtomDomain(T=i32) }
+    
+    .. TODO: Support python syntax for Option: https://github.com/opendp/opendp/issues/1389
+
+    >>> domain_of('Option<int>')  # Python's `Optional` is not supported.
+    OptionDomain(AtomDomain(T=i32))
+    
+    >>> import opendp.prelude as dp
+    >>> domain_of(dp.i32)
+    AtomDomain(T=i32)
+
+    More complex types are not supported:
+
+    >>> domain_of(List[List[int]]) # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ...
+    opendp.mod.OpenDPException:
+      FFI("VectorDomain constructor only supports AtomDomain or UserDomain inner domains")
+
+    Alternatively, an example of the data can be provided, but note that passing sensitive data may result in a privacy violation:
+
+    >>> domain_of([1, 2, 3], infer=True)
+    VectorDomain(AtomDomain(T=i32))
 
     :param T: carrier type
-    :param infer: if True, `T` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
+    :param infer: if True, ``T`` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
     """
     import opendp.typing as ty
     from opendp.domains import vector_domain, atom_domain, option_domain, map_domain
@@ -145,7 +182,7 @@ def domain_of(T, infer=False) -> Domain:
 
 
 def metric_of(M) -> Metric:
-    """Constructs an instance of a metric from metric type `M`."""
+    """Constructs an instance of a metric from metric type ``M``."""
     import opendp.typing as ty
     import opendp.metrics as metrics
 
@@ -175,12 +212,8 @@ def metric_of(M) -> Metric:
     raise TypeError(f"unrecognized metric: {M}")
 
 
-def loss_of(*, epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]:
+def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
-
-    :param U: The type of the privacy parameter.
-
-    :example:
 
     >>> loss_of(epsilon=1.0)
     (MaxDivergence(f64), 1.0)
@@ -189,9 +222,16 @@ def loss_of(*, epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, flo
     >>> loss_of(rho=1.0)
     (ZeroConcentratedDivergence(f64), 1.0)
 
+    :param epsilon: Parameter for pure ε-DP.
+    :param delta: Parameter for approximate (ε,δ)-DP.
+    :param rho: Parameter for zero-concentrated ρ-DP.
+    :param U: The type of the privacy parameter; Inferred if not provided.
+
     """
     if epsilon is None and rho is None:
         raise ValueError("Either epsilon or rho must be specified.")
+    if epsilon is None and delta is not None:
+        raise ValueError("Epsilon must be specified if delta is given.")
 
     if rho:
         U = RuntimeType.parse_or_infer(U, rho)
@@ -215,8 +255,19 @@ def unit_of(
     U=None,
 ) -> Tuple[Metric, float]:
     """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
+    The parameters are mutually exclusive.
 
-    :param ordered: Set to true to use InsertDeleteDistance instead of SymmetricDistance, or HammingDistance instead of ChangeOneDistance.
+    >>> unit_of(contributions=3)
+    (SymmetricDistance(), 3)
+    >>> unit_of(l1=2.0)
+    (L1Distance(f64), 2.0)
+
+    :param contributions: Greatest number of records a privacy unit may contribute to microdata
+    :param changes: Greatest number of records a privacy unit may change in microdata
+    :param absolute: Greatest absolute distance a privacy unit can influence a scalar aggregate data set
+    :param l1: Greatest l1 distance a privacy unit can influence a vector aggregate data set
+    :param l2: Greatest l2 distance a privacy unit can influence a vector aggregate data set
+    :param ordered: Set to ``True`` to use ``InsertDeleteDistance`` instead of ``SymmetricDistance``, or ``HammingDistance`` instead of ``ChangeOneDistance``.
     :param U: The type of the dataset distance."""
 
     def _is_distance(p, v):
@@ -244,7 +295,15 @@ def unit_of(
 
 
 class Context(object):
-    """A Context coordinates queries to an instance of a privacy `accountant`."""
+    """A Context coordinates queries to an instance of a privacy :py:attr:`accountant`.
+
+    It is recommended to use the :py:func:`make_sequential_composition <opendp.combinators.make_sequential_composition>` constructor instead of this one.
+
+    :param accountant: The measurement used to spawn the queryable.
+    :param queryable: Executes the queries and tracks the privacy expenditure.
+    :param d_in: An upper bound on the distance between adjacent datasets.
+    :param d_mids: A sequence of privacy losses for each query to be sent to the queryable. Used for compositors.
+    :param d_out: An upper bound on the overall privacy loss. Used for filters."""
 
     accountant: Measurement  # union Odometer once merged
     """The accountant is the measurement used to spawn the queryable.
@@ -261,13 +320,6 @@ class Context(object):
         d_mids=None,
         d_out=None,
     ):
-        """Initializes the context with the given accountant and queryable.
-
-        It is recommended to use the `sequential_composition` constructor instead of this one.
-
-        :param d_in: An upper bound on the distance between adjacent datasets.
-        :param d_mids: A sequence of privacy losses for each query to be sent to the queryable. Used for compositors.
-        :param d_out: An upper bound on the overall privacy loss. Used for filters."""
         self.accountant = accountant
         self.queryable = queryable
         self.d_in = d_in
@@ -288,13 +340,13 @@ class Context(object):
         If the domain is not specified, it will be inferred from the data.
         This makes the assumption that the structure of the data is public information.
 
-        The weights may be a list of numerics, corresponding to how `privacy_loss` should be distributed to each query.
-        Alternatively, pass a single integer to distribute the loss evenly.
+        ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.
 
         :param data: The data to be analyzed.
         :param privacy_unit: The privacy unit of the compositor.
         :param privacy_loss: The privacy loss of the compositor.
-        :param weights: How to distribute `privacy_loss` among the queries.
+        :param split_evenly_over: The number of parts to evenly distribute the privacy loss
+        :param split_by_weights: A list of weights for each intermediate privacy loss
         :param domain: The domain of the data."""
         if domain is None:
             domain = domain_of(data, infer=True)
@@ -325,7 +377,7 @@ class Context(object):
         If the context has been constructed with a sequence of privacy losses,
         the next loss will be used. Otherwise, the loss will be computed from the kwargs.
 
-        :param kwargs: The privacy loss to use for the query. Passed directly into `loss_of`.
+        :param kwargs: The privacy loss to use for the query. Passed directly into :py:func:`loss_of`.
         """
         d_query = None
         if self.d_mids is not None:
@@ -361,10 +413,10 @@ class Query(object):
     _output_measure: Measure
     """The output measure of the query."""
     _context: Optional["Context"]
-    """The context that the query is part of. `query.release()` submits `_chain` to `_context`."""
+    """The context that the query is part of. ``query.release()`` submits ``_chain`` to ``_context``."""
     _wrap_release: Optional[Callable[[Any], Any]]
     """For internal use. A function that wraps the release of the query. 
-    Used to wrap the response of compositor/odometer queries in another `Analysis`."""
+    Used to wrap the response of compositor/odometer queries in another ``Analysis``."""
 
     def __init__(
         self,
@@ -377,7 +429,7 @@ class Query(object):
     ) -> None:
         """Initializes the query with the given chain and output measure.
 
-        It is more convenient to use the `context.query()` constructor than this one.
+        It is more convenient to use the ``context.query()`` constructor than this one.
         However, this can be used stand-alone to help build a transformation/measurement that is not part of a context.
 
         :param chain: an initial metric space (tuple of domain and metric) or transformation
@@ -400,9 +452,9 @@ class Query(object):
             raise AttributeError(f"Unrecognized constructor: '{name}'")
 
         def make(*args, **kwargs) -> "Query":
-            """Wraps the `make_{name}` constructor to allow one optional parameter and chains it to the current query.
+            """Wraps the ``make_{name}`` constructor to allow one optional parameter and chains it to the current query.
 
-            This function will be called when the user calls `query.{name}(...)`.
+            This function will be called when the user calls ``query.{name}(...)``.
             """
             constructor, is_partial = constructors[name]
 
@@ -446,7 +498,7 @@ class Query(object):
         return super().__dir__() + list(constructors.keys())  # type: ignore[operator] # pragma: no cover
 
     def resolve(self, allow_transformations=False):
-        """Resolve the query into a measurement."
+        """Resolve the query into a measurement.
 
         :param allow_transformations: If true, allow the response to be a transformation instead of a measurement.
         """
@@ -468,7 +520,7 @@ class Query(object):
         return answer
 
     def param(self):
-        """Returns the discovered parameter, if there is one"""
+        """Returns the discovered parameter, if there is one."""
         return getattr(self.resolve(), "param", None) # pragma: no cover
 
     def compositor(
@@ -480,7 +532,10 @@ class Query(object):
     ) -> "Context":
         """Constructs a new context containing a sequential compositor with the given weights.
 
-        :param weights: A list of weights corresponding to the privacy budget allocated to a sequence of queries.
+        ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.
+
+        :param split_evenly_over: The number of parts to evenly distribute the privacy loss
+        :param split_by_weights: A list of weights for each intermediate privacy loss
         """
 
         if d_out is not None and self._d_out is not None:
@@ -590,13 +645,16 @@ def _sequential_composition_by_weights(
     split_evenly_over: Optional[int] = None,
     split_by_weights: Optional[List[float]] = None,
 ) -> Tuple[Measurement, List[Any]]:
-    """constructs a sequential composition measurement
-    where the d_mids are proportional to the weights
+    """Constructs a sequential composition measurement
+    where the ``d_mids`` are proportional to the weights.
+
+    ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.
 
     :param domain: the domain of the data
-    :param privacy_unit: a tuple of the input metric and the data distance (d_in)
-    :param privacy_loss: a tuple of the output measure and the privacy loss (d_out)
-    :param weights: either a list of weights for each intermediate privacy loss, or the number of ways to evenly distribute the privacy loss
+    :param privacy_unit: a tuple of the input metric and the data distance (``d_in``)
+    :param privacy_loss: a tuple of the output measure and the privacy parameter (``d_out``)
+    :param split_evenly_over: The number of parts to evenly distribute the privacy loss
+    :param split_by_weights: A list of weights for each intermediate privacy loss
     """
     input_metric, d_in = privacy_unit
     output_measure, d_out = privacy_loss
@@ -640,9 +698,9 @@ def _sequential_composition_by_weights(
 
 
 def _cast_measure(chain, to_measure=None, d_to=None):
-    """Casts the output measure of a given `chain` to `to_measure`.
+    """Casts the output measure of a given ``chain`` to ``to_measure``.
 
-    If provided, `d_to` is the privacy loss wrt the new measure.
+    If provided, ``d_to`` is the privacy loss wrt the new measure.
     """
     if to_measure is None or chain.output_measure == to_measure:
         return chain
@@ -665,7 +723,7 @@ def _cast_measure(chain, to_measure=None, d_to=None):
 
 
 def _translate_measure_distance(d_from, from_measure, to_measure):
-    """Translate a privacy loss `d_from` from `from_measure` to `to_measure`.
+    """Translate a privacy loss ``d_from`` from ``from_measure`` to ``to_measure``.
     """
     if from_measure == to_measure:
         return d_from # pragma: no cover
