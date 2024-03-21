@@ -96,10 +96,10 @@ def import_optional_dependency(name, raise_error=True):
         return None
 
 
-np_csprng: "np.random.Generator" = None # type: ignore[assignment]
+np_csprng = None
 try:
     np = import_optional_dependency('numpy')
-    from randomgen import UserBitGenerator  # type: ignore[import-not-found]
+    randomgen = import_optional_dependency('randomgen')
 
     buffer_len = 1024
     buffer = np.empty(buffer_len, dtype=np.uint64)
@@ -121,7 +121,7 @@ try:
         buffer_pos += 1
         return int(out)
 
-    np_csprng = np.random.Generator(bit_generator=UserBitGenerator(next_raw)) # type:ignore
+    np_csprng = np.random.Generator(bit_generator=randomgen.UserBitGenerator(next_raw)) # type:ignore
 
 except ImportError:  # pragma: no cover
     pass

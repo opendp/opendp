@@ -7,6 +7,7 @@ def test_np_rng():
     n_samples = 100_000
 
     np = pytest.importorskip('numpy')
+    assert np_csprng is not None # for mypy
     counts = np.unique(np_csprng.integers(n_cats, size=n_samples), return_counts=True)[1]
     pytest.importorskip('sklearn')
     scipy = pytest.importorskip('scipy')

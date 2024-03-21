@@ -1,7 +1,7 @@
 import pytest
 import opendp.prelude as dp
-from opendp._lib import np_csprng
-from ..helpers import optional_dependency, import_optional_dependency
+from opendp._lib import np_csprng, import_optional_dependency
+from ..helpers import optional_dependency
 
 dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
