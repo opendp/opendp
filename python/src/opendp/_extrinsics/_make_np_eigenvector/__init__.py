@@ -156,7 +156,7 @@ def make_private_np_eigenvectors(
     try:
         from scipy.linalg import null_space  # type: ignore[import]
     except ImportError:
-        raise ImportError('The optional install scipy is required for this functionality')
+        raise ImportError('The optional install scikit-learn is required for this functionality')
 
     dp.assert_features("contrib", "floating-point")
 
