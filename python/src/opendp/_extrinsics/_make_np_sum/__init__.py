@@ -1,5 +1,6 @@
 from opendp._extrinsics._utilities import to_then, with_privacy
 from opendp.mod import Domain, Metric, Transformation
+from opendp._lib import import_optional_dependency
 
 
 # planning to make this public, but may make more API changes
@@ -14,12 +15,7 @@ def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
     :returns a Measurement that computes the DP sum
     """
     import opendp.prelude as dp
-    try:
-        import numpy as np # type: ignore[import-not-found]
-    except ImportError:
-        raise ImportError(
-            "The optional install numpy is required for this functionality"
-        )
+    np = import_optional_dependency('numpy')
 
     dp.assert_features("contrib", "floating-point")
 

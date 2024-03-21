@@ -4,6 +4,7 @@ import platform
 import re
 import sys
 from typing import Dict, List, Optional, Any
+import importlib
 
 
 # list all acceptable alternative types for each default type
@@ -74,14 +75,30 @@ def _load_library():
 lib = _load_library()
 
 
+optional_dependencies = {
+    'sklearn': 'scikit-learn',
+    'numpy': 'numpy',
+    'randomgen': 'randomgen'
+}
+
+
+def import_optional_dependency(name, raise_error=True):
+    '''
+    Imports optional dependency, or explains that it is required.
+    '''
+    assert name in optional_dependencies
+    try:
+        return importlib.import_module(name)
+    except ImportError:
+        if raise_error:
+            install_name = optional_dependencies[name]
+            raise ImportError(f'The optional install {install_name} is required for this functionality')
+        return None
+
+
 np_csprng: "np.random.Generator" = None # type: ignore[assignment]
 try:
-    try:
-        import numpy as np # type: ignore[import-not-found]
-    except ImportError:
-        raise ImportError(
-            "The optional install numpy is required for this functionality"
-        )
+    np = import_optional_dependency('numpy')
     from randomgen import UserBitGenerator  # type: ignore[import-not-found]
 
     buffer_len = 1024

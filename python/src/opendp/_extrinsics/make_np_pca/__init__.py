@@ -8,6 +8,7 @@ from opendp._extrinsics._make_np_eigendecomposition import (
     then_private_np_eigendecomposition,
 )
 from opendp.mod import Domain, Metric, Measurement
+from opendp._lib import import_optional_dependency
 
 
 class PCAEpsilons(NamedTuple):
@@ -34,12 +35,7 @@ def make_private_np_pca(
     :returns a Measurement that computes a tuple of (mean, S, Vt)
     """
     import opendp.prelude as dp
-    try:
-        import numpy as np # type: ignore[import-not-found]
-    except ImportError:
-        raise ImportError(
-            "The optional install numpy is required for this functionality"
-        )
+    np = import_optional_dependency('numpy')
 
     dp.assert_features("contrib", "floating-point")
 
@@ -142,12 +138,7 @@ then_private_np_pca = register_measurement(make_private_np_pca)
 
 def _smaller(v):
     """returns the next non-negative float closer to zero"""
-    try:
-        import numpy as np # type: ignore[import-not-found]
-    except ImportError:
-        raise ImportError(
-            "The optional install numpy is required for this functionality"
-        )
+    np = import_optional_dependency('numpy')
 
     if v < 0:
         raise ValueError("expected non-negative value")
@@ -169,12 +160,7 @@ def _split_pca_epsilon_evenly(unit_epsilon, num_eigvec_releases, estimate_mean=F
 
 def _make_center(input_domain, input_metric):
     import opendp.prelude as dp
-    try:
-        import numpy as np # type: ignore[import-not-found]
-    except ImportError:
-        raise ImportError(
-            "The optional install numpy is required for this functionality"
-        )
+    np = import_optional_dependency('numpy')
 
     dp.assert_features("contrib", "floating-point")
 

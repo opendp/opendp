@@ -3,6 +3,7 @@ from typing import NamedTuple, Literal
 from opendp.mod import Domain
 from opendp.typing import RuntimeTypeDescriptor, ELEMENTARY_TYPES
 from opendp._convert import ATOM_MAP
+from opendp._lib import import_optional_dependency
 
 
 def _check_norm_and_p(norm: float | None, p: int | None):
@@ -52,12 +53,7 @@ def np_array2_domain(
     :param num_columns: number of columns in the data
     :param T: atom type
     """
-    try:
-        import numpy as np  # type: ignore[import]
-    except ImportError:
-        raise ImportError(
-                "The optional install numpy is required for this functionality"
-            )
+    np = import_optional_dependency('numpy')
     import opendp.prelude as dp
 
     _check_norm_and_p(norm, p)
@@ -167,12 +163,7 @@ def _np_sscp_domain(
     :param num_features: number of rows/columns in the matrix
     """
     import opendp.prelude as dp
-    try:
-        import numpy as np # type: ignore[import-not-found]
-    except ImportError:
-        raise ImportError(
-            "The optional install numpy is required for this functionality"
-        )
+    np = import_optional_dependency('numpy')
 
     _check_norm_and_p(norm, p)
     _check_nonnegative_int(size, "size")

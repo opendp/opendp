@@ -1,6 +1,6 @@
 from opendp._extrinsics.domains import _np_sscp_domain
 from opendp._extrinsics._utilities import to_then
-from opendp._lib import np_csprng
+from opendp._lib import np_csprng, import_optional_dependency
 from opendp.mod import Domain, Metric, Transformation, Measurement
 from typing import List
 
@@ -16,12 +16,7 @@ def make_private_np_eigenvector(
     :param input_metric: instance of `symmetric_distance()`
     :param unit_epsilon: ε-expenditure per changed record in the input data
     """
-    try:
-        import numpy as np # type: ignore[import-not-found]
-    except ImportError:
-        raise ImportError(
-            "The optional install numpy is required for this functionality"
-        )
+    np = import_optional_dependency('numpy')
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "floating-point")
@@ -146,12 +141,7 @@ then_np_sscp_projection = to_then(make_np_sscp_projection)
 def make_private_np_eigenvectors(
     input_domain: Domain, input_metric: Metric, unit_epsilons: List[float]
 ) -> Measurement:
-    try:
-        import numpy as np # type: ignore[import-not-found]
-    except ImportError:
-        raise ImportError(
-            "The optional install numpy is required for this functionality"
-        )
+    np = import_optional_dependency('numpy')
     import opendp.prelude as dp
     try:
         from scipy.linalg import null_space  # type: ignore[import]

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from opendp._extrinsics.make_np_pca import make_private_np_pca
 from opendp.mod import Measurement
+from opendp._lib import import_optional_dependency
 
 
 try:
@@ -73,12 +74,7 @@ class PCA(SKLPCA):
 
     def _postprocess(self, values):
         """A function that applies a release of the mean and eigendecomposition to self"""
-        try:
-            import numpy as np # type: ignore[import-not-found]
-        except ImportError:
-            raise ImportError(
-                "The optional install numpy is required for this functionality"
-            )
+        np = import_optional_dependency('numpy')
         from sklearn.utils.extmath import stable_cumsum, svd_flip # type: ignore[import]
         from sklearn.decomposition._pca import _infer_dimension # type: ignore[import]
 

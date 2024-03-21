@@ -1,18 +1,13 @@
 import pytest
 import opendp.prelude as dp
 from opendp._lib import np_csprng
-from ..helpers import optional_dependency
+from ..helpers import optional_dependency, import_optional_dependency
 
 dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 
 def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
-    try:
-        import numpy as np # type: ignore[import-not-found]
-    except ImportError:
-        raise ImportError(
-            "The optional install numpy is required for this functionality"
-        )
+    np = import_optional_dependency('numpy')
 
     cov = cov or sample_covariance(num_columns)
     microdata = np.random.multivariate_normal(
@@ -23,12 +18,7 @@ def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
 
 
 def sample_covariance(num_features):
-    try:
-        import numpy as np # type: ignore[import-not-found]
-    except ImportError:
-        raise ImportError(
-            "The optional install numpy is required for this functionality"
-        )
+    np = import_optional_dependency('numpy')
 
     A = np.random.uniform(0, num_features, size=(num_features, num_features))
     return A.T @ A
