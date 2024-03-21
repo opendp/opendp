@@ -17,7 +17,10 @@ OpenDP is available for Python, R, and Rust.
     .. tab-item:: R
         :sync: r
 
-        Launch R and then use ``install.packages``:
+        First, make sure `Rust is installed <https://www.rust-lang.org/tools/install>`_.
+        (The R package includes Rust source code which will be compiled during install.)
+
+        Then, launch R and use ``install.packages``:
 
         .. code:: r
 
