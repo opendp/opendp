@@ -12,7 +12,7 @@
 
 \contrib
 
-Proves soundness of \rustdoc{measurements/fn}{make\_rappor} in \asOfCommit{mod.rs}{304ef9c2}.
+Proves soundness of \rustdoc{measurements/fn}{make\_rappor} in \asOfCommit{mod.rs}{cfd1bec5}.
 
 \section{Introduction}
 RAPPOR is a protocol for local-differentially private frequency estimation. In the local model each user is guaranteed $\varepsilon$-differential privacy for their response. This is achieved by computing the \texttt{xor} of each input vector with a noise vector. Because the noise is added mechanically we can efficiently account for the bias introduced with the function \rustdoc{measurements/fn}{debias\_basic\_rappor}, which sums and normalises a vector of private outputs.
