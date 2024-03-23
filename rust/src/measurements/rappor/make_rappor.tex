@@ -140,7 +140,7 @@ The following proof makes use of the following lemma that asserts the correctnes
 \label{thm:unbiased-estimator}
 	The expected value of \rustdoc{measurements/fn}{debias\_basic\_rappor} is $N$.
 \end{theorem}
-\begin{proof} Let $Y$ be the sum of received randomised outputs of \rustdoc{measurements/fn}{make\_rappor}, where $Y_i$ is the number of received bits at index $i\in [k]$. Let $N_i$ be the true number of times bit $i$ was set.
+\begin{proof} Each user, or row in the database $x$ represented as a vector with at most $m$ bits set is encoded into $y$ using \rustdoc{measurements/fn}{make\_rappor}. Let $Y$ be the sum of  $n$ received randomised outputs, where $Y_i=\sum_{j=1}^n y_i$ is the number of received bits at index $i\in [k]$. Let $N_i$ be the true (non-private) count of users with bit $i$ set in their input.
 \begin{align}
 \mathbb{E}[Y_i] &= N_i\left(1-\frac{1}{2}f\right) + (n-N_i)\frac{f}{2}\nonumber\\
 	&= N_i(1-f) + n\frac{1}{2}f\nonumber\\
@@ -159,7 +159,7 @@ The following proof makes use of the following lemma that asserts the correctnes
 \begin{proof}\hfill
 Notice that each $\hat{Y_i}$ is a sum of $n$ Bernoulli random variables with probability $1-\frac{1}{2}f$ or $\frac{1}{2}f$, which both have $\sigma^2 = \frac{1}{2}f\left(1-\frac{1}{2}f\right) = \frac{f}{2}-\frac{f^2}{4}$
 	\begin{align*}
-		\mathbb{E}[|\hat{N}-N|_2^2] &= \mathbb{E}[\sum\limits_{i=1}^k(\hat{N_i}-N_i)^2] = \sum\limits_{i=1}^k\mathbb{E}[(\hat{N_i}-N_i)^2] &&\\
+		\mathbb{E}[|\hat{N}-N|_2^2] &= \mathbb{E}\left[\sum\limits_{i=1}^k(\hat{N_i}-N_i)^2\right] = \sum\limits_{i=1}^k\mathbb{E}[(\hat{N_i}-N_i)^2] &&\\
 			&= \sum\limits_{i=1}^k\mathbb{E}[(\hat{N_i}-\mathbb{E}[\hat{N_i}])^2] && \text{by Theorem~\ref{thm:unbiased-estimator}}\\
 			&= \sum\limits_{i=1}^k\text{Var}(\hat{N_i}) = \sum\limits_{i=1}^k\frac{\text{Var}(\hat{Y_i})}{1-f}&&\text{by Equation~\ref{eq:estimator}}\\
 			&= \sum\limits_{i=1}^kn\left(\frac{\frac{f}{2}-\frac{f^2}{4}}{1-f}\right) &&\\
