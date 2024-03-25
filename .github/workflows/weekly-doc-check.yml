@@ -36,5 +36,7 @@ jobs:
       - name: Check links
         run: linkchecker -f linkchecker-external.cfg build/html/index.html
 
-      - name: Build Rust docs
-        run: make html-rustdoc
+      # We could also build and check the Rust docs, but:
+      # - The build here doesn't replicate errors reported by docs.rs.
+      # - There are more than 10K internal links, but the ones that don't
+      #   come from the Rust docs build also are in the Sphinx docs.
