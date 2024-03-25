@@ -38,7 +38,7 @@ function run() {
 
 function init() {
   log "Install dependencies"
-  run pip install wheel
+  run pip install wheel setuptools
 }
 
 function build() {
