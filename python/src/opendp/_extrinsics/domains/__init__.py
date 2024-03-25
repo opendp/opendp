@@ -7,7 +7,7 @@ from opendp._lib import import_optional_dependency
 import typing
 
 if typing.TYPE_CHECKING:
-    import numpy
+    import numpy # type: ignore[import-not-found]
 
 def _check_norm_and_p(norm: float | None, p: int | None):
     """Checks that a scalar L`p` `norm` is well-defined"""

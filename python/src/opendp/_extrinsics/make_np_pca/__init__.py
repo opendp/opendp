@@ -11,7 +11,7 @@ from opendp.mod import Domain, Metric, Measurement
 from opendp._lib import import_optional_dependency
 
 if TYPE_CHECKING:
-    import numpy
+    import numpy # type: ignore[import-not-found]
 
 
 class PCAEpsilons(NamedTuple):
