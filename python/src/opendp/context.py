@@ -3,6 +3,7 @@ The ``context`` module provides :py:class:`opendp.context.Context` and supportin
 '''
 
 from typing import Any, Callable, List, Optional, Tuple, Union
+from __future__ import annotations
 import importlib
 from inspect import signature
 from functools import partial
