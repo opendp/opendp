@@ -20,7 +20,7 @@ provide a broader view of the the develpment and release process.
 
 #### Weekly
 
-- [`weekly-link-check.yml`](weekly-link-check.yml) checks external links. [Past runs](https://github.com/opendp/opendp/actions/workflows/weekly-link-check.yml).
+- [`weekly-doc-check.yml`](weekly-doc-check.yml) checks external links. [Past runs](https://github.com/opendp/opendp/actions/workflows/weekly-doc-check.yml).
 
 ### Manual
 
