@@ -24,7 +24,7 @@ jobs:
 
       - name: Check markdown links
         run: |
-          find .. | grep '.md$' | grep -v 'venv/\|.git/\|CHANGELOG' \
+          find .. | grep '.md$' | grep -v 'venv/\|.git/\|CHANGELOG\|vendor/' \
           | xargs linkchecker -f linkchecker-external.cfg
 
       - name: Install Pandoc
