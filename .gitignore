@@ -139,8 +139,37 @@ target/
 vendor/
 binary/
 
-# auto-generated header file
+# Auto-generated files
 rust/opendp.h
+R/opendp/R/accuracy.R
+R/opendp/R/combinators.R
+R/opendp/R/core.R
+R/opendp/R/data.R
+R/opendp/R/domains.R
+R/opendp/R/measurements.R
+R/opendp/R/measures.R
+R/opendp/R/metrics.R
+R/opendp/R/transformations.R
+R/opendp/src/Ropendp.h
+R/opendp/src/accuracy.c
+R/opendp/src/combinators.c
+R/opendp/src/core.c
+R/opendp/src/data.c
+R/opendp/src/domains.c
+R/opendp/src/lib.c
+R/opendp/src/measurements.c
+R/opendp/src/measures.c
+R/opendp/src/metrics.c
+R/opendp/src/transformations.c
+python/src/opendp/_data.py
+python/src/opendp/accuracy.py
+python/src/opendp/combinators.py
+python/src/opendp/core.py
+python/src/opendp/domains.py
+python/src/opendp/measurements.py
+python/src/opendp/measures.py
+python/src/opendp/metrics.py
+python/src/opendp/transformations.py
 
 # Remove Cargo.lock from gitignore if creating an executable, leave it for libraries
 # More information here https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
