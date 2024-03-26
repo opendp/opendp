@@ -875,6 +875,18 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_laplace(const stru
                                                                       const int32_t *k,
                                                                       const char *QO);
 
+struct FfiResult_____AnyMeasurement opendp_measurements__make_private_expr(const struct AnyDomain *input_domain,
+                                                                           const struct AnyMetric *input_metric,
+                                                                           const struct AnyMeasure *output_measure,
+                                                                           const struct AnyObject *expr,
+                                                                           const struct AnyObject *param);
+
+struct FfiResult_____AnyMeasurement opendp_measurements__make_private_lazyframe(const struct AnyDomain *input_domain,
+                                                                                const struct AnyMetric *input_metric,
+                                                                                const struct AnyMeasure *output_measure,
+                                                                                const struct AnyObject *lazyframe,
+                                                                                double param);
+
 struct FfiResult_____AnyMeasurement opendp_measurements__make_user_measurement(const struct AnyDomain *input_domain,
                                                                                const struct AnyMetric *input_metric,
                                                                                const struct AnyMeasure *output_measure,
@@ -1025,6 +1037,14 @@ struct FfiResult_____AnyMetric opendp_metrics__linf_distance(c_bool monotonic, c
  * * `descriptor` - A string description of the metric.
  */
 struct FfiResult_____AnyMetric opendp_metrics__user_distance(char *descriptor);
+
+struct FfiResult_____AnyTransformation opendp_transformations__make_stable_lazyframe(const struct AnyDomain *input_domain,
+                                                                                     const struct AnyMetric *input_metric,
+                                                                                     const struct AnyObject *lazyframe);
+
+struct FfiResult_____AnyTransformation opendp_transformations__make_stable_expr(const struct AnyDomain *input_domain,
+                                                                                const struct AnyMetric *input_metric,
+                                                                                const struct AnyObject *expr);
 
 struct FfiResult_____AnyTransformation opendp_transformations__make_sized_bounded_covariance(unsigned int size,
                                                                                              const struct AnyObject *bounds_0,

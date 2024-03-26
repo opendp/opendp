@@ -3,6 +3,16 @@
 //! The different [`crate::core::Transformation`] implementations in this module are accessed by calling the appropriate constructor function.
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Transformation` does.
 
+#[cfg(all(feature = "contrib", feature = "polars"))]
+mod make_stable_lazyframe;
+#[cfg(all(feature = "contrib", feature = "polars"))]
+pub use make_stable_lazyframe::*;
+
+#[cfg(all(feature = "contrib", feature = "polars"))]
+mod make_stable_expr;
+#[cfg(all(feature = "contrib", feature = "polars"))]
+pub use make_stable_expr::*;
+
 #[cfg(feature = "contrib")]
 mod covariance;
 #[cfg(feature = "contrib")]
