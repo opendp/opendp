@@ -43,7 +43,7 @@ jobs:
         run: cargo check --verbose --no-default-features --features untrusted,ffi
 
       - name: Test
-        run: cargo test --verbose --features untrusted,ffi
+        run: cargo test --verbose --features untrusted,ffi --lib
 
       - name: Check that generated python is up to date
         run: git diff --exit-code
