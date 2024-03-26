@@ -1,6 +1,6 @@
 import pytest
 import opendp.prelude as dp
-from opendp._lib import np_csprng, import_optional_dependency
+from opendp._lib import import_optional_dependency
 from ..helpers import optional_dependency
 
 dp.enable_features("honest-but-curious", "contrib", "floating-point")
@@ -24,7 +24,6 @@ def sample_covariance(num_features):
     return A.T @ A
 
 
-@pytest.mark.skipif(np_csprng is None, reason='randomgen not installed')
 def test_pca():
     from opendp._extrinsics.make_np_pca import then_private_np_pca
 
@@ -42,7 +41,6 @@ def test_pca():
     assert m_pca.check(2, 1.0)
 
 
-@pytest.mark.skipif(np_csprng is None, reason='randomgen not installed')
 def test_pca_skl():
     num_columns = 4
     num_rows = 10_000
@@ -131,7 +129,6 @@ def flaky_assert_pca_compare_sklearn():
     print(model_odp.explained_variance_)
 
 
-@pytest.mark.skipif(np_csprng is None, reason='randomgen not installed')
 def test_pca_compare_sklearn():
     for _ in range(5):
         try:

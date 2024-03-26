@@ -15,14 +15,14 @@ def optional_dependency(name):
     To that end, we should:
     - Make sure the test suite runs for any set of optional dependencies.
     - Avoid pytest.skipif: There is always a defined behavior to check.
-    - If the test uses a dependency indirectly,
+    - If the test uses a library indirectly,
       wrap the first call with "with optional_dependency('numpy'):" or similar
     - If the test uses a library directly,
       use "np = pytest.importorskip('numpy')" as late in the code as possible,
       so we can catch any preceding indirect usages.
 
     If "optional_dependency('numpy')" and "pytest.importorskip('numpy')"
-    are used in the same test, it is redundant, but doesn't do any harm. 
+    are used in the same test, it is redundant, but the intended effect is more clear. 
     '''
     # Proceed normally if installed:
     if name in sys.modules: 
