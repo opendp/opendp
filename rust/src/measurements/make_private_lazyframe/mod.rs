@@ -2,14 +2,21 @@ use opendp_derive::bootstrap;
 use polars::prelude::*;
 
 use crate::{
+    combinators::BasicCompositionMeasure,
     core::{Function, Measure, Measurement, Metric, MetricSpace},
-    domains::{LazyFrameDomain, LogicalPlanDomain},
+    domains::{ExprDomain, LazyFrameDomain, LogicalPlanDomain},
     error::Fallible,
-    metrics::SymmetricDistance,
+    metrics::PartitionDistance,
+    transformations::{traits::UnboundedMetric, DatasetMetric, StableLogicalPlan},
 };
+
+use super::PrivateExpr;
 
 #[cfg(feature = "ffi")]
 mod ffi;
+
+#[cfg(feature = "contrib")]
+mod aggregate;
 
 #[bootstrap(
     features("contrib"),
@@ -72,15 +79,33 @@ pub trait PrivateLogicalPlan<MI: Metric, MO: Measure> {
     ) -> Fallible<Measurement<LogicalPlanDomain, LogicalPlan, MI, MO>>;
 }
 
-impl<MO: Measure> PrivateLogicalPlan<SymmetricDistance, MO> for LogicalPlan {
+impl<MS, MO> PrivateLogicalPlan<MS, MO> for LogicalPlan
+where
+    MS: 'static + UnboundedMetric + DatasetMetric,
+    MO: 'static + BasicCompositionMeasure,
+    Expr: PrivateExpr<PartitionDistance<MS>, MO>,
+    LogicalPlan: StableLogicalPlan<MS, MS>,
+    (LogicalPlanDomain, MS): MetricSpace,
+    (ExprDomain, MS): MetricSpace,
+{
     fn make_private(
         self,
-        _input_domain: LogicalPlanDomain,
-        _input_metric: SymmetricDistance,
-        _output_measure: MO,
-        _global_scale: f64,
-    ) -> Fallible<Measurement<LogicalPlanDomain, LogicalPlan, SymmetricDistance, MO>> {
+        input_domain: LogicalPlanDomain,
+        input_metric: MS,
+        output_measure: MO,
+        global_scale: f64,
+    ) -> Fallible<Measurement<LogicalPlanDomain, LogicalPlan, MS, MO>> {
         match &self {
+            #[cfg(feature = "contrib")]
+            plan if matches!(plan, LogicalPlan::Aggregate { .. }) => {
+                aggregate::make_private_aggregate(
+                    input_domain,
+                    input_metric,
+                    output_measure,
+                    self,
+                    global_scale,
+                )
+            }
             lp => fallible!(
                 MakeMeasurement,
                 "A step in your logical plan is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
