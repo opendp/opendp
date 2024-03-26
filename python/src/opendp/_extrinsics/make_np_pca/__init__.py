@@ -10,7 +10,7 @@ from opendp._extrinsics._make_np_eigendecomposition import (
 from opendp.mod import Domain, Metric, Measurement
 from opendp._lib import import_optional_dependency
 
-if TYPE_CHECKING:
+if TYPE_CHECKING: # pragma: no cover
     import numpy # type: ignore[import-not-found]
 
 

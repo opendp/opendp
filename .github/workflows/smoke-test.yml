@@ -96,6 +96,10 @@ jobs:
         optional-numpy: ['numpy', '']
         optional-randomgen: ['randomgen', '']
         optional-scikit-learn: ['scikit-learn', '']
+        # optional-install:
+        #   - '.'
+        #   - '.[numpy]'
+        #   - '.[scikit-learn]'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -130,6 +134,7 @@ jobs:
       
       - name: Install package
         run: python -m pip install -e .
+        # run: python -m pip install -e ${{ matrix.optional-install }}
 
       - name: TEMP pip freeze
         run: python -m pip freeze

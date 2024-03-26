@@ -8,7 +8,7 @@ decomposition = import_optional_dependency('sklearn.decomposition', False)
 if decomposition is not None:
     class SKLPCA(decomposition.PCA): # type: ignore[name-defined]
         pass
-else:
+else: # pragma: no cover
     class SKLPCA(object): # type: ignore[no-redef]
         def __init__(*args, **kwargs):
             raise ImportError(
