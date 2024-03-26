@@ -143,10 +143,7 @@ def make_private_np_eigenvectors(
 ) -> Measurement:
     np = import_optional_dependency('numpy')
     import opendp.prelude as dp
-    try:
-        from scipy.linalg import null_space  # type: ignore[import]
-    except ImportError:
-        raise ImportError('The optional install scikit-learn is required for this functionality')
+    linalg = import_optional_dependency('scipy.linalg')
 
     dp.assert_features("contrib", "floating-point")
 
@@ -192,7 +189,7 @@ def make_private_np_eigenvectors(
             theta = np.vstack((theta, P.T @ u))
 
             # 2.b: update the projection, P maintains singular values with magnitude <= 1
-            P = null_space(theta).T
+            P = linalg.null_space(theta).T
 
         # the eigvec of a 1x1 matrix is always I, so it doesn't need to be released
         # so if down to the last eigvec, return the projection built up via postprocessing

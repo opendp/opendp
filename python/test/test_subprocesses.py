@@ -3,8 +3,8 @@ import sys
 import pytest
 
 tests = {
-    'linting': 'cd .. && flake8 . --count --show-source --statistics',
-    'type checking': 'mypy .'
+    'flake8 linting': 'cd .. && flake8 . --count --show-source --statistics',
+    'mypy type checking': 'mypy .'
 }
 
 @pytest.mark.skipif(sys.version_info < (3, 11), reason='mypy will fail on 3.8')

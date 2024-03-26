@@ -75,10 +75,8 @@ def _load_library():
 lib = _load_library()
 
 
-optional_dependencies = {
-    'sklearn': 'scikit-learn',
-    'numpy': 'numpy',
-    'randomgen': 'randomgen'
+install_names = {
+    'sklearn': 'scikit-learn'
 }
 
 
@@ -86,12 +84,12 @@ def import_optional_dependency(name, raise_error=True):
     '''
     Imports optional dependency, or explains that it is required.
     '''
-    assert name in optional_dependencies
     try:
         return importlib.import_module(name)
     except ImportError:
         if raise_error:
-            install_name = optional_dependencies[name]
+            root_name = name.split(".")[0]
+            install_name = install_names.get(root_name) or root_name
             raise ImportError(f'The optional install {install_name} is required for this functionality')
         return None
 
