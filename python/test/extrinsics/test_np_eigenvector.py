@@ -71,7 +71,8 @@ def test_eigenvectors():
         >> then_np_clamp(norm=4.0, p=2)
         >> then_np_sscp(dp.symmetric_distance())
     )
-    meas = sp_sscp >> then_private_np_eigenvectors([1.0] * 3)
+    with optional_dependency('scipy.linalg'):
+        meas = sp_sscp >> then_private_np_eigenvectors([1.0] * 3)
 
     np = pytest.importorskip('numpy')
     data = np.random.normal(size=(1000, num_columns))

@@ -35,7 +35,7 @@ def test_pca():
             dp.np_array2_domain(norm=1, p=2, origin=0, num_columns=num_columns, size=num_rows, T=float),
             dp.symmetric_distance(),
         )
-    with optional_dependency('scipy'):
+    with optional_dependency('scipy.linalg'):
         m_pca = space >> then_private_np_pca(unit_epsilon=1.0)
 
     print(m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)))

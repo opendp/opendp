@@ -3,9 +3,11 @@ import re
 from contextlib import contextmanager
 import pytest
 
+from opendp._lib import install_names
+
 
 @contextmanager
-def optional_dependency(*module_names):
+def optional_dependency(name):
     '''
     A number of opendp functions rely on optional dependencies.
     If a user calls one of these functions without the appropriate installs,
@@ -23,27 +25,16 @@ def optional_dependency(*module_names):
     are used in the same test, it is redundant, but doesn't do any harm. 
     '''
     # Proceed normally if installed:
-    if all(name in sys.modules for name in module_names): 
+    if name in sys.modules: 
         yield
         return
     
-    # Otherwise, check that it's an expected name:
-    name_map = {
-        'sklearn': 'scikit-learn',
-        'numpy': 'numpy',
-        'randomgen': 'randomgen'
-    }
-    for name in module_names:
-        if name not in name_map:
-            raise ValueError(f'Expected one of {"/".join(name_map)}, not {name}')
-    install_names = [name_map[name] for name in module_names]
-    expected_messages = [
-        f'The optional install {name} is required for this functionality'
-        for name in install_names
-    ]
-    expected_messages_re = '|'.join(re.escape(message) for message in expected_messages)
-    # Confirm that one of the expected errors is raised...
-    with pytest.raises(Exception, match=expected_messages_re):
+    # Otherwise, confirm that expected error is raised...:
+    root_name = name.split(".")[0]
+    install_name = install_names.get(root_name) or root_name
+    expected_message = f'The optional install {install_name} is required for this functionality'
+    expected_message_re = re.escape(expected_message)
+    with pytest.raises(Exception, match=expected_message_re):
         yield
     # ... and then skip the rest of the test.
     raise pytest.skip('Saw expected OpenDPException; skipping rest of test')
