@@ -105,7 +105,10 @@ where
         + Clone
         + BinarySearchable,
 {
-    let (mut lower, mut upper) = bounds.expect("TODO");
+    let (mut lower, mut upper) = match bounds {
+        Some(bounds) => bounds,
+        None => fallible_exponential_bounds_search(&predicate)?.expect("TODO"),
+    };
     if lower > upper {
         return fallible!(FailedFunction, "lower may not be greater than upper");
     }
