@@ -4,10 +4,10 @@ from opendp.mod import Measurement
 from opendp._lib import import_optional_dependency
 
 
-try:
-    from sklearn.decomposition import PCA as SKLPCA  # type: ignore[import]
-except ImportError:
-
+decomposition = import_optional_dependency('sklearn.decomposition', False)
+if decomposition is not None:
+    SKLPCA = decomposition.PCA
+else:
     class SKLPCA(object):  # type: ignore[no-redef]
         def __init__(*args, **kwargs):
             raise ImportError(
