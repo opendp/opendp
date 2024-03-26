@@ -1,19 +1,12 @@
 import pytest
-import sys
 from typing import List, Tuple, Any
 
 from opendp.mod import *
 from opendp.typing import *
 
 
-try:
-    import numpy as np  # type: ignore
-except ImportError:
-    pass
-
-@pytest.mark.skipif('numpy' not in sys.modules,
-                    reason="requires the Numpy library")
 def test_numpy_function():
+    np = pytest.importorskip('numpy')
     print(RuntimeType.infer(np.array([1, 2, 3])))
     print(RuntimeType.infer(np.array(1)))
     print(RuntimeType.infer(np.array(1.)))

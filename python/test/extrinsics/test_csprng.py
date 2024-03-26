@@ -1,14 +1,14 @@
 from opendp._lib import np_csprng
 import pytest
-import sys
 
-
-@pytest.mark.skipif("numpy" not in sys.modules, reason="requires the Numpy library")
+@pytest.mark.skipif(np_csprng is None, reason='randomgen not installed')
 def test_np_rng():
-    import numpy as np # type: ignore[import-not-found] 
-    from scipy.stats import chisquare # type: ignore[import]
-
     n_cats = 100
     n_samples = 100_000
+
+    np = pytest.importorskip('numpy')
+    assert np_csprng is not None # for mypy
     counts = np.unique(np_csprng.integers(n_cats, size=n_samples), return_counts=True)[1]
-    assert chisquare(counts).pvalue > .0001
+    pytest.importorskip('sklearn')
+    scipy = pytest.importorskip('scipy')
+    assert scipy.stats.chisquare(counts).pvalue > .0001

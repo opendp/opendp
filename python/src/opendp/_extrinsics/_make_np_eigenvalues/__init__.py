@@ -1,5 +1,6 @@
 from opendp._extrinsics._utilities import to_then, with_privacy
 from opendp.mod import Domain, Metric, Transformation
+from opendp._lib import import_optional_dependency
 
 # planning to make this public, but may make more API changes
 
@@ -10,7 +11,7 @@ def make_np_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transform
     :param input_domain: instance of `_np_sscp_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
     """
-    import numpy as np  # type: ignore[import]
+    np = import_optional_dependency('numpy')
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "floating-point")
