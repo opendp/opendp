@@ -6,9 +6,10 @@ from opendp._lib import import_optional_dependency
 
 decomposition = import_optional_dependency('sklearn.decomposition', False)
 if decomposition is not None:
-    SKLPCA = decomposition.PCA
+    class SKLPCA(decomposition.PCA): # type: ignore[name-defined]
+        pass
 else:
-    class SKLPCA(object):  # type: ignore[no-redef]
+    class SKLPCA(object): # type: ignore[no-redef]
         def __init__(*args, **kwargs):
             raise ImportError(
                 "The optional install scikit-learn is required for this functionality"
