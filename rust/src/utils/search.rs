@@ -38,7 +38,7 @@ where
     }
 }
 
-pub fn binary_search<T>(predicate: impl Fn(&T) -> bool, bounds: (T, T)) -> Fallible<T>
+pub fn binary_search<T>(predicate: impl Fn(&T) -> bool, bounds: Option<(T, T)>) -> Fallible<T>
 where
     T: Clone
         + Bands
@@ -55,7 +55,7 @@ where
 
 pub fn signed_binary_search<T>(
     predicate: impl Fn(&T) -> bool,
-    bounds: (T, T),
+    bounds: Option<(T, T)>,
 ) -> Fallible<(T, bool)>
 where
     T: Clone
@@ -74,7 +74,7 @@ where
 
 pub fn fallible_binary_search<T>(
     predicate: impl Fn(&T) -> Fallible<bool>,
-    bounds: (T, T),
+    bounds: Option<(T, T)>,
 ) -> Fallible<T>
 where
     T: Clone
@@ -92,7 +92,7 @@ where
 
 pub fn signed_fallible_binary_search<T>(
     predicate: impl Fn(&T) -> Fallible<bool>,
-    bounds: (T, T),
+    bounds: Option<(T, T)>,
 ) -> Fallible<(T, bool)>
 where
     T: Clone
@@ -105,7 +105,7 @@ where
         + Clone
         + BinarySearchable,
 {
-    let (mut lower, mut upper) = bounds;
+    let (mut lower, mut upper) = bounds.expect("TODO");
     if lower > upper {
         return fallible!(FailedFunction, "lower may not be greater than upper");
     }
@@ -148,32 +148,40 @@ mod test_binary_search {
 
     #[test]
     fn test_binary_search_lt_neg() -> Fallible<()> {
-        let (num, _) =
-            signed_fallible_binary_search(|num| -> Fallible<bool> { Ok(num <= &-5) }, (-10, 10))?;
+        let (num, _) = signed_fallible_binary_search(
+            |num| -> Fallible<bool> { Ok(num <= &-5) },
+            Some((-10, 10)),
+        )?;
         assert_eq!(num, -5);
         Ok(())
     }
 
     #[test]
     fn test_binary_search_lt_pos() -> Fallible<()> {
-        let (num, _) =
-            signed_fallible_binary_search(|num| -> Fallible<bool> { Ok(num <= &5) }, (-10, 10))?;
+        let (num, _) = signed_fallible_binary_search(
+            |num| -> Fallible<bool> { Ok(num <= &5) },
+            Some((-10, 10)),
+        )?;
         assert_eq!(num, 5);
         Ok(())
     }
 
     #[test]
     fn test_binary_search_gt_neg() -> Fallible<()> {
-        let (num, _) =
-            signed_fallible_binary_search(|num| -> Fallible<bool> { Ok(num >= &-5) }, (-10, 10))?;
+        let (num, _) = signed_fallible_binary_search(
+            |num| -> Fallible<bool> { Ok(num >= &-5) },
+            Some((-10, 10)),
+        )?;
         assert_eq!(num, -5);
         Ok(())
     }
 
     #[test]
     fn test_binary_search_gt_pos() -> Fallible<()> {
-        let (num, _) =
-            signed_fallible_binary_search(|num| -> Fallible<bool> { Ok(num >= &5) }, (-10, 10))?;
+        let (num, _) = signed_fallible_binary_search(
+            |num| -> Fallible<bool> { Ok(num >= &5) },
+            Some((-10, 10)),
+        )?;
         assert_eq!(num, 5);
         Ok(())
     }
@@ -182,7 +190,7 @@ mod test_binary_search {
     fn test_binary_search_fail() -> Fallible<()> {
         let result = signed_fallible_binary_search(
             |_num| -> Fallible<bool> { fallible!(FailedFunction, "intentional fail") },
-            (0, 1),
+            Some((0, 1)),
         );
         assert!(matches!(result, Err { .. }));
         Ok(())
@@ -330,7 +338,7 @@ where
     let exception_bounds = exponential_bounds_search(&exception_predicate)
         .ok_or_else(|| err!(FailedFunction, "predicate always fails"))?;
 
-    let (center, sign) = signed_binary_search(exception_predicate, exception_bounds)?;
+    let (center, sign) = signed_binary_search(exception_predicate, Some(exception_bounds))?;
     let at_center = predicate(&center)?;
     Ok(signed_band_search(center, at_center, sign))
 }
