@@ -122,7 +122,7 @@ def test_stable_expr():
 
 def test_private_expr():
     pl = pytest.importorskip("polars")
-    domain = dp.expr_domain(example_lf(margin=[])[0])
+    domain = dp.expr_domain(example_lf(margin=[])[0], grouping_columns=[])
     with pytest.raises(dp.OpenDPException):
         dp.m.make_private_expr(
             domain,
