@@ -11,16 +11,16 @@ provide a broader view of the the develpment and release process.
 
 #### Every PR
 
-- [`smoke-test.yml`](smoke-test.yml) runs all tests and static checks.
-- [`latex.yml`](latex.yml) confirms that the LaTEX documentation builds.
+- [`smoke-test.yml`](smoke-test.yml) runs all tests and static checks. [![smoke-test status](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml?query=branch%3Amain)
+- [`latex.yml`](latex.yml) confirms that the LaTEX documentation builds, if there are changes to source files.
 
 #### Nightly
 
-- [`nightly.yml`](nightly.yml) makes a nightly release. [Past runs](https://github.com/opendp/opendp/actions/workflows/nightly.yml).
+- [`nightly.yml`](nightly.yml) makes a nightly release. [Past runs](https://github.com/opendp/opendp/actions/workflows/nightly.yml). [![nightly status](https://github.com/opendp/opendp/actions/workflows/nightly.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/nightly.yml?query=branch%3Amain)
 
 #### Weekly
 
-- [`weekly-link-check.yml`](weekly-link-check.yml) checks external links. [Past runs](https://github.com/opendp/opendp/actions/workflows/weekly-link-check.yml).
+- [`weekly-doc-check.yml`](weekly-doc-check.yml) checks external links. [Past runs](https://github.com/opendp/opendp/actions/workflows/weekly-doc-check.yml). [![weekly-doc-check status](https://github.com/opendp/opendp/actions/workflows/weekly-doc-check.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/weekly-doc-check.yml?query=branch%3Amain)
 
 ### Manual
 
@@ -47,6 +47,8 @@ graph TD
 
     subgraph docs.yml
         dcc[credential-check] --> docs
+        dcc[credential-check] --> r-docs
+        r-docs --> docs
     end
     docs.yml -.- rdocs[docs]
 

@@ -12,7 +12,7 @@ pub use split::*;
 
 use crate::{
     error::Fallible,
-    traits::{AlertingAbs, ExactIntCast, InfMul, TotalOrd},
+    traits::{AlertingAbs, ExactIntCast, InfMul, ProductOrd},
 };
 
 #[doc(hidden)]
@@ -27,7 +27,7 @@ pub trait CanIntSumOverflow: Sized {
     fn int_sum_can_overflow(size: usize, bounds: (Self, Self)) -> Fallible<bool>;
 }
 
-impl<T: ExactIntCast<usize> + AlertingAbs + TotalOrd + InfMul + AddIsExact> CanIntSumOverflow
+impl<T: ExactIntCast<usize> + AlertingAbs + ProductOrd + InfMul + AddIsExact> CanIntSumOverflow
     for T
 {
     fn int_sum_can_overflow(size: usize, (lower, upper): (Self, Self)) -> Fallible<bool> {

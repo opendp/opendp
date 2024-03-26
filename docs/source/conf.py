@@ -4,6 +4,9 @@ import sys
 import os
 from datetime import datetime
 import semver
+import pypandoc
+import re
+from sphinx.ext import autodoc
 
 # docs should be built without needing import the library binary for the specified version
 os.environ["OPENDP_HEADLESS"] = "true"
@@ -25,6 +28,7 @@ extensions = [
     'sphinx-prompt',
     'sphinx_multiversion',
     'nbsphinx',
+    'sphinx_design',
 ]
 
 # convert markdown to rst when rendering with sphinx
@@ -39,8 +43,6 @@ markdown_modules = {
     "measures"
 }
 
-import pypandoc
-import re
 py_attr_re = re.compile(r"\:py\:\w+\:(``[^:`]+``)")
 
 def is_rst(line):
@@ -175,14 +177,6 @@ html_last_updated_fmt = '%b %d, %Y'
 
 # Custom sidebar templates, maps document names to template names.
 html_theme_options = {
-    "icon_links": [
-        {
-            "name": "GitHub Discussions",
-            "url": "https://github.com/opendp/opendp/discussions",
-            "icon": "far fa-comments",
-        },
-    ],
-    "twitter_url": "https://twitter.com/opendp_org",
     "github_url": "https://github.com/opendp"
 }
 
@@ -218,14 +212,10 @@ smv_released_pattern = r'^tags/v\d+\.\d+\.\d+$'
 # Because we need values to be calculated for each version, we can't use Python variables, so we have the shell expand them.
 version_cmd = 'VERSION=`cat ../VERSION`'
 sphinx_apidoc_cmd = 'sphinx-apidoc -f -F -e -H "OpenDP" -A "The OpenDP Project" -V $VERSION -o source/api/python ../python/src/opendp --templatedir source/_templates'
-rustdoc_cmd = '(cd ../rust && cargo rustdoc --no-deps --target-dir ../docs/source/api/rust -- --html-in-header katex.html)'
-# Building the Rust docs locally takes forever, and is only necessary for latest branch (releases are automatically published to https://docs.rs).
-# TODO: Figure out how to use locally generated Rust docs for latest branch only.
-#smv_prebuild_command = '&&'.join([version_cmd, sphinx_apidoc_cmd, rustdoc_cmd])
 smv_prebuild_command = '&&'.join([version_cmd, sphinx_apidoc_cmd])
 
 # This is the file name suffix for HTML files (e.g. ".xhtml").
-#html_file_suffix = None
+# html_file_suffix = None
 htmlhelp_basename = 'OpenDPdoc'
 
 html_logo = "_static/images/opendp-logo.png"
@@ -236,21 +226,33 @@ rst_prolog = """
 
 # insert this header on nbsphinx pages to link to binder and github:
 # we have to resolve the link ref here, at runtime, because sphinx-multiversion mediates the reading of this config
-nbsphinx_prolog = fr"""
-{{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}}
-{{% if env.config.release.endswith('-dev') %}}
-    {{% set frag = 'main' %}}
-{{% elif '-' in env.config.release %}}
-    {{% set frag = env.config.release.split('-', 1)[1].split('.', 1)[0] %}}
-{{% else %}}
-    {{% set frag = 'v' ~ env.config.version %}}
-{{% endif %}}
+nbsphinx_prolog = r"""
+{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}
+{% if env.config.release.endswith('-dev') %}
+    {% set frag = 'main' %}
+{% elif '-' in env.config.release %}
+    {% set frag = env.config.release.split('-', 1)[1].split('.', 1)[0] %}
+{% else %}
+    {% set frag = 'v' ~ env.config.version %}
+{% endif %}
 .. raw:: html
 
     <div class="admonition note">
       This page was generated from
-      <a class="reference external" href="https://github.com/opendp/opendp/tree/{{{{ frag|e }}}}/{{{{ docname|e }}}}" target="_blank">{{{{ docname|e }}}}</a>.
+      <a class="reference external" href="https://github.com/opendp/opendp/tree/{{ frag|e }}/{{ docname|e }}" target="_blank">{{ docname|e }}</a>.
       Interactive online version:
-      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp/{{{{ frag|e }}}}?filepath={{{{ docname|e }}}}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
+      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp/{{ frag|e }}?filepath={{ docname|e }}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
     </div>
 """
+
+class CustomClassDocumenter(autodoc.ClassDocumenter):
+    '''
+    Removes unneeded note from base classes.
+    From https://stackoverflow.com/a/75041544/10727889
+    '''
+    def add_line(self, line: str, source: str, *lineno: int) -> None:
+        if line == "   Bases: :py:class:`object`":
+            return
+        super().add_line(line, source, *lineno)
+
+autodoc.ClassDocumenter = CustomClassDocumenter

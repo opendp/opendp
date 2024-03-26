@@ -19,7 +19,6 @@ __all__ = [
 ]
 
 
-@versioned
 def accuracy_to_discrete_gaussian_scale(
     accuracy,
     alpha,
@@ -60,7 +59,6 @@ def accuracy_to_discrete_gaussian_scale(
     return output
 
 
-@versioned
 def accuracy_to_discrete_laplacian_scale(
     accuracy,
     alpha,
@@ -102,7 +100,6 @@ def accuracy_to_discrete_laplacian_scale(
     return output
 
 
-@versioned
 def accuracy_to_gaussian_scale(
     accuracy,
     alpha,
@@ -139,7 +136,6 @@ def accuracy_to_gaussian_scale(
     return output
 
 
-@versioned
 def accuracy_to_laplacian_scale(
     accuracy,
     alpha,
@@ -177,7 +173,6 @@ def accuracy_to_laplacian_scale(
     return output
 
 
-@versioned
 def discrete_gaussian_scale_to_accuracy(
     scale,
     alpha,
@@ -218,7 +213,6 @@ def discrete_gaussian_scale_to_accuracy(
     return output
 
 
-@versioned
 def discrete_laplacian_scale_to_accuracy(
     scale,
     alpha,
@@ -265,7 +259,6 @@ def discrete_laplacian_scale_to_accuracy(
     return output
 
 
-@versioned
 def gaussian_scale_to_accuracy(
     scale,
     alpha,
@@ -302,7 +295,6 @@ def gaussian_scale_to_accuracy(
     return output
 
 
-@versioned
 def laplacian_scale_to_accuracy(
     scale,
     alpha,

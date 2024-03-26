@@ -1,7 +1,7 @@
 assert_features <- function(...) {
   for (feature in list(...)) {
     if (!feature %in% getOption("opendp_features")) {
-      stop(paste0("Attempted to use function that requires ", feature, " but ", feature, " is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"", feature, "\")"))
+      stop("Attempted to use function that requires ", feature, " but ", feature, " is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"", feature, "\")")
     }
   }
 }
@@ -10,6 +10,7 @@ assert_features <- function(...) {
 #'
 #' See https://github.com/opendp/opendp/discussions/304 for available features.
 #'
+#' @concept mod
 #' @param ... features to enable
 #' @export
 enable_features <- function(...) {
@@ -18,6 +19,7 @@ enable_features <- function(...) {
 
 #' Disable features in the opendp package.
 #'
+#' @concept mod
 #' @param ... features to disable
 #' @export
 disable_features <- function(...) {
@@ -38,7 +40,7 @@ output_domain <- function(x) {
     return(x[[1]])
   }
 
-  stop(paste("expected a transformation or metric space. Got", class(x)))
+  stop("expected a transformation or metric space. Got ", class(x))
 }
 
 output_metric <- function(x) {
@@ -69,11 +71,12 @@ make_chain_dyn <- function(rhs, lhs, log) {
   if (inherits(rhs, "opendp_function")) {
     return(new_measurement(make_chain_pm(rhs, lhs)("ptr"), log))
   }
-  stop(paste("cannot chain lhs and rhs", class(lhs), class(rhs)))
+  stop("cannot chain lhs and rhs: ", class(lhs), ", ", class(rhs))
 }
 
 #' new transformation
 #'
+#' @concept mod
 #' @param ptr pointer to the transformation struct
 #' @param log call history
 new_transformation <- function(ptr, log) {
@@ -112,6 +115,7 @@ new_transformation <- function(ptr, log) {
   transformation
 }
 
+#' @concept mod
 #' @export
 toString.transformation <- function(x, ...) {
   paste0(
@@ -124,6 +128,7 @@ toString.transformation <- function(x, ...) {
   )
 }
 
+#' @concept mod
 #' @export
 print.transformation <- function(x, ...) {
   cat(toString(x, ...))
@@ -131,6 +136,7 @@ print.transformation <- function(x, ...) {
 
 #' new measurement
 #'
+#' @concept mod
 #' @param ptr pointer to the measurement struct
 #' @param log call history
 new_measurement <- function(ptr, log) {
@@ -167,6 +173,7 @@ new_measurement <- function(ptr, log) {
   measurement
 }
 
+#' @concept mod
 #' @export
 toString.measurement <- function(x, ...) {
   paste0(
@@ -178,6 +185,7 @@ toString.measurement <- function(x, ...) {
   )
 }
 
+#' @concept mod
 #' @export
 print.measurement <- function(x, ...) {
   cat(toString(x, ...))
@@ -185,6 +193,7 @@ print.measurement <- function(x, ...) {
 
 #' new domain
 #'
+#' @concept mod
 #' @param ptr a pointer to a domain
 #' @param log call history
 new_domain <- function(ptr, log) {
@@ -211,11 +220,13 @@ new_domain <- function(ptr, log) {
   domain
 }
 
+#' @concept mod
 #' @export
 toString.domain <- function(x, ...) {
   x("debug")
 }
 
+#' @concept mod
 #' @export
 print.domain <- function(x, ...) {
   cat(toString(x, ...))
@@ -223,6 +234,7 @@ print.domain <- function(x, ...) {
 
 #' new metric
 #'
+#' @concept mod
 #' @param ptr a pointer to a metric
 #' @param log call history
 new_metric <- function(ptr, log) {
@@ -241,11 +253,13 @@ new_metric <- function(ptr, log) {
   metric
 }
 
+#' @concept mod
 #' @export
 toString.metric <- function(x, ...) {
   x("debug")
 }
 
+#' @concept mod
 #' @export
 print.metric <- function(x, ...) {
   cat(toString(x, ...))
@@ -253,6 +267,7 @@ print.metric <- function(x, ...) {
 
 #' new measure
 #'
+#' @concept mod
 #' @param ptr a pointer to a measure
 #' @param log call history
 new_measure <- function(ptr, log) {
@@ -271,11 +286,13 @@ new_measure <- function(ptr, log) {
   measure
 }
 
+#' @concept mod
 #' @export
 toString.measure <- function(x, ...) {
   x("debug")
 }
 
+#' @concept mod
 #' @export
 print.measure <- function(x, ...) {
   cat(toString(x, ...))
@@ -283,6 +300,7 @@ print.measure <- function(x, ...) {
 
 #' new function
 #'
+#' @concept mod
 #' @param ptr a pointer to a function
 #' @param log call history
 new_function <- function(ptr, log) {
@@ -308,6 +326,7 @@ new_function <- function(ptr, log) {
 
 #' new Smoothed Max Divergence curve
 #'
+#' @concept mod
 #' @param ptr a pointer to a SMD curve
 new_smd_curve <- function(ptr) {
   smd_curve <- function(attr, delta) {
@@ -330,6 +349,7 @@ new_smd_curve <- function(ptr) {
 
 #' new queryable
 #'
+#' @concept mod
 #' @param ptr a pointer to a queryable
 new_queryable <- function(ptr) {
   queryable <- function(attr, query) {
@@ -352,6 +372,7 @@ new_queryable <- function(ptr) {
 
 #' extract heterogeneously typed keys and values from a hashtab
 #'
+#' @concept mod
 #' @param data a hashtab
 #' @param type_name the expected runtime_type of the hashtab
 #' @export
@@ -376,6 +397,7 @@ hashitems <- function(data, type_name) {
 
 #' create an instance of a hashtab from keys and values
 #'
+#' @concept mod
 #' @param keys a vector of keys
 #' @param vals a vector of values
 #' @export
@@ -387,9 +409,9 @@ new_hashtab <- function(keys, vals) {
 }
 
 to_str <- function(x, depth) UseMethod("to_str")
-`to_str.default` <- function(x, depth) format(x)
-`to_str.hashtab` <- function(x, depth = 0L) {
-  spacer <- paste(rep("  ", depth), collapse = "")
+to_str.default <- function(x, depth) format(x)
+to_str.hashtab <- function(x, depth = 0L) {
+  spacer <- strrep("  ", depth)
   val <- "hashtab(\n"
   utils::maphash(x, function(k, v) {
     val <<- c(val, paste0(spacer, "  ", k, ": ", to_str(v, depth = depth + 1), ",\n"))
@@ -398,8 +420,9 @@ to_str <- function(x, depth) UseMethod("to_str")
   paste0(val, collapse = "")
 }
 
+#' @concept mod
 #' @export
-`print.hashtab` <- function(x, ...) {
+print.hashtab <- function(x, ...) {
   cat(to_str(x, ...))
 }
 
@@ -464,6 +487,7 @@ unbox2 <- function(x) {
 #'
 #' See `binary_search_param` to retrieve the discovered parameter instead of the complete computation chain.
 #'
+#' @concept mod
 #' @param make_chain a function that takes a number and returns a Transformation or Measurement
 #' @param d_in how far apart input datasets can be
 #' @param d_out how far apart output datasets or distributions can be
@@ -489,6 +513,7 @@ binary_search_chain <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 #' Searches for the numeric parameter to `make_chain` that results in a computation
 #' that most tightly satisfies `d_out` when datasets differ by at most `d_in`.
 #'
+#' @concept mod
 #' @param make_chain a function that takes a number and returns a Transformation or Measurement
 #' @param d_in how far apart input datasets can be
 #' @param d_out how far apart output datasets or distributions can be
@@ -506,6 +531,7 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 #'
 #' If bounds are not passed, conducts an exponential search.
 #'
+#' @concept mod
 #' @param predicate a monotonic unary function from a number to a boolean
 #' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
 #' @param .T type of argument to `predicate`, one of {float, int}
@@ -571,6 +597,7 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
   return(value)
 }
 
+# nolint start: cyclocomp_linter
 exponential_bounds_search <- function(predicate, .T) {
   # try to infer T
   if (is.null(.T)) {
@@ -657,3 +684,4 @@ exponential_bounds_search <- function(predicate, .T) {
   at_center <- predicate(center)
   return(signed_band_search(center, at_center, sign))
 }
+# nolint end

@@ -1,9 +1,6 @@
-from opendp.transformations import *
-from opendp.measurements import *
-from opendp.domains import atom_domain, option_domain
-from opendp.mod import enable_features
+import opendp.prelude as dp
 
-enable_features("floating-point", "contrib")
+dp.enable_features("floating-point", "contrib")
 
 
 def test_dp_mean():
@@ -23,23 +20,23 @@ def test_dp_mean():
     scale = 1.
     preprocessor = (
         # Convert data into Vec<Vec<String>>
-        make_split_dataframe(separator=",", col_names=col_names) >>
+        dp.t.make_split_dataframe(separator=",", col_names=col_names) >>
         # Selects a column of df, Vec<str>
-        make_select_column(key=index, TOA=str) >>
+        dp.t.make_select_column(key=index, TOA=str) >>
         # Cast the column as Vec<Optional<Float>>
-        then_cast(TOA=float) >>
+        dp.t.then_cast(TOA=float) >>
         # Impute missing values to 0 Vec<Float>
-        then_impute_constant(impute_constant) >>
+        dp.t.then_impute_constant(impute_constant) >>
         # Clamp values
-        then_clamp(bounds) >>
+        dp.t.then_clamp(bounds) >>
         # Resize dataset length
-        then_resize(n, impute_constant) >>
+        dp.t.then_resize(n, impute_constant) >>
         # Aggregate with mean
-        then_mean() >>
+        dp.t.then_mean() >>
         # Noise
-        then_base_laplace(scale)
+        dp.m.then_laplace(scale)
     )
     res = preprocessor(data)
-    assert type(res) == float
+    assert isinstance(res, float)
 
 

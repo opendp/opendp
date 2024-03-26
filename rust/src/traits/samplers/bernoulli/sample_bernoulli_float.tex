@@ -1,0 +1,110 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn sample\_bernoulli\_float}}
+\author{Vicki Xu, Hanwen Zhang, Zachary Ratliff}
+
+\begin{document}
+\maketitle
+
+\contrib
+\begin{tcolorbox}
+    \begin{warning}[Code is not constant-time]
+     \texttt{sample\_bernoulli\_float} takes in a boolean \texttt{constant\_time} parameter to protect against timing attacks on the Bernoulli sampling procedure. However, the current implementation does not guard against other types of timing side-channels that can break differential privacy, e.g., non-constant time code execution due to branching.
+    \end{warning}
+\end{tcolorbox}
+
+\subsection*{PR History}
+\begin{itemize}
+    \item \vettingPR{473}
+\end{itemize}
+
+This document proves that the implementation of \rustdoc{traits/samplers/bernoulli/fn}{sample\_bernoulli\_float} in \asOfCommit{mod.rs}{f5bb719} 
+satisfies its proof definition.
+
+\texttt{sample\_bernoulli\_float} considers the binary expansion of \texttt{prob} into an infinite sequence $\texttt{a\_i}$, 
+like so: $\texttt{prob} = \sum_{i = 0}^{\infty} \frac{a_i}{2^{i + 1}}$. 
+The algorithm samples $I \sim Geom(0.5)$ using an internal function \rustdoc{traits/samplers/geometric/fn}{sample\_geometric\_buffer}, then returns $a_I$. 
+
+\subsection{Hoare Triple}
+\subsubsection*{Preconditions}
+\begin{itemize}
+    \item \textbf{User-specified types:}
+    \begin{itemize}
+        \item Variable \texttt{prob} must be of type \texttt{T}
+        \item Variable \texttt{constant\_time} must be of type \texttt{bool}
+        \item Type \texttt{T} has trait \rustdoc{traits/trait}{Float}. 
+            \texttt{Float} implies there exists an associated type \texttt{T::Bits} (defined in \rustdoc{traits/trait}{FloatBits}) that captures the underlying bit representation of \texttt{T}.
+        \item Type \texttt{T::Bits} has traits \texttt{PartialOrd} and \texttt{ExactIntCast<usize>}
+        \item Type \texttt{usize} has trait \texttt{ExactIntCast<T::Bits>}
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_bernoulli_float.py}
+
+\subsubsection*{Postcondition}
+
+\begin{definition}
+    \label{sample-bernoulli}
+    For any setting of the input parameters
+    \texttt{prob} of type \texttt{T} restricted to $[0, 1]$,
+    and \texttt{constant\_time} of type \texttt{bool},
+    \texttt{sample\_bernoulli\_float} either
+    \begin{itemize}
+        \item raises an exception if there is a lack of system entropy,
+        \item returns \texttt{out} where \texttt{out} is $\top$ with probability \texttt{prob}, otherwise $\bot$.
+    \end{itemize}
+     If \texttt{constant\_time} is set, the implementation's runtime is constant.    
+\end{definition}
+
+\subsection{Proof}
+\begin{proof} 
+To show the correctness of \texttt{sample\_bernoulli} we observe first that the base-2 representation of \texttt{prob} is of the form 
+\[
+\texttt{leading\_zeroes || implicit\_bit || mantissa || trailing\_zeroes}
+\]
+and is represented \emph{exactly} as a normal floating-point number. The \href{https://en.wikipedia.org/wiki/IEEE_754}{IEEE-754 standard} represents a normal floating-point number using an exponent $E$, and a mantissa $m$, using a base-2 analog of scientific notation. 
+
+\begin{definition}[Floating-Point Number]
+A $(k,\ell)$-bit floating-point number $z$ is represented as
+\[
+z = (-1)^s \cdot (B.M) \cdot (2^E) 
+\]
+where
+\begin{itemize}
+    \item $s$ is used to represent the \emph{sign} of $z$
+    \item $B$ is the implicit bit; $1$ for normal floating-point numbers and $0$ for subnormal floating point numbers
+    \item $M \in \{0,1\}^k$ is a $k$-bit string representing the part of the mantissa to the right of the radix point, i.e.,
+    \[
+    1.M = \sum_{i = 1}^k M_i2^{-i}
+    \]
+    \item $E \in \mathbb{Z}$ represents the \emph{exponent} of $z$. When $\ell$ bits are allocated to representing $E$, then $E \in [-(2^{\ell - 1} - 2), 2^{\ell - 1}] \cap \mathbb{Z}$. Note that the range of $E$ is $2^\ell - 2$ rather than $2^\ell$ as the remaining to numbers are used to represent special floating point values. When $E = -(2^{\ell -1} - 2)$, then the floating point number is considered \emph{subnormal}. 
+\end{itemize} 
+\end{definition}
+
+We now use the technique for \href{https://web.archive.org/web/20160418185834/https://amakelov.wordpress.com/2013/10/10/arbitrarily-biasing-a-coin-in-2-expected-tosses/}{arbitrarily biasing a coin in 2 expected tosses} as a building block. Recall that we can represent the probability $\texttt{prob}$ as $\texttt{prob} = \sum_{i = 0}^\infty \frac{a_i}{2^{i + 1}}$ for $a_i \in \{0, 1\}$, where $a_i$ is the zero-indexed $i$-th significant bit in the binary expansion of $\texttt{prob}$. Then let $I \sim Geom(0.5)$ and observe that the random variable $a_I$ is an exact Bernoulli sample with probability $\texttt{prob}$ since $P(a_I = 1) = \sum_{i = 0}^\infty P(a_i = 1|I = i)P(I = i) = \sum_{i = 1}^\infty a_i \cdot \frac{1}{2^{i + 1}} = \texttt{prob}$. It is therefore sufficient to show that for any $(k,\ell)$-bit float $\texttt{prob} = \sum_{i = 0}^\infty \frac{a_i}{2^{i + 1}}$, \texttt{sample\_bernoulli} returns the value $a_I$ with $I \sim Geom(0.5)$.
+
+First, we observe that by line \ref{line:1check}, if $\texttt{prob} = 1.0$ then \texttt{sample\_bernoulli} returns \texttt{true} which is correct by definition of a Bernoulli random variable. Otherwise, the variable \texttt{max\_coin\_flips} is computed to be the value $\texttt{T::EXPONENT\_BIAS} + \texttt{T::MANTISSA\_BITS}$ which equals $2^{\ell - 1} - 1 + k$ for any $(k,\ell)$-bit float. Since \texttt{prob} has finite precision, there is some $j$ for which $a_i = 0$ for all $i > j$. For all $(k,\ell)$-bit floating-point numbers, $j \le 2^{\ell - 1} - 1 + k$ by definition. Then \texttt{sample\_bernoulli} calls \texttt{sample\_geometric\_buffer} with a buffer of length $\lceil \frac{\texttt{max\_coin\_flips}}{8}\rceil$ bytes (as shown in lines \ref{line:maxcoinflips} and \ref{line:bufferlen}) which returns  $\texttt{None}$ if and only if $I > {8\cdot \lceil \frac{2^{\ell - 1} -1 + k}{8}\rceil}$, where $I \sim Geom(0.5)$ (by Theorem 2.1). In this case, since $I > j$ this index appears in the \texttt{trailing\_zeroes} part of the binary expansion of \texttt{prob} and should always return \texttt{false}, i.e., $a_I = 0$ for all $I > j$. We can therefore restrict our attention to when \texttt{sample\_geometric\_buffer} returns an index $I \le \texttt{max\_coin\_flips}$ and show that \texttt{sample\_bernoulli} always returns $a_I$. 
+
+Assuming that \texttt{sample\_geometric\_buffer} returns some $I < j$,  \texttt{sample\_bernoulli} computes the number of leading zeroes in the binary expansion of \texttt{prob} to be $\texttt{leading\_zeroes} = \texttt{T::EXPONENT\_BIAS} - 1 - \texttt{raw\_exponent(prob)}$, where \texttt{raw\_exponent(prob)} is the value stored in the $\ell$ bits of the exponent. This value is correct by the specification of a $(k,\ell)$-bit float.  \texttt{sample\_bernoulli} then matches on the value \texttt{first\_heads\_index} corresponding to $I \sim Geom(0.5)$ returned by the function \texttt{sample\_geometric\_buffer}: \\
+
+\noindent\textbf{Case 1} ($\texttt{first\_heads\_index} < \texttt{leading\_zeroes}$). \\
+\noindent This corresponds to \texttt{sample\_geometric\_buffer} returning a value $I$ such that $a_I$ indexes into the \texttt{leading\_zeroes} part of the  \texttt{prob} variable's binary expansion. Therefore, for any $I < \texttt{leading\_zeroes}$, it follows that $a_I = 0$ and we should return \texttt{false}. In this case, \texttt{sample\_bernoulli} returns \texttt{false}.\\
+
+\noindent\textbf{Case 2} ($\texttt{first\_heads\_index} == \texttt{leading\_zeroes}$). \\
+\noindent This corresponds to \texttt{sample\_geometric\_buffer} returning a value $I$ such that $a_I$ indexes into the \texttt{implicit\_bit} part of the  \texttt{prob} variable's binary expansion. When \texttt{prob} is a normal floating point value, i.e., $E \ne -(2^{\ell -1} - 2)$ then the implicit bit $a_I = 1$. Otherwise, when \texttt{prob} is a subnormal floating point value, i.e., $E = -(2^{\ell - 1} - 2)$, the implicit bit $a_I = 0$. Since \texttt{raw\_exponent(prob)} corresponds to the exponent $E$ for any $(k,\ell)$-bit floating point number \texttt{prob}, \texttt{sample\_bernoulli} returns \texttt{true} when $\texttt{raw\_exponent(prob)} \ne 0$ and \texttt{false} otherwise. \\
+
+
+\noindent\textbf{Case 3} ($\texttt{leading\_zeroes}  + \texttt{T::MANTISSA\_BITS} < I$). This corresponds to the case where  \texttt{sample\_geometric\_buffer} returns a value $I$ where $I > j$, but $I < \texttt{max\_coin\_flips}$ and therefore $a_I$ indexes into the trailing zeroes. In this case, \texttt{sample\_bernoulli} returns \texttt{false} since $a_I = 0$ for all bits in the \texttt{trailing\_zeroes} part of \texttt{prob}'s binary expansion. \\
+
+\noindent\textbf{Case 4} ($ \texttt{leading\_zeroes} < \texttt{first\_heads\_index}  <  \texttt{leading\_zeroes}  + \texttt{T::MANTISSA\_BITS}$). \\
+\noindent This corresponds to \texttt{sample\_geometric\_buffer} returning a value $I$ such that $a_I$ indexes into the \texttt{mantissa} part of the  \texttt{prob} variable's binary expansion. In this case, 
+\texttt{sample\_bernoulli}  left-shifts the value \texttt{1} by  $(\texttt{MANTISSA\_BITS + leading\_zeroes - first\_heads\_index})$ digits, the index into the mantissa corresponding to the digit $a_I$ in the binary representation of \texttt{prob}. Since the operation between the left-shifted \texttt{1} and the binary representation of \texttt{prob} at that position is a bitwise AND, if the bit in question is 1 (matching the left-shifted \texttt{1}), \texttt{sample\_bernoulli} will return \texttt{true}. Otherwise, \texttt{sample\_bernoulli} will return \texttt{false}. \\
+
+
+\noindent Therefore, for any value of \texttt{prob}, the function \texttt{sample\_bernoulli} either raises an exception or returns the value \texttt{true} with probability exactly $\texttt{prob}$.  
+\end{proof}
+
+\end{document}

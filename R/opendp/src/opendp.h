@@ -813,21 +813,17 @@ struct FfiResult_____AnyDomain opendp_domains__user_domain(char *identifier,
  */
 struct FfiResult_____ExtrinsicObject opendp_domains___user_domain_descriptor(struct AnyDomain *domain);
 
-struct FfiResult_____AnyMeasurement opendp_measurements__make_base_gaussian(const struct AnyDomain *input_domain,
-                                                                            const struct AnyMetric *input_metric,
-                                                                            const void *scale,
-                                                                            long k,
-                                                                            const char *MO);
-
-struct FfiResult_____AnyMeasurement opendp_measurements__make_base_discrete_gaussian(const struct AnyDomain *input_domain,
-                                                                                     const struct AnyMetric *input_metric,
-                                                                                     const void *scale,
-                                                                                     const char *MO);
-
 struct FfiResult_____AnyMeasurement opendp_measurements__make_gaussian(const struct AnyDomain *input_domain,
                                                                        const struct AnyMetric *input_metric,
                                                                        const void *scale,
+                                                                       const int32_t *k,
                                                                        const char *MO);
+
+struct FfiResult_____AnyMeasurement opendp_measurements__make_geometric(const struct AnyDomain *input_domain,
+                                                                        const struct AnyMetric *input_metric,
+                                                                        const void *scale,
+                                                                        const struct AnyObject *bounds,
+                                                                        const char *QO);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_report_noisy_max_gumbel(const struct AnyDomain *input_domain,
                                                                                       const struct AnyMetric *input_metric,
@@ -835,36 +831,10 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_report_noisy_max_g
                                                                                       const char *optimize,
                                                                                       const char *QO);
 
-struct FfiResult_____AnyMeasurement opendp_measurements__make_base_laplace(const struct AnyDomain *input_domain,
-                                                                           const struct AnyMetric *input_metric,
-                                                                           const void *scale,
-                                                                           long k);
-
-struct FfiResult_____AnyMeasurement opendp_measurements__make_base_discrete_laplace(const struct AnyDomain *input_domain,
-                                                                                    const struct AnyMetric *input_metric,
-                                                                                    const void *scale,
-                                                                                    const char *QO);
-
-struct FfiResult_____AnyMeasurement opendp_measurements__make_base_discrete_laplace_cks20(const struct AnyDomain *input_domain,
-                                                                                          const struct AnyMetric *input_metric,
-                                                                                          const void *scale,
-                                                                                          const char *QO);
-
-struct FfiResult_____AnyMeasurement opendp_measurements__make_base_discrete_laplace_linear(const struct AnyDomain *input_domain,
-                                                                                           const struct AnyMetric *input_metric,
-                                                                                           const void *scale,
-                                                                                           const struct AnyObject *bounds,
-                                                                                           const char *QO);
-
-struct FfiResult_____AnyMeasurement opendp_measurements__make_base_geometric(const struct AnyDomain *input_domain,
-                                                                             const struct AnyMetric *input_metric,
-                                                                             const void *scale,
-                                                                             const struct AnyObject *bounds,
-                                                                             const char *QO);
-
 struct FfiResult_____AnyMeasurement opendp_measurements__make_laplace(const struct AnyDomain *input_domain,
                                                                       const struct AnyMetric *input_metric,
                                                                       const void *scale,
+                                                                      const int32_t *k,
                                                                       const char *QO);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_user_measurement(const struct AnyDomain *input_domain,

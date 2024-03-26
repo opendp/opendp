@@ -7,7 +7,7 @@ use crate::{
     interactive::{Answer, Query, Queryable},
     measures::ffi::TypedMeasure,
     metrics::ffi::TypedMetric,
-    traits::TotalOrd,
+    traits::ProductOrd,
 };
 
 fn make_sequential_composition(
@@ -18,8 +18,8 @@ fn make_sequential_composition(
     d_mids: Vec<AnyObject>,
 ) -> Fallible<Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>> {
     fn monomorphize<
-        QI: 'static + TotalOrd + Clone + Send + Sync,
-        QO: 'static + TotalOrd + Clone + Send + Sync + Debug,
+        QI: 'static + ProductOrd + Clone + Send + Sync,
+        QO: 'static + ProductOrd + Clone + Send + Sync + Debug,
     >(
         input_domain: AnyDomain,
         input_metric: AnyMetric,
@@ -102,8 +102,8 @@ pub extern "C" fn opendp_combinators__make_sequential_composition(
 }
 
 impl<
-        QI: 'static + TotalOrd + Clone + Send + Sync,
-        QO: 'static + TotalOrd + Clone + Send + Sync,
+        QI: 'static + ProductOrd + Clone + Send + Sync,
+        QO: 'static + ProductOrd + Clone + Send + Sync,
     >
     Measurement<
         AnyDomain,

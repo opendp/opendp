@@ -129,7 +129,7 @@ class RuntimeType(object):
             return False
         return self.origin == other.origin and self.args == other.args
 
-    def __str__(self):
+    def __repr__(self):
         result = self.origin or ''
         if result == 'Tuple':
             return f'({", ".join(map(str, self.args))})'
@@ -254,7 +254,7 @@ class RuntimeType(object):
             return ELEMENTARY_TYPES[type_name]
 
         if type_name == tuple:
-            raise UnknownTypeException(f"non-parameterized argument")
+            raise UnknownTypeException("non-parameterized argument")
 
         raise UnknownTypeException(f"unable to parse type: {type_name}")
 
@@ -299,7 +299,7 @@ class RuntimeType(object):
             types = {cls.infer(v, py_object=py_object) for v in value}
 
             if len(types) == 0:
-                return UnknownType("cannot infer atomic type when empty")
+                return UnknownType("cannot infer atomic type when empty") # pragma: no cover
             if len(types) == 1:
                 return next(iter(types))
             if py_object: # pragma: no cover
@@ -376,7 +376,7 @@ class RuntimeType(object):
     
 
 class GenericType(RuntimeType):
-    def __str__(self):
+    def __repr__(self):
         raise UnknownTypeException(f"attempted to create a type_name with an unknown generic: {self.origin}")
 
 
@@ -387,12 +387,12 @@ class UnknownType(RuntimeType):
     origin: None # type: ignore[assignment]
     args: None # type: ignore[assignment]
 
-    def __init__(self, reason):
+    def __init__(self, reason): # pragma: no cover
         self.origin = None
         self.args = None
         self.reason = reason
 
-    def __str__(self):
+    def __repr__(self):
         raise UnknownTypeException(f"attempted to create a type_name with an unknown type: {self.reason}")
 
 

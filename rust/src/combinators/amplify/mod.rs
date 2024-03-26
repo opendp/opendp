@@ -117,7 +117,7 @@ mod test {
     use crate::combinators::make_population_amplification;
     use crate::domains::{AtomDomain, VectorDomain};
     use crate::error::Fallible;
-    use crate::measurements::then_base_laplace;
+    use crate::measurements::then_laplace;
     use crate::metrics::SymmetricDistance;
     use crate::transformations::make_mean;
 
@@ -126,7 +126,7 @@ mod test {
         let meas = (make_mean(
             VectorDomain::new(AtomDomain::new_closed((0., 10.))?).with_size(10),
             SymmetricDistance::default(),
-        ) >> then_base_laplace(0.5, None))?;
+        ) >> then_laplace(0.5, None))?;
         let amp = make_population_amplification(&meas, 100)?;
         amp.function.eval(&vec![1.; 10])?;
         assert!(meas.check(&2, &(2. + 1e-6))?);

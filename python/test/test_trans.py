@@ -359,7 +359,7 @@ def test_lipschitz_b_ary_tree():
         (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()) >>
         dp.t.then_count_by_categories(categories=["A", "B", "C", "D", "E", "F"]) >> 
         tree_builder >> 
-        dp.m.then_base_geometric(1.) >> 
+        dp.m.then_geometric(1.) >> 
         dp.t.make_consistent_b_ary_tree(branching_factor)
     )
 

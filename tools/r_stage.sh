@@ -30,22 +30,11 @@ function run() {
 function clean() {
   log "***** CLEAN *****"
 
-  run rm -f R/opendp/src/libopendp.a
   if [ -f "R/opendp/src/rust/Cargo.toml" ]; then
     run cargo clean --manifest-path R/opendp/src/rust/Cargo.toml
   fi
-  run rm -rf R/opendp/src/rust R/opendp/src/binary
-  run rm -rf R/opendp/opendp.Rcheck
-  run rm -rf R/opendp/man
-  run rm -f R/opendp/src/*.tar.xz
-  run rm -f R/opendp/README.md
-  run rm -f R/opendp/inst/AUTHORS
-  run rm -f R/opendp/LICENSE.note
-  run rm -f R/opendp/src/*.o R/opendp/src/opendp.so
-  run rm -f R/opendp/opendp_*.tar.gz R/opendp/src/Makevars
-  run rm -rf vendor
-  run rm -rf R/opendp-docs
-  rm -rf R/opendp/docs
+  # "-X" removes only git-ignored files: Other local changes are preserved.
+  run git clean -x --force R
   Rscript -e 'try(remove.packages("opendp"), silent=TRUE)'
 }
 
@@ -105,11 +94,6 @@ function docs() {
   log "stage docs version of package in R/opendp-docs"
   run cp -r R/opendp R/opendp-docs
   run rm -rf R/opendp-docs/src
-
-  log "copy README and CHANGELOG into the docs"
-  run cp README.md R/opendp-docs/
-  # https://pkgdown.r-lib.org/reference/build_news.html
-  sed "s|^## |# Version |" CHANGELOG.md > R/opendp-docs/NEWS.md
 
   log "remove all traces of compiled code from the package"
   sed "/#' @useDynLib opendp, .registration = TRUE/d" R/opendp-docs/R/opendp-package.R > R/opendp-docs/R/opendp-package.R

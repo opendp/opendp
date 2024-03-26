@@ -106,7 +106,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         if rust_type in ATOM_MAP:
             return ctypes.byref(ATOM_MAP[rust_type](value))
 
-        if rust_type == "String":
+        if rust_type == "String": # pragma: no cover
             return ctypes.c_char_p(value.encode())
 
         raise UnknownTypeException(rust_type)
@@ -264,7 +264,7 @@ def _refcounter(ptr, increment):
             ctypes.pythonapi.Py_IncRef(ctypes.py_object(ptr))
         else:
             ctypes.pythonapi.Py_DecRef(ctypes.py_object(ptr))
-    except:
+    except Exception:
         return False
     return True
 
@@ -383,7 +383,8 @@ def _tuple_to_slice(val: Tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
         check_similar_scalar(inner_type_name, v)
     
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
-    ptr_data = (ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p) # type: ignore
+    ptr_data = (
+        ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p) # type: ignore
         for v, name in zip(val, inner_type_names))
 
     array = (ctypes.c_void_p * len(val))(*ptr_data)
@@ -473,7 +474,7 @@ def _wrap_py_func(func, TO):
             lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
             lib.ffiresult_err.restype = ctypes.c_void_p
             return lib.ffiresult_err(
-                ctypes.c_char_p(f"Continued stack trace from Exception in user-defined function".encode()),
+                ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
                 ctypes.c_char_p(traceback.format_exc().encode()),
             )
 
@@ -519,7 +520,7 @@ def _wrap_py_transition(py_transition, A):
             lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
             lib.ffiresult_err.restype = ctypes.c_void_p
             return lib.ffiresult_err(
-                ctypes.c_char_p(f"Continued stack trace from Exception in user-defined function".encode()),
+                ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
                 ctypes.c_char_p(traceback.format_exc().encode()),
             )
 
