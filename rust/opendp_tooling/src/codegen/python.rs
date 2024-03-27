@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::{fs, string};
+use std::fs;
 
 use crate::{Argument, Function, TypeRecipe, Value};
 

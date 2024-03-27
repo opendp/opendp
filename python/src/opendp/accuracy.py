@@ -40,13 +40,6 @@ def accuracy_to_discrete_gaussian_scale(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
-    :example:
-
-    >>> import opendp.prelude as dp
-    >>> dp.accuracy_to_discrete_guassian_scale
-    ??? 
-
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=accuracy)
