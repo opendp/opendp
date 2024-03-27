@@ -150,7 +150,7 @@ Our goal however, is to estimate the frequency of each element $\hat{q}_i$ so we
 \begin{theorem}
 	\rustdoc{measurements/fn}{debias\_basic\_rappor} is a frequency estimator with mean squared error
 	\begin{equation*}
-		\mathbb{E}[\ell_2^2(q-\hat{q})] = \frac{k\left(\frac{f}{2}-f^2\right)}{4n(1-f)^2}.
+		\mathbb{E}[\ell_2^2(q-\hat{q})] = \frac{k\left(f-\frac{f^2}{2}\right)}{2n(1-f)^2}.
 	\end{equation*}
 \end{theorem}
 \begin{proof}\hfill
@@ -167,7 +167,7 @@ Let $q = q(X^n)=\sum\limits_{j=1}^n x_j$ be the non private frequency vector of 
 			&= \sum\limits_{i=1}^k\text{Var}\left(\frac{Y_i}{n(1-f)}\right) &&\\
 			&= \sum\limits_{i=1}^k\frac{\text{Var}(Y_i)}{n^2(1-f)^2}&&\\
 			&= k\left(\frac{n\frac{f}{2}\left(1-\frac{f}{2}\right)}{n^2(1-f)^2}\right) &&\text{ by Equation~\ref{eq:varianceY}}\\
-			& = \frac{k\left(f-\frac{f^2}{2}\right)}{2n(1-f)^2}
+			& = \frac{k\left(f-\frac{f^2}{2}\right)}{2n(1-f)^2}&&
 	\end{align*}
 	
 \end{proof}
