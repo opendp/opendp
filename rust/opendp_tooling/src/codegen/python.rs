@@ -255,7 +255,7 @@ fn generate_docstring(module_name: &str, func: &Function, hierarchy: &HashMap<St
 
     let example_path = format!("src/{}/{}.rst", &module_name, &func.name);
     let example = match fs::read_to_string(example_path) {
-        Ok(string) => format!("\nExample:\n{string}"),
+        Ok(string) => format!("\n\n:example:\n\n{string}\n"),
         Err(_) => "".to_string(),
     };
 
