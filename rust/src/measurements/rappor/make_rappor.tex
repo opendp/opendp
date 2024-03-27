@@ -129,32 +129,45 @@ The following proof makes use of the following lemma that asserts the correctnes
 \item Utility
 \begin{theorem}
 \label{thm:unbiased-estimator}
-	The expected value of \rustdoc{measurements/fn}{debias\_basic\_rappor} is $N$.
+	\rustdoc{measurements/fn}{debias\_basic\_rappor} is an unbiased frequency estimator.
 \end{theorem}
-\begin{proof} Each user, or row in the database $x$ represented as a vector with at most $m$ bits set is encoded into $y$ using \rustdoc{measurements/fn}{make\_rappor}. Let $Y$ be the sum of  $n$ received randomised outputs, where $Y_i=\sum_{j=1}^n y_i$ is the number of received bits at index $i\in [k]$. Let $N_i$ be the true (non-private) count of users with bit $i$ set in their input.
+\begin{proof} We denote the input domain as $X$, which is the set of all vectors with hamming weight less than or equal to $m$. The set of all users is $X^n$, where each user $x_1,\ldots,x_j,\ldots,x_n$ holds a single input. Each input $x_j$ is transformed into $y_j$ using \rustdoc{measurements/fn}{make\_rappor}. Let $Y$ be the sum of $n$ received outputs, where $Y_i=\sum_{j=1}^n y_i$ is the number of received bits at index $i\in [k]$. Let $N_i=\sum x_{j,i}$ be the true (non-private) count vector of users with bit $i$ set. Our goal is to estimate the frequencies $q_i=N_i/n$ with minimal error. $Y_i$ is a sum of two binomials
 \begin{align}
-\mathbb{E}[Y_i] &= N_i\left(1-\frac{1}{2}f\right) + (n-N_i)\frac{f}{2}\nonumber\\
-	&= N_i(1-f) + n\frac{1}{2}f\nonumber\\
-	\intertext{Therefore the estimator $\hat{N_i}$ given by}
-\hat{N_i} &= \frac{Y_i-n\frac{f}{2}}{1-f}\label{eq:estimator}\\
-\intertext{is unbiased as,}
-\mathbb{E}[\hat{N_i}] &= N_i
+\mathbb{E}[Y_i] &= \mathbb{E}\left[\text{Bin}\left(N_i,1-\frac{f}{2}\right)+\text{Bin}\left(n-N_i,\frac{f}{2}\right)\right]\label{eq:YsumBin}\\
+    &=N_i\left(1-\frac{1}{2}f\right) + (n-N_i)\frac{f}{2}\label{eq:expec-Y}
 \end{align}
+Therefore by rearranging~\ref{eq:expec-Y} we obtain an unbiased estimator for $\hat{N_i}$
+\begin{equation}
+    \label{eq:estimator}
+    \hat{N_i} = \frac{Y_i-n\frac{f}{2}}{1-f}
+\end{equation}
+
+Our goal however, is to estimate the frequency of each element $\hat{q}_i$ so we need to normalise by dividing by $n$ which gives us
+\[
+\hat{q_i}=\frac{\mathbb{E}[\hat{N}_i]}{n} = \frac{\frac{Y_i}{n}-\frac{f}{2}}{1-f}
+\]
 \end{proof}
 \begin{theorem}
-	\rustdoc{measurements/fn}{debias\_basic\_rappor} has mean squared error
+	\rustdoc{measurements/fn}{debias\_basic\_rappor} is a frequency estimator with mean squared error
 	\begin{equation*}
-		l_2^2(N-\hat{N}) = kn\left(\frac{f^2-2f}{4(f-1)}\right)
+		\mathbb{E}[\ell_2^2(q-\hat{q})] = \frac{k\left(\frac{f}{2}-f^2\right)}{4n(1-f)^2}.
 	\end{equation*}
 \end{theorem}
 \begin{proof}\hfill
-Notice that each $\hat{Y_i}$ is a sum of $n$ Bernoulli random variables with probability $1-\frac{1}{2}f$ or $\frac{1}{2}f$, which both have $\sigma^2 = \frac{1}{2}f\left(1-\frac{1}{2}f\right) = \frac{f}{2}-\frac{f^2}{4}$
+
+Let $q = q(X^n)=\sum\limits_{j=1}^n x_j$ be the non private frequency vector of inputs, our goal is to find the mean squared error of our estimate from this vector. Using the fact from equation~\ref{eq:YsumBin} that $Y_i$ is a sum of two Binomials with equal variance (by the symmetry of their probabilities), we get
+\begin{equation}
+\label{eq:varianceY}
+    \text{Var}(Y_i)=n\frac{f}{2}\left(1-\frac{f}{2}\right)
+\end{equation}
 	\begin{align*}
-		\mathbb{E}[|\hat{N}-N|_2^2] &= \mathbb{E}\left[\sum\limits_{i=1}^k(\hat{N_i}-N_i)^2\right] = \sum\limits_{i=1}^k\mathbb{E}[(\hat{N_i}-N_i)^2] &&\\
-			&= \sum\limits_{i=1}^k\mathbb{E}[(\hat{N_i}-\mathbb{E}[\hat{N_i}])^2] && \text{by Theorem~\ref{thm:unbiased-estimator}}\\
-			&= \sum\limits_{i=1}^k\text{Var}(\hat{N_i}) = \sum\limits_{i=1}^k\frac{\text{Var}(\hat{Y_i})}{1-f}&&\text{by Equation~\ref{eq:estimator}}\\
-			&= \sum\limits_{i=1}^kn\left(\frac{\frac{f}{2}-\frac{f^2}{4}}{1-f}\right) &&\\
-			&= kn\left(\frac{f^2-2f}{4(f-1)}\right)
+		\mathbb{E}[|\hat{q}-q|_2^2] &= \mathbb{E}\left[\sum\limits_{i=1}^k(\hat{q_i}-q_i)^2\right] = \sum\limits_{i=1}^k\mathbb{E}[(\hat{q_i}-q_i)^2] &&\\
+			&= \sum\limits_{i=1}^k\mathbb{E}[(\hat{q_i}-\mathbb{E}[\hat{q_i}])^2] && \text{by Theorem~\ref{thm:unbiased-estimator}}\\
+			&= \sum\limits_{i=1}^k\text{Var}(\hat{q_i}) = \sum\limits_{i=1}^k\text{Var}\left(\frac{\frac{\hat{Y_i}}{n}-\frac{f}{2}}{1-f}\right)&&\text{by Equation~\ref{eq:estimator}}\\
+			&= \sum\limits_{i=1}^k\text{Var}\left(\frac{Y_i}{n(1-f)}\right) &&\\
+			&= \sum\limits_{i=1}^k\frac{\text{Var}(Y_i)}{n^2(1-f)^2}&&\\
+			&= k\left(\frac{n\frac{f}{2}\left(1-\frac{f}{2}\right)}{n^2(1-f)^2}\right) &&\text{ by Equation~\ref{eq:varianceY}}\\
+			& = \frac{k\left(f-\frac{f^2}{2}\right)}{2n(1-f)^2}
 	\end{align*}
 	
 \end{proof}
