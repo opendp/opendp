@@ -62,7 +62,6 @@ and checks that 1.0 is a member of the domain, but NaN is not.
 
     .. doctest::
 
-      >>> import opendp.prelude as dp
       >>> f64_atom_domain = dp.atom_domain(T=float)  # float defaults to f64, a double-precision 64-bit float
       >>> assert f64_atom_domain.member(1.0)
       >>> assert not f64_atom_domain.member(float('nan'))
@@ -227,11 +226,7 @@ Putting this to practice, the following example invokes the stability map on a c
 
     .. doctest::
 
-        >>> from opendp.transformations import make_clamp
-        >>> from opendp.domains import vector_domain, atom_domain
-        >>> from opendp.metrics import symmetric_distance
-        ...
-        >>> clamper = make_clamp(vector_domain(atom_domain(T=int)), symmetric_distance(), bounds=(1, 10))
+        >>> clamper = dp.t.make_clamp(dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance(), bounds=(1, 10))
         ...
         >>> # The maximum number of records that any one individual may influence in your dataset
         >>> in_symmetric_distance = 3
