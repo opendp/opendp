@@ -165,9 +165,9 @@ class RuntimeType(object):
         'i32'
         >>> dp.RuntimeType.parse("i32")
         'i32'
-        >>> print(RuntimeType.parse(L1Distance[int]))
+        >>> dp.RuntimeType.parse(L1Distance[int])
         L1Distance<i32>
-        >>> print(RuntimeType.parse(L1Distance["f32"]))
+        >>> dp.RuntimeType.parse(L1Distance["f32"])
         L1Distance<f32>
         """
         generics = generics or []
