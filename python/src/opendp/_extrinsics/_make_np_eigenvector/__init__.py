@@ -1,6 +1,6 @@
 from opendp._extrinsics.domains import _np_sscp_domain
 from opendp._extrinsics._utilities import to_then
-from opendp._lib import np_csprng
+from opendp._lib import get_rng, import_optional_dependency
 from opendp.mod import Domain, Metric, Transformation, Measurement
 from typing import List
 
@@ -16,7 +16,7 @@ def make_private_np_eigenvector(
     :param input_metric: instance of `symmetric_distance()`
     :param unit_epsilon: ε-expenditure per changed record in the input data
     """
-    import numpy as np  # type: ignore[import]
+    np = import_optional_dependency('numpy')
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "floating-point")
@@ -72,7 +72,7 @@ def make_private_np_eigenvector(
             #    2. compute clamp_norm(compute L @ std_gaussian(d), 1) with arbitrary precision
             #       sample with sufficient precision where all components round to same float
             
-            z = np_csprng.multivariate_normal(mean=np.zeros(d), cov=Omega_inv)
+            z = get_rng().multivariate_normal(mean=np.zeros(d), cov=Omega_inv)
             # u is a sample from the angular central gaussian distribution, 
             #    an envelope for the bingham distribution
             u = z / np.linalg.norm(z)
@@ -138,9 +138,9 @@ then_np_sscp_projection = to_then(make_np_sscp_projection)
 def make_private_np_eigenvectors(
     input_domain: Domain, input_metric: Metric, unit_epsilons: List[float]
 ) -> Measurement:
-    import numpy as np  # type: ignore[import]
-    from scipy.linalg import null_space  # type: ignore[import]
+    np = import_optional_dependency('numpy')
     import opendp.prelude as dp
+    linalg = import_optional_dependency('scipy.linalg')
 
     dp.assert_features("contrib", "floating-point")
 
@@ -186,7 +186,7 @@ def make_private_np_eigenvectors(
             theta = np.vstack((theta, P.T @ u))
 
             # 2.b: update the projection, P maintains singular values with magnitude <= 1
-            P = null_space(theta).T
+            P = linalg.null_space(theta).T
 
         # the eigvec of a 1x1 matrix is always I, so it doesn't need to be released
         # so if down to the last eigvec, return the projection built up via postprocessing

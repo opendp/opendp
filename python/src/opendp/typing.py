@@ -11,7 +11,7 @@ from collections.abc import Hashable
 from typing import Dict, Optional, Union, Any, Type, List
 
 from opendp.mod import Function, UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
-from opendp._lib import ATOM_EQUIVALENCE_CLASSES
+from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency
 
 
 ELEMENTARY_TYPES: Dict[Any, str] = {
@@ -23,7 +23,7 @@ ELEMENTARY_TYPES: Dict[Any, str] = {
     Transformation: 'AnyTransformationPtr'
 }
 try:
-    import numpy as np # type: ignore[import-not-found]
+    np = import_optional_dependency('numpy')
     # https://numpy.org/doc/stable/reference/arrays.scalars.html#sized-aliases
     ELEMENTARY_TYPES.update({  # pragma: no cover
         # np.bytes_: '&[u8]',  # np.string_ # not used in OpenDP

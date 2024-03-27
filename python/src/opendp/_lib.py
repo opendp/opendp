@@ -4,6 +4,7 @@ import platform
 import re
 import sys
 from typing import Dict, List, Optional, Any
+import importlib
 
 
 # list all acceptable alternative types for each default type
@@ -74,10 +75,34 @@ def _load_library():
 lib = _load_library()
 
 
-np_csprng: "np.random.Generator" = None # type: ignore[assignment]
-try:
-    import numpy as np  # type: ignore[import-not-found]
-    from randomgen import UserBitGenerator  # type: ignore[import]
+install_names = {
+    'sklearn': 'scikit-learn'
+}
+
+
+def import_optional_dependency(name, raise_error=True):
+    '''
+    Imports optional dependency, or explains that it is required.
+    '''
+    try:
+        return importlib.import_module(name)
+    except ImportError:
+        if raise_error:
+            root_name = name.split(".")[0]
+            install_name = install_names.get(root_name) or root_name
+            raise ImportError(f'The optional install {install_name} is required for this functionality')
+        return None
+
+
+_np_csprng = None
+
+def get_rng():
+    global _np_csprng
+    if _np_csprng is not None:
+        return _np_csprng
+
+    np = import_optional_dependency('numpy')
+    randomgen = import_optional_dependency('randomgen')
 
     buffer_len = 1024
     buffer = np.empty(buffer_len, dtype=np.uint64)
@@ -85,24 +110,24 @@ try:
     buffer_pos = buffer_len
 
     def next_raw(_voidp):
+        # Mypy had trouble with globals, and there isn't a good block-ignore.
+        # https://github.com/python/mypy/issues/5732
         global buffer_pos
-        if buffer_len == buffer_pos:
+        if buffer_len == buffer_pos: # type: ignore[name-defined]
             from opendp._data import fill_bytes
 
             # there are 8x as many u8s as there are u64s
             if not fill_bytes(buffer_ptr, buffer_len * 8): # pragma: no cover
                 from opendp.mod import OpenDPException
                 raise OpenDPException("FailedFunction", "Failed to sample from CSPRNG")
-            buffer_pos = 0
+            buffer_pos = 0 # type: ignore[name-defined]
 
-        out = buffer[buffer_pos]
-        buffer_pos += 1
+        out = buffer[buffer_pos] # type: ignore[name-defined]
+        buffer_pos += 1 # type: ignore[name-defined]
         return int(out)
 
-    np_csprng = np.random.Generator(bit_generator=UserBitGenerator(next_raw)) # type:ignore
-
-except ImportError:  # pragma: no cover
-    pass
+    _np_csprng = np.random.Generator(bit_generator=randomgen.UserBitGenerator(next_raw)) # type:ignore
+    return _np_csprng
 
 # This enables backtraces in Rust by default.
 # It can be disabled by setting RUST_BACKTRACE=0.

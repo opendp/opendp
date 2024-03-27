@@ -3,7 +3,11 @@ from typing import NamedTuple, Literal
 from opendp.mod import Domain
 from opendp.typing import RuntimeTypeDescriptor, ELEMENTARY_TYPES
 from opendp._convert import ATOM_MAP
+from opendp._lib import import_optional_dependency
+import typing
 
+if typing.TYPE_CHECKING: # pragma: no cover
+    import numpy # type: ignore[import-not-found]
 
 def _check_norm_and_p(norm: float | None, p: int | None):
     """Checks that a scalar L`p` `norm` is well-defined"""
@@ -52,7 +56,7 @@ def np_array2_domain(
     :param num_columns: number of columns in the data
     :param T: atom type
     """
-    import numpy as np  # type: ignore[import]
+    np = import_optional_dependency('numpy')
     import opendp.prelude as dp
 
     _check_norm_and_p(norm, p)
@@ -126,7 +130,7 @@ def np_array2_domain(
         return True
 
     class NPArray2Descriptor(NamedTuple):
-        origin: np.ndarray | None
+        origin: numpy.ndarray | None
         norm: float | None
         p: Literal[1, 2, None]
         size: int | None
@@ -162,7 +166,7 @@ def _np_sscp_domain(
     :param num_features: number of rows/columns in the matrix
     """
     import opendp.prelude as dp
-    import numpy as np  # type: ignore[import]
+    np = import_optional_dependency('numpy')
 
     _check_norm_and_p(norm, p)
     _check_nonnegative_int(size, "size")
