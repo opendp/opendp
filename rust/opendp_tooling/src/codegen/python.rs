@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
 
 use crate::{Argument, Function, TypeRecipe, Value};
 
@@ -231,7 +231,11 @@ fn generate_input_argument(
 
 /// generate a docstring for the current function, with the function description, args, and return
 /// in Sphinx format: https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
-fn generate_docstring(module_name: &str, func: &Function, hierarchy: &HashMap<String, Vec<String>>) -> String {
+fn generate_docstring(
+    module_name: &str,
+    func: &Function,
+    hierarchy: &HashMap<String, Vec<String>>,
+) -> String {
     let description = (func.description.as_ref())
         .map(|v| format!("{}\n", v))
         .unwrap_or_else(String::new);
