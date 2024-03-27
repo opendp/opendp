@@ -902,7 +902,6 @@ def binary_search(
 
     Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.
 
-    >>> from opendp.transformations import make_count_by_categories
     >>> histogram = dp.t.make_count_by_categories(
     ...     dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance(),
     ...     categories=["a"], MO=dp.L2Distance[int])
