@@ -40,6 +40,7 @@ from opendp.mod import (
     binary_search_param,
 )
 from opendp.typing import RuntimeType
+from opendp._lib import indent
 
 
 __all__ = [
@@ -325,6 +326,14 @@ class Context(object):
         self.d_in = d_in
         self.d_mids = d_mids
         self.d_out = d_out
+
+    def __repr__(self) -> str:
+        return f"""Context(
+    accountant = {indent(repr(self.accountant), skip_first_line=True)},
+    queryable  = {self.queryable},
+    d_in       = {self.d_in},
+    d_mids     = {self.d_mids},
+    d_out      = {self.d_out})"""
 
     @staticmethod
     def compositor(
