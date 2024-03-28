@@ -1,0 +1,42 @@
+name: Weekly doc check
+
+on:
+  # Runs every Sunday at midnight:
+  schedule:
+    - cron: '0 0 * * 0'
+  # Or run manually:
+  # CLI: gh workflow run weekly-doc-check.yml
+  # web: https://github.com/opendp/opendp/actions/workflows/weekly-doc-check.yml
+  workflow_dispatch:
+
+jobs:
+  check-docs:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install deps
+        run: python -m pip install -r requirements.txt
+
+      - name: Check markdown links
+        run: |
+          find .. | grep '.md$' | grep -v 'venv/\|.git/\|CHANGELOG\|vendor/\|R/opendp/README.md' \
+          | xargs linkchecker --no-warnings -f linkchecker-external.cfg
+
+      - name: Install Pandoc
+        run: sudo apt-get install -y pandoc
+
+      - name: Build docs
+        run: make html
+
+      - name: Check links
+        run: linkchecker --no-warnings -f linkchecker-external.cfg build/html/index.html
+
+      # We could also build and check the Rust docs, but:
+      # - The build here doesn't replicate errors reported by docs.rs.
+      # - There are more than 10K internal links, but the ones that don't
+      #   come from the Rust docs build are also in the Sphinx docs.
