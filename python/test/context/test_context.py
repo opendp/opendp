@@ -5,9 +5,24 @@ import opendp.prelude as dp
 dp.enable_features("contrib")
 
 
-def test_distance_of():
+def test_unit_of():
     assert dp.unit_of(contributions=3) == (dp.symmetric_distance(), 3)
+    assert dp.unit_of(contributions=3, ordered=True) == (dp.insert_delete_distance(), 3)
+
+    assert dp.unit_of(changes=3) == (dp.change_one_distance(), 3)
+    assert dp.unit_of(changes=3, ordered=True) == (dp.hamming_distance(), 3)
+
+    # TODO: For the cases below, is ordered meaningful?
+    # Should an exception be raised?
+
+    assert dp.unit_of(absolute=3) == (dp.absolute_distance(dp.i32), 3)
+    assert dp.unit_of(absolute=3, ordered=True) == (dp.absolute_distance(dp.i32), 3)
+
     assert dp.unit_of(l1=2.0) == (dp.l1_distance(T=float), 2.0)
+    assert dp.unit_of(l1=2.0, ordered=True) == (dp.l1_distance(T=float), 2.0)
+
+    assert dp.unit_of(l2=2.0) == (dp.l2_distance(T=float), 2.0)
+    assert dp.unit_of(l2=2.0, ordered=True) == (dp.l2_distance(T=float), 2.0)
 
 
 def test_privacy_loss_of():
