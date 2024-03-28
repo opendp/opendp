@@ -69,16 +69,22 @@ from opendp.measures import *"#
         ""
     };
 
+    let prelude_note = "Instead of importing directly from this module,
+we suggest importing [opendp.prelude](opendp.prelude.html) with the conventional name `dp`:
+
+.. code:: python
+
+    import opendp.prelude as dp";
     let module_docs = match module_name {
-        "accuracy" => "The ``accuracy`` module provides functions for converting between accuracy and scale parameters.",
-        "combinators" => "The ``combinators`` module provides functions for combining transformations and measurements.",
-        "core" => "The ``core`` module provides functions for accessing the fields of transformations and measurements.",
-        "domains" => "The ``domains`` modules provides functions for creating and using domains.",
-        "measurements" => "The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.",
-        "measures" => "The ``measures`` modules provides functions that measure the distance between probability distributions.",
-        "metrics" => "The ``metrics`` module provides fuctions that measure the distance between two elements of a domain.",
-        "transformations" => "The ``transformations`` module provides functions that deterministicly transform datasets.",
-        _ => "TODO!"
+        "accuracy" => format!("{}\n\n{}", "The ``accuracy`` module provides functions for converting between accuracy and scale parameters.", prelude_note),
+        "combinators" => format!("{}\n\n{}", "The ``combinators`` module provides functions for combining transformations and measurements.", prelude_note),
+        "core" => format!("{}\n\n{}", "The ``core`` module provides functions for accessing the fields of transformations and measurements.", prelude_note),
+        "domains" => format!("{}\n\n{}", "The ``domains`` modules provides functions for creating and using domains.", prelude_note),
+        "measurements" => format!("{}\n\n{}", "The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.", prelude_note),
+        "measures" => format!("{}\n\n{}", "The ``measures`` modules provides functions that measure the distance between probability distributions.", prelude_note),
+        "metrics" => format!("{}\n\n{}", "The ``metrics`` module provides fuctions that measure the distance between two elements of a domain.", prelude_note),
+        "transformations" => format!("{}\n\n{}", "The ``transformations`` module provides functions that deterministicly transform datasets.", prelude_note),
+        _ => "TODO!".to_string()
     };
 
     format!(

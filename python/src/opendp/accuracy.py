@@ -1,6 +1,13 @@
 # Auto-generated. Do not edit!
 '''
 The ``accuracy`` module provides functions for converting between accuracy and scale parameters.
+
+Instead of importing directly from this module,
+we suggest importing [opendp.prelude](opendp.prelude.html) with the conventional name `dp`:
+
+.. code:: python
+
+    import opendp.prelude as dp
 '''
 from opendp._convert import *
 from opendp._lib import *

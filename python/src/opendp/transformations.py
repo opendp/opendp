@@ -1,6 +1,13 @@
 # Auto-generated. Do not edit!
 '''
 The ``transformations`` module provides functions that deterministicly transform datasets.
+
+Instead of importing directly from this module,
+we suggest importing [opendp.prelude](opendp.prelude.html) with the conventional name `dp`:
+
+.. code:: python
+
+    import opendp.prelude as dp
 '''
 from opendp._convert import *
 from opendp._lib import *

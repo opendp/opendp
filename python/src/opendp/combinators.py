@@ -1,6 +1,13 @@
 # Auto-generated. Do not edit!
 '''
 The ``combinators`` module provides functions for combining transformations and measurements.
+
+Instead of importing directly from this module,
+we suggest importing [opendp.prelude](opendp.prelude.html) with the conventional name `dp`:
+
+.. code:: python
+
+    import opendp.prelude as dp
 '''
 from opendp._convert import *
 from opendp._lib import *
