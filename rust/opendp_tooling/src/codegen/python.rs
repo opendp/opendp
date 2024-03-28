@@ -74,16 +74,28 @@ we suggest importing [opendp.prelude](opendp.prelude.html) with the conventional
 
 .. code:: python
 
-    import opendp.prelude as dp";
+    >>> import opendp.prelude as dp
+";
     let module_docs = match module_name {
-        "accuracy" => format!("{}\n\n{}", "The ``accuracy`` module provides functions for converting between accuracy and scale parameters.", prelude_note),
-        "combinators" => format!("{}\n\n{}", "The ``combinators`` module provides functions for combining transformations and measurements.", prelude_note),
-        "core" => format!("{}\n\n{}", "The ``core`` module provides functions for accessing the fields of transformations and measurements.", prelude_note),
-        "domains" => format!("{}\n\n{}", "The ``domains`` modules provides functions for creating and using domains.", prelude_note),
-        "measurements" => format!("{}\n\n{}", "The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.", prelude_note),
-        "measures" => format!("{}\n\n{}", "The ``measures`` modules provides functions that measure the distance between probability distributions.", prelude_note),
-        "metrics" => format!("{}\n\n{}", "The ``metrics`` module provides fuctions that measure the distance between two elements of a domain.", prelude_note),
-        "transformations" => format!("{}\n\n{}", "The ``transformations`` module provides functions that deterministicly transform datasets.", prelude_note),
+        "accuracy" => format!("{}\n\n{}",
+            "The ``accuracy`` module provides functions for converting between accuracy and scale parameters.", prelude_note),
+        "combinators" => format!("{}\n\n{}{}",
+            "The ``combinators`` module provides functions for combining transformations and measurements.", prelude_note,
+            "    >>> dp.c.make_basic_composition"),
+        "core" => format!("{}\n\n{}",
+            "The ``core`` module provides functions for accessing the fields of transformations and measurements.", prelude_note),
+        "domains" => format!("{}\n\n{}",
+            "The ``domains`` modules provides functions for creating and using domains.", prelude_note),
+        "measurements" => format!("{}\n\n{}{}",
+            "The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.", prelude_note,
+            "    >>> dp.m.then_laplace"),
+        "measures" => format!("{}\n\n{}",
+            "The ``measures`` modules provides functions that measure the distance between probability distributions.", prelude_note),
+        "metrics" => format!("{}\n\n{}",
+            "The ``metrics`` module provides fuctions that measure the distance between two elements of a domain.", prelude_note),
+        "transformations" => format!("{}\n\n{}{}",
+            "The ``transformations`` module provides functions that deterministicly transform datasets.", prelude_note,
+            "    >>> dp.t.then_sum"),
         _ => "TODO!".to_string()
     };
 

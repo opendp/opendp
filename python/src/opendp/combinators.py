@@ -7,7 +7,8 @@ we suggest importing [opendp.prelude](opendp.prelude.html) with the conventional
 
 .. code:: python
 
-    import opendp.prelude as dp
+    >>> import opendp.prelude as dp
+    >>> dp.c.make_basic_composition
 '''
 from opendp._convert import *
 from opendp._lib import *
