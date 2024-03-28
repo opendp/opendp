@@ -68,7 +68,7 @@ jobs:
           cache: pip
 
       - name: Install requirements
-        run: pip install -r tools/requirements-publish_tool.txt
+        run: pip install -r tools/requirements-tools.txt
 
       - name: Run sanity test
         env:
