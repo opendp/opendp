@@ -320,12 +320,14 @@ class Context(object):
         d_in,
         d_mids=None,
         d_out=None,
+        space_override=None,
     ):
         self.accountant = accountant
         self.queryable = queryable
         self.d_in = d_in
         self.d_mids = d_mids
         self.d_out = d_out
+        self.space_override = space_override
 
     def __repr__(self) -> str:
         return f"""Context(
@@ -403,7 +405,10 @@ class Context(object):
                 )
 
         return Query(
-            chain=(self.accountant.input_domain, self.accountant.input_metric),
+            chain=(
+                self.space_override
+                or (self.accountant.input_domain, self.accountant.input_metric)
+            ),
             output_measure=self.accountant.output_measure,
             d_in=self.d_in,
             d_out=d_query,
@@ -592,6 +597,7 @@ class Query(object):
                     queryable=queryable,
                     d_in=d_in,
                     d_mids=d_mids,
+                    space_override=(input_domain, input_metric)
                 )
 
             return self.new_with(chain=accountant, wrap_release=wrap_release)
