@@ -41,8 +41,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     Measurement(
         input_domain   = AtomDomain(T=i32),
         input_metric   = AbsoluteDistance(i32),
-        output_measure = MaxDivergence(f64)
-    )
+        output_measure = MaxDivergence(f64))
 
     >>> # invoke the measurement (invoke and __call__ are equivalent)
     >>> print('explicit: ', laplace.invoke(100))  # -> 101   # doctest: +ELLIPSIS
