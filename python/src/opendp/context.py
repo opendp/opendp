@@ -40,6 +40,7 @@ from opendp.mod import (
     binary_search_param,
 )
 from opendp.typing import RuntimeType
+from opendp._lib import indent
 
 
 __all__ = [
@@ -326,6 +327,14 @@ class Context(object):
         self.d_mids = d_mids
         self.d_out = d_out
 
+    def __repr__(self) -> str:
+        return f"""Context(
+    accountant = {indent(repr(self.accountant), skip_first_line=True)},
+    queryable  = {self.queryable},
+    d_in       = {self.d_in},
+    d_mids     = {self.d_mids},
+    d_out      = {self.d_out})"""
+
     @staticmethod
     def compositor(
         data: Any,
@@ -445,6 +454,14 @@ class Query(object):
         self._d_out = d_out
         self._context = context
         self._wrap_release = _wrap_release
+
+    def __repr__(self) -> str:
+        return f"""Query(
+    chain          = {indent(repr(self._chain), skip_first_line=True)},
+    output_measure = {self._output_measure},
+    d_in           = {self._d_in},
+    d_out          = {self._d_out},
+    context        = {indent(repr(self._context), skip_first_line=True)})"""
 
     def __getattr__(self, name: str) -> Callable[[Any], "Query"]:
         """Creates a new query by applying a transformation or measurement to the current chain."""

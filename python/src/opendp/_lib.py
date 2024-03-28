@@ -400,3 +400,11 @@ def get_channel(version):
         channel = match.group(2)
         return channel or "stable"
     return "unknown" # pragma: no cover
+
+def indent(text, skip_first_line=False):
+    lines = text.split('\n')
+    first, rest = lines[0], lines[1:]
+    spaces = ' ' * 4
+    indented_first = ('' if skip_first_line else spaces) + first
+    indented_rest = [f'\n{spaces}{line}' for line in rest]
+    return indented_first + ''.join(indented_rest)
