@@ -87,6 +87,21 @@ def test_context_init_split_evenly_over():
     # print(context.query().dp_sum((1, 10)).release())
 
 
+def test_partial_chain_right_shift():
+    context = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=3),
+        privacy_loss=dp.loss_of(epsilon=3.0),
+        split_evenly_over=3,
+    )
+
+    laplace = context.query().clamp((1, 10)).sum().laplace()
+    with pytest.raises(ValueError):
+        # TODO: What's a good way to exercise without using the private field?
+        # What's something we expect to pass?
+        laplace._chain >> None
+
+
 def test_context_zCDP():
     context = dp.Context.compositor(
         data=[1, 2, 3],
@@ -134,13 +149,26 @@ def test_subcontext_changes_metric():
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
     subcontext = context.query().clamp((0, 1)).sum().compositor(split_evenly_over=1).release()
+
+    # This still corresponds to the top-level context:
     assert subcontext.accountant.input_domain == dp.vector_domain(dp.atom_domain(T=dp.i32))
+
     # TODO: Is there a good way to make this assertion through the public API?
     assert subcontext.query()._chain == (
         dp.atom_domain(T=dp.i32),
         dp.absolute_distance(dp.i32)
     )
 
+
+def test_measure_cast():
+    context = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=2,
+        domain=dp.vector_domain(dp.atom_domain(T=int)),
+    )
+    context.query().compositor(split_evenly_over=1) # TODO: Exercise different output_measure params
 
 
 
