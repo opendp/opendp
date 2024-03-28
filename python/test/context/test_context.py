@@ -39,6 +39,26 @@ def test_option_domain():
     assert str(domain) == 'OptionDomain(AtomDomain(T=i32))'
 
 
+def test_context_repr():
+    assert repr(
+        dp.Context.compositor(
+            data=[1, 2, 3],
+            privacy_unit=dp.unit_of(contributions=3),
+            privacy_loss=dp.loss_of(epsilon=3.0),
+            split_evenly_over=1,
+            domain=dp.domain_of(List[int]),
+        )
+    ) == '''Context(
+    accountant = Measurement(
+        input_domain   = VectorDomain(AtomDomain(T=i32)),
+        input_metric   = SymmetricDistance(),
+        output_measure = MaxDivergence(f64)),
+    queryable  = Queryable(Q=AnyMeasurement),
+    d_in       = 3,
+    d_mids     = [3.0],
+    d_out      = None)'''
+
+
 def test_context_init_split_by_weights():
     dp.Context.compositor(
         data=[1, 2, 3],
@@ -82,12 +102,36 @@ def test_context_zCDP():
     print(dp_sum.release())
 
 
+def test_query_repr():
+    context = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.),
+        split_evenly_over=1
+    )
+    assert repr(context.query()) == '''Query(
+    chain          = (VectorDomain(AtomDomain(T=i32)), SymmetricDistance()),
+    output_measure = MaxDivergence(f64),
+    d_in           = 1,
+    d_out          = 1.0,
+    context        = Context(
+        accountant = Measurement(
+            input_domain   = VectorDomain(AtomDomain(T=i32)),
+            input_metric   = SymmetricDistance(),
+            output_measure = MaxDivergence(f64)),
+        queryable  = Queryable(Q=AnyMeasurement),
+        d_in       = 1,
+        d_mids     = [1.0],
+        d_out      = None))'''
+
 def test_sc_query():
     context = dp.Context.compositor(
         data=[1, 2, 3],
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=3.0, delta=1e-6),
         split_evenly_over=2,
+        # TODO: Using split_by_weights instead fails:
+        # split_by_weights=[1, 2],
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
 
