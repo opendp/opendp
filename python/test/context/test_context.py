@@ -134,9 +134,10 @@ def test_subcontext_changes_metric():
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
     subcontext = context.query().clamp((0, 1)).sum().compositor(split_evenly_over=1).release()
-    assert subcontext.accountant.input_domain == dp.vector_domain(dp.atom_domain(dp.i32))
+    assert subcontext.accountant.input_domain == dp.vector_domain(dp.atom_domain(T=dp.i32))
+    # TODO: Is there a good way to make this assertion through the public API?
     assert subcontext.query()._chain == (
-        dp.atom_domain(dp.i32),
+        dp.atom_domain(T=dp.i32),
         dp.absolute_distance(dp.i32)
     )
 

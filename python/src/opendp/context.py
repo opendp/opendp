@@ -468,7 +468,7 @@ class Query(object):
     d_out          = {self._d_out},
     context        = {indent(repr(self._context))})"""
 
-    def __getattr__(self, name: str) -> Callable[[Any], "Query"]:
+    def __getattr__(self, name: str) -> Callable[..., "Query"]:
         """Creates a new query by applying a transformation or measurement to the current chain."""
         if name not in constructors:
             raise AttributeError(f"Unrecognized constructor: '{name}'")
@@ -551,8 +551,10 @@ class Query(object):
         split_by_weights: Optional[List[float]] = None,
         d_out=None,
         output_measure=None,
-    ) -> "Context":
+    ) -> "Query":
         """Constructs a new context containing a sequential compositor with the given weights.
+        # TODO: I think it actually returns a Query,
+        # or at least changing the type fixes mypy, and agrees with the repr.
 
         ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.
 
