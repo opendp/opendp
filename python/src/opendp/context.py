@@ -173,7 +173,7 @@ def domain_of(T, infer=False) -> Domain:
             return vector_domain(domain_of(T.args[0]))
         if T.origin == "HashMap":
             return map_domain(domain_of(T.args[0]), domain_of(T.args[1]))
-        if T.origin == "Option": # pragma: no cover
+        if T.origin == "Option":
             return option_domain(domain_of(T.args[0]))
 
     if T in ty.PRIMITIVE_TYPES:
@@ -196,17 +196,17 @@ def metric_of(M) -> Metric:
             return metrics.absolute_distance(T=M.args[0])
         if M.origin == "L1Distance":
             return metrics.l1_distance(T=M.args[0])
-        if M.origin == "L2Distance": # pragma: no cover
+        if M.origin == "L2Distance":
             return metrics.l2_distance(T=M.args[0])
 
     if M == ty.HammingDistance:
-        return metrics.hamming_distance() # pragma: no cover
+        return metrics.hamming_distance()
     if M == ty.SymmetricDistance:
         return metrics.symmetric_distance()
     if M == ty.InsertDeleteDistance:
-        return metrics.insert_delete_distance() # pragma: no cover
+        return metrics.insert_delete_distance()
     if M == ty.ChangeOneDistance:
-        return metrics.change_one_distance() # pragma: no cover
+        return metrics.change_one_distance()
     if M == ty.DiscreteDistance:
         return metrics.discrete_distance()
 
@@ -280,16 +280,16 @@ def unit_of(
     if contributions is not None:
         metric = insert_delete_distance() if ordered else symmetric_distance()
         return metric, contributions
-    if changes is not None: # pragma: no cover
+    if changes is not None:
         metric = hamming_distance() if ordered else change_one_distance()
         return metric, changes
-    if absolute is not None: # pragma: no cover
+    if absolute is not None:
         metric = absolute_distance(T=RuntimeType.parse_or_infer(U, absolute))
         return metric, absolute
     if l1 is not None:
         metric = l1_distance(T=RuntimeType.parse_or_infer(U, l1))
         return metric, l1
-    if l2 is not None: # pragma: no cover
+    if l2 is not None:
         metric = l2_distance(T=RuntimeType.parse_or_infer(U, l2))
         return metric, l2
     raise Exception('No matching metric found')
@@ -376,7 +376,7 @@ class Context(object):
     def __call__(self, query: Union["Query", Measurement]):
         """Executes the given query on the context."""
         if isinstance(query, Query):
-            query = query.resolve() # pragma: no cover
+            query = query.resolve()
         answer = self.queryable(query)
         if self.d_mids is not None:
             self.d_mids.pop(0)
@@ -397,7 +397,7 @@ class Context(object):
             if not self.d_mids:
                 raise ValueError("Privacy allowance has been exhausted")
             d_query = self.d_mids[0]
-        elif kwargs: # pragma: no cover
+        elif kwargs:
             measure, d_query = loss_of(**kwargs)
             if measure != self.output_measure: # type: ignore[attr-defined]
                 raise ValueError(
@@ -517,7 +517,7 @@ class Query(object):
 
     def __dir__(self):
         """Returns the list of available constructors. Used by Python's error suggestion mechanism."""
-        return super().__dir__() + list(constructors.keys())  # type: ignore[operator] # pragma: no cover
+        return super().__dir__() + list(constructors.keys())  # type: ignore[operator]
 
     def resolve(self, allow_transformations=False):
         """Resolve the query into a measurement.
@@ -543,7 +543,7 @@ class Query(object):
 
     def param(self):
         """Returns the discovered parameter, if there is one."""
-        return getattr(self.resolve(), "param", None) # pragma: no cover
+        return getattr(self.resolve(), "param", None)
 
     def compositor(
         self,
@@ -574,7 +574,7 @@ class Query(object):
         def compositor(chain: Union[Tuple[Domain, Metric], Transformation], d_in):
             if isinstance(chain, tuple):
                 input_domain, input_metric = chain
-            elif isinstance(chain, Transformation): # pragma: no cover
+            elif isinstance(chain, Transformation):
                 input_domain, input_metric = chain.output_domain, chain.output_metric
                 d_in = chain.map(d_in)
 
@@ -589,7 +589,7 @@ class Query(object):
                 split_by_weights,
             )
             if isinstance(chain, Transformation):
-                accountant = chain >> accountant # pragma: no cover
+                accountant = chain >> accountant
 
             def wrap_release(queryable):
                 return Context(
@@ -607,7 +607,7 @@ class Query(object):
     def _compose_context(self, compositor):
         """Helper function for composition in a context."""
         if isinstance(self._chain, PartialChain):
-            return PartialChain(lambda x: compositor(self._chain(x), self._d_in)) # pragma: no cover
+            return PartialChain(lambda x: compositor(self._chain(x), self._d_in))
         else:
             return compositor(self._chain, self._d_in)
 
@@ -627,7 +627,7 @@ class PartialChain(object):
 
     def __call__(self, v):
         """Returns the transformation or measurement with the given parameter."""
-        return self.partial(v) # pragma: no cover
+        return self.partial(v)
 
     def fix(self, d_in, d_out, output_measure=None, T=None):
         """Returns the closest transformation or measurement that satisfies the given stability or privacy constraint.
@@ -646,7 +646,7 @@ class PartialChain(object):
 
     def __rshift__(self, other):
         # partials may be chained with other transformations or measurements to form a new partial
-        if isinstance(other, (Transformation, Measurement)): # pragma: no cover
+        if isinstance(other, (Transformation, Measurement)):
             return PartialChain(lambda x: self.partial(x) >> other)
 
         raise ValueError("At most one parameter may be missing at a time")
@@ -689,7 +689,7 @@ def _sequential_composition_by_weights(
 
     if split_evenly_over is not None:
         weights = [d_out] * split_evenly_over
-    elif split_by_weights is not None: # pragma: no cover
+    elif split_by_weights is not None:
         weights = split_by_weights
     else:
         raise ValueError(
@@ -749,7 +749,7 @@ def _translate_measure_distance(d_from, from_measure, to_measure):
     """Translate a privacy loss ``d_from`` from ``from_measure`` to ``to_measure``.
     """
     if from_measure == to_measure:
-        return d_from # pragma: no cover
+        return d_from
 
     from_to = from_measure.type.origin, to_measure.type.origin
     T = to_measure.type.args[0]
@@ -757,9 +757,9 @@ def _translate_measure_distance(d_from, from_measure, to_measure):
     constant = 1.0  # the choice of constant doesn't matter
 
     if from_to == ("MaxDivergence", "FixedSmoothedMaxDivergence"):
-        return (d_from, 0.0) # pragma: no cover
+        return (d_from, 0.0)
 
-    if from_to == ("ZeroConcentratedDivergence", "MaxDivergence"): # pragma: no cover
+    if from_to == ("ZeroConcentratedDivergence", "MaxDivergence"):
         space = atom_domain(T=T), absolute_distance(T=T)
         scale = binary_search_param(
             lambda eps: make_pureDP_to_zCDP(make_laplace(*space, eps)),
