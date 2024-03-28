@@ -124,6 +124,25 @@ def test_query_repr():
         d_mids     = [1.0],
         d_out      = None))'''
 
+
+def test_subcontext_changes_metric():
+    context = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=2,
+        domain=dp.vector_domain(dp.atom_domain(T=int)),
+    )
+    subcontext = context.query().clamp((0, 1)).sum().compositor(split_evenly_over=1).release()
+    assert subcontext.accountant.input_domain == dp.vector_domain(dp.atom_domain(dp.i32))
+    assert subcontext.query()._chain == (
+        dp.atom_domain(dp.i32),
+        dp.absolute_distance(dp.i32)
+    )
+
+
+
+
 def test_sc_query():
     context = dp.Context.compositor(
         data=[1, 2, 3],
@@ -136,22 +155,22 @@ def test_sc_query():
     )
 
     # build a child sequential compositor, and then use it to release a laplace sum
-    sub_context = context.query().compositor(split_evenly_over=3).release() # type: ignore[attr-defined]
-    dp_sum = sub_context.query().clamp((1, 10)).sum().laplace()
-    print("laplace dp_sum", dp_sum.release())
+    sub_context_1 = context.query().compositor(split_evenly_over=3).release() # type: ignore[attr-defined]
+    dp_sum_1 = sub_context_1.query().clamp((1, 10)).sum().laplace()
+    print("laplace dp_sum", dp_sum_1.release())
 
     # build a child sequential compositor in zCDP, and then use it to release some gaussian queries
-    sub_context = context.query().compositor(  # type: ignore[attr-defined]
+    sub_context_2 = context.query().compositor(  # type: ignore[attr-defined]
         split_evenly_over=2, 
         output_measure=dp.zero_concentrated_divergence(T=float)
     ).release()
-    dp_sum = sub_context.query().clamp((1, 10)).sum().gaussian()
+    dp_sum_2 = sub_context_2.query().clamp((1, 10)).sum().gaussian()
     # with partials, fusing, and measure convention, would shorten to
-    # dp_sum = sub_context.query().dp_sum((1, 10))
-    print("gaussian dp_sum", dp_sum.release())
+    # dp_sum = sub_context_2.query().dp_sum((1, 10))
+    print("gaussian dp_sum", dp_sum_2.release())
 
     dp_mean = (
-        sub_context.query()
+        sub_context_2.query()
         .cast_default(float)
         .clamp((1.0, 10.0))
         .resize(3, constant=5.0)
