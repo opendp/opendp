@@ -401,10 +401,17 @@ def get_channel(version):
         return channel or "stable"
     return "unknown" # pragma: no cover
 
-def indent(text, skip_first_line=False):
+def indent(text):
+    '''
+    Indents the lines after the first line of a multiline string.
+    Used for nested reprs.
+
+    >>> print(indent('object(\\nfield = 123)'))
+    object(
+        field = 123)
+    '''
     lines = text.split('\n')
     first, rest = lines[0], lines[1:]
     spaces = ' ' * 4
-    indented_first = ('' if skip_first_line else spaces) + first
     indented_rest = [f'\n{spaces}{line}' for line in rest]
-    return indented_first + ''.join(indented_rest)
+    return first + ''.join(indented_rest)

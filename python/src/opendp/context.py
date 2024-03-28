@@ -331,7 +331,7 @@ class Context(object):
 
     def __repr__(self) -> str:
         return f"""Context(
-    accountant = {indent(repr(self.accountant), skip_first_line=True)},
+    accountant = {indent(repr(self.accountant))},
     queryable  = {self.queryable},
     d_in       = {self.d_in},
     d_mids     = {self.d_mids},
@@ -462,11 +462,11 @@ class Query(object):
 
     def __repr__(self) -> str:
         return f"""Query(
-    chain          = {indent(repr(self._chain), skip_first_line=True)},
+    chain          = {indent(repr(self._chain))},
     output_measure = {self._output_measure},
     d_in           = {self._d_in},
     d_out          = {self._d_out},
-    context        = {indent(repr(self._context), skip_first_line=True)})"""
+    context        = {indent(repr(self._context))})"""
 
     def __getattr__(self, name: str) -> Callable[[Any], "Query"]:
         """Creates a new query by applying a transformation or measurement to the current chain."""
