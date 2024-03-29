@@ -257,7 +257,7 @@ fn generate_docstring(
         }
     );
 
-    let example_path = format!("src/{}/{}.rst", &module_name, &func.name);
+    let example_path = format!("src/{}/code/{}.rst", &module_name, &func.name);
     let example = match fs::read_to_string(example_path) {
         Ok(string) => format!("\n\n:example:\n\n{string}\n"),
         Err(_) => "".to_string(),
