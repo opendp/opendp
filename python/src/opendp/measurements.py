@@ -8,7 +8,8 @@ we suggest importing [opendp.prelude](opendp.prelude.html) with the conventional
 .. code:: python
 
     >>> import opendp.prelude as dp
-    >>> dp.m.then_laplace
+    >>> dp.m.then_laplace # doctest: +ELLIPSIS
+    <function then_laplace at ...>
 '''
 from opendp._convert import *
 from opendp._lib import *

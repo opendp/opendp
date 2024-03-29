@@ -8,7 +8,8 @@ we suggest importing [opendp.prelude](opendp.prelude.html) with the conventional
 .. code:: python
 
     >>> import opendp.prelude as dp
-    >>> dp.c.make_basic_composition
+    >>> dp.c.make_basic_composition # doctest: +ELLIPSIS
+    <function make_basic_composition at ...>
 '''
 from opendp._convert import *
 from opendp._lib import *
