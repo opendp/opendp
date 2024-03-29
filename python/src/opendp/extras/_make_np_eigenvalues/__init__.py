@@ -1,4 +1,4 @@
-from opendp._extrinsics._utilities import to_then, with_privacy
+from opendp.extras._utilities import to_then, with_privacy
 from opendp.mod import Domain, Metric, Transformation
 
 # planning to make this public, but may make more API changes

@@ -1,10 +1,10 @@
 from __future__ import annotations
 from typing import List
 
-from opendp._extrinsics._utilities import register_measurement
-from opendp._extrinsics._make_np_eigenvector import then_private_np_eigenvectors
-from opendp._extrinsics._make_np_eigenvalues import then_np_eigenvalues
-from opendp._extrinsics._make_np_sscp import make_np_sscp
+from opendp.extras._utilities import register_measurement
+from opendp.extras._make_np_eigenvector import then_private_np_eigenvectors
+from opendp.extras._make_np_eigenvalues import then_np_eigenvalues
+from opendp.extras._make_np_sscp import make_np_sscp
 
 from opendp.mod import Domain, Metric, Measurement
 

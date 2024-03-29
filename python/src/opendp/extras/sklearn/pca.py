@@ -1,5 +1,5 @@
 from __future__ import annotations
-from opendp._extrinsics.make_np_pca import make_private_np_pca
+from opendp.extras.make_np_pca import make_private_np_pca
 from opendp.mod import Measurement
 
 
@@ -52,7 +52,7 @@ class PCA(SKLPCA):
         if hasattr(self, "components_"):
             raise ValueError("DP-PCA model has already been fitted")
 
-        input_domain = dp.np_array2_domain(
+        input_domain = dp.x.np_array2_domain(
             num_columns=self.n_features_in_, size=self.n_samples, T=float
         )
         input_metric = dp.symmetric_distance()

@@ -1,5 +1,5 @@
-from opendp._extrinsics.domains import _np_sscp_domain
-from opendp._extrinsics._utilities import to_then
+from opendp.extras.domains import _np_sscp_domain
+from opendp.extras._utilities import to_then
 from opendp._lib import np_csprng
 from opendp.mod import Domain, Metric, Transformation, Measurement
 from typing import List

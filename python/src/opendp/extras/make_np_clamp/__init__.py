@@ -1,4 +1,4 @@
-from opendp._extrinsics._utilities import register_transformation
+from opendp.extras._utilities import register_transformation
 from opendp.mod import Domain, Metric, Transformation
 
 
@@ -43,7 +43,7 @@ def make_np_clamp(
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        dp.np_array2_domain(
+        dp.x.np_array2_domain(
             **{
                 **input_domain.descriptor._asdict(),
                 "norm": norm,

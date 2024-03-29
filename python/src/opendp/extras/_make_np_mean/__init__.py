@@ -1,7 +1,7 @@
 from __future__ import annotations
-from opendp._extrinsics.make_np_clamp import make_np_clamp
-from opendp._extrinsics._utilities import to_then
-from opendp._extrinsics._make_np_sum import make_private_np_sum
+from opendp.extras.make_np_clamp import make_np_clamp
+from opendp.extras._utilities import to_then
+from opendp.extras._make_np_sum import make_private_np_sum
 from opendp.mod import Domain, Metric, Measurement
 
 # planning to make this public, but may make more API changes
