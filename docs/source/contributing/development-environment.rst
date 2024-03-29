@@ -193,7 +193,8 @@ Then, set an environment variable to the absolute path of the OpenDP Library bin
 
     export OPENDP_LIB_DIR=`realpath rust/target/debug`
 
-Additional dependencies may be needed for development. For homebrew on MacOS we suggest:
+The default R install for MacOS also includes GUI elements like Tcl/Tk,
+so for the smoothest development experience we suggest these additional installs:
 
 .. code-block:: bash
 

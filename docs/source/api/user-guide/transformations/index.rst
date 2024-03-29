@@ -195,7 +195,7 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> import opendp.prelude as dp
         >>> dp.enable_features('contrib')
@@ -216,7 +216,7 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> binner = dp.t.make_find_bin(
         ...     dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance(),
@@ -230,7 +230,7 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> indexer = dp.t.make_index(
         ...     dp.vector_domain(dp.atom_domain(T=dp.usize)), dp.symmetric_distance(),
@@ -550,7 +550,7 @@ Use :func:`opendp.transformations.make_user_transformation` to construct your ow
 
     This requires a looser trust model, as we cannot verify any privacy or stability properties of user-defined functions.
 
-    .. doctest::
+    .. code:: python
 
         >>> import opendp.prelude as dp
         >>> dp.enable_features("honest-but-curious")
@@ -561,7 +561,7 @@ In this example, we mock the typical API of the OpenDP library to make a transfo
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> import opendp.prelude as dp
         >>> from typing import List
@@ -591,7 +591,7 @@ The resulting Transformation may be used interchangeably with those constructed 
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> trans = (
         ...     (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance())
