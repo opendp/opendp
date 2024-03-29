@@ -11,23 +11,23 @@ In this example we'll make a private release from a `very` small dataset:
 
 .. code:: python
 
-    .. TODO
-    .. >>> import opendp.prelude as dp
-    .. >>> import polars as pl
-    .. >>> pf = dp.PrivateFrame(pl.DataFrame(
-    .. ...     "age": [20, 40, 60]
-    .. ... }))
-    .. >>> pf.select(
-    .. ...     pl.col("age").private_mean()
-    .. ... ) # doctest: +ELLIPSIS
-    .. shape: (1, 1)
-    .. ┌──────┐
-    .. │ age  │
-    .. │ ---  │
-    .. │ i64  │
-    .. ╞══════╡
-    .. │ ...  │
-    .. └──────┘
+    # TODO
+    # >>> import opendp.prelude as dp
+    # >>> import polars as pl
+    # >>> pf = dp.PrivateFrame(pl.DataFrame(
+    # ...     "age": [20, 40, 60]
+    # ... }))
+    # >>> pf.select(
+    # ...     pl.col("age").private_mean()
+    # ... ) # doctest: +ELLIPSIS
+    # shape: (1, 1)
+    # ┌──────┐
+    # │ age  │
+    # │ ---  │
+    # │ i64  │
+    # ╞══════╡
+    # │ ...  │
+    # └──────┘
 
 You should get a number that is near, but probably not equal to, 40,
 and if you re-evaluate you will probably get a different number.
@@ -45,13 +45,13 @@ While Polars supports ``mean``, attempting the same thing in a ``PrivateFrame`` 
 
 .. code:: python
 
-    .. TODO
-    .. >>> pf.select(
-    .. ...     pl.col("age").mean()
-    .. ... )
-    .. Traceback:
-    .. ...
-    .. Last method in chain must be a private_* method
+    # TODO
+    # >>> pf.select(
+    # ...     pl.col("age").mean()
+    # ... )
+    # Traceback:
+    # ...
+    # Last method in chain must be a private_* method
 
 The ``PrivateFrame`` protects you from accidentally releasing data which is not differentially private.
 
