@@ -36,7 +36,7 @@ To demonstrate, the following snippet finds the necessary gaussian scale such th
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> from opendp.accuracy import accuracy_to_gaussian_scale
         >>> confidence = 95
