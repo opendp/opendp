@@ -119,32 +119,32 @@ def domain_of(T, infer=False) -> Domain:
     Accepts a limited set of Python type expressions:
 
     >>> from typing import List  # Or just use regular "list" after python 3.8.
-    >>> domain_of(List[int])
+    >>> import opendp.prelude as dp
+    >>> dp.domain_of(List[int])
     VectorDomain(AtomDomain(T=i32))
     
     As well as strings representing types in the underlying Rust syntax:
 
-    >>> domain_of('Vec<int>')
+    >>> dp.domain_of('Vec<int>')
     VectorDomain(AtomDomain(T=i32))
 
     Dictionaries, optional types, and a range of primitive types are supported:
 
     >>> from typing import Dict  # Or just use regular "dict" after python 3.8.
-    >>> domain_of(Dict[str, int])
+    >>> dp.domain_of(Dict[str, int])
     MapDomain { key_domain: AtomDomain(T=String), value_domain: AtomDomain(T=i32) }
     
     .. TODO: Support python syntax for Option: https://github.com/opendp/opendp/issues/1389
 
-    >>> domain_of('Option<int>')  # Python's `Optional` is not supported.
+    >>> dp.domain_of('Option<int>')  # Python's `Optional` is not supported.
     OptionDomain(AtomDomain(T=i32))
     
-    >>> import opendp.prelude as dp
-    >>> domain_of(dp.i32)
+    >>> dp.domain_of(dp.i32)
     AtomDomain(T=i32)
 
     More complex types are not supported:
 
-    >>> domain_of(List[List[int]]) # doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> dp.domain_of(List[List[int]]) # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ...
     opendp.mod.OpenDPException:
@@ -152,7 +152,7 @@ def domain_of(T, infer=False) -> Domain:
 
     Alternatively, an example of the data can be provided, but note that passing sensitive data may result in a privacy violation:
 
-    >>> domain_of([1, 2, 3], infer=True)
+    >>> dp.domain_of([1, 2, 3], infer=True)
     VectorDomain(AtomDomain(T=i32))
 
     :param T: carrier type
@@ -216,11 +216,12 @@ def metric_of(M) -> Metric:
 def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
-    >>> loss_of(epsilon=1.0)
+    >>> import opendp.prelude as dp
+    >>> dp.loss_of(epsilon=1.0)
     (MaxDivergence(f64), 1.0)
-    >>> loss_of(epsilon=1.0, delta=1e-9)
+    >>> dp.loss_of(epsilon=1.0, delta=1e-9)
     (FixedSmoothedMaxDivergence(f64), (1.0, 1e-09))
-    >>> loss_of(rho=1.0)
+    >>> dp.loss_of(rho=1.0)
     (ZeroConcentratedDivergence(f64), 1.0)
 
     :param epsilon: Parameter for pure ε-DP.
@@ -258,9 +259,10 @@ def unit_of(
     """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
     The parameters are mutually exclusive.
 
-    >>> unit_of(contributions=3)
+    >>> import opendp.prelude as dp
+    >>> dp.unit_of(contributions=3)
     (SymmetricDistance(), 3)
-    >>> unit_of(l1=2.0)
+    >>> dp.unit_of(l1=2.0)
     (L1Distance(f64), 2.0)
 
     :param contributions: Greatest number of records a privacy unit may contribute to microdata

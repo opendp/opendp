@@ -17,6 +17,7 @@ provide a broader view of the the develpment and release process.
 #### Nightly
 
 - [`nightly.yml`](nightly.yml) makes a nightly release. [Past runs](https://github.com/opendp/opendp/actions/workflows/nightly.yml). [![nightly status](https://github.com/opendp/opendp/actions/workflows/nightly.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/nightly.yml?query=branch%3Amain)
+- [`docs.rs`](https://docs.rs/crate/opendp/latest) also builds the Rust documentation, separate from the GitHub CI. ![docs.rs status](https://img.shields.io/docsrs/opendp?label=docs.rs)
 
 #### Weekly
 

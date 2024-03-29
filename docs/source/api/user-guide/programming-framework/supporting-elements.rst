@@ -17,7 +17,7 @@ To use the function, the Transformation or Measurement can be called directly:
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
       >>> import opendp.prelude as dp
       >>> dp.enable_features("contrib")
@@ -35,7 +35,7 @@ Or ``invoke`` can be used equivalently:
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
       >>> type(clamp.invoke)
       <class 'method'>
@@ -60,9 +60,8 @@ and checks that 1.0 is a member of the domain, but NaN is not.
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
-      >>> import opendp.prelude as dp
       >>> f64_atom_domain = dp.atom_domain(T=float)  # float defaults to f64, a double-precision 64-bit float
       >>> assert f64_atom_domain.member(1.0)
       >>> assert not f64_atom_domain.member(float('nan'))
@@ -76,7 +75,7 @@ Other domains may be described in a similar way. For example:
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
       >>> i32_bounded_domain = dp.atom_domain(bounds=(-2, 2))  # int defaults to i32, a 32-bit signed integer
       >>> assert i32_bounded_domain.member(-2)
@@ -90,7 +89,7 @@ In addition, domains may also be used to construct higher-level domains. For ins
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
       >>> bool_vector_domain = dp.vector_domain(dp.atom_domain(T=bool))
       >>> assert bool_vector_domain.member([])
@@ -104,7 +103,7 @@ In addition, a ``size`` parameter may be used. For example:
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
       >>> bool_vector_2_domain = dp.vector_domain(dp.atom_domain(T=bool), size=2)
       >>> assert bool_vector_2_domain.member([True, True])
@@ -116,7 +115,7 @@ Let's look at the Transformation returned from :py:func:`make_sum() <opendp.tran
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
       >>> dp.enable_features('contrib')
       >>> bounded_sum = dp.t.make_sum(
@@ -133,7 +132,7 @@ We see that the input domain is the same as we passed in:
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
       >>> bounded_sum.output_domain
       AtomDomain(T=i32)
@@ -225,13 +224,9 @@ Putting this to practice, the following example invokes the stability map on a c
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
-        >>> from opendp.transformations import make_clamp
-        >>> from opendp.domains import vector_domain, atom_domain
-        >>> from opendp.metrics import symmetric_distance
-        ...
-        >>> clamper = make_clamp(vector_domain(atom_domain(T=int)), symmetric_distance(), bounds=(1, 10))
+        >>> clamper = dp.t.make_clamp(dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance(), bounds=(1, 10))
         ...
         >>> # The maximum number of records that any one individual may influence in your dataset
         >>> in_symmetric_distance = 3
@@ -245,7 +240,7 @@ There is also a relation check predicate function that simply compares the outpu
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> # reusing the prior clamp transformation
         >>> assert clamper.check(d_in=3, d_out=3)
