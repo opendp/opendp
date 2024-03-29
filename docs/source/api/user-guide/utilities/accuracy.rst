@@ -36,7 +36,7 @@ To demonstrate, the following snippet finds the necessary gaussian scale such th
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> import opendp.prelude as dp
         >>> confidence = 95

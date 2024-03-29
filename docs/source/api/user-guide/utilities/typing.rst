@@ -18,7 +18,7 @@ For instance, the atom domain constructor accepts a type argument `T`:
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> import opendp.prelude as dp
         >>> dp.atom_domain((0, 1), T=dp.i32)
