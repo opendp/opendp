@@ -555,9 +555,6 @@ class Query(object):
         output_measure=None,
     ) -> "Query":
         """Constructs a new context containing a sequential compositor with the given weights.
-        
-        .. TODO: I think it actually returns a Query,
-        .. or at least changing the type fixes mypy, and agrees with the repr.
 
         ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.
 
