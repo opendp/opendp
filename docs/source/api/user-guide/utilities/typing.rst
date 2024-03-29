@@ -18,7 +18,7 @@ For instance, the atom domain constructor accepts a type argument `T`:
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> from opendp.domains import atom_domain
         >>> from opendp.typing import *
