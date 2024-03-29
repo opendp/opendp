@@ -1,6 +1,7 @@
 from opendp._extrinsics._utilities import to_then
 from opendp._extrinsics.domains import _np_sscp_domain
 from opendp.mod import Domain, Metric, Transformation
+from opendp._lib import import_optional_dependency
 
 # planning to make this public, but may make more API changes
 
@@ -17,7 +18,7 @@ def make_np_sscp(
     :returns a Measurement that computes the DP sum
     """
     import opendp.prelude as dp
-    import numpy as np  # type: ignore[import]
+    np = import_optional_dependency('numpy')
 
     dp.assert_features("contrib", "floating-point")
 

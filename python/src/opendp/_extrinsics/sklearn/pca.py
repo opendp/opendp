@@ -1,16 +1,18 @@
 from __future__ import annotations
 from opendp._extrinsics.make_np_pca import make_private_np_pca
 from opendp.mod import Measurement
+from opendp._lib import import_optional_dependency
 
 
-try:
-    from sklearn.decomposition import PCA as SKLPCA  # type: ignore[import]
-except ImportError:
-
-    class SKLPCA(object):  # type: ignore[no-redef]
+decomposition = import_optional_dependency('sklearn.decomposition', False)
+if decomposition is not None:
+    class SKLPCA(decomposition.PCA): # type: ignore[name-defined]
+        pass
+else: # pragma: no cover
+    class SKLPCA(object): # type: ignore[no-redef]
         def __init__(*args, **kwargs):
             raise ImportError(
-                "please install scikit-learn to use the sklearn API: https://scikit-learn.org/stable/install.html"
+                "The optional install scikit-learn is required for this functionality"
             )
 
 
@@ -73,7 +75,7 @@ class PCA(SKLPCA):
 
     def _postprocess(self, values):
         """A function that applies a release of the mean and eigendecomposition to self"""
-        import numpy as np
+        np = import_optional_dependency('numpy')
         from sklearn.utils.extmath import stable_cumsum, svd_flip # type: ignore[import]
         from sklearn.decomposition._pca import _infer_dimension # type: ignore[import]
 

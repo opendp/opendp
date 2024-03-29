@@ -4,6 +4,7 @@ import platform
 import re
 import sys
 from typing import Dict, List, Optional, Any
+import importlib
 
 
 # list all acceptable alternative types for each default type
@@ -74,10 +75,29 @@ def _load_library():
 lib = _load_library()
 
 
-np_csprng: "np.random.Generator" = None # type: ignore[assignment]
+install_names = {
+    'sklearn': 'scikit-learn'
+}
+
+
+def import_optional_dependency(name, raise_error=True):
+    '''
+    Imports optional dependency, or explains that it is required.
+    '''
+    try:
+        return importlib.import_module(name)
+    except ImportError:
+        if raise_error:
+            root_name = name.split(".")[0]
+            install_name = install_names.get(root_name) or root_name
+            raise ImportError(f'The optional install {install_name} is required for this functionality')
+        return None
+
+
+np_csprng = None
 try:
-    import numpy as np  # type: ignore[import-not-found]
-    from randomgen import UserBitGenerator  # type: ignore[import]
+    np = import_optional_dependency('numpy')
+    randomgen = import_optional_dependency('randomgen')
 
     buffer_len = 1024
     buffer = np.empty(buffer_len, dtype=np.uint64)
@@ -99,7 +119,7 @@ try:
         buffer_pos += 1
         return int(out)
 
-    np_csprng = np.random.Generator(bit_generator=UserBitGenerator(next_raw)) # type:ignore
+    np_csprng = np.random.Generator(bit_generator=randomgen.UserBitGenerator(next_raw)) # type:ignore
 
 except ImportError:  # pragma: no cover
     pass
@@ -400,3 +420,18 @@ def get_channel(version):
         channel = match.group(2)
         return channel or "stable"
     return "unknown" # pragma: no cover
+
+def indent(text):
+    '''
+    Indents the lines after the first line of a multiline string.
+    Used for nested reprs.
+
+    >>> print(indent('object(\\nfield = 123)'))
+    object(
+        field = 123)
+    '''
+    lines = text.split('\n')
+    first, rest = lines[0], lines[1:]
+    spaces = ' ' * 4
+    indented_rest = [f'\n{spaces}{line}' for line in rest]
+    return first + ''.join(indented_rest)
