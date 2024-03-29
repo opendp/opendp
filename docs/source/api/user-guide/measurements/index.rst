@@ -157,7 +157,7 @@ Use :func:`opendp.measurements.make_user_measurement` to construct a measurement
 
       .. tab-item:: Python
 
-        .. doctest::
+        .. code:: python
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features("honest-but-curious", "contrib")
@@ -168,7 +168,7 @@ This example mocks the typical API of the OpenDP library to make the *most priva
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> def make_base_constant(constant):
         ...     """Constructs a Measurement that only returns a constant value."""
@@ -193,7 +193,7 @@ The resulting Measurement may be used interchangeably with those constructed via
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> meas = (
         ...     (dp.vector_domain(dp.atom_domain((0, 10))), dp.symmetric_distance())

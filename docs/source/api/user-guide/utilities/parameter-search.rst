@@ -32,7 +32,7 @@ This is extremely powerful!
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> import opendp.prelude as dp
         >>> dp.enable_features('contrib', 'floating-point')
@@ -41,7 +41,7 @@ This is extremely powerful!
   | This is useful when you want to determine how accurate you can make a query with a given budget.
 
 
-  .. doctest::
+  .. code:: python
 
     >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
     >>> dp.binary_search_param(lambda s: dp.m.make_gaussian(*input_space, scale=s), d_in=1., d_out=1.)
@@ -50,7 +50,7 @@ This is extremely powerful!
 * | If you have a bound on ``d_in`` and a noise scale, you can solve for the tightest budget ``d_out`` that is still differentially private.
   | This is useful when you want to find the smallest budget that will satisfy a target accuracy.
 
-  .. doctest::
+  .. code:: python
 
     >>> # in this case, a search is unnecessary. We can just use the map:
     >>> dp.m.make_gaussian(*input_space, scale=1.).map(d_in=1.)
@@ -59,7 +59,7 @@ This is extremely powerful!
 * | If you have a noise scale and a budget ``d_out``, you can solve for the largest bound on ``d_in`` that is still differentially private.
   | This is useful when you want to determine an upper bound on how many records can be collected from an individual before needing to truncate.
 
-  .. doctest::
+  .. code:: python
 
     >>> # finds the largest permissible d_in, a sensitivity
     >>> dp.binary_search(lambda d_in: dp.m.make_gaussian(*input_space, scale=1.).check(d_in=d_in, d_out=1.))
@@ -69,7 +69,7 @@ This is extremely powerful!
 * | If you have ``d_in``, ``d_out``, and noise scale derived from a target accuracy, you can solve for the smallest dataset size ``n`` that is still differentially private.
   | This is useful when you want to determine the necessary sample size when collecting data.
 
-  .. doctest::
+  .. code:: python
 
     >>> # finds the smallest n
     >>> dp.binary_search_param(
@@ -82,7 +82,7 @@ This is extremely powerful!
 * | If you have ``d_in``, ``d_out``, and noise scale derived from a target accuracy, you can solve for the greatest clipping range that is still differentially private
   | This is useful when you want to minimize the likelihood of introducing bias.
 
-  .. doctest::
+  .. code:: python
 
     >>> # finds the largest clipping bounds
     >>> dp.binary_search_param(
