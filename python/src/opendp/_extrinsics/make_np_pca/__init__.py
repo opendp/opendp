@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import NamedTuple, List, Optional
+from typing import NamedTuple, List, Optional, TYPE_CHECKING
 
 from opendp._extrinsics.make_np_clamp import then_np_clamp
 from opendp._extrinsics._utilities import register_measurement, to_then
@@ -8,6 +8,10 @@ from opendp._extrinsics._make_np_eigendecomposition import (
     then_private_np_eigendecomposition,
 )
 from opendp.mod import Domain, Metric, Measurement
+from opendp._lib import import_optional_dependency
+
+if TYPE_CHECKING: # pragma: no cover
+    import numpy # type: ignore[import-not-found]
 
 
 class PCAEpsilons(NamedTuple):
@@ -34,14 +38,14 @@ def make_private_np_pca(
     :returns a Measurement that computes a tuple of (mean, S, Vt)
     """
     import opendp.prelude as dp
-    import numpy as np
+    np = import_optional_dependency('numpy')
 
     dp.assert_features("contrib", "floating-point")
 
     class PCAResult(NamedTuple):
-        mean: np.ndarray
-        S: np.ndarray
-        Vt: np.ndarray
+        mean: numpy.ndarray
+        S: numpy.ndarray
+        Vt: numpy.ndarray
 
     input_desc = input_domain.descriptor
     if input_desc.size is None:
@@ -137,7 +141,7 @@ then_private_np_pca = register_measurement(make_private_np_pca)
 
 def _smaller(v):
     """returns the next non-negative float closer to zero"""
-    import numpy as np
+    np = import_optional_dependency('numpy')
 
     if v < 0:
         raise ValueError("expected non-negative value")
@@ -159,7 +163,7 @@ def _split_pca_epsilon_evenly(unit_epsilon, num_eigvec_releases, estimate_mean=F
 
 def _make_center(input_domain, input_metric):
     import opendp.prelude as dp
-    import numpy as np
+    np = import_optional_dependency('numpy')
 
     dp.assert_features("contrib", "floating-point")
 
