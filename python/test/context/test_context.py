@@ -12,17 +12,19 @@ def test_unit_of():
     assert dp.unit_of(changes=3) == (dp.change_one_distance(), 3)
     assert dp.unit_of(changes=3, ordered=True) == (dp.hamming_distance(), 3)
 
-    # TODO: For the cases below, is ordered meaningful?
-    # Should an exception be raised?
+    # For the rest, "ordered=True" is not allowed:
 
     assert dp.unit_of(absolute=3) == (dp.absolute_distance(dp.i32), 3)
-    assert dp.unit_of(absolute=3, ordered=True) == (dp.absolute_distance(dp.i32), 3)
+    with pytest.raises(ValueError):
+        dp.unit_of(absolute=3, ordered=True)
 
     assert dp.unit_of(l1=2.0) == (dp.l1_distance(T=float), 2.0)
-    assert dp.unit_of(l1=2.0, ordered=True) == (dp.l1_distance(T=float), 2.0)
+    with pytest.raises(ValueError):
+        dp.unit_of(l1=2.0, ordered=True)
 
     assert dp.unit_of(l2=2.0) == (dp.l2_distance(T=float), 2.0)
-    assert dp.unit_of(l2=2.0, ordered=True) == (dp.l2_distance(T=float), 2.0)
+    with pytest.raises(ValueError):
+        dp.unit_of(l2=2.0, ordered=True)
 
 
 def test_privacy_loss_of():
@@ -53,10 +55,8 @@ def test_context_repr():
         input_domain   = VectorDomain(AtomDomain(T=i32)),
         input_metric   = SymmetricDistance(),
         output_measure = MaxDivergence(f64)),
-    queryable  = Queryable(Q=AnyMeasurement),
     d_in       = 3,
-    d_mids     = [3.0],
-    d_out      = None)'''
+    d_mids     = [3.0])'''
 
 
 def test_context_init_split_by_weights():
@@ -86,20 +86,6 @@ def test_context_init_split_evenly_over():
     # where we're headed:
     # print(context.query().dp_sum((1, 10)).release())
 
-
-def test_partial_chain_right_shift():
-    context = dp.Context.compositor(
-        data=[1, 2, 3],
-        privacy_unit=dp.unit_of(contributions=3),
-        privacy_loss=dp.loss_of(epsilon=3.0),
-        split_evenly_over=3,
-    )
-
-    laplace = context.query().clamp((1, 10)).sum().laplace()
-    with pytest.raises(ValueError):
-        # TODO: What's a good way to exercise without using the private field?
-        # What's something we expect to pass?
-        laplace._chain >> None
 
 
 def test_context_zCDP():
@@ -134,10 +120,8 @@ def test_query_repr():
             input_domain   = VectorDomain(AtomDomain(T=i32)),
             input_metric   = SymmetricDistance(),
             output_measure = MaxDivergence(f64)),
-        queryable  = Queryable(Q=AnyMeasurement),
         d_in       = 1,
-        d_mids     = [1.0],
-        d_out      = None))'''
+        d_mids     = [1.0]))'''
 
 
 def test_subcontext_changes_metric():

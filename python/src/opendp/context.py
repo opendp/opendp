@@ -271,6 +271,9 @@ def unit_of(
     :param ordered: Set to ``True`` to use ``InsertDeleteDistance`` instead of ``SymmetricDistance``, or ``HammingDistance`` instead of ``ChangeOneDistance``.
     :param U: The type of the dataset distance."""
 
+    if ordered and contributions is None and changes is None:
+        raise ValueError('"ordered" is only valid with "changes" or "contributions"')
+
     def _is_distance(p, v):
         return p not in ["ordered", "U", "_is_distance"] and v is not None
 
@@ -332,10 +335,9 @@ class Context(object):
     def __repr__(self) -> str:
         return f"""Context(
     accountant = {indent(repr(self.accountant))},
-    queryable  = {self.queryable},
     d_in       = {self.d_in},
-    d_mids     = {self.d_mids},
-    d_out      = {self.d_out})"""
+    d_mids     = {self.d_mids})"""
+    # TODO: Add "d_out" when filters are implemented.
 
     @staticmethod
     def compositor(
