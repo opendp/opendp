@@ -41,8 +41,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     Measurement(
         input_domain   = AtomDomain(T=i32),
         input_metric   = AbsoluteDistance(i32),
-        output_measure = MaxDivergence(f64)
-    )
+        output_measure = MaxDivergence(f64))
 
     >>> # invoke the measurement (invoke and __call__ are equivalent)
     >>> print('explicit: ', laplace.invoke(100))  # -> 101   # doctest: +ELLIPSIS
@@ -198,7 +197,10 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
             pass
     
     def __repr__(self) -> str:
-        return f"Measurement(\n    input_domain   = {self.input_domain},\n    input_metric   = {self.input_metric},\n    output_measure = {self.output_measure}\n)" # pragma: no cover
+        return f"""Measurement(
+    input_domain   = {self.input_domain},
+    input_metric   = {self.input_metric},
+    output_measure = {self.output_measure})"""
 
 
 class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
