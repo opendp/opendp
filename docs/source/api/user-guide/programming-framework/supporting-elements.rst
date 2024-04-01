@@ -4,7 +4,7 @@ Supporting Elements
 This section builds on the :ref:`core-structures` documentation to expand on the constituent pieces of Measurements and Transformations.
 
 
-.. _functions:
+.. _functions-user-guide:
 
 Function
 --------
@@ -45,7 +45,7 @@ Or ``invoke`` can be used equivalently:
 A mathematical function associates each value in some input set with some value in the output set (or a distribution over such values, in the case of a randomized function).
 In OpenDP, as discussed in the next section, we capture these sets with domains.
 
-.. _domains:
+.. _domains-user-guide:
 
 Domain
 ------
@@ -149,7 +149,7 @@ These domains serve two purposes:
    to guarantee that the output of the first function is always a valid input to the second function.
 
 
-.. _metrics:
+.. _metrics-user-guide:
 
 Metric
 ------
@@ -176,7 +176,7 @@ In practice, you may not have a need to provide global sensitivities to stabilit
 because they are a midway distance bound encountered while relating dataset distances and privacy distances.
 However, there are situations where constructors accept a metric for specifying the metric for sensitivities.
 
-.. _measures:
+.. _measures-user-guide:
 
 Measure
 -------
@@ -287,6 +287,6 @@ Practically speaking, the smaller the ``d_out``, the tighter your analysis will 
 You might find it surprising that metrics and measures are never actually evaluated!
 The framework does not evaluate these because it only needs to relate a user-provided input distance to another user-provided output distance.
 Even the user should not directly compute input and output distances:
-they are :ref:`solved-for <determining-accuracy>`, :ref:`bisected <parameter-search>`, or provided by the Context API.
+they are :ref:`solved-for <accuracy-user-guide>`, :ref:`bisected <parameter-search>`, or provided by the Context API.
 
 Be careful: even a dataset query to determine the greatest number of contributions made by any one individual can itself be private information.

@@ -1,4 +1,4 @@
-.. _combinator-constructors:
+.. _combinators-user-guide:
 
 Combinators
 ===========
@@ -104,7 +104,7 @@ This is intended to enable further chaining with preprocessors such as:
 * :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`
 * :py:func:`make_clamp <opendp.transformations.make_clamp>` 
 * :py:func:`make_resize <opendp.transformations.make_resize>`.
-See the section on :ref:`transformation-constructors` for more information on how to preprocess data in OpenDP.
+See the section on :ref:`transformations-user-guide` for more information on how to preprocess data in OpenDP.
 
 Composition
 -----------

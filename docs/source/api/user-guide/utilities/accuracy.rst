@@ -1,5 +1,5 @@
 
-.. _determining-accuracy:
+.. _accuracy-user-guide:
 
 Accuracy
 --------
