@@ -279,7 +279,7 @@ fn generate_docstring_arg(arg: &Argument, hierarchy: &HashMap<String, Vec<String
                 v
             })
             .map_or(
-                format!("\n:type {}:", name),
+                format!("\n:type {}:", name), // ":type"  is required, even if we haven't filled it in yet.
                 |v| format!("\n:type {}: {}", name, v)
             )
     )
