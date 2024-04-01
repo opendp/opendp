@@ -89,8 +89,11 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
     (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
 
     :param T: carrier type (the type of members in the domain)
+    :type T:
     :param M: metric type
+    :type M:
     :param infer: if True, ``T`` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
+    :type infer:
     """
     import opendp.typing as ty
 
@@ -156,7 +159,9 @@ def domain_of(T, infer=False) -> Domain:
     VectorDomain(AtomDomain(T=i32))
 
     :param T: carrier type
+    :type T:
     :param infer: if True, ``T`` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
+    :type infer:
     """
     import opendp.typing as ty
     from opendp.domains import vector_domain, atom_domain, option_domain, map_domain
@@ -266,12 +271,19 @@ def unit_of(
     (L1Distance(f64), 2.0)
 
     :param contributions: Greatest number of records a privacy unit may contribute to microdata
+    :type contributions:
     :param changes: Greatest number of records a privacy unit may change in microdata
+    :type changes:
     :param absolute: Greatest absolute distance a privacy unit can influence a scalar aggregate data set
+    :type absolute:
     :param l1: Greatest l1 distance a privacy unit can influence a vector aggregate data set
+    :type l1:
     :param l2: Greatest l2 distance a privacy unit can influence a vector aggregate data set
+    :type l2:
     :param ordered: Set to ``True`` to use ``InsertDeleteDistance`` instead of ``SymmetricDistance``, or ``HammingDistance`` instead of ``ChangeOneDistance``.
-    :param U: The type of the dataset distance."""
+    :type ordered:
+    :param U: The type of the dataset distance.
+    :type U:"""
 
     if ordered and contributions is None and changes is None:
         raise ValueError('"ordered" is only valid with "changes" or "contributions"')
@@ -527,6 +539,7 @@ class Query(object):
         """Resolve the query into a measurement.
 
         :param allow_transformations: If true, allow the response to be a transformation instead of a measurement.
+        :type allow_transformations:
         """
         # resolve a partial chain into a measurement, by fixing the input and output distances
         if isinstance(self._chain, PartialChain):
@@ -561,7 +574,9 @@ class Query(object):
         ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.
 
         :param split_evenly_over: The number of parts to evenly distribute the privacy loss
+        :type split_evenly_over:
         :param split_by_weights: A list of weights for each intermediate privacy loss
+        :type split_by_weights:
         """
 
         if d_out is not None and self._d_out is not None:
