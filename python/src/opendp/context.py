@@ -213,7 +213,7 @@ def metric_of(M) -> Metric:
     raise TypeError(f"unrecognized metric: {M}")
 
 
-LossParameter = float | Tuple[float, float]
+LossParameter = Union[float, Tuple[float, float]]
 
 
 def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, LossParameter]:
