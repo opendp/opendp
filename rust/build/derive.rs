@@ -22,7 +22,7 @@ pub fn main() {
     // write out a json file containing the proof paths. To be used by the proc macros later
     write_proof_paths(&proof_paths).unwrap();
 
-    #[cfg(feature = "ffi")]
+    #[cfg(feature = "bindings")]
     generate_header();
 
     // parse crate into module metadata
@@ -45,7 +45,7 @@ pub fn main() {
     }
 }
 
-#[cfg(feature = "ffi")]
+#[cfg(feature = "bindings")]
 fn generate_header() {
     use cbindgen::{Config, Language};
     use std::env;

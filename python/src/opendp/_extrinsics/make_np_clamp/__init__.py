@@ -1,5 +1,6 @@
 from opendp._extrinsics._utilities import register_transformation
 from opendp.mod import Domain, Metric, Transformation
+from opendp._lib import import_optional_dependency
 
 
 def make_np_clamp(
@@ -14,7 +15,7 @@ def make_np_clamp(
     :param origin: norm clamping is centered on this point. Defaults to zero
     """
     import opendp.prelude as dp
-    import numpy as np  # type: ignore[import]
+    np = import_optional_dependency('numpy')
 
     dp.assert_features("contrib")
 

@@ -86,7 +86,7 @@ jobs:
           cache: pip
 
       - name: Install requirements
-        run: pip install -r tools/requirements-channel_tool.txt
+        run: pip install -r tools/requirements-tools.txt
 
       - name: Initialize channel
         env:

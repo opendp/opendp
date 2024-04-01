@@ -1,12 +1,13 @@
-import sys
 import pytest
 import opendp.prelude as dp
+from opendp._lib import np_csprng, import_optional_dependency
+from ..helpers import optional_dependency
 
 dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 
 def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
-    import numpy as np
+    np = import_optional_dependency('numpy')
 
     cov = cov or sample_covariance(num_columns)
     microdata = np.random.multivariate_normal(
@@ -17,40 +18,44 @@ def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
 
 
 def sample_covariance(num_features):
-    import numpy as np
+    np = import_optional_dependency('numpy')
 
     A = np.random.uniform(0, num_features, size=(num_features, num_features))
     return A.T @ A
 
 
-@pytest.mark.skipif("scipy" not in sys.modules, reason="Scipy needed")
+@pytest.mark.skipif(np_csprng is None, reason='randomgen not installed')
 def test_pca():
     from opendp._extrinsics.make_np_pca import then_private_np_pca
 
     num_columns = 4
     num_rows = 10_000
-    space = (
-        dp.np_array2_domain(norm=1, p=2, origin=0, num_columns=num_columns, size=num_rows, T=float),
-        dp.symmetric_distance(),
-    )
-    m_pca = space >> then_private_np_pca(unit_epsilon=1.0)
+    with optional_dependency('numpy'):
+        space = (
+            dp.np_array2_domain(norm=1, p=2, origin=0, num_columns=num_columns, size=num_rows, T=float),
+            dp.symmetric_distance(),
+        )
+    with optional_dependency('scipy.linalg'):
+        m_pca = space >> then_private_np_pca(unit_epsilon=1.0)
 
     print(m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)))
     assert m_pca.check(2, 1.0)
 
 
-@pytest.mark.skipif("sklearn" not in sys.modules, reason="Scikit-Learn needed")
+@pytest.mark.skipif(np_csprng is None, reason='randomgen not installed')
 def test_pca_skl():
     num_columns = 4
     num_rows = 10_000
-    data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
+    with optional_dependency('numpy'):
+        data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
 
-    model = dp.sklearn.PCA(
-        epsilon=1.0,
-        row_norm=1.0,
-        n_samples=num_rows,
-        n_features=4,
-    )
+    with optional_dependency('sklearn'):
+        model = dp.sklearn.PCA(
+            epsilon=1.0,
+            row_norm=1.0,
+            n_samples=num_rows,
+            n_features=4,
+        )
 
     model.fit(data)
     print(model)
@@ -81,29 +86,28 @@ def test_pca_skl():
 
 
 def flip_row_signs(a, b):
-    import numpy as np
-
+    np = pytest.importorskip('numpy')
     signs = np.equal(np.sign(a[:, 0]), np.sign(b[:, 0])) * 2 - 1
     return a, b * signs[:, None]
 
 
-def flaky_test_pca_compare_sklearn():
-    import numpy as np
-    from sklearn.decomposition import PCA  # type: ignore[import]
-
+def flaky_assert_pca_compare_sklearn():
     num_columns = 4
     num_rows = 1_000_000
-    data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
+    with optional_dependency('numpy'):
+        data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
 
-    model_odp = dp.sklearn.PCA(
-        epsilon=1_000_000.0,
-        row_norm=64.0,
-        n_samples=num_rows,
-        n_features=4,
-    )
+    with optional_dependency("sklearn"):
+        model_odp = dp.sklearn.PCA(
+            epsilon=1_000_000.0,
+            row_norm=64.0,
+            n_samples=num_rows,
+            n_features=4,
+        )
     model_odp.fit(data)
 
-    model_skl = PCA()
+    sklearn = pytest.importorskip('sklearn')
+    model_skl = sklearn.decomposition.PCA()
     model_skl.fit(data)
 
     print(model_odp)
@@ -111,6 +115,7 @@ def flaky_test_pca_compare_sklearn():
 
     print("odp singular values", model_odp.singular_values_)
     print("skl singular values", model_skl.singular_values_)
+    np = pytest.importorskip('numpy')
     assert np.allclose(
         model_odp.singular_values_, model_skl.singular_values_, atol=1e-1
     )
@@ -126,11 +131,11 @@ def flaky_test_pca_compare_sklearn():
     print(model_odp.explained_variance_)
 
 
-@pytest.mark.skipif("sklearn" not in sys.modules, reason="Scikit-Learn needed")
+@pytest.mark.skipif(np_csprng is None, reason='randomgen not installed')
 def test_pca_compare_sklearn():
     for _ in range(5):
         try:
-            flaky_test_pca_compare_sklearn()
+            flaky_assert_pca_compare_sklearn()
             break
         except AssertionError:
             pass

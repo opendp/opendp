@@ -279,7 +279,9 @@ jobs:
           path: python/src/opendp/
 
       - name: Create Python package
-        run: bash tools/python_build.sh -i
+        run: |
+          pip install -r tools/requirements-tools.txt
+          bash tools/python_build.sh
 
       - name: Upload Python wheel
         uses: actions/upload-artifact@v4
