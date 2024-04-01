@@ -3,6 +3,7 @@ The ``context`` module provides :py:class:`opendp.context.Context` and supportin
 '''
 
 from __future__ import annotations
+from dataclasses import dataclass
 from typing import Any, Callable, List, Optional, Tuple, Union
 import importlib
 from inspect import signature
@@ -53,7 +54,8 @@ __all__ = [
     'Context',
     'Query',
     'Chain',
-    'PartialChain'
+    'PartialChain',
+    'LossParameter'
 ]
 
 
@@ -214,7 +216,26 @@ def metric_of(M) -> Metric:
     raise TypeError(f"unrecognized metric: {M}")
 
 
-LossParameter = Union[float, Tuple[float, float]]
+
+@dataclass
+class LossParameter:
+    epsilon: Optional[float] = None
+    delta: Optional[float] = None
+    rho: Optional[float] = None
+
+    def __repr__(self) -> str:
+        if self.epsilon and self.delta:
+            return f'({self.epsilon}, {self.delta})'
+        if self.epsilon:
+            return str(self.epsilon)
+        return str(self.rho)
+    
+    def __mul__(self, other) -> LossParameter:
+        return LossParameter(
+            epsilon=(self.epsilon * other if self.epsilon is not None else None),
+            delta=(self.delta * other if self.delta is not None else None),
+            rho=(self.rho * other if self.rho is not None else None),
+        )
 
 
 def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, LossParameter]:
@@ -241,13 +262,13 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, LossPa
 
     if rho:
         U = RuntimeType.parse_or_infer(U, rho)
-        return zero_concentrated_divergence(T=U), rho
+        return zero_concentrated_divergence(T=U), LossParameter(rho=rho)
     if delta is None:
         U = RuntimeType.parse_or_infer(U, epsilon)
-        return max_divergence(T=U), epsilon
+        return max_divergence(T=U), LossParameter(epsilon=epsilon)
     else:
         U = RuntimeType.parse_or_infer(U, epsilon)
-        return fixed_smoothed_max_divergence(T=U), (epsilon, delta)
+        return fixed_smoothed_max_divergence(T=U), LossParameter(epsilon=epsilon, delta=delta)
 
 
 def unit_of(
@@ -349,7 +370,7 @@ class Context(object):
     def compositor(
         data: Any,
         privacy_unit: Tuple[Metric, float],
-        privacy_loss: Tuple[Measure, Any],
+        privacy_loss: Tuple[Measure, LossParameter],
         split_evenly_over: Optional[int] = None,
         split_by_weights: Optional[List[float]] = None,
         domain: Optional[Domain] = None,
@@ -672,7 +693,7 @@ class PartialChain(object):
 def _sequential_composition_by_weights(
     domain: Domain,
     privacy_unit: Tuple[Metric, float],
-    privacy_loss: Tuple[Measure, float],
+    privacy_loss: Tuple[Measure, LossParameter],
     split_evenly_over: Optional[int] = None,
     split_by_weights: Optional[List[float]] = None,
 ) -> Tuple[Measurement, List[Any]]:
@@ -704,14 +725,8 @@ def _sequential_composition_by_weights(
             "Must specify either `split_evenly_over` or `split_by_weights`"
         )
 
-    def mul(dist, scale):
-        if isinstance(dist, tuple):
-            return dist[0] * scale, dist[1] * scale
-        else:
-            return dist * scale
-
     def scale_weights(scale, weights):
-        return [mul(w, scale) for w in weights]
+        return [w * scale for w in weights]
 
     def scale_sc(scale):
         return make_sequential_composition(

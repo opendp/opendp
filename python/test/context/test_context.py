@@ -28,11 +28,11 @@ def test_unit_of():
 
 
 def test_privacy_loss_of():
-    assert dp.loss_of(epsilon=3.0) == (dp.max_divergence(T=float), 3.0)
-    assert dp.loss_of(rho=2.0) == (dp.zero_concentrated_divergence(T=float), 2.0)
+    assert dp.loss_of(epsilon=3.0) == (dp.max_divergence(T=float), dp.LossParameter(epsilon=3.0))
+    assert dp.loss_of(rho=2.0) == (dp.zero_concentrated_divergence(T=float), dp.LossParameter(rho=2.0))
     assert dp.loss_of(epsilon=2.0, delta=1e-6) == (
         dp.fixed_smoothed_max_divergence(T=float),
-        (2.0, 1e-6),
+        dp.LossParameter(epsilon=2.0, delta=1e-6),
     )
 
 
