@@ -83,6 +83,17 @@ We suggest importing under the conventional name ``dp``:
         )
     }
 
+    fn special_boilerplate(name: String) -> String {
+        let initial = name.chars().nth(0);
+        format!("{}\n\nThe methods of this module will then be accessible at ``dp.{}``.",
+            boilerplate(name),
+            match initial {
+                Some(s) => s.to_string(),
+                None => "".to_string()
+            }
+        )
+    }
+
     let module_docs = match module_name {
         "accuracy" => format!(
             "{}{}",
@@ -91,7 +102,7 @@ We suggest importing under the conventional name ``dp``:
         "combinators" => format!(
             "{}{}",
             "The ``combinators`` module provides functions for combining transformations and measurements.",
-            boilerplate("combinators".to_string())),
+            special_boilerplate("combinators".to_string())),
         "core" =>
             "The ``core`` module provides functions for accessing the fields of transformations and measurements.".to_string(),
         "domains" => format!(
@@ -101,7 +112,7 @@ We suggest importing under the conventional name ``dp``:
         "measurements" => format!(
             "{}{}",
             "The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.",
-            boilerplate("measurements".to_string())),
+            special_boilerplate("measurements".to_string())),
         "measures" => format!(
             "{}{}",
             "The ``measures`` module provides functions that measure the distance between probability distributions.",
@@ -113,7 +124,7 @@ We suggest importing under the conventional name ``dp``:
         "transformations" => format!(
             "{}{}",
             "The ``transformations`` module provides functions that deterministicly transform datasets.",
-            boilerplate("transformations".to_string())),
+            special_boilerplate("transformations".to_string())),
         _ => "TODO!".to_string()
     };
 

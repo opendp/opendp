@@ -9,6 +9,8 @@ We suggest importing under the conventional name ``dp``:
 .. code:: python
 
     >>> import opendp.prelude as dp
+
+The methods of this module will then be accessible at ``dp.c``.
 '''
 from opendp._convert import *
 from opendp._lib import *
