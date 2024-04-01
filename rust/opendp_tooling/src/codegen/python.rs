@@ -85,11 +85,12 @@ We suggest importing under the conventional name ``dp``:
 
     fn special_boilerplate(name: String) -> String {
         let initial = name.chars().nth(0);
-        format!("{}\n\nThe methods of this module will then be accessible at ``dp.{}``.",
+        format!(
+            "{}\n\nThe methods of this module will then be accessible at ``dp.{}``.",
             boilerplate(name),
             match initial {
                 Some(s) => s.to_string(),
-                None => "".to_string()
+                None => "".to_string(),
             }
         )
     }
