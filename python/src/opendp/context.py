@@ -2,6 +2,7 @@
 The ``context`` module provides :py:class:`opendp.context.Context` and supporting utilities.
 '''
 
+import logging
 from typing import Any, Callable, List, Optional, Tuple, Union
 import importlib
 from inspect import signature
@@ -54,6 +55,9 @@ __all__ = [
     'Chain',
     'PartialChain'
 ]
+
+
+logger = logging.getLogger(__name__)
 
 
 # a dictionary of "constructor name" -> (constructor_function, is_partial)
@@ -235,13 +239,22 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]
     if epsilon is None and delta is not None:
         raise ValueError("Epsilon must be specified if delta is given.")
 
+    def range_warning(name, value, info_level, warn_level):
+        if info_level < value <= warn_level:
+            logger.info(f'{name} is typically less than {info_level}')
+        if warn_level < value:
+            logger.warn(f'{name} should be less than {warn_level}, and is typically less than {info_level}')
+
     if rho:
+        range_warning('rho', rho, 0.25, 0.5)
         U = RuntimeType.parse_or_infer(U, rho)
         return zero_concentrated_divergence(T=U), rho
     if delta is None:
+        range_warning('delta', delta, 1e-6, 1e-6)
         U = RuntimeType.parse_or_infer(U, epsilon)
         return max_divergence(T=U), epsilon
     else:
+        range_warning('epsilon', delta, 1, 5)
         U = RuntimeType.parse_or_infer(U, epsilon)
         return fixed_smoothed_max_divergence(T=U), (epsilon, delta) # type: ignore[return-value]
 
