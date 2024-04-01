@@ -1,8 +1,14 @@
 # Auto-generated. Do not edit!
 '''
-
 The ``transformations`` module provides functions that deterministicly transform datasets.
-For more context, set :ref:`Transformations in the User Guide <transformations-user-guide>`
+For more context, see :ref:`transformations in the User Guide <transformations-user-guide>`.
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
 '''
 from opendp._convert import *
 from opendp._lib import *

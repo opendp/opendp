@@ -1,8 +1,14 @@
 # Auto-generated. Do not edit!
 '''
-
 The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.
-For more context, see :ref:`Measurements in the User Guide <measurements-user-guide>`
+For more context, see :ref:`measurements in the User Guide <measurements-user-guide>`.
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
 '''
 from opendp._convert import *
 from opendp._lib import *

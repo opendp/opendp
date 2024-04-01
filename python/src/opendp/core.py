@@ -1,6 +1,5 @@
 # Auto-generated. Do not edit!
 '''
-
 The ``core`` module provides functions for accessing the fields of transformations and measurements.
 '''
 from opendp._convert import *

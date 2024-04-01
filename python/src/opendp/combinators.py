@@ -1,8 +1,14 @@
 # Auto-generated. Do not edit!
 '''
-
 The ``combinators`` module provides functions for combining transformations and measurements.
-For more context, see :ref:`Combinators in the User Guide <combinators-user-guide>`
+For more context, see :ref:`combinators in the User Guide <combinators-user-guide>`.
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
 '''
 from opendp._convert import *
 from opendp._lib import *
