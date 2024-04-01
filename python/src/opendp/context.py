@@ -243,20 +243,21 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]
         if info_level < value <= warn_level:
             logger.info(f'{name} is typically less than {info_level}')
         if warn_level < value:
-            logger.warn(f'{name} should be less than {warn_level}, and is typically less than {info_level}')
+            logger.warning(f'{name} should be less than {warn_level}, and is typically less than {info_level}')
 
     if rho:
         range_warning('rho', rho, 0.25, 0.5)
         U = RuntimeType.parse_or_infer(U, rho)
         return zero_concentrated_divergence(T=U), rho
+
+    range_warning('epsilon', epsilon, 1, 5)
     if delta is None:
-        range_warning('delta', delta, 1e-6, 1e-6)
         U = RuntimeType.parse_or_infer(U, epsilon)
         return max_divergence(T=U), epsilon
-    else:
-        range_warning('epsilon', delta, 1, 5)
-        U = RuntimeType.parse_or_infer(U, epsilon)
-        return fixed_smoothed_max_divergence(T=U), (epsilon, delta) # type: ignore[return-value]
+
+    range_warning('delta', delta, 1e-6, 1e-6)
+    U = RuntimeType.parse_or_infer(U, epsilon)
+    return fixed_smoothed_max_divergence(T=U), (epsilon, delta) # type: ignore[return-value]
 
 
 def unit_of(
