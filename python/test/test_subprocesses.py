@@ -5,6 +5,8 @@ import pytest
 tests = {
     # "cd .." because we want to lint the build tools as well.
     'flake8 linting': 'cd .. && flake8 . --count --show-source --statistics',
+    # pylint is slower and fussier: Only using it to check documentation consistency for now.
+    'pylint doc param consistency': 'pylint opendp',
     # Had non-reproducible errors between local runs, so disable caching.
     'mypy type checking': 'mypy . --cache-dir=/dev/null',
 }
