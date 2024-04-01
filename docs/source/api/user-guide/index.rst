@@ -14,3 +14,4 @@ it complements the bottom-up view provided by the `Python API Reference <../pyth
    measurements/index
    combinators/index
    utilities/index
+   context/index

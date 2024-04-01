@@ -3,6 +3,8 @@
 Combinators
 ===========
 
+(See also :py:mod:`opendp.combinators` in the API reference.)
+
 Combinator constructors use Transformations or Measurements to produce a new Transformation or Measurement.
 
 .. _chaining:

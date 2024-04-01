@@ -1,13 +1,14 @@
 Supporting Elements
 ===================
 
-This section builds on the :ref:`core-structures` documentation to expand on the constituent pieces of Measurements and Transformations.
+This section builds on the :ref:`core-user-guide` documentation to expand on the constituent pieces of Measurements and Transformations.
 
 
 .. _functions-user-guide:
 
 Function
 --------
+
 As one would expect, all data processing is handled via a function.
 The function member stored in a Transformation or Measurement struct is straightforward representation of an idealized mathematical function.
 
@@ -49,6 +50,9 @@ In OpenDP, as discussed in the next section, we capture these sets with domains.
 
 Domain
 ------
+
+(See also :py:mod:`opendp.domains` in the API reference.)
+
 A domain describes the set of all possible input values of a function, or all possible output values of a function.
 Transformations have both an ``input_domain`` and ``output_domain``, while measurements only have an ``input_domain``.
 
@@ -153,6 +157,9 @@ These domains serve two purposes:
 
 Metric
 ------
+
+(See also :py:mod:`opendp.metrics` in the API reference.)
+
 A metric is a function that computes the distance between two elements of a domain.
 Transformations have both an ``input_metric`` and ``output_metric``, while measurements only have an ``input_metric``.
 
@@ -180,6 +187,9 @@ However, there are situations where constructors accept a metric for specifying 
 
 Measure
 -------
+
+(See also :py:mod:`opendp.measures` in the API reference.)
+
 In OpenDP, a measure is a function for measuring the distance between probability distributions.
 Transformations don't make use of a measure, but measurements do have an ``output_measure``.
 

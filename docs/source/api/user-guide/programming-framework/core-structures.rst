@@ -1,7 +1,9 @@
-.. _core-structures:
+.. _core-user-guide:
 
 Core Structures
 ===============
+
+(See also :py:mod:`opendp.core` in the API reference.)
 
 OpenDP is focused on creating computations with specific privacy characteristics.
 These computations are modeled with two core structures in OpenDP:
@@ -74,6 +76,8 @@ Transformations need to be :ref:`chained <chaining>` with a measurement before t
 
 Measurement
 -----------
+
+(See also :py:mod:`opendp.measurements` in the API reference.)
 
 A :py:class:`Measurement <opendp.mod.Measurement>` is, in contrast, a `randomized` mapping from datasets to outputs.
 Measurements are used to create differentially private releases.

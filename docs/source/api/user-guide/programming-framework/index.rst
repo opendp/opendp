@@ -18,7 +18,7 @@ There is also an illustrative notebook `A Framework to Understand DP <../../../t
 .. note::
 
     In this section, we've used lower case when writing the names of OpenDP concepts. 
-    Later, when we talk about :doc:`programming elements <core-structures>`, we'll use the capitalized form to refer to the concrete data types that implement these concepts. 
+    Later, when we talk about :ref:`programming elements <core-user-guide>`, we'll use the capitalized form to refer to the concrete data types that implement these concepts. 
     (The concept names link to their corresponding type descriptions.)
 
 * :ref:`measurements <measurements-user-guide>` are randomized mappings from a private, 

@@ -1,5 +1,9 @@
+.. _typing-user-guide:
+
 Typing
 ======
+
+(See also :py:mod:`opendp.typing` in the API reference.)
 
 OpenDP computations are always strict about the types being used. 
 Integers and floats are never treated interchangeably and there is never implicit casting between types.
@@ -92,7 +96,7 @@ Examples of these types include:
 * L1Distance[u128]
 
 The docstrings on the constructor APIs should typically guide you as to what types are permissible.
-If you aren't familiar with these concepts, it may help to review :ref:`domains` and :ref:`metrics`.
+If you aren't familiar with these concepts, it may help to review :ref:`domains-user-guide` and :ref:`metrics-user-guide`.
 
 
 Type Aliases
