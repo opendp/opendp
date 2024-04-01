@@ -103,8 +103,10 @@ We suggest importing under the conventional name ``dp``:
             "{}{}",
             "The ``combinators`` module provides functions for combining transformations and measurements.",
             special_boilerplate("combinators".to_string())),
-        "core" =>
+        "core" => format!(
+            "{}{}",
             "The ``core`` module provides functions for accessing the fields of transformations and measurements.".to_string(),
+            boilerplate("core".to_string())),
         "domains" => format!(
             "{}{}",
             "The ``domains`` module provides functions for creating and using domains.",
