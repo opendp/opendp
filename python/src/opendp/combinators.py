@@ -1,6 +1,8 @@
 # Auto-generated. Do not edit!
 '''
+
 The ``combinators`` module provides functions for combining transformations and measurements.
+For more context, see :ref:`Combinators in the User Guide <combinators-user-guide>`
 '''
 from opendp._convert import *
 from opendp._lib import *

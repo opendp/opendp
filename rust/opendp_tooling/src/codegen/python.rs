@@ -70,14 +70,29 @@ from opendp.measures import *"#
     };
 
     let module_docs = match module_name {
-        "accuracy" => "The ``accuracy`` module provides functions for converting between accuracy and scale parameters.",
-        "combinators" => "The ``combinators`` module provides functions for combining transformations and measurements.",
-        "core" => "The ``core`` module provides functions for accessing the fields of transformations and measurements.",
-        "domains" => "The ``domains`` modules provides functions for creating and using domains.",
-        "measurements" => "The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.",
-        "measures" => "The ``measures`` modules provides functions that measure the distance between probability distributions.",
-        "metrics" => "The ``metrics`` module provides fuctions that measure the distance between two elements of a domain.",
-        "transformations" => "The ``transformations`` module provides functions that deterministicly transform datasets.",
+        "accuracy" => "
+The ``accuracy`` module provides functions for converting between accuracy and scale parameters.
+For more context, see :ref:`Accuracy in the User Guide <accuracy-user-guide>`",
+        "combinators" => "
+The ``combinators`` module provides functions for combining transformations and measurements.
+For more context, see :ref:`Combinators in the User Guide <combinators-user-guide>`",
+        "core" => "
+The ``core`` module provides functions for accessing the fields of transformations and measurements.",
+        "domains" => "
+The ``domains`` module provides functions for creating and using domains.
+For more context, see :ref:`Domains in the User Guide <domains-user-guide>`",
+        "measurements" => "
+The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.
+For more context, see :ref:`Measurements in the User Guide <measurements-user-guide>`",
+        "measures" => "
+The ``measures`` module provides functions that measure the distance between probability distributions.
+For more context, see :ref:`Measures in the User Guide <measures-user-guide>`",
+        "metrics" => "
+The ``metrics`` module provides fuctions that measure the distance between two elements of a domain.
+For more context, see :ref:`Metrics in the User Guide <metrics-user-guide>`",
+        "transformations" => "
+The ``transformations`` module provides functions that deterministicly transform datasets.
+For more context, set :ref:`Transformations in the User Guide <transformations-user-guide>`",
         _ => "TODO!"
     };
 

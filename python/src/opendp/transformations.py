@@ -1,6 +1,8 @@
 # Auto-generated. Do not edit!
 '''
+
 The ``transformations`` module provides functions that deterministicly transform datasets.
+For more context, set :ref:`Transformations in the User Guide <transformations-user-guide>`
 '''
 from opendp._convert import *
 from opendp._lib import *

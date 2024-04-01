@@ -1,6 +1,8 @@
 # Auto-generated. Do not edit!
 '''
-The ``domains`` modules provides functions for creating and using domains.
+
+The ``domains`` module provides functions for creating and using domains.
+For more context, see :ref:`Domains in the User Guide <domains-user-guide>`
 '''
 from opendp._convert import *
 from opendp._lib import *

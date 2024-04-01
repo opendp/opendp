@@ -1,6 +1,8 @@
 # Auto-generated. Do not edit!
 '''
+
 The ``metrics`` module provides fuctions that measure the distance between two elements of a domain.
+For more context, see :ref:`Metrics in the User Guide <metrics-user-guide>`
 '''
 from opendp._convert import *
 from opendp._lib import *
