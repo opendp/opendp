@@ -460,6 +460,7 @@ def new_function(
     Can be used as a post-processing step.
 
     :param function: A function mapping data to a value of type `TO`
+    :type function:
     :param TO: Output Type
     :type TO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Function
@@ -494,6 +495,7 @@ def new_queryable(
     r"""Construct a queryable from a user-defined transition function.
 
     :param transition: A transition function taking a reference to self, a query, and an internal/external indicator
+    :type transition:
     :param Q: Query Type
     :type Q: :py:ref:`RuntimeTypeDescriptor`
     :param A: Output Type

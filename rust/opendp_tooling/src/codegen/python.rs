@@ -270,6 +270,7 @@ fn generate_docstring_arg(arg: &Argument, hierarchy: &HashMap<String, Vec<String
     format!(
         r#":param {name}: {description}{type_}"#,
         name = name,
+        description = arg.description.clone().unwrap_or_default(),
         type_ = arg
             .python_type_hint(hierarchy)
             .map(|v| if v.as_str() == "RuntimeTypeDescriptor" {
@@ -277,9 +278,10 @@ fn generate_docstring_arg(arg: &Argument, hierarchy: &HashMap<String, Vec<String
             } else {
                 v
             })
-            .map(|v| format!("\n:type {}: {}", name, v))
-            .unwrap_or_default(),
-        description = arg.description.clone().unwrap_or_default()
+            .map_or(
+                format!("\n:type {}:", name),
+                |v| format!("\n:type {}: {}", name, v)
+            )
     )
 }
 

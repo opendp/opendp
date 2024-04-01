@@ -67,10 +67,15 @@ def make_alp_queryable(
     :param input_metric: 
     :type input_metric: Metric
     :param scale: Privacy loss parameter. This is equal to epsilon/sensitivity.
+    :type scale:
     :param total_limit: Either the true value or an upper bound estimate of the sum of all values in the input.
+    :type total_limit:
     :param value_limit: Upper bound on individual values (referred to as β). Entries above β are clamped.
+    :type value_limit:
     :param size_factor: Optional multiplier (default of 50) for setting the size of the projection.
+    :type size_factor:
     :param alpha: Optional parameter (default of 4) for scaling and determining p in randomized response step.
+    :type alpha:
     :param CO: 
     :type CO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
@@ -117,10 +122,15 @@ def then_alp_queryable(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_alp_queryable`
 
     :param scale: Privacy loss parameter. This is equal to epsilon/sensitivity.
+    :type scale:
     :param total_limit: Either the true value or an upper bound estimate of the sum of all values in the input.
+    :type total_limit:
     :param value_limit: Upper bound on individual values (referred to as β). Entries above β are clamped.
+    :type value_limit:
     :param size_factor: Optional multiplier (default of 50) for setting the size of the projection.
+    :type size_factor:
     :param alpha: Optional parameter (default of 4) for scaling and determining p in randomized response step.
+    :type alpha:
     :param CO: 
     :type CO: :py:ref:`RuntimeTypeDescriptor`
     """
@@ -163,7 +173,9 @@ def make_base_laplace_threshold(
     :param input_metric: Metric for the input domain.
     :type input_metric: Metric
     :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+    :type scale:
     :param threshold: Exclude counts that are less than this minimum value.
+    :type threshold:
     :param k: The noise granularity in terms of 2^k.
     :type k: int
     :rtype: Measurement
@@ -203,7 +215,9 @@ def then_base_laplace_threshold(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_base_laplace_threshold`
 
     :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+    :type scale:
     :param threshold: Exclude counts that are less than this minimum value.
+    :type threshold:
     :param k: The noise granularity in terms of 2^k.
     :type k: int
     """
@@ -246,7 +260,9 @@ def make_gaussian(
     :param input_metric: Metric of the data type to be privatized.
     :type input_metric: Metric
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
+    :type scale:
     :param k: The noise granularity in terms of 2^k.
+    :type k:
     :param MO: Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
@@ -288,7 +304,9 @@ def then_gaussian(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_gaussian`
 
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
+    :type scale:
     :param k: The noise granularity in terms of 2^k.
+    :type k:
     :param MO: Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
     """
@@ -329,6 +347,7 @@ def make_geometric(
     :param input_metric: 
     :type input_metric: Metric
     :param scale: 
+    :type scale:
     :param bounds: 
     :type bounds: Any
     :param QO: 
@@ -372,6 +391,7 @@ def then_geometric(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_geometric`
 
     :param scale: 
+    :type scale:
     :param bounds: 
     :type bounds: Any
     :param QO: 
@@ -423,7 +443,9 @@ def make_laplace(
     :param input_metric: Metric of the data type to be privatized.
     :type input_metric: Metric
     :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
+    :type scale:
     :param k: The noise granularity in terms of 2^k, only valid for domains over floats.
+    :type k:
     :param QO: Data type of the output distance and scale. `f32` or `f64`.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
@@ -463,7 +485,9 @@ def then_laplace(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_laplace`
 
     :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
+    :type scale:
     :param k: The noise granularity in terms of 2^k, only valid for domains over floats.
+    :type k:
     :param QO: Data type of the output distance and scale. `f32` or `f64`.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     """
@@ -497,6 +521,7 @@ def make_randomized_response(
     :param categories: Set of valid outcomes
     :type categories: Any
     :param prob: Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
+    :type prob:
     :param constant_time: Set to true to enable constant time. Slower.
     :type constant_time: bool
     :param T: Data type of a category.
@@ -552,6 +577,7 @@ def make_randomized_response_bool(
     [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/randomized_response/make_randomized_response_bool.pdf)
 
     :param prob: Probability of returning the correct answer. Must be in `[0.5, 1)`
+    :type prob:
     :param constant_time: Set to true to enable constant time. Slower.
     :type constant_time: bool
     :param QO: Data type of probability and output distance.
@@ -689,7 +715,9 @@ def make_user_measurement(
     :param output_measure: The measure from which distances between adjacent output distributions are measured.
     :type output_measure: Measure
     :param function: A function mapping data from `input_domain` to a release of type `TO`.
+    :type function:
     :param privacy_map: A function mapping distances from `input_metric` to `output_measure`.
+    :type privacy_map:
     :param TO: The data type of outputs from the function.
     :type TO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
@@ -733,7 +761,9 @@ def then_user_measurement(
     :param output_measure: The measure from which distances between adjacent output distributions are measured.
     :type output_measure: Measure
     :param function: A function mapping data from `input_domain` to a release of type `TO`.
+    :type function:
     :param privacy_map: A function mapping distances from `input_metric` to `output_measure`.
+    :type privacy_map:
     :param TO: The data type of outputs from the function.
     :type TO: :py:ref:`RuntimeTypeDescriptor`
     """

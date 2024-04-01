@@ -293,7 +293,9 @@ def user_domain(
     :param identifier: A string description of the data domain.
     :type identifier: str
     :param member: A function used to test if a value is a member of the data domain.
+    :type member:
     :param descriptor: Additional constraints on the domain.
+    :type descriptor:
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse

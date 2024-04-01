@@ -33,7 +33,9 @@ def accuracy_to_discrete_gaussian_scale(
     [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/accuracy/accuracy_to_discrete_gaussian_scale.pdf)
 
     :param accuracy: Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
+    :type accuracy:
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+    :type alpha:
     :param T: Data type of `accuracy` and `alpha`
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Any
@@ -73,7 +75,9 @@ def accuracy_to_discrete_laplacian_scale(
     [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/accuracy/accuracy_to_discrete_laplacian_scale.pdf)
 
     :param accuracy: Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
+    :type accuracy:
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+    :type alpha:
     :param T: Data type of `accuracy` and `alpha`
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :return: Discrete laplacian noise scale that meets the `accuracy` requirement at a given level-`alpha`.
@@ -110,7 +114,9 @@ def accuracy_to_gaussian_scale(
     [accuracy_to_gaussian_scale in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.accuracy_to_gaussian_scale.html)
 
     :param accuracy: Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
+    :type accuracy:
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+    :type alpha:
     :param T: Data type of `accuracy` and `alpha`
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Any
@@ -146,7 +152,9 @@ def accuracy_to_laplacian_scale(
     [accuracy_to_laplacian_scale in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.accuracy_to_laplacian_scale.html)
 
     :param accuracy: Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
+    :type accuracy:
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+    :type alpha:
     :param T: Data type of `accuracy` and `alpha`
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :return: Laplacian noise scale that meets the `accuracy` requirement at a given level-`alpha`.
@@ -187,7 +195,9 @@ def discrete_gaussian_scale_to_accuracy(
     [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/accuracy/discrete_gaussian_scale_to_accuracy.pdf)
 
     :param scale: Gaussian noise scale.
+    :type scale:
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+    :type alpha:
     :param T: Data type of `scale` and `alpha`
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Any
@@ -233,7 +243,9 @@ def discrete_laplacian_scale_to_accuracy(
     [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/accuracy/discrete_laplacian_scale_to_accuracy.pdf)
 
     :param scale: Discrete Laplacian noise scale.
+    :type scale:
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+    :type alpha:
     :param T: Data type of `scale` and `alpha`
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Any
@@ -269,7 +281,9 @@ def gaussian_scale_to_accuracy(
     [gaussian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.gaussian_scale_to_accuracy.html)
 
     :param scale: Gaussian noise scale.
+    :type scale:
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+    :type alpha:
     :param T: Data type of `scale` and `alpha`
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Any
@@ -305,7 +319,9 @@ def laplacian_scale_to_accuracy(
     [laplacian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.laplacian_scale_to_accuracy.html)
 
     :param scale: Laplacian noise scale.
+    :type scale:
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+    :type alpha:
     :param T: Data type of `scale` and `alpha`
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Any

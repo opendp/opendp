@@ -2017,6 +2017,7 @@ def make_lipschitz_float_mul(
     * Output Metric:  `M`
 
     :param constant: The constant to multiply aggregates by.
+    :type constant:
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
     :param D: Domain of the function. Must be `AtomDomain<T>` or `VectorDomain<AtomDomain<T>>`
@@ -3309,7 +3310,9 @@ def make_user_transformation(
     :param output_metric: The metric from which distances between outputs of adjacent inputs are measured.
     :type output_metric: Metric
     :param function: A function mapping data from `input_domain` to `output_domain`.
+    :type function:
     :param stability_map: A function mapping distances from `input_metric` to `output_metric`.
+    :type stability_map:
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse

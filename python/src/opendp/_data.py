@@ -30,6 +30,7 @@ def bool_free(
     Used to clean up after the relation check.
 
     :param this: A pointer to the bool to free.
+    :type this:
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -55,6 +56,7 @@ def extrinsic_object_free(
     Used to clean up after the type getter functions.
 
     :param this: 
+    :type this:
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -107,6 +109,7 @@ def fill_bytes(
     sampled from a cryptographically secure RNG.
 
     :param ptr: 
+    :type ptr:
     :param len: 
     :type len: int
     :rtype: bool
