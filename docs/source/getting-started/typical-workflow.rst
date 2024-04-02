@@ -33,7 +33,7 @@ Releases on the teacher survey should conceal the addition or removal of any one
 
 .. tab-set::
 
-    .. tab-item:: Context API
+    .. tab-item:: Context API (Python)
         :sync: context
 
         .. literalinclude:: code/typical-workflow-context.rst
@@ -41,11 +41,19 @@ Releases on the teacher survey should conceal the addition or removal of any one
             :start-after: unit-of-privacy
             :end-before: /unit-of-privacy
 
-    .. tab-item:: Framework API
+    .. tab-item:: Framework API (Python)
         :sync: framework
 
         .. literalinclude:: code/typical-workflow-framework.rst
             :language: python
+            :start-after: unit-of-privacy
+            :end-before: /unit-of-privacy
+
+    .. tab-item:: Framework API (R)
+        :sync: r
+
+        .. literalinclude:: code/typical-workflow-framework.R
+            :language: r
             :start-after: unit-of-privacy
             :end-before: /unit-of-privacy
 
@@ -71,7 +79,7 @@ A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending
 
 .. tab-set::
 
-    .. tab-item:: Context API
+    .. tab-item:: Context API (Python)
         :sync: context
 
         .. literalinclude:: code/typical-workflow-context.rst
@@ -79,11 +87,19 @@ A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending
             :start-after: privacy-loss
             :end-before: /privacy-loss
 
-    .. tab-item:: Framework API
+    .. tab-item:: Framework API (Python)
         :sync: framework
 
         .. literalinclude:: code/typical-workflow-framework.rst
             :language: python
+            :start-after: privacy-loss
+            :end-before: /privacy-loss
+
+    .. tab-item:: Framework API (R)
+        :sync: r
+
+        .. literalinclude:: code/typical-workflow-framework.R
+            :language: r
             :start-after: privacy-loss
             :end-before: /privacy-loss
 
@@ -102,7 +118,7 @@ This is the same under either API.
 
 .. tab-set::
 
-    .. tab-item:: Context API
+    .. tab-item:: Context API (Python)
         :sync: context
 
         .. literalinclude:: code/typical-workflow-context.rst
@@ -110,11 +126,19 @@ This is the same under either API.
             :start-after: public-info
             :end-before: /public-info
 
-    .. tab-item:: Framework API
+    .. tab-item:: Framework API (Python)
         :sync: framework
 
         .. literalinclude:: code/typical-workflow-framework.rst
             :language: python
+            :start-after: public-info
+            :end-before: /public-info
+
+    .. tab-item:: Framework API (R)
+        :sync: r
+
+        .. literalinclude:: code/typical-workflow-framework.R
+            :language: r
             :start-after: public-info
             :end-before: /public-info
 
@@ -131,7 +155,7 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
 
 .. tab-set::
 
-    .. tab-item:: Context API
+    .. tab-item:: Context API (Python)
         :sync: context
 
         .. literalinclude:: code/typical-workflow-context.rst
@@ -141,11 +165,22 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
 
         Since the privacy loss budget is at most ε = 1, and we are partitioning our budget evenly amongst three queries, then each query will be calibrated to satisfy ε = 1/3.
 
-    .. tab-item:: Framework API
+    .. tab-item:: Framework API (Python)
         :sync: framework
 
         .. literalinclude:: code/typical-workflow-framework.rst
             :language: python
+            :start-after: mediate
+            :end-before: /mediate
+
+        ``dp.Context.compositor`` creates a sequential composition measurement.
+        You can now submit up to three queries to ``qbl_sc``, in the form of measurements.
+
+    .. tab-item:: Framework API (R)
+        :sync: r
+
+        .. literalinclude:: code/typical-workflow-framework.R
+            :language: r
             :start-after: mediate
             :end-before: /mediate
 
@@ -160,7 +195,7 @@ Here's a differentially private count:
 
 .. tab-set::
 
-    .. tab-item:: Context API
+    .. tab-item:: Context API (Python)
         :sync: context
 
         .. literalinclude:: code/typical-workflow-context.rst
@@ -168,11 +203,19 @@ Here's a differentially private count:
             :start-after: count
             :end-before: /count
 
-    .. tab-item:: Framework API
+    .. tab-item:: Framework API (Python)
         :sync: framework
 
         .. literalinclude:: code/typical-workflow-framework.rst
             :language: python
+            :start-after: count
+            :end-before: /count
+
+    .. tab-item:: Framework API (R)
+        :sync: r
+
+        .. literalinclude:: code/typical-workflow-framework.R
+            :language: r
             :start-after: count
             :end-before: /count
 
@@ -180,7 +223,7 @@ Here's a differentially private mean:
 
 .. tab-set::
 
-    .. tab-item:: Context API
+    .. tab-item:: Context API (Python)
         :sync: context
 
         .. literalinclude:: code/typical-workflow-context.rst
@@ -188,11 +231,19 @@ Here's a differentially private mean:
             :start-after: mean
             :end-before: /mean
 
-    .. tab-item:: Framework API
+    .. tab-item:: Framework API (Python)
         :sync: framework
 
         .. literalinclude:: code/typical-workflow-framework.rst
             :language: python
+            :start-after: mean
+            :end-before: /mean
+
+    .. tab-item:: Framework API (R)
+        :sync: r
+
+        .. literalinclude:: code/typical-workflow-framework.R
+            :language: r
             :start-after: mean
             :end-before: /mean
 
