@@ -218,7 +218,7 @@ def metric_of(M) -> Metric:
     raise TypeError(f"unrecognized metric: {M}")
 
 
-def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]:
+def loss_of(epsilon: float=None, delta: float=None, rho: float=None, U=None) -> Tuple[Measure, float]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
     >>> import opendp.prelude as dp
@@ -230,9 +230,13 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]
     (ZeroConcentratedDivergence(f64), 1.0)
 
     :param epsilon: Parameter for pure ε-DP.
+    :type epsilon:
     :param delta: Parameter for approximate (ε,δ)-DP.
+    :type delta:
     :param rho: Parameter for zero-concentrated ρ-DP.
+    :type rho:
     :param U: The type of the privacy parameter; Inferred if not provided.
+    :type U:
 
     """
     if epsilon is None and rho is None:
@@ -577,6 +581,10 @@ class Query(object):
         :type split_evenly_over:
         :param split_by_weights: A list of weights for each intermediate privacy loss
         :type split_by_weights:
+        :param d_out:
+        :type d_out:
+        :param output_measure:
+        :type output_measure:
         """
 
         if d_out is not None and self._d_out is not None:
