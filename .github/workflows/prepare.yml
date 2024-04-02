@@ -106,7 +106,8 @@ jobs:
       - name: Push changes
         if: ${{ !inputs.dry_run }}
         run: |
-          git commit -a -m "Initialize and configure channel"
+          git add --force .
+          git commit -m "Initialize and configure channel"
           git push --force origin ${{ inputs.channel }}
     outputs:
       date: ${{ steps.configure.outputs.date }}
