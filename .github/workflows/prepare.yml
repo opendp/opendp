@@ -106,7 +106,7 @@ jobs:
       - name: Push changes
         if: ${{ !inputs.dry_run }}
         run: |
-          git add --force .
+          git add --force . # Generated files are git-ignored, so we need --force.
           git commit -m "Initialize and configure channel"
           git push --force origin ${{ inputs.channel }}
     outputs:
