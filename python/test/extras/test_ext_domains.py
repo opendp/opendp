@@ -1,4 +1,3 @@
-import sys
 from opendp.extras.domains import _np_sscp_domain
 import opendp.prelude as dp
 import pytest
@@ -8,6 +7,7 @@ dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 
 def test_np_array2_domain():
+    np = pytest.importorskip('numpy')
     # missing norm
     with pytest.raises(ValueError):
         with optional_dependency('numpy'):

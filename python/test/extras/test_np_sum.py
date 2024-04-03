@@ -10,7 +10,7 @@ def test_np_sum():
 
     # unsized data
     with optional_dependency('numpy'):
-        space = dp.np_array2_domain(norm=1., p=2, T=float), dp.symmetric_distance()
+        space = dp.x.np_array2_domain(norm=1., p=2, T=float), dp.symmetric_distance()
     trans = space >> then_np_sum()
     assert trans.map(1) == 1
 
@@ -28,7 +28,7 @@ def test_np_sum():
 def test_private_np_sum():
     from opendp.extras._make_np_sum import then_private_np_sum
     with optional_dependency('numpy'):
-        space = dp.np_array2_domain(norm=1., p=2, T=float), dp.symmetric_distance()
+        space = dp.x.np_array2_domain(norm=1., p=2, T=float), dp.symmetric_distance()
     meas = space >> then_private_np_sum(dp.zero_concentrated_divergence(T=float), scale=1.)
     np = pytest.importorskip('numpy')
     data = np.random.normal(size=(1000, 4))
