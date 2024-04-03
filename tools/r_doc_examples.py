@@ -25,7 +25,7 @@ def scan_r_examples(template):
         print('Failed:')
         print('\n'.join(fails))
         print()
-    return bool(success)
+    return not bool(fails)
 
 tests_pass = scan_r_examples("Rscript {}")
 
