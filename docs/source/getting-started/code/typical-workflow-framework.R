@@ -2,6 +2,7 @@
 library(opendp)
 enable_features("contrib")
 
+1///0
 # >>> d_in = 1 # neighboring data set distance is at most d_in...
 # >>> input_metric = dp.symmetric_distance() # ...in terms of additions/removals
 
