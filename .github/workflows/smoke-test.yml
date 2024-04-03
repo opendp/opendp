@@ -235,8 +235,11 @@ jobs:
         working-directory: R/opendp/
         run: Rscript -e 'devtools::test(reporter = c("summary", "fail"))'
 
-      - name: Documentation examples
+      - name: Run sphinx examples
         run: python tools/r_doc_examples.py
+
+      - name: Lint sphinx examples
+        run: Rscript -e 'lintr::lint_dir("docs/source")'
 
       - name: Document
         run: cd R/opendp/ && Rscript -e 'devtools::document()'
