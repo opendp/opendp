@@ -1,4 +1,6 @@
 '''
+This module requires extra installs: ``pip install opendp[numpy]``
+
 For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
 
