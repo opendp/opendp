@@ -48,7 +48,7 @@ def test_loss_of_logging(caplog):
         dp.loss_of(epsilon=2, delta=1e-5)
         assert caplog.record_tuples == [
             ('opendp.context', logging.INFO, 'epsilon is typically less than 1'),
-            ('opendp.context', logging.WARN, 'delta should be less than 1e-06, and is typically less than 1e-06')
+            ('opendp.context', logging.WARN, 'delta should be equal to or less than 1e-06')
         ]
         caplog.clear()
 
