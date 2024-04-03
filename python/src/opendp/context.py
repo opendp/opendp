@@ -240,10 +240,13 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]
         raise ValueError("Epsilon must be specified if delta is given.")
 
     def range_warning(name, value, info_level, warn_level):
-        if info_level < value <= warn_level:
+        if value > warn_level:
+            if info_level == warn_level:
+                logger.warning(f'{name} should be less than {warn_level}')
+            else:
+                logger.warning(f'{name} should be less than {warn_level}, and is typically less than {info_level}')
+        elif value > info_level:
             logger.info(f'{name} is typically less than {info_level}')
-        if warn_level < value:
-            logger.warning(f'{name} should be less than {warn_level}, and is typically less than {info_level}')
 
     if rho:
         range_warning('rho', rho, 0.25, 0.5)
