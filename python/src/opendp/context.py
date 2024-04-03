@@ -242,15 +242,11 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]
     def range_warning(name, value, info_level, warn_level):
         if value > warn_level:
             if info_level == warn_level:
-                if name == 'delta':
-                    logger.warning(f'{name} should be equal to or less than {warn_level}')
-                else:
-                    logger.warning(f'{name} should be less than {warn_level}')
-
+                logger.warning(f'{name} should be less than or equal to {warn_level}')
             else:
-                logger.warning(f'{name} should be less than {warn_level}, and is typically less than {info_level}')
+                logger.warning(f'{name} should be less than or equal to {warn_level}, and is typically less than or equal to {info_level}')
         elif value > info_level:
-            logger.info(f'{name} is typically less than {info_level}')
+            logger.info(f'{name} is typically less than or equal to {info_level}')
 
     if rho:
         range_warning('rho', rho, 0.25, 0.5)
