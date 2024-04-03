@@ -2,43 +2,41 @@
 library(opendp)
 enable_features("contrib")
 
-1///0
-# >>> d_in = 1 # neighboring data set distance is at most d_in...
-# >>> input_metric = dp.symmetric_distance() # ...in terms of additions/removals
+d_in <- 1 # neighboring data set distance is at most d_in...
+input_metric <- symmetric_distance() # ...in terms of additions/removals
 
 # /unit-of-privacy
 
 
 # privacy-loss
-# >>> d_out = 1. # output distributions have distance at most d_out (ε)...
-# >>> privacy_measure = dp.max_divergence(T=float) # ...in terms of pure-DP
+d_out <- 1.0 # output distributions have distance at most d_out (ε)...
+privacy_measure <- max_divergence(.T = f64) # ...in terms of pure-DP
 
 # /privacy-loss
 
 
 # public-info
-# >>> col_names = [
-# ...    "name", "sex", "age", "maritalStatus", "hasChildren", "highestEducationLevel", 
-# ...    "sourceOfStress", "smoker", "optimism", "lifeSatisfaction", "selfEsteem"
-# ... ]
+col_names <- c(
+  "name", "sex", "age", "maritalStatus", "hasChildren", "highestEducationLevel",
+  "sourceOfStress", "smoker", "optimism", "lifeSatisfaction", "selfEsteem"
+)
 
 # /public-info
 
 
 # mediate
-# >>> import urllib.request
-# >>> data_url = "https://raw.githubusercontent.com/opendp/opendp/sydney/teacher_survey.csv"
-# >>> with urllib.request.urlopen(data_url) as data_req:
-# ...     data = data_req.read().decode('utf-8')
+temp_file <- "teacher_survey.csv"
+download.file("https://raw.githubusercontent.com/opendp/opendp/sydney/teacher_survey.csv", temp_file)
+data_string <- paste(readLines(temp_file), collapse = "\n")
+file.remove(temp_file)
 
-# >>> m_sc = dp.c.make_sequential_composition(
-# ...     # data set is a single string, with rows separated by linebreaks
-# ...     input_domain=dp.atom_domain(T=str),
-# ...     input_metric=input_metric,
-# ...     output_measure=privacy_measure,
-# ...     d_in=d_in,
-# ...     d_mids=[d_out / 3] * 3,
-# ... )
+m_sc <- make_sequential_composition(
+  input_domain = atom_domain(.T = String),
+  input_metric = input_metric,
+  output_measure = privacy_measure,
+  d_in = d_in,
+  d_mids = rep(d_out / 3, 3)
+)
 
 # >>> # Call measurement with data to create a queryable:
 # >>> qbl_sc = m_sc(data)
