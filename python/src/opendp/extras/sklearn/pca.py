@@ -23,6 +23,7 @@ else: # pragma: no cover
 
 
 class PCA(_SKLPCA):
+    # TODO: If I add a docstring here, it also tries to locate _SKLPCA, and fails
     def __init__(
         self,
         *,

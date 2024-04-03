@@ -1,3 +1,14 @@
+'''
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
+
+The methods of this module will then be accessible at ``dp.x``.    
+'''
+
 from opendp.extras._utilities import register_transformation
 from opendp.mod import Domain, Metric, Transformation
 from opendp._lib import import_optional_dependency
