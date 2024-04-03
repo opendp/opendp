@@ -3,25 +3,36 @@ import subprocess
 import sys
 import os
 
-total = 0
-success = 0
-fails = []
-r_glob = '**/*.R'
+def scan_r_examples(template):
+    total = 0
+    success = 0
+    fails = []
 
-os.chdir(Path(__file__).parent.parent / 'docs')
-for r_script in Path('.').glob(r_glob):
-    total += 1
-    result = subprocess.run(['Rscript', r_script])
-    if result.returncode == 0:
-        success += 1
-    else:
-        fails.append(r_script)
+    os.chdir(Path(__file__).parent.parent / 'docs')
+    r_glob = '**/*.R'
+    for r_example in Path('.').glob(r_glob):
+        total += 1
+        cmd = template.replace('{}', str(r_example))
+        result = subprocess.run(cmd, shell=True)
+        if result.returncode == 0:
+            success += 1
+        else:
+            fails.append(str(r_example))
 
-print(f'{success}/{total} scripts passed')
+    if total == 0:
+        print(f'Nothing matched "{r_glob}"')
+        sys.exit(1)
+    
+    print(f'{success}/{total} for "{template}"')
+    if fails:
+        print('Failed:')
+        print('\n'.join(fails))
+        print()
+    return bool(fails)
 
-if total == 0:
-    print(f'Nothing matched "{r_glob}"')
-    sys.exit(1)
-if fails:
-    print(f'These failed: {", ".join(str(f) for f in fails)}')
+tests_pass = scan_r_examples("Rscript {}")
+lints_pass = scan_r_examples("Rscript -e 'lintr::lint(\"{}\")'")
+
+if not all([tests_pass, lints_pass]):
+    print('FAIL')
     sys.exit(1)
