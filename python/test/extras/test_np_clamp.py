@@ -1,16 +1,16 @@
-import sys
 import opendp.prelude as dp
 from opendp.extras.make_np_clamp import then_np_clamp
 import pytest
+from ..helpers import optional_dependency
 
 dp.enable_features("honest-but-curious", "contrib")
 
 
-@pytest.mark.skipif('numpy' not in sys.modules, reason="Numpy needed")
 def test_clamp():
-    import numpy as np
-    space = dp.x.np_array2_domain(T=float), dp.symmetric_distance()
+    with optional_dependency('numpy'):
+        space = dp.x.np_array2_domain(T=float), dp.symmetric_distance()
     trans = space >> then_np_clamp(norm=1.0, p=2)
+    np = pytest.importorskip('numpy')
     data = np.random.normal(size=(100_000, 10))
     assert trans.output_domain.member(trans(data))
 

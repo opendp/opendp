@@ -3,6 +3,7 @@ from opendp.extras.make_np_clamp import make_np_clamp
 from opendp.extras._utilities import to_then
 from opendp.extras._make_np_sum import make_private_np_sum
 from opendp.mod import Domain, Metric, Measurement
+from opendp._lib import import_optional_dependency
 
 # planning to make this public, but may make more API changes
 
@@ -27,7 +28,7 @@ def make_private_np_mean(
     :returns a Measurement that computes the DP mean
     """
     import opendp.prelude as dp
-    import numpy as np  # type: ignore[import]
+    np = import_optional_dependency('numpy')
 
     dp.assert_features("contrib", "floating-point")
 

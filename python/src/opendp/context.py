@@ -40,6 +40,7 @@ from opendp.mod import (
     binary_search_param,
 )
 from opendp.typing import RuntimeType
+from opendp._lib import indent
 
 
 __all__ = [
@@ -118,32 +119,32 @@ def domain_of(T, infer=False) -> Domain:
     Accepts a limited set of Python type expressions:
 
     >>> from typing import List  # Or just use regular "list" after python 3.8.
-    >>> domain_of(List[int])
+    >>> import opendp.prelude as dp
+    >>> dp.domain_of(List[int])
     VectorDomain(AtomDomain(T=i32))
     
     As well as strings representing types in the underlying Rust syntax:
 
-    >>> domain_of('Vec<int>')
+    >>> dp.domain_of('Vec<int>')
     VectorDomain(AtomDomain(T=i32))
 
     Dictionaries, optional types, and a range of primitive types are supported:
 
     >>> from typing import Dict  # Or just use regular "dict" after python 3.8.
-    >>> domain_of(Dict[str, int])
+    >>> dp.domain_of(Dict[str, int])
     MapDomain { key_domain: AtomDomain(T=String), value_domain: AtomDomain(T=i32) }
     
     .. TODO: Support python syntax for Option: https://github.com/opendp/opendp/issues/1389
 
-    >>> domain_of('Option<int>')  # Python's `Optional` is not supported.
+    >>> dp.domain_of('Option<int>')  # Python's `Optional` is not supported.
     OptionDomain(AtomDomain(T=i32))
     
-    >>> import opendp.prelude as dp
-    >>> domain_of(dp.i32)
+    >>> dp.domain_of(dp.i32)
     AtomDomain(T=i32)
 
     More complex types are not supported:
 
-    >>> domain_of(List[List[int]]) # doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> dp.domain_of(List[List[int]]) # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ...
     opendp.mod.OpenDPException:
@@ -151,7 +152,7 @@ def domain_of(T, infer=False) -> Domain:
 
     Alternatively, an example of the data can be provided, but note that passing sensitive data may result in a privacy violation:
 
-    >>> domain_of([1, 2, 3], infer=True)
+    >>> dp.domain_of([1, 2, 3], infer=True)
     VectorDomain(AtomDomain(T=i32))
 
     :param T: carrier type
@@ -172,7 +173,7 @@ def domain_of(T, infer=False) -> Domain:
             return vector_domain(domain_of(T.args[0]))
         if T.origin == "HashMap":
             return map_domain(domain_of(T.args[0]), domain_of(T.args[1]))
-        if T.origin == "Option": # pragma: no cover
+        if T.origin == "Option":
             return option_domain(domain_of(T.args[0]))
 
     if T in ty.PRIMITIVE_TYPES:
@@ -215,11 +216,12 @@ def metric_of(M) -> Metric:
 def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
-    >>> loss_of(epsilon=1.0)
+    >>> import opendp.prelude as dp
+    >>> dp.loss_of(epsilon=1.0)
     (MaxDivergence(f64), 1.0)
-    >>> loss_of(epsilon=1.0, delta=1e-9)
+    >>> dp.loss_of(epsilon=1.0, delta=1e-9)
     (FixedSmoothedMaxDivergence(f64), (1.0, 1e-09))
-    >>> loss_of(rho=1.0)
+    >>> dp.loss_of(rho=1.0)
     (ZeroConcentratedDivergence(f64), 1.0)
 
     :param epsilon: Parameter for pure ε-DP.
@@ -257,9 +259,10 @@ def unit_of(
     """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
     The parameters are mutually exclusive.
 
-    >>> unit_of(contributions=3)
+    >>> import opendp.prelude as dp
+    >>> dp.unit_of(contributions=3)
     (SymmetricDistance(), 3)
-    >>> unit_of(l1=2.0)
+    >>> dp.unit_of(l1=2.0)
     (L1Distance(f64), 2.0)
 
     :param contributions: Greatest number of records a privacy unit may contribute to microdata
@@ -270,6 +273,9 @@ def unit_of(
     :param ordered: Set to ``True`` to use ``InsertDeleteDistance`` instead of ``SymmetricDistance``, or ``HammingDistance`` instead of ``ChangeOneDistance``.
     :param U: The type of the dataset distance."""
 
+    if ordered and contributions is None and changes is None:
+        raise ValueError('"ordered" is only valid with "changes" or "contributions"')
+
     def _is_distance(p, v):
         return p not in ["ordered", "U", "_is_distance"] and v is not None
 
@@ -279,16 +285,16 @@ def unit_of(
     if contributions is not None:
         metric = insert_delete_distance() if ordered else symmetric_distance()
         return metric, contributions
-    if changes is not None: # pragma: no cover
+    if changes is not None:
         metric = hamming_distance() if ordered else change_one_distance()
         return metric, changes
-    if absolute is not None: # pragma: no cover
+    if absolute is not None:
         metric = absolute_distance(T=RuntimeType.parse_or_infer(U, absolute))
         return metric, absolute
     if l1 is not None:
         metric = l1_distance(T=RuntimeType.parse_or_infer(U, l1))
         return metric, l1
-    if l2 is not None: # pragma: no cover
+    if l2 is not None:
         metric = l2_distance(T=RuntimeType.parse_or_infer(U, l2))
         return metric, l2
     raise Exception('No matching metric found')
@@ -319,12 +325,21 @@ class Context(object):
         d_in,
         d_mids=None,
         d_out=None,
+        space_override=None,
     ):
         self.accountant = accountant
         self.queryable = queryable
         self.d_in = d_in
         self.d_mids = d_mids
         self.d_out = d_out
+        self.space_override = space_override
+
+    def __repr__(self) -> str:
+        return f"""Context(
+    accountant = {indent(repr(self.accountant))},
+    d_in       = {self.d_in},
+    d_mids     = {self.d_mids})"""
+    # TODO: Add "d_out" when filters are implemented.
 
     @staticmethod
     def compositor(
@@ -394,7 +409,10 @@ class Context(object):
                 )
 
         return Query(
-            chain=(self.accountant.input_domain, self.accountant.input_metric),
+            chain=(
+                self.space_override
+                or (self.accountant.input_domain, self.accountant.input_metric)
+            ),
             output_measure=self.accountant.output_measure,
             d_in=self.d_in,
             d_out=d_query,
@@ -446,7 +464,15 @@ class Query(object):
         self._context = context
         self._wrap_release = _wrap_release
 
-    def __getattr__(self, name: str) -> Callable[[Any], "Query"]:
+    def __repr__(self) -> str:
+        return f"""Query(
+    chain          = {indent(repr(self._chain))},
+    output_measure = {self._output_measure},
+    d_in           = {self._d_in},
+    d_out          = {self._d_out},
+    context        = {indent(repr(self._context))})"""
+
+    def __getattr__(self, name: str) -> Callable[..., "Query"]:
         """Creates a new query by applying a transformation or measurement to the current chain."""
         if name not in constructors:
             raise AttributeError(f"Unrecognized constructor: '{name}'")
@@ -521,7 +547,7 @@ class Query(object):
 
     def param(self):
         """Returns the discovered parameter, if there is one."""
-        return getattr(self.resolve(), "param", None) # pragma: no cover
+        return getattr(self.resolve(), "param", None)
 
     def compositor(
         self,
@@ -529,7 +555,7 @@ class Query(object):
         split_by_weights: Optional[List[float]] = None,
         d_out=None,
         output_measure=None,
-    ) -> "Context":
+    ) -> "Query":
         """Constructs a new context containing a sequential compositor with the given weights.
 
         ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.
@@ -552,7 +578,7 @@ class Query(object):
         def compositor(chain: Union[Tuple[Domain, Metric], Transformation], d_in):
             if isinstance(chain, tuple):
                 input_domain, input_metric = chain
-            elif isinstance(chain, Transformation): # pragma: no cover
+            elif isinstance(chain, Transformation):
                 input_domain, input_metric = chain.output_domain, chain.output_metric
                 d_in = chain.map(d_in)
 
@@ -567,7 +593,7 @@ class Query(object):
                 split_by_weights,
             )
             if isinstance(chain, Transformation):
-                accountant = chain >> accountant # pragma: no cover
+                accountant = chain >> accountant
 
             def wrap_release(queryable):
                 return Context(
@@ -575,6 +601,7 @@ class Query(object):
                     queryable=queryable,
                     d_in=d_in,
                     d_mids=d_mids,
+                    space_override=(input_domain, input_metric)
                 )
 
             return self.new_with(chain=accountant, wrap_release=wrap_release)
@@ -666,8 +693,8 @@ def _sequential_composition_by_weights(
 
     if split_evenly_over is not None:
         weights = [d_out] * split_evenly_over
-    elif split_by_weights is not None: # pragma: no cover
-        weights = split_by_weights
+    elif split_by_weights is not None:
+        weights = [d_out * w for w in split_by_weights]
     else:
         raise ValueError(
             "Must specify either `split_evenly_over` or `split_by_weights`"
