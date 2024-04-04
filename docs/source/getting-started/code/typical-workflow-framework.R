@@ -26,7 +26,7 @@ col_names <- c(
 
 # mediate
 temp_file <- "teacher_survey.csv"
-download.file("https://raw.githubusercontent.com/opendp/opendp/sydney/teacher_survey.csv", temp_file)
+download.file("https://raw.githubusercontent.com/opendp/opendp/sydney/teacher_survey.csv", temp_file) # nolint: line_length_linter
 data_string <- paste(readLines(temp_file), collapse = "\n")
 file.remove(temp_file)
 
@@ -58,7 +58,7 @@ count_sensitivity
 # 1
 
 count_measurement <- binary_search_chain(
-  function(scale) count_transformation |> dp.m.then_laplace(scale), d_in, d_out / 3
+  function(scale) count_transformation |> dp.m.then_laplace(scale), d_in, d_out / 3 # nolint: line_length_linter
 )
 dp_count <- qbl_sc(count_measurement)
 
@@ -76,7 +76,7 @@ mean_transformation <- (
 )
 
 mean_measurement <- dp.binary_search_chain(
-  function(scale) mean_transformation |> dp.m.then_laplace(scale), d_in, d_out / 3
+  function(scale) mean_transformation |> dp.m.then_laplace(scale), d_in, d_out / 3 # nolint: line_length_linter
 )
 
 dp_mean <- qbl_sc(mean_measurement)
