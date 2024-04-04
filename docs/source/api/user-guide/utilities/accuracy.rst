@@ -1,8 +1,10 @@
 
-.. _determining-accuracy:
+.. _accuracy-user-guide:
 
 Accuracy
 --------
+
+(See also :py:mod:`opendp.accuracy` in the API reference.)
 
 The library contains utilities to estimate accuracy at a given noise scale and statistical significance level
 or derive the necessary noise scale to meet a given target accuracy and statistical significance level.
@@ -36,11 +38,11 @@ To demonstrate, the following snippet finds the necessary gaussian scale such th
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
-        >>> from opendp.accuracy import accuracy_to_gaussian_scale
+        >>> import opendp.prelude as dp
         >>> confidence = 95
-        >>> accuracy_to_gaussian_scale(accuracy=2., alpha=1. - confidence / 100)
+        >>> dp.accuracy_to_gaussian_scale(accuracy=2., alpha=1. - confidence / 100)
         1.020426913849308
 
 You can generally plug the distribution (Laplace or Gaussian), scale, accuracy and alpha

@@ -17,7 +17,7 @@ This will make the OpenDP modules available to your local environment.
 
 Many of our examples begin with these lines:
 
-.. doctest::
+.. code:: python
 
     .. TODO
     .. >>> import opendp.prelude as dp

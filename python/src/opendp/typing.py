@@ -3,6 +3,15 @@ The ``typing`` module provides utilities that bridge between Python and Rust typ
 OpenDP relies on precise descriptions of data types to make its security guarantees:
 These are more natural in Rust with its fine-grained type system,
 but they may feel out of place in Python. These utilities try to fill that gap.
+
+For more context, see :ref:`typing in the User Guide <typing-user-guide>`.
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
 '''
 from __future__ import annotations
 import sys
@@ -11,7 +20,7 @@ from collections.abc import Hashable
 from typing import Dict, Optional, Union, Any, Type, List
 
 from opendp.mod import Function, UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
-from opendp._lib import ATOM_EQUIVALENCE_CLASSES
+from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency
 
 
 ELEMENTARY_TYPES: Dict[Any, str] = {
@@ -23,7 +32,7 @@ ELEMENTARY_TYPES: Dict[Any, str] = {
     Transformation: 'AnyTransformationPtr'
 }
 try:
-    import numpy as np # type: ignore[import-not-found]
+    np = import_optional_dependency('numpy')
     # https://numpy.org/doc/stable/reference/arrays.scalars.html#sized-aliases
     ELEMENTARY_TYPES.update({  # pragma: no cover
         # np.bytes_: '&[u8]',  # np.string_ # not used in OpenDP
@@ -160,14 +169,14 @@ class RuntimeType(object):
 
         :examples:
 
-        >>> from opendp.typing import RuntimeType, L1Distance
-        >>> RuntimeType.parse(int)
+        >>> import opendp.prelude as dp
+        >>> dp.RuntimeType.parse(int)
         'i32'
-        >>> RuntimeType.parse("i32")
+        >>> dp.RuntimeType.parse("i32")
         'i32'
-        >>> print(RuntimeType.parse(L1Distance[int]))
+        >>> dp.RuntimeType.parse(L1Distance[int])
         L1Distance<i32>
-        >>> print(RuntimeType.parse(L1Distance["f32"]))
+        >>> dp.RuntimeType.parse(L1Distance["f32"])
         L1Distance<f32>
         """
         generics = generics or []
@@ -275,13 +284,13 @@ class RuntimeType(object):
 
         :examples:
 
-        >>> from opendp.typing import RuntimeType, L1Distance
-        >>> assert RuntimeType.infer(23) == "i32"
-        >>> assert RuntimeType.infer(12.) == "f64"
-        >>> assert RuntimeType.infer(["A", "B"]) == "Vec<String>"
-        >>> assert RuntimeType.infer((12., True, "A")) == "(f64,  bool,String)" # eq doesn't care about whitespace
+        >>> import opendp.prelude as dp
+        >>> assert dp.RuntimeType.infer(23) == "i32"
+        >>> assert dp.RuntimeType.infer(12.) == "f64"
+        >>> assert dp.RuntimeType.infer(["A", "B"]) == "Vec<String>"
+        >>> assert dp.RuntimeType.infer((12., True, "A")) == "(f64,  bool,String)" # eq doesn't care about whitespace
         
-        >>> print(RuntimeType.infer([]))
+        >>> print(dp.RuntimeType.infer([]))
         Traceback (most recent call last):
         ...
         opendp.mod.UnknownTypeException: attempted to create a type_name with an unknown type: cannot infer atomic type when empty

@@ -4,16 +4,14 @@
 set -e -u
 
 function usage() {
-  echo "Usage: $(basename "$0") [-i] [-p <PY_PLATFORM>]" >&2
+  echo "Usage: $(basename "$0") [-p <PY_PLATFORM>]" >&2
   echo "Note that <PY_PLATFORM> is the whole platform tag (e.g., cp310-cp310-macosx_10_9_x86_64, not just macos)." >&2
   echo "(This is just a hook for future expansion, in case we want to do platform-specific builds.)" >&2
 }
 
-INIT=false
 PY_PLATFORM=ALL
 while getopts ":ip:" OPT; do
   case "$OPT" in
-  i) INIT=true ;;
   p) PY_PLATFORM="$OPTARG" ;;
   *) usage && exit 1 ;;
   esac
@@ -34,11 +32,6 @@ function run() {
   local ARGS=("$@")
   log "$ %s" "${ARGS[*]}"
   eval "${ARGS[@]}"
-}
-
-function init() {
-  log "Install dependencies"
-  run pip install setuptools wheel
 }
 
 function build() {
@@ -66,11 +59,6 @@ function build() {
   log "Restore README.md"
   run git restore python/README.md
 }
-
-if [[ $INIT == true ]]; then
-  log "***** INITIALIZING *****"
-  init
-fi
 
 log "***** RUNNING BUILD *****"
 build

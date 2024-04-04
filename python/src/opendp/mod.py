@@ -41,8 +41,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     Measurement(
         input_domain   = AtomDomain(T=i32),
         input_metric   = AbsoluteDistance(i32),
-        output_measure = MaxDivergence(f64)
-    )
+        output_measure = MaxDivergence(f64))
 
     >>> # invoke the measurement (invoke and __call__ are equivalent)
     >>> print('explicit: ', laplace.invoke(100))  # -> 101   # doctest: +ELLIPSIS
@@ -198,7 +197,10 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
             pass
     
     def __repr__(self) -> str:
-        return f"Measurement(\n    input_domain   = {self.input_domain},\n    input_metric   = {self.input_metric},\n    output_measure = {self.output_measure}\n)" # pragma: no cover
+        return f"""Measurement(
+    input_domain   = {self.input_domain},
+    input_metric   = {self.input_metric},
+    output_measure = {self.output_measure})"""
 
 
 class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
@@ -874,22 +876,21 @@ def binary_search(
 
     :example:
 
-    >>> from opendp.mod import binary_search
-    >>> binary_search(lambda x: x >= 5.)
+    >>> import opendp.prelude as dp
+    >>> dp.binary_search(lambda x: x >= 5.)
     5.0
-    >>> binary_search(lambda x: x <= 5.)
+    >>> dp.binary_search(lambda x: x <= 5.)
     5.0
 
-    >>> binary_search(lambda x: x > 5, T=int)
+    >>> dp.binary_search(lambda x: x > 5, T=int)
     6
-    >>> binary_search(lambda x: x < 5, T=int)
+    >>> dp.binary_search(lambda x: x < 5, T=int)
     4
 
     Find epsilon usage of the gaussian(scale=1.) mechanism applied on a dp mean.
     Assume neighboring datasets differ by up to three additions/removals, and fix delta to 1e-8.
 
     >>> # build a histogram that emits float counts
-    >>> import opendp.prelude as dp
     >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 100.)), 1000), dp.symmetric_distance()
     >>> dp_mean = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(
     ...     input_space >> dp.t.then_mean() >> dp.m.then_gaussian(1.)), 
@@ -903,7 +904,6 @@ def binary_search(
 
     Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.
 
-    >>> from opendp.transformations import make_count_by_categories
     >>> histogram = dp.t.make_count_by_categories(
     ...     dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance(),
     ...     categories=["a"], MO=dp.L2Distance[int])

@@ -4,7 +4,7 @@ Measurements
 ============
 
 This section gives a high-level overview of the measurements that are available in the library.
-Refer to the :ref:`measurement` section for an explanation of what a measurement is.
+Refer to the :ref:`measurements-user-guide` for an explanation of what a measurement is.
 
 The intermediate domains and metrics need to match when chaining.
 This means you will need to choose a measurement that chains with your :ref:`aggregator <aggregators>`.
@@ -157,7 +157,7 @@ Use :func:`opendp.measurements.make_user_measurement` to construct a measurement
 
       .. tab-item:: Python
 
-        .. doctest::
+        .. code:: python
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features("honest-but-curious", "contrib")
@@ -168,7 +168,7 @@ This example mocks the typical API of the OpenDP library to make the *most priva
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> def make_base_constant(constant):
         ...     """Constructs a Measurement that only returns a constant value."""
@@ -193,7 +193,7 @@ The resulting Measurement may be used interchangeably with those constructed via
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> meas = (
         ...     (dp.vector_domain(dp.atom_domain((0, 10))), dp.symmetric_distance())

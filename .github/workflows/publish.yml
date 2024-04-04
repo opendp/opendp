@@ -83,7 +83,7 @@ jobs:
           # twine doesn't support dry-runs, so if that's what we're doing, simulate it by using TestPyPI instead of PyPI
           REPOSITORY: ${{ inputs.dry_run && 'testpypi' || 'pypi' }}
         run: |
-          pip install -r tools/requirements-publish_tool.txt
+          pip install -r tools/requirements-tools.txt
           python tools/publish_tool.py python -r $REPOSITORY
 
   publish-r:
@@ -139,7 +139,7 @@ jobs:
         env:
           DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry_run' || '' }}
         run: |
-          pip install -r tools/requirements-publish_tool.txt
+          pip install -r tools/requirements-tools.txt
           python tools/publish_tool.py rust $DRY_RUN_FLAG
 
   publish-github:
@@ -163,6 +163,6 @@ jobs:
           DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry_run' || '' }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          pip install -r tools/requirements-publish_tool.txt
+          pip install -r tools/requirements-tools.txt
           python tools/publish_tool.py github -d ${{ inputs.date }} $DRY_RUN_FLAG
   

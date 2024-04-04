@@ -39,10 +39,10 @@ Who is using OpenDP?
 
 Some of the applications of OpenDP in finance, healthcare, government, and tech include:
 
-* `Spectus <https://spectus.ai/>`_ using OpenDP to create `privacy enhanced mobility data <https://spectus.ai/wp-content/uploads/2022/10/Spectus_DPWhitepaper_v01b.pdf>`_
-* The `Swiss Federal Statistical Office <https://www.bfs.admin.ch/bfs/en/home.html>`_ using OpenDP to `release income statistics <https://www.youtube.com/watch?v=71cR0Jx0RgM&t=526s>`_
-* `Sarus <https://www.sarus.tech/>`_ contributing an `implementation of f-DP <https://medium.com/sarus/sarus-implements-differential-privacy-in-opendp-47350a94da03>`_
-* `LiveRamp <https://liveramp.com>`_ using OpenDP to `support COVID research <https://liveramp.com/developers/blog/two-liveramp-engineers-named-harvard-opendp-fellows/>`_
+* `Spectus <https://spectus.ai/>`_ is using OpenDP to create `privacy enhanced mobility data <https://spectus.ai/wp-content/uploads/2022/10/Spectus_DPWhitepaper_v01b.pdf>`_
+* The `Swiss Federal Statistical Office <https://www.bfs.admin.ch/bfs/en/home.html>`_ is using OpenDP to `release income statistics <https://www.youtube.com/watch?v=71cR0Jx0RgM&t=526s>`_
+* `Sarus <https://www.sarus.tech/>`_ is contributing an `implementation of f-DP <https://medium.com/sarus/sarus-implements-differential-privacy-in-opendp-47350a94da03>`_
+* `LiveRamp <https://liveramp.com>`_ is using OpenDP to `support COVID research <https://liveramp.com/developers/blog/two-liveramp-engineers-named-harvard-opendp-fellows/>`_
 
 What next?
 ----------

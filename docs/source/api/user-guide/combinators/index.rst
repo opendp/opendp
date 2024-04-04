@@ -1,7 +1,9 @@
-.. _combinator-constructors:
+.. _combinators-user-guide:
 
 Combinators
 ===========
+
+(See also :py:mod:`opendp.combinators` in the API reference.)
 
 Combinator constructors use Transformations or Measurements to produce a new Transformation or Measurement.
 
@@ -31,7 +33,7 @@ In the following example we chain :py:func:`opendp.measurements.make_laplace` wi
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> import opendp.prelude as dp
         >>> dp.enable_features("contrib", "floating-point")
@@ -63,7 +65,7 @@ and :func:`make_chain_pm <opendp.combinators.make_chain_pm>`.
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> noisy_sum_meas = sum_trans >> lap_meas
 
@@ -82,7 +84,7 @@ In the below example, the adjustment is subtle, but the bounds were adjusted to 
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> # call a constructor to produce a transformation, but this time with float bounds
         >>> sum_trans = dp.t.make_sum(
@@ -104,7 +106,7 @@ This is intended to enable further chaining with preprocessors such as:
 * :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`
 * :py:func:`make_clamp <opendp.transformations.make_clamp>` 
 * :py:func:`make_resize <opendp.transformations.make_resize>`.
-See the section on :ref:`transformation-constructors` for more information on how to preprocess data in OpenDP.
+See the section on :ref:`transformations-user-guide` for more information on how to preprocess data in OpenDP.
 
 Composition
 -----------
@@ -164,7 +166,7 @@ This is useful if you want to compose pure-DP measurements with approximate-DP m
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
         >>> meas_pureDP = input_space >> dp.m.then_laplace(scale=10.)
@@ -184,7 +186,7 @@ Similarly, :func:`opendp.combinators.make_pureDP_to_zCDP` is used for casting an
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> meas_zCDP = input_space >> dp.m.then_gaussian(scale=0.5)
         >>> # convert the output measure to `SmoothedMaxDivergence`
@@ -202,7 +204,7 @@ It fixes the delta parameter in the curve, so that the resulting measurement can
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> # convert the output measure to `FixedSmoothedMaxDivergence`
         >>> meas_fixed_approxDP = dp.c.make_fix_delta(meas_approxDP, delta=1e-8)
@@ -225,7 +227,7 @@ you can make the privacy relation more permissive by wrapping your measurement w
 
     The amplifier requires a looser trust model, as the population size can be set arbitrarily.
 
-    .. doctest::
+    .. code:: python
 
 
         >>> dp.enable_features("honest-but-curious")
@@ -238,7 +240,7 @@ The resulting measurement expects the size of the input dataset to be 10.
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=10), dp.symmetric_distance()
         >>> meas = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
@@ -252,7 +254,7 @@ The function on the amplified measurement is identical to the standard measureme
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
       
         >>> amplified = dp.c.make_population_amplification(meas, population_size=100)
         >>> print("amplified mean:", amplified([1.] * 10)) # -> .97 # doctest: +ELLIPSIS
@@ -265,7 +267,7 @@ is a simple sample of individuals from a theoretical larger dataset that capture
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> # Where we once had a privacy utilization of ~2 epsilon...
         >>> assert meas.check(2, 2. + 1e-6)

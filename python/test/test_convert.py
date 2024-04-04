@@ -6,11 +6,6 @@ from opendp._convert import (
 )
 from opendp.typing import *
 import pytest
-import sys
-try:
-    import numpy as np  # type: ignore
-except ImportError:
-    pass
 
 
 def test_data_object_int():
@@ -113,9 +108,8 @@ def test_hashmap():
     assert c_to_py(any) == data
 
 
-@pytest.mark.skipif('numpy' not in sys.modules,
-                    reason="requires the Numpy library")
 def test_numpy_data():
+    np = pytest.importorskip('numpy')
     def roundtrip(value, type_name, dtype=None):
         print(c_to_py(py_to_c(np.array(value, dtype=dtype), AnyObjectPtr, type_name=type_name)))
     roundtrip([1, 2], "Vec<i32>", dtype=np.int32)
@@ -125,9 +119,9 @@ def test_numpy_data():
     roundtrip(["A", "B"], "Vec<String>")
     roundtrip("A", "String")
 
-@pytest.mark.skipif('numpy' not in sys.modules,
-                    reason="requires the Numpy library")
+
 def test_numpy_trans():
+    np = pytest.importorskip('numpy')
     import opendp.prelude as dp
     dp.enable_features("contrib")
     assert dp.t.make_sum(

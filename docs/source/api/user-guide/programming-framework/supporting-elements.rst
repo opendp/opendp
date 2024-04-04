@@ -1,15 +1,16 @@
 Supporting Elements
 ===================
 
-This section builds on the :ref:`core-structures` documentation to expand on the constituent pieces of Measurements and Transformations.
+This section builds on the :ref:`core-user-guide` documentation to expand on the constituent pieces of Measurements and Transformations.
 
 
-.. _functions:
+.. _functions-user-guide:
 
 Function
 --------
+
 As one would expect, all data processing is handled via a function.
-The function member stored in a Transformation or Measurement struct is straightforward representation of an idealized mathematical function.
+The function member stored in a Transformation or Measurement struct is a straightforward representation of an idealized mathematical function.
 
 To use the function, the Transformation or Measurement can be called directly:
 
@@ -17,7 +18,7 @@ To use the function, the Transformation or Measurement can be called directly:
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
       >>> import opendp.prelude as dp
       >>> dp.enable_features("contrib")
@@ -35,7 +36,7 @@ Or ``invoke`` can be used equivalently:
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
       >>> type(clamp.invoke)
       <class 'method'>
@@ -45,10 +46,13 @@ Or ``invoke`` can be used equivalently:
 A mathematical function associates each value in some input set with some value in the output set (or a distribution over such values, in the case of a randomized function).
 In OpenDP, as discussed in the next section, we capture these sets with domains.
 
-.. _domains:
+.. _domains-user-guide:
 
 Domain
 ------
+
+(See also :py:mod:`opendp.domains` in the API reference.)
+
 A domain describes the set of all possible input values of a function, or all possible output values of a function.
 Transformations have both an ``input_domain`` and ``output_domain``, while measurements only have an ``input_domain``.
 
@@ -60,9 +64,8 @@ and checks that 1.0 is a member of the domain, but NaN is not.
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
-      >>> import opendp.prelude as dp
       >>> f64_atom_domain = dp.atom_domain(T=float)  # float defaults to f64, a double-precision 64-bit float
       >>> assert f64_atom_domain.member(1.0)
       >>> assert not f64_atom_domain.member(float('nan'))
@@ -76,7 +79,7 @@ Other domains may be described in a similar way. For example:
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
       >>> i32_bounded_domain = dp.atom_domain(bounds=(-2, 2))  # int defaults to i32, a 32-bit signed integer
       >>> assert i32_bounded_domain.member(-2)
@@ -90,7 +93,7 @@ In addition, domains may also be used to construct higher-level domains. For ins
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
       >>> bool_vector_domain = dp.vector_domain(dp.atom_domain(T=bool))
       >>> assert bool_vector_domain.member([])
@@ -104,7 +107,7 @@ In addition, a ``size`` parameter may be used. For example:
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
       >>> bool_vector_2_domain = dp.vector_domain(dp.atom_domain(T=bool), size=2)
       >>> assert bool_vector_2_domain.member([True, True])
@@ -116,7 +119,7 @@ Let's look at the Transformation returned from :py:func:`make_sum() <opendp.tran
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
       >>> dp.enable_features('contrib')
       >>> bounded_sum = dp.t.make_sum(
@@ -133,7 +136,7 @@ We see that the input domain is the same as we passed in:
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
       >>> bounded_sum.output_domain
       AtomDomain(T=i32)
@@ -150,10 +153,13 @@ These domains serve two purposes:
    to guarantee that the output of the first function is always a valid input to the second function.
 
 
-.. _metrics:
+.. _metrics-user-guide:
 
 Metric
 ------
+
+(See also :py:mod:`opendp.metrics` in the API reference.)
+
 A metric is a function that computes the distance between two elements of a domain.
 Transformations have both an ``input_metric`` and ``output_metric``, while measurements only have an ``input_metric``.
 
@@ -177,10 +183,13 @@ In practice, you may not have a need to provide global sensitivities to stabilit
 because they are a midway distance bound encountered while relating dataset distances and privacy distances.
 However, there are situations where constructors accept a metric for specifying the metric for sensitivities.
 
-.. _measures:
+.. _measures-user-guide:
 
 Measure
 -------
+
+(See also :py:mod:`opendp.measures` in the API reference.)
+
 In OpenDP, a measure is a function for measuring the distance between probability distributions.
 Transformations don't make use of a measure, but measurements do have an ``output_measure``.
 
@@ -225,13 +234,9 @@ Putting this to practice, the following example invokes the stability map on a c
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
-        >>> from opendp.transformations import make_clamp
-        >>> from opendp.domains import vector_domain, atom_domain
-        >>> from opendp.metrics import symmetric_distance
-        ...
-        >>> clamper = make_clamp(vector_domain(atom_domain(T=int)), symmetric_distance(), bounds=(1, 10))
+        >>> clamper = dp.t.make_clamp(dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance(), bounds=(1, 10))
         ...
         >>> # The maximum number of records that any one individual may influence in your dataset
         >>> in_symmetric_distance = 3
@@ -245,7 +250,7 @@ There is also a relation check predicate function that simply compares the outpu
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> # reusing the prior clamp transformation
         >>> assert clamper.check(d_in=3, d_out=3)
@@ -292,6 +297,6 @@ Practically speaking, the smaller the ``d_out``, the tighter your analysis will 
 You might find it surprising that metrics and measures are never actually evaluated!
 The framework does not evaluate these because it only needs to relate a user-provided input distance to another user-provided output distance.
 Even the user should not directly compute input and output distances:
-they are :ref:`solved-for <determining-accuracy>`, :ref:`bisected <parameter-search>`, or provided by the Context API.
+they are :ref:`solved-for <accuracy-user-guide>`, :ref:`bisected <parameter-search>`, or provided by the :ref:`Context API <context-user-guide>`.
 
 Be careful: even a dataset query to determine the greatest number of contributions made by any one individual can itself be private information.
