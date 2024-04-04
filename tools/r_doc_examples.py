@@ -33,12 +33,6 @@ def for_each(glob, template):
 
 def main():
     os.chdir(Path(__file__).parent.parent / 'docs' / 'source')
-    profile = '.Rprofile'
-    profile_path = Path(profile).absolute()
-    if not profile_path.exists():
-        raise Exception(f'Missing {profile_path}')
-    os.environ['R_PROFILE'] = profile
-
     tests_pass = for_each('**/*.R', "Rscript {}")
 
     if not tests_pass:
