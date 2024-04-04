@@ -1,3 +1,5 @@
+options(error = traceback)
+
 # unit-of-privacy
 library(opendp)
 enable_features("contrib")
