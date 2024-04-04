@@ -3,32 +3,46 @@ import subprocess
 import sys
 import os
 
-def scan_r_examples(template):
+
+def for_each(glob, template):
     total = 0
     success = 0
     fails = []
 
-    os.chdir(Path(__file__).parent.parent / 'docs' / 'source')
-    r_glob = '**/*.R'
-    for r_example in Path('.').glob(r_glob):
+    for file in Path('.').glob(glob):
         total += 1
-        cmd = template.replace('{}', str(r_example))
-        print(f'Running: {cmd}')
+        cmd = template.replace('{}', str(file))
+        print(f'START: {cmd}')
         result = subprocess.run(cmd, shell=True)
         if result.returncode == 0:
+            print(f'PASS: {cmd}')
             success += 1
         else:
-            fails.append(str(r_example))
+            print(f'FAIL: {cmd}')
+            fails.append(str(file))
     
     print(f'{success}/{total} for "{template}"')
     if fails:
-        print('Failed:')
+        print('These failed:')
         print('\n'.join(fails))
         print()
-    return not bool(fails)
+    if not success:
+        print(f'Nothing matched "{glob}"')
 
-tests_pass = scan_r_examples("Rscript {}")
+    return success and not fails
 
-if not tests_pass:
-    print('FAIL')
-    sys.exit(1)
+def main():
+    os.chdir(Path(__file__).parent.parent / 'docs' / 'source')
+    profile = '.Rprofile'
+    profile_path = Path(profile).absolute()
+    if not profile_path.exists():
+        raise Exception(f'Missing {profile_path}')
+    os.environ['R_PROFILE'] = profile
+
+    tests_pass = for_each('**/*.R', "Rscript {}")
+
+    if not tests_pass:
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
