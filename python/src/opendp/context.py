@@ -248,12 +248,12 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]
 
 def unit_of(
     *,
-    contributions=None,
-    changes=None,
-    absolute=None,
-    l1=None,
-    l2=None,
-    ordered=False,
+    contributions: Optional[int] = None,
+    changes: Optional[int] = None,
+    absolute: Optional[float] = None,
+    l1: Optional[float] = None,
+    l2: Optional[float] = None,
+    ordered: bool = False,
     U=None,
 ) -> Tuple[Metric, float]:
     """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
