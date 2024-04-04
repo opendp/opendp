@@ -22,14 +22,14 @@ def for_each(glob, template):
             fails.append(str(file))
     
     print(f'{success}/{total} for "{template}"')
-    if fails:
+    if len(fails) != 0:
         print('These failed:')
         print('\n'.join(fails))
         print()
-    if not success:
+    if total == 0:
         print(f'Nothing matched "{glob}"')
 
-    return success and not fails
+    return total != 0 and len(fails) == 0
 
 def main():
     os.chdir(Path(__file__).parent.parent / 'docs' / 'source')
