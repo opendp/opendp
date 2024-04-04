@@ -20,7 +20,6 @@ it can raise an exception and prevent you from running more queries than your bu
     .. code:: python
 
       >>> import opendp.prelude as dp
-      >>> dp.enable_features("contrib")
       >>> context = dp.Context.compositor(
       ...     data=[5.0] * 100,
       ...     privacy_unit=dp.unit_of(contributions=1),
