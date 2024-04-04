@@ -1,8 +1,10 @@
 
-.. _determining-accuracy:
+.. _accuracy-user-guide:
 
 Accuracy
 --------
+
+(See also :py:mod:`opendp.accuracy` in the API reference.)
 
 The library contains utilities to estimate accuracy at a given noise scale and statistical significance level
 or derive the necessary noise scale to meet a given target accuracy and statistical significance level.

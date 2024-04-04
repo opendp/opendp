@@ -3,6 +3,15 @@ The ``typing`` module provides utilities that bridge between Python and Rust typ
 OpenDP relies on precise descriptions of data types to make its security guarantees:
 These are more natural in Rust with its fine-grained type system,
 but they may feel out of place in Python. These utilities try to fill that gap.
+
+For more context, see :ref:`typing in the User Guide <typing-user-guide>`.
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
 '''
 from __future__ import annotations
 import sys
