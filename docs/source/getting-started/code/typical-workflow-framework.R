@@ -39,7 +39,7 @@ m_sc <- make_sequential_composition(
 )
 
 # Call measurement with data to create a queryable:
-qbl_sc <- m_sc(arg = data_string) # Note: "arg" is not required by the Python API.
+qbl_sc <- m_sc(arg = data_string) # Different from Python, which does not require "arg".
 
 # /mediate
 
@@ -47,36 +47,36 @@ qbl_sc <- m_sc(arg = data_string) # Note: "arg" is not required by the Python AP
 # count
 count_transformation <- (
   make_split_dataframe(",", col_names = col_names)
-  |> then_select_column("age", String) # Note that this is different from the Python.
+  |> then_select_column("age", String) # Different from Python, which uses "make_".
   |> then_count()
 )
 
-count_sensitivity <- count_transformation.map(d_in)
-count_sensitivity
+count_sensitivity <- count_transformation(d_in = d_in) # Different from Python, which uses ".map".
+cat("count_sensitivity:", count_sensitivity, "\n")
 # 1
 
 count_measurement <- binary_search_chain(
   function(scale) count_transformation |> then_laplace(scale), d_in, d_out / 3L
 )
-dp_count <- qbl_sc(count_measurement)
-
+dp_count <- qbl_sc(query = count_measurement) # Different from Python, which does not require "query".
+cat("dp_count:", dp_count, "\n")
 # /count
 
 
 # mean
 mean_transformation <- (
   make_split_dataframe(",", col_names = col_names)
-  |> then_select_column("age", str)
-  |> then_cast_default(float)
+  |> then_select_column("age", String)
+  |> then_cast_default(f64) # Different from Python, which just uses "float".
   |> then_clamp(c(18.0, 70.0))  # a best-guess based on public information
   |> then_resize(size = dp_count, constant = 42.0)
   |> then_mean()
 )
 
-mean_measurement <- dp.binary_search_chain(
+mean_measurement <- binary_search_chain(
   function(scale) mean_transformation |> then_laplace(scale), d_in, d_out / 3L
 )
 
-dp_mean <- qbl_sc(mean_measurement)
-
+dp_mean <- qbl_sc(query = mean_measurement) # Different from Python, which does not require "query".
+cat("dp_mean:", dp_mean, "\n")
 # /mean
