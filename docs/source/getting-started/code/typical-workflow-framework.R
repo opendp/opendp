@@ -2,7 +2,7 @@
 library(opendp)
 enable_features("contrib")
 
-d_in <- 1 # neighboring data set distance is at most d_in...
+d_in <- 1L # neighboring data set distance is at most d_in...
 input_metric <- symmetric_distance() # ...in terms of additions/removals
 
 # /unit-of-privacy
@@ -26,7 +26,7 @@ col_names <- c(
 
 # mediate
 temp_file <- "teacher_survey.csv"
-download.file("https://raw.githubusercontent.com/opendp/opendp/sydney/teacher_survey.csv", temp_file) # nolint: line_length_linter
+download.file("https://raw.githubusercontent.com/opendp/opendp/sydney/teacher_survey.csv", temp_file)
 data_string <- paste(readLines(temp_file), collapse = "\n")
 file.remove(temp_file)
 
@@ -36,7 +36,7 @@ m_sc <- make_sequential_composition(
   input_metric = input_metric,
   output_measure = privacy_measure,
   d_in = d_in,
-  d_mids = rep(d_out / 3, 3)
+  d_mids = rep(d_out / 3L, 3L)
 )
 
 # TODO: Haven't actually run the code below, because of the error above!
@@ -58,7 +58,7 @@ count_sensitivity
 # 1
 
 count_measurement <- binary_search_chain(
-  function(scale) count_transformation |> dp.m.then_laplace(scale), d_in, d_out / 3 # nolint: line_length_linter
+  function(scale) count_transformation |> dp.m.then_laplace(scale), d_in, d_out / 3L
 )
 dp_count <- qbl_sc(count_measurement)
 
@@ -76,7 +76,7 @@ mean_transformation <- (
 )
 
 mean_measurement <- dp.binary_search_chain(
-  function(scale) mean_transformation |> dp.m.then_laplace(scale), d_in, d_out / 3 # nolint: line_length_linter
+  function(scale) mean_transformation |> dp.m.then_laplace(scale), d_in, d_out / 3L
 )
 
 dp_mean <- qbl_sc(mean_measurement)
