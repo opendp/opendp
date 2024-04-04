@@ -1,4 +1,12 @@
-options(error = traceback)
+# Based on https://renkun.me/2020/03/31/a-simple-way-to-show-stack-trace-on-error-in-r/
+options(error = function() {
+  traceback()
+  if (interactive()) {
+    browser()
+  } else {
+    q(status = 1L)
+  }
+})
 
 # unit-of-privacy
 library(opendp)
