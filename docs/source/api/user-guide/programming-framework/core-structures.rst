@@ -1,7 +1,9 @@
-.. _core-structures:
+.. _core-user-guide:
 
 Core Structures
 ===============
+
+(See also :py:mod:`opendp.core` in the API reference.)
 
 OpenDP is focused on creating computations with specific privacy characteristics.
 These computations are modeled with two core structures in OpenDP:
@@ -22,10 +24,10 @@ Similarities
 Both transformations and measurements are mappings from inputs to outputs,
 and they share these four fields:
 
-:``input_domain``: A :ref:`domain <domains>` that describes the set of all possible input values for the function.
-:``output_domain``: A :ref:`domain <domains>` that describes the set of all possible output values of the function.
-:``function``: A :ref:`function <functions>` that transforms data.
-:``input_metric``: A :ref:`metric <metrics>` used to compute distance between two members of the input domain.
+:``input_domain``: A :ref:`domain <domains-user-guide>` that describes the set of all possible input values for the function.
+:``output_domain``: A :ref:`domain <domains-user-guide>` that describes the set of all possible output values of the function.
+:``function``: A :ref:`function <functions-user-guide>` that transforms data.
+:``input_metric``: A :ref:`metric <metrics-user-guide>` used to compute distance between two members of the input domain.
 
 Transformations and measurements have two additional fields, and this is where they differ:
 
@@ -70,10 +72,12 @@ Invoking the function transforms the data, but the output is not differentially 
 Transformations need to be :ref:`chained <chaining>` with a measurement before they can be used to create a differentially-private release.
 
 
-.. _measurement:
+.. _measurements-user-guide:
 
 Measurement
 -----------
+
+(See also :py:mod:`opendp.measurements` in the API reference.)
 
 A :py:class:`Measurement <opendp.mod.Measurement>` is, in contrast, a `randomized` mapping from datasets to outputs.
 Measurements are used to create differentially private releases.

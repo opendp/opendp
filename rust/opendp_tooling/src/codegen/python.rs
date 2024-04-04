@@ -69,16 +69,66 @@ from opendp.measures import *"#
         ""
     };
 
+    fn boilerplate(name: String) -> String {
+        format!(
+            "
+For more context, see :ref:`{name} in the User Guide <{name}-user-guide>`.
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp"
+        )
+    }
+
+    fn special_boilerplate(name: String) -> String {
+        let initial = name.chars().nth(0);
+        format!(
+            "{}\n\nThe methods of this module will then be accessible at ``dp.{}``.",
+            boilerplate(name),
+            match initial {
+                Some(s) => s.to_string(),
+                None => "".to_string(),
+            }
+        )
+    }
+
     let module_docs = match module_name {
-        "accuracy" => "The ``accuracy`` module provides functions for converting between accuracy and scale parameters.",
-        "combinators" => "The ``combinators`` module provides functions for combining transformations and measurements.",
-        "core" => "The ``core`` module provides functions for accessing the fields of transformations and measurements.",
-        "domains" => "The ``domains`` modules provides functions for creating and using domains.",
-        "measurements" => "The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.",
-        "measures" => "The ``measures`` modules provides functions that measure the distance between probability distributions.",
-        "metrics" => "The ``metrics`` module provides fuctions that measure the distance between two elements of a domain.",
-        "transformations" => "The ``transformations`` module provides functions that deterministicly transform datasets.",
-        _ => "TODO!"
+        "accuracy" => format!(
+            "{}{}",
+            "The ``accuracy`` module provides functions for converting between accuracy and scale parameters.",
+            boilerplate("accuracy".to_string())),
+        "combinators" => format!(
+            "{}{}",
+            "The ``combinators`` module provides functions for combining transformations and measurements.",
+            special_boilerplate("combinators".to_string())),
+        "core" => format!(
+            "{}{}",
+            "The ``core`` module provides functions for accessing the fields of transformations and measurements.".to_string(),
+            boilerplate("core".to_string())),
+        "domains" => format!(
+            "{}{}",
+            "The ``domains`` module provides functions for creating and using domains.",
+            boilerplate("domains".to_string())),
+        "measurements" => format!(
+            "{}{}",
+            "The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.",
+            special_boilerplate("measurements".to_string())),
+        "measures" => format!(
+            "{}{}",
+            "The ``measures`` module provides functions that measure the distance between probability distributions.",
+            boilerplate("measures".to_string())),
+        "metrics" => format!(
+            "{}{}",
+            "The ``metrics`` module provides fuctions that measure the distance between two elements of a domain.",
+            boilerplate("metrics".to_string())),
+        "transformations" => format!(
+            "{}{}",
+            "The ``transformations`` module provides functions that deterministicly transform datasets.",
+            special_boilerplate("transformations".to_string())),
+        _ => "TODO!".to_string()
     };
 
     format!(

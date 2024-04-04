@@ -1,6 +1,14 @@
 # Auto-generated. Do not edit!
 '''
 The ``metrics`` module provides fuctions that measure the distance between two elements of a domain.
+For more context, see :ref:`metrics in the User Guide <metrics-user-guide>`.
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
 '''
 from opendp._convert import *
 from opendp._lib import *

@@ -1,6 +1,14 @@
 # Auto-generated. Do not edit!
 '''
-The ``measures`` modules provides functions that measure the distance between probability distributions.
+The ``measures`` module provides functions that measure the distance between probability distributions.
+For more context, see :ref:`measures in the User Guide <measures-user-guide>`.
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
 '''
 from opendp._convert import *
 from opendp._lib import *
