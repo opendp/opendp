@@ -30,7 +30,6 @@ download.file("https://raw.githubusercontent.com/opendp/opendp/sydney/teacher_su
 data_string <- paste(readLines(temp_file), collapse = "\n")
 file.remove(temp_file)
 
-# TODO: Currently failing with "inferred type is f64, expected u32."
 m_sc <- make_sequential_composition(
   input_domain = atom_domain(.T = String),
   input_metric = input_metric,
@@ -39,9 +38,8 @@ m_sc <- make_sequential_composition(
   d_mids = rep(d_out / 3L, 3L)
 )
 
-# TODO: Haven't actually run the code below, because of the error above!
 # Call measurement with data to create a queryable:
-qbl_sc <- m_sc(data)
+qbl_sc <- m_sc(arg = data_string) # Note: "arg" is not required by the Python API.
 
 # /mediate
 
@@ -49,7 +47,7 @@ qbl_sc <- m_sc(data)
 # count
 count_transformation <- (
   make_split_dataframe(",", col_names = col_names)
-  |> make_select_column("age", str)
+  |> make_select_column("age", String)
   |> then_count()
 )
 
