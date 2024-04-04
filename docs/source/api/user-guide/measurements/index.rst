@@ -4,7 +4,7 @@ Measurements
 ============
 
 This section gives a high-level overview of the measurements that are available in the library.
-Refer to the :ref:`measurement` section for an explanation of what a measurement is.
+Refer to the :ref:`measurements-user-guide` for an explanation of what a measurement is.
 
 The intermediate domains and metrics need to match when chaining.
 This means you will need to choose a measurement that chains with your :ref:`aggregator <aggregators>`.
