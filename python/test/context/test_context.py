@@ -177,14 +177,12 @@ def test_measure_cast():
     context.query().compositor(split_evenly_over=1) # TODO: Exercise different output_measure params
 
 
-# TODO: https://github.com/opendp/opendp/issues/1451
-@pytest.mark.xfail
 def test_split_by_weights():
     dp.Context.compositor(
         data=[1, 2, 3],
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=3.0, delta=1e-6),
-        split_by_weights=[1, 2], # Bug: split_evenly_over works, but this doesn't.
+        split_by_weights=[1, 2],
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
 

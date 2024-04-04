@@ -711,7 +711,7 @@ def _sequential_composition_by_weights(
     if split_evenly_over is not None:
         weights = [d_out] * split_evenly_over
     elif split_by_weights is not None:
-        weights = split_by_weights
+        weights = [d_out * w for w in split_by_weights]
     else:
         raise ValueError(
             "Must specify either `split_evenly_over` or `split_by_weights`"
