@@ -30,6 +30,7 @@ download.file("https://raw.githubusercontent.com/opendp/opendp/sydney/teacher_su
 data_string <- paste(readLines(temp_file), collapse = "\n")
 file.remove(temp_file)
 
+# TODO: Currently failing with "inferred type is f64, expected u32."
 m_sc <- make_sequential_composition(
   input_domain = atom_domain(.T = String),
   input_metric = input_metric,
@@ -38,45 +39,46 @@ m_sc <- make_sequential_composition(
   d_mids = rep(d_out / 3, 3)
 )
 
-# >>> # Call measurement with data to create a queryable:
-# >>> qbl_sc = m_sc(data)
+# TODO: Haven't actually run the code below, because of the error above!
+# Call measurement with data to create a queryable:
+qbl_sc <- m_sc(data)
 
 # /mediate
 
 
 # count
-# >>> count_transformation = (
-# ...     dp.t.make_split_dataframe(",", col_names=col_names)
-# ...     >> dp.t.make_select_column("age", str)
-# ...     >> dp.t.then_count()
-# ... )
+count_transformation <- (
+  make_split_dataframe(",", col_names = col_names)
+  |> make_select_column("age", str)
+  |> then_count()
+)
 
-# >>> count_sensitivity = count_transformation.map(d_in)
-# >>> count_sensitivity
+count_sensitivity <- count_transformation.map(d_in)
+count_sensitivity
 # 1
 
-# >>> count_measurement = dp.binary_search_chain(
-# ...     lambda scale: count_transformation >> dp.m.then_laplace(scale), d_in, d_out / 3
-# ... )
-# >>> dp_count = qbl_sc(count_measurement)
+count_measurement <- binary_search_chain(
+  function(scale) count_transformation |> dp.m.then_laplace(scale), d_in, d_out / 3
+)
+dp_count <- qbl_sc(count_measurement)
 
 # /count
 
 
 # mean
-# >>> mean_transformation = (
-# ...     dp.t.make_split_dataframe(",", col_names=col_names) >>
-# ...     dp.t.make_select_column("age", str) >>
-# ...     dp.t.then_cast_default(float) >>
-# ...     dp.t.then_clamp((18.0, 70.0)) >>  # a best-guess based on public information
-# ...     dp.t.then_resize(size=dp_count, constant=42.0) >>
-# ...     dp.t.then_mean()
-# ... )
+mean_transformation <- (
+  make_split_dataframe(",", col_names = col_names)
+  |> make_select_column("age", str)
+  |> then_cast_default(float)
+  |> then_clamp(c(18.0, 70.0))  # a best-guess based on public information
+  |> then_resize(size = dp_count, constant = 42.0)
+  |> then_mean()
+)
 
-# >>> mean_measurement = dp.binary_search_chain(
-# ...     lambda scale: mean_transformation >> dp.m.then_laplace(scale), d_in, d_out / 3
-# ... )
+mean_measurement <- dp.binary_search_chain(
+  function(scale) mean_transformation |> dp.m.then_laplace(scale), d_in, d_out / 3
+)
 
-# >>> dp_mean = qbl_sc(mean_measurement)
+dp_mean <- qbl_sc(mean_measurement)
 
 # /mean
