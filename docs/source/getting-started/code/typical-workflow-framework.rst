@@ -50,7 +50,7 @@
 # count
 >>> count_transformation = (
 ...     dp.t.make_split_dataframe(",", col_names=col_names)
-...     >> dp.t.make_select_column("age", str)
+...     >> dp.t.then_select_column("age", str)
 ...     >> dp.t.then_count()
 ... )
 

@@ -47,7 +47,7 @@ qbl_sc <- m_sc(arg = data_string) # Note: "arg" is not required by the Python AP
 # count
 count_transformation <- (
   make_split_dataframe(",", col_names = col_names)
-  |> make_select_column("age", String)
+  |> then_select_column("age", String) # Note that this is different from the Python.
   |> then_count()
 )
 
@@ -56,7 +56,7 @@ count_sensitivity
 # 1
 
 count_measurement <- binary_search_chain(
-  function(scale) count_transformation |> dp.m.then_laplace(scale), d_in, d_out / 3L
+  function(scale) count_transformation |> then_laplace(scale), d_in, d_out / 3L
 )
 dp_count <- qbl_sc(count_measurement)
 
@@ -66,7 +66,7 @@ dp_count <- qbl_sc(count_measurement)
 # mean
 mean_transformation <- (
   make_split_dataframe(",", col_names = col_names)
-  |> make_select_column("age", str)
+  |> then_select_column("age", str)
   |> then_cast_default(float)
   |> then_clamp(c(18.0, 70.0))  # a best-guess based on public information
   |> then_resize(size = dp_count, constant = 42.0)
@@ -74,7 +74,7 @@ mean_transformation <- (
 )
 
 mean_measurement <- dp.binary_search_chain(
-  function(scale) mean_transformation |> dp.m.then_laplace(scale), d_in, d_out / 3L
+  function(scale) mean_transformation |> then_laplace(scale), d_in, d_out / 3L
 )
 
 dp_mean <- qbl_sc(mean_measurement)
