@@ -99,6 +99,13 @@ def atom_domain(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> import opendp.prelude as dp
+    >>> dp.atom_domain(T=float)
+    AtomDomain(T=f64)
+
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
