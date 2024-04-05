@@ -32,13 +32,6 @@ R_TO_RUST <- list(
   `function` = "AnyFunction"
 )
 
-parse_or_infer <- function(type_name, public_example) {
-  if (is.null(type_name)) {
-    type_name <- rt_infer(public_example)
-  }
-  type_name
-}
-
 as_rt_vec <- function(atom_type) {
   new_runtime_type("Vec", list(atom_type))
 }
