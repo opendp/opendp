@@ -6,13 +6,13 @@ use std::fmt::{Debug, Formatter};
 use crate::core::{Metric, MetricSpace};
 use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, LInfDistance,
-    LpDistance, PartitionDistance, SymmetricDistance,
+    LpDistance, Parallel, PartitionDistance, SymmetricDistance,
 };
 use crate::traits::ProductOrd;
 use crate::transformations::DatasetMetric;
 use crate::{core::Domain, error::Fallible};
 
-use super::{Frame, FrameDomain, LogicalPlanDomain, NumericDataType, SeriesDomain};
+use super::{Frame, FrameDomain, LogicalPlanDomain, Margin, NumericDataType, SeriesDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -123,6 +123,14 @@ impl ExprDomain {
         Ok(&mut self.frame_domain.series_domains[0])
     }
 
+    pub fn active_margin(&self) -> Fallible<&Margin> {
+        let grouping_columns = self.context.grouping_columns()?;
+        self.frame_domain
+            .margins
+            .get(&grouping_columns)
+            .ok_or_else(|| err!(FailedFunction, "No known margin for {:?}", grouping_columns))
+    }
+
     pub fn check_one_column(&self) -> Fallible<()> {
         let series_domains = &self.frame_domain.series_domains;
         if series_domains.len() != 1 {
@@ -227,6 +235,12 @@ impl<Q: ProductOrd, const P: usize> MetricSpace for (ExprDomain, LpDistance<P, Q
 impl<Q: ProductOrd> MetricSpace for (ExprDomain, LInfDistance<Q>) {
     fn check_space(&self) -> Fallible<()> {
         Ok(())
+    }
+}
+
+impl<Q: ProductOrd> MetricSpace for (ExprDomain, Parallel<LInfDistance<Q>>) {
+    fn check_space(&self) -> Fallible<()> {
+        (self.0.clone(), self.1 .0.clone()).check_space()
     }
 }
 

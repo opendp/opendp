@@ -439,29 +439,29 @@ impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
 /// # Proof Definition
 ///
 /// ### $d$-closeness
-/// For any two partitionings $u, v \in \texttt{D}$ and $d$ of type `(usize, M::Distance)`,
-/// we say that $u, v$ are $d$-close under the the parallel distance metric whenever
+/// For any two partitionings $x, x' \in \texttt{D}$ and $d$ of type `(u32, M::Distance)`,
+/// we say that $x, x'$ are $d = (l0, li)$-close under the the partition distance metric whenever
 ///
 /// ```math
-/// d(x, x') = |d_M(x, x')|_0, |d_M(x, x')|_\infty \leq d
+/// d(x, x') = (|d_M(x, x')|_0, |d_M(x, x')|_\infty) \leq (l0, li) = d
 /// ```
 ///
-/// All three numbers in the triple must be less than their respective values in $d$ to be $d$-close.
+/// Both numbers in the 2-tuple must be less than their respective values to be $d$-close.
 ///
 #[derive(Clone, PartialEq)]
-pub struct ParallelDistance<M: Metric>(pub M);
-impl<M: Metric> Default for ParallelDistance<M> {
+pub struct Parallel<M: Metric>(pub M);
+impl<M: Metric> Default for Parallel<M> {
     fn default() -> Self {
-        ParallelDistance(M::default())
+        Parallel(M::default())
     }
 }
-impl<M: Metric> Debug for ParallelDistance<M> {
+impl<M: Metric> Debug for Parallel<M> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "ParallelDistance({:?})", self.0)
+        write!(f, "Parallel({:?})", self.0)
     }
 }
 
-impl<M: Metric> Metric for ParallelDistance<M> {
+impl<M: Metric> Metric for Parallel<M> {
     //               L^0          L^\infty
     type Distance = (IntDistance, M::Distance);
 }
@@ -582,9 +582,20 @@ impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
 /// ```math
 /// d_{\infty}(u, v) = max_{i} |u_i - v_i|
 /// ```
+///
+/// If `monotonic` is `true`, then the distance is infinity if any of the differences have opposing signs.
 pub struct LInfDistance<Q> {
     pub monotonic: bool,
     _marker: PhantomData<fn() -> Q>,
+}
+
+impl<Q> LInfDistance<Q> {
+    pub fn new(monotonic: bool) -> Self {
+        LInfDistance {
+            monotonic,
+            _marker: PhantomData,
+        }
+    }
 }
 
 impl<Q: InfAdd> LInfDistance<Q> {
@@ -600,14 +611,8 @@ impl<Q: InfAdd> LInfDistance<Q> {
             d_in.inf_add(&d_in)
         }
     }
-
-    pub fn new(monotonic: bool) -> Self {
-        LInfDistance {
-            monotonic,
-            _marker: PhantomData,
-        }
-    }
 }
+
 impl<Q> Default for LInfDistance<Q> {
     fn default() -> Self {
         LInfDistance {

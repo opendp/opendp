@@ -380,7 +380,7 @@ def test_quantile_score_candidates():
     input_domain = dp.vector_domain(dp.atom_domain(T=int))
     input_metric = dp.symmetric_distance()
     trans = dp.t.make_quantile_score_candidates(input_domain, input_metric, [20, 33, 40, 50, 72, 100], alpha=0.5)
-    scores = trans(list(range(100)))
-    print(scores)
-
-    assert trans.map(1) == 5_000
+    scores = trans(list(range(101)))
+    # score works out to 2 * |50 - cand|
+    assert scores == [60, 34, 20, 0, 44, 100]
+    assert trans.map(1) == 1
