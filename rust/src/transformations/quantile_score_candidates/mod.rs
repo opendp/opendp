@@ -1,13 +1,15 @@
 use std::cmp::Ordering;
 
+use dashu::{integer::UBig, rational::RBig};
+use num::NumCast;
 use opendp_derive::bootstrap;
 
 use crate::{
     core::{Function, MetricSpace, StabilityMap, Transformation},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    metrics::LInfDistance,
-    traits::{AlertingMul, ExactIntCast, InfDiv, Number, RoundCast},
+    metrics::{IntDistance, LInfDistance},
+    traits::{ExactIntCast, Integer, Number, RoundCast},
 };
 
 use super::traits::UnboundedMetric;
@@ -52,53 +54,102 @@ where
         return fallible!(MakeTransformation, "input must be non-null");
     }
 
-    if candidates.windows(2).any(|w| w[0] >= w[1]) {
-        return fallible!(MakeTransformation, "candidates must be increasing");
-    }
+    validate_candidates(&candidates)?;
 
-    let alpha_den = if let Some(size) = input_domain.size {
-        // choose the finest granularity that won't overflow
-        // must have that size * denom < MAX, so let denom = MAX // size
-        (usize::MAX).neg_inf_div(&size)?
-    } else {
-        // default to an alpha granularity of .00001
-        10_000
-    };
-    // numer = alpha * denom
-    let alpha_num = usize::round_cast(alpha * f64::round_cast(alpha_den.clone())?)?;
-    if alpha_num > alpha_den || alpha_den == 0 {
-        return fallible!(MakeTransformation, "alpha must be within [0, 1]");
-    }
-
-    let size_limit = if let Some(size_limit) = input_domain.size {
-        // ensures that there is no overflow
-        size_limit.alerting_mul(&alpha_den)?;
-        size_limit
-    } else {
-        (usize::MAX).neg_inf_div(&alpha_den)?
-    };
-
-    let stability_map = if input_domain.size.is_some() {
-        StabilityMap::new_fallible(move |d_in| {
-            usize::exact_int_cast(d_in / 2)?
-                .alerting_mul(&2)?
-                .alerting_mul(&alpha_den)
-        })
-    } else {
-        let abs_dist_const = alpha_num.max(alpha_den - alpha_num);
-        StabilityMap::new_from_constant(abs_dist_const)
-    };
+    let (alpha_num, alpha_den, size_limit) = score_candidates_constants(input_domain.size, alpha)?;
 
     Transformation::<_, VectorDomain<AtomDomain<usize>>, _, _>::new(
-        input_domain,
+        input_domain.clone(),
         VectorDomain::default().with_size(candidates.len()),
         Function::new(move |arg: &Vec<TIA>| {
             compute_score(arg.clone(), &candidates, alpha_num, alpha_den, size_limit)
         }),
         input_metric,
-        LInfDistance::new(true),
-        stability_map,
+        LInfDistance::default(),
+        StabilityMap::new_fallible(score_candidates_map(
+            alpha_num,
+            alpha_den,
+            input_domain.size.is_some(),
+        )),
     )
+}
+
+pub(crate) fn validate_candidates<T: Number>(candidates: &Vec<T>) -> Fallible<()> {
+    if candidates.is_empty() {
+        return fallible!(MakeTransformation, "candidates must be non-empty");
+    }
+    if candidates.windows(2).any(|w| {
+        w[0].partial_cmp(&w[1])
+            .map(|c| c != Ordering::Less)
+            .unwrap_or(true)
+    }) {
+        return fallible!(
+            MakeTransformation,
+            "candidates must be non-null and increasing"
+        );
+    }
+    Ok(())
+}
+
+pub(crate) fn score_candidates_constants<T: Integer>(
+    size: Option<T>,
+    alpha: f64,
+) -> Fallible<(T, T, T)>
+where
+    f64: RoundCast<T>,
+    T: RoundCast<f64> + NumCast,
+    UBig: From<T>,
+{
+    if !(0.0..=1.0).contains(&alpha) {
+        return fallible!(MakeTransformation, "alpha must be within [0, 1]");
+    }
+
+    let (alpha_num_exact, alpha_den_exact) = RBig::try_from(alpha)?.into_parts();
+
+    let alpha_den_approx = if let Some(size) = size {
+        // choose the finest granularity that won't overflow
+        // must have that size * denom < MAX, so let denom = MAX // size
+        T::MAX_FINITE.neg_inf_div(&size)?
+    } else {
+        // default to an alpha granularity of .00001
+        T::exact_int_cast(10_000)?
+    };
+
+    let (alpha_num, alpha_den) = if alpha_den_exact < UBig::from(alpha_den_approx) {
+        T::from(alpha_num_exact.into_parts().1)
+            .zip(T::from(alpha_den_exact))
+            .unwrap()
+    } else {
+        // numer = alpha * denom
+        let alpha_num_approx = T::round_cast(alpha * f64::round_cast(alpha_den_approx.clone())?)?;
+        (alpha_num_approx, alpha_den_approx)
+    };
+
+    let size_limit = if let Some(size_limit) = size {
+        // ensures that there is no overflow
+        size_limit.alerting_mul(&alpha_den)?;
+        size_limit
+    } else {
+        T::MAX_FINITE.neg_inf_div(&alpha_den)?
+    };
+
+    Ok((alpha_num, alpha_den, size_limit))
+}
+
+pub(crate) fn score_candidates_map<T: Integer + ExactIntCast<IntDistance>>(
+    alpha_num: T,
+    alpha_den: T,
+    known_size: bool,
+) -> impl Fn(&IntDistance) -> Fallible<T> {
+    move |d_in| {
+        if known_size {
+            T::exact_int_cast(d_in / 2 * 2)? // round down to even
+                .alerting_mul(&alpha_den)
+        } else {
+            let abs_dist_const = alpha_num.max(alpha_den - alpha_num);
+            T::exact_int_cast(*d_in)?.alerting_mul(&abs_dist_const)
+        }
+    }
 }
 
 /// Compute score of each candidate on a dataset
@@ -127,7 +178,7 @@ where
 /// * `alpha_num` - numerator of alpha fraction
 /// * `alpha_den` - denominator of alpha fraction. alpha fraction is {0: min, 0.5: median, 1: max, ...}
 /// * `size_limit` - maximum size of `x`. If `x` is larger than `size_limit`, scores are truncated
-fn compute_score<TIA: PartialOrd>(
+pub(crate) fn compute_score<TIA: PartialOrd>(
     mut x: Vec<TIA>,
     candidates: &Vec<TIA>,
     alpha_num: usize,
@@ -382,17 +433,16 @@ mod test_trans {
         let _scores = trans.invoke(&(0..100).collect())?;
         let _scores_sized = trans_sized.invoke(&(0..100).collect())?;
 
-        // because alpha is .75, sensitivity is 1.5 (because not monotonic)
-        // granularity of quantile is .00001, so scores are integerized at a scale of 10000x
-        assert_eq!(trans.map(&1)?, 7500);
+        // because alpha is .75, linf sensitivity is usually .75
+        // granularity of quantile is .25, so scores are integerized at a scale of 4x
+        // .75 = 3/4 = α_num / α_den
+        // d_out = d_in * max(α_num, α_den - α_num) = 1 * max(3, 4 - 3) = 3
+        assert_eq!(trans.map(&1)?, 3);
 
-        // alpha does not affect sensitivity- it's solely based on the size of the input domain
-        // using all of the range of the usize,
-        //     so scores can be scaled up by a factor of usize::MAX / 100 before being converted to integers and not overflow
-        // factor of 4 breaks into:
-        //   * a factor of 2 from non-monotonicity
-        //   * a factor of 2 from difference in score after moving one record from above to below a candidate
-        assert_eq!(trans_sized.map(&2)?, usize::MAX / 100 * 2);
+        // when size is known, sensitivity is based on whichever is smaller:
+        //     * the size of the output domain (usize::MAX / size)
+        //     * the denominator of the alpha fraction (4)
+        assert_eq!(trans_sized.map(&2)?, 8);
 
         Ok(())
     }

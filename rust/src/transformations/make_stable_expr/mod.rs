@@ -5,7 +5,10 @@ use crate::{
     core::{Metric, MetricSpace, Scalar, Transformation},
     domains::{ExprDomain, OuterMetric},
     error::Fallible,
-    metrics::{InsertDeleteDistance, LpDistance, PartitionDistance, SymmetricDistance},
+    metrics::{
+        InsertDeleteDistance, LInfDistance, LpDistance, Parallel, PartitionDistance,
+        SymmetricDistance,
+    },
 };
 
 use super::{traits::UnboundedMetric, DatasetMetric};
@@ -15,6 +18,9 @@ mod ffi;
 
 #[cfg(feature = "contrib")]
 mod expr_col;
+
+#[cfg(feature = "contrib")]
+pub(crate) mod expr_discrete_quantile_score;
 
 #[cfg(feature = "contrib")]
 mod expr_clip;
@@ -111,6 +117,41 @@ where
                 expr_sum::make_expr_sum::<_, _, P>(input_domain, input_metric, self.clone())
             }
 
+            expr => fallible!(
+                MakeTransformation,
+                "Expr is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
+                expr
+            )
+        }
+    }
+}
+
+impl<MI> StableExpr<PartitionDistance<MI>, Parallel<LInfDistance<Scalar>>> for Expr
+where
+    MI: 'static + UnboundedMetric,
+    Expr: StableExpr<PartitionDistance<MI>, PartitionDistance<MI>>,
+    (ExprDomain, PartitionDistance<MI>): MetricSpace,
+{
+    fn make_stable(
+        self,
+        input_domain: ExprDomain,
+        input_metric: PartitionDistance<MI>,
+    ) -> Fallible<
+        Transformation<
+            ExprDomain,
+            ExprDomain,
+            PartitionDistance<MI>,
+            Parallel<LInfDistance<Scalar>>,
+        >,
+    > {
+        if expr_discrete_quantile_score::match_dq_score(&self)?.is_some() {
+            return expr_discrete_quantile_score::make_expr_discrete_quantile_score(
+                input_domain,
+                input_metric,
+                self,
+            );
+        }
+        match self {
             expr => fallible!(
                 MakeTransformation,
                 "Expr is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",

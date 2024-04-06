@@ -1,7 +1,7 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use dashu::integer::Sign;
+use dashu::base::Sign;
 use opendp_derive::bootstrap;
 
 use crate::{
@@ -18,7 +18,7 @@ use crate::traits::{
     DistanceConstant,
 };
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Optimize {
     Max,
     Min,
@@ -102,6 +102,7 @@ where
     )
 }
 
+#[cfg(feature = "floating-point")]
 #[cfg(test)]
 pub mod test_exponential {
     use crate::error::Fallible;

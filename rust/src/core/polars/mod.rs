@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use crate::{measurements::expr_laplace::LaplaceArgs, traits::InfCast};
+use crate::{
+    measurements::expr_laplace::LaplaceArgs, traits::InfCast,
+    transformations::expr_discrete_quantile_score::DQScoreArgs,
+};
 use polars_plan::{
     dsl::{lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
     logical_plan::Literal,
@@ -232,5 +235,14 @@ impl DPNamespace {
 
     pub fn mean<L: Literal>(self, bounds: (L, L), scale: f64) -> Expr {
         self.0.clone().dp().sum(bounds, scale) / self.0.len()
+    }
+
+    pub fn quantile_score(self, candidates: Vec<f64>, alpha: f64) -> Expr {
+        let args = DQScoreArgs {
+            alpha,
+            candidates,
+            constants: None,
+        };
+        apply_anonymous_function(vec![self.0], args)
     }
 }
