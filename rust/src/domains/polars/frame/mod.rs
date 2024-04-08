@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -92,7 +92,7 @@ impl Frame for DataFrame {
 ///     SeriesDomain::new("B", AtomDomain::<String>::default()),
 /// ])?
 ///         .with_margin(&["A"], Margin::new().with_public_keys())?
-///         .with_margin(&["B"], Margin::new().with_public_sizes())?;
+///         .with_margin(&["B"], Margin::new().with_public_lengths())?;
 ///
 /// # opendp::error::Fallible::Ok(())
 /// ```
@@ -111,16 +111,15 @@ impl<F: Frame> PartialEq for FrameDomain<F> {
 }
 
 pub type LazyFrameDomain = FrameDomain<LazyFrame>;
-pub(crate) type LogicalPlanDomain = FrameDomain<LogicalPlan>;
 
 impl<F: Frame, M: DatasetMetric> MetricSpace for (FrameDomain<F>, M) {
     fn check_space(&self) -> Fallible<()> {
         if M::SIZED
-            && !self
+            && self
                 .0
                 .margins
                 .values()
-                .any(|m| m.public_info == Some(MarginPub::Lengths))
+                .all(|m| m.public_info != Some(MarginPub::Lengths))
         {
             return fallible!(MetricSpace, "bounded dataset metric must have known size");
         }
@@ -136,8 +135,12 @@ impl<Q> MetricSpace for (LazyFrameDomain, LInfDistance<Q>) {
 
 impl<F: Frame> FrameDomain<F> {
     pub fn new(series_domains: Vec<SeriesDomain>) -> Fallible<Self> {
-        let num_unique = BTreeSet::from_iter(series_domains.iter().map(|s| &s.field.name)).len();
-        if num_unique != series_domains.len() {
+        let n_unique = series_domains
+            .iter()
+            .map(|s| &s.field.name)
+            .collect::<HashSet<_>>()
+            .len();
+        if n_unique != series_domains.len() {
             return fallible!(MakeDomain, "column names must be distinct");
         }
         Ok(FrameDomain {
@@ -145,14 +148,6 @@ impl<F: Frame> FrameDomain<F> {
             margins: HashMap::new(),
             _marker: PhantomData,
         })
-    }
-
-    pub(crate) fn cast_carrier<FO: Frame>(&self) -> FrameDomain<FO> {
-        FrameDomain {
-            series_domains: self.series_domains.clone(),
-            margins: self.margins.clone(),
-            _marker: PhantomData,
-        }
     }
 
     pub fn new_from_schema(schema: Schema) -> Fallible<Self> {
@@ -188,56 +183,33 @@ impl<F: Frame> FrameDomain<F> {
     }
 
     #[must_use]
-    pub fn with_margin<I: AsRef<str>>(mut self, by: &[I], margin: Margin) -> Fallible<Self> {
-        let by_set = BTreeSet::from_iter(by.iter().map(AsRef::as_ref).map(ToString::to_string));
-        if by.len() != by_set.len() {
-            return fallible!(MakeDomain, "margin columns must be distinct");
-        }
-        if self.margins.contains_key(&by_set) {
+    pub fn with_margin<I: AsRef<str>>(
+        mut self,
+        grouping_keys: &[I],
+        margin: Margin,
+    ) -> Fallible<Self> {
+        let grouping_keys =
+            BTreeSet::from_iter(grouping_keys.iter().map(|v| v.as_ref().to_string()));
+        if self.margins.contains_key(&grouping_keys) {
             return fallible!(MakeDomain, "margin already exists");
         }
-        self.margins.insert(by_set, margin);
+        self.margins.insert(grouping_keys, margin);
         Ok(self)
-    }
-
-    fn column_index<I: AsRef<str>>(&self, name: I) -> Option<usize> {
-        self.series_domains
-            .iter()
-            .position(|s| s.field.name() == name.as_ref())
-    }
-    pub fn column<I: AsRef<str>>(&self, name: I) -> Option<&SeriesDomain> {
-        self.column_index(name).map(|i| &self.series_domains[i])
-    }
-    pub fn try_column<I: AsRef<str>>(&self, name: I) -> Fallible<&SeriesDomain> {
-        self.column(&name)
-            .ok_or_else(|| err!(FailedFunction, "{} is not in dataframe", name.as_ref()))
-    }
-    pub fn try_column_mut<I: AsRef<str>>(&mut self, name: I) -> Fallible<&mut SeriesDomain> {
-        let series_index = self
-            .column_index(name.as_ref())
-            .ok_or_else(|| err!(FailedFunction, "{} is not in dataframe", name.as_ref()))?;
-        Ok(&mut self.series_domains[series_index])
-    }
-
-    pub fn schema(&self) -> Schema {
-        Schema::from_iter(self.series_domains.iter().map(|s| s.field.clone()))
     }
 }
 
 impl<F: Frame> Debug for FrameDomain<F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut margins_debug = self
+        let margins_debug = self
             .margins
             .keys()
             .map(|id| format!("{:?}", id))
             .collect::<Vec<_>>()
             .join(", ");
-        if !margins_debug.is_empty() {
-            margins_debug = format!("; margins=[{}]", margins_debug);
-        }
+
         write!(
             f,
-            "LazyFrameDomain({}{})",
+            "FrameDomain({}; margins=[{}])",
             self.series_domains
                 .iter()
                 .map(|s| format!("{}: {}", s.field.name, s.field.dtype))
@@ -259,15 +231,16 @@ impl<F: Frame> Domain for FrameDomain<F> {
         }
 
         // check if each column is a member of the series domain
-        for (s, dom) in val_df.get_columns().iter().zip(self.series_domains.iter()) {
-            if !dom.member(s)? {
+        for (series_domain, series) in self.series_domains.iter().zip(val_df.get_columns().iter()) {
+            if !series_domain.member(series)? {
                 return Ok(false);
             }
         }
 
         // check that margins are satisfied
-        for (by, margin) in self.margins.iter() {
-            if !margin.member(by, val.clone().lazyframe())? {
+        for (grouping_keys, margin) in self.margins.iter() {
+            let grouping_keys = grouping_keys.iter().map(|c| col(c)).collect::<Vec<_>>();
+            if !margin.member(val.clone().lazyframe().group_by(grouping_keys))? {
                 return Ok(false);
             }
         }
@@ -320,20 +293,20 @@ impl Margin {
         }
     }
 
-    pub fn max_partition_size(mut self, value: u32) -> Self {
+    pub fn with_max_partition_size(mut self, value: u32) -> Self {
         self.max_partition_size = Some(value);
         self
     }
-    pub fn max_num_partitions(mut self, value: u32) -> Self {
+    pub fn with_max_num_partitions(mut self, value: u32) -> Self {
         self.max_num_partitions = Some(value);
         self
     }
 
-    pub fn max_partition_contributions(mut self, value: u32) -> Self {
+    pub fn with_max_partition_contributions(mut self, value: u32) -> Self {
         self.max_partition_contributions = Some(value);
         self
     }
-    pub fn max_influenced_partitions(mut self, value: u32) -> Self {
+    pub fn with_max_influenced_partitions(mut self, value: u32) -> Self {
         self.max_influenced_partitions = Some(value);
         self
     }
@@ -348,7 +321,7 @@ impl Margin {
         self
     }
 
-    fn member(&self, by: &BTreeSet<String>, val: LazyFrame) -> Fallible<bool> {
+    fn member(&self, value: LazyGroupBy) -> Fallible<bool> {
         // retrieves the first row/first column from $tgt as type $ty
         macro_rules! item {
             ($tgt:expr, $ty:ident) => {
@@ -357,18 +330,13 @@ impl Margin {
             };
         }
 
-        let max_part_size = val
-            .clone()
-            .group_by(by.iter().map(|s| col(s)).collect::<Vec<_>>())
-            .agg([len()])
-            .select(&[max("len")]);
+        let max_part_size = value.clone().agg([len()]).select(&[max("len")]);
 
         if item!(max_part_size, u32) > self.max_partition_size.unwrap_or(u32::MAX) {
             return Ok(false);
         }
 
-        let max_num_parts =
-            val.select([cols(by.iter().map(|s| s.as_str()).collect::<Vec<_>>()).n_unique()]);
+        let max_num_parts = value.agg([]).select(&[len()]);
 
         if item!(max_num_parts, u32) > self.max_num_partitions.unwrap_or(u32::MAX) {
             return Ok(false);
@@ -404,7 +372,9 @@ mod test_lazyframe {
         ])?
         .with_margin(
             &["A"],
-            Margin::new().max_partition_size(1).max_num_partitions(2),
+            Margin::new()
+                .with_max_partition_size(1)
+                .with_max_num_partitions(2),
         )?;
 
         let lf_exceed_partition_size = df!("A" => [1, 2, 2], "B" => ["1", "1", "2"])?.lazyframe();
