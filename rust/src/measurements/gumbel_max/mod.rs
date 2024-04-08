@@ -1,7 +1,7 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use dashu::base::Sign;
+use dashu::rational::RBig;
 use opendp_derive::bootstrap;
 
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
     metrics::LInfDistance,
-    traits::{Float, Number},
+    traits::{Float, InfAdd, InfCast, Number},
 };
 
 use crate::traits::{
@@ -22,6 +22,17 @@ use crate::traits::{
 pub enum Optimize {
     Max,
     Min,
+}
+
+impl TryFrom<&str> for Optimize {
+    type Error = crate::error::Error;
+    fn try_from(s: &str) -> Fallible<Self> {
+        Ok(match s {
+            i if i.to_lowercase().starts_with("min") => Optimize::Min,
+            i if i.to_lowercase().starts_with("max") => Optimize::Max,
+            _ => return fallible!(FailedCast, "optimize must start with \"min\" or \"max"),
+        })
+    }
 }
 
 #[bootstrap(
@@ -63,43 +74,72 @@ where
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &Vec<TIA>| {
-            (arg.iter().cloned().enumerate())
-                .map(|(i, v)| {
-                    let shift = v.into_rational()?
-                        * match optimize {
-                            Optimize::Max => Sign::Positive,
-                            Optimize::Min => Sign::Negative,
-                        };
-                    Ok((i, GumbelPSRN::new(shift, scale_frac.clone())))
-                })
-                .reduce(|l, r| {
-                    let (mut l, mut r) = (l?, r?);
-                    Ok(if l.1.greater_than(&mut r.1)? { l } else { r })
-                })
-                .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
-                .map(|v| v.0)
+            select_score(arg.iter().cloned(), optimize.clone(), scale_frac.clone())
         }),
         input_metric.clone(),
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(move |d_in: &TIA| {
-            // convert L_\infty distance to range distance
-            let d_in = input_metric.range_distance(*d_in)?;
-
-            // convert data type to QO
-            let d_in = QO::inf_cast(d_in)?;
-
-            if d_in.is_sign_negative() {
-                return fallible!(InvalidDistance, "sensitivity must be non-negative");
-            }
-
-            if scale.is_zero() {
-                return Ok(QO::infinity());
-            }
-
-            // d_out >= d_in / scale
-            d_in.inf_div(&scale)
-        }),
+        PrivacyMap::new_fallible(rnm_gumbel_map(scale, input_metric)),
     )
+}
+
+pub(crate) fn rnm_gumbel_map<QI, QO>(
+    scale: QO,
+    input_metric: LInfDistance<QI>,
+) -> impl Fn(&QI) -> Fallible<QO>
+where
+    QI: Clone + InfAdd,
+    QO: Float + InfCast<QI>,
+{
+    move |d_in: &QI| {
+        // convert L_\infty distance to range distance
+        let d_in = input_metric.range_distance(d_in.clone())?;
+
+        // convert data type to QO
+        let d_in = QO::inf_cast(d_in)?;
+
+        if d_in.is_sign_negative() {
+            return fallible!(InvalidDistance, "sensitivity must be non-negative");
+        }
+
+        if scale.is_zero() {
+            return Ok(QO::infinity());
+        }
+
+        // d_out >= d_in / scale
+        d_in.inf_div(&scale)
+    }
+}
+
+pub fn select_score<TIA>(
+    iter: impl Iterator<Item = TIA>,
+    optimize: Optimize,
+    scale: RBig,
+) -> Fallible<usize>
+where
+    TIA: Number + CastInternalRational,
+{
+    if scale.is_zero() {
+        return Ok(iter
+            .enumerate()
+            .reduce(|l, r| if l.1 > r.1 { l } else { r })
+            .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
+            .0);
+    }
+
+    (iter.enumerate())
+        .map(|(i, v)| {
+            let mut shift = v.into_rational()?;
+            if optimize == Optimize::Min {
+                shift = -shift;
+            }
+            Ok((i, GumbelPSRN::new(shift, scale.clone())))
+        })
+        .reduce(|l, r| {
+            let (mut l, mut r) = (l?, r?);
+            Ok(if l.1.greater_than(&mut r.1)? { l } else { r })
+        })
+        .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
+        .map(|v| v.0)
 }
 
 #[cfg(feature = "floating-point")]

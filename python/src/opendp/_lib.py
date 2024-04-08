@@ -148,6 +148,31 @@ if pl is not None:
             return self._expr.dp.sum(bounds, scale) / self._expr.len()
 
 
+        def _quantile_score(self, alpha, candidates):
+            return pl.plugins.register_plugin_function(
+                plugin_path=lib_path,
+                function_name="dq_score",
+                kwargs={"alpha": alpha, "candidates": candidates},
+                args=self._expr,
+                returns_scalar=True,
+            )
+
+        def _rnm_gumbel(self, scale, optimize):
+            return pl.plugins.register_plugin_function(
+                plugin_path=lib_path,
+                function_name="rnm_gumbel",
+                kwargs={"scale": scale, "optimize": optimize},
+                args=self._expr,
+                is_elementwise=True,
+            )
+
+        def quantile(self, alpha, candidates, scale):
+            dq_score = self._expr.dp._quantile_score(alpha, candidates)
+            return dq_score.dp._rnm_gumbel(scale, "min")
+        
+        def median(self, candidates, scale):
+            return self._expr.dp.quantile(0.5, candidates, scale)
+
 # This enables backtraces in Rust by default.
 # It can be disabled by setting RUST_BACKTRACE=0.
 if "RUST_BACKTRACE" not in os.environ:

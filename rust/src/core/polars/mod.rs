@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use crate::{
-    measurements::expr_laplace::LaplaceArgs, traits::InfCast,
+    measurements::{
+        expr_laplace::LaplaceArgs, expr_report_noisy_max_gumbel::RNMGumbelArgs, Optimize,
+    },
+    traits::InfCast,
     transformations::expr_discrete_quantile_score::DQScoreArgs,
 };
 use polars_plan::{
@@ -244,5 +247,22 @@ impl DPNamespace {
             constants: None,
         };
         apply_anonymous_function(vec![self.0], args)
+    }
+
+    pub(crate) fn rnm_gumbel(self, scale: f64, optimize: Optimize) -> Expr {
+        let optimize = match optimize {
+            Optimize::Min => "min",
+            Optimize::Max => "max",
+        }
+        .to_string();
+        apply_anonymous_function(vec![self.0], RNMGumbelArgs { scale, optimize })
+    }
+
+    pub fn quantile(self, candidates: Vec<f64>, alpha: f64, scale: f64) -> Expr {
+        self.0
+            .dp()
+            .quantile_score(candidates, alpha)
+            .dp()
+            .rnm_gumbel(scale, Optimize::Min)
     }
 }
