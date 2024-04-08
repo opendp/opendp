@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use crate::{
     interactive::{Answer, Query, Queryable},
-    measurements::expr_laplace::LaplaceArgs,
+    measurements::{
+        expr_laplace::LaplaceArgs, expr_report_noisy_max_gumbel::RNMGumbelArgs, Optimize,
+    },
     transformations::expr_discrete_quantile_score::DQScoreArgs,
 };
 use polars::{frame::DataFrame, lazy::frame::LazyFrame};
@@ -241,7 +243,6 @@ impl DPNamespace {
     /// # Arguments
     /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
     /// * `candidates` - Set of possible quantiles to evaluate the utility of.
-    #[allow(dead_code)]
     pub(crate) fn quantile_score(self, alpha: f64, candidates: Vec<f64>) -> Expr {
         let args = DQScoreArgs {
             alpha,
@@ -249,6 +250,49 @@ impl DPNamespace {
             constants: None,
         };
         apply_anonymous_function(vec![self.0], args)
+    }
+
+    /// Report the argmax or argmin after adding Gumbel noise.
+    ///
+    /// The scale calibrates the level of entropy when selecting an index.
+    ///
+    /// # Arguments
+    /// * `optimize` - Distinguish between argmax and argmin.
+    /// * `scale` - Noise scale parameter for the Gumbel distribution.
+    pub(crate) fn rnm_gumbel(self, optimize: Optimize, scale: Option<f64>) -> Expr {
+        let optimize = match optimize {
+            Optimize::Min => "min",
+            Optimize::Max => "max",
+        }
+        .to_string();
+        apply_anonymous_function(vec![self.0], RNMGumbelArgs { optimize, scale })
+    }
+
+    /// Compute a differentially private quantile.
+    ///
+    /// The scale calibrates the level of entropy when selecting a candidate.
+    ///
+    /// # Arguments
+    /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
+    /// * `candidates` - Potential quantiles to select from.
+    /// * `scale` - Noise scale parameter for the Gumbel distribution.
+    pub fn quantile(self, alpha: f64, candidates: Vec<f64>, scale: Option<f64>) -> Expr {
+        self.0
+            .dp()
+            .quantile_score(alpha, candidates)
+            .dp()
+            .rnm_gumbel(Optimize::Min, scale)
+    }
+
+    /// Compute a differentially private median.
+    ///
+    /// The scale calibrates the level of entropy when selecting a candidate.
+    ///
+    /// # Arguments
+    /// * `candidates` - Potential quantiles to select from.
+    /// * `scale` - Noise scale parameter for the Gumbel distribution.
+    pub fn median(self, candidates: Vec<f64>, scale: Option<f64>) -> Expr {
+        self.0.dp().quantile(0.5, candidates, scale)
     }
 }
 

@@ -29,11 +29,7 @@ pub extern "C" fn opendp_measurements__make_report_noisy_max_gumbel(
     let TIA = try_!(input_domain.type_.get_atom());
     let scale = try_as_ref!(scale);
 
-    let optimize = match try_!(to_str(optimize)) {
-        i if i.to_lowercase().starts_with("min") => Optimize::Min,
-        i if i.to_lowercase().starts_with("max") => Optimize::Max,
-        _ => return err!(FFI, "optimize must start with \"min\" or \"max\"").into(),
-    };
+    let optimize = try_!(Optimize::try_from(try_!(to_str(optimize))));
     let QO = try_!(Type::try_from(QO));
 
     fn monomorphize<TIA, QO>(
