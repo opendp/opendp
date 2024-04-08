@@ -32,6 +32,7 @@ extensions = [
     'sphinx_multiversion',
     'nbsphinx',
     'sphinx_design',
+    'sphinxcontrib.jupyter',
 ]
 
 # convert markdown to rst when rendering with sphinx
@@ -261,3 +262,14 @@ class CustomClassDocumenter(autodoc.ClassDocumenter):
         super().add_line(line, source, *lineno)
 
 autodoc.ClassDocumenter = CustomClassDocumenter
+
+jupyter_kernels = {
+    "python3": {
+        "kernelspec": {
+            "display_name": "Python",
+            "language": "python",
+            "name": "python"
+            },
+        "file_extension": ".py",
+    },
+}
