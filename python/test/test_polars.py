@@ -173,3 +173,16 @@ def test_private_expr():
             dp.max_divergence(T=float),
             pl.col("A").sum(),
         )
+
+def test_private_lazyframe_median():
+    pl = pytest.importorskip("polars")
+    lf_domain, lf = example_lf(margin=["A"], public_info="keys", max_partition_length=50)
+    candidates = list(range(1, 6))
+    expr = pl.col("B").dp.median(candidates)
+    plan = seed(lf.schema).group_by("A").agg(expr)
+    m_lf = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.
+    )
+    print(m_lf(lf).collect())
+
+    assert m_lf(lf).collect()["B"][0] == 2
