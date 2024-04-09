@@ -10,7 +10,12 @@ import tempfile
 
 
 def clean_rst(rst_text):
-    return rst_text
+    clean_rst_text = (
+        rst_text
+            .replace('.. literalinclude::', '.. include::')
+            .replace(':language:', ':code:')
+    )
+    return clean_rst_text
 
 
 def clean_rst_to_nb(clean_rst_text, resource_path):
