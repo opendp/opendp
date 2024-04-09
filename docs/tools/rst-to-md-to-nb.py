@@ -48,6 +48,7 @@ def rst_to_md(rst_text, resource_path):
 
 
 def clean_md(md_text):
+    md_text = re.sub(r'``` \{.*?\}', '``` code', md_text, flags=re.DOTALL)
     return md_text
 
 
