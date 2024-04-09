@@ -45,7 +45,7 @@ jobs:
         run: bash tools/r_stage.sh -d
 
       - name: Upload docs
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: r-docs
           path: R/opendp/docs
