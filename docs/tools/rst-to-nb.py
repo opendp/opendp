@@ -9,30 +9,40 @@ import subprocess
 import tempfile
 
 
+def run_command(cmd):
+    print(cmd)
+    completed_process = subprocess.run(
+        cmd,
+        capture_output=True,
+        shell=True,
+        text=True
+    )
+    print(completed_process.stderr)
+    if completed_process.returncode != 0:
+        raise Exception(f'Failed subprocess: {cmd}')
+    return completed_process.stdout
+
+
 def clean_rst(rst_text):
     clean_rst_text = (
         rst_text
             .replace('.. literalinclude::', '.. include::')
-            .replace(':language:', ':code:')
+            .replace(':language: python', ':code: code')
+            .replace(
+                'code/',
+                '/Users/chuckmccallum/github/opendp/opendp/docs/source/getting-started/code/')
+            # .replace('\s+>>>', '')
     )
     return clean_rst_text
 
 
 def clean_rst_to_nb(clean_rst_text, resource_path):
-    with tempfile.NamedTemporaryFile() as temp:
+    with tempfile.NamedTemporaryFile(delete=False) as temp:
         temp_path = Path(temp.name)
         temp_path.write_text(clean_rst_text)
 
-        cmd = f'pandoc --from rst --to ipynb --resource-path {resource_path} {temp_path}'
-        completed_process = subprocess.run(
-            cmd,
-            capture_output=True,
-            shell=True,
-            text=True
-        )
-        if completed_process.returncode != 0:
-            raise Exception(f'"{cmd}" failed: "{completed_process.stderr}"')
-        return completed_process.stdout
+        cmd = f'pandoc --from rst --to ipynb --fail-if-warnings {temp_path}'
+        return run_command(cmd)
 
 
 def rst_to_nb(rst_text, resource_path):

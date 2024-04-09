@@ -7,6 +7,7 @@ import argparse
 from pathlib import Path
 import subprocess
 import tempfile
+import re
 
 
 def run_command(cmd):
@@ -17,27 +18,33 @@ def run_command(cmd):
         shell=True,
         text=True
     )
+    print(completed_process.stderr)
     if completed_process.returncode != 0:
-        raise Exception(f'"{cmd}" failed: "{completed_process.stderr}"')
+        raise Exception(f'subprocess failed : {cmd}')
     return completed_process.stdout
 
 
-def clean_rst(rst_text):
-    clean_rst_text = (
-        rst_text
-            .replace('.. literalinclude::', '.. include::')
-            .replace(':language:', ':code:')
-    )
-    return clean_rst_text
+def clean_rst(rst_text, resource_path):
+    # desired format: https://github.com/jgm/pandoc/issues/6631#issuecomment-678727316
+    abs_prefix = resource_path.absolute()
+    spaces = ' ' * 4
+    rst_text = re.sub(r'^\s+?\.\. literalinclude:: (\S+)', fr'.. include:: {abs_prefix}/\1\n{spaces}:code: python\n', rst_text, flags=re.MULTILINE)
+    rst_text = re.sub(r'^\s+?\.\. tab-set::', '', rst_text, flags=re.MULTILINE)
+    rst_text = re.sub(r'^\s+?\.\. tab-item::.*', '', rst_text, flags=re.MULTILINE) 
+    rst_text = re.sub(r'^\s+?:sync:.*', '', rst_text, flags=re.MULTILINE)
+    rst_text = re.sub(r'^\s+?:language: python', '', rst_text, flags=re.MULTILINE)
+    rst_text = re.sub(r'^\s+?(:start-after: \S+)', fr'{spaces}\1', rst_text, flags=re.MULTILINE)
+    rst_text = re.sub(r'^\s+?(:end-before: \S+)', fr'{spaces}\1', rst_text, flags=re.MULTILINE)
+    return rst_text
 
 
 def rst_to_md(rst_text, resource_path):
-    clean_rst_text = clean_rst(rst_text)
-    with tempfile.NamedTemporaryFile(delete=False) as temp:
+    clean_rst_text = clean_rst(rst_text, resource_path)
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.clean.rst') as temp:
         temp_path = Path(temp.name)
         temp_path.write_text(clean_rst_text)
         return run_command(
-            f'pandoc --from rst --to markdown --resource-path {resource_path} {temp_path}')
+            f'pandoc --from rst --to markdown {temp_path}')
 
 
 def clean_md(md_text):
@@ -46,7 +53,7 @@ def clean_md(md_text):
 
 def md_to_nb(md_text, resource_path):
     clean_md_text = clean_md(md_text)
-    with tempfile.NamedTemporaryFile(delete=False) as temp:
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.clean.md') as temp:
         temp_path = Path(temp.name)
         temp_path.write_text(clean_md_text)
         return run_command(
@@ -55,6 +62,9 @@ def md_to_nb(md_text, resource_path):
 
 def rst_to_nb(rst_text, resource_path):
     md_text = rst_to_md(rst_text, resource_path=resource_path)
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.md') as temp:
+        Path(temp.name).write_text(md_text)
+        print(f'# Raw MD: {temp.name}')
     nb_text = md_to_nb(md_text, resource_path=resource_path)
     return nb_text
 
