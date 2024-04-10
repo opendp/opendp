@@ -58,17 +58,26 @@ def clean_rst(rst_text, prefix):
     ... 
     ...     .. tab-item:: Context API
     ...         :sync: context
-    ... 
+    ...
+    ...         A long, long time ago...
+    ...
     ...         .. literalinclude:: code/typical-workflow-context.rst
     ...             :language: python
     ...             :start-after: unit-of-privacy
     ...             :end-before: /unit-of-privacy
+    ...
+    ...         And in conclusion...
     ... """, prefix="/root"))
+    <BLANKLINE>
+    <BLANKLINE>
+    A long, long time ago...
     <BLANKLINE>
     .. include:: /root/code/typical-workflow-context.rst
         :code: python
         :start-after: unit-of-privacy
         :end-before: /unit-of-privacy
+    <BLANKLINE>
+    And in conclusion...
     <BLANKLINE>
     '''
     def sub(pattern, replacement, text):
@@ -76,21 +85,24 @@ def clean_rst(rst_text, prefix):
 
     # Clear unneeded tags:
     rst_text = sub(r'\.\. tab-set::', '', rst_text)
-    rst_text = sub(r'\.\. tab-set::', '', rst_text)
     rst_text = sub(r'\.\. tab-item::.*', '', rst_text) 
     rst_text = sub(r':sync:.*', '', rst_text)
     rst_text = sub(r':language: python', '', rst_text)
 
-    # Switch to RST built-in, and outdent:
+    # Switch to RST built-in, remove indentation:
     spaces = ' ' * 4
     rst_text = sub(
         r'\.\. literalinclude:: (\S+)',
         fr'\n.. include:: {prefix}/\1\n{spaces}:code: python\n',
         rst_text)
 
-    # Outdent inner tags:
+    # Minimal indentation on inner tags:
     rst_text = sub(r'(:start-after: \S+)', fr'{spaces}\1', rst_text)
     rst_text = sub(r'(:end-before: \S+)', fr'{spaces}\1', rst_text)
+
+    # Remove indentation on any remaining text, but do not remove newlines.
+    # (This is sloppy: Running into the limitations of regex approach.)
+    rst_text = re.sub(r'^[ \t]+([^: \t])', r'\1', rst_text, flags=re.MULTILINE)
     return rst_text
 
 
