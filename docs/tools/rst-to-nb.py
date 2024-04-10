@@ -18,6 +18,19 @@ debug = False
 
 
 def run_command(cmd):
+    '''
+    >>> run_command('echo "hello!"')
+    'hello!\\n'
+
+    >>> try:
+    ...     run_command('bad-command')
+    ... except Exception as e:
+    ...     print(e)
+    STDERR: /bin/sh: bad-command: command not found
+    <BLANKLINE>
+    subprocess failed: bad-command
+
+    '''
     global debug
     if debug:
         print(f'RUN: {cmd}')
@@ -30,7 +43,7 @@ def run_command(cmd):
     if completed_process.stderr:
         print(f'STDERR: {completed_process.stderr}')
     if completed_process.returncode != 0:
-        raise Exception(f'subprocess failed : {cmd}')
+        raise Exception(f'subprocess failed: {cmd}')
     return completed_process.stdout
 
 
@@ -157,7 +170,8 @@ def clean_md(md_text):
 
 
 def rst_to_md(dirty_rst_text, prefix):
-    with text_to_temp(dirty_rst_text, '.dirty.rst'): pass
+    with text_to_temp(dirty_rst_text, '.dirty.rst'):
+        pass
 
     clean_rst_text = clean_rst(dirty_rst_text, prefix)
     with text_to_temp(clean_rst_text, '.clean.rst') as temp:
@@ -166,7 +180,8 @@ def rst_to_md(dirty_rst_text, prefix):
 
 
 def md_to_nb(dirty_md_text, resource_path):
-    with text_to_temp(dirty_md_text, '.dirty.md'): pass
+    with text_to_temp(dirty_md_text, '.dirty.md'):
+        pass
 
     clean_md_text = clean_md(dirty_md_text)
     with text_to_temp(clean_md_text, '.clean.md') as temp:
