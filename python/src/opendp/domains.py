@@ -1,6 +1,14 @@
 # Auto-generated. Do not edit!
 '''
-The ``domains`` modules provides functions for creating and using domains.
+The ``domains`` module provides functions for creating and using domains.
+For more context, see :ref:`domains in the User Guide <domains-user-guide>`.
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
 '''
 from opendp._convert import *
 from opendp._lib import *
@@ -91,6 +99,13 @@ def atom_domain(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> import opendp.prelude as dp
+    >>> dp.atom_domain(T=float)
+    AtomDomain(T=f64)
+
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))

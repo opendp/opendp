@@ -1,6 +1,14 @@
 # Auto-generated. Do not edit!
 '''
 The ``core`` module provides functions for accessing the fields of transformations and measurements.
+For more context, see :ref:`core in the User Guide <core-user-guide>`.
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
 '''
 from opendp._convert import *
 from opendp._lib import *

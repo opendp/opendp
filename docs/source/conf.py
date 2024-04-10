@@ -16,11 +16,18 @@ os.environ["OPENDP_HEADLESS"] = "true"
 rootdir = os.path.join(os.getenv("SPHINX_MULTIVERSION_SOURCEDIR", default=os.getcwd()), "..", "..", "python", "src")
 sys.path.insert(0, rootdir)
 
+# With sphinx-multiversion, the same configuration is used to build all versions of the documentation,
+# so we need some extensions even though they are not currently used in main,
+# and we should also be cautious about adding new extensions.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.doctest',
+    'sphinx.ext.extlinks',
+    'sphinx.ext.graphviz',
     'sphinx.ext.ifconfig',
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
+    'sphinx.ext.todo',
     'sphinx-prompt',
     'sphinx_multiversion',
     'nbsphinx',
@@ -48,7 +55,9 @@ def is_rst(line):
 def docstring(app, what, name, obj, options, lines):
     path = name.split(".")
 
-    if len(path) > 1 and path[1] in markdown_modules:
+    # "len(path) > 2": We only need special processing for the contents of modules.
+    # The top-of-module docstrings are plain RST.
+    if len(path) > 2 and path[1] in markdown_modules:
         # split docstring into description and params
         param_index = next((i for i, line in enumerate(lines) if is_rst(line)), len(lines))
         description, params = lines[:param_index], lines[param_index:]
