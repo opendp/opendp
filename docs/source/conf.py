@@ -16,11 +16,18 @@ os.environ["OPENDP_HEADLESS"] = "true"
 rootdir = os.path.join(os.getenv("SPHINX_MULTIVERSION_SOURCEDIR", default=os.getcwd()), "..", "..", "python", "src")
 sys.path.insert(0, rootdir)
 
+# With sphinx-multiversion, the same configuration is used to build all versions of the documentation,
+# so we need some extensions even though they are not currently used in main,
+# and we should also be cautious about adding new extensions.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.doctest',
+    'sphinx.ext.extlinks',
+    'sphinx.ext.graphviz',
     'sphinx.ext.ifconfig',
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
+    'sphinx.ext.todo',
     'sphinx-prompt',
     'sphinx_multiversion',
     'nbsphinx',

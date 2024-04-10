@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs;
 use std::path::PathBuf;
 
 use crate::{Argument, Function, TypeRecipe, Value};
@@ -170,7 +171,7 @@ fn generate_function(
         .map(|v| format!(" -> {}", v))
         .unwrap_or_else(String::new);
 
-    let docstring = tab_py(generate_docstring(func, hierarchy));
+    let docstring = tab_py(generate_docstring(module_name, func, hierarchy));
     let body = tab_py(generate_body(module_name, func, typemap));
 
     let then_func = if func.supports_partial {
@@ -280,7 +281,11 @@ fn generate_input_argument(
 
 /// generate a docstring for the current function, with the function description, args, and return
 /// in Sphinx format: https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
-fn generate_docstring(func: &Function, hierarchy: &HashMap<String, Vec<String>>) -> String {
+fn generate_docstring(
+    module_name: &str,
+    func: &Function,
+    hierarchy: &HashMap<String, Vec<String>>,
+) -> String {
     let description = (func.description.as_ref())
         .map(|v| format!("{}\n", v))
         .unwrap_or_else(String::new);
@@ -302,10 +307,16 @@ fn generate_docstring(func: &Function, hierarchy: &HashMap<String, Vec<String>>)
         }
     );
 
+    let example_path = format!("src/{}/code/{}.rst", &module_name, &func.name);
+    let example = match fs::read_to_string(example_path) {
+        Ok(string) => format!("\n\n:example:\n\n{string}\n"),
+        Err(_) => "".to_string(),
+    };
+
     format!(
         r#"r"""{description}
 {doc_args}{ret_arg}
-{raises}
+{raises}{example}
 """"#,
         description = description,
         doc_args = doc_args,
