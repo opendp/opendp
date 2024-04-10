@@ -238,12 +238,17 @@ class LossParameter:
 
     def __repr__(self) -> str:
         if self.epsilon and self.delta:
-            return f'({self.epsilon}, {self.delta})'
+            return f'(ε={self.epsilon}, δ={self.delta})'
         if self.epsilon:
-            return str(self.epsilon)
-        return str(self.rho)
+            return f'(ε={self.epsilon})'
+        return f'(ρ={self.rho})'
     
     def __mul__(self, other) -> LossParameter:
+        '''
+        >>> lp = LossParameter(epsilon=1)
+        >>> lp * 5
+        (ε=5)
+        '''
         return LossParameter(
             epsilon=(self.epsilon * other if self.epsilon is not None else None),
             delta=(self.delta * other if self.delta is not None else None),
@@ -256,11 +261,11 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, LossPa
 
     >>> import opendp.prelude as dp
     >>> dp.loss_of(epsilon=1.0)
-    (MaxDivergence(f64), 1.0)
+    (MaxDivergence(f64), (ε=1.0))
     >>> dp.loss_of(epsilon=1.0, delta=1e-9)
-    (FixedSmoothedMaxDivergence(f64), (1.0, 1e-09))
+    (FixedSmoothedMaxDivergence(f64), (ε=1.0, δ=1e-09))
     >>> dp.loss_of(rho=1.0)
-    (ZeroConcentratedDivergence(f64), 1.0)
+    (ZeroConcentratedDivergence(f64), (ρ=1.0))
 
     :param epsilon: Parameter for pure ε-DP.
     :param delta: Parameter for approximate (ε,δ)-DP.
@@ -822,7 +827,6 @@ def _translate_measure_distance(d_from: LossParameter, from_measure, to_measure)
         "FixedSmoothedMaxDivergence",
         "ZeroConcentratedDivergence",
     ):
-        assert isinstance(d_from, tuple)
         def caster(measurement):
             return make_fix_delta(make_zCDP_to_approxDP(measurement), delta=d_from[1])
 
