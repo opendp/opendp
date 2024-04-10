@@ -254,7 +254,7 @@ impl<F: Frame> Domain for FrameDomain<F> {
 #[derive(Clone, PartialEq)]
 pub struct Margin {
     /// The greatest number of records that can be present in any one partition.
-    pub max_partition_size: Option<u32>,
+    pub max_partition_length: Option<u32>,
     /// The greatest number of partitions that can be present.
     pub max_num_partitions: Option<u32>,
 
@@ -285,7 +285,7 @@ pub enum MarginPub {
 impl Margin {
     pub fn new() -> Self {
         Margin {
-            max_partition_size: None,
+            max_partition_length: None,
             max_num_partitions: None,
             max_partition_contributions: None,
             max_influenced_partitions: None,
@@ -293,8 +293,8 @@ impl Margin {
         }
     }
 
-    pub fn with_max_partition_size(mut self, value: u32) -> Self {
-        self.max_partition_size = Some(value);
+    pub fn with_max_partition_length(mut self, value: u32) -> Self {
+        self.max_partition_length = Some(value);
         self
     }
     pub fn with_max_num_partitions(mut self, value: u32) -> Self {
@@ -330,9 +330,9 @@ impl Margin {
             };
         }
 
-        let max_part_size = value.clone().agg([len()]).select(&[max("len")]);
+        let max_part_length = value.clone().agg([len()]).select(&[max("len")]);
 
-        if item!(max_part_size, u32) > self.max_partition_size.unwrap_or(u32::MAX) {
+        if item!(max_part_length, u32) > self.max_partition_length.unwrap_or(u32::MAX) {
             return Ok(false);
         }
 
@@ -373,7 +373,7 @@ mod test_lazyframe {
         .with_margin(
             &["A"],
             Margin::new()
-                .with_max_partition_size(1)
+                .with_max_partition_length(1)
                 .with_max_num_partitions(2),
         )?;
 
