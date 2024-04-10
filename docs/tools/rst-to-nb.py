@@ -54,6 +54,8 @@ def clean_rst(rst_text, prefix):
     TODO: Pick just the first tab of a set.
 
     >>> print(clean_rst("""
+    ... The start
+    ...
     ... .. tab-set::
     ... 
     ...     .. tab-item:: Context API
@@ -66,8 +68,12 @@ def clean_rst(rst_text, prefix):
     ...             :start-after: unit-of-privacy
     ...             :end-before: /unit-of-privacy
     ...
-    ...         And in conclusion...
+    ...         In a galaxy far, far away...
+    ...
+    ... The end
     ... """, prefix="/root"))
+    <BLANKLINE>
+    The start
     <BLANKLINE>
     <BLANKLINE>
     A long, long time ago...
@@ -77,7 +83,9 @@ def clean_rst(rst_text, prefix):
         :start-after: unit-of-privacy
         :end-before: /unit-of-privacy
     <BLANKLINE>
-    And in conclusion...
+    In a galaxy far, far away...
+    <BLANKLINE>
+    The end
     <BLANKLINE>
     '''
     def sub(pattern, replacement, text):
