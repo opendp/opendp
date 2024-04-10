@@ -71,14 +71,26 @@ def clean_rst(rst_text, prefix):
         :end-before: /unit-of-privacy
     <BLANKLINE>
     '''
+    def sub(pattern, replacement, text):
+        return re.sub(rf'^\s+?{pattern}', replacement, text, flags=re.MULTILINE)
+
+    # Clear unneeded tags:
+    rst_text = sub(r'\.\. tab-set::', '', rst_text)
+    rst_text = sub(r'\.\. tab-set::', '', rst_text)
+    rst_text = sub(r'\.\. tab-item::.*', '', rst_text) 
+    rst_text = sub(r':sync:.*', '', rst_text)
+    rst_text = sub(r':language: python', '', rst_text)
+
+    # Switch to RST built-in, and outdent:
     spaces = ' ' * 4
-    rst_text = re.sub(r'^\s+?\.\. literalinclude:: (\S+)', fr'.. include:: {prefix}/\1\n{spaces}:code: python\n', rst_text, flags=re.MULTILINE)
-    rst_text = re.sub(r'^\s+?\.\. tab-set::', '', rst_text, flags=re.MULTILINE)
-    rst_text = re.sub(r'^\s+?\.\. tab-item::.*', '', rst_text, flags=re.MULTILINE) 
-    rst_text = re.sub(r'^\s+?:sync:.*', '', rst_text, flags=re.MULTILINE)
-    rst_text = re.sub(r'^\s+?:language: python', '', rst_text, flags=re.MULTILINE)
-    rst_text = re.sub(r'^\s+?(:start-after: \S+)', fr'{spaces}\1', rst_text, flags=re.MULTILINE)
-    rst_text = re.sub(r'^\s+?(:end-before: \S+)', fr'{spaces}\1', rst_text, flags=re.MULTILINE)
+    rst_text = sub(
+        r'\.\. literalinclude:: (\S+)',
+        fr'\n.. include:: {prefix}/\1\n{spaces}:code: python\n',
+        rst_text)
+
+    # Outdent inner tags:
+    rst_text = sub(r'(:start-after: \S+)', fr'{spaces}\1', rst_text)
+    rst_text = sub(r'(:end-before: \S+)', fr'{spaces}\1', rst_text)
     return rst_text
 
 
