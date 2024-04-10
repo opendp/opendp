@@ -8,10 +8,19 @@ from pathlib import Path
 import subprocess
 import tempfile
 import re
+from contextlib import contextmanager
+
+
+debug = False
+
+
+# Utility functions:
 
 
 def run_command(cmd):
-    print(f'RUN: {cmd}')
+    global debug
+    if debug:
+        print(f'RUN: {cmd}')
     completed_process = subprocess.run(
         cmd,
         capture_output=True,
@@ -24,6 +33,20 @@ def run_command(cmd):
         raise Exception(f'subprocess failed : {cmd}')
     return completed_process.stdout
 
+
+@contextmanager
+def text_to_temp(text, file_suffix):
+    global debug
+    with tempfile.NamedTemporaryFile(delete=not debug, suffix=file_suffix) as temp:
+        temp_path = Path(temp.name)
+        temp_path.write_text(text)
+        if debug:
+            print(f'TEMP: {temp.name}')
+        yield temp_path
+
+
+# Ugly regexes:
+        
 
 def clean_rst(rst_text, prefix):
     '''
@@ -59,21 +82,6 @@ def clean_rst(rst_text, prefix):
     return rst_text
 
 
-def rst_to_md(rst_text, prefix):
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.dirty.rst') as temp:
-        temp_path = Path(temp.name)
-        temp_path.write_text(rst_text)
-        print(f'DIRTY RST: {temp.name}')
-
-    clean_rst_text = clean_rst(rst_text, prefix)
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.clean.rst') as temp:
-        temp_path = Path(temp.name)
-        temp_path.write_text(clean_rst_text)
-        print(f'CLEAN RST: {temp.name}')
-        return run_command(
-            f'pandoc --from rst --to markdown {temp_path}')
-
-
 def undoctest_line(line):
     if line.startswith('>>> '):
         return line.replace('>>> ', '')
@@ -107,27 +115,31 @@ def undoctest(match):
     return pre + inside + post
 
 
-
 def clean_md(md_text):
     md_text = re.sub(r'``` \{.*?\}', '``` code', md_text, flags=re.DOTALL)
     md_text = re.sub(r'(``` code)(.*?)(```)', undoctest, md_text, flags=re.DOTALL)
     return md_text
 
 
-def md_to_nb(md_text, resource_path):
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.dirty.md') as temp:
-        temp_path = Path(temp.name)
-        temp_path.write_text(md_text)
-        print(f'DIRTY MD: {temp.name}')
+# High level functions:
 
-    clean_md_text = clean_md(md_text)
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.clean.md') as temp:
-        temp_path = Path(temp.name)
-        temp_path.write_text(clean_md_text)
-        print(f'CLEAN MD: {temp.name}')
 
+def rst_to_md(dirty_rst_text, prefix):
+    with text_to_temp(dirty_rst_text, '.dirty.rst'): pass
+
+    clean_rst_text = clean_rst(dirty_rst_text, prefix)
+    with text_to_temp(clean_rst_text, '.clean.rst') as temp:
         return run_command(
-            f'pandoc --from markdown --to ipynb --resource-path {resource_path} {temp_path}')
+            f'pandoc --from rst --to markdown {temp}')
+
+
+def md_to_nb(dirty_md_text, resource_path):
+    with text_to_temp(dirty_md_text, '.dirty.md'): pass
+
+    clean_md_text = clean_md(dirty_md_text)
+    with text_to_temp(clean_md_text, '.clean.md') as temp:
+        return run_command(
+            f'pandoc --from markdown --to ipynb --resource-path {resource_path} {temp}')
 
 
 def rst_to_nb(rst_text, resource_path):
@@ -146,8 +158,11 @@ def read_write(input_path, output_path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input', required=True, help='.rst input file')
-    parser.add_argument('--output', required=True, help='.ipynb input file')
+    parser.add_argument('--output', required=True, help='.ipynb output file')
+    parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
+    global debug
+    debug = args.debug
     read_write(Path(args.input), Path(args.output))
 
 
