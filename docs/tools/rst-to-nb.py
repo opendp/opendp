@@ -176,7 +176,10 @@ def md_to_nb(dirty_md_text, resource_path):
 
 def rst_to_nb(rst_text, resource_path):
     '''
-    >>> print(re.sub(r'"id": \\S+', '...', rst_to_nb('hello?', Path('/root'))))
+    Given a string of RST, returns a string of ipynb JSON.
+    Requires Pandoc installation, so doctest is skipped.
+
+    >>> print(re.sub(r'"id": \\S+', '...', rst_to_nb('hello?', Path('/root')))) # doctest: +SKIP
     {
      "cells": [
       {
