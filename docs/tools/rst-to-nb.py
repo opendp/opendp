@@ -167,6 +167,25 @@ def md_to_nb(dirty_md_text, resource_path):
 
 
 def rst_to_nb(rst_text, resource_path):
+    '''
+    >>> print(re.sub(r'"id": \\S+', '...', rst_to_nb('hello?', Path('/root'))))
+    {
+     "cells": [
+      {
+       "cell_type": "markdown",
+       "metadata": {},
+       "source": [
+        "hello?"
+       ],
+       ...
+      }
+     ],
+     "nbformat": 4,
+     "nbformat_minor": 5,
+     "metadata": {}
+    }
+    <BLANKLINE>
+    '''
     prefix = resource_path.absolute()
     md_text = rst_to_md(rst_text, prefix)
     nb_text = md_to_nb(md_text, resource_path=resource_path)
