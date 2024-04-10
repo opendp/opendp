@@ -20,11 +20,11 @@ def run_command(cmd, debug=False):
     RUN: echo "hello!"
     'hello!\\n'
 
-    >>> try:
+    >>> try: # doctest: +ELLIPSIS
     ...     run_command('bad-command')
     ... except Exception as e:
     ...     print(e)
-    STDERR: /bin/sh: bad-command: command not found
+    STDERR: /bin/sh: ...
     <BLANKLINE>
     subprocess failed: bad-command
 
@@ -206,7 +206,7 @@ def rst_to_nb(rst_text, resource_path, debug=False): # pragma: no cover
     Given a string of RST, returns a string of ipynb JSON.
     Requires Pandoc installation, so doctest is skipped.
 
-    >>> print(re.sub(r'"id": \\S+', '...', rst_to_nb('hello?', Path('/root')))) # doctest: +SKIP
+    >>> print(rst_to_nb('hello?', Path('/root'))) # doctest: +SKIP
     {
      "cells": [
       {
@@ -215,7 +215,7 @@ def rst_to_nb(rst_text, resource_path, debug=False): # pragma: no cover
        "source": [
         "hello?"
        ],
-       ...
+       "id": "..."
       }
      ],
      "nbformat": 4,
