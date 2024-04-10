@@ -29,7 +29,6 @@ def clean_rst(rst_text, prefix):
     '''
     Translate Sphinx extension tags to RST built-ins that Pandoc will process.
     TODO: Pick just the first tab of a set.
-    Example of target format: https://github.com/jgm/pandoc/issues/6631#issuecomment-678727316
 
     >>> print(clean_rst("""
     ... .. tab-set::
@@ -75,8 +74,43 @@ def rst_to_md(rst_text, prefix):
             f'pandoc --from rst --to markdown {temp_path}')
 
 
+def undoctest_line(line):
+    if line.startswith('>>> '):
+        return line.replace('>>> ', '')
+    if line.startswith('... '):
+        return line.replace('... ', '')
+    if line:
+        return '# ' + line
+    return line
+
+
+def undoctest(match):
+    '''
+    >>> docstring = """
+    ... ``` code
+    ... >>> if True:
+    ... ...     print('hello!')
+    ... hello!
+    ... ```
+    ... """
+    >>> match = re.search(r'(``` code)(.*?)(```)', docstring, flags=re.DOTALL)
+    >>> print(undoctest(match))
+    ``` code
+    if True:
+        print('hello!')
+    # hello!
+    ```
+    '''
+    pre = match.group(1)
+    post = match.group(3)
+    inside = '\n'.join(undoctest_line(line) for line in match.group(2).split('\n'))
+    return pre + inside + post
+
+
+
 def clean_md(md_text):
     md_text = re.sub(r'``` \{.*?\}', '``` code', md_text, flags=re.DOTALL)
+    md_text = re.sub(r'(``` code)(.*?)(```)', undoctest, md_text, flags=re.DOTALL)
     return md_text
 
 
