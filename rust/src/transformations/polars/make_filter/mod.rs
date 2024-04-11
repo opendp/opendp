@@ -158,11 +158,15 @@ fn row_by_row_translate(
             };
             LazyFrameDomain::new(vec![output_series])?
         }
-        // Expr::Cast {
-        //     expr,
-        //     data_type,
-        //     strict,
-        // } => todo!(),
+        Expr::Cast {
+            expr,
+            data_type,
+            strict,
+        } => {
+            input_domain.series_domains.map(|sd| {cast_variant(sd,data_type,strict)?})
+            input_domain.margins = null; 
+            input_domain
+        },
         // Expr::Sort { expr, options } => todo!(),
         // Expr::Take { expr, idx } => todo!(),
         // Expr::SortBy {
@@ -209,6 +213,43 @@ fn row_by_row_translate(
         // Expr::Selector(_) => todo!(),
         _ => return fallible!(MakeTransformation, "expr is not implemented"),
     })
+}
+
+fn cast_variant(
+	mut input_domain: SeriesDomain,
+    data_type: DataType,
+    strict: bool,
+) -> Fallible<SeriesDomain> {
+
+    // create a new element domain based on the target_dtype
+    macro_rules! new_element_domain {
+        ($ty:ty) => {
+            Arc::new(AtomDomain::<$ty>::default())
+        };
+    }
+	
+    input_domain.element_domain = match data_type {
+        DataType::Boolean => new_element_domain!(bool),
+        DataType::UInt8 => new_element_domain!(u8),
+        DataType::UInt16 => new_element_domain!(u16),
+        DataType::UInt32 => new_element_domain!(u32),
+        DataType::UInt64 => new_element_domain!(u64),
+        DataType::Int8 => new_element_domain!(i8),
+        DataType::Int16 => new_element_domain!(i16),
+        DataType::Int32 => new_element_domain!(i32),
+        DataType::Int64 => new_element_domain!(i64),
+        DataType::Float32 => Arc::new(AtomDomain::<f32>::new_nullable()), 
+        DataType::Float64 => Arc::new(AtomDomain::<f64>::new_nullable()),
+        DataType::String => new_element_domain!(str),
+        _ => return fallible!(MakeDomain, "unsupported type {}", data_type),
+    };
+
+    input_domain.field.dtype = data_type;
+    if strict {
+        input_domain.nullable = true;
+    }
+    Ok(input_domain)
+
 }
 
 #[cfg(test)]
