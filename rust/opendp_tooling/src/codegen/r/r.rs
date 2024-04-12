@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter::once, fs};
+use std::{collections::HashMap, fs, iter::once};
 
 use crate::{
     codegen::{flatten_type_recipe, tab_r},
