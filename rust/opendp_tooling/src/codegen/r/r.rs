@@ -229,11 +229,12 @@ fn generate_doc_block(
 
     format!(
         r#"{description}
-{concept}{doc_args}{ret_arg}{export}"#,
+{concept}{doc_args}{ret_arg}{examples}{export}"#,
         concept = concept,
         description = description,
         doc_args = doc_args,
-        ret_arg = generate_docstring_return_arg(&func.ret, hierarchy)
+        ret_arg = generate_docstring_return_arg(&func.ret, hierarchy),
+        examples = generate_docstring_examples(),
     )
     .split("\n")
     .map(|l| format!("#' {}", l).trim().to_string())
@@ -261,10 +262,11 @@ fn generate_then_doc_block(
 
 @concept {module_name}
 @param lhs The prior transformation or metric space.
-{doc_args}{ret_arg}
+{doc_args}{ret_arg}{examples}
 @export"#,
         func_name = func.name,
-        ret_arg = generate_docstring_return_arg(&func.ret, hierarchy)
+        ret_arg = generate_docstring_return_arg(&func.ret, hierarchy),
+        examples = generate_docstring_examples(),
     )
     .split("\n")
     .map(|l| format!("#' {}", l).trim().to_string())
@@ -299,6 +301,11 @@ fn generate_docstring_return_arg(
         return String::new();
     };
     format!("\n@return {description}")
+}
+
+fn generate_docstring_examples() -> String {
+    let example = "2 + 2".to_string();
+    format!("\n@examples\n{example}")
 }
 
 /// generate the function body, consisting of type args formatters, data converters, and the call

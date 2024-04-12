@@ -38,6 +38,8 @@ NULL
 #' @param alpha Optional parameter (default of 4) for scaling and determining p in randomized response step.
 #' @param .CO undocumented
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 make_alp_queryable <- function(
   input_domain,
@@ -91,6 +93,8 @@ make_alp_queryable <- function(
 #' @param alpha Optional parameter (default of 4) for scaling and determining p in randomized response step.
 #' @param .CO undocumented
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 then_alp_queryable <- function(
   lhs,
@@ -146,6 +150,8 @@ then_alp_queryable <- function(
 #' @param threshold Exclude counts that are less than this minimum value.
 #' @param k The noise granularity in terms of 2^k.
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 make_base_laplace_threshold <- function(
   input_domain,
@@ -187,6 +193,8 @@ make_base_laplace_threshold <- function(
 #' @param threshold Exclude counts that are less than this minimum value.
 #' @param k The noise granularity in terms of 2^k.
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 then_base_laplace_threshold <- function(
   lhs,
@@ -239,6 +247,8 @@ then_base_laplace_threshold <- function(
 #' @param k The noise granularity in terms of 2^k.
 #' @param .MO Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 make_gaussian <- function(
   input_domain,
@@ -282,6 +292,8 @@ make_gaussian <- function(
 #' @param k The noise granularity in terms of 2^k.
 #' @param .MO Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 then_gaussian <- function(
   lhs,
@@ -332,6 +344,8 @@ then_gaussian <- function(
 #' @param bounds undocumented
 #' @param .QO undocumented
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 make_geometric <- function(
   input_domain,
@@ -374,6 +388,8 @@ make_geometric <- function(
 #' @param bounds undocumented
 #' @param .QO undocumented
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 then_geometric <- function(
   lhs,
@@ -433,6 +449,8 @@ then_geometric <- function(
 #' @param k The noise granularity in terms of 2^k, only valid for domains over floats.
 #' @param .QO Data type of the output distance and scale. `f32` or `f64`.
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 make_laplace <- function(
   input_domain,
@@ -475,6 +493,8 @@ make_laplace <- function(
 #' @param k The noise granularity in terms of 2^k, only valid for domains over floats.
 #' @param .QO Data type of the output distance and scale. `f32` or `f64`.
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 then_laplace <- function(
   lhs,
@@ -520,6 +540,8 @@ then_laplace <- function(
 #' @param .T Data type of a category.
 #' @param .QO Data type of probability and output distance.
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 make_randomized_response <- function(
   categories,
@@ -565,6 +587,8 @@ make_randomized_response <- function(
 #' @param .T Data type of a category.
 #' @param .QO Data type of probability and output distance.
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 then_randomized_response <- function(
   lhs,
@@ -614,6 +638,8 @@ then_randomized_response <- function(
 #' @param constant_time Set to true to enable constant time. Slower.
 #' @param .QO Data type of probability and output distance.
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 make_randomized_response_bool <- function(
   prob,
@@ -652,6 +678,8 @@ make_randomized_response_bool <- function(
 #' @param constant_time Set to true to enable constant time. Slower.
 #' @param .QO Data type of probability and output distance.
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 then_randomized_response_bool <- function(
   lhs,
@@ -699,6 +727,8 @@ then_randomized_response_bool <- function(
 #' @param optimize Indicate whether to privately return the "Max" or "Min"
 #' @param .QO Output Distance Type.
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 make_report_noisy_max_gumbel <- function(
   input_domain,
@@ -739,6 +769,8 @@ make_report_noisy_max_gumbel <- function(
 #' @param optimize Indicate whether to privately return the "Max" or "Min"
 #' @param .QO Output Distance Type.
 #' @return Measurement
+#' @examples
+#' 2 + 2
 #' @export
 then_report_noisy_max_gumbel <- function(
   lhs,

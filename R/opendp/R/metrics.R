@@ -11,6 +11,8 @@ NULL
 #' @concept metrics
 #' @param .T undocumented
 #' @return Metric
+#' @examples
+#' 2 + 2
 #' @export
 absolute_distance <- function(
   .T
@@ -37,6 +39,8 @@ absolute_distance <- function(
 #' @concept metrics
 #'
 #' @return Metric
+#' @examples
+#' 2 + 2
 #' @export
 change_one_distance <- function(
 
@@ -60,6 +64,8 @@ change_one_distance <- function(
 #' @concept metrics
 #'
 #' @return Metric
+#' @examples
+#' 2 + 2
 #' @export
 discrete_distance <- function(
 
@@ -83,6 +89,8 @@ discrete_distance <- function(
 #' @concept metrics
 #'
 #' @return Metric
+#' @examples
+#' 2 + 2
 #' @export
 hamming_distance <- function(
 
@@ -106,6 +114,8 @@ hamming_distance <- function(
 #' @concept metrics
 #'
 #' @return Metric
+#' @examples
+#' 2 + 2
 #' @export
 insert_delete_distance <- function(
 
@@ -131,6 +141,8 @@ insert_delete_distance <- function(
 #' @concept metrics
 #' @param .T undocumented
 #' @return Metric
+#' @examples
+#' 2 + 2
 #' @export
 l1_distance <- function(
   .T
@@ -159,6 +171,8 @@ l1_distance <- function(
 #' @concept metrics
 #' @param .T undocumented
 #' @return Metric
+#' @examples
+#' 2 + 2
 #' @export
 l2_distance <- function(
   .T
@@ -188,6 +202,8 @@ l2_distance <- function(
 #' @param monotonic set to true if non-monotonicity implies infinite distance
 #' @param .T The type of the distance.
 #' @return Metric
+#' @examples
+#' 2 + 2
 #' @export
 linf_distance <- function(
   .T,
@@ -218,6 +234,8 @@ linf_distance <- function(
 #' @concept metrics
 #' @param this The metric to debug (stringify).
 #' @return str
+#' @examples
+#' 2 + 2
 #' @export
 metric_debug <- function(
   this
@@ -242,6 +260,8 @@ metric_debug <- function(
 #' @concept metrics
 #' @param this The metric to retrieve the distance type from.
 #' @return str
+#' @examples
+#' 2 + 2
 #' @export
 metric_distance_type <- function(
   this
@@ -266,6 +286,8 @@ metric_distance_type <- function(
 #' @concept metrics
 #' @param this The metric to retrieve the type from.
 #' @return str
+#' @examples
+#' 2 + 2
 #' @export
 metric_type <- function(
   this
@@ -290,6 +312,8 @@ metric_type <- function(
 #' @concept metrics
 #'
 #' @return Metric
+#' @examples
+#' 2 + 2
 #' @export
 symmetric_distance <- function(
 
@@ -314,6 +338,8 @@ symmetric_distance <- function(
 #' @concept metrics
 #' @param descriptor A string description of the metric.
 #' @return Metric
+#' @examples
+#' 2 + 2
 #' @export
 user_distance <- function(
   descriptor

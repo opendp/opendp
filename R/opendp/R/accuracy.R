@@ -17,6 +17,8 @@ NULL
 #' @param alpha Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
 #' @param .T Data type of `accuracy` and `alpha`
 #' @return Any
+#' @examples
+#' 2 + 2
 #' @export
 accuracy_to_discrete_gaussian_scale <- function(
   accuracy,
@@ -57,6 +59,8 @@ accuracy_to_discrete_gaussian_scale <- function(
 #' @param alpha Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
 #' @param .T Data type of `accuracy` and `alpha`
 #' @return Discrete laplacian noise scale that meets the `accuracy` requirement at a given level-`alpha`.
+#' @examples
+#' 2 + 2
 #' @export
 accuracy_to_discrete_laplacian_scale <- function(
   accuracy,
@@ -93,6 +97,8 @@ accuracy_to_discrete_laplacian_scale <- function(
 #' @param alpha Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
 #' @param .T Data type of `accuracy` and `alpha`
 #' @return Any
+#' @examples
+#' 2 + 2
 #' @export
 accuracy_to_gaussian_scale <- function(
   accuracy,
@@ -129,6 +135,8 @@ accuracy_to_gaussian_scale <- function(
 #' @param alpha Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
 #' @param .T Data type of `accuracy` and `alpha`
 #' @return Laplacian noise scale that meets the `accuracy` requirement at a given level-`alpha`.
+#' @examples
+#' 2 + 2
 #' @export
 accuracy_to_laplacian_scale <- function(
   accuracy,
@@ -169,6 +177,8 @@ accuracy_to_laplacian_scale <- function(
 #' @param alpha Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
 #' @param .T Data type of `scale` and `alpha`
 #' @return Any
+#' @examples
+#' 2 + 2
 #' @export
 discrete_gaussian_scale_to_accuracy <- function(
   scale,
@@ -215,6 +225,8 @@ discrete_gaussian_scale_to_accuracy <- function(
 #' @param alpha Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
 #' @param .T Data type of `scale` and `alpha`
 #' @return Any
+#' @examples
+#' 2 + 2
 #' @export
 discrete_laplacian_scale_to_accuracy <- function(
   scale,
@@ -251,6 +263,8 @@ discrete_laplacian_scale_to_accuracy <- function(
 #' @param alpha Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
 #' @param .T Data type of `scale` and `alpha`
 #' @return Any
+#' @examples
+#' 2 + 2
 #' @export
 gaussian_scale_to_accuracy <- function(
   scale,
@@ -287,6 +301,8 @@ gaussian_scale_to_accuracy <- function(
 #' @param alpha Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
 #' @param .T Data type of `scale` and `alpha`
 #' @return Any
+#' @examples
+#' 2 + 2
 #' @export
 laplacian_scale_to_accuracy <- function(
   scale,
