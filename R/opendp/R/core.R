@@ -11,8 +11,6 @@ NULL
 #' @param arg Input data to supply to the measurement. A member of the measurement's input domain.
 #' @param TI Input Type.
 #' @return Any
-#' @examples
-#' 2 + 2
 #' @export
 function_eval <- function(
   this,
@@ -46,8 +44,6 @@ function_eval <- function(
 #' @param distance_in undocumented
 #' @param distance_out undocumented
 #' @return True indicates that the relation passed at the given distance.
-#' @examples
-#' 2 + 2
 #' @export
 measurement_check <- function(
   measurement,
@@ -81,8 +77,6 @@ measurement_check <- function(
 #' @concept core
 #' @param this The measurement to retrieve the value from.
 #' @return Function
-#' @examples
-#' 2 + 2
 #' @export
 measurement_function <- function(
   this
@@ -107,8 +101,6 @@ measurement_function <- function(
 #' @concept core
 #' @param this The measurement to retrieve the type from.
 #' @return str
-#' @examples
-#' 2 + 2
 #' @export
 measurement_input_carrier_type <- function(
   this
@@ -133,8 +125,6 @@ measurement_input_carrier_type <- function(
 #' @concept core
 #' @param this The measurement to retrieve the type from.
 #' @return str
-#' @examples
-#' 2 + 2
 #' @export
 measurement_input_distance_type <- function(
   this
@@ -159,8 +149,6 @@ measurement_input_distance_type <- function(
 #' @concept core
 #' @param this The measurement to retrieve the value from.
 #' @return Domain
-#' @examples
-#' 2 + 2
 #' @export
 measurement_input_domain <- function(
   this
@@ -185,8 +173,6 @@ measurement_input_domain <- function(
 #' @concept core
 #' @param this The measurement to retrieve the value from.
 #' @return Metric
-#' @examples
-#' 2 + 2
 #' @export
 measurement_input_metric <- function(
   this
@@ -212,8 +198,6 @@ measurement_input_metric <- function(
 #' @param this Measurement to invoke.
 #' @param arg Input data to supply to the measurement. A member of the measurement's input domain.
 #' @return Any
-#' @examples
-#' 2 + 2
 #' @export
 measurement_invoke <- function(
   this,
@@ -245,8 +229,6 @@ measurement_invoke <- function(
 #' @param measurement Measurement to check the map distances with.
 #' @param distance_in Distance in terms of the input metric.
 #' @return Any
-#' @examples
-#' 2 + 2
 #' @export
 measurement_map <- function(
   measurement,
@@ -277,8 +259,6 @@ measurement_map <- function(
 #' @concept core
 #' @param this The measurement to retrieve the type from.
 #' @return str
-#' @examples
-#' 2 + 2
 #' @export
 measurement_output_distance_type <- function(
   this
@@ -303,8 +283,6 @@ measurement_output_distance_type <- function(
 #' @concept core
 #' @param this The measurement to retrieve the value from.
 #' @return Measure
-#' @examples
-#' 2 + 2
 #' @export
 measurement_output_measure <- function(
   this
@@ -330,8 +308,6 @@ measurement_output_measure <- function(
 #' @param queryable Queryable to eval.
 #' @param query Input data to supply to the measurement. A member of the measurement's input domain.
 #' @return Any
-#' @examples
-#' 2 + 2
 #' @export
 queryable_eval <- function(
   queryable,
@@ -362,8 +338,6 @@ queryable_eval <- function(
 #' @concept core
 #' @param this The queryable to retrieve the query type from.
 #' @return str
-#' @examples
-#' 2 + 2
 #' @export
 queryable_query_type <- function(
   this
@@ -390,8 +364,6 @@ queryable_query_type <- function(
 #' @param distance_in undocumented
 #' @param distance_out undocumented
 #' @return True indicates that the relation passed at the given distance.
-#' @examples
-#' 2 + 2
 #' @export
 transformation_check <- function(
   transformation,
@@ -425,8 +397,6 @@ transformation_check <- function(
 #' @concept core
 #' @param this The transformation to retrieve the value from.
 #' @return Function
-#' @examples
-#' 2 + 2
 #' @export
 transformation_function <- function(
   this
@@ -451,8 +421,6 @@ transformation_function <- function(
 #' @concept core
 #' @param this The transformation to retrieve the type from.
 #' @return str
-#' @examples
-#' 2 + 2
 #' @export
 transformation_input_carrier_type <- function(
   this
@@ -477,8 +445,6 @@ transformation_input_carrier_type <- function(
 #' @concept core
 #' @param this The transformation to retrieve the type from.
 #' @return str
-#' @examples
-#' 2 + 2
 #' @export
 transformation_input_distance_type <- function(
   this
@@ -503,8 +469,6 @@ transformation_input_distance_type <- function(
 #' @concept core
 #' @param this The transformation to retrieve the value from.
 #' @return Domain
-#' @examples
-#' 2 + 2
 #' @export
 transformation_input_domain <- function(
   this
@@ -529,8 +493,6 @@ transformation_input_domain <- function(
 #' @concept core
 #' @param this The transformation to retrieve the value from.
 #' @return Metric
-#' @examples
-#' 2 + 2
 #' @export
 transformation_input_metric <- function(
   this
@@ -556,8 +518,6 @@ transformation_input_metric <- function(
 #' @param this Transformation to invoke.
 #' @param arg Input data to supply to the transformation. A member of the transformation's input domain.
 #' @return Any
-#' @examples
-#' 2 + 2
 #' @export
 transformation_invoke <- function(
   this,
@@ -589,8 +549,6 @@ transformation_invoke <- function(
 #' @param transformation Transformation to check the map distances with.
 #' @param distance_in Distance in terms of the input metric.
 #' @return Any
-#' @examples
-#' 2 + 2
 #' @export
 transformation_map <- function(
   transformation,
@@ -621,8 +579,6 @@ transformation_map <- function(
 #' @concept core
 #' @param this The transformation to retrieve the type from.
 #' @return str
-#' @examples
-#' 2 + 2
 #' @export
 transformation_output_distance_type <- function(
   this
@@ -647,8 +603,6 @@ transformation_output_distance_type <- function(
 #' @concept core
 #' @param this The transformation to retrieve the value from.
 #' @return Domain
-#' @examples
-#' 2 + 2
 #' @export
 transformation_output_domain <- function(
   this
@@ -673,8 +627,6 @@ transformation_output_domain <- function(
 #' @concept core
 #' @param this The transformation to retrieve the value from.
 #' @return Metric
-#' @examples
-#' 2 + 2
 #' @export
 transformation_output_metric <- function(
   this

@@ -11,8 +11,6 @@ NULL
 #' @concept measures
 #' @param .T undocumented
 #' @return Measure
-#' @examples
-#' 2 + 2
 #' @export
 fixed_smoothed_max_divergence <- function(
   .T
@@ -41,8 +39,6 @@ fixed_smoothed_max_divergence <- function(
 #' @concept measures
 #' @param .T undocumented
 #' @return Measure
-#' @examples
-#' 2 + 2
 #' @export
 max_divergence <- function(
   .T
@@ -69,8 +65,6 @@ max_divergence <- function(
 #' @concept measures
 #' @param this The measure to debug (stringify).
 #' @return str
-#' @examples
-#' 2 + 2
 #' @export
 measure_debug <- function(
   this
@@ -95,8 +89,6 @@ measure_debug <- function(
 #' @concept measures
 #' @param this The measure to retrieve the distance type from.
 #' @return str
-#' @examples
-#' 2 + 2
 #' @export
 measure_distance_type <- function(
   this
@@ -121,8 +113,6 @@ measure_distance_type <- function(
 #' @concept measures
 #' @param this The measure to retrieve the type from.
 #' @return str
-#' @examples
-#' 2 + 2
 #' @export
 measure_type <- function(
   this
@@ -149,8 +139,6 @@ measure_type <- function(
 #' @concept measures
 #' @param .T undocumented
 #' @return Measure
-#' @examples
-#' 2 + 2
 #' @export
 smoothed_max_divergence <- function(
   .T
@@ -178,8 +166,6 @@ smoothed_max_divergence <- function(
 #' @concept measures
 #' @param descriptor A string description of the privacy measure.
 #' @return Measure
-#' @examples
-#' 2 + 2
 #' @export
 user_divergence <- function(
   descriptor
@@ -211,8 +197,6 @@ user_divergence <- function(
 #' @concept measures
 #' @param .T undocumented
 #' @return Measure
-#' @examples
-#' 2 + 2
 #' @export
 zero_concentrated_divergence <- function(
   .T

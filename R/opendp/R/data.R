@@ -9,8 +9,6 @@ NULL
 #' @concept data
 #' @param this A pointer to the AnyObject.
 #' @return str
-#' @examples
-#' 2 + 2
 object_type <- function(
   this
 ) {
@@ -35,8 +33,6 @@ object_type <- function(
 #' @param curve The SMDCurve.
 #' @param delta What to fix delta to compute epsilon.
 #' @return Epsilon at a given `delta`.
-#' @examples
-#' 2 + 2
 smd_curve_epsilon <- function(
   curve,
   delta
@@ -66,8 +62,6 @@ smd_curve_epsilon <- function(
 #' @concept data
 #' @param this The AnyObject to convert to a string representation.
 #' @return str
-#' @examples
-#' 2 + 2
 to_string <- function(
   this
 ) {

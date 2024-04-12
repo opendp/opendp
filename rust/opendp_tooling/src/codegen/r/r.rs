@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter::once};
+use std::{collections::HashMap, iter::once, fs};
 
 use crate::{
     codegen::{flatten_type_recipe, tab_r},
@@ -234,7 +234,7 @@ fn generate_doc_block(
         description = description,
         doc_args = doc_args,
         ret_arg = generate_docstring_return_arg(&func.ret, hierarchy),
-        examples = generate_docstring_examples(),
+        examples = generate_docstring_examples(module_name, func),
     )
     .split("\n")
     .map(|l| format!("#' {}", l).trim().to_string())
@@ -266,7 +266,7 @@ fn generate_then_doc_block(
 @export"#,
         func_name = func.name,
         ret_arg = generate_docstring_return_arg(&func.ret, hierarchy),
-        examples = generate_docstring_examples(),
+        examples = generate_docstring_examples(module_name, func),
     )
     .split("\n")
     .map(|l| format!("#' {}", l).trim().to_string())
@@ -303,9 +303,12 @@ fn generate_docstring_return_arg(
     format!("\n@return {description}")
 }
 
-fn generate_docstring_examples() -> String {
-    let example = "2 + 2".to_string();
-    format!("\n@examples\n{example}")
+fn generate_docstring_examples(module_name: &str, func: &Function) -> String {
+    let example_path = format!("src/{}/code/{}.R", &module_name, &func.name);
+    match fs::read_to_string(example_path) {
+        Ok(example) => format!("\n@examples\n{example}"),
+        Err(_) => "".to_string(),
+    }
 }
 
 /// generate the function body, consisting of type args formatters, data converters, and the call

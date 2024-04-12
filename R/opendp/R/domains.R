@@ -14,7 +14,7 @@ NULL
 #' @param .T The type of the atom.
 #' @return Domain
 #' @examples
-#' 2 + 2
+#' atom_domain(.T = "i32")
 #' @export
 atom_domain <- function(
   bounds = NULL,
@@ -48,8 +48,6 @@ atom_domain <- function(
 #' @concept domains
 #' @param this The domain to retrieve the carrier type from.
 #' @return str
-#' @examples
-#' 2 + 2
 #' @export
 domain_carrier_type <- function(
   this
@@ -74,8 +72,6 @@ domain_carrier_type <- function(
 #' @concept domains
 #' @param this The domain to debug (stringify).
 #' @return str
-#' @examples
-#' 2 + 2
 #' @export
 domain_debug <- function(
   this
@@ -100,8 +96,6 @@ domain_debug <- function(
 #' @concept domains
 #' @param this The domain to retrieve the type from.
 #' @return str
-#' @examples
-#' 2 + 2
 #' @export
 domain_type <- function(
   this
@@ -127,8 +121,6 @@ domain_type <- function(
 #' @param key_domain domain of keys in the hashmap
 #' @param value_domain domain of values in the hashmap
 #' @return Domain
-#' @examples
-#' 2 + 2
 #' @export
 map_domain <- function(
   key_domain,
@@ -158,8 +150,6 @@ map_domain <- function(
 #' @concept domains
 #' @param this The domain to check membership in.
 #' @param val A potential element of the domain.
-#' @examples
-#' 2 + 2
 #' @export
 member <- function(
   this,
@@ -194,8 +184,6 @@ member <- function(
 #' @param element_domain undocumented
 #' @param .D The type of the inner domain.
 #' @return Domain
-#' @examples
-#' 2 + 2
 #' @export
 option_domain <- function(
   element_domain,
@@ -227,8 +215,6 @@ option_domain <- function(
 #' @param atom_domain The inner domain.
 #' @param size undocumented
 #' @return Domain
-#' @examples
-#' 2 + 2
 #' @export
 vector_domain <- function(
   atom_domain,

@@ -16,8 +16,6 @@ NULL
 #' @concept transformations
 #' @param size_guess A guess at the size of your dataset.
 #' @return int
-#' @examples
-#' 2 + 2
 #' @export
 choose_branching_factor <- function(
   size_guess
@@ -62,8 +60,6 @@ choose_branching_factor <- function(
 #' @param leaf_count The number of leaf nodes in the b-ary tree.
 #' @param branching_factor The number of children on each branch of the resulting tree. Larger branching factors result in shallower trees.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_b_ary_tree <- function(
   input_domain,
@@ -100,8 +96,6 @@ make_b_ary_tree <- function(
 #' @param leaf_count The number of leaf nodes in the b-ary tree.
 #' @param branching_factor The number of children on each branch of the resulting tree. Larger branching factors result in shallower trees.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_b_ary_tree <- function(
   lhs,
@@ -162,8 +156,6 @@ then_b_ary_tree <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .S Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_bounded_float_checked_sum <- function(
   size_limit,
@@ -205,8 +197,6 @@ make_bounded_float_checked_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .S Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_bounded_float_checked_sum <- function(
   lhs,
@@ -268,8 +258,6 @@ then_bounded_float_checked_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .S Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_bounded_float_ordered_sum <- function(
   size_limit,
@@ -311,8 +299,6 @@ make_bounded_float_ordered_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .S Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_bounded_float_ordered_sum <- function(
   lhs,
@@ -359,8 +345,6 @@ then_bounded_float_ordered_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_bounded_int_monotonic_sum <- function(
   bounds,
@@ -397,8 +381,6 @@ make_bounded_int_monotonic_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_bounded_int_monotonic_sum <- function(
   lhs,
@@ -443,8 +425,6 @@ then_bounded_int_monotonic_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_bounded_int_ordered_sum <- function(
   bounds,
@@ -481,8 +461,6 @@ make_bounded_int_ordered_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_bounded_int_ordered_sum <- function(
   lhs,
@@ -527,8 +505,6 @@ then_bounded_int_ordered_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_bounded_int_split_sum <- function(
   bounds,
@@ -565,8 +541,6 @@ make_bounded_int_split_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_bounded_int_split_sum <- function(
   lhs,
@@ -609,8 +583,6 @@ then_bounded_int_split_sum <- function(
 #' @param input_metric undocumented
 #' @param .TOA Atomic Output Type to cast into
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_cast <- function(
   input_domain,
@@ -643,8 +615,6 @@ make_cast <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param .TOA Atomic Output Type to cast into
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_cast <- function(
   lhs,
@@ -693,8 +663,6 @@ then_cast <- function(
 #' @param input_metric undocumented
 #' @param .TOA Atomic Output Type to cast into
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_cast_default <- function(
   input_domain,
@@ -729,8 +697,6 @@ make_cast_default <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param .TOA Atomic Output Type to cast into
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_cast_default <- function(
   lhs,
@@ -775,8 +741,6 @@ then_cast_default <- function(
 #' @param input_metric undocumented
 #' @param .TOA Atomic Output Type to cast into
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_cast_inherent <- function(
   input_domain,
@@ -809,8 +773,6 @@ make_cast_inherent <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param .TOA Atomic Output Type to cast into
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_cast_inherent <- function(
   lhs,
@@ -846,8 +808,6 @@ then_cast_inherent <- function(
 #' @concept transformations
 #' @param .TA Atomic Type. One of `f32` or `f64`
 #' @return Function
-#' @examples
-#' 2 + 2
 #' @export
 make_cdf <- function(
   .TA = "float"
@@ -878,8 +838,6 @@ make_cdf <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param .TA Atomic Type. One of `f32` or `f64`
 #' @return Function
-#' @examples
-#' 2 + 2
 #' @export
 then_cdf <- function(
   lhs,
@@ -924,8 +882,6 @@ then_cdf <- function(
 #' @param input_metric Metric on input domain.
 #' @param bounds Tuple of inclusive lower and upper bounds.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_clamp <- function(
   input_domain,
@@ -962,8 +918,6 @@ make_clamp <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param bounds Tuple of inclusive lower and upper bounds.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_clamp <- function(
   lhs,
@@ -1012,8 +966,6 @@ then_clamp <- function(
 #' @param .TIA Atomic type of the input data. Should be an integer type.
 #' @param .TOA Atomic type of the output data. Should be a float type.
 #' @return Function
-#' @examples
-#' 2 + 2
 #' @export
 make_consistent_b_ary_tree <- function(
   branching_factor,
@@ -1052,8 +1004,6 @@ make_consistent_b_ary_tree <- function(
 #' @param .TIA Atomic type of the input data. Should be an integer type.
 #' @param .TOA Atomic type of the output data. Should be a float type.
 #' @return Function
-#' @examples
-#' 2 + 2
 #' @export
 then_consistent_b_ary_tree <- function(
   lhs,
@@ -1103,8 +1053,6 @@ then_consistent_b_ary_tree <- function(
 #' @param input_metric Metric of the data type to be privatized.
 #' @param .TO Output Type. Must be numeric.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_count <- function(
   input_domain,
@@ -1137,8 +1085,6 @@ make_count <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param .TO Output Type. Must be numeric.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_count <- function(
   lhs,
@@ -1184,8 +1130,6 @@ then_count <- function(
 #' @param .MO Output Metric.
 #' @param .TV Type of Value. Express counts in terms of this integral type.
 #' @return The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
-#' @examples
-#' 2 + 2
 #' @export
 make_count_by <- function(
   input_domain,
@@ -1221,8 +1165,6 @@ make_count_by <- function(
 #' @param .MO Output Metric.
 #' @param .TV Type of Value. Express counts in terms of this integral type.
 #' @return The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
-#' @examples
-#' 2 + 2
 #' @export
 then_count_by <- function(
   lhs,
@@ -1273,8 +1215,6 @@ then_count_by <- function(
 #' @param .MO Output Metric.
 #' @param .TOA Atomic Output Type that is numeric.
 #' @return The carrier type is `Vec<TOA>`, a vector of the counts (`TOA`).
-#' @examples
-#' 2 + 2
 #' @export
 make_count_by_categories <- function(
   input_domain,
@@ -1320,8 +1260,6 @@ make_count_by_categories <- function(
 #' @param .MO Output Metric.
 #' @param .TOA Atomic Output Type that is numeric.
 #' @return The carrier type is `Vec<TOA>`, a vector of the counts (`TOA`).
-#' @examples
-#' 2 + 2
 #' @export
 then_count_by_categories <- function(
   lhs,
@@ -1371,8 +1309,6 @@ then_count_by_categories <- function(
 #' @param input_metric undocumented
 #' @param .TO Output Type. Must be numeric.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_count_distinct <- function(
   input_domain,
@@ -1405,8 +1341,6 @@ make_count_distinct <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param .TO Output Type. Must be numeric.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_count_distinct <- function(
   lhs,
@@ -1445,8 +1379,6 @@ then_count_distinct <- function(
 #' @param col_names Column names for each record entry.
 #' @param .K categorical/hashable data type of column names
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_create_dataframe <- function(
   col_names,
@@ -1483,8 +1415,6 @@ make_create_dataframe <- function(
 #' @param col_names Column names for each record entry.
 #' @param .K categorical/hashable data type of column names
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_create_dataframe <- function(
   lhs,
@@ -1535,8 +1465,6 @@ then_create_dataframe <- function(
 #' @param .TIA Atomic Input Type to cast from
 #' @param .TOA Atomic Output Type to cast into
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_df_cast_default <- function(
   input_domain,
@@ -1579,8 +1507,6 @@ make_df_cast_default <- function(
 #' @param .TIA Atomic Input Type to cast from
 #' @param .TOA Atomic Output Type to cast into
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_df_cast_default <- function(
   lhs,
@@ -1626,8 +1552,6 @@ then_df_cast_default <- function(
 #' @param value Value to check for equality
 #' @param .TIA Atomic Input Type to cast from
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_df_is_equal <- function(
   input_domain,
@@ -1670,8 +1594,6 @@ make_df_is_equal <- function(
 #' @param value Value to check for equality
 #' @param .TIA Atomic Input Type to cast from
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_df_is_equal <- function(
   lhs,
@@ -1720,8 +1642,6 @@ then_df_is_equal <- function(
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_drop_null <- function(
   input_domain,
@@ -1751,8 +1671,6 @@ make_drop_null <- function(
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_drop_null <- function(
   lhs
@@ -1794,8 +1712,6 @@ then_drop_null <- function(
 #' @param input_metric The metric of the input vector.
 #' @param categories The set of categories to find indexes from.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_find <- function(
   input_domain,
@@ -1832,8 +1748,6 @@ make_find <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param categories The set of categories to find indexes from.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_find <- function(
   lhs,
@@ -1881,8 +1795,6 @@ then_find <- function(
 #' @param input_metric The metric of the input vector.
 #' @param edges The set of edges to split bins by.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_find_bin <- function(
   input_domain,
@@ -1919,8 +1831,6 @@ make_find_bin <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param edges The set of edges to split bins by.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_find_bin <- function(
   lhs,
@@ -1964,8 +1874,6 @@ then_find_bin <- function(
 #' @param domain undocumented
 #' @param metric undocumented
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_identity <- function(
   domain,
@@ -1995,8 +1903,6 @@ make_identity <- function(
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_identity <- function(
   lhs
@@ -2042,8 +1948,6 @@ then_identity <- function(
 #' @param input_metric Metric of the input data. A dataset metric.
 #' @param constant Value to replace nulls with.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_impute_constant <- function(
   input_domain,
@@ -2079,8 +1983,6 @@ make_impute_constant <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param constant Value to replace nulls with.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_impute_constant <- function(
   lhs,
@@ -2120,8 +2022,6 @@ then_impute_constant <- function(
 #' @param input_metric Metric of the input.
 #' @param bounds Tuple of inclusive lower and upper bounds.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_impute_uniform_float <- function(
   input_domain,
@@ -2158,8 +2058,6 @@ make_impute_uniform_float <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param bounds Tuple of inclusive lower and upper bounds.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_impute_uniform_float <- function(
   lhs,
@@ -2201,8 +2099,6 @@ then_impute_uniform_float <- function(
 #' @param null Category to return if the index is out-of-range of the category set.
 #' @param .TOA Atomic Output Type. Output data will be `Vec<TOA>`.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_index <- function(
   input_domain,
@@ -2244,8 +2140,6 @@ make_index <- function(
 #' @param null Category to return if the index is out-of-range of the category set.
 #' @param .TOA Atomic Output Type. Output data will be `Vec<TOA>`.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_index <- function(
   lhs,
@@ -2293,8 +2187,6 @@ then_index <- function(
 #' @param input_metric undocumented
 #' @param value value to check against
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_is_equal <- function(
   input_domain,
@@ -2331,8 +2223,6 @@ make_is_equal <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param value value to check against
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_is_equal <- function(
   lhs,
@@ -2371,8 +2261,6 @@ then_is_equal <- function(
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_is_null <- function(
   input_domain,
@@ -2402,8 +2290,6 @@ make_is_null <- function(
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_is_null <- function(
   lhs
@@ -2444,8 +2330,6 @@ then_is_null <- function(
 #' @param .D Domain of the function. Must be `AtomDomain<T>` or `VectorDomain<AtomDomain<T>>`
 #' @param .M Metric. Must be `AbsoluteDistance<T>`, `L1Distance<T>` or `L2Distance<T>`
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_lipschitz_float_mul <- function(
   constant,
@@ -2491,8 +2375,6 @@ make_lipschitz_float_mul <- function(
 #' @param .D Domain of the function. Must be `AtomDomain<T>` or `VectorDomain<AtomDomain<T>>`
 #' @param .M Metric. Must be `AbsoluteDistance<T>`, `L1Distance<T>` or `L2Distance<T>`
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_lipschitz_float_mul <- function(
   lhs,
@@ -2538,8 +2420,6 @@ then_lipschitz_float_mul <- function(
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_mean <- function(
   input_domain,
@@ -2569,8 +2449,6 @@ make_mean <- function(
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_mean <- function(
   lhs
@@ -2616,8 +2494,6 @@ then_mean <- function(
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_metric_bounded <- function(
   input_domain,
@@ -2647,8 +2523,6 @@ make_metric_bounded <- function(
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_metric_bounded <- function(
   lhs
@@ -2691,8 +2565,6 @@ then_metric_bounded <- function(
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_metric_unbounded <- function(
   input_domain,
@@ -2722,8 +2594,6 @@ make_metric_unbounded <- function(
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_metric_unbounded <- function(
   lhs
@@ -2766,8 +2636,6 @@ then_metric_unbounded <- function(
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_ordered_random <- function(
   input_domain,
@@ -2797,8 +2665,6 @@ make_ordered_random <- function(
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_ordered_random <- function(
   lhs
@@ -2841,8 +2707,6 @@ then_ordered_random <- function(
 #' @param candidates Potential quantiles to score
 #' @param alpha a value in \eqn{[0, 1]}. Choose 0.5 for median
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_quantile_score_candidates <- function(
   input_domain,
@@ -2882,8 +2746,6 @@ make_quantile_score_candidates <- function(
 #' @param candidates Potential quantiles to score
 #' @param alpha a value in \eqn{[0, 1]}. Choose 0.5 for median
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_quantile_score_candidates <- function(
   lhs,
@@ -2925,8 +2787,6 @@ then_quantile_score_candidates <- function(
 #' @param .TA Atomic Type of the bin edges and data.
 #' @param .F Float type of the alpha argument. One of `f32` or `f64`
 #' @return Function
-#' @examples
-#' 2 + 2
 #' @export
 make_quantiles_from_counts <- function(
   bin_edges,
@@ -2973,8 +2833,6 @@ make_quantiles_from_counts <- function(
 #' @param .TA Atomic Type of the bin edges and data.
 #' @param .F Float type of the alpha argument. One of `f32` or `f64`
 #' @return Function
-#' @examples
-#' 2 + 2
 #' @export
 then_quantiles_from_counts <- function(
   lhs,
@@ -3023,8 +2881,6 @@ then_quantiles_from_counts <- function(
 #' @param constant Value to impute with.
 #' @param .MO Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
 #' @return A vector of the same type `TA`, but with the provided `size`.
-#' @examples
-#' 2 + 2
 #' @export
 make_resize <- function(
   input_domain,
@@ -3066,8 +2922,6 @@ make_resize <- function(
 #' @param constant Value to impute with.
 #' @param .MO Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
 #' @return A vector of the same type `TA`, but with the provided `size`.
-#' @examples
-#' 2 + 2
 #' @export
 then_resize <- function(
   lhs,
@@ -3111,8 +2965,6 @@ then_resize <- function(
 #' @param .K data type of key
 #' @param .TOA Atomic Output Type to downcast vector to
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_select_column <- function(
   key,
@@ -3151,8 +3003,6 @@ make_select_column <- function(
 #' @param .K data type of key
 #' @param .TOA Atomic Output Type to downcast vector to
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_select_column <- function(
   lhs,
@@ -3212,8 +3062,6 @@ then_select_column <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .S Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_sized_bounded_float_checked_sum <- function(
   size,
@@ -3255,8 +3103,6 @@ make_sized_bounded_float_checked_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .S Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_sized_bounded_float_checked_sum <- function(
   lhs,
@@ -3318,8 +3164,6 @@ then_sized_bounded_float_checked_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .S Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_sized_bounded_float_ordered_sum <- function(
   size,
@@ -3361,8 +3205,6 @@ make_sized_bounded_float_ordered_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .S Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_sized_bounded_float_ordered_sum <- function(
   lhs,
@@ -3410,8 +3252,6 @@ then_sized_bounded_float_ordered_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_sized_bounded_int_checked_sum <- function(
   size,
@@ -3451,8 +3291,6 @@ make_sized_bounded_int_checked_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_sized_bounded_int_checked_sum <- function(
   lhs,
@@ -3500,8 +3338,6 @@ then_sized_bounded_int_checked_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_sized_bounded_int_monotonic_sum <- function(
   size,
@@ -3541,8 +3377,6 @@ make_sized_bounded_int_monotonic_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_sized_bounded_int_monotonic_sum <- function(
   lhs,
@@ -3592,8 +3426,6 @@ then_sized_bounded_int_monotonic_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_sized_bounded_int_ordered_sum <- function(
   size,
@@ -3633,8 +3465,6 @@ make_sized_bounded_int_ordered_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_sized_bounded_int_ordered_sum <- function(
   lhs,
@@ -3684,8 +3514,6 @@ then_sized_bounded_int_ordered_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_sized_bounded_int_split_sum <- function(
   size,
@@ -3725,8 +3553,6 @@ make_sized_bounded_int_split_sum <- function(
 #' @param bounds Tuple of lower and upper bounds for data in the input domain.
 #' @param .T Atomic Input Type and Output Type
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_sized_bounded_int_split_sum <- function(
   lhs,
@@ -3769,8 +3595,6 @@ then_sized_bounded_int_split_sum <- function(
 #' @param col_names Column names for each record entry.
 #' @param .K categorical/hashable data type of column names
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_split_dataframe <- function(
   separator,
@@ -3809,8 +3633,6 @@ make_split_dataframe <- function(
 #' @param col_names Column names for each record entry.
 #' @param .K categorical/hashable data type of column names
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_split_dataframe <- function(
   lhs,
@@ -3850,8 +3672,6 @@ then_split_dataframe <- function(
 #' @concept transformations
 #'
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_split_lines <- function(
 
@@ -3879,8 +3699,6 @@ make_split_lines <- function(
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_split_lines <- function(
   lhs
@@ -3914,8 +3732,6 @@ then_split_lines <- function(
 #' @concept transformations
 #' @param separator The token(s) that separate entries in each record.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_split_records <- function(
   separator
@@ -3944,8 +3760,6 @@ make_split_records <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param separator The token(s) that separate entries in each record.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_split_records <- function(
   lhs,
@@ -3983,8 +3797,6 @@ then_split_records <- function(
 #' @param keep_columns list of column names to apply subset to
 #' @param .TK Type of the column name
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_subset_by <- function(
   indicator_column,
@@ -4024,8 +3836,6 @@ make_subset_by <- function(
 #' @param keep_columns list of column names to apply subset to
 #' @param .TK Type of the column name
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_subset_by <- function(
   lhs,
@@ -4074,8 +3884,6 @@ then_subset_by <- function(
 #' @param input_domain Domain of the input data.
 #' @param input_metric One of `SymmetricDistance` or `InsertDeleteDistance`.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_sum <- function(
   input_domain,
@@ -4105,8 +3913,6 @@ make_sum <- function(
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_sum <- function(
   lhs
@@ -4163,8 +3969,6 @@ then_sum <- function(
 #' @param input_metric undocumented
 #' @param .S Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_sum_of_squared_deviations <- function(
   input_domain,
@@ -4199,8 +4003,6 @@ make_sum_of_squared_deviations <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param .S Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_sum_of_squared_deviations <- function(
   lhs,
@@ -4245,8 +4047,6 @@ then_sum_of_squared_deviations <- function(
 #' @param input_domain undocumented
 #' @param input_metric undocumented
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_unordered <- function(
   input_domain,
@@ -4276,8 +4076,6 @@ make_unordered <- function(
 #' @param lhs The prior transformation or metric space.
 #'
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_unordered <- function(
   lhs
@@ -4323,8 +4121,6 @@ then_unordered <- function(
 #' @param ddof Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.
 #' @param .S Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 make_variance <- function(
   input_domain,
@@ -4364,8 +4160,6 @@ make_variance <- function(
 #' @param ddof Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.
 #' @param .S Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
 #' @return Transformation
-#' @examples
-#' 2 + 2
 #' @export
 then_variance <- function(
   lhs,
