@@ -20,7 +20,7 @@ use polars::datatypes::{
     ArrayFromIter, DataType, Field, Float32Type, Float64Type, Int16Type, Int32Type, Int64Type,
     Int8Type, PolarsDataType, UInt32Type, UInt64Type,
 };
-use polars::error::polars_err;
+use polars::error::{polars_bail, polars_err};
 use polars::error::{PolarsError, PolarsResult};
 use polars::lazy::dsl::Expr;
 use polars::series::{IntoSeries, Series};
@@ -36,15 +36,15 @@ use serde::{Deserialize, Serialize};
 /// * `input_metric` - The metric space under which neighboring LazyFrames are compared
 /// * `expr` - The expression to which the Laplace noise will be added
 /// * `param` - (Re)scale the noise parameter for the laplace distribution
-pub fn make_expr_laplace<MS: 'static + Metric>(
+pub fn make_expr_laplace<MI: 'static + Metric>(
     input_domain: ExprDomain,
-    input_metric: MS,
+    input_metric: MI,
     expr: Expr,
     param: f64,
-) -> Fallible<Measurement<ExprDomain, Expr, MS, MaxDivergence<f64>>>
+) -> Fallible<Measurement<ExprDomain, Expr, MI, MaxDivergence<f64>>>
 where
-    Expr: StableExpr<MS, L1Distance<Scalar>>,
-    (ExprDomain, MS): MetricSpace,
+    Expr: StableExpr<MI, L1Distance<Scalar>>,
+    (ExprDomain, MI): MetricSpace,
 {
     let (input, scale) =
         match_laplace(&expr)?.ok_or_else(|| err!(MakeMeasurement, "Expected Laplace function"))?;
@@ -52,20 +52,20 @@ where
     let t_prior = input
         .clone()
         .make_stable(input_domain.clone(), input_metric.clone())?;
-    let input_domain = t_prior.output_domain.clone();
+    let (middle_domain, middle_metric) = t_prior.output_space();
 
     if scale.is_nan() && param.is_nan() {
         return fallible!(
             MakeMeasurement,
-            "Laplace mechanism requires a scale parameter"
+            "Laplace mechanism requires either a scale to be set on the expression or a param to be passed to the constructor"
         );
     }
 
     let scale = if scale.is_nan() { 1. } else { scale };
     let param = if param.is_nan() { 1. } else { param };
-    let param = param.inf_mul(&scale)?;
+    let scale = scale.inf_mul(&param)?;
 
-    if input_domain.active_series()?.nullable {
+    if middle_domain.active_series()?.nullable {
         return fallible!(
             MakeMeasurement,
             "Laplace mechanism requires non-nullable input"
@@ -74,13 +74,13 @@ where
 
     t_prior
         >> Measurement::<_, _, L1Distance<Scalar>, _>::new(
-            input_domain,
+            middle_domain,
             Function::new_expr(move |input_expr| {
-                apply_plugin(input_expr, expr.clone(), LaplaceArgs { scale: param })
+                apply_plugin(input_expr, expr.clone(), LaplaceArgs { scale })
             }),
-            L1Distance::default(),
+            middle_metric,
             MaxDivergence::default(),
-            PrivacyMap::new_fallible(move |d_in: &Scalar| laplace_map(param, 0.)(&d_in.f64()?)),
+            PrivacyMap::new_fallible(move |d_in: &Scalar| laplace_map(scale, 0.)(&d_in.f64()?)),
         )?
 }
 
@@ -93,7 +93,7 @@ where
 /// The input to the Laplace expression and the scale of the Laplace noise
 pub(crate) fn match_laplace(expr: &Expr) -> Fallible<Option<(&Expr, f64)>> {
     let Some((input, LaplaceArgs { scale })) = match_plugin(expr, "laplace")? else {
-        return fallible!(MakeMeasurement, "Expected Laplace expr");
+        return Ok(None);
     };
 
     let [input] = <&[_; 1]>::try_from(input.as_slice())
@@ -102,12 +102,15 @@ pub(crate) fn match_laplace(expr: &Expr) -> Fallible<Option<(&Expr, f64)>> {
     Ok(Some((input, scale)))
 }
 
+// When using the plugin API from other languages, the LaplaceArgs struct is serialized inside a FunctionExpr::FfiPlugin.
+// When using the Rust API directly, the LaplaceArgs struct is stored inside an AnonymousFunction.
+//
 /// Arguments for the Laplace noise expression
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub(crate) struct LaplaceArgs {
     /// The scale of the Laplace noise.
     ///
-    /// When parsed by [`make_private_expr`], NaN defaults to one and is multiplied by the `param`.
+    /// Scale may be left NaN, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
     pub scale: f64,
 }
 
@@ -147,9 +150,9 @@ impl SeriesUdf for LaplaceArgs {
 ///
 /// The Polars engine executes this function over chunks of data.
 fn laplace_udf(inputs: &[Series], kwargs: LaplaceArgs) -> PolarsResult<Series> {
-    let [series] = <&[_; 1]>::try_from(inputs).map_err(|_| {
-        PolarsError::InvalidOperation("Laplace expects a single input field".into())
-    })?;
+    let Ok([series]) = <&[_; 1]>::try_from(inputs) else {
+        polars_bail!(InvalidOperation: "Laplace expects a single input field");
+    };
     let scale = kwargs.scale;
 
     // PT stands for Polars Type
@@ -211,18 +214,20 @@ fn laplace_udf(inputs: &[Series], kwargs: LaplaceArgs) -> PolarsResult<Series> {
             .into_series())
     }
 
+    use DataType::*;
     match series.dtype() {
-        DataType::UInt32 => laplace_impl_integer::<UInt32Type>(series, scale),
-        DataType::UInt64 => laplace_impl_integer::<UInt64Type>(series, scale),
-        DataType::Int8 => laplace_impl_integer::<Int8Type>(series, scale),
-        DataType::Int16 => laplace_impl_integer::<Int16Type>(series, scale),
-        DataType::Int32 => laplace_impl_integer::<Int32Type>(series, scale),
-        DataType::Int64 => laplace_impl_integer::<Int64Type>(series, scale),
-        DataType::Float32 => laplace_impl_float::<Float32Type>(series, scale),
-        DataType::Float64 => laplace_impl_float::<Float64Type>(series, scale),
-        _ => Err(PolarsError::ComputeError(
-            "Expected numeric data type.".into(),
-        )),
+        UInt32 => laplace_impl_integer::<UInt32Type>(series, scale),
+        UInt64 => laplace_impl_integer::<UInt64Type>(series, scale),
+        Int8 => laplace_impl_integer::<Int8Type>(series, scale),
+        Int16 => laplace_impl_integer::<Int16Type>(series, scale),
+        Int32 => laplace_impl_integer::<Int32Type>(series, scale),
+        Int64 => laplace_impl_integer::<Int64Type>(series, scale),
+        Float32 => laplace_impl_float::<Float32Type>(series, scale),
+        Float64 => laplace_impl_float::<Float64Type>(series, scale),
+        UInt8 | UInt16 => {
+            polars_bail!(InvalidOperation: "u8 and u16 not supported in the OpenDP Polars plugin. Please use u32 or u64.")
+        }
+        dtype => polars_bail!(InvalidOperation: "Expected numeric data type, found {}", dtype),
     }
 }
 
@@ -234,14 +239,19 @@ pub(crate) fn laplace_type_udf(input_fields: &[Field]) -> PolarsResult<Field> {
         polars_bail!(InvalidOperation: "laplace expects a single input field")
     };
     use DataType::*;
+    if matches!(field.data_type(), UInt8 | UInt16) {
+        polars_bail!(
+            InvalidOperation: "u8 and u16 not supported in the OpenDP Polars plugin. Please use u32 or u64."
+        );
+    }
     if !matches!(
         field.data_type(),
-        UInt8 | UInt16 | UInt32 | UInt64 | Int8 | Int16 | Int32 | Int64 | Float32 | Float64
+        UInt32 | UInt64 | Int8 | Int16 | Int32 | Int64 | Float32 | Float64
     ) {
-        return Err(polars_err!(
+        polars_bail!(
             InvalidOperation: "Expected numeric data type, found {:?}",
             field.data_type()
-        ));
+        );
     }
     Ok(field.clone())
 }
@@ -260,8 +270,8 @@ mod test_make_laplace_expr {
 
     use crate::{
         core::PrivacyNamespaceHelper,
-        measurements::PrivateExpr,
-        metrics::{InsertDeleteDistance, PartitionDistance, SymmetricDistance},
+        measurements::{make_private_expr, make_private_lazyframe},
+        metrics::{PartitionDistance, SymmetricDistance},
         transformations::polars_test::get_test_data,
     };
 
@@ -273,7 +283,7 @@ mod test_make_laplace_expr {
 
         let m_quant = make_private_expr(
             expr_domain,
-            SymmetricDistance,
+            PartitionDistance(SymmetricDistance),
             MaxDivergence::default(),
             col("B").dp().sum((0., 1.), scale),
             scale,
@@ -291,21 +301,24 @@ mod test_make_laplace_expr {
     #[test]
     fn test_make_laplace_grouped() -> Fallible<()> {
         let (lf_domain, lf) = get_test_data()?;
-        let expr_domain = lf_domain.aggregate(&["A"]);
         let scale: f64 = 0.0;
 
         let expr_exp = col("B").clip(lit(1), lit(2)).sum().dp().laplace(f64::NAN);
-        let m_lap = expr_exp.clone().make_private(
-            expr_domain,
-            PartitionDistance(InsertDeleteDistance),
+        let m_lap = make_private_lazyframe(
+            lf_domain,
+            SymmetricDistance,
             MaxDivergence::default(),
+            lf.clone().group_by(["A"]).agg([expr_exp]),
             scale,
         )?;
 
-        let meas_res = m_lap.invoke(&(lf.logical_plan.clone(), all()))?;
-
-        let df_act = lf.clone().group_by(&[col("A")]).agg([meas_res]).collect()?;
-        let df_exp = lf.clone().group_by(&[col("A")]).agg([sum("B")]).collect()?;
+        let df_act = m_lap.invoke(&lf)?.sort("A", Default::default()).collect()?;
+        let df_exp = lf
+            .clone()
+            .group_by(&[col("A")])
+            .agg([sum("B")])
+            .sort("A", Default::default())
+            .collect()?;
 
         assert_eq!(df_act, df_exp);
         Ok(())

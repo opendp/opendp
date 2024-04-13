@@ -22,6 +22,8 @@ pub(crate) trait OpenDPPlugin:
     fn get_options(&self) -> FunctionOptions;
 }
 
+static OPENDP_LIB_NAME: &str = "opendp";
+
 pub(crate) fn match_plugin<'e, KW>(
     expr: &'e Expr,
     name: &str,
@@ -41,10 +43,10 @@ where
                 },
             ..
         } => {
-            if !lib.contains("libopendp") || symbol.as_ref() != name {
+            if !lib.contains(OPENDP_LIB_NAME) || symbol.as_ref() != name {
                 return Ok(None);
             }
-            let args = serde_pickle::from_slice(kwargs, Default::default())
+            let args = serde_pickle::from_slice(kwargs.as_ref(), Default::default())
                 .map_err(|e| err!(FailedFunction, e.to_string()))?;
             (input, args)
         }
@@ -69,7 +71,7 @@ where
 pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
     input_expr: Expr,
     plugin_expr: Expr,
-    kwargs: KW,
+    kwargs_new: KW,
 ) -> Expr {
     match plugin_expr {
         // handle the case where the expression is an FFI plugin
@@ -81,10 +83,11 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
         } => {
             // overwrite the kwargs to update the noise scale parameter in the FFI plugin
             if let FunctionExpr::FfiPlugin { kwargs, .. } = &mut function {
-                *kwargs = serde_pickle::to_vec(&kwargs, Default::default())
+                *kwargs = serde_pickle::to_vec(&kwargs_new, Default::default())
                     .expect("pickling does not fail")
                     .into();
             }
+
             Expr::Function {
                 input: vec![input_expr],
                 function,
@@ -98,7 +101,7 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
             ..
         } => Expr::AnonymousFunction {
             input: vec![input_expr],
-            function: SpecialEq::new(Arc::new(kwargs)),
+            function: SpecialEq::new(Arc::new(kwargs_new)),
             output_type,
             options,
         },
@@ -213,9 +216,8 @@ impl PrivacyNamespaceHelper for Expr {
 pub struct DPNamespace(Expr);
 impl DPNamespace {
     /// Add Laplace noise to the expression.
-    ///
-    /// When parsed by [`make_private_expr`], NaN defaults to one and is multiplied by the `param`.
-    /// Otherwise, `scale` must be a finite non-negative number.
+    /// `scale` must not be negative or inf.
+    /// Scale may be left NaN, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
     pub fn laplace(self, scale: f64) -> Expr {
         apply_anonymous_function(vec![self.0], LaplaceArgs { scale })
     }
