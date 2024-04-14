@@ -74,9 +74,9 @@ def test_lazyframe_ffi():
     assert t_ident(lf).collect().equals(lf.collect())
 
 def test_expr_ffi():
-    """ensure that lazyframes can be passed to/from Rust"""
+    """ensure that expr domain's carrier type can be passed to/from Rust"""
     pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()
-    expr_domain = dp.expr_domain(lf_domain, "select")
+    expr_domain = dp.expr_domain(lf_domain, grouping_columns=[])
     t_ident = (expr_domain, dp.symmetric_distance()) >> dp.t.then_identity()
     assert str(t_ident((lf, pl.col("A")))[1]) == str(pl.col("A"))

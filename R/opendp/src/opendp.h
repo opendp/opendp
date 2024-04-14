@@ -846,11 +846,9 @@ struct FfiResult_____AnyDomain opendp_domains__series_domain(char *name,
  *
  * # Arguments
  * * `lazyframe_domain` - the domain of the LazyFrame to be constructed
- * * `context` - used when the constructor is called inside a lazyframe context constructor
- * * `grouping_columns` - used when the constructor is called inside a groupby context constructor
+ * * `grouping_columns` - set when creating an expression that aggregates
  */
 struct FfiResult_____AnyDomain opendp_domains__expr_domain(const struct AnyDomain *lazyframe_domain,
-                                                           const char *context,
                                                            const struct AnyObject *grouping_columns);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_gaussian(const struct AnyDomain *input_domain,

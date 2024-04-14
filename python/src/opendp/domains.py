@@ -210,7 +210,6 @@ def domain_type(
 
 def expr_domain(
     lazyframe_domain: Domain,
-    context: Optional[str] = None,
     grouping_columns: Optional[List[str]] = None
 ) -> Domain:
     r"""Construct an ExprDomain from a LazyFrameDomain.
@@ -219,9 +218,7 @@ def expr_domain(
 
     :param lazyframe_domain: the domain of the LazyFrame to be constructed
     :type lazyframe_domain: Domain
-    :param context: used when the constructor is called inside a lazyframe context constructor
-    :type context: str
-    :param grouping_columns: used when the constructor is called inside a groupby context constructor
+    :param grouping_columns: set when creating an expression that aggregates
     :type grouping_columns: List[str]
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
@@ -233,15 +230,14 @@ def expr_domain(
     # No type arguments to standardize.
     # Convert arguments to c types.
     c_lazyframe_domain = py_to_c(lazyframe_domain, c_type=Domain, type_name=None)
-    c_context = py_to_c(context, c_type=ctypes.c_char_p, type_name=None)
     c_grouping_columns = py_to_c(grouping_columns, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[RuntimeType(origin='Vec', args=[String])]))
 
     # Call library function.
     lib_function = lib.opendp_domains__expr_domain
-    lib_function.argtypes = [Domain, ctypes.c_char_p, AnyObjectPtr]
+    lib_function.argtypes = [Domain, AnyObjectPtr]
     lib_function.restype = FfiResult
 
-    output = c_to_py(unwrap(lib_function(c_lazyframe_domain, c_context, c_grouping_columns), Domain))
+    output = c_to_py(unwrap(lib_function(c_lazyframe_domain, c_grouping_columns), Domain))
 
     return output
 

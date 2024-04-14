@@ -17,18 +17,14 @@ use super::{Frame, FrameDomain, LogicalPlanDomain, NumericDataType, SeriesDomain
 #[cfg(feature = "ffi")]
 mod ffi;
 
-// TODO: remove this allow marker later
-#[allow(dead_code)]
 #[derive(Clone, PartialEq, Debug)]
 pub enum ExprContext {
-    // select
-    Select,
-    // filter
-    Filter,
-    // with_columns
-    WithColumns,
-    // group_by/agg
-    Aggregate(BTreeSet<String>),
+    /// Requires that the expression applied to the data frame is row-by-row, i.e. the expression is applied to each row independently.
+    ///
+    /// Rows cannot be added or removed, and the order of rows cannot be changed.
+    RowByRow,
+    /// Allows for aggregation operations that break row alignment, such as `group_by/agg` and `select`.
+    Aggregate { grouping_columns: BTreeSet<String> },
 }
 
 impl ExprContext {
@@ -36,30 +32,28 @@ impl ExprContext {
         let (lp, expr) = val.clone();
         let frame = LazyFrame::from(lp);
         match self {
-            ExprContext::Select => frame.select([expr]),
-            ExprContext::Filter => frame.filter(expr),
-            ExprContext::WithColumns => frame.with_columns([expr]),
-            ExprContext::Aggregate(columns) => frame
-                .group_by(&columns.iter().map(|n| col(n)).collect::<Vec<_>>())
+            ExprContext::RowByRow => frame.select([expr]),
+            ExprContext::Aggregate {
+                grouping_columns: grouping_keys,
+            } => frame
+                .group_by(
+                    &grouping_keys
+                        .iter()
+                        .map(AsRef::as_ref)
+                        .map(col)
+                        .collect::<Vec<_>>(),
+                )
                 .agg([expr]),
         }
         .logical_plan
     }
 
-    pub fn break_alignment(&self) -> Fallible<()> {
-        if matches!(self, ExprContext::Filter | ExprContext::WithColumns) {
-            return fallible!(
-                MakeMeasurement,
-                "record alignment can only be broken in a selection or aggregation"
-            );
-        }
-        Ok(())
-    }
-
-    pub fn grouping_columns(&self) -> BTreeSet<String> {
+    pub fn grouping_columns(&self) -> Fallible<BTreeSet<String>> {
         match self {
-            ExprContext::Aggregate(columns) => columns.clone(),
-            _ => BTreeSet::new(),
+            ExprContext::Aggregate { grouping_columns } => Ok(grouping_columns.clone()),
+            ExprContext::RowByRow => {
+                fallible!(FailedFunction, "RowByRow context has no grouping columns")
+            }
         }
     }
 }
@@ -83,7 +77,7 @@ impl ExprContext {
 pub struct ExprDomain {
     /// The domain that materialized data frames are a member of.
     pub frame_domain: LogicalPlanDomain,
-    /// Denotes an expression must be applied to materialize a member of the domain.
+    /// Denotes how an expression must be applied to materialize a member of the domain.
     pub context: ExprContext,
 }
 
