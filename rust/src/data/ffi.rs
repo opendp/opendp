@@ -109,7 +109,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         raw: &FfiSlice,
     ) -> Fallible<AnyObject> {
         if raw.len != 2 {
-            return fallible!(FFI, "Expected a slice length of two");
+            return fallible!(FFI, "Expected a slice length of two, found length of {}", raw.len);
         }
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, 2) };
 
@@ -225,16 +225,16 @@ pub extern "C" fn opendp_data__slice_as_object(
         raw: &FfiSlice,
     ) -> Fallible<AnyObject> {
         if raw.len != 2 {
-            return fallible!(FFI, "Expected a slice length of two");
+            return fallible!(FFI, "Expected a slice length of two, found length of {}", raw.len);
         }
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const FfiSlice, 2) };
 
         let lp_ptr = util::as_ref(slice[0])
-            .ok_or_else(|| err!(FFI, "attempted to follow null pointer"))?;
+            .ok_or_else(|| err!(FFI, "attempted to follow null pointer to LazyFrame"))?;
         let lp = deserialize_raw::<LogicalPlan>(lp_ptr, "LazyFrame")?;
 
         let expr_ptr = util::as_ref(slice[1])
-            .ok_or_else(|| err!(FFI, "attempted to follow null pointer"))?;
+            .ok_or_else(|| err!(FFI, "attempted to follow null pointer to Expr"))?;
         let expr = deserialize_raw::<Expr>(expr_ptr, "Expr")?;
         
         Ok(AnyObject::new((lp, expr)))
