@@ -107,9 +107,8 @@ jobs:
           - 3.12
         extra-install:
           - '.'
-          - '.[numpy]'
           - '.[scikit-learn]'
-          - '.[scikit-learn,polars]'
+          - '.[polars]'
 
     steps:
       - name: Checkout repository
