@@ -105,7 +105,7 @@ jobs:
 
   libs-macos:
     needs: credential-check
-    runs-on: macos-11
+    runs-on: macos-latest
     strategy:
       matrix:
         architecture: [x86_64, aarch64]
