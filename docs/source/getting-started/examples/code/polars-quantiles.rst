@@ -11,7 +11,6 @@
 >>> lf_domain = dp.lazyframe_domain([
 ...     dp.series_domain("A", dp.atom_domain(T=dp.f64)),
 ...     dp.series_domain("B", dp.atom_domain(T=dp.i32)),
-...     dp.series_domain("C", dp.option_domain(dp.atom_domain(T=dp.String))),
 ...     dp.series_domain("D", dp.atom_domain(T=dp.i32)),
 ... ])
 
@@ -34,7 +33,6 @@
 >>> schema_from_domain = { # TODO: Utility to extract this from domain
 ...     'A': pl.Float64,
 ...     'B': pl.Int32,
-...     'C': pl.String,
 ...     'D': pl.Int32
 ... }
 >>> empty_lf = pl.DataFrame(None, schema_from_domain, orient="row").lazy()
@@ -57,7 +55,6 @@
 >>> lf = pl.LazyFrame([
 ...     pl.Series("A", [1.0] * 50, dtype=pl.Float64),
 ...     pl.Series("B", [1, 2, 3, 4, 5] * 10, dtype=pl.Int32),
-...     pl.Series("C", ["1"] * 49 + [None], dtype=pl.String),
 ...     pl.Series("D", [2] * 50, dtype=pl.Int32),
 ... ])
 
