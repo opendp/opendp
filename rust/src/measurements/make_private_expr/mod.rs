@@ -17,6 +17,9 @@ mod ffi;
 mod expr_len;
 
 #[cfg(feature = "contrib")]
+mod expr_index_candidates;
+
+#[cfg(feature = "contrib")]
 pub(crate) mod expr_laplace;
 
 #[cfg(feature = "contrib")]
@@ -84,6 +87,16 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergen
             return expr_report_noisy_max_gumbel::make_expr_report_noisy_max_gumbel::<
                 PartitionDistance<M>,
             >(input_domain, input_metric, self, global_scale);
+        }
+
+        if expr_index_candidates::match_index_candidates(&self)?.is_some() {
+            return expr_index_candidates::make_expr_index_candidates::<PartitionDistance<M>, _>(
+                input_domain,
+                input_metric,
+                output_measure,
+                self,
+                global_scale,
+            );
         }
 
         if let Some(meas) = expr_postprocess::match_postprocess(

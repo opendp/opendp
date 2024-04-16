@@ -203,7 +203,7 @@ def test_private_lazyframe_median():
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
     )
     expect = pl.DataFrame(
-        [pl.Series("A", [1.0], dtype=pl.Float64), pl.Series("B", [2], dtype=pl.UInt32)]
+        [pl.Series("A", [1.0], dtype=pl.Float64), pl.Series("B", [3], dtype=pl.UInt32)]
     )
 
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
