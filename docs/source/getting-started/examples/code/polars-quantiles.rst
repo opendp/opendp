@@ -23,9 +23,11 @@
 
 
 # candidates
->>> candidates = [10 * i for i in range(11)]
->>> candidates
-[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+>>> candidates = [i for i in range(5)]
+
+
+#>>> candidates
+#[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 
 # /candidates
 
@@ -38,7 +40,7 @@
 >>> empty_lf = pl.DataFrame(None, schema_from_domain, orient="row").lazy()
 >>> plan = empty_lf.group_by("B").agg([
 ...     pl.col("A").dp.sum(bounds=(0.0, 1.0), scale=2.),
-...     pl.col("D").dp.quantile(candidates, alpha=.75, scale=1.),
+...     pl.col("D").dp.quantile(candidates, alpha=.75, scale=1.0),
 ... ])
 
 >>> measurement = dp.m.make_private_lazyframe(
@@ -55,10 +57,10 @@
 >>> lf = pl.LazyFrame([
 ...     pl.Series("A", [1.0] * 50, dtype=pl.Float64),
 ...     pl.Series("B", [1, 2, 3, 4, 5] * 10, dtype=pl.Int32),
-...     pl.Series("D", [2] * 50, dtype=pl.Int32),
+...     pl.Series("D", [1, 2, 3, 4, 5] * 10, dtype=pl.Int32),
 ... ])
 
->>> release = measurement(lf).collect()
+>>> release = measurement(lf).collect().sort("B")
 
 >>> print(release) # doctest: +ELLIPSIS
 shape: (5, 3)
