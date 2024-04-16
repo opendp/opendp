@@ -450,6 +450,7 @@ def _series_to_slice(val) -> FfiSlicePtr:
 
     # make the conversion through PyArrow's private API
     # this changes the pointer's memory and is thus unsafe. In particular, `_export_to_c` can go out of bounds
+    # NOTE: consider changing to PyCapsule when available. https://github.com/pola-rs/polars/issues/12530
     val.to_arrow()._export_to_c(array_ptr, schema_ptr)
 
     # when freeing the slice, also free up the memory of what's left behind the slice
@@ -467,7 +468,7 @@ def _series_to_slice(val) -> FfiSlicePtr:
 def _slice_to_series(raw: FfiSlicePtr):
     pl = import_optional_dependency('polars')
     pyarrow = import_optional_dependency('pyarrow')
-    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p)) # type: ignore[union-attr]
+    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
     array_ptr, schema_ptr, name_ptr = slice_array[0:3]
 
     arrow_array = pyarrow.Array._import_from_c(array_ptr, schema_ptr)
@@ -475,7 +476,7 @@ def _slice_to_series(raw: FfiSlicePtr):
 
     name_bytes = ctypes.cast(name_ptr, ctypes.c_char_p).value
     if name_bytes is not None:
-        series = series.rename(name_bytes.decode()) # type: ignore[arg-type]
+        series = series.rename(name_bytes.decode())
     return series
 
 

@@ -14,7 +14,7 @@ pub struct BootstrapArguments {
     pub name: Option<String>,
     pub proof_path: Option<String>,
     #[darling(default)]
-    pub ffi: Option<bool>,
+    pub has_ffi: Option<bool>,
     #[darling(default)]
     pub unproven: bool,
     #[darling(default)]

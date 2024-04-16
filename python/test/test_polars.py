@@ -21,7 +21,7 @@ def example_series():
 def test_infer():
     pl = pytest.importorskip("polars")
     series = pl.Series("A", [1] * 100)
-    assert dp.RuntimeType.infer(series) == "Series"
+    assert dp.RuntimeType.infer(series) == dp.Series
 
 
 # data loaders

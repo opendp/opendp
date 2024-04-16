@@ -182,8 +182,6 @@ pub extern "C" fn opendp_data__slice_as_object(
 
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Series") => raw_to_series(raw),
-        #[cfg(feature = "polars")]
-        TypeContents::PLAIN("SeriesDomain") => raw_to_series(raw),
 
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(&element_id));

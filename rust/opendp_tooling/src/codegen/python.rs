@@ -43,19 +43,19 @@ fn generate_module(
 ) -> String {
     let all = module
         .iter()
-        .filter(|func| func.generate_ffi)
+        .filter(|func| func.has_ffi)
         .map(|func| format!("    \"{}\"", func.name))
         .chain(
             module
                 .iter()
-                .filter(|func| func.supports_partial && func.generate_ffi)
+                .filter(|func| func.supports_partial && func.has_ffi)
                 .map(|func| format!("    \"{}\"", func.name.replacen("make_", "then_", 1))),
         )
         .collect::<Vec<_>>()
         .join(",\n");
     let functions = module
         .into_iter()
-        .filter(|func| func.generate_ffi)
+        .filter(|func| func.has_ffi)
         .map(|func| generate_function(&module_name, &func, typemap, hierarchy))
         .collect::<Vec<String>>()
         .join("\n");

@@ -26,7 +26,7 @@ pub struct Function {
     // set to true if the first two arguments are input domain and input metric
     pub supports_partial: bool,
     // whether to generate FFI
-    pub generate_ffi: bool,
+    pub has_ffi: bool,
 }
 
 // Metadata for function arguments, derived types and returns.

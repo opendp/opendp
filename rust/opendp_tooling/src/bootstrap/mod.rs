@@ -77,7 +77,7 @@ pub fn reconcile_function(
         derived_types: reconcile_derived_types(bootstrap.derived_types),
         dependencies: bootstrap.dependencies.0,
         supports_partial: signature.supports_partial,
-        generate_ffi: bootstrap.ffi.unwrap_or(true),
+        has_ffi: bootstrap.has_ffi.unwrap_or(true),
     })
 }
 
