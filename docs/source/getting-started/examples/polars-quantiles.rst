@@ -1,5 +1,5 @@
-Polars Quantiles
-================
+Polars API
+==========
 
 The Polars API for OpenDP is under development and subject to change.
 We are currently focused on supporting a particular use case,
@@ -10,7 +10,7 @@ The OpenDP Polars API leverages `Polars <https://docs.pola.rs/>`_:
 You'll use Polars methods like ``group_by``, ``agg``, and ``col`` to construct
 most of your query, and only use ``dp`` extensions when needed.
 
-This example demonstrates how to construct DP aggregate statistics on quantiles.
+This example demonstrates how to construct DP aggregate statistics, including quantiles.
 
 .. tab-set::
 
@@ -22,10 +22,15 @@ This example demonstrates how to construct DP aggregate statistics on quantiles.
             :start-after: init
             :end-before: /init
 
-The columns of Polars dataframes have data types analogous to the types used by OpenDP domains.
-While there is a function to extract an OpenDP domain from a Polars dataframe,
-we discourage its use: We should be very careful about indvertantly leaking information,
-so it is safer to give the public characteristics of a domain without referencing the private data.
+We need to understand the structure of our private data before we can apply differential privacy,
+but we usually shoulnd't or can't look at the private data as we prepare our analysis.
+For this example, our dataset will have three columns:
+
+* ``grouping-key``: integers between 1 and 5; the grouping key
+* ``twice-key``: integers between 2 and 10
+* ``ones``: the float 1.0
+
+Our first step is to represent this as a domain:
 
 .. tab-set::
 
@@ -38,7 +43,7 @@ so it is safer to give the public characteristics of a domain without referencin
             :end-before: /init-domain
 
 Grouping on a column necessarily reveals characteristics of that column,
-so we need to modify the original domain to make clear that these characteristics are public.
+so we need to modify the original domain to make this margin explicitly public.
 
 .. tab-set::
 
@@ -49,3 +54,51 @@ so we need to modify the original domain to make clear that these characteristic
             :language: python
             :start-after: margin-domain
             :end-before: /margin-domain
+
+Now we'll use this same information, but instead of preparing an OpenDP domain,
+we'll create an empty Polars LazyFrame. We won't be storing data in this LazyFrame:
+Instead we'll use it to keep track of the steps of our analysis,
+and then pass it back to OpenDP for evaluation.
+
+Note the use of ``dp`` to access differentially private extensions to Polars.
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. literalinclude:: code/polars-quantiles.rst
+            :language: python
+            :start-after: plan
+            :end-before: /plan
+
+We can pass this ``plan`` to ``make_private_lazyframe`` to get a measurement function:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. literalinclude:: code/polars-quantiles.rst
+            :language: python
+            :start-after: measurement
+            :end-before: /measurement
+
+Finally, the measurement function is applied to the private data to create a DP release:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. literalinclude:: code/polars-quantiles.rst
+            :language: python
+            :start-after: dp-release
+            :end-before: /dp-release
+
+Note that after the ``collect`` you have a normal Polars DataFrame,
+so you can use the Polars methods for post-processing.
+
+In this case you should have a DataFrame with 5 rows, corresponding to the key values.
+The values for ``ones`` will vary between runs, but will center on 10, since 10 rows have been grouped,
+The values for ``twice-key`` will often be exactly twice ``grouping-key``, but with some noise.
