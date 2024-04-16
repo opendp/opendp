@@ -72,7 +72,7 @@ Note the use of ``dp`` to access differentially private extensions to Polars.
             :start-after: plan
             :end-before: /plan
 
-We can pass this ``plan`` to ``make_private_lazyframe`` to get a measurement function:
+We can pass this ``plan`` to :py:func:`make_private_lazyframe <opendp.measurements.make_private_lazyframe>` to get a measurement function:
 
 .. tab-set::
 
