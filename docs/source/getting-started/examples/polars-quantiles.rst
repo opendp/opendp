@@ -23,7 +23,7 @@ This example demonstrates how to construct DP aggregate statistics, including qu
             :end-before: /init
 
 We need to understand the structure of our private data before we can apply differential privacy,
-but we usually shoulnd't or can't look at the private data as we prepare our analysis.
+but we usually shouldn't or can't look at the private data as we prepare our analysis.
 For this example, our dataset will have three columns:
 
 * ``grouping-key``: integers between 1 and 5; the grouping key
