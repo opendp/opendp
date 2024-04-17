@@ -48,12 +48,6 @@ FrameDomain(grouping-key: i32, twice-key: i32, ones: f64; margins=[{"grouping-ke
 
 # /means-plan
 
-...     pl.col("twice-key")
-...         .dp.median(candidates=list(range(11)), scale=1.0) # TODO: Explain candidates, scale and alpha
-...         .alias("twice-key median"),
-...     # pl.col("twice-key").dp.quantile([2, 4, 6, 8, 10], alpha=.75, scale=1.0), # TODO: Explain candidates, scale and alpha
-
-
 # means-measurement
 >>> means_measurement = dp.m.make_private_lazyframe(
 ...     input_domain=lf_domain_with_margin, 
@@ -83,3 +77,32 @@ shape: (5, 3)
 └──────────────┴─────────────┴──────────────┘
 
 # /means-release
+
+# quantiles-plan-measurement-release
+>>> quantiles_plan = empty_lf.group_by("grouping-key").agg([
+...     pl.col("twice-key")
+...         .dp.median(candidates=[1,2,3,4,5,6,7,8,9,10], scale=1.0) # TODO: Explain candidates, scale
+...     #    .alias("median"),
+...     #pl.col("twice-key")
+...     #    .dp.quantile(candidates=[1,2,3,4,5,6,7,8,9,10], alpha=0.25, scale=1.0)
+...     #    .alias("25% quantile"),
+...     #pl.col("twice-key")
+...     #    .dp.quantile(candidates=[1,2,3,4,5,6,7,8,9,10], alpha=0.75, scale=1.0)
+...     #    .alias("75% quantile"),
+... ])
+
+>>> quantiles_measurement = dp.m.make_private_lazyframe(
+...     input_domain=lf_domain_with_margin, 
+...     input_metric=dp.symmetric_distance(), 
+...     output_measure=dp.max_divergence(T=float), 
+...     lazyframe=quantiles_plan, 
+...     param=1. # TODO: Explain param; Is this epsilon?
+... )
+
+>>> quantiles_release = quantiles_measurement(private_lf).collect().sort("grouping-key")
+>>> print(quantiles_release) # doctest: +ELLIPSIS
+???
+
+# /quantiles-plan-measurement-release
+
+

@@ -114,5 +114,14 @@ Medians and quantiles
 ---------------------
 
 Let's now consider the calculation of medians and quantiles.
+These work a little differently, because instead of supplying bounds, we provide candidate values.
 
-TODO
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. literalinclude:: code/polars-quantiles.rst
+            :language: python
+            :start-after: quantiles-plan-measurement-release
+            :end-before: /quantiles-plan-measurement-release
