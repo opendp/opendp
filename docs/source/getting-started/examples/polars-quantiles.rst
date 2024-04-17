@@ -103,3 +103,20 @@ so you can use the Polars methods for post-processing.
 In this case you should have a DataFrame with 5 rows, corresponding to the key values.
 The values for ``ones`` will vary between runs, but will center on 10 since ten rows have been grouped together,
 The values for ``twice-key`` will often be exactly twice ``grouping-key``, but with some noise.
+
+Caveat: quantile candidates
+---------------------------
+
+When constructing the plan we gave a list of candidate quantile values.
+If a value from the dataset isn't in the candidates, we might expect a near by candidate to be chosen,
+but that is not the behavior.
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. literalinclude:: code/polars-quantiles.rst
+            :language: python
+            :start-after: fewer-candidates
+            :end-before: /fewer-candidates

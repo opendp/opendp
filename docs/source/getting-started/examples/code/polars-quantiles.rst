@@ -39,7 +39,7 @@ FrameDomain(grouping-key: i32, twice-key: i32, ones: f64; margins=[{"grouping-ke
 >>> empty_lf = pl.DataFrame(None, schema_from_domain, orient="row").lazy()
 >>> plan = empty_lf.group_by("grouping-key").agg([
 ...     pl.col("ones").dp.sum(bounds=(0.0, 2.0), scale=2.), # TODO: Explain scale
-...     pl.col("twice-key").dp.quantile([2, 4, 6, 8, 10], alpha=.75, scale=1.0), # TODO: Explain scale and alpha
+...     pl.col("twice-key").dp.quantile([2, 4, 6, 8, 10], alpha=.75, scale=1.0), # TODO: Explain candidates, scale and alpha
 ... ])
 
 # /plan
@@ -73,3 +73,36 @@ shape: (5, 3)
 └──────────────┴───────────┴───────────┘
 
 # /dp-release
+
+# Note: The test above is fragile: if all of the `ones` end in a zero, the column will be one character narrower.
+
+# fewer-candidates
+>>> plan_with_fewer_candidates = empty_lf.group_by("grouping-key").agg([
+...     pl.col("ones").dp.sum(bounds=(0.0, 2.0), scale=2.),
+...     pl.col("twice-key").dp.quantile([2, 10], alpha=.75, scale=1.0), # Candidates limited to [2, 10]
+... ])
+>>> measurement_with_fewer_candidates = dp.m.make_private_lazyframe(
+...     input_domain=lf_domain_with_margin, 
+...     input_metric=dp.symmetric_distance(), 
+...     output_measure=dp.max_divergence(T=float), 
+...     lazyframe=plan_with_fewer_candidates, # Only change is here.
+...     param=1. # TODO: Explain param; Is this epsilon?
+... )
+>>> release_with_fewer_candidates = measurement_with_fewer_candidates(private_lf).collect().sort("grouping-key")
+>>> print(release_with_fewer_candidates.select("twice-key"))
+shape: (5, 1)
+┌───────────┐
+│ twice-key │
+│ ---       │
+│ i64       │
+╞═══════════╡
+│ 2         │
+│ 10        │
+│ 10        │
+│ 10        │
+│ 10        │
+└───────────┘
+
+TODO: We're expecting values to be chosen at random, but that doesn't seem to be the behavior.
+
+# /fewer-candidates
