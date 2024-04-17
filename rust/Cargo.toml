@@ -42,6 +42,31 @@ openssl = { version = "0.10.29", features = ["vendored"], optional = true }
 opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.9.2-dev" }
 readonly = "0.2"
 
+# A strict version requirement is necessary to keep the serialization format of LazyFrames stable.
+# If you change the version of Polars, 
+# be sure to also change the Python package version requirement and test binary compatibility.
+polars = { version = "=0.38.3", features = [
+    "lazy",
+    "csv",
+    "dtype-struct",
+    "dtype-array",
+    "parquet",
+    "serde-lazy",
+    "streaming",
+    "round_series",
+    "rank",
+    "polars-ops",
+    "abs",
+], optional = true }
+polars-plan = { version = "=0.38.3", features = [
+    "ffi_plugin",
+], optional = true }
+polars-arrow = { version = "=0.38.3", optional = true }
+pyo3-polars = { version = "=0.12.0", features = ["derive"], optional = true }
+serde = { version = "1.0", optional = true }
+serde-pickle = { version = "1.1", optional = true }
+ciborium = { version = "0.2.1", optional = true }
+
 lazy_static = { version = "1.4.0", optional = true }
 vega_lite_4 = { version = "0.6.0", optional = true }
 
@@ -59,6 +84,15 @@ contrib = []
 honest-but-curious = []
 untrusted = ["floating-point", "contrib", "honest-but-curious"]
 
+polars = [
+    "dep:polars",
+    "polars-plan",
+    "polars-arrow",
+    "pyo3-polars",
+    "serde",
+    "serde-pickle",
+    "ciborium",
+]
 use-openssl = ["openssl"]
 
 # for plotting in unit tests

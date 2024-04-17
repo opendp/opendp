@@ -42,7 +42,7 @@ on:
         required: false
         default: false
 env:
-  FEATURES: untrusted,ffi
+  FEATURES: untrusted,ffi,polars
 
 jobs:
   credential-check:
