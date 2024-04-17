@@ -7,7 +7,7 @@ but we plan to expand the API until it is the preferred interface
 for both Python and R.
 
 The OpenDP Polars API leverages `Polars <https://docs.pola.rs/>`_:
-You'll use Polars methods like ``group_by``, ``agg``, and ``col`` to construct
+You'll use Polars methods like ``group_by``, ``agg``, ``alias``, and ``col`` to construct
 most of your query, and only use ``dp`` extensions when needed.
 
 This example demonstrates how to construct DP aggregate statistics, including quantiles.
@@ -61,6 +61,10 @@ We won't be storing data in this LazyFrame:
 Instead we'll use it to keep track of the steps of our analysis,
 and then pass it back to OpenDP for evaluation.
 
+Sums and means
+--------------
+
+Let's first look at the calculation of differentially private sums and means.
 Note the use of ``dp`` to access differentially private extensions to Polars.
 
 .. tab-set::
@@ -70,22 +74,10 @@ Note the use of ``dp`` to access differentially private extensions to Polars.
 
         .. literalinclude:: code/polars-quantiles.rst
             :language: python
-            :start-after: plan
-            :end-before: /plan
+            :start-after: means-plan
+            :end-before: /means-plan
 
-We can pass this ``plan`` to :py:func:`make_private_lazyframe <opendp.measurements.make_private_lazyframe>` to get a measurement function:
-
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: python
-
-        .. literalinclude:: code/polars-quantiles.rst
-            :language: python
-            :start-after: measurement
-            :end-before: /measurement
-
-Finally, the measurement function is applied to the private data to create a DP release:
+We can pass this ``means_plan`` to :py:func:`make_private_lazyframe <opendp.measurements.make_private_lazyframe>` to get a measurement function:
 
 .. tab-set::
 
@@ -94,29 +86,33 @@ Finally, the measurement function is applied to the private data to create a DP 
 
         .. literalinclude:: code/polars-quantiles.rst
             :language: python
-            :start-after: dp-release
-            :end-before: /dp-release
+            :start-after: means-measurement
+            :end-before: /means-measurement
+
+Finally, the ``means_measurement`` function is applied to the private data to create a DP release:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. literalinclude:: code/polars-quantiles.rst
+            :language: python
+            :start-after: means-release
+            :end-before: /means-release
 
 Note that after the ``collect`` you have a normal Polars DataFrame,
 so you can use the Polars methods for post-processing.
 
 In this case you should have a DataFrame with 5 rows, corresponding to the key values.
-The values for ``ones`` will vary between runs, but will center on 10 since ten rows have been grouped together,
-The values for ``twice-key`` will often be exactly twice ``grouping-key``, but with some noise.
+The first column, ``grouping-key``, will be the values 1 through 5.
+After that, the values for ``sum of ones`` will be centered on 10, while ``mean of ones`` will center on 1.0.
+Calculating the mean requires that ``public_info="lengths"`` be enabled in ``with_margin``;
+If only sums are required, then ``public_info="keys"`` would suffice.
 
-Caveat: quantile candidates
----------------------------
+Medians and quantiles
+---------------------
 
-When constructing the plan we gave a list of candidate quantile values.
-If a value from the dataset isn't in the candidates, we might expect a near by candidate to be chosen,
-but that is not the behavior.
+Let's now consider the calculation of medians and quantiles.
 
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: python
-
-        .. literalinclude:: code/polars-quantiles.rst
-            :language: python
-            :start-after: fewer-candidates
-            :end-before: /fewer-candidates
+TODO

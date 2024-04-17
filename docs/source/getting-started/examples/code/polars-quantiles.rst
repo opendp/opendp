@@ -22,7 +22,7 @@ FrameDomain(grouping-key: i32, twice-key: i32, ones: f64; margins=[])
 >>> lf_domain_with_margin = dp.with_margin(
 ...     lf_domain,
 ...     by=["grouping-key"],
-...     public_info="keys",
+...     public_info="lengths", # For sums, "keys" would suffice
 ...     max_partition_length=50 # TODO: Explain
 ... )
 >>> lf_domain_with_margin
@@ -30,79 +30,56 @@ FrameDomain(grouping-key: i32, twice-key: i32, ones: f64; margins=[{"grouping-ke
 
 # /margin-domain
 
-# plan
+# means-plan
 >>> schema_from_domain = { # TODO: Make a utility function to derive this from domain
 ...     'grouping-key': pl.Int32,
 ...     'twice-key': pl.Int32,
 ...     'ones': pl.Float64,
 ... }
->>> empty_lf = pl.DataFrame(None, schema_from_domain, orient="row").lazy()
->>> plan = empty_lf.group_by("grouping-key").agg([
-...     pl.col("ones").dp.sum(bounds=(0.0, 2.0), scale=2.), # TODO: Explain scale
-...     pl.col("twice-key").dp.quantile([2, 4, 6, 8, 10], alpha=.75, scale=1.0), # TODO: Explain candidates, scale and alpha
+>>> empty_lf = pl.LazyFrame(None, schema_from_domain, orient="row")
+>>> means_plan = empty_lf.group_by("grouping-key").agg([
+...     pl.col("ones")
+...         .dp.sum(bounds=(0.0, 2.0), scale=2.) # TODO: Explain scale
+...         .alias("sum of ones"),
+...     pl.col("ones")
+...         .dp.mean(bounds=(0.0, 2.0), scale=2.)
+...         .alias("mean of ones"),
 ... ])
 
-# /plan
+# /means-plan
 
-# measurement
->>> measurement = dp.m.make_private_lazyframe(
+...     pl.col("twice-key")
+...         .dp.median(candidates=list(range(11)), scale=1.0) # TODO: Explain candidates, scale and alpha
+...         .alias("twice-key median"),
+...     # pl.col("twice-key").dp.quantile([2, 4, 6, 8, 10], alpha=.75, scale=1.0), # TODO: Explain candidates, scale and alpha
+
+
+# means-measurement
+>>> means_measurement = dp.m.make_private_lazyframe(
 ...     input_domain=lf_domain_with_margin, 
 ...     input_metric=dp.symmetric_distance(), 
 ...     output_measure=dp.max_divergence(T=float), 
-...     lazyframe=plan, 
+...     lazyframe=means_plan, 
 ...     param=1. # TODO: Explain param; Is this epsilon?
 ... )
 
-# /measurement
+# /means-measurement
 
-# dp-release
+# means-release
 >>> private_lf = pl.LazyFrame([
 ...     pl.Series("grouping-key", [1, 2, 3, 4, 5] * 10, dtype=pl.Int32),
 ...     pl.Series("twice-key", [2, 4, 6, 8, 10] * 10, dtype=pl.Int32),
 ...     pl.Series("ones", [1.0] * 50, dtype=pl.Float64),
 ... ])
->>> release = measurement(private_lf).collect().sort("grouping-key")
->>> print(release) # doctest: +ELLIPSIS
+>>> means_release = means_measurement(private_lf).collect().sort("grouping-key")
+>>> print(means_release) # doctest: +ELLIPSIS
 shape: (5, 3)
-┌──────────────┬───────────┬───────────┐
-│ grouping-key ┆ ones      ┆ twice-key │
-│ ---          ┆ ---       ┆ ---       │
-│ i32          ┆ f64       ┆ i64       │
-╞══════════════╪═══════════╪═══════════╡
+┌──────────────┬─────────────┬──────────────┐
+│ grouping-key ┆ sum of ones ┆ mean of ones │
+│ ---          ┆ ---         ┆ ---          │
+│ i32          ┆ f64         ┆ f64          │
+╞══════════════╪═════════════╪══════════════╡
 ...
-└──────────────┴───────────┴───────────┘
+└──────────────┴─────────────┴──────────────┘
 
-# /dp-release
-
-# Note: The test above is fragile: if all of the `ones` end in a zero, the column will be one character narrower.
-
-# fewer-candidates
->>> plan_with_fewer_candidates = empty_lf.group_by("grouping-key").agg([
-...     pl.col("ones").dp.sum(bounds=(0.0, 2.0), scale=2.),
-...     pl.col("twice-key").dp.quantile([2, 10], alpha=.75, scale=1.0), # Candidates limited to [2, 10]
-... ])
->>> measurement_with_fewer_candidates = dp.m.make_private_lazyframe(
-...     input_domain=lf_domain_with_margin, 
-...     input_metric=dp.symmetric_distance(), 
-...     output_measure=dp.max_divergence(T=float), 
-...     lazyframe=plan_with_fewer_candidates, # Only change is here.
-...     param=1. # TODO: Explain param; Is this epsilon?
-... )
->>> release_with_fewer_candidates = measurement_with_fewer_candidates(private_lf).collect().sort("grouping-key")
->>> print(release_with_fewer_candidates.select("twice-key"))
-shape: (5, 1)
-┌───────────┐
-│ twice-key │
-│ ---       │
-│ i64       │
-╞═══════════╡
-│ 2         │
-│ 10        │
-│ 10        │
-│ 10        │
-│ 10        │
-└───────────┘
-
-TODO: We're expecting values to be chosen at random, but that doesn't seem to be the behavior.
-
-# /fewer-candidates
+# /means-release
