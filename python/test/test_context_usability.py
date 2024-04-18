@@ -68,18 +68,12 @@ def test_int_mean():
     mean_query.laplace()
 
 
-@pytest.mark.xfail(raises=TypeError)
 def test_scalar_instead_of_vector():
-    # Currently fails with:
-    #   TypeError: inferred type is Vec<i32>, expected i32. See https://github.com/opendp/opendp/discussions/298
-    # Possible resolution:
-    #   Would the domain ever not be a Vector? Maybe we check first for that, and give a more precise error.
-    context = dp.Context.compositor(
-        data=[1, 2, 3, 4, 5],
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0),
-        split_evenly_over=1,
-        domain=dp.domain_of(int),
-    )
-    sum_query = context.query().clamp((1, 10)).sum()
-    sum_query.laplace()
+    with pytest.raises(TypeError, match='To fix, wrap domain kwarg with dp.vector_domain()'):
+        dp.Context.compositor(
+            data=[1, 2, 3, 4, 5],
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1.0),
+            split_evenly_over=1,
+            domain=dp.domain_of(int),
+        )
