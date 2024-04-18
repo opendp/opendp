@@ -120,11 +120,11 @@ impl Argument {
             }
             if c_type.ends_with("AnyObject *") {
                 // py_to_object converts Any to AnyObjectPtr
-                return Some("Any".to_string());
+                return None;
             }
             if c_type.ends_with("FfiSlice *") {
                 // py_to_c converts Any to FfiSlicePtr
-                return Some("Any".to_string());
+                return None;
             }
 
             hierarchy

@@ -100,13 +100,11 @@ def extrinsic_object_free(
 
 
 def ffislice_of_anyobjectptrs(
-    raw: Any
-) -> Any:
+    raw
+):
     r"""Internal function. Converts an FfiSlice of AnyObjects to an FfiSlice of AnyObjectPtrs.
 
     :param raw: A pointer to the slice to free.
-    :type raw: Any
-    :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -156,13 +154,12 @@ def fill_bytes(
 
 def new_arrow_array(
     name: str
-) -> Any:
+):
     r"""Allocate an empty ArrowArray and ArrowSchema that Rust owns the memory for.
     The ArrowArray and ArrowSchema are initialized empty, and are populated by the bindings language.
 
     :param name: The name of the ArrowArray. A clone of this string owned by Rust will be returned in the slice.
     :type name: str
-    :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -182,14 +179,12 @@ def new_arrow_array(
 
 
 def object_as_slice(
-    obj: Any
-) -> Any:
+    obj
+):
     r"""Internal function. Unload data from an AnyObject into an FfiSlicePtr.
 
     :param obj: A pointer to the AnyObject to unpack.
-    :type obj: Any
     :return: An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages.
-    :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -214,7 +209,6 @@ def object_free(
     r"""Internal function. Free the memory associated with `this`, an AnyObject.
 
     :param this: A pointer to the AnyObject to free.
-    :type this: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -234,12 +228,11 @@ def object_free(
 
 
 def object_type(
-    this: Any
+    this
 ) -> str:
     r"""Internal function. Retrieve the type descriptor string of an AnyObject.
 
     :param this: A pointer to the AnyObject.
-    :type this: Any
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -262,7 +255,7 @@ def object_type(
 def slice_as_object(
     raw: FfiSlicePtr,
     T: str
-) -> Any:
+):
     r"""Internal function. Load data from a `slice` into an AnyObject
 
     :param raw: A pointer to the slice with data.
@@ -271,7 +264,6 @@ def slice_as_object(
     :type T: str
     :return: An AnyObject that contains the data in `slice`.
     The AnyObject also captures rust type information.
-    :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -301,7 +293,6 @@ def slice_free(
     Frees the slice, but not what the slice references!
 
     :param this: A pointer to the FfiSlice to free.
-    :type this: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -321,17 +312,14 @@ def slice_free(
 
 
 def smd_curve_epsilon(
-    curve: Any,
-    delta: Any
-) -> Any:
+    curve,
+    delta
+):
     r"""Internal function. Use an SMDCurve to find epsilon at a given `delta`.
 
     :param curve: The SMDCurve.
-    :type curve: Any
     :param delta: What to fix delta to compute epsilon.
-    :type delta: Any
     :return: Epsilon at a given `delta`.
-    :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -378,12 +366,11 @@ def str_free(
 
 
 def to_string(
-    this: Any
+    this
 ) -> str:
     r"""Internal function. Convert the AnyObject to a string representation.
 
     :param this: The AnyObject to convert to a string representation.
-    :type this: Any
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse

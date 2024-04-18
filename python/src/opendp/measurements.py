@@ -315,7 +315,7 @@ def make_geometric(
     input_domain: Domain,
     input_metric: Metric,
     scale,
-    bounds: Optional[Any] = None,
+    bounds = None,
     QO: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
     r"""Equivalent to `make_laplace` but restricted to an integer support.
@@ -340,7 +340,6 @@ def make_geometric(
     :type input_metric: Metric
     :param scale: 
     :param bounds: 
-    :type bounds: Any
     :param QO: 
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
@@ -373,7 +372,7 @@ def make_geometric(
 
 def then_geometric(
     scale,
-    bounds: Optional[Any] = None,
+    bounds = None,
     QO: Optional[RuntimeTypeDescriptor] = None
 ):  
     r"""partial constructor of make_geometric
@@ -383,7 +382,6 @@ def then_geometric(
 
     :param scale: 
     :param bounds: 
-    :type bounds: Any
     :param QO: 
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     """
@@ -487,7 +485,7 @@ def then_laplace(
 
 
 def make_randomized_response(
-    categories: Any,
+    categories,
     prob,
     constant_time: bool = False,
     T: Optional[RuntimeTypeDescriptor] = None,
@@ -505,7 +503,6 @@ def make_randomized_response(
     * Output Measure: `MaxDivergence<QO>`
 
     :param categories: Set of valid outcomes
-    :type categories: Any
     :param prob: Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
     :param constant_time: Set to true to enable constant time. Slower.
     :type constant_time: bool
@@ -594,7 +591,7 @@ def make_randomized_response_bool(
 def make_report_noisy_max_gumbel(
     input_domain: Domain,
     input_metric: Metric,
-    scale: Any,
+    scale,
     optimize: str,
     QO: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
@@ -618,7 +615,6 @@ def make_report_noisy_max_gumbel(
     :param input_metric: Metric on the input domain. Must be LInfDistance
     :type input_metric: Metric
     :param scale: Higher scales are more private.
-    :type scale: Any
     :param optimize: Indicate whether to privately return the "Max" or "Min"
     :type optimize: str
     :param QO: Output Distance Type.
@@ -650,7 +646,7 @@ def make_report_noisy_max_gumbel(
     return output
 
 def then_report_noisy_max_gumbel(
-    scale: Any,
+    scale,
     optimize: str,
     QO: Optional[RuntimeTypeDescriptor] = None
 ):  
@@ -660,7 +656,6 @@ def then_report_noisy_max_gumbel(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_report_noisy_max_gumbel`
 
     :param scale: Higher scales are more private.
-    :type scale: Any
     :param optimize: Indicate whether to privately return the "Max" or "Min"
     :type optimize: str
     :param QO: Output Distance Type.

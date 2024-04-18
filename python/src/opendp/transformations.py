@@ -1026,7 +1026,7 @@ def then_count_by(
 def make_count_by_categories(
     input_domain: Domain,
     input_metric: Metric,
-    categories: Any,
+    categories,
     null_category: bool = True,
     MO: SensitivityMetric = "L1Distance<int>",
     TOA: RuntimeTypeDescriptor = "int"
@@ -1053,7 +1053,6 @@ def make_count_by_categories(
     :param input_metric: 
     :type input_metric: Metric
     :param categories: The set of categories to compute counts for.
-    :type categories: Any
     :param null_category: Include a count of the number of elements that were not in the category set at the end of the vector.
     :type null_category: bool
     :param MO: Output Metric.
@@ -1091,7 +1090,7 @@ def make_count_by_categories(
     return output
 
 def then_count_by_categories(
-    categories: Any,
+    categories,
     null_category: bool = True,
     MO: SensitivityMetric = "L1Distance<int>",
     TOA: RuntimeTypeDescriptor = "int"
@@ -1102,7 +1101,6 @@ def then_count_by_categories(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_count_by_categories`
 
     :param categories: The set of categories to compute counts for.
-    :type categories: Any
     :param null_category: Include a count of the number of elements that were not in the category set at the end of the vector.
     :type null_category: bool
     :param MO: Output Metric.
@@ -1189,7 +1187,7 @@ def then_count_distinct(
 
 
 def make_create_dataframe(
-    col_names: Any,
+    col_names,
     K: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
     r"""Make a Transformation that constructs a dataframe from a `Vec<Vec<String>>` (a vector of records).
@@ -1204,7 +1202,6 @@ def make_create_dataframe(
     * Output Metric:  `SymmetricDistance`
 
     :param col_names: Column names for each record entry.
-    :type col_names: Any
     :param K: categorical/hashable data type of column names
     :type K: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -1234,7 +1231,7 @@ def make_create_dataframe(
 def make_df_cast_default(
     input_domain: Domain,
     input_metric: Metric,
-    column_name: Any,
+    column_name,
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
 ) -> Transformation:
@@ -1263,7 +1260,6 @@ def make_df_cast_default(
     :param input_metric: 
     :type input_metric: Metric
     :param column_name: column name to be transformed
-    :type column_name: Any
     :param TIA: Atomic Input Type to cast from
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic Output Type to cast into
@@ -1298,7 +1294,7 @@ def make_df_cast_default(
     return output
 
 def then_df_cast_default(
-    column_name: Any,
+    column_name,
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
 ):  
@@ -1308,7 +1304,6 @@ def then_df_cast_default(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_df_cast_default`
 
     :param column_name: column name to be transformed
-    :type column_name: Any
     :param TIA: Atomic Input Type to cast from
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic Output Type to cast into
@@ -1326,8 +1321,8 @@ def then_df_cast_default(
 def make_df_is_equal(
     input_domain: Domain,
     input_metric: Metric,
-    column_name: Any,
-    value: Any,
+    column_name,
+    value,
     TIA: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
     r"""Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`.
@@ -1346,9 +1341,7 @@ def make_df_is_equal(
     :param input_metric: 
     :type input_metric: Metric
     :param column_name: Column name to be transformed
-    :type column_name: Any
     :param value: Value to check for equality
-    :type value: Any
     :param TIA: Atomic Input Type to cast from
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -1380,8 +1373,8 @@ def make_df_is_equal(
     return output
 
 def then_df_is_equal(
-    column_name: Any,
-    value: Any,
+    column_name,
+    value,
     TIA: Optional[RuntimeTypeDescriptor] = None
 ):  
     r"""partial constructor of make_df_is_equal
@@ -1390,9 +1383,7 @@ def then_df_is_equal(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_df_is_equal`
 
     :param column_name: Column name to be transformed
-    :type column_name: Any
     :param value: Value to check for equality
-    :type value: Any
     :param TIA: Atomic Input Type to cast from
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     """
@@ -1470,7 +1461,7 @@ def then_drop_null(
 def make_find(
     input_domain: Domain,
     input_metric: Metric,
-    categories: Any
+    categories
 ) -> Transformation:
     r"""Find the index of a data value in a set of categories.
 
@@ -1492,7 +1483,6 @@ def make_find(
     :param input_metric: The metric of the input vector.
     :type input_metric: Metric
     :param categories: The set of categories to find indexes from.
-    :type categories: Any
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -1518,7 +1508,7 @@ def make_find(
     return output
 
 def then_find(
-    categories: Any
+    categories
 ):  
     r"""partial constructor of make_find
 
@@ -1526,7 +1516,6 @@ def then_find(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_find`
 
     :param categories: The set of categories to find indexes from.
-    :type categories: Any
     """
     return PartialConstructor(lambda input_domain, input_metric: make_find(
         input_domain=input_domain,
@@ -1538,7 +1527,7 @@ def then_find(
 def make_find_bin(
     input_domain: Domain,
     input_metric: Metric,
-    edges: Any
+    edges
 ) -> Transformation:
     r"""Make a transformation that finds the bin index in a monotonically increasing vector of edges.
 
@@ -1564,7 +1553,6 @@ def make_find_bin(
     :param input_metric: The metric of the input vector.
     :type input_metric: Metric
     :param edges: The set of edges to split bins by.
-    :type edges: Any
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -1590,7 +1578,7 @@ def make_find_bin(
     return output
 
 def then_find_bin(
-    edges: Any
+    edges
 ):  
     r"""partial constructor of make_find_bin
 
@@ -1598,7 +1586,6 @@ def then_find_bin(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_find_bin`
 
     :param edges: The set of edges to split bins by.
-    :type edges: Any
     """
     return PartialConstructor(lambda input_domain, input_metric: make_find_bin(
         input_domain=input_domain,
@@ -1671,7 +1658,7 @@ def then_identity(
 def make_impute_constant(
     input_domain: Domain,
     input_metric: Metric,
-    constant: Any
+    constant
 ) -> Transformation:
     r"""Make a Transformation that replaces null/None data with `constant`.
 
@@ -1697,7 +1684,6 @@ def make_impute_constant(
     :param input_metric: Metric of the input data. A dataset metric.
     :type input_metric: Metric
     :param constant: Value to replace nulls with.
-    :type constant: Any
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -1721,7 +1707,7 @@ def make_impute_constant(
     return output
 
 def then_impute_constant(
-    constant: Any
+    constant
 ):  
     r"""partial constructor of make_impute_constant
 
@@ -1729,7 +1715,6 @@ def then_impute_constant(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_impute_constant`
 
     :param constant: Value to replace nulls with.
-    :type constant: Any
     """
     return PartialConstructor(lambda input_domain, input_metric: make_impute_constant(
         input_domain=input_domain,
@@ -1805,8 +1790,8 @@ def then_impute_uniform_float(
 def make_index(
     input_domain: Domain,
     input_metric: Metric,
-    categories: Any,
-    null: Any,
+    categories,
+    null,
     TOA: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
     r"""Make a transformation that treats each element as an index into a vector of categories.
@@ -1825,9 +1810,7 @@ def make_index(
     :param input_metric: The metric of the input vector.
     :type input_metric: Metric
     :param categories: The set of categories to index into.
-    :type categories: Any
     :param null: Category to return if the index is out-of-range of the category set.
-    :type null: Any
     :param TOA: Atomic Output Type. Output data will be `Vec<TOA>`.
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -1857,8 +1840,8 @@ def make_index(
     return output
 
 def then_index(
-    categories: Any,
-    null: Any,
+    categories,
+    null,
     TOA: Optional[RuntimeTypeDescriptor] = None
 ):  
     r"""partial constructor of make_index
@@ -1867,9 +1850,7 @@ def then_index(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_index`
 
     :param categories: The set of categories to index into.
-    :type categories: Any
     :param null: Category to return if the index is out-of-range of the category set.
-    :type null: Any
     :param TOA: Atomic Output Type. Output data will be `Vec<TOA>`.
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
     """
@@ -1885,7 +1866,7 @@ def then_index(
 def make_is_equal(
     input_domain: Domain,
     input_metric: Metric,
-    value: Any
+    value
 ) -> Transformation:
     r"""Make a Transformation that checks if each element is equal to `value`.
 
@@ -1907,7 +1888,6 @@ def make_is_equal(
     :param input_metric: 
     :type input_metric: Metric
     :param value: value to check against
-    :type value: Any
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -1934,7 +1914,7 @@ def make_is_equal(
     return output
 
 def then_is_equal(
-    value: Any
+    value
 ):  
     r"""partial constructor of make_is_equal
 
@@ -1942,7 +1922,6 @@ def then_is_equal(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_is_equal`
 
     :param value: value to check against
-    :type value: Any
     """
     return PartialConstructor(lambda input_domain, input_metric: make_is_equal(
         input_domain=input_domain,
@@ -2314,7 +2293,7 @@ def then_ordered_random(
 def make_quantile_score_candidates(
     input_domain: Domain,
     input_metric: Metric,
-    candidates: Any,
+    candidates,
     alpha: float
 ) -> Transformation:
     r"""Makes a Transformation that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
@@ -2337,7 +2316,6 @@ def make_quantile_score_candidates(
     :param input_metric: Either SymmetricDistance or InsertDeleteDistance.
     :type input_metric: Metric
     :param candidates: Potential quantiles to score
-    :type candidates: Any
     :param alpha: a value in $[0, 1]$. Choose 0.5 for median
     :type alpha: float
     :rtype: Transformation
@@ -2366,7 +2344,7 @@ def make_quantile_score_candidates(
     return output
 
 def then_quantile_score_candidates(
-    candidates: Any,
+    candidates,
     alpha: float
 ):  
     r"""partial constructor of make_quantile_score_candidates
@@ -2375,7 +2353,6 @@ def then_quantile_score_candidates(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_quantile_score_candidates`
 
     :param candidates: Potential quantiles to score
-    :type candidates: Any
     :param alpha: a value in $[0, 1]$. Choose 0.5 for median
     :type alpha: float
     """
@@ -2388,8 +2365,8 @@ def then_quantile_score_candidates(
 
 
 def make_quantiles_from_counts(
-    bin_edges: Any,
-    alphas: Any,
+    bin_edges,
+    alphas,
     interpolation: str = "linear",
     TA: Optional[RuntimeTypeDescriptor] = None,
     F: RuntimeTypeDescriptor = "float"
@@ -2404,9 +2381,7 @@ def make_quantiles_from_counts(
     * Output Type:    `Vec<TA>`
 
     :param bin_edges: The edges that the input data was binned into before counting.
-    :type bin_edges: Any
     :param alphas: Return all specified `alpha`-quantiles.
-    :type alphas: Any
     :param interpolation: Must be one of `linear` or `nearest`
     :type interpolation: str
     :param TA: Atomic Type of the bin edges and data.
@@ -2445,7 +2420,7 @@ def make_resize(
     input_domain: Domain,
     input_metric: Metric,
     size: int,
-    constant: Any,
+    constant,
     MO: RuntimeTypeDescriptor = "SymmetricDistance"
 ) -> Transformation:
     r"""Make a Transformation that either truncates or imputes records
@@ -2467,7 +2442,6 @@ def make_resize(
     :param size: Number of records in output data.
     :type size: int
     :param constant: Value to impute with.
-    :type constant: Any
     :param MO: Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
     :type MO: :py:ref:`RuntimeTypeDescriptor`
     :return: A vector of the same type `TA`, but with the provided `size`.
@@ -2499,7 +2473,7 @@ def make_resize(
 
 def then_resize(
     size: int,
-    constant: Any,
+    constant,
     MO: RuntimeTypeDescriptor = "SymmetricDistance"
 ):  
     r"""partial constructor of make_resize
@@ -2510,7 +2484,6 @@ def then_resize(
     :param size: Number of records in output data.
     :type size: int
     :param constant: Value to impute with.
-    :type constant: Any
     :param MO: Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
     :type MO: :py:ref:`RuntimeTypeDescriptor`
     """
@@ -2524,7 +2497,7 @@ def then_resize(
 
 
 def make_select_column(
-    key: Any,
+    key,
     TOA: RuntimeTypeDescriptor,
     K: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
@@ -2540,7 +2513,6 @@ def make_select_column(
     * Output Metric:  `SymmetricDistance`
 
     :param key: categorical/hashable data type of the key/column name
-    :type key: Any
     :param K: data type of key
     :type K: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic Output Type to downcast vector to
@@ -2925,7 +2897,7 @@ def make_sized_bounded_int_split_sum(
 
 def make_split_dataframe(
     separator: str,
-    col_names: Any,
+    col_names,
     K: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
     r"""Make a Transformation that splits each record in a String into a `Vec<Vec<String>>`,
@@ -2943,7 +2915,6 @@ def make_split_dataframe(
     :param separator: The token(s) that separate entries in each record.
     :type separator: str
     :param col_names: Column names for each record entry.
-    :type col_names: Any
     :param K: categorical/hashable data type of column names
     :type K: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -3043,8 +3014,8 @@ def make_split_records(
 
 
 def make_subset_by(
-    indicator_column: Any,
-    keep_columns: Any,
+    indicator_column,
+    keep_columns,
     TK: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
     r"""Make a Transformation that subsets a dataframe by a boolean column.
@@ -3059,9 +3030,7 @@ def make_subset_by(
     * Output Metric:  `SymmetricDistance`
 
     :param indicator_column: name of the boolean column that indicates inclusion in the subset
-    :type indicator_column: Any
     :param keep_columns: list of column names to apply subset to
-    :type keep_columns: Any
     :param TK: Type of the column name
     :type TK: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation

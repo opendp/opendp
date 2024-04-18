@@ -16,7 +16,6 @@ NULL
 #' @param accuracy Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
 #' @param alpha Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
 #' @param .T Data type of `accuracy` and `alpha`
-#' @return Any
 #' @export
 accuracy_to_discrete_gaussian_scale <- function(
   accuracy,
@@ -92,7 +91,6 @@ accuracy_to_discrete_laplacian_scale <- function(
 #' @param accuracy Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
 #' @param alpha Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
 #' @param .T Data type of `accuracy` and `alpha`
-#' @return Any
 #' @export
 accuracy_to_gaussian_scale <- function(
   accuracy,
@@ -168,7 +166,6 @@ accuracy_to_laplacian_scale <- function(
 #' @param scale Gaussian noise scale.
 #' @param alpha Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
 #' @param .T Data type of `scale` and `alpha`
-#' @return Any
 #' @export
 discrete_gaussian_scale_to_accuracy <- function(
   scale,
@@ -214,7 +211,6 @@ discrete_gaussian_scale_to_accuracy <- function(
 #' @param scale Discrete Laplacian noise scale.
 #' @param alpha Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
 #' @param .T Data type of `scale` and `alpha`
-#' @return Any
 #' @export
 discrete_laplacian_scale_to_accuracy <- function(
   scale,
@@ -250,7 +246,6 @@ discrete_laplacian_scale_to_accuracy <- function(
 #' @param scale Gaussian noise scale.
 #' @param alpha Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
 #' @param .T Data type of `scale` and `alpha`
-#' @return Any
 #' @export
 gaussian_scale_to_accuracy <- function(
   scale,
@@ -286,7 +281,6 @@ gaussian_scale_to_accuracy <- function(
 #' @param scale Laplacian noise scale.
 #' @param alpha Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
 #' @param .T Data type of `scale` and `alpha`
-#' @return Any
 #' @export
 laplacian_scale_to_accuracy <- function(
   scale,
