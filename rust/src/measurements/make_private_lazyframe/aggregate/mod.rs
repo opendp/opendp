@@ -52,7 +52,7 @@ where
     };
 
     let t_prior = input.make_stable(input_domain.clone(), input_metric.clone())?;
-    let (input_domain, input_metric) = t_prior.output_space();
+    let (middle_domain, middle_metric) = t_prior.output_space();
 
     if options.as_ref() != &GroupbyOptions::default() {
         return fallible!(MakeMeasurement, "Unsupported options in logical plan. Do not optimize the lazyframe passed into the constructor. Options should be default, but are {:?}", options);
@@ -82,14 +82,14 @@ where
         .flatten()
         .collect::<BTreeSet<_>>();
 
-    let margin = input_domain
+    let margin = middle_domain
         .margins
         .get(&keys)
         .ok_or_else(|| err!(MakeMeasurement, "Failed to find margin for {:?}", keys))?
         .clone();
 
     let expr_domain = ExprDomain::new(
-        input_domain.clone(),
+        middle_domain.clone(),
         ExprContext::Aggregate {
             grouping_columns: keys,
         },
@@ -99,8 +99,8 @@ where
         expr_domain.clone(),
         expr_domain.clone(),
         Function::new(Clone::clone),
-        input_metric.clone(),
-        PartitionDistance(input_metric.clone()),
+        middle_metric.clone(),
+        PartitionDistance(middle_metric.clone()),
         StabilityMap::new_fallible(move |&d_in| {
             let l0 = margin.max_influenced_partitions.unwrap_or(d_in).min(d_in);
             let li = margin.max_partition_contributions.unwrap_or(d_in).min(d_in);
@@ -115,7 +115,7 @@ where
                 .map(|expr| {
                     make_private_expr(
                         expr_domain.clone(),
-                        PartitionDistance(input_metric.clone()),
+                        PartitionDistance(middle_metric.clone()),
                         output_measure.clone(),
                         expr.clone(),
                         global_scale,
@@ -129,7 +129,7 @@ where
 
     t_prior
         >> Measurement::new(
-            input_domain,
+            middle_domain,
             Function::new_fallible(move |arg: &LogicalPlan| {
                 let mut output = plan.clone();
                 if let LogicalPlan::Aggregate {
@@ -143,7 +143,7 @@ where
                 };
                 Ok(output)
             }),
-            input_metric,
+            middle_metric,
             output_measure,
             privacy_map,
         )?
