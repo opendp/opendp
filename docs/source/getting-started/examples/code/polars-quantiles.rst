@@ -10,11 +10,11 @@
 # init-domain
 >>> lf_domain = dp.lazyframe_domain([
 ...     dp.series_domain("grouping-key", dp.atom_domain(T=dp.i32)),
-...     dp.series_domain("twice-key", dp.atom_domain(T=dp.i32)),
+...     dp.series_domain("noisy-key", dp.atom_domain(T=dp.i32)),
 ...     dp.series_domain("ones", dp.atom_domain(T=dp.f64)),
 ... ])
 >>> lf_domain
-FrameDomain(grouping-key: i32, twice-key: i32, ones: f64; margins=[])
+FrameDomain(grouping-key: i32, noisy-key: i32, ones: f64; margins=[])
 
 # /init-domain
 
@@ -26,14 +26,14 @@ FrameDomain(grouping-key: i32, twice-key: i32, ones: f64; margins=[])
 ...     max_partition_length=50 # TODO: Explain
 ... )
 >>> lf_domain_with_margin
-FrameDomain(grouping-key: i32, twice-key: i32, ones: f64; margins=[{"grouping-key"}])
+FrameDomain(grouping-key: i32, noisy-key: i32, ones: f64; margins=[{"grouping-key"}])
 
 # /margin-domain
 
 # means-plan
 >>> schema_from_domain = { # TODO: Make a utility function to derive this from domain
 ...     'grouping-key': pl.Int32,
-...     'twice-key': pl.Int32,
+...     'noisy-key': pl.Int32,
 ...     'ones': pl.Float64,
 ... }
 >>> empty_lf = pl.LazyFrame(None, schema_from_domain, orient="row")
@@ -54,7 +54,7 @@ FrameDomain(grouping-key: i32, twice-key: i32, ones: f64; margins=[{"grouping-ke
 ...     input_metric=dp.symmetric_distance(), 
 ...     output_measure=dp.max_divergence(T=float), 
 ...     lazyframe=means_plan, 
-...     param=1. # TODO: Explain param; Is this epsilon?
+...     global_scale=1.0
 ... )
 
 # /means-measurement
@@ -62,7 +62,7 @@ FrameDomain(grouping-key: i32, twice-key: i32, ones: f64; margins=[{"grouping-ke
 # means-release
 >>> private_lf = pl.LazyFrame([
 ...     pl.Series("grouping-key", [1, 2, 3, 4, 5] * 10, dtype=pl.Int32),
-...     pl.Series("twice-key", [2, 4, 6, 8, 10] * 10, dtype=pl.Int32),
+...     pl.Series("noisy-key", [1] * 10 + [1, 2, 3, 4, 5] * 6 + [5] * 10, dtype=pl.Int32),
 ...     pl.Series("ones", [1.0] * 50, dtype=pl.Float64),
 ... ])
 >>> means_release = means_measurement(private_lf).collect().sort("grouping-key")
@@ -80,15 +80,21 @@ shape: (5, 3)
 
 # quantiles-plan-measurement-release
 >>> quantiles_plan = empty_lf.group_by("grouping-key").agg([
-...     pl.col("twice-key")
-...         .dp.median(candidates=[1,2,3,4,5,6,7,8,9,10], scale=1.0) # TODO: Explain candidates, scale
-...     #    .alias("median"),
-...     #pl.col("twice-key")
-...     #    .dp.quantile(candidates=[1,2,3,4,5,6,7,8,9,10], alpha=0.25, scale=1.0)
-...     #    .alias("25% quantile"),
-...     #pl.col("twice-key")
-...     #    .dp.quantile(candidates=[1,2,3,4,5,6,7,8,9,10], alpha=0.75, scale=1.0)
-...     #    .alias("75% quantile"),
+...     pl.col("noisy-key")
+...         .dp.mean(bounds=(1, 5), scale=2.)
+...         .alias("mean"),
+...     pl.col("noisy-key")
+...         .dp.median(candidates=[1, 2, 3, 4, 5], scale=1.0)
+...         .alias("median"),
+...     pl.col("noisy-key")
+...         .dp.median(candidates=[1, 3, 5], scale=1.0)
+...         .alias("median 1/3/5"),
+...     pl.col("noisy-key")
+...         .dp.quantile(candidates=[1, 2, 3, 4, 5], alpha=0.1, scale=1.0)
+...         .alias("10% quantile"),
+...     pl.col("noisy-key")
+...         .dp.quantile(candidates=[1, 2, 3, 4, 5], alpha=0.9, scale=1.0)
+...         .alias("90% quantile"),
 ... ])
 
 >>> quantiles_measurement = dp.m.make_private_lazyframe(
@@ -96,12 +102,25 @@ shape: (5, 3)
 ...     input_metric=dp.symmetric_distance(), 
 ...     output_measure=dp.max_divergence(T=float), 
 ...     lazyframe=quantiles_plan, 
-...     param=1. # TODO: Explain param; Is this epsilon?
+...     global_scale=1.0
 ... )
 
 >>> quantiles_release = quantiles_measurement(private_lf).collect().sort("grouping-key")
 >>> print(quantiles_release) # doctest: +ELLIPSIS
-???
+shape: (5, 6)
+┌──────────────┬──────┬────────┬──────────────┬──────────────┬──────────────┐
+│ grouping-key ┆ mean ┆ median ┆ median 1/3/5 ┆ 10% quantile ┆ 90% quantile │
+│ ---          ┆ ---  ┆ ---    ┆ ---          ┆ ---          ┆ ---          │
+│ i32          ┆ f64  ┆ i64    ┆ i64          ┆ i64          ┆ i64          │
+╞══════════════╪══════╪════════╪══════════════╪══════════════╪══════════════╡
+│ 1            ┆ ...  ┆ 5      ┆ 5            ┆ 5            ┆ 1            │
+│ 2            ┆ ...  ┆ 5      ┆ 5            ┆ 5            ┆ 1            │
+│ 3            ┆ ...  ┆ 5      ┆ 5            ┆ 5            ┆ 1            │
+│ 4            ┆ ...  ┆ 5      ┆ 5            ┆ 5            ┆ 1            │
+│ 5            ┆ ...  ┆ 1      ┆ 1            ┆ 5            ┆ 1            │
+└──────────────┴──────┴────────┴──────────────┴──────────────┴──────────────┘
+
+TODO: means are good, but medians and quantiles don't seem right.
 
 # /quantiles-plan-measurement-release
 

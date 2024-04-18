@@ -27,7 +27,7 @@ but we usually shouldn't or can't look at the private data as we prepare our ana
 For this example, we'll keep the data simple:
 
 * ``grouping-key``: the grouping key, an integer between 1 and 5
-* ``twice-key``: an integer between 2 and 10
+* ``noisy-key``: most of the time, equal to ``grouping-key``, but some rows are set to 1, and some are set to 5.  
 * ``ones``: a constant value, the float 1.0
 
 Our first step is to represent this as a domain:
