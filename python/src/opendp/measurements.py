@@ -26,6 +26,8 @@ __all__ = [
     "make_gaussian",
     "make_geometric",
     "make_laplace",
+    "make_private_expr",
+    "make_private_lazyframe",
     "make_randomized_response",
     "make_randomized_response_bool",
     "make_report_noisy_max_gumbel",
@@ -35,6 +37,8 @@ __all__ = [
     "then_gaussian",
     "then_geometric",
     "then_laplace",
+    "then_private_expr",
+    "then_private_lazyframe",
     "then_report_noisy_max_gumbel",
     "then_user_measurement"
 ]
@@ -483,6 +487,165 @@ def then_laplace(
         scale=scale,
         k=k,
         QO=QO))
+
+
+
+def make_private_expr(
+    input_domain: Domain,
+    input_metric: Metric,
+    output_measure: Measure,
+    expr: Any,
+    global_scale: Optional[Any] = None
+) -> Measurement:
+    r"""Create a differentially private measurement from an [`Expr`].
+
+    [make_private_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_private_expr.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `ExprDomain`
+    * Output Type:    `Expr`
+    * Input Metric:   `MI`
+    * Output Measure: `MO`
+
+    :param input_domain: The domain of the input data.
+    :type input_domain: Domain
+    :param input_metric: How to measure distances between neighboring input data sets.
+    :type input_metric: Metric
+    :param output_measure: How to measure privacy loss.
+    :type output_measure: Measure
+    :param expr: The [`Expr`] to be privatized.
+    :type expr: Any
+    :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
+    :type global_scale: Any
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=None)
+    c_expr = py_to_c(expr, c_type=AnyObjectPtr, type_name=Expr)
+    c_global_scale = py_to_c(global_scale, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[f64]))
+
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_private_expr
+    lib_function.argtypes = [Domain, Metric, Measure, AnyObjectPtr, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_expr, c_global_scale), Measurement))
+
+    return output
+
+def then_private_expr(
+    output_measure: Measure,
+    expr: Any,
+    global_scale: Optional[Any] = None
+):  
+    r"""partial constructor of make_private_expr
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_private_expr`
+
+    :param output_measure: How to measure privacy loss.
+    :type output_measure: Measure
+    :param expr: The [`Expr`] to be privatized.
+    :type expr: Any
+    :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
+    :type global_scale: Any
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_private_expr(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        output_measure=output_measure,
+        expr=expr,
+        global_scale=global_scale))
+
+
+
+def make_private_lazyframe(
+    input_domain: Domain,
+    input_metric: Metric,
+    output_measure: Measure,
+    lazyframe: Any,
+    global_scale: Optional[Any] = None
+) -> Measurement:
+    r"""Create a differentially private measurement from a [`LazyFrame`].
+
+    Any data inside the [`LazyFrame`] is ignored,
+    but it is still recommended to start with an empty [`DataFrame`] and build up the computation using the [`LazyFrame`] API.
+
+    [make_private_lazyframe in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_private_lazyframe.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `LazyFrameDomain`
+    * Output Type:    `LazyFrame`
+    * Input Metric:   `MI`
+    * Output Measure: `MO`
+
+    :param input_domain: The domain of the input data.
+    :type input_domain: Domain
+    :param input_metric: How to measure distances between neighboring input data sets.
+    :type input_metric: Metric
+    :param output_measure: How to measure privacy loss.
+    :type output_measure: Measure
+    :param lazyframe: A description of the computations to be run, in the form of a [`LazyFrame`].
+    :type lazyframe: Any
+    :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
+    :type global_scale: Any
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=None)
+    c_lazyframe = py_to_c(lazyframe, c_type=AnyObjectPtr, type_name=LazyFrame)
+    c_global_scale = py_to_c(global_scale, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[f64]))
+
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_private_lazyframe
+    lib_function.argtypes = [Domain, Metric, Measure, AnyObjectPtr, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_lazyframe, c_global_scale), Measurement))
+
+    return output
+
+def then_private_lazyframe(
+    output_measure: Measure,
+    lazyframe: Any,
+    global_scale: Optional[Any] = None
+):  
+    r"""partial constructor of make_private_lazyframe
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_private_lazyframe`
+
+    :param output_measure: How to measure privacy loss.
+    :type output_measure: Measure
+    :param lazyframe: A description of the computations to be run, in the form of a [`LazyFrame`].
+    :type lazyframe: Any
+    :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
+    :type global_scale: Any
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_private_lazyframe(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        output_measure=output_measure,
+        lazyframe=lazyframe,
+        global_scale=global_scale))
 
 
 

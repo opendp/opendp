@@ -68,6 +68,8 @@ __all__ = [
     "make_split_dataframe",
     "make_split_lines",
     "make_split_records",
+    "make_stable_expr",
+    "make_stable_lazyframe",
     "make_subset_by",
     "make_sum",
     "make_sum_of_squared_deviations",
@@ -100,6 +102,8 @@ __all__ = [
     "then_ordered_random",
     "then_quantile_score_candidates",
     "then_resize",
+    "then_stable_expr",
+    "then_stable_lazyframe",
     "then_sum",
     "then_sum_of_squared_deviations",
     "then_unordered",
@@ -3040,6 +3044,130 @@ def make_split_records(
     output = c_to_py(unwrap(lib_function(c_separator), Transformation))
 
     return output
+
+
+def make_stable_expr(
+    input_domain: Domain,
+    input_metric: Metric,
+    expr: Any
+) -> Transformation:
+    r"""Create a stable transformation from an [`Expr`].
+
+    [make_stable_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_stable_expr.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `ExprDomain`
+    * Output Domain:  `ExprDomain`
+    * Input Metric:   `MI`
+    * Output Metric:  `MO`
+
+    :param input_domain: The domain of the input data.
+    :type input_domain: Domain
+    :param input_metric: How to measure distances between neighboring input data sets.
+    :type input_metric: Metric
+    :param expr: The [`Expr`] to be privatized.
+    :type expr: Any
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_expr = py_to_c(expr, c_type=AnyObjectPtr, type_name=Expr)
+
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_stable_expr
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_expr), Transformation))
+
+    return output
+
+def then_stable_expr(
+    expr: Any
+):  
+    r"""partial constructor of make_stable_expr
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_stable_expr`
+
+    :param expr: The [`Expr`] to be privatized.
+    :type expr: Any
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_stable_expr(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        expr=expr))
+
+
+
+def make_stable_lazyframe(
+    input_domain: Domain,
+    input_metric: Metric,
+    lazyframe: Any
+) -> Transformation:
+    r"""Create a stable transformation from a [`LazyFrame`].
+
+    [make_stable_lazyframe in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_stable_lazyframe.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `LazyFrameDomain`
+    * Output Domain:  `LazyFrameDomain`
+    * Input Metric:   `MI`
+    * Output Metric:  `MO`
+
+    :param input_domain: The domain of the input data.
+    :type input_domain: Domain
+    :param input_metric: How to measure distances between neighboring input data sets.
+    :type input_metric: Metric
+    :param lazyframe: The [`LazyFrame`] to be analyzed.
+    :type lazyframe: Any
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_lazyframe = py_to_c(lazyframe, c_type=AnyObjectPtr, type_name=LazyFrame)
+
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_stable_lazyframe
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_lazyframe), Transformation))
+
+    return output
+
+def then_stable_lazyframe(
+    lazyframe: Any
+):  
+    r"""partial constructor of make_stable_lazyframe
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_stable_lazyframe`
+
+    :param lazyframe: The [`LazyFrame`] to be analyzed.
+    :type lazyframe: Any
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_stable_lazyframe(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        lazyframe=lazyframe))
+
 
 
 def make_subset_by(
