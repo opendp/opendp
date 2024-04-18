@@ -304,6 +304,12 @@ class RuntimeType(object):
         
         pl = import_optional_dependency("polars", raise_error=False)
         if pl is not None:
+            if isinstance(public_example, pl.LazyFrame):
+                return LazyFrame
+            
+            if isinstance(public_example, pl.DataFrame):
+                return DataFrame
+            
             if isinstance(public_example, pl.Series):
                 return Series
 
@@ -469,11 +475,12 @@ usize: str = 'usize'
 f32: str = 'f32'
 f64: str = 'f64'
 String: str = 'String'
+LazyFrame: str = 'LazyFrame'
+DataFrame: str = 'DataFrame'
 Series: str = 'Series'
-AnyMeasurementPtr: str = "AnyMeasurementPtr"
-AnyTransformationPtr: str = "AnyTransformationPtr"
-
-SeriesDomain: str = "SeriesDomain"
+AnyMeasurementPtr: str = 'AnyMeasurementPtr'
+AnyTransformationPtr: str = 'AnyTransformationPtr'
+SeriesDomain: str = 'SeriesDomain'
 
 class DomainDescriptor(RuntimeType):
     def __getitem__(self, subdomain):

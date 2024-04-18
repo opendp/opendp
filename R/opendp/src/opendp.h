@@ -818,6 +818,24 @@ struct FfiResult_____AnyDomain opendp_domains__user_domain(char *identifier,
  */
 struct FfiResult_____ExtrinsicObject opendp_domains___user_domain_descriptor(struct AnyDomain *domain);
 
+/**
+ * Construct an instance of `LazyFrameDomain`.
+ *
+ * # Arguments
+ * * `series_domains` - Domain of each series in the lazyframe.
+ */
+struct FfiResult_____AnyDomain opendp_domains__lazyframe_domain(struct AnyObject *series_domains);
+
+struct FfiResult_____AnyDomain opendp_domains__infer_lazyframe_domain(struct AnyObject *lazyframe);
+
+struct FfiResult_____AnyDomain opendp_domains__with_margin(struct AnyDomain *frame_domain,
+                                                           struct AnyObject *by,
+                                                           struct AnyObject *max_partition_length,
+                                                           struct AnyObject *max_num_partitions,
+                                                           struct AnyObject *max_partition_contributions,
+                                                           struct AnyObject *max_influenced_partitions,
+                                                           char *public_info);
+
 struct FfiResult_____AnyDomain opendp_domains__series_domain(char *name,
                                                              const struct AnyDomain *element_domain);
 
