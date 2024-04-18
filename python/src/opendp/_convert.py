@@ -429,10 +429,10 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
             raise TypeError(f"Tuple members must be one of {ATOM_MAP.keys()}. Got {t}")
 
     # check that actual type can be represented by the inner_type_name
-    val = [
+    val = tuple(
         check_and_cast_scalar(inner_type_name, val[i])
         for i, inner_type_name in zip(range(len(val)), inner_type_names)
-    ]
+    )
     
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     ptr_data = (
