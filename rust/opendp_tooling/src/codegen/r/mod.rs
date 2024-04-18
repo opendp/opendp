@@ -48,6 +48,7 @@ const BLACKLIST: &'static [&'static str] = &[
     "lazyframe_domain",
     "infer_lazyframe_domain",
     "with_margin",
+    "expr_domain",
 ];
 
 /// Top-level function to generate R bindings, including all modules.
