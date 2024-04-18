@@ -220,6 +220,26 @@ SEXP metrics__metric_type(
 }
 
 
+SEXP metrics__partition_distance(
+    SEXP metric, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(metric);
+    PROTECT(log);
+
+    AnyMetric * c_metric = sexp_to_anymetricptr(metric);
+
+    // Call library function.
+    FfiResult_____AnyMetric _result = opendp_metrics__partition_distance(c_metric);
+
+    UNPROTECT(2);
+    if(_result.tag == Err_____AnyMetric)
+        return(extract_error(_result.err));
+    AnyMetric* _return_value = _result.ok;
+    return(anymetricptr_to_sexp(_return_value, log));
+}
+
+
 SEXP metrics__symmetric_distance(
     SEXP log
 ) {
