@@ -16,6 +16,8 @@ The example below demonstrates how to construct your own mechanism that chooses 
 It also makes use of library plugins (via a user-defined transformation and domain)
 and the Report Noisy Max Gumbel mechanism.
 
+We'll first write user-defined functions for our transformation and measurement:
+
 .. tab-set::
 
     .. tab-item:: Python
@@ -23,5 +25,29 @@ and the Report Noisy Max Gumbel mechanism.
 
         .. literalinclude:: code/selecting-grouping-columns.rst
             :language: python
-            :start-after: example
-            :end-before: /example
+            :start-after: user-defined-functions
+            :end-before: /user-defined-functions
+
+Next, use these functions to create a DP mechanism:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. literalinclude:: code/selecting-grouping-columns.rst
+            :language: python
+            :start-after: dp-mechanism
+            :end-before: /dp-mechanism
+
+Finally, load your data and make a DP release:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. literalinclude:: code/selecting-grouping-columns.rst
+            :language: python
+            :start-after: dp-release
+            :end-before: /dp-release

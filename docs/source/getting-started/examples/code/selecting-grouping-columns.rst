@@ -1,12 +1,10 @@
 :orphan:
 
-# example
+# user-defined-functions
 >>> import opendp.prelude as dp
 >>> import pandas as pd
 >>> import faker
 >>> import random
-
-First, write constructors that will be used to build the mechanism:
 
 >>> def make_grouping_cols_score(candidates, min_bin_contributions):
 ...     r"""Create a transformation that assesses the utility of each candidate in `candidates`.
@@ -37,7 +35,6 @@ First, write constructors that will be used to build the mechanism:
 ...         stability_map=lambda d_in: float(d_in),
 ...     )
 
-
 >>> def make_select_grouping_cols(candidates, min_bin_size, scale):
 ...     """Create a measurement that selects a set of grouping columns from `candidates`."""
 ...     return (
@@ -46,9 +43,9 @@ First, write constructors that will be used to build the mechanism:
 ...         >> (lambda idx: candidates[idx])
 ...     )
 
+# /user-defined-functions
 
-Second, construct the mechanism you will apply to your data:
-
+# dp-mechanism
 >>> candidates = [
 ...     ("date", "merch_category", "transaction_type"),
 ...     ("date", "merchant_postal_code"),
@@ -66,8 +63,9 @@ Second, construct the mechanism you will apply to your data:
 
 >>> print("ε = ", m_select_gcols.map(d_in=1))
 
-Finally, load the data and release:
+# /dp-mechanism
 
+# dp-release
 >>> fake = faker.Faker()
 >>> n_records = 10_000
 >>> data = pd.DataFrame(
@@ -82,4 +80,4 @@ Finally, load the data and release:
 >>> dp_selected_grouping_columns = m_select_gcols(data)
 >>> print(dp_selected_grouping_columns)
 
-# /example
+# /dp-release
