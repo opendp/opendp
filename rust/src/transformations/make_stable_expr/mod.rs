@@ -32,7 +32,7 @@ mod expr_sum;
 /// # Arguments
 /// * `input_domain` - The domain of the input data.
 /// * `input_metric` - How to measure distances between neighboring input data sets.
-/// * `expr` - The [`Expr`] to be privatized.
+/// * `expr` - The expression to be analyzed for stability.
 pub fn make_stable_expr<MI: 'static + Metric, MO: 'static + Metric>(
     input_domain: ExprDomain,
     input_metric: MI,
