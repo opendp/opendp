@@ -51,3 +51,5 @@ Finally, load your data and make a DP release:
             :language: python
             :start-after: dp-release
             :end-before: /dp-release
+
+Successive runs will return different sets of columns that satisfy your criteria.
