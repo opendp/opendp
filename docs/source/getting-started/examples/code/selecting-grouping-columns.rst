@@ -61,7 +61,8 @@
 ...     scale=10.0,
 ... )
 
->>> print("ε = ", m_select_gcols.map(d_in=1))
+>>> print("ε =", m_select_gcols.map(d_in=1))
+ε = 0.1
 
 # /dp-mechanism
 
@@ -79,5 +80,6 @@
 
 >>> dp_selected_grouping_columns = m_select_gcols(data)
 >>> print(dp_selected_grouping_columns)
+(...)
 
 # /dp-release
