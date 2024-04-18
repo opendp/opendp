@@ -13,23 +13,29 @@ mod ffi;
 
 #[bootstrap(
     features("contrib"),
-    arguments(output_measure(c_type = "AnyMeasure *", rust_type = b"null")),
+    arguments(
+        output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        global_scale(rust_type = "Option<f64>", c_type = "AnyObject *", default = b"null")
+    ),
     generics(MI(suppress), MO(suppress))
 )]
 /// Create a differentially private measurement from a [`LazyFrame`].
+///
+/// Any data inside the [`LazyFrame`] is ignored,
+/// but it is still recommended to start with an empty [`DataFrame`] and build up the computation using the [`LazyFrame`] API.
 ///
 /// # Arguments
 /// * `input_domain` - The domain of the input data.
 /// * `input_metric` - How to measure distances between neighboring input data sets.
 /// * `output_measure` - How to measure privacy loss.
-/// * `lazyframe` - The [`LazyFrame`] to be privatized.
-/// * `param` - A tune-able parameter that affects the privacy-utility tradeoff.
+/// * `lazyframe` - A description of the computations to be run, in the form of a [`LazyFrame`].
+/// * `global_scale` - A tune-able parameter that affects the privacy-utility tradeoff.
 pub fn make_private_lazyframe<MI: Metric, MO: 'static + Measure>(
     input_domain: LazyFrameDomain,
     input_metric: MI,
     output_measure: MO,
     lazyframe: LazyFrame,
-    param: f64,
+    global_scale: f64,
 ) -> Fallible<Measurement<LazyFrameDomain, LazyFrame, MI, MO>>
 where
     LogicalPlan: PrivateLogicalPlan<MI, MO>,
@@ -40,7 +46,7 @@ where
         input_domain.cast_carrier(),
         input_metric,
         output_measure,
-        param,
+        global_scale,
     )?;
     let f_lp = m_lp.function.clone();
 
@@ -62,7 +68,7 @@ pub trait PrivateLogicalPlan<MI: Metric, MO: Measure> {
         input_domain: LogicalPlanDomain,
         input_metric: MI,
         output_measure: MO,
-        param: f64,
+        global_scale: f64,
     ) -> Fallible<Measurement<LogicalPlanDomain, LogicalPlan, MI, MO>>;
 }
 
@@ -72,7 +78,7 @@ impl<MO: Measure> PrivateLogicalPlan<SymmetricDistance, MO> for LogicalPlan {
         _input_domain: LogicalPlanDomain,
         _input_metric: SymmetricDistance,
         _output_measure: MO,
-        _param: f64,
+        _global_scale: f64,
     ) -> Fallible<Measurement<LogicalPlanDomain, LogicalPlan, SymmetricDistance, MO>> {
         match &self {
             lp => fallible!(

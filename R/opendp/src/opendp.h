@@ -879,13 +879,13 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_private_expr(const
                                                                            const struct AnyMetric *input_metric,
                                                                            const struct AnyMeasure *output_measure,
                                                                            const struct AnyObject *expr,
-                                                                           const struct AnyObject *param);
+                                                                           const struct AnyObject *global_scale);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_private_lazyframe(const struct AnyDomain *input_domain,
                                                                                 const struct AnyMetric *input_metric,
                                                                                 const struct AnyMeasure *output_measure,
                                                                                 const struct AnyObject *lazyframe,
-                                                                                double param);
+                                                                                const struct AnyObject *global_scale);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_user_measurement(const struct AnyDomain *input_domain,
                                                                                const struct AnyMetric *input_metric,

@@ -19,7 +19,7 @@ pub extern "C" fn opendp_measurements__make_private_expr(
     input_metric: *const AnyMetric,
     output_measure: *const AnyMeasure,
     expr: *const AnyObject,
-    param: *const AnyObject,
+    global_scale: *const AnyObject,
 ) -> FfiResult<*mut AnyMeasurement> {
     let input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<ExprDomain>()).clone();
     let input_metric =
@@ -28,14 +28,21 @@ pub extern "C" fn opendp_measurements__make_private_expr(
     let output_measure =
         try_!(try_as_ref!(output_measure).downcast_ref::<MaxDivergence<f64>>()).clone();
 
-    let param = if let Some(param) = util::as_ref(param) {
+    let expr = try_!(try_as_ref!(expr).downcast_ref::<Expr>()).clone();
+
+    let global_scale = if let Some(param) = util::as_ref(global_scale) {
         *try_!(try_as_ref!(param).downcast_ref::<f64>())
     } else {
         f64::NAN
     };
 
-    let expr = try_!(try_as_ref!(expr).downcast_ref::<Expr>()).clone();
-    make_private_expr(input_domain, input_metric, output_measure, expr, param)
-        .into_any()
-        .into()
+    make_private_expr(
+        input_domain,
+        input_metric,
+        output_measure,
+        expr,
+        global_scale,
+    )
+    .into_any()
+    .into()
 }

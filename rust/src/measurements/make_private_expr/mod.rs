@@ -17,7 +17,7 @@ mod ffi;
     features("contrib"),
     arguments(
         output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
-        param(rust_type = "Option<f64>", c_type = "AnyObject *", default = b"null")
+        global_scale(rust_type = "Option<f64>", c_type = "AnyObject *", default = b"null")
     ),
     generics(MI(suppress), MO(suppress))
 )]
@@ -28,19 +28,19 @@ mod ffi;
 /// * `input_metric` - How to measure distances between neighboring input data sets.
 /// * `output_measure` - How to measure privacy loss.
 /// * `expr` - The [`Expr`] to be privatized.
-/// * `param` - A tune-able parameter that affects the privacy-utility tradeoff.
+/// * `global_scale` - A tune-able parameter that affects the privacy-utility tradeoff.
 pub fn make_private_expr<MI: 'static + Metric, MO: 'static + Measure>(
     input_domain: ExprDomain,
     input_metric: MI,
     output_measure: MO,
     expr: Expr,
-    param: f64,
+    global_scale: f64,
 ) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>
 where
     Expr: PrivateExpr<MI, MO>,
     (ExprDomain, MI): MetricSpace,
 {
-    expr.make_private(input_domain, input_metric, output_measure, param)
+    expr.make_private(input_domain, input_metric, output_measure, global_scale)
 }
 
 pub trait PrivateExpr<MI: Metric, MO: Measure> {
@@ -49,7 +49,7 @@ pub trait PrivateExpr<MI: Metric, MO: Measure> {
         input_domain: ExprDomain,
         input_metric: MI,
         output_metric: MO,
-        param: f64,
+        global_scale: f64,
     ) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>;
 }
 
@@ -65,7 +65,7 @@ where
         _input_domain: ExprDomain,
         _input_metric: PartitionDistance<M>,
         _output_measure: MaxDivergence<f64>,
-        _param: f64,
+        _global_scale: f64,
     ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, MaxDivergence<f64>>> {
         match self {
             expr => fallible!(

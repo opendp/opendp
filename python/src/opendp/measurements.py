@@ -495,7 +495,7 @@ def make_private_expr(
     input_metric: Metric,
     output_measure: Measure,
     expr: Any,
-    param: Optional[Any] = None
+    global_scale: Optional[Any] = None
 ) -> Measurement:
     r"""Create a differentially private measurement from an [`Expr`].
 
@@ -516,8 +516,8 @@ def make_private_expr(
     :type output_measure: Measure
     :param expr: The [`Expr`] to be privatized.
     :type expr: Any
-    :param param: A tune-able parameter that affects the privacy-utility tradeoff.
-    :type param: Any
+    :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
+    :type global_scale: Any
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -531,21 +531,21 @@ def make_private_expr(
     c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=None)
     c_expr = py_to_c(expr, c_type=AnyObjectPtr, type_name=Expr)
-    c_param = py_to_c(param, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[f64]))
+    c_global_scale = py_to_c(global_scale, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[f64]))
 
     # Call library function.
     lib_function = lib.opendp_measurements__make_private_expr
     lib_function.argtypes = [Domain, Metric, Measure, AnyObjectPtr, AnyObjectPtr]
     lib_function.restype = FfiResult
 
-    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_expr, c_param), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_expr, c_global_scale), Measurement))
 
     return output
 
 def then_private_expr(
     output_measure: Measure,
     expr: Any,
-    param: Optional[Any] = None
+    global_scale: Optional[Any] = None
 ):  
     r"""partial constructor of make_private_expr
 
@@ -556,15 +556,15 @@ def then_private_expr(
     :type output_measure: Measure
     :param expr: The [`Expr`] to be privatized.
     :type expr: Any
-    :param param: A tune-able parameter that affects the privacy-utility tradeoff.
-    :type param: Any
+    :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
+    :type global_scale: Any
     """
     return PartialConstructor(lambda input_domain, input_metric: make_private_expr(
         input_domain=input_domain,
         input_metric=input_metric,
         output_measure=output_measure,
         expr=expr,
-        param=param))
+        global_scale=global_scale))
 
 
 
@@ -573,9 +573,12 @@ def make_private_lazyframe(
     input_metric: Metric,
     output_measure: Measure,
     lazyframe: Any,
-    param: float
+    global_scale: Optional[Any] = None
 ) -> Measurement:
     r"""Create a differentially private measurement from a [`LazyFrame`].
+
+    Any data inside the [`LazyFrame`] is ignored,
+    but it is still recommended to start with an empty [`DataFrame`] and build up the computation using the [`LazyFrame`] API.
 
     [make_private_lazyframe in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_private_lazyframe.html)
 
@@ -592,10 +595,10 @@ def make_private_lazyframe(
     :type input_metric: Metric
     :param output_measure: How to measure privacy loss.
     :type output_measure: Measure
-    :param lazyframe: The [`LazyFrame`] to be privatized.
+    :param lazyframe: A description of the computations to be run, in the form of a [`LazyFrame`].
     :type lazyframe: Any
-    :param param: A tune-able parameter that affects the privacy-utility tradeoff.
-    :type param: float
+    :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
+    :type global_scale: Any
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -609,21 +612,21 @@ def make_private_lazyframe(
     c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=None)
     c_lazyframe = py_to_c(lazyframe, c_type=AnyObjectPtr, type_name=LazyFrame)
-    c_param = py_to_c(param, c_type=ctypes.c_double, type_name=f64)
+    c_global_scale = py_to_c(global_scale, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[f64]))
 
     # Call library function.
     lib_function = lib.opendp_measurements__make_private_lazyframe
-    lib_function.argtypes = [Domain, Metric, Measure, AnyObjectPtr, ctypes.c_double]
+    lib_function.argtypes = [Domain, Metric, Measure, AnyObjectPtr, AnyObjectPtr]
     lib_function.restype = FfiResult
 
-    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_lazyframe, c_param), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_lazyframe, c_global_scale), Measurement))
 
     return output
 
 def then_private_lazyframe(
     output_measure: Measure,
     lazyframe: Any,
-    param: float
+    global_scale: Optional[Any] = None
 ):  
     r"""partial constructor of make_private_lazyframe
 
@@ -632,17 +635,17 @@ def then_private_lazyframe(
 
     :param output_measure: How to measure privacy loss.
     :type output_measure: Measure
-    :param lazyframe: The [`LazyFrame`] to be privatized.
+    :param lazyframe: A description of the computations to be run, in the form of a [`LazyFrame`].
     :type lazyframe: Any
-    :param param: A tune-able parameter that affects the privacy-utility tradeoff.
-    :type param: float
+    :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
+    :type global_scale: Any
     """
     return PartialConstructor(lambda input_domain, input_metric: make_private_lazyframe(
         input_domain=input_domain,
         input_metric=input_metric,
         output_measure=output_measure,
         lazyframe=lazyframe,
-        param=param))
+        global_scale=global_scale))
 
 
 
