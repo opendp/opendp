@@ -5,7 +5,6 @@ from opendp._lib import *
 from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
 from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 
-
 ATOM_MAP = {
     'f32': ctypes.c_float,
     'f64': ctypes.c_double,
@@ -193,6 +192,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
         
         if type_name == "String":
             return _slice_to_string(raw)
+        
+        if type_name == "Series":
+            return _slice_to_series(raw)
 
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
@@ -228,6 +230,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 
         if type_name == "String":
             return _string_to_slice(value)
+        
+        if type_name == "Series":
+            return _series_to_slice(value)
     
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
@@ -434,6 +439,45 @@ def _slice_to_hashmap(raw: FfiSlicePtr) -> Dict[Any, Any]:
     keys.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
     vals.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
     return result
+
+
+def _series_to_slice(val) -> FfiSlicePtr:
+    from opendp._data import new_arrow_array, arrow_array_free
+
+    raw = new_arrow_array(val.name)
+    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
+    array_ptr, schema_ptr = slice_array[0:2]
+
+    # make the conversion through PyArrow's private API
+    # this changes the pointer's memory and is thus unsafe. In particular, `_export_to_c` can go out of bounds
+    # NOTE: consider changing to PyCapsule when available. https://github.com/pola-rs/polars/issues/12530
+    val.to_arrow()._export_to_c(array_ptr, schema_ptr)
+
+    # when freeing the slice, also free up the memory of what's left behind the slice
+    class ArrowArrayFFIBuffer(object):
+        def __init__(self, ptr) -> None:
+            self.ptr = ptr
+
+        def __del__(self) -> None:
+            arrow_array_free(self.ptr)
+
+    raw.depends_on(ArrowArrayFFIBuffer(raw.contents.ptr))
+    return raw
+
+
+def _slice_to_series(raw: FfiSlicePtr):
+    pl = import_optional_dependency('polars')
+    pyarrow = import_optional_dependency('pyarrow')
+    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
+    array_ptr, schema_ptr, name_ptr = slice_array[0:3]
+
+    arrow_array = pyarrow.Array._import_from_c(array_ptr, schema_ptr)
+    series = pl.from_arrow(arrow_array)
+
+    name_bytes = ctypes.cast(name_ptr, ctypes.c_char_p).value
+    if name_bytes is not None:
+        series = series.rename(name_bytes.decode())
+    return series
 
 
 def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:

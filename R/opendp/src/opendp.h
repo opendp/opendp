@@ -659,6 +659,11 @@ struct FfiResult_____c_void opendp_data__object_free(struct AnyObject *this_);
 struct FfiResult_____c_void opendp_data__slice_free(struct FfiSlice *this_);
 
 /**
+ * Internal function. Free the memory associated with `this`, a slice containing an Arrow array, schema, and name.
+ */
+struct FfiResult_____c_void opendp_data__arrow_array_free(void *this_);
+
+/**
  * Internal function. Free the memory associated with `this`, a string.
  * Used to clean up after the type getter functions.
  *
@@ -812,6 +817,9 @@ struct FfiResult_____AnyDomain opendp_domains__user_domain(char *identifier,
  * * `domain` - The UserDomain to extract the descriptor from
  */
 struct FfiResult_____ExtrinsicObject opendp_domains___user_domain_descriptor(struct AnyDomain *domain);
+
+struct FfiResult_____AnyDomain opendp_domains__series_domain(char *name,
+                                                             const struct AnyDomain *element_domain);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_gaussian(const struct AnyDomain *input_domain,
                                                                        const struct AnyMetric *input_metric,

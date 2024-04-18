@@ -40,6 +40,10 @@ const BLACKLIST: &'static [&'static str] = &[
     "new_queryable",
     "user_domain",
     "_user_domain_descriptor",
+    // polars
+    "new_arrow_array",
+    "series_domain",
+    "arrow_array_free",
 ];
 
 /// Top-level function to generate R bindings, including all modules.
