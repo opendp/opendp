@@ -492,6 +492,7 @@ class DomainDescriptor(RuntimeType):
         if not isinstance(subdomain, tuple):
             subdomain = (subdomain,)
         return DomainDescriptor(self.origin, [self.parse(type_name=sub_i) for sub_i in subdomain])
+
     def __call__(self, *args, **kwargs):
         '''
         >>> FakeDomain = DomainDescriptor('FakeDomain')
