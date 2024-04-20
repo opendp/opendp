@@ -36,6 +36,7 @@ INT_SIZES = {
 }
 _ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
 
+
 def check_and_cast_scalar(expected, value):
     inferred = RuntimeType.infer(value)
     
