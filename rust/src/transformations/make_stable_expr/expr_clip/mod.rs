@@ -45,9 +45,9 @@ where
         .map_err(|_| err!(MakeTransformation, "Clip expects 3 arguments"))?;
 
     let t_prior = input.make_stable(input_domain.clone(), input_metric.clone())?;
-    let (input_domain, input_metric) = t_prior.output_space();
+    let (middle_domain, middle_metric) = t_prior.output_space();
 
-    let mut output_domain = t_prior.output_domain.clone();
+    let mut output_domain = middle_domain.clone();
     let (lower, upper) = {
         let series_domain = output_domain.active_series_mut()?;
 
@@ -71,20 +71,13 @@ where
         }
     };
 
-    let series_name = input_domain.active_series()?.field.name.as_str();
-
-    output_domain
-        .frame_domain
-        .margins
-        .retain(|s, _| !s.contains(series_name));
-
     t_prior
         >> Transformation::new(
-            input_domain.clone(),
+            middle_domain.clone(),
             output_domain,
             Function::new_expr(move |expr| expr.clip(lower.clone(), upper.clone())),
-            input_metric.clone(),
-            input_metric,
+            middle_metric.clone(),
+            middle_metric,
             StabilityMap::new(Clone::clone),
         )?
 }
@@ -120,40 +113,4 @@ fn extract_bounds<T: Number + NumericDataType + Literal>(
 }
 
 #[cfg(test)]
-mod test_make_clip {
-    use crate::domains::{AtomDomain, LogicalPlanDomain};
-    use crate::metrics::SymmetricDistance;
-    use crate::transformations::polars_test::get_test_data;
-
-    use super::*;
-
-    #[test]
-    fn test_make_expr_clip() -> Fallible<()> {
-        let (lf_domain, lf) = get_test_data()?;
-        let lp = lf.logical_plan;
-        let expr_domain = lf_domain.clone().select();
-
-        let expected = col("const_1f64").clip(lit(0.), lit(0.5));
-
-        let t_clip = expected
-            .clone()
-            .make_stable(expr_domain, SymmetricDistance)?;
-        let actual = t_clip.invoke(&(lp, all()))?.1;
-
-        assert_eq!(expected, actual);
-
-        let mut series_domain = lf_domain
-            .series_domains
-            .into_iter()
-            .find(|s| s.field.name.as_str() == "const_1f64")
-            .unwrap();
-        series_domain.element_domain = Arc::new(AtomDomain::<f64>::new_closed((0.0, 0.5))?);
-
-        let mut lf_domain_exp = LogicalPlanDomain::new(vec![series_domain])?;
-        lf_domain_exp.margins = t_clip.output_domain.frame_domain.margins.clone();
-
-        assert_eq!(t_clip.output_domain, lf_domain_exp.select());
-
-        Ok(())
-    }
-}
+mod test;
