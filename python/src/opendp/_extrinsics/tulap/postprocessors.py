@@ -103,7 +103,6 @@ def _make_ump_test(theta, size, alpha, epsilon, delta, tail):
             return phi
         elif data and tail == "right":
             return 1 - phi
-
     return function
 
 # should take in Z
@@ -125,8 +124,7 @@ def _make_oneside_pvalue(theta, size, epsilon, delta, tail):
         reps = Z.size  # sample size
         if reps > 1:
             pval = [0] * reps
-            values = np.array(range(size))
-
+            values = np.array(range(size + 1))  
             B = binom.pmf(k=values, n=size, p=theta)
 
             for r in range(reps):
