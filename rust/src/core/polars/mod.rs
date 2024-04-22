@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::measurements::expr_laplace::LaplaceArgs;
 use polars_plan::{
-    dsl::{lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
+    dsl::{len, lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
     logical_plan::Literal,
     prelude::FunctionOptions,
 };
@@ -186,7 +186,14 @@ impl DPNamespace {
             .laplace(scale)
     }
 
+    /// Compute the differentially private mean.
+    ///
+    /// The scale calibrates the amount of noise to be added to the sum.
+    ///
+    /// # Arguments
+    /// * `bounds` - The bounds of the input data.
+    /// * `scale` - Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
     pub fn mean<L: Literal>(self, bounds: (L, L), scale: Option<f64>) -> Expr {
-        self.0.clone().dp().sum(bounds, scale) / self.0.len()
+        self.0.dp().sum(bounds, scale) / len()
     }
 }

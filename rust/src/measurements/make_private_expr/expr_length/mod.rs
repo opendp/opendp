@@ -1,8 +1,7 @@
-use crate::core::{ExprFunction, Measure, MetricSpace, PrivacyMap};
+use crate::core::{Measure, MetricSpace, PrivacyMap};
 use crate::domains::MarginPub;
 use crate::metrics::PartitionDistance;
 use crate::transformations::traits::UnboundedMetric;
-use crate::transformations::StableExpr;
 use crate::{
     core::{Function, Measurement},
     domains::ExprDomain,
@@ -11,7 +10,8 @@ use crate::{
 
 use num::Zero;
 use polars::lazy::dsl::Expr;
-use polars_plan::dsl::AggExpr;
+use polars_plan::dsl::len;
+use polars_plan::logical_plan::LogicalPlan;
 
 /// Make a measurement that computes the count exactly under bounded-DP
 ///
@@ -23,36 +23,29 @@ use polars_plan::dsl::AggExpr;
 /// # Arguments
 /// * `input_domain` - ExprDomain
 /// * `input_metric` - valid selections shown in table above
+/// * `output_measure` - how to measure privacy loss
 /// * `expr` - count expression
-pub fn make_expr_private_count<MI: 'static + UnboundedMetric, MO: 'static + Measure>(
+pub fn make_expr_private_length<MI: 'static + UnboundedMetric, MO: 'static + Measure>(
     input_domain: ExprDomain,
     input_metric: PartitionDistance<MI>,
+    output_measure: MO,
     expr: Expr,
 ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MO>>
 where
     MO::Distance: Zero,
-    Expr: StableExpr<PartitionDistance<MI>, PartitionDistance<MI>>,
     (ExprDomain, PartitionDistance<MI>): MetricSpace,
 {
-    let Expr::Agg(AggExpr::Count(expr, include_nulls)) = expr else {
-        return fallible!(MakeMeasurement, "Expected Count expression");
+    // You'd typically expect .len() and .count() to be transformations, where they are 1-stable.
+    // But this constructor isn't actually a transformation;
+    //    it's a measurement for releasing insensitive partition lengths (len()).
+    // The sensitivity of .count() or .len() isn't zero, because changing any one record to null will change the count.
+    // This is why we don't allow the variant of this expression that only counts non-null values.
+    let Expr::Len = expr else {
+        return fallible!(MakeMeasurement, "Expected len() expression");
     };
 
-    if !include_nulls {
-        return fallible!(
-            MakeMeasurement,
-            "Public margin sizes assume nulls are included. Try using `len` instead."
-        );
-    }
-
-    let t_prior = expr
-        .clone()
-        .make_stable(input_domain.clone(), input_metric.clone())?;
-
-    let (middle_domain, middle_metric) = t_prior.output_space();
-
-    let by = middle_domain.context.grouping_columns()?;
-    let margin = middle_domain
+    let by = input_domain.context.grouping_columns()?;
+    let margin = input_domain
         .frame_domain
         .margins
         .get(&by)
@@ -61,19 +54,29 @@ where
     if Some(MarginPub::Lengths) != margin.public_info {
         return fallible!(
             MakeMeasurement,
-            "Len is only private if size(s) of {:?} are public",
+            "The length of partitions when grouped by {:?} is not public information.",
             by
         );
     }
 
-    t_prior
-        >> Measurement::new(
-            middle_domain,
-            Function::new_expr(|input_expr| input_expr.len()),
-            middle_metric,
-            MO::default(),
-            PrivacyMap::new(move |_| MO::Distance::zero()),
-        )?
+    Measurement::new(
+        input_domain,
+        Function::new_fallible(
+            // in most other situations, we would use `Function::new_expr`, but we need to return a Fallible here
+            move |(_, expr): &(LogicalPlan, Expr)| -> Fallible<Expr> {
+                if expr != &Expr::Wildcard {
+                    return fallible!(
+                        FailedFunction,
+                        "Expected all() as input (denoting that all columns are selected). This is because column selection is a leaf node in the expression tree."
+                    );
+                }
+                Ok(len())
+            },
+        ),
+        input_metric,
+        output_measure,
+        PrivacyMap::new(move |_| MO::Distance::zero()),
+    )
 }
 
 #[cfg(test)]
@@ -92,9 +95,10 @@ mod test_make_expr_count_private {
     #[test]
     fn test_make_count_expr_grouped() -> Fallible<()> {
         let (lf_domain, lf) = get_test_data()?;
+        // This will succeed because there is a margin for "chunk_2_bool" that indicates that partition lengths are public.
         let expr_domain = lf_domain.aggregate(["chunk_2_bool"]);
 
-        let m_lap = col("const_1f64").len().make_private(
+        let m_lap = len().make_private(
             expr_domain,
             PartitionDistance(SymmetricDistance),
             MaxDivergence::default(),
@@ -108,10 +112,7 @@ mod test_make_expr_count_private {
             .group_by([col("chunk_2_bool")])
             .agg([meas_res])
             .collect()?;
-        let df_exact = lf
-            .group_by([col("chunk_2_bool")])
-            .agg([col("const_1f64").len()])
-            .collect()?;
+        let df_exact = lf.group_by([col("chunk_2_bool")]).agg([len()]).collect()?;
 
         assert_eq!(
             df_actual.sort(["chunk_2_bool"], false, false)?,
@@ -123,10 +124,10 @@ mod test_make_expr_count_private {
     #[test]
     fn test_make_count_expr_no_length() -> Fallible<()> {
         let (lf_domain, _) = get_test_data()?;
+        // This will fail because there is no margin for "cycle_5_alpha" that indicates that partition lengths are public.
         let expr_domain = lf_domain.aggregate(["cycle_5_alpha"]);
 
-        let variant = col("const_1f64")
-            .len()
+        let variant = len()
             .make_private(
                 expr_domain,
                 PartitionDistance(SymmetricDistance),

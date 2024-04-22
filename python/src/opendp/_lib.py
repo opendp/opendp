@@ -130,6 +130,14 @@ if pl is not None:
         
         
         def mean(self, bounds, scale=None):
+            """Compute the differentially private mean.
+
+            The amount of noise to be added to the sum is determined by the scale.
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+
+            :param bounds: The bounds of the input data.
+            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
+            """
             return self.expr.dp.sum(bounds, scale) / pl.len()
 
 

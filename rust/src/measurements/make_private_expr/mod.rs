@@ -1,5 +1,5 @@
 use opendp_derive::bootstrap;
-use polars_plan::dsl::{AggExpr, Expr};
+use polars_plan::dsl::Expr;
 
 use crate::{
     core::{Measure, Measurement, Metric, MetricSpace},
@@ -14,7 +14,7 @@ use crate::{
 mod ffi;
 
 #[cfg(feature = "contrib")]
-mod expr_count;
+mod expr_length;
 
 #[cfg(feature = "contrib")]
 pub(crate) mod expr_laplace;
@@ -77,75 +77,20 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergen
             return expr_laplace::make_expr_laplace(input_domain, input_metric, self, global_scale);
         }
 
+        if let Some(meas) = expr_postprocess::match_postprocess(
+            input_domain.clone(),
+            input_metric.clone(),
+            output_measure.clone(),
+            self.clone(),
+            global_scale,
+        )? {
+            return Ok(meas);
+        }
+
         match self {
             #[cfg(feature = "contrib")]
-            Expr::KeepName(expr) => {
-                expr_postprocess::make_expr_postprocess(
-                    input_domain,
-                    input_metric,
-                    output_measure,
-                    vec![*expr],
-                    move |exprs| {
-                        let [expr] = <[Expr; 1]>::try_from(exprs)
-                            .expect("Will always have exactly one expression.");
-                        Ok(expr.name().keep())
-                    },
-                    global_scale
-                )
-            }
-            #[cfg(feature = "contrib")]
-            Expr::Alias(expr, name) => {
-                expr_postprocess::make_expr_postprocess(
-                    input_domain,
-                    input_metric,
-                    output_measure,
-                    vec![*expr],
-                    move |exprs| {
-                        let [expr] = <[Expr; 1]>::try_from(exprs)
-                            .expect("Will always have exactly one expression.");
-                        Ok(expr.alias(name.as_ref()))
-                    },
-                    global_scale
-                )
-            }
-
-            #[cfg(feature = "contrib")]
-            Expr::BinaryExpr { left, op, right } => {
-                expr_postprocess::make_expr_postprocess(
-                    input_domain,
-                    input_metric,
-                    output_measure,
-                    vec![*left, *right],
-                    move |exprs| {
-                        let [left, right] = <[Expr; 2]>::try_from(exprs)
-                            .expect("Will always have exactly two expressions.")
-                            .map(Box::new);
-                        Ok(Expr::BinaryExpr { left, op, right })
-                    },
-                    global_scale
-                )
-            }
-
-            #[cfg(feature = "contrib")]
-            Expr::Agg(AggExpr::Count(_, _)) => {
-                expr_count::make_expr_private_count(input_domain, input_metric, self.clone())
-            }
-
-            #[cfg(feature = "contrib")]
-            Expr::Gather { expr, idx, returns_scalar } => {
-                expr_postprocess::make_expr_postprocess(
-                    input_domain,
-                    input_metric,
-                    output_measure,
-                    vec![*expr, *idx],
-                    move |exprs| {
-                        let [expr, idx] = <[Expr; 2]>::try_from(exprs)
-                            .expect("Will always have exactly two expressions.")
-                            .map(Box::new);
-                        Ok(Expr::Gather { expr, idx, returns_scalar })
-                    },
-                    global_scale
-                )
+            Expr::Len => {
+                expr_length::make_expr_private_length(input_domain, input_metric, output_measure, self.clone())
             }
 
             #[cfg(feature = "contrib")]
@@ -157,7 +102,7 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergen
                 MakeMeasurement,
                 "Expr is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
                 expr
-            )
+            ),
         }
     }
 }

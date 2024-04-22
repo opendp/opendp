@@ -8,7 +8,7 @@ use crate::{
 
 use num::Zero;
 use polars::lazy::dsl::Expr;
-use polars_plan::logical_plan::{LiteralValue, LogicalPlan};
+use polars_plan::logical_plan::LogicalPlan;
 
 /// Make a measurement that returns a literal.
 ///
@@ -28,14 +28,9 @@ where
     Expr: StableExpr<MI, MI>,
     (ExprDomain, MI): MetricSpace,
 {
-    let Expr::Literal(lit) = &expr else {
+    let Expr::Literal(_) = &expr else {
         return fallible!(MakeMeasurement, "Expected Literal expression");
     };
-
-    let LiteralValue::Series(series) = lit else {
-        return fallible!(MakeMeasurement, "Expected Literal series");
-    };
-    println!("lit: {:?}", &**series);
 
     Measurement::new(
         input_domain,

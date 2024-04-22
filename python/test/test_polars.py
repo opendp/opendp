@@ -136,13 +136,13 @@ def test_private_lazyframe_mean():
         margin=["B"], public_info="lengths", max_partition_length=50
     )
 
-    expr = pl.col("A").dp.mean((1.0, 2.0), scale=1.0)
+    expr = pl.col("A").dp.mean((1.0, 2.0), scale=0.0)
     plan = seed(lf.schema).group_by("B").agg(expr)
     dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 1.0
     )
 
-    print(lf.select(expr).collect())
+    assert lf.select(expr).collect().equals(pl.DataFrame({"A": [1.0]}))
 
 
 def test_stable_lazyframe():
