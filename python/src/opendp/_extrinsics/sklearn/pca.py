@@ -1,14 +1,13 @@
 from __future__ import annotations
 from opendp._extrinsics.make_np_pca import make_private_np_pca
 from opendp.mod import Measurement
-from opendp._lib import import_optional_dependency
+from opendp._lib import import_optional_dependency, optional_dependency
 
 
-decomposition = import_optional_dependency('sklearn.decomposition', False)
-if decomposition is not None:
+with optional_dependency('sklearn.decomposition') as decomposition:
     class SKLPCA(decomposition.PCA): # type: ignore[name-defined]
         pass
-else: # pragma: no cover
+if SKLPCA is None: # pragma: no cover
     class SKLPCA(object): # type: ignore[no-redef]
         def __init__(*args, **kwargs):
             raise ImportError(

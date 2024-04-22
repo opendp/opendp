@@ -5,6 +5,7 @@ import re
 import sys
 from typing import Dict, List, Optional, Any
 import importlib
+from contextlib import contextmanager
 
 
 # list all acceptable alternative types for each default type
@@ -80,19 +81,25 @@ install_names = {
 }
 
 
-def import_optional_dependency(name, raise_error=True):
+def import_optional_dependency(name):
     '''
     Imports optional dependency, or explains that it is required.
     '''
     try:
         return importlib.import_module(name)
     except ImportError:
-        if raise_error:
-            root_name = name.split(".")[0]
-            install_name = install_names.get(root_name) or root_name
-            raise ImportError(f'The optional install {install_name} is required for this functionality')
-        return None
+        root_name = name.split(".")[0]
+        install_name = install_names.get(root_name) or root_name
+        raise ImportError(f'The optional install {install_name} is required for this functionality')
 
+
+@contextmanager
+def optional_dependency(name):
+    try:
+        module = importlib.import_module(name)
+        yield module
+    except ImportError:
+        return
 
 np_csprng = None
 try:

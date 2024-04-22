@@ -21,7 +21,7 @@ from typing import Dict, Optional, Union, Any, Type, List
 
 
 from opendp.mod import Function, UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
-from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency
+from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency, optional_dependency
 
 
 ELEMENTARY_TYPES: Dict[Any, str] = {
@@ -302,8 +302,7 @@ class RuntimeType(object):
         if isinstance(public_example, (Domain, Metric, Measure)):
             return RuntimeType.parse(public_example.type) # pragma: no cover
         
-        pl = import_optional_dependency("polars", raise_error=False)
-        if pl is not None:
+        with optional_dependency("polars") as pl:
             if isinstance(public_example, pl.LazyFrame):
                 return LazyFrame
             

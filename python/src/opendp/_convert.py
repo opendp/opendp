@@ -266,9 +266,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 
 
 def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
-    np = import_optional_dependency('numpy', raise_error=False)
-    if np is not None and isinstance(val, np.ndarray):
-        val = val.item() # pragma: no cover
+    with optional_dependency('numpy') as np:
+        if isinstance(val, np.ndarray):
+            val = val.item() # pragma: no cover
     check_similar_scalar(type_name, val)
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     return _wrap_in_slice(ctypes.pointer(ATOM_MAP[type_name](val)), 1)
@@ -297,9 +297,9 @@ def _slice_to_extrinsic(raw: FfiSlicePtr):
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ExtrinsicObject)).contents.ptr
 
 def _string_to_slice(val: str) -> FfiSlicePtr:
-    np = import_optional_dependency('numpy', raise_error=False)
-    if np is not None and isinstance(val, np.ndarray):
-        val = val.item() # pragma: no cover
+    with optional_dependency('numpy') as np:
+        if isinstance(val, np.ndarray):
+            val = val.item() # pragma: no cover
     return _wrap_in_slice(ctypes.pointer(ctypes.c_char_p(val.encode())), 1)
 
 
@@ -314,9 +314,9 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
     inner_type_name = type_name.args[0]
     # when input is numpy array
     # TODO: can we use the underlying buffer directly?
-    np = import_optional_dependency('numpy', raise_error=False)
-    if np is not None and isinstance(val, np.ndarray):
-        val = val.tolist() # pragma: no cover
+    with optional_dependency('numpy') as np:
+        if isinstance(val, np.ndarray):
+            val = val.tolist() # pragma: no cover
 
     if not isinstance(val, list):
         raise TypeError(f"Expected type is {type_name} but input data is not a list.")
