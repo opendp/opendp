@@ -99,9 +99,9 @@ def _make_ump_test(theta, size, alpha, epsilon, delta, tail):
         values_array = np.array(values)
         phi = _ptulap(t=values_array - s, m=0, epsilon=epsilon, delta=delta)
 
-        if data and tail == "left":
+        if np.any(data) and tail == "left":
             return phi
-        elif data and tail == "right":
+        elif np.any(data) and tail == "right":
             return 1 - phi
     return function
 

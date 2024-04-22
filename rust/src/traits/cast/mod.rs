@@ -9,6 +9,7 @@ use dashu::{
         FBig,
     },
     integer::{IBig, UBig},
+    rational::RBig,
 };
 use num::{NumCast, One, Zero};
 
@@ -429,6 +430,18 @@ impl<R: Round> RoundCast<FBig<R>> for f32 {
 impl<R: Round> RoundCast<FBig<R>> for f64 {
     fn round_cast(v: FBig<R>) -> Fallible<Self> {
         Ok(v.with_rounding::<HalfEven>().to_f64().value())
+    }
+}
+
+impl RoundCast<RBig> for f32 {
+    fn round_cast(v: RBig) -> Fallible<Self> {
+        Ok(v.to_f32().value())
+    }
+}
+
+impl RoundCast<RBig> for f64 {
+    fn round_cast(v: RBig) -> Fallible<Self> {
+        Ok(v.to_f64().value())
     }
 }
 
