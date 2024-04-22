@@ -75,7 +75,7 @@ def make_private_np_eigenvector(
             #    2. compute clamp_norm(compute L @ std_gaussian(d), 1) with arbitrary precision
             #       sample with sufficient precision where all components round to same float
             
-            z = np_csprng.multivariate_normal(mean=np.zeros(d), cov=Omega_inv)
+            z = np_csprng.multivariate_normal(mean=np.zeros(d), cov=Omega_inv)  # type: ignore[union-attr] 
             # u is a sample from the angular central gaussian distribution, 
             #    an envelope for the bingham distribution
             u = z / np.linalg.norm(z)

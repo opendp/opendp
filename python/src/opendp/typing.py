@@ -19,6 +19,7 @@ import typing
 from collections.abc import Hashable
 from typing import Dict, Optional, Union, Any, Type, List
 
+
 from opendp.mod import Function, UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency
 
@@ -300,6 +301,20 @@ class RuntimeType(object):
         
         if isinstance(public_example, (Domain, Metric, Measure)):
             return RuntimeType.parse(public_example.type) # pragma: no cover
+        
+        pl = import_optional_dependency("polars", raise_error=False)
+        if pl is not None:
+            if isinstance(public_example, pl.LazyFrame):
+                return LazyFrame
+            
+            if isinstance(public_example, pl.DataFrame):
+                return DataFrame
+            
+            if isinstance(public_example, pl.Series):
+                return Series
+            
+            if isinstance(public_example, pl.Expr):
+                return Expr
 
         if isinstance(public_example, tuple):
             return RuntimeType('Tuple', [cls.infer(e, py_object) for e in public_example])
@@ -463,9 +478,13 @@ usize: str = 'usize'
 f32: str = 'f32'
 f64: str = 'f64'
 String: str = 'String'
-AnyMeasurementPtr: str = "AnyMeasurementPtr"
-AnyTransformationPtr: str = "AnyTransformationPtr"
-
+LazyFrame: str = 'LazyFrame'
+DataFrame: str = 'DataFrame'
+Series: str = 'Series'
+Expr: str = 'Expr'
+AnyMeasurementPtr: str = 'AnyMeasurementPtr'
+AnyTransformationPtr: str = 'AnyTransformationPtr'
+SeriesDomain: str = 'SeriesDomain'
 
 class DomainDescriptor(RuntimeType):
     def __getitem__(self, subdomain):

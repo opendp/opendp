@@ -10,7 +10,10 @@ mod chain;
 #[cfg(feature = "contrib")]
 pub use crate::combinators::chain::*;
 
+#[cfg(feature = "contrib")]
 mod sequential_compositor;
+#[cfg(feature = "contrib")]
+pub use sequential_compositor::*;
 
 #[cfg(feature = "contrib")]
 mod measure_cast;
