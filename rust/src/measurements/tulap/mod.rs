@@ -1,4 +1,4 @@
-use dashu::float::FBig;
+use dashu::{float::FBig, rational::RBig};
 use num::Zero;
 use opendp_derive::bootstrap;
 
@@ -43,12 +43,12 @@ pub fn make_tulap(
         return fallible!(FailedMap, "delta must not exceed 1");
     }
     let f_epsilon = FBig::try_from(epsilon)?;
-    let f_delta = FBig::try_from(delta)?;
+    let r_delta = RBig::try_from(delta)?;
     Measurement::new(
         input_domain,
         Function::new_fallible(move |&arg: &f64| {
-            let shift = FBig::try_from(arg).unwrap_or(FBig::ZERO);
-            let mut tulap = TulapPSRN::new(shift, f_epsilon.clone(), f_delta.clone());
+            let shift = RBig::try_from(arg).unwrap_or(RBig::ZERO);
+            let mut tulap = TulapPSRN::new(shift, f_epsilon.clone(), r_delta.clone())?;
             pinpoint::<TulapPSRN, f64>(&mut tulap)
         }),
         input_metric,

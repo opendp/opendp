@@ -1,17 +1,20 @@
-use dashu::float::FBig;
+use dashu::{
+    base::Sign,
+    float::{
+        round::mode::{Down, Up},
+        FBig,
+    },
+    rational::RBig,
+};
 
 use crate::error::Fallible;
 
 use super::{ODPRound, UniformPSRN, PSRN};
 
+#[cfg(test)]
+mod test;
+
 // TODO
-//
-//
-// RUST
-//     make sure the inverse tulap is done in a way where the rounding direction is always preserved!
-//     check that the partial psrn is not making the sampling worse
-//
-// PROOF
 //       update the proof to reflect this new implementation (if still correct)
 //
 // PYTHON
@@ -27,116 +30,83 @@ use super::{ODPRound, UniformPSRN, PSRN};
 
 /// A partially sampled tulap random number.
 pub struct TulapPSRN {
-    shift: FBig,
-    epsilon: FBig,
-    delta: FBig,
+    shift: RBig,
+    exp_eps: RBig,
+    neg_exp_eps: RBig,
+    c: RBig,
+    delta: RBig,
     uniform: UniformPSRN,
-    precision: usize,
 }
 
 impl TulapPSRN {
-    // caliberate precision here to check if c is less than 0.5
-    // sanity check the use of rounds in the inverse cdfs.
-    pub fn new(shift: FBig, epsilon: FBig, delta: FBig) -> Self {
-        TulapPSRN {
+    pub fn new(shift: RBig, epsilon: FBig, delta: RBig) -> Fallible<Self> {
+        let exp_eps = epsilon.clone().with_rounding::<Down>().exp();
+        let exp_eps = RBig::try_from(exp_eps)?;
+
+        let neg_exp_eps = (-epsilon.clone()).with_rounding::<Up>().exp();
+        let neg_exp_eps = RBig::try_from(neg_exp_eps)?;
+
+        // c = (1 - δ) / (1 + exp(ε))
+        let c = (RBig::ONE - &delta) / (RBig::ONE + &exp_eps);
+
+        if c >= RBig::from_parts_const(Sign::Positive, 1, 2) {
+            return fallible!(FailedFunction, "c must not exceed .5");
+        }
+
+        Ok(TulapPSRN {
             shift,
-            epsilon,
+            exp_eps,
+            neg_exp_eps,
             delta,
+            c,
             uniform: UniformPSRN::default(),
-            precision: 50,
-        }
+        })
     }
 
-    // q cnd funtion explanation:
-    fn q_cnd<R: ODPRound>(&self, u: FBig<R>, c: FBig<R>) -> FBig<R> {
-        let _1 = FBig::<R>::ONE.with_precision(self.precision).value();
-        if u < c.clone() {
-            self.q_cnd(_1 - self.f(u), c.clone()) - FBig::ONE
-        } else if u >= c.clone() && u <= &_1 - c.clone() {
-            (u - &_1 / FBig::from(2)) / (_1 - FBig::from(2) * c.clone())
+    fn q_cnd(&self, unif: RBig) -> Option<RBig> {
+        let _1 = RBig::ONE;
+
+        Some(if unif < self.c {
+            // in the setting where unif is less than c, like so:
+            // --------|----|--------|--------|-------------
+            //         u    c        .5       1-c
+            self.q_cnd(&_1 - self.f(unif)?)? - _1
+        } else if unif <= &_1 - &self.c {
+            // in the setting where unif is within [c, 1 - c], like so:
+            // -------------|----|---|--------|-------------
+            //              c    u   .5       1-c
+            let num = &unif - RBig::from_parts_const(Sign::Positive, 1, 2);
+            let den = _1 - RBig::from(2) * &self.c;
+            if den.is_zero() {
+                return None;
+            }
+            num / den
         } else {
-            self.q_cnd(self.f(&_1 - u), c.clone()) + _1
-        }
+            // in the setting where unif is greater than 1 - c, like so:
+            // -------------|--------|--------|----|--------
+            //              c        .5       1-c  u
+            self.q_cnd(self.f(&_1 - unif)?)? + _1
+        })
     }
 
-    fn f<R: ODPRound>(&self, u: FBig<R>) -> FBig<R> {
-        // if this function can only be phrased in terms of ε, δ,
-        // then we might as well keep everything in terms of ε, δ?
-        let _1 = FBig::<R>::ONE.with_precision(self.precision).value();
-
-        let t1 = &_1
-            - self.delta.clone().with_rounding()
-            - self.epsilon.clone().with_rounding().exp() * u.clone();
-        let t2 = (-self.epsilon.clone().with_rounding()).exp()
-            * (_1 - &self.delta.clone().with_rounding() - u);
-        t1.max(t2).max(FBig::<R>::ZERO)
+    fn f(&self, unif: RBig) -> Option<RBig> {
+        let t1 = RBig::ONE - self.delta.clone() - &self.exp_eps * unif.clone();
+        let t2 = &self.neg_exp_eps * (RBig::ONE - &self.delta - unif);
+        Some(t1.max(t2).max(RBig::ZERO))
     }
 }
 
 impl PSRN for TulapPSRN {
-    type Edge = FBig;
-    fn edge<R: ODPRound>(&self) -> Option<FBig> {
-        let uniform = FBig::<R>::from(self.uniform.edge::<R>()?)
-            .with_precision(self.precision)
-            .value();
-        let _1 = FBig::<R>::ONE.with_precision(self.precision).value();
-        let c = (&_1 - self.delta.clone().with_rounding())
-            / (&_1 + self.epsilon.clone().with_rounding().exp());
-
-        if c == FBig::<R>::try_from(0.5).unwrap() {
-            return None;
-        }
-
-        let tulap = self.q_cnd(uniform, c) + self.shift.clone().with_rounding();
-        Some(tulap.with_rounding())
+    type Edge = RBig;
+    fn edge<R: ODPRound>(&self) -> Option<RBig> {
+        Some(self.q_cnd(self.uniform.edge::<R>()?)? + self.shift.clone())
     }
 
     fn refine(&mut self) -> Fallible<()> {
-        self.precision += 1;
         self.uniform.refine()
     }
 
     fn refinements(&self) -> usize {
-        self.precision
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::traits::samplers::test::test_progression;
-
-    use super::*;
-
-    #[test]
-    fn test_sample_tulap_interval_progression() -> Fallible<()> {
-        let mut tulap = TulapPSRN::new(
-            FBig::ZERO,
-            FBig::ONE.with_precision(50).value(),
-            FBig::try_from(1e-6).unwrap(),
-        );
-        let (l, r) = test_progression(&mut tulap, 20);
-        let (l, r) = (l.to_f64().value(), r.to_f64().value());
-        println!("{l:?}, {r:?}, {}", tulap.refinements());
-        Ok(())
-    }
-
-    #[test]
-    fn test_tulap_psrn() -> Fallible<()> {
-        fn sample_tulap() -> Fallible<f64> {
-            let mut tulap = TulapPSRN::new(
-                FBig::ZERO,
-                FBig::ONE.with_precision(50).value(),
-                FBig::try_from(1e-6).unwrap(),
-            );
-            // refine it
-            (0..30).try_for_each(|_| tulap.refine())?;
-
-            Ok(tulap.lower().unwrap().to_f64().value())
-        }
-        let samples = (0..1000)
-            .map(|_| sample_tulap())
-            .collect::<Fallible<Vec<_>>>()?;
-        println!("{:?}", samples);
-        Ok(())
+        self.uniform.refinements()
     }
 }
