@@ -62,5 +62,6 @@ def test_right_tail_single_value(mock_new_function, mock_ptulap):
     tail = "right"
     Z = np.array([5,1])
     pvalue_func = _make_oneside_pvalue(theta, size, epsilon, delta, tail)
-    pvalue = pvalue_func(Z)
+    pvalue = np.array(pvalue_func(Z))
+    print (pvalue)
     assert np.all(pvalue >= 0) and np.all(pvalue <= 1), "P-values should be within [0, 1]"
