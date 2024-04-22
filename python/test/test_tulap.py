@@ -47,7 +47,7 @@ def test_left_tail_basic():
     result = ump_test_func(data)
     assert isinstance(result, np.ndarray), "Result should be a numpy array"
     assert result.dtype == float, "All items in the result should be floats"
-    assert (result >= 0).all() and (result <= 1).all(), "All p-values should be between 0 and 1"
+    assert (result >= 0).all() and (result <= 1).all(), "P-values should be within [0, 1]"
 
 
 @patch('postprocessors._ptulap')
