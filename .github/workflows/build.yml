@@ -42,7 +42,7 @@ on:
         required: false
         default: false
 env:
-  FEATURES: untrusted,ffi
+  FEATURES: untrusted,ffi,polars
 
 jobs:
   credential-check:
@@ -105,7 +105,7 @@ jobs:
 
   libs-macos:
     needs: credential-check
-    runs-on: macos-11
+    runs-on: macos-12
     strategy:
       matrix:
         architecture: [x86_64, aarch64]

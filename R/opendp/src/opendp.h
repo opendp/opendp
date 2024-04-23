@@ -659,6 +659,11 @@ struct FfiResult_____c_void opendp_data__object_free(struct AnyObject *this_);
 struct FfiResult_____c_void opendp_data__slice_free(struct FfiSlice *this_);
 
 /**
+ * Internal function. Free the memory associated with `this`, a slice containing an Arrow array, schema, and name.
+ */
+struct FfiResult_____c_void opendp_data__arrow_array_free(void *this_);
+
+/**
  * Internal function. Free the memory associated with `this`, a string.
  * Used to clean up after the type getter functions.
  *
@@ -813,6 +818,39 @@ struct FfiResult_____AnyDomain opendp_domains__user_domain(char *identifier,
  */
 struct FfiResult_____ExtrinsicObject opendp_domains___user_domain_descriptor(struct AnyDomain *domain);
 
+/**
+ * Construct an instance of `LazyFrameDomain`.
+ *
+ * # Arguments
+ * * `series_domains` - Domain of each series in the lazyframe.
+ */
+struct FfiResult_____AnyDomain opendp_domains__lazyframe_domain(struct AnyObject *series_domains);
+
+struct FfiResult_____AnyDomain opendp_domains__infer_lazyframe_domain(struct AnyObject *lazyframe);
+
+struct FfiResult_____AnyDomain opendp_domains__with_margin(struct AnyDomain *frame_domain,
+                                                           struct AnyObject *by,
+                                                           struct AnyObject *max_partition_length,
+                                                           struct AnyObject *max_num_partitions,
+                                                           struct AnyObject *max_partition_contributions,
+                                                           struct AnyObject *max_influenced_partitions,
+                                                           char *public_info);
+
+struct FfiResult_____AnyDomain opendp_domains__series_domain(char *name,
+                                                             const struct AnyDomain *element_domain);
+
+/**
+ * Construct an ExprDomain from a LazyFrameDomain.
+ *
+ * Must pass either `context` or `grouping_columns`.
+ *
+ * # Arguments
+ * * `lazyframe_domain` - the domain of the LazyFrame to be constructed
+ * * `grouping_columns` - set when creating an expression that aggregates
+ */
+struct FfiResult_____AnyDomain opendp_domains__expr_domain(const struct AnyDomain *lazyframe_domain,
+                                                           const struct AnyObject *grouping_columns);
+
 struct FfiResult_____AnyMeasurement opendp_measurements__make_gaussian(const struct AnyDomain *input_domain,
                                                                        const struct AnyMetric *input_metric,
                                                                        const void *scale,
@@ -836,6 +874,18 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_laplace(const stru
                                                                       const void *scale,
                                                                       const int32_t *k,
                                                                       const char *QO);
+
+struct FfiResult_____AnyMeasurement opendp_measurements__make_private_expr(const struct AnyDomain *input_domain,
+                                                                           const struct AnyMetric *input_metric,
+                                                                           const struct AnyMeasure *output_measure,
+                                                                           const struct AnyObject *expr,
+                                                                           const struct AnyObject *global_scale);
+
+struct FfiResult_____AnyMeasurement opendp_measurements__make_private_lazyframe(const struct AnyDomain *input_domain,
+                                                                                const struct AnyMetric *input_metric,
+                                                                                const struct AnyMeasure *output_measure,
+                                                                                const struct AnyObject *lazyframe,
+                                                                                const struct AnyObject *global_scale);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_user_measurement(const struct AnyDomain *input_domain,
                                                                                const struct AnyMetric *input_metric,
@@ -975,6 +1025,8 @@ struct FfiResult_____AnyMetric opendp_metrics__l2_distance(const char *T);
  */
 struct FfiResult_____AnyMetric opendp_metrics__discrete_distance(void);
 
+struct FfiResult_____AnyMetric opendp_metrics__partition_distance(const struct AnyMetric *metric);
+
 struct FfiResult_____AnyMetric opendp_metrics__linf_distance(c_bool monotonic, const char *T);
 
 /**
@@ -985,6 +1037,14 @@ struct FfiResult_____AnyMetric opendp_metrics__linf_distance(c_bool monotonic, c
  * * `descriptor` - A string description of the metric.
  */
 struct FfiResult_____AnyMetric opendp_metrics__user_distance(char *descriptor);
+
+struct FfiResult_____AnyTransformation opendp_transformations__make_stable_lazyframe(const struct AnyDomain *input_domain,
+                                                                                     const struct AnyMetric *input_metric,
+                                                                                     const struct AnyObject *lazyframe);
+
+struct FfiResult_____AnyTransformation opendp_transformations__make_stable_expr(const struct AnyDomain *input_domain,
+                                                                                const struct AnyMetric *input_metric,
+                                                                                const struct AnyObject *expr);
 
 struct FfiResult_____AnyTransformation opendp_transformations__make_sized_bounded_covariance(unsigned int size,
                                                                                              const struct AnyObject *bounds_0,
