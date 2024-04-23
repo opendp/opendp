@@ -86,27 +86,10 @@ function docs() {
   clean
 
   log "***** DOCS *****"
-  # We don't directly expose any APIs from compiled code, 
-  # so we don't actually have to build the binary in order to build docs.
-  # To avoid the overhead of building the binary, 
-  # stage the docs build in a separate package where binaries are stripped out.
-
-  log "stage docs version of package in R/opendp-docs"
-  run cp -r R/opendp R/opendp-docs
-  run rm -rf R/opendp-docs/src
-
-  log "remove all traces of compiled code from the package"
-  sed "/#' @useDynLib opendp, .registration = TRUE/d" R/opendp-docs/R/opendp-package.R > R/opendp-docs/R/opendp-package.R
-  rm -f R/opendp-docs/configure
-  rm -f R/opendp-docs/NAMESPACE
 
   log "build the docs, and then website"
-  Rscript -e 'devtools::document("R/opendp-docs")'
-  Rscript -e 'pkgdown::build_site("R/opendp-docs")'
-
-  log "move docs to the main package"
-  mv R/opendp-docs/docs R/opendp
-  rm -rf R/opendp-docs
+  Rscript -e 'devtools::document("R/opendp")'
+  Rscript -e 'pkgdown::build_site("R/opendp")'
 
   log "R package docs are ready in R/opendp/docs/index.html"
 }
