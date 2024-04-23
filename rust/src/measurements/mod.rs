@@ -23,6 +23,16 @@ mod laplace;
 #[cfg(feature = "contrib")]
 pub use laplace::*;
 
+#[cfg(all(feature = "contrib", feature = "polars"))]
+mod make_private_expr;
+#[cfg(all(feature = "contrib", feature = "polars"))]
+pub use make_private_expr::*;
+
+#[cfg(all(feature = "contrib", feature = "polars"))]
+mod make_private_lazyframe;
+#[cfg(all(feature = "contrib", feature = "polars"))]
+pub use make_private_lazyframe::*;
+
 #[cfg(all(feature = "honest-but-curious", feature = "ffi"))]
 mod make_user_measurement;
 #[cfg(all(feature = "honest-but-curious", feature = "ffi"))]
