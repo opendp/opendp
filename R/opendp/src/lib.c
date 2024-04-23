@@ -99,6 +99,7 @@ static R_CMethodDef R_CDef[] = {
     {"metrics__metric_debug", (DL_FUNC) &metrics__metric_debug, 2},
     {"metrics__metric_distance_type", (DL_FUNC) &metrics__metric_distance_type, 2},
     {"metrics__metric_type", (DL_FUNC) &metrics__metric_type, 2},
+    {"metrics__partition_distance", (DL_FUNC) &metrics__partition_distance, 2},
     {"metrics__symmetric_distance", (DL_FUNC) &metrics__symmetric_distance, 1},
     {"metrics__user_distance", (DL_FUNC) &metrics__user_distance, 2},
     {"transformations__choose_branching_factor", (DL_FUNC) &transformations__choose_branching_factor, 2},
