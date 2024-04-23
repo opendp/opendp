@@ -86,7 +86,7 @@ def _user_domain_descriptor(
 
 
 def atom_domain(
-    bounds: Optional[Any] = None,
+    bounds = None,
     nullable: bool = False,
     T: Optional[RuntimeTypeDescriptor] = None
 ) -> Domain:
@@ -95,7 +95,6 @@ def atom_domain(
     [atom_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.atom_domain.html)
 
     :param bounds: 
-    :type bounds: Any
     :param nullable: 
     :type nullable: bool
     :param T: The type of the atom.
@@ -243,7 +242,7 @@ def expr_domain(
 
 
 def infer_lazyframe_domain(
-    lazyframe: Any
+    lazyframe
 ) -> Domain:
     r"""Infer the lazyframe domain that a dataset is a member of.
 
@@ -253,7 +252,6 @@ def infer_lazyframe_domain(
     [infer_lazyframe_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.infer_lazyframe_domain.html)
 
     :param lazyframe: The lazyframe to infer the domain from.
-    :type lazyframe: Any
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -274,12 +272,11 @@ def infer_lazyframe_domain(
 
 
 def lazyframe_domain(
-    series_domains: Any
+    series_domains
 ) -> Domain:
     r"""Construct an instance of `LazyFrameDomain`.
 
     :param series_domains: Domain of each series in the lazyframe.
-    :type series_domains: Any
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -331,14 +328,13 @@ def map_domain(
 
 def member(
     this: Domain,
-    val: Any
+    val
 ):
     r"""Check membership in a `domain`.
 
     :param this: The domain to check membership in.
     :type this: Domain
     :param val: A potential element of the domain.
-    :type val: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -462,14 +458,13 @@ def user_domain(
 
 def vector_domain(
     atom_domain: Domain,
-    size: Optional[Any] = None
+    size = None
 ) -> Domain:
     r"""Construct an instance of `VectorDomain`.
 
     :param atom_domain: The inner domain.
     :type atom_domain: Domain
     :param size: 
-    :type size: Any
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -492,11 +487,11 @@ def vector_domain(
 
 def with_margin(
     frame_domain: Domain,
-    by: Any,
-    max_partition_length: Optional[Any] = None,
-    max_num_partitions: Optional[Any] = None,
-    max_partition_contributions: Optional[Any] = None,
-    max_influenced_partitions: Optional[Any] = None,
+    by,
+    max_partition_length = None,
+    max_num_partitions = None,
+    max_partition_contributions = None,
+    max_influenced_partitions = None,
     public_info: Optional[str] = None
 ) -> Domain:
     r"""
@@ -504,15 +499,10 @@ def with_margin(
     :param frame_domain: 
     :type frame_domain: Domain
     :param by: 
-    :type by: Any
     :param max_partition_length: 
-    :type max_partition_length: Any
     :param max_num_partitions: 
-    :type max_num_partitions: Any
     :param max_partition_contributions: 
-    :type max_partition_contributions: Any
     :param max_influenced_partitions: 
-    :type max_influenced_partitions: Any
     :param public_info: 
     :type public_info: str
     :rtype: Domain

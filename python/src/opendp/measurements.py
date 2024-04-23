@@ -319,7 +319,7 @@ def make_geometric(
     input_domain: Domain,
     input_metric: Metric,
     scale,
-    bounds: Optional[Any] = None,
+    bounds = None,
     QO: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
     r"""Equivalent to `make_laplace` but restricted to an integer support.
@@ -344,7 +344,6 @@ def make_geometric(
     :type input_metric: Metric
     :param scale: 
     :param bounds: 
-    :type bounds: Any
     :param QO: 
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
@@ -377,7 +376,7 @@ def make_geometric(
 
 def then_geometric(
     scale,
-    bounds: Optional[Any] = None,
+    bounds = None,
     QO: Optional[RuntimeTypeDescriptor] = None
 ):  
     r"""partial constructor of make_geometric
@@ -387,7 +386,6 @@ def then_geometric(
 
     :param scale: 
     :param bounds: 
-    :type bounds: Any
     :param QO: 
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     """
@@ -494,8 +492,8 @@ def make_private_expr(
     input_domain: Domain,
     input_metric: Metric,
     output_measure: Measure,
-    expr: Any,
-    global_scale: Optional[Any] = None
+    expr,
+    global_scale = None
 ) -> Measurement:
     r"""Create a differentially private measurement from an [`Expr`].
 
@@ -515,9 +513,7 @@ def make_private_expr(
     :param output_measure: How to measure privacy loss.
     :type output_measure: Measure
     :param expr: The [`Expr`] to be privatized.
-    :type expr: Any
     :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
-    :type global_scale: Any
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -544,8 +540,8 @@ def make_private_expr(
 
 def then_private_expr(
     output_measure: Measure,
-    expr: Any,
-    global_scale: Optional[Any] = None
+    expr,
+    global_scale = None
 ):  
     r"""partial constructor of make_private_expr
 
@@ -555,9 +551,7 @@ def then_private_expr(
     :param output_measure: How to measure privacy loss.
     :type output_measure: Measure
     :param expr: The [`Expr`] to be privatized.
-    :type expr: Any
     :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
-    :type global_scale: Any
     """
     return PartialConstructor(lambda input_domain, input_metric: make_private_expr(
         input_domain=input_domain,
@@ -572,8 +566,8 @@ def make_private_lazyframe(
     input_domain: Domain,
     input_metric: Metric,
     output_measure: Measure,
-    lazyframe: Any,
-    global_scale: Optional[Any] = None
+    lazyframe,
+    global_scale = None
 ) -> Measurement:
     r"""Create a differentially private measurement from a [`LazyFrame`].
 
@@ -596,9 +590,7 @@ def make_private_lazyframe(
     :param output_measure: How to measure privacy loss.
     :type output_measure: Measure
     :param lazyframe: A description of the computations to be run, in the form of a [`LazyFrame`].
-    :type lazyframe: Any
     :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
-    :type global_scale: Any
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -625,8 +617,8 @@ def make_private_lazyframe(
 
 def then_private_lazyframe(
     output_measure: Measure,
-    lazyframe: Any,
-    global_scale: Optional[Any] = None
+    lazyframe,
+    global_scale = None
 ):  
     r"""partial constructor of make_private_lazyframe
 
@@ -636,9 +628,7 @@ def then_private_lazyframe(
     :param output_measure: How to measure privacy loss.
     :type output_measure: Measure
     :param lazyframe: A description of the computations to be run, in the form of a [`LazyFrame`].
-    :type lazyframe: Any
     :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
-    :type global_scale: Any
     """
     return PartialConstructor(lambda input_domain, input_metric: make_private_lazyframe(
         input_domain=input_domain,
@@ -650,7 +640,7 @@ def then_private_lazyframe(
 
 
 def make_randomized_response(
-    categories: Any,
+    categories,
     prob,
     constant_time: bool = False,
     T: Optional[RuntimeTypeDescriptor] = None,
@@ -668,7 +658,6 @@ def make_randomized_response(
     * Output Measure: `MaxDivergence<QO>`
 
     :param categories: Set of valid outcomes
-    :type categories: Any
     :param prob: Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
     :param constant_time: Set to true to enable constant time. Slower.
     :type constant_time: bool
@@ -757,7 +746,7 @@ def make_randomized_response_bool(
 def make_report_noisy_max_gumbel(
     input_domain: Domain,
     input_metric: Metric,
-    scale: Any,
+    scale,
     optimize: str,
     QO: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
@@ -781,7 +770,6 @@ def make_report_noisy_max_gumbel(
     :param input_metric: Metric on the input domain. Must be LInfDistance
     :type input_metric: Metric
     :param scale: Higher scales are more private.
-    :type scale: Any
     :param optimize: Indicate whether to privately return the "Max" or "Min"
     :type optimize: str
     :param QO: Output Distance Type.
@@ -813,7 +801,7 @@ def make_report_noisy_max_gumbel(
     return output
 
 def then_report_noisy_max_gumbel(
-    scale: Any,
+    scale,
     optimize: str,
     QO: Optional[RuntimeTypeDescriptor] = None
 ):  
@@ -823,7 +811,6 @@ def then_report_noisy_max_gumbel(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_report_noisy_max_gumbel`
 
     :param scale: Higher scales are more private.
-    :type scale: Any
     :param optimize: Indicate whether to privately return the "Max" or "Min"
     :type optimize: str
     :param QO: Output Distance Type.
