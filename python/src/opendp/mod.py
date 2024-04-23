@@ -962,8 +962,8 @@ def binary_search(
 
 
 def exponential_bounds_search(
-        predicate: Callable[[Union[float, int]], bool], 
-        T: Optional[Union[Type[float], Type[int]]]) -> Optional[Union[Tuple[float, float], Tuple[int, int]]]:
+        predicate: Callable[[float], bool], 
+        T: Optional[Type[float]]) -> Optional[Tuple[float, float]]:
     """Determine bounds for a binary search via an exponential search,
     in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
     Will attempt to recover once if `predicate` throws an exception, 
