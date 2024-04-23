@@ -3020,7 +3020,7 @@ def make_split_records(
 def make_stable_expr(
     input_domain: Domain,
     input_metric: Metric,
-    expr: Any
+    expr
 ) -> Transformation:
     r"""Create a stable transformation from an [`Expr`].
 
@@ -3038,7 +3038,6 @@ def make_stable_expr(
     :param input_metric: How to measure distances between neighboring input data sets.
     :type input_metric: Metric
     :param expr: The [`Expr`] to be privatized.
-    :type expr: Any
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -3062,7 +3061,7 @@ def make_stable_expr(
     return output
 
 def then_stable_expr(
-    expr: Any
+    expr
 ):  
     r"""partial constructor of make_stable_expr
 
@@ -3070,7 +3069,6 @@ def then_stable_expr(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_stable_expr`
 
     :param expr: The [`Expr`] to be privatized.
-    :type expr: Any
     """
     return PartialConstructor(lambda input_domain, input_metric: make_stable_expr(
         input_domain=input_domain,
@@ -3082,7 +3080,7 @@ def then_stable_expr(
 def make_stable_lazyframe(
     input_domain: Domain,
     input_metric: Metric,
-    lazyframe: Any
+    lazyframe
 ) -> Transformation:
     r"""Create a stable transformation from a [`LazyFrame`].
 
@@ -3100,7 +3098,6 @@ def make_stable_lazyframe(
     :param input_metric: How to measure distances between neighboring input data sets.
     :type input_metric: Metric
     :param lazyframe: The [`LazyFrame`] to be analyzed.
-    :type lazyframe: Any
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -3124,7 +3121,7 @@ def make_stable_lazyframe(
     return output
 
 def then_stable_lazyframe(
-    lazyframe: Any
+    lazyframe
 ):  
     r"""partial constructor of make_stable_lazyframe
 
@@ -3132,7 +3129,6 @@ def then_stable_lazyframe(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_stable_lazyframe`
 
     :param lazyframe: The [`LazyFrame`] to be analyzed.
-    :type lazyframe: Any
     """
     return PartialConstructor(lambda input_domain, input_metric: make_stable_lazyframe(
         input_domain=input_domain,

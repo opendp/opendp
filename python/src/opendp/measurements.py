@@ -492,8 +492,8 @@ def make_private_expr(
     input_domain: Domain,
     input_metric: Metric,
     output_measure: Measure,
-    expr: Any,
-    global_scale: Optional[Any] = None
+    expr,
+    global_scale = None
 ) -> Measurement:
     r"""Create a differentially private measurement from an [`Expr`].
 
@@ -513,9 +513,7 @@ def make_private_expr(
     :param output_measure: How to measure privacy loss.
     :type output_measure: Measure
     :param expr: The [`Expr`] to be privatized.
-    :type expr: Any
     :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
-    :type global_scale: Any
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -542,8 +540,8 @@ def make_private_expr(
 
 def then_private_expr(
     output_measure: Measure,
-    expr: Any,
-    global_scale: Optional[Any] = None
+    expr,
+    global_scale = None
 ):  
     r"""partial constructor of make_private_expr
 
@@ -553,9 +551,7 @@ def then_private_expr(
     :param output_measure: How to measure privacy loss.
     :type output_measure: Measure
     :param expr: The [`Expr`] to be privatized.
-    :type expr: Any
     :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
-    :type global_scale: Any
     """
     return PartialConstructor(lambda input_domain, input_metric: make_private_expr(
         input_domain=input_domain,
@@ -570,8 +566,8 @@ def make_private_lazyframe(
     input_domain: Domain,
     input_metric: Metric,
     output_measure: Measure,
-    lazyframe: Any,
-    global_scale: Optional[Any] = None
+    lazyframe,
+    global_scale = None
 ) -> Measurement:
     r"""Create a differentially private measurement from a [`LazyFrame`].
 
@@ -594,9 +590,7 @@ def make_private_lazyframe(
     :param output_measure: How to measure privacy loss.
     :type output_measure: Measure
     :param lazyframe: A description of the computations to be run, in the form of a [`LazyFrame`].
-    :type lazyframe: Any
     :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
-    :type global_scale: Any
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -623,8 +617,8 @@ def make_private_lazyframe(
 
 def then_private_lazyframe(
     output_measure: Measure,
-    lazyframe: Any,
-    global_scale: Optional[Any] = None
+    lazyframe,
+    global_scale = None
 ):  
     r"""partial constructor of make_private_lazyframe
 
@@ -634,9 +628,7 @@ def then_private_lazyframe(
     :param output_measure: How to measure privacy loss.
     :type output_measure: Measure
     :param lazyframe: A description of the computations to be run, in the form of a [`LazyFrame`].
-    :type lazyframe: Any
     :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
-    :type global_scale: Any
     """
     return PartialConstructor(lambda input_domain, input_metric: make_private_lazyframe(
         input_domain=input_domain,
