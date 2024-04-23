@@ -18,6 +18,7 @@ import sys
 import typing
 from collections.abc import Hashable
 from typing import Dict, Optional, Union, Any, Type, List
+import re
 
 
 from opendp.mod import Function, UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
@@ -490,7 +491,19 @@ class DomainDescriptor(RuntimeType):
     def __getitem__(self, subdomain):
         if not isinstance(subdomain, tuple):
             subdomain = (subdomain,)
-        return DomainDescriptor(self.origin, [self.parse(type_name=sub_i) for sub_i in subdomain])    
+        return DomainDescriptor(self.origin, [self.parse(type_name=sub_i) for sub_i in subdomain])
+
+    def __call__(self, *args, **kwargs):
+        '''
+        >>> FakeDomain = DomainDescriptor('FakeDomain')
+        >>> FakeDomain(int)
+        Traceback (most recent call last):
+        ...
+        Exception: Use dp.fake_domain to construst a new FakeDomain
+        '''
+        # https://stackoverflow.com/a/12867228/10727889
+        lc_name = re.sub('(?!^)([A-Z])', r'_\1', self.origin).lower()
+        raise Exception(f'Use dp.{lc_name} to construst a new {self.origin}')
 
 
 AtomDomain: DomainDescriptor = DomainDescriptor('AtomDomain')
