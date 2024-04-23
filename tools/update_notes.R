@@ -20,7 +20,10 @@ authors <- vapply(l, \(x) {
   paste(authors, collapse = ", ")
 }, FUN.VALUE = character(1L))
 
-licenses <- vapply(l, \(x) x[["license"]], FUN.VALUE = character(1L))
+# TODO: handle cases where license field is not present, but license file is present
+licenses <- vapply(l, \(x) {
+  if ("license" %in% x) { x[["license"]] } else { "see license file" }
+}, FUN.VALUE = character(1L))
 
 dir.create("R/opendp/inst", showWarnings = FALSE)
 

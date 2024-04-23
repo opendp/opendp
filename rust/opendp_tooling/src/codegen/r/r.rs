@@ -20,6 +20,7 @@ pub fn generate_r_module(
 ) -> String {
     let body = module
         .into_iter()
+        .filter(|func| func.has_ffi)
         .filter(|func| !BLACKLIST.contains(&func.name.as_str()))
         .map(|func| generate_r_function(module_name, &func, hierarchy))
         .collect::<Vec<String>>()

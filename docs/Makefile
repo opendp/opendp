@@ -28,6 +28,7 @@ clean:
 
 html:
 	@set -e
+	# If sphinx-apidoc options change, also update conf.py!
 	$(SPHINXAPIDOC) -f -F -e -d 3 -H "OpenDP" -A "The OpenDP Project" -V $(VERSION) -o source/api/python ../python/src/opendp --templatedir source/_templates
 	$(SPHINXBUILD) $(SPHINXOPTS) -D version=$(VERSION) -D 'html_sidebars.**'=sidebar-nav-bs.html source $(BUILDDIR)/html
 	@echo
