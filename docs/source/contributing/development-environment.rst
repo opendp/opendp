@@ -48,7 +48,7 @@ Now run ``cargo build`` in the ``rust`` subdirectory of the repo:
 .. code-block:: bash
 
     cd rust
-    cargo build --features untrusted,bindings
+    cargo build --features untrusted,bindings,polars
 
 This will compile a debug build of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. 
 (The specific name of the library file will vary depending on your platform.)
