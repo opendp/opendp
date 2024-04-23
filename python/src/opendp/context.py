@@ -23,7 +23,7 @@ from opendp.combinators import (
     make_sequential_composition,
     make_zCDP_to_approxDP,
 )
-from opendp.domains import atom_domain
+from opendp.domains import atom_domain, vector_domain
 from opendp.measurements import make_laplace, make_gaussian
 from opendp.measures import (
     fixed_smoothed_max_divergence,
@@ -396,9 +396,18 @@ class Context(object):
             domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights
         )
 
+        try:
+            queryable = accountant(data)
+        except TypeError as e:
+            inferred_domain = domain_of(data, infer=True)
+            if vector_domain(domain) == inferred_domain:
+                # With Python 3.11, add_note is available, but pytest.raises doesn't see notes.
+                e.args = (e.args[0] + '; To fix, wrap domain kwarg with dp.vector_domain()',)
+            raise e
+
         return Context(
             accountant=accountant,
-            queryable=accountant(data),
+            queryable=queryable,
             d_in=privacy_unit[1],
             d_mids=d_mids,
         )
