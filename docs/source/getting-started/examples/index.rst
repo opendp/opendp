@@ -20,7 +20,6 @@ These introductory notebooks provide some solutions for real-world problems with
   pums-data-analysis
   unknown-dataset-size
   histograms
-  selecting-grouping-columns
 
 Theory examples
 ---------------
