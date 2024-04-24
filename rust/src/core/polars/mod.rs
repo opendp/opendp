@@ -164,11 +164,11 @@ impl DPNamespace {
     /// Add Laplace noise to the expression.
     ///
     /// `scale` must not be negative or inf.
-    /// Scale may be left NaN, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
+    /// Scale may be left None, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
     ///
     /// # Arguments
     /// * `scale` - Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
-    pub fn laplace(self, scale: f64) -> Expr {
+    pub fn laplace(self, scale: Option<f64>) -> Expr {
         apply_anonymous_function(vec![self.0], LaplaceArgs { scale })
     }
 
@@ -177,7 +177,7 @@ impl DPNamespace {
     /// # Arguments
     /// * `bounds` - The bounds of the input data.
     /// * `scale` - Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
-    pub fn sum<L: Literal>(self, bounds: (L, L), scale: f64) -> Expr {
+    pub fn sum<L: Literal>(self, bounds: (L, L), scale: Option<f64>) -> Expr {
         self.0
             .clip(lit(bounds.0), lit(bounds.1))
             .sum()

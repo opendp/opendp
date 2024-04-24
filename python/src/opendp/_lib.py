@@ -106,7 +106,7 @@ if pl is not None:
             """Add Laplace noise to the expression.
 
             `scale` must not be negative or inf.
-            Scale may be left NaN, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
+            Scale may be left None, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
 
             :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
             """

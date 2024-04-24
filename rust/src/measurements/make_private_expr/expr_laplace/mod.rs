@@ -40,7 +40,7 @@ pub fn make_expr_laplace<MI: 'static + Metric>(
     input_domain: ExprDomain,
     input_metric: MI,
     expr: Expr,
-    global_scale: f64,
+    global_scale: Option<f64>,
 ) -> Fallible<Measurement<ExprDomain, Expr, MI, MaxDivergence<f64>>>
 where
     Expr: StableExpr<MI, L1Distance<f64>>,
@@ -54,19 +54,15 @@ where
         .make_stable(input_domain.clone(), input_metric.clone())?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    if scale.is_nan() && global_scale.is_nan() {
+    if scale.is_none() && global_scale.is_none() {
         return fallible!(
             MakeMeasurement,
             "Laplace mechanism requires either a scale to be set on the expression or a param to be passed to the constructor"
         );
     }
 
-    let scale = if scale.is_nan() { 1. } else { scale };
-    let global_scale = if global_scale.is_nan() {
-        1.
-    } else {
-        global_scale
-    };
+    let scale = scale.unwrap_or(1.);
+    let global_scale = global_scale.unwrap_or(1.);
     let scale = scale.inf_mul(&global_scale)?;
 
     if middle_domain.active_series()?.nullable {
@@ -80,7 +76,7 @@ where
         >> Measurement::<_, _, L1Distance<f64>, _>::new(
             middle_domain,
             Function::new_expr(move |input_expr| {
-                apply_plugin(input_expr, expr.clone(), LaplaceArgs { scale })
+                apply_plugin(input_expr, expr.clone(), LaplaceArgs { scale: Some(scale) })
             }),
             middle_metric,
             MaxDivergence::default(),
@@ -94,28 +90,30 @@ where
 /// * `expr` - The expression to check
 ///
 /// # Returns
-/// The input to the Laplace expression and the scale of the Laplace noise
-pub(crate) fn match_laplace(expr: &Expr) -> Fallible<Option<(&Expr, f64)>> {
+/// The input to the Laplace expression and optional scale of Laplace noise
+pub(crate) fn match_laplace(expr: &Expr) -> Fallible<Option<(&Expr, Option<f64>)>> {
     let Some((input, LaplaceArgs { scale })) = match_plugin(expr, "laplace")? else {
         return Ok(None);
     };
 
-    let [input] = <&[_; 1]>::try_from(input.as_slice())
-        .map_err(|_| err!(MakeMeasurement, "Laplace expects a single input expression"))?;
+    let Ok([input]) = <&[_; 1]>::try_from(input.as_slice()) else {
+        return fallible!(MakeMeasurement, "Laplace expects a single input expression");
+    };
 
     Ok(Some((input, scale)))
 }
 
+// Code comment, not documentation:
 // When using the plugin API from other languages, the LaplaceArgs struct is serialized inside a FunctionExpr::FfiPlugin.
 // When using the Rust API directly, the LaplaceArgs struct is stored inside an AnonymousFunction.
-//
+
 /// Arguments for the Laplace noise expression
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub(crate) struct LaplaceArgs {
     /// The scale of the Laplace noise.
     ///
-    /// Scale may be left NaN, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
-    pub scale: f64,
+    /// Scale may be left None, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
+    pub scale: Option<f64>,
 }
 
 impl OpenDPPlugin for LaplaceArgs {
@@ -155,9 +153,11 @@ impl SeriesUdf for LaplaceArgs {
 /// The Polars engine executes this function over chunks of data.
 fn laplace_udf(inputs: &[Series], kwargs: LaplaceArgs) -> PolarsResult<Series> {
     let Ok([series]) = <&[_; 1]>::try_from(inputs) else {
-        polars_bail!(InvalidOperation: "Laplace expects a single input field");
+        polars_bail!(InvalidOperation: "Laplace expects a single input expression");
     };
-    let scale = kwargs.scale;
+    let Some(scale) = kwargs.scale else {
+        polars_bail!(InvalidOperation: "Laplace scale parameter must be known");
+    };
 
     // PT stands for Polars Type
     fn laplace_impl_integer<PT: 'static + PolarsDataType>(
@@ -289,8 +289,8 @@ mod test_make_laplace_expr {
             expr_domain,
             PartitionDistance(SymmetricDistance),
             MaxDivergence::default(),
-            col("const_1f64").dp().sum((0., 1.), scale),
-            scale,
+            col("const_1f64").dp().sum((0., 1.), Some(scale)),
+            None,
         )?;
 
         let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?;
@@ -310,13 +310,13 @@ mod test_make_laplace_expr {
             .clip(lit(0), lit(8))
             .sum()
             .dp()
-            .laplace(f64::NAN);
+            .laplace(None);
         let m_lap = make_private_lazyframe(
             lf_domain,
             SymmetricDistance,
             MaxDivergence::default(),
             lf.clone().group_by(["chunk_2_bool"]).agg([expr_exp]),
-            scale,
+            Some(scale),
         )?;
         // sum([0, 1, 2, 3, 4]) * 100 = 1000
         // sum([5, 6, 7, 8, 8]) * 100 = 3400

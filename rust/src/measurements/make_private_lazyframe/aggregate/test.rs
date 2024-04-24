@@ -30,7 +30,7 @@ fn test_aggregate() -> Fallible<()> {
         lf.group_by(&[col("A"), col("C")])
             .agg(&[col("B").sum()])
             .logical_plan,
-        1.,
+        Some(1.),
     )
     .map(|_| ())
     .unwrap_err()

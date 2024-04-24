@@ -70,15 +70,19 @@ def test_domains():
 @pytest.mark.parametrize("domain,series", zip(*example_series()))
 def test_series_ffi(domain, series):
     """ensure that series can be passed to/from Rust"""
+    pl_testing = pytest.importorskip("polars.testing")
+    
     t_ident = (domain, dp.symmetric_distance()) >> dp.t.then_identity()
-    assert t_ident(series).equals(series)
+    pl_testing.assert_series_equal(t_ident(series), series)
 
 
 def test_lazyframe_ffi():
     """ensure that lazyframes can be passed to/from Rust"""
+    pl_testing = pytest.importorskip("polars.testing")
     lf_domain, lf = example_lf()
     t_ident = (lf_domain, dp.symmetric_distance()) >> dp.t.then_identity()
-    assert t_ident(lf).collect().equals(lf.collect())
+
+    pl_testing.assert_frame_equal(t_ident(lf).collect(), lf.collect())
 
 
 def test_expr_ffi():
@@ -92,6 +96,8 @@ def test_expr_ffi():
 
 def test_private_lazyframe_explicit_sum():
     pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
     lf_domain, lf = example_lf(
         margin=["B"], public_info="keys", max_partition_length=50
     )
@@ -102,14 +108,12 @@ def test_private_lazyframe_explicit_sum():
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
     )
 
-    df_exp = pl.DataFrame(
-        {
-            "B": list(range(1, 6)),
-            "A": [10.0] * 5,
-        }
-    )
+    df_exp = pl.DataFrame([
+        pl.Series("B", list(range(1, 6)), dtype=pl.Int32),
+        pl.Series("A", [10.0] * 5),
+    ])
     df_act = m_lf(lf).sort("B").collect()
-    assert df_act.equals(df_exp)
+    pl_testing.assert_frame_equal(df_act, df_exp)
 
 
 def test_private_lazyframe_sum():
