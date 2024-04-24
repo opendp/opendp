@@ -3,11 +3,12 @@ Privately Selecting Grouping Columns
 
 This longer example demonstrates how plugins could be used on a real-world problem.
 
-Imagine you have a tabular dataset with four columns:
-``date``, ``merchant_postal_code``, ``merch_category`` and ``transaction_type``.
-The data is sparse – not all combinations of these categories are present in the data.
-To create a differentially private release with statistics grouped by these columns,
-you can only release statistics for combinations of these attributes that many people contribute to.
+Imagine you want to group the rows in a private dataset before releasing aggregate statistics,
+but you yourself are not allowed to look at the private data, and you don't know what columns to group by.
+You do know that there are three types of columns:
+* Columns that are too uniform: most rows have the same value.
+* Columns that are too diverse: most rows have unique values.
+* Columns that are just right
 
 If you group by too many columns,
 then the number of individuals contributing to each combination of attributes will be small,
