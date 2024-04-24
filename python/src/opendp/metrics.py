@@ -1,6 +1,14 @@
 # Auto-generated. Do not edit!
 '''
 The ``metrics`` module provides fuctions that measure the distance between two elements of a domain.
+For more context, see :ref:`metrics in the User Guide <metrics-user-guide>`.
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
 '''
 from opendp._convert import *
 from opendp._lib import *
@@ -20,6 +28,7 @@ __all__ = [
     "metric_debug",
     "metric_distance_type",
     "metric_type",
+    "partition_distance",
     "symmetric_distance",
     "user_distance"
 ]
@@ -340,6 +349,34 @@ def metric_type(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+
+    return output
+
+
+def partition_distance(
+    metric: Metric
+) -> Metric:
+    r"""Construct an instance of the `PartitionDistance` metric.
+
+    [partition_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.partition_distance.html)
+
+    :param metric: The metric used to compute distance between partitions.
+    :type metric: Metric
+    :rtype: Metric
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_metric = py_to_c(metric, c_type=Metric, type_name=None)
+
+    # Call library function.
+    lib_function = lib.opendp_metrics__partition_distance
+    lib_function.argtypes = [Metric]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_metric), Metric))
 
     return output
 

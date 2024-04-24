@@ -18,6 +18,7 @@
     "char *": "ctypes.c_char_p",
     "const char *": "ctypes.c_char_p",
     "uint8_t *": "ctypes.POINTER(ctypes.c_uint8)",
+    "uint32_t *": "ctypes.POINTER(ctypes.c_uint32)",
     "bool": "ctypes.c_bool",
     "FfiSlice *": "FfiSlicePtr",
     "const FfiSlice *": "FfiSlicePtr",

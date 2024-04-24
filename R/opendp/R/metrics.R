@@ -285,6 +285,32 @@ metric_type <- function(
 }
 
 
+#' Construct an instance of the `PartitionDistance` metric.
+#'
+#' [partition_distance in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn.partition_distance.html)
+#'
+#' @concept metrics
+#' @param metric The metric used to compute distance between partitions.
+#' @return Metric
+#' @export
+partition_distance <- function(
+  metric
+) {
+  # No type arguments to standardize.
+  log <- new_constructor_log("partition_distance", "metrics", new_hashtab(
+    list("metric"),
+    list(metric)
+  ))
+
+  # Call wrapper function.
+  output <- .Call(
+    "metrics__partition_distance",
+    metric,
+    log, PACKAGE = "opendp")
+  output
+}
+
+
 #' Construct an instance of the `SymmetricDistance` metric.
 #'
 #' @concept metrics

@@ -10,7 +10,6 @@ NULL
 #' @param this Function to invoke.
 #' @param arg Input data to supply to the measurement. A member of the measurement's input domain.
 #' @param TI Input Type.
-#' @return Any
 #' @export
 function_eval <- function(
   this,
@@ -197,7 +196,6 @@ measurement_input_metric <- function(
 #' @concept core
 #' @param this Measurement to invoke.
 #' @param arg Input data to supply to the measurement. A member of the measurement's input domain.
-#' @return Any
 #' @export
 measurement_invoke <- function(
   this,
@@ -228,7 +226,6 @@ measurement_invoke <- function(
 #' @concept core
 #' @param measurement Measurement to check the map distances with.
 #' @param distance_in Distance in terms of the input metric.
-#' @return Any
 #' @export
 measurement_map <- function(
   measurement,
@@ -307,7 +304,6 @@ measurement_output_measure <- function(
 #' @concept core
 #' @param queryable Queryable to eval.
 #' @param query Input data to supply to the measurement. A member of the measurement's input domain.
-#' @return Any
 #' @export
 queryable_eval <- function(
   queryable,
@@ -517,7 +513,6 @@ transformation_input_metric <- function(
 #' @concept core
 #' @param this Transformation to invoke.
 #' @param arg Input data to supply to the transformation. A member of the transformation's input domain.
-#' @return Any
 #' @export
 transformation_invoke <- function(
   this,
@@ -548,7 +543,6 @@ transformation_invoke <- function(
 #' @concept core
 #' @param transformation Transformation to check the map distances with.
 #' @param distance_in Distance in terms of the input metric.
-#' @return Any
 #' @export
 transformation_map <- function(
   transformation,

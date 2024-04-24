@@ -13,6 +13,8 @@ NULL
 #' @param nullable undocumented
 #' @param .T The type of the atom.
 #' @return Domain
+#' @examples
+#' atom_domain(.T = "i32")
 #' @export
 atom_domain <- function(
   bounds = NULL,

@@ -11,4 +11,4 @@ These hints will help you apply the Python examples to R.
 
 Next: [Reference](reference/index.html)
 
-<!-- The line above works in the rendered docs, but not in github. This file is skipped by link checker. >
+<!-- The line above works in the rendered docs, but not in github. This file is skipped by link checker. -->

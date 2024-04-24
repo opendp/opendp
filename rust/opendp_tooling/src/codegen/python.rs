@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs;
 use std::path::PathBuf;
 
 use crate::{Argument, Function, TypeRecipe, Value};
@@ -42,18 +43,20 @@ fn generate_module(
 ) -> String {
     let all = module
         .iter()
+        .filter(|func| func.has_ffi)
         .map(|func| format!("    \"{}\"", func.name))
         .chain(
             module
                 .iter()
-                .filter(|func| func.supports_partial)
+                .filter(|func| func.supports_partial && func.has_ffi)
                 .map(|func| format!("    \"{}\"", func.name.replacen("make_", "then_", 1))),
         )
         .collect::<Vec<_>>()
         .join(",\n");
     let functions = module
         .into_iter()
-        .map(|func| generate_function(module_name, &func, typemap, hierarchy))
+        .filter(|func| func.has_ffi)
+        .map(|func| generate_function(&module_name, &func, typemap, hierarchy))
         .collect::<Vec<String>>()
         .join("\n");
 
@@ -69,16 +72,66 @@ from opendp.measures import *"#
         ""
     };
 
+    fn boilerplate(name: String) -> String {
+        format!(
+            "
+For more context, see :ref:`{name} in the User Guide <{name}-user-guide>`.
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp"
+        )
+    }
+
+    fn special_boilerplate(name: String) -> String {
+        let initial = name.chars().nth(0);
+        format!(
+            "{}\n\nThe methods of this module will then be accessible at ``dp.{}``.",
+            boilerplate(name),
+            match initial {
+                Some(s) => s.to_string(),
+                None => "".to_string(),
+            }
+        )
+    }
+
     let module_docs = match module_name {
-        "accuracy" => "The ``accuracy`` module provides functions for converting between accuracy and scale parameters.",
-        "combinators" => "The ``combinators`` module provides functions for combining transformations and measurements.",
-        "core" => "The ``core`` module provides functions for accessing the fields of transformations and measurements.",
-        "domains" => "The ``domains`` modules provides functions for creating and using domains.",
-        "measurements" => "The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.",
-        "measures" => "The ``measures`` modules provides functions that measure the distance between probability distributions.",
-        "metrics" => "The ``metrics`` module provides fuctions that measure the distance between two elements of a domain.",
-        "transformations" => "The ``transformations`` module provides functions that deterministicly transform datasets.",
-        _ => "TODO!"
+        "accuracy" => format!(
+            "{}{}",
+            "The ``accuracy`` module provides functions for converting between accuracy and scale parameters.",
+            boilerplate("accuracy".to_string())),
+        "combinators" => format!(
+            "{}{}",
+            "The ``combinators`` module provides functions for combining transformations and measurements.",
+            special_boilerplate("combinators".to_string())),
+        "core" => format!(
+            "{}{}",
+            "The ``core`` module provides functions for accessing the fields of transformations and measurements.".to_string(),
+            boilerplate("core".to_string())),
+        "domains" => format!(
+            "{}{}",
+            "The ``domains`` module provides functions for creating and using domains.",
+            boilerplate("domains".to_string())),
+        "measurements" => format!(
+            "{}{}",
+            "The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.",
+            special_boilerplate("measurements".to_string())),
+        "measures" => format!(
+            "{}{}",
+            "The ``measures`` module provides functions that measure the distance between probability distributions.",
+            boilerplate("measures".to_string())),
+        "metrics" => format!(
+            "{}{}",
+            "The ``metrics`` module provides fuctions that measure the distance between two elements of a domain.",
+            boilerplate("metrics".to_string())),
+        "transformations" => format!(
+            "{}{}",
+            "The ``transformations`` module provides functions that deterministicly transform datasets.",
+            special_boilerplate("transformations".to_string())),
+        _ => "TODO!".to_string()
     };
 
     format!(
@@ -120,7 +173,7 @@ fn generate_function(
         .map(|v| format!(" -> {}", v))
         .unwrap_or_else(String::new);
 
-    let docstring = tab_py(generate_docstring(func, hierarchy));
+    let docstring = tab_py(generate_docstring(module_name, func, hierarchy));
     let body = tab_py(generate_body(module_name, func, typemap));
 
     let then_func = if func.supports_partial {
@@ -230,7 +283,11 @@ fn generate_input_argument(
 
 /// generate a docstring for the current function, with the function description, args, and return
 /// in Sphinx format: https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
-fn generate_docstring(func: &Function, hierarchy: &HashMap<String, Vec<String>>) -> String {
+fn generate_docstring(
+    module_name: &str,
+    func: &Function,
+    hierarchy: &HashMap<String, Vec<String>>,
+) -> String {
     let description = (func.description.as_ref())
         .map(|v| format!("{}\n", v))
         .unwrap_or_else(String::new);
@@ -252,10 +309,16 @@ fn generate_docstring(func: &Function, hierarchy: &HashMap<String, Vec<String>>)
         }
     );
 
+    let example_path = format!("src/{}/code/{}.rst", &module_name, &func.name);
+    let example = match fs::read_to_string(example_path) {
+        Ok(string) => format!("\n\n:example:\n\n{string}\n"),
+        Err(_) => "".to_string(),
+    };
+
     format!(
         r#"r"""{description}
 {doc_args}{ret_arg}
-{raises}
+{raises}{example}
 """"#,
         description = description,
         doc_args = doc_args,
