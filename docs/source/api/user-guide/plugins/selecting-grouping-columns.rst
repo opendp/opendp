@@ -27,7 +27,7 @@ We'll first write plugins for our transformation and measurement:
     .. tab-item:: Python
         :sync: python
 
-        .. literalinclude:: code/selecting-grouping-columns.rst
+        .. literalinclude:: code/selecting-grouping-columns.txt
             :language: python
             :start-after: plugins
             :end-before: /plugins
@@ -39,7 +39,7 @@ Next, use these functions to create a DP mechanism:
     .. tab-item:: Python
         :sync: python
 
-        .. literalinclude:: code/selecting-grouping-columns.rst
+        .. literalinclude:: code/selecting-grouping-columns.txt
             :language: python
             :start-after: dp-mechanism
             :end-before: /dp-mechanism
@@ -51,7 +51,7 @@ Finally, load your data and make a DP release:
     .. tab-item:: Python
         :sync: python
 
-        .. literalinclude:: code/selecting-grouping-columns.rst
+        .. literalinclude:: code/selecting-grouping-columns.txt
             :language: python
             :start-after: dp-release
             :end-before: /dp-release
