@@ -289,7 +289,7 @@ mod test_plotting {
 
         let title = format!("Laplace(shift={}, scale={}) distribution", shift, scale);
         let data = (0..10_000)
-            .map(|_| f64::sample_discrete_laplace_Z2k(shift, scale, -1074))
+            .map(|_| sample_discrete_laplace_Z2k(shift, scale, -1074))
             .collect::<Fallible<Vec<f64>>>()?;
 
         plot_continuous(title, data).unwrap_test();
@@ -303,7 +303,7 @@ mod test_plotting {
 
         let title = format!("Gaussian(shift={}, scale={}) distribution", shift, scale);
         let data = (0..10_000)
-            .map(|_| f64::sample_discrete_gaussian_Z2k(shift, scale, -1074))
+            .map(|_| sample_discrete_gaussian_Z2k(shift, scale, -1074))
             .collect::<Fallible<Vec<f64>>>()?;
 
         plot_continuous(title, data).unwrap_test();
