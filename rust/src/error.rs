@@ -194,6 +194,18 @@ impl<T, E: Debug> ExplainUnwrap for Result<T, E> {
         self.unwrap()
     }
 }
+pub trait WithVariant {
+    fn with_variant(self, variant: ErrorVariant) -> Self;
+}
+impl<T> WithVariant for Fallible<T> {
+    fn with_variant(self, v: ErrorVariant) -> Self {
+        self.map_err(|e| Error {
+            variant: v,
+            message: e.message,
+            backtrace: e.backtrace,
+        })
+    }
+}
 
 #[cfg(test)]
 mod tests {
