@@ -6,6 +6,7 @@ This longer example demonstrates how plugins could be used on a real-world probl
 Imagine you want to group the rows in a private dataset before releasing aggregate statistics,
 but you yourself are not allowed to look at the private data, and you don't know what columns to group by.
 You do know that there are three types of columns:
+
 * Columns that are too uniform: most rows have the same value.
 * Columns that are too diverse: most rows have unique values.
 * Columns that are just right
@@ -19,7 +20,7 @@ The example below demonstrates how to construct your own mechanism that chooses 
 It also makes use of library plugins (via a user-defined transformation and domain)
 and the Report Noisy Max Gumbel mechanism.
 
-We'll first write user-defined functions for our transformation and measurement:
+We'll first write plugins for our transformation and measurement:
 
 .. tab-set::
 
@@ -28,8 +29,8 @@ We'll first write user-defined functions for our transformation and measurement:
 
         .. literalinclude:: code/selecting-grouping-columns.rst
             :language: python
-            :start-after: user-defined-functions
-            :end-before: /user-defined-functions
+            :start-after: plugins
+            :end-before: /plugins
 
 Next, use these functions to create a DP mechanism:
 

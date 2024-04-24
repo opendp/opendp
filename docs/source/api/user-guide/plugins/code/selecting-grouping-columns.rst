@@ -1,9 +1,8 @@
 :orphan:
 
-# user-defined-functions
+# plugins
 >>> import opendp.prelude as dp
 >>> import pandas as pd
->>> import faker
 >>> import random
 
 >>> def make_grouping_cols_score(candidates, min_bin_contributions):
@@ -43,16 +42,23 @@
 ...         >> (lambda idx: candidates[idx])
 ...     )
 
-# /user-defined-functions
+# /plugins
 
 # dp-mechanism
->>> candidates = [
-...     ("date", "merch_category", "transaction_type"),
-...     ("date", "merchant_postal_code"),
-...     ("date", "merchant_postal_code", "merch_category"),
-...     ("date", "merchant_postal_code", "merch_category", "transaction_type"),
-... ]
+>>> row_count = 50
+>>> col_count = 4
+>>> private_data = pd.DataFrame({
+...     **{f'too_uniform_{n}': [random.randint(0,1)         for _ in range(row_count)] for n in range(col_count)},
+...     **{f'too_diverse_{n}': [random.randint(0,row_count) for _ in range(row_count)] for n in range(col_count)},
+...     **{f'just_right_{n}':  [random.randint(0,20)        for _ in range(row_count)] for n in range(col_count)},
+... })
 
+>>> from itertools import chain, combinations
+>>> def powerset(iterable): # https://docs.python.org/3/library/itertools.html#itertools-recipes 
+...     s = list(iterable)  # allows duplicate elements
+...     return chain.from_iterable(combinations(s, r) for r in range(1,len(s)+1))
+
+>>> candidates = list(powerset(private_data.columns))
 
 >>> dp.enable_features("honest-but-curious", "contrib")
 >>> m_select_gcols = make_select_grouping_cols(
@@ -67,18 +73,7 @@
 # /dp-mechanism
 
 # dp-release
->>> fake = faker.Faker()
->>> n_records = 10_000
->>> data = pd.DataFrame(
-...     {
-...         "date": [fake.date() for _ in range(n_records)],
-...         "merch_category": [random.choice([1, 2, 3]) for _ in range(n_records)],
-...         "transaction_type": [random.choice([1, 2, 3]) for _ in range(n_records)],
-...         "merchant_postal_code": [fake.zipcode() for _ in range(n_records)],
-...     }
-... )
-
->>> dp_selected_grouping_columns = m_select_gcols(data)
+>>> dp_selected_grouping_columns = m_select_gcols(private_data)
 >>> print(dp_selected_grouping_columns)
 (...)
 
