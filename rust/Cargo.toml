@@ -6,7 +6,7 @@ homepage = "https://opendp.org/"
 repository = "https://github.com/opendp/opendp"
 authors = ["The OpenDP Project <info@opendp.org>"]
 edition = "2021"
-rust-version = "1.64.0" # MSRV via `cargo install cargo-msrv && cargo msrv --min 1.49.0 -- cargo check --features=untrusted,bindings`
+rust-version = "1.64.0" # MSRV via `cargo install cargo-msrv && cargo msrv --min 1.49.0 -- cargo check --all-features`
 
 [workspace]
 members = [".", "opendp_derive", "opendp_tooling"]
