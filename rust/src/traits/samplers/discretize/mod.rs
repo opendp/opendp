@@ -283,6 +283,7 @@ mod test_plotting {
     }
 
     #[test]
+    #[ignore] // Don't want to produce graphics in CI
     fn plot_laplace() -> Fallible<()> {
         let shift = 0.;
         let scale = 5.;
@@ -297,6 +298,7 @@ mod test_plotting {
     }
 
     #[test]
+    #[ignore] // Don't want to produce graphics in CI
     fn plot_gaussian() -> Fallible<()> {
         let shift = 0.;
         let scale = 5.;
