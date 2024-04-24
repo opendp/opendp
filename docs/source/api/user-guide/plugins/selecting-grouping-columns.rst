@@ -1,6 +1,8 @@
 Privately Selecting Grouping Columns
 ====================================
 
+This longer example demonstrates how plugins could be used on a real-world problem.
+
 Imagine you have a tabular dataset with four columns:
 ``date``, ``merchant_postal_code``, ``merch_category`` and ``transaction_type``.
 The data is sparse – not all combinations of these categories are present in the data.
