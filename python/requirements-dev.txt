@@ -10,8 +10,6 @@ click==8.1.7
     # via pip-tools
 coverage==7.3.2
     # via -r requirements-dev.in
-faker==24.11.0
-    # via -r requirements-dev.in
 flake8==7.0.0
     # via -r requirements-dev.in
 iniconfig==2.0.0
@@ -43,9 +41,7 @@ pyproject-hooks==1.0.0
 pytest==7.4.3
     # via -r requirements-dev.in
 python-dateutil==2.9.0.post0
-    # via
-    #   faker
-    #   pandas
+    # via pandas
 pytz==2024.1
     # via pandas
 six==1.16.0

@@ -14,4 +14,3 @@ pip-tools==7.3.0
 
 # Just needed for examples in documentation:
 pandas
-faker
