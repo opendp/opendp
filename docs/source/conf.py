@@ -216,7 +216,8 @@ smv_released_pattern = r'^tags/v\d+\.\d+\.\d+$'
 # We use this to generate the templates for the Python API docs.
 # Because we need values to be calculated for each version, we can't use Python variables, so we have the shell expand them.
 version_cmd = 'VERSION=`cat ../VERSION`'
-sphinx_apidoc_cmd = 'sphinx-apidoc -f -F -e -H "OpenDP" -A "The OpenDP Project" -V $VERSION -o source/api/python ../python/src/opendp --templatedir source/_templates'
+# If sphinx-apidoc options change, also update Makefile!
+sphinx_apidoc_cmd = 'sphinx-apidoc -f -F -e -d 3 -H "OpenDP" -A "The OpenDP Project" -V $VERSION -o source/api/python ../python/src/opendp --templatedir source/_templates'
 smv_prebuild_command = '&&'.join([version_cmd, sphinx_apidoc_cmd])
 
 # This is the file name suffix for HTML files (e.g. ".xhtml").

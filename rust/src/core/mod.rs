@@ -298,6 +298,10 @@ where
             privacy_map,
         )
     }
+
+    pub fn input_space(&self) -> (DI, MI) {
+        (self.input_domain.clone(), self.input_metric.clone())
+    }
 }
 
 impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
@@ -385,6 +389,14 @@ where
             output_metric,
             privacy_map,
         )
+    }
+
+    pub fn input_space(&self) -> (DI, MI) {
+        (self.input_domain.clone(), self.input_metric.clone())
+    }
+
+    pub fn output_space(&self) -> (DO, MO) {
+        (self.output_domain.clone(), self.output_metric.clone())
     }
 }
 

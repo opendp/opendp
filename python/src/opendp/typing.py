@@ -18,6 +18,7 @@ import sys
 import typing
 from collections.abc import Hashable
 from typing import Dict, Optional, Union, Any, Type, List
+import re
 
 
 from opendp.mod import Function, UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
@@ -68,7 +69,7 @@ PRIMITIVE_TYPES = NUMERIC_TYPES | {"bool", "String"}
 RuntimeTypeDescriptor = Union[
     "RuntimeType",  # as the normalized type -- ChangeOneDistance; RuntimeType.parse("i32")
     str,  # plaintext string in terms of Rust types -- "Vec<i32>"
-    Type[Union[typing.List[Any], typing.Tuple[Any, Any], int, float, str, bool]],  # using the Python type class itself -- int, float
+    Type[Union[typing.List[Any], typing.Tuple[Any, Any], float, str, bool]],  # using the Python type class itself -- int, float
     typing.Tuple["RuntimeTypeDescriptor", ...],  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, List[int])
 ]
 
@@ -490,7 +491,19 @@ class DomainDescriptor(RuntimeType):
     def __getitem__(self, subdomain):
         if not isinstance(subdomain, tuple):
             subdomain = (subdomain,)
-        return DomainDescriptor(self.origin, [self.parse(type_name=sub_i) for sub_i in subdomain])    
+        return DomainDescriptor(self.origin, [self.parse(type_name=sub_i) for sub_i in subdomain])
+
+    def __call__(self, *args, **kwargs):
+        '''
+        >>> FakeDomain = DomainDescriptor('FakeDomain')
+        >>> FakeDomain(int)
+        Traceback (most recent call last):
+        ...
+        Exception: Use dp.fake_domain to construst a new FakeDomain
+        '''
+        # https://stackoverflow.com/a/12867228/10727889
+        lc_name = re.sub('(?!^)([A-Z])', r'_\1', self.origin).lower()
+        raise Exception(f'Use dp.{lc_name} to construst a new {self.origin}')
 
 
 AtomDomain: DomainDescriptor = DomainDescriptor('AtomDomain')

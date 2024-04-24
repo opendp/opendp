@@ -152,18 +152,16 @@ def _transformation_free(
 
 def function_eval(
     this: Function,
-    arg: Any,
+    arg,
     TI: Optional[str] = None
-) -> Any:
+):
     r"""Eval the `function` with `arg`.
 
     :param this: Function to invoke.
     :type this: Function
     :param arg: Input data to supply to the measurement. A member of the measurement's input domain.
-    :type arg: Any
     :param TI: Input Type.
     :type TI: str
-    :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -186,17 +184,15 @@ def function_eval(
 
 def measurement_check(
     measurement: Measurement,
-    distance_in: Any,
-    distance_out: Any
+    distance_in,
+    distance_out
 ):
     r"""Check the privacy relation of the `measurement` at the given `d_in`, `d_out`
 
     :param measurement: Measurement to check the privacy relation of.
     :type measurement: Measurement
     :param distance_in: 
-    :type distance_in: Any
     :param distance_out: 
-    :type distance_out: Any
     :return: True indicates that the relation passed at the given distance.
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -350,15 +346,13 @@ def measurement_input_metric(
 
 def measurement_invoke(
     this: Measurement,
-    arg: Any
-) -> Any:
+    arg
+):
     r"""Invoke the `measurement` with `arg`. Returns a differentially private release.
 
     :param this: Measurement to invoke.
     :type this: Measurement
     :param arg: Input data to supply to the measurement. A member of the measurement's input domain.
-    :type arg: Any
-    :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -380,15 +374,13 @@ def measurement_invoke(
 
 def measurement_map(
     measurement: Measurement,
-    distance_in: Any
-) -> Any:
+    distance_in
+):
     r"""Use the `measurement` to map a given `d_in` to `d_out`.
 
     :param measurement: Measurement to check the map distances with.
     :type measurement: Measurement
     :param distance_in: Distance in terms of the input metric.
-    :type distance_in: Any
-    :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -498,7 +490,7 @@ def new_queryable(
     transition,
     Q: RuntimeTypeDescriptor = "ExtrinsicObject",
     A: RuntimeTypeDescriptor = "ExtrinsicObject"
-) -> Any:
+):
     r"""Construct a queryable from a user-defined transition function.
 
     :param transition: A transition function taking a reference to self, a query, and an internal/external indicator
@@ -506,7 +498,6 @@ def new_queryable(
     :type Q: :py:ref:`RuntimeTypeDescriptor`
     :param A: Output Type
     :type A: :py:ref:`RuntimeTypeDescriptor`
-    :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -533,16 +524,13 @@ def new_queryable(
 
 
 def queryable_eval(
-    queryable: Any,
-    query: Any
-) -> Any:
+    queryable,
+    query
+):
     r"""Invoke the `queryable` with `query`. Returns a differentially private release.
 
     :param queryable: Queryable to eval.
-    :type queryable: Any
     :param query: Input data to supply to the measurement. A member of the measurement's input domain.
-    :type query: Any
-    :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -563,12 +551,11 @@ def queryable_eval(
 
 
 def queryable_query_type(
-    this: Any
+    this
 ) -> str:
     r"""Get the query type of `queryable`.
 
     :param this: The queryable to retrieve the query type from.
-    :type this: Any
     :rtype: str
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -590,17 +577,15 @@ def queryable_query_type(
 
 def transformation_check(
     transformation: Transformation,
-    distance_in: Any,
-    distance_out: Any
+    distance_in,
+    distance_out
 ):
     r"""Check the privacy relation of the `measurement` at the given `d_in`, `d_out`
 
     :param transformation: 
     :type transformation: Transformation
     :param distance_in: 
-    :type distance_in: Any
     :param distance_out: 
-    :type distance_out: Any
     :return: True indicates that the relation passed at the given distance.
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -754,15 +739,13 @@ def transformation_input_metric(
 
 def transformation_invoke(
     this: Transformation,
-    arg: Any
-) -> Any:
+    arg
+):
     r"""Invoke the `transformation` with `arg`. Returns a differentially private release.
 
     :param this: Transformation to invoke.
     :type this: Transformation
     :param arg: Input data to supply to the transformation. A member of the transformation's input domain.
-    :type arg: Any
-    :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -784,15 +767,13 @@ def transformation_invoke(
 
 def transformation_map(
     transformation: Transformation,
-    distance_in: Any
-) -> Any:
+    distance_in
+):
     r"""Use the `transformation` to map a given `d_in` to `d_out`.
 
     :param transformation: Transformation to check the map distances with.
     :type transformation: Transformation
     :param distance_in: Distance in terms of the input metric.
-    :type distance_in: Any
-    :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
