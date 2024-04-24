@@ -17,6 +17,16 @@ use super::{Frame, FrameDomain, LogicalPlanDomain, NumericDataType, SeriesDomain
 #[cfg(feature = "ffi")]
 mod ffi;
 
+/// The expression context describes how an expression will be applied to a data frame.
+///
+/// Expressions used in the Polars API fall into four categories:
+///
+/// 1. Not useful on their own for DP (shift)
+/// 2. Must be leaf nodes, like only col or lit (impute, group by or join keys, explode)
+/// 3. Must be row-by-row (sorting by, filter, with column, top/bottom k)
+/// 4. Aggregates (select, aggregate)
+///
+/// Specifying the expression context is not necessary for categories one or two, leaving only row-by-row and aggregates.
 #[derive(Clone, PartialEq, Debug)]
 pub enum ExprContext {
     /// Requires that the expression applied to the data frame is row-by-row, i.e. the expression is applied to each row independently.
@@ -24,6 +34,9 @@ pub enum ExprContext {
     /// Rows cannot be added or removed, and the order of rows cannot be changed.
     RowByRow,
     /// Allows for aggregation operations that break row alignment, such as `group_by/agg` and `select`.
+    ///
+    /// `.agg(exprs)` is the general case where there are grouping columns.
+    /// `.select(exprs)` is the special case where there are no grouping columns.
     Aggregate { grouping_columns: BTreeSet<String> },
 }
 
@@ -50,6 +63,7 @@ impl ExprContext {
 
     pub fn grouping_columns(&self) -> Fallible<BTreeSet<String>> {
         match self {
+            // ExprContext::Aggregate serves both `select` and `group_by/agg`
             ExprContext::Aggregate { grouping_columns } => Ok(grouping_columns.clone()),
             ExprContext::RowByRow => {
                 fallible!(FailedFunction, "RowByRow context has no grouping columns")
