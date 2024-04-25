@@ -118,13 +118,10 @@ impl Argument {
             if c_type.ends_with("AnyMeasure *") {
                 return Some("Measure".to_string());
             }
-            if c_type.ends_with("AnyObject *") {
-                // py_to_object converts Any to AnyObjectPtr
-                return Some("Any".to_string());
-            }
-            if c_type.ends_with("FfiSlice *") {
-                // py_to_c converts Any to FfiSlicePtr
-                return Some("Any".to_string());
+            if c_type.ends_with("AnyObject *") || c_type.ends_with("FfiSlice *") {
+                // Returning "Any" doesn't strengthen type checking,
+                // and sometimes seems odd in the docs.
+                return None;
             }
 
             hierarchy

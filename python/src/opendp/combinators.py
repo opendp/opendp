@@ -36,7 +36,7 @@ __all__ = [
 
 
 def make_basic_composition(
-    measurements: Any
+    measurements
 ) -> Measurement:
     r"""Construct the DP composition \[`measurement0`, `measurement1`, ...\].
     Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
@@ -53,7 +53,6 @@ def make_basic_composition(
     [make_basic_composition in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_basic_composition.html)
 
     :param measurements: A vector of Measurements to compose.
-    :type measurements: Any
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -183,7 +182,7 @@ def make_chain_tt(
 
 def make_fix_delta(
     measurement: Measurement,
-    delta: Any
+    delta
 ) -> Measurement:
     r"""Fix the delta parameter in the privacy map of a `measurement` with a SmoothedMaxDivergence output measure.
 
@@ -192,7 +191,6 @@ def make_fix_delta(
     :param measurement: a measurement with a privacy curve to be fixed
     :type measurement: Measurement
     :param delta: parameter to fix the privacy curve with
-    :type delta: Any
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -326,8 +324,8 @@ def make_sequential_composition(
     input_domain: Domain,
     input_metric: Metric,
     output_measure: Measure,
-    d_in: Any,
-    d_mids: Any
+    d_in,
+    d_mids
 ) -> Measurement:
     r"""Construct a Measurement that when invoked,
     returns a queryable that interactively composes measurements.
@@ -359,9 +357,7 @@ def make_sequential_composition(
     :param output_measure: how privacy is measured
     :type output_measure: Measure
     :param d_in: maximum distance between adjacent input datasets
-    :type d_in: Any
     :param d_mids: maximum privacy expenditure of each query
-    :type d_mids: Any
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -390,8 +386,8 @@ def make_sequential_composition(
 
 def then_sequential_composition(
     output_measure: Measure,
-    d_in: Any,
-    d_mids: Any
+    d_in,
+    d_mids
 ):  
     r"""partial constructor of make_sequential_composition
 
@@ -401,9 +397,7 @@ def then_sequential_composition(
     :param output_measure: how privacy is measured
     :type output_measure: Measure
     :param d_in: maximum distance between adjacent input datasets
-    :type d_in: Any
     :param d_mids: maximum privacy expenditure of each query
-    :type d_mids: Any
     """
     return PartialConstructor(lambda input_domain, input_metric: make_sequential_composition(
         input_domain=input_domain,

@@ -33,7 +33,7 @@ const BLACKLIST: &'static [&'static str] = &[
     "object_free",
     "extrinsic_object_free",
     "fill_bytes",
-    // udf
+    // plugins
     "make_user_transformation",
     "make_user_measurement",
     "new_function",

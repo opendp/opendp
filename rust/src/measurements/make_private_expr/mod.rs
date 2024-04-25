@@ -7,7 +7,7 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
     metrics::PartitionDistance,
-    transformations::{traits::UnboundedMetric, DatasetOuterMetric},
+    transformations::traits::UnboundedMetric,
 };
 
 #[cfg(feature = "ffi")]
@@ -55,10 +55,6 @@ pub trait PrivateExpr<MI: Metric, MO: Measure> {
 
 impl<M: UnboundedMetric + OuterMetric> PrivateExpr<PartitionDistance<M>, MaxDivergence<f64>>
     for Expr
-where
-    <PartitionDistance<M> as Metric>::Distance: Clone,
-    (ExprDomain, PartitionDistance<M>): MetricSpace,
-    PartitionDistance<M>: DatasetOuterMetric,
 {
     fn make_private(
         self,
