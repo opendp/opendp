@@ -4,7 +4,7 @@
 set -e -u
 
 function usage() {
-  echo "Usage: $(basename "$0") [-irtn] [-p <PLATFORM>] [-c <TOOLCHAIN>] [-g <TARGET>] [-f <FEATURES>]" >&2
+  echo "Usage: $(basename "$0") [-irtn] [-p <PLATFORM>] [-c <TOOLCHAIN>] [-g <TARGET>]" >&2
 }
 
 INIT=false
@@ -14,7 +14,6 @@ CHECK=false
 PLATFORM=UNSET
 TARGET=UNSET
 TOOLCHAIN=stable
-FEATURES=default
 while getopts ":irtnp:c:g:f:" OPT; do
   case "$OPT" in
   i) INIT=true ;;
@@ -24,7 +23,6 @@ while getopts ":irtnp:c:g:f:" OPT; do
   p) PLATFORM="$OPTARG" ;;
   c) TOOLCHAIN="$OPTARG" ;;
   g) TARGET="$OPTARG" ;;
-  f) FEATURES="$OPTARG" ;;
   *) usage && exit 1 ;;
   esac
 done
@@ -83,7 +81,7 @@ function run_cargo() {
   [[ $TOOLCHAIN != UNSET ]] && CMD+=(+"$TOOLCHAIN")
   CMD+=(--verbose --verbose --color=always $ACTION)
   [[ $TARGET != UNSET ]] && CMD+=(--target "$TARGET")
-  CMD+=(--manifest-path=rust/Cargo.toml --features="$FEATURES")
+  CMD+=(--manifest-path=rust/Cargo.toml --all-features)
   [[ $RELEASE_MODE == true ]] && CMD+=(--release)
   run "${CMD[@]}"
 }

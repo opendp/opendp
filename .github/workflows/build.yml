@@ -41,8 +41,6 @@ on:
         type: boolean
         required: false
         default: false
-env:
-  FEATURES: untrusted,ffi,polars
 
 jobs:
   credential-check:
@@ -85,7 +83,7 @@ jobs:
 
       - name: Create Rust build for windows
         if: ${{ !inputs.fake }}
-        run: bash tools/rust_build.sh -i -r -t -f "$FEATURES"
+        run: bash tools/rust_build.sh -i -r -t
 
       - name: Create Rust build for windows (FAKE)
         if: ${{ inputs.fake }}
@@ -136,7 +134,7 @@ jobs:
         env:
           # Only run tests for native compile
           FLAGS: ${{ matrix.architecture == 'x86_64' && '-i -r -t' || '-i -r' }}
-        run: bash tools/rust_build.sh $FLAGS -g $TARGET -f "$FEATURES"
+        run: bash tools/rust_build.sh $FLAGS -g $TARGET
 
       - name: Create Rust build for macos (FAKE)
         if: ${{ inputs.fake }}
@@ -187,7 +185,7 @@ jobs:
         env:
           # Only run tests for native compile
           FLAGS: ${{ matrix.architecture == 'x86_64' && '-i -r -t' || '-i -r' }}
-        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh $FLAGS -g $TARGET -f \"$FEATURES\""
+        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh $FLAGS -g $TARGET
 
       - name: Create Rust build for linux (FAKE)
         if: ${{ inputs.fake }}
@@ -231,7 +229,7 @@ jobs:
 
       - name: Create bindings
         if: ${{ !inputs.fake }}
-        run: bash tools/rust_build.sh -r -n -f "$FEATURES,bindings"
+        run: bash tools/rust_build.sh -r -n
 
       - name: Upload Python bindings
         uses: actions/upload-artifact@v4
