@@ -258,7 +258,7 @@ impl<F: Frame> Domain for FrameDomain<F> {
 
 /// A restriction on the unique values in the margin, as well as possibly their counts,
 /// over a set of columns in a LazyFrame.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct Margin {
     /// The greatest number of records that can be present in any one partition.
     pub max_partition_length: Option<u32>,
@@ -280,7 +280,7 @@ pub struct Margin {
     pub public_info: Option<MarginPub>,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 /// Denote how margins interact with the metric.
 pub enum MarginPub {
     /// The distance between data sets with different margin keys are is infinite.
