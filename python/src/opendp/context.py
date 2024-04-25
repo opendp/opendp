@@ -226,7 +226,7 @@ def metric_of(M) -> Metric:
     raise TypeError(f"unrecognized metric: {M}")
 
 
-def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]:
+def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, Union[float, Tuple[float, float]]]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
     >>> import opendp.prelude as dp
@@ -269,7 +269,7 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]
 
     range_warning('delta', delta, 1e-6, 1e-6)
     U = RuntimeType.parse_or_infer(U, epsilon)
-    return fixed_smoothed_max_divergence(T=U), (epsilon, delta) # type: ignore[return-value]
+    return fixed_smoothed_max_divergence(T=U), (epsilon, delta)
 
 
 def unit_of(
