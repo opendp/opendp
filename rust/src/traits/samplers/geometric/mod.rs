@@ -237,6 +237,7 @@ mod test_plotting {
     use crate::error::ExplainUnwrap;
     use crate::traits::samplers::Fallible;
     #[test]
+    #[ignore] // Don't want to produce graphics in CI
     fn plot_geometric() -> Fallible<()> {
         let shift = 0;
         let scale = 5.;

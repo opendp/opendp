@@ -49,13 +49,13 @@ jobs:
         run: cargo fmt --manifest-path=Cargo.toml --all --check
 
       - name: Build
-        run: cargo build --verbose --features untrusted,bindings,polars
+        run: cargo build --verbose --all-features
       
       - name: Check --no-default-features
-        run: cargo check --verbose --no-default-features --features untrusted,ffi,polars
+        run: cargo check --verbose --all-features
 
       - name: Test
-        run: cargo test --verbose --features untrusted,ffi,polars
+        run: cargo test --verbose --all-features
 
       - name: Check that generated python is up to date
         run: git diff --exit-code

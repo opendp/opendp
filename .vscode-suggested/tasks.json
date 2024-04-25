@@ -15,11 +15,10 @@
                 "cwd": "./rust"
             },
             "args": [
-                "--features",
-                "untrusted"
+                "--all-features"
             ],
             "group": "build",
-            "label": "cargo check --features untrusted",
+            "label": "cargo check --all-features",
             "detail": "    gives more detailed compiler errors than problems tab",
             "presentation": {
                 "clear": true
@@ -39,11 +38,10 @@
                 "cwd": "./rust"
             },
             "args": [
-                "--features",
-                "untrusted bindings"
+                "--all-features"
             ],
             "group": "build",
-            "label": "cargo build --features untrusted,bindings",
+            "label": "cargo build --all-features",
             "detail": "    run before testing in Python",
             "presentation": {
                 "clear": true
@@ -63,12 +61,11 @@
                 "cwd": "./rust"
             },
             "args": [
-                "--features",
-                "untrusted bindings"
+                "----all-features"
             ],
             "group": "build",
-            "label": "cargo test --features untrusted,ffi",
-            "detail": "    run all Rust tests, including ffi",
+            "label": "cargo test --all-features",
+            "detail": "    run all Rust tests",
             "presentation": {
                 "clear": true
             }
@@ -88,11 +85,10 @@
                 "cwd": "./rust"
             },
             "args": [
-                "--features",
-                "untrusted bindings"
+                "--all-features"
             ],
             "group": "build",
-            "label": "cargo clippy --features ffi",
+            "label": "cargo clippy --all-features",
             "detail": "    more detailed linting and style suggestions",
             "presentation": {
                 "clear": true
@@ -113,7 +109,7 @@
             },
             "args": [
                 "--open",
-                "--features", "derive untrusted",
+                "--all-features",
                 "--", "--html-in-header", "katex.html", "--document-private-items"
             ],
             "group": "build",
@@ -134,7 +130,7 @@
                 "cwd": "./rust"
             },
             "args": [
-                "--features", "derive untrusted",
+                "--all-features",
                 "--", "--html-in-header", "katex.html", "--document-private-items"
             ],
             "group": "build",
