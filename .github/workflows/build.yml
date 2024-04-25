@@ -4,7 +4,7 @@
 # * For Python:
 #   * Downloads the lib-* and python_bindings artifacts,
 #   * creates a Python wheel,
-#   * and uploads to the python_wheel artifact
+#   * and uploads to the python_wheel_[platform] artifacts
 # * For R:
 #   * Downloads ONLY the r_bindings artifact,
 #   * creates an R package
@@ -92,16 +92,16 @@ jobs:
         run: |
           mkdir -p rust/target/release/
           echo windows > rust/target/release/opendp.dll
-          echo windows > rust/target/release/libopendp.a
+        # echo windows > rust/target/release/libopendp.a
 
       - name: Upload .dll and .a
         uses: actions/upload-artifact@v4
         with:
-          name: libs-windows
+          name: lib_win_amd64
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: |
             rust/target*/release/opendp.dll
-            rust/target*/release/libopendp.a
+          # rust/target*/release/libopendp.a
 
   libs-macos:
     needs: credential-check
@@ -147,11 +147,11 @@ jobs:
       - name: Upload .dylib and .a
         uses: actions/upload-artifact@v4
         with:
-          name: libs-macos-${{ matrix.architecture }}
+          name: lib_macosx_12_7_${{ matrix.architecture }}
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: |
             rust/target*/${{ env.TARGET }}/release/libopendp.dylib
-            rust/target*/${{ env.TARGET }}/release/libopendp.a
+          # rust/target*/${{ env.TARGET }}/release/libopendp.a
 
   libs-linux:
     needs: credential-check
@@ -194,17 +194,16 @@ jobs:
         run: |
           mkdir -p rust/target/${{ env.TARGET }}/release/
           echo linux > rust/target/${{ env.TARGET }}/release/libopendp.so
-          echo linux > rust/target/${{ env.TARGET }}/release/libopendp.a
-          echo fake > R/opendp/src/vendor.tar.xz
+        # echo linux > rust/target/${{ env.TARGET }}/release/libopendp.a
 
       - name: Upload .so and .a
         uses: actions/upload-artifact@v4
         with:
-          name: libs-linux-${{ matrix.architecture }}
+          name: lib_manylinux_2_24_${{ matrix.architecture }}
           # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
           path: |
             rust/target*/${{ env.TARGET }}/release/libopendp.so
-            rust/target*/${{ env.TARGET }}/release/libopendp.a
+          # rust/target*/${{ env.TARGET }}/release/libopendp.a
 
 
   bindings:
@@ -242,6 +241,12 @@ jobs:
       - name: Prepare vendored sources
         if: ${{ !inputs.fake }}
         run: bash tools/r_stage.sh -v
+
+      - name: Prepare vendored sources (fake)
+        if: ${{ inputs.fake }}
+        run: |
+          mkdir -p R/opendp/src/
+          echo fake > R/opendp/src/vendor.tar.xz
   
       - name: Upload R bindings
         uses: actions/upload-artifact@v4
@@ -253,6 +258,10 @@ jobs:
   python:
     needs: [ libs-windows, libs-macos, libs-linux, bindings ]
     runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        # https://docs.python.org/3/library/sysconfig.html#sysconfig.get_platform
+        platform-tag: [ win_amd64, macosx_12_7_aarch64, macosx_12_7_x86_64, manylinux_2_24_aarch64, manylinux_2_24_x86_64 ] 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -265,11 +274,10 @@ jobs:
           python-version: 3.12
           cache: pip
 
-      - name: Download libs
+      - name: Download lib
         uses: actions/download-artifact@v4
         with:
-          pattern: libs-*
-          merge-multiple: true
+          name: lib_${{ matrix.platform-tag }}
           path: rust/
 
       - name: Download Python bindings
@@ -279,15 +287,23 @@ jobs:
           path: python/src/opendp/
 
       - name: Create Python package
+        # https://packaging.python.org/en/latest/specifications/platform-compatibility-tags/
         run: |
           pip install -r tools/requirements-tools.txt
-          bash tools/python_build.sh
+
+          # Convert macosx_12_7_aarch64 to macosx_12_7_arm64
+          PYTHON_PLATFORM_TAG=${{ matrix.platform-tag }}
+          if [[ $PYTHON_PLATFORM_TAG == "macosx_12_7_aarch64" ]]; then
+            PYTHON_PLATFORM_TAG="macosx_12_7_arm64"
+          fi
+          
+          bash tools/python_build.sh -p $PYTHON_PLATFORM_TAG
 
       - name: Upload Python wheel
         uses: actions/upload-artifact@v4
         with:
-          name: python_wheel
-          path: python/wheelhouse/opendp-*-py3-none-any.whl
+          name: python_wheel_${{ matrix.platform-tag }}
+          path: python/wheelhouse/opendp-*-py3-none-*.whl
 
   r:
     needs: bindings
