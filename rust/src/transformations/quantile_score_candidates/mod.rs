@@ -264,7 +264,7 @@ fn count_lt_eq<TI: PartialOrd>(x: &[TI], target: &TI) -> (usize, usize) {
 }
 
 #[cfg(test)]
-mod test_scorer {
+mod test {
     use super::*;
 
     #[test]

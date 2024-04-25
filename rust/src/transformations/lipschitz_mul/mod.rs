@@ -131,7 +131,7 @@ impl<const P: usize, Q> LipschitzMulFloatMetric for LpDistance<P, Q> {}
 impl<Q> LipschitzMulFloatMetric for AbsoluteDistance<Q> {}
 
 #[cfg(test)]
-pub mod test {
+mod test {
     use super::*;
 
     #[test]

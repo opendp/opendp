@@ -79,7 +79,7 @@ where
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use crate::transformations::Pairwise;
 
     use super::*;

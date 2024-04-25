@@ -233,7 +233,7 @@ fn count_lt<TI: PartialOrd>(x: &[TI], target: &TI) -> usize {
 }
 
 #[cfg(test)]
-mod test_cdf {
+mod test {
     use super::*;
     #[test]
     fn test_cdf() -> Fallible<()> {

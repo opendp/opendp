@@ -56,7 +56,7 @@ where
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use crate::metrics::SymmetricDistance;
 
     use super::*;

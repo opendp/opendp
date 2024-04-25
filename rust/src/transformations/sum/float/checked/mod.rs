@@ -329,11 +329,6 @@ mod test {
 
         Ok(())
     }
-}
-
-#[cfg(test)]
-mod test_checks {
-    use super::*;
 
     #[test]
     fn test_round_up_to_nearest_power_of_two() -> Fallible<()> {

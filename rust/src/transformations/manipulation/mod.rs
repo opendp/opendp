@@ -222,7 +222,7 @@ where
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
 
     use super::*;
     use crate::domains::{AtomDomain, OptionDomain};
