@@ -18,6 +18,9 @@ mod ffi;
 #[cfg(feature = "contrib")]
 mod aggregate;
 
+#[cfg(feature = "contrib")]
+mod select;
+
 #[bootstrap(
     features("contrib"),
     arguments(
@@ -99,6 +102,17 @@ where
             #[cfg(feature = "contrib")]
             plan if matches!(plan, LogicalPlan::Aggregate { .. }) => {
                 aggregate::make_private_aggregate(
+                    input_domain,
+                    input_metric,
+                    output_measure,
+                    self,
+                    global_scale,
+                )
+            }
+
+            #[cfg(feature = "contrib")]
+            plan if matches!(plan, LogicalPlan::Projection { .. }) => {
+                select::make_private_select(
                     input_domain,
                     input_metric,
                     output_measure,
