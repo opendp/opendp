@@ -196,7 +196,7 @@ where
 
 // UNIT TESTS
 #[cfg(test)]
-mod tests {
+mod test;
     use crate::core::*;
     use crate::domains::AtomDomain;
     use crate::error::ExplainUnwrap;
