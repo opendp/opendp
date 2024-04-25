@@ -139,7 +139,7 @@ pub fn sample_bernoulli_rational(prob: RBig, trials: Option<usize>) -> Fallible<
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::traits::samplers::test_utils::*;
+    use crate::traits::samplers::test::*;
 
     #[test]
     fn test_bernoulli() {
