@@ -74,7 +74,7 @@ def test_sequential_composition_approxdp():
     sc_qbl(sum_meas)
 
 
-def test_udf_queryable_int():
+def test_plugin_queryable_int():
     def transition(query):
         assert query == 2
         return query + 1
@@ -82,7 +82,7 @@ def test_udf_queryable_int():
     assert qbl(2) == 3
 
 
-def test_udf_queryable_list():
+def test_plugin_queryable_list():
     def transition(query, _is_internal):
         assert query == [2, 3]
         return query[-1]
@@ -90,7 +90,7 @@ def test_udf_queryable_list():
     assert qbl([2, 3]) == 3
 
 
-def test_udf_queryable_error():
+def test_plugin_queryable_error():
     def transition(_query, _is_internal):
         raise ValueError("test clean stack trace")
     qbl = dp.new_queryable(transition, "Vec<i32>", int)
