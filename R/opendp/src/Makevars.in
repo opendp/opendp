@@ -27,7 +27,7 @@ rust_build:
 		mkdir -p .cargo; \
 		cp cargo_vendor_config.toml .cargo/config.toml; \
 		echo "* build OpenDP Library (libopendp.a)"; \
-		@BEFORE_CARGO_BUILD@ cargo build --manifest-path rust/Cargo.toml --color always --release --jobs 2 --offline --features @RUST_FEATURES@; \
+		@BEFORE_CARGO_BUILD@ cargo build --manifest-path rust/Cargo.toml --color always --release --jobs 2 --offline --all-features; \
 		@AFTER_CARGO_BUILD@ \
 		cp rust/target/release/libopendp.a .; \
 	elif [ ! -z "@OPENDP_LIB_DIR@" ]; then \

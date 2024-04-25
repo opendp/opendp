@@ -4,8 +4,6 @@ echo "***** CONFIGURE *****"
 BEFORE_CARGO_BUILD=''
 AFTER_CARGO_BUILD=''
 
-RUST_FEATURES=untrusted,ffi
-
 # Even when `cargo` is on `PATH`, `rustc` might not. We need to source
 # ~/.cargo/env to ensure PATH is configured correctly in some cases
 # (c.f. https://github.com/yutannihilation/string2path/issues/4). However, this file is not always
@@ -30,7 +28,6 @@ if [ "${NOT_CRAN}" != "true" ]; then
 fi
 
 sed \
-    -e "s|@RUST_FEATURES@|${RUST_FEATURES}|" \
     -e "s|@BEFORE_CARGO_BUILD@|${BEFORE_CARGO_BUILD}|" \
     -e "s|@AFTER_CARGO_BUILD@|${AFTER_CARGO_BUILD}|" \
     -e "s|@OPENDP_LIB_DIR@|${OPENDP_LIB_DIR}|" \
