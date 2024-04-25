@@ -112,6 +112,25 @@ impl ExprDomain {
     }
 }
 
+#[cfg(test)]
+impl<F: Frame> FrameDomain<F> {
+    pub fn row_by_row(&self) -> ExprDomain {
+        ExprDomain::new(self.clone(), ExprContext::RowByRow)
+    }
+    pub fn aggregate<E: AsRef<[IE]>, IE: AsRef<str>>(&self, by: E) -> ExprDomain {
+        let by = BTreeSet::from_iter(by.as_ref().iter().map(|s| s.as_ref().to_string()));
+        ExprDomain::new(
+            self.clone(),
+            ExprContext::Aggregate {
+                grouping_columns: by,
+            },
+        )
+    }
+    pub fn select(&self) -> ExprDomain {
+        self.aggregate::<_, &str>([])
+    }
+}
+
 impl Domain for ExprDomain {
     type Carrier = (LogicalPlan, Expr);
 
