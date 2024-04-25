@@ -6,7 +6,6 @@ set -e -u
 function usage() {
   echo "Usage: $(basename "$0") [-p <PY_PLATFORM>]" >&2
   echo "Note that <PY_PLATFORM> is the whole platform tag (e.g., cp310-cp310-macosx_10_9_x86_64, not just macos)." >&2
-  echo "(This is just a hook for future expansion, in case we want to do platform-specific builds.)" >&2
 }
 
 PY_PLATFORM=ALL
@@ -37,6 +36,7 @@ function run() {
 function build() {
   log "Copy shared libraries"
   run mkdir -p python/src/opendp/lib
+  run ls rust/target/
   for LIB in release/opendp.dll release/libopendp.dylib release/libopendp.so; do
     [[ -f rust/target/$LIB ]] && run cp rust/target/$LIB python/src/opendp/lib
   done
@@ -51,9 +51,9 @@ function build() {
 
   log "Build bdist"
   if [[ $PY_PLATFORM != ALL ]]; then
-    run \(cd python '&&' python setup.py bdist_wheel -d wheelhouse --plat-name="$PY_PLATFORM"\)
+    run \(cd python '&&' python setup.py bdist_wheel -d wheelhouse --plat-name="$PY_PLATFORM" --py-limited-api=cp38\)
   else
-    run \(cd python '&&' python setup.py bdist_wheel -d wheelhouse\)
+    run \(cd python '&&' python setup.py bdist_wheel -d wheelhouse --py-limited-api=cp38\)
   fi
 
   log "Restore README.md"

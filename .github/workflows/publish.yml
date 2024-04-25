@@ -57,6 +57,10 @@ jobs:
   publish-python:
     needs: credential-check
     runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        # https://docs.python.org/3/library/sysconfig.html#sysconfig.get_platform
+        platform-tag: [ win_amd64, macosx_12_7_aarch64, macosx_12_7_x86_64, manylinux_2_24_aarch64, manylinux_2_24_x86_64 ] 
     env:
       # twine doesn't support dry-runs, so if that's what we're doing, simulate it by using TestPyPI instead of PyPI
       PYPI_API_TOKEN: ${{ inputs.dry_run && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_API_TOKEN }}
@@ -75,7 +79,7 @@ jobs:
       - name: Download Python wheel
         uses: actions/download-artifact@v4
         with:
-          name: python_wheel
+          name: python_wheel_${{ matrix.platform-tag }}
           path: python/wheelhouse
 
       - name: Publish Python package
@@ -84,7 +88,14 @@ jobs:
           REPOSITORY: ${{ inputs.dry_run && 'testpypi' || 'pypi' }}
         run: |
           pip install -r tools/requirements-tools.txt
-          python tools/publish_tool.py python -r $REPOSITORY
+
+          # Convert macosx_12_7_aarch64 to macosx_12_7_arm64
+          PYTHON_PLATFORM_TAG=${{ matrix.platform-tag }}
+          if [[ $PYTHON_PLATFORM_TAG == "macosx_12_7_aarch64" ]]; then
+            PYTHON_PLATFORM_TAG="macosx_12_7_arm64"
+          fi
+          
+          python tools/publish_tool.py python -r $REPOSITORY -p $PYTHON_PLATFORM_TAG
 
   publish-r:
     if: 

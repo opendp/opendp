@@ -31,7 +31,7 @@ def python(args):
 
     # Note, version naming will comply with:
     # https://packaging.python.org/en/latest/specifications/version-specifiers/
-    wheel = f"opendp-{version}-py3-none-any.whl"
+    wheel = f"opendp-{version}-py3-none-{args.platform}.whl"
     run_command("Publishing opendp package", f"python -m twine upload -r {args.repository} --verbose python/wheelhouse/{wheel}")
     # Unfortunately, twine doesn't have an option to block until the index is propagated. Polling the index is unreliable,
     # because often the new item will appear, but installs will still fail (probably because of stale caches).
@@ -46,7 +46,7 @@ def sanity(args):
     version = get_python_version(version)
     run_command("Creating venv", f"rm -rf {args.venv} && python -m venv {args.venv}")
     if args.python_repository == "local":
-        package = f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
+        package = f"python/wheelhouse/opendp-{version}-py3-none-{args.platform}.whl"
         run_command(f"Installing opendp {version}", f". {args.venv}/bin/activate && pip install {package}")
     else:
         index_url = "https://test.pypi.org/simple" if args.python_repository == "testpypi" else "https://pypi.org/simple"
@@ -98,6 +98,7 @@ def _main(argv):
     subparser = subparsers.add_parser("python", help="Publish Python package")
     subparser.set_defaults(func=python)
     subparser.add_argument("-r", "--repository", choices=["pypi", "testpypi"], default="pypi", help="Package repository")
+    subparser.add_argument("-p", "--platform", default="any", help="Platform tag")
     subparser.add_argument("-t", "--index-check-timeout", type=int, default=300, help="How long to keep checking for index update (0 = don't check)")
     subparser.add_argument("-b", "--index-check-backoff", type=float, default=2.0, help="How much to back off between checks for index update")
 
@@ -105,6 +106,7 @@ def _main(argv):
     subparser.set_defaults(func=sanity)
     subparser.add_argument("-e", "--venv", default="/tmp/sanity-venv", help="Virtual environment directory")
     subparser.add_argument("-r", "--python-repository", choices=["pypi", "testpypi", "local"], default="pypi", help="Python package repository")
+    subparser.add_argument("-p", "--platform", default="any", help="Platform tag")
     subparser.add_argument("-t", "--package-timeout", type=int, default=0, help="How long to retry package installation attempts (0 = no retries)")
     subparser.add_argument("-b", "--package-backoff", type=float, default=2.0, help="How much to back off between package installation attempts")
     subparser.add_argument("--fake", action="store_true")
