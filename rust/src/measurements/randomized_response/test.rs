@@ -42,11 +42,9 @@ fn test_cat_extremes() -> Fallible<()> {
         false,
     )?;
     assert!(ran_res.check(&1, &1e-10)?);
-    assert!(make_randomized_response(
-        HashSet::from_iter(vec![2, 3, 5, 7].into_iter()),
-        1.,
-        false
-    )
-    .is_err());
+    assert!(
+        make_randomized_response(HashSet::from_iter(vec![2, 3, 5, 7].into_iter()), 1., false)
+            .is_err()
+    );
     Ok(())
 }

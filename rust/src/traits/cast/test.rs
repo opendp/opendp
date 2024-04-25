@@ -18,9 +18,7 @@ fn check_rounded_cast(input: f64, diff: Diff) {
 
     let error = match diff {
         Diff::Equal => (casted != input).then(|| "casted value must be equal to input"),
-        Diff::Greater => {
-            (casted <= input).then(|| "casted value must be greater than input value")
-        }
+        Diff::Greater => (casted <= input).then(|| "casted value must be greater than input value"),
         Diff::Less => (casted >= input).then(|| "casted value must be less than input value"),
         Diff::Next => (f64::from_bits(input.to_bits() + 1) != casted)
             .then(|| "casted must be one step greater than input"),

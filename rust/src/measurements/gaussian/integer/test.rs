@@ -1,4 +1,3 @@
-
 use super::*;
 use crate::{domains::AtomDomain, measures::ZeroConcentratedDivergence};
 

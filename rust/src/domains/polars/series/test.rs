@@ -28,8 +28,7 @@ fn test_series_bounded() -> Fallible<()> {
 #[test]
 fn test_series_non_nullable() -> Fallible<()> {
     // option domain with non-nullable type
-    let series_domain =
-        SeriesDomain::new("A", OptionDomain::new(AtomDomain::<bool>::default()));
+    let series_domain = SeriesDomain::new("A", OptionDomain::new(AtomDomain::<bool>::default()));
 
     let series = Series::new("A", vec![Some(true), Some(false), None]);
     assert!(series_domain.member(&series)?);

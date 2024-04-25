@@ -1,4 +1,3 @@
-
 use crate::metrics::{AbsoluteDistance, L2Distance};
 
 use super::*;

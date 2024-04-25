@@ -58,8 +58,7 @@ fn test_make_create_dataframe() {
 #[test]
 fn test_make_split_dataframe() {
     let transformation =
-        make_split_dataframe::<String>(None, vec!["0".to_string(), "1".to_string()])
-            .unwrap_test();
+        make_split_dataframe::<String>(None, vec!["0".to_string(), "1".to_string()]).unwrap_test();
     let arg = "ant, foo\nbat, bar\ncat, baz".to_owned();
     let ret = transformation.invoke(&arg).unwrap_test();
     let expected: DataFrame<String> = vec![

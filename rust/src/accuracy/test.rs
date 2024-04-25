@@ -225,8 +225,7 @@ pub fn test_empirical_laplace_accuracy() -> Fallible<()> {
     let scale = accuracy_to_laplacian_scale(accuracy, theoretical_alpha)?;
     let input_domain = AtomDomain::default();
     let input_metric = AbsoluteDistance::default();
-    let base_laplace =
-        make_scalar_float_laplace(input_domain, input_metric, scale, Some(-100))?;
+    let base_laplace = make_scalar_float_laplace(input_domain, input_metric, scale, Some(-100))?;
     let n = 50_000;
     let empirical_alpha = (0..n)
         .filter(|_| base_laplace.invoke(&0.0).unwrap().abs() > accuracy)

@@ -7,12 +7,8 @@ fn test() -> Fallible<()> {
         VectorDomain::new(AtomDomain::default()),
         SymmetricDistance::default(),
     );
-    let trans = make_resize::<_, SymmetricDistance, SymmetricDistance>(
-        input_domain,
-        input_metric,
-        3,
-        "x",
-    )?;
+    let trans =
+        make_resize::<_, SymmetricDistance, SymmetricDistance>(input_domain, input_metric, 3, "x")?;
     assert_eq!(trans.invoke(&vec!["A"; 2])?, vec!["A", "A", "x"]);
     assert_eq!(trans.invoke(&vec!["A"; 3])?, vec!["A"; 3]);
     assert_eq!(trans.invoke(&vec!["A"; 4])?, vec!["A", "A", "A"]);

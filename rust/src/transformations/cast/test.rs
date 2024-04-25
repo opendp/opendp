@@ -66,8 +66,7 @@ fn test_cast_combinations() -> Fallible<()> {
 
 #[test]
 fn test_cast_default_unsigned() -> Fallible<()> {
-    let caster =
-        make_cast_default::<_, f64, u8>(Default::default(), SymmetricDistance::default())?;
+    let caster = make_cast_default::<_, f64, u8>(Default::default(), SymmetricDistance::default())?;
     assert_eq!(caster.invoke(&vec![-1.])?, vec![u8::default()]);
     Ok(())
 }
@@ -107,8 +106,7 @@ fn test_cast_default_floats() -> Fallible<()> {
         vec!["NaN".to_string(), "-inf".to_string(), "inf".to_string()]
     );
 
-    let caster =
-        make_cast_default::<_, f64, u8>(Default::default(), SymmetricDistance::default())?;
+    let caster = make_cast_default::<_, f64, u8>(Default::default(), SymmetricDistance::default())?;
     assert_eq!(
         caster.invoke(&vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY])?,
         vec![u8::default(), u8::default(), u8::default()]

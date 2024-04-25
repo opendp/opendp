@@ -1,7 +1,5 @@
 use super::*;
-use crate::{
-    domains::VectorDomain, metrics::SymmetricDistance, transformations::make_count_by,
-};
+use crate::{domains::VectorDomain, metrics::SymmetricDistance, transformations::make_count_by};
 
 #[test]
 #[cfg(feature = "partials")]
@@ -18,8 +16,7 @@ fn test_count_by_ptr() -> Fallible<()> {
         VectorDomain::new(AtomDomain::default()),
         SymmetricDistance::default(),
     )? >> then_base_laplace_threshold(scale, threshold, None))?;
-    let ret =
-        measurement.invoke(&vec!['a', 'b', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'])?;
+    let ret = measurement.invoke(&vec!['a', 'b', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'])?;
     println!("stability eval: {:?}", ret);
 
     let epsilon_p = measurement.map(&max_influence)?.0;

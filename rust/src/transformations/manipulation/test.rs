@@ -4,8 +4,8 @@ use crate::domains::{AtomDomain, OptionDomain};
 #[cfg(feature = "honest-but-curious")]
 #[test]
 fn test_identity() {
-    let identity = make_identity(VectorDomain::new(AtomDomain::default()), SymmetricDistance)
-        .unwrap_test();
+    let identity =
+        make_identity(VectorDomain::new(AtomDomain::default()), SymmetricDistance).unwrap_test();
     let arg = vec![99];
     let ret = identity.invoke(&arg).unwrap_test();
     assert_eq!(ret, arg);

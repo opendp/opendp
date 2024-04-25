@@ -6,9 +6,7 @@ use super::*;
 #[test]
 #[cfg(feature = "ffi")]
 fn test_threading() -> Fallible<()> {
-    use crate::{
-        measurements::make_randomized_response_bool, transformations::make_split_lines,
-    };
+    use crate::{measurements::make_randomized_response_bool, transformations::make_split_lines};
 
     fn is_send_sync<T: Send + Sync>(_arg: &T) {}
 

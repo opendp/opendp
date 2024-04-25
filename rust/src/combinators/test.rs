@@ -7,8 +7,7 @@ use crate::domains::{AtomDomain, VectorDomain};
 use crate::traits::CheckAtom;
 
 pub fn make_test_measurement<T: 'static + Clone + CheckAtom>(
-) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, T, SymmetricDistance, MaxDivergence<f64>>>
-{
+) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, T, SymmetricDistance, MaxDivergence<f64>>> {
     Measurement::new(
         VectorDomain::new(AtomDomain::default()),
         Function::new(|arg: &Vec<T>| arg[0].clone()),

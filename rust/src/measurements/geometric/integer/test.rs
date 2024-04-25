@@ -39,8 +39,7 @@ fn test_make_vector_geometric_bounded() -> Fallible<()> {
 
 #[test]
 fn test_make_geometric_mechanism() -> Fallible<()> {
-    let measurement =
-        make_scalar_geometric(AtomDomain::default(), Default::default(), 10.0, None)?;
+    let measurement = make_scalar_geometric(AtomDomain::default(), Default::default(), 10.0, None)?;
     let arg = 205;
     let _ret = measurement.invoke(&arg)?;
     println!("{:?}", _ret);
