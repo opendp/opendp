@@ -96,7 +96,6 @@ fn test_find_nearest_multiple_of_2k() -> Fallible<()> {
     Ok(())
 }
 
-
 #[cfg(feature = "test-plot")]
 mod test_plotting {
     use super::*;
