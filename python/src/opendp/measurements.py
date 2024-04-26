@@ -319,7 +319,7 @@ def then_gaussian(
 
     >>> dp.enable_features('contrib')
     >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    >>> gaussian = input_space >> dp.m.make_gaussian(scale=1.0)
+    >>> gaussian = input_space >> dp.m.then_gaussian(scale=1.0)
     >>> gaussian(100.0)
     ...
 
@@ -368,6 +368,15 @@ def make_geometric(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
+    >>> geometric = dp.m.make_geometric(*input_space, scale=1.0)
+    >>> geometric(100)
+    ...
+
     """
     assert_features("contrib")
 
@@ -406,6 +415,15 @@ def then_geometric(
     :param bounds: 
     :param QO: 
     :type QO: :py:ref:`RuntimeTypeDescriptor`
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
+    >>> geometric = input_space >> dp.m.then_geometric(scale=1.0)
+    >>> geometric(100)
+    ...
+
     """
     return PartialConstructor(lambda input_domain, input_metric: make_geometric(
         input_domain=input_domain,
@@ -460,6 +478,16 @@ def make_laplace(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib")
+    >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    >>> laplace = dp.m.make_laplace(*input_space, scale=1.0)
+    >>> laplace(100)
+    ...
+
     """
     assert_features("contrib")
 
@@ -496,6 +524,15 @@ def then_laplace(
     :param k: The noise granularity in terms of 2^k, only valid for domains over floats.
     :param QO: Data type of the output distance and scale. `f32` or `f64`.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
+
+    :example:
+
+    >>> dp.enable_features('contrib')
+    >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    >>> laplace = input_space >> dp.m.laplace(scale=1.0)
+    >>> laplace(100.0)
+    ...
+
     """
     return PartialConstructor(lambda input_domain, input_metric: make_laplace(
         input_domain=input_domain,
@@ -687,6 +724,14 @@ def make_randomized_response(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> random_string = dp.m.make_randomized_response(['a', 'b', 'c'], 0.99)
+    >>> random_string('a')
+    ...
+
     """
     assert_features("contrib")
 
@@ -740,6 +785,14 @@ def make_randomized_response_bool(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> random_bool = dp.m.make_randomized_response_bool(0.99)
+    >>> random_bool(True)
+    ...
+
     """
     assert_features("contrib")
 
@@ -796,6 +849,15 @@ def make_report_noisy_max_gumbel(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.linf_distance(T=int)
+    >>> select_index = dp.m.make_report_noisy_max_gumbel(*input_space, scale=1.0, optimize='Max')
+    >>> select_index([1, 2, 3, 2, 1])
+    ...
+
     """
     assert_features("contrib")
 
@@ -833,6 +895,15 @@ def then_report_noisy_max_gumbel(
     :type optimize: str
     :param QO: Output Distance Type.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.linf_distance(T=int)
+    >>> select_index = input_space >> dp.m.then_report_noisy_max_gumbel(scale=1.0, optimize='Max')
+    >>> select_index([1, 2, 3, 2, 1])
+    ...
+
     """
     return PartialConstructor(lambda input_domain, input_metric: make_report_noisy_max_gumbel(
         input_domain=input_domain,
@@ -874,6 +945,27 @@ def make_user_measurement(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> def const_function(_arg):
+    ...     return 42
+    >>> def privacy_map(_d_in):
+    ...     return 0.
+    >>> user_measurement = dp.m.make_user_measurement(
+    ...     dp.atom_domain(T=int),
+    ...     dp.absolute_distance(int),
+    ...     dp.max_divergence(float),
+    ...     const_function,
+    ...     privacy_map,
+    ...     TO=dp.RuntimeType.infer(42),
+    ... )
+    >>> user_measurement(0)
+    42
+
+
+
     """
     assert_features("contrib", "honest-but-curious")
 
