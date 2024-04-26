@@ -64,12 +64,8 @@ fn test_num_nodes_from_num_layers() {
 
 #[test]
 fn test_make_b_ary_tree() -> Fallible<()> {
-    let trans = make_b_ary_tree::<L1Distance<i32>, i32>(
-        Default::default(),
-        L1Distance::default(),
-        10,
-        2,
-    )?;
+    let trans =
+        make_b_ary_tree::<L1Distance<i32>, i32>(Default::default(), L1Distance::default(), 10, 2)?;
     let actual = trans.invoke(&vec![1; 10])?;
     let expect = vec![
         vec![10],
