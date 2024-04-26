@@ -323,8 +323,7 @@ fn generate_docstring(
     format!(
         r#"r"""{description}
 {doc_args}{ret_arg}
-{raises}
-{example}
+{raises}{example}
 """"#,
         description = description,
         doc_args = doc_args,

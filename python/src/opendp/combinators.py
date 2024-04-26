@@ -57,7 +57,6 @@ def make_basic_composition(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -92,7 +91,6 @@ def make_chain_mt(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -129,7 +127,6 @@ def make_chain_pm(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -165,7 +162,6 @@ def make_chain_tt(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -199,7 +195,6 @@ def make_fix_delta(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -241,7 +236,6 @@ def make_population_amplification(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib", "honest-but-curious")
 
@@ -274,7 +268,6 @@ def make_pureDP_to_fixed_approxDP(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -310,7 +303,6 @@ def make_pureDP_to_zCDP(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -370,7 +362,6 @@ def make_sequential_composition(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -431,7 +422,6 @@ def make_zCDP_to_approxDP(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 

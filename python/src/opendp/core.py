@@ -60,7 +60,6 @@ def _error_free(
     :rtype: bool
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -86,7 +85,6 @@ def _function_free(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -112,7 +110,6 @@ def _measurement_free(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -138,7 +135,6 @@ def _transformation_free(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -169,7 +165,6 @@ def function_eval(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -202,7 +197,6 @@ def measurement_check(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -231,7 +225,6 @@ def measurement_function(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -258,7 +251,6 @@ def measurement_input_carrier_type(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -285,7 +277,6 @@ def measurement_input_distance_type(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -312,7 +303,6 @@ def measurement_input_domain(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -339,7 +329,6 @@ def measurement_input_metric(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -367,7 +356,6 @@ def measurement_invoke(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -396,7 +384,6 @@ def measurement_map(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -424,7 +411,6 @@ def measurement_output_distance_type(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -451,7 +437,6 @@ def measurement_output_measure(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -481,7 +466,6 @@ def new_function(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -517,7 +501,6 @@ def new_queryable(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -551,7 +534,6 @@ def queryable_eval(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -578,7 +560,6 @@ def queryable_query_type(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -609,7 +590,6 @@ def transformation_check(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -638,7 +618,6 @@ def transformation_function(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -665,7 +644,6 @@ def transformation_input_carrier_type(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -692,7 +670,6 @@ def transformation_input_distance_type(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -719,7 +696,6 @@ def transformation_input_domain(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -746,7 +722,6 @@ def transformation_input_metric(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -774,7 +749,6 @@ def transformation_invoke(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -803,7 +777,6 @@ def transformation_map(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -831,7 +804,6 @@ def transformation_output_distance_type(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -858,7 +830,6 @@ def transformation_output_domain(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -885,7 +856,6 @@ def transformation_output_metric(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.

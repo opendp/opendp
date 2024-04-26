@@ -128,7 +128,6 @@ def choose_branching_factor(
     :rtype: int
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
-
     """
     assert_features("contrib")
 
@@ -176,7 +175,6 @@ def make_b_ary_tree(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -263,7 +261,6 @@ def make_bounded_float_checked_sum(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -333,7 +330,6 @@ def make_bounded_float_ordered_sum(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -386,7 +382,6 @@ def make_bounded_int_monotonic_sum(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -436,7 +431,6 @@ def make_bounded_int_ordered_sum(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -486,7 +480,6 @@ def make_bounded_int_split_sum(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -536,7 +529,6 @@ def make_cast(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -610,7 +602,6 @@ def make_cast_default(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -682,7 +673,6 @@ def make_cast_inherent(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -739,7 +729,6 @@ def make_cdf(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -792,7 +781,6 @@ def make_clamp(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -866,7 +854,6 @@ def make_consistent_b_ary_tree(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -923,7 +910,6 @@ def make_count(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -997,7 +983,6 @@ def make_count_by(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -1083,7 +1068,6 @@ def make_count_by_categories(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -1168,7 +1152,6 @@ def make_count_distinct(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -1229,7 +1212,6 @@ def make_create_dataframe(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -1290,7 +1272,6 @@ def make_df_cast_default(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -1371,7 +1352,6 @@ def make_df_is_equal(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -1449,7 +1429,6 @@ def make_drop_null(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -1512,7 +1491,6 @@ def make_find(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -1583,7 +1561,6 @@ def make_find_bin(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -1649,7 +1626,6 @@ def make_identity(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib", "honest-but-curious")
 
@@ -1716,7 +1692,6 @@ def make_impute_constant(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -1778,7 +1753,6 @@ def make_impute_uniform_float(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -1847,7 +1821,6 @@ def make_index(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -1923,7 +1896,6 @@ def make_is_equal(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -1985,7 +1957,6 @@ def make_is_null(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2049,7 +2020,6 @@ def make_lipschitz_float_mul(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2102,7 +2072,6 @@ def make_mean(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2168,7 +2137,6 @@ def make_metric_bounded(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2231,7 +2199,6 @@ def make_metric_unbounded(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2294,7 +2261,6 @@ def make_ordered_random(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2360,7 +2326,6 @@ def make_quantile_score_candidates(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2431,7 +2396,6 @@ def make_quantiles_from_counts(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2489,7 +2453,6 @@ def make_resize(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2562,7 +2525,6 @@ def make_select_column(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2629,7 +2591,6 @@ def make_sized_bounded_float_checked_sum(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2699,7 +2660,6 @@ def make_sized_bounded_float_ordered_sum(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2755,7 +2715,6 @@ def make_sized_bounded_int_checked_sum(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2809,7 +2768,6 @@ def make_sized_bounded_int_monotonic_sum(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2865,7 +2823,6 @@ def make_sized_bounded_int_ordered_sum(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2921,7 +2878,6 @@ def make_sized_bounded_int_split_sum(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -2969,7 +2925,6 @@ def make_split_dataframe(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -3010,7 +2965,6 @@ def make_split_lines(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -3046,7 +3000,6 @@ def make_split_records(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -3089,7 +3042,6 @@ def make_stable_expr(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -3150,7 +3102,6 @@ def make_stable_lazyframe(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -3210,7 +3161,6 @@ def make_subset_by(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -3263,7 +3213,6 @@ def make_sum(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -3342,7 +3291,6 @@ def make_sum_of_squared_deviations(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -3412,7 +3360,6 @@ def make_unordered(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -3470,7 +3417,6 @@ def make_user_transformation(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib", "honest-but-curious")
 
@@ -3529,7 +3475,6 @@ def make_variance(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 

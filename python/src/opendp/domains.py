@@ -45,7 +45,6 @@ def _domain_free(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -71,7 +70,6 @@ def _user_domain_descriptor(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -105,7 +103,6 @@ def atom_domain(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
 
     :example:
 
@@ -142,7 +139,6 @@ def domain_carrier_type(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -169,7 +165,6 @@ def domain_debug(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -196,7 +191,6 @@ def domain_type(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -228,7 +222,6 @@ def expr_domain(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("contrib")
 
@@ -262,7 +255,6 @@ def infer_lazyframe_domain(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -288,7 +280,6 @@ def lazyframe_domain(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -318,7 +309,6 @@ def map_domain(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -347,7 +337,6 @@ def member(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -380,7 +369,6 @@ def option_domain(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # Standardize type arguments.
     D = RuntimeType.parse_or_infer(type_name=D, public_example=element_domain)
@@ -415,7 +403,6 @@ def series_domain(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -449,7 +436,6 @@ def user_domain(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("honest-but-curious")
 
@@ -482,7 +468,6 @@ def vector_domain(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -523,7 +508,6 @@ def with_margin(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.

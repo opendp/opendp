@@ -38,7 +38,6 @@ def _measure_free(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -67,7 +66,6 @@ def fixed_smoothed_max_divergence(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # Standardize type arguments.
     T = RuntimeType.parse(type_name=T)
@@ -98,7 +96,6 @@ def max_divergence(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # Standardize type arguments.
     T = RuntimeType.parse(type_name=T)
@@ -127,7 +124,6 @@ def measure_debug(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -154,7 +150,6 @@ def measure_distance_type(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -181,7 +176,6 @@ def measure_type(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -210,7 +204,6 @@ def smoothed_max_divergence(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # Standardize type arguments.
     T = RuntimeType.parse(type_name=T)
@@ -240,7 +233,6 @@ def user_divergence(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     assert_features("honest-but-curious")
 
@@ -271,7 +263,6 @@ def zero_concentrated_divergence(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
-
     """
     # Standardize type arguments.
     T = RuntimeType.parse(type_name=T)
