@@ -4,7 +4,7 @@ use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
     domains::ExprDomain,
     ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast},
-    metrics::{PartitionDistance, SymmetricDistance},
+    metrics::{L1Distance, PartitionDistance, SymmetricDistance},
 };
 
 use super::make_stable_expr;
@@ -21,7 +21,8 @@ pub extern "C" fn opendp_transformations__make_stable_expr(
             .clone();
 
     let expr = try_!(try_as_ref!(expr).downcast_ref::<Expr>()).clone();
-    make_stable_expr(input_domain, input_metric, expr)
+    // TODO: dispatch to different output types
+    make_stable_expr::<_, L1Distance<f64>>(input_domain, input_metric, expr)
         .into_any()
         .into()
 }
