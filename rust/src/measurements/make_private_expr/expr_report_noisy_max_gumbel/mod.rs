@@ -29,6 +29,9 @@ use polars_plan::prelude::{ApplyOptions, FunctionOptions};
 use pyo3_polars::derive::polars_expr;
 use serde::{Deserialize, Serialize};
 
+#[cfg(test)]
+mod test;
+
 /// Make a measurement that reports the index of the maximum value after adding Gumbel noise.
 ///
 /// # Arguments
@@ -119,11 +122,30 @@ pub(crate) fn match_rnm_gumbel(expr: &Expr) -> Fallible<Option<(&Expr, RNMGumbel
 #[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct RNMGumbelArgs {
     /// Controls whether the noisy maximum or noisy minimum candidate is selected.
-    pub optimize: String,
+    pub optimize: Optimize,
     /// The scale of the Gumbel noise.
     ///
     /// When parsed by [`make_private_expr`], None defaults to one and is multiplied by the `param`.
     pub scale: Option<f64>,
+}
+
+impl Serialize for Optimize {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.to_string().as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for Optimize {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Self::try_from(String::deserialize(deserializer)?.as_str())
+            .map_err(serde::de::Error::custom)
+    }
 }
 
 impl OpenDPPlugin for RNMGumbelArgs {
@@ -171,7 +193,7 @@ fn rnm_gumbel_udf(inputs: &[Series], kwargs: RNMGumbelArgs) -> PolarsResult<Seri
     };
     let scale = RBig::try_from(scale)
         .map_err(|_| PolarsError::InvalidOperation("scale must be finite".into()))?;
-    let optimize = Optimize::try_from(kwargs.optimize.as_ref())?;
+    let optimize = kwargs.optimize;
 
     // PT stands for Polars Type
     fn rnm_gumbel_impl<PT: 'static + PolarsDataType>(
@@ -261,40 +283,4 @@ pub(crate) fn rnm_gumbel_type_udf(input_fields: &[Field]) -> PolarsResult<Field>
 #[polars_expr(output_type_func=rnm_gumbel_type_udf)]
 fn rnm_gumbel(inputs: &[Series], kwargs: RNMGumbelArgs) -> PolarsResult<Series> {
     rnm_gumbel_udf(inputs, kwargs)
-}
-
-#[cfg(test)]
-mod test_expr_rnm_gumbel {
-    use super::*;
-    use polars::prelude::*;
-
-    use crate::{
-        core::PrivacyNamespaceHelper,
-        measurements::make_private_expr,
-        metrics::{PartitionDistance, SymmetricDistance},
-        transformations::expr_discrete_quantile_score::test::get_quantile_test_data,
-    };
-
-    #[test]
-    fn test_rnm_gumbel_expr() -> Fallible<()> {
-        let (lf_domain, lf) = get_quantile_test_data()?;
-        let expr_domain = lf_domain.select();
-        let scale: f64 = 1e-8;
-        let candidates = vec![0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.];
-
-        let m_quant = make_private_expr(
-            expr_domain,
-            PartitionDistance(SymmetricDistance),
-            MaxDivergence::default(),
-            col("A").dp().median(candidates, Some(scale)),
-            None,
-        )?;
-
-        let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?;
-        let df = lf.select([dp_expr]).collect()?;
-        let actual = df.column("A")?.u32()?.get(0).unwrap();
-        assert_eq!(actual, 5);
-
-        Ok(())
-    }
 }

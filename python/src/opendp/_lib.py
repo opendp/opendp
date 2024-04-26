@@ -154,7 +154,7 @@ if pl is not None:
                 plugin_path=lib_path,
                 function_name="dq_score",
                 kwargs={"alpha": alpha, "candidates": candidates},
-                args=self._expr,
+                args=self.expr,
                 returns_scalar=True,
             )
 
@@ -170,7 +170,7 @@ if pl is not None:
                 plugin_path=lib_path,
                 function_name="rnm_gumbel",
                 kwargs={"optimize": optimize, "scale": scale},
-                args=self._expr,
+                args=self.expr,
                 is_elementwise=True,
             )
     
@@ -179,11 +179,11 @@ if pl is not None:
             
             The scale calibrates the level of entropy when selecting a candidate.
             
-            :param candidates: Potential quantiles to select from.
             :param alpha: a value in $[0, 1]$. Choose 0.5 for median
-            :param scale: Noise scale parameter for the Gumbel distribution.
+            :param candidates: Potential quantiles to select from.
+            :param scale: How much noise to add to the scores of candidate.
             """
-            dq_score = self._expr.dp._quantile_score(alpha, candidates)
+            dq_score = self.expr.dp._quantile_score(alpha, candidates)
             return dq_score.dp._rnm_gumbel("min", scale)
         
         def median(self, candidates, scale=None):
@@ -192,9 +192,9 @@ if pl is not None:
             The scale calibrates the level of entropy when selecting a candidate.
             
             :param candidates: Potential quantiles to select from.
-            :param scale: Noise scale parameter for the Gumbel distribution.
+            :param scale: How much noise to add to the scores of candidate.
             """
-            return self._expr.dp.quantile(0.5, candidates, scale)
+            return self.expr.dp.quantile(0.5, candidates, scale)
 
 # This enables backtraces in Rust by default.
 # It can be disabled by setting RUST_BACKTRACE=0.
