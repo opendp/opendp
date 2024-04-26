@@ -260,11 +260,6 @@ impl DPNamespace {
     /// * `optimize` - Distinguish between argmax and argmin.
     /// * `scale` - Noise scale parameter for the Gumbel distribution.
     pub(crate) fn rnm_gumbel(self, optimize: Optimize, scale: Option<f64>) -> Expr {
-        let optimize = match optimize {
-            Optimize::Min => "min",
-            Optimize::Max => "max",
-        }
-        .to_string();
         apply_anonymous_function(vec![self.0], RNMGumbelArgs { optimize, scale })
     }
 

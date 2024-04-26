@@ -1,6 +1,8 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
+use std::fmt::Display;
+
 use dashu::rational::RBig;
 use opendp_derive::bootstrap;
 
@@ -20,17 +22,30 @@ use crate::traits::{
 
 #[derive(PartialEq, Clone)]
 pub enum Optimize {
-    Max,
     Min,
+    Max,
+}
+
+impl Display for Optimize {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match *self {
+                Optimize::Min => "min",
+                Optimize::Max => "max",
+            }
+        )
+    }
 }
 
 impl TryFrom<&str> for Optimize {
     type Error = crate::error::Error;
     fn try_from(s: &str) -> Fallible<Self> {
         Ok(match s {
-            i if i.to_lowercase().starts_with("min") => Optimize::Min,
-            i if i.to_lowercase().starts_with("max") => Optimize::Max,
-            _ => return fallible!(FailedCast, "optimize must start with \"min\" or \"max"),
+            "min" => Optimize::Min,
+            "max" => Optimize::Max,
+            _ => return fallible!(FailedCast, "optimize must be \"min\" or \"max\""),
         })
     }
 }
