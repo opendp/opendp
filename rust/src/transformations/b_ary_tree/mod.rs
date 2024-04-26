@@ -142,7 +142,7 @@ pub fn choose_branching_factor(size_guess: u32) -> u32 {
 }
 
 #[cfg(all(test, feature = "partials"))]
-pub mod test_b_trees {
+pub mod test {
     use crate::{measurements::then_laplace, metrics::L1Distance};
 
     use super::*;

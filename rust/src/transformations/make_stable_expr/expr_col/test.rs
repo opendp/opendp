@@ -1,5 +1,6 @@
 use crate::metrics::SymmetricDistance;
-use crate::transformations::{test::get_test_data, StableExpr};
+use crate::transformations::StableExpr;
+use crate::transformations::make_stable_expr::test::get_test_data;
 
 use super::*;
 
