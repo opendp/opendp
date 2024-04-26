@@ -43,6 +43,7 @@ where
                 },
             ..
         } => {
+            // check that the plugin is from the opendp library and the plugin has a matching name
             if !lib.contains(OPENDP_LIB_NAME) || symbol.as_ref() != name {
                 return Ok(None);
             }

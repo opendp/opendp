@@ -100,13 +100,12 @@ if pl is not None:
     @pl.api.register_expr_namespace("dp")
     class DPNamespace(object):
         def __init__(self, expr):
-            self._expr = expr
+            self.expr = expr
 
         def laplace(self, scale=None):
             """Add Laplace noise to the expression.
 
-            `scale` must not be negative or inf.
-            Scale may be left None, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
 
             :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
             """
@@ -115,20 +114,19 @@ if pl is not None:
                 plugin_path=lib_path,
                 function_name="laplace",
                 kwargs={"scale": scale},
-                args=self._expr,
+                args=self.expr,
                 is_elementwise=True,
             )
 
         def sum(self, bounds, scale=None):
             """Compute the differentially private sum.
 
-            `scale` must not be negative or inf.
-            Scale may be left NaN, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
 
             :param bounds: The bounds of the input data.
             :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
             """
-            return self._expr.clip(*bounds).sum().dp.laplace(scale)
+            return self.expr.clip(*bounds).sum().dp.laplace(scale)
 
 
 # This enables backtraces in Rust by default.
