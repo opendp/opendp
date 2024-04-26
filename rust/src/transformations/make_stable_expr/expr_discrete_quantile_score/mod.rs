@@ -16,6 +16,11 @@ use polars::prelude::DataType::*;
 mod plugin_dq_score;
 pub(crate) use plugin_dq_score::DQScoreArgs;
 
+#[cfg(test)]
+pub mod test;
+
+static DQ_SCORE_PLUGIN_NAME: &str = "dq_score";
+
 /// Make a measurement that adds Laplace noise to a Polars expression.
 ///
 /// # Arguments
@@ -94,6 +99,7 @@ where
         .ok_or_else(|| err!(MakeTransformation, "Must know max_partition_length"))?;
 
     let constants = score_candidates_constants::<u64>(Some(mpl as u64), alpha)?;
+    // alpha = alpha_num / alpha_den (numerator and denominator of alpha)
     let (alpha_num, alpha_den, _) = constants.clone();
 
     t_prior
@@ -132,77 +138,17 @@ where
 /// # Returns
 /// If matched, ipnut expression and discrete quantile score arguments
 pub(crate) fn match_dq_score(expr: &Expr) -> Fallible<Option<(&Expr, DQScoreArgs)>> {
-    let Some((score_input, args)) = match_plugin(expr, "dq_score")? else {
+    let Some((score_input, args)) = match_plugin(expr, DQ_SCORE_PLUGIN_NAME)? else {
         return Ok(None);
     };
 
     let [score_input] = <&[_; 1]>::try_from(score_input.as_slice()).map_err(|_| {
         err!(
             MakeTransformation,
-            "dq_score expects a single input expression"
+            "{} expects a single input expression",
+            DQ_SCORE_PLUGIN_NAME
         )
     })?;
 
     Ok(Some((score_input, args)))
-}
-
-#[cfg(test)]
-pub mod test_expr_quantile {
-    use super::*;
-    use polars::prelude::*;
-
-    use crate::{
-        core::PrivacyNamespaceHelper,
-        domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
-        metrics::SymmetricDistance,
-    };
-
-    pub fn get_quantile_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
-        let pub_key_margin = Margin::new()
-            .with_max_partition_length(1000)
-            .with_public_keys();
-
-        let lf_domain = LazyFrameDomain::new(vec![
-            SeriesDomain::new("A", AtomDomain::<i32>::default()),
-            SeriesDomain::new("B", AtomDomain::<f64>::default()),
-        ])?
-        .with_margin::<&str>(&[], pub_key_margin.clone())?
-        .with_margin(&["A"], pub_key_margin)?;
-
-        let a = (0..1010).map(|i| (i % 101) as f64).collect::<Vec<_>>();
-        let b = (0..1010).map(|i| (i % 10)).collect::<Vec<_>>();
-        let lf = df!("A" => a, "B" => b)?.lazy();
-
-        Ok((lf_domain, lf))
-    }
-
-    #[test]
-    fn test_expr_discrete_quantile_score() -> Fallible<()> {
-        let (lf_domain, lf) = get_quantile_test_data()?;
-        let expr_domain = lf_domain.select();
-        let candidates = vec![0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.];
-
-        let m_quant: Transformation<_, _, _, Parallel<LInfDistance<f64>>> = col("A")
-            .dp()
-            .quantile_score(candidates, 0.5)
-            .make_stable(expr_domain, PartitionDistance(SymmetricDistance))?;
-
-        let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?.1;
-
-        let df_actual = lf.clone().select([dp_expr]).collect()?;
-        let AnyValue::Array(series, _) = df_actual.column("A")?.get(0)? else {
-            panic!("Expected an array");
-        };
-
-        let actual: Vec<u64> = series
-            .u64()?
-            .downcast_iter()
-            .flat_map(StaticArray::values_iter)
-            .collect();
-
-        let expected = vec![1000, 800, 600, 400, 200, 0, 200, 400, 600, 800, 1000];
-        assert_eq!(actual, expected);
-
-        Ok(())
-    }
 }

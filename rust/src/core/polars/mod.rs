@@ -231,7 +231,16 @@ impl DPNamespace {
         self.0.dp().sum(bounds, scale) / len()
     }
 
-    pub(crate) fn quantile_score(self, candidates: Vec<f64>, alpha: f64) -> Expr {
+    /// Score the utility of each candidate for representing the true quantile.
+    ///
+    /// Candidates closer to the true quantile are assigned scores closer to zero.
+    /// Lower scores are better.
+    ///
+    /// # Arguments
+    /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
+    /// * `candidates` - Set of possible quantiles to evaluate the utility of.
+    #[allow(dead_code)]
+    pub(crate) fn quantile_score(self, alpha: f64, candidates: Vec<f64>) -> Expr {
         let args = DQScoreArgs {
             alpha,
             candidates,

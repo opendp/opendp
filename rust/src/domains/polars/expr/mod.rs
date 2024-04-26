@@ -219,7 +219,8 @@ impl<M: 'static + Metric> OuterMetric for PartitionDistance<M> {
 
 impl<M: DatasetMetric> MetricSpace for (ExprDomain, M) {
     fn check_space(&self) -> Fallible<()> {
-        (self.0.frame_domain.clone(), self.1.clone()).check_space()
+        let (expr_domain, metric) = self;
+        (expr_domain.frame_domain.clone(), metric.clone()).check_space()
     }
 }
 
@@ -240,13 +241,15 @@ impl<Q: ProductOrd> MetricSpace for (ExprDomain, LInfDistance<Q>) {
 
 impl<Q: ProductOrd> MetricSpace for (ExprDomain, Parallel<LInfDistance<Q>>) {
     fn check_space(&self) -> Fallible<()> {
-        (self.0.clone(), self.1 .0.clone()).check_space()
+        let (expr_domain, Parallel(inner_metric)) = self;
+        (expr_domain.clone(), inner_metric.clone()).check_space()
     }
 }
 
 impl<M: DatasetMetric> MetricSpace for (ExprDomain, PartitionDistance<M>) {
     fn check_space(&self) -> Fallible<()> {
-        (self.0.frame_domain.clone(), self.1 .0.clone()).check_space()
+        let (expr_domain, PartitionDistance(inner_metric)) = self;
+        (expr_domain.frame_domain.clone(), inner_metric.clone()).check_space()
     }
 }
 

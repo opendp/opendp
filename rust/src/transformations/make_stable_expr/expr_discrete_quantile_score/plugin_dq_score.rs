@@ -24,6 +24,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{core::OpenDPPlugin, error::Fallible, traits::RoundCast};
 
+use super::DQ_SCORE_PLUGIN_NAME;
+
 /// Arguments for the discrete quantile score expression
 #[derive(Clone)]
 #[cfg_attr(feature = "ffi", derive(Serialize, Deserialize))]
@@ -40,7 +42,7 @@ impl OpenDPPlugin for DQScoreArgs {
     fn get_options(&self) -> FunctionOptions {
         FunctionOptions {
             collect_groups: ApplyOptions::GroupWise,
-            fmt_str: "dq_score",
+            fmt_str: DQ_SCORE_PLUGIN_NAME,
             returns_scalar: true,
             changes_length: true,
             ..Default::default()
@@ -79,63 +81,25 @@ fn dq_score_udf(inputs: &[Series], kwargs: DQScoreArgs) -> PolarsResult<Series> 
 
     let n = series.len() as u64;
     let (candidates, constants) = (kwargs.candidates, kwargs.constants);
+
+    // when a user initially creates a DQ score expression, the constants are not yet known and are left empty
+    // the constants are computed in make_expr_discrete_quantile_score and embedded in the resulting expression
     let Some((alpha_num, alpha_den, size_limit)) = constants else {
         polars_bail!(InvalidOperation:
             "encountered quantile in expression that has not been made private or stable",
         );
     };
-
-    // PT stands for Polars Type
-    fn hist<PT: 'static + PolarsDataType>(
-        series: &Series,
-        candidates: Vec<f64>,
-    ) -> PolarsResult<(Vec<u64>, Vec<u64>)>
-    where
-        // candidates must be able to be converted into a the physical dtype
-        for<'a> PT::Physical<'a>: RoundCast<f64> + PartialOrd,
-        PT::Array: StaticArray,
-    {
-        let candidates = candidates
-            .into_iter()
-            .map(PT::Physical::round_cast)
-            .collect::<Fallible<Vec<_>>>()?;
-
-        // count of the number of records between...
-        //  (-inf, c1), [c1, c2), [c2, c3), ..., [ck, inf)
-        let mut hist_lo = vec![0u64; candidates.len() + 1];
-        //  (-inf, c1], (c1, c2], (c2, c3], ..., (ck, inf)
-        let mut hist_ro = vec![0u64; candidates.len() + 1];
-
-        series
-            .unpack::<PT>()?
-            .downcast_iter()
-            .flat_map(StaticArray::values_iter)
-            .for_each(|v| {
-                let idx_lt = candidates.partition_point(|c| *c < v);
-                hist_ro[idx_lt] += 1;
-
-                let idx_eq = idx_lt + candidates[idx_lt..].partition_point(|c| *c == v);
-                hist_lo[idx_eq] += 1;
-            });
-
-        // don't care about the number of elements greater than all
-        hist_lo.pop();
-        hist_ro.pop();
-
-        Ok((hist_lo, hist_ro))
-    }
-
     // compute histograms of the number of records between each candidate
     // one histogram has left-open intervals, the other has right-open intervals
     let (hist_lo, hist_ro) = match series.dtype() {
-        UInt32 => hist::<UInt32Type>(series, candidates),
-        UInt64 => hist::<UInt64Type>(series, candidates),
-        Int8 => hist::<Int8Type>(series, candidates),
-        Int16 => hist::<Int16Type>(series, candidates),
-        Int32 => hist::<Int32Type>(series, candidates),
-        Int64 => hist::<Int64Type>(series, candidates),
-        Float32 => hist::<Float32Type>(series, candidates),
-        Float64 => hist::<Float64Type>(series, candidates),
+        UInt32 => series_histogram::<UInt32Type>(series, candidates),
+        UInt64 => series_histogram::<UInt64Type>(series, candidates),
+        Int8 => series_histogram::<Int8Type>(series, candidates),
+        Int16 => series_histogram::<Int16Type>(series, candidates),
+        Int32 => series_histogram::<Int32Type>(series, candidates),
+        Int64 => series_histogram::<Int64Type>(series, candidates),
+        Float32 => series_histogram::<Float32Type>(series, candidates),
+        Float64 => series_histogram::<Float64Type>(series, candidates),
         UInt8 | UInt16 => polars_bail!(
             InvalidOperation: "u8 and u16 not supported in the OpenDP Polars plugin. Please use u32 or u64."),
         dtype => polars_bail!(
@@ -170,6 +134,46 @@ fn dq_score_udf(inputs: &[Series], kwargs: DQScoreArgs) -> PolarsResult<Series> 
 
     let fsla = FixedSizeListArray::new(dtype, Box::new(scores), None);
     Ok(Series::from(ArrayChunked::from(fsla)))
+}
+
+// PT stands for Polars Type
+fn series_histogram<PT: 'static + PolarsDataType>(
+    series: &Series,
+    candidates: Vec<f64>,
+) -> PolarsResult<(Vec<u64>, Vec<u64>)>
+where
+    // candidates must be able to be converted into a the physical dtype
+    for<'a> PT::Physical<'a>: RoundCast<f64> + PartialOrd,
+    PT::Array: StaticArray,
+{
+    let candidates = candidates
+        .into_iter()
+        .map(PT::Physical::round_cast)
+        .collect::<Fallible<Vec<_>>>()?;
+
+    // count of the number of records between...
+    //  (-inf, c1), [c1, c2), [c2, c3), ..., [ck, inf)
+    let mut hist_lo = vec![0u64; candidates.len() + 1];
+    //  (-inf, c1], (c1, c2], (c2, c3], ..., (ck, inf)
+    let mut hist_ro = vec![0u64; candidates.len() + 1];
+
+    series
+        .unpack::<PT>()?
+        .downcast_iter()
+        .flat_map(StaticArray::values_iter)
+        .for_each(|v| {
+            let idx_lt = candidates.partition_point(|c| *c < v);
+            hist_ro[idx_lt] += 1;
+
+            let idx_eq = idx_lt + candidates[idx_lt..].partition_point(|c| *c == v);
+            hist_lo[idx_eq] += 1;
+        });
+
+    // don't care about the number of elements greater than all
+    hist_lo.pop();
+    hist_ro.pop();
+
+    Ok((hist_lo, hist_ro))
 }
 
 /// Helper function for the Polars plan optimizer to determine the output type of the expression.
