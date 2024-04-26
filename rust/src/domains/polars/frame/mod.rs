@@ -9,10 +9,7 @@ use crate::core::Domain;
 use crate::metrics::{LInfDistance, LpDistance};
 use crate::traits::ProductOrd;
 use crate::{
-    core::MetricSpace,
-    domains::{AtomDomain, OptionDomain, SeriesDomain},
-    error::Fallible,
-    transformations::DatasetMetric,
+    core::MetricSpace, domains::SeriesDomain, error::Fallible, transformations::DatasetMetric,
 };
 
 use super::NumericDataType;
@@ -179,30 +176,7 @@ impl<F: Frame> FrameDomain<F> {
 
     pub fn new_from_schema(schema: Schema) -> Fallible<Self> {
         let series_domains = (schema.iter_fields())
-            .map(|field| {
-                macro_rules! new_series_domain {
-                    ($ty:ty, $func:ident) => {
-                        SeriesDomain::new(
-                            field.name.as_str(),
-                            OptionDomain::new(AtomDomain::<$ty>::$func()),
-                        )
-                    };
-                }
-
-                Ok(match field.data_type() {
-                    DataType::Boolean => new_series_domain!(bool, default),
-                    DataType::UInt32 => new_series_domain!(u32, default),
-                    DataType::UInt64 => new_series_domain!(u64, default),
-                    DataType::Int8 => new_series_domain!(i8, default),
-                    DataType::Int16 => new_series_domain!(i16, default),
-                    DataType::Int32 => new_series_domain!(i32, default),
-                    DataType::Int64 => new_series_domain!(i64, default),
-                    DataType::Float32 => new_series_domain!(f64, new_nullable),
-                    DataType::Float64 => new_series_domain!(f64, new_nullable),
-                    DataType::String => new_series_domain!(String, default),
-                    dtype => return fallible!(MakeDomain, "unsupported type {}", dtype),
-                })
-            })
+            .map(SeriesDomain::new_from_field)
             .collect::<Fallible<_>>()?;
         FrameDomain::new(series_domains)
     }
