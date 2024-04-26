@@ -58,9 +58,9 @@ where
 }
 
 #[cfg(test)]
-mod test_make_col {
+mod test {
     use crate::metrics::SymmetricDistance;
-    use crate::transformations::{polars_test::get_test_data, StableExpr};
+    use crate::transformations::{test::get_test_data, StableExpr};
 
     use super::*;
 

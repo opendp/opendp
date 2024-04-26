@@ -72,7 +72,7 @@ where
 }
 
 #[cfg(test)]
-pub mod polars_test {
+pub mod test {
 
     use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
     use crate::error::*;
