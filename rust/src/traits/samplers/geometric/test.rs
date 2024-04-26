@@ -1,3 +1,4 @@
+#[cfg(feature = "test-plot")]
 use super::*;
 
 #[cfg(feature = "test-plot")]

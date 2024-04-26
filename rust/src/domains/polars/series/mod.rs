@@ -110,8 +110,6 @@ impl SeriesDomain {
         }
 
         match self.field.dtype {
-            DataType::UInt8 => drop_bounds!(u8),
-            DataType::UInt16 => drop_bounds!(u16),
             DataType::UInt32 => drop_bounds!(u32),
             DataType::UInt64 => drop_bounds!(u64),
             DataType::Int8 => drop_bounds!(i8),
@@ -203,7 +201,7 @@ impl PartialEq for dyn DynSeriesAtomDomain + '_ {
 
 /// Utility trait to construct the Polars runtime data-type indicator from an atomic type.
 pub trait NumericDataType:
-    NumericNative<PolarsType = Self::NumericPolars> + PrimitiveDataType
+    NumericNative<PolarsType = Self::NumericPolars> + PrimitiveDataType + Literal
 {
     type NumericPolars: PolarsDataType + PolarsNumericType<Native = Self>;
 }
@@ -225,8 +223,6 @@ macro_rules! impl_dtype_from {
         }
     };
 }
-impl_dtype_from!(u8, UInt8Type);
-impl_dtype_from!(u16, UInt16Type);
 impl_dtype_from!(u32, UInt32Type);
 impl_dtype_from!(u64, UInt64Type);
 impl_dtype_from!(i8, Int8Type);
