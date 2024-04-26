@@ -1,3 +1,5 @@
+use super::*;
+
 #[cfg(feature = "test-plot")]
 mod test_plotting {
     use super::*;
