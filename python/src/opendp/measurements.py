@@ -314,6 +314,15 @@ def then_gaussian(
     :param k: The noise granularity in terms of 2^k.
     :param MO: Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
+
+:example:
+
+>>> dp.enable_features('contrib')
+>>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+>>> gaussian = input_space >> dp.m.make_gaussian(scale=1.0)
+>>> gaussian(100.0)
+...
+
     """
     return PartialConstructor(lambda input_domain, input_metric: make_gaussian(
         input_domain=input_domain,
