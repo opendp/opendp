@@ -1,4 +1,4 @@
-use crate::core::{Measure, Metric, MetricSpace, PrivacyMap};
+use crate::core::{ExprFunction, Measure, Metric, MetricSpace, PrivacyMap};
 use crate::transformations::StableExpr;
 use crate::{
     core::{Function, Measurement},
@@ -8,7 +8,9 @@ use crate::{
 
 use num::Zero;
 use polars::lazy::dsl::Expr;
-use polars_plan::logical_plan::LogicalPlan;
+
+#[cfg(test)]
+mod test;
 
 /// Make a measurement that returns a literal.
 ///
@@ -34,18 +36,7 @@ where
 
     Measurement::new(
         input_domain,
-        Function::new_fallible(
-            // in most other situations, we would use `Function::new_expr`, but we need to return a Fallible here
-            move |(_, expr_wild): &(LogicalPlan, Expr)| -> Fallible<Expr> {
-                if expr_wild != &Expr::Wildcard {
-                    return fallible!(
-                        FailedFunction,
-                        "Expected all() as input (denoting that all columns are selected). This is because literal is a leaf node in the expression tree."
-                    );
-                }
-                Ok(expr.clone())
-            },
-        ),
+        Function::from_expr(expr),
         input_metric,
         MO::default(),
         PrivacyMap::new(move |_| MO::Distance::zero()),

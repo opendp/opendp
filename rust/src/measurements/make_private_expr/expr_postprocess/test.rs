@@ -1,7 +1,7 @@
 use crate::{
     measures::MaxDivergence,
     metrics::{PartitionDistance, SymmetricDistance},
-    transformations::polars_test::get_test_data,
+    transformations::test_helper::get_test_data,
 };
 use polars::prelude::*;
 

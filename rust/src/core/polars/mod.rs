@@ -130,24 +130,55 @@ pub(crate) fn apply_anonymous_function<KW: OpenDPPlugin>(input: Vec<Expr>, kwarg
 }
 
 pub(crate) trait ExprFunction {
-    fn new_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self;
+    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self;
+    fn from_expr(expr: Expr) -> Self;
 }
 
 impl<F: Clone> ExprFunction for Function<(F, Expr), (F, Expr)> {
-    fn new_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
+    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
         Self::new(move |arg: &(F, Expr)| (arg.0.clone(), function(arg.1.clone())))
+    }
+    fn from_expr(expr: Expr) -> Self {
+        Self::new_fallible(
+            move |(frame, expr_wild): &(F, Expr)| -> Fallible<(F, Expr)> {
+                assert_is_wildcard(expr_wild)?;
+                Ok((frame.clone(), expr.clone()))
+            },
+        )
     }
 }
 impl<F: Clone> ExprFunction for Function<(F, Expr), Expr> {
-    fn new_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
+    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
         Self::new(move |arg: &(F, Expr)| function(arg.1.clone()))
+    }
+    fn from_expr(expr: Expr) -> Self {
+        Self::new_fallible(move |(_, expr_wild): &(F, Expr)| -> Fallible<Expr> {
+            assert_is_wildcard(expr_wild)?;
+            Ok(expr.clone())
+        })
     }
 }
 
 impl ExprFunction for Function<Expr, Expr> {
-    fn new_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
+    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
         Self::new(move |arg: &Expr| function(arg.clone()))
     }
+    fn from_expr(expr: Expr) -> Self {
+        Self::new_fallible(move |expr_wild: &Expr| -> Fallible<Expr> {
+            assert_is_wildcard(expr_wild)?;
+            Ok(expr.clone())
+        })
+    }
+}
+
+fn assert_is_wildcard(expr: &Expr) -> Fallible<()> {
+    if expr != &Expr::Wildcard {
+        return fallible!(
+            FailedFunction,
+            "The only valid input expression is all() (denoting that all columns are selected)."
+        );
+    }
+    Ok(())
 }
 
 /// Helper trait for Rust users to access differentially private expressions.

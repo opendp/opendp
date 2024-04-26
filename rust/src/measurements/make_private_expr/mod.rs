@@ -14,7 +14,7 @@ use crate::{
 mod ffi;
 
 #[cfg(feature = "contrib")]
-mod expr_length;
+mod expr_len;
 
 #[cfg(feature = "contrib")]
 pub(crate) mod expr_laplace;
@@ -90,7 +90,7 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergen
         match self {
             #[cfg(feature = "contrib")]
             Expr::Len => {
-                expr_length::make_expr_private_length(input_domain, input_metric, output_measure, self.clone())
+                expr_len::make_expr_private_len(input_domain, input_metric, output_measure, self.clone())
             }
 
             #[cfg(feature = "contrib")]
