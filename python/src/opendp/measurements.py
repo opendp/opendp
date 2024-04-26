@@ -267,6 +267,12 @@ def make_gaussian(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> dp.m.make_gaussian
+    ???
+
     """
     assert_features("contrib")
 

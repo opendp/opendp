@@ -1,0 +1,2 @@
+>>> dp.m.make_gaussian
+???
