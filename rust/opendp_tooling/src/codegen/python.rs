@@ -179,7 +179,7 @@ fn generate_function(
     let then_name = func.name.replacen("make_", "then_", 1);
     let example_path = format!("src/{}/code/{}.rst", &module_name, then_name);
     let example = match fs::read_to_string(example_path) {
-        Ok(string) => format!("\n\n:example:\n\n{string}\n"),
+        Ok(string) => tab_py(format!("\n\n:example:\n\n{string}\n")),
         Err(_) => "".to_string(),
     };
     let then_func = if func.supports_partial {
@@ -199,7 +199,6 @@ def {then_name}(
     return PartialConstructor(lambda {dom_met}: {name}(
 {args}))
 "#,
-            then_name = then_name,
             func_name = func.name,
             doc_params = tab_py(
                 func.args
@@ -324,7 +323,8 @@ fn generate_docstring(
     format!(
         r#"r"""{description}
 {doc_args}{ret_arg}
-{raises}{example}
+{raises}
+{example}
 """"#,
         description = description,
         doc_args = doc_args,

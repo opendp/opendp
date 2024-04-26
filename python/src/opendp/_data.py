@@ -34,6 +34,7 @@ def arrow_array_free(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -59,6 +60,7 @@ def bool_free(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -84,6 +86,7 @@ def extrinsic_object_free(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -108,6 +111,7 @@ def ffislice_of_anyobjectptrs(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -136,6 +140,7 @@ def fill_bytes(
     :rtype: bool
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -163,6 +168,7 @@ def new_arrow_array(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -188,6 +194,7 @@ def object_as_slice(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -212,6 +219,7 @@ def object_free(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -237,6 +245,7 @@ def object_type(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -267,6 +276,7 @@ def slice_as_object(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # Standardize type arguments.
     T = parse_or_infer(T, raw) # type: ignore
@@ -296,6 +306,7 @@ def slice_free(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -323,6 +334,7 @@ def smd_curve_epsilon(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -350,6 +362,7 @@ def str_free(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -375,6 +388,7 @@ def to_string(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.

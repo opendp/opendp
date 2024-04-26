@@ -44,6 +44,7 @@ def _metric_free(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -72,6 +73,7 @@ def absolute_distance(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # Standardize type arguments.
     T = RuntimeType.parse(type_name=T)
@@ -99,6 +101,7 @@ def change_one_distance(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # No arguments to convert to c types.
@@ -122,6 +125,7 @@ def discrete_distance(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # No arguments to convert to c types.
@@ -145,6 +149,7 @@ def hamming_distance(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # No arguments to convert to c types.
@@ -168,6 +173,7 @@ def insert_delete_distance(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # No arguments to convert to c types.
@@ -194,6 +200,7 @@ def l1_distance(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # Standardize type arguments.
     T = RuntimeType.parse(type_name=T)
@@ -224,6 +231,7 @@ def l2_distance(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # Standardize type arguments.
     T = RuntimeType.parse(type_name=T)
@@ -257,6 +265,7 @@ def linf_distance(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # Standardize type arguments.
     T = RuntimeType.parse(type_name=T)
@@ -286,6 +295,7 @@ def metric_debug(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -312,6 +322,7 @@ def metric_distance_type(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -338,6 +349,7 @@ def metric_type(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -366,6 +378,7 @@ def partition_distance(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -391,6 +404,7 @@ def symmetric_distance(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # No type arguments to standardize.
     # No arguments to convert to c types.
@@ -416,6 +430,7 @@ def user_distance(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     assert_features("honest-but-curious")
 

@@ -91,6 +91,7 @@ def make_alp_queryable(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     assert_features("contrib")
 
@@ -184,6 +185,7 @@ def make_base_laplace_threshold(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     assert_features("contrib", "floating-point")
 
@@ -268,6 +270,7 @@ def make_gaussian(
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
 
+
     :example:
 
     >>> dp.enable_features('contrib')
@@ -315,13 +318,13 @@ def then_gaussian(
     :param MO: Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
 
-:example:
+    :example:
 
->>> dp.enable_features('contrib')
->>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
->>> gaussian = input_space >> dp.m.make_gaussian(scale=1.0)
->>> gaussian(100.0)
-...
+    >>> dp.enable_features('contrib')
+    >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    >>> gaussian = input_space >> dp.m.make_gaussian(scale=1.0)
+    >>> gaussian(100.0)
+    ...
 
     """
     return PartialConstructor(lambda input_domain, input_metric: make_gaussian(
@@ -368,6 +371,7 @@ def make_geometric(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     assert_features("contrib")
 
@@ -460,6 +464,7 @@ def make_laplace(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     assert_features("contrib")
 
@@ -536,6 +541,7 @@ def make_private_expr(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     assert_features("contrib")
 
@@ -613,6 +619,7 @@ def make_private_lazyframe(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     assert_features("contrib")
 
@@ -687,6 +694,7 @@ def make_randomized_response(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     assert_features("contrib")
 
@@ -740,6 +748,7 @@ def make_randomized_response_bool(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     assert_features("contrib")
 
@@ -796,6 +805,7 @@ def make_report_noisy_max_gumbel(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     assert_features("contrib")
 
@@ -874,6 +884,7 @@ def make_user_measurement(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     assert_features("contrib", "honest-but-curious")
 

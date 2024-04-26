@@ -47,6 +47,7 @@ def accuracy_to_discrete_gaussian_scale(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=accuracy)
@@ -87,6 +88,7 @@ def accuracy_to_discrete_laplacian_scale(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=accuracy)
@@ -122,6 +124,7 @@ def accuracy_to_gaussian_scale(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=accuracy)
@@ -158,6 +161,7 @@ def accuracy_to_laplacian_scale(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=accuracy)
@@ -197,6 +201,7 @@ def discrete_gaussian_scale_to_accuracy(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
@@ -242,6 +247,7 @@ def discrete_laplacian_scale_to_accuracy(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
@@ -277,6 +283,7 @@ def gaussian_scale_to_accuracy(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
@@ -312,6 +319,7 @@ def laplacian_scale_to_accuracy(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
