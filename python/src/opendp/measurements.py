@@ -273,8 +273,8 @@ def make_gaussian(
     >>> dp.enable_features('contrib')
     >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
     >>> gaussian = dp.m.make_gaussian(*input_space, scale=1.0)
-    >>> gaussian(100.0)
-    ...
+    >>> print('100?', gaussian(100.0))
+    100? ...
 
     """
     assert_features("contrib")
@@ -320,8 +320,8 @@ def then_gaussian(
     >>> dp.enable_features('contrib')
     >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
     >>> gaussian = input_space >> dp.m.then_gaussian(scale=1.0)
-    >>> gaussian(100.0)
-    ...
+    >>> print('100?', gaussian(100.0))
+    100? ...
 
     """
     return PartialConstructor(lambda input_domain, input_metric: make_gaussian(
@@ -374,8 +374,8 @@ def make_geometric(
     >>> dp.enable_features("contrib")
     >>> input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
     >>> geometric = dp.m.make_geometric(*input_space, scale=1.0)
-    >>> geometric(100)
-    ...
+    >>> print('100?', geometric(100))
+    100? ...
 
     """
     assert_features("contrib")
@@ -421,8 +421,8 @@ def then_geometric(
     >>> dp.enable_features("contrib")
     >>> input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
     >>> geometric = input_space >> dp.m.then_geometric(scale=1.0)
-    >>> geometric(100)
-    ...
+    >>> print('100?', geometric(100))
+    100? ...
 
     """
     return PartialConstructor(lambda input_domain, input_metric: make_geometric(
@@ -485,8 +485,8 @@ def make_laplace(
     >>> dp.enable_features("contrib")
     >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
     >>> laplace = dp.m.make_laplace(*input_space, scale=1.0)
-    >>> laplace(100)
-    ...
+    >>> print('100?', laplace(100.0))
+    100? ...
 
     """
     assert_features("contrib")
@@ -529,9 +529,9 @@ def then_laplace(
 
     >>> dp.enable_features('contrib')
     >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    >>> laplace = input_space >> dp.m.laplace(scale=1.0)
-    >>> laplace(100.0)
-    ...
+    >>> laplace = input_space >> dp.m.then_laplace(scale=1.0)
+    >>> print('100?', laplace(100.0))
+    100? ...
 
     """
     return PartialConstructor(lambda input_domain, input_metric: make_laplace(
@@ -729,8 +729,8 @@ def make_randomized_response(
 
     >>> dp.enable_features("contrib")
     >>> random_string = dp.m.make_randomized_response(['a', 'b', 'c'], 0.99)
-    >>> random_string('a')
-    ...
+    >>> print('a?', random_string('a'))
+    a? ...
 
     """
     assert_features("contrib")
@@ -790,8 +790,8 @@ def make_randomized_response_bool(
 
     >>> dp.enable_features("contrib")
     >>> random_bool = dp.m.make_randomized_response_bool(0.99)
-    >>> random_bool(True)
-    ...
+    >>> print('True?', random_bool(True))
+    True? ...
 
     """
     assert_features("contrib")
@@ -855,8 +855,8 @@ def make_report_noisy_max_gumbel(
     >>> dp.enable_features("contrib")
     >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.linf_distance(T=int)
     >>> select_index = dp.m.make_report_noisy_max_gumbel(*input_space, scale=1.0, optimize='Max')
-    >>> select_index([1, 2, 3, 2, 1])
-    ...
+    >>> print('2?', select_index([1, 2, 3, 2, 1]))
+    2? ...
 
     """
     assert_features("contrib")
@@ -901,8 +901,8 @@ def then_report_noisy_max_gumbel(
     >>> dp.enable_features("contrib")
     >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.linf_distance(T=int)
     >>> select_index = input_space >> dp.m.then_report_noisy_max_gumbel(scale=1.0, optimize='Max')
-    >>> select_index([1, 2, 3, 2, 1])
-    ...
+    >>> print('2?', select_index([1, 2, 3, 2, 1]))
+    2? ...
 
     """
     return PartialConstructor(lambda input_domain, input_metric: make_report_noisy_max_gumbel(
@@ -961,8 +961,8 @@ def make_user_measurement(
     ...     privacy_map,
     ...     TO=dp.RuntimeType.infer(42),
     ... )
-    >>> user_measurement(0)
-    42
+    >>> print('42?', user_measurement(0))
+    42? 42
 
 
 

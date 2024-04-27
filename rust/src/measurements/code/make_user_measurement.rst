@@ -11,6 +11,6 @@
 ...     privacy_map,
 ...     TO=dp.RuntimeType.infer(42),
 ... )
->>> user_measurement(0)
-42
+>>> print('42?', user_measurement(0))
+42? 42
 
