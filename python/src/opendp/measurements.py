@@ -953,13 +953,12 @@ def make_user_measurement(
     ...     return 42
     >>> def privacy_map(_d_in):
     ...     return 0.
+    >>> space = dp.atom_domain(T=int), dp.absolute_distance(int)
     >>> user_measurement = dp.m.make_user_measurement(
-    ...     dp.atom_domain(T=int),
-    ...     dp.absolute_distance(int),
-    ...     dp.max_divergence(float),
-    ...     const_function,
-    ...     privacy_map,
-    ...     TO=dp.RuntimeType.infer(42),
+    ...     *space,
+    ...     output_measure=dp.max_divergence(float),
+    ...     function=const_function,
+    ...     privacy_map=privacy_map
     ... )
     >>> print('42?', user_measurement(0))
     42? 42
@@ -1006,6 +1005,25 @@ def then_user_measurement(
     :param privacy_map: A function mapping distances from `input_metric` to `output_measure`.
     :param TO: The data type of outputs from the function.
     :type TO: :py:ref:`RuntimeTypeDescriptor`
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> def const_function(_arg):
+    ...     return 42
+    >>> def privacy_map(_d_in):
+    ...     return 0.
+    >>> space = dp.atom_domain(T=int), dp.absolute_distance(int)
+    >>> user_measurement = space >> dp.m.then_user_measurement(
+    ...     output_measure=dp.max_divergence(float),
+    ...     function=const_function,
+    ...     privacy_map=privacy_map
+    ... )
+    >>> print('42?', user_measurement(0))
+    42? 42
+
+
+
     """
     return PartialConstructor(lambda input_domain, input_metric: make_user_measurement(
         input_domain=input_domain,
