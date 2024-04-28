@@ -48,9 +48,6 @@ on:
 jobs:
   sanity-test:
     runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        platform-tag: [manylinux_2_24_x86_64]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -61,8 +58,8 @@ jobs:
         if: ${{ inputs.python_repository == 'local' }}
         uses: actions/download-artifact@v4
         with:
-          name: python_wheel_${{ matrix.platform-tag }}
-          path: python/wheelhouse
+          name: python_wheel_ubuntu-latest 
+          path: python/dist
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -76,4 +73,4 @@ jobs:
       - name: Run sanity test
         env:
           FAKE_FLAG: ${{ inputs.fake && '--fake' || '' }}
-        run: python tools/publish_tool.py sanity -r ${{ inputs.python_repository }} -t 300 $FAKE_FLAG -p ${{ matrix.platform-tag }}
+        run: python tools/publish_tool.py sanity -r ${{ inputs.python_repository }} -t 300 $FAKE_FLAG

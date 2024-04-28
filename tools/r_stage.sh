@@ -4,7 +4,7 @@
 # (but not target)
 # 
 # vendors dependencies
-# zips contents to avoid paths
+# zips contents to avoid paths being too long, which can cause issues in R CMD check
 
 # exit immediately upon failure, unset vars
 set -e -u

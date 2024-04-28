@@ -37,8 +37,8 @@ rand = "0.7.3"
 num = "0.3.1"
 thiserror = "1.0.24"
 statrs = "0.13.0"
-dashu = "0.4.0"
-openssl = { version = "0.10.29", features = ["vendored"], optional = true }
+dashu = { version = "0.4.0", features = ["num-traits_v02"] }
+openssl = { version = "0.10.64", features = ["vendored"], optional = true }
 opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.9.2-dev" }
 readonly = "0.2"
 
@@ -62,7 +62,7 @@ polars-plan = { version = "=0.38.3", features = [
     "ffi_plugin",
 ], optional = true }
 polars-arrow = { version = "=0.38.3", optional = true }
-pyo3 = { version = "0.20", features = ["abi3-py38", "extension-module"], optional = true }
+pyo3 = { version = "0.20", features = ["abi3-py39", "extension-module"], optional = true }
 pyo3-polars = { version = "=0.12.0", features = ["derive"], optional = true }
 serde = { version = "1.0", optional = true }
 serde-pickle = { version = "1.1", optional = true }
