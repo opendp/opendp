@@ -171,6 +171,7 @@ Cargo.lock
 out/
 
 /python/wheelhouse
+/python/src/opendp/rust/
 
 # R miscellanea
 R/opendp/man
