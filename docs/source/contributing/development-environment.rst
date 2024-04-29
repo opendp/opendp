@@ -101,7 +101,7 @@ If you run into problems, please contact us!
 Python Setup
 ------------
 
-If you have not already, install `Python version 3.8 or higher <https://www.python.org>`_.
+If you have not already, install `Python version 3.9 or higher <https://www.python.org>`_.
 
 You can install a local Python package that uses your new OpenDP binary. 
 
