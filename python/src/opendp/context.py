@@ -226,7 +226,12 @@ def metric_of(M) -> Metric:
     raise TypeError(f"unrecognized metric: {M}")
 
 
-def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, Union[float, Tuple[float, float]]]:
+def loss_of(
+        epsilon: Optional[float]=None,
+        delta: Optional[float]=None,
+        rho: Optional[float]=None,
+        U=None
+    ) -> Tuple[Measure, Union[float, Tuple[float, float]]]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
     >>> import opendp.prelude as dp
@@ -735,16 +740,16 @@ def _sequential_composition_by_weights(
             "Must specify either `split_evenly_over` or `split_by_weights`"
         )
 
-    def mul(dist, scale):
+    def mul(dist, scale: float):
         if isinstance(dist, tuple):
             return dist[0] * scale, dist[1] * scale
         else:
             return dist * scale
 
-    def scale_weights(scale, weights):
+    def scale_weights(scale: float, weights):
         return [mul(w, scale) for w in weights]
 
-    def scale_sc(scale):
+    def scale_sc(scale: float):
         return make_sequential_composition(
             input_domain=domain,
             input_metric=input_metric,
