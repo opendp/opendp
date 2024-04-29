@@ -114,7 +114,7 @@ impl<Q: 'static> BasicCompositionMeasure for TypedMeasure<Q> {
 
 #[cfg(test)]
 mod tests {
-    use crate::combinators::tests::make_test_measurement;
+    use crate::combinators::test::make_test_measurement;
     use crate::core;
     use crate::error::Fallible;
     use crate::ffi::any::{AnyObject, Downcast};

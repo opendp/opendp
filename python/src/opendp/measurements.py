@@ -1,6 +1,16 @@
 # Auto-generated. Do not edit!
 '''
 The ``measurements`` module provides functions that apply calibrated noise to data to ensure differential privacy.
+For more context, see :ref:`measurements in the User Guide <measurements-user-guide>`.
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
+
+The methods of this module will then be accessible at ``dp.m``.
 '''
 from opendp._convert import *
 from opendp._lib import *
@@ -16,6 +26,8 @@ __all__ = [
     "make_gaussian",
     "make_geometric",
     "make_laplace",
+    "make_private_expr",
+    "make_private_lazyframe",
     "make_randomized_response",
     "make_randomized_response_bool",
     "make_report_noisy_max_gumbel",
@@ -25,6 +37,8 @@ __all__ = [
     "then_gaussian",
     "then_geometric",
     "then_laplace",
+    "then_private_expr",
+    "then_private_lazyframe",
     "then_report_noisy_max_gumbel",
     "then_user_measurement"
 ]
@@ -253,6 +267,15 @@ def make_gaussian(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> dp.enable_features('contrib')
+    >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    >>> gaussian = dp.m.make_gaussian(*input_space, scale=1.0)
+    >>> print('100?', gaussian(100.0))
+    100? ...
+
     """
     assert_features("contrib")
 
@@ -291,6 +314,15 @@ def then_gaussian(
     :param k: The noise granularity in terms of 2^k.
     :param MO: Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
+
+    :example:
+
+    >>> dp.enable_features('contrib')
+    >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    >>> gaussian = input_space >> dp.m.then_gaussian(scale=1.0)
+    >>> print('100?', gaussian(100.0))
+    100? ...
+
     """
     return PartialConstructor(lambda input_domain, input_metric: make_gaussian(
         input_domain=input_domain,
@@ -305,7 +337,7 @@ def make_geometric(
     input_domain: Domain,
     input_metric: Metric,
     scale,
-    bounds: Optional[Any] = None,
+    bounds = None,
     QO: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
     r"""Equivalent to `make_laplace` but restricted to an integer support.
@@ -330,13 +362,21 @@ def make_geometric(
     :type input_metric: Metric
     :param scale: 
     :param bounds: 
-    :type bounds: Any
     :param QO: 
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
+    >>> geometric = dp.m.make_geometric(*input_space, scale=1.0)
+    >>> print('100?', geometric(100))
+    100? ...
+
     """
     assert_features("contrib")
 
@@ -363,7 +403,7 @@ def make_geometric(
 
 def then_geometric(
     scale,
-    bounds: Optional[Any] = None,
+    bounds = None,
     QO: Optional[RuntimeTypeDescriptor] = None
 ):  
     r"""partial constructor of make_geometric
@@ -373,9 +413,17 @@ def then_geometric(
 
     :param scale: 
     :param bounds: 
-    :type bounds: Any
     :param QO: 
     :type QO: :py:ref:`RuntimeTypeDescriptor`
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
+    >>> geometric = input_space >> dp.m.then_geometric(scale=1.0)
+    >>> print('100?', geometric(100))
+    100? ...
+
     """
     return PartialConstructor(lambda input_domain, input_metric: make_geometric(
         input_domain=input_domain,
@@ -430,6 +478,16 @@ def make_laplace(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib")
+    >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    >>> laplace = dp.m.make_laplace(*input_space, scale=1.0)
+    >>> print('100?', laplace(100.0))
+    100? ...
+
     """
     assert_features("contrib")
 
@@ -466,6 +524,15 @@ def then_laplace(
     :param k: The noise granularity in terms of 2^k, only valid for domains over floats.
     :param QO: Data type of the output distance and scale. `f32` or `f64`.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
+
+    :example:
+
+    >>> dp.enable_features('contrib')
+    >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    >>> laplace = input_space >> dp.m.then_laplace(scale=1.0)
+    >>> print('100?', laplace(100.0))
+    100? ...
+
     """
     return PartialConstructor(lambda input_domain, input_metric: make_laplace(
         input_domain=input_domain,
@@ -476,8 +543,159 @@ def then_laplace(
 
 
 
+def make_private_expr(
+    input_domain: Domain,
+    input_metric: Metric,
+    output_measure: Measure,
+    expr,
+    global_scale = None
+) -> Measurement:
+    r"""Create a differentially private measurement from an [`Expr`].
+
+    [make_private_expr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_private_expr.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `ExprDomain`
+    * Output Type:    `Expr`
+    * Input Metric:   `MI`
+    * Output Measure: `MO`
+
+    :param input_domain: The domain of the input data.
+    :type input_domain: Domain
+    :param input_metric: How to measure distances between neighboring input data sets.
+    :type input_metric: Metric
+    :param output_measure: How to measure privacy loss.
+    :type output_measure: Measure
+    :param expr: The [`Expr`] to be privatized.
+    :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=None)
+    c_expr = py_to_c(expr, c_type=AnyObjectPtr, type_name=Expr)
+    c_global_scale = py_to_c(global_scale, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[f64]))
+
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_private_expr
+    lib_function.argtypes = [Domain, Metric, Measure, AnyObjectPtr, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_expr, c_global_scale), Measurement))
+
+    return output
+
+def then_private_expr(
+    output_measure: Measure,
+    expr,
+    global_scale = None
+):  
+    r"""partial constructor of make_private_expr
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_private_expr`
+
+    :param output_measure: How to measure privacy loss.
+    :type output_measure: Measure
+    :param expr: The [`Expr`] to be privatized.
+    :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_private_expr(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        output_measure=output_measure,
+        expr=expr,
+        global_scale=global_scale))
+
+
+
+def make_private_lazyframe(
+    input_domain: Domain,
+    input_metric: Metric,
+    output_measure: Measure,
+    lazyframe,
+    global_scale = None
+) -> Measurement:
+    r"""Create a differentially private measurement from a [`LazyFrame`].
+
+    Any data inside the [`LazyFrame`] is ignored,
+    but it is still recommended to start with an empty [`DataFrame`] and build up the computation using the [`LazyFrame`] API.
+
+    [make_private_lazyframe in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_private_lazyframe.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `LazyFrameDomain`
+    * Output Type:    `LazyFrame`
+    * Input Metric:   `MI`
+    * Output Measure: `MO`
+
+    :param input_domain: The domain of the input data.
+    :type input_domain: Domain
+    :param input_metric: How to measure distances between neighboring input data sets.
+    :type input_metric: Metric
+    :param output_measure: How to measure privacy loss.
+    :type output_measure: Measure
+    :param lazyframe: A description of the computations to be run, in the form of a [`LazyFrame`].
+    :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=None)
+    c_lazyframe = py_to_c(lazyframe, c_type=AnyObjectPtr, type_name=LazyFrame)
+    c_global_scale = py_to_c(global_scale, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[f64]))
+
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_private_lazyframe
+    lib_function.argtypes = [Domain, Metric, Measure, AnyObjectPtr, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_lazyframe, c_global_scale), Measurement))
+
+    return output
+
+def then_private_lazyframe(
+    output_measure: Measure,
+    lazyframe,
+    global_scale = None
+):  
+    r"""partial constructor of make_private_lazyframe
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_private_lazyframe`
+
+    :param output_measure: How to measure privacy loss.
+    :type output_measure: Measure
+    :param lazyframe: A description of the computations to be run, in the form of a [`LazyFrame`].
+    :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_private_lazyframe(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        output_measure=output_measure,
+        lazyframe=lazyframe,
+        global_scale=global_scale))
+
+
+
 def make_randomized_response(
-    categories: Any,
+    categories,
     prob,
     constant_time: bool = False,
     T: Optional[RuntimeTypeDescriptor] = None,
@@ -495,7 +713,6 @@ def make_randomized_response(
     * Output Measure: `MaxDivergence<QO>`
 
     :param categories: Set of valid outcomes
-    :type categories: Any
     :param prob: Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
     :param constant_time: Set to true to enable constant time. Slower.
     :type constant_time: bool
@@ -507,6 +724,14 @@ def make_randomized_response(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> random_string = dp.m.make_randomized_response(['a', 'b', 'c'], 0.99)
+    >>> print('a?', random_string('a'))
+    a? ...
+
     """
     assert_features("contrib")
 
@@ -560,6 +785,14 @@ def make_randomized_response_bool(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> random_bool = dp.m.make_randomized_response_bool(0.99)
+    >>> print('True?', random_bool(True))
+    True? ...
+
     """
     assert_features("contrib")
 
@@ -584,7 +817,7 @@ def make_randomized_response_bool(
 def make_report_noisy_max_gumbel(
     input_domain: Domain,
     input_metric: Metric,
-    scale: Any,
+    scale,
     optimize: str,
     QO: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
@@ -608,7 +841,6 @@ def make_report_noisy_max_gumbel(
     :param input_metric: Metric on the input domain. Must be LInfDistance
     :type input_metric: Metric
     :param scale: Higher scales are more private.
-    :type scale: Any
     :param optimize: Indicate whether to privately return the "Max" or "Min"
     :type optimize: str
     :param QO: Output Distance Type.
@@ -617,6 +849,15 @@ def make_report_noisy_max_gumbel(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.linf_distance(T=int)
+    >>> select_index = dp.m.make_report_noisy_max_gumbel(*input_space, scale=1.0, optimize='Max')
+    >>> print('2?', select_index([1, 2, 3, 2, 1]))
+    2? ...
+
     """
     assert_features("contrib")
 
@@ -640,7 +881,7 @@ def make_report_noisy_max_gumbel(
     return output
 
 def then_report_noisy_max_gumbel(
-    scale: Any,
+    scale,
     optimize: str,
     QO: Optional[RuntimeTypeDescriptor] = None
 ):  
@@ -650,11 +891,19 @@ def then_report_noisy_max_gumbel(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_report_noisy_max_gumbel`
 
     :param scale: Higher scales are more private.
-    :type scale: Any
     :param optimize: Indicate whether to privately return the "Max" or "Min"
     :type optimize: str
     :param QO: Output Distance Type.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.linf_distance(T=int)
+    >>> select_index = input_space >> dp.m.then_report_noisy_max_gumbel(scale=1.0, optimize='Max')
+    >>> print('2?', select_index([1, 2, 3, 2, 1]))
+    2? ...
+
     """
     return PartialConstructor(lambda input_domain, input_metric: make_report_noisy_max_gumbel(
         input_domain=input_domain,
@@ -696,6 +945,26 @@ def make_user_measurement(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> def const_function(_arg):
+    ...     return 42
+    >>> def privacy_map(_d_in):
+    ...     return 0.
+    >>> space = dp.atom_domain(T=int), dp.absolute_distance(int)
+    >>> user_measurement = dp.m.make_user_measurement(
+    ...     *space,
+    ...     output_measure=dp.max_divergence(float),
+    ...     function=const_function,
+    ...     privacy_map=privacy_map
+    ... )
+    >>> print('42?', user_measurement(0))
+    42? 42
+
+
+
     """
     assert_features("contrib", "honest-but-curious")
 

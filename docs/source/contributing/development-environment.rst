@@ -48,7 +48,7 @@ Now run ``cargo build`` in the ``rust`` subdirectory of the repo:
 .. code-block:: bash
 
     cd rust
-    cargo build --features untrusted,bindings
+    cargo build --all-features
 
 This will compile a debug build of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. 
 (The specific name of the library file will vary depending on your platform.)
@@ -101,7 +101,7 @@ If you run into problems, please contact us!
 Python Setup
 ------------
 
-If you have not already, install `Python version 3.8 or higher <https://www.python.org>`_.
+If you have not already, install `Python version 3.9 or higher <https://www.python.org>`_.
 
 You can install a local Python package that uses your new OpenDP binary. 
 
@@ -124,7 +124,7 @@ Change to the ``python`` directory, install dependencies, and then install the P
     cd python
 
     pip install -r requirements-dev.txt
-    pip install -e .
+    pip install -e '.[scikit-learn,polars]'
 
 ``requirement-dev.txt`` is compiled from ``requirements-dev.in``:
 To update dependencies, follow the directions in that file.

@@ -498,7 +498,7 @@ macro_rules! impl_float_inf_uni {
                 if !self.$op().is_finite() {
                     return Err(not_finite());
                 }
-                let lhs = FBig::<Up>::inf_cast(self)?;
+                let lhs = FBig::<Up>::inf_cast(self)?.with_precision(<$ty>::MANTISSA_DIGITS as usize).value();
                 let Ok(output) = catch_unwind_silent(|| lhs.$op()) else {
                     return Err(not_finite())
                 };

@@ -8,7 +8,7 @@ on:
   pull_request:
 
 jobs:
-  rust-build-and-test:
+  rust-build:
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -16,6 +16,18 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
     steps:
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false     # no: will remove rust
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: false        # no: little/no benefit
+          large-packages: false # no: slow
+          swap-storage: false   # no: having swap is useful
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -37,24 +49,34 @@ jobs:
         run: cargo fmt --manifest-path=Cargo.toml --all --check
 
       - name: Build
-        run: cargo build --verbose --features untrusted,bindings
+        run: cargo build --verbose --all-features
       
       - name: Check --no-default-features
-        run: cargo check --verbose --no-default-features --features untrusted,ffi
+        run: cargo check --verbose --no-default-features --features untrusted,bindings
 
       - name: Test
-        run: cargo test --verbose --features untrusted,ffi
+        run: cargo test --verbose --all-features
 
       - name: Check that generated python is up to date
         run: git diff --exit-code
 
-      - name: Upload libs
+      - name: Build (dynamic w/ polars)
+        run: cargo build --verbose --features untrusted,ffi,polars
+      
+      - name: Upload (dynamic w/ polars)
         uses: actions/upload-artifact@v4
         with:
-          name: libs
-          path: |
-            rust/target/debug/libopendp.so
-            rust/target/debug/libopendp.a
+          name: dynamic-lib
+          path: rust/target/debug/libopendp.so
+
+      - name: Build (static w/o Polars)
+        run: cargo build --verbose --features untrusted,ffi
+      
+      - name: Upload (static w/o Polars)
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-lib
+          path: rust/target/debug/libopendp.a
       
       - name: Prepare vendored sources
         run: cd .. && bash tools/r_stage.sh -v
@@ -64,6 +86,44 @@ jobs:
         with:
           name: vendor
           path: R/opendp/src/vendor.tar.xz
+
+  rust-test:
+    needs: rust-build
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: rust
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false     # no: will remove rust
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: false        # no: little/no benefit
+          large-packages: false # no: slow
+          swap-storage: false   # no: having swap is useful
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Test
+        run: cargo test --verbose --features untrusted,ffi,polars
+        
 
   rust-examples:
     runs-on: ubuntu-22.04
@@ -83,7 +143,7 @@ jobs:
         run: cargo +nightly -Zscript getting-started/code/quickstart-framework.rs
 
   python-test:
-    needs: rust-build-and-test
+    needs: rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -91,12 +151,13 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - 3.8
+          - 3.9
           - 3.12
         extra-install:
           - '.'
-          - '.[numpy]'
           - '.[scikit-learn]'
+          - '.[polars]'
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -123,10 +184,10 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
-      - name: Download libs
+      - name: Download dynamic lib
         uses: actions/download-artifact@v4
         with:
-          name: libs
+          name: dynamic-lib
           path: python/src/opendp/lib
       
       - name: Install package
@@ -137,7 +198,7 @@ jobs:
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
-        if: ${{ contains(matrix.extra-install, 'scikit-learn') }}
+        if: ${{ contains(matrix.extra-install, 'scikit-learn,polars') }}
         run: coverage report
 
   docs-links:
@@ -162,7 +223,7 @@ jobs:
         run: linkchecker -f linkchecker.cfg build/html/index.html
 
   python-notebooks:
-    needs: rust-build-and-test
+    needs: rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -193,10 +254,10 @@ jobs:
           python -m pip install flake8 pytest nbmake pytest-xdist
           python -m pip install -r requirements_notebooks.txt
 
-      - name: Download libs
+      - name: Download dynamic lib
         uses: actions/download-artifact@v4
         with:
-          name: libs
+          name: dynamic-lib
           path: python/src/opendp/lib
 
       - name: Install package
@@ -208,19 +269,22 @@ jobs:
           pytest --nbmake source/**/*.ipynb -n=auto
 
   r-test:
-    needs: rust-build-and-test
+    needs: rust-build
     runs-on: ubuntu-22.04
     env:
       OPENDP_LIB_DIR: ${{ github.workspace }}/libs
       LINTR_ERROR_ON_LINT: true
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Download libs
         uses: actions/download-artifact@v4
         with:
-          name: libs
+          # R uses a static library build that doesn't include Polars 
+          # (Polars currently links against Python)
+          name: static-lib
           path: libs/
 
       - name: Set up R
@@ -229,20 +293,23 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: R/opendp
-          extra-packages: devtools, local::., RcppTOML, lintr
+          extra-packages: devtools, RcppTOML, lintr
+
+      # running the OpenDP install in a separate command (instead of local::. above)
+      #   provides significantly more debug info if it fails
+      - name: Install OpenDP
+        working-directory: R/opendp/
+        run: Rscript -e 'devtools::install()'
 
       - name: Unit tests
         working-directory: R/opendp/
         run: Rscript -e 'devtools::test(reporter = c("summary", "fail"))'
 
-      - name: Documentation examples
-        run: |
-          STATUS=0
-          for R in `find docs/source -type f -name '*.R'`; do
-            echo $R
-            Rscript "$R" || STATUS=1
-          done
-          exit $STATUS
+      - name: Run sphinx examples
+        run: python tools/r_doc_examples.py
+
+      - name: Lint sphinx examples
+        run: Rscript -e 'lintr::lint_dir("docs/source")'
 
       - name: Document
         run: cd R/opendp/ && Rscript -e 'devtools::document()'

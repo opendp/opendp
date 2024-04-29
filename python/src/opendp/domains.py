@@ -1,6 +1,14 @@
 # Auto-generated. Do not edit!
 '''
-The ``domains`` modules provides functions for creating and using domains.
+The ``domains`` module provides functions for creating and using domains.
+For more context, see :ref:`domains in the User Guide <domains-user-guide>`.
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
 '''
 from opendp._convert import *
 from opendp._lib import *
@@ -14,11 +22,16 @@ __all__ = [
     "domain_carrier_type",
     "domain_debug",
     "domain_type",
+    "expr_domain",
+    "infer_lazyframe_domain",
+    "lazyframe_domain",
     "map_domain",
     "member",
     "option_domain",
+    "series_domain",
     "user_domain",
-    "vector_domain"
+    "vector_domain",
+    "with_margin"
 ]
 
 
@@ -73,7 +86,7 @@ def _user_domain_descriptor(
 
 
 def atom_domain(
-    bounds: Optional[Any] = None,
+    bounds = None,
     nullable: bool = False,
     T: Optional[RuntimeTypeDescriptor] = None
 ) -> Domain:
@@ -82,7 +95,6 @@ def atom_domain(
     [atom_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.atom_domain.html)
 
     :param bounds: 
-    :type bounds: Any
     :param nullable: 
     :type nullable: bool
     :param T: The type of the atom.
@@ -91,6 +103,12 @@ def atom_domain(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> dp.atom_domain(T=float)
+    AtomDomain(T=f64)
+
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
@@ -188,6 +206,95 @@ def domain_type(
     return output
 
 
+def expr_domain(
+    lazyframe_domain: Domain,
+    grouping_columns: Optional[List[str]] = None
+) -> Domain:
+    r"""Construct an ExprDomain from a LazyFrameDomain.
+
+    Must pass either `context` or `grouping_columns`.
+
+    :param lazyframe_domain: the domain of the LazyFrame to be constructed
+    :type lazyframe_domain: Domain
+    :param grouping_columns: set when creating an expression that aggregates
+    :type grouping_columns: List[str]
+    :rtype: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_lazyframe_domain = py_to_c(lazyframe_domain, c_type=Domain, type_name=None)
+    c_grouping_columns = py_to_c(grouping_columns, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[RuntimeType(origin='Vec', args=[String])]))
+
+    # Call library function.
+    lib_function = lib.opendp_domains__expr_domain
+    lib_function.argtypes = [Domain, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_lazyframe_domain, c_grouping_columns), Domain))
+
+    return output
+
+
+def infer_lazyframe_domain(
+    lazyframe
+) -> Domain:
+    r"""Infer the lazyframe domain that a dataset is a member of.
+
+    WARNING: This function looks at the data to infer the domain,
+    and should only be used if you consider the column names and column types to be public information.
+
+    [infer_lazyframe_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.infer_lazyframe_domain.html)
+
+    :param lazyframe: The lazyframe to infer the domain from.
+    :rtype: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_lazyframe = py_to_c(lazyframe, c_type=AnyObjectPtr, type_name=LazyFrame)
+
+    # Call library function.
+    lib_function = lib.opendp_domains__infer_lazyframe_domain
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_lazyframe), Domain))
+
+    return output
+
+
+def lazyframe_domain(
+    series_domains
+) -> Domain:
+    r"""Construct an instance of `LazyFrameDomain`.
+
+    :param series_domains: Domain of each series in the lazyframe.
+    :rtype: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_series_domains = py_to_c(series_domains, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[SeriesDomain]))
+
+    # Call library function.
+    lib_function = lib.opendp_domains__lazyframe_domain
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_series_domains), Domain))
+
+    return output
+
+
 def map_domain(
     key_domain: Domain,
     value_domain: Domain
@@ -220,14 +327,13 @@ def map_domain(
 
 def member(
     this: Domain,
-    val: Any
+    val
 ):
     r"""Check membership in a `domain`.
 
     :param this: The domain to check membership in.
     :type this: Domain
     :param val: A potential element of the domain.
-    :type val: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -281,6 +387,38 @@ def option_domain(
     return output
 
 
+def series_domain(
+    name: str,
+    element_domain: Domain
+) -> Domain:
+    r"""Construct an instance of `SeriesDomain`.
+
+    [series_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.series_domain.html)
+
+    :param name: The name of the series.
+    :type name: str
+    :param element_domain: The domain of elements in the series.
+    :type element_domain: Domain
+    :rtype: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_name = py_to_c(name, c_type=ctypes.c_char_p, type_name=str)
+    c_element_domain = py_to_c(element_domain, c_type=Domain, type_name=None)
+
+    # Call library function.
+    lib_function = lib.opendp_domains__series_domain
+    lib_function.argtypes = [ctypes.c_char_p, Domain]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_name, c_element_domain), Domain))
+
+    return output
+
+
 def user_domain(
     identifier: str,
     member,
@@ -319,14 +457,13 @@ def user_domain(
 
 def vector_domain(
     atom_domain: Domain,
-    size: Optional[Any] = None
+    size = None
 ) -> Domain:
     r"""Construct an instance of `VectorDomain`.
 
     :param atom_domain: The inner domain.
     :type atom_domain: Domain
     :param size: 
-    :type size: Any
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -343,5 +480,50 @@ def vector_domain(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_atom_domain, c_size), Domain))
+
+    return output
+
+
+def with_margin(
+    frame_domain: Domain,
+    by,
+    max_partition_length = None,
+    max_num_partitions = None,
+    max_partition_contributions = None,
+    max_influenced_partitions = None,
+    public_info: Optional[str] = None
+) -> Domain:
+    r"""
+
+    :param frame_domain: 
+    :type frame_domain: Domain
+    :param by: 
+    :param max_partition_length: 
+    :param max_num_partitions: 
+    :param max_partition_contributions: 
+    :param max_influenced_partitions: 
+    :param public_info: 
+    :type public_info: str
+    :rtype: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_frame_domain = py_to_c(frame_domain, c_type=Domain, type_name=None)
+    c_by = py_to_c(by, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[String]))
+    c_max_partition_length = py_to_c(max_partition_length, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[u32]))
+    c_max_num_partitions = py_to_c(max_num_partitions, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[u32]))
+    c_max_partition_contributions = py_to_c(max_partition_contributions, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[u32]))
+    c_max_influenced_partitions = py_to_c(max_influenced_partitions, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[u32]))
+    c_public_info = py_to_c(public_info, c_type=ctypes.c_char_p, type_name=RuntimeType(origin='Option', args=[String]))
+
+    # Call library function.
+    lib_function = lib.opendp_domains__with_margin
+    lib_function.argtypes = [Domain, AnyObjectPtr, AnyObjectPtr, AnyObjectPtr, AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_frame_domain, c_by, c_max_partition_length, c_max_num_partitions, c_max_partition_contributions, c_max_influenced_partitions, c_public_info), Domain))
 
     return output

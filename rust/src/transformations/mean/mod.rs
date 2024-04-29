@@ -43,15 +43,7 @@ where
     let size = input_domain
         .size
         .ok_or_else(|| err!(MakeTransformation, "dataset size must be known. Either specify size in the input domain or use make_resize"))?;
-    let bounds = input_domain
-        .element_domain
-        .get_closed_bounds()
-        .ok_or_else(|| {
-            err!(
-                MakeTransformation,
-                "input domain must consist of bounded data. Either specify bounds in the input domain or use make_clamp."
-            )
-        })?;
+    let bounds = input_domain.element_domain.get_closed_bounds()?;
     if size == 0 {
         return fallible!(MakeTransformation, "dataset size must be positive");
     }
@@ -64,23 +56,4 @@ where
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::metrics::SymmetricDistance;
-
-    use super::*;
-
-    #[test]
-    fn test_make_bounded_mean_symmetric() -> Fallible<()> {
-        let transformation = make_mean(
-            VectorDomain::new(AtomDomain::new_closed((0., 10.))?).with_size(5),
-            SymmetricDistance::default(),
-        )?;
-        let arg = vec![1., 2., 3., 4., 5.];
-        let ret = transformation.invoke(&arg)?;
-        let expected = 3.;
-        assert_eq!(ret, expected);
-        assert!(transformation.check(&1, &2.)?);
-
-        Ok(())
-    }
-}
+mod test;
