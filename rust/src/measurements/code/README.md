@@ -8,9 +8,9 @@ These snippets are built into the reference API documentation and run as tests, 
   - Doctests in `.rst` files under `docs/` (but not `.rst` files under `rust/`!) are run by `--doctest-glob '*.rst'`
 - Globals for the doctests in Python source are defined by `python/conftest.py`.
 
-When debugging tests, rather than going through a full build of python sources, I've found it easier to just use global search and replace to make edits to the snippet and the generated python at the same time.
+When debugging tests, rather than going through a full build of Python sources, I've found it easier to just use global search and replace to make edits to the snippet and the generated python at the same time.
 
 ## For R:
 
 - `r.rs` generates R source code, and if a function name matches a file name with an `.R` extesion, the snippet will be included in the generated source code.
-- In contrast to python doctests, in general there are no assertions of expected output in the snippets themselves: Instead, by default, the R docs build will run examples, and error if any example is an error.
+- In contrast to Python doctests, in general there are no assertions of expected output in the snippets themselves: Instead, by default, the R docs build will run examples, and fail if an example has an error.
