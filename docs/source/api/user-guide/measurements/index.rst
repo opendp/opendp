@@ -100,7 +100,7 @@ it is necessary to use a mechanism that only releases keys which are "stable".
 That is, keys which are present among all neighboring datasets.
 
 The stability histogram is used to release a category set and frequency counts, and is useful when the category set is unknown or very large.
-``make_count_by`` is included here because it is currently the only transformation that ``make_base_laplace_threshold`` chains with.
+``make_count_by`` is included here because it is currently the only transformation that ``make_laplace_threshold`` chains with.
 
 See the `Histograms notebook <../../../getting-started/examples/histograms.html>`_ for code examples and more exposition.
 
@@ -115,7 +115,7 @@ See the `Histograms notebook <../../../getting-started/examples/histograms.html>
      - ``VectorDomain<AtomDomain<TK>>``
      - ``SymmetricDistance``
      - ``L1Distance<TV>``
-   * - :func:`opendp.measurements.make_base_laplace_threshold`
+   * - :func:`opendp.measurements.make_laplace_threshold`
      - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
      - ``L1Distance<TV>``
      - ``SmoothedMaxDivergence<TV>``

@@ -80,7 +80,7 @@ def test_count_by_threshold():
     print(scale, threshold)
 
     with pytest.raises(dp.OpenDPException):
-        dp.m.make_base_laplace_threshold(
+        dp.m.make_laplace_threshold(
             dp.atom_domain(T=int), dp.l1_distance(T=float), scale=1.0, threshold=1e8
         )
 
