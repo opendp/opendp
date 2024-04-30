@@ -218,7 +218,7 @@ def then_b_ary_tree(
 
 def make_bounded_float_checked_sum(
     size_limit: int,
-    bounds: tuple[Any, Any],
+    bounds: Tuple[Any, Any],
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded data with known dataset size.
@@ -254,7 +254,7 @@ def make_bounded_float_checked_sum(
     :param size_limit: Upper bound on number of records to keep in the input data.
     :type size_limit: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
-    :type bounds: tuple[Any, Any]
+    :type bounds: Tuple[Any, Any]
     :param S: Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
     :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -286,7 +286,7 @@ def make_bounded_float_checked_sum(
 
 def make_bounded_float_ordered_sum(
     size_limit: int,
-    bounds: tuple[Any, Any],
+    bounds: Tuple[Any, Any],
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded floats with known ordering.
@@ -323,7 +323,7 @@ def make_bounded_float_ordered_sum(
     :param size_limit: Upper bound on the number of records in input data. Used to bound sensitivity.
     :type size_limit: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
-    :type bounds: tuple[Any, Any]
+    :type bounds: Tuple[Any, Any]
     :param S: Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
     :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -354,7 +354,7 @@ def make_bounded_float_ordered_sum(
 
 
 def make_bounded_int_monotonic_sum(
-    bounds: tuple[Any, Any],
+    bounds: Tuple[Any, Any],
     T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded ints,
