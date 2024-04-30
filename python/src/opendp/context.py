@@ -12,7 +12,7 @@ We suggest importing under the conventional name ``dp``:
 '''
 
 import logging
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Tuple, Union
 import importlib
 from inspect import signature
 from functools import partial
@@ -93,9 +93,8 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
     A metric space consists of a domain and a metric.
 
     >>> import opendp.prelude as dp
-    >>> from typing import List # in Python 3.9, can just write list[int] below
     ...
-    >>> dp.space_of(List[int])
+    >>> dp.space_of(list[int])
     (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
     >>> # the verbose form allows greater control:
     >>> (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())
@@ -131,9 +130,8 @@ def domain_of(T, infer=False) -> Domain:
 
     Accepts a limited set of Python type expressions:
 
-    >>> from typing import List  # Or just use regular "list" after python 3.8.
     >>> import opendp.prelude as dp
-    >>> dp.domain_of(List[int])
+    >>> dp.domain_of(list[int])
     VectorDomain(AtomDomain(T=i32))
     
     As well as strings representing types in the underlying Rust syntax:
@@ -157,7 +155,7 @@ def domain_of(T, infer=False) -> Domain:
 
     More complex types are not supported:
 
-    >>> dp.domain_of(List[List[int]]) # doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> dp.domain_of(list[list[int]]) # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ...
     opendp.mod.OpenDPException:
@@ -373,7 +371,7 @@ class Context(object):
         privacy_unit: Tuple[Metric, float],
         privacy_loss: Tuple[Measure, Any],
         split_evenly_over: Optional[int] = None,
-        split_by_weights: Optional[List[float]] = None,
+        split_by_weights: Optional[list[float]] = None,
         domain: Optional[Domain] = None,
     ) -> "Context":
         """Constructs a new context containing a sequential compositor with the given weights.
@@ -587,7 +585,7 @@ class Query(object):
     def compositor(
         self,
         split_evenly_over: Optional[int] = None,
-        split_by_weights: Optional[List[float]] = None,
+        split_by_weights: Optional[list[float]] = None,
         d_out=None,
         output_measure=None,
     ) -> "Query":
@@ -705,8 +703,8 @@ def _sequential_composition_by_weights(
     privacy_unit: Tuple[Metric, float],
     privacy_loss: Tuple[Measure, float],
     split_evenly_over: Optional[int] = None,
-    split_by_weights: Optional[List[float]] = None,
-) -> Tuple[Measurement, List[Any]]:
+    split_by_weights: Optional[list[float]] = None,
+) -> Tuple[Measurement, list[Any]]:
     """Constructs a sequential composition measurement
     where the ``d_mids`` are proportional to the weights.
 

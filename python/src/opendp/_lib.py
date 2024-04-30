@@ -3,12 +3,12 @@ import os
 import platform
 import re
 import sys
-from typing import Dict, List, Optional, Any
+from typing import Optional, Any
 import importlib
 
 
 # list all acceptable alternative types for each default type
-ATOM_EQUIVALENCE_CLASSES: Dict[str, List[str]] = {
+ATOM_EQUIVALENCE_CLASSES: dict[str, list[str]] = {
     'i32': ['u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64', 'usize'],
     'f64': ['f32', 'f64'],
     'bool': ['bool'],
@@ -187,7 +187,7 @@ class AnyQueryable(ctypes.Structure):
 
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)): # type: ignore[misc]
     _type_ = FfiSlice
-    _dependencies: Dict[Any, Any] = {}  # TODO: Tighten this
+    _dependencies: dict[Any, Any] = {}  # TODO: Tighten this
 
     def depends_on(self, *args):
         """Extends the memory lifetime of args to the lifetime of self."""
