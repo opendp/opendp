@@ -20,7 +20,7 @@ def make_report_noisy_max_gumbel(
 
     scale_frac = Fraction(scale)
 
-    def function(scores: List[TIA]):
+    def function(scores: list[TIA]):
         def map_gumbel(score):
             return GumbelPSRN(shift=sign * Fraction(score), scale=scale_frac)
         gumbel_scores = map(map_gumbel, scores)

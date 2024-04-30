@@ -17,7 +17,7 @@ from __future__ import annotations
 import sys
 import typing
 from collections.abc import Hashable
-from typing import Dict, Optional, Union, Any, Type, List
+from typing import Optional, Union, Any, Type
 import re
 
 
@@ -25,7 +25,7 @@ from opendp.mod import Function, UnknownTypeException, Measurement, Transformati
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency
 
 
-ELEMENTARY_TYPES: Dict[Any, str] = {
+ELEMENTARY_TYPES: dict[Any, str] = {
     int: 'i32',
     float: 'f64',
     str: 'String',
@@ -69,13 +69,13 @@ PRIMITIVE_TYPES = NUMERIC_TYPES | {"bool", "String"}
 RuntimeTypeDescriptor = Union[
     "RuntimeType",  # as the normalized type -- ChangeOneDistance; RuntimeType.parse("i32")
     str,  # plaintext string in terms of Rust types -- "Vec<i32>"
-    Type[Union[typing.List[Any], typing.Tuple[Any, Any], float, str, bool]],  # using the Python type class itself -- int, float
-    typing.Tuple["RuntimeTypeDescriptor", ...],  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, List[int])
+    Type[Union[list[Any], tuple[Any, Any], float, str, bool]],  # using the Python type class itself -- int, float
+    tuple["RuntimeTypeDescriptor", ...],  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, list[int])
 ]
 
 if sys.version_info >= (3, 8):
     from typing import _GenericAlias # type: ignore[attr-defined]
-    # a Python type hint from the std typing module -- List[int]
+    # a Python type hint from the std typing module -- list[int]
     RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (_GenericAlias,) # type: ignore[attr-defined]
 
 if sys.version_info >= (3, 9):  # pragma: no cover
@@ -125,7 +125,7 @@ class RuntimeType(object):
     """Utility for validating, manipulating, inferring and parsing/normalizing type information.
     """
     origin: str
-    args: List[Union["RuntimeType", str]]
+    args: list[Union["RuntimeType", str]]
 
     def __init__(self, origin, args=None):
         if not isinstance(origin, str):
@@ -142,7 +142,7 @@ class RuntimeType(object):
 
     def __repr__(self):
         result = self.origin or ''
-        if result == 'Tuple':
+        if result == 'tuple':
             return f'({", ".join(map(str, self.args))})'
         if self.args:
             result += f'<{", ".join(map(str, self.args))}>'
@@ -152,7 +152,7 @@ class RuntimeType(object):
         return hash(str(self)) # pragma: no cover
 
     @classmethod
-    def parse(cls, type_name: RuntimeTypeDescriptor, generics: Optional[List[str]] = None) -> Union["RuntimeType", str]:
+    def parse(cls, type_name: RuntimeTypeDescriptor, generics: Optional[list[str]] = None) -> Union["RuntimeType", str]:
         """Parse type descriptor into a normalized Rust type.
 
         Type descriptor may be expressed as:
@@ -164,7 +164,7 @@ class RuntimeType(object):
 
         :param type_name: type specifier
         :param generics: For internal use. List of type names to consider generic when parsing.
-        :type: List[str]
+        :type: list[str]
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
         :raises UnknownTypeException: if `type_name` fails to parse
@@ -200,7 +200,7 @@ class RuntimeType(object):
             origin, args = hinted_type
             args = [RuntimeType.parse(v, generics=generics) for v in args] or None # type: ignore[assignment]
             if origin == tuple:
-                origin = 'Tuple'
+                origin = 'tuple'
             elif origin == list:
                 origin = 'Vec'
             elif origin == dict:
@@ -208,9 +208,9 @@ class RuntimeType(object):
             
             return RuntimeType(RuntimeType.parse(origin, generics=generics), args)
 
-        # parse a tuple of types-- (int, "f64"); (List[int], (int, bool))
+        # parse a tuple of types-- (int, "f64"); (list[int], (int, bool))
         if isinstance(type_name, tuple):
-            return RuntimeType('Tuple', list(cls.parse(v, generics=generics) for v in type_name))
+            return RuntimeType('tuple', list(cls.parse(v, generics=generics) for v in type_name))
 
         # parse a string-- "Vec<f32>",
         if isinstance(type_name, str):
@@ -224,7 +224,7 @@ class RuntimeType(object):
             if type_name in generics:
                 return GenericType(type_name)
             if type_name.startswith('(') and type_name.endswith(')'):
-                return RuntimeType('Tuple', cls._parse_args(type_name[1:-1], generics=generics))
+                return RuntimeType('tuple', cls._parse_args(type_name[1:-1], generics=generics))
             start, end = type_name.find('<'), type_name.rfind('>')
 
             # attempt to upgrade strings to the metric/measure instance
@@ -270,7 +270,7 @@ class RuntimeType(object):
         raise UnknownTypeException(f"unable to parse type: {type_name}")
 
     @classmethod
-    def _parse_args(cls, args, generics: Optional[List[str]] = None):
+    def _parse_args(cls, args, generics: Optional[list[str]] = None):
         import re
         return [cls.parse(v, generics=generics) for v in re.split(r",\s*(?![^()<>]*\))", args)]
 
@@ -318,7 +318,7 @@ class RuntimeType(object):
                 return Expr
 
         if isinstance(public_example, tuple):
-            return RuntimeType('Tuple', [cls.infer(e, py_object) for e in public_example])
+            return RuntimeType('tuple', [cls.infer(e, py_object) for e in public_example])
 
         def infer_homogeneous(value):
             types = {cls.infer(v, py_object=py_object) for v in value}
@@ -373,7 +373,7 @@ class RuntimeType(object):
             cls,
             type_name: RuntimeTypeDescriptor | None = None,
             public_example: Any = None,
-            generics: Optional[List[str]] = None
+            generics: Optional[list[str]] = None
     ) -> Union["RuntimeType", str]:
         """If type_name is supplied, normalize it. Otherwise, infer the normalized type from a public example.
 
@@ -382,7 +382,7 @@ class RuntimeType(object):
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
         :param generics: For internal use. List of type names to consider generic when parsing.
-        :type: List[str]
+        :type: list[str]
         :raises ValueError: if `type_name` fails to parse
         :raises UnknownTypeException: if inference fails on `public_example` or no args are supplied
         """
@@ -540,7 +540,7 @@ def pass_through(value: Any) -> Any:
 def get_dependencies(value: Union[Measurement, Transformation, Function]) -> Any:
     return getattr(value, "_dependencies", None)
 
-def get_dependencies_iterable(value: List[Union[Measurement, Transformation, Function]]) -> List[Any]:
+def get_dependencies_iterable(value: list[Union[Measurement, Transformation, Function]]) -> list[Any]:
     return list(map(get_dependencies, value))
 
 def get_carrier_type(value: Domain) -> Union[RuntimeType, str]:

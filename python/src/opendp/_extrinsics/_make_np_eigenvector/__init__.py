@@ -2,7 +2,6 @@ from opendp._extrinsics.domains import _np_sscp_domain
 from opendp._extrinsics._utilities import to_then
 from opendp._lib import np_csprng, import_optional_dependency
 from opendp.mod import Domain, Metric, Transformation, Measurement
-from typing import List
 
 # planning to make this public, but may make more API changes
 
@@ -139,7 +138,7 @@ then_np_sscp_projection = to_then(make_np_sscp_projection)
 
 
 def make_private_np_eigenvectors(
-    input_domain: Domain, input_metric: Metric, unit_epsilons: List[float]
+    input_domain: Domain, input_metric: Metric, unit_epsilons: list[float]
 ) -> Measurement:
     np = import_optional_dependency('numpy')
     import opendp.prelude as dp
