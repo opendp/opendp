@@ -73,15 +73,9 @@ RuntimeTypeDescriptor = Union[
     tuple["RuntimeTypeDescriptor", ...],  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, list[int])
 ]
 
-if sys.version_info >= (3, 8):
-    from typing import _GenericAlias # type: ignore[attr-defined]
-    # a Python type hint from the std typing module -- list[int]
-    RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (_GenericAlias,) # type: ignore[attr-defined]
-
-if sys.version_info >= (3, 9):  # pragma: no cover
-    from types import GenericAlias
-    # a Python type hint from the std types module -- list[int]
-    RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (GenericAlias,) # type: ignore[attr-defined]
+from types import GenericAlias
+# a Python type hint from the std types module -- list[int]
+RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (GenericAlias,) # type: ignore[attr-defined]
 
 
 def set_default_int_type(T: RuntimeTypeDescriptor) -> None:
@@ -187,14 +181,9 @@ class RuntimeType(object):
 
         # parse type hints from the typing module
         hinted_type = None
-        if sys.version_info >= (3, 8):
-            from typing import _GenericAlias # type: ignore[attr-defined]
-            if isinstance(type_name, _GenericAlias):
-                hinted_type = typing.get_origin(type_name), typing.get_args(type_name)
-        if sys.version_info >= (3, 9):  # pragma: no cover
-            from types import GenericAlias
-            if isinstance(type_name, GenericAlias): # type: ignore[attr-defined]
-                hinted_type = type_name.__origin__, type_name.__args__ # type: ignore[attr-defined] # pragma: no cover
+        from types import GenericAlias
+        if isinstance(type_name, GenericAlias): # type: ignore[attr-defined]
+            hinted_type = type_name.__origin__, type_name.__args__ # type: ignore[attr-defined] # pragma: no cover
     
         if hinted_type:
             origin, args = hinted_type

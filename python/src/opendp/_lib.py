@@ -338,22 +338,12 @@ def make_proof_link(
 
 
 def get_opendp_version():
-    import sys
+    import importlib.metadata
 
-    if sys.version_info >= (3, 8):
-        import importlib.metadata
-
-        try:
-            return unmangle_py_version(importlib.metadata.version("opendp"))
-        except importlib.metadata.PackageNotFoundError:
-            return get_opendp_version_from_file()
-    else: # pragma: no cover
-        import pkg_resources
-
-        try:
-            return unmangle_py_version(pkg_resources.get_distribution("opendp").version)
-        except pkg_resources.DistributionNotFound:
-            return get_opendp_version_from_file()
+    try:
+        return unmangle_py_version(importlib.metadata.version("opendp"))
+    except importlib.metadata.PackageNotFoundError:
+        return get_opendp_version_from_file()
 
 
 def unmangle_py_version(py_version):
