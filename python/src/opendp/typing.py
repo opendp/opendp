@@ -14,7 +14,6 @@ We suggest importing under the conventional name ``dp``:
     >>> import opendp.prelude as dp
 '''
 from __future__ import annotations
-import sys
 import typing
 from collections.abc import Hashable
 from typing import Dict, Optional, Union, Any, Type, List, _GenericAlias # type: ignore[attr-defined]
@@ -179,14 +178,10 @@ class RuntimeType(object):
 
         # parse type hints from the typing module
         hinted_type = None
-        if sys.version_info >= (3, 8):
-            from typing import _GenericAlias # type: ignore[attr-defined]
-            if isinstance(type_name, _GenericAlias):
-                hinted_type = typing.get_origin(type_name), typing.get_args(type_name)
-        if sys.version_info >= (3, 9):  # pragma: no cover
-            from types import GenericAlias
-            if isinstance(type_name, GenericAlias): # type: ignore[attr-defined]
-                hinted_type = type_name.__origin__, type_name.__args__ # type: ignore[attr-defined] # pragma: no cover
+        if isinstance(type_name, _GenericAlias):
+            hinted_type = typing.get_origin(type_name), typing.get_args(type_name)
+        if isinstance(type_name, GenericAlias): # type: ignore[attr-defined]
+            hinted_type = type_name.__origin__, type_name.__args__ # type: ignore[attr-defined] # pragma: no cover
     
         if hinted_type:
             origin, args = hinted_type
