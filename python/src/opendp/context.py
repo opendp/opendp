@@ -12,7 +12,7 @@ We suggest importing under the conventional name ``dp``:
 '''
 
 import logging
-from typing import Any, Callable, Optional, tuple, Union
+from typing import Any, Callable, Optional, Union
 import importlib
 from inspect import signature
 from functools import partial

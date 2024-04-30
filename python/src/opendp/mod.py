@@ -8,7 +8,7 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 '''
 from __future__ import annotations
 import ctypes
-from typing import Any, Literal, Type, TypeVar, Union, tuple, Callable, Optional, overload, TYPE_CHECKING, cast
+from typing import Any, Literal, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
 
 from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
 
