@@ -73,15 +73,12 @@ RuntimeTypeDescriptor = Union[
     typing.Tuple["RuntimeTypeDescriptor", ...],  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, List[int])
 ]
 
-if sys.version_info >= (3, 8):
-    from typing import _GenericAlias # type: ignore[attr-defined]
-    # a Python type hint from the std typing module -- List[int]
-    RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (_GenericAlias,) # type: ignore[attr-defined]
-
-if sys.version_info >= (3, 9):  # pragma: no cover
-    from types import GenericAlias
-    # a Python type hint from the std types module -- list[int]
-    RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (GenericAlias,) # type: ignore[attr-defined]
+from typing import _GenericAlias # type: ignore[attr-defined]
+# a Python type hint from the std typing module -- List[int]
+RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (_GenericAlias,) # type: ignore[attr-defined]
+from types import GenericAlias
+# a Python type hint from the std types module -- list[int]
+RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (GenericAlias,) # type: ignore[attr-defined]
 
 
 def set_default_int_type(T: RuntimeTypeDescriptor) -> None:
