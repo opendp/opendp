@@ -482,8 +482,9 @@ where
     MO::Distance: 'static,
 {
     fn into_any(self) -> AnyPrivacyMap {
-        let PrivacyMap {data, time} = self;
-        let mut map = AnyPrivacyMap::new_fallible(move |d_in| data(d_in.downcast_ref()?).map(AnyObject::new));
+        let PrivacyMap { data, time } = self;
+        let mut map =
+            AnyPrivacyMap::new_fallible(move |d_in| data(d_in.downcast_ref()?).map(AnyObject::new));
         if let Some(time) = time {
             map = map.with_timing(move |d_in: &AnyObject| time(d_in.downcast_ref()?));
         }
@@ -503,8 +504,10 @@ where
     MO::Distance: 'static,
 {
     fn into_any(self) -> AnyStabilityMap {
-        let StabilityMap {data, time} = self;
-        let mut map = AnyStabilityMap::new_fallible(move |d_in| data(d_in.downcast_ref()?).map(AnyObject::new));
+        let StabilityMap { data, time } = self;
+        let mut map = AnyStabilityMap::new_fallible(move |d_in| {
+            data(d_in.downcast_ref()?).map(AnyObject::new)
+        });
         if let Some(time) = time {
             map = map.with_timing(move |d_in: &AnyObject| time(d_in.downcast_ref()?));
         }

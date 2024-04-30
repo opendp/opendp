@@ -137,7 +137,6 @@ pub struct PrivacyMap<MI: Metric, MO: Measure> {
     pub time: Option<Arc<dyn Fn(&MI::Distance) -> Fallible<TimeDistance> + Send + Sync>>,
 }
 
-
 impl<MI: Metric, MO: Measure> Clone for PrivacyMap<MI, MO> {
     fn clone(&self) -> Self {
         PrivacyMap {
@@ -151,7 +150,7 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static + Send + Sync) -> Self {
         PrivacyMap {
             data: Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))),
-            time: None
+            time: None,
         }
     }
     pub fn new_fallible(
@@ -159,7 +158,7 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     ) -> Self {
         PrivacyMap {
             data: Arc::new(move |d_in: &MI::Distance| map(d_in)),
-            time: None
+            time: None,
         }
     }
     pub fn new_from_constant(c: MO::Distance) -> Self
@@ -177,7 +176,10 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     pub fn eval(&self, input_distance: &MI::Distance) -> Fallible<MO::Distance> {
         (self.data)(input_distance)
     }
-    pub fn with_timing(mut self, map: impl Fn(&MI::Distance) -> Fallible<TimeDistance> + 'static + Send + Sync) -> Self {
+    pub fn with_timing(
+        mut self,
+        map: impl Fn(&MI::Distance) -> Fallible<TimeDistance> + 'static + Send + Sync,
+    ) -> Self {
         self.time = Some(Arc::new(map));
         self
     }
@@ -188,9 +190,17 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
         map1: &PrivacyMap<MX, MO>,
         map0: &StabilityMap<MI, MX>,
     ) -> Self {
-        let PrivacyMap { data: pmap, time: tmap1 } = map1.clone();
-        let StabilityMap { data: smap, time: tmap0 } = map0.clone();
-        let mut mapc = PrivacyMap::new_fallible(enclose!(smap, move |d_in: &MI::Distance| pmap(&smap(d_in)?)));
+        let PrivacyMap {
+            data: pmap,
+            time: tmap1,
+        } = map1.clone();
+        let StabilityMap {
+            data: smap,
+            time: tmap0,
+        } = map0.clone();
+        let mut mapc = PrivacyMap::new_fallible(enclose!(smap, move |d_in: &MI::Distance| pmap(
+            &smap(d_in)?
+        )));
 
         if let Some((tmap0, tmap1)) = tmap0.zip(tmap1) {
             mapc = mapc.with_timing(move |d_in: &MI::Distance| {
@@ -211,7 +221,6 @@ pub struct StabilityMap<MI: Metric, MO: Metric> {
     pub data: Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance> + Send + Sync>,
     pub time: Option<Arc<dyn Fn(&MI::Distance) -> Fallible<TimeDistance> + Send + Sync>>,
 }
-
 
 type TimeDistance = u64;
 
@@ -235,11 +244,14 @@ impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
     pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static + Send + Sync) -> Self {
         StabilityMap {
             data: Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))),
-            time: None
+            time: None,
         }
     }
 
-    pub fn with_timing(mut self, map: impl Fn(&MI::Distance) -> Fallible<TimeDistance> + 'static + Send + Sync) -> Self {
+    pub fn with_timing(
+        mut self,
+        map: impl Fn(&MI::Distance) -> Fallible<TimeDistance> + 'static + Send + Sync,
+    ) -> Self {
         self.time = Some(Arc::new(map));
         self
     }
@@ -249,7 +261,7 @@ impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
     ) -> Self {
         StabilityMap {
             data: Arc::new(map),
-            time: None
+            time: None,
         }
     }
     pub fn new_from_constant(c: MO::Distance) -> Self
@@ -274,10 +286,19 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
         map1: &StabilityMap<MX, MO>,
         map0: &StabilityMap<MI, MX>,
     ) -> Self {
-        let StabilityMap { data: smap1, time: tmap1 } = map1.clone();
-        let StabilityMap { data: smap0, time: tmap0 } = map0.clone();
+        let StabilityMap {
+            data: smap1,
+            time: tmap1,
+        } = map1.clone();
+        let StabilityMap {
+            data: smap0,
+            time: tmap0,
+        } = map0.clone();
 
-        let mut map_out = StabilityMap::new_fallible(enclose!(smap0, move |d_in: &MI::Distance| smap1(&smap0(d_in)?)));
+        let mut map_out = StabilityMap::new_fallible(enclose!(
+            smap0,
+            move |d_in: &MI::Distance| smap1(&smap0(d_in)?)
+        ));
 
         if let Some((tmap0, tmap1)) = tmap0.zip(tmap1) {
             map_out = map_out.with_timing(move |d_in: &MI::Distance| {
@@ -318,7 +339,7 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, 
             input_metric: self.input_metric.clone(),
             output_measure: self.output_measure.clone(),
             privacy_map: self.privacy_map.clone(),
-            time_safe: self.time_safe
+            time_safe: self.time_safe,
         }
     }
 }
@@ -341,7 +362,7 @@ where
             input_metric,
             output_measure,
             privacy_map,
-            time_safe: false
+            time_safe: false,
         })
     }
 

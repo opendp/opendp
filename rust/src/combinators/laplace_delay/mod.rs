@@ -16,7 +16,6 @@ use crate::{
 
 use super::BasicCompositionMeasure;
 
-
 #[cfg(test)]
 mod test;
 
@@ -62,9 +61,9 @@ where
             let delay = i_shift.clone() + sample_discrete_laplace(r_scale.clone())?;
             let (sign, mag) = delay.into_parts();
             match sign {
-                Sign::Positive => sleep(Duration::from_millis(
-                    u64::try_from(mag).unwrap_or(u64::MAX),
-                )),
+                Sign::Positive => {
+                    sleep(Duration::from_nanos(u64::try_from(mag).unwrap_or(u64::MAX)))
+                }
                 Sign::Negative => (),
             };
 
