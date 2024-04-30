@@ -1,13 +1,13 @@
 import opendp.prelude as dp
-from typing import Dict, List
+from typing import Dict
 
 def test_typed_space_of():
     # metric defaults to symmetric_distance on vector_domain
-    space = dp.space_of(List[int])  # can also do list[int] if python 3.8+
+    space = dp.space_of(list[int])  # can also do list[int] if python 3.8+
     assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())
 
     # can specify metric explicitly. If not fully specified, will infer distance type from domain
-    space = dp.space_of(List[int], dp.L1Distance)
+    space = dp.space_of(list[int], dp.L1Distance)
     assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.l1_distance(T=dp.i32))
 
     # when type is scalar, domain defaults to atom_domain and metric defaults to absolute_distance

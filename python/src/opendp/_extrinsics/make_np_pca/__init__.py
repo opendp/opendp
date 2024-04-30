@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import NamedTuple, List, Optional, TYPE_CHECKING
+from typing import NamedTuple, Optional, TYPE_CHECKING
 
 from opendp._extrinsics.make_np_clamp import then_np_clamp
 from opendp._extrinsics._utilities import register_measurement, to_then
@@ -16,7 +16,7 @@ if TYPE_CHECKING: # pragma: no cover
 
 class PCAEpsilons(NamedTuple):
     eigvals: float
-    eigvecs: List[float]
+    eigvecs: list[float]
     mean: Optional[float]
 
 
