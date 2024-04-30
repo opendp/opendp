@@ -141,8 +141,7 @@ def domain_of(T, infer=False) -> Domain:
 
     Dictionaries, optional types, and a range of primitive types are supported:
 
-    >>> from typing import Dict  # Or just use regular "dict" after python 3.8.
-    >>> dp.domain_of(Dict[str, int])
+    >>> dp.domain_of(dict[str, int])
     MapDomain { key_domain: AtomDomain(T=String), value_domain: AtomDomain(T=i32) }
     
     .. TODO: Support python syntax for Option: https://github.com/opendp/opendp/issues/1389

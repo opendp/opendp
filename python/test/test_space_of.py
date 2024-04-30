@@ -1,5 +1,4 @@
 import opendp.prelude as dp
-from typing import Dict
 
 def test_typed_space_of():
     # metric defaults to symmetric_distance on vector_domain
@@ -22,7 +21,7 @@ def test_typed_space_of():
     space = dp.space_of(int, dp.discrete_distance())
     assert space == (dp.atom_domain(T=dp.i32), dp.discrete_distance())
 
-    space = dp.space_of(Dict[str, int], dp.L1Distance[int])
+    space = dp.space_of(dict[str, int], dp.L1Distance[int])
     assert space == (dp.map_domain(dp.atom_domain(T=dp.String), dp.atom_domain(T=dp.i32)), dp.l1_distance(T=dp.i32))
 
 def test_infer_space_of():

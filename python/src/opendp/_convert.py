@@ -1,4 +1,4 @@
-from typing import Sequence, Tuple, Union, Dict, cast
+from typing import Sequence, Tuple, Union, cast
 from inspect import signature
 
 from opendp._lib import *
@@ -439,7 +439,7 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> Tuple[Any, ...]
                  for void_p, name in zip(ptr_data, inner_type_names))
 
 
-def _hashmap_to_slice(val: Dict[Any, Any], type_name: RuntimeType) -> FfiSlicePtr:
+def _hashmap_to_slice(val: dict[Any, Any], type_name: RuntimeType) -> FfiSlicePtr:
     key_type, val_type = type_name.args
     if not isinstance(val, dict):
         raise TypeError(f"Expected type is {type_name} but input data is not a dict.")
@@ -460,7 +460,7 @@ def _hashmap_to_slice(val: Dict[Any, Any], type_name: RuntimeType) -> FfiSlicePt
     return ffislice
 
 
-def _slice_to_hashmap(raw: FfiSlicePtr) -> Dict[Any, Any]:
+def _slice_to_hashmap(raw: FfiSlicePtr) -> dict[Any, Any]:
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))
     keys: AnyObjectPtr = slice_array[0]
     vals: AnyObjectPtr = slice_array[1]
