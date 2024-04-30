@@ -93,7 +93,7 @@ impl Argument {
         }
         if let Some(TypeRecipe::Nest { origin, args }) = &self.rust_type {
             if origin == "Tuple" {
-                return Some(format!("Tuple[{}]", vec!["Any"; args.len()].join(", ")));
+                return Some(format!("tuple[{}]", vec!["Any"; args.len()].join(", ")));
             }
         }
         self.c_type.clone().and_then(|mut c_type| {

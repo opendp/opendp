@@ -16,7 +16,9 @@ def test_numpy_function():
 
 def test_typing_hint():
     assert str(RuntimeType.parse(Tuple[int, float])) == "(i32, f64)" # type: ignore[arg-type]
+    assert str(RuntimeType.parse(tuple[int, float])) == "(i32, f64)" # type: ignore[arg-type]
     assert str(RuntimeType.parse(Tuple[int, Tuple[str]])) == "(i32, (String))" # type: ignore[arg-type]
+    assert str(RuntimeType.parse(tuple[int, tuple[str]])) == "(i32, (String))" # type: ignore[arg-type]
     assert str(RuntimeType.parse(List[int])) == "Vec<i32>"
     assert str(RuntimeType.parse(list[int])) == "Vec<i32>"
     assert str(RuntimeType.parse(List[List[str]])) == "Vec<Vec<String>>"
