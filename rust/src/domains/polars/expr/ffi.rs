@@ -23,7 +23,7 @@ use super::{ExprContext, ExprDomain};
         grouping_columns(
             rust_type = "Option<Vec<String>>",
             default = b"null",
-            hint = "List[str]"
+            hint = "list[str]"
         ),
         active_column(
             c_type = "AnyObject *",

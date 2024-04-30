@@ -208,7 +208,7 @@ def domain_type(
 
 def expr_domain(
     lazyframe_domain: Domain,
-    grouping_columns: Optional[List[str]] = None
+    grouping_columns: Optional[list[str]] = None
 ) -> Domain:
     r"""Construct an ExprDomain from a LazyFrameDomain.
 
@@ -217,7 +217,7 @@ def expr_domain(
     :param lazyframe_domain: the domain of the LazyFrame to be constructed
     :type lazyframe_domain: Domain
     :param grouping_columns: set when creating an expression that aggregates
-    :type grouping_columns: List[str]
+    :type grouping_columns: list[str]
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
