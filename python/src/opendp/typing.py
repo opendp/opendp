@@ -17,9 +17,9 @@ from __future__ import annotations
 import sys
 import typing
 from collections.abc import Hashable
-from typing import Dict, Optional, Union, Any, Type, List
+from typing import Dict, Optional, Union, Any, Type, List, _GenericAlias # type: ignore[attr-defined]
+from types import GenericAlias
 import re
-
 
 from opendp.mod import Function, UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency
@@ -71,14 +71,9 @@ RuntimeTypeDescriptor = Union[
     str,  # plaintext string in terms of Rust types -- "Vec<i32>"
     Type[Union[typing.List[Any], typing.Tuple[Any, Any], float, str, bool]],  # using the Python type class itself -- int, float
     typing.Tuple["RuntimeTypeDescriptor", ...],  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, List[int])
+    _GenericAlias, # a Python type hint from the std typing module -- List[int]
+    GenericAlias, # a Python type hint from the std types module -- list[int]
 ]
-
-from typing import _GenericAlias # type: ignore[attr-defined]
-# a Python type hint from the std typing module -- List[int]
-RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (_GenericAlias,) # type: ignore[attr-defined]
-from types import GenericAlias
-# a Python type hint from the std types module -- list[int]
-RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (GenericAlias,) # type: ignore[attr-defined]
 
 
 def set_default_int_type(T: RuntimeTypeDescriptor) -> None:
