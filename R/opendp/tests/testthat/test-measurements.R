@@ -1,11 +1,18 @@
 library(opendp)
 enable_features("contrib", "floating-point")
 
+# test_that("arg is required", {
+#   meas <- make_randomized_response_bool(0.75)
+#   expect_type(meas(), "logical")
+# })
+
 test_that("make_randomized_response_bool", {
   meas <- make_randomized_response_bool(0.75)
 
   expect_type(meas(arg = TRUE), "logical")
   expect_equal(meas(d_in = 1L), 1.0986122886681098)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("make_laplace", {
@@ -13,6 +20,8 @@ test_that("make_laplace", {
   meas <- space |> then_laplace(1.)
   expect_type(meas(arg = 0L), "integer")
   expect_equal(meas(d_in = 1L), 1.0)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 
   space <- c(atom_domain(.T = "f64"), absolute_distance(.T = "f64"))
   (space |> then_laplace(1.))(arg = 0.)
@@ -29,6 +38,8 @@ test_that("make_geometric", {
   meas <- space |> then_geometric(1., bounds = c(0L, 2L))
   expect_type(meas(arg = 0L), "integer")
   expect_equal(meas(d_in = 1L), 1.0)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("make_laplace", {
@@ -36,6 +47,8 @@ test_that("make_laplace", {
   meas <- space |> then_laplace(1., k = -40L)
   expect_type(meas(arg = 0), "double")
   expect_equal(meas(d_in = 1), 1.0)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("make_discrete_laplace", {
@@ -43,6 +56,8 @@ test_that("make_discrete_laplace", {
   meas <- space |> then_laplace(1.)
   expect_type(meas(arg = 0L), "integer")
   expect_equal(meas(d_in = 1L), 1.0)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_gaussian_curve", {
@@ -64,6 +79,8 @@ test_that("test_gaussian_curve", {
   curve <- make_zCDP_to_approxDP(input_space |> then_gaussian(0.))(d_in = 0.0)
   expect_equal(curve(delta = 0.0), 0.0)
   expect_equal(curve(delta = 0.1), 0.0)
+
+  # TODO: expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_gaussian_search", {
@@ -81,6 +98,8 @@ test_that("test_gaussian_search", {
     d_in = 1., d_out = c(1., 1e-5)
   )
   expect_equal(make_smd_gauss(scale, 1e-5)(d_in = 1.)[[1]], 1.)
+
+  # TODO: expect_error(fixed_meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_laplace", {
@@ -88,6 +107,8 @@ test_that("test_laplace", {
   meas <- input_space |> then_laplace(10.5)
   meas(arg = 100.)
   expect_lt(meas(d_in = 1.), 0.096)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_vector_laplace", {
@@ -95,6 +116,8 @@ test_that("test_vector_laplace", {
   meas <- input_space |> then_laplace(scale = 10.5)
   meas(arg = c(80., 90., 100.))
   expect_lt(meas(d_in = 1.), 1.3)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_gaussian_smoothed_max_divergence", {
@@ -104,6 +127,8 @@ test_that("test_gaussian_smoothed_max_divergence", {
 
   epsilon <- meas(d_in = 1.)(delta = 0.000001)
   expect_gt(epsilon, 0.4)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_gaussian_zcdp", {
@@ -112,6 +137,8 @@ test_that("test_gaussian_zcdp", {
   meas(arg = 100.)
 
   expect_lt(meas(d_in = 1.), 0.223)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_vector_gaussian", {
@@ -124,6 +151,8 @@ test_that("test_vector_gaussian", {
   )
   meas(arg = c(80., 90., 100.))
   expect_lt(meas(d_in = 1.)[[1]], 0.6)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_geometric", {
@@ -137,6 +166,8 @@ test_that("test_geometric", {
   meas(arg = 100L)
   expect_lte(meas(d_in = 1L), 0.5)
   expect_gt(meas(d_in = 1L), 0.49999)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_discrete_laplace", {
@@ -144,6 +175,8 @@ test_that("test_discrete_laplace", {
   meas(arg = 100L)
   expect_lte(meas(d_in = 1L), 0.5)
   expect_gt(meas(d_in = 1L), 0.49999)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_vector_discrete_laplace_cks20", {
@@ -152,6 +185,8 @@ test_that("test_vector_discrete_laplace_cks20", {
   meas(arg = c(100L, 10L, 12L))
   expect_lte(meas(d_in = 1L), 0.5)
   expect_gt(meas(d_in = 1L), 0.49999)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_geometric", {
@@ -160,6 +195,8 @@ test_that("test_geometric", {
   meas(arg = 100L)
   expect_lte(meas(d_in = 1L), 0.5)
   expect_gt(meas(d_in = 1L), 0.49999)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_vector_discrete_laplace", {
@@ -168,6 +205,8 @@ test_that("test_vector_discrete_laplace", {
   meas(arg = c(100L, 10L, 12L))
   expect_lte(meas(d_in = 1L), 0.5)
   expect_gt(meas(d_in = 1L), 0.49999)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_discrete_gaussian", {
@@ -175,6 +214,8 @@ test_that("test_discrete_gaussian", {
   meas <- input_space |> then_gaussian(scale = 2.)
   meas(arg = 100L)
   expect_equal(meas(d_in = 1L), 0.125)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_vector_discrete_gaussian", {
@@ -183,6 +224,8 @@ test_that("test_vector_discrete_gaussian", {
   meas(arg = c(100L, 10L, 12L))
   expect_lte(meas(d_in = 1.), 0.125)
   expect_gt(meas(d_in = 1.), 0.124)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_laplace_threshold", {
@@ -194,6 +237,8 @@ test_that("test_laplace_threshold", {
   meas(arg = c(rep("CAT_A", each = 20), rep("CAT_B", each = 10)))
 
   expect_lte(meas(d_in = 1L)[[1]], 1.0)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_randomized_response", {
@@ -201,6 +246,8 @@ test_that("test_randomized_response", {
   meas(arg = "A")
   expect_lte(meas(d_in = 1L), log(9.))
   expect_gt(meas(d_in = 1L), log(8.999))
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_randomized_response_bool", {
@@ -208,6 +255,8 @@ test_that("test_randomized_response_bool", {
   meas(arg = TRUE)
   expect_lte(meas(d_in = 1L), log(3.))
   expect_gt(meas(d_in = 1L), log(2.999))
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_gaussian", {
