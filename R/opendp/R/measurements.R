@@ -239,6 +239,15 @@ then_base_laplace_threshold <- function(
 #' @param k The noise granularity in terms of 2^k.
 #' @param .MO Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
 #' @return Measurement
+#' @examples
+#' library(opendp)
+#' enable_features("contrib")
+#' gaussian <- make_gaussian(
+#'                           atom_domain(.T = f64),
+#'                           absolute_distance(.T = f64),
+#'                           scale = 1.0)
+#' gaussian(arg = 100.0)
+#'
 #' @export
 make_gaussian <- function(
   input_domain,
@@ -282,6 +291,15 @@ make_gaussian <- function(
 #' @param k The noise granularity in terms of 2^k.
 #' @param .MO Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
 #' @return Measurement
+#' @examples
+#' library(opendp)
+#' enable_features("contrib")
+#' gaussian <- make_gaussian(
+#'                           atom_domain(.T = f64),
+#'                           absolute_distance(.T = f64),
+#'                           scale = 1.0)
+#' gaussian(arg = 100.0)
+#'
 #' @export
 then_gaussian <- function(
   lhs,

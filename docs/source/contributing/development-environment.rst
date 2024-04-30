@@ -204,7 +204,7 @@ Then, install devtools in R:
 
 .. code-block:: R
 
-    install.packages("devtools", "RcppTOML", "lintr")
+    install.packages(c("devtools", "RcppTOML", "lintr"))
 
 After each edit to the R or Rust source, run the following command in R to (re)load the R package:
 
