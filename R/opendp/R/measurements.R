@@ -248,6 +248,10 @@ then_base_laplace_threshold <- function(
 #'                           scale = 1.0)
 #' gaussian(arg = 100.0)
 #'
+#' # Alternatively:
+#' space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
+#' chain_gaussian <- space |> then_gaussian(scale = 1.0)
+#' chain_gaussian(arg = 100.0)
 #' @export
 make_gaussian <- function(
   input_domain,
@@ -300,6 +304,10 @@ make_gaussian <- function(
 #'                           scale = 1.0)
 #' gaussian(arg = 100.0)
 #'
+#' # Alternatively:
+#' space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
+#' chain_gaussian <- space |> then_gaussian(scale = 1.0)
+#' chain_gaussian(arg = 100.0)
 #' @export
 then_gaussian <- function(
   lhs,
