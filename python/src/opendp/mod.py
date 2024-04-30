@@ -8,7 +8,7 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 '''
 from __future__ import annotations
 import ctypes
-from typing import Any, Literal, Type, TypeVar, Union, Tuple, Callable, Optional, overload, TYPE_CHECKING, cast
+from typing import Any, Literal, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
 
 from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
 
@@ -137,7 +137,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return measurement_input_metric(self)
 
     @property
-    def input_space(self) -> Tuple["Domain", "Metric"]:
+    def input_space(self) -> tuple["Domain", "Metric"]:
         return self.input_domain, self.input_metric
     
     @property
@@ -350,11 +350,11 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         return transformation_output_metric(self)
     
     @property
-    def input_space(self) -> Tuple["Domain", "Metric"]:
+    def input_space(self) -> tuple["Domain", "Metric"]:
         return self.input_domain, self.input_metric # pragma: no cover
     
     @property
-    def output_space(self) -> Tuple["Domain", "Metric"]:
+    def output_space(self) -> tuple["Domain", "Metric"]:
         return self.output_domain, self.output_metric
     
     @property
@@ -698,7 +698,7 @@ M = TypeVar("M", Transformation, Measurement)
 def binary_search_chain(
         make_chain: Callable[[float], M],
         d_in: Any, d_out: Any,
-        bounds: Tuple[float, float] | None = None,
+        bounds: tuple[float, float] | None = None,
         T=None) -> M:
     """Find the highest-utility (`d_in`, `d_out`)-close Transformation or Measurement.
     
@@ -762,7 +762,7 @@ def binary_search_chain(
 def binary_search_param(
         make_chain: Callable[[float], Union[Transformation, Measurement]],
         d_in: Any, d_out: Any,
-        bounds: Tuple[float, float] | None = None,
+        bounds: tuple[float, float] | None = None,
         T=None) -> float:
     """Solve for the ideal constructor argument to `make_chain`.
     
@@ -830,7 +830,7 @@ def binary_search_param(
 @overload
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: Tuple[float, float] | None = ...,
+        bounds: tuple[float, float] | None = ...,
         T: Type[float] | None = ...,
         return_sign: Literal[False] = False) -> float:
     ...
@@ -840,27 +840,27 @@ def binary_search(
 @overload
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: Tuple[float, float] | None = ...,
+        bounds: tuple[float, float] | None = ...,
         T: Type[float] | None = ...,
         *, # see https://stackoverflow.com/questions/66435480/overload-following-optional-argument
-        return_sign: Literal[True]) -> Tuple[float, int]:
+        return_sign: Literal[True]) -> tuple[float, int]:
     ...
 
 # when setting return sign to true as a positional argument, return both
 @overload
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: Tuple[float, float] | None,
+        bounds: tuple[float, float] | None,
         T: Type[float] | None,
-        return_sign: Literal[True]) -> Tuple[float, int]:
+        return_sign: Literal[True]) -> tuple[float, int]:
     ...
 
 
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: Tuple[float, float] | None = None,
+        bounds: tuple[float, float] | None = None,
         T: Type[float] | None = None,
-        return_sign: bool = False) -> float | Tuple[float, int]:
+        return_sign: bool = False) -> float | tuple[float, int]:
     """Find the closest passing value to the decision boundary of `predicate`.
 
     If bounds are not passed, conducts an exponential search.
@@ -962,7 +962,7 @@ def binary_search(
 
 def exponential_bounds_search(
         predicate: Callable[[float], bool], 
-        T: Optional[Type[float]]) -> Optional[Tuple[float, float]]:
+        T: Optional[Type[float]]) -> Optional[tuple[float, float]]:
     """Determine bounds for a binary search via an exponential search,
     in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
     Will attempt to recover once if `predicate` throws an exception, 

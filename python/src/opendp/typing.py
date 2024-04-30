@@ -68,8 +68,8 @@ PRIMITIVE_TYPES = NUMERIC_TYPES | {"bool", "String"}
 RuntimeTypeDescriptor = Union[
     "RuntimeType",  # as the normalized type -- ChangeOneDistance; RuntimeType.parse("i32")
     str,  # plaintext string in terms of Rust types -- "Vec<i32>"
-    Type[Union[list[Any], typing.Tuple[Any, Any], float, str, bool]],  # using the Python type class itself -- int, float
-    typing.Tuple["RuntimeTypeDescriptor", ...],  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, list[int])
+    Type[Union[list[Any], tuple[Any, Any], float, str, bool]],  # using the Python type class itself -- int, float
+    tuple["RuntimeTypeDescriptor", ...],  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, list[int])
     _GenericAlias, # a Python type hint from the std typing module -- List[int]
     GenericAlias, # a Python type hint from the std types module -- list[int]
 ]
