@@ -17,6 +17,7 @@ When debugging tests, rather than going through a full build of Python sources, 
 
 ## For R:
 
-- `r.rs` generates R source code, and if a function name matches a file name with an `.R` extesion, the snippet will be included in the generated source code.
+- `r.rs` generates R source code, and if a function name matches a file name with an `.R` extension, the snippet will be included in the generated source code.
+- For now, the `then_` function docs use the snippet of the corresponding `make_` function.
 - `tools/r_stage.sh -d` will rebuild the R docs from the previously generated R source code.
 - In contrast to Python doctests, in general there are no assertions on expected output in the snippets themselves: Instead, by default, the R docs build will run examples, and include output in generated documentation, but fail if an example has an error.
