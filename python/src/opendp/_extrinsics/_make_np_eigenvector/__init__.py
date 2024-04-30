@@ -119,12 +119,11 @@ def make_np_sscp_projection(
             f"projection P (axis-1 size: {P.shape[1]}) does not conform with data in input_domain (num_features: {input_domain.num_features})"
         )
 
+    kwargs = input_desc._asdict() | {"num_features": P.shape[0]}
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        _np_sscp_domain(
-            **{**input_desc._asdict(), "num_features": P.shape[0]}
-        ),
+        _np_sscp_domain(**kwargs),
         input_metric,
         # http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=5
         # Algorithm 1 step 2.c

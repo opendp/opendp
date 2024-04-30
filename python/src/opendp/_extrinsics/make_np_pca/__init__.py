@@ -169,15 +169,11 @@ def _make_center(input_domain, input_metric):
 
     input_desc = input_domain.descriptor
 
+    kwargs = input_desc._asdict() | {"origin": np.zeros(input_desc.num_columns)}
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        dp.np_array2_domain(
-            **{
-                **input_desc._asdict(),
-                "origin": np.zeros(input_desc.num_columns),
-            }  # type: ignore[arg-type]
-        ),
+        dp.np_array2_domain(**kwargs),
         input_metric,
         lambda arg: arg - input_desc.origin,
         lambda d_in: d_in,
