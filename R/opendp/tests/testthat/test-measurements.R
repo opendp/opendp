@@ -84,8 +84,6 @@ test_that("test_gaussian_curve", {
   curve <- make_zCDP_to_approxDP(input_space |> then_gaussian(0.))(d_in = 0.0)
   expect_equal(curve(delta = 0.0), 0.0)
   expect_equal(curve(delta = 0.1), 0.0)
-
-  # TODO: expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_gaussian_search", {
@@ -103,8 +101,6 @@ test_that("test_gaussian_search", {
     d_in = 1., d_out = c(1., 1e-5)
   )
   expect_equal(make_smd_gauss(scale, 1e-5)(d_in = 1.)[[1]], 1.)
-
-  # TODO: expect_error(fixed_meas(), "expected exactly one of attr, arg or d_in")
 })
 
 test_that("test_laplace", {
