@@ -16,7 +16,7 @@ We suggest importing under the conventional name ``dp``:
 from __future__ import annotations
 import typing
 from collections.abc import Hashable
-from typing import Dict, Optional, Union, Any, Type, List, _GenericAlias # type: ignore[attr-defined]
+from typing import Dict, Optional, Union, Any, Type, _GenericAlias # type: ignore[attr-defined]
 from types import GenericAlias
 import re
 
@@ -68,8 +68,8 @@ PRIMITIVE_TYPES = NUMERIC_TYPES | {"bool", "String"}
 RuntimeTypeDescriptor = Union[
     "RuntimeType",  # as the normalized type -- ChangeOneDistance; RuntimeType.parse("i32")
     str,  # plaintext string in terms of Rust types -- "Vec<i32>"
-    Type[Union[typing.List[Any], typing.Tuple[Any, Any], float, str, bool]],  # using the Python type class itself -- int, float
-    typing.Tuple["RuntimeTypeDescriptor", ...],  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, List[int])
+    Type[Union[list[Any], typing.Tuple[Any, Any], float, str, bool]],  # using the Python type class itself -- int, float
+    typing.Tuple["RuntimeTypeDescriptor", ...],  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, list[int])
     _GenericAlias, # a Python type hint from the std typing module -- List[int]
     GenericAlias, # a Python type hint from the std types module -- list[int]
 ]
@@ -116,7 +116,7 @@ class RuntimeType(object):
     """Utility for validating, manipulating, inferring and parsing/normalizing type information.
     """
     origin: str
-    args: List[Union["RuntimeType", str]]
+    args: list[Union["RuntimeType", str]]
 
     def __init__(self, origin, args=None):
         if not isinstance(origin, str):
@@ -143,7 +143,7 @@ class RuntimeType(object):
         return hash(str(self)) # pragma: no cover
 
     @classmethod
-    def parse(cls, type_name: RuntimeTypeDescriptor, generics: Optional[List[str]] = None) -> Union["RuntimeType", str]:
+    def parse(cls, type_name: RuntimeTypeDescriptor, generics: Optional[list[str]] = None) -> Union["RuntimeType", str]:
         """Parse type descriptor into a normalized Rust type.
 
         Type descriptor may be expressed as:
@@ -155,7 +155,7 @@ class RuntimeType(object):
 
         :param type_name: type specifier
         :param generics: For internal use. List of type names to consider generic when parsing.
-        :type: List[str]
+        :type: list[str]
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
         :raises UnknownTypeException: if `type_name` fails to parse
@@ -195,7 +195,7 @@ class RuntimeType(object):
             
             return RuntimeType(RuntimeType.parse(origin, generics=generics), args)
 
-        # parse a tuple of types-- (int, "f64"); (List[int], (int, bool))
+        # parse a tuple of types-- (int, "f64"); (list[int], (int, bool))
         if isinstance(type_name, tuple):
             return RuntimeType('Tuple', list(cls.parse(v, generics=generics) for v in type_name))
 
@@ -257,7 +257,7 @@ class RuntimeType(object):
         raise UnknownTypeException(f"unable to parse type: {type_name}")
 
     @classmethod
-    def _parse_args(cls, args, generics: Optional[List[str]] = None):
+    def _parse_args(cls, args, generics: Optional[list[str]] = None):
         import re
         return [cls.parse(v, generics=generics) for v in re.split(r",\s*(?![^()<>]*\))", args)]
 
@@ -360,7 +360,7 @@ class RuntimeType(object):
             cls,
             type_name: RuntimeTypeDescriptor | None = None,
             public_example: Any = None,
-            generics: Optional[List[str]] = None
+            generics: Optional[list[str]] = None
     ) -> Union["RuntimeType", str]:
         """If type_name is supplied, normalize it. Otherwise, infer the normalized type from a public example.
 
@@ -369,7 +369,7 @@ class RuntimeType(object):
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
         :param generics: For internal use. List of type names to consider generic when parsing.
-        :type: List[str]
+        :type: list[str]
         :raises ValueError: if `type_name` fails to parse
         :raises UnknownTypeException: if inference fails on `public_example` or no args are supplied
         """
@@ -527,7 +527,7 @@ def pass_through(value: Any) -> Any:
 def get_dependencies(value: Union[Measurement, Transformation, Function]) -> Any:
     return getattr(value, "_dependencies", None)
 
-def get_dependencies_iterable(value: List[Union[Measurement, Transformation, Function]]) -> List[Any]:
+def get_dependencies_iterable(value: list[Union[Measurement, Transformation, Function]]) -> list[Any]:
     return list(map(get_dependencies, value))
 
 def get_carrier_type(value: Domain) -> Union[RuntimeType, str]:

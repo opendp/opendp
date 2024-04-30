@@ -723,13 +723,12 @@ def binary_search_chain(
 
     Find a base_laplace measurement with the smallest noise scale that is still (d_in, d_out)-close.
 
-    >>> from typing import List
     >>> import opendp.prelude as dp
     >>> dp.enable_features("floating-point", "contrib")
     ...
     >>> # The majority of the chain only needs to be defined once.
     >>> pre = (
-    ...     dp.space_of(List[float]) >>
+    ...     dp.space_of(list[float]) >>
     ...     dp.t.then_clamp(bounds=(0., 1.)) >>
     ...     dp.t.then_resize(size=10, constant=0.) >>
     ...     dp.t.then_mean()
