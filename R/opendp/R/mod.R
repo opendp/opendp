@@ -158,6 +158,9 @@ new_measurement <- function(ptr, log) {
     if (!missing(arg)) {
       return(measurement_invoke(ptr, arg))
     }
+    if (is.numeric(attr)) {
+      stop("numeric attr not allowed; Did you mean 'arg='?")
+    }
     switch(attr,
       input_domain = measurement_input_domain(ptr),
       input_metric = measurement_input_metric(ptr),

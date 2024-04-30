@@ -1,11 +1,6 @@
 library(opendp)
 enable_features("contrib", "floating-point")
 
-# test_that("arg is required", {
-#   meas <- make_randomized_response_bool(0.75)
-#   expect_type(meas(), "logical")
-# })
-
 test_that("make_randomized_response_bool", {
   meas <- make_randomized_response_bool(0.75)
 
@@ -15,13 +10,14 @@ test_that("make_randomized_response_bool", {
   expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
-test_that("make_laplace", {
+test_that("then_laplace", {
   space <- c(atom_domain(.T = "i32"), absolute_distance(.T = "i32"))
   meas <- space |> then_laplace(1.)
   expect_type(meas(arg = 0L), "integer")
   expect_equal(meas(d_in = 1L), 1.0)
 
   expect_error(meas(), "expected exactly one of attr, arg or d_in")
+  expect_error(meas(0L), "numeric attr not allowed; Did you mean 'arg='?")
 
   space <- c(atom_domain(.T = "f64"), absolute_distance(.T = "f64"))
   (space |> then_laplace(1.))(arg = 0.)
@@ -31,6 +27,15 @@ test_that("make_laplace", {
 
   space <- c(vector_domain(atom_domain(.T = "int")), l1_distance(.T = "int"))
   (space |> then_laplace(1.))(arg = c(0L, 1L))
+})
+
+test_that("make_laplace", {
+  meas <- make_laplace(atom_domain(.T = "i32"), absolute_distance(.T = "i32"), 1.)
+  expect_type(meas(arg = 0L), "integer")
+  expect_equal(meas(d_in = 1L), 1.0)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
+  expect_error(meas(0L), "numeric attr not allowed; Did you mean 'arg='?")
 })
 
 test_that("make_geometric", {
