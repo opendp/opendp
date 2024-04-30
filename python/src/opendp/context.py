@@ -12,7 +12,7 @@ We suggest importing under the conventional name ``dp``:
 '''
 
 import logging
-from typing import Any, Callable, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Union
 import importlib
 from inspect import signature
 from functools import partial
@@ -87,7 +87,7 @@ for module_name in ["transformations", "measurements"]:
         constructors[name[5:]] = constructor, is_partial
 
 
-def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
+def space_of(T, M=None, infer=False) -> tuple[Domain, Metric]:
     """A shorthand for building a metric space.
 
     A metric space consists of a domain and a metric.
@@ -223,7 +223,7 @@ def metric_of(M) -> Metric:
     raise TypeError(f"unrecognized metric: {M}")
 
 
-def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, Union[float, Tuple[float, float]]]:
+def loss_of(epsilon=None, delta=None, rho=None, U=None) -> tuple[Measure, Union[float, tuple[float, float]]]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
     >>> import opendp.prelude as dp
@@ -278,7 +278,7 @@ def unit_of(
     l2=None,
     ordered=False,
     U=None,
-) -> Tuple[Metric, float]:
+) -> tuple[Metric, float]:
     """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
     The parameters are mutually exclusive.
 
@@ -367,8 +367,8 @@ class Context(object):
     @staticmethod
     def compositor(
         data: Any,
-        privacy_unit: Tuple[Metric, float],
-        privacy_loss: Tuple[Measure, Any],
+        privacy_unit: tuple[Metric, float],
+        privacy_loss: tuple[Measure, Any],
         split_evenly_over: Optional[int] = None,
         split_by_weights: Optional[list[float]] = None,
         domain: Optional[Domain] = None,
@@ -452,7 +452,7 @@ class Context(object):
         )
 
 
-Chain = Union[Tuple[Domain, Metric], Transformation, Measurement, "PartialChain"]
+Chain = Union[tuple[Domain, Metric], Transformation, Measurement, "PartialChain"]
 
 
 class Query(object):
@@ -607,7 +607,7 @@ class Query(object):
                 d_out, self._output_measure, output_measure
             )
 
-        def compositor(chain: Union[Tuple[Domain, Metric], Transformation], d_in):
+        def compositor(chain: Union[tuple[Domain, Metric], Transformation], d_in):
             if isinstance(chain, tuple):
                 input_domain, input_metric = chain
             elif isinstance(chain, Transformation):
@@ -699,11 +699,11 @@ class PartialChain(object):
 
 def _sequential_composition_by_weights(
     domain: Domain,
-    privacy_unit: Tuple[Metric, float],
-    privacy_loss: Tuple[Measure, float],
+    privacy_unit: tuple[Metric, float],
+    privacy_loss: tuple[Measure, float],
     split_evenly_over: Optional[int] = None,
     split_by_weights: Optional[list[float]] = None,
-) -> Tuple[Measurement, list[Any]]:
+) -> tuple[Measurement, list[Any]]:
     """Constructs a sequential composition measurement
     where the ``d_mids`` are proportional to the weights.
 

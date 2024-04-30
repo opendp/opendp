@@ -1,4 +1,4 @@
-from typing import Sequence, Tuple, Union, cast
+from typing import Sequence, Union, cast
 from inspect import signature
 
 from opendp._lib import *
@@ -388,7 +388,7 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> list[Any]:
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len] # type: ignore
 
 
-def _tuple_to_slice(val: Tuple[Any, ...], type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
+def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
     type_name = cast(RuntimeType, type_name)
     inner_type_names = type_name.args
     if not isinstance(val, tuple):
@@ -422,7 +422,7 @@ def _tuple_to_slice(val: Tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
     return _wrap_in_slice(ctypes.pointer(array), len(val))
 
 
-def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> Tuple[Any, ...]:
+def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]:
     inner_type_names = type_name.args
     # typed pointer
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
