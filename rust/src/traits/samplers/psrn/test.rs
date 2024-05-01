@@ -1,32 +1,59 @@
 use super::*;
 
-#[test]
-fn test_sample_gumbel_interval_progression() -> Fallible<()> {
-    let mut gumbel = GumbelPSRN::new(RBig::ZERO, RBig::ONE);
-    for _ in 0..10 {
-        println!(
-            "{:?}, {:?}, {}",
-            gumbel.value::<Down>()?.to_f64(),
-            gumbel.value::<Up>()?.to_f64(),
-            gumbel.precision
-        );
-        gumbel.refine()?;
+pub fn assert_ordered_progression<D: InverseCDF>(
+    sampler: &mut PartialSample<D>,
+    min_refinements: usize,
+) -> (D::Edge, D::Edge)
+where
+    D::Edge: PartialOrd,
+{
+    loop {
+        sampler.refine().unwrap();
+        let Some((l, r)) = sampler.lower().zip(sampler.upper()) else {
+            continue;
+        };
+        assert!(l <= r);
+
+        if sampler.refinements >= min_refinements {
+            return (l, r);
+        }
     }
+}
+
+struct UniformRV;
+
+impl UniformRV {
+    pub fn sample() -> PartialSample<Self> {
+        PartialSample::new(UniformRV)
+    }
+}
+
+impl InverseCDF for UniformRV {
+    type Edge = RBig;
+
+    fn inverse_cdf<R: ODPRound>(&self, uniform: RBig, _refinements: usize) -> Option<Self::Edge> {
+        Some(uniform)
+    }
+}
+
+#[test]
+fn test_value() -> Fallible<()> {
+    let mut psrn = UniformRV::sample();
+    // sampled value will always be in [0, 1]
+    assert!((0f64..1f64).contains(&psrn.value()?));
+
     Ok(())
 }
 
 #[test]
-fn test_gumbel_psrn() -> Fallible<()> {
-    fn sample_gumbel() -> Fallible<f64> {
-        let mut gumbel = GumbelPSRN::new(RBig::ZERO, RBig::ONE);
-        for _ in 0..10 {
-            gumbel.refine()?;
-        }
-        Ok(gumbel.value::<Down>()?.to_f64().value())
+fn test_greater_than() -> Fallible<()> {
+    let (mut l, mut r) = (UniformRV::sample(), UniformRV::sample());
+
+    if l.greater_than(&mut r)? {
+        assert!(l.value::<f64>()? > r.value::<f64>()?);
+    } else {
+        assert!(l.value::<f64>()? < r.value::<f64>()?);
     }
-    let samples = (0..1000)
-        .map(|_| sample_gumbel())
-        .collect::<Fallible<Vec<_>>>()?;
-    println!("{:?}", samples);
+
     Ok(())
 }
