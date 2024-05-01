@@ -41,7 +41,7 @@ use super::get_discretization_consts;
 /// # Generics
 /// * `TK` - Type of Key. Must be hashable/categorical.
 /// * `TV` - Type of Value. Must be float.
-pub fn make_base_laplace_threshold<TK, TV>(
+pub fn make_laplace_threshold<TK, TV>(
     input_domain: MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
     input_metric: L1Distance<TV>,
     scale: TV,

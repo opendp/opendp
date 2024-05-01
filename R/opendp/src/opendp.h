@@ -894,11 +894,11 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_user_measurement(c
                                                                                CallbackFn privacy_map,
                                                                                const char *TO);
 
-struct FfiResult_____AnyMeasurement opendp_measurements__make_base_laplace_threshold(const struct AnyDomain *input_domain,
-                                                                                     const struct AnyMetric *input_metric,
-                                                                                     const void *scale,
-                                                                                     const void *threshold,
-                                                                                     long k);
+struct FfiResult_____AnyMeasurement opendp_measurements__make_laplace_threshold(const struct AnyDomain *input_domain,
+                                                                                const struct AnyMetric *input_metric,
+                                                                                const void *scale,
+                                                                                const void *threshold,
+                                                                                long k);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_response_bool(const void *prob,
                                                                                        c_bool constant_time,
