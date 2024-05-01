@@ -2,7 +2,7 @@ These snippets are built into the reference API documentation and run as tests, 
 
 ## For Python or R:
 
-- From the `rust` directory, runs `cargo build --all-features` to to rebuild genereated code.
+- From the `rust` directory, runs `cargo build --all-features` to rebuild generated code.
 (`cargo build --features bindings` should work but currently fails. See https://github.com/opendp/opendp/issues/1343.)
 
 ## For Python:
