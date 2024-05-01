@@ -30,6 +30,7 @@ __all__ = [
     "make_private_lazyframe",
     "make_randomized_response",
     "make_randomized_response_bool",
+    "make_report_noisy_max_exponential",
     "make_report_noisy_max_gumbel",
     "make_user_measurement",
     "then_alp_queryable",
@@ -39,6 +40,7 @@ __all__ = [
     "then_laplace_threshold",
     "then_private_expr",
     "then_private_lazyframe",
+    "then_report_noisy_max_exponential",
     "then_report_noisy_max_gumbel",
     "then_user_measurement"
 ]
@@ -802,6 +804,85 @@ def make_randomized_response_bool(
     return output
 
 
+def make_report_noisy_max_exponential(
+    input_domain: Domain,
+    input_metric: Metric,
+    scale,
+    optimize: str,
+    QO: Optional[RuntimeTypeDescriptor] = None
+) -> Measurement:
+    r"""Make a Measurement that takes a vector of scores and privately selects the index of the highest score
+    with noise added from the exponential distribution.
+
+    [make_report_noisy_max_exponential in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_report_noisy_max_exponential.html)
+
+    **Supporting Elements:**
+
+    * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+    * Output Type:    `usize`
+    * Input Metric:   `LInfDistance<TIA>`
+    * Output Measure: `MaxDivergence<QO>`
+
+    :param input_domain: Domain of the input vector. Must be a non-nullable VectorDomain.
+    :type input_domain: Domain
+    :param input_metric: Metric on the input domain. Must be LInfDistance
+    :type input_metric: Metric
+    :param scale: Higher scales are more private.
+    :param optimize: Indicate whether to privately return the "Max" or "Min"
+    :type optimize: str
+    :param QO: Output Distance Type.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # Standardize type arguments.
+    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
+
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_scale = py_to_c(scale, c_type=AnyObjectPtr, type_name=QO)
+    c_optimize = py_to_c(optimize, c_type=ctypes.c_char_p, type_name=String)
+    c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
+
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_report_noisy_max_exponential
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_optimize, c_QO), Measurement))
+
+    return output
+
+def then_report_noisy_max_exponential(
+    scale,
+    optimize: str,
+    QO: Optional[RuntimeTypeDescriptor] = None
+):  
+    r"""partial constructor of make_report_noisy_max_exponential
+
+    .. seealso:: 
+      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_report_noisy_max_exponential`
+
+    :param scale: Higher scales are more private.
+    :param optimize: Indicate whether to privately return the "Max" or "Min"
+    :type optimize: str
+    :param QO: Output Distance Type.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
+    """
+    return PartialConstructor(lambda input_domain, input_metric: make_report_noisy_max_exponential(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        optimize=optimize,
+        QO=QO))
+
+
+
 def make_report_noisy_max_gumbel(
     input_domain: Domain,
     input_metric: Metric,
@@ -828,7 +909,7 @@ def make_report_noisy_max_gumbel(
     :type input_domain: Domain
     :param input_metric: Metric on the input domain. Must be LInfDistance
     :type input_metric: Metric
-    :param scale: Higher scales are more private.
+    :param scale: Noise scale for the Gumbel distribution.
     :param optimize: Indicate whether to privately return the "Max" or "Min"
     :type optimize: str
     :param QO: Output Distance Type.
@@ -878,7 +959,7 @@ def then_report_noisy_max_gumbel(
     .. seealso:: 
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_report_noisy_max_gumbel`
 
-    :param scale: Higher scales are more private.
+    :param scale: Noise scale for the Gumbel distribution.
     :param optimize: Indicate whether to privately return the "Max" or "Min"
     :type optimize: str
     :param QO: Output Distance Type.

@@ -15,6 +15,9 @@ pub use gumbel::GumbelPSRN;
 mod laplace;
 pub use laplace::LaplacePSRN;
 
+mod exponential;
+pub use exponential::ExponentialPSRN;
+
 mod uniform;
 pub use uniform::UniformPSRN;
 

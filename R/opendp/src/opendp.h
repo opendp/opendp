@@ -869,6 +869,12 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_report_noisy_max_g
                                                                                       const char *optimize,
                                                                                       const char *QO);
 
+struct FfiResult_____AnyMeasurement opendp_measurements__make_report_noisy_max_exponential(const struct AnyDomain *input_domain,
+                                                                                           const struct AnyMetric *input_metric,
+                                                                                           const struct AnyObject *scale,
+                                                                                           const char *optimize,
+                                                                                           const char *QO);
+
 struct FfiResult_____AnyMeasurement opendp_measurements__make_laplace(const struct AnyDomain *input_domain,
                                                                       const struct AnyMetric *input_metric,
                                                                       const void *scale,
