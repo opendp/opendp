@@ -1,7 +1,10 @@
 use dashu::{
-    float::round::{
-        mode::{Down, Up},
-        ErrorBounds,
+    float::{
+        round::{
+            mode::{Down, Up},
+            ErrorBounds,
+        },
+        FBig,
     },
     integer::UBig,
 };
@@ -15,7 +18,7 @@ pub use laplace::LaplacePSRN;
 mod uniform;
 pub use uniform::UniformPSRN;
 
-use crate::error::Fallible;
+use crate::{error::Fallible, traits::RoundCast};
 
 pub trait PSRN {
     type Edge: PartialOrd;
@@ -64,14 +67,34 @@ impl ODPRound for Up {
     type Complement = Down;
 }
 
-// fn psrn_value<TI: PSRN<Edge = Rational>, TO: CastInternalRational + PartialEq>(
-//     psrn: &mut TI,
-// ) -> Fallible<TO> {
-//     while TO::from_rational(psrn.edge(Lower)?) != TO::from_rational(psrn.edge(Upper)?) {
-//         psrn.refine()?;
-//     }
-//     Ok(TO::from_rational(psrn.edge(Lower)?))
-// }
+/// Check if `psrn` is greater than `threshold`
+pub fn check_above<RV: PSRN>(psrn: &mut RV, threshold: &RV::Edge) -> Fallible<bool> {
+    loop {
+        if psrn.lower().as_ref() > Some(threshold) {
+            return Ok(true);
+        }
+        if psrn.upper().as_ref() < Some(threshold) {
+            return Ok(false);
+        }
+        psrn.refine()?;
+    }
+}
+
+/// Refine `psrn` until both bounds of interval round to same TO
+pub fn pinpoint<TI: PSRN<Edge = FBig>, TO: RoundCast<FBig> + PartialEq>(
+    psrn: &mut LaplacePSRN,
+) -> Fallible<TO> {
+    loop {
+        psrn.refine()?;
+        let Some((l, r)) = psrn.lower().zip(psrn.upper()) else {
+            continue;
+        };
+        let (l, r) = (TO::round_cast(l)?, TO::round_cast(r)?);
+        if l == r {
+            return Ok(l);
+        }
+    }
+}
 
 #[cfg(test)]
 mod test;

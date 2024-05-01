@@ -467,14 +467,9 @@ def make_laplace_threshold(
     input_domain: Domain,
     input_metric: Metric,
     scale,
-    threshold,
-    k: int = -1074
+    threshold
 ) -> Measurement:
     r"""Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
-
-    This function takes a noise granularity in terms of 2^k.
-    Larger granularities are more computationally efficient, but have a looser privacy map.
-    If k is not set, k defaults to the smallest granularity.
 
     [make_laplace_threshold in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_laplace_threshold.html)
 
@@ -491,14 +486,12 @@ def make_laplace_threshold(
     :type input_metric: Metric
     :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
     :param threshold: Exclude counts that are less than this minimum value.
-    :param k: The noise granularity in terms of 2^k.
-    :type k: int
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
-    assert_features("contrib", "floating-point")
+    assert_features("contrib")
 
     # Standardize type arguments.
     TV = get_distance_type(input_metric) # type: ignore
@@ -508,21 +501,19 @@ def make_laplace_threshold(
     c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=TV)
     c_threshold = py_to_c(threshold, c_type=ctypes.c_void_p, type_name=TV)
-    c_k = py_to_c(k, c_type=ctypes.c_uint32, type_name=i32)
 
     # Call library function.
     lib_function = lib.opendp_measurements__make_laplace_threshold
-    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_void_p]
     lib_function.restype = FfiResult
 
-    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_threshold, c_k), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_threshold), Measurement))
 
     return output
 
 def then_laplace_threshold(
     scale,
-    threshold,
-    k: int = -1074
+    threshold
 ):  
     r"""partial constructor of make_laplace_threshold
 
@@ -531,15 +522,12 @@ def then_laplace_threshold(
 
     :param scale: Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
     :param threshold: Exclude counts that are less than this minimum value.
-    :param k: The noise granularity in terms of 2^k.
-    :type k: int
     """
     return PartialConstructor(lambda input_domain, input_metric: make_laplace_threshold(
         input_domain=input_domain,
         input_metric=input_metric,
         scale=scale,
-        threshold=threshold,
-        k=k))
+        threshold=threshold))
 
 
 

@@ -1,6 +1,9 @@
-use std::os::raw::{c_long, c_void};
+use std::os::raw::c_void;
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
+use dashu::base::ConversionError;
+use dashu::float::FBig;
+
+use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, MapDomain};
 use crate::err;
 use crate::error::Fallible;
@@ -8,8 +11,7 @@ use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::{Type, TypeContents};
 use crate::measurements::make_laplace_threshold;
 use crate::metrics::L1Distance;
-use crate::traits::samplers::CastInternalRational;
-use crate::traits::{ExactIntCast, Float, Hashable};
+use crate::traits::{ExactIntCast, Float, Hashable, RoundCast};
 
 #[no_mangle]
 pub extern "C" fn opendp_measurements__make_laplace_threshold(
@@ -17,19 +19,19 @@ pub extern "C" fn opendp_measurements__make_laplace_threshold(
     input_metric: *const AnyMetric,
     scale: *const c_void,
     threshold: *const c_void,
-    k: c_long,
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<TK, TV>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
         scale: *const c_void,
         threshold: *const c_void,
-        k: i32,
     ) -> Fallible<AnyMeasurement>
     where
         TK: Hashable,
-        TV: Float + CastInternalRational,
-        i32: ExactIntCast<TV::Bits>,
+        TV: Float + RoundCast<FBig>,
+        u32: ExactIntCast<TV::Bits>,
+        FBig: TryFrom<TV, Error = ConversionError>,
+        (MapDomain<AtomDomain<TK>, AtomDomain<TV>>, L1Distance<TV>): MetricSpace,
     {
         let input_domain = input_domain
             .downcast_ref::<MapDomain<AtomDomain<TK>, AtomDomain<TV>>>()?
@@ -37,10 +39,8 @@ pub extern "C" fn opendp_measurements__make_laplace_threshold(
         let input_metric = input_metric.downcast_ref::<L1Distance<TV>>()?.clone();
         let scale = *try_as_ref!(scale as *const TV);
         let threshold = *try_as_ref!(threshold as *const TV);
-        make_laplace_threshold::<TK, TV>(input_domain, input_metric, scale, threshold, Some(k))
-            .into_any()
+        make_laplace_threshold::<TK, TV>(input_domain, input_metric, scale, threshold).into_any()
     }
-    let k = k as i32;
 
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
@@ -66,6 +66,6 @@ pub extern "C" fn opendp_measurements__make_laplace_threshold(
     dispatch!(monomorphize, [
         (TK, @hashable),
         (TV, @floats)
-    ], (input_domain, input_metric, scale, threshold, k))
+    ], (input_domain, input_metric, scale, threshold))
     .into()
 }

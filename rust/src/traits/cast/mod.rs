@@ -420,6 +420,30 @@ impl RoundCast<bool> for String {
     }
 }
 
+impl<R: Round> RoundCast<f32> for FBig<R> {
+    fn round_cast(v: f32) -> Fallible<Self> {
+        FBig::try_from(v).map_err(|_| err!(FailedCast, "value must be finite"))
+    }
+}
+
+impl<R: Round> RoundCast<f64> for FBig<R> {
+    fn round_cast(v: f64) -> Fallible<Self> {
+        FBig::try_from(v).map_err(|_| err!(FailedCast, "value must be finite"))
+    }
+}
+
+impl<R: Round> RoundCast<FBig<R>> for f32 {
+    fn round_cast(v: FBig<R>) -> Fallible<Self> {
+        Ok(v.to_f32().value())
+    }
+}
+
+impl<R: Round> RoundCast<FBig<R>> for f64 {
+    fn round_cast(v: FBig<R>) -> Fallible<Self> {
+        Ok(v.to_f64().value())
+    }
+}
+
 impl<R: Round> InfCast<f32> for FBig<R> {
     fn inf_cast(v: f32) -> Fallible<Self> {
         FBig::try_from(v).map_err(|_| err!(FailedCast, "found NaN"))
