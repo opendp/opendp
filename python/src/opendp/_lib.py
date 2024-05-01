@@ -95,9 +95,10 @@ def import_optional_dependency(name, raise_error=True):
 
 
 _np_csprng = None
-
+_buffer_pos = 0
 def get_np_csprng():
     global _np_csprng
+    global _buffer_pos
     if _np_csprng is not None:
         return _np_csprng
 
@@ -107,21 +108,21 @@ def get_np_csprng():
     buffer_len = 1024
     buffer = np.empty(buffer_len, dtype=np.uint64)
     buffer_ptr = ctypes.cast(buffer.ctypes.data, ctypes.POINTER(ctypes.c_uint8))
-    buffer_pos = buffer_len
+    _buffer_pos = buffer_len
 
     def next_raw(_voidp):
-        global buffer_pos
-        if buffer_len == buffer_pos:
+        global _buffer_pos
+        if buffer_len == _buffer_pos:
             from opendp._data import fill_bytes
 
             # there are 8x as many u8s as there are u64s
             if not fill_bytes(buffer_ptr, buffer_len * 8): # pragma: no cover
                 from opendp.mod import OpenDPException
                 raise OpenDPException("FailedFunction", "Failed to sample from CSPRNG")
-            buffer_pos = 0
+            _buffer_pos = 0
 
-        out = buffer[buffer_pos]
-        buffer_pos += 1
+        out = buffer[_buffer_pos]
+        _buffer_pos += 1
         return int(out)
 
     _np_csprng = np.random.Generator(bit_generator=randomgen.UserBitGenerator(next_raw)) # type:ignore
