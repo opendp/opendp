@@ -152,7 +152,7 @@ def test_make_count_by_ptr():
     meas = (
         input_space >>
         dp.t.then_count_by(MO=dp.L1Distance[float], TV=float) >> 
-        dp.m.then_base_laplace_threshold(scale=2., threshold=28.)
+        dp.m.then_laplace_threshold(scale=2., threshold=28.)
     )
     print("stability histogram:", meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
     print(meas.map(1))

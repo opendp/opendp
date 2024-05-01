@@ -52,35 +52,6 @@ SEXP measurements__make_alp_queryable(
 }
 
 
-SEXP measurements__make_base_laplace_threshold(
-    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP threshold, SEXP k, SEXP TV, SEXP log
-) {
-    // Convert arguments to c types.
-    PROTECT(input_domain);
-    PROTECT(input_metric);
-    PROTECT(scale);
-    PROTECT(threshold);
-    PROTECT(k);
-    PROTECT(TV);
-    PROTECT(log);
-
-    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
-    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
-    void * c_scale = sexp_to_voidptr(scale, TV);
-    void * c_threshold = sexp_to_voidptr(threshold, TV);
-    uint32_t c_k = (unsigned int)Rf_asInteger(k);
-
-    // Call library function.
-    FfiResult_____AnyMeasurement _result = opendp_measurements__make_base_laplace_threshold(c_input_domain, c_input_metric, c_scale, c_threshold, c_k);
-
-    UNPROTECT(7);
-    if(_result.tag == Err_____AnyMeasurement)
-        return(extract_error(_result.err));
-    AnyMeasurement* _return_value = _result.ok;
-    return(anymeasurementptr_to_sexp(_return_value, log));
-}
-
-
 SEXP measurements__make_gaussian(
     SEXP input_domain, SEXP input_metric, SEXP scale, SEXP k, SEXP MO, SEXP QO, SEXP T_k, SEXP log
 ) {
@@ -164,6 +135,35 @@ SEXP measurements__make_laplace(
     FfiResult_____AnyMeasurement _result = opendp_measurements__make_laplace(c_input_domain, c_input_metric, c_scale, c_k, c_QO);
 
     UNPROTECT(8);
+    if(_result.tag == Err_____AnyMeasurement)
+        return(extract_error(_result.err));
+    AnyMeasurement* _return_value = _result.ok;
+    return(anymeasurementptr_to_sexp(_return_value, log));
+}
+
+
+SEXP measurements__make_laplace_threshold(
+    SEXP input_domain, SEXP input_metric, SEXP scale, SEXP threshold, SEXP k, SEXP TV, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(scale);
+    PROTECT(threshold);
+    PROTECT(k);
+    PROTECT(TV);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    void * c_scale = sexp_to_voidptr(scale, TV);
+    void * c_threshold = sexp_to_voidptr(threshold, TV);
+    uint32_t c_k = (unsigned int)Rf_asInteger(k);
+
+    // Call library function.
+    FfiResult_____AnyMeasurement _result = opendp_measurements__make_laplace_threshold(c_input_domain, c_input_metric, c_scale, c_threshold, c_k);
+
+    UNPROTECT(7);
     if(_result.tag == Err_____AnyMeasurement)
         return(extract_error(_result.err));
     AnyMeasurement* _return_value = _result.ok;
