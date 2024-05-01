@@ -1,6 +1,11 @@
 from opendp._lib import get_np_csprng
 import pytest
 from ..helpers import optional_dependency
+try:
+    # So randomgen will be in sys.modules, if possible.
+    import randomgen # type: ignore[import-not-found] # noqa F401
+except ModuleNotFoundError:
+    pass
 
 def test_np_rng():
     n_cats = 100
