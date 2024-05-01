@@ -1,6 +1,6 @@
 from opendp._extrinsics.domains import _np_sscp_domain
 from opendp._extrinsics._utilities import to_then
-from opendp._lib import np_csprng, import_optional_dependency
+from opendp._lib import get_np_csprng, import_optional_dependency
 from opendp.mod import Domain, Metric, Transformation, Measurement
 from typing import List
 
@@ -21,9 +21,7 @@ def make_private_np_eigenvector(
 
     dp.assert_features("contrib", "floating-point")
     
-    if np_csprng is None:
-        raise ImportError('The optional install randomgen is required for this functionality')
-
+    np_csprng = get_np_csprng()
     input_desc = input_domain.descriptor
 
     if input_desc.p != 2:

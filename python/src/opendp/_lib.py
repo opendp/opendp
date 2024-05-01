@@ -94,10 +94,15 @@ def import_optional_dependency(name, raise_error=True):
         return None
 
 
-np_csprng = None
-try:
-    np = import_optional_dependency('numpy')
+_np_csprng = None
+
+def get_np_csprng():
+    global _np_csprng
+    if _np_csprng is not None:
+        return _np_csprng
+
     randomgen = import_optional_dependency('randomgen')
+    np = import_optional_dependency('numpy')
 
     buffer_len = 1024
     buffer = np.empty(buffer_len, dtype=np.uint64)
@@ -119,10 +124,9 @@ try:
         buffer_pos += 1
         return int(out)
 
-    np_csprng = np.random.Generator(bit_generator=randomgen.UserBitGenerator(next_raw)) # type:ignore
+    _np_csprng = np.random.Generator(bit_generator=randomgen.UserBitGenerator(next_raw)) # type:ignore
+    return _np_csprng
 
-except ImportError:  # pragma: no cover
-    pass
 
 # This enables backtraces in Rust by default.
 # It can be disabled by setting RUST_BACKTRACE=0.
