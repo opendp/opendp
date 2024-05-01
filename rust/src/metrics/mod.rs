@@ -19,9 +19,10 @@ use std::marker::PhantomData;
 
 use crate::{
     core::{Domain, Metric, MetricSpace},
-    domains::{type_name, AtomDomain, MapDomain, VectorDomain},
+    domains::{type_name, AllDomain, AtomDomain, MapDomain, VectorDomain},
     error::Fallible,
-    traits::{CheckAtom, InfAdd},
+    interactive::Queryable,
+    traits::{CheckAtom, InfAdd, Number},
 };
 #[cfg(feature = "contrib")]
 use crate::{traits::Hashable, transformations::DataFrameDomain};
@@ -648,5 +649,11 @@ impl<T: CheckAtom> MetricSpace for (VectorDomain<AtomDomain<T>>, LInfDistance<T>
         } else {
             Ok(())
         }
+    }
+}
+
+impl<Q, A: Number> MetricSpace for (AllDomain<Queryable<Q, A>>, LInfDistance<A>) {
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
