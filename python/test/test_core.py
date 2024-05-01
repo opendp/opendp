@@ -226,17 +226,18 @@ def test_user_domain():
 
     # nest inside a vector domain
     vec_domain = dp.vector_domain(domain)
-    assert vec_domain.member([datetime.now()])
+    january_1 = datetime.fromisoformat('2024-01-01')
+    assert vec_domain.member([january_1])
     trans = dp.t.make_identity(vec_domain, dp.symmetric_distance())
-    misc_data = [1, datetime.now(), "abc", 1j + 2]
+    misc_data = [1, january_1, "abc", 1j + 2]
     assert trans(misc_data) == misc_data
     assert not vec_domain.member(misc_data)
 
     # nest inside a hashmap domain
     map_domain = dp.map_domain(dp.atom_domain(T=str), domain)
-    assert map_domain.member({"A": datetime.now(), "B": datetime.now()})
+    assert map_domain.member({"A": january_1, "B": january_1})
     trans = dp.t.make_identity(map_domain, dp.symmetric_distance())
-    misc_data = {"A": datetime.now(), "C": 1j + 2}  # type: ignore[assignment]
+    misc_data = {"A": january_1, "C": 1j + 2}  # type: ignore[assignment]
     assert trans(misc_data) == misc_data
     assert not map_domain.member(misc_data)
 
@@ -285,7 +286,8 @@ def test_user_distance():
         lambda d_in: d_in.total_seconds() * 1000,
     )
 
-    data = [datetime.now(), datetime.now()]
+    january_1 = datetime.fromisoformat('2024-01-01')
+    data = [january_1, january_1]
     assert trans(data) == sum(datetime.timestamp(x) for x in data)
 
     d_in = timedelta(days=2.4, seconds=45.2)

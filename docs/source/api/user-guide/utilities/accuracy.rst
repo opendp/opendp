@@ -20,7 +20,7 @@ The noise distribution may be either Laplace or Gaussian.
 
 :Laplacian: | Applies to any L1 noise addition mechanism.
   | :func:`make_laplace() <opendp.measurements.make_laplace>`
-  | :func:`make_base_laplace_threshold() <opendp.measurements.make_base_laplace_threshold>`
+  | :func:`make_laplace_threshold() <opendp.measurements.make_laplace_threshold>`
 :Gaussian: | Applies to any L2 noise addition mechanism.
   | :func:`make_gaussian() <opendp.measurements.make_gaussian>`
 
