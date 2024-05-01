@@ -399,7 +399,7 @@ These default to ``L1Distance[TOA]``, which chains with L1 noise mechanisms like
 If you set the output metric to ``L2Distance[TOA]``, you can chain with L2 mechanisms like :func:`opendp.measurements.make_gaussian`.
 
 The constructor :func:`opendp.transformations.make_count_by` does a similar aggregation as :func:`opendp.transformations.make_count_by_categories`,
-but does not need a category set (you instead chain with :func:`opendp.measurements.make_base_laplace_threshold`).
+but does not need a category set (you instead chain with :func:`opendp.measurements.make_laplace_threshold`).
 
 The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time because data loaders for data of type ``Vec<(T, T)>`` are not implemented.
 

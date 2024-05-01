@@ -57,17 +57,17 @@ def test_count_by_threshold():
     budget = (1.0, 1e-8)
 
     scale = dp.binary_search_param(
-        lambda s: pre >> dp.m.then_base_laplace_threshold(scale=s, threshold=1e8),
+        lambda s: pre >> dp.m.then_laplace_threshold(scale=s, threshold=1e8),
         d_in=1,
         d_out=budget,
     )
     threshold = dp.binary_search_param(
-        lambda t: pre >> dp.m.then_base_laplace_threshold(scale=scale, threshold=t),
+        lambda t: pre >> dp.m.then_laplace_threshold(scale=scale, threshold=t),
         d_in=1,
         d_out=budget,
     )
 
-    laplace_histogram_from_dataframe = pre >> dp.m.then_base_laplace_threshold(
+    laplace_histogram_from_dataframe = pre >> dp.m.then_laplace_threshold(
         scale=scale, threshold=threshold
     )
 
@@ -80,10 +80,10 @@ def test_count_by_threshold():
     print(scale, threshold)
 
     with pytest.raises(dp.OpenDPException):
-        dp.m.make_base_laplace_threshold(
+        dp.m.make_laplace_threshold(
             dp.atom_domain(T=int), dp.l1_distance(T=float), scale=1.0, threshold=1e8
         )
 
     assert (
-        pre >> dp.m.then_base_laplace_threshold(scale=0.0, threshold=threshold)
+        pre >> dp.m.then_laplace_threshold(scale=0.0, threshold=threshold)
     ).map(1) == (float("inf"), 1.0)
