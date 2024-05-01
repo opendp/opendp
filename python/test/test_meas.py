@@ -221,3 +221,18 @@ def test_alp_histogram():
     print(alp_qbl("B"))
     print(alp_qbl("C"))
     print(alp_meas.map(1))
+
+
+def test_alp_histogram_should_not_freeze():
+    import opendp.prelude as dp
+
+    counter = dp.t.make_count_by(
+        dp.vector_domain(dp.atom_domain(T=str)),
+        dp.symmetric_distance(),
+        MO=dp.L1Distance[int])
+    
+    dp.m.make_alp_queryable(
+        *counter,
+        scale=1.,
+        total_limit=24,
+        value_limit=24)
