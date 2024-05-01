@@ -9,6 +9,9 @@ use dashu::{
 mod gumbel;
 pub use gumbel::GumbelPSRN;
 
+mod laplace;
+pub use laplace::LaplacePSRN;
+
 mod uniform;
 pub use uniform::UniformPSRN;
 
