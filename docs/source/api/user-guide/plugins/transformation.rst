@@ -22,11 +22,9 @@ In this example, we mock the typical API of the OpenDP library to make a transfo
     .. code:: python
 
         >>> import opendp.prelude as dp
-        >>> from typing import List
-        ...
         >>> def make_repeat(multiplicity):
         ...     """Constructs a Transformation that duplicates each record `multiplicity` times"""
-        ...     def function(arg: List[int]) -> List[int]:
+        ...     def function(arg: list[int]) -> list[int]:
         ...         return arg * multiplicity
         ... 
         ...     def stability_map(d_in: int) -> int:

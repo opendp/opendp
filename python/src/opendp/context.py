@@ -12,7 +12,7 @@ We suggest importing under the conventional name ``dp``:
 '''
 
 import logging
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Union
 import importlib
 from inspect import signature
 from functools import partial
@@ -87,15 +87,14 @@ for module_name in ["transformations", "measurements"]:
         constructors[name[5:]] = constructor, is_partial
 
 
-def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
+def space_of(T, M=None, infer=False) -> tuple[Domain, Metric]:
     """A shorthand for building a metric space.
 
     A metric space consists of a domain and a metric.
 
     >>> import opendp.prelude as dp
-    >>> from typing import List # in Python 3.9, can just write list[int] below
     ...
-    >>> dp.space_of(List[int])
+    >>> dp.space_of(list[int])
     (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
     >>> # the verbose form allows greater control:
     >>> (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())
@@ -131,9 +130,8 @@ def domain_of(T, infer=False) -> Domain:
 
     Accepts a limited set of Python type expressions:
 
-    >>> from typing import List  # Or just use regular "list" after python 3.8.
     >>> import opendp.prelude as dp
-    >>> dp.domain_of(List[int])
+    >>> dp.domain_of(list[int])
     VectorDomain(AtomDomain(T=i32))
     
     As well as strings representing types in the underlying Rust syntax:
@@ -143,8 +141,7 @@ def domain_of(T, infer=False) -> Domain:
 
     Dictionaries, optional types, and a range of primitive types are supported:
 
-    >>> from typing import Dict  # Or just use regular "dict" after python 3.8.
-    >>> dp.domain_of(Dict[str, int])
+    >>> dp.domain_of(dict[str, int])
     MapDomain { key_domain: AtomDomain(T=String), value_domain: AtomDomain(T=i32) }
     
     .. TODO: Support python syntax for Option: https://github.com/opendp/opendp/issues/1389
@@ -157,7 +154,7 @@ def domain_of(T, infer=False) -> Domain:
 
     More complex types are not supported:
 
-    >>> dp.domain_of(List[List[int]]) # doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> dp.domain_of(list[list[int]]) # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ...
     opendp.mod.OpenDPException:
@@ -226,7 +223,7 @@ def metric_of(M) -> Metric:
     raise TypeError(f"unrecognized metric: {M}")
 
 
-def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, Union[float, Tuple[float, float]]]:
+def loss_of(epsilon=None, delta=None, rho=None, U=None) -> tuple[Measure, Union[float, tuple[float, float]]]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
     >>> import opendp.prelude as dp
@@ -281,7 +278,7 @@ def unit_of(
     l2=None,
     ordered=False,
     U=None,
-) -> Tuple[Metric, float]:
+) -> tuple[Metric, float]:
     """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
     The parameters are mutually exclusive.
 
@@ -370,10 +367,10 @@ class Context(object):
     @staticmethod
     def compositor(
         data: Any,
-        privacy_unit: Tuple[Metric, float],
-        privacy_loss: Tuple[Measure, Any],
+        privacy_unit: tuple[Metric, float],
+        privacy_loss: tuple[Measure, Any],
         split_evenly_over: Optional[int] = None,
-        split_by_weights: Optional[List[float]] = None,
+        split_by_weights: Optional[list[float]] = None,
         domain: Optional[Domain] = None,
     ) -> "Context":
         """Constructs a new context containing a sequential compositor with the given weights.
@@ -455,7 +452,7 @@ class Context(object):
         )
 
 
-Chain = Union[Tuple[Domain, Metric], Transformation, Measurement, "PartialChain"]
+Chain = Union[tuple[Domain, Metric], Transformation, Measurement, "PartialChain"]
 
 
 class Query(object):
@@ -587,7 +584,7 @@ class Query(object):
     def compositor(
         self,
         split_evenly_over: Optional[int] = None,
-        split_by_weights: Optional[List[float]] = None,
+        split_by_weights: Optional[list[float]] = None,
         d_out=None,
         output_measure=None,
     ) -> "Query":
@@ -610,7 +607,7 @@ class Query(object):
                 d_out, self._output_measure, output_measure
             )
 
-        def compositor(chain: Union[Tuple[Domain, Metric], Transformation], d_in):
+        def compositor(chain: Union[tuple[Domain, Metric], Transformation], d_in):
             if isinstance(chain, tuple):
                 input_domain, input_metric = chain
             elif isinstance(chain, Transformation):
@@ -702,11 +699,11 @@ class PartialChain(object):
 
 def _sequential_composition_by_weights(
     domain: Domain,
-    privacy_unit: Tuple[Metric, float],
-    privacy_loss: Tuple[Measure, float],
+    privacy_unit: tuple[Metric, float],
+    privacy_loss: tuple[Measure, float],
     split_evenly_over: Optional[int] = None,
-    split_by_weights: Optional[List[float]] = None,
-) -> Tuple[Measurement, List[Any]]:
+    split_by_weights: Optional[list[float]] = None,
+) -> tuple[Measurement, list[Any]]:
     """Constructs a sequential composition measurement
     where the ``d_mids`` are proportional to the weights.
 

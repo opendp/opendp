@@ -16,14 +16,19 @@ def test_numpy_function():
 
 def test_typing_hint():
     assert str(RuntimeType.parse(Tuple[int, float])) == "(i32, f64)" # type: ignore[arg-type]
+    assert str(RuntimeType.parse(tuple[int, float])) == "(i32, f64)" # type: ignore[arg-type]
     assert str(RuntimeType.parse(Tuple[int, Tuple[str]])) == "(i32, (String))" # type: ignore[arg-type]
+    assert str(RuntimeType.parse(tuple[int, tuple[str]])) == "(i32, (String))" # type: ignore[arg-type]
     assert str(RuntimeType.parse(List[int])) == "Vec<i32>"
+    assert str(RuntimeType.parse(list[int])) == "Vec<i32>"
     assert str(RuntimeType.parse(List[List[str]])) == "Vec<Vec<String>>"
+    assert str(RuntimeType.parse(list[list[str]])) == "Vec<Vec<String>>"
     assert str(RuntimeType.parse((List[int], (int, bool)))) == '(Vec<i32>, (i32, bool))'
+    assert str(RuntimeType.parse((list[int], (int, bool)))) == '(Vec<i32>, (i32, bool))'
     assert isinstance(RuntimeType.parse('L1Distance<f64>'), SensitivityMetric)
 
     try:
-        RuntimeType.parse(List[Any])
+        RuntimeType.parse(list[Any])
         raise Exception("typing.Any should fail to parse")
     except UnknownTypeException:
         pass

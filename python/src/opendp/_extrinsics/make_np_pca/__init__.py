@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import NamedTuple, List, Optional, TYPE_CHECKING
+from typing import NamedTuple, Optional, TYPE_CHECKING
 
 from opendp._extrinsics.make_np_clamp import then_np_clamp
 from opendp._extrinsics._utilities import register_measurement, to_then
@@ -16,7 +16,7 @@ if TYPE_CHECKING: # pragma: no cover
 
 class PCAEpsilons(NamedTuple):
     eigvals: float
-    eigvecs: List[float]
+    eigvecs: list[float]
     mean: Optional[float]
 
 
@@ -169,15 +169,11 @@ def _make_center(input_domain, input_metric):
 
     input_desc = input_domain.descriptor
 
+    kwargs = input_desc._asdict() | {"origin": np.zeros(input_desc.num_columns)}
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        dp.np_array2_domain(
-            **{
-                **input_desc._asdict(),
-                "origin": np.zeros(input_desc.num_columns),
-            }  # type: ignore[arg-type]
-        ),
+        dp.np_array2_domain(**kwargs),
         input_metric,
         lambda arg: arg - input_desc.origin,
         lambda d_in: d_in,
