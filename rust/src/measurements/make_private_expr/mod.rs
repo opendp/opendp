@@ -13,6 +13,9 @@ use crate::{
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[cfg(feature = "contrib")]
+pub(crate) mod expr_laplace;
+
 #[bootstrap(
     features("contrib"),
     arguments(
@@ -34,7 +37,7 @@ pub fn make_private_expr<MI: 'static + Metric, MO: 'static + Measure>(
     input_metric: MI,
     output_measure: MO,
     expr: Expr,
-    global_scale: f64,
+    global_scale: Option<f64>,
 ) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>
 where
     Expr: PrivateExpr<MI, MO>,
@@ -49,7 +52,7 @@ pub trait PrivateExpr<MI: Metric, MO: Measure> {
         input_domain: ExprDomain,
         input_metric: MI,
         output_metric: MO,
-        global_scale: f64,
+        global_scale: Option<f64>,
     ) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>;
 }
 
@@ -58,11 +61,15 @@ impl<M: UnboundedMetric + OuterMetric> PrivateExpr<PartitionDistance<M>, MaxDive
 {
     fn make_private(
         self,
-        _input_domain: ExprDomain,
-        _input_metric: PartitionDistance<M>,
+        input_domain: ExprDomain,
+        input_metric: PartitionDistance<M>,
         _output_measure: MaxDivergence<f64>,
-        _global_scale: f64,
+        global_scale: Option<f64>,
     ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, MaxDivergence<f64>>> {
+        if expr_laplace::match_laplace(&self)?.is_some() {
+            return expr_laplace::make_expr_laplace(input_domain, input_metric, self, global_scale);
+        }
+
         match self {
             expr => fallible!(
                 MakeMeasurement,

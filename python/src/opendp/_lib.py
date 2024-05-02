@@ -32,18 +32,18 @@ def _load_library():
         
         lib_path = lib_dir / lib_dir_file_names[0]
         try:
-            return ctypes.cdll.LoadLibrary(str(lib_path))
+            return ctypes.cdll.LoadLibrary(str(lib_path)), lib_path
         except Exception as e:
             raise Exception("Unable to load OpenDP shared library", lib_path, e)
 
     elif os.environ.get('OPENDP_HEADLESS', "false") != "false":
-        return None
+        return None, None
 
     else:
         raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
+    
 
-
-lib = _load_library()
+lib, lib_path = _load_library()
 
 
 install_names = {
@@ -94,6 +94,40 @@ try:
 
 except ImportError:  # pragma: no cover
     pass
+
+pl = import_optional_dependency("polars", raise_error=False)
+if pl is not None:
+    @pl.api.register_expr_namespace("dp")
+    class DPNamespace(object):
+        def __init__(self, expr):
+            self.expr = expr
+
+        def laplace(self, scale=None):
+            """Add Laplace noise to the expression.
+
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+
+            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
+            """
+            scale = float("nan") if scale is None else scale
+            return pl.plugins.register_plugin_function(
+                plugin_path=lib_path,
+                function_name="laplace",
+                kwargs={"scale": scale},
+                args=self.expr,
+                is_elementwise=True,
+            )
+
+        def sum(self, bounds, scale=None):
+            """Compute the differentially private sum.
+
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+
+            :param bounds: The bounds of the input data.
+            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
+            """
+            return self.expr.clip(*bounds).sum().dp.laplace(scale)
+
 
 # This enables backtraces in Rust by default.
 # It can be disabled by setting RUST_BACKTRACE=0.

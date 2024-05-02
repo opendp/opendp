@@ -3037,7 +3037,7 @@ def make_stable_expr(
     :type input_domain: Domain
     :param input_metric: How to measure distances between neighboring input data sets.
     :type input_metric: Metric
-    :param expr: The [`Expr`] to be privatized.
+    :param expr: The expression to be analyzed for stability.
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -3068,7 +3068,7 @@ def then_stable_expr(
     .. seealso:: 
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_stable_expr`
 
-    :param expr: The [`Expr`] to be privatized.
+    :param expr: The expression to be analyzed for stability.
     """
     return PartialConstructor(lambda input_domain, input_metric: make_stable_expr(
         input_domain=input_domain,
