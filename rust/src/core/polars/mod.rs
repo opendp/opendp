@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use crate::measurements::expr_laplace::LaplaceArgs;
+use crate::{
+    measurements::expr_laplace::LaplaceArgs,
+    transformations::expr_discrete_quantile_score::DQScoreArgs,
+};
 use polars_plan::{
     dsl::{len, lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
     logical_plan::Literal,
@@ -226,5 +229,23 @@ impl DPNamespace {
     /// * `scale` - Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
     pub fn mean<L: Literal>(self, bounds: (L, L), scale: Option<f64>) -> Expr {
         self.0.dp().sum(bounds, scale) / len()
+    }
+
+    /// Score the utility of each candidate for representing the true quantile.
+    ///
+    /// Candidates closer to the true quantile are assigned scores closer to zero.
+    /// Lower scores are better.
+    ///
+    /// # Arguments
+    /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
+    /// * `candidates` - Set of possible quantiles to evaluate the utility of.
+    #[allow(dead_code)]
+    pub(crate) fn quantile_score(self, alpha: f64, candidates: Vec<f64>) -> Expr {
+        let args = DQScoreArgs {
+            alpha,
+            candidates,
+            constants: None,
+        };
+        apply_anonymous_function(vec![self.0], args)
     }
 }
