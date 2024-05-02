@@ -4,8 +4,8 @@ dp.enable_features("contrib")
 
 
 lf_domain = dp.lazyframe_domain([
-    dp.series_domain("pet_count", dp.atom_domain(T=dp.i32)),
-    dp.series_domain("grade", dp.atom_domain(T=dp.i32))])
+    dp.series_domain("grade", dp.atom_domain(T=dp.i32)),
+    dp.series_domain("pet_count", dp.atom_domain(T=dp.i32))])
 
 lf_domain_with_margin = dp.with_margin(
     lf_domain,
@@ -14,11 +14,11 @@ lf_domain_with_margin = dp.with_margin(
     max_partition_length=50)
 
 plan = (
-    pl.LazyFrame(schema={'pet_count': pl.Int32, 'grade': pl.Int32})
+    pl.LazyFrame(schema={'grade': pl.Int32, 'pet_count': pl.Int32})
     .group_by("grade")
     .agg(pl.col("pet_count").dp.sum((0, 10), scale=1.0)))
 
-make_private = dp.m.make_private_lazyframe(
+dp_sum_pets_by_grade = dp.m.make_private_lazyframe(
     input_domain=lf_domain_with_margin,
     input_metric=dp.symmetric_distance(),
     output_measure=dp.max_divergence(T=float),
@@ -33,11 +33,11 @@ df = pl.from_records(
         [1, 1], # Each first grader has 1 pet.
         [1, 1],
         [1, 1],
-        [1, 2], # One second grader has chickens!
-        [1, 2],
-        [9, 2]
+        [2, 1], # One second grader has chickens!
+        [2, 1],
+        [2, 9]
     ],
-    schema=['pet_count', 'grade'])
+    schema=['grade', 'pet_count'])
 lf = pl.LazyFrame(df)
-results = make_private(lf).sort("grade").collect()
-print(results)
+results = dp_sum_pets_by_grade(lf).sort("grade").collect()
+print(results) # doctest: +ELLIPSIS
