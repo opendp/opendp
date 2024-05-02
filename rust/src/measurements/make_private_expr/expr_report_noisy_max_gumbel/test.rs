@@ -1,5 +1,6 @@
 use super::*;
 use polars::prelude::*;
+use polars_arrow::array::{FixedSizeListArray, UInt32Array};
 
 use crate::{
     core::PrivacyNamespaceHelper,
@@ -7,6 +8,37 @@ use crate::{
     metrics::{PartitionDistance, SymmetricDistance},
     transformations::expr_discrete_quantile_score::test::get_quantile_test_data,
 };
+
+#[test]
+fn test_rnm_gumbel_udf() -> Fallible<()> {
+    // the scores are packed into a FixedSizeListArray with 3 elements per row
+    // the max value in the first row is 3, the max value in the second row is 1, and the max value in the third row is 9
+    // the indices of the max values are 0, 1, and 2 respectively
+    let scores_slice = &[3, 1, 0, 0, 1, 0, 0, 0, 9];
+    let expect_slice = &[0u32, 1, 2];
+
+    let dtype = ArrowDataType::FixedSizeList(
+        Box::new(ArrowField::new("item", ArrowDataType::UInt32, true)),
+        3,
+    );
+
+    let fsla =
+        FixedSizeListArray::new(dtype, Box::new(UInt32Array::from_slice(scores_slice)), None);
+    let scores = Series::from(ArrayChunked::from(fsla));
+
+    let actual = super::rnm_gumbel_udf(
+        &[scores],
+        RNMGumbelArgs {
+            optimize: Optimize::Max,
+            scale: Some(0.0),
+        },
+    )?;
+
+    let expect = Series::new("", expect_slice);
+
+    assert_eq!(actual, expect);
+    Ok(())
+}
 
 #[test]
 fn test_rnm_gumbel_expr() -> Fallible<()> {

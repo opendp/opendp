@@ -189,10 +189,14 @@ fn rnm_gumbel_udf(inputs: &[Series], kwargs: RNMGumbelArgs) -> PolarsResult<Seri
     };
 
     let Some(scale) = kwargs.scale else {
-        polars_bail!(InvalidOperation: "RNM Gumbel scale parameter must be known");
+        polars_bail!(InvalidOperation: "RNM Gumbel scale must be known");
     };
-    let scale = RBig::try_from(scale)
-        .map_err(|_| PolarsError::InvalidOperation("scale must be finite".into()))?;
+    let Ok(scale) = RBig::try_from(scale) else {
+        polars_bail!(InvalidOperation: "RNM Gumbel scale must be a number");
+    };
+    if scale < RBig::ZERO {
+        polars_bail!(InvalidOperation: "RNM Gumbel scale must be non-negative");
+    }
     let optimize = kwargs.optimize;
 
     // PT stands for Polars Type
