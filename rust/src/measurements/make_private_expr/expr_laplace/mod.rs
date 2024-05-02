@@ -78,7 +78,7 @@ where
     t_prior
         >> Measurement::<_, _, L1Distance<f64>, _>::new(
             middle_domain,
-            Function::new_expr(move |input_expr| {
+            Function::then_expr(move |input_expr| {
                 apply_plugin(input_expr, expr.clone(), LaplaceArgs { scale: Some(scale) })
             }),
             middle_metric,

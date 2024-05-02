@@ -79,7 +79,7 @@ where
         >> Transformation::<_, _, PartitionDistance<MI>, LpDistance<P, _>>::new(
             middle_domain,
             output_domain,
-            Function::new_expr(Expr::sum),
+            Function::then_expr(Expr::sum),
             middle_metric.clone(),
             LpDistance::default(),
             stability_map,
