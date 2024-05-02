@@ -16,6 +16,6 @@ def test_np_rng():
     
     np = pytest.importorskip('numpy')
     counts = np.unique(np_csprng.integers(n_cats, size=n_samples), return_counts=True)[1]
-    pytest.importorskip('sklearn') # TODO: implicit dependency should use optional_dependency
-    scipy = pytest.importorskip('scipy')
-    assert scipy.stats.chisquare(counts).pvalue > .0001
+    with optional_dependency('sklearn'):
+        scipy = pytest.importorskip('scipy')
+        assert scipy.stats.chisquare(counts).pvalue > .0001

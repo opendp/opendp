@@ -132,12 +132,12 @@ def flaky_assert_pca_compare_sklearn():
 
 
 def test_pca_compare_sklearn():
-    with optional_dependency('randomgen'):
-        for _ in range(5):
-            try:
+    for _ in range(5):
+        try:
+            with optional_dependency('randomgen'):
                 flaky_assert_pca_compare_sklearn()
-                break
-            except AssertionError:
-                pass
-        else:
-            assert False, "PCA failed too many times"
+            break
+        except AssertionError:
+            pass
+    else:
+        assert False, "PCA failed too many times"
