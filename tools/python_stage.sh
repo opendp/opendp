@@ -32,7 +32,7 @@ function clean() {
   if [ -f "python/src/opendp/rust/Cargo.toml" ]; then
     run cargo clean --manifest-path python/src/opendp/rust/Cargo.toml
   fi
-  # "-X" removes only git-ignored files: Other local changes are preserved.
+  # "-x" removes ignored and untracked files
   run git clean -x --force python
   pip uninstall opendp -y
 
@@ -57,7 +57,7 @@ if (($# == 0)); then
   clean
   source_dir
 
-  echo "Python package is staged. Run pip install python to build the package."
+  echo "Python package is staged. Run 'pip install python/.' to build the package."
   exit 0
 fi
 

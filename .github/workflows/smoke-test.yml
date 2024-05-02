@@ -70,7 +70,7 @@ jobs:
       - name: Upload (dynamic w/ polars)
         uses: actions/upload-artifact@v4
         with:
-          name: dynamic-lib
+          name: dynamic_lib
           path: rust/target/debug/libopendp.so
 
       - name: Build (static w/o Polars)
@@ -79,7 +79,7 @@ jobs:
       - name: Upload (static w/o Polars)
         uses: actions/upload-artifact@v4
         with:
-          name: static-lib
+          name: static_lib
           path: rust/target/debug/libopendp.a
       
       - name: Prepare vendored sources
@@ -202,7 +202,7 @@ jobs:
       - name: Download dynamic lib
         uses: actions/download-artifact@v4
         with:
-          name: dynamic-lib
+          name: dynamic_lib
           path: python/src/opendp/lib
       
       - name: Install package
@@ -272,7 +272,7 @@ jobs:
       - name: Download dynamic lib
         uses: actions/download-artifact@v4
         with:
-          name: dynamic-lib
+          name: dynamic_lib
           path: python/src/opendp/lib
 
       - name: Install package
@@ -299,7 +299,7 @@ jobs:
         with:
           # R uses a static library build that doesn't include Polars 
           # (Polars currently links against Python)
-          name: static-lib
+          name: static_lib
           path: libs/
 
       - name: Set up R

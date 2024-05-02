@@ -106,9 +106,11 @@ jobs:
     name: python-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      # it is helpful to try to build all platforms to completion to catch any platform-specific issues
       fail-fast: false
       matrix:
         # macos-13 is an intel runner, macos-14 is apple silicon
+        # https://cibuildwheel.pypa.io/en/stable/faq/#how
         os: [ubuntu-latest, windows-latest, macos-13, macos-14]
 
     steps:

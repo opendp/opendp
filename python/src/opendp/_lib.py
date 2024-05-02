@@ -1,5 +1,6 @@
 import ctypes
 import os
+from pathlib import Path
 import re
 from typing import Optional, Any
 import importlib
@@ -17,23 +18,21 @@ ATOM_EQUIVALENCE_CLASSES: dict[str, list[str]] = {
 
 
 def _load_library():
-    lib_dir = os.environ.get("OPENDP_LIB_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
-    if not os.path.exists(lib_dir): # pragma: no cover
+    default_lib_dir = Path(__file__).absolute().parent / "lib"
+    lib_dir = Path(os.environ.get("OPENDP_LIB_DIR", default_lib_dir))
+    if not lib_dir.exists(): # pragma: no cover
         # fall back to default location of binaries in a developer install
         build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
-        lib_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'rust', 'target', build_dir)
+        lib_dir = Path(__file__).parent / ".." / ".." / ".." / 'rust' / 'target' / build_dir
 
-    if os.path.exists(lib_dir):
-        def is_binary(name):
-            return any(name.endswith(ext) for ext in (".so", ".dylib", ".dll"))
-        
-        lib_dir_file_names = [n for n in os.listdir(lib_dir) if is_binary(n)]
+    if lib_dir.exists():
+        lib_dir_file_names = [p for p in lib_dir.iterdir() if p.suffix in {".so", ".dylib", ".dll"}]
         if len(lib_dir_file_names) != 1:
             raise Exception(f"Expected exactly one binary to be present. Got: {lib_dir_file_names}")
         
-        lib_path = os.path.join(lib_dir, lib_dir_file_names[0])
+        lib_path = lib_dir / lib_dir_file_names[0]
         try:
-            return ctypes.cdll.LoadLibrary(lib_path)
+            return ctypes.cdll.LoadLibrary(str(lib_path))
         except Exception as e:
             raise Exception("Unable to load OpenDP shared library", lib_path, e)
 
