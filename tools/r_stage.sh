@@ -4,7 +4,7 @@
 # (but not target)
 # 
 # vendors dependencies
-# zips contents to avoid paths
+# zips contents to avoid paths being too long, which can cause issues in R CMD check
 
 # exit immediately upon failure, unset vars
 set -e -u
@@ -33,7 +33,7 @@ function clean() {
   if [ -f "R/opendp/src/rust/Cargo.toml" ]; then
     run cargo clean --manifest-path R/opendp/src/rust/Cargo.toml
   fi
-  # "-X" removes only git-ignored files: Other local changes are preserved.
+  # "-x" removes ignored and untracked files
   run git clean -x --force R
   Rscript -e 'try(remove.packages("opendp"), silent=TRUE)'
 }

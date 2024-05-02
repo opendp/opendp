@@ -22,7 +22,7 @@ on:
       counter:
         type: number
         required: false
-        default: 0
+        default: 1
       dry_run:
         type: boolean
         required: false
@@ -51,7 +51,7 @@ on:
         description: Version Counter
         type: number
         required: false
-        default: 0
+        default: 1
       dry_run:
         description: Dry Run?
         type: boolean

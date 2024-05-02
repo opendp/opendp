@@ -70,7 +70,7 @@ jobs:
       - name: Upload (dynamic w/ polars)
         uses: actions/upload-artifact@v4
         with:
-          name: dynamic-lib
+          name: dynamic_lib
           path: rust/target/debug/libopendp.so
 
       - name: Build (static w/o Polars)
@@ -79,7 +79,7 @@ jobs:
       - name: Upload (static w/o Polars)
         uses: actions/upload-artifact@v4
         with:
-          name: static-lib
+          name: static_lib
           path: rust/target/debug/libopendp.a
       
       - name: Prepare vendored sources
@@ -101,6 +101,17 @@ jobs:
       CARGO_TERM_COLOR: always
     steps:
       
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false     # no: will remove rust
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: false        # no: little/no benefit
+          large-packages: false # no: slow
+          swap-storage: false   # no: having swap is useful
+
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
@@ -191,7 +202,7 @@ jobs:
       - name: Download dynamic lib
         uses: actions/download-artifact@v4
         with:
-          name: dynamic-lib
+          name: dynamic_lib
           path: python/src/opendp/lib
       
       - name: Install package
@@ -261,7 +272,7 @@ jobs:
       - name: Download dynamic lib
         uses: actions/download-artifact@v4
         with:
-          name: dynamic-lib
+          name: dynamic_lib
           path: python/src/opendp/lib
 
       - name: Install package
@@ -288,7 +299,7 @@ jobs:
         with:
           # R uses a static library build that doesn't include Polars 
           # (Polars currently links against Python)
-          name: static-lib
+          name: static_lib
           path: libs/
 
       - name: Set up R
