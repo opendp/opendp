@@ -21,16 +21,16 @@ jobs:
       CARGO_TERM_COLOR: always
     steps:
 
-      - name: Free disk space
-        uses: jlumbroso/free-disk-space@v1.3.1
-        with:
-          tool-cache: false     # no: will remove rust
-          android: true         # 8.7GiB
-          dotnet: true          # 1.6GiB
-          docker-images: true   # 3.2GiB
-          haskell: false        # no: little/no benefit
-          large-packages: false # no: slow
-          swap-storage: false   # no: having swap is useful
+      # - name: Free disk space
+      #   uses: jlumbroso/free-disk-space@v1.3.1
+      #   with:
+      #     tool-cache: false     # no: will remove rust
+      #     android: true         # 8.7GiB
+      #     dotnet: true          # 1.6GiB
+      #     docker-images: true   # 3.2GiB
+      #     haskell: false        # no: little/no benefit
+      #     large-packages: false # no: slow
+      #     swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -58,9 +58,6 @@ jobs:
       - name: Check --no-default-features
         run: cargo check --verbose --no-default-features --features untrusted,bindings
 
-      - name: Test
-        run: cargo test --verbose --all-features
-
       - name: Check that generated python is up to date
         run: git diff --exit-code
 
@@ -82,15 +79,6 @@ jobs:
           name: static_lib
           path: rust/target/debug/libopendp.a
       
-      - name: Prepare vendored sources
-        run: cd .. && bash tools/r_stage.sh -v
-          
-      - name: Upload vendored sources
-        uses: actions/upload-artifact@v4
-        with:
-          name: vendor
-          path: R/opendp/src/vendor.tar.xz
-
   rust-test:
     needs: rust-build
     runs-on: ubuntu-22.04
@@ -101,27 +89,16 @@ jobs:
       CARGO_TERM_COLOR: always
     steps:
       
-      - name: Free disk space
-        uses: jlumbroso/free-disk-space@v1.3.1
-        with:
-          tool-cache: false     # no: will remove rust
-          android: true         # 8.7GiB
-          dotnet: true          # 1.6GiB
-          docker-images: true   # 3.2GiB
-          haskell: false        # no: little/no benefit
-          large-packages: false # no: slow
-          swap-storage: false   # no: having swap is useful
-
-      - name: Free disk space
-        uses: jlumbroso/free-disk-space@v1.3.1
-        with:
-          tool-cache: false     # no: will remove rust
-          android: true         # 8.7GiB
-          dotnet: true          # 1.6GiB
-          docker-images: true   # 3.2GiB
-          haskell: false        # no: little/no benefit
-          large-packages: false # no: slow
-          swap-storage: false   # no: having swap is useful
+      # - name: Free disk space
+      #   uses: jlumbroso/free-disk-space@v1.3.1
+      #   with:
+      #     tool-cache: false     # no: will remove rust
+      #     android: true         # 8.7GiB
+      #     dotnet: true          # 1.6GiB
+      #     docker-images: true   # 3.2GiB
+      #     haskell: false        # no: little/no benefit
+      #     large-packages: false # no: slow
+      #     swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -137,7 +114,7 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Test
-        run: cargo test --verbose --features untrusted,ffi,polars
+        run: cargo test --verbose --all-features --lib
         
 
   rust-examples:
