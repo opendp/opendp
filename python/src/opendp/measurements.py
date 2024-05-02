@@ -671,14 +671,14 @@ def make_private_lazyframe(
     ...     public_info="keys",
     ...     max_partition_length=50)
 
-    With that in place, we can plan the Polars computation, using the ``dp`` plugin. 
+    With that in place, we can plan the Polars computation, using the `dp` plugin. 
 
     >>> plan = (
     ...     pl.LazyFrame(schema={'grade': pl.Int32, 'pet_count': pl.Int32})
     ...     .group_by("grade")
     ...     .agg(pl.col("pet_count").dp.sum((0, 10), scale=1.0)))
 
-    We now have all the pieces to make our measurement function using ``make_private_lazyframe``:
+    We now have all the pieces to make our measurement function using `make_private_lazyframe`:
 
     >>> dp_sum_pets_by_grade = dp.m.make_private_lazyframe(
     ...     input_domain=lf_domain_with_margin,
