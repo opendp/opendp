@@ -80,7 +80,7 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergen
             return expr_laplace::make_expr_laplace(input_domain, input_metric, self, global_scale);
         }
 
-        if expr_report_noisy_max_gumbel::match_rnm_gumbel(&self)?.is_some() {
+        if expr_report_noisy_max_gumbel::match_report_noisy_max_gumbel(&self)?.is_some() {
             return expr_report_noisy_max_gumbel::make_expr_report_noisy_max_gumbel::<
                 PartitionDistance<M>,
             >(input_domain, input_metric, self, global_scale);

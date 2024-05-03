@@ -28,10 +28,10 @@ pub fn get_quantile_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
 }
 
 #[test]
-fn test_expr_discrete_quantile_score() -> Fallible<()> {
+fn test_expr_discrete_quantile_score_float() -> Fallible<()> {
     let (lf_domain, lf) = get_quantile_test_data()?;
     let expr_domain = lf_domain.select();
-    let candidates = vec![0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.];
+    let candidates = Series::new("", [0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.]);
 
     let m_quant: Transformation<_, _, _, Parallel<LInfDistance<f64>>> = col("cycle_(..101f64)")
         .dp()
@@ -52,6 +52,38 @@ fn test_expr_discrete_quantile_score() -> Fallible<()> {
         .collect();
 
     let expected = vec![1000, 800, 600, 400, 200, 0, 200, 400, 600, 800, 1000];
+    assert_eq!(actual, expected);
+
+    Ok(())
+}
+
+#[test]
+fn test_expr_discrete_quantile_score_int() -> Fallible<()> {
+    let (lf_domain, lf) = get_quantile_test_data()?;
+    let expr_domain = lf_domain.select();
+    let candidates = Series::new("", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+    let m_quant: Transformation<_, _, _, Parallel<LInfDistance<f64>>> = col("cycle_(..10i32)")
+        .dp()
+        .quantile_score(0.5, candidates)
+        .make_stable(expr_domain, PartitionDistance(SymmetricDistance))?;
+
+    let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?.1;
+
+    let df_actual = lf.clone().select([dp_expr]).collect()?;
+    let AnyValue::Array(series, _) = df_actual.column("cycle_(..10i32)")?.get(0)? else {
+        panic!("Expected an array");
+    };
+
+    let actual: Vec<u64> = series
+        .u64()?
+        .downcast_iter()
+        .flat_map(StaticArray::values_iter)
+        .collect();
+
+    // there are 101 occurrences of each of the 10 unique values
+    // therefore scores follow the pattern of: 1000 - 101*k
+    let expected = vec![909, 707, 505, 303, 101, 101, 303, 505, 707, 909];
     assert_eq!(actual, expected);
 
     Ok(())

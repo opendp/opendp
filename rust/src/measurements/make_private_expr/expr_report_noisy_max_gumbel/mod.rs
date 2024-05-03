@@ -1,7 +1,7 @@
 use crate::core::{
     apply_plugin, match_plugin, ExprFunction, Metric, MetricSpace, OpenDPPlugin, PrivacyMap,
 };
-use crate::measurements::{rnm_gumbel_map, select_score, Optimize};
+use crate::measurements::{report_noisy_max_gumbel_map, select_score, Optimize};
 use crate::metrics::{IntDistance, LInfDistance, Parallel};
 use crate::traits::samplers::CastInternalRational;
 use crate::traits::{InfCast, InfMul, Number};
@@ -32,6 +32,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 mod test;
 
+static RNM_GUMBEL_PLUGIN_NAME: &str = "report_noisy_max_gumbel";
+
 /// Make a measurement that reports the index of the maximum value after adding Gumbel noise.
 ///
 /// # Arguments
@@ -49,8 +51,9 @@ where
     Expr: StableExpr<MI, Parallel<LInfDistance<f64>>>,
     (ExprDomain, MI): MetricSpace,
 {
-    let (input, RNMGumbelArgs { scale, optimize }) = match_rnm_gumbel(&expr)?
-        .ok_or_else(|| err!(MakeMeasurement, "Expected RNM Gumbel function"))?;
+    let (input, ReportNoisyMaxGumbelArgs { scale, optimize }) =
+        match_report_noisy_max_gumbel(&expr)?
+            .ok_or_else(|| err!(MakeMeasurement, "Expected {}", RNM_GUMBEL_PLUGIN_NAME))?;
 
     let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
@@ -58,18 +61,35 @@ where
     if scale.is_none() && global_scale.is_none() {
         return fallible!(
             MakeMeasurement,
-            "RNM Gumbel mechanism requires a scale parameter"
+            "{} requires a scale parameter",
+            RNM_GUMBEL_PLUGIN_NAME
         );
     }
 
     let scale = scale.unwrap_or(1.);
     let global_scale = global_scale.unwrap_or(1.);
+
+    if scale.is_nan() || scale.is_sign_negative() {
+        return fallible!(
+            MakeMeasurement,
+            "{} scale must be a non-negative number",
+            RNM_GUMBEL_PLUGIN_NAME
+        );
+    }
+    if global_scale.is_nan() || global_scale.is_sign_negative() {
+        return fallible!(
+            MakeMeasurement,
+            "global_scale must be a non-negative number"
+        );
+    }
+
     let scale = scale.inf_mul(&global_scale)?;
 
     if middle_domain.active_series()?.nullable {
         return fallible!(
             MakeMeasurement,
-            "RNM Gumbel mechanism requires non-nullable input"
+            "{} requires non-nullable input",
+            RNM_GUMBEL_PLUGIN_NAME
         );
     }
 
@@ -80,7 +100,7 @@ where
                 apply_plugin(
                     input_expr,
                     expr.clone(),
-                    RNMGumbelArgs {
+                    ReportNoisyMaxGumbelArgs {
                         optimize: optimize.clone(),
                         scale: Some(scale),
                     },
@@ -90,28 +110,31 @@ where
             MaxDivergence::default(),
             PrivacyMap::new_fallible(move |(l0, li): &(IntDistance, f64)| {
                 let linf_metric = middle_metric.0.clone();
-                let epsilon = rnm_gumbel_map(scale, linf_metric)(li)?;
+                let epsilon = report_noisy_max_gumbel_map(scale, linf_metric)(li)?;
                 f64::inf_cast(*l0)?.inf_mul(&epsilon)
             }),
         )?
 }
 
-/// Determine if the given expression is a RNM Gumbel expression.
+/// Determine if the given expression is a report_noisy_max_gumbel expression.
 ///
 /// # Arguments
 /// * `expr` - The expression to check
 ///
 /// # Returns
-/// The input to the RNM Gumbel expression and the arguments to the mechanism
-pub(crate) fn match_rnm_gumbel(expr: &Expr) -> Fallible<Option<(&Expr, RNMGumbelArgs)>> {
-    let Some((input, args)) = match_plugin(expr, "rnm_gumbel")? else {
+/// The input to the report_noisy_max_gumbel expression and the arguments to the mechanism
+pub(crate) fn match_report_noisy_max_gumbel(
+    expr: &Expr,
+) -> Fallible<Option<(&Expr, ReportNoisyMaxGumbelArgs)>> {
+    let Some((input, args)) = match_plugin(expr, RNM_GUMBEL_PLUGIN_NAME)? else {
         return Ok(None);
     };
 
     let Ok([input]) = <&[_; 1]>::try_from(input.as_slice()) else {
         return fallible!(
             MakeMeasurement,
-            "RNM Gumbel expects a single input expression"
+            "{} expects a single input expression",
+            RNM_GUMBEL_PLUGIN_NAME
         );
     };
 
@@ -120,7 +143,7 @@ pub(crate) fn match_rnm_gumbel(expr: &Expr) -> Fallible<Option<(&Expr, RNMGumbel
 
 /// Arguments for the Report Noisy Max Gumbel noise expression
 #[derive(Serialize, Deserialize, Clone)]
-pub(crate) struct RNMGumbelArgs {
+pub(crate) struct ReportNoisyMaxGumbelArgs {
     /// Controls whether the noisy maximum or noisy minimum candidate is selected.
     pub optimize: Optimize,
     /// The scale of the Gumbel noise.
@@ -148,30 +171,30 @@ impl<'de> Deserialize<'de> for Optimize {
     }
 }
 
-impl OpenDPPlugin for RNMGumbelArgs {
+impl OpenDPPlugin for ReportNoisyMaxGumbelArgs {
     fn get_options(&self) -> FunctionOptions {
         FunctionOptions {
             collect_groups: ApplyOptions::ElementWise,
-            fmt_str: "rnm_gumbel",
+            fmt_str: RNM_GUMBEL_PLUGIN_NAME,
             ..Default::default()
         }
     }
 }
 
 // allow the RNMGumbelArgs struct to be stored inside an AnonymousFunction, when used from Rust directly
-impl SeriesUdf for RNMGumbelArgs {
+impl SeriesUdf for ReportNoisyMaxGumbelArgs {
     // makes it possible to downcast the AnonymousFunction trait object back to Self
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
 
     fn call_udf(&self, s: &mut [Series]) -> PolarsResult<Option<Series>> {
-        rnm_gumbel_udf(s, self.clone()).map(Some)
+        report_noisy_max_gumbel_udf(s, self.clone()).map(Some)
     }
 
     fn get_output(&self) -> Option<GetOutput> {
         Some(GetOutput::map_fields(|fields| {
-            rnm_gumbel_type_udf(fields)
+            report_noisy_max_gumbel_type_udf(fields)
                 // NOTE: it would be better if this didn't need to fall back,
                 // but Polars does not support raising an error
                 .ok()
@@ -180,22 +203,25 @@ impl SeriesUdf for RNMGumbelArgs {
     }
 }
 
-/// Implementation of the RNM Gumbel noise expression.
+/// Implementation of the report_noisy_max_gumbel noise expression.
 ///
 /// The Polars engine executes this function over chunks of data.
-fn rnm_gumbel_udf(inputs: &[Series], kwargs: RNMGumbelArgs) -> PolarsResult<Series> {
+fn report_noisy_max_gumbel_udf(
+    inputs: &[Series],
+    kwargs: ReportNoisyMaxGumbelArgs,
+) -> PolarsResult<Series> {
     let Ok([series]) = <&[_; 1]>::try_from(inputs) else {
-        polars_bail!(InvalidOperation: "RNM Gumbel expects a single input field");
+        polars_bail!(InvalidOperation: "{} expects a single input field", RNM_GUMBEL_PLUGIN_NAME);
     };
 
     let Some(scale) = kwargs.scale else {
-        polars_bail!(InvalidOperation: "RNM Gumbel scale must be known");
+        polars_bail!(InvalidOperation: "{} scale must be known", RNM_GUMBEL_PLUGIN_NAME);
     };
     let Ok(scale) = RBig::try_from(scale) else {
-        polars_bail!(InvalidOperation: "RNM Gumbel scale must be a number");
+        polars_bail!(InvalidOperation: "{} scale must be a number", RNM_GUMBEL_PLUGIN_NAME);
     };
     if scale < RBig::ZERO {
-        polars_bail!(InvalidOperation: "RNM Gumbel scale must be non-negative");
+        polars_bail!(InvalidOperation: "{} scale must be non-negative", RNM_GUMBEL_PLUGIN_NAME);
     }
     let optimize = kwargs.optimize;
 
@@ -252,9 +278,9 @@ fn rnm_gumbel_udf(inputs: &[Series], kwargs: RNMGumbelArgs) -> PolarsResult<Seri
 /// Helper function for the Polars plan optimizer to determine the output type of the expression.
 ///
 /// Ensures that the input field is numeric.
-pub(crate) fn rnm_gumbel_type_udf(input_fields: &[Field]) -> PolarsResult<Field> {
+pub(crate) fn report_noisy_max_gumbel_type_udf(input_fields: &[Field]) -> PolarsResult<Field> {
     let Ok([field]) = <&[Field; 1]>::try_from(input_fields) else {
-        polars_bail!(InvalidOperation: "rnm_gumbel expects a single input field")
+        polars_bail!(InvalidOperation: "{} expects a single input field", RNM_GUMBEL_PLUGIN_NAME)
     };
     use DataType::*;
     let Array(dtype, n) = field.data_type() else {
@@ -282,9 +308,12 @@ pub(crate) fn rnm_gumbel_type_udf(input_fields: &[Field]) -> PolarsResult<Field>
     Ok(Field::new(field.name(), UInt32))
 }
 
-// generate the FFI plugin for the RNM Gumbel noise expression
+// generate the FFI plugin for the report_noisy_max_gumbel expression
 #[cfg(feature = "ffi")]
-#[polars_expr(output_type_func=rnm_gumbel_type_udf)]
-fn rnm_gumbel(inputs: &[Series], kwargs: RNMGumbelArgs) -> PolarsResult<Series> {
-    rnm_gumbel_udf(inputs, kwargs)
+#[polars_expr(output_type_func=report_noisy_max_gumbel_type_udf)]
+fn report_noisy_max_gumbel(
+    inputs: &[Series],
+    kwargs: ReportNoisyMaxGumbelArgs,
+) -> PolarsResult<Series> {
+    report_noisy_max_gumbel_udf(inputs, kwargs)
 }
