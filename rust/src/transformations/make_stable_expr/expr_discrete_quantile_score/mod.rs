@@ -3,23 +3,28 @@ use crate::core::{
 };
 use crate::domains::MarginPub;
 use crate::metrics::{LInfDistance, Parallel, PartitionDistance};
-use crate::traits::{InfCast, Number, RoundCast};
+use crate::traits::{InfCast, Number};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{
     score_candidates_constants, score_candidates_map, validate_candidates, StableExpr,
 };
 use crate::{core::Function, domains::ExprDomain, error::Fallible};
 
+use polars::datatypes::{
+    Float32Type, Float64Type, Int16Type, Int32Type, Int64Type, Int8Type, PolarsDataType,
+    StaticArray, UInt32Type, UInt64Type,
+};
 use polars::lazy::dsl::Expr;
 use polars::prelude::DataType::*;
 
 mod plugin_dq_score;
-pub(crate) use plugin_dq_score::DQScoreArgs;
+pub(crate) use plugin_dq_score::{Candidates, DiscreteQuantileScoreArgs};
+use polars::series::Series;
 
 #[cfg(test)]
 pub mod test;
 
-static DQ_SCORE_PLUGIN_NAME: &str = "dq_score";
+static DQ_SCORE_PLUGIN_NAME: &str = "discrete_quantile_score";
 
 /// Make a measurement that adds Laplace noise to a Polars expression.
 ///
@@ -39,12 +44,18 @@ where
     Expr: StableExpr<PartitionDistance<MI>, PartitionDistance<MI>>,
     (ExprDomain, PartitionDistance<MI>): MetricSpace,
 {
-    let Some((input, args)) = match_dq_score(&expr)? else {
-        return fallible!(MakeTransformation, "Expected quantile_score function");
+    let Some((input, args)) = match_discrete_quantile_score(&expr)? else {
+        return fallible!(
+            MakeTransformation,
+            "Expected {} function",
+            DQ_SCORE_PLUGIN_NAME
+        );
     };
 
-    let DQScoreArgs {
-        alpha, candidates, ..
+    let DiscreteQuantileScoreArgs {
+        alpha,
+        candidates: Candidates(candidates),
+        ..
     } = args;
 
     let t_prior = input.clone().make_stable(input_domain, input_metric)?;
@@ -58,25 +69,15 @@ where
         );
     }
 
-    fn validate<T: Number + RoundCast<f64>>(candidates: &Vec<f64>) -> Fallible<()> {
-        validate_candidates(
-            &candidates
-                .iter()
-                .cloned()
-                .map(T::round_cast)
-                .collect::<Fallible<_>>()?,
-        )
-    }
-
     match active_series.field.dtype {
-        UInt32 => validate::<u32>(&candidates),
-        UInt64 => validate::<u64>(&candidates),
-        Int8 => validate::<i8>(&candidates),
-        Int16 => validate::<i16>(&candidates),
-        Int32 => validate::<i32>(&candidates),
-        Int64 => validate::<i64>(&candidates),
-        Float32 => validate::<f32>(&candidates),
-        Float64 => validate::<f64>(&candidates),
+        UInt32 => validate::<UInt32Type>(&candidates),
+        UInt64 => validate::<UInt64Type>(&candidates),
+        Int8 => validate::<Int8Type>(&candidates),
+        Int16 => validate::<Int16Type>(&candidates),
+        Int32 => validate::<Int32Type>(&candidates),
+        Int64 => validate::<Int64Type>(&candidates),
+        Float32 => validate::<Float32Type>(&candidates),
+        Float64 => validate::<Float64Type>(&candidates),
         UInt8 | UInt16 => {
             return fallible!(
                 FailedFunction,
@@ -110,9 +111,9 @@ where
                 apply_plugin(
                     input_expr,
                     expr.clone(),
-                    DQScoreArgs {
+                    DiscreteQuantileScoreArgs {
                         alpha,
-                        candidates: candidates.clone(),
+                        candidates: Candidates(candidates.clone()),
                         constants: Some(constants),
                     },
                 )
@@ -130,6 +131,32 @@ where
         )?
 }
 
+fn validate<T: 'static + PolarsDataType>(candidates: &Series) -> Fallible<()>
+where
+    for<'a> T::Physical<'a>: Number,
+{
+    if candidates.null_count() > 0 {
+        return fallible!(
+            MakeTransformation,
+            "Candidates must not contain null values"
+        );
+    }
+    validate_candidates(&series_to_vec::<T>(&candidates.cast(&T::get_dtype())?)?)
+}
+
+fn series_to_vec<'a, T: 'static + PolarsDataType>(
+    series: &'a Series,
+) -> Fallible<Vec<T::Physical<'a>>>
+where
+    T::Array: StaticArray,
+{
+    Ok(series
+        .unpack::<T>()?
+        .downcast_iter()
+        .flat_map(StaticArray::values_iter)
+        .collect::<Vec<_>>())
+}
+
 /// Determine if the given expression is a discrete quantile score expression.
 ///
 /// # Arguments
@@ -137,7 +164,9 @@ where
 ///
 /// # Returns
 /// If matched, ipnut expression and discrete quantile score arguments
-pub(crate) fn match_dq_score(expr: &Expr) -> Fallible<Option<(&Expr, DQScoreArgs)>> {
+pub(crate) fn match_discrete_quantile_score(
+    expr: &Expr,
+) -> Fallible<Option<(&Expr, DiscreteQuantileScoreArgs)>> {
     let Some((score_input, args)) = match_plugin(expr, DQ_SCORE_PLUGIN_NAME)? else {
         return Ok(None);
     };

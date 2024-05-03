@@ -3,11 +3,11 @@ use std::sync::Arc;
 use crate::{
     interactive::{Answer, Query, Queryable},
     measurements::{
-        expr_laplace::LaplaceArgs, expr_report_noisy_max_gumbel::RNMGumbelArgs, Optimize,
+        expr_laplace::LaplaceArgs, expr_report_noisy_max_gumbel::ReportNoisyMaxGumbelArgs, Optimize,
     },
-    transformations::expr_discrete_quantile_score::DQScoreArgs,
+    transformations::expr_discrete_quantile_score::{Candidates, DiscreteQuantileScoreArgs},
 };
-use polars::{frame::DataFrame, lazy::frame::LazyFrame};
+use polars::{frame::DataFrame, lazy::frame::LazyFrame, series::Series};
 use polars_plan::{
     dsl::{len, lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
     logical_plan::Literal,
@@ -19,7 +19,7 @@ use super::{Fallible, Function};
 
 // this trait is used to make the Deserialize trait bound conditional on the feature flag
 #[cfg(not(feature = "ffi"))]
-pub(crate) trait OpenDPPlugin: Clone + SeriesUdf {
+pub(crate) trait OpenDPPlugin: 'static + Clone + SeriesUdf {
     fn get_options(&self) -> FunctionOptions;
 }
 #[cfg(feature = "ffi")]
@@ -243,10 +243,10 @@ impl DPNamespace {
     /// # Arguments
     /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
     /// * `candidates` - Set of possible quantiles to evaluate the utility of.
-    pub(crate) fn quantile_score(self, alpha: f64, candidates: Vec<f64>) -> Expr {
-        let args = DQScoreArgs {
+    pub(crate) fn quantile_score(self, alpha: f64, candidates: Series) -> Expr {
+        let args = DiscreteQuantileScoreArgs {
             alpha,
-            candidates,
+            candidates: Candidates(candidates),
             constants: None,
         };
         apply_anonymous_function(vec![self.0], args)
@@ -259,8 +259,8 @@ impl DPNamespace {
     /// # Arguments
     /// * `optimize` - Distinguish between argmax and argmin.
     /// * `scale` - Noise scale parameter for the Gumbel distribution.
-    pub(crate) fn rnm_gumbel(self, optimize: Optimize, scale: Option<f64>) -> Expr {
-        apply_anonymous_function(vec![self.0], RNMGumbelArgs { optimize, scale })
+    pub(crate) fn report_noisy_max_gumbel(self, optimize: Optimize, scale: Option<f64>) -> Expr {
+        apply_anonymous_function(vec![self.0], ReportNoisyMaxGumbelArgs { optimize, scale })
     }
 
     /// Compute a differentially private quantile.
@@ -271,12 +271,12 @@ impl DPNamespace {
     /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
     /// * `candidates` - Potential quantiles to select from.
     /// * `scale` - Noise scale parameter for the Gumbel distribution.
-    pub fn quantile(self, alpha: f64, candidates: Vec<f64>, scale: Option<f64>) -> Expr {
+    pub fn quantile(self, alpha: f64, candidates: Series, scale: Option<f64>) -> Expr {
         self.0
             .dp()
             .quantile_score(alpha, candidates)
             .dp()
-            .rnm_gumbel(Optimize::Min, scale)
+            .report_noisy_max_gumbel(Optimize::Min, scale)
     }
 
     /// Compute a differentially private median.
@@ -286,7 +286,7 @@ impl DPNamespace {
     /// # Arguments
     /// * `candidates` - Potential quantiles to select from.
     /// * `scale` - Noise scale parameter for the Gumbel distribution.
-    pub fn median(self, candidates: Vec<f64>, scale: Option<f64>) -> Expr {
+    pub fn median(self, candidates: Series, scale: Option<f64>) -> Expr {
         self.0.dp().quantile(0.5, candidates, scale)
     }
 }

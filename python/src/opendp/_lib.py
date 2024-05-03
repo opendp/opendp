@@ -146,7 +146,7 @@ if pl is not None:
             return self.expr.dp.sum(bounds, scale) / pl.len()
 
 
-        def _quantile_score(self, alpha, candidates):
+        def _discrete_quantile_score(self, alpha, candidates):
             """Score the utility of each candidate for representing the true quantile.
             
             Candidates closer to the true quantile are assigned scores closer to zero.
@@ -157,13 +157,13 @@ if pl is not None:
             """
             return pl.plugins.register_plugin_function(
                 plugin_path=lib_path,
-                function_name="dq_score",
+                function_name="discrete_quantile_score",
                 kwargs={"alpha": alpha, "candidates": candidates},
                 args=self.expr,
                 returns_scalar=True,
             )
 
-        def _rnm_gumbel(self, optimize, scale=None):
+        def _report_noisy_max_gumbel(self, optimize, scale=None):
             """Report the argmax or argmin after adding Gumbel noise.
             
             The scale calibrates the level of entropy when selecting an index.
@@ -173,7 +173,7 @@ if pl is not None:
             """
             return pl.plugins.register_plugin_function(
                 plugin_path=lib_path,
-                function_name="rnm_gumbel",
+                function_name="report_noisy_max_gumbel",
                 kwargs={"optimize": optimize, "scale": scale},
                 args=self.expr,
                 is_elementwise=True,
@@ -188,8 +188,8 @@ if pl is not None:
             :param candidates: Potential quantiles to select from.
             :param scale: How much noise to add to the scores of candidate.
             """
-            dq_score = self.expr.dp._quantile_score(alpha, candidates)
-            return dq_score.dp._rnm_gumbel("min", scale)
+            dq_score = self.expr.dp._discrete_quantile_score(alpha, candidates)
+            return dq_score.dp._report_noisy_max_gumbel("min", scale)
         
         def median(self, candidates, scale=None):
             """Compute a differentially private median.

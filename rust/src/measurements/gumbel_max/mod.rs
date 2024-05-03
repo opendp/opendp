@@ -93,11 +93,11 @@ where
         }),
         input_metric.clone(),
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(rnm_gumbel_map(scale, input_metric)),
+        PrivacyMap::new_fallible(report_noisy_max_gumbel_map(scale, input_metric)),
     )
 }
 
-pub(crate) fn rnm_gumbel_map<QI, QO>(
+pub(crate) fn report_noisy_max_gumbel_map<QI, QO>(
     scale: QO,
     input_metric: LInfDistance<QI>,
 ) -> impl Fn(&QI) -> Fallible<QO>

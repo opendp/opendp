@@ -4,13 +4,14 @@ use polars_arrow::array::{FixedSizeListArray, UInt32Array};
 
 use crate::{
     core::PrivacyNamespaceHelper,
+    error::ErrorVariant,
     measurements::make_private_expr,
     metrics::{PartitionDistance, SymmetricDistance},
     transformations::expr_discrete_quantile_score::test::get_quantile_test_data,
 };
 
 #[test]
-fn test_rnm_gumbel_udf() -> Fallible<()> {
+fn test_report_noisy_max_gumbel_udf() -> Fallible<()> {
     // the scores are packed into a FixedSizeListArray with 3 elements per row
     // the max value in the first row is 3, the max value in the second row is 1, and the max value in the third row is 9
     // the indices of the max values are 0, 1, and 2 respectively
@@ -26,9 +27,9 @@ fn test_rnm_gumbel_udf() -> Fallible<()> {
         FixedSizeListArray::new(dtype, Box::new(UInt32Array::from_slice(scores_slice)), None);
     let scores = Series::from(ArrayChunked::from(fsla));
 
-    let actual = super::rnm_gumbel_udf(
+    let actual = super::report_noisy_max_gumbel_udf(
         &[scores],
-        RNMGumbelArgs {
+        ReportNoisyMaxGumbelArgs {
             optimize: Optimize::Max,
             scale: Some(0.0),
         },
@@ -41,11 +42,11 @@ fn test_rnm_gumbel_udf() -> Fallible<()> {
 }
 
 #[test]
-fn test_rnm_gumbel_expr() -> Fallible<()> {
+fn test_report_noisy_max_gumbel_expr() -> Fallible<()> {
     let (lf_domain, lf) = get_quantile_test_data()?;
     let expr_domain = lf_domain.select();
     let scale: f64 = 1e-8;
-    let candidates = vec![0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.];
+    let candidates = Series::new("", [0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.]);
 
     let m_quant = make_private_expr(
         expr_domain,
@@ -59,6 +60,29 @@ fn test_rnm_gumbel_expr() -> Fallible<()> {
     let df = lf.select([dp_expr]).collect()?;
     let actual = df.column("cycle_(..101f64)")?.u32()?.get(0).unwrap();
     assert_eq!(actual, 5);
+
+    Ok(())
+}
+
+#[test]
+fn test_fail_report_noisy_max_gumbel_expr_nan_scale() -> Fallible<()> {
+    let (lf_domain, _) = get_quantile_test_data()?;
+    let expr_domain = lf_domain.select();
+    let scale: f64 = f64::NAN;
+    let candidates = Series::new("", [0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.]);
+
+    let err_variant = make_private_expr(
+        expr_domain,
+        PartitionDistance(SymmetricDistance),
+        MaxDivergence::default(),
+        col("cycle_(..101f64)").dp().median(candidates, Some(scale)),
+        None,
+    )
+    .map(|_| ())
+    .unwrap_err()
+    .variant;
+
+    assert_eq!(err_variant, ErrorVariant::MakeMeasurement);
 
     Ok(())
 }

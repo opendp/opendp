@@ -127,7 +127,7 @@ where
     ) -> Fallible<
         Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
     > {
-        if expr_discrete_quantile_score::match_dq_score(&self)?.is_some() {
+        if expr_discrete_quantile_score::match_discrete_quantile_score(&self)?.is_some() {
             return expr_discrete_quantile_score::make_expr_discrete_quantile_score(
                 input_domain,
                 input_metric,
