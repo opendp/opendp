@@ -14,6 +14,9 @@ use super::{traits::UnboundedMetric, DatasetMetric};
 mod ffi;
 
 #[cfg(feature = "contrib")]
+mod expr_boolean_function;
+
+#[cfg(feature = "contrib")]
 mod expr_clip;
 
 #[cfg(feature = "contrib")]
@@ -84,6 +87,12 @@ where
         use Expr::*;
         use FunctionExpr::*;
         match self {
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: Boolean(_),
+                ..
+            } => return expr_boolean_function::make_expr_boolean_function(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Function {
