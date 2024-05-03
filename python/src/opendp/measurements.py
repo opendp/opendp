@@ -20,7 +20,8 @@ from opendp.core import *
 from opendp.domains import *
 from opendp.metrics import *
 from opendp.measures import *
-import polars
+if TYPE_CHECKING:
+    import polars
 __all__ = [
     "make_alp_queryable",
     "make_gaussian",
