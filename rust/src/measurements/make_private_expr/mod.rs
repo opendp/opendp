@@ -17,7 +17,7 @@ mod ffi;
 mod expr_len;
 
 #[cfg(feature = "contrib")]
-mod expr_index_candidates;
+pub(crate) mod expr_index_candidates;
 
 #[cfg(feature = "contrib")]
 pub(crate) mod expr_laplace;

@@ -3,11 +3,14 @@ use std::sync::Arc;
 use crate::{
     interactive::{Answer, Query, Queryable},
     measurements::{
-        expr_laplace::LaplaceArgs, expr_report_noisy_max_gumbel::ReportNoisyMaxGumbelArgs, Optimize,
+        expr_index_candidates::{Candidates, IndexCandidatesArgs},
+        expr_laplace::LaplaceArgs,
+        expr_report_noisy_max_gumbel::ReportNoisyMaxGumbelArgs,
+        Optimize,
     },
-    transformations::expr_discrete_quantile_score::{Candidates, DiscreteQuantileScoreArgs},
+    transformations::expr_discrete_quantile_score::DiscreteQuantileScoreArgs,
 };
-use polars::{frame::DataFrame, lazy::frame::LazyFrame, series::Series};
+use polars::{frame::DataFrame, lazy::frame::LazyFrame, prelude::NamedFrom, series::Series};
 use polars_plan::{
     dsl::{len, lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
     logical_plan::Literal,
@@ -263,6 +266,21 @@ impl DPNamespace {
         apply_anonymous_function(vec![self.0], ReportNoisyMaxGumbelArgs { optimize, scale })
     }
 
+    /// Index into a candidate set.
+    ///
+    /// Typically used after `rnm_gumbel` to map selected indices to candidates.
+    ///
+    /// # Arguments
+    /// * `candidates` - The values that each selected index corresponds to.
+    pub(crate) fn index_candidates(self, candidates: Series) -> Expr {
+        apply_anonymous_function(
+            vec![self.0],
+            IndexCandidatesArgs {
+                candidates: Candidates(candidates),
+            },
+        )
+    }
+
     /// Compute a differentially private quantile.
     ///
     /// The scale calibrates the level of entropy when selecting a candidate.
@@ -274,9 +292,11 @@ impl DPNamespace {
     pub fn quantile(self, alpha: f64, candidates: Series, scale: Option<f64>) -> Expr {
         self.0
             .dp()
-            .quantile_score(alpha, candidates)
+            .quantile_score(alpha, candidates.clone())
             .dp()
             .report_noisy_max_gumbel(Optimize::Min, scale)
+            .dp()
+            .index_candidates(Series::new("", candidates))
     }
 
     /// Compute a differentially private median.

@@ -178,6 +178,22 @@ if pl is not None:
                 args=self.expr,
                 is_elementwise=True,
             )
+        
+        def _index_candidates(self, candidates):
+            """Index into a candidate set. 
+
+            Typically used after `rnm_gumbel` to map selected indices to candidates.
+            
+            :param candidates: The values that each selected index corresponds to.
+            """
+            return pl.plugins.register_plugin_function(
+                plugin_path=lib_path,
+                function_name="index_candidates",
+                kwargs={"candidates": candidates},
+                args=self.expr,
+                is_elementwise=True,
+            )
+
     
         def quantile(self, alpha, candidates, scale=None):
             """Compute a differentially private quantile.
@@ -189,7 +205,9 @@ if pl is not None:
             :param scale: How much noise to add to the scores of candidate.
             """
             dq_score = self.expr.dp._discrete_quantile_score(alpha, candidates)
-            return dq_score.dp._report_noisy_max_gumbel("min", scale)
+            noisy_idx = dq_score.dp._report_noisy_max_gumbel("min", scale)
+            return noisy_idx.dp._index_candidates(candidates)
+
         
         def median(self, candidates, scale=None):
             """Compute a differentially private median.
