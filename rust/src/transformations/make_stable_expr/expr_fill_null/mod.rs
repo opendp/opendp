@@ -40,6 +40,8 @@ where
 
     let mut output_domain = middle_domain.clone();
     let series_domain = output_domain.active_series_mut()?;
+    series_domain.nullable = false;
+
     let dtype = series_domain.field.dtype.clone();
 
     use DataType::*;
@@ -114,7 +116,7 @@ pub fn match_fill_null(expr: &Expr) -> Fallible<Option<(&Expr, &LiteralValue)>> 
 
 fn reconcile_domain<T: TryGetValue + ?Sized>(
     constant: &LiteralValue,
-    series_domain: &mut SeriesDomain,
+    series_domain: &SeriesDomain,
 ) -> Fallible<Expr>
 where
     T::Owned: Primitive + Literal,
@@ -133,8 +135,6 @@ where
             series_domain
         );
     }
-
-    series_domain.nullable = false;
     Ok(lit(constant))
 }
 
