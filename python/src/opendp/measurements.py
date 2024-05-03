@@ -20,6 +20,7 @@ from opendp.core import *
 from opendp.domains import *
 from opendp.metrics import *
 from opendp.measures import *
+import polars
 __all__ = [
     "make_alp_queryable",
     "make_gaussian",
@@ -621,7 +622,7 @@ def make_private_lazyframe(
     input_domain: Domain,
     input_metric: Metric,
     output_measure: Measure,
-    lazyframe,
+    lazyframe: polars.LazyFrame,
     global_scale = None
 ) -> Measurement:
     r"""Create a differentially private measurement from a [`LazyFrame`].
