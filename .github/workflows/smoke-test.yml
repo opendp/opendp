@@ -21,6 +21,7 @@ jobs:
       CARGO_TERM_COLOR: always
     steps:
 
+      # We're no longer running out of space, but freeing disk space uses time, so disable. Re-enable if needed.
       # - name: Free disk space
       #   uses: jlumbroso/free-disk-space@v1.3.1
       #   with:
@@ -89,6 +90,7 @@ jobs:
       CARGO_TERM_COLOR: always
     steps:
       
+      # We're no longer running out of space, but freeing disk space uses time, so disable. Re-enable if needed.
       # - name: Free disk space
       #   uses: jlumbroso/free-disk-space@v1.3.1
       #   with:
@@ -114,7 +116,7 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Test
-        run: cargo test --verbose --all-features --lib
+        run: cargo test --verbose --all-features
         
 
   rust-examples:
