@@ -2,6 +2,7 @@ use crate::core::{
     apply_plugin, match_plugin, ExprFunction, MetricSpace, StabilityMap, Transformation,
 };
 use crate::domains::MarginPub;
+use crate::measurements::expr_index_candidates::Candidates;
 use crate::metrics::{LInfDistance, Parallel, PartitionDistance};
 use crate::traits::{InfCast, Number};
 use crate::transformations::traits::UnboundedMetric;
@@ -18,7 +19,7 @@ use polars::lazy::dsl::Expr;
 use polars::prelude::DataType::*;
 
 mod plugin_dq_score;
-pub(crate) use plugin_dq_score::{Candidates, DiscreteQuantileScoreArgs};
+pub(crate) use plugin_dq_score::DiscreteQuantileScoreArgs;
 use polars::series::Series;
 
 #[cfg(test)]

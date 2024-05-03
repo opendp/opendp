@@ -6,7 +6,6 @@ use crate::{
     domains::ExprDomain,
     error::Fallible,
 };
-use serde::ser::SerializeSeq;
 
 use polars::datatypes::{AnyValue, DataType, Field};
 use polars::error::PolarsResult;
@@ -16,10 +15,15 @@ use polars::series::Series;
 use polars_plan::dsl::{Expr, GetOutput, SeriesUdf};
 use polars_plan::prelude::{ApplyOptions, FunctionOptions};
 use pyo3_polars::derive::polars_expr;
-use serde::{Deserialize, Serialize};
+#[cfg(feature = "ffi")]
+use serde::{ser::SerializeSeq, Deserialize, Serialize};
+#[cfg(feature = "ffi")]
 use serde_pickle::Value;
 
 use super::PrivateExpr;
+
+#[cfg(test)]
+mod test;
 
 /// Make a post-processor that selects from a candidate set.
 ///
@@ -83,31 +87,39 @@ pub(crate) fn match_index_candidates(
 }
 
 #[derive(Clone)]
+#[cfg_attr(feature = "ffi", derive(Deserialize, Serialize))]
 pub(crate) struct IndexCandidatesArgs {
-    pub candidates: Series,
+    pub candidates: Candidates,
 }
 
-impl Serialize for IndexCandidatesArgs {
+#[derive(Clone)]
+pub(crate) struct Candidates(pub Series);
+
+#[cfg(feature = "ffi")]
+impl Serialize for Candidates {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        let mut seq = serializer.serialize_seq(Some(self.candidates.len()))?;
+        let mut seq = serializer.serialize_seq(Some(self.0.len()))?;
 
-        for value in self.candidates.iter() {
+        for value in self.0.iter() {
             match value {
                 AnyValue::Boolean(v) => seq.serialize_element(&v),
                 AnyValue::Int64(v) => seq.serialize_element(&v),
                 AnyValue::Float64(v) => seq.serialize_element(&v),
                 AnyValue::String(v) => seq.serialize_element(&v),
-                _ => Err(serde::ser::Error::custom("Expected homogenous candidates")),
+                _ => Err(serde::ser::Error::custom(
+                    "Expected homogenous candidates of either bool, i64, f64, or string",
+                )),
             }?;
         }
         seq.end()
     }
 }
 
-impl<'de> Deserialize<'de> for IndexCandidatesArgs {
+#[cfg(feature = "ffi")]
+impl<'de> Deserialize<'de> for Candidates {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -153,7 +165,7 @@ impl<'de> Deserialize<'de> for IndexCandidatesArgs {
             }
         };
 
-        Ok(IndexCandidatesArgs { candidates })
+        Ok(Candidates(candidates))
     }
 }
 
@@ -179,7 +191,7 @@ impl SeriesUdf for IndexCandidatesArgs {
     }
 
     fn get_output(&self) -> Option<GetOutput> {
-        let dtype = self.candidates.dtype().clone();
+        let dtype = self.candidates.0.dtype().clone();
         Some(GetOutput::map_field(move |f| {
             Field::new(f.name(), dtype.clone())
         }))
@@ -193,7 +205,7 @@ fn index_candidates_udf(inputs: &[Series], kwargs: IndexCandidatesArgs) -> Polar
     let Ok([series]) = <&[_; 1]>::try_from(inputs) else {
         polars_bail!(InvalidOperation: "index_candidates expects a single input field");
     };
-    let selections = kwargs.candidates.take(series.u32()?)?;
+    let selections = kwargs.candidates.0.take(series.u32()?)?;
     Ok(selections.with_name(series.name()))
 }
 
@@ -212,7 +224,10 @@ pub(crate) fn index_candidates_type_udf(
         polars_bail!(InvalidOperation: "Expected u32 input field, found {:?}", field.data_type())
     }
 
-    Ok(Field::new(field.name(), kwargs.candidates.dtype().clone()))
+    Ok(Field::new(
+        field.name(),
+        kwargs.candidates.0.dtype().clone(),
+    ))
 }
 
 // generate the FFI plugin for the index_candidates noise expression

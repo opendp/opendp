@@ -2,12 +2,10 @@ use std::iter::zip;
 
 use polars::{
     datatypes::{
-        AnyValue, ArrayChunked, ArrowDataType, DataType::*, Field, Float32Type, Float64Type,
-        Int16Type, Int32Type, Int64Type, Int8Type, PolarsDataType, StaticArray, UInt32Type,
-        UInt64Type,
+        ArrayChunked, ArrowDataType, DataType::*, Field, Float32Type, Float64Type, Int16Type,
+        Int32Type, Int64Type, Int8Type, PolarsDataType, StaticArray, UInt32Type, UInt64Type,
     },
     error::{polars_bail, polars_err, PolarsResult},
-    prelude::NamedFrom,
     series::Series,
 };
 use polars_arrow::{
@@ -22,11 +20,11 @@ use polars_plan::{
 #[cfg(feature = "ffi")]
 use pyo3_polars::derive::polars_expr;
 #[cfg(feature = "ffi")]
-use serde::{ser::SerializeSeq, Deserialize, Serialize};
-#[cfg(feature = "ffi")]
-use serde_pickle::Value;
+use serde::{Deserialize, Serialize};
 
-use crate::{core::OpenDPPlugin, traits::RoundCast};
+use crate::{
+    core::OpenDPPlugin, measurements::expr_index_candidates::Candidates, traits::RoundCast,
+};
 
 use super::{series_to_vec, DQ_SCORE_PLUGIN_NAME};
 
@@ -40,83 +38,6 @@ pub(crate) struct DiscreteQuantileScoreArgs {
     pub alpha: f64,
     /// Alpha numerator, alpha denominator, and max partition length
     pub constants: Option<(u64, u64, u64)>,
-}
-
-#[derive(Clone)]
-pub(crate) struct Candidates(pub Series);
-
-#[cfg(feature = "ffi")]
-impl Serialize for Candidates {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut seq = serializer.serialize_seq(Some(self.0.len()))?;
-
-        for value in self.0.iter() {
-            match value {
-                AnyValue::Boolean(v) => seq.serialize_element(&v),
-                AnyValue::Int64(v) => seq.serialize_element(&v),
-                AnyValue::Float64(v) => seq.serialize_element(&v),
-                AnyValue::String(v) => seq.serialize_element(&v),
-                _ => Err(serde::ser::Error::custom(
-                    "Expected homogenous candidates of either bool, i64, f64, or string",
-                )),
-            }?;
-        }
-        seq.end()
-    }
-}
-
-#[cfg(feature = "ffi")]
-impl<'de> Deserialize<'de> for Candidates {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let value = Value::deserialize(deserializer)?;
-
-        let Value::List(list) = value else {
-            return Err(serde::de::Error::custom(format!(
-                "Expected a list, found {:?}",
-                value
-            )));
-        };
-        let first = list
-            .first()
-            .ok_or_else(|| serde::de::Error::custom("Expected at least one candidate"))?
-            .clone();
-
-        macro_rules! match_candidates {
-            ($list:ident, $dtype:ident) => {
-                Series::new(
-                    "",
-                    $list
-                        .into_iter()
-                        .map(|x| match x {
-                            Value::$dtype(v) => Ok(v),
-                            _ => Err(serde::de::Error::custom("Expected homogenous candidates")),
-                        })
-                        .collect::<Result<Vec<_>, D::Error>>()?,
-                )
-            };
-        }
-
-        let candidates = match first {
-            Value::Bool(_) => match_candidates!(list, Bool),
-            Value::I64(_) => match_candidates!(list, I64),
-            Value::F64(_) => match_candidates!(list, F64),
-            Value::String(_) => match_candidates!(list, String),
-            first => {
-                return Err(serde::de::Error::custom(format!(
-                    "Candidates must be homogeneous primitives, first candidate is {:?}",
-                    first
-                )))
-            }
-        };
-
-        Ok(Candidates(candidates))
-    }
 }
 
 impl OpenDPPlugin for DiscreteQuantileScoreArgs {
