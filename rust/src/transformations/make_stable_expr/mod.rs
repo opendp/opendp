@@ -74,10 +74,6 @@ where
         input_domain: ExprDomain,
         input_metric: M,
     ) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>> {
-        if expr_fill_null::match_fill_null(&self)?.is_some() {
-            return expr_fill_null::make_expr_fill_null(input_domain, input_metric, self);
-        }
-
         use Expr::*;
         use FunctionExpr::*;
         match self {
@@ -87,6 +83,12 @@ where
                 function: Clip { .. },
                 ..
             } => expr_clip::make_expr_clip(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: FillNull { .. },
+                ..
+            } => expr_fill_null::make_expr_fill_null(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Column(_) => expr_col::make_expr_col(input_domain, input_metric, self),
