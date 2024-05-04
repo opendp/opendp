@@ -10,12 +10,12 @@ use super::StableExpr;
 #[cfg(test)]
 mod test;
 
-/// Make a Transformation that returns a `fill_null(constant)` expression
+/// Make a Transformation that returns a `fill_null` expression
 ///
 /// # Arguments
 /// * `input_domain` - Expr domain
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared
-/// * `expr` - The imputation expression
+/// * `expr` - The fill_null expression
 pub fn make_expr_fill_null<M: OuterMetric>(
     input_domain: ExprDomain,
     input_metric: M,
