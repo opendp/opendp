@@ -14,6 +14,9 @@ use super::{traits::UnboundedMetric, DatasetMetric};
 mod ffi;
 
 #[cfg(feature = "contrib")]
+mod expr_alias;
+
+#[cfg(feature = "contrib")]
 mod expr_binary;
 
 #[cfg(feature = "contrib")]
@@ -93,6 +96,9 @@ where
         use Expr::*;
         use FunctionExpr::*;
         match self {
+
+            #[cfg(feature = "contrib")]
+            Alias(_, _) => expr_alias::make_expr_alias(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Expr::BinaryExpr { .. } => expr_binary::make_expr_binary(input_domain, input_metric, self),
