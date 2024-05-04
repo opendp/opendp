@@ -220,7 +220,7 @@ def test_onceframe_multi_collect():
         margin=["B"], public_info="keys", max_partition_length=50
     )
 
-    expr = pl.col("A").dp.sum((1.0, 2.0), scale=0.0)
+    expr = pl.col("A").fill_null(1.5).dp.sum((1.0, 2.0), scale=0.0)
     plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan
@@ -240,7 +240,7 @@ def test_onceframe_lazy():
         margin=["B"], public_info="keys", max_partition_length=50
     )
     
-    expr = pl.col("A").dp.sum((1.0, 2.0), scale=0.0)
+    expr = pl.col("A").fill_null(1.5).dp.sum((1.0, 2.0), scale=0.0)
     plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan

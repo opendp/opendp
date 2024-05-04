@@ -1,4 +1,8 @@
-use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain};
+use polars::df;
+use polars::lazy::frame::IntoLazy;
+use polars_plan::dsl::{all, col};
+
+use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::metrics::SymmetricDistance;
 
 use super::*;
@@ -16,6 +20,7 @@ fn test_make_expr_fill_null() -> Fallible<()> {
         .fill_null(0)
         .make_stable(lf_domain.clone().row_by_row(), SymmetricDistance)?;
     let expr_fill_null = t_fill_null.invoke(&(lf.logical_plan.clone(), all()))?.1;
+    println!("{:?}", expr_fill_null);
     let actual = lf.with_column(expr_fill_null).collect()?;
 
     assert_eq!(actual, df!("i32" => [0, 1])?);
