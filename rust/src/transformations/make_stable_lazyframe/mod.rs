@@ -18,6 +18,9 @@ mod source;
 #[cfg(feature = "contrib")]
 mod filter;
 
+#[cfg(feature = "contrib")]
+mod h_stack;
+
 #[bootstrap(
     features("contrib"),
     arguments(output_metric(c_type = "AnyMetric *", rust_type = b"null")),
@@ -81,6 +84,9 @@ impl StableLogicalPlan<SymmetricDistance, SymmetricDistance> for LogicalPlan {
             }
             LogicalPlan::Selection { .. } => {
                 filter::make_stable_filter(input_domain, input_metric, self)
+            }
+            LogicalPlan::HStack { .. } => {
+                h_stack::make_h_stack(input_domain, input_metric, self)
             }
             lp => fallible!(
                 MakeTransformation,
