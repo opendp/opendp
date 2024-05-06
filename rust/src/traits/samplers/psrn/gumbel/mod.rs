@@ -47,7 +47,7 @@ impl PSRN for GumbelPSRN {
             return None;
         }
         // These computations are behind one negation, so the rounding direction is reversed
-        let f_exp = f_exp.with_rounding::<R::Complement>();
+        let f_exp = f_exp.with_rounding::<R::C>();
         let f_gumbel = -f_exp.ln().with_precision(self.precision).value();
 
         // Return to normal rounding for shift/scale

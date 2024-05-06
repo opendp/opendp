@@ -221,3 +221,19 @@ def test_alp_histogram():
     print(alp_qbl("B"))
     print(alp_qbl("C"))
     print(alp_meas.map(1))
+
+
+def test_tulap():
+
+    # to call this-- first run: 
+    # 
+    # 1. `pip install -e .` from `python/` once, to install a live-reloading python package
+    # 2. `cargo build --features untrusted,bindings-python` from `rust/` any time you change the rust code
+    
+    space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    tulap_meas = space >> dp.m.then_tulap(epsilon=1., delta=1e-6)
+
+    print(tulap_meas.map(1.))
+    print(tulap_meas(0.))
+
+test_tulap()

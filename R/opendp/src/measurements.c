@@ -251,3 +251,29 @@ SEXP measurements__make_report_noisy_max_gumbel(
     return(anymeasurementptr_to_sexp(_return_value, log));
 }
 
+
+SEXP measurements__make_tulap(
+    SEXP input_domain, SEXP input_metric, SEXP epsilon, SEXP delta, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(epsilon);
+    PROTECT(delta);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    double c_epsilon = Rf_asReal(epsilon);
+    double c_delta = Rf_asReal(delta);
+
+    // Call library function.
+    FfiResult_____AnyMeasurement _result = opendp_measurements__make_tulap(c_input_domain, c_input_metric, c_epsilon, c_delta);
+
+    UNPROTECT(5);
+    if(_result.tag == Err_____AnyMeasurement)
+        return(extract_error(_result.err));
+    AnyMeasurement* _return_value = _result.ok;
+    return(anymeasurementptr_to_sexp(_return_value, log));
+}
+
