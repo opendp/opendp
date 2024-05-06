@@ -37,16 +37,16 @@ def _ptulap(t, m=0, epsilon=0, delta=0):
 
 # define a public API. How about this one?
 class Tulap(object):
-    def __init__(self, data, epsilon, delta, theta, size) -> None:
+    def __init__(self, data, epsilon, delta, size) -> None:
         self.data = data
         self.epsilon = epsilon
         self.delta = delta
-        self.theta = theta
+        #self.theta = theta
         self.size = size
 
 
-    def ump_test(self, alpha, tail):
-        postprocessor = _make_ump_test(self.theta, self.size, alpha, self.epsilon, self.delta, tail)
+    def ump_test(self, theta, alpha, tail):
+        postprocessor = _make_ump_test(theta, self.size, alpha, self.epsilon, self.delta, tail)
         return postprocessor(self.data)
 
     def CI(self, alpha, tail=None):
@@ -55,15 +55,15 @@ class Tulap(object):
         elif tail in {"lower", "upper"}:
             postprocessor = _make_CI_oneside(alpha, self.size, self.epsilon, self.delta, tail)
         else:
-            raise ValueError("tail must be None, left or right")
+            raise ValueError("tail must be None, lower or upper")
 
         return postprocessor(self.data)
 
-    def p_value(self, tail=None):
+    def p_value(self, theta, tail=None):
         if tail is None:
-            postprocessor = _make_twoside_pvalue(self.theta, self.size, self.epsilon, self.delta)
+            postprocessor = _make_twoside_pvalue(theta, self.size, self.epsilon, self.delta)
         elif tail in {"left", "right"}:
-            postprocessor = _make_oneside_pvalue(self.theta, self.size, self.epsilon, self.delta, tail)
+            postprocessor = _make_oneside_pvalue(theta, self.size, self.epsilon, self.delta, tail)
         else:
             raise ValueError("tail must be None, left or right")
 
@@ -236,7 +236,7 @@ def _make_CI_oneside(alpha, size, epsilon, delta, tail):
 
         elif tail == "upper":
             CIobj = lambda x: (
-                (_make_oneside_pvalue(x, size=size, epsilon=epsilon, delta=delta, tail="right")(Z))
+                (_make_oneside_pvalue(x, size=size, epsilon=epsilon, delta=delta, tail="right")(Z)[0])
                 - (1 - alpha)
             )
         L = minimize_scalar(
