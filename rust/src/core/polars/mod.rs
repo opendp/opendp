@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     measurements::{
         expr_index_candidates::{Candidates, IndexCandidatesArgs},
-        expr_laplace::LaplaceArgs,
+        expr_noise::{Distribution, NoiseArgs},
         expr_report_noisy_max_gumbel::ReportNoisyMaxGumbelArgs,
         Optimize,
     },
@@ -202,6 +202,24 @@ impl PrivacyNamespaceHelper for Expr {
 
 pub struct DPNamespace(Expr);
 impl DPNamespace {
+    /// Add noise to the expression.
+    ///
+    /// `scale` must not be negative or inf.
+    /// Scale and distribution may be left None, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
+    ///
+    /// # Arguments
+    /// * `scale` - Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
+    /// * `distribution` - If specified, determines the noise distribution
+    pub fn noise(self, scale: Option<f64>, distribution: Option<Distribution>) -> Expr {
+        apply_anonymous_function(
+            vec![self.0],
+            NoiseArgs {
+                scale,
+                distribution,
+            },
+        )
+    }
+
     /// Add Laplace noise to the expression.
     ///
     /// `scale` must not be negative or inf.
@@ -210,7 +228,18 @@ impl DPNamespace {
     /// # Arguments
     /// * `scale` - Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
     pub fn laplace(self, scale: Option<f64>) -> Expr {
-        apply_anonymous_function(vec![self.0], LaplaceArgs { scale })
+        self.noise(scale, Some(Distribution::Laplace))
+    }
+
+    /// Add Gaussian noise to the expression.
+    ///
+    /// `scale` must not be negative or inf.
+    /// Scale may be left None, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
+    ///
+    /// # Arguments
+    /// * `scale` - Noise scale parameter for the Gaussian distribution. `scale` == standard_deviation.
+    pub fn gaussian(self, scale: Option<f64>) -> Expr {
+        self.noise(scale, Some(Distribution::Gaussian))
     }
 
     /// Compute the differentially private sum.
@@ -223,7 +252,7 @@ impl DPNamespace {
             .clip(lit(bounds.0), lit(bounds.1))
             .sum()
             .dp()
-            .laplace(scale)
+            .noise(scale, None)
     }
 
     /// Compute the differentially private mean.

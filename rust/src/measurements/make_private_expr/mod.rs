@@ -2,10 +2,11 @@ use opendp_derive::bootstrap;
 use polars_plan::dsl::Expr;
 
 use crate::{
+    combinators::BasicCompositionMeasure,
     core::{Measure, Measurement, Metric, MetricSpace},
     domains::ExprDomain,
     error::Fallible,
-    measures::MaxDivergence,
+    measures::{MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
     transformations::traits::UnboundedMetric,
 };
@@ -20,7 +21,7 @@ mod expr_len;
 pub(crate) mod expr_index_candidates;
 
 #[cfg(feature = "contrib")]
-pub(crate) mod expr_laplace;
+pub(crate) mod expr_noise;
 
 #[cfg(feature = "contrib")]
 mod expr_literal;
@@ -79,8 +80,8 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergen
         output_measure: MaxDivergence<f64>,
         global_scale: Option<f64>,
     ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, MaxDivergence<f64>>> {
-        if expr_laplace::match_laplace(&self)?.is_some() {
-            return expr_laplace::make_expr_laplace(input_domain, input_metric, self, global_scale);
+        if expr_noise::match_noise(&self)?.is_some() {
+            return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
 
         if expr_report_noisy_max_gumbel::match_report_noisy_max_gumbel(&self)?.is_some() {
@@ -89,42 +90,91 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergen
             >(input_domain, input_metric, self, global_scale);
         }
 
-        if expr_index_candidates::match_index_candidates(&self)?.is_some() {
-            return expr_index_candidates::make_expr_index_candidates::<PartitionDistance<M>, _>(
-                input_domain,
-                input_metric,
-                output_measure,
-                self,
-                global_scale,
-            );
-        }
-
-        if let Some(meas) = expr_postprocess::match_postprocess(
-            input_domain.clone(),
-            input_metric.clone(),
-            output_measure.clone(),
-            self.clone(),
+        make_private_measure_agnostic(
+            input_domain,
+            input_metric,
+            output_measure,
+            self,
             global_scale,
-        )? {
-            return Ok(meas);
+        )
+    }
+}
+
+impl<M: 'static + UnboundedMetric>
+    PrivateExpr<PartitionDistance<M>, ZeroConcentratedDivergence<f64>> for Expr
+{
+    fn make_private(
+        self,
+        input_domain: ExprDomain,
+        input_metric: PartitionDistance<M>,
+        output_measure: ZeroConcentratedDivergence<f64>,
+        global_scale: Option<f64>,
+    ) -> Fallible<
+        Measurement<ExprDomain, Expr, PartitionDistance<M>, ZeroConcentratedDivergence<f64>>,
+    > {
+        if expr_noise::match_noise(&self)?.is_some() {
+            return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
 
-        match self {
-            #[cfg(feature = "contrib")]
-            Expr::Len => {
-                expr_len::make_expr_private_len(input_domain, input_metric, output_measure, self.clone())
-            }
+        make_private_measure_agnostic(
+            input_domain,
+            input_metric,
+            output_measure,
+            self,
+            global_scale,
+        )
+    }
+}
 
-            #[cfg(feature = "contrib")]
-            Expr::Literal(_) => {
-                expr_literal::make_expr_private_lit(input_domain, input_metric, self.clone())
-            }
+fn make_private_measure_agnostic<
+    MI: 'static + UnboundedMetric,
+    MO: 'static + BasicCompositionMeasure<Distance = f64>,
+>(
+    input_domain: ExprDomain,
+    input_metric: PartitionDistance<MI>,
+    output_measure: MO,
+    expr: Expr,
+    global_scale: Option<f64>,
+) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MO>>
+where
+    Expr: PrivateExpr<PartitionDistance<MI>, MO>,
+    (ExprDomain, MI): MetricSpace,
+{
+    if expr_index_candidates::match_index_candidates(&expr)?.is_some() {
+        return expr_index_candidates::make_expr_index_candidates::<PartitionDistance<MI>, _>(
+            input_domain,
+            input_metric,
+            output_measure,
+            expr,
+            global_scale,
+        );
+    }
 
-            expr => fallible!(
-                MakeMeasurement,
-                "Expr is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
-                expr
-            ),
+    if let Some(meas) = expr_postprocess::match_postprocess(
+        input_domain.clone(),
+        input_metric.clone(),
+        output_measure.clone(),
+        expr.clone(),
+        global_scale,
+    )? {
+        return Ok(meas);
+    }
+
+    match &expr {
+        #[cfg(feature = "contrib")]
+        Expr::Len => {
+            expr_len::make_expr_private_len(input_domain, input_metric, output_measure, expr)
         }
+
+        #[cfg(feature = "contrib")]
+        Expr::Literal(_) => {
+            expr_literal::make_expr_private_lit(input_domain, input_metric, expr)
+        }
+
+        expr => fallible!(
+            MakeMeasurement,
+            "Expr is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
+            expr
+        ),
     }
 }

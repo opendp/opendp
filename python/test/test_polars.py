@@ -94,7 +94,10 @@ def test_expr_ffi():
     assert str(t_ident((lf, pl.col("A")))[1]) == str(pl.col("A"))
 
 
-def test_private_lazyframe_explicit_sum():
+@pytest.mark.parametrize(
+    "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
+)
+def test_private_lazyframe_explicit_sum(measure):
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
 
@@ -102,11 +105,11 @@ def test_private_lazyframe_explicit_sum():
         margin=["B"], public_info="keys", max_partition_length=50
     )
 
-    expr = pl.col("A").fill_null(0.0).clip(0.0, 1.0).sum().dp.laplace(0.0)
+    expr = pl.col("A").fill_null(0.0).clip(0.0, 1.0).sum().dp.noise(0.0)
     print("expr", expr)
     plan = seed(lf.schema).group_by("B").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
-        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
+        lf_domain, dp.symmetric_distance(), measure, plan, 0.0
     )
 
     df_exp = pl.DataFrame(
@@ -119,27 +122,35 @@ def test_private_lazyframe_explicit_sum():
     pl_testing.assert_frame_equal(df_act, df_exp)
 
 
-def test_private_lazyframe_sum():
+@pytest.mark.parametrize(
+    "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
+)
+def test_private_lazyframe_sum(measure):
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
 
     lf_domain, lf = example_lf(
         margin=["B"], public_info="keys", max_partition_length=50
     )
-    expr = pl.col("A").fill_null(0.).dp.sum((1.0, 2.0), scale=0.0)
+    expr = pl.col("A").fill_null(0.0).dp.sum((1.0, 2.0), scale=0.0)
     plan = seed(lf.schema).group_by("B").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
-        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
+        lf_domain, dp.symmetric_distance(), measure, plan, 0.0
     )
 
-    expect = pl.DataFrame([
-        pl.Series("B", [1, 2, 3, 4, 5], dtype=pl.Int32),
-        pl.Series("A", [10.0] * 5, dtype=pl.Float64),
-    ])
+    expect = pl.DataFrame(
+        [
+            pl.Series("B", [1, 2, 3, 4, 5], dtype=pl.Int32),
+            pl.Series("A", [10.0] * 5, dtype=pl.Float64),
+        ]
+    )
     pl_testing.assert_frame_equal(m_lf(lf).sort("B").collect(), expect)
 
 
-def test_private_lazyframe_mean():
+@pytest.mark.parametrize(
+    "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
+)
+def test_private_lazyframe_mean(measure):
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
 
@@ -147,16 +158,18 @@ def test_private_lazyframe_mean():
         margin=["B"], public_info="lengths", max_partition_length=50
     )
 
-    expr = pl.col("A").fill_null(0.).dp.mean((1.0, 2.0), scale=0.0)
+    expr = pl.col("A").fill_null(0.0).dp.mean((1.0, 2.0), scale=0.0)
     plan = seed(lf.schema).group_by("B").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
-        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 1.0
+        lf_domain, dp.symmetric_distance(), measure, plan, 1.0
     )
 
-    expect = pl.DataFrame([
-        pl.Series("B", [1, 2, 3, 4, 5], dtype=pl.Int32),
-        pl.Series("A", [1.0] * 5, dtype=pl.Float64),
-    ])
+    expect = pl.DataFrame(
+        [
+            pl.Series("B", [1, 2, 3, 4, 5], dtype=pl.Int32),
+            pl.Series("A", [1.0] * 5, dtype=pl.Float64),
+        ]
+    )
     pl_testing.assert_frame_equal(m_lf(lf).sort("B").collect(), expect)
 
 
@@ -210,16 +223,21 @@ def test_private_lazyframe_median():
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
 
 
-def test_filter():
+@pytest.mark.parametrize(
+    "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
+)
+def test_filter(measure):
     """ensure that expr domain's carrier type can be passed to/from Rust"""
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
 
     lf_domain, lf = example_lf(margin=[], public_info="keys", max_partition_length=50)
 
-    plan = lf.filter(pl.col("B") < 2).select(pl.len().dp.laplace(scale=0.))
+    plan = lf.filter(pl.col("B") < 2).select(pl.len().dp.noise(scale=0.0))
 
-    m_lf = dp.m.make_private_lazyframe(lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan)
+    m_lf = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), measure, plan
+    )
 
     expect = pl.DataFrame([pl.Series("len", [10], dtype=pl.UInt32)])
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
