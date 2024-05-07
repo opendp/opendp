@@ -1,5 +1,5 @@
 use crate::core::{ExprFunction, Measure, Metric, MetricSpace, PrivacyMap};
-use crate::transformations::StableExpr;
+use crate::metrics::PartitionDistance;
 use crate::{
     core::{Function, Measurement},
     domains::ExprDomain,
@@ -22,13 +22,12 @@ mod test;
 /// * `expr` - literal expression
 pub fn make_expr_private_lit<MI: 'static + Metric, MO: 'static + Measure>(
     input_domain: ExprDomain,
-    input_metric: MI,
+    input_metric: PartitionDistance<MI>,
     expr: Expr,
-) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>
+) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MO>>
 where
     MO::Distance: Zero,
-    Expr: StableExpr<MI, MI>,
-    (ExprDomain, MI): MetricSpace,
+    (ExprDomain, PartitionDistance<MI>): MetricSpace,
 {
     let Expr::Literal(_) = &expr else {
         return fallible!(MakeMeasurement, "Expected Literal expression");

@@ -1,13 +1,15 @@
 use polars_plan::dsl::Expr;
 
 use crate::{
-    core::{FfiResult, IntoAnyMeasurementFfiResultExt},
+    core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure},
     domains::ExprDomain,
+    error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
         util,
     },
-    measures::MaxDivergence,
+    measurements::PrivateExpr,
+    measures::{MaxDivergence, ZeroConcentratedDivergence},
     metrics::{PartitionDistance, SymmetricDistance},
 };
 
@@ -25,8 +27,9 @@ pub extern "C" fn opendp_measurements__make_private_expr(
     let input_metric =
         try_!(try_as_ref!(input_metric).downcast_ref::<PartitionDistance<SymmetricDistance>>())
             .clone();
-    let output_measure =
-        try_!(try_as_ref!(output_measure).downcast_ref::<MaxDivergence<f64>>()).clone();
+
+    let output_measure = try_as_ref!(output_measure);
+    let MO = output_measure.type_.clone();
 
     let expr = try_!(try_as_ref!(expr).downcast_ref::<Expr>()).clone();
 
@@ -36,13 +39,30 @@ pub extern "C" fn opendp_measurements__make_private_expr(
         None
     };
 
-    make_private_expr(
-        input_domain,
-        input_metric,
-        output_measure,
-        expr,
-        global_scale,
-    )
-    .into_any()
+    fn monomorphize<MO: 'static + Measure>(
+        input_domain: ExprDomain,
+        input_metric: PartitionDistance<SymmetricDistance>,
+        output_measure: &AnyMeasure,
+        expr: Expr,
+        global_scale: Option<f64>,
+    ) -> Fallible<AnyMeasurement>
+    where
+        Expr: PrivateExpr<PartitionDistance<SymmetricDistance>, MO>,
+    {
+        let output_measure = output_measure.downcast_ref::<MO>()?.clone();
+        make_private_expr(
+            input_domain,
+            input_metric,
+            output_measure,
+            expr,
+            global_scale,
+        )
+        .into_any()
+    }
+
+    dispatch!(
+        monomorphize,
+        [(MO, [MaxDivergence<f64>, ZeroConcentratedDivergence<f64>])],
+        (input_domain, input_metric, output_measure, expr, global_scale))
     .into()
 }

@@ -107,21 +107,26 @@ if pl is not None:
         def __init__(self, expr):
             self.expr = expr
 
-        def laplace(self, scale=None):
-            """Add Laplace noise to the expression.
+        def noise(self, scale=None, distribution=None):
+            """Add noise to the expression.
 
             If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
 
-            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
+            :param scale: Noise scale parameter for the distribution.
             """
-            scale = float("nan") if scale is None else scale
             return pl.plugins.register_plugin_function(
                 plugin_path=lib_path,
-                function_name="laplace",
-                kwargs={"scale": scale},
+                function_name="noise",
+                kwargs={"scale": scale, "distribution": distribution},
                 args=self.expr,
                 is_elementwise=True,
             )
+        
+        def laplace(self, scale=None):
+            return self.noise(scale=scale, distribution="Laplace")
+        
+        def gaussian(self, scale=None):
+            return self.noise(scale=scale, distribution="Gaussian")
 
         def sum(self, bounds, scale=None):
             """Compute the differentially private sum.
@@ -131,7 +136,7 @@ if pl is not None:
             :param bounds: The bounds of the input data.
             :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
             """
-            return self.expr.clip(*bounds).sum().dp.laplace(scale)
+            return self.expr.clip(*bounds).sum().dp.noise(scale)
         
         
         def mean(self, bounds, scale=None):
