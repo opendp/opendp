@@ -2,10 +2,10 @@ use super::*;
 use polars::prelude::*;
 
 use crate::{
-    core::PrivacyNamespaceHelper,
     error::ErrorVariant,
     measurements::{make_private_expr, make_private_lazyframe},
     metrics::{PartitionDistance, SymmetricDistance},
+    polars::PrivacyNamespace,
     transformations::test_helper::get_test_data,
 };
 

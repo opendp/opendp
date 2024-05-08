@@ -2,9 +2,9 @@ use super::*;
 use polars::prelude::*;
 
 use crate::{
-    core::PrivacyNamespaceHelper,
     domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
     metrics::SymmetricDistance,
+    polars::PrivacyNamespace,
 };
 
 pub fn get_quantile_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {

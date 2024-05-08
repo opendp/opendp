@@ -23,7 +23,7 @@ use pyo3_polars::derive::polars_expr;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    core::OpenDPPlugin, measurements::expr_index_candidates::Candidates, traits::RoundCast,
+    measurements::expr_index_candidates::Candidates, polars::OpenDPPlugin, traits::RoundCast,
 };
 
 use super::{series_to_vec, DQ_SCORE_PLUGIN_NAME};

@@ -1,9 +1,9 @@
-use crate::core::PrivacyNamespaceHelper;
 use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
 use crate::error::ErrorVariant::MakeMeasurement;
 use crate::error::*;
 use crate::measurements::make_private_lazyframe;
 use crate::measures::MaxDivergence;
+use crate::polars::PrivacyNamespace;
 use polars::prelude::*;
 
 use crate::metrics::SymmetricDistance;

@@ -3,10 +3,11 @@ use polars::lazy::frame::LazyFrame;
 use polars_plan::logical_plan::LogicalPlan;
 
 use crate::{
-    core::{get_disabled_features_message, Function, Metric, MetricSpace, Transformation},
+    core::{Function, Metric, MetricSpace, Transformation},
     domains::{LazyFrameDomain, LogicalPlanDomain},
     error::Fallible,
     metrics::SymmetricDistance,
+    polars::get_disabled_features_message,
 };
 
 #[cfg(feature = "ffi")]

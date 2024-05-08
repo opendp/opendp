@@ -1,9 +1,10 @@
 use polars::prelude::*;
 use polars_plan::dsl::{Expr, FunctionExpr};
 
-use crate::core::{ExprFunction, Function, MetricSpace, StabilityMap, Transformation};
+use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Bounds, ExprDomain, NumericDataType, OuterMetric, SeriesDomain};
 use crate::error::*;
+use crate::polars::ExprFunction;
 use crate::traits::Number;
 use crate::transformations::DatasetMetric;
 

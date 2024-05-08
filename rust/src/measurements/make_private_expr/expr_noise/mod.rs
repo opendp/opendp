@@ -1,10 +1,8 @@
-use crate::core::{
-    apply_plugin, match_plugin, ExprFunction, Measure, Metric, MetricSpace, OpenDPPlugin,
-    PrivacyMap,
-};
+use crate::core::{Measure, Metric, MetricSpace, PrivacyMap};
 use crate::measurements::{gaussian_zcdp_map, get_discretization_consts, laplace_puredp_map};
 use crate::measures::ZeroConcentratedDivergence;
 use crate::metrics::{L1Distance, L2Distance};
+use crate::polars::{apply_plugin, match_plugin, ExprFunction, OpenDPPlugin};
 use crate::traits::samplers::{
     sample_discrete_gaussian, sample_discrete_gaussian_Z2k, sample_discrete_laplace,
     sample_discrete_laplace_Z2k,
