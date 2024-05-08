@@ -1,6 +1,5 @@
-use crate::core::{
-    apply_plugin, match_plugin, ExprFunction, Measure, Metric, MetricSpace, OpenDPPlugin,
-};
+use crate::core::{Measure, Metric, MetricSpace};
+use crate::polars::{apply_plugin, match_plugin, ExprFunction, OpenDPPlugin};
 use crate::{
     core::{Function, Measurement},
     domains::ExprDomain,

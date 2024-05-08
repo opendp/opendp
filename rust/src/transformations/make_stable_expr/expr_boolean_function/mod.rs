@@ -2,9 +2,10 @@ use polars::prelude::*;
 use polars_plan::dsl::{BooleanFunction, Expr, FunctionExpr};
 use polars_plan::prelude::{ApplyOptions, FunctionOptions};
 
-use crate::core::{ExprFunction, Function, MetricSpace, StabilityMap, Transformation};
+use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, ExprDomain, OuterMetric};
 use crate::error::*;
+use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
 
 use super::StableExpr;

@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
 use crate::{
+    core::Function,
+    error::Fallible,
     measurements::{
         expr_index_candidates::{Candidates, IndexCandidatesArgs},
         expr_noise::{Distribution, NoiseArgs},
@@ -16,8 +18,6 @@ use polars_plan::{
     prelude::FunctionOptions,
 };
 use serde::{Deserialize, Serialize};
-
-use super::{Fallible, Function};
 
 // this trait is used to make the Deserialize trait bound conditional on the feature flag
 #[cfg(not(feature = "ffi"))]
@@ -191,17 +191,17 @@ fn assert_is_wildcard(expr: &Expr) -> Fallible<()> {
 }
 
 /// Helper trait for Rust users to access differentially private expressions.
-pub trait PrivacyNamespaceHelper {
-    fn dp(self) -> DPNamespace;
+pub trait PrivacyNamespace {
+    fn dp(self) -> DPExpr;
 }
-impl PrivacyNamespaceHelper for Expr {
-    fn dp(self) -> DPNamespace {
-        DPNamespace(self)
+impl PrivacyNamespace for Expr {
+    fn dp(self) -> DPExpr {
+        DPExpr(self)
     }
 }
 
-pub struct DPNamespace(Expr);
-impl DPNamespace {
+pub struct DPExpr(Expr);
+impl DPExpr {
     /// Add noise to the expression.
     ///
     /// `scale` must not be negative or inf.

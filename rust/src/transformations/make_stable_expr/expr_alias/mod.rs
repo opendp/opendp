@@ -3,9 +3,10 @@ use std::mem::replace;
 
 use polars_plan::dsl::Expr;
 
-use crate::core::{ExprFunction, Function, MetricSpace, StabilityMap, Transformation};
+use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric};
 use crate::error::*;
+use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
 
 use super::StableExpr;
