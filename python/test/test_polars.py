@@ -208,3 +208,18 @@ def test_private_lazyframe_median():
     )
 
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
+
+
+def test_filter():
+    """ensure that expr domain's carrier type can be passed to/from Rust"""
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    lf_domain, lf = example_lf(margin=[], public_info="keys", max_partition_length=50)
+
+    plan = lf.filter(pl.col("B") < 2).select(pl.len().dp.laplace(scale=0.))
+
+    m_lf = dp.m.make_private_lazyframe(lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan)
+
+    expect = pl.DataFrame([pl.Series("len", [10], dtype=pl.UInt32)])
+    pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
