@@ -1,11 +1,14 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use crate::{
+    interactive::{Answer, Query, Queryable},
     measurements::expr_laplace::LaplaceArgs,
     transformations::expr_discrete_quantile_score::DQScoreArgs,
 };
+use polars::{frame::DataFrame, lazy::frame::LazyFrame};
 use polars_plan::{
     dsl::{len, lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
+    frame::OptState,
     logical_plan::Literal,
     prelude::FunctionOptions,
 };
@@ -247,5 +250,69 @@ impl DPNamespace {
             constants: None,
         };
         apply_anonymous_function(vec![self.0], args)
+    }
+}
+
+pub enum OnceFrameQuery {
+    Collect,
+}
+
+pub enum OnceFrameAnswer {
+    Collect(DataFrame),
+    Null,
+}
+
+pub(crate) struct ExtractLazyFrame;
+
+pub type OnceFrame = Queryable<OnceFrameQuery, OnceFrameAnswer>;
+
+impl From<LazyFrame> for OnceFrame {
+    fn from(value: LazyFrame) -> Self {
+        let mut state = Some(value);
+        Self::new_raw(move |_self: &Self, query: Query<OnceFrameQuery>| {
+            let Some(lazyframe) = state.clone() else {
+                return fallible!(FailedFunction, "LazyFrame has been exhausted");
+            };
+            Ok(match query {
+                Query::External(q_external) => Answer::External(match q_external {
+                    OnceFrameQuery::Collect => {
+                        let dataframe = lazyframe.collect()?;
+                        state.take();
+                        OnceFrameAnswer::Collect(dataframe)
+                    }
+                }),
+                Query::Internal(q_internal) => Answer::Internal({
+                    if q_internal.downcast_ref::<ExtractLazyFrame>().is_some() {
+                        Box::new(state.clone())
+                    } else {
+                        return fallible!(FailedFunction, "Unrecognized internal query");
+                    }
+                }),
+            })
+        })
+    }
+}
+
+impl OnceFrame {
+    pub fn collect(mut self) -> Fallible<DataFrame> {
+        if let Answer::External(OnceFrameAnswer::Collect(dataframe)) =
+            self.eval_query(Query::External(&OnceFrameQuery::Collect))?
+        {
+            Ok(dataframe)
+        } else {
+            // should never be reached
+            fallible!(FailedFunction, "Collect returned invalid answer")
+        }
+    }
+
+    pub(crate) fn lazyframe(&mut self) -> LazyFrame {
+        let answer = self.eval_query(Query::Internal(&ExtractLazyFrame)).unwrap();
+        let Answer::Internal(boxed) = answer else {
+            panic!("failed to extract");
+        };
+        let Ok(lazyframe) = boxed.downcast() else {
+            panic!("failed to extract");
+        };
+        *lazyframe
     }
 }

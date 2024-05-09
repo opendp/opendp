@@ -141,10 +141,20 @@ def c_to_py(value: Any) -> Any:
     if isinstance(value, AnyObjectPtr):
         from opendp._data import object_type, object_as_slice, slice_free
         obj_type = object_type(value)
+        
         if "SMDCurve" in obj_type:
             return SMDCurve(value)
+        
         if "Queryable" in obj_type:
-            return Queryable(value)
+            from opendp.core import queryable_query_type
+            query_type = RuntimeType.parse(queryable_query_type(value))
+            
+            if query_type == "OnceFrameQuery":
+                from opendp.polars import OnceFrame
+                return OnceFrame(value)
+            
+            return Queryable(value, query_type)
+        
         ffi_slice = object_as_slice(value)
         try:
             return _slice_to_py(ffi_slice, RuntimeType.parse(obj_type))

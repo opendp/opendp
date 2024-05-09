@@ -103,46 +103,64 @@ def test_private_lazyframe_explicit_sum():
     )
 
     expr = pl.col("A").clip(0.0, 1.0).sum().dp.laplace(0.0)
-    plan = seed(lf.schema).group_by("B").agg(expr)
+    plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
     )
 
-    df_exp = pl.DataFrame([
-        pl.Series("B", list(range(1, 6)), dtype=pl.Int32),
-        pl.Series("A", [10.0] * 5),
-    ])
-    df_act = m_lf(lf).sort("B").collect()
+    df_exp = pl.DataFrame(
+        [
+            pl.Series("B", list(range(1, 6)), dtype=pl.Int32),
+            pl.Series("A", [10.0] * 5),
+        ]
+    )
+    df_act = m_lf(lf).collect()
     pl_testing.assert_frame_equal(df_act, df_exp)
 
 
 def test_private_lazyframe_sum():
     pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
     lf_domain, lf = example_lf(
         margin=["B"], public_info="keys", max_partition_length=50
     )
     expr = pl.col("A").dp.sum((1.0, 2.0), scale=0.0)
-    plan = seed(lf.schema).group_by("B").agg(expr)
+    plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
     dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
     )
 
-    assert lf.select(expr).collect()["A"][0] == 50
+    expect = pl.DataFrame(
+        [
+            pl.Series("B", [1, 2, 3, 4, 5], dtype=pl.Int32),
+            pl.Series("A", [10.0] * 5, dtype=pl.Float64),
+        ]
+    )
+    pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
 
 
 def test_private_lazyframe_mean():
     pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
     lf_domain, lf = example_lf(
         margin=["B"], public_info="lengths", max_partition_length=50
     )
 
     expr = pl.col("A").dp.mean((1.0, 2.0), scale=0.0)
-    plan = seed(lf.schema).group_by("B").agg(expr)
-    dp.m.make_private_lazyframe(
+    plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
+    m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 1.0
     )
 
-    assert lf.select(expr).collect().equals(pl.DataFrame({"A": [1.0]}))
+    expect = pl.DataFrame(
+        [
+            pl.Series("B", [1, 2, 3, 4, 5], dtype=pl.Int32),
+            pl.Series("A", [1.0] * 5, dtype=pl.Float64),
+        ]
+    )
+    pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
 
 
 def test_stable_lazyframe():

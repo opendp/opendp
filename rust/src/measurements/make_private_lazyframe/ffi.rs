@@ -1,13 +1,16 @@
 use polars::lazy::frame::LazyFrame;
+use polars_plan::logical_plan::LogicalPlan;
 
 use crate::{
-    core::{FfiResult, IntoAnyMeasurementFfiResultExt},
+    core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure},
     domains::LazyFrameDomain,
+    error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
         util,
     },
-    measures::MaxDivergence,
+    measurements::PrivateLogicalPlan,
+    measures::{MaxDivergence, ZeroConcentratedDivergence},
     metrics::SymmetricDistance,
 };
 
@@ -23,8 +26,6 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
 ) -> FfiResult<*mut AnyMeasurement> {
     let input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<LazyFrameDomain>()).clone();
     let input_metric = try_!(try_as_ref!(input_metric).downcast_ref::<SymmetricDistance>()).clone();
-    let output_measure =
-        try_!(try_as_ref!(output_measure).downcast_ref::<MaxDivergence<f64>>()).clone();
 
     let lazyframe = try_!(try_as_ref!(lazyframe).downcast_ref::<LazyFrame>()).clone();
 
@@ -33,13 +34,35 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
     } else {
         None
     };
-    make_private_lazyframe(
-        input_domain,
-        input_metric,
-        output_measure,
-        lazyframe,
-        global_scale,
-    )
-    .into_any()
+
+    fn monomorphize<MO: 'static + Measure>(
+        input_domain: LazyFrameDomain,
+        input_metric: SymmetricDistance,
+        output_measure: &AnyMeasure,
+        lazyframe: LazyFrame,
+        global_scale: Option<f64>,
+    ) -> Fallible<AnyMeasurement>
+    where
+        LogicalPlan: PrivateLogicalPlan<SymmetricDistance, MO>,
+    {
+        let output_measure = output_measure.downcast_ref::<MO>()?.clone();
+        Ok(make_private_lazyframe(
+            input_domain,
+            input_metric,
+            output_measure,
+            lazyframe,
+            global_scale,
+        )?
+        .into_any_Q()
+        .into_any_A())
+        .into_any()
+    }
+
+    let MO = output_measure.type_.clone();
+
+    dispatch!(
+        monomorphize,
+        [(MO, [MaxDivergence<f64>, ZeroConcentratedDivergence<f64>])],
+        (input_domain, input_metric, output_measure, lazyframe, global_scale))
     .into()
 }

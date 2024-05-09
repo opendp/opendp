@@ -26,7 +26,7 @@ mod expr_literal;
 mod expr_postprocess;
 
 #[bootstrap(
-    features("contrib"),
+    features("contrib", "honest-but-curious"),
     arguments(
         output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
         global_scale(rust_type = "Option<f64>", c_type = "AnyObject *", default = b"null")
