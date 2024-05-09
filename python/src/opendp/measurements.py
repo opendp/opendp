@@ -196,6 +196,12 @@ def make_gaussian(
     >>> print('100?', gaussian(100.0))
     100? ...
 
+    Or, more readably, define the space and then chain:
+
+    >>> gaussian = input_space >> dp.m.then_gaussian(scale=1.0)
+    >>> print('100?', gaussian(100.0))
+    100? ...
+
     """
     assert_features("contrib")
 
@@ -234,15 +240,6 @@ def then_gaussian(
     :param k: The noise granularity in terms of 2^k.
     :param MO: Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
-
-    :example:
-
-    >>> dp.enable_features('contrib')
-    >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    >>> gaussian = input_space >> dp.m.then_gaussian(scale=1.0)
-    >>> print('100?', gaussian(100.0))
-    100? ...
-
     """
     return PartialConstructor(lambda input_domain, input_metric: make_gaussian(
         input_domain=input_domain,
@@ -297,6 +294,12 @@ def make_geometric(
     >>> print('100?', geometric(100))
     100? ...
 
+    Or, more readably, define the space and then chain:
+
+    >>> geometric = input_space >> dp.m.then_geometric(scale=1.0)
+    >>> print('100?', geometric(100))
+    100? ...
+
     """
     assert_features("contrib")
 
@@ -335,15 +338,6 @@ def then_geometric(
     :param bounds: 
     :param QO: 
     :type QO: :py:ref:`RuntimeTypeDescriptor`
-
-    :example:
-
-    >>> dp.enable_features("contrib")
-    >>> input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
-    >>> geometric = input_space >> dp.m.then_geometric(scale=1.0)
-    >>> print('100?', geometric(100))
-    100? ...
-
     """
     return PartialConstructor(lambda input_domain, input_metric: make_geometric(
         input_domain=input_domain,
@@ -408,6 +402,12 @@ def make_laplace(
     >>> print('100?', laplace(100.0))
     100? ...
 
+    Or, more readably, define the space and then chain:
+
+    >>> laplace = input_space >> dp.m.then_laplace(scale=1.0)
+    >>> print('100?', laplace(100.0))
+    100? ...
+
     """
     assert_features("contrib")
 
@@ -444,15 +444,6 @@ def then_laplace(
     :param k: The noise granularity in terms of 2^k, only valid for domains over floats.
     :param QO: Data type of the output distance and scale. `f32` or `f64`.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
-
-    :example:
-
-    >>> dp.enable_features('contrib')
-    >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    >>> laplace = input_space >> dp.m.then_laplace(scale=1.0)
-    >>> print('100?', laplace(100.0))
-    100? ...
-
     """
     return PartialConstructor(lambda input_domain, input_metric: make_laplace(
         input_domain=input_domain,
@@ -858,6 +849,12 @@ def make_report_noisy_max_gumbel(
     >>> print('2?', select_index([1, 2, 3, 2, 1]))
     2? ...
 
+    Or, more readably, define the space and then chain:
+
+    >>> select_index = input_space >> dp.m.then_report_noisy_max_gumbel(scale=1.0, optimize='Max')
+    >>> print('2?', select_index([1, 2, 3, 2, 1]))
+    2? ...
+
     """
     assert_features("contrib")
 
@@ -895,15 +892,6 @@ def then_report_noisy_max_gumbel(
     :type optimize: str
     :param QO: Output Distance Type.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
-
-    :example:
-
-    >>> dp.enable_features("contrib")
-    >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.linf_distance(T=int)
-    >>> select_index = input_space >> dp.m.then_report_noisy_max_gumbel(scale=1.0, optimize='Max')
-    >>> print('2?', select_index([1, 2, 3, 2, 1]))
-    2? ...
-
     """
     return PartialConstructor(lambda input_domain, input_metric: make_report_noisy_max_gumbel(
         input_domain=input_domain,

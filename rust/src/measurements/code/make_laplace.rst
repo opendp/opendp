@@ -4,3 +4,9 @@
 >>> laplace = dp.m.make_laplace(*input_space, scale=1.0)
 >>> print('100?', laplace(100.0))
 100? ...
+
+Or, more readably, define the space and then chain:
+
+>>> laplace = input_space >> dp.m.then_laplace(scale=1.0)
+>>> print('100?', laplace(100.0))
+100? ...
