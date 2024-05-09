@@ -15,6 +15,9 @@ mod ffi;
 #[cfg(feature = "contrib")]
 mod source;
 
+#[cfg(feature = "contrib")]
+mod filter;
+
 #[bootstrap(
     features("contrib"),
     arguments(output_metric(c_type = "AnyMetric *", rust_type = b"null")),
@@ -75,6 +78,9 @@ impl StableLogicalPlan<SymmetricDistance, SymmetricDistance> for LogicalPlan {
         match &self {
             LogicalPlan::DataFrameScan { .. } => {
                 source::make_stable_source(input_domain, input_metric, self)
+            }
+            LogicalPlan::Selection { .. } => {
+                filter::make_stable_filter(input_domain, input_metric, self)
             }
             lp => fallible!(
                 MakeTransformation,
