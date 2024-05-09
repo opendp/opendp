@@ -107,7 +107,7 @@ def test_private_lazyframe_explicit_sum(measure):
 
     expr = pl.col("A").fill_null(0.0).clip(0.0, 1.0).sum().dp.noise(0.0)
     print("expr", expr)
-    plan = seed(lf.schema).group_by("B").agg(expr)
+    plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 0.0
     )
@@ -118,7 +118,7 @@ def test_private_lazyframe_explicit_sum(measure):
             pl.Series("A", [10.0] * 5),
         ]
     )
-    df_act = m_lf(lf).sort("B").collect()
+    df_act = m_lf(lf).collect()
     pl_testing.assert_frame_equal(df_act, df_exp)
 
 
@@ -133,7 +133,7 @@ def test_private_lazyframe_sum(measure):
         margin=["B"], public_info="keys", max_partition_length=50
     )
     expr = pl.col("A").fill_null(0.0).dp.sum((1.0, 2.0), scale=0.0)
-    plan = seed(lf.schema).group_by("B").agg(expr)
+    plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 0.0
     )
@@ -144,7 +144,7 @@ def test_private_lazyframe_sum(measure):
             pl.Series("A", [10.0] * 5, dtype=pl.Float64),
         ]
     )
-    pl_testing.assert_frame_equal(m_lf(lf).sort("B").collect(), expect)
+    pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
 
 
 @pytest.mark.parametrize(
@@ -159,7 +159,7 @@ def test_private_lazyframe_mean(measure):
     )
 
     expr = pl.col("A").fill_null(0.0).dp.mean((1.0, 2.0), scale=0.0)
-    plan = seed(lf.schema).group_by("B").agg(expr)
+    plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 1.0
     )
@@ -170,7 +170,7 @@ def test_private_lazyframe_mean(measure):
             pl.Series("A", [1.0] * 5, dtype=pl.Float64),
         ]
     )
-    pl_testing.assert_frame_equal(m_lf(lf).sort("B").collect(), expect)
+    pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
 
 
 def test_stable_lazyframe():

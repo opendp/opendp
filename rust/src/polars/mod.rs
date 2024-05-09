@@ -1,8 +1,9 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     core::Function,
     error::Fallible,
+    interactive::{Answer, Query, Queryable},
     measurements::{
         expr_index_candidates::{Candidates, IndexCandidatesArgs},
         expr_noise::{Distribution, NoiseArgs},
@@ -11,9 +12,15 @@ use crate::{
     },
     transformations::expr_discrete_quantile_score::DiscreteQuantileScoreArgs,
 };
-use polars::{prelude::NamedFrom, series::Series};
+use polars::{
+    frame::DataFrame,
+    lazy::frame::LazyFrame,
+    prelude::{CsvWriterOptions, NamedFrom, ParquetWriteOptions},
+    series::Series,
+};
 use polars_plan::{
     dsl::{len, lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
+    frame::OptState,
     logical_plan::Literal,
     prelude::FunctionOptions,
 };
@@ -336,5 +343,94 @@ impl DPExpr {
     /// * `scale` - Noise scale parameter for the Gumbel distribution.
     pub fn median(self, candidates: Series, scale: Option<f64>) -> Expr {
         self.0.dp().quantile(0.5, candidates, scale)
+    }
+}
+
+pub enum OnceFrameQuery {
+    OptState(OptState),
+    Collect,
+    SinkCsv(PathBuf, CsvWriterOptions),
+    SinkParquet(PathBuf, ParquetWriteOptions),
+}
+
+pub enum OnceFrameAnswer {
+    Collect(DataFrame),
+    Null,
+}
+
+pub(crate) struct ExtractLazyFrame;
+
+pub type OnceFrame = Queryable<OnceFrameQuery, OnceFrameAnswer>;
+
+impl From<LazyFrame> for OnceFrame {
+    fn from(value: LazyFrame) -> Self {
+        let mut state = Some(value);
+        Self::new_raw(move |_self: &Self, query: Query<OnceFrameQuery>| {
+            let Some(lazyframe) = state.clone() else {
+                return fallible!(FailedFunction, "LazyFrame has been exhausted");
+            };
+            macro_rules! sink {
+                ($attr:ident, $path:ident, $options:ident) => {{
+                    lazyframe.$attr($path.clone(), $options.clone())?;
+                    state.take();
+                    OnceFrameAnswer::Null
+                }};
+            }
+            Ok(match query {
+                Query::External(q_external) => Answer::External(match q_external {
+                    OnceFrameQuery::Collect => {
+                        let dataframe = lazyframe.collect()?;
+                        state.take();
+                        OnceFrameAnswer::Collect(dataframe)
+                    }
+                    OnceFrameQuery::OptState(opt_state) => {
+                        state = Some(lazyframe.with_optimizations(opt_state.clone()));
+                        OnceFrameAnswer::Null
+                    }
+                    OnceFrameQuery::SinkCsv(path, options) => sink!(sink_csv, path, options),
+                    OnceFrameQuery::SinkParquet(path, options) => {
+                        sink!(sink_parquet, path, options)
+                    }
+                }),
+                Query::Internal(q_internal) => Answer::Internal({
+                    if q_internal.downcast_ref::<ExtractLazyFrame>().is_some() {
+                        Box::new(state.clone())
+                    } else {
+                        return fallible!(FailedFunction, "Unrecognized internal query");
+                    }
+                }),
+            })
+        })
+    }
+}
+
+impl OnceFrame {
+    pub fn collect(mut self) -> Fallible<DataFrame> {
+        if let Answer::External(OnceFrameAnswer::Collect(dataframe)) =
+            self.eval_query(Query::External(&OnceFrameQuery::Collect))?
+        {
+            Ok(dataframe)
+        } else {
+            // should never be reached
+            fallible!(FailedFunction, "Collect returned invalid answer")
+        }
+    }
+
+    pub fn with_optimizations(mut self, opt_state: OptState) -> Self {
+        // should never fail
+        self.eval_query(Query::External(&OnceFrameQuery::OptState(opt_state)))
+            .ok();
+        self
+    }
+
+    pub(crate) fn lazyframe(&mut self) -> LazyFrame {
+        let answer = self.eval_query(Query::Internal(&ExtractLazyFrame)).unwrap();
+        let Answer::Internal(boxed) = answer else {
+            panic!("failed to extract");
+        };
+        let Ok(lazyframe) = boxed.downcast() else {
+            panic!("failed to extract");
+        };
+        *lazyframe
     }
 }

@@ -414,8 +414,9 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
 Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
 
 class Queryable(object):
-    def __init__(self, value):
+    def __init__(self, value, query_type):
         self.value = value
+        self.query_type = query_type
 
     def __call__(self, query):
         from opendp.core import queryable_eval
@@ -424,12 +425,6 @@ class Queryable(object):
     def eval(self, query):
         from opendp.core import queryable_eval # pragma: no cover
         return queryable_eval(self.value, query) # pragma: no cover
-
-    @property
-    def query_type(self):
-        from opendp.core import queryable_query_type
-        from opendp.typing import RuntimeType
-        return RuntimeType.parse(queryable_query_type(self.value))
 
     def __repr__(self) -> str:
         return f"Queryable(Q={self.query_type})"

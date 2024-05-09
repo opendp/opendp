@@ -48,13 +48,15 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
         LogicalPlan: PrivateLogicalPlan<SymmetricDistance, MO>,
     {
         let output_measure = output_measure.downcast_ref::<MO>()?.clone();
-        make_private_lazyframe(
+        Ok(make_private_lazyframe(
             input_domain,
             input_metric,
             output_measure,
             lazyframe,
             global_scale,
-        )
+        )?
+        .into_any_Q()
+        .into_any_A())
         .into_any()
     }
 

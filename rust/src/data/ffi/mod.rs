@@ -8,13 +8,16 @@ use std::os::raw::c_char;
 use std::slice;
 
 #[cfg(feature = "polars")]
+use ::polars::export::arrow;
+#[cfg(feature = "polars")]
+use ::polars::prelude::*;
+#[cfg(feature = "polars")]
 use arrow::ffi::{ArrowArray, ArrowSchema};
 #[cfg(feature = "polars")]
-use polars::export::arrow;
-#[cfg(feature = "polars")]
-use polars::prelude::*;
-#[cfg(feature = "polars")]
 use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "polars")]
+mod polars;
 
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;

@@ -574,7 +574,7 @@ def make_private_expr(
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
-    assert_features("contrib")
+    assert_features("contrib", "honest-but-curious")
 
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -634,7 +634,7 @@ def make_private_lazyframe(
     **Supporting Elements:**
 
     * Input Domain:   `LazyFrameDomain`
-    * Output Type:    `LazyFrame`
+    * Output Type:    `OnceFrame`
     * Input Metric:   `MI`
     * Output Measure: `MO`
 

@@ -133,3 +133,24 @@ if pl is not None:
             :param scale: How much noise to add to the scores of candidate.
             """
             return self.expr.dp.quantile(0.5, candidates, scale)
+
+
+class OnceFrame(object):
+    def __init__(self, value):
+        self.value = value
+
+    def collect(self):
+        from opendp._data import onceframe_collect
+        return onceframe_collect(self.value)
+
+    def sink_csv(self, path):
+        from opendp._data import onceframe_sink_csv
+        onceframe_sink_csv(self.value, path)
+
+    def sink_parquet(self, path):
+        from opendp._data import onceframe_sink_parquet
+        onceframe_sink_parquet(self.value, path)
+
+    def _lazyframe(self):
+        from opendp._data import _onceframe_extract_lazyframe
+        return _onceframe_extract_lazyframe(self.value)
