@@ -60,6 +60,7 @@ SEXP core__transformation_output_metric(SEXP this, SEXP log);
 SEXP data__object_type(SEXP this, SEXP log);
 SEXP data__smd_curve_epsilon(SEXP curve, SEXP delta, SEXP T_delta, SEXP log);
 SEXP data__to_string(SEXP this, SEXP log);
+SEXP domains___lazyframe_from_domain(SEXP domain, SEXP log);
 SEXP domains__atom_domain(SEXP bounds, SEXP nullable, SEXP T, SEXP T_bounds, SEXP log);
 SEXP domains__domain_carrier_type(SEXP this, SEXP log);
 SEXP domains__domain_debug(SEXP this, SEXP log);

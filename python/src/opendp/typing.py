@@ -472,6 +472,7 @@ Series: str = 'Series'
 Expr: str = 'Expr'
 AnyMeasurementPtr: str = 'AnyMeasurementPtr'
 AnyTransformationPtr: str = 'AnyTransformationPtr'
+LazyFrameDomain: str = 'LazyFrame'
 SeriesDomain: str = 'SeriesDomain'
 
 class DomainDescriptor(RuntimeType):

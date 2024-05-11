@@ -4,6 +4,33 @@
 NULL
 
 
+#' Construct a LazyFrame from a LazyFrameDomain.
+#'
+#' [_lazyframe_from_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn._lazyframe_from_domain.html)
+#'
+#' @concept domains
+#' @param domain A LazyFrameDomain.
+lazyframe_from_domain <- function(
+  domain
+) {
+  # No type arguments to standardize.
+  log <- new_constructor_log("_lazyframe_from_domain", "domains", new_hashtab(
+    list("domain"),
+    list(domain)
+  ))
+
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = LazyFrameDomain, inferred = rt_infer(domain))
+
+  # Call wrapper function.
+  output <- .Call(
+    "domains___lazyframe_from_domain",
+    domain,
+    log, PACKAGE = "opendp")
+  output
+}
+
+
 #' Construct an instance of `AtomDomain`.
 #'
 #' [atom_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.atom_domain.html)

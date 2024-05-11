@@ -14,6 +14,26 @@
 #include "opendp_extras.h"
 
 
+SEXP domains___lazyframe_from_domain(
+    SEXP domain, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(domain);
+    PROTECT(log);
+
+    AnyDomain * c_domain = sexp_to_anydomainptr(domain);
+
+    // Call library function.
+    FfiResult_____AnyObject _result = opendp_domains___lazyframe_from_domain(c_domain);
+
+    UNPROTECT(2);
+    if(_result.tag == Err_____AnyObject)
+        return(extract_error(_result.err));
+    AnyObject* _return_value = _result.ok;
+    return(anyobjectptr_to_sexp(_return_value));
+}
+
+
 SEXP domains__atom_domain(
     SEXP bounds, SEXP nullable, SEXP T, SEXP T_bounds, SEXP log
 ) {

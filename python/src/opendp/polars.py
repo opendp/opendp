@@ -1,7 +1,10 @@
 from __future__ import annotations
+from dataclasses import dataclass
 from typing import Literal, Tuple
 from opendp._lib import import_optional_dependency, lib_path
 from opendp.mod import assert_features
+from opendp.domains import series_domain, lazyframe_domain, option_domain, atom_domain
+from opendp.measurements import make_private_lazyframe
 
 
 pl = import_optional_dependency("polars", raise_error=False)
@@ -190,3 +193,123 @@ class OnceFrame(object):
 
         assert_features("honest-but-curious")
         return onceframe_lazy(self.queryable)
+
+
+def lazyframe_domain_from_schema(schema):
+    return lazyframe_domain(
+        [series_domain_from_field(field) for field in schema.items()]
+    )
+
+
+def series_domain_from_field(field):
+    name, dtype = field
+    T = {
+        pl.UInt32: "u32",
+        pl.UInt64: "u64",
+        pl.Int8: "i8",
+        pl.Int16: "i16",
+        pl.Int32: "i32",
+        pl.Int64: "i64",
+        pl.Float32: "f32",
+        pl.Float64: "f64",
+        pl.Boolean: "bool",
+        pl.String: "String",
+    }.get(dtype)
+
+    if T is None:
+        raise ValueError(f"unrecognized dtype: {dtype}")
+
+    element_domain = option_domain(atom_domain(T=T, nullable=T in {"f32", "f64"}))
+    return series_domain(name, element_domain)
+
+if pl is not None:
+    from polars import LazyFrame
+    from polars.lazyframe.group_by import LazyGroupBy
+
+    class LazyQuery(LazyFrame):
+        """This class mimics the LazyFrame API, but adds additional methods `release` and `resolve`."""
+        def __init__(self, lazy: LazyFrame | LazyGroupBy, query):
+            self._lazy = lazy
+            self._query = query
+
+        def __getattribute__(self, name):
+
+            lf = object.__getattribute__(self, "_lazy")
+            query = object.__getattribute__(self, "_query")
+            attr = getattr(lf, name, None)
+
+            if attr is None:
+                return object.__getattribute__(self, name)
+
+            if callable(attr):
+
+                def wrap(*args, **kwargs):
+                    out = attr(*args, **kwargs)
+                    if isinstance(out, (LazyGroupBy, LazyFrame)):
+                        return LazyQuery(out, query)
+                    return out
+
+                return wrap
+
+        def resolve(self):
+            from opendp.context import PartialChain
+
+            lf = object.__getattribute__(self, "_lazy")
+            query = object.__getattribute__(self, "_query")
+            input_domain, input_metric = query._chain
+            query._chain = PartialChain(
+                lambda s: make_private_lazyframe(
+                    input_domain=input_domain,
+                    input_metric=input_metric,
+                    output_measure=query._output_measure,
+                    lazyframe=lf,
+                    global_scale=s,
+                )
+            )
+            return query.resolve()
+
+        def release(self):
+            query = object.__getattribute__(self, "_query")
+            resolve = object.__getattribute__(self, "resolve")
+            return query._context(resolve())  # type: ignore[misc]
+
+else:
+    class LazyQuery(object): # type: ignore[no-redef]
+        pass
+
+@dataclass
+class Margin(object):
+    public_info: Literal["keys"] | Literal["lengths"] | None = None
+    """Identifies properties of grouped data that are considered public information.
+    
+    * "keys" designates that keys are not protected
+    * "lengths" designates that both keys and partition lengths are not protected
+    """
+
+    max_partition_length: int | None = None
+    """An upper bound on the number of records in any one partition.
+
+    If you don't know how many records are in the data, you can specify a very loose upper bound.
+
+    This is used to resolve issues raised in "Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It" [CSVW22]
+    """
+
+    max_num_partitions: int | None = None
+    """An upper bound on the number of distinct partitions."""
+
+    max_partition_contributions: int | None = None
+    """The greatest number of records an individual may contribute to any one partition.
+    
+    This can significantly reduce the sensitivity of grouped queries under zero-Concentrated DP.
+    """
+
+    max_influenced_partitions: int | None = None
+    """The greatest number of partitions any one individual can contribute to."""
+
+    def with_public_keys(self) -> "Margin":
+        self.public_info = "keys"
+        return self
+
+    def with_public_lengths(self) -> "Margin":
+        self.public_info = "lengths"
+        return self
