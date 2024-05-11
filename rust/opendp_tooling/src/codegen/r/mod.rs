@@ -57,6 +57,7 @@ const BLACKLIST: &'static [&'static str] = &[
     "onceframe_sink_csv",
     "onceframe_sink_parquet",
     "_onceframe_extract_lazyframe",
+    "_lazyframe_from_domain",
 ];
 
 /// Top-level function to generate R bindings, including all modules.

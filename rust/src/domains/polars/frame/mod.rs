@@ -14,6 +14,9 @@ use crate::{
 
 use super::NumericDataType;
 
+#[cfg(test)]
+mod test;
+
 #[cfg(feature = "ffi")]
 mod ffi;
 
@@ -188,6 +191,10 @@ impl<F: Frame> FrameDomain<F> {
         FrameDomain::new(series_domains)
     }
 
+    pub fn schema(&self) -> Schema {
+        Schema::from_iter(self.series_domains.iter().map(|s| s.field.clone()))
+    }
+
     pub(crate) fn cast_carrier<FO: Frame>(&self) -> FrameDomain<FO> {
         FrameDomain {
             series_domains: self.series_domains.clone(),
@@ -358,6 +365,3 @@ impl Margin {
         Ok(true)
     }
 }
-
-#[cfg(test)]
-mod test;

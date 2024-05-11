@@ -861,7 +861,7 @@ struct FfiResult_____ExtrinsicObject opendp_domains___user_domain_descriptor(str
  */
 struct FfiResult_____AnyDomain opendp_domains__lazyframe_domain(struct AnyObject *series_domains);
 
-struct FfiResult_____AnyDomain opendp_domains__infer_lazyframe_domain(struct AnyObject *lazyframe);
+struct FfiResult_____AnyObject opendp_domains___lazyframe_from_domain(struct AnyDomain *domain);
 
 struct FfiResult_____AnyDomain opendp_domains__with_margin(struct AnyDomain *frame_domain,
                                                            struct AnyObject *by,

@@ -221,6 +221,10 @@ pub extern "C" fn opendp_data__slice_as_object(
         Ok(AnyObject::new(deserialize_raw::<Expr>(raw, "Expr")?))
     }
     #[cfg(feature = "polars")]
+    fn raw_to_schema(raw: &FfiSlice) -> Fallible<AnyObject> {
+        Ok(AnyObject::new(deserialize_raw::<Schema>(raw, "Schema")?))
+    }
+    #[cfg(feature = "polars")]
     fn raw_to_lazyframe(raw: &FfiSlice) -> Fallible<AnyObject> {
         Ok(AnyObject::new(LazyFrame::from(deserialize_raw::<LogicalPlan>(raw, "LazyFrame")?)))
     }
@@ -251,6 +255,8 @@ pub extern "C" fn opendp_data__slice_as_object(
         TypeContents::PLAIN("LazyFrame") => raw_to_lazyframe(raw),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Expr") => raw_to_expr(raw),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("Schema") => raw_to_schema(raw),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("DataFrame") => raw_to_dataframe(raw),
         #[cfg(feature = "polars")]
@@ -454,6 +460,10 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         serialize_obj(&obj.downcast_ref::<Expr>()?, "Expr")
     }
     #[cfg(feature = "polars")]
+    fn schema_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        serialize_obj(&try_!(obj.downcast_ref::<Schema>()), "Schema")
+    }
+    #[cfg(feature = "polars")]
     fn dataframe_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
         let frame: &DataFrame = obj.downcast_ref::<DataFrame>()?;
 
@@ -521,6 +531,8 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         TypeContents::PLAIN("LazyFrame") => lazyframe_to_raw(obj),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Expr") => expr_to_raw(obj),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("Schema") => schema_to_raw(obj),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("DataFrame") => dataframe_to_raw(obj),
         #[cfg(feature = "polars")]

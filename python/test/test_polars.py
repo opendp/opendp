@@ -48,11 +48,6 @@ def test_expr_domain():
     dp.expr_domain(lf_domain)
 
 
-def test_lazyframe_domain_infer():
-    _, lf = example_lf()
-    assert dp.infer_lazyframe_domain(lf).member(lf)
-
-
 def test_domains():
     example_lf(margin=["B"])
     example_lf(margin=["B"], public_info="keys", max_partition_length=50)
@@ -241,3 +236,44 @@ def test_filter(measure):
 
     expect = pl.DataFrame([pl.Series("len", [10], dtype=pl.UInt32)])
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
+
+
+def test_polars_context():
+    pl = pytest.importorskip("polars")
+
+    lf = pl.LazyFrame(
+        {"A": [1, 2, 3, 4], "B": ["x", "x", "y", None]},
+        schema={"A": pl.Int32, "B": pl.String},
+    )
+
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=2,
+        margins={
+            # TODO: this is redundant with the second margin
+            (): dp.Margin(max_partition_length=5),
+            ("B",): dp.Margin(public_info="keys", max_partition_length=5),
+        },
+    )
+
+    _df1 = (
+        context.query()
+        .with_columns(pl.col("B").is_null().alias("B_nulls"))
+        .filter(pl.col("B_nulls"))
+        .select(pl.col("A").fill_null(2.0).dp.sum((0, 3)))
+        .release()
+        .collect()
+    )
+
+    _df2 = (
+        context.query()
+        .group_by("B")
+        .agg(
+            pl.len().dp.noise(),
+            pl.col("A").fill_null(2).dp.sum((0, 3))
+        )
+        .release()
+        .collect()
+    )
