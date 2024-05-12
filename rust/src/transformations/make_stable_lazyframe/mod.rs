@@ -82,7 +82,7 @@ impl StableLogicalPlan<SymmetricDistance, SymmetricDistance> for LogicalPlan {
             LogicalPlan::DataFrameScan { .. } => {
                 source::make_stable_source(input_domain, input_metric, self)
             }
-            LogicalPlan::Selection { .. } => {
+            LogicalPlan::Filter { .. } => {
                 filter::make_stable_filter(input_domain, input_metric, self)
             }
             LogicalPlan::HStack { .. } => {

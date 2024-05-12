@@ -116,7 +116,7 @@ where
 
         match &self {
             #[cfg(feature = "contrib")]
-            plan if matches!(plan, LogicalPlan::Aggregate { .. }) => {
+            plan if matches!(plan, LogicalPlan::GroupBy { .. }) => {
                 aggregate::make_private_aggregate(
                     input_domain,
                     input_metric,
@@ -127,7 +127,7 @@ where
             }
 
             #[cfg(feature = "contrib")]
-            plan if matches!(plan, LogicalPlan::Projection { .. }) => {
+            plan if matches!(plan, LogicalPlan::Select { .. }) => {
                 select::make_private_select(
                     input_domain,
                     input_metric,

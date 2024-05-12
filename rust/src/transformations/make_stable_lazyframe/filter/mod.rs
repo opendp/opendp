@@ -27,11 +27,11 @@ where
     LogicalPlan: StableLogicalPlan<M, M>,
     Expr: StableExpr<M, M>,
 {
-    let LogicalPlan::Selection { input, predicate } = plan else {
+    let LogicalPlan::Filter { input, predicate } = plan else {
         return fallible!(MakeTransformation, "Expected Aggregate logical plan");
     };
 
-    let t_prior = (*input).make_stable(input_domain.clone(), input_metric.clone())?;
+    let t_prior = (input.as_ref().clone()).make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let expr_domain = ExprDomain::new(middle_domain.clone(), ExprContext::RowByRow);
@@ -61,8 +61,8 @@ where
         >> Transformation::new(
             middle_domain,
             output_domain,
-            Function::new(move |plan: &LogicalPlan| LogicalPlan::Selection {
-                input: Box::new(plan.clone()),
+            Function::new(move |plan: &LogicalPlan| LogicalPlan::Filter {
+                input: Arc::new(plan.clone()),
                 predicate: predicate.clone(),
             }),
             middle_metric.clone(),

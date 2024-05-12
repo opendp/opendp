@@ -39,7 +39,7 @@ where
     (ExprDomain, MI): MetricSpace,
     (ExprDomain, PartitionDistance<MI>): MetricSpace,
 {
-    let LogicalPlan::Aggregate {
+    let LogicalPlan::GroupBy {
         input,
         keys,
         aggs,
@@ -51,7 +51,10 @@ where
         return fallible!(MakeMeasurement, "Expected Aggregate logical plan");
     };
 
-    let t_prior = input.make_stable(input_domain.clone(), input_metric.clone())?;
+    let t_prior = input
+        .as_ref()
+        .clone()
+        .make_stable(input_domain.clone(), input_metric.clone())?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     if options.as_ref() != &GroupbyOptions::default() {
@@ -132,13 +135,13 @@ where
             middle_domain,
             Function::new_fallible(move |arg: &LogicalPlan| {
                 let mut output = plan.clone();
-                if let LogicalPlan::Aggregate {
+                if let LogicalPlan::GroupBy {
                     ref mut input,
                     ref mut aggs,
                     ..
                 } = output
                 {
-                    *input = Box::new(arg.clone());
+                    *input = Arc::new(arg.clone());
                     *aggs = f_exprs.eval(&(arg.clone(), all()))?;
                 };
                 Ok(output)

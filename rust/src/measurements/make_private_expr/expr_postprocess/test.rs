@@ -26,7 +26,7 @@ fn test_postprocess_alias() -> Fallible<()> {
     let expected = df!("chunk_2_bool" => [false, true], "new name" => [500u32, 500])?;
 
     assert!(actual
-        .sort(["chunk_2_bool"], false, false)?
+        .sort(["chunk_2_bool"], Default::default())?
         .equals(&expected));
 
     Ok(())
@@ -52,7 +52,7 @@ fn test_postprocess_binary() -> Fallible<()> {
     let expected = df!("chunk_2_bool" => [false, true], "len" => [false, false])?;
 
     assert!(actual
-        .sort(["chunk_2_bool"], false, false)?
+        .sort(["chunk_2_bool"], Default::default())?
         .equals(&expected));
 
     Ok(())

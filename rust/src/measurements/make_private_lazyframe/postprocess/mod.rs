@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::combinators::BasicCompositionMeasure;
 use crate::core::{Metric, MetricSpace};
 use crate::domains::{LazyFrameDomain, LogicalPlanDomain};
@@ -30,15 +32,21 @@ where
         LogicalPlan::Sort {
             input,
             by_column,
-            args,
+            slice,
+            sort_options,
         } => {
-            let m_in =
-                input.make_private(input_domain, input_metric, output_measure, global_scale)?;
+            let m_in = input.as_ref().clone().make_private(
+                input_domain,
+                input_metric,
+                output_measure,
+                global_scale,
+            )?;
             let sort = Function::new_fallible(move |arg: &LogicalPlan| {
                 Ok(LogicalPlan::Sort {
-                    input: Box::new(arg.clone()),
+                    input: Arc::new(arg.clone()),
                     by_column: by_column.clone(),
-                    args: args.clone(),
+                    slice: slice.clone(),
+                    sort_options: sort_options.clone(),
                 })
             });
             m_in >> sort

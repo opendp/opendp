@@ -41,11 +41,11 @@ where
     (ExprDomain, MI): MetricSpace,
     (ExprDomain, PartitionDistance<MI>): MetricSpace,
 {
-    let LogicalPlan::Projection { expr, input, .. } = plan.clone() else {
+    let LogicalPlan::Select { expr, input, .. } = plan.clone() else {
         return fallible!(MakeMeasurement, "Expected Aggregate logical plan");
     };
 
-    let t_prior = input.make_stable(input_domain, input_metric)?;
+    let t_prior = (input.as_ref().clone()).make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut expr_domain = ExprDomain::new(
@@ -98,13 +98,13 @@ where
         middle_domain,
         Function::new_fallible(move |arg: &LogicalPlan| {
             let mut output = plan.clone();
-            if let LogicalPlan::Projection {
+            if let LogicalPlan::Select {
                 ref mut input,
                 ref mut expr,
                 ..
             } = output
             {
-                *input = Box::new(arg.clone());
+                *input = Arc::new(arg.clone());
                 *expr = m_select_expr.invoke(&(arg.clone(), all()))?;
             };
             Ok(output)

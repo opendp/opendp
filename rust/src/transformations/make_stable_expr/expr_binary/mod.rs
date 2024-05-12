@@ -41,8 +41,14 @@ where
     } = input_domain.clone();
 
     let expr_domain = ExprDomain::new(frame_domain, ExprContext::RowByRow);
-    let t_left = left.make_stable(expr_domain.clone(), input_metric.clone())?;
-    let t_right = right.make_stable(expr_domain.clone(), input_metric.clone())?;
+    let t_left = left
+        .as_ref()
+        .clone()
+        .make_stable(expr_domain.clone(), input_metric.clone())?;
+    let t_right = right
+        .as_ref()
+        .clone()
+        .make_stable(expr_domain.clone(), input_metric.clone())?;
 
     use polars_plan::dsl::Operator::*;
     if !matches!(op, Eq | NotEq | Lt | LtEq | Gt | GtEq | And | Or | Xor) {
@@ -65,8 +71,8 @@ where
             let right = t_right.invoke(arg)?.1;
 
             let binary = Expr::BinaryExpr {
-                left: Box::new(left),
-                right: Box::new(right),
+                left: Arc::new(left),
+                right: Arc::new(right),
                 op: op.clone(),
             };
             Ok((arg.0.clone(), binary))

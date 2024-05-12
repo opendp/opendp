@@ -39,7 +39,7 @@ where
         return fallible!(MakeTransformation, "Expected with_columns logical plan");
     };
 
-    let t_prior = (*input).make_stable(input_domain.clone(), input_metric.clone())?;
+    let t_prior = (input.as_ref().clone()).make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     // create a transformation for each expression
@@ -88,7 +88,7 @@ where
         Function::new_fallible(move |plan: &LogicalPlan| {
             let expr_arg = (plan.clone(), all());
             Ok(LogicalPlan::HStack {
-                input: Box::new(plan.clone()),
+                input: Arc::new(plan.clone()),
                 exprs: (t_exprs.iter())
                     .map(|t| t.invoke(&expr_arg).map(|p| p.1))
                     .collect::<Fallible<Vec<_>>>()?,

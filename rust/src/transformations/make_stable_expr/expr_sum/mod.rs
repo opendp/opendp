@@ -40,7 +40,7 @@ where
         return fallible!(MakeTransformation, "expected sum expression");
     };
 
-    let t_prior = prior_expr.make_stable(input_domain, input_metric)?;
+    let t_prior = (prior_expr.as_ref().clone()).make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let dtype = &middle_domain.active_series()?.field.dtype;
