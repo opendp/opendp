@@ -227,7 +227,7 @@ def loss_of(
         epsilon: Optional[float] = None,
         delta: Optional[float] = None,
         rho: Optional[float] = None,
-        U = None) -> Tuple[Measure, Union[float, Tuple[float, float]]]:
+        U = None) -> tuple[Measure, Union[float, tuple[float, float]]]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
     >>> import opendp.prelude as dp
