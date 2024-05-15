@@ -3,7 +3,7 @@ use polars_plan::dsl::Expr;
 
 use crate::{
     core::{Measure, Measurement, Metric, MetricSpace},
-    domains::{ExprDomain, OuterMetric},
+    domains::ExprDomain,
     error::Fallible,
     measures::MaxDivergence,
     metrics::PartitionDistance,
@@ -12,6 +12,18 @@ use crate::{
 
 #[cfg(feature = "ffi")]
 mod ffi;
+
+#[cfg(feature = "contrib")]
+mod expr_len;
+
+#[cfg(feature = "contrib")]
+pub(crate) mod expr_laplace;
+
+#[cfg(feature = "contrib")]
+mod expr_literal;
+
+#[cfg(feature = "contrib")]
+mod expr_postprocess;
 
 #[bootstrap(
     features("contrib"),
@@ -34,7 +46,7 @@ pub fn make_private_expr<MI: 'static + Metric, MO: 'static + Measure>(
     input_metric: MI,
     output_measure: MO,
     expr: Expr,
-    global_scale: f64,
+    global_scale: Option<f64>,
 ) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>
 where
     Expr: PrivateExpr<MI, MO>,
@@ -49,26 +61,48 @@ pub trait PrivateExpr<MI: Metric, MO: Measure> {
         input_domain: ExprDomain,
         input_metric: MI,
         output_metric: MO,
-        global_scale: f64,
+        global_scale: Option<f64>,
     ) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>;
 }
 
-impl<M: UnboundedMetric + OuterMetric> PrivateExpr<PartitionDistance<M>, MaxDivergence<f64>>
-    for Expr
-{
+impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergence<f64>> for Expr {
     fn make_private(
         self,
-        _input_domain: ExprDomain,
-        _input_metric: PartitionDistance<M>,
-        _output_measure: MaxDivergence<f64>,
-        _global_scale: f64,
+        input_domain: ExprDomain,
+        input_metric: PartitionDistance<M>,
+        output_measure: MaxDivergence<f64>,
+        global_scale: Option<f64>,
     ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, MaxDivergence<f64>>> {
+        if expr_laplace::match_laplace(&self)?.is_some() {
+            return expr_laplace::make_expr_laplace(input_domain, input_metric, self, global_scale);
+        }
+
+        if let Some(meas) = expr_postprocess::match_postprocess(
+            input_domain.clone(),
+            input_metric.clone(),
+            output_measure.clone(),
+            self.clone(),
+            global_scale,
+        )? {
+            return Ok(meas);
+        }
+
         match self {
+            #[cfg(feature = "contrib")]
+            Expr::Len => {
+                expr_len::make_expr_private_len(input_domain, input_metric, output_measure, self.clone())
+            }
+
+            #[cfg(feature = "contrib")]
+            Expr::Literal(_) => {
+                expr_literal::make_expr_private_lit(input_domain, input_metric, self.clone())
+            }
+
             expr => fallible!(
                 MakeMeasurement,
                 "Expr is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
                 expr
-            )
+            ),
         }
     }
 }

@@ -29,9 +29,9 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
     let lazyframe = try_!(try_as_ref!(lazyframe).downcast_ref::<LazyFrame>()).clone();
 
     let global_scale = if let Some(param) = util::as_ref(global_scale) {
-        *try_!(try_as_ref!(param).downcast_ref::<f64>())
+        Some(*try_!(try_as_ref!(param).downcast_ref::<f64>()))
     } else {
-        f64::NAN
+        None
     };
     make_private_lazyframe(
         input_domain,

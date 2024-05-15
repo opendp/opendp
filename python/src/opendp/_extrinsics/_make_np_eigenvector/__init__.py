@@ -1,8 +1,7 @@
 from opendp._extrinsics.domains import _np_sscp_domain
 from opendp._extrinsics._utilities import to_then
-from opendp._lib import np_csprng, import_optional_dependency
+from opendp._lib import get_np_csprng, import_optional_dependency
 from opendp.mod import Domain, Metric, Transformation, Measurement
-from typing import List
 
 # planning to make this public, but may make more API changes
 
@@ -21,9 +20,7 @@ def make_private_np_eigenvector(
 
     dp.assert_features("contrib", "floating-point")
     
-    if np_csprng is None:
-        raise ImportError('The optional install randomgen is required for this functionality')
-
+    np_csprng = get_np_csprng()
     input_desc = input_domain.descriptor
 
     if input_desc.p != 2:
@@ -120,12 +117,11 @@ def make_np_sscp_projection(
             f"projection P (axis-1 size: {P.shape[1]}) does not conform with data in input_domain (num_features: {input_domain.num_features})"
         )
 
+    kwargs = input_desc._asdict() | {"num_features": P.shape[0]}
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        _np_sscp_domain(
-            **{**input_desc._asdict(), "num_features": P.shape[0]}
-        ),
+        _np_sscp_domain(**kwargs),
         input_metric,
         # http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=5
         # Algorithm 1 step 2.c
@@ -139,7 +135,7 @@ then_np_sscp_projection = to_then(make_np_sscp_projection)
 
 
 def make_private_np_eigenvectors(
-    input_domain: Domain, input_metric: Metric, unit_epsilons: List[float]
+    input_domain: Domain, input_metric: Metric, unit_epsilons: list[float]
 ) -> Measurement:
     np = import_optional_dependency('numpy')
     import opendp.prelude as dp

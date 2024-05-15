@@ -196,6 +196,12 @@ def make_gaussian(
     >>> print('100?', gaussian(100.0))
     100? ...
 
+    Or, more readably, define the space and then chain:
+
+    >>> gaussian = input_space >> dp.m.then_gaussian(scale=1.0)
+    >>> print('100?', gaussian(100.0))
+    100? ...
+
     """
     assert_features("contrib")
 
@@ -234,15 +240,6 @@ def then_gaussian(
     :param k: The noise granularity in terms of 2^k.
     :param MO: Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
-
-    :example:
-
-    >>> dp.enable_features('contrib')
-    >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    >>> gaussian = input_space >> dp.m.then_gaussian(scale=1.0)
-    >>> print('100?', gaussian(100.0))
-    100? ...
-
     """
     return PartialConstructor(lambda input_domain, input_metric: make_gaussian(
         input_domain=input_domain,
@@ -297,6 +294,12 @@ def make_geometric(
     >>> print('100?', geometric(100))
     100? ...
 
+    Or, more readably, define the space and then chain:
+
+    >>> geometric = input_space >> dp.m.then_geometric(scale=1.0)
+    >>> print('100?', geometric(100))
+    100? ...
+
     """
     assert_features("contrib")
 
@@ -335,15 +338,6 @@ def then_geometric(
     :param bounds: 
     :param QO: 
     :type QO: :py:ref:`RuntimeTypeDescriptor`
-
-    :example:
-
-    >>> dp.enable_features("contrib")
-    >>> input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
-    >>> geometric = input_space >> dp.m.then_geometric(scale=1.0)
-    >>> print('100?', geometric(100))
-    100? ...
-
     """
     return PartialConstructor(lambda input_domain, input_metric: make_geometric(
         input_domain=input_domain,
@@ -408,6 +402,12 @@ def make_laplace(
     >>> print('100?', laplace(100.0))
     100? ...
 
+    Or, more readably, define the space and then chain:
+
+    >>> laplace = input_space >> dp.m.then_laplace(scale=1.0)
+    >>> print('100?', laplace(100.0))
+    100? ...
+
     """
     assert_features("contrib")
 
@@ -444,15 +444,6 @@ def then_laplace(
     :param k: The noise granularity in terms of 2^k, only valid for domains over floats.
     :param QO: Data type of the output distance and scale. `f32` or `f64`.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
-
-    :example:
-
-    >>> dp.enable_features('contrib')
-    >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    >>> laplace = input_space >> dp.m.then_laplace(scale=1.0)
-    >>> print('100?', laplace(100.0))
-    100? ...
-
     """
     return PartialConstructor(lambda input_domain, input_metric: make_laplace(
         input_domain=input_domain,
@@ -650,6 +641,72 @@ def make_private_lazyframe(
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    >>> dp.enable_features("contrib")
+    >>> import polars as pl
+
+    We'll imagine an elementary school is taking a pet census.
+    The private census data will have two columns: 
+
+    >>> lf_domain = dp.lazyframe_domain([
+    ...     dp.series_domain("grade", dp.atom_domain(T=dp.i32)),
+    ...     dp.series_domain("pet_count", dp.atom_domain(T=dp.i32))])
+
+    We also need to specify the column we'll be grouping by.
+
+    >>> lf_domain_with_margin = dp.with_margin(
+    ...     lf_domain,
+    ...     by=["grade"],
+    ...     public_info="keys",
+    ...     max_partition_length=50)
+
+    With that in place, we can plan the Polars computation, using the `dp` plugin. 
+
+    >>> plan = (
+    ...     pl.LazyFrame(schema={'grade': pl.Int32, 'pet_count': pl.Int32})
+    ...     .group_by("grade")
+    ...     .agg(pl.col("pet_count").dp.sum((0, 10), scale=1.0)))
+
+    We now have all the pieces to make our measurement function using `make_private_lazyframe`:
+
+    >>> dp_sum_pets_by_grade = dp.m.make_private_lazyframe(
+    ...     input_domain=lf_domain_with_margin,
+    ...     input_metric=dp.symmetric_distance(),
+    ...     output_measure=dp.max_divergence(T=float),
+    ...     lazyframe=plan,
+    ...     global_scale=1.0)
+
+    It's only at this point that we need to introduce the private data.
+
+    >>> df = pl.from_records(
+    ...     [
+    ...         [0, 0], # No kindergarteners with pets.
+    ...         [0, 0],
+    ...         [0, 0],
+    ...         [1, 1], # Each first grader has 1 pet.
+    ...         [1, 1],
+    ...         [1, 1],
+    ...         [2, 1], # One second grader has chickens!
+    ...         [2, 1],
+    ...         [2, 9]
+    ...     ],
+    ...     schema=['grade', 'pet_count'])
+    >>> lf = pl.LazyFrame(df)
+    >>> results = dp_sum_pets_by_grade(lf).sort("grade").collect()
+    >>> print(results) # doctest: +ELLIPSIS
+    shape: (3, 2)
+    ┌───────┬───────────┐
+    │ grade ┆ pet_count │
+    │ ---   ┆ ---       │
+    │ i64   ┆ i64       │
+    ╞═══════╪═══════════╡
+    │ 0     ┆ ...       │
+    │ 1     ┆ ...       │
+    │ 2     ┆ ...       │
+    └───────┴───────────┘
+
     """
     assert_features("contrib")
 
@@ -858,6 +915,12 @@ def make_report_noisy_max_gumbel(
     >>> print('2?', select_index([1, 2, 3, 2, 1]))
     2? ...
 
+    Or, more readably, define the space and then chain:
+
+    >>> select_index = input_space >> dp.m.then_report_noisy_max_gumbel(scale=1.0, optimize='Max')
+    >>> print('2?', select_index([1, 2, 3, 2, 1]))
+    2? ...
+
     """
     assert_features("contrib")
 
@@ -895,15 +958,6 @@ def then_report_noisy_max_gumbel(
     :type optimize: str
     :param QO: Output Distance Type.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
-
-    :example:
-
-    >>> dp.enable_features("contrib")
-    >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.linf_distance(T=int)
-    >>> select_index = input_space >> dp.m.then_report_noisy_max_gumbel(scale=1.0, optimize='Max')
-    >>> print('2?', select_index([1, 2, 3, 2, 1]))
-    2? ...
-
     """
     return PartialConstructor(lambda input_domain, input_metric: make_report_noisy_max_gumbel(
         input_domain=input_domain,

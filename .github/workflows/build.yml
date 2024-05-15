@@ -4,7 +4,7 @@
 # * For Python:
 #   * Downloads the lib-* and python_bindings artifacts,
 #   * creates a Python wheel,
-#   * and uploads to the python_wheel artifact
+#   * and uploads to the python_wheel_[platform] artifacts
 # * For R:
 #   * Downloads ONLY the r_bindings artifact,
 #   * creates an R package
@@ -35,7 +35,7 @@ on:
           - beta
           - stable
         required: true
-        default: nightly
+        default: dev
       fake:
         description: Fake Build?
         type: boolean
@@ -50,161 +50,6 @@ jobs:
     with:
       ref: ${{ inputs.channel }}
       assert_version: ${{ inputs.channel != 'dev' }}
-
-  libs-windows:
-    needs: credential-check
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: msys2 {0}
-    steps:
-      - name: Set up MSYS2
-        uses: msys2/setup-msys2@v2
-        with:
-          path-type: inherit
-          install: m4
-
-      - name: Checkout repository
-        if: ${{ !inputs.fake }}
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.channel }}
-
-      - name: Cache Rust dependencies
-        if: ${{ !inputs.fake }}
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~\.cargo\bin
-            ~\.cargo\registry\index
-            ~\.cargo\registry\cache
-            ~\.cargo\git\db
-            rust\target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
-
-      - name: Create Rust build for windows
-        if: ${{ !inputs.fake }}
-        run: bash tools/rust_build.sh -i -r -t -f "$FEATURES"
-
-      - name: Create Rust build for windows (FAKE)
-        if: ${{ inputs.fake }}
-        run: |
-          mkdir -p rust/target/release/
-          echo windows > rust/target/release/opendp.dll
-          echo windows > rust/target/release/libopendp.a
-
-      - name: Upload .dll and .a
-        uses: actions/upload-artifact@v4
-        with:
-          name: libs-windows
-          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
-          path: |
-            rust/target*/release/opendp.dll
-            rust/target*/release/libopendp.a
-
-  libs-macos:
-    needs: credential-check
-    runs-on: macos-12
-    strategy:
-      matrix:
-        architecture: [x86_64, aarch64]
-    env:
-      TARGET: ${{ matrix.architecture }}-apple-darwin
-    steps:
-      - name: Checkout repository
-        if: ${{ !inputs.fake }}
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.channel }}
-
-      - name: Cache Rust dependencies
-        if: ${{ !inputs.fake }}
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
-
-      - name: Create Rust build for macos
-        if: ${{ !inputs.fake }}
-        env:
-          # Only run tests for native compile
-          FLAGS: ${{ matrix.architecture == 'x86_64' && '-i -r -t' || '-i -r' }}
-        run: bash tools/rust_build.sh $FLAGS -g $TARGET -f "$FEATURES"
-
-      - name: Create Rust build for macos (FAKE)
-        if: ${{ inputs.fake }}
-        run: |
-          mkdir -p rust/target/${{ env.TARGET }}/release/
-          echo macos > rust/target/${{ env.TARGET }}/release/libopendp.dylib
-
-      - name: Upload .dylib and .a
-        uses: actions/upload-artifact@v4
-        with:
-          name: libs-macos-${{ matrix.architecture }}
-          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
-          path: |
-            rust/target*/${{ env.TARGET }}/release/libopendp.dylib
-            rust/target*/${{ env.TARGET }}/release/libopendp.a
-
-  libs-linux:
-    needs: credential-check
-    runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        architecture: [x86_64, aarch64]
-    env:
-      DOCKER_IMAGE: messense/manylinux_2_24-cross:${{ matrix.architecture }}
-      TARGET: ${{ matrix.architecture }}-unknown-linux-gnu
-    steps:
-      - name: Checkout repository
-        if: ${{ !inputs.fake }}
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.channel }}
-
-      - name: Cache Rust dependencies
-        if: ${{ !inputs.fake }}
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
-
-      - name: Create Rust build for linux
-        if: ${{ !inputs.fake }}
-        env:
-          # Only run tests for native compile
-          FLAGS: ${{ matrix.architecture == 'x86_64' && '-i -r -t' || '-i -r' }}
-        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh $FLAGS -g $TARGET -f \"$FEATURES\""
-
-      - name: Create Rust build for linux (FAKE)
-        if: ${{ inputs.fake }}
-        run: |
-          mkdir -p rust/target/${{ env.TARGET }}/release/
-          echo linux > rust/target/${{ env.TARGET }}/release/libopendp.so
-          echo linux > rust/target/${{ env.TARGET }}/release/libopendp.a
-          echo fake > R/opendp/src/vendor.tar.xz
-
-      - name: Upload .so and .a
-        uses: actions/upload-artifact@v4
-        with:
-          name: libs-linux-${{ matrix.architecture }}
-          # Unnecessary '*' in path will cause artifact to include parent directories starting at that element.
-          path: |
-            rust/target*/${{ env.TARGET }}/release/libopendp.so
-            rust/target*/${{ env.TARGET }}/release/libopendp.a
 
 
   bindings:
@@ -238,23 +83,105 @@ jobs:
         with:
           name: python_bindings
           path: python/src/opendp/
-  
+
       - name: Prepare vendored sources
         if: ${{ !inputs.fake }}
         run: bash tools/r_stage.sh -v
+
+      - name: Prepare vendored sources (fake)
+        if: ${{ inputs.fake }}
+        run: |
+          mkdir -p R/opendp/src/
+          echo fake > R/opendp/src/vendor.tar.xz
   
       - name: Upload R bindings
         uses: actions/upload-artifact@v4
         with:
           name: r_bindings
           path: R/opendp/
-
-
+          
   python:
-    needs: [ libs-windows, libs-macos, libs-linux, bindings ]
-    runs-on: ubuntu-20.04
+    needs: bindings
+    if: ${{ !inputs.fake }}
+    name: python-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # it is helpful to try to build all platforms to completion to catch any platform-specific issues
+      fail-fast: false
+      matrix:
+        # macos-13 is an intel runner, macos-14 is apple silicon
+        # https://cibuildwheel.pypa.io/en/stable/faq/#how
+        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+
     steps:
       - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Stage Python source distribution
+        run: bash tools/python_stage.sh
+
+      - name: Download Python bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+    
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+          cache: pip
+
+      - name: Install cibuildwheel
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install cibuildwheel==2.17.0
+    
+      - name: Build wheels
+        working-directory: python
+        run: python -m cibuildwheel --output-dir dist
+        env:
+          # uncomment to stop building separate wheels for pypy
+          # CIBW_SKIP: "pp*"
+          CIBW_ENVIRONMENT: 'PATH="$HOME/.cargo/bin:$PATH"'
+          CIBW_ENVIRONMENT_WINDOWS: 'PATH="$UserProfile\.cargo\bin;$PATH"'
+          # omits i686 because OpenSSL fails to build due to libatomic
+          # aarch64 is not added because it is not supported by cibuildwheel and qemu is too slow (6+ hours compilation)
+          #   a separate python-aarch64 job handles this below
+          CIBW_ARCHS_LINUX: x86_64
+          CIBW_BEFORE_BUILD: pip install setuptools-rust
+          CIBW_BEFORE_BUILD_LINUX: |
+            pip install setuptools-rust &&
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --profile=minimal -y
+            
+            # from: https://github.com/sfackler/rust-openssl/issues/2036#issuecomment-1724324145
+            if command -v yum &> /dev/null; then
+                # If we're running on rhel centos
+                yum update -y && yum install -y perl-core openssl openssl-devel pkgconfig libatomic
+            elif command -v apt &> /dev/null; then
+                # If we're running on debian-based system (glibc)
+                apt update -y && apt-get install -y libssl-dev openssl pkg-config
+            elif command -v apk &> /dev/null; then
+                # If we're running on alpine (musl)
+                apk update && apk add openssl pkgconfig
+            fi
+          CIBW_BUILD_VERBOSITY: 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python_wheel_${{ matrix.os }}
+          path: python/dist/*.whl
+  
+  python-aarch64:
+    needs: bindings
+    runs-on: ubuntu-20.04
+    env:
+      DOCKER_IMAGE: messense/manylinux_2_24-cross:aarch64
+      TARGET: aarch64-unknown-linux-gnu
+    steps:
+      - name: Checkout repository
+        if: ${{ !inputs.fake }}
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.channel }}
@@ -262,32 +189,86 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: 3.9
           cache: pip
 
-      - name: Download libs
-        uses: actions/download-artifact@v4
+      - name: Cache Rust dependencies
+        if: ${{ !inputs.fake }}
+        uses: actions/cache@v4
         with:
-          pattern: libs-*
-          merge-multiple: true
-          path: rust/
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
 
+      - name: Create Rust build for linux
+        if: ${{ !inputs.fake }}
+        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\""
+
+      - name: Create Rust build for linux (FAKE)
+        if: ${{ inputs.fake }}
+        run: |
+          mkdir -p rust/target/${{ env.TARGET }}/release/
+          echo linux > rust/target/${{ env.TARGET }}/release/libopendp.so
+      
       - name: Download Python bindings
         uses: actions/download-artifact@v4
         with:
           name: python_bindings
           path: python/src/opendp/
 
-      - name: Create Python package
+      - name: Copy lib
         run: |
-          pip install -r tools/requirements-tools.txt
-          bash tools/python_build.sh
+          mkdir -p python/src/opendp/lib
+          cp rust/target/${{ env.TARGET }}/release/libopendp.so python/src/opendp/lib/
+
+      - name: Create Python package
+        working-directory: python
+        # bdist_wheel is deprecated, but the replacement (build) lacks an API to pass platform tags
+        # https://github.com/pypa/setuptools/issues/3896
+        # https://github.com/pypa/build/issues/202
+        # [bdist_wheel] in setup.cfg seems to only be read by build, not by bdist_wheel, so py-limited-api needs to be repeated here
+        # continuing to use bdist_wheel for now until python's packaging story matures
+        run: > 
+          python -m pip install wheel &&
+          python setup.py bdist_wheel --plat-name=manylinux_2_24_aarch64 --py-limited-api=cp39
 
       - name: Upload Python wheel
         uses: actions/upload-artifact@v4
         with:
-          name: python_wheel
-          path: python/wheelhouse/opendp-*-py3-none-any.whl
+          name: python_wheel_aarch64
+          path: python/dist/opendp-*.whl
+
+  python-sdist:
+    needs: bindings
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.channel }}
+
+    - name: Stage Python source distribution
+      run: bash tools/python_stage.sh
+
+    - name: Download Python bindings
+      uses: actions/download-artifact@v4
+      with:
+        name: python_bindings
+        path: python/src/opendp/
+  
+    - name: Build SDist
+      run: >
+        python -m pip install build &&
+        python -m build python/. --sdist
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: python_sdist
+        path: python/dist/*.tar.gz
 
   r:
     needs: bindings

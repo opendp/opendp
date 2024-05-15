@@ -1,11 +1,11 @@
 # type: ignore
 def compute_score(
-    x: List[TIA], 
-    candidates: List[TIA], 
+    x: list[TIA], 
+    candidates: list[TIA], 
     alpha_num: usize,
     alpha_den: usize,
     size_limit: usize
-) -> List[usize]:
+) -> list[usize]:
 
     x = list(sorted(x))
 

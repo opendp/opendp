@@ -1,14 +1,13 @@
 import ctypes
 import os
-import platform
+from pathlib import Path
 import re
-import sys
-from typing import Dict, List, Optional, Any
+from typing import Optional, Any
 import importlib
 
 
 # list all acceptable alternative types for each default type
-ATOM_EQUIVALENCE_CLASSES: Dict[str, List[str]] = {
+ATOM_EQUIVALENCE_CLASSES: dict[str, list[str]] = {
     'i32': ['u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64', 'usize'],
     'f64': ['f32', 'f64'],
     'bool': ['bool'],
@@ -19,60 +18,32 @@ ATOM_EQUIVALENCE_CLASSES: Dict[str, List[str]] = {
 
 
 def _load_library():
-    lib_dir = os.environ.get("OPENDP_LIB_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
-    if not os.path.exists(lib_dir): # pragma: no cover
+    default_lib_dir = Path(__file__).absolute().parent / "lib"
+    lib_dir = Path(os.environ.get("OPENDP_LIB_DIR", default_lib_dir))
+    if not lib_dir.exists(): # pragma: no cover
         # fall back to default location of binaries in a developer install
         build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
-        lib_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'rust', 'target', build_dir)
+        lib_dir = Path(__file__).parent / ".." / ".." / ".." / 'rust' / 'target' / build_dir
 
-    if os.path.exists(lib_dir):
-        # Mapping of Python platform to library name format
-        platform_to_name_template = {
-            "darwin": "libopendp{}.dylib",
-            "linux": "libopendp{}.so",
-            "win32": "opendp{}.dll",
-        }
-        # Mapping of Python platform/machine to Rust architecture.
-        platform_machine_to_architecture = {
-            ("win32", "AMD64"): "x86_64",
-            # No way to build this yet ("win32", "ARM64"): "aarch64",
-            ("darwin", "x86_64"): "x86_64",
-            ("darwin", "arm64"): "aarch64",
-            ("linux", "x86_64"): "x86_64",
-            ("linux", "aarch64"): "aarch64",
-        }
-
-        name_template = platform_to_name_template.get(sys.platform)
-        if name_template is None:
-            raise Exception("Platform not supported", sys.platform)
-        architecture = platform_machine_to_architecture.get((sys.platform, platform.machine()))
-        if architecture is None:
-            raise Exception("Machine not supported", sys.platform, platform.machine())
-
-        def get_lib_path(name_template, architecture):
-            suffix = f"-{architecture}" if architecture is not None else ""
-            name = name_template.format(suffix)
-            return os.path.join(lib_dir, name)
-
-        # First try name with architecture
-        lib_path = get_lib_path(name_template, architecture)
-        if not os.path.exists(lib_path):
-            # Fall back to name without architecture (happens on darwin, which has fat binaries, and developer installs)
-            lib_path = get_lib_path(name_template, None)
-
+    if lib_dir.exists():
+        lib_dir_file_names = [p for p in lib_dir.iterdir() if p.suffix in {".so", ".dylib", ".dll"}]
+        if len(lib_dir_file_names) != 1:
+            raise Exception(f"Expected exactly one binary to be present. Got: {lib_dir_file_names}")
+        
+        lib_path = lib_dir / lib_dir_file_names[0]
         try:
-            return ctypes.cdll.LoadLibrary(lib_path)
+            return ctypes.cdll.LoadLibrary(str(lib_path)), lib_path
         except Exception as e:
             raise Exception("Unable to load OpenDP shared library", lib_path, e)
 
     elif os.environ.get('OPENDP_HEADLESS', "false") != "false":
-        return None
+        return None, None
 
     else:
         raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
+    
 
-
-lib = _load_library()
+lib, lib_path = _load_library()
 
 
 install_names = {
@@ -94,35 +65,86 @@ def import_optional_dependency(name, raise_error=True):
         return None
 
 
-np_csprng = None
-try:
-    np = import_optional_dependency('numpy')
+_np_csprng = None
+_buffer_pos = 0 # TODO: Make this into a class rather than using ad-hoc globals.
+def get_np_csprng():
+    global _np_csprng
+    global _buffer_pos
+    if _np_csprng is not None:
+        return _np_csprng
+
     randomgen = import_optional_dependency('randomgen')
+    np = import_optional_dependency('numpy')
 
     buffer_len = 1024
     buffer = np.empty(buffer_len, dtype=np.uint64)
     buffer_ptr = ctypes.cast(buffer.ctypes.data, ctypes.POINTER(ctypes.c_uint8))
-    buffer_pos = buffer_len
+    _buffer_pos = buffer_len
 
     def next_raw(_voidp):
-        global buffer_pos
-        if buffer_len == buffer_pos:
+        global _buffer_pos
+        if buffer_len == _buffer_pos:
             from opendp._data import fill_bytes
 
             # there are 8x as many u8s as there are u64s
             if not fill_bytes(buffer_ptr, buffer_len * 8): # pragma: no cover
                 from opendp.mod import OpenDPException
                 raise OpenDPException("FailedFunction", "Failed to sample from CSPRNG")
-            buffer_pos = 0
+            _buffer_pos = 0
 
-        out = buffer[buffer_pos]
-        buffer_pos += 1
+        out = buffer[_buffer_pos]
+        _buffer_pos += 1
         return int(out)
 
-    np_csprng = np.random.Generator(bit_generator=randomgen.UserBitGenerator(next_raw)) # type:ignore
+    _np_csprng = np.random.Generator(bit_generator=randomgen.UserBitGenerator(next_raw)) # type:ignore
+    return _np_csprng
 
-except ImportError:  # pragma: no cover
-    pass
+
+pl = import_optional_dependency("polars", raise_error=False)
+if pl is not None:
+    @pl.api.register_expr_namespace("dp")
+    class DPNamespace(object):
+        def __init__(self, expr):
+            self.expr = expr
+
+        def laplace(self, scale=None):
+            """Add Laplace noise to the expression.
+
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+
+            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
+            """
+            scale = float("nan") if scale is None else scale
+            return pl.plugins.register_plugin_function(
+                plugin_path=lib_path,
+                function_name="laplace",
+                kwargs={"scale": scale},
+                args=self.expr,
+                is_elementwise=True,
+            )
+
+        def sum(self, bounds, scale=None):
+            """Compute the differentially private sum.
+
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+
+            :param bounds: The bounds of the input data.
+            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
+            """
+            return self.expr.clip(*bounds).sum().dp.laplace(scale)
+        
+        
+        def mean(self, bounds, scale=None):
+            """Compute the differentially private mean.
+
+            The amount of noise to be added to the sum is determined by the scale.
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+
+            :param bounds: The bounds of the input data.
+            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
+            """
+            return self.expr.dp.sum(bounds, scale) / pl.len()
+
 
 # This enables backtraces in Rust by default.
 # It can be disabled by setting RUST_BACKTRACE=0.
@@ -187,7 +209,7 @@ class AnyQueryable(ctypes.Structure):
 
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)): # type: ignore[misc]
     _type_ = FfiSlice
-    _dependencies: Dict[Any, Any] = {}  # TODO: Tighten this
+    _dependencies: dict[Any, Any] = {}  # TODO: Tighten this
 
     def depends_on(self, *args):
         """Extends the memory lifetime of args to the lifetime of self."""
@@ -338,22 +360,12 @@ def make_proof_link(
 
 
 def get_opendp_version():
-    import sys
+    import importlib.metadata
 
-    if sys.version_info >= (3, 8):
-        import importlib.metadata
-
-        try:
-            return unmangle_py_version(importlib.metadata.version("opendp"))
-        except importlib.metadata.PackageNotFoundError:
-            return get_opendp_version_from_file()
-    else: # pragma: no cover
-        import pkg_resources
-
-        try:
-            return unmangle_py_version(pkg_resources.get_distribution("opendp").version)
-        except pkg_resources.DistributionNotFound:
-            return get_opendp_version_from_file()
+    try:
+        return unmangle_py_version(importlib.metadata.version("opendp"))
+    except importlib.metadata.PackageNotFoundError:
+        return get_opendp_version_from_file()
 
 
 def unmangle_py_version(py_version):
