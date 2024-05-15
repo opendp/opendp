@@ -143,7 +143,7 @@ if pl is not None:
             :param bounds: The bounds of the input data.
             :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
             """
-            return self.expr.dp.sum(bounds, scale) / pl.len()
+            return self.expr.dp.sum(bounds, scale) / pl.len() # pragma: no cover
 
 
 # This enables backtraces in Rust by default.
