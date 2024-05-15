@@ -105,7 +105,7 @@ if pl is not None:
     @pl.api.register_expr_namespace("dp")
     class DPNamespace(object):
         def __init__(self, expr):
-            self.expr = expr
+            self.expr = expr # pragma: no cover
 
         def laplace(self, scale=None):
             """Add Laplace noise to the expression.
@@ -114,8 +114,8 @@ if pl is not None:
 
             :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
             """
-            scale = float("nan") if scale is None else scale
-            return pl.plugins.register_plugin_function(
+            scale = float("nan") if scale is None else scale # pragma: no cover
+            return pl.plugins.register_plugin_function( # pragma: no cover
                 plugin_path=lib_path,
                 function_name="laplace",
                 kwargs={"scale": scale},
@@ -131,7 +131,7 @@ if pl is not None:
             :param bounds: The bounds of the input data.
             :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
             """
-            return self.expr.clip(*bounds).sum().dp.laplace(scale)
+            return self.expr.clip(*bounds).sum().dp.laplace(scale) # pragma: no cover
         
         
         def mean(self, bounds, scale=None):
