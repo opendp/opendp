@@ -176,12 +176,13 @@ fn generate_function(
     let docstring = tab_py(generate_docstring(module_name, func, hierarchy));
     let body = tab_py(generate_body(module_name, func, typemap));
 
-    let then_name = func.name.replacen("make_", "then_", 1);
-    let example_path = format!("src/{}/code/{}.rst", &module_name, then_name);
+    let example_path = format!("src/{}/code/{}.rst", &module_name, func.name);
     let example = match fs::read_to_string(example_path) {
         Ok(string) => tab_py(format!("\n\n:example:\n\n{string}\n")),
         Err(_) => "".to_string(),
     };
+
+    let then_name = func.name.replacen("make_", "then_", 1);
     let then_func = if func.supports_partial {
         format!(
             r#"
