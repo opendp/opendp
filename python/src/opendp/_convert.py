@@ -55,11 +55,37 @@ def _check_and_cast_scalar(expected, value):
     ...
     ValueError: 256 is not representable by u8
 
+    ... but not for floats? TODO?
+    >>> _check_and_cast_scalar('f32', 1e100)
+    1e+100
+
     Floats cannot be cast to ints:
     >>> _check_and_cast_scalar('i32', 1.0)
     Traceback (most recent call last):
     ...
     TypeError: inferred type is f64, expected i32. See https://github.com/opendp/opendp/discussions/298
+
+    Bools cast to bools:
+    >>> _check_and_cast_scalar('bool', True)
+    True
+
+    Bools cannot cast to ints:
+    >>> _check_and_cast_scalar('u8', True)
+    Traceback (most recent call last):
+    ...
+    TypeError: inferred type is f64, expected u8. See https://github.com/opendp/opendp/discussions/298
+
+    ... but bools can cast to floats: Is this right? TODO
+    >>> _check_and_cast_scalar('f64', True)
+    1.0
+
+    >>> _check_and_cast_scalar('f32', True)
+    1.0
+
+    >>> _check_and_cast_scalar('bool', 1)
+    Traceback (most recent call last):
+    ...
+    TypeError: inferred type is f64, expected bool. See https://github.com/opendp/opendp/discussions/298
 
     Unrecognized types will fail, but note that the error message refers to "f64":
     >>> _check_and_cast_scalar('fake', 1)
