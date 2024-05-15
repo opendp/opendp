@@ -1,0 +1,7 @@
+# init
+[dependencies]
+opendp = { features = ["contrib", "honest-but-curious"] }
+# Optionally pin the version number.
+# /init
+
+# Make sure the features are in sync with Cargo.toml.
