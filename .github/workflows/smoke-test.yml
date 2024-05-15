@@ -130,8 +130,8 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - 3.9
-          - 3.12
+          - '3.9'
+          - '3.12'
         extra-install:
           - '.'
           - '.[scikit-learn]'
@@ -178,7 +178,7 @@ jobs:
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
         # "polars" implies "scikit-learn": see setup.cfg.
-        if: ${{ contains(matrix.extra-install, 'polars') }}
+        if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.12') }}
         run: coverage report
 
   docs-links:
