@@ -29,6 +29,8 @@ jobs:
   r-docs:
     needs: credential-check
     runs-on: ubuntu-22.04
+    env:
+      OPENDP_LIB_DIR: ${{ github.workspace }}/libs
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
