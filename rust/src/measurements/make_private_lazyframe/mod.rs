@@ -42,7 +42,7 @@ pub fn make_private_lazyframe<MI: Metric, MO: 'static + Measure>(
     input_metric: MI,
     output_measure: MO,
     lazyframe: LazyFrame,
-    global_scale: f64,
+    global_scale: Option<f64>,
 ) -> Fallible<Measurement<LazyFrameDomain, LazyFrame, MI, MO>>
 where
     LogicalPlan: PrivateLogicalPlan<MI, MO>,
@@ -75,7 +75,7 @@ pub trait PrivateLogicalPlan<MI: Metric, MO: Measure> {
         input_domain: LogicalPlanDomain,
         input_metric: MI,
         output_measure: MO,
-        global_scale: f64,
+        global_scale: Option<f64>,
     ) -> Fallible<Measurement<LogicalPlanDomain, LogicalPlan, MI, MO>>;
 }
 
@@ -93,7 +93,7 @@ where
         input_domain: LogicalPlanDomain,
         input_metric: MS,
         output_measure: MO,
-        global_scale: f64,
+        global_scale: Option<f64>,
     ) -> Fallible<Measurement<LogicalPlanDomain, LogicalPlan, MS, MO>> {
         match &self {
             #[cfg(feature = "contrib")]

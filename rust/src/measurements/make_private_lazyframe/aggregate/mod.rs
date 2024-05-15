@@ -26,7 +26,7 @@ pub fn make_private_aggregate<MS, MI, MO>(
     input_metric: MS,
     output_measure: MO,
     plan: LogicalPlan,
-    global_scale: f64,
+    global_scale: Option<f64>,
 ) -> Fallible<Measurement<LogicalPlanDomain, LogicalPlan, MS, MO>>
 where
     MS: 'static + DatasetMetric,

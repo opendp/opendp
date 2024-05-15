@@ -1,6 +1,6 @@
 use polars::prelude::*;
 
-use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
+use crate::core::{ExprFunction, Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric};
 use crate::error::{ErrorVariant::MakeTransformation, *};
 use crate::transformations::DatasetMetric;
@@ -39,18 +39,7 @@ where
     Transformation::new(
         input_domain,
         output_domain,
-        Function::new_fallible(
-            // in most other situations, we would use `Function::new_expr`, but we need to return a Fallible here
-            move |(plan, expr): &(LogicalPlan, Expr)| -> Fallible<(LogicalPlan, Expr)> {
-                if expr != &Expr::Wildcard {
-                    return fallible!(
-                        FailedFunction,
-                        "Expected all() as input (denoting that all columns are selected). This is because column selection is a leaf node in the expression tree."
-                    );
-                }
-                Ok((plan.clone(), col(&*col_name)))
-            },
-        ),
+        Function::from_expr(col(&*col_name)),
         input_metric.clone(),
         input_metric,
         StabilityMap::new(Clone::clone),

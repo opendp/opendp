@@ -37,4 +37,4 @@ def optional_dependency(name):
     with pytest.raises(Exception, match=expected_message_re):
         yield
     # ... and then skip the rest of the test.
-    raise pytest.skip('Saw expected OpenDPException; skipping rest of test')
+    raise pytest.skip(f'Saw expected exception "{expected_message}". Skipping rest of test.')

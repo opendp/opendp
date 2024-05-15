@@ -114,17 +114,11 @@ mod test_trans {
         let _scores = trans.invoke(&(0..100).collect())?;
         let _scores_sized = trans_sized.invoke(&(0..100).collect())?;
 
-        // because alpha is .75, sensitivity is 1.5 (because not monotonic)
-        // granularity of quantile is .00001, so scores are integerized at a scale of 10000x
-        assert_eq!(trans.map(&1)?, 7500);
+        // because alpha is .75 = 3 / 4, sensitivity is d_in * max(α_num, α_den - α_num) = 3
+        assert_eq!(trans.map(&1)?, 3);
 
-        // alpha does not affect sensitivity- it's solely based on the size of the input domain
-        // using all of the range of the usize,
-        //     so scores can be scaled up by a factor of usize::MAX / 100 before being converted to integers and not overflow
-        // factor of 4 breaks into:
-        //   * a factor of 2 from non-monotonicity
-        //   * a factor of 2 from difference in score after moving one record from above to below a candidate
-        assert_eq!(trans_sized.map(&2)?, usize::MAX / 100 * 2);
+        // sensitivity is d_in * α_den
+        assert_eq!(trans_sized.map(&2)?, 8);
 
         Ok(())
     }

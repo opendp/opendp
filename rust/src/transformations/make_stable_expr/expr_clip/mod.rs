@@ -75,7 +75,7 @@ where
         >> Transformation::new(
             middle_domain.clone(),
             output_domain,
-            Function::new_expr(move |expr| expr.clip(lower.clone(), upper.clone())),
+            Function::then_expr(move |expr| expr.clip(lower.clone(), upper.clone())),
             middle_metric.clone(),
             middle_metric,
             StabilityMap::new(Clone::clone),

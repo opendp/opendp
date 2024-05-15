@@ -58,8 +58,8 @@ jobs:
         if: ${{ inputs.python_repository == 'local' }}
         uses: actions/download-artifact@v4
         with:
-          name: python_wheel
-          path: python/wheelhouse
+          name: python_wheel_ubuntu-latest 
+          path: python/dist
 
       - name: Set up Python
         uses: actions/setup-python@v5

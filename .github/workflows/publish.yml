@@ -75,8 +75,14 @@ jobs:
       - name: Download Python wheel
         uses: actions/download-artifact@v4
         with:
-          name: python_wheel
-          path: python/wheelhouse
+          pattern: python_wheel_*
+          path: python/dist
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: python_sdist
+          path: python/dist
 
       - name: Publish Python package
         env:
