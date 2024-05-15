@@ -39,13 +39,33 @@ _ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
 
 def _check_and_cast_scalar(expected, value):
     '''
-    
-    If expected is not one of a small number of Rust types:
+    Any number is cast to float, if f32 or f64 is expected:
     >>> _check_and_cast_scalar('f32', 1.0)
-    ???
-    >>> _check_and_cast_scalar('f32', 1)
-    ???
+    1.0
+    >>> _check_and_cast_scalar('f64', 1)
+    1.0
 
+    Ints cast to ints, unsurprisingly:
+    >>> _check_and_cast_scalar('u8', 1)
+    1
+
+    ... but there are range checks:
+    >>> _check_and_cast_scalar('u8', 256)
+    Traceback (most recent call last):
+    ...
+    ValueError: 256 is not representable by u8
+
+    Floats cannot be cast to ints:
+    >>> _check_and_cast_scalar('i32', 1.0)
+    Traceback (most recent call last):
+    ...
+    TypeError: inferred type is f64, expected i32. See https://github.com/opendp/opendp/discussions/298
+
+    Unrecognized types will fail, but note that the error message refers to "f64":
+    >>> _check_and_cast_scalar('fake', 1)
+    Traceback (most recent call last):
+    ...
+    TypeError: inferred type is f64, expected fake. See https://github.com/opendp/opendp/discussions/298    
     '''
     inferred = RuntimeType.infer(value)
     
