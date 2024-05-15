@@ -177,6 +177,7 @@ jobs:
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
+        # "polars" implies "scikit-learn": see setup.cfg.
         if: ${{ contains(matrix.extra-install, 'polars') }}
         run: coverage report
 
