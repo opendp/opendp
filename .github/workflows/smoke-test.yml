@@ -274,6 +274,9 @@ jobs:
           working-directory: R/opendp
           extra-packages: devtools, RcppTOML, lintr
 
+      - name: Build R docs (and run API examples)
+        run: bash tools/r_stage.sh -d
+
       # running the OpenDP install in a separate command (instead of local::. above)
       #   provides significantly more debug info if it fails
       - name: Install OpenDP
@@ -289,9 +292,6 @@ jobs:
 
       - name: Lint sphinx examples
         run: Rscript -e 'lintr::lint_dir("docs/source")'
-
-      - name: Document
-        run: cd R/opendp/ && Rscript -e 'devtools::document()'
 
       - name: Check
         run: cd R/opendp/ && Rscript -e 'devtools::check(error_on="warning")'
