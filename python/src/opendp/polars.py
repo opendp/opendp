@@ -19,7 +19,7 @@ An expression like this can be used as a plan in :py:func:`opendp.measurements.m
 See the full example there for more information.
 '''
 
-from opendp.typing import Optional
+from typing import Optional, Literal
 from opendp._lib import import_optional_dependency, lib_path
 
 pl = import_optional_dependency("polars", raise_error=False)
@@ -35,7 +35,7 @@ if pl is not None:
         def __init__(self, expr):
             self.expr = expr
 
-        def noise(self, scale: Optional[float] = None, distribution=None):
+        def noise(self, scale: Optional[float] = None, distribution: Optional[Literal['Gaussian', 'Laplace']] = None):
             """Add noise to the expression.
 
             If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
@@ -134,7 +134,7 @@ if pl is not None:
                 returns_scalar=True,
             )
 
-        def _report_noisy_max_gumbel(self, optimize, scale: Optional[float] = None):
+        def _report_noisy_max_gumbel(self, optimize: Literal['max', 'min'], scale: Optional[float] = None):
             """Report the argmax or argmin after adding Gumbel noise.
 
             The scale calibrates the level of entropy when selecting an index.
@@ -151,7 +151,7 @@ if pl is not None:
                 is_elementwise=True,
             )
 
-        def _index_candidates(self, candidates):
+        def _index_candidates(self, candidates: list[float]):
             """Index into a candidate set.
 
             Typically used after ``_report_noisy_max_gumbel`` to map selected indices to candidates.
