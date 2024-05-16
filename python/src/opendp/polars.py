@@ -1,6 +1,6 @@
 '''
 The ``opendp.polars`` module adds differential privacy to the `Polars <https://docs.pola.rs>`_ DataFrame library.
-These methods are not called directly: Instead, if both ``opendp`` and ``polars`` have been imported,
+If both ``opendp`` and ``polars`` have been imported,
 these methods are registered under the ``dp`` namespace in `Polars expressions <https://docs.pola.rs/py-polars/html/reference/expressions/index.html>`_:
 
 >>> import polars as pl
