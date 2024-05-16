@@ -6,6 +6,6 @@
 
 Or, more readably, define the space and then chain:
 
->>> select_index = input_space >> dp.m.then_report_noisy_max_gumbel(scale=1.0, optimize='Max')
+>>> select_index = input_space >> dp.m.then_report_noisy_max_gumbel(scale=1.0, optimize='max')
 >>> print('2?', select_index([1, 2, 3, 2, 1]))
 2? ...
