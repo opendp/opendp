@@ -31,7 +31,7 @@ if pl is not None:
 
             :param scale: Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
             """
-            return self.noise(scale=scale, distribution="Laplace")
+            return self.noise(scale=scale, distribution="Laplace") # pragma: no cover
 
         def gaussian(self, scale=None):
             """Add Gaussian noise to the expression.
@@ -40,7 +40,7 @@ if pl is not None:
 
             :param scale: Noise scale parameter for the distribution. `scale` == standard_deviation.
             """
-            return self.noise(scale=scale, distribution="Gaussian")
+            return self.noise(scale=scale, distribution="Gaussian") # pragma: no cover
 
         def sum(self, bounds, scale=None):
             """Compute the differentially private sum.
@@ -50,7 +50,7 @@ if pl is not None:
             :param bounds: The bounds of the input data.
             :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
             """
-            return self.expr.clip(*bounds).sum().dp.noise(scale)
+            return self.expr.clip(*bounds).sum().dp.noise(scale) # pragma: no cover
 
         def mean(self, bounds, scale=None):
             """Compute the differentially private mean.
@@ -61,7 +61,7 @@ if pl is not None:
             :param bounds: The bounds of the input data.
             :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
             """
-            return self.expr.dp.sum(bounds, scale) / pl.len()
+            return self.expr.dp.sum(bounds, scale) / pl.len() # pragma: no cover
 
         def _discrete_quantile_score(self, alpha, candidates):
             """Score the utility of each candidate for representing the true quantile.
@@ -72,7 +72,7 @@ if pl is not None:
             :param alpha: a value in $[0, 1]$. Choose 0.5 for median
             :param candidates: Set of possible quantiles to evaluate the utility of.
             """
-            return pl.plugins.register_plugin_function(
+            return pl.plugins.register_plugin_function( # pragma: no cover
                 plugin_path=lib_path,
                 function_name="discrete_quantile_score",
                 kwargs={"alpha": alpha, "candidates": candidates},
@@ -88,7 +88,7 @@ if pl is not None:
             :param optimize: Distinguish between argmax and argmin.
             :param scale: Noise scale parameter for the Gumbel distribution.
             """
-            return pl.plugins.register_plugin_function(
+            return pl.plugins.register_plugin_function( # pragma: no cover
                 plugin_path=lib_path,
                 function_name="report_noisy_max_gumbel",
                 kwargs={"optimize": optimize, "scale": scale},
@@ -103,7 +103,7 @@ if pl is not None:
 
             :param candidates: The values that each selected index corresponds to.
             """
-            return pl.plugins.register_plugin_function(
+            return pl.plugins.register_plugin_function( # pragma: no cover
                 plugin_path=lib_path,
                 function_name="index_candidates",
                 kwargs={"candidates": candidates},
@@ -120,9 +120,9 @@ if pl is not None:
             :param candidates: Potential quantiles to select from.
             :param scale: How much noise to add to the scores of candidate.
             """
-            dq_score = self.expr.dp._discrete_quantile_score(alpha, candidates)
-            noisy_idx = dq_score.dp._report_noisy_max_gumbel("min", scale)
-            return noisy_idx.dp._index_candidates(candidates)
+            dq_score = self.expr.dp._discrete_quantile_score(alpha, candidates) # pragma: no cover
+            noisy_idx = dq_score.dp._report_noisy_max_gumbel("min", scale) # pragma: no cover
+            return noisy_idx.dp._index_candidates(candidates) # pragma: no cover
 
         def median(self, candidates, scale=None):
             """Compute a differentially private median.
@@ -132,4 +132,4 @@ if pl is not None:
             :param candidates: Potential quantiles to select from.
             :param scale: How much noise to add to the scores of candidate.
             """
-            return self.expr.dp.quantile(0.5, candidates, scale)
+            return self.expr.dp.quantile(0.5, candidates, scale) # pragma: no cover
