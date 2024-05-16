@@ -223,7 +223,11 @@ def metric_of(M) -> Metric:
     raise TypeError(f"unrecognized metric: {M}")
 
 
-def loss_of(epsilon=None, delta=None, rho=None, U=None) -> tuple[Measure, Union[float, tuple[float, float]]]:
+def loss_of(
+        epsilon: Optional[float] = None,
+        delta: Optional[float] = None,
+        rho: Optional[float] = None,
+        U = None) -> tuple[Measure, Union[float, tuple[float, float]]]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
     >>> import opendp.prelude as dp
@@ -240,11 +244,6 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> tuple[Measure, Union[
     :param U: The type of the privacy parameter; Inferred if not provided.
 
     """
-    if epsilon is None and rho is None:
-        raise ValueError("Either epsilon or rho must be specified.")
-    if epsilon is None and delta is not None:
-        raise ValueError("Epsilon must be specified if delta is given.")
-
     def range_warning(name, value, info_level, warn_level):
         if value > warn_level:
             if info_level == warn_level:
@@ -259,6 +258,9 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> tuple[Measure, Union[
         U = RuntimeType.parse_or_infer(U, rho)
         return zero_concentrated_divergence(T=U), rho
 
+    if epsilon is None:
+        raise ValueError("Either epsilon or rho must be specified.")
+ 
     range_warning('epsilon', epsilon, 1, 5)
     if delta is None:
         U = RuntimeType.parse_or_infer(U, epsilon)
@@ -271,12 +273,12 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> tuple[Measure, Union[
 
 def unit_of(
     *,
-    contributions=None,
-    changes=None,
-    absolute=None,
-    l1=None,
-    l2=None,
-    ordered=False,
+    contributions: Optional[int] = None,
+    changes: Optional[int] = None,
+    absolute: Optional[float] = None,
+    l1: Optional[float] = None,
+    l2: Optional[float] = None,
+    ordered: bool = False,
     U=None,
 ) -> tuple[Metric, float]:
     """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
@@ -732,16 +734,16 @@ def _sequential_composition_by_weights(
             "Must specify either `split_evenly_over` or `split_by_weights`"
         )
 
-    def mul(dist, scale):
+    def mul(dist, scale: float):
         if isinstance(dist, tuple):
             return dist[0] * scale, dist[1] * scale
         else:
             return dist * scale
 
-    def scale_weights(scale, weights):
+    def scale_weights(scale: float, weights):
         return [mul(w, scale) for w in weights]
 
-    def scale_sc(scale):
+    def scale_sc(scale: float):
         return make_sequential_composition(
             input_domain=domain,
             input_metric=input_metric,

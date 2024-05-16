@@ -100,6 +100,52 @@ def get_np_csprng():
     return _np_csprng
 
 
+pl = import_optional_dependency("polars", raise_error=False)
+if pl is not None:
+    @pl.api.register_expr_namespace("dp")
+    class DPNamespace(object):
+        def __init__(self, expr):
+            self.expr = expr # pragma: no cover
+
+        def laplace(self, scale=None):
+            """Add Laplace noise to the expression.
+
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+
+            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
+            """
+            scale = float("nan") if scale is None else scale # pragma: no cover
+            return pl.plugins.register_plugin_function( # pragma: no cover
+                plugin_path=lib_path,
+                function_name="laplace",
+                kwargs={"scale": scale},
+                args=self.expr,
+                is_elementwise=True,
+            )
+
+        def sum(self, bounds, scale=None):
+            """Compute the differentially private sum.
+
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+
+            :param bounds: The bounds of the input data.
+            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
+            """
+            return self.expr.clip(*bounds).sum().dp.laplace(scale) # pragma: no cover
+        
+        
+        def mean(self, bounds, scale=None):
+            """Compute the differentially private mean.
+
+            The amount of noise to be added to the sum is determined by the scale.
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+
+            :param bounds: The bounds of the input data.
+            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
+            """
+            return self.expr.dp.sum(bounds, scale) / pl.len() # pragma: no cover
+
+
 # This enables backtraces in Rust by default.
 # It can be disabled by setting RUST_BACKTRACE=0.
 if "RUST_BACKTRACE" not in os.environ:
