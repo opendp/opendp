@@ -12,7 +12,7 @@ if pl is not None:
         def noise(self, scale=None, distribution=None):
             """Add noise to the expression.
 
-            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
             :param scale: Noise scale parameter for the distribution.
             """
@@ -27,7 +27,7 @@ if pl is not None:
         def laplace(self, scale=None):
             """Add Laplace noise to the expression.
 
-            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
             :param scale: Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
             """
@@ -36,7 +36,7 @@ if pl is not None:
         def gaussian(self, scale=None):
             """Add Gaussian noise to the expression.
 
-            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
             :param scale: Noise scale parameter for the distribution. `scale` == standard_deviation.
             """
@@ -45,7 +45,7 @@ if pl is not None:
         def sum(self, bounds, scale=None):
             """Compute the differentially private sum.
 
-            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
             :param bounds: The bounds of the input data.
             :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
@@ -56,7 +56,7 @@ if pl is not None:
             """Compute the differentially private mean.
 
             The amount of noise to be added to the sum is determined by the scale.
-            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
             :param bounds: The bounds of the input data.
             :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
