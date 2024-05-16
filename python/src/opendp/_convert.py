@@ -194,7 +194,7 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
             return _slice_to_string(raw)
         
         if type_name == "LazyFrame":
-            return _slice_to_lazyframe(raw)
+            return _slice_to_lazyframe(raw) # pragma: no cover
         
         if type_name == "DataFrame":
             return _slice_to_dataframe(raw)
@@ -244,7 +244,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
             return _series_to_slice(value)
         
         if type_name == "LazyFrame":
-            return _lazyframe_to_slice(value)
+            return _lazyframe_to_slice(value) # pragma: no cover
         
         if type_name == "DataFrame":
             return _dataframe_to_slice(value)
