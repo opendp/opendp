@@ -3,7 +3,7 @@ The ``opendp.polars`` module adds differential privacy to the `Polars <https://d
 If both ``opendp`` and ``polars`` have been imported,
 these methods are registered under the ``dp`` namespace in `Polars expressions <https://docs.pola.rs/py-polars/html/reference/expressions/index.html>`_:
 
->>> import polars as pl
+>>> import polars as pl # Import order does not matter.
 >>> import opendp
 >>> expression = pl.col('numbers').dp.sum((0, 10), scale=1.0)
 >>> print(expression) # doctest: +ELLIPSIS
@@ -19,6 +19,7 @@ An expression like this can be used as a plan in :py:func:`opendp.measurements.m
 See the full example there for more information.
 '''
 
+from opendp.typing import Optional
 from opendp._lib import import_optional_dependency, lib_path
 
 pl = import_optional_dependency("polars", raise_error=False)
@@ -27,10 +28,14 @@ if pl is not None:
 
     @pl.api.register_expr_namespace("dp")
     class DPExpr(object):
+        '''
+        This class is not used directly by users:
+        Instead its methods are registered under the ``dp`` namespace of Polars expressions.
+        '''
         def __init__(self, expr):
             self.expr = expr
 
-        def noise(self, scale=None, distribution=None):
+        def noise(self, scale: Optional[float] = None, distribution=None):
             """Add noise to the expression.
 
             If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
@@ -45,7 +50,7 @@ if pl is not None:
                 is_elementwise=True,
             )
 
-        def laplace(self, scale=None):
+        def laplace(self, scale: Optional[float] = None):
             """Add Laplace noise to the expression.
 
             If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
@@ -61,7 +66,7 @@ if pl is not None:
             """
             return self.noise(scale=scale, distribution="Laplace")
 
-        def gaussian(self, scale=None):
+        def gaussian(self, scale: Optional[float] = None):
             """Add Gaussian noise to the expression.
 
             If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
@@ -77,7 +82,7 @@ if pl is not None:
             """
             return self.noise(scale=scale, distribution="Gaussian")
 
-        def sum(self, bounds, scale=None):
+        def sum(self, bounds, scale: Optional[float] = None):
             """Compute the differentially private sum.
 
             If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
@@ -94,7 +99,7 @@ if pl is not None:
             """
             return self.expr.clip(*bounds).sum().dp.noise(scale)
 
-        def mean(self, bounds, scale=None):
+        def mean(self, bounds, scale: Optional[float] = None):
             """Compute the differentially private mean.
 
             The amount of noise to be added to the sum is determined by the scale.
@@ -129,7 +134,7 @@ if pl is not None:
                 returns_scalar=True,
             )
 
-        def _report_noisy_max_gumbel(self, optimize, scale=None):
+        def _report_noisy_max_gumbel(self, optimize, scale: Optional[float] = None):
             """Report the argmax or argmin after adding Gumbel noise.
 
             The scale calibrates the level of entropy when selecting an index.
@@ -161,7 +166,7 @@ if pl is not None:
                 is_elementwise=True,
             )
 
-        def quantile(self, alpha, candidates, scale=None):
+        def quantile(self, alpha, candidates, scale: Optional[float] = None):
             """Compute a differentially private quantile.
 
             The scale calibrates the level of entropy when selecting a candidate.
@@ -182,7 +187,7 @@ if pl is not None:
             noisy_idx = dq_score.dp._report_noisy_max_gumbel("min", scale)
             return noisy_idx.dp._index_candidates(candidates)
 
-        def median(self, candidates, scale=None):
+        def median(self, candidates, scale: Optional[float] = None):
             """Compute a differentially private median.
 
             The scale calibrates the level of entropy when selecting a candidate.
