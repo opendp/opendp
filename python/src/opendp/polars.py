@@ -82,7 +82,7 @@ if pl is not None:
             """
             return self.noise(scale=scale, distribution="Gaussian")
 
-        def sum(self, bounds, scale: Optional[float] = None):
+        def sum(self, bounds: tuple[float, float], scale: Optional[float] = None):
             """Compute the differentially private sum.
 
             If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
@@ -99,7 +99,7 @@ if pl is not None:
             """
             return self.expr.clip(*bounds).sum().dp.noise(scale)
 
-        def mean(self, bounds, scale: Optional[float] = None):
+        def mean(self, bounds: tuple[float, float], scale: Optional[float] = None):
             """Compute the differentially private mean.
 
             The amount of noise to be added to the sum is determined by the scale.
@@ -117,7 +117,7 @@ if pl is not None:
             """
             return self.expr.dp.sum(bounds, scale) / pl.len()
 
-        def _discrete_quantile_score(self, alpha, candidates):
+        def _discrete_quantile_score(self, alpha: float, candidates: list[float]):
             """Score the utility of each candidate for representing the true quantile.
 
             Candidates closer to the true quantile are assigned scores closer to zero.
@@ -166,7 +166,7 @@ if pl is not None:
                 is_elementwise=True,
             )
 
-        def quantile(self, alpha, candidates, scale: Optional[float] = None):
+        def quantile(self, alpha: float, candidates: list[float], scale: Optional[float] = None):
             """Compute a differentially private quantile.
 
             The scale calibrates the level of entropy when selecting a candidate.
@@ -187,7 +187,7 @@ if pl is not None:
             noisy_idx = dq_score.dp._report_noisy_max_gumbel("min", scale)
             return noisy_idx.dp._index_candidates(candidates)
 
-        def median(self, candidates, scale: Optional[float] = None):
+        def median(self, candidates: list[float], scale: Optional[float] = None):
             """Compute a differentially private median.
 
             The scale calibrates the level of entropy when selecting a candidate.
