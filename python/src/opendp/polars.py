@@ -1,3 +1,24 @@
+'''
+The ``opendp.polars`` module adds differential privacy to the `Polars <https://docs.pola.rs>`_ DataFrame library.
+These methods are not called directly: Instead, if both ``opendp`` and ``polars`` have been imported,
+these methods are registered under the ``dp`` namespace in `Polars expressions <https://docs.pola.rs/py-polars/html/reference/expressions/index.html>`_:
+
+>>> import polars as pl
+>>> import opendp
+>>> expression = pl.col('numbers').dp.sum((0, 10), scale=1.0)
+>>> print(expression) # doctest: +ELLIPSIS
+col("numbers").clip([0, 10]).sum()...:noise()
+
+Note that ``sum`` is a shortcut which actually implies several operations:
+
+* Cliping the values
+* Summing them
+* Applying Laplace noise to the sum
+
+An expression like this can be used as a plan in :py:func:`opendp.measurements.make_private_lazyframe`;
+See the full example there for more information.
+'''
+
 from opendp._lib import import_optional_dependency, lib_path
 
 pl = import_optional_dependency("polars", raise_error=False)
