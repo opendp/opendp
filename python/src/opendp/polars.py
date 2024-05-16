@@ -54,7 +54,6 @@ if pl is not None:
 
             :example:
 
-            >>> dp.enable_features("contrib")
             >>> import polars as pl
             >>> expression = pl.col('numbers').dp.laplace()
             >>> print(expression) # doctest: +ELLIPSIS
@@ -71,7 +70,6 @@ if pl is not None:
 
             :example:
 
-            >>> dp.enable_features("contrib")
             >>> import polars as pl
             >>> expression = pl.col('numbers').dp.gaussian()
             >>> print(expression) # doctest: +ELLIPSIS
@@ -89,7 +87,6 @@ if pl is not None:
 
             :example:
 
-            >>> dp.enable_features("contrib")
             >>> import polars as pl
             >>> expression = pl.col('numbers').dp.sum((0, 10))
             >>> print(expression) # doctest: +ELLIPSIS
@@ -108,7 +105,6 @@ if pl is not None:
 
             :example:
 
-            >>> dp.enable_features("contrib")
             >>> import polars as pl
             >>> expression = pl.col('numbers').dp.mean((0, 10))
             >>> print(expression) # doctest: +ELLIPSIS
@@ -177,7 +173,6 @@ if pl is not None:
 
             :example:
 
-            >>> dp.enable_features("contrib")
             >>> import polars as pl
             >>> expression = pl.col('numbers').dp.quantile(0.5, [1, 2, 3])
             >>> print(expression) # doctest: +ELLIPSIS
@@ -198,7 +193,6 @@ if pl is not None:
 
             :example:
 
-            >>> dp.enable_features("contrib")
             >>> import polars as pl
             >>> expression = pl.col('numbers').dp.quantile(0.5, [1, 2, 3])
             >>> print(expression) # doctest: +ELLIPSIS
