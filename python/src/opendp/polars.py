@@ -29,7 +29,7 @@ if pl is not None:
 
             If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
-            :param scale: Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
+            :param scale: Noise scale parameter for the distribution. scale == standard_deviation / sqrt(2).
             """
             return self.noise(scale=scale, distribution="Laplace") # pragma: no cover
 
@@ -38,7 +38,7 @@ if pl is not None:
 
             If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
-            :param scale: Noise scale parameter for the distribution. `scale` == standard_deviation.
+            :param scale: Noise scale parameter for the distribution. scale == standard_deviation.
             """
             return self.noise(scale=scale, distribution="Gaussian") # pragma: no cover
 
@@ -48,7 +48,7 @@ if pl is not None:
             If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
             :param bounds: The bounds of the input data.
-            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
+            :param scale: Noise scale parameter for the Laplace distribution. scale == standard_deviation / sqrt(2).
             """
             return self.expr.clip(*bounds).sum().dp.noise(scale) # pragma: no cover
 
@@ -59,7 +59,7 @@ if pl is not None:
             If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
             :param bounds: The bounds of the input data.
-            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
+            :param scale: Noise scale parameter for the Laplace distribution. scale == standard_deviation / sqrt(2).
             """
             return self.expr.dp.sum(bounds, scale) / pl.len() # pragma: no cover
 
@@ -69,7 +69,7 @@ if pl is not None:
             Candidates closer to the true quantile are assigned scores closer to zero.
             Lower scores are better.
 
-            :param alpha: a value in $[0, 1]$. Choose 0.5 for median
+            :param alpha: a value in [0, 1]. Choose 0.5 for median
             :param candidates: Set of possible quantiles to evaluate the utility of.
             """
             return pl.plugins.register_plugin_function( # pragma: no cover
@@ -100,7 +100,7 @@ if pl is not None:
         def _index_candidates(self, candidates):
             """Index into a candidate set.
 
-            Typically used after `rnm_gumbel` to map selected indices to candidates.
+            Typically used after ``_report_noisy_max_gumbel`` to map selected indices to candidates.
 
             :param candidates: The values that each selected index corresponds to.
             """
@@ -118,7 +118,7 @@ if pl is not None:
             The scale calibrates the level of entropy when selecting a candidate.
             If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
-            :param alpha: a value in $[0, 1]$. Choose 0.5 for median
+            :param alpha: a value in [0, 1]. Choose 0.5 for median
             :param candidates: Potential quantiles to select from.
             :param scale: How much noise to add to the scores of candidate.
             """
