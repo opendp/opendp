@@ -84,6 +84,7 @@ if pl is not None:
             """Report the argmax or argmin after adding Gumbel noise.
 
             The scale calibrates the level of entropy when selecting an index.
+            If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
             :param optimize: Distinguish between argmax and argmin.
             :param scale: Noise scale parameter for the Gumbel distribution.
@@ -115,6 +116,7 @@ if pl is not None:
             """Compute a differentially private quantile.
 
             The scale calibrates the level of entropy when selecting a candidate.
+            If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
             :param alpha: a value in $[0, 1]$. Choose 0.5 for median
             :param candidates: Potential quantiles to select from.
@@ -128,6 +130,7 @@ if pl is not None:
             """Compute a differentially private median.
 
             The scale calibrates the level of entropy when selecting a candidate.
+            If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
             :param candidates: Potential quantiles to select from.
             :param scale: How much noise to add to the scores of candidate.
