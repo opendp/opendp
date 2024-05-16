@@ -51,8 +51,16 @@ if pl is not None:
             If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
             :param scale: Noise scale parameter for the distribution. scale == standard_deviation / sqrt(2).
+
+            :example:
+
+            >>> dp.enable_features("contrib")
+            >>> import polars as pl
+            >>> expression = pl.col('numbers').dp.laplace()
+            >>> print(expression) # doctest: +ELLIPSIS
+            col("numbers")...:noise()
             """
-            return self.noise(scale=scale, distribution="Laplace") # pragma: no cover
+            return self.noise(scale=scale, distribution="Laplace")
 
         def gaussian(self, scale=None):
             """Add Gaussian noise to the expression.
@@ -60,8 +68,16 @@ if pl is not None:
             If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
             :param scale: Noise scale parameter for the distribution. scale == standard_deviation.
+
+            :example:
+
+            >>> dp.enable_features("contrib")
+            >>> import polars as pl
+            >>> expression = pl.col('numbers').dp.gaussian()
+            >>> print(expression) # doctest: +ELLIPSIS
+            col("numbers")...:noise()
             """
-            return self.noise(scale=scale, distribution="Gaussian") # pragma: no cover
+            return self.noise(scale=scale, distribution="Gaussian")
 
         def sum(self, bounds, scale=None):
             """Compute the differentially private sum.
@@ -70,8 +86,16 @@ if pl is not None:
 
             :param bounds: The bounds of the input data.
             :param scale: Noise scale parameter for the Laplace distribution. scale == standard_deviation / sqrt(2).
+
+            :example:
+
+            >>> dp.enable_features("contrib")
+            >>> import polars as pl
+            >>> expression = pl.col('numbers').dp.sum((0, 10))
+            >>> print(expression) # doctest: +ELLIPSIS
+            col("numbers").clip([0, 10]).sum()...:noise()
             """
-            return self.expr.clip(*bounds).sum().dp.noise(scale) # pragma: no cover
+            return self.expr.clip(*bounds).sum().dp.noise(scale)
 
         def mean(self, bounds, scale=None):
             """Compute the differentially private mean.
@@ -81,8 +105,16 @@ if pl is not None:
 
             :param bounds: The bounds of the input data.
             :param scale: Noise scale parameter for the Laplace distribution. scale == standard_deviation / sqrt(2).
+
+            :example:
+
+            >>> dp.enable_features("contrib")
+            >>> import polars as pl
+            >>> expression = pl.col('numbers').dp.mean((0, 10))
+            >>> print(expression) # doctest: +ELLIPSIS
+            [(col("numbers").clip([0, 10]).sum()...:noise()) / (len())]
             """
-            return self.expr.dp.sum(bounds, scale) / pl.len() # pragma: no cover
+            return self.expr.dp.sum(bounds, scale) / pl.len()
 
         def _discrete_quantile_score(self, alpha, candidates):
             """Score the utility of each candidate for representing the true quantile.
@@ -93,7 +125,7 @@ if pl is not None:
             :param alpha: a value in [0, 1]. Choose 0.5 for median
             :param candidates: Set of possible quantiles to evaluate the utility of.
             """
-            return pl.plugins.register_plugin_function( # pragma: no cover
+            return pl.plugins.register_plugin_function(
                 plugin_path=lib_path,
                 function_name="discrete_quantile_score",
                 kwargs={"alpha": alpha, "candidates": candidates},
@@ -110,7 +142,7 @@ if pl is not None:
             :param optimize: Distinguish between argmax and argmin.
             :param scale: Noise scale parameter for the Gumbel distribution.
             """
-            return pl.plugins.register_plugin_function( # pragma: no cover
+            return pl.plugins.register_plugin_function(
                 plugin_path=lib_path,
                 function_name="report_noisy_max_gumbel",
                 kwargs={"optimize": optimize, "scale": scale},
@@ -125,7 +157,7 @@ if pl is not None:
 
             :param candidates: The values that each selected index corresponds to.
             """
-            return pl.plugins.register_plugin_function( # pragma: no cover
+            return pl.plugins.register_plugin_function(
                 plugin_path=lib_path,
                 function_name="index_candidates",
                 kwargs={"candidates": candidates},
@@ -142,10 +174,18 @@ if pl is not None:
             :param alpha: a value in [0, 1]. Choose 0.5 for median
             :param candidates: Potential quantiles to select from.
             :param scale: How much noise to add to the scores of candidate.
+
+            :example:
+
+            >>> dp.enable_features("contrib")
+            >>> import polars as pl
+            >>> expression = pl.col('numbers').dp.quantile(0.5, [1, 2, 3])
+            >>> print(expression) # doctest: +ELLIPSIS
+            col("numbers")...:discrete_quantile_score()...:report_noisy_max_gumbel()...:index_candidates()
             """
-            dq_score = self.expr.dp._discrete_quantile_score(alpha, candidates) # pragma: no cover
-            noisy_idx = dq_score.dp._report_noisy_max_gumbel("min", scale) # pragma: no cover
-            return noisy_idx.dp._index_candidates(candidates) # pragma: no cover
+            dq_score = self.expr.dp._discrete_quantile_score(alpha, candidates)
+            noisy_idx = dq_score.dp._report_noisy_max_gumbel("min", scale)
+            return noisy_idx.dp._index_candidates(candidates)
 
         def median(self, candidates, scale=None):
             """Compute a differentially private median.
@@ -155,5 +195,13 @@ if pl is not None:
 
             :param candidates: Potential quantiles to select from.
             :param scale: How much noise to add to the scores of candidate.
+
+            :example:
+
+            >>> dp.enable_features("contrib")
+            >>> import polars as pl
+            >>> expression = pl.col('numbers').dp.quantile(0.5, [1, 2, 3])
+            >>> print(expression) # doctest: +ELLIPSIS
+            col("numbers")...:discrete_quantile_score()...:report_noisy_max_gumbel()...:index_candidates()
             """
-            return self.expr.dp.quantile(0.5, candidates, scale) # pragma: no cover
+            return self.expr.dp.quantile(0.5, candidates, scale)
