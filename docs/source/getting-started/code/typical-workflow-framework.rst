@@ -26,6 +26,8 @@
 # /public-info
 
 
+>>> data = 'age\n42\n' # Minimal data so doctest can run without hitting network.
+
 # mediate
 >>> import urllib.request
 >>> data_url = "https://raw.githubusercontent.com/opendp/opendp/sydney/teacher_survey.csv"
