@@ -181,6 +181,27 @@ jobs:
         if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.12') }}
         run: coverage report
 
+      - name: Upload coverage
+        if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.12') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: .coverage
+
+  confirm-coverage:
+    needs: python-test
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - name: Download coverage
+        # No additional action needed: We just need to confirm that at least one test produced a coverage report.
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: .coverage
+
   docs-links:
     runs-on: ubuntu-22.04
     defaults:
