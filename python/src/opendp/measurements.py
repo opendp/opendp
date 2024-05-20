@@ -759,7 +759,7 @@ def make_private_lazyframe(
     >>> mean_plan = group_by_grade.agg(
     ...     pl.col("pet_count").dp.mean((0, 10), scale=1.0))
     >>> dp_mean_pets_by_grade = make_measurement(mean_plan)
-    >>> means = dp_sum_pets_by_grade(lf).sort("grade").collect()
+    >>> means = dp_mean_pets_by_grade(lf).sort("grade").collect()
     >>> print(means) # doctest: +ELLIPSIS
     shape: (3, 2)
     ┌───────┬───────────┐
@@ -775,7 +775,7 @@ def make_private_lazyframe(
     >>> median_plan = group_by_grade.agg(
     ...     pl.col("pet_count").dp.median((0, 10), scale=1.0))
     >>> dp_median_pets_by_grade = make_measurement(median_plan)
-    >>> medians = dp_sum_pets_by_grade(lf).sort("grade").collect()
+    >>> medians = dp_median_pets_by_grade(lf).sort("grade").collect()
     >>> print(medians) # doctest: +ELLIPSIS
     shape: (3, 2)
     ┌───────┬───────────┐
@@ -894,7 +894,7 @@ def then_private_lazyframe(
     >>> mean_plan = group_by_grade.agg(
     ...     pl.col("pet_count").dp.mean((0, 10), scale=1.0))
     >>> dp_mean_pets_by_grade = make_measurement(mean_plan)
-    >>> means = dp_sum_pets_by_grade(lf).sort("grade").collect()
+    >>> means = dp_mean_pets_by_grade(lf).sort("grade").collect()
     >>> print(means) # doctest: +ELLIPSIS
     shape: (3, 2)
     ┌───────┬───────────┐
@@ -910,7 +910,7 @@ def then_private_lazyframe(
     >>> median_plan = group_by_grade.agg(
     ...     pl.col("pet_count").dp.median((0, 10), scale=1.0))
     >>> dp_median_pets_by_grade = make_measurement(median_plan)
-    >>> medians = dp_sum_pets_by_grade(lf).sort("grade").collect()
+    >>> medians = dp_median_pets_by_grade(lf).sort("grade").collect()
     >>> print(medians) # doctest: +ELLIPSIS
     shape: (3, 2)
     ┌───────┬───────────┐
