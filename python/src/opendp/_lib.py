@@ -293,7 +293,7 @@ def unwrap(result, type_) -> Any:
     if pl is not None:
         from opendp.mod import _EXPECTED_POLARS_VERSION
         if 'polars' in str(message).lower() and pl.__version__ != _EXPECTED_POLARS_VERSION:
-            message = f'Installed python polars version ({pl.__version__}) != expected version ({_EXPECTED_POLARS_VERSION}). {message}'
+            message = f'Installed python polars version ({pl.__version__}) != expected version ({_EXPECTED_POLARS_VERSION}). {message}' # pragma: no cover
     raise OpenDPException(variant, message, backtrace)
 
 
