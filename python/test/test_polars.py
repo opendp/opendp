@@ -5,6 +5,12 @@ import opendp.prelude as dp
 dp.enable_features("contrib", "honest-but-curious")
 
 
+def test_polars_version():
+    pl = pytest.importorskip("polars")
+    from opendp.mod import _EXPECTED_POLARS_VERSION
+    assert pl.__version__ == _EXPECTED_POLARS_VERSION
+
+
 def seed(schema):
     pl = pytest.importorskip("polars")
     return pl.DataFrame(None, schema, orient="row").lazy()  # type: ignore[attr-defined]
