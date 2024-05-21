@@ -25,7 +25,7 @@
 # /public-info
 
 
->>> data = 'age\n42\n' # Minimal data so doctest can run without hitting network.
+>>> data = 'John Smith,M,42,,,,,,,,\n' # Minimal data so doctest can run without hitting network.
 
 # mediate
 >>> import urllib.request
