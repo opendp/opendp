@@ -57,7 +57,7 @@ def check_c_int_cast(v, type_name):
         raise ValueError(f"{v} is not representable by {type_name}")
 
 
-def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any: # type: ignore[assignment]
+def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     """Map from Python `value` to ctypes `c_type`.
 
     :param value: value to convert to c_type
@@ -108,7 +108,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
 
     if c_type == AnyObjectPtr:
         from opendp._data import slice_as_object
-        return slice_as_object(value, type_name) # type: ignore
+        return slice_as_object(value, type_name) # type: ignore[arg-type]
 
     if c_type == FfiSlicePtr:
         if type_name is None:
@@ -153,7 +153,8 @@ def c_to_py(value: Any) -> Any:
 
     if isinstance(value, ctypes.c_char_p):
         from opendp._data import str_free
-        value_contents = value.value.decode() # type: ignore[reportOptionalMemberAccess,union-attr]
+        assert value.value is not None
+        value_contents = value.value.decode()
         str_free(value)
         return value_contents
 
@@ -304,7 +305,9 @@ def _string_to_slice(val: str) -> FfiSlicePtr:
 
 
 def _slice_to_string(raw: FfiSlicePtr) -> str:
-    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p)).contents.value.decode()  # type: ignore[reportOptionalMemberAccess,union-attr]
+    value = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p)).contents.value
+    assert value is not None 
+    return value.decode()
 
 
 def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
@@ -325,7 +328,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
 
     if isinstance(inner_type_name, RuntimeType):
         c_repr = [py_to_c(v, c_type=AnyObjectPtr, type_name=inner_type_name) for v in val]
-        array = (AnyObjectPtr * len(val))(*c_repr) # type: ignore[operator] # type: ignore[operator]
+        array = (AnyObjectPtr * len(val))(*c_repr) # type: ignore[operator]
         ffislice = _wrap_in_slice(array, len(val))
         ffislice.depends_on(*c_repr)
         return ffislice
@@ -356,7 +359,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
     if inner_type_name not in ATOM_MAP:
         raise TypeError(f"Members must be one of {tuple(ATOM_MAP.keys())}. Found {inner_type_name}.")
 
-    array = (ATOM_MAP[inner_type_name] * len(val))(*val) # type: ignore[operator] # type: ignore[operator]
+    array = (ATOM_MAP[inner_type_name] * len(val))(*val) # type: ignore[operator]
     return _wrap_in_slice(array, len(val))
 
 
@@ -385,7 +388,8 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> list[Any]:
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p))[0:raw.contents.len]
         return list(map(lambda v: v.decode(), array))
 
-    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len] # type: ignore
+    assert isinstance(inner_type_name, str)
+    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len]
 
 
 def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
@@ -415,7 +419,7 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
     
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     ptr_data = (
-        ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p) # type: ignore
+        ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p) # type: ignore[index]
         for v, name in zip(val, inner_type_names))
 
     array = (ctypes.c_void_p * len(val))(*ptr_data)
@@ -435,7 +439,7 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
         return _slice_to_lazyframe(lp_slice), _slice_to_expr(expr_slice)
     
     # tuple of instances of Python types
-    return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value # type: ignore
+    return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value # type: ignore[index,attr-defined]
                  for void_p, name in zip(ptr_data, inner_type_names))
 
 
@@ -451,7 +455,7 @@ def _hashmap_to_slice(val: dict[Any, Any], type_name: RuntimeType) -> FfiSlicePt
     
     keys: AnyObjectPtr = py_to_c(list(val.keys()), type_name=Vec[key_type], c_type=AnyObjectPtr)
     vals: AnyObjectPtr = py_to_c(list(val.values()), type_name=Vec[val_type], c_type=AnyObjectPtr)
-    ffislice = _wrap_in_slice(ctypes.pointer((AnyObjectPtr * 2)(keys, vals)), 2) # type: ignore[operator] # type: ignore[operator]
+    ffislice = _wrap_in_slice(ctypes.pointer((AnyObjectPtr * 2)(keys, vals)), 2) # type: ignore[operator]
 
     # The __del__ destructor on `keys` and `vals` is called and memory freed when their refcounts go to zero.
     # ffislice needs keys and vals to have a lifetime at least as long as itself,
