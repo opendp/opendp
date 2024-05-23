@@ -300,7 +300,7 @@ def _slice_to_extrinsic(raw: FfiSlicePtr):
 def _string_to_slice(val: str) -> FfiSlicePtr:
     np = import_optional_dependency('numpy', raise_error=False)
     if np is not None and isinstance(val, np.ndarray):
-        val = val.item() # pragma: no cover
+        val = val.item()
     return _wrap_in_slice(ctypes.pointer(ctypes.c_char_p(val.encode())), 1)
 
 
@@ -319,7 +319,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
     # TODO: can we use the underlying buffer directly?
     np = import_optional_dependency('numpy', raise_error=False)
     if np is not None and isinstance(val, np.ndarray):
-        val = val.tolist() # pragma: no cover
+        val = val.tolist()
 
     if not isinstance(val, list):
         raise TypeError(f"Expected type is {type_name} but input data is not a list.")
