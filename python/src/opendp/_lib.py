@@ -23,7 +23,7 @@ def _load_library():
     if not lib_dir.exists():
         # fall back to default location of binaries in a developer install
         build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
-        lib_dir = Path(__file__).parent / ".." / ".." / ".." / 'rust' / 'target' / build_dir
+        lib_dir = Path(__file__).parent / ".." / ".." / ".." / 'rust' / 'target' / build_dir  # pragma: no cover
 
     if lib_dir.exists():
         lib_dir_file_names = [p for p in lib_dir.iterdir() if p.suffix in {".so", ".dylib", ".dll"}]
@@ -87,7 +87,7 @@ def get_np_csprng():
             from opendp._data import fill_bytes
 
             # there are 8x as many u8s as there are u64s
-            if not fill_bytes(buffer_ptr, buffer_len * 8):
+            if not fill_bytes(buffer_ptr, buffer_len * 8): # pragma: no cover
                 from opendp.mod import OpenDPException
                 raise OpenDPException("FailedFunction", "Failed to sample from CSPRNG")
             _buffer_pos = 0
@@ -264,9 +264,11 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
 # def _str_to_c_char_p(s: Optional[str]) -> Optional[bytes]:
 #     return s and s.encode("utf-8")
 def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
+    ''''''
     if s is not None:
         return s.decode("utf-8")
-    return None
+    # TODO: Unused: would it indicate a problem if we did start hitting this?
+    return None # pragma: no cover
 
 
 def unwrap(result, type_) -> Any:
@@ -274,7 +276,8 @@ def unwrap(result, type_) -> Any:
     from opendp.mod import OpenDPException
 
     if not isinstance(result, FfiResult):
-        return result
+        # TODO: Unused: would it indicate a problem if we did start hitting this?
+        return result # pragma: no cover
 
     if result.tag == 0:
         return ctypes.cast(result.payload.Ok, type_)
@@ -344,7 +347,7 @@ def make_proof_link(
     # link from sphinx and rustdoc to latex
     sphinx_port = os.environ.get("OPENDP_SPHINX_PORT", None)
     if sphinx_port is not None:
-        proof_uri = f"http://localhost:{sphinx_port}"
+        proof_uri = f"http://localhost:{sphinx_port}" # pragma: no cover
 
     else:
         # find the docs uri
