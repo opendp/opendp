@@ -40,7 +40,8 @@ def check_similar_scalar(expected, value):
     inferred = RuntimeType.infer(value)
     
     if inferred in ATOM_EQUIVALENCE_CLASSES:
-        if expected not in ATOM_EQUIVALENCE_CLASSES[inferred]: # type: ignore[index]
+        assert isinstance(inferred, str)
+        if expected not in ATOM_EQUIVALENCE_CLASSES[inferred]:
             raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
     else:
         if expected != inferred:
