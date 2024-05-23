@@ -20,7 +20,7 @@ ATOM_EQUIVALENCE_CLASSES: dict[str, list[str]] = {
 def _load_library():
     default_lib_dir = Path(__file__).absolute().parent / "lib"
     lib_dir = Path(os.environ.get("OPENDP_LIB_DIR", default_lib_dir))
-    if not lib_dir.exists(): # pragma: no cover
+    if not lib_dir.exists():
         # fall back to default location of binaries in a developer install
         build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
         lib_dir = Path(__file__).parent / ".." / ".." / ".." / 'rust' / 'target' / build_dir
@@ -87,7 +87,7 @@ def get_np_csprng():
             from opendp._data import fill_bytes
 
             # there are 8x as many u8s as there are u64s
-            if not fill_bytes(buffer_ptr, buffer_len * 8): # pragma: no cover
+            if not fill_bytes(buffer_ptr, buffer_len * 8):
                 from opendp.mod import OpenDPException
                 raise OpenDPException("FailedFunction", "Failed to sample from CSPRNG")
             _buffer_pos = 0
@@ -105,7 +105,7 @@ if pl is not None:
     @pl.api.register_expr_namespace("dp")
     class DPNamespace(object):
         def __init__(self, expr):
-            self.expr = expr # pragma: no cover
+            self.expr = expr
 
         def laplace(self, scale=None):
             """Add Laplace noise to the expression.
@@ -114,8 +114,8 @@ if pl is not None:
 
             :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
             """
-            scale = float("nan") if scale is None else scale # pragma: no cover
-            return pl.plugins.register_plugin_function( # pragma: no cover
+            scale = float("nan") if scale is None else scale
+            return pl.plugins.register_plugin_function(
                 plugin_path=lib_path,
                 function_name="laplace",
                 kwargs={"scale": scale},
@@ -131,7 +131,7 @@ if pl is not None:
             :param bounds: The bounds of the input data.
             :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
             """
-            return self.expr.clip(*bounds).sum().dp.laplace(scale) # pragma: no cover
+            return self.expr.clip(*bounds).sum().dp.laplace(scale)
         
         
         def mean(self, bounds, scale=None):
@@ -143,7 +143,7 @@ if pl is not None:
             :param bounds: The bounds of the input data.
             :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
             """
-            return self.expr.dp.sum(bounds, scale) / pl.len() # pragma: no cover
+            return self.expr.dp.sum(bounds, scale) / pl.len()
 
 
 # This enables backtraces in Rust by default.
@@ -253,7 +253,7 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
     _type_ = ExtrinsicObject
 
     def __del__(self):
-        try: # pragma: no cover
+        try:
             from opendp._data import extrinsic_object_free
             extrinsic_object_free(self)
         except (ImportError, TypeError):
@@ -266,7 +266,7 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
 def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
     if s is not None:
         return s.decode("utf-8")
-    return None # pragma: no cover
+    return None
 
 
 def unwrap(result, type_) -> Any:
@@ -274,7 +274,7 @@ def unwrap(result, type_) -> Any:
     from opendp.mod import OpenDPException
 
     if not isinstance(result, FfiResult):
-        return result # pragma: no cover
+        return result
 
     if result.tag == 0:
         return ctypes.cast(result.payload.Ok, type_)
@@ -295,7 +295,7 @@ def unwrap(result, type_) -> Any:
 proof_doc_re = re.compile(r"\[\(Proof Document\)\]\(([^)]+)\)")
 
 
-def proven(function): # pragma: no cover
+def proven(function):
     """Decorator for functions that have an associated proof document.
     Locates the proof document and edits the docstring with a link.
     """
@@ -331,7 +331,7 @@ def make_proof_link(
     source_dir,
     relative_path,
     repo_path,
-) -> str: # pragma: no cover
+) -> str:
     # construct absolute path
     absolute_path = os.path.join(source_dir, relative_path)
 
@@ -344,7 +344,7 @@ def make_proof_link(
     # link from sphinx and rustdoc to latex
     sphinx_port = os.environ.get("OPENDP_SPHINX_PORT", None)
     if sphinx_port is not None:
-        proof_uri = f"http://localhost:{sphinx_port}"  # pragma: no cover
+        proof_uri = f"http://localhost:{sphinx_port}"
 
     else:
         # find the docs uri
@@ -374,15 +374,21 @@ def unmangle_py_version(py_version):
     the original format, so we need to unmangle for links to work.
     There are more variations possible, but we only need to handle X.Y.Z-dev0, X.Y.Z-aNNN00M, X.Y.Z-bNNN00M, X.Y.Z
     
+    >>> unmangle_py_version('0.9.0')
+    '0.9.0'
     >>> unmangle_py_version('0.9.0.dev0')
     '0.9.0-dev'
+    >>> unmangle_py_version('0.9.0a11111111001')
+    '0.9.0-nightly.11111111.1'
+    >>> unmangle_py_version('0.9.0b11111111001')
+    '0.9.0-beta.11111111.1'
     >>> unmangle_py_version('other')
     'other'
     '''
     if py_version.endswith(".dev0"):
         return f"{py_version[:-5]}-dev"
     match = re.match(r"^(\d+\.\d+\.\d+)(?:([ab])(\d{8})(\d{3}))?$", py_version)
-    if match: # pragma: no cover
+    if match:
         base = match.group(1)
         py_tag = match.group(2)
         if not py_tag:
@@ -431,7 +437,7 @@ def get_channel(version):
     if match:
         channel = match.group(2)
         return channel or "stable"
-    return "unknown" # pragma: no cover
+    return "unknown"
 
 def indent(text):
     '''
