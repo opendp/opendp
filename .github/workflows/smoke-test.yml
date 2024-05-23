@@ -179,7 +179,24 @@ jobs:
         # We only expect test coverage with all extra dependencies.
         # "polars" implies "scikit-learn": see setup.cfg.
         if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.12') }}
-        run: coverage report
+        run: coverage report | tee /tmp/coverage.txt
+
+      - name: Upload coverage
+        if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.12') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: /tmp/coverage.txt
+
+  confirm-coverage:
+    needs: python-test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download coverage
+        # No additional action needed: We just need to confirm that at least one test produced a coverage report.
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
 
   docs-links:
     runs-on: ubuntu-22.04
