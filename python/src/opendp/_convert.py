@@ -60,11 +60,10 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     """Map from Python `value` to ctypes `c_type`.
 
     :param value: value to convert to c_type
-    :param c_type: expected ctypes type to convert to
+    :param c_type: expected ctypes type to convert to. Untyped because there is no public superclass.
     :param type_name: optional. rust_type to check inferred rust_type of value against, and/or specify bit depth
     :return: value converted to ctypes representation
     """
-
     if isinstance(type_name, str):
         type_name = RuntimeType.parse(type_name)
 
@@ -101,7 +100,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         if rust_type in ATOM_MAP:
             return ctypes.byref(ATOM_MAP[rust_type](value))
 
-        if rust_type == "String": # pragma: no cover
+        if rust_type == "String":
             return ctypes.c_char_p(value.encode())
 
         raise UnknownTypeException(rust_type)
@@ -194,7 +193,7 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
             return _slice_to_string(raw)
         
         if type_name == "LazyFrame":
-            return _slice_to_lazyframe(raw) # pragma: no cover
+            return _slice_to_lazyframe(raw)
         
         if type_name == "DataFrame":
             return _slice_to_dataframe(raw)
@@ -244,7 +243,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
             return _series_to_slice(value)
         
         if type_name == "LazyFrame":
-            return _lazyframe_to_slice(value) # pragma: no cover
+            return _lazyframe_to_slice(value)
         
         if type_name == "DataFrame":
             return _dataframe_to_slice(value)
@@ -268,7 +267,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
     np = import_optional_dependency('numpy', raise_error=False)
     if np is not None and isinstance(val, np.ndarray):
-        val = val.item() # pragma: no cover
+        val = val.item()
     check_similar_scalar(type_name, val)
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     return _wrap_in_slice(ctypes.pointer(ATOM_MAP[type_name](val)), 1)
