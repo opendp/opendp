@@ -11,7 +11,13 @@ import pytest
 def test_data_object_int():
     val_in = 123
     obj = py_to_c(val_in, c_type=AnyObjectPtr)
-    print(obj)
+    val_out = c_to_py(obj)
+    assert val_out == val_in
+
+
+def test_data_object_int_to_float():
+    val_in = 123
+    obj = py_to_c(val_in, c_type=AnyObjectPtr, type_name='f64')
     val_out = c_to_py(obj)
     assert val_out == val_in
 

@@ -36,18 +36,79 @@ INT_SIZES = {
 }
 _ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
 
-def check_similar_scalar(expected, value):
-    inferred = RuntimeType.infer(value)
-    
-    if inferred in ATOM_EQUIVALENCE_CLASSES:
-        if expected not in ATOM_EQUIVALENCE_CLASSES[inferred]: # type: ignore[index]
-            raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
-    else:
-        if expected != inferred:
-            raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}") 
 
+def _check_and_cast_scalar(expected, value):
+    '''
+    Any number is cast to float, if f32 or f64 is expected:
+    >>> _check_and_cast_scalar('f32', 1.0)
+    1.0
+    >>> _check_and_cast_scalar('f64', 1)
+    1.0
+
+    Ints cast to ints, unsurprisingly:
+    >>> _check_and_cast_scalar('u8', 1)
+    1
+
+    ... but there are range checks:
+    >>> _check_and_cast_scalar('u8', 256)
+    Traceback (most recent call last):
+    ...
+    ValueError: 256 is not representable by u8
+
+    ... but not for floats? TODO?
+    >>> _check_and_cast_scalar('f32', 1e100)
+    1e+100
+
+    Floats cannot be cast to ints:
+    >>> _check_and_cast_scalar('i32', 1.0)
+    Traceback (most recent call last):
+    ...
+    TypeError: inferred type is f64, expected i32. See https://github.com/opendp/opendp/discussions/298
+
+    Bools cast to bools:
+    >>> _check_and_cast_scalar('bool', True)
+    True
+
+    Bools cannot cast to ints:
+    >>> _check_and_cast_scalar('u8', True)
+    Traceback (most recent call last):
+    ...
+    TypeError: inferred type is f64, expected u8. See https://github.com/opendp/opendp/discussions/298
+
+    ... but bools can cast to floats: Is this right? TODO
+    >>> _check_and_cast_scalar('f64', True)
+    1.0
+
+    >>> _check_and_cast_scalar('f32', True)
+    1.0
+
+    >>> _check_and_cast_scalar('bool', 1)
+    Traceback (most recent call last):
+    ...
+    TypeError: inferred type is f64, expected bool. See https://github.com/opendp/opendp/discussions/298
+
+    Unrecognized types will fail, but note that the error message refers to "f64":
+    >>> _check_and_cast_scalar('fake', 1)
+    Traceback (most recent call last):
+    ...
+    TypeError: inferred type is f64, expected fake. See https://github.com/opendp/opendp/discussions/298    
+    '''
+    inferred = RuntimeType.infer(value)
+    inferred_in_eq_class = inferred in ATOM_EQUIVALENCE_CLASSES
+    if (
+        (inferred_in_eq_class and expected not in ATOM_EQUIVALENCE_CLASSES[inferred]) # type: ignore[index]
+        or
+        (not inferred_in_eq_class and expected != inferred)
+    ):
+        if not isinstance(value, int):
+            raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
+        value = float(value)
+        value = _check_and_cast_scalar(expected, value)
+            
     if expected in INT_SIZES:
         check_c_int_cast(value, expected)
+    
+    return value
 
 
 def check_c_int_cast(v, type_name):
@@ -96,7 +157,8 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
             raise ValueError("type_name must be known")
 
         rust_type = str(type_name)
-        check_similar_scalar(rust_type, value)
+        
+        value = _check_and_cast_scalar(rust_type, value)
 
         if rust_type in ATOM_MAP:
             return ctypes.byref(ATOM_MAP[rust_type](value))
@@ -269,7 +331,7 @@ def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
     np = import_optional_dependency('numpy', raise_error=False)
     if np is not None and isinstance(val, np.ndarray):
         val = val.item() # pragma: no cover
-    check_similar_scalar(type_name, val)
+    val = _check_and_cast_scalar(type_name, val)
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     return _wrap_in_slice(ctypes.pointer(ATOM_MAP[type_name](val)), 1)
 
@@ -337,8 +399,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         ffi_slice.depends_on(c_repr)
         return ffi_slice
 
-    for v in val:
-        check_similar_scalar(inner_type_name, v)
+    val = [_check_and_cast_scalar(inner_type_name, v) for v in val]
 
     if inner_type_name == "String":
         def str_to_slice(val):
@@ -410,8 +471,10 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
             raise TypeError(f"Tuple members must be one of {ATOM_MAP.keys()}. Got {t}")
 
     # check that actual type can be represented by the inner_type_name
-    for v, inner_type_name in zip(val, inner_type_names):
-        check_similar_scalar(inner_type_name, v)
+    val = tuple(
+        _check_and_cast_scalar(inner_type_name, val[i])
+        for i, inner_type_name in zip(range(len(val)), inner_type_names)
+    )
     
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     ptr_data = (
@@ -444,10 +507,11 @@ def _hashmap_to_slice(val: dict[Any, Any], type_name: RuntimeType) -> FfiSlicePt
     if not isinstance(val, dict):
         raise TypeError(f"Expected type is {type_name} but input data is not a dict.")
 
-    for k, v in val.items():
-        check_similar_scalar(key_type, k)
-        if val_type != "ExtrinsicObject":
-            check_similar_scalar(val_type, v)
+    val = {
+        _check_and_cast_scalar(key_type, k):
+            _check_and_cast_scalar(val_type, v) if val_type != "ExtrinsicObject" else v
+        for k, v in val.items()
+    }
     
     keys: AnyObjectPtr = py_to_c(list(val.keys()), type_name=Vec[key_type], c_type=AnyObjectPtr)
     vals: AnyObjectPtr = py_to_c(list(val.values()), type_name=Vec[val_type], c_type=AnyObjectPtr)
