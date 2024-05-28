@@ -230,6 +230,9 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         output_metric  = AbsoluteDistance(i32)
     )
 
+    >>> count.input_space
+    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
+    
     >>> # invoke the transformation (invoke and __call__ are equivalent)
     >>> count.invoke([1, 2, 3])
     3
@@ -287,7 +290,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         from opendp.core import transformation_check
 
         if debug:
-            return transformation_check(self, d_in, d_out) # pragma: no cover
+            return transformation_check(self, d_in, d_out)
 
         try:
             return transformation_check(self, d_in, d_out)
@@ -351,7 +354,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     
     @property
     def input_space(self) -> tuple["Domain", "Metric"]:
-        return self.input_domain, self.input_metric # pragma: no cover
+        return self.input_domain, self.input_metric
     
     @property
     def output_space(self) -> tuple["Domain", "Metric"]:
@@ -685,14 +688,14 @@ class OpenDPException(Exception):
             opendp multi
               line
             opendp single line
-        SomeVariant("my message")
+          SomeVariant("my message")
         >>> dp.disable_features('rust-stack-trace')
         >>> print(e)
         <BLANKLINE>
           SomeVariant("my message")
         '''
         response = ''
-        if self.raw_traceback and 'rust-stack-trace' in GLOBAL_FEATURES: # pragma: no cover
+        if self.raw_traceback and 'rust-stack-trace' in GLOBAL_FEATURES:
             response += self._continued_stack_trace()
         response += '\n  ' + self.variant
 
