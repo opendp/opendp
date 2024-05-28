@@ -260,8 +260,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         :return: non-differentially-private answer
         :raises OpenDPException: packaged error from the core OpenDP library
         """
-        from opendp.core import transformation_invoke # pragma: no cover
-        return transformation_invoke(self, arg)  # pragma: no cover
+        from opendp.core import transformation_invoke
+        return transformation_invoke(self, arg) 
 
     def __call__(self, arg):
         from opendp.core import transformation_invoke
@@ -359,8 +359,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     
     @property
     def function(self) -> "Function":
-        from opendp.core import transformation_function # pragma: no cover
-        return transformation_function(self) # pragma: no cover
+        from opendp.core import transformation_function
+        return transformation_function(self)
 
     @property
     def input_distance_type(self) -> Union["RuntimeType", str]:
@@ -662,9 +662,9 @@ class OpenDPException(Exception):
             return "\n  ".join(line.strip() for line in frame.split("\n"))
         return [format_frame(f) for f in self.raw_frames() if f.startswith("opendp") or f.startswith("<opendp")]
 
-    def __str__(self) -> str: # pragma: no cover
+    def __str__(self) -> str:
         response = ''
-        if self.raw_traceback and 'rust-stack-trace' in GLOBAL_FEATURES:
+        if self.raw_traceback and 'rust-stack-trace' in GLOBAL_FEATURES: # pragma: no cover
             # join and split by newlines because frames may be multi-line
             lines = "\n".join(self.frames()[::-1]).split('\n')
             response += "Continued Rust stack trace:\n" + '\n'.join('    ' + line for line in lines)
@@ -1043,7 +1043,7 @@ def exponential_bounds_search(
             return False
     exception_bounds = exponential_bounds_search(exception_predicate, T=T)
     if exception_bounds is None:
-        try: # pragma: no cover
+        try:
             predicate(center)
         except Exception:
             raise ValueError(f"predicate always fails. An example traceback is shown above at {center}.")
