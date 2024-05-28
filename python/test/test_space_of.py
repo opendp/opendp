@@ -9,6 +9,14 @@ def test_typed_space_of():
     space = dp.space_of(list[int], dp.L2Distance)
     assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.l2_distance(T=dp.i32))
 
+    # not all metrics are parmeterized
+    space = dp.space_of(list[int], dp.HammingDistance)
+    assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.hamming_distance())
+    space = dp.space_of(list[int], dp.InsertDeleteDistance)
+    assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.insert_delete_distance())
+    space = dp.space_of(list[int], dp.ChangeOneDistance)
+    assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.change_one_distance())
+
     # when type is scalar, domain defaults to atom_domain and metric defaults to absolute_distance
     space = dp.space_of(float)
     assert space == (dp.atom_domain(T=dp.f64), dp.absolute_distance(T=dp.f64))
