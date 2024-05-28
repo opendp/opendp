@@ -653,22 +653,45 @@ class OpenDPException(Exception):
         self.message = message
         self.raw_traceback = raw_traceback
 
-    def raw_frames(self): # pragma: no cover
+    def _raw_frames(self):
         import re
         return re.split(r"\s*[0-9]+: ", self.raw_traceback or "")
     
-    def frames(self): # pragma: no cover
+    def _frames(self):
         def format_frame(frame):
             return "\n  ".join(line.strip() for line in frame.split("\n"))
-        return [format_frame(f) for f in self.raw_frames() if f.startswith("opendp") or f.startswith("<opendp")]
+        return [format_frame(f) for f in self._raw_frames() if f.startswith("opendp") or f.startswith("<opendp")]
+
+    def _continued_stack_trace(self):
+        # join and split by newlines because frames may be multi-line
+        lines = "\n".join(self._frames()[::-1]).split('\n')
+        return "Continued Rust stack trace:\n" + '\n'.join('    ' + line for line in lines)
 
     def __str__(self) -> str:
+        '''
+        >>> raw_traceback = """
+        ... 0: top
+        ... 1: opendp single line
+        ... 2: opendp multi
+        ...             line
+        ... 3: bottom
+        ... """
+        >>> e = OpenDPException(variant='SomeVariant', message='my message', raw_traceback=raw_traceback)
+        >>> dp.enable_features('rust-stack-trace')
+        >>> print(e)
+        Continued Rust stack trace:
+            opendp multi
+              line
+            opendp single line
+        SomeVariant("my message")
+        >>> dp.disable_features('rust-stack-trace')
+        >>> print(e)
+        <BLANKLINE>
+          SomeVariant("my message")
+        '''
         response = ''
         if self.raw_traceback and 'rust-stack-trace' in GLOBAL_FEATURES: # pragma: no cover
-            # join and split by newlines because frames may be multi-line
-            lines = "\n".join(self.frames()[::-1]).split('\n')
-            response += "Continued Rust stack trace:\n" + '\n'.join('    ' + line for line in lines)
-
+            response += self._continued_stack_trace()
         response += '\n  ' + self.variant
 
         if self.message:
