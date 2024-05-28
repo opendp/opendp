@@ -645,6 +645,8 @@ class OpenDPException(Exception):
     Error variants may change in library updates.
 
     See `Rust ErrorVariant <https://docs.rs/opendp/latest/opendp/error/enum.ErrorVariant.html>`_ for values variant may take on.
+
+    Run ``dp.enable_features('rust-stack-trace')`` to see wrapped Rust stack traces.
     """
     raw_traceback: Optional[str]
 
