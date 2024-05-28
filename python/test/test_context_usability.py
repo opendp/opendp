@@ -77,3 +77,14 @@ def test_scalar_instead_of_vector():
             split_evenly_over=1,
             domain=dp.domain_of(int),
         )
+
+def test_query_dir():
+    context = dp.Context.compositor(
+        data=[1, 2, 3, 4, 5],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+    query_dir = dir(context.query())
+    assert 'count' in query_dir
+    assert 'laplace' in query_dir
