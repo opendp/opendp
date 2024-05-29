@@ -68,6 +68,15 @@ def test_set_feature():
     assert "A" not in GLOBAL_FEATURES
 
 
+def test_default_float_type():
+    assert RuntimeType.parse(float) == f64
+
+    set_default_float_type(f64)
+    assert RuntimeType.parse(float) == f64
+
+    # Can't set to f32 because debug binary has fewer types.
+
+
 disallowed_int_default_types = set([i128, u128, isize])
 
 @pytest.mark.parametrize('integer_type', set(INTEGER_TYPES) - disallowed_int_default_types)
