@@ -84,8 +84,6 @@ def set_default_int_type(T: RuntimeTypeDescriptor) -> None:
     
     :params T: must be one of [u8, u16, u32, u64, usize, i8, i16, i32, i64]
     :type T: :ref:`RuntimeTypeDescriptor`
-
-    :examples:
     """
     equivalence_class = ATOM_EQUIVALENCE_CLASSES[ELEMENTARY_TYPES[int]]
     T = RuntimeType.parse(T)
@@ -276,32 +274,6 @@ class RuntimeType(object):
         Vec<String>
         >>> dp.RuntimeType.infer((12., True, "A"))
         (f64, bool, String)
-
-        TODO: This one seems strange: Why not have the usual error if types don't match?
-
-        >>> dp.RuntimeType.infer([1, True], py_object=True)
-        Vec<ExtrinsicObject>
-        
-        >>> dp.RuntimeType.infer([])
-        Traceback (most recent call last):
-        ...
-        opendp.mod.UnknownTypeException: attempted to create a type_name with an unknown type: cannot infer atomic type when empty
-
-        >>> dp.RuntimeType.infer(object())
-        Traceback (most recent call last):
-        ...
-        opendp.mod.UnknownTypeException: <class 'object'>
-        
-        >>> dp.RuntimeType.infer(object(), py_object=True)
-        'ExtrinsicObject'
-
-        >>> dp.RuntimeType.infer(lambda _: True)
-        'CallbackFn'
-
-        >>> dp.RuntimeType.infer(None)
-        Traceback (most recent call last):
-        ...
-        opendp.mod.UnknownTypeException: attempted to create a type_name with an unknown type: Constructed Option from a None variant
         """
         if type(public_example) in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type(public_example)]

@@ -14,7 +14,46 @@ def test_numpy_function():
     print(RuntimeType.infer(np.array(["A", "B"])))
 
 
-def test_typing_hint():
+def test_typing_infer():
+    '''
+    >>> dp.RuntimeType.infer(23)
+    'i32'
+    >>> dp.RuntimeType.infer(12.)
+    'f64'
+    >>> dp.RuntimeType.infer(["A", "B"])
+    Vec<String>
+    >>> dp.RuntimeType.infer((12., True, "A"))
+    (f64, bool, String)
+
+    TODO: This one seems strange: Why not have the usual error if types don't match?
+
+    >>> dp.RuntimeType.infer([1, True], py_object=True)
+    Vec<ExtrinsicObject>
+    
+    >>> dp.RuntimeType.infer([])
+    Traceback (most recent call last):
+    ...
+    opendp.mod.UnknownTypeException: attempted to create a type_name with an unknown type: cannot infer atomic type when empty
+
+    >>> dp.RuntimeType.infer(object())
+    Traceback (most recent call last):
+    ...
+    opendp.mod.UnknownTypeException: <class 'object'>
+    
+    >>> dp.RuntimeType.infer(object(), py_object=True)
+    'ExtrinsicObject'
+
+    >>> dp.RuntimeType.infer(lambda _: True)
+    'CallbackFn'
+
+    >>> dp.RuntimeType.infer(None)
+    Traceback (most recent call last):
+    ...
+    opendp.mod.UnknownTypeException: attempted to create a type_name with an unknown type: Constructed Option from a None variant
+    '''
+    pass
+
+def test_typing_parse():
     assert str(RuntimeType.parse(Tuple[int, float])) == "(i32, f64)" # type: ignore[arg-type]
     assert str(RuntimeType.parse(tuple[int, float])) == "(i32, f64)" # type: ignore[arg-type]
     assert str(RuntimeType.parse(Tuple[int, Tuple[str]])) == "(i32, (String))" # type: ignore[arg-type]
@@ -26,12 +65,8 @@ def test_typing_hint():
     assert str(RuntimeType.parse((List[int], (int, bool)))) == '(Vec<i32>, (i32, bool))'
     assert str(RuntimeType.parse((list[int], (int, bool)))) == '(Vec<i32>, (i32, bool))'
     assert isinstance(RuntimeType.parse('L1Distance<f64>'), SensitivityMetric)
-
-    try:
+    with pytest.raises(UnknownTypeException):
         RuntimeType.parse(list[Any])
-        raise Exception("typing.Any should fail to parse")
-    except UnknownTypeException:
-        pass
 
 
 def test_sensitivity():
