@@ -993,11 +993,6 @@ extern "C" fn opendp_data__new_arrow_array(name: *const c_char) -> FfiResult<*mu
     }
 }
 
-#[bootstrap(
-    name = "to_string",
-    arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<char *>")
-)]
 /// Internal function. Convert the AnyObject to a string representation.
 ///
 /// # Arguments

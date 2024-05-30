@@ -20,8 +20,7 @@ __all__ = [
     "slice_as_object",
     "slice_free",
     "smd_curve_epsilon",
-    "str_free",
-    "to_string"
+    "str_free"
 ]
 
 
@@ -361,30 +360,5 @@ def str_free(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
-
-    return output
-
-
-def to_string(
-    this
-) -> str:
-    r"""Internal function. Convert the AnyObject to a string representation.
-
-    :param this: The AnyObject to convert to a string representation.
-    :rtype: str
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeException: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    # No type arguments to standardize.
-    # Convert arguments to c types.
-    c_this = py_to_c(this, c_type=AnyObjectPtr, type_name=None)
-
-    # Call library function.
-    lib_function = lib.opendp_data__to_string
-    lib_function.argtypes = [AnyObjectPtr]
-    lib_function.restype = FfiResult
-
-    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
 
     return output
