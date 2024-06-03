@@ -10,7 +10,7 @@ Function
 --------
 
 As one would expect, all data processing is handled via a function.
-The function member stored in a Transformation or Measurement struct is a straightforward representation of an idealized mathematical function.
+The function member stored in a Transformation or Measurement instance is a straightforward representation of an idealized mathematical function.
 
 To use the function, the Transformation or Measurement can be called directly:
 
