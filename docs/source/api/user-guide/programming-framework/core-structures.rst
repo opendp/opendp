@@ -7,7 +7,7 @@ Core Structures
 
 OpenDP is focused on creating computations with specific privacy characteristics.
 These computations are modeled with two core classes in OpenDP:
-:py:class:`opendp.mod.Transformation` and :py:class:`opendp.mod.Measurement`.
+:py:class:`Transformation <opendp.mod.Transformation>` and :py:class:`Measurement <opendp.mod.Measurement>`.
 These classes are in all OpenDP programs, regardless of the underlying algorithm or definition of privacy.
 By modeling computations in this way, we're able to combine them in flexible arrangements and reason about the privacy properties of the resulting programs.
 OpenDP relates:
