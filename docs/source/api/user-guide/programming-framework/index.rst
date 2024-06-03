@@ -15,23 +15,17 @@ We'll cover the highlights here, which should be enough for you to get acquainte
 If you're interested in more of the details and motivations behind the framework, you're encouraged to read `the paper <https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf>`_.
 There is also an illustrative notebook `A Framework to Understand DP <../../../theory/a-framework-to-understand-dp.html>`_.
 
-.. note::
-
-    In this section, we've used lower case when writing the names of OpenDP concepts. 
-    Later, when we talk about :ref:`programming elements <core-user-guide>`, we'll use the capitalized form to refer to the concrete data types that implement these concepts. 
-    (The concept names link to their corresponding type descriptions.)
-
-* :ref:`measurements <measurements-user-guide>` are randomized mappings from a private, 
+* :ref:`Measurements <measurements-user-guide>` are randomized mappings from a private, 
   potentially sensitive dataset or value to an arbitrary output value that is safe to release.
   They are a controlled means of introducing privacy protection (e.g. noise) to a computation. 
   An example of a measurement is one that adds Laplace noise to a value.
-* :ref:`transformations <transformations-user-guide>` are deterministic mappings from a private dataset to another private dataset or value.
+* :ref:`Transformations <transformations-user-guide>` are deterministic mappings from a private dataset to another private dataset or value.
   They are used to summarize or transform values in some way.
   An example of a transformation is one which calculates the mean of a set of values.
-* :ref:`domains <domains-user-guide>` are sets which identify the possible values that some object can take. 
+* :ref:`Domains <domains-user-guide>` are sets which identify the possible values that some object can take. 
   They are used to constrain the input or output of measurements and transformations. 
   Examples of domains are the integers between 1 and 10, or vectors of length 5 containing floating point numbers.
-* :ref:`measures <measures-user-guide>` and :ref:`metrics <metrics-user-guide>` are things that specify distances between two mathematical objects.
+* :ref:`Measures <measures-user-guide>` and :ref:`metrics <metrics-user-guide>` are things that specify distances between two mathematical objects.
 
   * Measures characterize a distance between two probability distributions.
     An example measure is the "max-divergence" of pure differential privacy.
