@@ -1,7 +1,7 @@
 Supporting Elements
 ===================
 
-This section builds on the :ref:`core-user-guide` documentation to expand on the constituent pieces of Measurements and Transformations.
+This section builds on the :ref:`core-user-guide` documentation and explains the elements of Measurements and Transformations.
 
 
 .. _functions-user-guide:
