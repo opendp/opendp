@@ -58,11 +58,6 @@ You don't need to know all the details of the Programming Framework to write Ope
 * Measurements don't have a static privacy loss specified when constructing the measurement. 
   Instead, measurements are typically constructed by specifying the scale of noise, and the loss is bounded by the resulting privacy relation. This requires some extra work compared to specifying the loss directly, but OpenDP provides some utilities to make this easier on the programmer, and the benefit is greatly increased flexibility of the framework as a whole.
 
-Implementation Differences
---------------------------
-
-As a work in progress, it's important to note that OpenDP doesn't yet implement all the details of the Programming Framework.
-
 Interactive Measurements
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
