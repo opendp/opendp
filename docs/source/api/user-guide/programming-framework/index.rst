@@ -58,22 +58,6 @@ You don't need to know all the details of the Programming Framework to write Ope
 * Measurements don't have a static privacy loss specified when constructing the measurement. 
   Instead, measurements are typically constructed by specifying the scale of noise, and the loss is bounded by the resulting privacy relation. This requires some extra work compared to specifying the loss directly, but OpenDP provides some utilities to make this easier on the programmer, and the benefit is greatly increased flexibility of the framework as a whole.
 
-Interactive Measurements
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-An important aspect of the Programming Framework is the flexible way that it models interactive measurements. 
-These are measurements where the operation isn't a static function, but instead captures a series of queries and responses, where the sequence is possibly determined dynamically. 
-This is a very flexible model of computation, and can be used to capture notions such as adaptive composition.
-
-OpenDP doesn’t yet implement interactive measurements, but it is a top priority `on our roadmap <https://opendp.org/roadmap>`_ and we are in the process of prototyping an implementation.
-We know this is important functionality, and are in the process of implementing this `in PR #618 <https://github.com/opendp/opendp/pull/618>`_.
-
-Applying the Concepts
-^^^^^^^^^^^^^^^^^^^^^
-
-This is just a glance at the abstract concepts in the OpenDP Programming Framework. 
-The following sections of this guide describe the actual software components in OpenDP implementing these concepts, and how they can be used in your programs.
-
 .. toctree::
   :hidden:
 
