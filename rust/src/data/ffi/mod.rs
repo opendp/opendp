@@ -214,7 +214,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         // https://github.com/pola-rs/pyo3-polars/blob/5150d4ca27c287ff4be5cafef243d9a878a8879d/pyo3-polars/src/lib.rs#L147-L153
         // the slice is lf.__getstate__ from the python side and then deserialized here
         ciborium::de::from_reader(slice).map_err(
-            |e| err!(FFI, "Error when deserializing {}. This may be due to mismatched polars versions. {}", name, e)
+            |e| err!(FFI, "Error when deserializing {}. {}", name, e)
         )
     }
     #[cfg(feature = "polars")]
