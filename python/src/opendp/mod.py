@@ -230,6 +230,9 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         output_metric  = AbsoluteDistance(i32)
     )
 
+    >>> count.input_space
+    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
+    
     >>> # invoke the transformation (invoke and __call__ are equivalent)
     >>> count.invoke([1, 2, 3])
     3
@@ -260,8 +263,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         :return: non-differentially-private answer
         :raises OpenDPException: packaged error from the core OpenDP library
         """
-        from opendp.core import transformation_invoke # pragma: no cover
-        return transformation_invoke(self, arg)  # pragma: no cover
+        from opendp.core import transformation_invoke
+        return transformation_invoke(self, arg) 
 
     def __call__(self, arg):
         from opendp.core import transformation_invoke
@@ -287,7 +290,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         from opendp.core import transformation_check
 
         if debug:
-            return transformation_check(self, d_in, d_out) # pragma: no cover
+            return transformation_check(self, d_in, d_out)
 
         try:
             return transformation_check(self, d_in, d_out)
@@ -351,7 +354,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     
     @property
     def input_space(self) -> tuple["Domain", "Metric"]:
-        return self.input_domain, self.input_metric # pragma: no cover
+        return self.input_domain, self.input_metric
     
     @property
     def output_space(self) -> tuple["Domain", "Metric"]:
@@ -359,8 +362,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     
     @property
     def function(self) -> "Function":
-        from opendp.core import transformation_function # pragma: no cover
-        return transformation_function(self) # pragma: no cover
+        from opendp.core import transformation_function
+        return transformation_function(self)
 
     @property
     def input_distance_type(self) -> Union["RuntimeType", str]:
@@ -645,6 +648,8 @@ class OpenDPException(Exception):
     Error variants may change in library updates.
 
     See `Rust ErrorVariant <https://docs.rs/opendp/latest/opendp/error/enum.ErrorVariant.html>`_ for values variant may take on.
+
+    Run ``dp.enable_features('rust-stack-trace')`` to see wrapped Rust stack traces.
     """
     raw_traceback: Optional[str]
 
@@ -653,22 +658,45 @@ class OpenDPException(Exception):
         self.message = message
         self.raw_traceback = raw_traceback
 
-    def raw_frames(self): # pragma: no cover
+    def _raw_frames(self):
         import re
         return re.split(r"\s*[0-9]+: ", self.raw_traceback or "")
     
-    def frames(self): # pragma: no cover
+    def _frames(self):
         def format_frame(frame):
             return "\n  ".join(line.strip() for line in frame.split("\n"))
-        return [format_frame(f) for f in self.raw_frames() if f.startswith("opendp") or f.startswith("<opendp")]
+        return [format_frame(f) for f in self._raw_frames() if f.startswith("opendp") or f.startswith("<opendp")]
 
-    def __str__(self) -> str: # pragma: no cover
+    def _continued_stack_trace(self):
+        # join and split by newlines because frames may be multi-line
+        lines = "\n".join(self._frames()[::-1]).split('\n')
+        return "Continued Rust stack trace:\n" + '\n'.join('    ' + line for line in lines)
+
+    def __str__(self) -> str:
+        '''
+        >>> raw_traceback = """
+        ... 0: top
+        ... 1: opendp single line
+        ... 2: opendp multi
+        ...             line
+        ... 3: bottom
+        ... """
+        >>> e = OpenDPException(variant='SomeVariant', message='my message', raw_traceback=raw_traceback)
+        >>> dp.enable_features('rust-stack-trace')
+        >>> print(e)
+        Continued Rust stack trace:
+            opendp multi
+              line
+            opendp single line
+          SomeVariant("my message")
+        >>> dp.disable_features('rust-stack-trace')
+        >>> print(e)
+        <BLANKLINE>
+          SomeVariant("my message")
+        '''
         response = ''
         if self.raw_traceback and 'rust-stack-trace' in GLOBAL_FEATURES:
-            # join and split by newlines because frames may be multi-line
-            lines = "\n".join(self.frames()[::-1]).split('\n')
-            response += "Continued Rust stack trace:\n" + '\n'.join('    ' + line for line in lines)
-
+            response += self._continued_stack_trace()
         response += '\n  ' + self.variant
 
         if self.message:
@@ -1043,7 +1071,7 @@ def exponential_bounds_search(
             return False
     exception_bounds = exponential_bounds_search(exception_predicate, T=T)
     if exception_bounds is None:
-        try: # pragma: no cover
+        try:
             predicate(center)
         except Exception:
             raise ValueError(f"predicate always fails. An example traceback is shown above at {center}.")
