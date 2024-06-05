@@ -19,7 +19,7 @@ use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
     L1Distance, L2Distance, SymmetricDistance,
 };
-use crate::polars::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
+use crate::core::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
 use crate::transformations::DataFrameDomain;
 use crate::{err, fallible};
 

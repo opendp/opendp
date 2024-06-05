@@ -1,4 +1,5 @@
 from opendp._lib import import_optional_dependency, lib_path
+from opendp.mod import assert_features
 
 pl = import_optional_dependency("polars", raise_error=False)
 
@@ -140,17 +141,21 @@ class OnceFrame(object):
         self.value = value
 
     def collect(self):
+        """Collects a DataFrame from a OnceFrame, exhausting the OnceFrame."""
         from opendp._data import onceframe_collect
         return onceframe_collect(self.value)
 
-    def sink_csv(self, path):
-        from opendp._data import onceframe_sink_csv
-        onceframe_sink_csv(self.value, path)
+    def lazy(self):
+        r"""Extracts a LazyFrame from a OnceFrame,
+        circumventing protections against multiple evaluations.
 
-    def sink_parquet(self, path):
-        from opendp._data import onceframe_sink_parquet
-        onceframe_sink_parquet(self.value, path)
+        Each collection consumes the entire allocated privacy budget.
+        To remain DP at the advertised privacy level, only collect the LazyFrame once.
 
-    def _lazyframe(self):
-        from opendp._data import _onceframe_extract_lazyframe
-        return _onceframe_extract_lazyframe(self.value)
+        **Features:**
+
+        * `honest-but-curious` - LazyFrames can be collected an unlimited number of times.
+        """
+        from opendp._data import onceframe_lazy
+        assert_features("honest-but-curious")
+        return onceframe_lazy(self.value)

@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     interactive::{Answer, Query, Queryable},
@@ -8,7 +8,6 @@ use crate::{
 use polars::{frame::DataFrame, lazy::frame::LazyFrame};
 use polars_plan::{
     dsl::{len, lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
-    frame::OptState,
     logical_plan::Literal,
     prelude::FunctionOptions,
 };
@@ -259,7 +258,6 @@ pub enum OnceFrameQuery {
 
 pub enum OnceFrameAnswer {
     Collect(DataFrame),
-    Null,
 }
 
 pub(crate) struct ExtractLazyFrame;
@@ -283,7 +281,7 @@ impl From<LazyFrame> for OnceFrame {
                 }),
                 Query::Internal(q_internal) => Answer::Internal({
                     if q_internal.downcast_ref::<ExtractLazyFrame>().is_some() {
-                        Box::new(state.clone())
+                        Box::new(lazyframe)
                     } else {
                         return fallible!(FailedFunction, "Unrecognized internal query");
                     }
@@ -301,11 +299,15 @@ impl OnceFrame {
             Ok(dataframe)
         } else {
             // should never be reached
-            fallible!(FailedFunction, "Collect returned invalid answer")
+            fallible!(
+                FailedFunction,
+                "Collect returned invalid answer: Please report this bug"
+            )
         }
     }
 
-    pub(crate) fn lazyframe(&mut self) -> LazyFrame {
+    #[cfg(feature = "honest-but-curious")]
+    pub fn lazyframe(&mut self) -> LazyFrame {
         let answer = self.eval_query(Query::Internal(&ExtractLazyFrame)).unwrap();
         let Answer::Internal(boxed) = answer else {
             panic!("failed to extract");

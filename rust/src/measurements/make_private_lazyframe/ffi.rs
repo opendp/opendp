@@ -58,6 +58,7 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
         .into_any()
     }
 
+    let output_measure = try_as_ref!(output_measure);
     let MO = output_measure.type_.clone();
 
     dispatch!(

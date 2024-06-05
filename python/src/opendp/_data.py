@@ -8,7 +8,6 @@ from opendp.mod import *
 from opendp.typing import *
 
 __all__ = [
-    "_onceframe_extract_lazyframe",
     "arrow_array_free",
     "bool_free",
     "extrinsic_object_free",
@@ -19,39 +18,13 @@ __all__ = [
     "object_free",
     "object_type",
     "onceframe_collect",
-    "onceframe_sink_csv",
-    "onceframe_sink_parquet",
+    "onceframe_lazy",
     "slice_as_object",
     "slice_free",
     "smd_curve_epsilon",
     "str_free",
     "to_string"
 ]
-
-
-def _onceframe_extract_lazyframe(
-    onceframe
-):
-    r"""Internal function. Extracts a LazyFrame from a OnceFrame,
-    circumventing protections against multiple evaluations.
-
-    :param onceframe: The queryable holding a LazyFrame.
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeException: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    # No type arguments to standardize.
-    # Convert arguments to c types.
-    c_onceframe = py_to_c(onceframe, c_type=AnyObjectPtr, type_name=AnyQueryable)
-
-    # Call library function.
-    lib_function = lib.opendp_data___onceframe_extract_lazyframe
-    lib_function.argtypes = [AnyObjectPtr]
-    lib_function.restype = FfiResult
-
-    output = c_to_py(unwrap(lib_function(c_onceframe), AnyObjectPtr))
-
-    return output
 
 
 def arrow_array_free(
@@ -305,58 +278,36 @@ def onceframe_collect(
     return output
 
 
-def onceframe_sink_csv(
-    onceframe,
-    path: str
+def onceframe_lazy(
+    onceframe
 ):
-    r"""Internal function. Sinks the data from a OnceFrame into a CSV file, exhausting the OnceFrame.
+    r"""Internal function. Extracts a LazyFrame from a OnceFrame,
+    circumventing protections against multiple evaluations.
+
+    Each collection consumes the entire allocated privacy budget.
+    To remain DP at the advertised privacy level, only collect the LazyFrame once.
+
+    **Features:**
+
+    * `honest-but-curious` - LazyFrames can be collected an unlimited number of times.
 
     :param onceframe: The queryable holding a LazyFrame.
-    :param path: 
-    :type path: str
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("honest-but-curious")
+
     # No type arguments to standardize.
     # Convert arguments to c types.
     c_onceframe = py_to_c(onceframe, c_type=AnyObjectPtr, type_name=AnyQueryable)
-    c_path = py_to_c(path, c_type=ctypes.c_char_p, type_name=String)
 
     # Call library function.
-    lib_function = lib.opendp_data__onceframe_sink_csv
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    lib_function = lib.opendp_data__onceframe_lazy
+    lib_function.argtypes = [AnyObjectPtr]
     lib_function.restype = FfiResult
 
-    output = c_to_py(unwrap(lib_function(c_onceframe, c_path), AnyObjectPtr))
-
-    return output
-
-
-def onceframe_sink_parquet(
-    onceframe,
-    path: str
-):
-    r"""Internal function. Sinks the data from a OnceFrame into a Parquet file, exhausting the OnceFrame.
-
-    :param onceframe: The queryable holding a LazyFrame.
-    :param path: 
-    :type path: str
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeException: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    # No type arguments to standardize.
-    # Convert arguments to c types.
-    c_onceframe = py_to_c(onceframe, c_type=AnyObjectPtr, type_name=AnyQueryable)
-    c_path = py_to_c(path, c_type=ctypes.c_char_p, type_name=String)
-
-    # Call library function.
-    lib_function = lib.opendp_data__onceframe_sink_parquet
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
-    lib_function.restype = FfiResult
-
-    output = c_to_py(unwrap(lib_function(c_onceframe, c_path), AnyObjectPtr))
+    output = c_to_py(unwrap(lib_function(c_onceframe), AnyObjectPtr))
 
     return output
 

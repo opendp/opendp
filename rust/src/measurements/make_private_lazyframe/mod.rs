@@ -100,7 +100,6 @@ where
         output_measure: MO,
         global_scale: Option<f64>,
     ) -> Fallible<Measurement<LogicalPlanDomain, LogicalPlan, MS, MO>> {
-        #[cfg(feature = "contrib")]
         if let Some(meas) = postprocess::match_postprocess(
             input_domain.clone(),
             input_metric.clone(),

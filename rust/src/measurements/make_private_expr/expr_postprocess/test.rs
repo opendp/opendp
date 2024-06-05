@@ -1,9 +1,11 @@
+use polars::df;
+use polars_plan::dsl::{all, col, len, lit};
+
 use crate::{
     measures::MaxDivergence,
     metrics::{PartitionDistance, SymmetricDistance},
     transformations::test_helper::get_test_data,
 };
-use polars::prelude::*;
 
 use super::*;
 

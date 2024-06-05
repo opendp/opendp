@@ -740,31 +740,19 @@ bool opendp_data__fill_bytes(uint8_t *ptr, uintptr_t len);
 struct FfiResult_____AnyObject opendp_data__onceframe_collect(struct AnyObject *onceframe);
 
 /**
- * Internal function. Sinks the data from a OnceFrame into a CSV file, exhausting the OnceFrame.
- *
- * # Arguments
- * * `onceframe` - The queryable holding a LazyFrame.
- */
-struct FfiResult_____c_void opendp_data__onceframe_sink_csv(struct AnyObject *onceframe,
-                                                            const char *path);
-
-/**
- * Internal function. Sinks the data from a OnceFrame into a Parquet file, exhausting the OnceFrame.
- *
- * # Arguments
- * * `onceframe` - The queryable holding a LazyFrame.
- */
-struct FfiResult_____c_void opendp_data__onceframe_sink_parquet(struct AnyObject *onceframe,
-                                                                const char *path);
-
-/**
  * Internal function. Extracts a LazyFrame from a OnceFrame,
  * circumventing protections against multiple evaluations.
  *
+ * Each collection consumes the entire allocated privacy budget.
+ * To remain DP at the advertised privacy level, only collect the LazyFrame once.
+ *
+ * # Features
+ * * `honest-but-curious` - LazyFrames can be collected an unlimited number of times.
+ *
  * # Arguments
  * * `onceframe` - The queryable holding a LazyFrame.
  */
-struct FfiResult_____AnyObject opendp_data___onceframe_extract_lazyframe(struct AnyObject *onceframe);
+struct FfiResult_____AnyObject opendp_data__onceframe_lazy(struct AnyObject *onceframe);
 
 /**
  * Internal function. Free the memory associated with `this`.

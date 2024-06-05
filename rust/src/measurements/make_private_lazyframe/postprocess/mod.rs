@@ -13,6 +13,12 @@ use super::PrivateLogicalPlan;
 #[cfg(test)]
 mod test;
 
+/// Since we're recursing through DSL trees that describe the computation plan,
+/// and postprocessors are at the root of the tree,
+/// we unfortunately need to build a whitelist of postprocessors.
+///
+/// This is a whitelist in the same code structure as in the case for expressions.
+/// If a DSL branch is not considered postprocessing, then execution will continue in the parent function.
 pub fn match_postprocess<MI: 'static + Metric, MO: 'static + BasicCompositionMeasure>(
     input_domain: LogicalPlanDomain,
     input_metric: MI,

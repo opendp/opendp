@@ -191,3 +191,33 @@ def test_private_expr():
             dp.max_divergence(T=float),
             pl.col("A").sum(),
         )
+
+
+
+def test_onceframe_multi_collect():
+    pl = pytest.importorskip("polars")
+
+    lf_domain, lf = example_lf()
+    plan = seed(lf.schema).select(pl.len().dp.noise(1.0))
+    m_lf = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan
+    )
+
+    of = m_lf(lf)
+    of.collect()
+    with pytest.raises(dp.OpenDPException):
+        of.collect()
+
+
+def test_onceframe_lazy():
+    dp.enable_features("rust-stack-trace")
+    pl = pytest.importorskip("polars")
+
+    lf_domain, lf = example_lf()
+    plan = seed(lf.schema).select(pl.len().dp.noise(1.0))
+    m_lf = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan
+    )
+
+    of = m_lf(lf)
+    assert isinstance(of.lazy(), pl.LazyFrame)
