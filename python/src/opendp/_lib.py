@@ -292,8 +292,10 @@ def unwrap(result, type_) -> Any:
     pl = import_optional_dependency('polars', raise_error=False)
     if pl is not None:
         from opendp.mod import _EXPECTED_POLARS_VERSION
-        if 'polars' in str(message).lower() and pl.__version__ != _EXPECTED_POLARS_VERSION:
-            message = f'Installed python polars version ({pl.__version__}) != expected version ({_EXPECTED_POLARS_VERSION}). {message}' # pragma: no cover
+        if 'polars' in str(message).lower() and pl.__version__ != _EXPECTED_POLARS_VERSION: # pragma: no cover
+            message = f'Installed python polars version ({pl.__version__}) != expected version ({_EXPECTED_POLARS_VERSION}). {message}'
+        else:
+            message = f'Installed python polars version ({pl.__version__}) matches expected version, but there is a problem: {message}'
     raise OpenDPException(variant, message, backtrace)
 
 
