@@ -40,7 +40,7 @@ Who is using OpenDP?
 Some of the applications of OpenDP in healthcare, government, and tech include:
 
 * The `Swiss Federal Statistical Office <https://www.bfs.admin.ch/bfs/en/home.html>`_ is using OpenDP to `release income statistics <https://www.youtube.com/watch?v=71cR0Jx0RgM&t=526s>`_
-* `Oblivious <https://www.oblivious.com>`_ has used OpenDP for major U.N. and telecom pilot projects and part of their `Antigranular <https://www.oblivious.com/antigranular>`_ data privacy platform.
+* `Oblivious <https://www.oblivious.com>`_ has used OpenDP for major U.N. and telecom pilot projects as part of their `Antigranular <https://docs.antigranular.com/private-python/packages/opendp/>`_ data privacy platform.
 * `OpenMined <https://openmined.org>`_ is using OpenDP as part of their PySyft platform for multiple national statistical agency pilot programs.
 * `Microsoft <https://microsoft.com>`_ uses OpenDP internally as well as for several public research projects including the `United States Broadband Percentages Database <https://github.com/microsoft/USBroadbandUsagePercentages>`_.
 * `Spectus <https://spectus.ai/>`_ is using OpenDP to create `privacy enhanced mobility data <https://spectus.ai/wp-content/uploads/2022/10/Spectus_DPWhitepaper_v01b.pdf>`_
