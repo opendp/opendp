@@ -178,6 +178,7 @@ impl Measure for UserDivergence {
 )]
 /// Construct a new UserDivergence.
 /// Any two instances of an UserDivergence are equal if their string descriptors are equal.
+/// Requires `honest-but-curious`: TODO
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the privacy measure.
