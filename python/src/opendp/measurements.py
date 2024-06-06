@@ -1104,6 +1104,7 @@ def make_user_measurement(
     TO: RuntimeTypeDescriptor = "ExtrinsicObject"
 ) -> Measurement:
     r"""Construct a Measurement from user-defined callbacks.
+    Requires `honest-but-curious`: TODO
 
     **Supporting Elements:**
 

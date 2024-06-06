@@ -1603,6 +1603,7 @@ def make_identity(
     metric: Metric
 ) -> Transformation:
     r"""Make a Transformation representing the identity function.
+    Requires `honest-but-curious`: TODO
 
     WARNING: In Python, this function does not ensure that the domain and metric form a valid metric space.
     However, if the domain and metric do not form a valid metric space,
@@ -3402,6 +3403,7 @@ def make_user_transformation(
     stability_map
 ) -> Transformation:
     r"""Construct a Transformation from user-defined callbacks.
+    Requires `honest-but-curious`: TODO
 
     :param input_domain: A domain describing the set of valid inputs for the function.
     :type input_domain: Domain

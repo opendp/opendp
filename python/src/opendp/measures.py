@@ -226,6 +226,7 @@ def user_divergence(
 ) -> Measure:
     r"""Construct a new UserDivergence.
     Any two instances of an UserDivergence are equal if their string descriptors are equal.
+    Requires `honest-but-curious`: TODO
 
     :param descriptor: A string description of the privacy measure.
     :type descriptor: str
