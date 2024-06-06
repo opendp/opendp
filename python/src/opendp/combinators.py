@@ -223,8 +223,8 @@ def make_population_amplification(
 
     The DIA, DO, MI and MO between the input measurement and amplified output measurement all match.
 
-    Protected by the "honest-but-curious" feature flag
-    because a dishonest adversary could set the population size to be arbitrarily large.
+    Requires `honest-but-curious`:
+    a dishonest adversary could set the population size to be arbitrarily large.
 
     [make_population_amplification in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_population_amplification.html)
 

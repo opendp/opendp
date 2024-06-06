@@ -315,8 +315,9 @@ pub fn get_proof_path(
 /// confirm prescence of note for honest-but-curious 
 pub fn confirm_note_for_honest_but_curious(name: String, attributes: &mut Vec<Attribute>) -> () {
     let doc_comment = get_doc_comment(attributes.to_vec());
-    if !doc_comment.contains("Requires `honest-but-curious`:") {
-        panic!("honest-but-curious function {name} needs to explain why; {doc_comment}")
+    let requires = "Requires `honest-but-curious`";
+    if !doc_comment.contains(requires) {
+        panic!("In {name} doc comment, add '{requires} because ...'")
     };
 }
 
