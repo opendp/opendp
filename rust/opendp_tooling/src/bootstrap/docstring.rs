@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, path::PathBuf};
+use std::{collections::HashMap, env, path::PathBuf, thread::panicking};
 
 use darling::{Error, Result};
 use proc_macro2::{Literal, Punct, Spacing, TokenStream, TokenTree};
@@ -310,6 +310,24 @@ pub fn get_proof_path(
             None => None
         }
     })
+}
+
+/// confirm prescence of note for honest-but-curious 
+pub fn confirm_note_for_honest_but_curious(name: String, attributes: &mut Vec<Attribute>) -> () {
+    let doc_comment = get_doc_comment(attributes.to_vec());
+    if !doc_comment.contains("Requires `honest-but-curious`:") {
+        panic!("honest-but-curious function {name} needs to explain why; {doc_comment}")
+    };
+}
+
+fn get_doc_comment(attributes: Vec<Attribute>) -> String {
+    attributes.iter()
+        .filter(|attr| attr.path.get_ident().map(ToString::to_string).as_deref() == Some("doc"))
+        .map(|attr| if let Ok(comment) = parse_doc_attribute(attr.clone()) {
+            comment
+        } else {
+            "".to_string()
+        }).collect::<Vec<_>>().join("\n")
 }
 
 /// add attributes containing the proof link

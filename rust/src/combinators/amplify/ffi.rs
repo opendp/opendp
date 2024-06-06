@@ -95,8 +95,8 @@ impl IsSizedDomain for AnyDomain {
 ///
 /// The DIA, DO, MI and MO between the input measurement and amplified output measurement all match.
 ///
-/// Protected by the "honest-but-curious" feature flag
-/// because a dishonest adversary could set the population size to be arbitrarily large.
+/// Requires `honest-but-curious`:
+/// a dishonest adversary could set the population size to be arbitrarily large.
 ///
 /// # Arguments
 /// * `measurement` - the computation to amplify
