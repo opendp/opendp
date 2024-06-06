@@ -312,7 +312,7 @@ pub fn get_proof_path(
     })
 }
 
-/// confirm prescence of note for honest-but-curious 
+/// confirm prescence of note for honest-but-curious
 pub fn confirm_note_for_honest_but_curious(name: String, attributes: &mut Vec<Attribute>) -> () {
     let doc_comment = get_doc_comment(attributes.to_vec());
     let requires = "Requires `honest-but-curious`";
@@ -322,13 +322,18 @@ pub fn confirm_note_for_honest_but_curious(name: String, attributes: &mut Vec<At
 }
 
 fn get_doc_comment(attributes: Vec<Attribute>) -> String {
-    attributes.iter()
+    attributes
+        .iter()
         .filter(|attr| attr.path.get_ident().map(ToString::to_string).as_deref() == Some("doc"))
-        .map(|attr| if let Ok(comment) = parse_doc_attribute(attr.clone()) {
-            comment
-        } else {
-            "".to_string()
-        }).collect::<Vec<_>>().join("\n")
+        .map(|attr| {
+            if let Ok(comment) = parse_doc_attribute(attr.clone()) {
+                comment
+            } else {
+                "".to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// add attributes containing the proof link
