@@ -2,11 +2,8 @@ use opendp_derive::bootstrap;
 use polars::lazy::frame::LazyFrame;
 
 use crate::{
-    core::{FfiResult, ExtractLazyFrame, OnceFrameAnswer, OnceFrameQuery},
-    ffi::{
-        any::{AnyObject, AnyQueryable, Downcast},
-        util::to_str,
-    },
+    core::{ExtractLazyFrame, FfiResult, OnceFrameAnswer, OnceFrameQuery},
+    ffi::any::{AnyObject, AnyQueryable, Downcast},
 };
 
 #[bootstrap(

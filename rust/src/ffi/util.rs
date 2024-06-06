@@ -7,6 +7,7 @@ use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
+use crate::core::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
 use crate::domains::ffi::UserDomain;
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::*;
@@ -19,7 +20,6 @@ use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
     L1Distance, L2Distance, SymmetricDistance,
 };
-use crate::core::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
 use crate::transformations::DataFrameDomain;
 use crate::{err, fallible};
 

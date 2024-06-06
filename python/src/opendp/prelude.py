@@ -48,8 +48,5 @@ from opendp.accuracy import *
 from opendp.core import new_function, new_queryable
 from opendp.context import *
 
-# we don't want to make this module public, but do want the module setup to run
-import opendp.polars as _x_polars
-del _x_polars
 
 __all__ = ["t", "m", "c"]

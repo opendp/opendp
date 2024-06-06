@@ -3,11 +3,10 @@ use polars::prelude::*;
 
 use crate::{
     combinators::BasicCompositionMeasure,
-    core::{Function, Measure, Measurement, Metric, MetricSpace},
+    core::{Function, Measure, Measurement, Metric, MetricSpace, OnceFrame},
     domains::{ExprDomain, LazyFrameDomain, LogicalPlanDomain},
     error::Fallible,
     metrics::PartitionDistance,
-    polars::OnceFrame,
     transformations::{traits::UnboundedMetric, DatasetMetric, StableLogicalPlan},
 };
 

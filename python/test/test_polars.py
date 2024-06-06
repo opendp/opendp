@@ -127,7 +127,7 @@ def test_private_lazyframe_sum():
     )
     expr = pl.col("A").dp.sum((1.0, 2.0), scale=0.0)
     plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
-    dp.m.make_private_lazyframe(
+    m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
     )
 
@@ -197,8 +197,12 @@ def test_private_expr():
 def test_onceframe_multi_collect():
     pl = pytest.importorskip("polars")
 
-    lf_domain, lf = example_lf()
-    plan = seed(lf.schema).select(pl.len().dp.noise(1.0))
+    lf_domain, lf = example_lf(
+        margin=["B"], public_info="keys", max_partition_length=50
+    )
+
+    expr = pl.col("A").dp.sum((1.0, 2.0), scale=0.0)
+    plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan
     )
@@ -213,8 +217,12 @@ def test_onceframe_lazy():
     dp.enable_features("rust-stack-trace")
     pl = pytest.importorskip("polars")
 
-    lf_domain, lf = example_lf()
-    plan = seed(lf.schema).select(pl.len().dp.noise(1.0))
+    lf_domain, lf = example_lf(
+        margin=["B"], public_info="keys", max_partition_length=50
+    )
+    
+    expr = pl.col("A").dp.sum((1.0, 2.0), scale=0.0)
+    plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan
     )
