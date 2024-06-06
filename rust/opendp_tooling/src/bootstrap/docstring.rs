@@ -312,6 +312,25 @@ pub fn get_proof_path(
     })
 }
 
+/// confirm prescence of note for honest-but-curious 
+pub fn confirm_note_for_honest_but_curious(name: String, attributes: &mut Vec<Attribute>) -> () {
+    let doc_comment = get_doc_comment(attributes.to_vec());
+    let requires = "Requires `honest-but-curious`";
+    if !doc_comment.contains(requires) {
+        panic!("In {name} doc comment, add '{requires} because ...'")
+    };
+}
+
+fn get_doc_comment(attributes: Vec<Attribute>) -> String {
+    attributes.iter()
+        .filter(|attr| attr.path.get_ident().map(ToString::to_string).as_deref() == Some("doc"))
+        .map(|attr| if let Ok(comment) = parse_doc_attribute(attr.clone()) {
+            comment
+        } else {
+            "".to_string()
+        }).collect::<Vec<_>>().join("\n")
+}
+
 /// add attributes containing the proof link
 pub fn insert_proof_attribute(attributes: &mut Vec<Attribute>, proof_path: String) -> Result<()> {
     let source_dir = get_src_dir()?;

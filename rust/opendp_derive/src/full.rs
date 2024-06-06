@@ -5,7 +5,7 @@ use proc_macro::TokenStream;
 
 use opendp_tooling::{
     bootstrap::{
-        docstring::{get_proof_path, insert_proof_attribute},
+        docstring::{get_proof_path, insert_proof_attribute, confirm_note_for_honest_but_curious},
         partial::generate_partial,
     },
     proven::{filesystem::load_proof_paths, Proven},
@@ -54,6 +54,10 @@ pub(crate) fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStre
         Function::from_ast(attr_args, item_fn.clone(), None),
         original_input
     );
+
+    if function.features.contains(&String::from("honest-but-curious")) {
+        confirm_note_for_honest_but_curious(function.name, &mut item_fn.attrs)
+    }
 
     let mut output = TokenStream::new();
 
