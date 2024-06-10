@@ -1,3 +1,4 @@
+#[cfg(feature = "polars")]
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::convert::TryFrom;

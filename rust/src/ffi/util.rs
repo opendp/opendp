@@ -7,6 +7,7 @@ use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
+#[cfg(feature = "polars")]
 use crate::core::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
 use crate::domains::ffi::UserDomain;
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
@@ -57,6 +58,12 @@ struct SeriesDomain;
 struct ExprDomain;
 #[cfg(not(feature = "polars"))]
 struct LazyFrameDomain;
+#[cfg(not(feature = "polars"))]
+struct OnceFrame;
+#[cfg(not(feature = "polars"))]
+struct OnceFrameAnswer;
+#[cfg(not(feature = "polars"))]
+struct OnceFrameQuery;
 
 pub type RefCountFn = extern "C" fn(*const c_void, bool) -> bool;
 
