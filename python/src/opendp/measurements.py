@@ -598,6 +598,10 @@ def make_private_expr(
     * Input Metric:   `MI`
     * Output Measure: `MO`
 
+    **Features:**
+
+    * `honest-but-curious` - The privacy guarantee governs only at most one evaluation of the released expression.
+
     :param input_domain: The domain of the input data.
     :type input_domain: Domain
     :param input_metric: How to measure distances between neighboring input data sets.

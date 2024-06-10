@@ -35,6 +35,9 @@ mod expr_postprocess;
 )]
 /// Create a differentially private measurement from an [`Expr`].
 ///
+/// # Features
+/// * `honest-but-curious` - The privacy guarantee governs only at most one evaluation of the released expression.
+///
 /// # Arguments
 /// * `input_domain` - The domain of the input data.
 /// * `input_metric` - How to measure distances between neighboring input data sets.
