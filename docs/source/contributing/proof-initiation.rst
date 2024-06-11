@@ -2,9 +2,7 @@ OpenDP Proof Initiation
 =======================
 
 This notebook is an introduction to writing proofs in the OpenDP
-framework. It assumes you have already read about the `programming
-framework in the user
-guide <https://docs.opendp.org/en/stable/user/programming-framework/index.html>`__,
+framework. It assumes you have already read about the :doc:`../api/user-guide/programming-framework/index`,
 and you have some familiarity with the library interfaces.
 
 Our goal is to prove that OpenDP produces stable transformations and
