@@ -12,16 +12,17 @@ book <https://doc.rust-lang.org/stable/book/ch01-00-getting-started.html>`__.
 This notebook will also reference sections of the Rust book that surface
 commonly in the OpenDP library.
 
-.. code:: ipython3
+We'll use this Python snip to demonstrate concepts later...
 
-    # we'll use this Python snip to demonstrate concepts later...
-    import opendp.prelude as dp
-    dp.enable_features("contrib")
+.. code:: python
+
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib")
     
-    input_domain = dp.vector_domain(dp.atom_domain(T=str))
-    input_metric = dp.symmetric_distance()
+    >>> input_domain = dp.vector_domain(dp.atom_domain(T=str))
+    >>> input_metric = dp.symmetric_distance()
     
-    default_cast_trans = dp.t.make_cast_default(input_domain, input_metric, TOA=int)
+    >>> default_cast_trans = dp.t.make_cast_default(input_domain, input_metric, TOA=int)
 
 Transformation Structure
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -46,12 +47,10 @@ Transformations are structs (`see chapter
 This struct has four generics (`see chapter
 10.1 <https://doc.rust-lang.org/stable/book/ch10-00-generics.html>`__):
 
-::
-
-   - DI for input domain
-   - DO for output domain
-   - MI for input metric
-   - MO for output metric
+- ``DI`` for input domain
+- ``DO`` for output domain
+- ``MI`` for input metric
+- ``MO`` for output metric
 
 A generic is a type that has not yet been explicitly determined. These
 generics let us build transformations out of many different types.
@@ -99,18 +98,10 @@ file <https://github.com/opendp/opendp/blob/main/rust/src/core/mod.rs>`__.
 
 When we invoke the following transformation:
 
-.. code:: ipython3
+.. code:: python
 
-    default_cast_trans(["null", "1.", "2", "456"])
-
-
-
-
-.. parsed-literal::
-
+    >>> default_cast_trans(["null", "1.", "2", "456"])
     [0, 0, 2, 456]
-
-
 
 1. the Python data structure is translated into a low-level C
    representation and then into a Rust representation
@@ -145,18 +136,10 @@ file <https://github.com/opendp/opendp/blob/main/rust/src/core/mod.rs>`__.
 
 Invoking this function triggers a similar process as the function did:
 
-.. code:: ipython3
+.. code:: python
 
-    default_cast_trans.map(d_in=3)
-
-
-
-
-.. parsed-literal::
-
+    >>> default_cast_trans.map(d_in=3)
     3
-
-
 
 When any two compatible transformations are chained, the resulting
 transformation contains a functional composition of the relations.
