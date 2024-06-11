@@ -732,6 +732,29 @@ const struct FfiResult______AnyObject *ffiresult_err(char *message, char *backtr
 bool opendp_data__fill_bytes(uint8_t *ptr, uintptr_t len);
 
 /**
+ * Internal function. Collects a DataFrame from a OnceFrame, exhausting the OnceFrame.
+ *
+ * # Arguments
+ * * `onceframe` - The queryable holding a LazyFrame.
+ */
+struct FfiResult_____AnyObject opendp_data__onceframe_collect(struct AnyObject *onceframe);
+
+/**
+ * Internal function. Extracts a LazyFrame from a OnceFrame,
+ * circumventing protections against multiple evaluations.
+ *
+ * Each collection consumes the entire allocated privacy budget.
+ * To remain DP at the advertised privacy level, only collect the LazyFrame once.
+ *
+ * # Features
+ * * `honest-but-curious` - LazyFrames can be collected an unlimited number of times.
+ *
+ * # Arguments
+ * * `onceframe` - The queryable holding a LazyFrame.
+ */
+struct FfiResult_____AnyObject opendp_data__onceframe_lazy(struct AnyObject *onceframe);
+
+/**
  * Internal function. Free the memory associated with `this`.
  */
 struct FfiResult_____c_void opendp_domains___domain_free(struct AnyDomain *this_);

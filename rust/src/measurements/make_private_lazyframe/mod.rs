@@ -3,7 +3,7 @@ use polars::prelude::*;
 
 use crate::{
     combinators::BasicCompositionMeasure,
-    core::{Function, Measure, Measurement, Metric, MetricSpace},
+    core::{Function, Measure, Measurement, Metric, MetricSpace, OnceFrame},
     domains::{ExprDomain, LazyFrameDomain, LogicalPlanDomain},
     error::Fallible,
     metrics::PartitionDistance,
@@ -17,6 +17,9 @@ mod ffi;
 
 #[cfg(feature = "contrib")]
 mod aggregate;
+
+#[cfg(feature = "contrib")]
+mod postprocess;
 
 #[bootstrap(
     features("contrib"),
@@ -43,7 +46,7 @@ pub fn make_private_lazyframe<MI: Metric, MO: 'static + Measure>(
     output_measure: MO,
     lazyframe: LazyFrame,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<LazyFrameDomain, LazyFrame, MI, MO>>
+) -> Fallible<Measurement<LazyFrameDomain, OnceFrame, MI, MO>>
 where
     LogicalPlan: PrivateLogicalPlan<MI, MO>,
     (LogicalPlanDomain, MI): MetricSpace,
@@ -60,8 +63,9 @@ where
     Measurement::new(
         m_lp.input_domain.cast_carrier(),
         Function::new_fallible(move |arg: &LazyFrame| {
-            Ok(LazyFrame::from(f_lp.eval(&arg.logical_plan)?)
-                .with_optimizations(arg.get_current_optimizations()))
+            let lf = LazyFrame::from(f_lp.eval(&arg.logical_plan)?)
+                .with_optimizations(arg.get_current_optimizations());
+            Ok(OnceFrame::from(lf))
         }),
         m_lp.input_metric.clone(),
         m_lp.output_measure.clone(),
@@ -95,6 +99,16 @@ where
         output_measure: MO,
         global_scale: Option<f64>,
     ) -> Fallible<Measurement<LogicalPlanDomain, LogicalPlan, MS, MO>> {
+        if let Some(meas) = postprocess::match_postprocess(
+            input_domain.clone(),
+            input_metric.clone(),
+            output_measure.clone(),
+            self.clone(),
+            global_scale,
+        )? {
+            return Ok(meas);
+        }
+
         match &self {
             #[cfg(feature = "contrib")]
             plan if matches!(plan, LogicalPlan::Aggregate { .. }) => {

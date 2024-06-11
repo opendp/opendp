@@ -26,7 +26,7 @@ mod expr_literal;
 mod expr_postprocess;
 
 #[bootstrap(
-    features("contrib"),
+    features("contrib", "honest-but-curious"),
     arguments(
         output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
         global_scale(rust_type = "Option<f64>", c_type = "AnyObject *", default = b"null")
@@ -34,6 +34,9 @@ mod expr_postprocess;
     generics(MI(suppress), MO(suppress))
 )]
 /// Create a differentially private measurement from an [`Expr`].
+///
+/// # Features
+/// * `honest-but-curious` - The privacy guarantee governs only at most one evaluation of the released expression.
 ///
 /// # Arguments
 /// * `input_domain` - The domain of the input data.
