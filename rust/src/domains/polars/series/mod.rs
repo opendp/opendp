@@ -97,6 +97,8 @@ impl SeriesDomain {
         }
     }
 
+    /// Instantiates the broadest possible domain given the limited information available from a field.
+    /// The data could have NaNs or nulls, and is not bounded.
     pub fn new_from_field(field: Field) -> Fallible<Self> {
         macro_rules! new_series_domain {
             ($ty:ty, $func:ident) => {

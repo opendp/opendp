@@ -31,6 +31,9 @@ where
 
     let name = expr_output_name(&expr)?;
     let dtype = literal_value.get_datatype();
+    // In the setting of the literal transformation, we know the literal is not null.
+    // So we may as well tighten the output domain to exclude nulls.
+    // The fact that it's non-null will prove useful in downstream expressions like fill_null.
     let mut series_domain = SeriesDomain::new_from_field(Field::new(name.as_ref(), dtype))?;
     series_domain.nullable = false;
 
