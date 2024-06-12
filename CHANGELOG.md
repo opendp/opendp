@@ -21,6 +21,7 @@ showing the source changes from the previous version.
     - Polars: add `FrameDomain` [#765](https://github.com/opendp/opendp/pull/765)
     - Polars: add `SeriesDomain` [#763](https://github.com/opendp/opendp/pull/763)
     - Polars: add `make_expr_col` [#797](https://github.com/opendp/opendp/pull/797)
+    - Polars: add `OnceFrame` [#1602](https://github.com/opendp/opendp/pull/1602)
 - Usability:
     - Steer users in the right direction if they try to call a domain descriptor [#1512](https://github.com/opendp/opendp/pull/1512)
     - Warn if large priv loss [#1457](https://github.com/opendp/opendp/pull/1457)
@@ -29,7 +30,7 @@ showing the source changes from the previous version.
     - Runtime error if non-function is passed to `new_function` [#1355](https://github.com/opendp/opendp/pull/1355)
     - Error if missing `arg` param on measurement in R [#1559](https://github.com/opendp/opendp/pull/1559)
     - Specialized message for mismatched domain [#1511](https://github.com/opendp/opendp/pull/1511)
-- Python linting and typing:
+- Python testing, linting, and typing:
     - Call mypy and flake8 as subprocesses from pytest [#1359](https://github.com/opendp/opendp/pull/1359)
     - More Python typing on context module [#1472](https://github.com/opendp/opendp/pull/1472)
     - Require explicit imports [#1220](https://github.com/opendp/opendp/pull/1220)
@@ -42,6 +43,12 @@ showing the source changes from the previous version.
     - Remove `Any` from generated python [#1507](https://github.com/opendp/opendp/pull/1507)
     - Python typing: float implies int [#1486](https://github.com/opendp/opendp/pull/1486)
     - Fix return signature on `loss_of` [#1524](https://github.com/opendp/opendp/pull/1524)
+    - Improved test coverage and typing:
+        - `_convert.py` [#1645](https://github.com/opendp/opendp/pull/1645)
+        - `_lib.py` [#1646](https://github.com/opendp/opendp/pull/1646)
+        - `context.py` [#1648](https://github.com/opendp/opendp/pull/1648)
+        - `mod.py` [#1649](https://github.com/opendp/opendp/pull/1649)
+    - Confirm python coverage ran [#1633](https://github.com/opendp/opendp/pull/1633)
 - Sphinx docs and examples:
     - Grouping columns example [#1508](https://github.com/opendp/opendp/pull/1508)
     - Python measurement examples [#1550](https://github.com/opendp/opendp/pull/1550)
@@ -61,6 +68,10 @@ showing the source changes from the previous version.
     - Documentation reorg [#1177](https://github.com/opendp/opendp/pull/1177)
     - Use appropriate shell syntax in notebook examples [#1406](https://github.com/opendp/opendp/pull/1406)
     - In Python API docs, use the same examples for `make` and `then` [#1576](https://github.com/opendp/opendp/pull/1576) [#1575](https://github.com/opendp/opendp/pull/1575)
+    - Update "who's using OpenDP" section [#1661](https://github.com/opendp/opendp/pull/1661)
+    - Update links to match new docs structure [#1638](https://github.com/opendp/opendp/pull/1638)
+    - Misc. copy-edits on the API User Guide [#1659](https://github.com/opendp/opendp/pull/1659)
+    - Upgrade pydata theme for search snippets [#1640](https://github.com/opendp/opendp/pull/1640)
 - R docs and linting:
     - R examples in docs via stand-alone files [#1494](https://github.com/opendp/opendp/pull/1494)
     - Fix r-doc comment with missing closing tag [#1493](https://github.com/opendp/opendp/pull/1493)
