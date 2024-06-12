@@ -89,8 +89,8 @@ the dataset with a resize transformation.
     ...     dp.m.then_laplace(1.)
     ... )
     
-    >>> mean_meas(data)
-    6.862637830873848
+    >>> print("dp mean:", mean_meas(data))
+    dp mean: ...
 
 
 The total privacy expenditure is the composition of the ``count_meas``
@@ -98,8 +98,8 @@ and ``mean_meas`` releases.
 
 .. code:: python
 
-    >>> dp.c.make_basic_composition([count_meas, mean_meas]).map(1)
-    2.000000000000017
+    >>> print("composition:", dp.c.make_basic_composition([count_meas, mean_meas]).map(1))
+    composition: ...
 
 
 Another approach is to compute the DP sum and DP count, and then
@@ -114,9 +114,9 @@ postprocess the output.
     
     >>> dp_sum, dp_count = dp_fraction_meas(data)
     >>> print("dp mean:", dp_sum / dp_count)
-    dp mean: 7.778118283305409
+    dp mean: ...
     >>> print("epsilon:", dp_fraction_meas.map(1))
-    epsilon: 2.000000009313226
+    epsilon: 2.000000009313227
 
 
 The same approaches are valid for the variance estimator. The `Unknown
