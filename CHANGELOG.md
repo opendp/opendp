@@ -72,6 +72,7 @@ showing the source changes from the previous version.
     - Update links to match new docs structure [#1638](https://github.com/opendp/opendp/pull/1638)
     - Misc. copy-edits on the API User Guide [#1659](https://github.com/opendp/opendp/pull/1659)
     - Upgrade pydata theme for search snippets [#1640](https://github.com/opendp/opendp/pull/1640)
+    - Update the Changelog itself [#1671](https://github.com/opendp/opendp/pull/1671) [#1630](https://github.com/opendp/opendp/pull/1630)
 - R docs and linting:
     - R examples in docs via stand-alone files [#1494](https://github.com/opendp/opendp/pull/1494)
     - Fix r-doc comment with missing closing tag [#1493](https://github.com/opendp/opendp/pull/1493)
