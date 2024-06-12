@@ -17,11 +17,31 @@ def log_until(match):
 
 
 def parse_log(lines):
+    '''
+    >>> print(parse_log([
+    ...     'abcd0000 Add: Colon and capital (#3)',
+    ...     'abcd0001 add still works if missing (#2)',
+    ...     'abcd0002 (tag) remove tags (#1)'
+    ... ]))
+    ### Add
+    <BLANKLINE>
+    - Colon and capital [#3](https://github.com/opendp/opendp/pull/3)
+    - Still works if missing [#2](https://github.com/opendp/opendp/pull/2)
+    <BLANKLINE>
+    ### Remove
+    <BLANKLINE>
+    - Tags [#1](https://github.com/opendp/opendp/pull/1)
+    <BLANKLINE>
+    '''
     categories = defaultdict(list)
     for line in lines:
-        line = re.sub(r'^\w+\s+', '', line)
+        line = re.sub(r'^\w+\s+', '', line) # Remove hash
+        line = re.sub(r'^\([^)]+\)\s+', '', line) # Remove tag
         line = re.sub(r'\(#(\d+)\)', r'[#\1](https://github.com/opendp/opendp/pull/\1)', line)
-        categories['todo'].append(line)
+        words = line.split(' ')
+        first = re.sub(r'\W', '', words[0]).capitalize()
+        rest = ' '.join(words[1:]).capitalize()
+        categories[first].append(rest)
 
     output_lines = []
     for k, v in categories.items():
@@ -29,6 +49,7 @@ def parse_log(lines):
         output_lines.append('')
         for line in v:
             output_lines.append(f'- {line}')
+        output_lines.append('')
     
     return '\n'.join(output_lines)
 
