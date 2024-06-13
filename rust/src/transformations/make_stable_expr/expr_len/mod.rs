@@ -1,16 +1,15 @@
-use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
+use crate::core::{ExprFunction, Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, ExprDomain, LogicalPlanDomain, MarginPub, SeriesDomain};
 use crate::error::*;
 use crate::metrics::{IntDistance, LpDistance, PartitionDistance};
 use crate::traits::{InfCast, InfMul, InfSqrt, ProductOrd};
 use crate::transformations::traits::UnboundedMetric;
 use polars_plan::dsl::{len, Expr};
-use polars_plan::logical_plan::LogicalPlan;
 
 #[cfg(test)]
 mod test;
 
-/// Polars operator to sum a column in a LazyFrame
+/// Polars operator to get the length of a LazyFrame
 ///
 /// | input_metric                              |
 /// | ----------------------------------------- |
@@ -50,23 +49,34 @@ where
         .map(|m| m.public_info.clone())
         .unwrap_or_default();
 
+    //  norm_map(d_in) returns d_in^(1/p)
     let norm_map = move |d_in: f64| match P {
         1 => Ok(d_in),
         2 => d_in.inf_sqrt(),
-        _ => return fallible!(MakeTransformation, "unsupported Lp norm"),
+        _ => {
+            return fallible!(
+                MakeTransformation,
+                "unsupported Lp norm. Must be an L1 or L2 norm."
+            )
+        }
     };
 
+    //  pp_map(d_in) returns the per-partition change in counts if d_in input records are changed
     let pp_map = move |d_in: &IntDistance| match public_info {
         Some(MarginPub::Lengths) => 0,
         _ => *d_in,
     };
 
+    // an explanatory example of this math is provided in the tests
     let stability_map = StabilityMap::new_fallible(
         move |(l0, l1, l_inf): &(IntDistance, IntDistance, IntDistance)| {
+            // if l0 partitions may change, then l0_p denotes how sensitivity scales wrt the norm
             let l0_p = norm_map(f64::from(*l0))?;
+            // per-partition count sensitivity depends on whether counts are public information/may change
             let l1_p = f64::inf_cast(pp_map(l1))?;
             let l_inf_p = f64::inf_cast(pp_map(l_inf))?;
 
+            // min(l1',    l0' *         l∞')
             l1_p.total_min(l0_p.inf_mul(&l_inf_p)?)
         },
     );
@@ -74,18 +84,7 @@ where
     Transformation::new(
         input_domain,
         output_domain,
-        Function::new_fallible(
-            // in most other situations, we would use `Function::new_expr`, but we need to return a Fallible here
-            move |(lp, expr): &(LogicalPlan, Expr)| -> Fallible<(LogicalPlan, Expr)> {
-                if expr != &Expr::Wildcard {
-                    return fallible!(
-                        FailedFunction,
-                        "Expected all() as input (denoting that all columns are selected). This is because column selection is a leaf node in the expression tree."
-                    );
-                }
-                Ok((lp.clone(), len()))
-            },
-        ),
+        Function::from_expr(len()),
         input_metric,
         LpDistance::default(),
         stability_map,

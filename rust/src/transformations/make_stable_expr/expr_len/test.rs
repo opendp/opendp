@@ -1,12 +1,13 @@
 use polars::df;
-use polars_plan::dsl::all;
+use polars_plan::dsl::{all, len};
 
 use crate::{
+    core::Transformation,
     metrics::{InsertDeleteDistance, L2Distance, PartitionDistance},
     transformations::{test_helper::get_test_data, StableExpr},
 };
 
-use super::*;
+use super::Fallible;
 
 #[test]
 fn test_select_make_expr_len() -> Fallible<()> {
@@ -18,9 +19,9 @@ fn test_select_make_expr_len() -> Fallible<()> {
     let expr_res = t_sum.invoke(&(lf.logical_plan.clone(), all()))?.1;
     assert_eq!(expr_res, len());
 
-    let sens = t_sum.map(&(4, 4, 1))?;
-    println!("sens: {:?}", sens);
-    assert_eq!(sens, 2.);
+    let sensitivity = t_sum.map(&(4, 4, 1))?;
+    println!("sens: {:?}", sensitivity);
+    assert_eq!(sensitivity, 2.);
     Ok(())
 }
 
@@ -68,5 +69,19 @@ fn test_grouped_make_len_expr() -> Fallible<()> {
     println!("sens: {:?}", sens);
     assert!(sens > (3.16227).into());
     assert!(sens < (3.162278).into());
+    Ok(())
+}
+
+#[test]
+fn test_select_make_expr_len_row_by_row() -> Fallible<()> {
+    // this transformation should refuse to build in a row-by-row context like `with_columns`
+    let (lf_domain, _) = get_test_data()?;
+    let expr_domain = lf_domain.row_by_row();
+
+    assert!(len()
+        .make_stable(expr_domain, InsertDeleteDistance)
+        .map(|_: Transformation<_, _, _, InsertDeleteDistance>| ())
+        .is_err());
+
     Ok(())
 }
