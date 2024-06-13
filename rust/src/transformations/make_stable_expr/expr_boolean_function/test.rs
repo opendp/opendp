@@ -22,6 +22,8 @@ fn get_f64_i64_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     Ok((lf_domain, lf))
 }
 
+// check if members of the output domain may have a nullable bitmask
+// (unrelated to inherent nullity within AtomDomain)
 macro_rules! is_nullable {
     ($col:expr, $op:ident, $domain:ident) => {
         $col.$op()
