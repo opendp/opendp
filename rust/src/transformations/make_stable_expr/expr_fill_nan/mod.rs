@@ -61,16 +61,25 @@ where
 
     let fill_series = fill_domain.active_series()?;
     let fill_can_be_nan = match &fill_series.field.dtype {
+        // from the perspective of atom domain, null refers to existence of any missing value.
+        // For float types, this is NaN.
+        // Therefore if the float domain may be nullable, then the domain includes NaN
         DataType::Float32 => fill_series.atom_domain::<f32>()?.nullable(),
         DataType::Float64 => fill_series.atom_domain::<f64>()?.nullable(),
-        _ => return fallible!(MakeTransformation, "fill_nan filler must be float data"),
+        _ => return fallible!(MakeTransformation, "filler data for fill_nan must be float"),
     };
 
     if fill_can_be_nan {
-        return fallible!(MakeTransformation, "fill_nan requires non-nan fill data");
+        return fallible!(
+            MakeTransformation,
+            "filler data for fill_nan must not contain nan"
+        );
     }
     if fill_series.nullable {
-        return fallible!(MakeTransformation, "fill_nan requires non-null fill data");
+        return fallible!(
+            MakeTransformation,
+            "filler data for fill_nan must not be nullable"
+        );
     }
 
     let mut output_domain = data_domain.clone();
@@ -104,6 +113,8 @@ where
     )
 }
 
+/// If the passed expression is fill_null (a ternary conditioned on data is_not_nan),
+/// then returns the data and fill expressions.
 pub fn match_fill_nan(expr: &Expr) -> Option<(&Expr, &Expr)> {
     let Expr::Ternary {
         predicate,
