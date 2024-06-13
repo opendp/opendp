@@ -28,7 +28,7 @@ where
     Expr: StableExpr<M, M>,
 {
     let LogicalPlan::Selection { input, predicate } = plan else {
-        return fallible!(MakeTransformation, "Expected Aggregate logical plan");
+        return fallible!(MakeTransformation, "Expected filter in logical plan");
     };
 
     let t_prior = (*input).make_stable(input_domain.clone(), input_metric.clone())?;
@@ -42,7 +42,7 @@ where
 
     let pred_dtype = t_pred.output_domain.active_series()?.field.dtype.clone();
 
-    if pred_dtype != DataType::Boolean {
+    if !pred_dtype.is_bool() {
         return fallible!(
             MakeTransformation,
             "Expected predicate to return a boolean value, got: {:?}",
