@@ -38,11 +38,32 @@ where
         return fallible!(MakeTransformation, "expected boolean function expression");
     };
 
+    use BooleanFunction::*;
+
+    if matches!(bool_function, Any { .. } | All { .. }) {
+        return fallible!(
+            MakeTransformation,
+            "{:?} will not be supported, as these aggregations are too sensitive to extreme values to be estimated with reasonable utility"
+        );
+    }
+
+    if !matches!(
+        bool_function,
+        IsNull | IsNotNull | IsFinite | IsInfinite | IsNan | IsNotNan | Not
+    ) {
+        return fallible!(
+            MakeTransformation,
+            "{:?} is not currently supported",
+            bool_function
+        );
+    }
+
     let Ok([input]) = <&[_; 1]>::try_from(input.as_slice()) else {
         return fallible!(
             MakeTransformation,
-            "{} must have one argument",
-            bool_function
+            "{} must have one argument, found {}",
+            bool_function,
+            input.len()
         );
     };
 
@@ -54,23 +75,15 @@ where
     let mut output_domain = middle_domain.clone();
     let active_series = output_domain.active_series_mut()?;
 
-    use BooleanFunction::*;
-
-    match bool_function {
-        IsNull | IsNotNull => active_series.nullable = false,
-        IsFinite | IsInfinite | IsNan | IsNotNan | Not => (),
-        _ => {
-            return fallible!(
-                MakeTransformation,
-                "{:?} is not a recognized row-by-row boolean function",
-                bool_function
-            )
-        }
+    if matches!(bool_function, IsNull | IsNotNull) {
+        active_series.nullable = false;
     }
 
-    if bool_function == Not && active_series.field.dtype != DataType::Boolean {
+    if matches!(bool_function, Not) && active_series.field.dtype != DataType::Boolean {
+        // under these conditions, the expression performs a bitwise negation
         active_series.drop_bounds()?;
     } else {
+        // otherwise, the output data will be a bool
         active_series.element_domain = Arc::new(AtomDomain::<bool>::default());
         active_series.field.dtype = DataType::Boolean;
     }
