@@ -45,15 +45,20 @@ where
     let t_right = right.make_stable(expr_domain.clone(), input_metric.clone())?;
 
     use polars_plan::dsl::Operator::*;
-    if !matches!(op, Eq | NotEq | Lt | LtEq | Gt | GtEq | And | Or | Xor) {
+    if !matches!(
+        op,
+        Eq | NotEq | Lt | LtEq | Gt | GtEq | And | Or | Xor | LogicalAnd | LogicalOr
+    ) {
         return fallible!(MakeTransformation, "unsupported operator: {:?}. Only binary operations that emit booleans are currently supported.", op);
     }
 
     let mut series_domain =
         SeriesDomain::new(&*expr_output_name(&expr)?, AtomDomain::<bool>::default());
 
-    series_domain.nullable = t_left.output_domain.active_series()?.nullable
-        || t_right.output_domain.active_series()?.nullable;
+    let left_nullable = t_left.output_domain.active_series()?.nullable;
+    let right_nullable = t_right.output_domain.active_series()?.nullable;
+
+    series_domain.nullable = left_nullable || right_nullable;
 
     let output_domain = ExprDomain::new(LogicalPlanDomain::new(vec![series_domain])?, context);
 
