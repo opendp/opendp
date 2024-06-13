@@ -8,7 +8,7 @@ use super::*;
 
 #[test]
 fn test_filter() -> Fallible<()> {
-    let lf = df!("chunk_2_null" => [[Some(1i64); 500], [None; 500]].concat())?.lazy();
+    let lf = df!("chunk_2_null" => [Some(1i64), None])?.lazy();
 
     let lf_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
         "chunk_2_null",
@@ -23,7 +23,7 @@ fn test_filter() -> Fallible<()> {
     )?;
 
     let actual = t_filter.invoke(&lf)?.collect()?;
-    assert_eq!(actual, df!("chunk_2_null" => [Some(1); 500])?);
+    assert_eq!(actual, df!("chunk_2_null" => [Some(1)])?);
 
     assert!(t_filter
         .output_domain
@@ -35,8 +35,8 @@ fn test_filter() -> Fallible<()> {
 }
 
 #[test]
-fn test_fail_filter() -> Fallible<()> {
-    let lf = df!("chunk_2_null" => [[Some(1i64); 500], [None; 500]].concat())?.lazy();
+fn test_filter_fail_with_non_bool_predicate() -> Fallible<()> {
+    let lf = df!("chunk_2_null" => [Some(1i64), None])?.lazy();
 
     let lf_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
         "chunk_2_null",
