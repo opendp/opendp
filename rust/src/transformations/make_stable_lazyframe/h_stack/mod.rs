@@ -51,6 +51,7 @@ where
 
     // expand and update the set of series domains on the output domain
     let mut series_domains = Vec::new();
+    // keys are the column name, values are the index of the column
     let mut lookup = HashMap::new();
 
     let new_series = t_exprs
@@ -80,7 +81,8 @@ where
         .map(|(k, v)| (k.clone(), v.clone()))
         .collect();
 
-    let output_domain = LogicalPlanDomain::new_unchecked(series_domains, margins);
+    // instead of using the public APIs that check invariants, directly populate the struct entries
+    let output_domain = LogicalPlanDomain::new_with_margins(series_domains, margins)?;
 
     let t_with_columns = Transformation::new(
         middle_domain,

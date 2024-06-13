@@ -158,18 +158,14 @@ impl<Q> MetricSpace for (LazyFrameDomain, LInfDistance<Q>) {
 }
 
 impl<F: Frame> FrameDomain<F> {
-    pub(crate) fn new_unchecked(
-        series_domains: Vec<SeriesDomain>,
-        margins: HashMap<BTreeSet<String>, Margin>,
-    ) -> Self {
-        FrameDomain {
-            series_domains,
-            margins,
-            _marker: PhantomData,
-        }
+    pub fn new(series_domains: Vec<SeriesDomain>) -> Fallible<Self> {
+        Self::new_with_margins(series_domains, HashMap::new())
     }
 
-    pub fn new(series_domains: Vec<SeriesDomain>) -> Fallible<Self> {
+    pub(crate) fn new_with_margins(
+        series_domains: Vec<SeriesDomain>,
+        margins: HashMap<BTreeSet<String>, Margin>,
+    ) -> Fallible<Self> {
         let n_unique = series_domains
             .iter()
             .map(|s| &s.field.name)
@@ -178,7 +174,11 @@ impl<F: Frame> FrameDomain<F> {
         if n_unique != series_domains.len() {
             return fallible!(MakeDomain, "column names must be distinct");
         }
-        Ok(Self::new_unchecked(series_domains, HashMap::new()))
+        Ok(FrameDomain {
+            series_domains,
+            margins,
+            _marker: PhantomData,
+        })
     }
 
     pub fn new_from_schema(schema: Schema) -> Fallible<Self> {
