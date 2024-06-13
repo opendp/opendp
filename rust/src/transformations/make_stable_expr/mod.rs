@@ -23,6 +23,9 @@ mod expr_col;
 pub(crate) mod expr_discrete_quantile_score;
 
 #[cfg(feature = "contrib")]
+mod expr_lit;
+
+#[cfg(feature = "contrib")]
 mod expr_sum;
 
 #[bootstrap(
@@ -80,6 +83,9 @@ where
 
             #[cfg(feature = "contrib")]
             Column(_) => expr_col::make_expr_col(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Literal(_) => expr_lit::make_expr_lit(input_domain, input_metric, self),
 
             expr => fallible!(
                 MakeTransformation,
