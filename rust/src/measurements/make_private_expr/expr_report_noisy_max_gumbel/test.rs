@@ -52,7 +52,11 @@ fn test_report_noisy_max_gumbel_expr() -> Fallible<()> {
         expr_domain,
         PartitionDistance(SymmetricDistance),
         MaxDivergence::default(),
-        col("cycle_(..101f64)").dp().median(candidates, Some(scale)),
+        col("cycle_(..101f64)")
+            .dp()
+            .quantile_score(0.5, candidates)
+            .dp()
+            .report_noisy_max_gumbel(Optimize::Min, Some(scale)),
         None,
     )?;
 

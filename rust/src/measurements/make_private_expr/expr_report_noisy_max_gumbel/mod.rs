@@ -298,10 +298,10 @@ pub(crate) fn report_noisy_max_gumbel_type_udf(input_fields: &[Field]) -> Polars
     }
     if !matches!(
         dtype.as_ref(),
-        UInt32 | UInt64 | Int8 | Int16 | Int32 | Int64
+        UInt32 | UInt64 | Int8 | Int16 | Int32 | Int64 | Float32 | Float64
     ) {
         polars_bail!(
-            InvalidOperation: "Expected integer data type, found {:?}",
+            InvalidOperation: "Expected numeric data type, found {:?}",
             field.data_type()
         );
     }
