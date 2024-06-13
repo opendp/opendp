@@ -23,6 +23,9 @@ mod expr_col;
 pub(crate) mod expr_discrete_quantile_score;
 
 #[cfg(feature = "contrib")]
+mod expr_fill_null;
+
+#[cfg(feature = "contrib")]
 mod expr_lit;
 
 #[cfg(feature = "contrib")]
@@ -80,6 +83,12 @@ where
                 function: Clip { .. },
                 ..
             } => expr_clip::make_expr_clip(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: FillNull { .. },
+                ..
+            } => expr_fill_null::make_expr_fill_null(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Column(_) => expr_col::make_expr_col(input_domain, input_metric, self),

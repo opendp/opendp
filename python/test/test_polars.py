@@ -13,7 +13,7 @@ def seed(schema):
 def example_series():
     pl = pytest.importorskip("polars")
     return [
-        dp.series_domain("A", dp.atom_domain(T=dp.f64)),
+        dp.series_domain("A", dp.option_domain(dp.atom_domain(T=dp.f64))),
         dp.series_domain("B", dp.atom_domain(T=dp.i32)),
         dp.series_domain("C", dp.option_domain(dp.atom_domain(T=dp.String))),
         dp.series_domain("D", dp.atom_domain(T=dp.i32)),
@@ -102,7 +102,7 @@ def test_private_lazyframe_explicit_sum():
         margin=["B"], public_info="keys", max_partition_length=50
     )
 
-    expr = pl.col("A").clip(0.0, 1.0).sum().dp.laplace(0.0)
+    expr = pl.col("A").fill_null(0.0).clip(0.0, 1.0).sum().dp.laplace(0.0)
     plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
@@ -125,7 +125,7 @@ def test_private_lazyframe_sum():
     lf_domain, lf = example_lf(
         margin=["B"], public_info="keys", max_partition_length=50
     )
-    expr = pl.col("A").dp.sum((1.0, 2.0), scale=0.0)
+    expr = pl.col("A").fill_null(0.).dp.sum((1.0, 2.0), scale=0.0)
     plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
@@ -148,7 +148,7 @@ def test_private_lazyframe_mean():
         margin=["B"], public_info="lengths", max_partition_length=50
     )
 
-    expr = pl.col("A").dp.mean((1.0, 2.0), scale=0.0)
+    expr = pl.col("A").fill_null(0.).dp.mean((1.0, 2.0), scale=0.0)
     plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 1.0
@@ -220,7 +220,7 @@ def test_onceframe_multi_collect():
         margin=["B"], public_info="keys", max_partition_length=50
     )
 
-    expr = pl.col("A").dp.sum((1.0, 2.0), scale=0.0)
+    expr = pl.col("A").fill_null(1.5).dp.sum((1.0, 2.0), scale=0.0)
     plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan
@@ -240,7 +240,7 @@ def test_onceframe_lazy():
         margin=["B"], public_info="keys", max_partition_length=50
     )
     
-    expr = pl.col("A").dp.sum((1.0, 2.0), scale=0.0)
+    expr = pl.col("A").fill_null(1.5).dp.sum((1.0, 2.0), scale=0.0)
     plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan
