@@ -8,7 +8,7 @@ use super::*;
 
 #[test]
 fn test_with_column() -> Fallible<()> {
-    let lf = df!("chunk_2_null" => [[Some(1i64); 500], [None; 500]].concat())?.lazy();
+    let lf = df!("chunk_2_null" => [Some(1i64), None])?.lazy();
 
     let lf_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
         "chunk_2_null",
@@ -24,8 +24,8 @@ fn test_with_column() -> Fallible<()> {
 
     let actual = t_with_column.invoke(&lf)?.collect()?;
     let expect = df!(
-        "chunk_2_null" => [[Some(1); 500], [None; 500]].concat(),
-        "literal" => [[Some(true); 500], [None; 500]].concat()
+        "chunk_2_null" => [Some(1), None],
+        "literal" => [Some(true), None]
     )?;
     assert_eq!(actual, expect);
     // while margins get filtered out, chunk_2_null should still be present
@@ -37,10 +37,11 @@ fn test_with_column() -> Fallible<()> {
     Ok(())
 }
 
-// LazyFrame::fill_nan works for "free", because it breaks down to pre-existing primitives
+// LazyFrame::fill_nan works for "free", because it breaks down to pre-existing primitives:
+//    hstack with fill_nan expressions
 #[test]
 fn test_fill_nan() -> Fallible<()> {
-    let lf = df!("f64" => [[1f64; 500], [f64::NAN; 500]].concat())?.lazy();
+    let lf = df!("f64" => [1f64, f64::NAN])?.lazy();
 
     let lf_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
         "f64",
@@ -54,7 +55,7 @@ fn test_fill_nan() -> Fallible<()> {
     )?;
 
     let actual = t_with_column.invoke(&lf)?.collect()?;
-    let expect = df!("f64" => [[1f64; 500], [2f64; 500]].concat())?;
+    let expect = df!("f64" => [1f64, 2f64])?;
 
     assert_eq!(actual, expect);
     Ok(())

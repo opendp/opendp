@@ -51,6 +51,7 @@ where
 
     // expand and update the set of series domains on the output domain
     let mut series_domains = Vec::new();
+    // keys are the column name, values are the index of the column
     let mut lookup = HashMap::new();
 
     let new_series = t_exprs
