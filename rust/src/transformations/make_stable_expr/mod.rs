@@ -23,6 +23,9 @@ mod expr_col;
 pub(crate) mod expr_discrete_quantile_score;
 
 #[cfg(feature = "contrib")]
+mod expr_fill_nan;
+
+#[cfg(feature = "contrib")]
 mod expr_fill_null;
 
 #[cfg(feature = "contrib")]
@@ -74,6 +77,10 @@ where
         input_domain: ExprDomain,
         input_metric: M,
     ) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>> {
+        if expr_fill_nan::match_fill_nan(&self).is_some() {
+            return expr_fill_nan::make_expr_fill_nan(input_domain, input_metric, self);
+        }
+
         use Expr::*;
         use FunctionExpr::*;
         match self {

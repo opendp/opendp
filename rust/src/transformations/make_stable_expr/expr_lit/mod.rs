@@ -1,8 +1,9 @@
-use polars::prelude::*;
+use polars_plan::dsl::Expr;
+use polars_plan::logical_plan::LiteralValue;
 use polars_plan::utils::expr_output_name;
 
 use crate::core::{ExprFunction, Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{ExprDomain, LogicalPlanDomain, OuterMetric, SeriesDomain};
+use crate::domains::{AtomDomain, ExprDomain, LogicalPlanDomain, Null, OuterMetric, SeriesDomain};
 use crate::error::Fallible;
 use crate::transformations::DatasetMetric;
 
@@ -30,12 +31,26 @@ where
     };
 
     let name = expr_output_name(&expr)?;
-    let dtype = literal_value.get_datatype();
-    // In the setting of the literal transformation, we know the literal is not null.
-    // So we may as well tighten the output domain to exclude nulls.
-    // The fact that it's non-null will prove useful in downstream expressions like fill_null.
-    let mut series_domain = SeriesDomain::new_from_field(Field::new(name.as_ref(), dtype))?;
-    series_domain.nullable = false;
+
+    macro_rules! series_domain {
+        ($ty:ty, $null:expr) => {
+            SeriesDomain::new(name.as_ref(), AtomDomain::<$ty>::new(None, $null))
+        };
+    }
+
+    let series_domain = match literal_value {
+        LiteralValue::Boolean(_) => series_domain!(bool, None),
+        LiteralValue::String(_) => series_domain!(String, None),
+        LiteralValue::UInt32(_) => series_domain!(u32, None),
+        LiteralValue::UInt64(_) => series_domain!(u64, None),
+        LiteralValue::Int8(_) => series_domain!(i8, None),
+        LiteralValue::Int16(_) => series_domain!(i16, None),
+        LiteralValue::Int32(_) => series_domain!(i32, None),
+        LiteralValue::Int64(_) => series_domain!(i64, None),
+        LiteralValue::Float32(v) => series_domain!(f32, v.is_nan().then(Null::new)),
+        LiteralValue::Float64(v) => series_domain!(f64, v.is_nan().then(Null::new)),
+        _ => return fallible!(MakeTransformation, "unsupported literal type"),
+    };
 
     let output_domain = ExprDomain::new(
         LogicalPlanDomain::new(vec![series_domain])?,

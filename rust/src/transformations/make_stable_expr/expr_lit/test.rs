@@ -1,3 +1,6 @@
+use polars::{df, lazy::frame::IntoLazy};
+use polars_plan::dsl::{all, lit};
+
 use crate::{
     domains::{AtomDomain, LazyFrameDomain},
     metrics::SymmetricDistance,
@@ -12,15 +15,19 @@ fn test_lit() -> Fallible<()> {
         "bool",
         AtomDomain::<bool>::default(),
     )])?;
-    let lf = df!("A" => [true; 3])?.lazy();
+    let lf = df!("bool" => [true; 3])?.lazy();
 
-    let t_const = lit(1.0).make_stable(lf_domain.clone().row_by_row(), SymmetricDistance)?;
+    let t_const = lit(1.0).make_stable(lf_domain.row_by_row(), SymmetricDistance)?;
     let expr_const = t_const.invoke(&(lf.logical_plan.clone(), all()))?.1;
     assert_eq!(expr_const, lit(1.0));
 
     let actual = lf.with_column(expr_const).collect()?;
-    let expect = df!("A" => [true; 3], "literal" => [1.0; 3])?;
+    let expect = df!("bool" => [true; 3], "literal" => [1.0; 3])?;
     assert_eq!(actual, expect);
+
+    let series_domain = t_const.output_domain.active_series()?;
+    assert_eq!(series_domain.atom_domain::<f64>()?.nullable(), false);
+    assert_eq!(series_domain.nullable, false);
 
     Ok(())
 }
