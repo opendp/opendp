@@ -210,6 +210,10 @@ impl<F: Frame> FrameDomain<F> {
         self.margins.insert(grouping_keys, margin);
         Ok(self)
     }
+
+    pub fn schema(&self) -> Schema {
+        Schema::from_iter(self.series_domains.iter().map(|s| s.field.clone()))
+    }
 }
 
 impl<F: Frame> Debug for FrameDomain<F> {

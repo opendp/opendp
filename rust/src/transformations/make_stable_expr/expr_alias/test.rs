@@ -1,40 +1,61 @@
-use polars::{df, lazy::frame::IntoLazy};
+use polars::{
+    df,
+    lazy::frame::{IntoLazy, LazyFrame},
+};
 use polars_plan::dsl::{all, col};
 
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, SeriesDomain},
     metrics::SymmetricDistance,
+    transformations::make_stable_lazyframe,
 };
 
 use super::*;
 
-#[test]
-fn test_behavior() -> Fallible<()> {
+fn get_alias_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
+    let lf_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<bool>::default()),
+    ])?;
     let ints = [1, 2, 3, 4, 5];
     let bools = [true, false, true, true, false];
     let lf = df!("A" => ints, "B" => bools)?.lazy();
+    Ok((lf_domain, lf))
+}
 
-    // alias with existing column preserves column order
-    let actual = lf.clone().with_column(col("A").alias("B")).collect()?;
-    let expect = df!("A" => ints, "B" => ints)?;
-    assert_eq!(actual, expect);
+macro_rules! test_query {
+    ($expr:expr) => {{
+        let (lf_domain, lf) = get_alias_data()?;
 
-    // ...both ways
-    let actual = lf.clone().with_column(col("B").alias("A")).collect()?;
-    let expect = df!("A" => bools, "B" => bools)?;
-    assert_eq!(actual, expect);
+        let query = lf.clone().with_column($expr);
+        let t_lf = make_stable_lazyframe(lf_domain, SymmetricDistance, query)?;
 
-    // alias with new column adds to end
-    let actual = lf.clone().with_column(col("A").alias("C")).collect()?;
-    let expect = df!("A" => ints, "B" => bools, "C" => ints)?;
-    assert_eq!(actual, expect);
+        assert_eq!(
+            t_lf.output_domain.schema(),
+            t_lf.invoke(&lf)?.collect()?.schema()
+        );
+        Ok(())
+    }};
+}
 
-    // alias with same name maintains position
-    let actual = lf.clone().with_column(col("A").alias("A")).collect()?;
-    let expect = df!("A" => ints, "B" => bools)?;
-    assert_eq!(actual, expect);
+#[test]
+fn test_alias_shadow_forward() -> Fallible<()> {
+    test_query!(col("A").alias("B"))
+}
 
-    Ok(())
+#[test]
+fn test_alias_shadow_backward() -> Fallible<()> {
+    test_query!(col("B").alias("A"))
+}
+
+#[test]
+fn test_alias_new_column() -> Fallible<()> {
+    test_query!(col("A").alias("C"))
+}
+
+#[test]
+fn test_alias_same_column() -> Fallible<()> {
+    test_query!(col("A").alias("A"))
 }
 
 #[test]

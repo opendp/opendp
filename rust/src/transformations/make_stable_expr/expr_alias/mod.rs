@@ -31,7 +31,7 @@ where
     Expr: StableExpr<M, M>,
 {
     let Expr::Alias(input, name) = expr else {
-        return fallible!(MakeTransformation, "expected boolean function expression");
+        return fallible!(MakeTransformation, "expected alias expression");
     };
 
     let t_prior = input.make_stable(input_domain, input_metric)?;
@@ -43,6 +43,9 @@ where
         name.as_ref().into(),
     );
 
+    // only keep margins with as many unique grouping keys as there were before
+    // if the number of unique grouping keys drops after aliasing,
+    //    then one of the grouping keys is shadowing another grouping key
     output_domain.frame_domain.margins = (output_domain.frame_domain.margins)
         .into_iter()
         .filter_map(|(k, v)| {
