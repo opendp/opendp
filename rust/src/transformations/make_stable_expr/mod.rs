@@ -2,7 +2,7 @@ use opendp_derive::bootstrap;
 use polars_plan::dsl::{AggExpr, Expr, FunctionExpr};
 
 use crate::{
-    core::{Metric, MetricSpace, Transformation},
+    core::{get_disabled_features_message, Metric, MetricSpace, Transformation},
     domains::{ExprDomain, OuterMetric},
     error::Fallible,
     metrics::{LInfDistance, LpDistance, Parallel, PartitionDistance},
@@ -117,8 +117,9 @@ where
 
             expr => fallible!(
                 MakeTransformation,
-                "Expr is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
-                expr
+                "Expr is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                expr,
+                get_disabled_features_message()
             )
         }
     }
@@ -146,8 +147,9 @@ where
 
             expr => fallible!(
                 MakeTransformation,
-                "Expr is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
-                expr
+                "Expr is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                expr,
+                get_disabled_features_message()
             )
         }
     }
@@ -174,8 +176,9 @@ where
         match self {
             expr => fallible!(
                 MakeTransformation,
-                "Expr is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
-                expr
+                "Expr is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                expr,
+                get_disabled_features_message()
             )
         }
     }

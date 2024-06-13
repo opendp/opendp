@@ -377,3 +377,24 @@ impl OnceFrame {
         *lazyframe
     }
 }
+
+pub(crate) fn get_disabled_features_message() -> String {
+    #[allow(unused_mut)]
+    let mut disabled_features: Vec<&'static str> = vec![];
+
+    #[cfg(not(feature = "contrib"))]
+    disabled_features.push("contrib");
+    #[cfg(not(feature = "floating-point"))]
+    disabled_features.push("floating-point");
+    #[cfg(not(feature = "honest-but-curious"))]
+    disabled_features.push("honest-but-curious");
+
+    if disabled_features.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "This may be due to disabled features: {}. ",
+            disabled_features.join(", ")
+        )
+    }
+}

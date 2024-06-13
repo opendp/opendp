@@ -6,7 +6,6 @@ use crate::domains::{ExprContext, ExprDomain, LogicalPlanDomain, MarginPub};
 use crate::error::*;
 use crate::measurements::make_private_expr;
 use crate::metrics::PartitionDistance;
-use crate::traits::InfMul;
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{DatasetMetric, StableLogicalPlan};
 use make_private_expr::PrivateExpr;
@@ -42,7 +41,7 @@ where
     (ExprDomain, PartitionDistance<MI>): MetricSpace,
 {
     let LogicalPlan::Projection { expr, input, .. } = plan.clone() else {
-        return fallible!(MakeMeasurement, "Expected Aggregate logical plan");
+        return fallible!(MakeMeasurement, "Expected selection in logical plan");
     };
 
     let t_prior = input.make_stable(input_domain, input_metric)?;
@@ -65,18 +64,33 @@ where
     // now that the domain is set up, we can clone it for use in the closure
     let margin = margin.clone();
 
+    if margin.max_partition_contributions.is_some() {
+        return fallible!(
+            MakeMeasurement,
+            "Since there is only one partition in select, max_partition_contributions is redundant with the input distance, so it must be unset"
+        );
+    }
+
+    if margin.max_influenced_partitions.unwrap_or(1) != 1
+        || margin.max_num_partitions.unwrap_or(1) != 1
+    {
+        return fallible!(
+            MakeMeasurement,
+            "There is only one partition in select, so both max_influenced_partitions and max_num_partitions must either be unset or one"
+        );
+    }
+
     let t_group_by = Transformation::new(
         expr_domain.clone(),
         expr_domain.clone(),
         Function::new(Clone::clone),
         middle_metric.clone(),
         PartitionDistance(middle_metric.clone()),
-        StabilityMap::new_fallible(move |&d_in| {
-            let l0 = 1;
-            let li = margin.max_partition_contributions.unwrap_or(d_in).min(d_in);
-            let l1 = l0.inf_mul(&li)?.min(d_in);
-            Ok((l0, l1, li))
-        }),
+        // the output distance triple consists of three numbers:
+        // l0: number of changed partitions. Only one partition exists in select
+        // l1: total number of contributions across all partitions
+        // l∞: max number of contributions in any one partition
+        StabilityMap::new(move |&d_in| (1, d_in, d_in)),
     )?;
 
     let m_exprs = expr
