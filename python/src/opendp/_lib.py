@@ -107,12 +107,21 @@ if pl is not None:
         def __init__(self, expr):
             self.expr = expr
 
-        def noise(self, scale=None, distribution=None):
+        def noise(
+            self,
+            scale=None,
+            distribution= None,
+        ):
             """Add noise to the expression.
 
             If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+            If distribution is None, then the noise distribution will be chosen for you:
+            
+             * Pure-DP: Laplace noise, where `scale` == standard_deviation / sqrt(2)
+             * zCDP: Gaussian noise, where `scale` == standard_devation
 
-            :param scale: Noise scale parameter for the distribution.
+            :param scale: Scale parameter for the noise distribution.
+            :param distribution: Either Laplace, Gaussian or None.
             """
             return pl.plugins.register_plugin_function(
                 plugin_path=lib_path,
@@ -123,9 +132,21 @@ if pl is not None:
             )
         
         def laplace(self, scale=None):
+            """Add Laplace noise to the expression.
+
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+
+            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
+            """
             return self.noise(scale=scale, distribution="Laplace")
         
         def gaussian(self, scale=None):
+            """Add Gaussian noise to the expression.
+
+            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
+
+            :param scale: Noise scale parameter for the Gaussian distribution. `scale` == standard_deviation. 
+            """
             return self.noise(scale=scale, distribution="Gaussian")
 
         def sum(self, bounds, scale=None):
