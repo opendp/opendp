@@ -146,6 +146,61 @@ if pl is not None:
             return self.expr.dp.sum(bounds, scale) / pl.len()
 
 
+        def _discrete_quantile_score(self, alpha, candidates):
+            """Score the utility of each candidate for representing the true quantile.
+            
+            Candidates closer to the true quantile are assigned scores closer to zero.
+            Lower scores are better.
+            
+            :param alpha: a value in $[0, 1]$. Choose 0.5 for median
+            :param candidates: Set of possible quantiles to evaluate the utility of.
+            """
+            return pl.plugins.register_plugin_function(
+                plugin_path=lib_path,
+                function_name="discrete_quantile_score",
+                kwargs={"alpha": alpha, "candidates": candidates},
+                args=self.expr,
+                returns_scalar=True,
+            )
+
+        def _report_noisy_max_gumbel(self, optimize, scale=None):
+            """Report the argmax or argmin after adding Gumbel noise.
+            
+            The scale calibrates the level of entropy when selecting an index.
+            
+            :param optimize: Distinguish between argmax and argmin.
+            :param scale: Noise scale parameter for the Gumbel distribution.
+            """
+            return pl.plugins.register_plugin_function(
+                plugin_path=lib_path,
+                function_name="report_noisy_max_gumbel",
+                kwargs={"optimize": optimize, "scale": scale},
+                args=self.expr,
+                is_elementwise=True,
+            )
+    
+        def quantile(self, alpha, candidates, scale=None):
+            """Compute a differentially private quantile.
+            
+            The scale calibrates the level of entropy when selecting a candidate.
+            
+            :param alpha: a value in $[0, 1]$. Choose 0.5 for median
+            :param candidates: Potential quantiles to select from.
+            :param scale: How much noise to add to the scores of candidate.
+            """
+            dq_score = self.expr.dp._discrete_quantile_score(alpha, candidates)
+            return dq_score.dp._report_noisy_max_gumbel("min", scale)
+        
+        def median(self, candidates, scale=None):
+            """Compute a differentially private median.
+            
+            The scale calibrates the level of entropy when selecting a candidate.
+            
+            :param candidates: Potential quantiles to select from.
+            :param scale: How much noise to add to the scores of candidate.
+            """
+            return self.expr.dp.quantile(0.5, candidates, scale)
+
 # This enables backtraces in Rust by default.
 # It can be disabled by setting RUST_BACKTRACE=0.
 if "RUST_BACKTRACE" not in os.environ:

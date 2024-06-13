@@ -25,6 +25,9 @@ mod expr_literal;
 #[cfg(feature = "contrib")]
 mod expr_postprocess;
 
+#[cfg(feature = "contrib")]
+pub(crate) mod expr_report_noisy_max_gumbel;
+
 #[bootstrap(
     features("contrib", "honest-but-curious"),
     arguments(
@@ -78,6 +81,12 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergen
     ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, MaxDivergence<f64>>> {
         if expr_laplace::match_laplace(&self)?.is_some() {
             return expr_laplace::make_expr_laplace(input_domain, input_metric, self, global_scale);
+        }
+
+        if expr_report_noisy_max_gumbel::match_report_noisy_max_gumbel(&self)?.is_some() {
+            return expr_report_noisy_max_gumbel::make_expr_report_noisy_max_gumbel::<
+                PartitionDistance<M>,
+            >(input_domain, input_metric, self, global_scale);
         }
 
         if let Some(meas) = expr_postprocess::match_postprocess(

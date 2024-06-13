@@ -717,7 +717,8 @@ def make_private_lazyframe(
     >>> plan = (
     ...     pl.LazyFrame(schema={'grade': pl.Int32, 'pet_count': pl.Int32})
     ...     .group_by("grade")
-    ...     .agg(pl.col("pet_count").dp.sum((0, 10), scale=1.0)))
+    ...     .agg(pl.col("pet_count").dp.sum((0, 10), scale=1.0))
+    ...     .sort("grade"))
 
     We now have all the pieces to make our measurement function using `make_private_lazyframe`:
 
@@ -744,7 +745,7 @@ def make_private_lazyframe(
     ...     ],
     ...     schema=['grade', 'pet_count'])
     >>> lf = pl.LazyFrame(df)
-    >>> results = dp_sum_pets_by_grade(lf).sort("grade").collect()
+    >>> results = dp_sum_pets_by_grade(lf).collect()
     >>> print(results) # doctest: +ELLIPSIS
     shape: (3, 2)
     ┌───────┬───────────┐
@@ -817,7 +818,8 @@ def then_private_lazyframe(
     >>> plan = (
     ...     pl.LazyFrame(schema={'grade': pl.Int32, 'pet_count': pl.Int32})
     ...     .group_by("grade")
-    ...     .agg(pl.col("pet_count").dp.sum((0, 10), scale=1.0)))
+    ...     .agg(pl.col("pet_count").dp.sum((0, 10), scale=1.0))
+    ...     .sort("grade"))
 
     We now have all the pieces to make our measurement function using `make_private_lazyframe`:
 
@@ -844,7 +846,7 @@ def then_private_lazyframe(
     ...     ],
     ...     schema=['grade', 'pet_count'])
     >>> lf = pl.LazyFrame(df)
-    >>> results = dp_sum_pets_by_grade(lf).sort("grade").collect()
+    >>> results = dp_sum_pets_by_grade(lf).collect()
     >>> print(results) # doctest: +ELLIPSIS
     shape: (3, 2)
     ┌───────┬───────────┐
@@ -1027,13 +1029,13 @@ def make_report_noisy_max_gumbel(
 
     >>> dp.enable_features("contrib")
     >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.linf_distance(T=int)
-    >>> select_index = dp.m.make_report_noisy_max_gumbel(*input_space, scale=1.0, optimize='Max')
+    >>> select_index = dp.m.make_report_noisy_max_gumbel(*input_space, scale=1.0, optimize='max')
     >>> print('2?', select_index([1, 2, 3, 2, 1]))
     2? ...
 
     Or, more readably, define the space and then chain:
 
-    >>> select_index = input_space >> dp.m.then_report_noisy_max_gumbel(scale=1.0, optimize='Max')
+    >>> select_index = input_space >> dp.m.then_report_noisy_max_gumbel(scale=1.0, optimize='max')
     >>> print('2?', select_index([1, 2, 3, 2, 1]))
     2? ...
 
@@ -1079,13 +1081,13 @@ def then_report_noisy_max_gumbel(
 
     >>> dp.enable_features("contrib")
     >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.linf_distance(T=int)
-    >>> select_index = dp.m.make_report_noisy_max_gumbel(*input_space, scale=1.0, optimize='Max')
+    >>> select_index = dp.m.make_report_noisy_max_gumbel(*input_space, scale=1.0, optimize='max')
     >>> print('2?', select_index([1, 2, 3, 2, 1]))
     2? ...
 
     Or, more readably, define the space and then chain:
 
-    >>> select_index = input_space >> dp.m.then_report_noisy_max_gumbel(scale=1.0, optimize='Max')
+    >>> select_index = input_space >> dp.m.then_report_noisy_max_gumbel(scale=1.0, optimize='max')
     >>> print('2?', select_index([1, 2, 3, 2, 1]))
     2? ...
 

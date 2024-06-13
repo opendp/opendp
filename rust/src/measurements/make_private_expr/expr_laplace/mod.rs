@@ -20,8 +20,8 @@ use polars::datatypes::{
     ArrayFromIter, DataType, Field, Float32Type, Float64Type, Int16Type, Int32Type, Int64Type,
     Int8Type, PolarsDataType, UInt32Type, UInt64Type,
 };
+use polars::error::PolarsResult;
 use polars::error::{polars_bail, polars_err};
-use polars::error::{PolarsError, PolarsResult};
 use polars::lazy::dsl::Expr;
 use polars::series::{IntoSeries, Series};
 use polars_plan::dsl::{GetOutput, SeriesUdf};
@@ -164,6 +164,10 @@ fn laplace_udf(inputs: &[Series], kwargs: LaplaceArgs) -> PolarsResult<Series> {
         polars_bail!(InvalidOperation: "Laplace scale parameter must be known");
     };
 
+    if scale.is_sign_negative() {
+        polars_bail!(InvalidOperation: "Laplace scale must be non-negative");
+    }
+
     // PT stands for Polars Type
     fn laplace_impl_integer<PT: 'static + PolarsDataType>(
         series: &Series,
@@ -180,8 +184,10 @@ fn laplace_udf(inputs: &[Series], kwargs: LaplaceArgs) -> PolarsResult<Series> {
         // must be able to convert the chunked array to a series
         ChunkedArray<PT>: IntoSeries,
     {
-        let scale = RBig::try_from(scale)
-            .map_err(|_| PolarsError::ComputeError("scale must be finite".into()))?;
+        let Ok(scale) = RBig::try_from(scale) else {
+            polars_bail!(InvalidOperation: "scale must be finite")
+        };
+
         Ok(series
             // unpack the series into a chunked array
             .unpack::<PT>()?

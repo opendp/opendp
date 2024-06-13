@@ -71,7 +71,7 @@ def test_domains():
 def test_series_ffi(domain, series):
     """ensure that series can be passed to/from Rust"""
     pl_testing = pytest.importorskip("polars.testing")
-    
+
     t_ident = (domain, dp.symmetric_distance()) >> dp.t.then_identity()
     pl_testing.assert_series_equal(t_ident(series), series)
 
@@ -192,6 +192,25 @@ def test_private_expr():
             pl.col("A").sum(),
         )
 
+
+def test_private_lazyframe_median():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    lf_domain, lf = example_lf(
+        margin=["A"], public_info="keys", max_partition_length=50
+    )
+    candidates = list(range(1, 6))
+    expr = pl.col("B").dp.median(candidates, 1.0)
+    plan = seed(lf.schema).group_by("A").agg(expr)
+    m_lf = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
+    )
+    expect = pl.DataFrame(
+        [pl.Series("A", [1.0], dtype=pl.Float64), pl.Series("B", [2], dtype=pl.UInt32)]
+    )
+
+    pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
 
 
 def test_onceframe_multi_collect():
