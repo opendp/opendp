@@ -3,7 +3,10 @@ use polars::prelude::*;
 
 use crate::{
     combinators::BasicCompositionMeasure,
-    core::{Function, Measure, Measurement, Metric, MetricSpace, OnceFrame},
+    core::{
+        get_disabled_features_message, Function, Measure, Measurement, Metric, MetricSpace,
+        OnceFrame,
+    },
     domains::{ExprDomain, LazyFrameDomain, LogicalPlanDomain},
     error::Fallible,
     metrics::PartitionDistance,
@@ -113,7 +116,6 @@ where
         }
 
         match &self {
-            #[cfg(feature = "contrib")]
             plan if matches!(plan, LogicalPlan::Aggregate { .. }) => {
                 aggregate::make_private_aggregate(
                     input_domain,
@@ -125,19 +127,19 @@ where
             }
 
             #[cfg(feature = "contrib")]
-            plan if matches!(plan, LogicalPlan::Projection { .. }) => {
-                select::make_private_select(
-                    input_domain,
-                    input_metric,
-                    output_measure,
-                    self,
-                    global_scale,
-                )
-            }
+            plan if matches!(plan, LogicalPlan::Projection { .. }) => select::make_private_select(
+                input_domain,
+                input_metric,
+                output_measure,
+                self,
+                global_scale,
+            ),
+
             lp => fallible!(
                 MakeMeasurement,
-                "A step in your logical plan is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
-                lp
+                "A step in your query is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                lp,
+                get_disabled_features_message()
             )
         }
     }

@@ -59,7 +59,7 @@ fn test_select() -> Fallible<()> {
 }
 
 #[test]
-fn test_fail_select() -> Fallible<()> {
+fn test_fail_select_invalid_expression() -> Fallible<()> {
     let lf_domain =
         LogicalPlanDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?;
 
@@ -69,6 +69,7 @@ fn test_fail_select() -> Fallible<()> {
         lf_domain,
         SymmetricDistance,
         MaxDivergence::<f64>::default(),
+        // this expression cannot be parsed into a measurement
         lf.select(&[col("A").sum()]).logical_plan,
         Some(1.),
     )

@@ -2,7 +2,7 @@ use opendp_derive::bootstrap;
 use polars_plan::dsl::Expr;
 
 use crate::{
-    core::{Measure, Measurement, Metric, MetricSpace},
+    core::{get_disabled_features_message, Measure, Measurement, Metric, MetricSpace},
     domains::ExprDomain,
     error::Fallible,
     measures::MaxDivergence,
@@ -125,8 +125,9 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergen
 
             expr => fallible!(
                 MakeMeasurement,
-                "Expr is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
-                expr
+                "Expr is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                expr,
+                get_disabled_features_message()
             ),
         }
     }

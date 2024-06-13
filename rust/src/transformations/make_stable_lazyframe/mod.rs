@@ -3,7 +3,7 @@ use polars::lazy::frame::LazyFrame;
 use polars_plan::logical_plan::LogicalPlan;
 
 use crate::{
-    core::{Function, Metric, MetricSpace, Transformation},
+    core::{get_disabled_features_message, Function, Metric, MetricSpace, Transformation},
     domains::{LazyFrameDomain, LogicalPlanDomain},
     error::Fallible,
     metrics::SymmetricDistance,
@@ -78,8 +78,9 @@ impl StableLogicalPlan<SymmetricDistance, SymmetricDistance> for LogicalPlan {
             }
             lp => fallible!(
                 MakeTransformation,
-                "A step in your logical plan is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
-                lp
+                "A step in your query is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                lp,
+                get_disabled_features_message()
             )
         }
     }
