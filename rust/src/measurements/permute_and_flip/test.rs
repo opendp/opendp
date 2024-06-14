@@ -15,7 +15,7 @@ fn test_shuffle() -> Fallible<()> {
     let mut sorted = out.clone();
     sorted.sort();
     assert_ne!(out, sorted);
-    
+
     Ok(())
 }
 
@@ -29,7 +29,6 @@ fn test_permute_and_flip_max() -> Fallible<()> {
     Ok(())
 }
 
-
 #[test]
 fn test_permute_and_flip_min() -> Fallible<()> {
     let input_domain = VectorDomain::new(AtomDomain::default());
@@ -37,6 +36,6 @@ fn test_permute_and_flip_min() -> Fallible<()> {
     let de = make_report_noisy_max_permute_and_flip(input_domain, input_metric, 1., Optimize::Min)?;
     let release = de.invoke(&vec![1., 2., 3., 2., 0.])?;
     println!("{:?}", release);
-    
+
     Ok(())
 }

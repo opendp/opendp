@@ -1,37 +1,27 @@
-use crate::error::Fallible;
-use crate::traits::samplers::sample_bernoulli_exp;
-use crate::traits::samplers::SampleUniformIntBelow;
-use super::Optimize;
-use dashu::rational::RBig;
-use dashu::base::Sign;
-
 use crate::{
     core::{Function, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
+    error::Fallible,
     measures::MaxDivergence,
     metrics::LInfDistance,
-    traits::{Float, Number},
+    traits::{Float, Number, DistanceConstant},
+    traits::samplers::{sample_bernoulli_exp, SampleUniformIntBelow, CastInternalRational},
+    measurements::Optimize
 };
-
-use crate::traits::{
-    samplers::CastInternalRational,
-    DistanceConstant,
-};
-
-use crate::error::Error;
+use dashu::base::Sign;
+use dashu::rational::RBig;
 
 
 fn exact_fisher_yates(n: usize, trials_per_coin: Option<usize>) -> Fallible<Vec<usize>> {
     let mut permutation: Vec<usize> = (0..n).collect();
 
     for i in (1..n).rev() {
-        let j =  usize::sample_uniform_int_below(i, trials_per_coin)?;
+        let j = usize::sample_uniform_int_below(i, trials_per_coin)?;
         permutation.swap(i, j);
     }
 
     Ok(permutation)
 }
-
 
 /// Make a Measurement that takes a vector of scores and privately selects the index of the highest score via permute and flip.
 ///
@@ -62,7 +52,7 @@ where
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
 
-    let scale_frac: RBig = scale.clone().into_rational()?;
+    let scale_frac: RBig = scale.into_rational()?;
     let sgn: Sign = match optimize {
         Optimize::Max => Sign::Positive,
         Optimize::Min => Sign::Negative,
@@ -73,16 +63,16 @@ where
         Function::new_fallible(move |arg: &Vec<TIA>| {
             let permutation = exact_fisher_yates(arg.len(), None)?;
             let rational_elements = arg
-            .into_iter()
-            .map(|x| ((*x).into_rational().and_then(|x| {Ok(x * sgn)})))
-            .collect::<Fallible<Vec<RBig>>>()?;
+                .iter()
+                .map(|x| ((*x).into_rational().map(|x| x * sgn)))
+                .collect::<Fallible<Vec<RBig>>>()?;
 
             // get argmax of the rational elements
             let argmax = rational_elements
                 .iter()
                 .enumerate()
                 .max_by_key(|&(_, value)| value)
-                .and_then(|(index, _)| Some(index))
+                .map(|(index, _)| index)
                 .ok_or(err!(FailedFunction, "there must be at least one candidate"))?;
 
             let max_element = rational_elements
@@ -92,8 +82,8 @@ where
             // iterate over the permutations and throw a coin for each
             for i in permutation {
                 let candidate = rational_elements
-                .get(i)
-                .ok_or(err!(FailedFunction, "Wrong indexing"))?;
+                    .get(i)
+                    .ok_or(err!(FailedFunction, "Wrong indexing"))?;
 
                 let coin_bias_scale = max_element - candidate;
                 let coin_flip = sample_bernoulli_exp(coin_bias_scale / &scale_frac)?;
@@ -119,15 +109,15 @@ where
             if scale.is_zero() {
                 return Ok(QO::infinity());
             }
-            
-            let rational_two = QO::inf_cast(TIA::from(2).ok_or(err!(FailedCast, "Failed to cast constant."))?)?;
+
+            let rational_two =
+                QO::inf_cast(TIA::from(2).ok_or(err!(FailedCast, "Failed to cast constant."))?)?;
 
             // d_out >= (2 * d_in) / scale
             (d_in * rational_two).inf_div(&scale)
         }),
     )
 }
-
 
 #[cfg(feature = "floating-point")]
 #[cfg(test)]
