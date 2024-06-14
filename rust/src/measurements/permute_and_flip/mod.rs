@@ -2,15 +2,14 @@ use crate::{
     core::{Function, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
+    measurements::Optimize,
     measures::MaxDivergence,
     metrics::LInfDistance,
-    traits::{Float, Number, DistanceConstant},
-    traits::samplers::{sample_bernoulli_exp, SampleUniformIntBelow, CastInternalRational},
-    measurements::Optimize
+    traits::samplers::{sample_bernoulli_exp, CastInternalRational, SampleUniformIntBelow},
+    traits::{DistanceConstant, Float, Number},
 };
 use dashu::base::Sign;
 use dashu::rational::RBig;
-
 
 fn exact_fisher_yates(n: usize, trials_per_coin: Option<usize>) -> Fallible<Vec<usize>> {
     let mut permutation: Vec<usize> = (0..n).collect();

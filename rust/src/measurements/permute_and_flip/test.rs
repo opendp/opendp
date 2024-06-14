@@ -36,6 +36,5 @@ fn test_permute_and_flip_min() -> Fallible<()> {
     let de = make_report_noisy_max_permute_and_flip(input_domain, input_metric, 1., Optimize::Min)?;
     let release = de.invoke(&vec![1., 2., 3., 2., 0.])?;
     println!("{:?}", release);
-
     Ok(())
 }
