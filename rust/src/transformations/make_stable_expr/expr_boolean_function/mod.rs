@@ -43,7 +43,8 @@ where
     if matches!(bool_function, Any { .. } | All { .. }) {
         return fallible!(
             MakeTransformation,
-            "{:?} will not be supported, as these aggregations are too sensitive to extreme values to be estimated with reasonable utility"
+            "{:?} will not be supported, as this aggregation is too sensitive to extreme values to be estimated with reasonable utility",
+            bool_function
         );
     }
 
