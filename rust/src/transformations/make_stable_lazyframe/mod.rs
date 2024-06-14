@@ -15,6 +15,9 @@ mod ffi;
 #[cfg(feature = "contrib")]
 mod source;
 
+#[cfg(test)]
+mod test;
+
 #[bootstrap(
     features("contrib"),
     arguments(output_metric(c_type = "AnyMetric *", rust_type = b"null")),
