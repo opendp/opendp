@@ -159,6 +159,13 @@ impl<Q> MetricSpace for (LazyFrameDomain, LInfDistance<Q>) {
 
 impl<F: Frame> FrameDomain<F> {
     pub fn new(series_domains: Vec<SeriesDomain>) -> Fallible<Self> {
+        Self::new_with_margins(series_domains, HashMap::new())
+    }
+
+    pub(crate) fn new_with_margins(
+        series_domains: Vec<SeriesDomain>,
+        margins: HashMap<BTreeSet<String>, Margin>,
+    ) -> Fallible<Self> {
         let n_unique = series_domains
             .iter()
             .map(|s| &s.field.name)
@@ -169,7 +176,7 @@ impl<F: Frame> FrameDomain<F> {
         }
         Ok(FrameDomain {
             series_domains,
-            margins: HashMap::new(),
+            margins,
             _marker: PhantomData,
         })
     }
