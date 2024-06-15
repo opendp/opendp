@@ -1,8 +1,11 @@
+'''The ``polars`` module provides supporting utilities for making DP releases with the Polars library.'''
+
 from __future__ import annotations
 from dataclasses import dataclass
+import os
 from typing import Literal, Tuple
 from opendp._lib import import_optional_dependency, lib_path
-from opendp.mod import assert_features
+from opendp.mod import Domain, Measurement, assert_features
 from opendp.domains import series_domain, lazyframe_domain, option_domain, atom_domain
 from opendp.measurements import make_private_lazyframe
 
@@ -11,8 +14,10 @@ pl = import_optional_dependency("polars", raise_error=False)
 
 
 if pl is None:
-    def _register_expr_namespace(_name):
+
+    def _register_expr_namespace(_name):  # pragma: no cover
         return lambda c: c
+
 else:
     _register_expr_namespace = pl.api.register_expr_namespace
 
@@ -195,13 +200,15 @@ class OnceFrame(object):
         return onceframe_lazy(self.queryable)
 
 
-def lazyframe_domain_from_schema(schema):
+def lazyframe_domain_from_schema(schema) -> Domain:
+    """Builds the broadest possible LazyFrameDomain that matches a given LazyFrame schema."""
     return lazyframe_domain(
         [series_domain_from_field(field) for field in schema.items()]
     )
 
 
-def series_domain_from_field(field):
+def series_domain_from_field(field) -> Domain:
+    """Builds the broadest possible SeriesDomain that matches a given field."""
     name, dtype = field
     T = {
         pl.UInt32: "u32",
@@ -222,60 +229,131 @@ def series_domain_from_field(field):
     element_domain = option_domain(atom_domain(T=T, nullable=T in {"f32", "f64"}))
     return series_domain(name, element_domain)
 
-if pl is not None:
-    from polars import LazyFrame
-    from polars.lazyframe.group_by import LazyGroupBy
 
-    class LazyQuery(LazyFrame):
-        """This class mimics the LazyFrame API, but adds additional methods `release` and `resolve`."""
-        def __init__(self, lazy: LazyFrame | LazyGroupBy, query):
-            self._lazy = lazy
+# In our DataFrame APIs, we only need to make a few small adjustments to Polars LazyFrames.
+# Therefore if Polars is installed, LazyFrameQuery subclasses LazyFrame.
+#
+# # Compatibility with MyPy
+# If Polars is not installed, then a dummy LazyFrameQuery class is declared.
+# This way other modules can import and include LazyFrameQuery in static type annotations.
+# MyPy type-checks based on the first definition of a class,
+# so the code is written such that the first definition of the class is the real thing.
+#
+# # Compatibility with Pylance
+# If declared in branching code, Pylance may only provide code analysis based on the dummy class.
+# Therefore preference is given to the real class via a try-except block.
+#
+# # Compatibility with Sphinx
+# Even when Polars is installed, Sphinx fails to find the reference to the Polars LazyFrame class.
+# I think this is because Polars is not a direct dependency.
+# Therefore the following code uses OPENDP_HEADLESS to get Sphinx to document the dummy class instead.
+# This may also be preferred behavior:
+#     only the changes we make to the Polars LazyFrame API are documented, not the entire LazyFrame API.
+try:
+    if os.environ.get("OPENDP_HEADLESS", "false") != "false":
+        raise ImportError(
+            "Sphinx always fails to find a reference to LazyFrame. Falling back to dummy class."
+        )
+    from polars.lazyframe.frame import LazyFrame  # type: ignore[import-not-found]
+    from polars.lazyframe.group_by import LazyGroupBy  # type: ignore[import-not-found]
+
+    EXECUTES_LAZY = {
+        "collect",
+        "collect_async",
+        "describe",
+        "sink_parquet",
+        "sink_ipc",
+        "sink_csv",
+        "sink_ndjson",
+        "fetch",
+    }
+
+    class LazyFrameQuery(LazyFrame):
+        """LazyFrameQuery mimics a Polars LazyFrame, but makes a few additions and changes as documented below."""
+
+        def __init__(self, lf_plan: LazyFrame | LazyGroupBy, query):
+            self._lf_plan = lf_plan
             self._query = query
+            # do not initialize super() because inheritance is only used to mimic the API surface
 
         def __getattribute__(self, name):
+            # Re-route all possible attribute access to self._lf_plan.
+            # __getattribute__ is necessary because __getattr__ cannot intercept calls to inherited methods
 
-            lf = object.__getattribute__(self, "_lazy")
+            # We keep the query plan void of data anyways,
+            # so running the computation doesn't affect privacy.
+            # This doesn't have to cover all possible APIs that may execute the query,
+            #    but it does give a simple sanity check for the obvious cases.
+            if name in EXECUTES_LAZY:
+                raise ValueError("You must call `.release()` before executing a query.")
+
+            lf_plan = object.__getattribute__(self, "_lf_plan")
             query = object.__getattribute__(self, "_query")
-            attr = getattr(lf, name, None)
+            attr = getattr(lf_plan, name, None)
 
+            # If not a valid attribute on self._lf_plan, then don't re-route
             if attr is None:
                 return object.__getattribute__(self, name)
 
+            # any callable attributes (like .with_columns or .select) will now also wrap their outputs in a LazyFrameQuery
             if callable(attr):
 
                 def wrap(*args, **kwargs):
                     out = attr(*args, **kwargs)
+
+                    # re-wrap any lazy outputs to keep the conveniences afforded by this class
                     if isinstance(out, (LazyGroupBy, LazyFrame)):
-                        return LazyQuery(out, query)
+                        return LazyFrameQuery(out, query)
+
                     return out
 
                 return wrap
+            return attr
 
-        def resolve(self):
+        def resolve(self) -> Measurement:
+            """Resolve the query into a measurement."""
             from opendp.context import PartialChain
 
-            lf = object.__getattribute__(self, "_lazy")
+            # access attributes of self without getting intercepted by Self.__getattribute__
+            lf_plan = object.__getattribute__(self, "_lf_plan")
             query = object.__getattribute__(self, "_query")
             input_domain, input_metric = query._chain
-            query._chain = PartialChain(
-                lambda s: make_private_lazyframe(
-                    input_domain=input_domain,
-                    input_metric=input_metric,
-                    output_measure=query._output_measure,
-                    lazyframe=lf,
-                    global_scale=s,
-                )
-            )
-            return query.resolve()
 
-        def release(self):
+            # create an updated query and then resolve it into a measurement
+            return query.new_with(
+                chain=PartialChain(
+                    lambda s: make_private_lazyframe(
+                        input_domain=input_domain,
+                        input_metric=input_metric,
+                        output_measure=query._output_measure,
+                        lazyframe=lf_plan,
+                        global_scale=s,
+                    )
+                )
+            ).resolve()
+
+        def release(self) -> OnceFrame:
+            """Release the query. The query must be part of a context."""
             query = object.__getattribute__(self, "_query")
             resolve = object.__getattribute__(self, "resolve")
             return query._context(resolve())  # type: ignore[misc]
 
-else:
-    class LazyQuery(object): # type: ignore[no-redef]
-        pass
+except ImportError:
+    ERR_MSG = (
+        "LazyFrameQuery needs Polars to be installed: `pip install 'opendp[polars]'`."
+    )
+
+    class LazyFrameQuery(object):  # type: ignore[no-redef]
+        """LazyFrameQuery mimics a Polars LazyFrame, but makes a few additions and changes as documented below."""
+
+        def resolve(self) -> Measurement:
+            """Resolve the query into a measurement."""
+            raise ImportError(ERR_MSG)
+
+        def release(self) -> OnceFrame:
+            """Release the query. The query must be part of a context."""
+            raise ImportError(ERR_MSG)
+
 
 @dataclass
 class Margin(object):
@@ -305,11 +383,3 @@ class Margin(object):
 
     max_influenced_partitions: int | None = None
     """The greatest number of partitions any one individual can contribute to."""
-
-    def with_public_keys(self) -> "Margin":
-        self.public_info = "keys"
-        return self
-
-    def with_public_lengths(self) -> "Margin":
-        self.public_info = "lengths"
-        return self

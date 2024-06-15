@@ -36,7 +36,9 @@ pub extern "C" fn opendp_domains__lazyframe_domain(
 }
 
 #[bootstrap()]
-/// Construct a LazyFrame from a LazyFrameDomain.
+/// Construct an empty LazyFrame with the same schema as in the LazyFrameDomain.
+///
+/// This is useful for creating a dummy lazyframe used to write a query plan.
 ///
 /// # Arguments
 /// * `domain` - A LazyFrameDomain.

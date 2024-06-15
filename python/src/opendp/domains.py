@@ -63,7 +63,9 @@ def _domain_free(
 def _lazyframe_from_domain(
     domain: Domain
 ):
-    r"""Construct a LazyFrame from a LazyFrameDomain.
+    r"""Construct an empty LazyFrame with the same schema as in the LazyFrameDomain.
+
+    This is useful for creating a dummy lazyframe used to write a query plan.
 
     [_lazyframe_from_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn._lazyframe_from_domain.html)
 

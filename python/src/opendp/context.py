@@ -1,4 +1,4 @@
-"""
+'''
 The ``context`` module provides :py:class:`opendp.context.Context` and supporting utilities.
 
 For more context, see :ref:`context in the User Guide <context-user-guide>`.
@@ -9,9 +9,8 @@ We suggest importing under the conventional name ``dp``:
 .. code:: python
 
     >>> import opendp.prelude as dp
-"""
+'''
 
-from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional, Union
 import importlib
@@ -52,20 +51,20 @@ from opendp.mod import (
 )
 from opendp.typing import RuntimeType
 from opendp._lib import indent, import_optional_dependency
-from opendp.polars import LazyQuery, Margin
+from opendp.polars import LazyFrameQuery, Margin
 from dataclasses import asdict
 
 
 __all__ = [
-    "space_of",
-    "domain_of",
-    "metric_of",
-    "loss_of",
-    "unit_of",
-    "Context",
-    "Query",
-    "Chain",
-    "PartialChain",
+    'space_of',
+    'domain_of',
+    'metric_of',
+    'loss_of',
+    'unit_of',
+    'Context',
+    'Query',
+    'Chain',
+    'PartialChain'
 ]
 
 
@@ -114,16 +113,16 @@ def space_of(T, M=None, infer: bool = False) -> tuple[Domain, Metric]:
 
     # choose a metric type if not set
     if M is None:
-        if D.origin == "VectorDomain":  # type: ignore[union-attr]
+        if D.origin == "VectorDomain": # type: ignore[union-attr]
             M = ty.SymmetricDistance
-        elif D.origin == "AtomDomain" and ty.get_atom(D) in ty.NUMERIC_TYPES:  # type: ignore[union-attr]
+        elif D.origin == "AtomDomain" and ty.get_atom(D) in ty.NUMERIC_TYPES: # type: ignore[union-attr]
             M = ty.AbsoluteDistance
         else:
             raise TypeError(f"no default metric for domain {D}. Please set `M`")
 
     # choose a distance type if not set
     if isinstance(M, ty.RuntimeType) and not M.args:
-        M = M[ty.get_atom(D)]  # type: ignore[index]
+        M = M[ty.get_atom(D)] # type: ignore[index]
 
     return domain, metric_of(M)
 
@@ -136,7 +135,7 @@ def domain_of(T, infer: bool = False) -> Domain:
     >>> import opendp.prelude as dp
     >>> dp.domain_of(list[int])
     VectorDomain(AtomDomain(T=i32))
-
+    
     As well as strings representing types in the underlying Rust syntax:
 
     >>> dp.domain_of('Vec<int>')
@@ -146,12 +145,12 @@ def domain_of(T, infer: bool = False) -> Domain:
 
     >>> dp.domain_of(dict[str, int])
     MapDomain { key_domain: AtomDomain(T=String), value_domain: AtomDomain(T=i32) }
-
+    
     .. TODO: Support python syntax for Option: https://github.com/opendp/opendp/issues/1389
 
     >>> dp.domain_of('Option<int>')  # Python's `Optional` is not supported.
     OptionDomain(AtomDomain(T=i32))
-
+    
     >>> dp.domain_of(dp.i32)
     AtomDomain(T=i32)
 
@@ -257,16 +256,14 @@ def loss_of(
     def range_warning(name, value, info_level, warn_level):
         if value > warn_level:
             if info_level == warn_level:
-                logger.warning(f"{name} should be less than or equal to {warn_level}")
+                logger.warning(f'{name} should be less than or equal to {warn_level}')
             else:
-                logger.warning(
-                    f"{name} should be less than or equal to {warn_level}, and is typically less than or equal to {info_level}"
-                )
+                logger.warning(f'{name} should be less than or equal to {warn_level}, and is typically less than or equal to {info_level}')
         elif value > info_level:
-            logger.info(f"{name} is typically less than or equal to {info_level}")
+            logger.info(f'{name} is typically less than or equal to {info_level}')
 
     if rho:
-        range_warning("rho", rho, 0.25, 0.5)
+        range_warning('rho', rho, 0.25, 0.5)
         U = RuntimeType.parse_or_infer(U, rho)
         return zero_concentrated_divergence(T=U), rho
 
@@ -278,7 +275,7 @@ def loss_of(
         U = RuntimeType.parse_or_infer(U, epsilon)
         return max_divergence(T=U), epsilon
 
-    range_warning("delta", delta, 1e-6, 1e-6)
+    range_warning('delta', delta, 1e-6, 1e-6)
     U = RuntimeType.parse_or_infer(U, epsilon)
     return fixed_smoothed_max_divergence(T=U), (epsilon, delta)
 
@@ -293,7 +290,7 @@ def unit_of(
     ordered: bool = False,
     U=None,
 ) -> tuple[Metric, float]:
-    """Constructs a unit of privacy, consisting of a metric and a dataset distance.
+    """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
     The parameters are mutually exclusive.
 
     >>> import opendp.prelude as dp
@@ -334,7 +331,7 @@ def unit_of(
     if l2 is not None:
         metric = l2_distance(T=RuntimeType.parse_or_infer(U, l2))
         return metric, l2
-    raise Exception("No matching metric found")
+    raise Exception('No matching metric found')
 
 
 class Context(object):
@@ -376,7 +373,6 @@ class Context(object):
     accountant = {indent(repr(self.accountant))},
     d_in       = {self.d_in},
     d_mids     = {self.d_mids})"""
-
     # TODO: Add "d_out" when filters are implemented.
 
     @staticmethod
@@ -384,10 +380,10 @@ class Context(object):
         data: Any,
         privacy_unit: tuple[Metric, float],
         privacy_loss: tuple[Measure, Any],
-        split_evenly_over: int | None = None,
-        split_by_weights: list[float] | None = None,
-        domain: Domain | None = None,
-        margins: dict[tuple[str, ...], Margin] | None = None,
+        split_evenly_over: Optional[int] = None,
+        split_by_weights: Optional[list[float]] = None,
+        domain: Optional[Domain] = None,
+        margins: Optional[dict[tuple[str, ...], Margin]] = None,
     ) -> "Context":
         """Constructs a new context containing a sequential compositor with the given weights.
 
@@ -399,9 +395,10 @@ class Context(object):
         :param data: The data to be analyzed.
         :param privacy_unit: The privacy unit of the compositor.
         :param privacy_loss: The privacy loss of the compositor.
-        :param split_evenly_over: The number of parts to evenly distribute the privacy loss
-        :param split_by_weights: A list of weights for each intermediate privacy loss
-        :param domain: The domain of the data."""
+        :param split_evenly_over: The number of parts to evenly distribute the privacy loss.
+        :param split_by_weights: A list of weights for each intermediate privacy loss.
+        :param domain: The domain of the data.
+        :param margins: A dictionary where the keys are grouping columns and values describe known properties of the respective margins."""
         if domain is None:
             domain = domain_of(data, infer=True)
 
@@ -418,9 +415,7 @@ class Context(object):
             inferred_domain = domain_of(data, infer=True)
             if vector_domain(domain) == inferred_domain:
                 # With Python 3.11, add_note is available, but pytest.raises doesn't see notes.
-                e.args = (
-                    e.args[0] + "; To fix, wrap domain kwarg with dp.vector_domain()",
-                )
+                e.args = (e.args[0] + '; To fix, wrap domain kwarg with dp.vector_domain()',)
             raise e
 
         return Context(
@@ -437,7 +432,7 @@ class Context(object):
             self.d_mids.pop(0)
         return answer
 
-    def query(self, **kwargs) -> Union["Query", LazyQuery]:
+    def query(self, **kwargs) -> Union["Query", LazyFrameQuery]:
         """Starts a new Query to be executed in this context.
 
         If the context has been constructed with a sequence of privacy losses,
@@ -458,7 +453,7 @@ class Context(object):
             measure, d_query = loss_of(**kwargs) # type: ignore[assignment]
             if measure != self.output_measure: # type: ignore[attr-defined]
                 raise ValueError(
-                    f"Expected output measure {self.output_measure} but got {measure}"  # type: ignore[attr-defined]
+                    f"Expected output measure {self.output_measure} but got {measure}" # type: ignore[attr-defined]
                 )
 
         chain = self.space_override or self.accountant.input_space
@@ -469,13 +464,14 @@ class Context(object):
             d_out=d_query,
             context=self,
         )
-
-
+        
+        # return a LazyFrameQuery when dealing with Polars data, to better mimic the Polars API
         if chain[0].type == "LazyFrameDomain":
             from opendp.domains import _lazyframe_from_domain
 
-            lf = _lazyframe_from_domain(self.accountant.input_domain)
-            return LazyQuery(lf, query)
+            # creates an empty lazyframe to hold the query plan
+            lf_plan = _lazyframe_from_domain(self.accountant.input_domain)
+            return LazyFrameQuery(lf_plan, query)
 
         return query
 
@@ -575,7 +571,7 @@ class Query(object):
             output_measure=self._output_measure,
             d_in=self._d_in,
             d_out=self._d_out,
-            context=self._context,  # type: ignore[arg-type]
+            context=self._context, # type: ignore[arg-type]
             _wrap_release=wrap_release or self._wrap_release,
         )
 
@@ -604,7 +600,7 @@ class Query(object):
     def release(self) -> Any:
         """Release the query. The query must be part of a context."""
         # TODO: consider adding an optional `data` parameter for when _context is None
-        answer = self._context(self.resolve())  # type: ignore[misc]
+        answer = self._context(self.resolve()) # type: ignore[misc]
         if self._wrap_release:
             answer = self._wrap_release(answer)
         return answer
@@ -666,7 +662,7 @@ class Query(object):
                     queryable=queryable,
                     d_in=d_in,
                     d_mids=d_mids,
-                    space_override=(input_domain, input_metric),
+                    space_override=(input_domain, input_metric)
                 )
 
             return self.new_with(chain=accountant, wrap_release=wrap_release)
@@ -854,7 +850,6 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
         "FixedSmoothedMaxDivergence",
         "ZeroConcentratedDivergence",
     ):
-
         def caster(measurement):
             return make_fix_delta(make_zCDP_to_approxDP(measurement), delta=d_from[1])
 
@@ -866,5 +861,6 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
             T=float,
         )
         return make_gaussian(*space, scale).map(constant)
+        
 
     raise ValueError(f"Unable to translate distance from {from_to[0]} to {from_to[1]}")
