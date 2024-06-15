@@ -187,3 +187,4 @@ pub mod measures;
 pub mod metrics;
 pub mod traits;
 pub mod transformations;
+pub mod utils;
