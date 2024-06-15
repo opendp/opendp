@@ -1,7 +1,7 @@
 use crate::{
-    core::PrivacyNamespaceHelper,
     measures::MaxDivergence,
     metrics::{PartitionDistance, SymmetricDistance},
+    polars::PrivacyNamespace,
     transformations::expr_discrete_quantile_score::test::get_quantile_test_data,
 };
 

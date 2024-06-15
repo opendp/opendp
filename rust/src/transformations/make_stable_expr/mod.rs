@@ -2,10 +2,11 @@ use opendp_derive::bootstrap;
 use polars_plan::dsl::{AggExpr, Expr, FunctionExpr};
 
 use crate::{
-    core::{get_disabled_features_message, Metric, MetricSpace, Transformation},
+    core::{Metric, MetricSpace, Transformation},
     domains::{ExprDomain, OuterMetric},
     error::Fallible,
     metrics::{LInfDistance, LpDistance, Parallel, PartitionDistance},
+    polars::get_disabled_features_message,
 };
 
 use super::{traits::UnboundedMetric, DatasetMetric};

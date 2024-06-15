@@ -7,8 +7,6 @@ use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
-#[cfg(feature = "polars")]
-use crate::core::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
 use crate::domains::ffi::UserDomain;
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::*;
@@ -21,6 +19,10 @@ use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
     L1Distance, L2Distance, SymmetricDistance,
 };
+
+#[cfg(feature = "polars")]
+use crate::polars::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
+
 use crate::transformations::DataFrameDomain;
 use crate::{err, fallible};
 

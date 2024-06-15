@@ -1,9 +1,8 @@
-use crate::core::{
-    apply_plugin, match_plugin, ExprFunction, MetricSpace, StabilityMap, Transformation,
-};
+use crate::core::{MetricSpace, StabilityMap, Transformation};
 use crate::domains::MarginPub;
 use crate::measurements::expr_index_candidates::Candidates;
 use crate::metrics::{LInfDistance, Parallel, PartitionDistance};
+use crate::polars::{apply_plugin, match_plugin, ExprFunction};
 use crate::traits::{InfCast, Number};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{

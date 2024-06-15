@@ -1,8 +1,7 @@
-use crate::core::{
-    apply_plugin, match_plugin, ExprFunction, Metric, MetricSpace, OpenDPPlugin, PrivacyMap,
-};
+use crate::core::{Metric, MetricSpace, PrivacyMap};
 use crate::measurements::{report_noisy_max_gumbel_map, select_score, Optimize};
 use crate::metrics::{IntDistance, LInfDistance, Parallel};
+use crate::polars::{apply_plugin, match_plugin, ExprFunction, OpenDPPlugin};
 use crate::traits::samplers::CastInternalRational;
 use crate::traits::{InfCast, InfMul, Number};
 use crate::transformations::StableExpr;

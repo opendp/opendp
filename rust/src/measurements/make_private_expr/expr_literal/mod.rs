@@ -1,5 +1,6 @@
-use crate::core::{ExprFunction, Measure, Metric, MetricSpace, PrivacyMap};
+use crate::core::{Measure, Metric, MetricSpace, PrivacyMap};
 use crate::metrics::PartitionDistance;
+use crate::polars::ExprFunction;
 use crate::{
     core::{Function, Measurement},
     domains::ExprDomain,

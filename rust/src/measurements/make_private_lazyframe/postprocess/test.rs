@@ -2,11 +2,11 @@ use polars::{df, lazy::frame::IntoLazy};
 use polars_plan::dsl::col;
 
 use crate::{
-    core::PrivacyNamespaceHelper,
     domains::{AtomDomain, Margin, SeriesDomain},
     measurements::make_private_lazyframe,
     measures::MaxDivergence,
     metrics::SymmetricDistance,
+    polars::PrivacyNamespace,
 };
 
 use super::*;

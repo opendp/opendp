@@ -3,11 +3,12 @@ use polars_plan::dsl::Expr;
 
 use crate::{
     combinators::BasicCompositionMeasure,
-    core::{get_disabled_features_message, Measure, Measurement, Metric, MetricSpace},
+    core::{Measure, Measurement, Metric, MetricSpace},
     domains::ExprDomain,
     error::Fallible,
     measures::{MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
+    polars::get_disabled_features_message,
     transformations::traits::UnboundedMetric,
 };
 

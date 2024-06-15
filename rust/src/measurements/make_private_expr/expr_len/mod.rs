@@ -1,6 +1,7 @@
-use crate::core::{ExprFunction, Measure, MetricSpace, PrivacyMap};
+use crate::core::{Measure, MetricSpace, PrivacyMap};
 use crate::domains::MarginPub;
 use crate::metrics::PartitionDistance;
+use crate::polars::ExprFunction;
 use crate::transformations::traits::UnboundedMetric;
 use crate::{
     core::{Function, Measurement},

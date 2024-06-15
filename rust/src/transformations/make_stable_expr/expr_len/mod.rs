@@ -1,7 +1,8 @@
-use crate::core::{ExprFunction, Function, MetricSpace, StabilityMap, Transformation};
+use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, ExprDomain, LogicalPlanDomain, MarginPub, SeriesDomain};
 use crate::error::*;
 use crate::metrics::{IntDistance, LpDistance, PartitionDistance};
+use crate::polars::ExprFunction;
 use crate::traits::{InfCast, InfMul, InfSqrt, ProductOrd};
 use crate::transformations::traits::UnboundedMetric;
 use polars_plan::dsl::{len, Expr};
