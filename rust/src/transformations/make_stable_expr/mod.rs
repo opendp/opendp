@@ -32,6 +32,9 @@ mod expr_fill_nan;
 mod expr_fill_null;
 
 #[cfg(feature = "contrib")]
+mod expr_len;
+
+#[cfg(feature = "contrib")]
 mod expr_lit;
 
 #[cfg(feature = "contrib")]
@@ -137,6 +140,9 @@ where
             Agg(AggExpr::Sum(_)) => {
                 expr_sum::make_expr_sum(input_domain, input_metric, self)
             }
+
+            #[cfg(feature = "contrib")]
+            Len => expr_len::make_expr_len(input_domain, input_metric, self),
 
             expr => fallible!(
                 MakeTransformation,
