@@ -6,7 +6,7 @@ use crate::metrics::{AbsoluteDistance, L1Distance};
 use crate::traits::samplers::{sample_discrete_laplace_Z2k, CastInternalRational};
 use crate::traits::{ExactIntCast, Float, FloatBits};
 
-use super::laplace_map;
+use super::laplace_puredp_map;
 
 /// Make a Measurement that adds noise from the Laplace(`scale`) distribution to a scalar value.
 ///
@@ -42,7 +42,7 @@ where
         Function::new_fallible(move |shift: &T| sample_discrete_laplace_Z2k(*shift, scale, k)),
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_map(scale, relaxation)),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, relaxation)),
     )
 }
 
@@ -92,7 +92,7 @@ where
         }),
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_map(scale, relaxation)),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, relaxation)),
     )
 }
 

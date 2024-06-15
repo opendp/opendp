@@ -60,7 +60,7 @@ where
         },
         input_metric,
         MO::default(),
-        MO::new_forward_map(scale, MO::Atom::zero())?,
+        MO::new_forward_map(scale, MO::Atom::zero()),
     )
 }
 
@@ -115,7 +115,7 @@ where
         },
         input_metric,
         MO::default(),
-        MO::new_forward_map(scale, MO::Atom::zero())?,
+        MO::new_forward_map(scale, MO::Atom::zero()),
     )
 }
 
