@@ -176,9 +176,9 @@ def domain_of(T, infer: bool = False) -> Domain:
     if infer:
         pl = import_optional_dependency("polars", raise_error=False)
         if pl is not None and isinstance(T, pl.LazyFrame):
-            from opendp.polars import lazyframe_domain_from_schema
+            from opendp.polars import _lazyframe_domain_from_schema
 
-            return lazyframe_domain_from_schema(T.schema)
+            return _lazyframe_domain_from_schema(T.schema)
 
     # normalize to a type descriptor
     if infer:
@@ -402,8 +402,9 @@ class Context(object):
         if domain is None:
             domain = domain_of(data, infer=True)
 
-        for by, margin in (margins or dict()).items():
-            domain = with_margin(domain, by=list(by), **asdict(margin))
+        if margins:
+            for by, margin in margins.items():
+                domain = with_margin(domain, by=list(by), **asdict(margin))
 
         accountant, d_mids = _sequential_composition_by_weights(
             domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights

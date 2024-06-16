@@ -290,6 +290,19 @@ def test_mechanisms(measure):
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
 
 
+def test_wrong_mechanism():
+    pl = pytest.importorskip("polars")
+
+    lf_domain, lf = example_lf()
+
+    plan = seed(lf.schema).select(pl.len().dp.gaussian(0.0))
+    with pytest.raises(dp.OpenDPException) as err:
+        dp.m.make_private_lazyframe(
+            lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
+        )
+    assert 'expected Laplace distribution, found Gaussian' in (err.value.message or '')
+
+
 def test_polars_context():
     pl = pytest.importorskip("polars")
 
@@ -345,7 +358,7 @@ def test_polars_non_wrapping():
     assert context.query().schema == {"A": pl.String}
     assert context.query().width == 1
     serial = context.query().with_columns(pl.col("A") + 2).serialize()
-    assert str(serial)[:10] == '{"HStack":'
+    assert serial.startswith('{"HStack":')
 
 
 def test_polars_collect_early():

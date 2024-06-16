@@ -1,30 +1,18 @@
-'''The ``polars`` module provides supporting utilities for making DP releases with the Polars library.'''
+"""The ``polars`` module provides supporting utilities for making DP releases with the Polars library."""
 
 from __future__ import annotations
 from dataclasses import dataclass
 import os
 from typing import Literal, Tuple
-from opendp._lib import import_optional_dependency, lib_path
+from opendp._lib import lib_path
 from opendp.mod import Domain, Measurement, assert_features
 from opendp.domains import series_domain, lazyframe_domain, option_domain, atom_domain
 from opendp.measurements import make_private_lazyframe
 
 
-pl = import_optional_dependency("polars", raise_error=False)
-
-
-if pl is None:
-
-    def _register_expr_namespace(_name):  # pragma: no cover
-        return lambda c: c
-
-else:
-    _register_expr_namespace = pl.api.register_expr_namespace
-
-
-@_register_expr_namespace("dp")
 class DPExpr(object):
     def __init__(self, expr):
+        """Apply a differentially private plugin to a Polars expression."""
         self.expr = expr
 
     def noise(
@@ -43,7 +31,8 @@ class DPExpr(object):
         :param scale: Scale parameter for the noise distribution.
         :param distribution: Either Laplace, Gaussian or None.
         """
-        return pl.plugins.register_plugin_function(
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        return register_plugin_function(
             plugin_path=lib_path,
             function_name="noise",
             kwargs={"scale": scale, "distribution": distribution},
@@ -88,6 +77,7 @@ class DPExpr(object):
         :param bounds: The bounds of the input data.
         :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
         """
+        import polars as pl  # type: ignore[import-not-found]
         return self.expr.dp.sum(bounds, scale) / pl.len()
 
     def _discrete_quantile_score(self, alpha: float, candidates: list[float]):
@@ -99,7 +89,8 @@ class DPExpr(object):
         :param alpha: a value in $[0, 1]$. Choose 0.5 for median
         :param candidates: Set of possible quantiles to evaluate the utility of.
         """
-        return pl.plugins.register_plugin_function(
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        return register_plugin_function(
             plugin_path=lib_path,
             function_name="discrete_quantile_score",
             kwargs={"alpha": alpha, "candidates": candidates},
@@ -117,7 +108,8 @@ class DPExpr(object):
         :param optimize: Distinguish between argmax and argmin.
         :param scale: Noise scale parameter for the Gumbel distribution.
         """
-        return pl.plugins.register_plugin_function(
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        return register_plugin_function(
             plugin_path=lib_path,
             function_name="report_noisy_max_gumbel",
             kwargs={"optimize": optimize, "scale": scale},
@@ -132,7 +124,8 @@ class DPExpr(object):
 
         :param candidates: The values that each selected index corresponds to.
         """
-        return pl.plugins.register_plugin_function(
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        return register_plugin_function(
             plugin_path=lib_path,
             function_name="index_candidates",
             kwargs={"candidates": candidates},
@@ -164,6 +157,13 @@ class DPExpr(object):
         :param scale: How much noise to add to the scores of candidate.
         """
         return self.expr.dp.quantile(0.5, candidates, scale)
+
+
+try:
+    from polars.api import register_expr_namespace  # type: ignore[import-not-found]
+    register_expr_namespace("dp")(DPExpr)
+except ImportError:
+    pass
 
 
 class OnceFrame(object):
@@ -200,15 +200,16 @@ class OnceFrame(object):
         return onceframe_lazy(self.queryable)
 
 
-def lazyframe_domain_from_schema(schema) -> Domain:
+def _lazyframe_domain_from_schema(schema) -> Domain:
     """Builds the broadest possible LazyFrameDomain that matches a given LazyFrame schema."""
     return lazyframe_domain(
-        [series_domain_from_field(field) for field in schema.items()]
+        [_series_domain_from_field(field) for field in schema.items()]
     )
 
 
-def series_domain_from_field(field) -> Domain:
+def _series_domain_from_field(field) -> Domain:
     """Builds the broadest possible SeriesDomain that matches a given field."""
+    import polars as pl
     name, dtype = field
     T = {
         pl.UInt32: "u32",
@@ -228,6 +229,18 @@ def series_domain_from_field(field) -> Domain:
 
     element_domain = option_domain(atom_domain(T=T, nullable=T in {"f32", "f64"}))
     return series_domain(name, element_domain)
+
+
+_LAZY_EXECUTION_METHODS = {
+    "collect",
+    "collect_async",
+    "describe",
+    "sink_parquet",
+    "sink_ipc",
+    "sink_csv",
+    "sink_ndjson",
+    "fetch",
+}
 
 
 # In our DataFrame APIs, we only need to make a few small adjustments to Polars LazyFrames.
@@ -250,28 +263,17 @@ def series_domain_from_field(field) -> Domain:
 # This may also be preferred behavior:
 #     only the changes we make to the Polars LazyFrame API are documented, not the entire LazyFrame API.
 try:
-    if os.environ.get("OPENDP_HEADLESS", "false") != "false":
+    if os.environ.get("OPENDP_HEADLESS"):
         raise ImportError(
             "Sphinx always fails to find a reference to LazyFrame. Falling back to dummy class."
         )
-    from polars.lazyframe.frame import LazyFrame  # type: ignore[import-not-found]
-    from polars.lazyframe.group_by import LazyGroupBy  # type: ignore[import-not-found]
+    from polars.lazyframe.frame import LazyFrame as _LazyFrame  # type: ignore[import-not-found]
+    from polars.lazyframe.group_by import LazyGroupBy as _LazyGroupBy  # type: ignore[import-not-found]
 
-    EXECUTES_LAZY = {
-        "collect",
-        "collect_async",
-        "describe",
-        "sink_parquet",
-        "sink_ipc",
-        "sink_csv",
-        "sink_ndjson",
-        "fetch",
-    }
-
-    class LazyFrameQuery(LazyFrame):
+    class LazyFrameQuery(_LazyFrame):
         """LazyFrameQuery mimics a Polars LazyFrame, but makes a few additions and changes as documented below."""
 
-        def __init__(self, lf_plan: LazyFrame | LazyGroupBy, query):
+        def __init__(self, lf_plan: _LazyFrame | _LazyGroupBy, query):
             self._lf_plan = lf_plan
             self._query = query
             # do not initialize super() because inheritance is only used to mimic the API surface
@@ -284,7 +286,7 @@ try:
             # so running the computation doesn't affect privacy.
             # This doesn't have to cover all possible APIs that may execute the query,
             #    but it does give a simple sanity check for the obvious cases.
-            if name in EXECUTES_LAZY:
+            if name in _LAZY_EXECUTION_METHODS:
                 raise ValueError("You must call `.release()` before executing a query.")
 
             lf_plan = object.__getattribute__(self, "_lf_plan")
@@ -302,7 +304,7 @@ try:
                     out = attr(*args, **kwargs)
 
                     # re-wrap any lazy outputs to keep the conveniences afforded by this class
-                    if isinstance(out, (LazyGroupBy, LazyFrame)):
+                    if isinstance(out, (_LazyGroupBy, _LazyFrame)):
                         return LazyFrameQuery(out, query)
 
                     return out
@@ -339,9 +341,7 @@ try:
             return query._context(resolve())  # type: ignore[misc]
 
 except ImportError:
-    ERR_MSG = (
-        "LazyFrameQuery needs Polars to be installed: `pip install 'opendp[polars]'`."
-    )
+    ERR_MSG = "LazyFrameQuery depends on Polars: `pip install 'opendp[polars]'`."
 
     class LazyFrameQuery(object):  # type: ignore[no-redef]
         """LazyFrameQuery mimics a Polars LazyFrame, but makes a few additions and changes as documented below."""
@@ -369,7 +369,7 @@ class Margin(object):
 
     If you don't know how many records are in the data, you can specify a very loose upper bound.
 
-    This is used to resolve issues raised in "Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It" [CSVW22]
+    This is used to resolve issues raised in [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     """
 
     max_num_partitions: int | None = None

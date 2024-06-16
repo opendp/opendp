@@ -47,6 +47,6 @@ from opendp.typing import *
 from opendp.accuracy import *
 from opendp.core import new_function, new_queryable
 from opendp.context import *
-from opendp.polars import Margin
+from opendp.polars import *
 
 __all__ = ["t", "m", "c"]
