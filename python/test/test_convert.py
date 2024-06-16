@@ -160,3 +160,14 @@ def test_polars_expr():
     obj = py_to_c(val_in, AnyObjectPtr, "Expr")
     val_out = c_to_py(obj)
     assert str(val_out) == str(val_in)
+
+
+def test_bitvec():
+    np = pytest.importorskip('numpy') 
+
+    for i in range(1, 20):
+        data = np.packbits([1] * i)
+        obj = py_to_c(data.tobytes(), AnyObjectPtr, "BitVector")
+        val_out = np.frombuffer(c_to_py(obj), dtype=np.uint8)
+        bits = np.unpackbits(val_out)
+        assert (bits.tolist() + [0]).index(0) == i
