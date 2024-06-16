@@ -239,3 +239,15 @@ test_that("test_gaussian", {
   input_space <- c(vector_domain(atom_domain(.T = f64)), l2_distance(.T = f64))
   (input_space |> then_gaussian(1.))(arg = c(1., 2., 3.))
 })
+
+
+test_that("test_randomized_response_bitvec", {
+  xx <- raw(3)
+  xx[1] <- charToRaw("A")
+  xx[2] <- as.raw(1L)
+  input_space <- c(bitvector_domain(max_weight = 4L), discrete_distance())
+  m_rr <- input_space |> then_randomized_response_bitvec(f = 0.95)
+
+  expect_equal(m_rr(d_in = 1L), 0.8006676684558611)
+  m_rr(arg = xx)
+})

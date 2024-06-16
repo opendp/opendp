@@ -19,9 +19,11 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "polars")]
 mod polars;
+use bitvec::slice::BitSlice;
 
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;
+use crate::domains::BitVector;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
 use crate::ffi::util::{self, into_c_char_p, AnyDomainPtr, ExtrinsicObject};
@@ -75,6 +77,25 @@ pub extern "C" fn opendp_data__slice_as_object(
             })?
             .clone();
         Ok(AnyObject::new(plain))
+    }
+    fn raw_to_bitvector(raw: &FfiSlice) -> Fallible<AnyObject> {
+        if raw.ptr.is_null() {
+            return fallible!(
+                FFI,
+                "Attempted to follow a null pointer to create a bitvector"
+            );
+        }
+
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len.div_ceil(8)) };
+
+        let bitslice = BitSlice::try_from_slice(slice).map_err(|_| {
+            err!(
+                FFI,
+                "Attempted to create a bitvector from a slice with non-zero padding"
+            )
+        })?;
+
+        Ok(AnyObject::new(BitVector::from_bitslice(&bitslice[..raw.len])))
     }
     fn raw_to_string(raw: &FfiSlice) -> Fallible<AnyObject> {
         let str_ptr = *util::as_ref(raw.ptr as *const *const c_char).ok_or_else(|| err!(FFI, "null pointer"))?;
@@ -245,6 +266,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         Ok(AnyObject::new((dsl, expr)))
     }
     match T_.contents {
+        TypeContents::PLAIN("BitVector") => raw_to_bitvector(raw),
         TypeContents::PLAIN("String") => raw_to_string(raw),
         TypeContents::PLAIN("ExtrinsicObject") => raw_to_plain::<ExtrinsicObject>(raw),
 
@@ -362,6 +384,13 @@ pub extern "C" fn opendp_data__object_type(this: *mut AnyObject) -> FfiResult<*m
 #[no_mangle]
 pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResult<*mut FfiSlice> {
     let obj = try_as_ref!(obj);
+    fn bitvector_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let vec: &BitVector = obj.downcast_ref()?;
+        Ok(FfiSlice::new(
+            vec.as_bitptr().pointer() as *mut c_void,
+            vec.len(),
+        ))
+    }
     fn plain_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let plain: &T = obj.downcast_ref()?;
         Ok(FfiSlice::new(plain as *const T as *mut c_void, 1))
@@ -515,6 +544,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         ))
     }
     match &obj.type_.contents {
+        TypeContents::PLAIN("BitVector") => bitvector_to_raw(obj),
         TypeContents::PLAIN("ExtrinsicObject") => plain_to_raw::<ExtrinsicObject>(obj),
         TypeContents::PLAIN("String") => string_to_raw(obj),
 
@@ -841,7 +871,8 @@ impl Clone for AnyObject {
                             f64,
                             bool,
                             String,
-                            ExtrinsicObject
+                            ExtrinsicObject,
+                            BitVector
                         ]
                     )],
                     (self)

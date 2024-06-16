@@ -206,6 +206,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
         if type_name in ATOM_MAP:
             return _slice_to_scalar(raw, type_name)
         
+        if type_name == "BitVector":
+            return _slice_to_bitvector(raw)
+        
         if type_name == "ExtrinsicObject":
             return _slice_to_extrinsic(raw)
         
@@ -249,6 +252,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
     if isinstance(type_name, str):
         if type_name in ATOM_MAP:
             return _scalar_to_slice(value, type_name)
+        
+        if type_name == "BitVector":
+            return _bitvector_to_slice(value)
     
         if type_name == "ExtrinsicObject":
             return _extrinsic_to_slice(value)
@@ -326,6 +332,26 @@ def _slice_to_string(raw: FfiSlicePtr) -> str:
     value = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p)).contents.value
     assert value is not None 
     return value.decode()
+
+
+def _bitvector_to_slice(val: Sequence[Any]) -> FfiSlicePtr:
+    np = import_optional_dependency('numpy', raise_error=False)
+    if np is not None and isinstance(val, np.ndarray):
+        val = val.tobytes()
+    
+    if not isinstance(val, (bytes, bytearray)):
+        raise TypeError("Expected type is BitVector but input data is not bytes or bytearray.")
+
+    array = (ctypes.c_uint8 * len(val)).from_buffer_copy(val) # type: ignore[operator]
+    return _wrap_in_slice(array, len(val) * 8)
+
+
+def _slice_to_bitvector(raw: FfiSlicePtr) -> bytes:
+    # raw.contents.len is the number of valid bits.
+    # ceiling division by 8 gives the number of bytes in the buffer
+    n_bytes = -(raw.contents.len // -8)
+    buffer = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))[0:n_bytes] # type: ignore
+    return bytes(buffer)
 
 
 def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:

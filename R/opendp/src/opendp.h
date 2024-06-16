@@ -806,6 +806,14 @@ struct FfiResult_____AnyDomain opendp_domains__vector_domain(const struct AnyDom
                                                              const struct AnyObject *size);
 
 /**
+ * Construct an instance of `BitVectorDomain`.
+ *
+ * # Arguments
+ * * `max_weight` - The maximum number of positive bits.
+ */
+struct FfiResult_____AnyDomain opendp_domains__bitvector_domain(const struct AnyObject *max_weight);
+
+/**
  * Construct an instance of `MapDomain`.
  *
  * # Arguments
@@ -928,6 +936,14 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_respons
                                                                                   const void *prob,
                                                                                   const char *T,
                                                                                   const char *QO);
+
+struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_response_bitvec(const struct AnyDomain *input_domain,
+                                                                                         const struct AnyMetric *input_metric,
+                                                                                         double f,
+                                                                                         c_bool constant_time);
+
+struct FfiResult_____AnyObject opendp_measurements__debias_randomized_response_bitvec(const struct AnyObject *answers,
+                                                                                      double f);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_alp_queryable(const struct AnyDomain *input_domain,
                                                                             const struct AnyMetric *input_metric,
