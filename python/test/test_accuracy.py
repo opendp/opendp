@@ -42,3 +42,15 @@ def test_accuracy_to_gaussian_scale():
     check_accuracy_to_gaussian_scale(accuracy=1., alpha=0.05)
     check_accuracy_to_gaussian_scale(accuracy=2., alpha=0.05)
     check_accuracy_to_gaussian_scale(accuracy=1.2, alpha=0.1)
+
+
+def test_accuracy_to_discrete_gaussian_scale():
+    assert accuracy_to_discrete_gaussian_scale(1.0, 0.5) == 0.797878994872694 # TODO: Closed form expression
+
+
+def test_accuracy_to_discrete_laplacian_scale():
+    assert accuracy_to_discrete_laplacian_scale(1.0, 0.5) == 0.9102392266268373 # TODO: Closed form expression
+
+
+def test_discrete_gaussian_scale_to_accuracy():
+    assert discrete_gaussian_scale_to_accuracy(1.0, 0.5) == 2.0
