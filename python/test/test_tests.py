@@ -13,15 +13,16 @@ def test_barely():
     we should add a minimal test here as a reminder, although
     the real tests for the FFI may be on the Rust side in many cases.
     '''
-    dp.accuracy_to_discrete_gaussian_scale(1.0, 0.5)
-    dp.accuracy_to_discrete_laplacian_scale(1.0, 0.5)
-    dp.discrete_gaussian_scale_to_accuracy(1.0, 0.5)
+    assert dp.accuracy_to_discrete_gaussian_scale(1.0, 0.5) == 0.797878994872694 # TODO: Closed form expression
+    assert dp.accuracy_to_discrete_laplacian_scale(1.0, 0.5) == 0.9102392266268373 # TODO: Closed form expression
+    assert dp.discrete_gaussian_scale_to_accuracy(1.0, 0.5) == 2.0
 
-    dp.smoothed_max_divergence(float)
+    # TODO: Add meaningful tests of measures:
+    assert str(dp.smoothed_max_divergence(float)) == 'SmoothedMaxDivergence(f64)' # TODO: Add a test that does something with SmoothedMaxDivergence 
 
-    dp.m.then_private_expr(None, None) # type: ignore[arg-type]
-    dp.m.then_private_lazyframe(None, None) # type: ignore[arg-type]
-
+    # TODO: Add meaningful tests of partial constructors:
+    dp.m.then_private_expr(None, None) == 0 # type: ignore[arg-type]
+    dp.m.then_private_lazyframe(None, None) == 0 # type: ignore[arg-type]
     dp.t.then_is_equal(None)
     dp.t.then_metric_bounded()
     dp.t.then_ordered_random()
