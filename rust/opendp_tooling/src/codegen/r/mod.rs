@@ -46,7 +46,7 @@ const BLACKLIST: &'static [&'static str] = &[
     "arrow_array_free",
     "dataframe_domain",
     "lazyframe_domain",
-    "infer_lazyframe_domain",
+    "_lazyframe_from_domain",
     "with_margin",
     "expr_domain",
     "make_stable_lazyframe",

@@ -35,24 +35,23 @@ pub extern "C" fn opendp_domains__lazyframe_domain(
     .into()
 }
 
-#[bootstrap(returns(c_type = "FfiResult<AnyDomain *>"))]
-/// Infer the lazyframe domain that a dataset is a member of.
+#[bootstrap()]
+/// Construct an empty LazyFrame with the same schema as in the LazyFrameDomain.
 ///
-/// WARNING: This function looks at the data to infer the domain,
-/// and should only be used if you consider the column names and column types to be public information.
+/// This is useful for creating a dummy lazyframe used to write a query plan.
 ///
 /// # Arguments
-/// * `lazyframe` - The lazyframe to infer the domain from.
-fn infer_lazyframe_domain(lazyframe: LazyFrame) -> Fallible<LazyFrameDomain> {
-    LazyFrameDomain::new_from_schema(lazyframe.schema()?.as_ref().clone())
+/// * `domain` - A LazyFrameDomain.
+fn _lazyframe_from_domain(domain: LazyFrameDomain) -> Fallible<LazyFrame> {
+    Ok(DataFrame::from_rows_and_schema(&[], &domain.schema())?.lazy())
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_domains__infer_lazyframe_domain(
-    lazyframe: *mut AnyObject,
-) -> FfiResult<*mut AnyDomain> {
-    let lazyframe = try_!(try_as_ref!(lazyframe).downcast_ref::<LazyFrame>()).clone();
-    Ok(AnyDomain::new(try_!(infer_lazyframe_domain(lazyframe)))).into()
+pub extern "C" fn opendp_domains___lazyframe_from_domain(
+    domain: *mut AnyDomain,
+) -> FfiResult<*mut AnyObject> {
+    let domain = try_!(try_as_ref!(domain).downcast_ref::<LazyFrameDomain>()).clone();
+    _lazyframe_from_domain(domain).map(AnyObject::new).into()
 }
 
 fn unpack_series_domains(series_domains: *mut AnyObject) -> Fallible<Vec<SeriesDomain>> {

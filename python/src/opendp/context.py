@@ -23,7 +23,7 @@ from opendp.combinators import (
     make_sequential_composition,
     make_zCDP_to_approxDP,
 )
-from opendp.domains import atom_domain, vector_domain
+from opendp.domains import atom_domain, vector_domain, with_margin
 from opendp.measurements import make_laplace, make_gaussian
 from opendp.measures import (
     fixed_smoothed_max_divergence,
@@ -50,7 +50,9 @@ from opendp.mod import (
     binary_search_param,
 )
 from opendp.typing import RuntimeType
-from opendp._lib import indent
+from opendp._lib import indent, import_optional_dependency
+from opendp.polars import LazyFrameQuery, Margin
+from dataclasses import asdict
 
 
 __all__ = [
@@ -170,6 +172,13 @@ def domain_of(T, infer: bool = False) -> Domain:
     """
     import opendp.typing as ty
     from opendp.domains import vector_domain, atom_domain, option_domain, map_domain
+
+    if infer:
+        pl = import_optional_dependency("polars", raise_error=False)
+        if pl is not None and isinstance(T, pl.LazyFrame):
+            from opendp.polars import _lazyframe_domain_from_schema
+
+            return _lazyframe_domain_from_schema(T.schema)
 
     # normalize to a type descriptor
     if infer:
@@ -374,6 +383,7 @@ class Context(object):
         split_evenly_over: Optional[int] = None,
         split_by_weights: Optional[list[float]] = None,
         domain: Optional[Domain] = None,
+        margins: Optional[dict[tuple[str, ...], Margin]] = None,
     ) -> "Context":
         """Constructs a new context containing a sequential compositor with the given weights.
 
@@ -385,11 +395,16 @@ class Context(object):
         :param data: The data to be analyzed.
         :param privacy_unit: The privacy unit of the compositor.
         :param privacy_loss: The privacy loss of the compositor.
-        :param split_evenly_over: The number of parts to evenly distribute the privacy loss
-        :param split_by_weights: A list of weights for each intermediate privacy loss
-        :param domain: The domain of the data."""
+        :param split_evenly_over: The number of parts to evenly distribute the privacy loss.
+        :param split_by_weights: A list of weights for each intermediate privacy loss.
+        :param domain: The domain of the data.
+        :param margins: A dictionary where the keys are grouping columns and values describe known properties of the respective margins."""
         if domain is None:
             domain = domain_of(data, infer=True)
+
+        if margins:
+            for by, margin in margins.items():
+                domain = with_margin(domain, by=list(by), **asdict(margin))
 
         accountant, d_mids = _sequential_composition_by_weights(
             domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights
@@ -418,7 +433,7 @@ class Context(object):
             self.d_mids.pop(0)
         return answer
 
-    def query(self, **kwargs) -> "Query":
+    def query(self, **kwargs) -> Union["Query", LazyFrameQuery]:
         """Starts a new Query to be executed in this context.
 
         If the context has been constructed with a sequence of privacy losses,
@@ -442,16 +457,24 @@ class Context(object):
                     f"Expected output measure {self.output_measure} but got {measure}" # type: ignore[attr-defined]
                 )
 
-        return Query(
-            chain=(
-                self.space_override
-                or (self.accountant.input_domain, self.accountant.input_metric)
-            ),
+        chain = self.space_override or self.accountant.input_space
+        query = Query(
+            chain=chain,
             output_measure=self.accountant.output_measure,
             d_in=self.d_in,
             d_out=d_query,
             context=self,
         )
+        
+        # return a LazyFrameQuery when dealing with Polars data, to better mimic the Polars API
+        if chain[0].type == "LazyFrameDomain":
+            from opendp.domains import _lazyframe_from_domain
+
+            # creates an empty lazyframe to hold the query plan
+            lf_plan = _lazyframe_from_domain(self.accountant.input_domain)
+            return LazyFrameQuery(lf_plan, query)
+
+        return query
 
 
 Chain = Union[tuple[Domain, Metric], Transformation, Measurement, "PartialChain"]
