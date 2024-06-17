@@ -701,14 +701,6 @@ struct FfiResult_____AnyObject opendp_data__smd_curve_epsilon(const struct AnyOb
                                                               const struct AnyObject *delta);
 
 /**
- * Internal function. Convert the AnyObject to a string representation.
- *
- * # Arguments
- * * `this` - The AnyObject to convert to a string representation.
- */
-struct FfiResult_____c_char opendp_data__to_string(const struct AnyObject *this_);
-
-/**
  * wrap an AnyObject in an FfiResult::Ok(this)
  *
  * # Arguments

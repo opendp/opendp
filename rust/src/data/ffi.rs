@@ -993,18 +993,6 @@ extern "C" fn opendp_data__new_arrow_array(name: *const c_char) -> FfiResult<*mu
     }
 }
 
-/// Internal function. Convert the AnyObject to a string representation.
-///
-/// # Arguments
-/// * `this` - The AnyObject to convert to a string representation.
-#[no_mangle]
-pub extern "C" fn opendp_data__to_string(this: *const AnyObject) -> FfiResult<*mut c_char> {
-    util::into_c_char_p(format!("{:?}", try_as_ref!(this))).map_or_else(
-        |e| FfiResult::Err(util::into_raw(FfiError::from(e))),
-        FfiResult::Ok,
-    )
-}
-
 /// wrap an AnyObject in an FfiResult::Ok(this)
 ///
 /// # Arguments
