@@ -22,7 +22,7 @@ pub use integer::*;
 #[cfg(feature = "ffi")]
 mod ffi;
 
-pub(crate) fn laplace_map<QI, QO>(scale: QO, relaxation: QO) -> impl Fn(&QI) -> Fallible<QO>
+pub(crate) fn laplace_puredp_map<QI, QO>(scale: QO, relaxation: QO) -> impl Fn(&QI) -> Fallible<QO>
 where
     QI: Clone,
     QO: Float + InfCast<QI>,

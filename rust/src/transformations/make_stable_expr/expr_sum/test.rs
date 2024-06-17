@@ -21,8 +21,8 @@ fn test_select_make_sum_expr() -> Fallible<()> {
 
     let sens = t_sum.map(&(4, 4, 1))?;
     println!("sens: {:?}", sens);
-    assert!(sens > (2.).into());
-    assert!(sens < (2.00001).into());
+    assert!(sens > 2.);
+    assert!(sens < 2.00001);
     Ok(())
 }
 

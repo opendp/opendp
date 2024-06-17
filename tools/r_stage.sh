@@ -94,6 +94,37 @@ function docs() {
   log "R package docs are ready in R/opendp/docs/index.html"
 }
 
+function dummydocs() {
+  # builds the documentation without running 
+  clean
+
+  log "***** DUMMY DOCS *****"
+
+  # We don't directly expose any APIs from compiled code, 
+  # so we don't actually have to build the binary in order to build docs.
+  # To avoid the overhead of building the binary, 
+  # stage the docs build in a separate package where binaries are stripped out.
+
+  log "stage docs version of package in R/opendp-docs"
+  run cp -r R/opendp R/opendp-docs
+  run rm -rf R/opendp-docs/src
+
+  log "remove all traces of compiled code from the package"
+  sed "/#' @useDynLib opendp, .registration = TRUE/d" R/opendp-docs/R/opendp-package.R > R/opendp-docs/R/opendp-package.R
+  rm -f R/opendp-docs/configure
+  rm -f R/opendp-docs/NAMESPACE
+
+  log "build the docs, and then website"
+  Rscript -e 'devtools::document("R/opendp-docs")'
+  Rscript -e 'pkgdown::build_site("R/opendp-docs")'
+
+  log "move docs to the main package"
+  mv R/opendp-docs/docs R/opendp
+  rm -rf R/opendp-docs
+
+  log "R package docs are ready in R/opendp/docs/index.html"
+}
+
 if (($# == 0)); then
   clean
   binary_tar
@@ -108,7 +139,7 @@ if (($# == 0)); then
   exit 0
 fi
 
-while getopts ":cbsvnd" OPT; do
+while getopts ":cbsvndu" OPT; do
   case "$OPT" in
     c) clean ;;
     b) binary_tar ;;
@@ -116,6 +147,7 @@ while getopts ":cbsvnd" OPT; do
     v) vendor_tar ;;
     n) notes ;;
     d) docs ;;
+    u) dummydocs ;;
     *) usage && exit 1 ;;
   esac
 done

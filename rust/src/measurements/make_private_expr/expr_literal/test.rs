@@ -35,14 +35,14 @@ fn test_make_expr_private_lit_groupby() -> Fallible<()> {
         lf_domain.cast_carrier(),
         SymmetricDistance,
         MaxDivergence::default(),
-        lf.clone().group_by(["chunk_2_bool"]).agg([lit(1)]),
+        lf.clone()
+            .group_by(["chunk_2_bool"])
+            .agg([lit(1)])
+            .sort("chunk_2_bool", Default::default()),
         None,
     )?;
 
-    let actual = m_lit
-        .invoke(&lf)?
-        .sort("chunk_2_bool", Default::default())
-        .collect()?;
+    let actual = m_lit.invoke(&lf)?.collect()?;
     let expect = df!(
         "chunk_2_bool" => [false, true],
         "literal" => [1, 1]

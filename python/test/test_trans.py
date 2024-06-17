@@ -242,6 +242,13 @@ def test_sum_of_squared_deviances():
     assert query(FLOAT_DATA) == 60.0
     assert query.check(2, 88.888888 + 1e-4)
 
+
+def test_transformation_check_debug():
+    transformation = dp.t.make_count(dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
+    assert not transformation.check(100, 1, debug=True)
+    assert transformation.check(1, 100, debug=True)
+    # Would be better with an example that actually throws an error, but better than nothing.
+
 def test_count():
     transformation = dp.t.make_count(dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
     arg = [1, 2, 3]

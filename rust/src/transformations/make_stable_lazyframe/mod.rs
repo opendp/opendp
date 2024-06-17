@@ -7,6 +7,7 @@ use crate::{
     domains::{LazyFrameDomain, LogicalPlanDomain},
     error::Fallible,
     metrics::SymmetricDistance,
+    polars::get_disabled_features_message,
 };
 
 #[cfg(feature = "ffi")]
@@ -14,6 +15,12 @@ mod ffi;
 
 #[cfg(feature = "contrib")]
 mod source;
+
+#[cfg(feature = "contrib")]
+mod filter;
+
+#[cfg(feature = "contrib")]
+mod h_stack;
 
 #[bootstrap(
     features("contrib"),
@@ -76,10 +83,17 @@ impl StableLogicalPlan<SymmetricDistance, SymmetricDistance> for LogicalPlan {
             LogicalPlan::DataFrameScan { .. } => {
                 source::make_stable_source(input_domain, input_metric, self)
             }
+            LogicalPlan::Selection { .. } => {
+                filter::make_stable_filter(input_domain, input_metric, self)
+            }
+            LogicalPlan::HStack { .. } => {
+                h_stack::make_h_stack(input_domain, input_metric, self)
+            }
             lp => fallible!(
                 MakeTransformation,
-                "A step in your logical plan is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
-                lp
+                "A step in your query is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                lp,
+                get_disabled_features_message()
             )
         }
     }

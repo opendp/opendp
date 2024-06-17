@@ -1,7 +1,8 @@
-use crate::core::{ExprFunction, Function, MetricSpace, StabilityMap, Transformation};
+use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, Margin, MarginPub, NumericDataType, SeriesDomain};
 use crate::error::*;
 use crate::metrics::{IntDistance, LpDistance, PartitionDistance};
+use crate::polars::ExprFunction;
 use crate::traits::{
     AlertingAbs, CheckAtom, ExactIntCast, InfAdd, InfCast, InfMul, InfSqrt, InfSub, Number,
     ProductOrd,

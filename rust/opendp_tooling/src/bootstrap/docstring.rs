@@ -50,6 +50,7 @@ impl BootstrapDocstring {
         add_section_to_description("Citations");
         add_section_to_description("Supporting Elements");
         add_section_to_description("Proof Definition");
+        add_section_to_description("Features");
 
         Ok(BootstrapDocstring {
             description: if description.is_empty() {

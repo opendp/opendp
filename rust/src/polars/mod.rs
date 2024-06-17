@@ -1,9 +1,18 @@
 use std::sync::Arc;
 
 use crate::{
-    measurements::expr_laplace::LaplaceArgs,
-    transformations::expr_discrete_quantile_score::DQScoreArgs,
+    core::Function,
+    error::Fallible,
+    interactive::{Answer, Query, Queryable},
+    measurements::{
+        expr_index_candidates::{Candidates, IndexCandidatesArgs},
+        expr_noise::{Distribution, NoiseArgs},
+        expr_report_noisy_max_gumbel::ReportNoisyMaxGumbelArgs,
+        Optimize,
+    },
+    transformations::expr_discrete_quantile_score::DiscreteQuantileScoreArgs,
 };
+use polars::{frame::DataFrame, lazy::frame::LazyFrame, prelude::NamedFrom, series::Series};
 use polars_plan::{
     dsl::{len, lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
     logical_plan::Literal,
@@ -11,11 +20,9 @@ use polars_plan::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::{Fallible, Function};
-
 // this trait is used to make the Deserialize trait bound conditional on the feature flag
 #[cfg(not(feature = "ffi"))]
-pub(crate) trait OpenDPPlugin: Clone + SeriesUdf {
+pub(crate) trait OpenDPPlugin: 'static + Clone + SeriesUdf {
     fn get_options(&self) -> FunctionOptions;
 }
 #[cfg(feature = "ffi")]
@@ -185,17 +192,39 @@ fn assert_is_wildcard(expr: &Expr) -> Fallible<()> {
 }
 
 /// Helper trait for Rust users to access differentially private expressions.
-pub trait PrivacyNamespaceHelper {
-    fn dp(self) -> DPNamespace;
+pub trait PrivacyNamespace {
+    fn dp(self) -> DPExpr;
 }
-impl PrivacyNamespaceHelper for Expr {
-    fn dp(self) -> DPNamespace {
-        DPNamespace(self)
+impl PrivacyNamespace for Expr {
+    fn dp(self) -> DPExpr {
+        DPExpr(self)
     }
 }
 
-pub struct DPNamespace(Expr);
-impl DPNamespace {
+pub struct DPExpr(Expr);
+impl DPExpr {
+    /// Add noise to the expression.
+    ///
+    /// `scale` must not be negative or inf.
+    /// Scale and distribution may be left None, to be filled later by [`make_private_lazyframe`].
+    /// If distribution is None, then the noise distribution will be chosen for you:
+    ///    
+    /// * Pure-DP: Laplace noise, where `scale` == standard_deviation / sqrt(2)
+    /// * zCDP: Gaussian noise, where `scale` == standard_devation
+    ///
+    /// # Arguments
+    /// * `scale` - Scale parameter for the noise distribution
+    /// * `distribution` - Either Laplace, Gaussian or None.
+    pub fn noise(self, scale: Option<f64>, distribution: Option<Distribution>) -> Expr {
+        apply_anonymous_function(
+            vec![self.0],
+            NoiseArgs {
+                scale,
+                distribution,
+            },
+        )
+    }
+
     /// Add Laplace noise to the expression.
     ///
     /// `scale` must not be negative or inf.
@@ -204,7 +233,18 @@ impl DPNamespace {
     /// # Arguments
     /// * `scale` - Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
     pub fn laplace(self, scale: Option<f64>) -> Expr {
-        apply_anonymous_function(vec![self.0], LaplaceArgs { scale })
+        self.noise(scale, Some(Distribution::Laplace))
+    }
+
+    /// Add Gaussian noise to the expression.
+    ///
+    /// `scale` must not be negative or inf.
+    /// Scale may be left None, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
+    ///
+    /// # Arguments
+    /// * `scale` - Noise scale parameter for the Gaussian distribution. `scale` == standard_deviation.
+    pub fn gaussian(self, scale: Option<f64>) -> Expr {
+        self.noise(scale, Some(Distribution::Gaussian))
     }
 
     /// Compute the differentially private sum.
@@ -217,7 +257,7 @@ impl DPNamespace {
             .clip(lit(bounds.0), lit(bounds.1))
             .sum()
             .dp()
-            .laplace(scale)
+            .noise(scale, None)
     }
 
     /// Compute the differentially private mean.
@@ -239,13 +279,155 @@ impl DPNamespace {
     /// # Arguments
     /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
     /// * `candidates` - Set of possible quantiles to evaluate the utility of.
-    #[allow(dead_code)]
-    pub(crate) fn quantile_score(self, alpha: f64, candidates: Vec<f64>) -> Expr {
-        let args = DQScoreArgs {
+    pub(crate) fn quantile_score(self, alpha: f64, candidates: Series) -> Expr {
+        let args = DiscreteQuantileScoreArgs {
             alpha,
-            candidates,
+            candidates: Candidates(candidates),
             constants: None,
         };
         apply_anonymous_function(vec![self.0], args)
+    }
+
+    /// Report the argmax or argmin after adding Gumbel noise.
+    ///
+    /// The scale calibrates the level of entropy when selecting an index.
+    ///
+    /// # Arguments
+    /// * `optimize` - Distinguish between argmax and argmin.
+    /// * `scale` - Noise scale parameter for the Gumbel distribution.
+    pub(crate) fn report_noisy_max_gumbel(self, optimize: Optimize, scale: Option<f64>) -> Expr {
+        apply_anonymous_function(vec![self.0], ReportNoisyMaxGumbelArgs { optimize, scale })
+    }
+
+    /// Index into a candidate set.
+    ///
+    /// Typically used after `rnm_gumbel` to map selected indices to candidates.
+    ///
+    /// # Arguments
+    /// * `candidates` - The values that each selected index corresponds to.
+    pub(crate) fn index_candidates(self, candidates: Series) -> Expr {
+        apply_anonymous_function(
+            vec![self.0],
+            IndexCandidatesArgs {
+                candidates: Candidates(candidates),
+            },
+        )
+    }
+
+    /// Compute a differentially private quantile.
+    ///
+    /// The scale calibrates the level of entropy when selecting a candidate.
+    ///
+    /// # Arguments
+    /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
+    /// * `candidates` - Potential quantiles to select from.
+    /// * `scale` - Noise scale parameter for the Gumbel distribution.
+    pub fn quantile(self, alpha: f64, candidates: Series, scale: Option<f64>) -> Expr {
+        self.0
+            .dp()
+            .quantile_score(alpha, candidates.clone())
+            .dp()
+            .report_noisy_max_gumbel(Optimize::Min, scale)
+            .dp()
+            .index_candidates(Series::new("", candidates))
+    }
+
+    /// Compute a differentially private median.
+    ///
+    /// The scale calibrates the level of entropy when selecting a candidate.
+    ///
+    /// # Arguments
+    /// * `candidates` - Potential quantiles to select from.
+    /// * `scale` - Noise scale parameter for the Gumbel distribution.
+    pub fn median(self, candidates: Series, scale: Option<f64>) -> Expr {
+        self.0.dp().quantile(0.5, candidates, scale)
+    }
+}
+
+pub enum OnceFrameQuery {
+    Collect,
+}
+
+pub enum OnceFrameAnswer {
+    Collect(DataFrame),
+}
+
+pub(crate) struct ExtractLazyFrame;
+
+pub type OnceFrame = Queryable<OnceFrameQuery, OnceFrameAnswer>;
+
+impl From<LazyFrame> for OnceFrame {
+    fn from(value: LazyFrame) -> Self {
+        let mut state = Some(value);
+        Self::new_raw(move |_self: &Self, query: Query<OnceFrameQuery>| {
+            let Some(lazyframe) = state.clone() else {
+                return fallible!(FailedFunction, "LazyFrame has been exhausted");
+            };
+            Ok(match query {
+                Query::External(q_external) => Answer::External(match q_external {
+                    OnceFrameQuery::Collect => {
+                        let dataframe = lazyframe.collect()?;
+                        state.take();
+                        OnceFrameAnswer::Collect(dataframe)
+                    }
+                }),
+                Query::Internal(q_internal) => Answer::Internal({
+                    if q_internal.downcast_ref::<ExtractLazyFrame>().is_some() {
+                        Box::new(lazyframe)
+                    } else {
+                        return fallible!(FailedFunction, "Unrecognized internal query");
+                    }
+                }),
+            })
+        })
+    }
+}
+
+impl OnceFrame {
+    pub fn collect(mut self) -> Fallible<DataFrame> {
+        if let Answer::External(OnceFrameAnswer::Collect(dataframe)) =
+            self.eval_query(Query::External(&OnceFrameQuery::Collect))?
+        {
+            Ok(dataframe)
+        } else {
+            // should never be reached
+            fallible!(
+                FailedFunction,
+                "Collect returned invalid answer: Please report this bug"
+            )
+        }
+    }
+
+    #[cfg(feature = "honest-but-curious")]
+    pub fn lazyframe(&mut self) -> LazyFrame {
+        let answer = self.eval_query(Query::Internal(&ExtractLazyFrame)).unwrap();
+        let Answer::Internal(boxed) = answer else {
+            panic!("failed to extract");
+        };
+        let Ok(lazyframe) = boxed.downcast() else {
+            panic!("failed to extract");
+        };
+        *lazyframe
+    }
+}
+
+pub(crate) fn get_disabled_features_message() -> String {
+    #[allow(unused_mut)]
+    let mut disabled_features: Vec<&'static str> = vec![];
+
+    #[cfg(not(feature = "contrib"))]
+    disabled_features.push("contrib");
+    #[cfg(not(feature = "floating-point"))]
+    disabled_features.push("floating-point");
+    #[cfg(not(feature = "honest-but-curious"))]
+    disabled_features.push("honest-but-curious");
+
+    if disabled_features.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "This may be due to disabled features: {}. ",
+            disabled_features.join(", ")
+        )
     }
 }

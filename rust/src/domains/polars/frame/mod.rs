@@ -9,13 +9,13 @@ use crate::core::Domain;
 use crate::metrics::{LInfDistance, LpDistance};
 use crate::traits::ProductOrd;
 use crate::{
-    core::MetricSpace,
-    domains::{AtomDomain, OptionDomain, SeriesDomain},
-    error::Fallible,
-    transformations::DatasetMetric,
+    core::MetricSpace, domains::SeriesDomain, error::Fallible, transformations::DatasetMetric,
 };
 
 use super::NumericDataType;
+
+#[cfg(test)]
+mod test;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -162,6 +162,13 @@ impl<Q> MetricSpace for (LazyFrameDomain, LInfDistance<Q>) {
 
 impl<F: Frame> FrameDomain<F> {
     pub fn new(series_domains: Vec<SeriesDomain>) -> Fallible<Self> {
+        Self::new_with_margins(series_domains, HashMap::new())
+    }
+
+    pub(crate) fn new_with_margins(
+        series_domains: Vec<SeriesDomain>,
+        margins: HashMap<BTreeSet<String>, Margin>,
+    ) -> Fallible<Self> {
         let n_unique = series_domains
             .iter()
             .map(|s| &s.field.name)
@@ -172,39 +179,20 @@ impl<F: Frame> FrameDomain<F> {
         }
         Ok(FrameDomain {
             series_domains,
-            margins: HashMap::new(),
+            margins,
             _marker: PhantomData,
         })
     }
 
     pub fn new_from_schema(schema: Schema) -> Fallible<Self> {
         let series_domains = (schema.iter_fields())
-            .map(|field| {
-                macro_rules! new_series_domain {
-                    ($ty:ty, $func:ident) => {
-                        SeriesDomain::new(
-                            field.name.as_str(),
-                            OptionDomain::new(AtomDomain::<$ty>::$func()),
-                        )
-                    };
-                }
-
-                Ok(match field.data_type() {
-                    DataType::Boolean => new_series_domain!(bool, default),
-                    DataType::UInt32 => new_series_domain!(u32, default),
-                    DataType::UInt64 => new_series_domain!(u64, default),
-                    DataType::Int8 => new_series_domain!(i8, default),
-                    DataType::Int16 => new_series_domain!(i16, default),
-                    DataType::Int32 => new_series_domain!(i32, default),
-                    DataType::Int64 => new_series_domain!(i64, default),
-                    DataType::Float32 => new_series_domain!(f64, new_nullable),
-                    DataType::Float64 => new_series_domain!(f64, new_nullable),
-                    DataType::String => new_series_domain!(String, default),
-                    dtype => return fallible!(MakeDomain, "unsupported type {}", dtype),
-                })
-            })
+            .map(SeriesDomain::new_from_field)
             .collect::<Fallible<_>>()?;
         FrameDomain::new(series_domains)
+    }
+
+    pub fn schema(&self) -> Schema {
+        Schema::from_iter(self.series_domains.iter().map(|s| s.field.clone()))
     }
 
     pub(crate) fn cast_carrier<FO: Frame>(&self) -> FrameDomain<FO> {
@@ -284,7 +272,7 @@ impl<F: Frame> Domain for FrameDomain<F> {
 
 /// A restriction on the unique values in the margin, as well as possibly their counts,
 /// over a set of columns in a LazyFrame.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct Margin {
     /// The greatest number of records that can be present in any one partition.
     pub max_partition_length: Option<u32>,
@@ -306,7 +294,7 @@ pub struct Margin {
     pub public_info: Option<MarginPub>,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 /// Denote how margins interact with the metric.
 pub enum MarginPub {
     /// The distance between data sets with different margin keys are is infinite.
@@ -377,6 +365,3 @@ impl Margin {
         Ok(true)
     }
 }
-
-#[cfg(test)]
-mod test;

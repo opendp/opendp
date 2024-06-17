@@ -20,10 +20,10 @@ ATOM_EQUIVALENCE_CLASSES: dict[str, list[str]] = {
 def _load_library():
     default_lib_dir = Path(__file__).absolute().parent / "lib"
     lib_dir = Path(os.environ.get("OPENDP_LIB_DIR", default_lib_dir))
-    if not lib_dir.exists(): # pragma: no cover
+    if not lib_dir.exists():
         # fall back to default location of binaries in a developer install
         build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
-        lib_dir = Path(__file__).parent / ".." / ".." / ".." / 'rust' / 'target' / build_dir
+        lib_dir = Path(__file__).parent / ".." / ".." / ".." / 'rust' / 'target' / build_dir  # pragma: no cover
 
     if lib_dir.exists():
         lib_dir_file_names = [p for p in lib_dir.iterdir() if p.suffix in {".so", ".dylib", ".dll"}]
@@ -98,52 +98,6 @@ def get_np_csprng():
 
     _np_csprng = np.random.Generator(bit_generator=randomgen.UserBitGenerator(next_raw)) # type:ignore
     return _np_csprng
-
-
-pl = import_optional_dependency("polars", raise_error=False)
-if pl is not None:
-    @pl.api.register_expr_namespace("dp")
-    class DPNamespace(object):
-        def __init__(self, expr):
-            self.expr = expr # pragma: no cover
-
-        def laplace(self, scale=None):
-            """Add Laplace noise to the expression.
-
-            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
-
-            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
-            """
-            scale = float("nan") if scale is None else scale # pragma: no cover
-            return pl.plugins.register_plugin_function( # pragma: no cover
-                plugin_path=lib_path,
-                function_name="laplace",
-                kwargs={"scale": scale},
-                args=self.expr,
-                is_elementwise=True,
-            )
-
-        def sum(self, bounds, scale=None):
-            """Compute the differentially private sum.
-
-            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
-
-            :param bounds: The bounds of the input data.
-            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
-            """
-            return self.expr.clip(*bounds).sum().dp.laplace(scale) # pragma: no cover
-        
-        
-        def mean(self, bounds, scale=None):
-            """Compute the differentially private mean.
-
-            The amount of noise to be added to the sum is determined by the scale.
-            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
-
-            :param bounds: The bounds of the input data.
-            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
-            """
-            return self.expr.dp.sum(bounds, scale) / pl.len() # pragma: no cover
 
 
 # This enables backtraces in Rust by default.
@@ -253,7 +207,7 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
     _type_ = ExtrinsicObject
 
     def __del__(self):
-        try: # pragma: no cover
+        try:
             from opendp._data import extrinsic_object_free
             extrinsic_object_free(self)
         except (ImportError, TypeError):
@@ -264,8 +218,10 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
 # def _str_to_c_char_p(s: Optional[str]) -> Optional[bytes]:
 #     return s and s.encode("utf-8")
 def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
+    ''''''
     if s is not None:
         return s.decode("utf-8")
+    # TODO: Unused: would it indicate a problem if we did start hitting this?
     return None # pragma: no cover
 
 
@@ -274,6 +230,7 @@ def unwrap(result, type_) -> Any:
     from opendp.mod import OpenDPException
 
     if not isinstance(result, FfiResult):
+        # TODO: Unused: would it indicate a problem if we did start hitting this?
         return result # pragma: no cover
 
     if result.tag == 0:
@@ -295,7 +252,7 @@ def unwrap(result, type_) -> Any:
 proof_doc_re = re.compile(r"\[\(Proof Document\)\]\(([^)]+)\)")
 
 
-def proven(function): # pragma: no cover
+def proven(function):
     """Decorator for functions that have an associated proof document.
     Locates the proof document and edits the docstring with a link.
     """
@@ -331,7 +288,7 @@ def make_proof_link(
     source_dir,
     relative_path,
     repo_path,
-) -> str: # pragma: no cover
+) -> str:
     # construct absolute path
     absolute_path = os.path.join(source_dir, relative_path)
 
@@ -344,7 +301,7 @@ def make_proof_link(
     # link from sphinx and rustdoc to latex
     sphinx_port = os.environ.get("OPENDP_SPHINX_PORT", None)
     if sphinx_port is not None:
-        proof_uri = f"http://localhost:{sphinx_port}"  # pragma: no cover
+        proof_uri = f"http://localhost:{sphinx_port}" # pragma: no cover
 
     else:
         # find the docs uri
@@ -374,15 +331,21 @@ def unmangle_py_version(py_version):
     the original format, so we need to unmangle for links to work.
     There are more variations possible, but we only need to handle X.Y.Z-dev0, X.Y.Z-aNNN00M, X.Y.Z-bNNN00M, X.Y.Z
     
+    >>> unmangle_py_version('0.9.0')
+    '0.9.0'
     >>> unmangle_py_version('0.9.0.dev0')
     '0.9.0-dev'
+    >>> unmangle_py_version('0.9.0a11111111001')
+    '0.9.0-nightly.11111111.1'
+    >>> unmangle_py_version('0.9.0b11111111001')
+    '0.9.0-beta.11111111.1'
     >>> unmangle_py_version('other')
     'other'
     '''
     if py_version.endswith(".dev0"):
         return f"{py_version[:-5]}-dev"
     match = re.match(r"^(\d+\.\d+\.\d+)(?:([ab])(\d{8})(\d{3}))?$", py_version)
-    if match: # pragma: no cover
+    if match:
         base = match.group(1)
         py_tag = match.group(2)
         if not py_tag:
@@ -431,7 +394,7 @@ def get_channel(version):
     if match:
         channel = match.group(2)
         return channel or "stable"
-    return "unknown" # pragma: no cover
+    return "unknown"
 
 def indent(text):
     '''

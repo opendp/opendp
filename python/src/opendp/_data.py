@@ -17,6 +17,8 @@ __all__ = [
     "object_as_slice",
     "object_free",
     "object_type",
+    "onceframe_collect",
+    "onceframe_lazy",
     "slice_as_object",
     "slice_free",
     "smd_curve_epsilon",
@@ -247,6 +249,64 @@ def object_type(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+
+    return output
+
+
+def onceframe_collect(
+    onceframe
+):
+    r"""Internal function. Collects a DataFrame from a OnceFrame, exhausting the OnceFrame.
+
+    :param onceframe: The queryable holding a LazyFrame.
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_onceframe = py_to_c(onceframe, c_type=AnyObjectPtr, type_name=AnyQueryable)
+
+    # Call library function.
+    lib_function = lib.opendp_data__onceframe_collect
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_onceframe), AnyObjectPtr))
+
+    return output
+
+
+def onceframe_lazy(
+    onceframe
+):
+    r"""Internal function. Extracts a LazyFrame from a OnceFrame,
+    circumventing protections against multiple evaluations.
+
+    Each collection consumes the entire allocated privacy budget.
+    To remain DP at the advertised privacy level, only collect the LazyFrame once.
+
+    **Features:**
+
+    * `honest-but-curious` - LazyFrames can be collected an unlimited number of times.
+
+    :param onceframe: The queryable holding a LazyFrame.
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("honest-but-curious")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_onceframe = py_to_c(onceframe, c_type=AnyObjectPtr, type_name=AnyQueryable)
+
+    # Call library function.
+    lib_function = lib.opendp_data__onceframe_lazy
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_onceframe), AnyObjectPtr))
 
     return output
 

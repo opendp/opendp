@@ -19,6 +19,10 @@ use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
     L1Distance, L2Distance, SymmetricDistance,
 };
+
+#[cfg(feature = "polars")]
+use crate::polars::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
+
 use crate::transformations::DataFrameDomain;
 use crate::{err, fallible};
 
@@ -56,6 +60,12 @@ struct SeriesDomain;
 struct ExprDomain;
 #[cfg(not(feature = "polars"))]
 struct LazyFrameDomain;
+#[cfg(not(feature = "polars"))]
+struct OnceFrame;
+#[cfg(not(feature = "polars"))]
+struct OnceFrameAnswer;
+#[cfg(not(feature = "polars"))]
+struct OnceFrameQuery;
 
 pub type RefCountFn = extern "C" fn(*const c_void, bool) -> bool;
 
@@ -316,7 +326,7 @@ lazy_static! {
             // these are used by PartitionDistance. The latter two values are the dtype of the inner metric
             vec![t!((u32, u32, u32)), t!((u32, u64, u64)), t!((u32, i32, i32)), t!((u32, i64, i64))],
             vec![t!((u32, usize, usize)), t!((u32, f32, f32)), t!((u32, f64, f64))],
-            type_vec![DataFrame, LazyFrame, LogicalPlan, Series, Expr],
+            type_vec![DataFrame, LazyFrame, LogicalPlan, Series, Expr, OnceFrame, OnceFrameQuery, OnceFrameAnswer],
             vec![t!((LogicalPlan, Expr))],
             type_vec![Vec, <(LogicalPlan, Expr)>],
             type_vec![Vec<Expr>],
