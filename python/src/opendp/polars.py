@@ -21,17 +21,19 @@ class DPExpr(object):
     '''
     This class is typically not used directly by users:
     Instead its methods are registered under the ``dp`` namespace of Polars expressions.
-    However, it can be useful if stronger typing id desired.
+    However, it can be useful if stronger typing is desired.
     Using `dp` returns an `Expr` object:
 
     >>> import polars as pl
     >>> pl.len().dp
-    ???
+    <opendp.polars.DPExpr object at ...>
 
     Explicitly wrapping with `DPExpr`:
     >>> DPExpr(pl.len())
-    ???
+    <opendp.polars.DPExpr object at ...>
 
+    TODO: I was expecting these to be different, and that would demonstrate why DPExpr is useful,
+    but that's obviously not true.
     '''
     def __init__(self, expr):
         """Apply a differentially private plugin to a Polars expression."""
