@@ -132,6 +132,7 @@ showing the source changes from the previous version.
     - Remove check from nightly, so it only calls release [#1417](https://github.com/opendp/opendp/pull/1417)
     - Fix nightly by checking `inputs.fake` on each [#1350](https://github.com/opendp/opendp/pull/1350)
     - Fix weekly-doc-check [#1429](https://github.com/opendp/opendp/pull/1429)
+    - When publishing, pip cache's post-setup fails [#1686](https://github.com/opendp/opendp/pull/1686)
 - Python
     - Regenerate python code to include example [#1615](https://github.com/opendp/opendp/pull/1615)
     - Add `get_np_csprng` wrapper function, so we can remove the last `skipif` [#1562](https://github.com/opendp/opendp/pull/1562)
