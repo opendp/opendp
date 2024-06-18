@@ -1,5 +1,12 @@
-"""The ``polars`` module provides supporting utilities for making DP releases with the Polars library."""
-
+'''
+The ``opendp.polars`` module adds differential privacy to the
+`Polars DataFrame library <https://docs.pola.rs>`_.
+If both ``opendp`` and ``polars`` have been imported,
+the methods of :py:class:`DPExpr` are registered under the ``dp`` namespace in
+`Polars expressions <https://docs.pola.rs/py-polars/html/reference/expressions/index.html>`_.
+These expressions can be used as a plan in :py:func:`opendp.measurements.make_private_lazyframe`;
+See the full example there for more information.
+'''
 from __future__ import annotations
 from dataclasses import dataclass
 import os
@@ -11,6 +18,21 @@ from opendp.measurements import make_private_lazyframe
 
 
 class DPExpr(object):
+    '''
+    This class is typically not used directly by users:
+    Instead its methods are registered under the ``dp`` namespace of Polars expressions.
+    However, it can be useful if stronger typing id desired.
+    Using `dp` returns an `Expr` object:
+
+    >>> import polars as pl
+    >>> pl.len().dp
+    ???
+
+    Explicitly wrapping with `DPExpr`:
+    >>> DPExpr(pl.len())
+    ???
+
+    '''
     def __init__(self, expr):
         """Apply a differentially private plugin to a Polars expression."""
         self.expr = expr
@@ -43,28 +65,52 @@ class DPExpr(object):
     def laplace(self, scale: float | None = None):
         """Add Laplace noise to the expression.
 
-        If scale is None it is filled by `global_scale` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
-        :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
+        :param scale: Noise scale parameter for the Laplace distribution. scale == standard_deviation / sqrt(2).
+
+        :example:
+        >>> import polars as pl
+        >>> expression = pl.col('numbers').dp.laplace()
+        >>> print(expression) # doctest: +ELLIPSIS
+        col("numbers")...:noise()
         """
         return self.noise(scale=scale, distribution="Laplace")
 
     def gaussian(self, scale: float | None = None):
         """Add Gaussian noise to the expression.
 
-        If scale is None it is filled by `global_scale` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
         :param scale: Noise scale parameter for the Gaussian distribution. `scale` == standard_deviation.
+
+        :example:
+        >>> import polars as pl
+        >>> expression = pl.col('numbers').dp.gaussian()
+        >>> print(expression) # doctest: +ELLIPSIS
+        col("numbers")...:noise()
         """
         return self.noise(scale=scale, distribution="Gaussian")
 
     def sum(self, bounds: Tuple[float, float], scale: float | None = None):
         """Compute the differentially private sum.
 
-        If scale is None it is filled by `global_scale` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
         :param bounds: The bounds of the input data.
-        :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
+        :param scale: Noise scale parameter for the Laplace distribution. scale == standard_deviation / sqrt(2).
+
+        :example:
+
+        Note that ``sum`` is a shortcut which actually implies several operations:
+        * Clipping the values
+        * Summing them
+        * Applying Laplace noise to the sum
+
+        >>> import polars as pl
+        >>> expression = pl.col('numbers').dp.sum((0, 10))
+        >>> print(expression) # doctest: +ELLIPSIS
+        col("numbers").clip([0, 10]).sum()...:noise()
         """
         return self.expr.clip(*bounds).sum().dp.noise(scale)
 
@@ -72,10 +118,16 @@ class DPExpr(object):
         """Compute the differentially private mean.
 
         The amount of noise to be added to the sum is determined by the scale.
-        If scale is None it is filled by `global_scale` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
         :param bounds: The bounds of the input data.
-        :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
+        :param scale: Noise scale parameter for the Laplace distribution. scale == standard_deviation / sqrt(2).
+
+        :example:
+        >>> import polars as pl
+        >>> expression = pl.col('numbers').dp.mean((0, 10))
+        >>> print(expression) # doctest: +ELLIPSIS
+        [(col("numbers").clip([0, 10]).sum()...:noise()) / (len())]
         """
         import polars as pl  # type: ignore[import-not-found]
         return self.expr.dp.sum(bounds, scale) / pl.len()
@@ -86,7 +138,7 @@ class DPExpr(object):
         Candidates closer to the true quantile are assigned scores closer to zero.
         Lower scores are better.
 
-        :param alpha: a value in $[0, 1]$. Choose 0.5 for median
+        :param alpha: a value in [0, 1]. Choose 0.5 for median
         :param candidates: Set of possible quantiles to evaluate the utility of.
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
@@ -99,11 +151,12 @@ class DPExpr(object):
         )
 
     def _report_noisy_max_gumbel(
-        self, optimize: Literal["min"] | Literal["max"], scale: float | None = None
+        self, optimize: Literal["min", "max"], scale: float | None = None
     ):
         """Report the argmax or argmin after adding Gumbel noise.
 
         The scale calibrates the level of entropy when selecting an index.
+        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
         :param optimize: Distinguish between argmax and argmin.
         :param scale: Noise scale parameter for the Gumbel distribution.
@@ -120,7 +173,7 @@ class DPExpr(object):
     def _index_candidates(self, candidates: list[float]):
         """Index into a candidate set.
 
-        Typically used after `rnm_gumbel` to map selected indices to candidates.
+        Typically used after :py:func:`_report_noisy_max_gumbel` to map selected indices to candidates.
 
         :param candidates: The values that each selected index corresponds to.
         """
@@ -140,9 +193,15 @@ class DPExpr(object):
 
         The scale calibrates the level of entropy when selecting a candidate.
 
-        :param alpha: a value in $[0, 1]$. Choose 0.5 for median
+        :param alpha: a value in [0, 1]. Choose 0.5 for median.
         :param candidates: Potential quantiles to select from.
         :param scale: How much noise to add to the scores of candidate.
+
+        :example:
+        >>> import polars as pl
+        >>> expression = pl.col('numbers').dp.quantile(0.5, [1, 2, 3])
+        >>> print(expression) # doctest: +ELLIPSIS
+        col("numbers")...:discrete_quantile_score()...:report_noisy_max_gumbel()...:index_candidates()
         """
         dq_score = self.expr.dp._discrete_quantile_score(alpha, candidates)
         noisy_idx = dq_score.dp._report_noisy_max_gumbel("min", scale)
@@ -152,9 +211,16 @@ class DPExpr(object):
         """Compute a differentially private median.
 
         The scale calibrates the level of entropy when selecting a candidate.
+        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
         :param candidates: Potential quantiles to select from.
         :param scale: How much noise to add to the scores of candidate.
+
+        :example:
+        >>> import polars as pl
+        >>> expression = pl.col('numbers').dp.quantile(0.5, [1, 2, 3])
+        >>> print(expression) # doctest: +ELLIPSIS
+        col("numbers")...:discrete_quantile_score()...:report_noisy_max_gumbel()...:index_candidates()
         """
         return self.expr.dp.quantile(0.5, candidates, scale)
 
