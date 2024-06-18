@@ -70,7 +70,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
-          cache: pip
 
       - name: Download Python wheel
         uses: actions/download-artifact@v4
@@ -139,7 +138,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
-          cache: pip
 
       - name: Publish Rust crate
         env:
@@ -161,7 +159,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
-          cache: pip
 
       - name: Publish GitHub Release
         if: ${{ inputs.channel == 'stable' }}

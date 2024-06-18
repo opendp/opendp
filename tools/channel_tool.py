@@ -1,5 +1,5 @@
 import argparse
-import configparser
+import configupdater
 import datetime
 import io
 import re
@@ -105,11 +105,11 @@ def update_version(version):
 
     # Python config
     def load_python_config(f):
-        config = configparser.RawConfigParser()
+        config = configupdater.ConfigUpdater()
         config.read_file(f)
         return config
     def munge_python_config(config):
-        config.set("metadata", "version", str(python_version))
+        config["metadata"]["version"].value = str(python_version)
         return config
     def dump_python_config(config, f):
         config.write(f)
