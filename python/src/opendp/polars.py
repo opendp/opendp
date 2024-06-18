@@ -72,6 +72,7 @@ class DPExpr(object):
         :param scale: Noise scale parameter for the Laplace distribution. scale == standard_deviation / sqrt(2).
 
         :example:
+
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.laplace()
         >>> print(expression) # doctest: +ELLIPSIS
@@ -87,6 +88,7 @@ class DPExpr(object):
         :param scale: Noise scale parameter for the Gaussian distribution. `scale` == standard_deviation.
 
         :example:
+
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.gaussian()
         >>> print(expression) # doctest: +ELLIPSIS
@@ -126,6 +128,7 @@ class DPExpr(object):
         :param scale: Noise scale parameter for the Laplace distribution. scale == standard_deviation / sqrt(2).
 
         :example:
+
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.mean((0, 10))
         >>> print(expression) # doctest: +ELLIPSIS
@@ -200,6 +203,7 @@ class DPExpr(object):
         :param scale: How much noise to add to the scores of candidate.
 
         :example:
+
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.quantile(0.5, [1, 2, 3])
         >>> print(expression) # doctest: +ELLIPSIS
@@ -219,6 +223,7 @@ class DPExpr(object):
         :param scale: How much noise to add to the scores of candidate.
 
         :example:
+        
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.quantile(0.5, [1, 2, 3])
         >>> print(expression) # doctest: +ELLIPSIS
