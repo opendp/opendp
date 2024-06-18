@@ -4,7 +4,7 @@ The ``opendp.polars`` module adds differential privacy to the
 If both ``opendp`` and ``polars`` have been imported,
 the methods of :py:class:`DPExpr` are registered under the ``dp`` namespace in
 `Polars expressions <https://docs.pola.rs/py-polars/html/reference/expressions/index.html>`_.
-These expressions can be used as a plan in :py:func:`opendp.measurements.make_private_lazyframe`;
+An expression can be used as a plan in :py:func:`opendp.measurements.make_private_lazyframe`;
 See the full example there for more information.
 '''
 from __future__ import annotations
@@ -22,13 +22,14 @@ class DPExpr(object):
     This class is typically not used directly by users:
     Instead its methods are registered under the ``dp`` namespace of Polars expressions.
     However, it can be useful if stronger typing is desired.
-    Using `dp` returns an `Expr` object:
+    Using ``dp`` returns an ``Expr`` object:
 
     >>> import polars as pl
     >>> pl.len().dp
     <opendp.polars.DPExpr object at ...>
 
     Explicitly wrapping with `DPExpr`:
+
     >>> DPExpr(pl.len())
     <opendp.polars.DPExpr object at ...>
 
@@ -49,8 +50,8 @@ class DPExpr(object):
         If scale is None it is filled by `global_scale` in :py:func:`opendp.measurements.make_private_lazyframe`.
         If distribution is None, then the noise distribution will be chosen for you:
 
-        * Pure-DP: Laplace noise, where `scale` == standard_deviation / sqrt(2)
-        * zCDP: Gaussian noise, where `scale` == standard_devation
+        * Pure-DP: Laplace noise, where ``scale == standard_deviation / sqrt(2)``
+        * zCDP: Gaussian noise, where ``scale == standard_devation``
 
         :param scale: Scale parameter for the noise distribution.
         :param distribution: Either Laplace, Gaussian or None.
@@ -69,7 +70,7 @@ class DPExpr(object):
 
         If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
-        :param scale: Noise scale parameter for the Laplace distribution. scale == standard_deviation / sqrt(2).
+        :param scale: Noise scale parameter for the Laplace distribution. ``scale == standard_deviation / sqrt(2)``
 
         :example:
 
@@ -85,7 +86,7 @@ class DPExpr(object):
 
         If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
-        :param scale: Noise scale parameter for the Gaussian distribution. `scale` == standard_deviation.
+        :param scale: Noise scale parameter for the Gaussian distribution. ``scale == standard_deviation``
 
         :example:
 
@@ -102,7 +103,7 @@ class DPExpr(object):
         If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
         :param bounds: The bounds of the input data.
-        :param scale: Noise scale parameter for the Laplace distribution. scale == standard_deviation / sqrt(2).
+        :param scale: Noise scale parameter for the Laplace distribution. ``scale == standard_deviation / sqrt(2)``
 
         :example:
 
@@ -125,7 +126,7 @@ class DPExpr(object):
         If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
         :param bounds: The bounds of the input data.
-        :param scale: Noise scale parameter for the Laplace distribution. scale == standard_deviation / sqrt(2).
+        :param scale: Noise scale parameter for the Laplace distribution. ``scale == standard_deviation / sqrt(2)``
 
         :example:
 
@@ -223,7 +224,7 @@ class DPExpr(object):
         :param scale: How much noise to add to the scores of candidate.
 
         :example:
-        
+
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.quantile(0.5, [1, 2, 3])
         >>> print(expression) # doctest: +ELLIPSIS
