@@ -1,11 +1,13 @@
 '''
 The ``opendp.polars`` module adds differential privacy to the
 `Polars DataFrame library <https://docs.pola.rs>`_.
-If both ``opendp`` and ``polars`` have been imported,
-the methods of :py:class:`DPExpr` are registered under the ``dp`` namespace in
-`Polars expressions <https://docs.pola.rs/py-polars/html/reference/expressions/index.html>`_.
-An expression can be used as a plan in :py:func:`opendp.measurements.make_private_lazyframe`;
-See the full example there for more information.
+
+For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
 '''
 from __future__ import annotations
 from dataclasses import dataclass
@@ -19,22 +21,26 @@ from opendp.measurements import make_private_lazyframe
 
 class DPExpr(object):
     '''
+    If both ``opendp`` and ``polars`` have been imported,
+    the methods of :py:class:`DPExpr` are registered under the ``dp`` namespace in
+    `Polars expressions <https://docs.pola.rs/py-polars/html/reference/expressions/index.html>`_.
+    An expression can be used as a plan in :py:func:`opendp.measurements.make_private_lazyframe`;
+    See the full example there for more information.
+
     This class is typically not used directly by users:
     Instead its methods are registered under the ``dp`` namespace of Polars expressions.
-    However, it can be useful if stronger typing is desired.
-    Using ``dp`` returns an ``Expr`` object:
+    
+    However, it can be useful if stronger typing is desired:
+    Both of these expressions return a ``DPExpr``:
 
     >>> import polars as pl
     >>> pl.len().dp
     <opendp.polars.DPExpr object at ...>
-
-    Explicitly wrapping with `DPExpr`:
-
     >>> DPExpr(pl.len())
     <opendp.polars.DPExpr object at ...>
 
-    TODO: I was expecting these to be different, and that would demonstrate why DPExpr is useful,
-    but that's obviously not true.
+    However, a static analysis tool like `mypy <https://mypy.readthedocs.io/en/stable/>`_
+    will see the type of the first expression as ``Any``, while the later is ``DPExpr``.
     '''
     def __init__(self, expr):
         """Apply a differentially private plugin to a Polars expression."""
@@ -108,6 +114,7 @@ class DPExpr(object):
         :example:
 
         Note that ``sum`` is a shortcut which actually implies several operations:
+
         * Clipping the values
         * Summing them
         * Applying Laplace noise to the sum
@@ -266,7 +273,7 @@ class OnceFrame(object):
 
         **Features:**
 
-        * `honest-but-curious` - LazyFrames can be collected an unlimited number of times.
+        * ``honest-but-curious`` - LazyFrames can be collected an unlimited number of times.
         """
         from opendp._data import onceframe_lazy
 
@@ -345,7 +352,11 @@ try:
     from polars.lazyframe.group_by import LazyGroupBy as _LazyGroupBy  # type: ignore[import-not-found]
 
     class LazyFrameQuery(_LazyFrame):
-        """LazyFrameQuery mimics a Polars LazyFrame, but makes a few additions and changes as documented below."""
+        """
+        A ``LazyFrameQuery`` may be returned by :py:func:`opendp.context.Context.query`.
+        It mimics a `Polars LazyFrame <https://docs.pola.rs/api/python/stable/reference/lazyframe/index.html>`_,
+        but makes a few additions and changes as documented below."""
+        # Keep this docstring in sync with the docstring below for the dummy class.
 
         def __init__(self, lf_plan: _LazyFrame | _LazyGroupBy, query):
             self._lf_plan = lf_plan
@@ -418,8 +429,12 @@ except ImportError:
     ERR_MSG = "LazyFrameQuery depends on Polars: `pip install 'opendp[polars]'`."
 
     class LazyFrameQuery(object):  # type: ignore[no-redef]
-        """LazyFrameQuery mimics a Polars LazyFrame, but makes a few additions and changes as documented below."""
-
+        """
+        A ``LazyFrameQuery`` may be returned by :py:func:`opendp.context.Context.query`.
+        It mimics a `Polars LazyFrame <https://docs.pola.rs/api/python/stable/reference/lazyframe/index.html>`_,
+        but makes a few additions and changes as documented below."""
+        # Keep this docstring in sync with the docstring above for the real class.
+                
         def resolve(self) -> Measurement:
             """Resolve the query into a measurement."""
             raise ImportError(ERR_MSG)
@@ -431,11 +446,17 @@ except ImportError:
 
 @dataclass
 class Margin(object):
+    '''
+    Instances of ``Margin`` are used to collect DP statistics on
+    `marginal distributions <https://en.wikipedia.org/wiki/Marginal_distribution>`_.
+    Instances of this class are used by :py:func:`opendp.context.Context.compositor`.
+    '''
+
     public_info: Literal["keys"] | Literal["lengths"] | None = None
     """Identifies properties of grouped data that are considered public information.
     
-    * "keys" designates that keys are not protected
-    * "lengths" designates that both keys and partition lengths are not protected
+    * ``"keys"`` designates that keys are not protected
+    * ``"lengths"`` designates that both keys and partition lengths are not protected
     """
 
     max_partition_length: int | None = None
@@ -443,7 +464,8 @@ class Margin(object):
 
     If you don't know how many records are in the data, you can specify a very loose upper bound.
 
-    This is used to resolve issues raised in [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    This is used to resolve issues raised in the paper
+    `Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It <https://arxiv.org/pdf/2207.10635.pdf>`_.
     """
 
     max_num_partitions: int | None = None
