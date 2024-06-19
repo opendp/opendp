@@ -144,9 +144,12 @@ Which is the estimator in \rustdoc{measurements/fn}{debias\_randomized\_response
 	\end{equation*}
 \end{theorem}
 \begin{proof}
-    Let $q = q(X^n)=\sum\limits_{j=1}^n \bar{x}_i$ be the true (non-private) vector sum of the inputs. Our goal is to find the mean squared error of our estimate from this vector. Notice that each coordinate $Y_j$ of $Y=\sum_{i=1}^n \bar{y}_i$, is a sum of Bernoulli random variables with probability $\frac{1}{2}f$ or $(1-\frac{1}{2}f)$ meaning their sum is that of two binomials with equal variance (by the symmetry of their probabilities). Using this we get the following,
+    Let $q = q(X^n)=\sum\limits_{j=1}^n \bar{x}_i$ be the true (non-private) vector sum of the inputs. Our goal is to find the mean squared error of our estimate from this vector. Notice that each coordinate $Y_j$ of $Y=\sum_{i=1}^n \bar{y}_i$, is a sum of Bernoulli random variables with probability $\frac{1}{2}f$ or $(1-\frac{1}{2}f)$ meaning their sum is that of two binomials with equal variance (by the symmetry of their probabilities). Using this we get that the variance is,
+\begin{equation}
+    \text{Var}(Y_j) = n\frac{f}{2}\left(1-\frac{f}{2}\right), \label{eq:varianceY}
+\end{equation}
+and the mean squared error is,
 \begin{align*}
-    \text{Var}(Y_j) &= n\frac{f}{2}\left(1-\frac{f}{2}\right) \numberthis \label{eq:varianceY}\\
     \mathbb{E}[\|\hat{q}-q\|_2^2] &= \mathbb{E}\left[\sum\limits_{j=1}^k(\hat{q_j}-q_j)^2\right] = \sum\limits_{j=1}^k\mathbb{E}[(\hat{q_j}-q_j)^2] \\
 			&= \sum\limits_{j=1}^k\mathbb{E}[(\hat{q_j}-\mathbb{E}[\hat{q_j}])^2] \tag{By unbiasedness, Theorem~\ref{thm:unbiased-estimator}}\\
 			&= \sum\limits_{j=1}^k\text{Var}(\hat{q_j}) = \sum\limits_{j=1}^k\text{Var}\left(\frac{\hat{Y_j}-n\frac{f}{2}}{1-f}\right) \tag{By Equation~\ref{eq:estimator}}\\
