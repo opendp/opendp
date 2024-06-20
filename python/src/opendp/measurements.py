@@ -710,19 +710,20 @@ def make_private_lazyframe(
 
     With that in place, we can plan the Polars computation, using the `dp` plugin. 
 
-    >>> plan = (
-    ...     pl.LazyFrame(schema={'grade': pl.Int32, 'pet_count': pl.Int32})
-    ...     .group_by("grade")
-    ...     .agg(pl.col("pet_count").dp.sum((0, 10), scale=1.0)))
+    >>> group_by_grade = pl.LazyFrame(schema={'grade': pl.Int32, 'pet_count': pl.Int32}).group_by("grade")
+    >>> sum_plan = group_by_grade.agg(
+    ...     pl.col("pet_count").dp.sum((0, 10), scale=1.0))
 
     We now have all the pieces to make our measurement function using `make_private_lazyframe`:
 
-    >>> dp_sum_pets_by_grade = dp.m.make_private_lazyframe(
-    ...     input_domain=lf_domain_with_margin,
-    ...     input_metric=dp.symmetric_distance(),
-    ...     output_measure=dp.max_divergence(T=float),
-    ...     lazyframe=plan,
-    ...     global_scale=1.0)
+    >>> def make_measurement(plan): # Define function that we'll reuse.
+    ...     return dp.m.make_private_lazyframe(
+    ...         input_domain=lf_domain_with_margin,
+    ...         input_metric=dp.symmetric_distance(),
+    ...         output_measure=dp.max_divergence(T=float),
+    ...         lazyframe=sum_plan,
+    ...         global_scale=1.0)
+    >>> dp_sum_pets_by_grade = make_measurement(sum_plan)
 
     It's only at this point that we need to introduce the private data.
 
@@ -740,8 +741,42 @@ def make_private_lazyframe(
     ...     ],
     ...     schema=['grade', 'pet_count'])
     >>> lf = pl.LazyFrame(df)
-    >>> results = dp_sum_pets_by_grade(lf).sort("grade").collect()
-    >>> print(results) # doctest: +ELLIPSIS
+    >>> sums = dp_sum_pets_by_grade(lf).sort("grade").collect()
+    >>> print(sums) # doctest: +ELLIPSIS
+    shape: (3, 2)
+    ┌───────┬───────────┐
+    │ grade ┆ pet_count │
+    │ ---   ┆ ---       │
+    │ i64   ┆ i64       │
+    ╞═══════╪═══════════╡
+    │ 0     ┆ ...       │
+    │ 1     ┆ ...       │
+    │ 2     ┆ ...       │
+    └───────┴───────────┘
+
+    We could calculate other statistics in a similar way:
+
+    >>> mean_plan = group_by_grade.agg(
+    ...     pl.col("pet_count").dp.mean((0, 10), scale=1.0))
+    >>> dp_mean_pets_by_grade = make_measurement(mean_plan)
+    >>> means = dp_mean_pets_by_grade(lf).sort("grade").collect()
+    >>> print(means) # doctest: +ELLIPSIS
+    shape: (3, 2)
+    ┌───────┬───────────┐
+    │ grade ┆ pet_count │
+    │ ---   ┆ ---       │
+    │ i64   ┆ i64       │
+    ╞═══════╪═══════════╡
+    │ 0     ┆ ...       │
+    │ 1     ┆ ...       │
+    │ 2     ┆ ...       │
+    └───────┴───────────┘
+
+    >>> median_plan = group_by_grade.agg(
+    ...     pl.col("pet_count").dp.median((0, 10), scale=1.0))
+    >>> dp_median_pets_by_grade = make_measurement(median_plan)
+    >>> medians = dp_median_pets_by_grade(lf).sort("grade").collect()
+    >>> print(medians) # doctest: +ELLIPSIS
     shape: (3, 2)
     ┌───────┬───────────┐
     │ grade ┆ pet_count │
@@ -810,19 +845,20 @@ def then_private_lazyframe(
 
     With that in place, we can plan the Polars computation, using the `dp` plugin. 
 
-    >>> plan = (
-    ...     pl.LazyFrame(schema={'grade': pl.Int32, 'pet_count': pl.Int32})
-    ...     .group_by("grade")
-    ...     .agg(pl.col("pet_count").dp.sum((0, 10), scale=1.0)))
+    >>> group_by_grade = pl.LazyFrame(schema={'grade': pl.Int32, 'pet_count': pl.Int32}).group_by("grade")
+    >>> sum_plan = group_by_grade.agg(
+    ...     pl.col("pet_count").dp.sum((0, 10), scale=1.0))
 
     We now have all the pieces to make our measurement function using `make_private_lazyframe`:
 
-    >>> dp_sum_pets_by_grade = dp.m.make_private_lazyframe(
-    ...     input_domain=lf_domain_with_margin,
-    ...     input_metric=dp.symmetric_distance(),
-    ...     output_measure=dp.max_divergence(T=float),
-    ...     lazyframe=plan,
-    ...     global_scale=1.0)
+    >>> def make_measurement(plan): # Define function that we'll reuse.
+    ...     return dp.m.make_private_lazyframe(
+    ...         input_domain=lf_domain_with_margin,
+    ...         input_metric=dp.symmetric_distance(),
+    ...         output_measure=dp.max_divergence(T=float),
+    ...         lazyframe=sum_plan,
+    ...         global_scale=1.0)
+    >>> dp_sum_pets_by_grade = make_measurement(sum_plan)
 
     It's only at this point that we need to introduce the private data.
 
@@ -840,8 +876,42 @@ def then_private_lazyframe(
     ...     ],
     ...     schema=['grade', 'pet_count'])
     >>> lf = pl.LazyFrame(df)
-    >>> results = dp_sum_pets_by_grade(lf).sort("grade").collect()
-    >>> print(results) # doctest: +ELLIPSIS
+    >>> sums = dp_sum_pets_by_grade(lf).sort("grade").collect()
+    >>> print(sums) # doctest: +ELLIPSIS
+    shape: (3, 2)
+    ┌───────┬───────────┐
+    │ grade ┆ pet_count │
+    │ ---   ┆ ---       │
+    │ i64   ┆ i64       │
+    ╞═══════╪═══════════╡
+    │ 0     ┆ ...       │
+    │ 1     ┆ ...       │
+    │ 2     ┆ ...       │
+    └───────┴───────────┘
+
+    We could calculate other statistics in a similar way:
+
+    >>> mean_plan = group_by_grade.agg(
+    ...     pl.col("pet_count").dp.mean((0, 10), scale=1.0))
+    >>> dp_mean_pets_by_grade = make_measurement(mean_plan)
+    >>> means = dp_mean_pets_by_grade(lf).sort("grade").collect()
+    >>> print(means) # doctest: +ELLIPSIS
+    shape: (3, 2)
+    ┌───────┬───────────┐
+    │ grade ┆ pet_count │
+    │ ---   ┆ ---       │
+    │ i64   ┆ i64       │
+    ╞═══════╪═══════════╡
+    │ 0     ┆ ...       │
+    │ 1     ┆ ...       │
+    │ 2     ┆ ...       │
+    └───────┴───────────┘
+
+    >>> median_plan = group_by_grade.agg(
+    ...     pl.col("pet_count").dp.median((0, 10), scale=1.0))
+    >>> dp_median_pets_by_grade = make_measurement(median_plan)
+    >>> medians = dp_median_pets_by_grade(lf).sort("grade").collect()
+    >>> print(medians) # doctest: +ELLIPSIS
     shape: (3, 2)
     ┌───────┬───────────┐
     │ grade ┆ pet_count │
