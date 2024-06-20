@@ -43,6 +43,35 @@ atom_domain <- function(
 }
 
 
+#' Construct an instance of `BitVectorDomain`.
+#'
+#' @concept domains
+#' @param max_weight The maximum number of positive bits.
+#' @return Domain
+#' @export
+bitvector_domain <- function(
+  max_weight = NULL
+) {
+  # Standardize type arguments.
+  .T.max_weight <- new_runtime_type(origin = "Option", args = list(u32))
+
+  log <- new_constructor_log("bitvector_domain", "domains", new_hashtab(
+    list("max_weight"),
+    list(max_weight)
+  ))
+
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.max_weight, inferred = rt_infer(max_weight))
+
+  # Call wrapper function.
+  output <- .Call(
+    "domains__bitvector_domain",
+    max_weight, rt_parse(.T.max_weight),
+    log, PACKAGE = "opendp")
+  output
+}
+
+
 #' Get the carrier type of a `domain`.
 #'
 #' @concept domains

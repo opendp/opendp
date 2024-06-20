@@ -20,6 +20,7 @@ __all__ = [
     "_lazyframe_from_domain",
     "_user_domain_descriptor",
     "atom_domain",
+    "bitvector_domain",
     "domain_carrier_type",
     "domain_debug",
     "domain_type",
@@ -153,6 +154,31 @@ def atom_domain(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_bounds, c_nullable, c_T), Domain))
+
+    return output
+
+
+def bitvector_domain(
+    max_weight = None
+) -> Domain:
+    r"""Construct an instance of `BitVectorDomain`.
+
+    :param max_weight: The maximum number of positive bits.
+    :rtype: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_max_weight = py_to_c(max_weight, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[u32]))
+
+    # Call library function.
+    lib_function = lib.opendp_domains__bitvector_domain
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_max_weight), Domain))
 
     return output
 

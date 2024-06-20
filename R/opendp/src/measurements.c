@@ -14,6 +14,29 @@
 #include "opendp_extras.h"
 
 
+SEXP measurements__debias_randomized_response_bitvec(
+    SEXP answers, SEXP f, SEXP T_answers, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(answers);
+    PROTECT(f);
+    PROTECT(T_answers);
+    PROTECT(log);
+
+    AnyObject * c_answers = sexp_to_anyobjectptr(answers, T_answers);
+    double c_f = Rf_asReal(f);
+
+    // Call library function.
+    FfiResult_____AnyObject _result = opendp_measurements__debias_randomized_response_bitvec(c_answers, c_f);
+
+    UNPROTECT(4);
+    if(_result.tag == Err_____AnyObject)
+        return(extract_error(_result.err));
+    AnyObject* _return_value = _result.ok;
+    return(anyobjectptr_to_sexp(_return_value));
+}
+
+
 SEXP measurements__make_alp_queryable(
     SEXP input_domain, SEXP input_metric, SEXP scale, SEXP total_limit, SEXP value_limit, SEXP size_factor, SEXP alpha, SEXP CO, SEXP CI, SEXP T_value_limit, SEXP T_size_factor, SEXP T_alpha, SEXP log
 ) {
@@ -193,6 +216,32 @@ SEXP measurements__make_randomized_response(
     FfiResult_____AnyMeasurement _result = opendp_measurements__make_randomized_response(c_categories, c_prob, c_constant_time, c_T, c_QO);
 
     UNPROTECT(7);
+    if(_result.tag == Err_____AnyMeasurement)
+        return(extract_error(_result.err));
+    AnyMeasurement* _return_value = _result.ok;
+    return(anymeasurementptr_to_sexp(_return_value, log));
+}
+
+
+SEXP measurements__make_randomized_response_bitvec(
+    SEXP input_domain, SEXP input_metric, SEXP f, SEXP constant_time, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(input_domain);
+    PROTECT(input_metric);
+    PROTECT(f);
+    PROTECT(constant_time);
+    PROTECT(log);
+
+    AnyDomain * c_input_domain = sexp_to_anydomainptr(input_domain);
+    AnyMetric * c_input_metric = sexp_to_anymetricptr(input_metric);
+    double c_f = Rf_asReal(f);
+    bool c_constant_time = asLogical(constant_time);
+
+    // Call library function.
+    FfiResult_____AnyMeasurement _result = opendp_measurements__make_randomized_response_bitvec(c_input_domain, c_input_metric, c_f, c_constant_time);
+
+    UNPROTECT(5);
     if(_result.tag == Err_____AnyMeasurement)
         return(extract_error(_result.err));
     AnyMeasurement* _return_value = _result.ok;

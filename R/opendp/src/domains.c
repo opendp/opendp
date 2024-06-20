@@ -39,6 +39,27 @@ SEXP domains__atom_domain(
 }
 
 
+SEXP domains__bitvector_domain(
+    SEXP max_weight, SEXP T_max_weight, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(max_weight);
+    PROTECT(T_max_weight);
+    PROTECT(log);
+
+    AnyObject * c_max_weight = sexp_to_anyobjectptr(max_weight, T_max_weight);
+
+    // Call library function.
+    FfiResult_____AnyDomain _result = opendp_domains__bitvector_domain(c_max_weight);
+
+    UNPROTECT(3);
+    if(_result.tag == Err_____AnyDomain)
+        return(extract_error(_result.err));
+    AnyDomain* _return_value = _result.ok;
+    return(anydomainptr_to_sexp(_return_value, log));
+}
+
+
 SEXP domains__domain_carrier_type(
     SEXP this, SEXP log
 ) {

@@ -4,6 +4,46 @@
 NULL
 
 
+#' Convert a vector of randomized response bitvec responses to a frequency estimate
+#'
+#' [debias_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.debias_randomized_response_bitvec.html)
+#'
+#' @concept measurements
+#' @param answers A vector of BitVectors with consistent size
+#' @param f The per bit flipping probability used to encode `answers`
+#'
+#' Computes the sum of the answers into a \eqn{k}-length vector \eqn{Y} and returns
+#' ```math
+#' Y\frac{Y-\frac{f}{2}}{1-f}
+#' ```
+#' @export
+debias_randomized_response_bitvec <- function(
+  answers,
+  f
+) {
+  assert_features("contrib")
+
+  # Standardize type arguments.
+  .T.answers <- new_runtime_type(origin = "Vec", args = list(BitVector))
+
+  log <- new_constructor_log("debias_randomized_response_bitvec", "measurements", new_hashtab(
+    list("answers", "f"),
+    list(answers, unbox2(f))
+  ))
+
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .T.answers, inferred = rt_infer(answers))
+  rt_assert_is_similar(expected = f64, inferred = rt_infer(f))
+
+  # Call wrapper function.
+  output <- .Call(
+    "measurements__debias_randomized_response_bitvec",
+    answers, f, rt_parse(.T.answers),
+    log, PACKAGE = "opendp")
+  output
+}
+
+
 #' alp queryable constructor
 #'
 #' Measurement to release a queryable containing a DP projection of bounded sparse data.
@@ -633,6 +673,94 @@ then_randomized_response <- function(
       constant_time = constant_time,
       .T = .T,
       .QO = .QO),
+    lhs,
+    log)
+}
+
+
+#' randomized response bitvec constructor
+#'
+#' Make a Measurement that implements randomized response on a bit vector.
+#'
+#' This primitive can be useful for implementing RAPPOR.
+#'
+#' [make_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_randomized_response_bitvec.html)
+#'
+#' **Citations:**
+#'
+#' * [RAPPOR: Randomized Aggregatable Privacy-Preserving Ordinal Response](https://arxiv.org/abs/1407.6981)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `BitVectorDomain`
+#' * Output Type:    `BitVector`
+#' * Input Metric:   `DiscreteDistance`
+#' * Output Measure: `MaxDivergence<f64>`
+#'
+#' **Proof Definition:**
+#'
+#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/randomized_response_bitvec/make_randomized_response_bitvec.pdf)
+#'
+#' @concept measurements
+#' @param input_domain BitVectorDomain with max_weight
+#' @param input_metric DiscreteDistance
+#' @param f Per-bit flipping probability. Must be in \eqn{(0, 1]}.
+#' @param constant_time Whether to run the Bernoulli samplers in constant time, this is likely to be extremely slow.
+#' @return Measurement
+#' @export
+make_randomized_response_bitvec <- function(
+  input_domain,
+  input_metric,
+  f,
+  constant_time = FALSE
+) {
+  assert_features("contrib")
+
+  # No type arguments to standardize.
+  log <- new_constructor_log("make_randomized_response_bitvec", "measurements", new_hashtab(
+    list("input_domain", "input_metric", "f", "constant_time"),
+    list(input_domain, input_metric, unbox2(f), unbox2(constant_time))
+  ))
+
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = f64, inferred = rt_infer(f))
+  rt_assert_is_similar(expected = bool, inferred = rt_infer(constant_time))
+
+  # Call wrapper function.
+  output <- .Call(
+    "measurements__make_randomized_response_bitvec",
+    input_domain, input_metric, f, constant_time,
+    log, PACKAGE = "opendp")
+  output
+}
+
+#' partial randomized response bitvec constructor
+#'
+#' See documentation for [make_randomized_response_bitvec()] for details.
+#'
+#' @concept measurements
+#' @param lhs The prior transformation or metric space.
+#' @param f Per-bit flipping probability. Must be in \eqn{(0, 1]}.
+#' @param constant_time Whether to run the Bernoulli samplers in constant time, this is likely to be extremely slow.
+#' @return Measurement
+#' @export
+then_randomized_response_bitvec <- function(
+  lhs,
+  f,
+  constant_time = FALSE
+) {
+
+  log <- new_constructor_log("then_randomized_response_bitvec", "measurements", new_hashtab(
+    list("f", "constant_time"),
+    list(unbox2(f), unbox2(constant_time))
+  ))
+
+  make_chain_dyn(
+    make_randomized_response_bitvec(
+      output_domain(lhs),
+      output_metric(lhs),
+      f = f,
+      constant_time = constant_time),
     lhs,
     log)
 }
