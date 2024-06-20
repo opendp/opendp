@@ -24,7 +24,7 @@
 //!
 //! # User Guide
 //!
-//! A more thorough User Guide [can be found on the docs website](https://docs.opendp.org/en/nightly/user/index.html).
+//! A more thorough User Guide [can be found on the docs website](https://docs.opendp.org/en/nightly/api/user-guide/index.html).
 //!
 //! OpenDP applications are created by using constructors and combinators to create private computation pipelines.
 //! These can be written directly in Rust, or by using a language binding that uses OpenDP through an FFI interface.

@@ -65,7 +65,7 @@ reference:
 
 - title: Mod
   desc: |
-    The `mod` module provides the classes which implement the [OpenDP Programming Framework](https://docs.opendp.org/en/nightly/user/programming-framework/index.html),
+    The `mod` module provides the classes which implement the [OpenDP Programming Framework](https://docs.opendp.org/en/nightly/api/user-guide/programming-framework/index.html),
     as well as utilities for enabling features and finding parameter values.
   contents:
   - has_concept("mod")

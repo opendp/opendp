@@ -31,7 +31,7 @@ We welcome you to try it and look forward to feedback on the library! However, p
 > OpenDP, like all real-world software, has both known and unknown issues.
 > If you intend to use OpenDP for a privacy-critical application, you should evaluate the impact of these issues on your use case.
 > 
-> More details can be found in the [Limitations section of the User Guide](https://docs.opendp.org/en/nightly/user/limitations.html).
+> More details can be found in the [Limitations section of the User Guide](https://docs.opendp.org/en/nightly/api/user-guide/limitations.html).
 
 
 ## Installation
@@ -44,13 +44,13 @@ Install OpenDP for R from an R session:
 
     install.packages("opendp", repos = "https://opendp.r-universe.dev")
 
-More information can be found in the [Getting Started section of the User Guide](https://docs.opendp.org/en/nightly/user/getting-started.html).
+More information can be found in the [Getting Started section of the User Guide](https://docs.opendp.org/en/nightly/api/user-guide/getting-started.html).
 
 ## Documentation
 
 The full documentation for OpenDP is located at https://docs.opendp.org. Here are some helpful entry points:
 
-* [User Guide](https://docs.opendp.org/en/nightly/user/index.html)
+* [User Guide](https://docs.opendp.org/en/nightly/api/user-guide/index.html)
 * [Python API Docs](https://docs.opendp.org/en/nightly/api/python/index.html)
 * [Contributor Guide](https://docs.opendp.org/en/nightly/contributing/index.html)
 
