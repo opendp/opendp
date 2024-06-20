@@ -279,10 +279,10 @@ class RuntimeType(object):
         >>> assert dp.RuntimeType.infer(["A", "B"]) == "Vec<String>"
         >>> assert dp.RuntimeType.infer((12., True, "A")) == "(f64,  bool,String)" # eq doesn't care about whitespace
         
-        >>> print(dp.RuntimeType.infer([]))
+        >>> dp.RuntimeType.infer([])
         Traceback (most recent call last):
         ...
-        opendp.mod.UnknownTypeException: attempted to create a type_name with an unknown type: cannot infer atomic type when empty
+        opendp.mod.UnknownTypeException: cannot infer atomic type when empty
         """
         if type(public_example) in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type(public_example)]
@@ -311,7 +311,7 @@ class RuntimeType(object):
             types = {cls.infer(v, py_object=py_object) for v in value}
 
             if len(types) == 0:
-                return UnknownType("cannot infer atomic type when empty") # pragma: no cover
+                raise UnknownTypeException("cannot infer atomic type when empty")
             if len(types) == 1:
                 return next(iter(types))
             if py_object: # pragma: no cover
@@ -346,7 +346,7 @@ class RuntimeType(object):
             return "AnyTransformationPtr"
 
         if public_example is None: # pragma: no cover
-            return RuntimeType('Option', [UnknownType("Constructed Option from a None variant")])
+            raise UnknownTypeException("Constructed Option from a None variant")
         
         if callable(public_example): # pragma: no cover
             return "CallbackFn"
@@ -390,22 +390,6 @@ class RuntimeType(object):
 class GenericType(RuntimeType):
     def __repr__(self):
         raise UnknownTypeException(f"attempted to create a type_name with an unknown generic: {self.origin}")
-
-
-class UnknownType(RuntimeType):
-    """Indicator for a type that cannot be inferred. Typically the atomic type of an empty list.
-    RuntimeTypes containing UnknownType cannot be used in FFI
-    """
-    origin: None # type: ignore[assignment]
-    args: None # type: ignore[assignment]
-
-    def __init__(self, reason): # pragma: no cover
-        self.origin = None
-        self.args = None
-        self.reason = reason
-
-    def __repr__(self):
-        raise UnknownTypeException(f"attempted to create a type_name with an unknown type: {self.reason}")
 
 
 SymmetricDistance = 'SymmetricDistance'
@@ -504,7 +488,7 @@ MapDomain: DomainDescriptor = DomainDescriptor('MapDomain')
 def get_atom(type_name):
     type_name = RuntimeType.parse(type_name)
     while isinstance(type_name, RuntimeType):
-        if isinstance(type_name, (UnknownType, GenericType)):
+        if isinstance(type_name, GenericType):
             return
         type_name = type_name.args[0]
     return type_name
