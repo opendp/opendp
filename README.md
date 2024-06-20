@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 [![Python](https://img.shields.io/badge/Python-3.9%20%E2%80%93%203.12-blue)](https://docs.opendp.org/en/nightly/api/python/index.html)
-[![R](https://img.shields.io/badge/R-grey)](https://docs.opendp.org/en/stable/api/r/)
+[![R](https://img.shields.io/badge/R-grey)](https://docs.opendp.org/en/nightly/api/r/)
 [![Rust](https://img.shields.io/badge/Rust-grey)](https://docs.rs/crate/opendp/latest)
 
 [![main CI](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml?query=branch%3Amain)
@@ -31,7 +31,7 @@ We welcome you to try it and look forward to feedback on the library! However, p
 > OpenDP, like all real-world software, has both known and unknown issues.
 > If you intend to use OpenDP for a privacy-critical application, you should evaluate the impact of these issues on your use case.
 > 
-> More details can be found in the [Limitations section of the User Guide](https://docs.opendp.org/en/stable/user/limitations.html).
+> More details can be found in the [Limitations section of the User Guide](https://docs.opendp.org/en/nightly/user/limitations.html).
 
 
 ## Installation
@@ -44,15 +44,15 @@ Install OpenDP for R from an R session:
 
     install.packages("opendp", repos = "https://opendp.r-universe.dev")
 
-More information can be found in the [Getting Started section of the User Guide](https://docs.opendp.org/en/stable/user/getting-started.html).
+More information can be found in the [Getting Started section of the User Guide](https://docs.opendp.org/en/nightly/user/getting-started.html).
 
 ## Documentation
 
 The full documentation for OpenDP is located at https://docs.opendp.org. Here are some helpful entry points:
 
-* [User Guide](https://docs.opendp.org/en/stable/user/index.html)
-* [Python API Docs](https://docs.opendp.org/en/stable/api/python/index.html)
-* [Contributor Guide](https://docs.opendp.org/en/stable/contributor/index.html)
+* [User Guide](https://docs.opendp.org/en/nightly/user/index.html)
+* [Python API Docs](https://docs.opendp.org/en/nightly/api/python/index.html)
+* [Contributor Guide](https://docs.opendp.org/en/nightly/contributor/index.html)
 
 ## Getting Help
 
@@ -67,4 +67,4 @@ If you're having problems using OpenDP, or want to submit feedback, please reach
 ## Contributing
 
 OpenDP is a community effort, and we welcome your contributions to its development! 
-If you'd like to participate, please contact us! We also have a [contribution process section in the Contributor Guide](https://docs.opendp.org/en/stable/contributor/contribution-process.html).
+If you'd like to participate, please contact us! We also have a [contribution process section in the Contributor Guide](https://docs.opendp.org/en/nightly/contributor/contribution-process.html).
