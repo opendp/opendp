@@ -43,8 +43,9 @@ def convert_block(match):
         :sync: python
 
         .. code:: python
-{indent_input}
-{indent_output}
+
+            {indent_input.strip()}
+            {indent_output.strip()}
 
 '''
 
@@ -55,7 +56,6 @@ def convert_blocks(rst):
     This is not perfect because cells can combine multiple statements:
     We'll need to finish it by hand.
     '''
-    # TODO
     pattern = r'\.\. code:: ipython3\n(.*?)(?:^\.\. parsed-literal::\n(.*?))?^(?=\S)'
     rst, count = re.subn(pattern, convert_block, rst, flags=re.MULTILINE|re.DOTALL)
     print(f"Converted {count} code blocks")
