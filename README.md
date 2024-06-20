@@ -44,7 +44,7 @@ Install OpenDP for R from an R session:
 
     install.packages("opendp", repos = "https://opendp.r-universe.dev")
 
-More information can be found in the [Getting Started section of the User Guide](https://docs.opendp.org/en/nightly/api/user-guide/getting-started.html).
+More information can be found in the [Getting Started section of the User Guide](https://docs.opendp.org/en/nightly/getting-started/).
 
 ## Documentation
 
