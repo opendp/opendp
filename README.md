@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 [![Python](https://img.shields.io/badge/Python-3.9%20%E2%80%93%203.12-blue)](https://docs.opendp.org/en/nightly/api/python/index.html)
-[![R](https://img.shields.io/badge/R-grey)](https://docs.opendp.org/en/nightly/api/r/)
+[![R](https://img.shields.io/badge/R-grey)](https://docs.opendp.org/en/stable/api/r/)
 [![Rust](https://img.shields.io/badge/Rust-grey)](https://docs.rs/crate/opendp/latest)
 
 [![main CI](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml?query=branch%3Amain)
