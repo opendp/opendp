@@ -14,19 +14,24 @@ def test_numpy_function():
     print(RuntimeType.infer(np.array(["A", "B"])))
 
 
-def test_typing_infer():
-    # Is there an argument for wrapping these in RuntimeType instances,
-    # and work towards simplifying the python type annotations?
+def test_typing_infer_to_string():
+    # Currently these return actual strings, which we test with `is`.
+    # The plan is to change the response type to be consistent:
+    # https://github.com/opendp/opendp/issues/1665
     assert RuntimeType.infer(23) is 'i32' # noqa: F632
     assert RuntimeType.infer(12.) is 'f64' # noqa: F632
     assert RuntimeType.infer('hello') is 'String' # noqa: F632
-    assert RuntimeType.infer(lambda: True) is 'CallbackFn' # noqa: F632
-    
+    assert RuntimeType.infer(lambda: True) is 'CallbackFn' # noqa: F632    
     assert RuntimeType.infer(object(), py_object=True) is 'ExtrinsicObject' # noqa: F632
-    # TODO: This one seems strange: Why not have the usual error if types don't match?
-    assert RuntimeType.infer([1, True], py_object=True) == 'Vec<ExtrinsicObject>'
+    
 
-    # Note that here we assert "==" rather than "is":
+def test_typing_infer_to_object():
+    # With py_object=True, it can fall back to a more general type:
+    assert RuntimeType.infer([1, True], py_object=True) == 'Vec<ExtrinsicObject>'
+    # Without py_object=True, it fails:
+    with pytest.raises(TypeError, match=re.escape("elements must be homogeneously typed")):
+        RuntimeType.infer([1, True])
+
     infer_vec = RuntimeType.infer(["A", "B"])
     assert infer_vec == 'Vec<String>'
     assert isinstance(infer_vec, RuntimeType)
