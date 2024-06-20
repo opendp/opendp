@@ -52,7 +52,7 @@ The full documentation for OpenDP is located at https://docs.opendp.org. Here ar
 
 * [User Guide](https://docs.opendp.org/en/nightly/user/index.html)
 * [Python API Docs](https://docs.opendp.org/en/nightly/api/python/index.html)
-* [Contributor Guide](https://docs.opendp.org/en/nightly/contributor/index.html)
+* [Contributor Guide](https://docs.opendp.org/en/nightly/contributing/index.html)
 
 ## Getting Help
 
@@ -67,4 +67,4 @@ If you're having problems using OpenDP, or want to submit feedback, please reach
 ## Contributing
 
 OpenDP is a community effort, and we welcome your contributions to its development! 
-If you'd like to participate, please contact us! We also have a [contribution process section in the Contributor Guide](https://docs.opendp.org/en/nightly/contributor/contribution-process.html).
+If you'd like to participate, please contact us! We also have a [contribution process section in the Contributor Guide](https://docs.opendp.org/en/nightly/contributing/contribution-process.html).

@@ -94,7 +94,7 @@
 //!
 //! # Contributor Guide
 //!
-//! A more thorough Contributor Guide [can be found on the docs website](https://docs.opendp.org/en/nightly/contributor/index.html).
+//! A more thorough Contributor Guide [can be found on the docs website](https://docs.opendp.org/en/nightly/contributing/index.html).
 //!
 //! ## Adding Constructors
 //!

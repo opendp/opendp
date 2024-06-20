@@ -144,7 +144,7 @@ pub trait FailedDispatch {
 impl<T> FailedDispatch for Fallible<T> {
     fn failed_dispatch(type_: &str) -> Self {
         let debug_message = if cfg!(debug_assertions) {
-            "You've got a debug binary! Debug binaries support fewer types. Consult https://docs.opendp.org/en/nightly/contributor/development-environment.html#build-opendp"
+            "You've got a debug binary! Debug binaries support fewer types. Consult https://docs.opendp.org/en/nightly/contributing/development-environment.html#build-opendp"
         } else {
             "See https://github.com/opendp/opendp/discussions/451."
         };
