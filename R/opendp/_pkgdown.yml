@@ -6,7 +6,7 @@ template:
   includes:
     before_title: |
       <a href="/">
-        <img src="https://docs.opendp.org/en/nightly/_static/opendp-logo.png" alt="OpenDP logo" style="width: 183px; margin-right: 2em;">
+        <img src="https://docs.opendp.org/en/stable/_static/opendp-logo.png" alt="OpenDP logo" style="width: 183px; margin-right: 2em;">
       </a>
 
 authors:
@@ -65,7 +65,7 @@ reference:
 
 - title: Mod
   desc: |
-    The `mod` module provides the classes which implement the [OpenDP Programming Framework](https://docs.opendp.org/en/nightly/api/user-guide/programming-framework/index.html),
+    The `mod` module provides the classes which implement the [OpenDP Programming Framework](https://docs.opendp.org/en/stable/api/user-guide/programming-framework/index.html),
     as well as utilities for enabling features and finding parameter values.
   contents:
   - has_concept("mod")

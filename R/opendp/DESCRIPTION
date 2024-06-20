@@ -22,7 +22,7 @@ Suggests:
     testthat (>= 3.0.0),
     jsonlite
 NeedsCompilation: yes
-URL: https://opendp.org/, https://github.com/opendp/opendp, https://docs.opendp.org/en/nightly/index.html
+URL: https://opendp.org/, https://github.com/opendp/opendp, https://docs.opendp.org/en/stable/index.html
 BugReports: https://github.com/opendp/opendp/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

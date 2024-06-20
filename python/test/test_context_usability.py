@@ -55,7 +55,7 @@ def test_mean_without_size():
 def test_int_mean():
     # Currently fails with:
     #   opendp.mod.OpenDPException:
-    #     FFI("No match for concrete type i32. You've got a debug binary! Debug binaries support fewer types. Consult https://docs.opendp.org/en/nightly/contributing/development-environment.html#build-opendp")
+    #     FFI("No match for concrete type i32. You've got a debug binary! Debug binaries support fewer types. Consult https://docs.opendp.org/en/stable/contributing/development-environment.html#build-opendp")
     # Possible resolution:
     #   Should just be the same as any mean without a size.
     context = dp.Context.compositor(
