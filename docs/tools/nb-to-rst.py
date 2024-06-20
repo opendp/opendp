@@ -18,7 +18,7 @@ def unindent(text):
 def doctest(text):
     # Not perfect! Closing parens could be in the first column.
     return '\n'.join(
-        (f'... {line}' if line[0] == ' ' else f'>>> {line}')
+        (f'... {line}' if line[0] in [' ', ']', ')', '}'] else f'>>> {line}')
             if line else ''
         for line in text.split('\n')
     )
@@ -33,19 +33,18 @@ def convert_block(match):
     Given a match object, with subexpressions for the input and output lines,
     return a python code block containing a doctest.
     '''
-    input = unindent(match.group(1).strip())
-    output = unindent((match.group(2) or '').strip())
-    double_indent_input = reindent(reindent(doctest(input)))
-    double_indent_output = reindent(reindent(output))
+    input = unindent(match.group(1))
+    output = unindent((match.group(2) or ''))
+    indent_input = reindent(reindent(reindent(doctest(input))))
+    indent_output = reindent(reindent(reindent(output)))
     return f'''.. tab-set::
 
     .. tab-item:: Python
         :sync: python
 
         .. code:: python
-
-{double_indent_input}
-{double_indent_output}
+{indent_input}
+{indent_output}
 
 '''
 
@@ -57,7 +56,7 @@ def convert_blocks(rst):
     We'll need to finish it by hand.
     '''
     # TODO
-    pattern = r'\.\. code:: ipython3\n(.*?)(?:^\.\. parsed-literal::\n(.*?))?^(?=\w)'
+    pattern = r'\.\. code:: ipython3\n(.*?)(?:^\.\. parsed-literal::\n(.*?))?^(?=\S)'
     rst, count = re.subn(pattern, convert_block, rst, flags=re.MULTILINE|re.DOTALL)
     print(f"Converted {count} code blocks")
     return rst
