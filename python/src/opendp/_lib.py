@@ -246,6 +246,11 @@ def unwrap(result, type_) -> Any:
         raise OpenDPException("Failed to free error.")
 
     # Rust stack traces follow from here:
+    pl = import_optional_dependency('polars', raise_error=False)
+    if pl is not None:
+        from opendp.mod import _EXPECTED_POLARS_VERSION
+        if 'polars' in str(message).lower() and pl.__version__ != _EXPECTED_POLARS_VERSION:
+            message = f'Installed python polars version ({pl.__version__}) != expected version ({_EXPECTED_POLARS_VERSION}). {message}' # pragma: no cover
     raise OpenDPException(variant, message, backtrace)
 
 
