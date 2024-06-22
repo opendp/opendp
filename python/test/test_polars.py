@@ -173,15 +173,16 @@ def test_private_lazyframe_mean(measure):
     pl_testing.assert_frame_equal(m_lf(lf).collect().sort("B"), expect)
 
 
-def test_stable_lazyframe():
+def test_cast():
     pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()
-    with pytest.raises(dp.OpenDPException):
-        dp.t.make_stable_lazyframe(
-            lf_domain,
-            dp.symmetric_distance(),
-            lf.with_columns(pl.col("A").cast(int)),
-        )
+    m_lf = dp.t.make_stable_lazyframe(
+        lf_domain,
+        dp.symmetric_distance(),
+        lf.with_columns(pl.col("A").cast(int)),
+    )
+
+    assert m_lf(lf).collect()["A"].dtype == pl.Int64
 
 
 def test_stable_expr():

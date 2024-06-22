@@ -24,6 +24,9 @@ mod expr_binary;
 mod expr_boolean_function;
 
 #[cfg(feature = "contrib")]
+mod expr_cast;
+
+#[cfg(feature = "contrib")]
 mod expr_clip;
 
 #[cfg(feature = "contrib")]
@@ -109,6 +112,9 @@ where
                 function: Boolean(_),
                 ..
             } => return expr_boolean_function::make_expr_boolean_function(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Cast { .. } => expr_cast::make_expr_cast(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Function {
