@@ -673,6 +673,11 @@ struct FfiResult_____c_void opendp_data__arrow_array_free(void *this_);
 struct FfiResult_____c_void opendp_data__str_free(char *this_);
 
 /**
+ * Internal function. Compute erf_inv.
+ */
+double opendp_data__erf_inv(double value);
+
+/**
  * Internal function. Free the memory associated with `this`, a bool.
  * Used to clean up after the relation check.
  *

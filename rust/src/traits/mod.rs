@@ -11,6 +11,9 @@ pub use bounded::*;
 mod arithmetic;
 pub use arithmetic::*;
 
+mod erf_inv;
+pub use erf_inv::*;
+
 mod cast;
 pub use cast::*;
 

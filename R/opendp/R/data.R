@@ -4,6 +4,32 @@
 NULL
 
 
+#' Internal function. Compute erf_inv.
+#'
+#' @concept data
+#' @param value undocumented
+#' @return float
+erf_inv <- function(
+  value
+) {
+  # No type arguments to standardize.
+  log <- new_constructor_log("erf_inv", "data", new_hashtab(
+    list("value"),
+    list(unbox2(value))
+  ))
+
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = f64, inferred = rt_infer(value))
+
+  # Call wrapper function.
+  output <- .Call(
+    "data__erf_inv",
+    value,
+    log, PACKAGE = "opendp")
+  output
+}
+
+
 #' Internal function. Retrieve the type descriptor string of an AnyObject.
 #'
 #' @concept data

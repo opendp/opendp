@@ -29,7 +29,7 @@ use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, Ty
 use crate::measures::SMDCurve;
 use crate::metrics::IntDistance;
 use crate::traits::samplers::{fill_bytes, Shuffle};
-use crate::traits::ProductOrd;
+use crate::traits::{erf_inv, ProductOrd};
 use crate::{err, fallible, try_, try_as_ref};
 use opendp_derive::bootstrap;
 
@@ -685,6 +685,13 @@ pub extern "C" fn opendp_data__arrow_array_free(this: *mut c_void) -> FfiResult<
 #[no_mangle]
 pub extern "C" fn opendp_data__str_free(this: *mut c_char) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
+}
+
+#[bootstrap(name = "erf_inv")]
+/// Internal function. Compute erf_inv.
+#[no_mangle]
+pub extern "C" fn opendp_data__erf_inv(value: f64) -> f64 {
+    erf_inv(value)
 }
 
 #[bootstrap(

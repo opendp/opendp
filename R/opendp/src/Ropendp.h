@@ -57,6 +57,7 @@ SEXP core__transformation_map(SEXP transformation, SEXP distance_in, SEXP T_dist
 SEXP core__transformation_output_distance_type(SEXP this, SEXP log);
 SEXP core__transformation_output_domain(SEXP this, SEXP log);
 SEXP core__transformation_output_metric(SEXP this, SEXP log);
+SEXP data__erf_inv(SEXP value, SEXP log);
 SEXP data__object_type(SEXP this, SEXP log);
 SEXP data__smd_curve_epsilon(SEXP curve, SEXP delta, SEXP T_delta, SEXP log);
 SEXP data__to_string(SEXP this, SEXP log);

@@ -10,6 +10,7 @@ from opendp.typing import *
 __all__ = [
     "arrow_array_free",
     "bool_free",
+    "erf_inv",
     "extrinsic_object_free",
     "ffislice_of_anyobjectptrs",
     "fill_bytes",
@@ -72,6 +73,31 @@ def bool_free(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+
+    return output
+
+
+def erf_inv(
+    value: float
+) -> float:
+    r"""Internal function. Compute erf_inv.
+
+    :param value: 
+    :type value: float
+    :rtype: float
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_value = py_to_c(value, c_type=ctypes.c_double, type_name=f64)
+
+    # Call library function.
+    lib_function = lib.opendp_data__erf_inv
+    lib_function.argtypes = [ctypes.c_double]
+    lib_function.restype = ctypes.c_double
+
+    output = c_to_py(lib_function(c_value))
 
     return output
 

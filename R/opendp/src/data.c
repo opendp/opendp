@@ -14,6 +14,23 @@
 #include "opendp_extras.h"
 
 
+SEXP data__erf_inv(
+    SEXP value, SEXP log
+) {
+    // Convert arguments to c types.
+    PROTECT(value);
+    PROTECT(log);
+
+    double c_value = Rf_asReal(value);
+
+    // Call library function.
+    double _result = opendp_data__erf_inv(c_value);
+
+    UNPROTECT(2);
+    return(ScalarReal(*(double *)_result));
+}
+
+
 SEXP data__object_type(
     SEXP this, SEXP log
 ) {
