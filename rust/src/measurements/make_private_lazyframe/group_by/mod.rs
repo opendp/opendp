@@ -1,7 +1,9 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use crate::accuracy::integrate_discrete_laplacian_tail;
+use crate::accuracy::{
+    conservative_discrete_gaussian_tail_to_alpha, conservative_discrete_laplacian_tail_to_alpha,
+};
 use crate::combinators::{make_basic_composition, BasicCompositionMeasure};
 use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
 use crate::domains::{DslPlanDomain, ExprContext, ExprDomain};
@@ -166,8 +168,11 @@ where
                 let d_instability = threshold_value.inf_sub(&li)?;
                 let delta_single =
                     integrate_discrete_noise_tail(noise.distribution, noise.scale, d_instability)?;
-                let delta_joint =
-                    (1.0).inf_sub(&(1.0).inf_sub(&delta_single)?.inf_powi(IBig::from(l0))?)?;
+                let delta_joint = (1.0).inf_sub(
+                    &(1.0)
+                        .neg_inf_sub(&delta_single)?
+                        .neg_inf_powi(IBig::from(l0))?,
+                )?;
                 d_out = MO::add_delta(d_out, delta_joint)?;
             } else if margin.public_info.is_none() {
                 return fallible!(FailedMap, "key-sets cannot be privatized under {:?}. FixedSmoothedMaxDivergence is necessary.", output_measure);
@@ -201,9 +206,12 @@ macro_rules! impl_measure_non_catastrophic {
 impl_measure_non_catastrophic!(MaxDivergence);
 impl_measure_non_catastrophic!(ZeroConcentratedDivergence);
 
-impl ApproximateMeasure for Approximate<MaxDivergence> {
-    fn add_delta((epsilon, delta): Self::Distance, delta_p: f64) -> Fallible<Self::Distance> {
-        Ok((epsilon, delta.inf_add(&delta_p)?))
+impl<MO: BasicCompositionMeasure> ApproximateMeasure for Approximate<MO>
+where
+    Self: BasicCompositionMeasure<Distance = (MO::Distance, f64)>,
+{
+    fn add_delta((d_out, delta): Self::Distance, delta_p: f64) -> Fallible<Self::Distance> {
+        Ok((d_out, delta.inf_add(&delta_p)?))
     }
 }
 
@@ -213,10 +221,7 @@ fn integrate_discrete_noise_tail(
     tail_bound: u32,
 ) -> Fallible<f64> {
     match distribution {
-        Distribution::Laplace => integrate_discrete_laplacian_tail(scale, tail_bound),
-        Distribution::Gaussian => fallible!(
-            MakeMeasurement,
-            "gaussian tail bounds are not currently implemented. See https://github.com/opendp/opendp/issues/1769"
-        ),
+        Distribution::Laplace => conservative_discrete_laplacian_tail_to_alpha(scale, tail_bound),
+        Distribution::Gaussian => conservative_discrete_gaussian_tail_to_alpha(scale, tail_bound),
     }
 }

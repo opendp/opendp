@@ -469,7 +469,7 @@ def test_polars_collect_early():
         context.query().describe()
 
 
-def test_polars_threshold():
+def test_polars_threshold_epsilon():
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
 
@@ -542,6 +542,66 @@ def test_polars_threshold():
         .release()
         .collect()
     )
+
+
+def test_polars_threshold_rho():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    lf = pl.LazyFrame(
+        {"A": [1] * 1000, "B": ["x"] * 500 + ["y"] * 500},
+        schema={"A": pl.Int32, "B": pl.String},
+    )
+
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(rho=0.5, delta=1e-7),
+        split_evenly_over=2
+    )
+
+    query = (
+        context.query()
+        .group_by("B")
+        .agg(pl.len().dp.noise())
+    )
+
+    actual = query.summarize()
+    expected = pl.DataFrame({
+        "column": ["len"],
+        "aggregate": ["Len"],
+        "distribution": ["Integer Gaussian"],
+        # rho = .5, split over two queries, so rho_0 = 0.25.
+        # gaussian formula is rho_0 = (d_in / scale)^2 / 2, now solve for scale:
+        # scale = 1 / sqrt(2 * rho_0) = sqrt(2) ~= 1.414
+        "scale": [1.4142135623730954],
+        # probability of a partition with a unique individual being present in outcome must be at most 1e-7
+        # since d_in = 1, only at most one partition may change
+        # (when d_in is greater, then must consider union bound over up to L0 partitions)
+        # 
+        # probability of returning an unstable partition 
+        # is the probability that noise added to the count in the unstable partition exceeds the threshold
+        # therefore we must limit probability of sampling noise values greater than t to at most delta
+        # 
+        # mass of discrete gaussian tail greater than t is bounded above by mass of continuous gaussian tail gte t
+        # mass of continuous gaussian tail gte t is:
+        # erfc(t / scale / sqrt(2)) / 2
+        # 
+        # if you let t = 7, then mass is 3.7e-7 (too heavy by a factor of ~3.7)
+        # if you let t = 8, then mass is 7.7e-9 (sufficiently unlikely enough)
+        # 
+        # noise added to a true count d_in of 1 results in a threshold of 9
+        "threshold": [9]
+    }, schema_overrides={"threshold": pl.UInt32})
+
+    # threshold should work out to 9
+    pl_testing.assert_frame_equal(actual, expected)
+
+    # check that query runs.
+    print('output should be two columns ("B" and "len") with two rows (1, ~500) each')
+    release = query.release().collect()
+    assert release.columns == ["B", "len"]
+    assert len(release) == 2
 
 
 @pytest.mark.skipif(
