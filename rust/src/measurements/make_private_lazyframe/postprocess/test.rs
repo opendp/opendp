@@ -35,6 +35,7 @@ fn test_make_private_lazyframe_sort() -> Fallible<()> {
         MaxDivergence::default(),
         query,
         None,
+        None,
     )?;
 
     Ok(())

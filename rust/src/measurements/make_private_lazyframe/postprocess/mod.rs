@@ -27,6 +27,7 @@ pub fn match_postprocess<MI: 'static + Metric, MO: 'static + BasicCompositionMea
     output_measure: MO,
     plan: DslPlan,
     global_scale: Option<f64>,
+    threshold: Option<u32>,
 ) -> Fallible<Option<Measurement<DslPlanDomain, DslPlan, MI, MO>>>
 where
     DslPlan: PrivateDslPlan<MI, MO>,
@@ -46,6 +47,7 @@ where
                 input_metric,
                 output_measure,
                 global_scale,
+                threshold,
             )?;
             let sort = Function::new_fallible(move |arg: &DslPlan| {
                 Ok(DslPlan::Sort {
