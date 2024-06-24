@@ -44,7 +44,7 @@ def make_permute_and_flip(
         if d_in == 0:
             return 0
 
-        return d_in.inf_div(scale)
+        return d_in.inf_div(scale_frac)
 
     return Measurement(
         input_domain=input_domain,
