@@ -29,7 +29,7 @@ def make_permute_and_flip(
 
         for current_index in shuffled_indexes:
             coin_bias = (best_score - scores[current_index])/scale 
-            if Bern(coin_bias) == True:
+            if Bern(coin_bias):
                 return current_index
 
     def privacy_map(d_in: TIA):
