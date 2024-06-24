@@ -107,7 +107,7 @@ def test_private_lazyframe_explicit_sum(measure):
     )
 
     expr = pl.col("A").fill_null(0.0).clip(0.0, 1.0).sum().dp.noise(0.0)
-    plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
+    plan = seed(lf.collect_schema()).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 0.0
     )
@@ -133,7 +133,7 @@ def test_private_lazyframe_sum(measure):
         margin=["B"], public_info="keys", max_partition_length=50
     )
     expr = pl.col("A").fill_null(0.0).dp.sum((1.0, 2.0), scale=0.0)
-    plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
+    plan = seed(lf.collect_schema()).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 0.0
     )
@@ -159,7 +159,7 @@ def test_private_lazyframe_mean(measure):
     )
 
     expr = pl.col("A").fill_null(0.0).dp.mean((1.0, 2.0), scale=0.0)
-    plan = seed(lf.schema).group_by("B").agg(expr).sort("B")
+    plan = seed(lf.collect_schema()).group_by("B").agg(expr).sort("B")
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 1.0
     )
@@ -212,7 +212,7 @@ def test_private_lazyframe_median():
     )
     candidates = list(range(1, 6))
     expr = pl.col("B").dp.median(candidates, 1.0)
-    plan = seed(lf.schema).group_by("A").agg(expr)
+    plan = seed(lf.collect_schema()).group_by("A").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
     )
@@ -247,7 +247,7 @@ def test_onceframe_multi_collect():
     pl = pytest.importorskip("polars")
 
     lf_domain, lf = example_lf()
-    plan = seed(lf.schema).select(pl.len().dp.noise(0.0))
+    plan = seed(lf.collect_schema()).select(pl.len().dp.noise(0.0))
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan
     )
@@ -262,7 +262,7 @@ def test_onceframe_lazy():
     pl = pytest.importorskip("polars")
 
     lf_domain, lf = example_lf()
-    plan = seed(lf.schema).select(pl.len().dp.noise(0.0))
+    plan = seed(lf.collect_schema()).select(pl.len().dp.noise(0.0))
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan
     )
@@ -287,7 +287,7 @@ def test_mechanisms(measure):
     else:
         expr = pl.len().dp.gaussian(0.0)
 
-    plan = seed(lf.schema).select(expr)
+    plan = seed(lf.collect_schema()).select(expr)
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 0.0
     )
@@ -301,7 +301,7 @@ def test_wrong_mechanism():
 
     lf_domain, lf = example_lf()
 
-    plan = seed(lf.schema).select(pl.len().dp.gaussian(0.0))
+    plan = seed(lf.collect_schema()).select(pl.len().dp.gaussian(0.0))
     with pytest.raises(dp.OpenDPException) as err:
         dp.m.make_private_lazyframe(
             lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
@@ -334,7 +334,7 @@ def test_polars_context():
         .with_columns(pl.col("B").is_null().alias("B_nulls"))
         .filter(pl.col("B_nulls"))
         .select(pl.col("A").fill_null(2.0).dp.sum((0, 3)))
-        .release()
+        .release()  # type: ignore[union-attr]
         .collect()
     )
 
@@ -358,11 +358,8 @@ def test_polars_non_wrapping():
         split_evenly_over=1,
     )
     # only calls that return a LazyFrame or LazyGroupBy are wrapped
-    assert context.query().explain() == 'DF ["A"]; PROJECT */1 COLUMNS; SELECTION: "None"'
-    assert context.query().columns == ["A"]
-    assert context.query().dtypes == [pl.String]
-    assert context.query().schema == {"A": pl.String}
-    assert context.query().width == 1
+    assert context.query().explain() == 'DF ["A"]; PROJECT */1 COLUMNS; SELECTION: None'
+    assert context.query().collect_schema() == {"A": pl.String}
     serial = context.query().with_columns(pl.col("A") + 2).serialize()
     assert serial.startswith('{"HStack":')
 

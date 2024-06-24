@@ -15,7 +15,7 @@ use crate::{
 use polars::{frame::DataFrame, lazy::frame::LazyFrame, prelude::NamedFrom, series::Series};
 use polars_plan::{
     dsl::{len, lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
-    logical_plan::Literal,
+    plans::Literal,
     prelude::FunctionOptions,
 };
 use serde::{Deserialize, Serialize};
@@ -431,3 +431,36 @@ pub(crate) fn get_disabled_features_message() -> String {
         )
     }
 }
+
+// struct LiteralDomain<T>(T);
+// #[doc(hidden)]
+// pub trait MultiSize {}
+// impl MultiSize for f64 {}
+// impl MultiSize for i128 {}
+
+// #[doc(hidden)]
+// #[derive(PartialEq, Debug, Clone, PartialOrd)]
+// pub struct DynLiteral<T: MultiSize>(pub T);
+
+// /// For dynamic typing on literal nodes. Includes all floats spanned by f64.
+// pub type DynFloat = DynLiteral<f64>;
+// /// For dynamic typing on literal nodes. Includes all integers spanned by i128.
+// pub type DynInt = DynLiteral<i128>;
+
+// impl<T: MultiSize + CheckNull> CheckNull for DynLiteral<T> {
+//     fn is_null(&self) -> bool {
+//         self.0.is_null()
+//     }
+// }
+
+// impl<T: CheckAtom + MultiSize + ProductOrd> CheckAtom for DynLiteral<T> {
+//     fn is_bounded(&self, bounds: crate::domains::Bounds<Self>) -> Fallible<bool> {
+//         bounds.member(self)
+//     }
+// }
+
+// impl<T: MultiSize + ProductOrd> ProductOrd for DynLiteral<T> {
+//     fn total_cmp(&self, other: &Self) -> Fallible<std::cmp::Ordering> {
+//         ProductOrd::total_cmp(&self.0, & other.0)
+//     }
+// }

@@ -223,7 +223,7 @@ pub extern "C" fn opendp_data__slice_as_object(
     }
     #[cfg(feature = "polars")]
     fn raw_to_lazyframe(raw: &FfiSlice) -> Fallible<AnyObject> {
-        Ok(AnyObject::new(LazyFrame::from(deserialize_raw::<LogicalPlan>(raw, "LazyFrame")?)))
+        Ok(AnyObject::new(LazyFrame::from(deserialize_raw::<DslPlan>(raw, "LazyFrame")?)))
     }
     #[cfg(feature = "polars")]
     fn raw_to_tuple_lf_expr(
@@ -234,15 +234,15 @@ pub extern "C" fn opendp_data__slice_as_object(
         }
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const FfiSlice, 2) };
 
-        let lp_ptr = util::as_ref(slice[0])
+        let dsl_ptr = util::as_ref(slice[0])
             .ok_or_else(|| err!(FFI, "attempted to follow null pointer to LazyFrame"))?;
-        let lp = deserialize_raw::<LogicalPlan>(lp_ptr, "LazyFrame")?;
+        let dsl = deserialize_raw::<DslPlan>(dsl_ptr, "LazyFrame")?;
 
         let expr_ptr = util::as_ref(slice[1])
             .ok_or_else(|| err!(FFI, "attempted to follow null pointer to Expr"))?;
         let expr = deserialize_raw::<Expr>(expr_ptr, "Expr")?;
         
-        Ok(AnyObject::new((lp, expr)))
+        Ok(AnyObject::new((dsl, expr)))
     }
     match T.contents {
         TypeContents::PLAIN("String") => raw_to_string(raw),
@@ -284,7 +284,7 @@ pub extern "C" fn opendp_data__slice_as_object(
                 // In the inbound direction, we can handle tuples of primitives only.
                 2 => {
                     #[cfg(feature = "polars")]
-                    if types == vec![Type::of::<LogicalPlan>(), Type::of::<Expr>()] {
+                    if types == vec![Type::of::<DslPlan>(), Type::of::<Expr>()] {
                         return raw_to_tuple_lf_expr(raw).into();
                     }
                     dispatch!(raw_to_tuple2, [(types[0], @primitives), (types[1], @primitives)], (raw))
@@ -504,11 +504,11 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
 
     #[cfg(feature = "polars")]
     fn tuple_lf_expr_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let (lp, expr) = obj.downcast_ref::<(LogicalPlan, Expr)>()?;
+        let (lp, expr) = obj.downcast_ref::<(DslPlan, Expr)>()?;
 
         Ok(FfiSlice::new(
             util::into_raw([
-                util::into_raw(serialize_obj(lp, "LogicalPlan")?) as *const c_void,
+                util::into_raw(serialize_obj(lp, "DslPlan")?) as *const c_void,
                 util::into_raw(serialize_obj(expr, "Expr")?) as *const c_void,
             ]) as *mut c_void,
             2,
@@ -546,7 +546,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                 // In the outbound direction, we can handle tuples of both primitives and AnyObjects.
                 2 => {
                     #[cfg(feature = "polars")]
-                    if types == vec![Type::of::<LogicalPlan>(), Type::of::<Expr>()] {
+                    if types == vec![Type::of::<DslPlan>(), Type::of::<Expr>()] {
                         return tuple_lf_expr_to_raw(obj).into();
                     }
                     dispatch!(tuple2_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))
@@ -852,8 +852,8 @@ impl Clone for AnyObject {
                 }
 
                 #[cfg(feature = "polars")]
-                if type_ids == &vec![TypeId::of::<LogicalPlan>(), TypeId::of::<Expr>()] {
-                    return clone_tuple2::<LogicalPlan, Expr>(self).unwrap();
+                if type_ids == &vec![TypeId::of::<DslPlan>(), TypeId::of::<Expr>()] {
+                    return clone_tuple2::<DslPlan, Expr>(self).unwrap();
                 }
 
                 dispatch!(clone_tuple2, [

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::combinators::{make_basic_composition, BasicCompositionMeasure};
 use crate::core::{Metric, MetricSpace};
 use crate::{
@@ -75,7 +77,7 @@ where
             input_domain,
             input_metric,
             output_measure,
-            vec![*expr],
+            vec![expr.as_ref().clone()],
             move |exprs| {
                 let [expr] = <[Expr; 1]>::try_from(exprs)
                     .expect("Alias will always be applied to exactly one expression.");
@@ -90,11 +92,11 @@ where
                 input_domain,
                 input_metric,
                 output_measure,
-                vec![*left, *right],
+                vec![left.as_ref().clone(), right.as_ref().clone()],
                 move |exprs| {
                     let [left, right] = <[Expr; 2]>::try_from(exprs)
                         .expect("Binary operations will always be applied over exactly two expressions.")
-                        .map(Box::new);
+                        .map(Arc::new);
                     Ok(Expr::BinaryExpr { left, op, right })
                 },
                 global_scale,
