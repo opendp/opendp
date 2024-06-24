@@ -11,15 +11,12 @@ use crate::{
 use dashu::base::Sign;
 use dashu::rational::RBig;
 
-fn exact_fisher_yates(n: usize, trials_per_coin: Option<usize>) -> Fallible<Vec<usize>> {
-    let mut permutation: Vec<usize> = (0..n).collect();
-
-    for i in (1..n).rev() {
-        let j = usize::sample_uniform_int_below(i, trials_per_coin)?;
-        permutation.swap(i, j);
+fn exact_fisher_yates<T>(slice: & mut [T]) -> Fallible<()> {
+    for i in (1..slice.len()).rev() {
+        let j: usize = usize::sample_uniform_int_below(i, None)?;
+        slice.swap(i, j);
     }
-
-    Ok(permutation)
+    Ok(())
 }
 
 /// Make a Measurement that takes a vector of scores and privately selects the index of the highest score via permute and flip.
@@ -33,7 +30,7 @@ fn exact_fisher_yates(n: usize, trials_per_coin: Option<usize>) -> Fallible<Vec<
 /// # Generics
 /// * `TIA` - Atom Input Type. Type of each element in the score vector.
 /// * `QO` - Output Distance Type.
-pub fn make_report_noisy_max_permute_and_flip<TIA, QO>(
+pub fn make_permute_and_flip<TIA, QO>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
     input_metric: LInfDistance<TIA>,
     scale: QO,
@@ -60,37 +57,29 @@ where
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &Vec<TIA>| {
-            let permutation = exact_fisher_yates(arg.len(), None)?;
+            let mut permutation: Vec<usize> = (0..arg.len()).collect();
+            exact_fisher_yates(permutation.as_mut_slice())?;
             let rational_elements = arg
                 .iter()
                 .map(|x| ((*x).into_rational().map(|x| x * sgn)))
                 .collect::<Fallible<Vec<RBig>>>()?;
 
             // get argmax of the rational elements
-            let argmax = rational_elements
+            let max_candidate = rational_elements
                 .iter()
-                .enumerate()
-                .max_by_key(|&(_, value)| value)
-                .map(|(index, _)| index)
-                .ok_or(err!(FailedFunction, "there must be at least one candidate"))?;
-
-            let max_element = rational_elements
-                .get(argmax)
+                .max()
                 .ok_or(err!(FailedFunction, "there must be at least one candidate"))?;
 
             // iterate over the permutations and throw a coin for each
             for i in permutation {
-                let candidate = rational_elements
-                    .get(i)
-                    .ok_or(err!(FailedFunction, "Wrong indexing"))?;
-
-                let coin_bias_scale = max_element - candidate;
+                let candidate = &rational_elements[i];
+                let coin_bias_scale = max_candidate - candidate;
                 let coin_flip = sample_bernoulli_exp(coin_bias_scale / &scale_frac)?;
                 if coin_flip {
                     return Ok(i);
                 }
             }
-            Ok(argmax)
+            Err(err!(FailedFunction, "Enumerating over all the candidates should always terminate."))
         }),
         input_metric.clone(),
         MaxDivergence::default(),
@@ -109,15 +98,11 @@ where
                 return Ok(QO::infinity());
             }
 
-            let rational_two =
-                QO::inf_cast(TIA::from(2).ok_or(err!(FailedCast, "Failed to cast constant."))?)?;
-
-            // d_out >= (2 * d_in) / scale
-            (d_in * rational_two).inf_div(&scale)
+            // d_out >= d_in / scale
+            d_in.inf_div(&scale)
         }),
     )
 }
 
-#[cfg(feature = "floating-point")]
 #[cfg(test)]
 mod test;
