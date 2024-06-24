@@ -16,10 +16,10 @@ def unindent(text):
 
 
 def doctest(text):
-    # Not perfect! Closing parens could be in the first column.
+    # Not perfect, but usually works.
     return '\n'.join(
         (f'... {line}' if line[0] in [' ', ']', ')', '}'] else f'>>> {line}')
-            if line else ''
+        if line else ''
         for line in text.split('\n')
     )
 
@@ -49,15 +49,71 @@ def convert_block(match):
 
 '''
 
+_test_input = '''
+Lorem
+
+.. code:: ipython3
+
+    successive()
+    lines()
+
+.. parsed-literal::
+
+    works!
+
+.. code:: ipython3
+
+    or_split(
+        'across lines'
+    )
+
+.. parsed-literal::
+
+    also works!
+
+ipsum!
+'''
+
+_test_output = '''
+Lorem
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: python
+
+            >>> successive()
+            >>> lines()
+            works!
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: python
+
+            >>> or_split(
+            ...     'across lines'
+            ... )
+            also works!
+
+ipsum!
+'''
 
 def convert_blocks(rst):
     '''
     Converts `ipython3` and `parsed-literal` blocks into doctests.
     This is not perfect because cells can combine multiple statements:
     We'll need to finish it by hand.
+
+    >>> assert convert_blocks(_test_input) == _test_output
+    Converted 2 code blocks
     '''
     pattern = r'\.\. code:: ipython3\n(.*?)(?:^\.\. parsed-literal::\n(.*?))?^(?=\S)'
-    rst, count = re.subn(pattern, convert_block, rst, flags=re.MULTILINE|re.DOTALL)
+    rst, count = re.subn(pattern, convert_block, rst, flags=re.MULTILINE | re.DOTALL)
     print(f"Converted {count} code blocks")
     return rst
 
@@ -87,6 +143,7 @@ def main():
     rst_path = args.nb_path.parent / f"{args.nb_path.stem}.rst"
     rst_path.write_text(rst)
     print(f"Wrote to: {rst_path}")
+
 
 
 if __name__ == "__main__":
