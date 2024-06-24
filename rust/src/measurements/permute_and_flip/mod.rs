@@ -11,7 +11,7 @@ use crate::{
 use dashu::base::Sign;
 use dashu::rational::RBig;
 
-fn exact_fisher_yates<T>(slice: & mut [T]) -> Fallible<()> {
+fn exact_fisher_yates<T>(slice: &mut [T]) -> Fallible<()> {
     for i in (1..slice.len()).rev() {
         let j: usize = usize::sample_uniform_int_below(i, None)?;
         slice.swap(i, j);
@@ -79,7 +79,10 @@ where
                     return Ok(i);
                 }
             }
-            Err(err!(FailedFunction, "Enumerating over all the candidates should always terminate."))
+            Err(err!(
+                FailedFunction,
+                "Enumerating over all the candidates should always terminate."
+            ))
         }),
         input_metric.clone(),
         MaxDivergence::default(),
