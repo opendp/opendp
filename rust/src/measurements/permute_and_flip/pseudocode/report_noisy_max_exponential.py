@@ -25,7 +25,7 @@ def report_noisy_max_exponential(
         noised_scores = []
 
         for score in scores:
-            Z = ExponentialNoise()
+            Z = ExponentialNoise(scale_frac)
             noised_scores.append(score + Z)
 
         return argmax(noised_scores)
