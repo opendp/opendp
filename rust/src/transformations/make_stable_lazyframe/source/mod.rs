@@ -1,5 +1,5 @@
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
-use crate::domains::LogicalPlanDomain;
+use crate::domains::DslPlanDomain;
 use crate::error::*;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::*;
@@ -11,27 +11,34 @@ use polars::prelude::*;
 /// * `input_metric` - The metric of the input LazyFrame.
 /// * `plan` - The LazyFrame to transform.
 pub fn make_stable_source<M: Metric>(
-    input_domain: LogicalPlanDomain,
+    input_domain: DslPlanDomain,
     input_metric: M,
-    plan: LogicalPlan,
-) -> Fallible<Transformation<LogicalPlanDomain, LogicalPlanDomain, M, M>>
+    plan: DslPlan,
+) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, M, M>>
 where
     M: UnboundedMetric + 'static,
-    (LogicalPlanDomain, M): MetricSpace,
+    (DslPlanDomain, M): MetricSpace,
 {
-    let LogicalPlan::DataFrameScan {
+    let DslPlan::DataFrameScan {
         df: _, // DO NOT TOUCH THE DATA. Touching the data will degrade any downstream stability or privacy guarantees.
-        projection,
-        selection,
+        filter,
+        output_schema,
         schema,
         ..
     } = plan
     else {
-        return fallible!(MakeTransformation, "Expected Aggregate logical plan");
+        return fallible!(MakeTransformation, "Expected dataframe scan");
     };
 
-    if projection.is_some() || selection.is_some() {
+    if filter.is_some() {
         return fallible!(MakeTransformation, "Lazyframe must not be optimized. Wait to optimize until after making a private lazyframe.");
+    }
+
+    if output_schema.is_some() {
+        return fallible!(
+            MakeTransformation,
+            "Dtype overrides are not currently supported."
+        );
     }
 
     let domain_schema = input_domain

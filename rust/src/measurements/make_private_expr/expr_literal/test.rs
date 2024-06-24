@@ -38,7 +38,7 @@ fn test_make_expr_private_lit_groupby() -> Fallible<()> {
         lf.clone()
             .group_by(["chunk_2_bool"])
             .agg([lit(1)])
-            .sort("chunk_2_bool", Default::default()),
+            .sort(["chunk_2_bool"], Default::default()),
         None,
     )?;
 

@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{ExprContext, ExprDomain, LogicalPlanDomain};
+use crate::domains::{DslPlanDomain, ExprContext, ExprDomain};
 use crate::error::*;
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
 use polars::prelude::*;
 
-use super::StableLogicalPlan;
+use super::StableDslPlan;
 
 #[cfg(test)]
 mod test;
@@ -19,27 +19,29 @@ mod test;
 /// * `input_metric` - The metric of the input LazyFrame.
 /// * `plan` - The LazyFrame to transform.
 pub fn make_h_stack<M: Metric>(
-    input_domain: LogicalPlanDomain,
+    input_domain: DslPlanDomain,
     input_metric: M,
-    plan: LogicalPlan,
-) -> Fallible<Transformation<LogicalPlanDomain, LogicalPlanDomain, M, M>>
+    plan: DslPlan,
+) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, M, M>>
 where
     M: UnboundedMetric + 'static,
-    (LogicalPlanDomain, M): MetricSpace,
-    LogicalPlan: StableLogicalPlan<M, M>,
+    (DslPlanDomain, M): MetricSpace,
+    DslPlan: StableDslPlan<M, M>,
     Expr: StableExpr<M, M>,
 {
-    let LogicalPlan::HStack {
+    let DslPlan::HStack {
         input,
         exprs,
-        schema,
         options,
     } = plan
     else {
         return fallible!(MakeTransformation, "Expected with_columns logical plan");
     };
 
-    let t_prior = (*input).make_stable(input_domain.clone(), input_metric.clone())?;
+    let t_prior = input
+        .as_ref()
+        .clone()
+        .make_stable(input_domain.clone(), input_metric.clone())?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     // create a transformation for each expression
@@ -82,19 +84,18 @@ where
         .collect();
 
     // instead of using the public APIs that check invariants, directly populate the struct entries
-    let output_domain = LogicalPlanDomain::new_with_margins(series_domains, margins)?;
+    let output_domain = DslPlanDomain::new_with_margins(series_domains, margins)?;
 
     let t_with_columns = Transformation::new(
         middle_domain,
         output_domain,
-        Function::new_fallible(move |plan: &LogicalPlan| {
+        Function::new_fallible(move |plan: &DslPlan| {
             let expr_arg = (plan.clone(), all());
-            Ok(LogicalPlan::HStack {
-                input: Box::new(plan.clone()),
+            Ok(DslPlan::HStack {
+                input: Arc::new(plan.clone()),
                 exprs: (t_exprs.iter())
                     .map(|t| t.invoke(&expr_arg).map(|p| p.1))
                     .collect::<Fallible<Vec<_>>>()?,
-                schema: schema.clone(),
                 options,
             })
         }),

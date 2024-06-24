@@ -10,7 +10,7 @@ use super::*;
 
 #[test]
 fn test_aggregate() -> Fallible<()> {
-    let lf_domain = LogicalPlanDomain::new(vec![
+    let lf_domain = DslPlanDomain::new(vec![
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<f64>::default()),
         SeriesDomain::new("C", AtomDomain::<i32>::default()),
@@ -23,7 +23,7 @@ fn test_aggregate() -> Fallible<()> {
         "C" => &[8i32, 9, 10],)?
     .lazy();
 
-    let error_variant_res = make_private_aggregate::<_, SymmetricDistance, _>(
+    let error_variant_res = make_private_group_by::<_, SymmetricDistance, _>(
         lf_domain,
         SymmetricDistance,
         MaxDivergence::<f64>::default(),
