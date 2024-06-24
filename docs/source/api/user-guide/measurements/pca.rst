@@ -18,14 +18,6 @@ us if you are interested in proof-writing. Thank you!
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib", "floating-point", "honest-but-curious")
-            
-
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: python
-
-        .. code:: python
 
             >>> import numpy as np
             
