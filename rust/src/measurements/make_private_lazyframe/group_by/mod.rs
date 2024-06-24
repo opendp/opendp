@@ -2,13 +2,13 @@ use std::collections::BTreeSet;
 
 use crate::combinators::{make_basic_composition, BasicCompositionMeasure};
 use crate::core::{Function, Measurement, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{ExprContext, ExprDomain, LogicalPlanDomain};
+use crate::domains::{DslPlanDomain, ExprContext, ExprDomain};
 use crate::error::*;
 use crate::measurements::make_private_expr;
 use crate::metrics::PartitionDistance;
 use crate::traits::InfMul;
 use crate::transformations::traits::UnboundedMetric;
-use crate::transformations::{DatasetMetric, StableLogicalPlan};
+use crate::transformations::{DatasetMetric, StableDslPlan};
 use make_private_expr::PrivateExpr;
 use polars::prelude::*;
 use polars_plan::prelude::GroupbyOptions;
@@ -21,25 +21,25 @@ use polars_plan::prelude::GroupbyOptions;
 /// * `output_measure` - The measure of the output LazyFrame.
 /// * `plan` - The LazyFrame to transform.
 /// * `global_scale` - The parameter for the measurement.
-pub fn make_private_aggregate<MS, MI, MO>(
-    input_domain: LogicalPlanDomain,
+pub fn make_private_group_by<MS, MI, MO>(
+    input_domain: DslPlanDomain,
     input_metric: MS,
     output_measure: MO,
-    plan: LogicalPlan,
+    plan: DslPlan,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<LogicalPlanDomain, LogicalPlan, MS, MO>>
+) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, MO>>
 where
     MS: 'static + DatasetMetric,
     MI: 'static + UnboundedMetric,
     MO: 'static + BasicCompositionMeasure,
     Expr: PrivateExpr<PartitionDistance<MI>, MO>,
-    LogicalPlan: StableLogicalPlan<MS, MI>,
-    (LogicalPlanDomain, MS): MetricSpace,
-    (LogicalPlanDomain, MI): MetricSpace,
+    DslPlan: StableDslPlan<MS, MI>,
+    (DslPlanDomain, MS): MetricSpace,
+    (DslPlanDomain, MI): MetricSpace,
     (ExprDomain, MI): MetricSpace,
     (ExprDomain, PartitionDistance<MI>): MetricSpace,
 {
-    let LogicalPlan::Aggregate {
+    let DslPlan::GroupBy {
         input,
         keys,
         aggs,
@@ -51,7 +51,10 @@ where
         return fallible!(MakeMeasurement, "Expected Aggregate logical plan");
     };
 
-    let t_prior = input.make_stable(input_domain.clone(), input_metric.clone())?;
+    let t_prior = input
+        .as_ref()
+        .clone()
+        .make_stable(input_domain.clone(), input_metric.clone())?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     if options.as_ref() != &GroupbyOptions::default() {
@@ -67,7 +70,7 @@ where
         .map(|e| {
             Ok(match e {
                 Expr::Column(name) => vec![(*name).to_string()],
-                Expr::Columns(names) => names.clone(),
+                Expr::Columns(names) => names.iter().map(|s| s.to_string()).collect(),
                 e => {
                     return fallible!(
                         MakeMeasurement,
@@ -130,15 +133,15 @@ where
     t_prior
         >> Measurement::new(
             middle_domain,
-            Function::new_fallible(move |arg: &LogicalPlan| {
+            Function::new_fallible(move |arg: &DslPlan| {
                 let mut output = plan.clone();
-                if let LogicalPlan::Aggregate {
+                if let DslPlan::GroupBy {
                     ref mut input,
                     ref mut aggs,
                     ..
                 } = output
                 {
-                    *input = Box::new(arg.clone());
+                    *input = Arc::new(arg.clone());
                     *aggs = f_exprs.eval(&(arg.clone(), all()))?;
                 };
                 Ok(output)

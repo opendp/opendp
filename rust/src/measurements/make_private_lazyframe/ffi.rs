@@ -1,5 +1,5 @@
 use polars::lazy::frame::LazyFrame;
-use polars_plan::logical_plan::LogicalPlan;
+use polars_plan::plans::DslPlan;
 
 use crate::{
     core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure},
@@ -9,7 +9,7 @@ use crate::{
         any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
         util,
     },
-    measurements::PrivateLogicalPlan,
+    measurements::PrivateDslPlan,
     measures::{MaxDivergence, ZeroConcentratedDivergence},
     metrics::SymmetricDistance,
 };
@@ -45,7 +45,7 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
         global_scale: Option<f64>,
     ) -> Fallible<AnyMeasurement>
     where
-        LogicalPlan: PrivateLogicalPlan<SymmetricDistance, MO>,
+        DslPlan: PrivateDslPlan<SymmetricDistance, MO>,
     {
         let output_measure = output_measure.downcast_ref::<MO>()?.clone();
         Ok(make_private_lazyframe(

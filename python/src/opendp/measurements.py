@@ -743,7 +743,7 @@ def make_private_lazyframe(
     ...         [2, 1],
     ...         [2, 9]
     ...     ],
-    ...     schema=['grade', 'pet_count'])
+    ...     schema=['grade', 'pet_count'], orient="row")
     >>> lf = pl.LazyFrame(df)
     >>> results = dp_sum_pets_by_grade(lf).collect()
     >>> print(results) # doctest: +ELLIPSIS
@@ -844,7 +844,7 @@ def then_private_lazyframe(
     ...         [2, 1],
     ...         [2, 9]
     ...     ],
-    ...     schema=['grade', 'pet_count'])
+    ...     schema=['grade', 'pet_count'], orient="row")
     >>> lf = pl.LazyFrame(df)
     >>> results = dp_sum_pets_by_grade(lf).collect()
     >>> print(results) # doctest: +ELLIPSIS

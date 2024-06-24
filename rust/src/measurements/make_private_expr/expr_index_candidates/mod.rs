@@ -192,7 +192,7 @@ impl SeriesUdf for IndexCandidatesArgs {
     fn get_output(&self) -> Option<GetOutput> {
         let dtype = self.candidates.0.dtype().clone();
         Some(GetOutput::map_field(move |f| {
-            Field::new(f.name(), dtype.clone())
+            Ok(Field::new(f.name(), dtype.clone()))
         }))
     }
 }
