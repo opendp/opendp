@@ -343,7 +343,7 @@ class RuntimeType(object):
             return "AnyTransformationPtr"
 
         if public_example is None: # pragma: no cover
-            raise UnknownTypeException("Constructed Option from a None variant")
+            raise UnknownTypeException("Type of Option cannot be inferred from None")
         
         if callable(public_example):
             return "CallbackFn"
