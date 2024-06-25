@@ -29,18 +29,10 @@ class DPExpr(object):
 
     This class is typically not used directly by users:
     Instead its methods are registered under the ``dp`` namespace of Polars expressions.
-    
-    However, it can be useful if stronger typing is desired:
-    Both of these expressions return a ``DPExpr``:
 
     >>> import polars as pl
     >>> pl.len().dp
     <opendp.polars.DPExpr object at ...>
-    >>> DPExpr(pl.len())
-    <opendp.polars.DPExpr object at ...>
-
-    However, a static analysis tool like `mypy <https://mypy.readthedocs.io/en/stable/>`_
-    will see the type of the first expression as ``Any``, while the later is ``DPExpr``.
     '''
     def __init__(self, expr):
         """Apply a differentially private plugin to a Polars expression."""
