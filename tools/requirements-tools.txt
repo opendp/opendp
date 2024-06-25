@@ -4,3 +4,4 @@ debmutate==0.61
 twine==4.0.2
 setuptools==69.2.0
 wheel
+configupdater==3.2

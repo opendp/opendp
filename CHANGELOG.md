@@ -3,7 +3,7 @@
 This file documents the version history of OpenDP. The links on each version number will take you to a comparison
 showing the source changes from the previous version.
 
-## 0.10.0
+## [0.10.0-dev](https://github.com/opendp/opendp/compare/v0.9.2...HEAD) - TBD
 
 ### Added
 
@@ -166,6 +166,7 @@ showing the source changes from the previous version.
     - Remove check from nightly, so it only calls release [#1417](https://github.com/opendp/opendp/pull/1417)
     - Fix nightly by checking `inputs.fake` on each [#1350](https://github.com/opendp/opendp/pull/1350)
     - Fix weekly-doc-check [#1429](https://github.com/opendp/opendp/pull/1429)
+    - When publishing, pip cache's post-setup fails [#1686](https://github.com/opendp/opendp/pull/1686)
 - Python
     - Regenerate python code to include example [#1615](https://github.com/opendp/opendp/pull/1615)
     - Add `get_np_csprng` wrapper function, so we can remove the last `skipif` [#1562](https://github.com/opendp/opendp/pull/1562)
@@ -191,7 +192,7 @@ showing the source changes from the previous version.
     - Patch R docs build failure on ci [#1669](https://github.com/opendp/opendp/pull/1669)
 
 
-## [0.9.2-dev](https://github.com/opendp/opendp/compare/v0.9.1...HEAD) - TBD
+## [0.9.2](https://github.com/opendp/opendp/compare/v0.9.1...v0.9.2) - 2024-02-08
 
 ### Fixed
 - Ignore nitpicky Sphinx warnings on old library versions [#1218](https://github.com/opendp/opendp/pull/1218)

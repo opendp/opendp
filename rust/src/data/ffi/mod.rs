@@ -214,7 +214,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         // https://github.com/pola-rs/pyo3-polars/blob/5150d4ca27c287ff4be5cafef243d9a878a8879d/pyo3-polars/src/lib.rs#L147-L153
         // the slice is lf.__getstate__ from the python side and then deserialized here
         ciborium::de::from_reader(slice).map_err(
-            |e| err!(FFI, "Error when deserializing {}. This may be due to mismatched polars versions. {}", name, e)
+            |e| err!(FFI, "Error when deserializing {}. {}", name, e)
         )
     }
     #[cfg(feature = "polars")]
@@ -995,23 +995,6 @@ extern "C" fn opendp_data__new_arrow_array(name: *const c_char) -> FfiResult<*mu
         )
         .into();
     }
-}
-
-#[bootstrap(
-    name = "to_string",
-    arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<char *>")
-)]
-/// Internal function. Convert the AnyObject to a string representation.
-///
-/// # Arguments
-/// * `this` - The AnyObject to convert to a string representation.
-#[no_mangle]
-pub extern "C" fn opendp_data__to_string(this: *const AnyObject) -> FfiResult<*mut c_char> {
-    util::into_c_char_p(format!("{:?}", try_as_ref!(this))).map_or_else(
-        |e| FfiResult::Err(util::into_raw(FfiError::from(e))),
-        FfiResult::Ok,
-    )
 }
 
 /// wrap an AnyObject in an FfiResult::Ok(this)
