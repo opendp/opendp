@@ -53,6 +53,13 @@ class DPExpr(object):
 
         :param scale: Scale parameter for the noise distribution.
         :param distribution: Either Laplace, Gaussian or None.
+
+        :example:
+
+        >>> import polars as pl
+        >>> expression = pl.len().dp.noise()
+        >>> print(expression)
+        len()...:noise()
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         return register_plugin_function(
@@ -73,9 +80,9 @@ class DPExpr(object):
         :example:
 
         >>> import polars as pl
-        >>> expression = pl.col('numbers').dp.laplace()
-        >>> print(expression) # doctest: +ELLIPSIS
-        col("numbers")...:noise()
+        >>> expression = pl.len().dp.laplace()
+        >>> print(expression)
+        len()...:noise()
         """
         return self.noise(scale=scale, distribution="Laplace")
 
@@ -89,9 +96,9 @@ class DPExpr(object):
         :example:
 
         >>> import polars as pl
-        >>> expression = pl.col('numbers').dp.gaussian()
-        >>> print(expression) # doctest: +ELLIPSIS
-        col("numbers")...:noise()
+        >>> expression = pl.len().dp.gaussian()
+        >>> print(expression)
+        len()...:noise()
         """
         return self.noise(scale=scale, distribution="Gaussian")
 
@@ -113,7 +120,7 @@ class DPExpr(object):
 
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.sum((0, 10))
-        >>> print(expression) # doctest: +ELLIPSIS
+        >>> print(expression)
         col("numbers").clip([0, 10]).sum()...:noise()
         """
         return self.expr.clip(*bounds).sum().dp.noise(scale)
@@ -131,7 +138,7 @@ class DPExpr(object):
 
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.mean((0, 10))
-        >>> print(expression) # doctest: +ELLIPSIS
+        >>> print(expression)
         [(col("numbers").clip([0, 10]).sum()...:noise()) / (len())]
         """
         import polars as pl  # type: ignore[import-not-found]
@@ -206,7 +213,7 @@ class DPExpr(object):
 
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.quantile(0.5, [1, 2, 3])
-        >>> print(expression) # doctest: +ELLIPSIS
+        >>> print(expression)
         col("numbers")...:discrete_quantile_score()...:report_noisy_max_gumbel()...:index_candidates()
         """
         dq_score = self.expr.dp._discrete_quantile_score(alpha, candidates)
@@ -226,7 +233,7 @@ class DPExpr(object):
 
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.quantile(0.5, [1, 2, 3])
-        >>> print(expression) # doctest: +ELLIPSIS
+        >>> print(expression)
         col("numbers")...:discrete_quantile_score()...:report_noisy_max_gumbel()...:index_candidates()
         """
         return self.expr.dp.quantile(0.5, candidates, scale)
@@ -439,8 +446,12 @@ except ImportError:
 @dataclass
 class Margin(object):
     '''
-    Instances of ``Margin`` are used to collect DP statistics on
-    `marginal distributions <https://en.wikipedia.org/wiki/Marginal_distribution>`_.
+    The ``Margin`` class is used to describe what information is known publicly about a grouped dataset:
+    like the values you might expect to find in the margins of a table.
+    
+    Be aware that aspects of your data marked as "public information" are not subject to privacy protections,
+    so it is important that public descriptors about the margin should be set conservatively, or not set at all.
+
     Instances of this class are used by :py:func:`opendp.context.Context.compositor`.
     '''
 
