@@ -465,7 +465,8 @@ class Margin(object):
     max_partition_length: int | None = None
     """An upper bound on the number of records in any one partition.
 
-    If you don't know how many records are in the data, you can specify a very loose upper bound.
+    If you don't know how many records are in the data, you can specify a very loose upper bound,
+    for example, the size of the total population you are sampling from.
 
     This is used to resolve issues raised in the paper
     `Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It <https://arxiv.org/pdf/2207.10635.pdf>`_.
