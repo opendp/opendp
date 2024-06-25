@@ -279,7 +279,7 @@ class RuntimeType(object):
         >>> dp.RuntimeType.infer([])
         Traceback (most recent call last):
         ...
-        opendp.mod.UnknownTypeException: cannot infer atomic type when empty
+        opendp.mod.UnknownTypeException: Cannot infer atomic type when empty
         """
         if type(public_example) in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type(public_example)]
@@ -308,7 +308,7 @@ class RuntimeType(object):
             types = {cls.infer(v, py_object=py_object) for v in value}
 
             if len(types) == 0:
-                raise UnknownTypeException("cannot infer atomic type when empty")
+                raise UnknownTypeException("Cannot infer atomic type when empty")
             if len(types) == 1:
                 return next(iter(types))
             if py_object:
