@@ -375,13 +375,6 @@ any more queries.
             opendp.mod.OpenDPException: 
               FailedFunction("insufficient budget for query: 0.0734... > 0.0146...")
 
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: python
-
-        .. code:: python
-
             >>> adp_sc_qbl(adp_count_meas)
             Traceback (most recent call last):
             ...
