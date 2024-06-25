@@ -266,7 +266,6 @@ class RuntimeType(object):
 
         :examples:
 
-        >>> import opendp.prelude as dp
         >>> dp.RuntimeType.infer(23)
         'i32'
         >>> dp.RuntimeType.infer(12.)
@@ -336,13 +335,7 @@ class RuntimeType(object):
                 infer_homogeneous(public_example.values())
             ])
 
-        if isinstance(public_example, Measurement): # pragma: no cover
-            return "AnyMeasurementPtr"
-
-        if isinstance(public_example, Transformation): # pragma: no cover
-            return "AnyTransformationPtr"
-
-        if public_example is None: # pragma: no cover
+        if public_example is None:
             raise UnknownTypeException("Type of Option cannot be inferred from None")
         
         if callable(public_example):
