@@ -14,6 +14,7 @@ please consult :doc:`../getting-started/index` and :doc:`../api/index`.
    contact
    getting-involved
    development-environment
+   plugins/index
    rust-initiation
    proof-initiation
    contribution-process

@@ -15,4 +15,3 @@ it complements the bottom-up view provided by the `Python API Reference <../pyth
    combinators/index
    utilities/index
    context/index
-   plugins/index

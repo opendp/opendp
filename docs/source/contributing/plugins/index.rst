@@ -3,7 +3,7 @@ Plugins
 
 Because Differential Privacy is a wide and expanding field,
 we can't implement every mechanism for every user,
-but users can provide their own code through these methods:
+but contributors can provide their own code through these methods:
 
 Domains
     :py:func:`user_domain <opendp.domains.user_domain>`
