@@ -370,8 +370,8 @@ def get_opendp_version_from_file():
     >>> import re
     >>> assert re.match(r'\\d+\\.\\d+\\.\\d+', get_opendp_version_from_file())
     '''
-    version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'VERSION')
-    return open(version_file, 'r').read().strip()
+    version_path = Path(__file__).parent.parent.parent.parent / 'VERSION'
+    return version_path.read_text().strip()
 
 
 def get_docs_ref(version):
