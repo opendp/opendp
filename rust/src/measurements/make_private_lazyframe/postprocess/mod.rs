@@ -25,7 +25,7 @@ pub fn match_postprocess<MI: 'static + Metric, MO: 'static + BasicCompositionMea
     input_domain: DslPlanDomain,
     input_metric: MI,
     output_measure: MO,
-    plan: DslPlan,
+    plan: &DslPlan,
     global_scale: Option<f64>,
 ) -> Fallible<Option<Measurement<DslPlanDomain, DslPlan, MI, MO>>>
 where
@@ -33,7 +33,7 @@ where
     (DslPlanDomain, MI): MetricSpace,
     (LazyFrameDomain, MI): MetricSpace,
 {
-    match plan {
+    match plan.clone() {
         #[cfg(feature = "contrib")]
         DslPlan::Sort {
             input,
@@ -41,12 +41,8 @@ where
             slice,
             sort_options,
         } => {
-            let m_in = input.as_ref().clone().make_private(
-                input_domain,
-                input_metric,
-                output_measure,
-                global_scale,
-            )?;
+            let m_in =
+                input.make_private(input_domain, input_metric, output_measure, global_scale)?;
             let sort = Function::new_fallible(move |arg: &DslPlan| {
                 Ok(DslPlan::Sort {
                     input: Arc::new(arg.clone()),

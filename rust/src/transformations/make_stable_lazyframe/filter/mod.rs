@@ -1,4 +1,4 @@
-use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
+use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{DslPlanDomain, ExprContext, ExprDomain};
 use crate::error::*;
 use crate::transformations::traits::UnboundedMetric;
@@ -16,10 +16,10 @@ mod test;
 /// * `input_domain` - The domain of the input LazyFrame.
 /// * `input_metric` - The metric of the input LazyFrame.
 /// * `plan` - The LazyFrame to transform.
-pub fn make_stable_filter<M: Metric>(
+pub fn make_stable_filter<M>(
     input_domain: DslPlanDomain,
     input_metric: M,
-    plan: DslPlan,
+    plan: &DslPlan,
 ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, M, M>>
 where
     M: UnboundedMetric + 'static,
@@ -27,21 +27,16 @@ where
     DslPlan: StableDslPlan<M, M>,
     Expr: StableExpr<M, M>,
 {
-    let DslPlan::Filter { input, predicate } = plan else {
+    let DslPlan::Filter { input, predicate } = plan.clone() else {
         return fallible!(MakeTransformation, "Expected filter in logical plan");
     };
 
-    let t_prior = input
-        .as_ref()
-        .clone()
-        .make_stable(input_domain.clone(), input_metric.clone())?;
+    let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let expr_domain = ExprDomain::new(middle_domain.clone(), ExprContext::RowByRow);
 
-    let t_pred = predicate
-        .clone()
-        .make_stable(expr_domain, middle_metric.clone())?;
+    let t_pred = predicate.make_stable(expr_domain, middle_metric.clone())?;
 
     let pred_dtype = t_pred.output_domain.active_series()?.field.dtype.clone();
 

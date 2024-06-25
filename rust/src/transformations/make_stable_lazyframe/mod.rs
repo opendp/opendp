@@ -65,7 +65,7 @@ where
 
 pub trait StableDslPlan<MI: Metric, MO: Metric> {
     fn make_stable(
-        self,
+        &self,
         input_domain: DslPlanDomain,
         input_metric: MI,
     ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, MI, MO>>;
@@ -73,12 +73,12 @@ pub trait StableDslPlan<MI: Metric, MO: Metric> {
 
 impl StableDslPlan<SymmetricDistance, SymmetricDistance> for DslPlan {
     fn make_stable(
-        self,
+        &self,
         input_domain: DslPlanDomain,
         input_metric: SymmetricDistance,
     ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, SymmetricDistance, SymmetricDistance>>
     {
-        match &self {
+        match self {
             DslPlan::DataFrameScan { .. } => {
                 source::make_stable_source(input_domain, input_metric, self)
             }

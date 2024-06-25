@@ -27,7 +27,7 @@ fn test_aggregate() -> Fallible<()> {
         lf_domain,
         SymmetricDistance,
         MaxDivergence::<f64>::default(),
-        lf.group_by(&[col("A"), col("C")])
+        &lf.group_by(&[col("A"), col("C")])
             .agg(&[col("B").sum()])
             .logical_plan,
         Some(1.),

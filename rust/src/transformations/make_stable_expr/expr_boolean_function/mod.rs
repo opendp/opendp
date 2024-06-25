@@ -22,7 +22,7 @@ mod test;
 pub fn make_expr_boolean_function<M: OuterMetric>(
     input_domain: ExprDomain,
     input_metric: M,
-    expr: Expr,
+    expr: &Expr,
 ) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
@@ -34,7 +34,7 @@ where
         input,
         function: FunctionExpr::Boolean(bool_function),
         ..
-    } = expr
+    } = expr.clone()
     else {
         return fallible!(MakeTransformation, "expected boolean function expression");
     };
@@ -69,9 +69,7 @@ where
         );
     };
 
-    let t_prior = input
-        .clone()
-        .make_stable(input_domain.clone(), input_metric.clone())?;
+    let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut output_domain = middle_domain.clone();

@@ -73,7 +73,7 @@ where
 
 pub trait StableExpr<MI: Metric, MO: Metric> {
     fn make_stable(
-        self,
+        &self,
         input_domain: ExprDomain,
         input_metric: MI,
     ) -> Fallible<Transformation<ExprDomain, ExprDomain, MI, MO>>;
@@ -86,11 +86,11 @@ where
     (ExprDomain, M): MetricSpace,
 {
     fn make_stable(
-        self,
+        &self,
         input_domain: ExprDomain,
         input_metric: M,
     ) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>> {
-        if expr_fill_nan::match_fill_nan(&self).is_some() {
+        if expr_fill_nan::match_fill_nan(self).is_some() {
             return expr_fill_nan::make_expr_fill_nan(input_domain, input_metric, self);
         }
 
@@ -143,7 +143,7 @@ where
     MI: 'static + UnboundedMetric,
 {
     fn make_stable(
-        self,
+        &self,
         input_domain: ExprDomain,
         input_metric: PartitionDistance<MI>,
     ) -> Fallible<Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, LpDistance<P, f64>>>
@@ -152,11 +152,11 @@ where
         match self {
             #[cfg(feature = "contrib")]
             Agg(AggExpr::Sum(_)) => {
-                expr_sum::make_expr_sum(input_domain, input_metric, self)
+                expr_sum::make_expr_sum(input_domain, input_metric, self.clone())
             }
 
             #[cfg(feature = "contrib")]
-            Len => expr_len::make_expr_len(input_domain, input_metric, self),
+            Len => expr_len::make_expr_len(input_domain, input_metric, self.clone()),
 
             expr => fallible!(
                 MakeTransformation,
@@ -173,13 +173,13 @@ where
     MI: 'static + UnboundedMetric,
 {
     fn make_stable(
-        self,
+        &self,
         input_domain: ExprDomain,
         input_metric: PartitionDistance<MI>,
     ) -> Fallible<
         Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
     > {
-        if expr_discrete_quantile_score::match_discrete_quantile_score(&self)?.is_some() {
+        if expr_discrete_quantile_score::match_discrete_quantile_score(self)?.is_some() {
             return expr_discrete_quantile_score::make_expr_discrete_quantile_score(
                 input_domain,
                 input_metric,

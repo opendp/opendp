@@ -35,7 +35,7 @@ pub fn make_expr_index_candidates<MI: 'static + Metric, MO: 'static + Measure>(
     input_domain: ExprDomain,
     input_metric: MI,
     output_measure: MO,
-    expr: Expr,
+    expr: &Expr,
     param: Option<f64>,
 ) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>
 where
@@ -45,12 +45,10 @@ where
     let (input, IndexCandidatesArgs { candidates }) = match_index_candidates(&expr)?
         .ok_or_else(|| err!(MakeMeasurement, "Expected Index Candidates function"))?;
 
-    let m_prior = input
-        .clone()
-        .make_private(input_domain, input_metric, output_measure, param)?;
+    let m_prior = input.make_private(input_domain, input_metric, output_measure, param)?;
 
     m_prior
-        >> Function::then_expr(move |input_expr| {
+        >> Function::then_expr(enclose!(expr, move |input_expr| {
             apply_plugin(
                 input_expr,
                 expr.clone(),
@@ -58,7 +56,7 @@ where
                     candidates: candidates.clone(),
                 },
             )
-        })
+        }))
 }
 
 /// Determine if the given expression is an index_candidates expression.

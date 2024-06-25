@@ -12,9 +12,7 @@ fn test_make_expr_clip() -> Fallible<()> {
 
     let expected = col("const_1f64").clip(lit(0.), lit(0.5));
 
-    let t_clip = expected
-        .clone()
-        .make_stable(expr_domain, SymmetricDistance)?;
+    let t_clip = expected.make_stable(expr_domain, SymmetricDistance)?;
     let actual = t_clip.invoke(&(lp, all()))?.1;
 
     assert_eq!(expected, actual);

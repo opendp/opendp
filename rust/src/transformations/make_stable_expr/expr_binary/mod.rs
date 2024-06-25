@@ -23,7 +23,7 @@ mod test;
 pub fn make_expr_binary<M: OuterMetric>(
     input_domain: ExprDomain,
     input_metric: M,
-    expr: Expr,
+    expr: &Expr,
 ) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
@@ -41,14 +41,8 @@ where
     } = input_domain.clone();
 
     let expr_domain = ExprDomain::new(frame_domain, ExprContext::RowByRow);
-    let t_left = left
-        .as_ref()
-        .clone()
-        .make_stable(expr_domain.clone(), input_metric.clone())?;
-    let t_right = right
-        .as_ref()
-        .clone()
-        .make_stable(expr_domain.clone(), input_metric.clone())?;
+    let t_left = left.make_stable(expr_domain.clone(), input_metric.clone())?;
+    let t_right = right.make_stable(expr_domain.clone(), input_metric.clone())?;
 
     use polars_plan::dsl::Operator::*;
     if !matches!(

@@ -43,7 +43,7 @@ static RNM_GUMBEL_PLUGIN_NAME: &str = "report_noisy_max_gumbel";
 pub fn make_expr_report_noisy_max_gumbel<MI: 'static + Metric>(
     input_domain: ExprDomain,
     input_metric: MI,
-    expr: Expr,
+    expr: &Expr,
     global_scale: Option<f64>,
 ) -> Fallible<Measurement<ExprDomain, Expr, MI, MaxDivergence<f64>>>
 where
@@ -54,7 +54,7 @@ where
         match_report_noisy_max_gumbel(&expr)?
             .ok_or_else(|| err!(MakeMeasurement, "Expected {}", RNM_GUMBEL_PLUGIN_NAME))?;
 
-    let t_prior = input.clone().make_stable(input_domain, input_metric)?;
+    let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     if scale.is_none() && global_scale.is_none() {
@@ -95,7 +95,7 @@ where
     t_prior
         >> Measurement::<_, _, Parallel<LInfDistance<f64>>, _>::new(
             middle_domain,
-            Function::then_expr(move |input_expr| {
+            Function::then_expr(enclose!(expr, move |input_expr| {
                 apply_plugin(
                     input_expr,
                     expr.clone(),
@@ -104,7 +104,7 @@ where
                         scale: Some(scale),
                     },
                 )
-            }),
+            })),
             middle_metric.clone(),
             MaxDivergence::default(),
             PrivacyMap::new_fallible(move |(l0, li): &(IntDistance, f64)| {

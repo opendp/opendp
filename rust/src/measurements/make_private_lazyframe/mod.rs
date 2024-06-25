@@ -79,7 +79,7 @@ where
 
 pub trait PrivateDslPlan<MI: Metric, MO: Measure> {
     fn make_private(
-        self,
+        &self,
         input_domain: DslPlanDomain,
         input_metric: MI,
         output_measure: MO,
@@ -97,7 +97,7 @@ where
     (ExprDomain, MS): MetricSpace,
 {
     fn make_private(
-        self,
+        &self,
         input_domain: DslPlanDomain,
         input_metric: MS,
         output_measure: MO,
@@ -107,13 +107,13 @@ where
             input_domain.clone(),
             input_metric.clone(),
             output_measure.clone(),
-            self.clone(),
+            self,
             global_scale,
         )? {
             return Ok(meas);
         }
 
-        match &self {
+        match self {
             #[cfg(feature = "contrib")]
             dsl if matches!(dsl, DslPlan::GroupBy { .. }) => {
                 group_by::make_private_group_by(

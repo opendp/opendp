@@ -1,4 +1,4 @@
-use polars::prelude::*;
+use polars_plan::dsl::{col, Expr};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric};
@@ -15,7 +15,7 @@ use crate::transformations::DatasetMetric;
 pub fn make_expr_col<M: OuterMetric>(
     input_domain: ExprDomain,
     input_metric: M,
-    expr: Expr,
+    expr: &Expr,
 ) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,

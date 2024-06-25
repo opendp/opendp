@@ -19,7 +19,7 @@ use super::StableExpr;
 pub fn make_expr_clip<M: OuterMetric>(
     input_domain: ExprDomain,
     input_metric: M,
-    expr: Expr,
+    expr: &Expr,
 ) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
@@ -42,10 +42,10 @@ where
         return fallible!(MakeTransformation, "Clip must have min and max");
     }
 
-    let [input, lower, upper] = <[Expr; 3]>::try_from(input)
+    let [input, lower, upper] = <&[Expr; 3]>::try_from(input.as_slice())
         .map_err(|_| err!(MakeTransformation, "Clip expects 3 arguments"))?;
 
-    let t_prior = input.make_stable(input_domain.clone(), input_metric.clone())?;
+    let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut output_domain = middle_domain.clone();
@@ -83,7 +83,7 @@ where
         )?
 }
 
-fn extract_bound<T: NumericDataType>(bound: Expr) -> Fallible<T> {
+fn extract_bound<T: NumericDataType>(bound: &Expr) -> Fallible<T> {
     let Expr::Literal(value) = bound else {
         return fallible!(MakeTransformation, "bound must be a literal");
     };
@@ -100,8 +100,8 @@ fn extract_bound<T: NumericDataType>(bound: Expr) -> Fallible<T> {
 }
 
 fn extract_bounds<T: Number + NumericDataType + Literal>(
-    lower: Expr,
-    upper: Expr,
+    lower: &Expr,
+    upper: &Expr,
     domain: &mut SeriesDomain,
 ) -> Fallible<(Expr, Expr)> {
     let bounds = (extract_bound::<T>(lower)?, extract_bound::<T>(upper)?);

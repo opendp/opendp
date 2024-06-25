@@ -26,7 +26,7 @@ pub fn make_private_select<MS, MI, MO>(
     input_domain: DslPlanDomain,
     input_metric: MS,
     output_measure: MO,
-    plan: DslPlan,
+    plan: &DslPlan,
     global_scale: Option<f64>,
 ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, MO>>
 where
@@ -44,10 +44,7 @@ where
         return fallible!(MakeMeasurement, "Expected selection in logical plan");
     };
 
-    let t_prior = input
-        .as_ref()
-        .clone()
-        .make_stable(input_domain, input_metric)?;
+    let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut expr_domain = ExprDomain::new(
@@ -113,7 +110,7 @@ where
     let privacy_map = m_select_expr.privacy_map.clone();
     let m_select = Measurement::new(
         middle_domain,
-        Function::new_fallible(move |arg: &DslPlan| {
+        Function::new_fallible(enclose!(plan, move |arg: &DslPlan| {
             let mut output = plan.clone();
             if let DslPlan::Select {
                 ref mut input,
@@ -125,7 +122,7 @@ where
                 *expr = m_select_expr.invoke(&(arg.clone(), all()))?;
             };
             Ok(output)
-        }),
+        })),
         middle_metric,
         output_measure,
         privacy_map,

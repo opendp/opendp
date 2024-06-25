@@ -20,18 +20,18 @@ mod test;
 pub fn make_expr_lit<M: OuterMetric>(
     input_domain: ExprDomain,
     input_metric: M,
-    expr: Expr,
+    expr: &Expr,
 ) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
     M::Distance: Clone,
     (ExprDomain, M): MetricSpace,
 {
-    let Expr::Literal(literal_value) = &expr else {
+    let Expr::Literal(literal_value) = expr else {
         return fallible!(MakeTransformation, "Expected literal expression");
     };
 
-    let name = expr_output_name(&expr)?;
+    let name = expr_output_name(expr)?;
 
     macro_rules! series_domain {
         ($ty:ty, $null:expr) => {{
@@ -61,7 +61,7 @@ where
     Transformation::new(
         input_domain,
         output_domain,
-        Function::from_expr(expr),
+        Function::from_expr(expr.clone()),
         input_metric.clone(),
         input_metric,
         StabilityMap::new(Clone::clone),

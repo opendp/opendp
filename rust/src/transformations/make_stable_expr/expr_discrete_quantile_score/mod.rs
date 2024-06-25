@@ -35,7 +35,7 @@ static DQ_SCORE_PLUGIN_NAME: &str = "discrete_quantile_score";
 pub fn make_expr_discrete_quantile_score<MI>(
     input_domain: ExprDomain,
     input_metric: PartitionDistance<MI>,
-    expr: Expr,
+    expr: &Expr,
 ) -> Fallible<
     Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
 >
@@ -44,7 +44,7 @@ where
     Expr: StableExpr<PartitionDistance<MI>, PartitionDistance<MI>>,
     (ExprDomain, PartitionDistance<MI>): MetricSpace,
 {
-    let Some((input, args)) = match_discrete_quantile_score(&expr)? else {
+    let Some((input, args)) = match_discrete_quantile_score(expr)? else {
         return fallible!(
             MakeTransformation,
             "Expected {} function",
@@ -58,7 +58,7 @@ where
         ..
     } = args;
 
-    let t_prior = input.clone().make_stable(input_domain, input_metric)?;
+    let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let active_series = middle_domain.active_series()?.clone();
@@ -107,7 +107,7 @@ where
         >> Transformation::<_, _, PartitionDistance<MI>, Parallel<LInfDistance<_>>>::new(
             middle_domain.clone(),
             middle_domain,
-            Function::then_expr(move |input_expr| {
+            Function::then_expr(enclose!(expr, move |input_expr| {
                 apply_plugin(
                     input_expr,
                     expr.clone(),
@@ -117,7 +117,7 @@ where
                         constants: Some(constants),
                     },
                 )
-            }),
+            })),
             middle_metric,
             Parallel(LInfDistance::new(false)),
             StabilityMap::new_fallible(move |(l0, _, li)| {

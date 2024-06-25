@@ -35,7 +35,6 @@ fn test_grouped_make_sum_expr() -> Fallible<()> {
     let t_sum: Transformation<_, _, _, L2Distance<f64>> = col("cycle_(..100i32)")
         .clip(lit(0), lit(1))
         .sum()
-        .clone()
         .make_stable(expr_domain, PartitionDistance(InsertDeleteDistance))?;
     let expr_res = t_sum.invoke(&(lf.logical_plan.clone(), all()))?.1;
 
@@ -85,7 +84,6 @@ fn test_overflow_sum_expr() -> Fallible<()> {
     let err = col("chunk_(..10u32)")
         .clip(lit(0), lit(u32::MAX))
         .sum()
-        .clone()
         .make_stable(expr_domain, PartitionDistance(InsertDeleteDistance))
         .map(|_: Transformation<_, _, _, L2Distance<f64>>| ())
         .unwrap_err();

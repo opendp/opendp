@@ -24,19 +24,19 @@ mod test;
 pub fn make_expr_private_lit<MI: 'static + Metric, MO: 'static + Measure>(
     input_domain: ExprDomain,
     input_metric: PartitionDistance<MI>,
-    expr: Expr,
+    expr: &Expr,
 ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MO>>
 where
     MO::Distance: Zero,
     (ExprDomain, PartitionDistance<MI>): MetricSpace,
 {
-    let Expr::Literal(_) = &expr else {
+    let Expr::Literal(_) = expr else {
         return fallible!(MakeMeasurement, "Expected Literal expression");
     };
 
     Measurement::new(
         input_domain,
-        Function::from_expr(expr),
+        Function::from_expr(expr.clone()),
         input_metric,
         MO::default(),
         PrivacyMap::new(move |_| MO::Distance::zero()),

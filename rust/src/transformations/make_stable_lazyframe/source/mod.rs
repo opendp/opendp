@@ -1,4 +1,4 @@
-use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
+use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::DslPlanDomain;
 use crate::error::*;
 use crate::transformations::traits::UnboundedMetric;
@@ -10,10 +10,10 @@ use polars::prelude::*;
 /// * `input_domain` - The domain of the input LazyFrame.
 /// * `input_metric` - The metric of the input LazyFrame.
 /// * `plan` - The LazyFrame to transform.
-pub fn make_stable_source<M: Metric>(
+pub fn make_stable_source<M>(
     input_domain: DslPlanDomain,
     input_metric: M,
-    plan: DslPlan,
+    plan: &DslPlan,
 ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, M, M>>
 where
     M: UnboundedMetric + 'static,

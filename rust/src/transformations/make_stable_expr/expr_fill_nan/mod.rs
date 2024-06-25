@@ -22,7 +22,7 @@ mod test;
 pub fn make_expr_fill_nan<M: OuterMetric>(
     input_domain: ExprDomain,
     input_metric: M,
-    expr: Expr,
+    expr: &Expr,
 ) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
@@ -40,12 +40,8 @@ where
     } = input_domain.clone();
     let rr_domain = ExprDomain::new(frame_domain, ExprContext::RowByRow);
 
-    let t_data = data
-        .clone()
-        .make_stable(rr_domain.clone(), input_metric.clone())?;
-    let t_fill = fill
-        .clone()
-        .make_stable(rr_domain.clone(), input_metric.clone())?;
+    let t_data = data.make_stable(rr_domain.clone(), input_metric.clone())?;
+    let t_fill = fill.make_stable(rr_domain.clone(), input_metric.clone())?;
 
     let (data_domain, data_metric) = t_data.output_space();
     let (fill_domain, fill_metric) = t_fill.output_space();

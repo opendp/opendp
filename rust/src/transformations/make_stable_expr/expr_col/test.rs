@@ -1,3 +1,5 @@
+use polars_plan::dsl::all;
+
 use crate::metrics::SymmetricDistance;
 use crate::transformations::make_stable_expr::test_helper::get_test_data;
 use crate::transformations::StableExpr;
@@ -9,9 +11,7 @@ fn test_make_col_expr() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
     let expr_domain = lf_domain.row_by_row();
     let expected = col("const_1f64");
-    let t_col = expected
-        .clone()
-        .make_stable(expr_domain.clone(), SymmetricDistance)?;
+    let t_col = expected.make_stable(expr_domain.clone(), SymmetricDistance)?;
     let actual = t_col.invoke(&(lf.logical_plan, all()))?.1;
 
     assert_eq!(actual, expected);

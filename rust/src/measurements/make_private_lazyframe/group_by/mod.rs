@@ -25,7 +25,7 @@ pub fn make_private_group_by<MS, MI, MO>(
     input_domain: DslPlanDomain,
     input_metric: MS,
     output_measure: MO,
-    plan: DslPlan,
+    plan: &DslPlan,
     global_scale: Option<f64>,
 ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, MO>>
 where
@@ -51,10 +51,7 @@ where
         return fallible!(MakeMeasurement, "Expected Aggregate logical plan");
     };
 
-    let t_prior = input
-        .as_ref()
-        .clone()
-        .make_stable(input_domain.clone(), input_metric.clone())?;
+    let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     if options.as_ref() != &GroupbyOptions::default() {
@@ -133,7 +130,7 @@ where
     t_prior
         >> Measurement::new(
             middle_domain,
-            Function::new_fallible(move |arg: &DslPlan| {
+            Function::new_fallible(enclose!(plan, move |arg: &DslPlan| {
                 let mut output = plan.clone();
                 if let DslPlan::GroupBy {
                     ref mut input,
@@ -145,7 +142,7 @@ where
                     *aggs = f_exprs.eval(&(arg.clone(), all()))?;
                 };
                 Ok(output)
-            }),
+            })),
             middle_metric,
             output_measure,
             privacy_map,

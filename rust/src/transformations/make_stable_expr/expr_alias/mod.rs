@@ -23,7 +23,7 @@ mod test;
 pub fn make_expr_alias<M: OuterMetric>(
     input_domain: ExprDomain,
     input_metric: M,
-    expr: Expr,
+    expr: &Expr,
 ) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
@@ -31,14 +31,11 @@ where
     (ExprDomain, M): MetricSpace,
     Expr: StableExpr<M, M>,
 {
-    let Expr::Alias(input, name) = expr else {
+    let Expr::Alias(ref input, ref name) = *expr else {
         return fallible!(MakeTransformation, "expected alias expression");
     };
 
-    let t_prior = input
-        .as_ref()
-        .clone()
-        .make_stable(input_domain, input_metric)?;
+    let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut output_domain = middle_domain.clone();
@@ -70,7 +67,7 @@ where
     let t_alias = Transformation::new(
         middle_domain.clone(),
         output_domain,
-        Function::then_expr(move |expr| expr.alias(name.as_ref())),
+        Function::then_expr(enclose!(name, move |expr| expr.alias(name.as_ref()))),
         middle_metric.clone(),
         middle_metric,
         StabilityMap::new(Clone::clone),

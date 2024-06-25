@@ -84,7 +84,7 @@ impl NoiseExprMeasure for ZeroConcentratedDivergence<f64> {
 pub fn make_expr_noise<MI: 'static + Metric, MO: NoiseExprMeasure>(
     input_domain: ExprDomain,
     input_metric: MI,
-    expr: Expr,
+    expr: &Expr,
     global_scale: Option<f64>,
 ) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>
 where
@@ -100,7 +100,7 @@ where
         distribution,
     } = args;
 
-    let t_prior = input.clone().make_stable(input_domain, input_metric)?;
+    let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     if scale.is_none() && global_scale.is_none() {
@@ -133,7 +133,7 @@ where
 
     let m_noise = Measurement::<_, _, MO::Metric, _>::new(
         middle_domain,
-        Function::then_expr(move |input_expr| {
+        Function::then_expr(enclose!(expr, move |input_expr| {
             apply_plugin(
                 input_expr,
                 expr.clone(),
@@ -142,7 +142,7 @@ where
                     distribution: Some(MO::DISTRIBUTION),
                 },
             )
-        }),
+        })),
         middle_metric,
         MO::default(),
         PrivacyMap::new_fallible(MO::map_function(scale)),

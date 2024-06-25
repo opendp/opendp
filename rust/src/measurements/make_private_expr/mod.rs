@@ -68,7 +68,7 @@ where
 
 pub trait PrivateExpr<MI: Metric, MO: Measure> {
     fn make_private(
-        self,
+        &self,
         input_domain: ExprDomain,
         input_metric: MI,
         output_metric: MO,
@@ -78,13 +78,13 @@ pub trait PrivateExpr<MI: Metric, MO: Measure> {
 
 impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergence<f64>> for Expr {
     fn make_private(
-        self,
+        &self,
         input_domain: ExprDomain,
         input_metric: PartitionDistance<M>,
         output_measure: MaxDivergence<f64>,
         global_scale: Option<f64>,
     ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, MaxDivergence<f64>>> {
-        if expr_noise::match_noise(&self)?.is_some() {
+        if expr_noise::match_noise(self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
 
@@ -108,7 +108,7 @@ impl<M: 'static + UnboundedMetric>
     PrivateExpr<PartitionDistance<M>, ZeroConcentratedDivergence<f64>> for Expr
 {
     fn make_private(
-        self,
+        &self,
         input_domain: ExprDomain,
         input_metric: PartitionDistance<M>,
         output_measure: ZeroConcentratedDivergence<f64>,
@@ -137,7 +137,7 @@ fn make_private_measure_agnostic<
     input_domain: ExprDomain,
     input_metric: PartitionDistance<MI>,
     output_measure: MO,
-    expr: Expr,
+    expr: &Expr,
     global_scale: Option<f64>,
 ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MO>>
 where

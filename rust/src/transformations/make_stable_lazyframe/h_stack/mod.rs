@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
+use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{DslPlanDomain, ExprContext, ExprDomain};
 use crate::error::*;
 use crate::transformations::traits::UnboundedMetric;
@@ -18,10 +18,10 @@ mod test;
 /// * `input_domain` - The domain of the input LazyFrame.
 /// * `input_metric` - The metric of the input LazyFrame.
 /// * `plan` - The LazyFrame to transform.
-pub fn make_h_stack<M: Metric>(
+pub fn make_h_stack<M>(
     input_domain: DslPlanDomain,
     input_metric: M,
-    plan: DslPlan,
+    plan: &DslPlan,
 ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, M, M>>
 where
     M: UnboundedMetric + 'static,
@@ -33,15 +33,12 @@ where
         input,
         exprs,
         options,
-    } = plan
+    } = plan.clone()
     else {
         return fallible!(MakeTransformation, "Expected with_columns logical plan");
     };
 
-    let t_prior = input
-        .as_ref()
-        .clone()
-        .make_stable(input_domain.clone(), input_metric.clone())?;
+    let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     // create a transformation for each expression

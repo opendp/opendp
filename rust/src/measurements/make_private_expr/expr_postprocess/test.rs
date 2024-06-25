@@ -16,7 +16,7 @@ fn test_postprocess_alias() -> Fallible<()> {
 
     let expr = len().alias("new name");
 
-    let m_expr = expr.clone().make_private(
+    let m_expr = expr.make_private(
         expr_domain,
         PartitionDistance(SymmetricDistance),
         MaxDivergence::default(),
@@ -42,7 +42,7 @@ fn test_postprocess_binary() -> Fallible<()> {
     // any binary expression is fine
     let expr = (len() / lit(2)).eq(lit(23)).or(lit(false));
 
-    let m_expr = expr.clone().make_private(
+    let m_expr = expr.make_private(
         expr_domain,
         PartitionDistance(SymmetricDistance),
         MaxDivergence::default(),

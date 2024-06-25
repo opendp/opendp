@@ -37,7 +37,7 @@ pub fn make_expr_private_len<MI: 'static + UnboundedMetric, MO: 'static + Measur
     input_domain: ExprDomain,
     input_metric: PartitionDistance<MI>,
     output_measure: MO,
-    expr: Expr,
+    expr: &Expr,
 ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MO>>
 where
     MO::Distance: Zero,

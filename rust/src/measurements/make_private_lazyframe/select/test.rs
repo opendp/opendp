@@ -69,7 +69,7 @@ fn test_fail_select_invalid_expression() -> Fallible<()> {
         SymmetricDistance,
         MaxDivergence::<f64>::default(),
         // this expression cannot be parsed into a measurement
-        lf.select(&[col("A").sum()]).logical_plan,
+        &lf.select(&[col("A").sum()]).logical_plan,
         Some(1.),
     )
     .map(|_| ())
