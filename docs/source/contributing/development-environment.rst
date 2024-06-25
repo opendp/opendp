@@ -74,8 +74,10 @@ Setting a feature changes how the crate compiles:
           - Enable to include constructors that have not passed the vetting process.
         * - ``honest-but-curious``
           - Enable to include constructors that are only private if the constructor arguments are honest.
+            For example, user defined functions require this flag because privacy depends on the stability specified by the user.
+            Similarly, population amplification relies on an honest population size.
         * - ``floating-point``
-          - Enable to include transformations/measurements with floating-point vulnerabilities.
+          - Enable to include transformations and measurements with floating-point vulnerabilities.
         * - ``bindings``
           - Enable to generate Python and R source code. Depends on the ``ffi`` and ``derive`` features. 
         * - ``partials``
