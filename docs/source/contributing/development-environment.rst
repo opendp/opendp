@@ -74,8 +74,8 @@ Setting a feature changes how the crate compiles:
           - Enable to include constructors that have not passed the vetting process.
         * - ``honest-but-curious``
           - Enable to include constructors that are only private if the constructor arguments are honest.
-            For example, user defined functions require this flag because privacy depends on the stability specified by the user.
-            Similarly, population amplification relies on an honest population size.
+            For example, population amplification relies on the assumption that the user is honest (and correct) in saying that the dataset under observation is a simple sample.
+            Similarly, library plugins rely on the assumption that the privacy or stability of a user-defined function is governed by a user-defined map.
         * - ``floating-point``
           - Enable to include transformations and measurements with floating-point vulnerabilities.
         * - ``bindings``
