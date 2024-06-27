@@ -16,7 +16,7 @@ use crate::{
 };
 
 use crate::traits::{
-    samplers::{CastInternalRational, GumbelPSRN},
+    samplers::{CastInternalRational, GumbelPSRN, PSRN},
     DistanceConstant,
 };
 
