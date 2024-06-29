@@ -49,7 +49,7 @@ where
 {
     // number of categories t is 2, and probability is bounded below by 1/t
     if !(QO::exact_int_cast(2)?.recip()..QO::one()).contains(&prob) {
-        return fallible!(MakeTransformation, "probability must be within [0.5, 1)");
+        return fallible!(MakeMeasurement, "probability must be within [0.5, 1)");
     }
 
     // d_out = min(d_in, 1) * ln(p / p')
@@ -88,7 +88,6 @@ where
 /// # Arguments
 /// * `categories` - Set of valid outcomes
 /// * `prob` - Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
-/// * `constant_time` - Set to true to enable constant time. Slower.
 ///
 /// # Generics
 /// * `T` - Data type of a category.
@@ -96,7 +95,6 @@ where
 pub fn make_randomized_response<T, QO>(
     categories: HashSet<T>,
     prob: QO,
-    constant_time: bool,
 ) -> Fallible<Measurement<AtomDomain<T>, T, DiscreteDistance, MaxDivergence<QO>>>
 where
     T: Hashable,
@@ -106,16 +104,13 @@ where
 {
     let categories = categories.into_iter().collect::<Vec<_>>();
     if categories.len() < 2 {
-        return fallible!(
-            MakeTransformation,
-            "length of categories must be at least two"
-        );
+        return fallible!(MakeMeasurement, "length of categories must be at least two");
     }
     let num_categories = QO::exact_int_cast(categories.len())?;
 
     if !(num_categories.recip()..QO::one()).contains(&prob) {
         return fallible!(
-            MakeTransformation,
+            MakeMeasurement,
             "probability must be within [1/num_categories, 1)"
         );
     }
@@ -151,7 +146,7 @@ where
             let lie = &categories[sample];
 
             // return the truth if we chose to be honest and the truth is in the category set
-            let be_honest = sample_bernoulli_float(prob, constant_time)?;
+            let be_honest = sample_bernoulli_float(prob, false)?;
             let is_member = index.is_some();
             Ok(if be_honest && is_member { truth } else { lie }.clone())
         }),

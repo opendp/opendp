@@ -172,12 +172,11 @@ SEXP measurements__make_laplace_threshold(
 
 
 SEXP measurements__make_randomized_response(
-    SEXP categories, SEXP prob, SEXP constant_time, SEXP T, SEXP QO, SEXP T_categories, SEXP log
+    SEXP categories, SEXP prob, SEXP T, SEXP QO, SEXP T_categories, SEXP log
 ) {
     // Convert arguments to c types.
     PROTECT(categories);
     PROTECT(prob);
-    PROTECT(constant_time);
     PROTECT(T);
     PROTECT(QO);
     PROTECT(T_categories);
@@ -185,14 +184,13 @@ SEXP measurements__make_randomized_response(
 
     AnyObject * c_categories = sexp_to_anyobjectptr(categories, T_categories);
     void * c_prob = sexp_to_voidptr(prob, QO);
-    bool c_constant_time = asLogical(constant_time);
     char * c_T = rt_to_string(T);
     char * c_QO = rt_to_string(QO);
 
     // Call library function.
-    FfiResult_____AnyMeasurement _result = opendp_measurements__make_randomized_response(c_categories, c_prob, c_constant_time, c_T, c_QO);
+    FfiResult_____AnyMeasurement _result = opendp_measurements__make_randomized_response(c_categories, c_prob, c_T, c_QO);
 
-    UNPROTECT(7);
+    UNPROTECT(6);
     if(_result.tag == Err_____AnyMeasurement)
         return(extract_error(_result.err));
     AnyMeasurement* _return_value = _result.ok;

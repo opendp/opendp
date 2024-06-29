@@ -872,7 +872,6 @@ def then_private_lazyframe(
 def make_randomized_response(
     categories,
     prob,
-    constant_time: bool = False,
     T: Optional[RuntimeTypeDescriptor] = None,
     QO: Optional[RuntimeTypeDescriptor] = None
 ) -> Measurement:
@@ -887,10 +886,12 @@ def make_randomized_response(
     * Input Metric:   `DiscreteDistance`
     * Output Measure: `MaxDivergence<QO>`
 
+    **Proof Definition:**
+
+    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/randomized_response/make_randomized_response.pdf)
+
     :param categories: Set of valid outcomes
     :param prob: Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
-    :param constant_time: Set to true to enable constant time. Slower.
-    :type constant_time: bool
     :param T: Data type of a category.
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :param QO: Data type of probability and output distance.
@@ -917,16 +918,15 @@ def make_randomized_response(
     # Convert arguments to c types.
     c_categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[T]))
     c_prob = py_to_c(prob, c_type=ctypes.c_void_p, type_name=QO)
-    c_constant_time = py_to_c(constant_time, c_type=ctypes.c_bool, type_name=bool)
     c_T = py_to_c(T, c_type=ctypes.c_char_p)
     c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
 
     # Call library function.
     lib_function = lib.opendp_measurements__make_randomized_response
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [AnyObjectPtr, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     lib_function.restype = FfiResult
 
-    output = c_to_py(unwrap(lib_function(c_categories, c_prob, c_constant_time, c_T, c_QO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_categories, c_prob, c_T, c_QO), Measurement))
 
     return output
 

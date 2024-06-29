@@ -559,10 +559,13 @@ then_laplace_threshold <- function(
 #' * Input Metric:   `DiscreteDistance`
 #' * Output Measure: `MaxDivergence<QO>`
 #'
+#' **Proof Definition:**
+#'
+#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/randomized_response/make_randomized_response.pdf)
+#'
 #' @concept measurements
 #' @param categories Set of valid outcomes
 #' @param prob Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
-#' @param constant_time Set to true to enable constant time. Slower.
 #' @param .T Data type of a category.
 #' @param .QO Data type of probability and output distance.
 #' @return Measurement
@@ -570,7 +573,6 @@ then_laplace_threshold <- function(
 make_randomized_response <- function(
   categories,
   prob,
-  constant_time = FALSE,
   .T = NULL,
   .QO = NULL
 ) {
@@ -582,19 +584,18 @@ make_randomized_response <- function(
   .T.categories <- new_runtime_type(origin = "Vec", args = list(.T))
 
   log <- new_constructor_log("make_randomized_response", "measurements", new_hashtab(
-    list("categories", "prob", "constant_time", "T", "QO"),
-    list(categories, prob, unbox2(constant_time), .T, .QO)
+    list("categories", "prob", "T", "QO"),
+    list(categories, prob, .T, .QO)
   ))
 
   # Assert that arguments are correctly typed.
   rt_assert_is_similar(expected = .T.categories, inferred = rt_infer(categories))
   rt_assert_is_similar(expected = .QO, inferred = rt_infer(prob))
-  rt_assert_is_similar(expected = bool, inferred = rt_infer(constant_time))
 
   # Call wrapper function.
   output <- .Call(
     "measurements__make_randomized_response",
-    categories, prob, constant_time, .T, .QO, rt_parse(.T.categories),
+    categories, prob, .T, .QO, rt_parse(.T.categories),
     log, PACKAGE = "opendp")
   output
 }
@@ -607,7 +608,6 @@ make_randomized_response <- function(
 #' @param lhs The prior transformation or metric space.
 #' @param categories Set of valid outcomes
 #' @param prob Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
-#' @param constant_time Set to true to enable constant time. Slower.
 #' @param .T Data type of a category.
 #' @param .QO Data type of probability and output distance.
 #' @return Measurement
@@ -616,21 +616,19 @@ then_randomized_response <- function(
   lhs,
   categories,
   prob,
-  constant_time = FALSE,
   .T = NULL,
   .QO = NULL
 ) {
 
   log <- new_constructor_log("then_randomized_response", "measurements", new_hashtab(
-    list("categories", "prob", "constant_time", "T", "QO"),
-    list(categories, prob, unbox2(constant_time), .T, .QO)
+    list("categories", "prob", "T", "QO"),
+    list(categories, prob, .T, .QO)
   ))
 
   make_chain_dyn(
     make_randomized_response(
       categories = categories,
       prob = prob,
-      constant_time = constant_time,
       .T = .T,
       .QO = .QO),
     lhs,
