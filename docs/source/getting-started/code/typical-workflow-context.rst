@@ -25,11 +25,14 @@
 # /public-info
 
 
+>>> data = 'John Smith,M,42,,,,,,,,\n' # Minimal data so doctest can run without hitting network.
+
 # mediate
 >>> import urllib.request
 >>> data_url = "https://raw.githubusercontent.com/opendp/opendp/sydney/teacher_survey.csv"
->>> with urllib.request.urlopen(data_url) as data_req:
-...     data = data_req.read().decode('utf-8')
+>>> if data is None:
+...     with urllib.request.urlopen(data_url) as data_req:
+...         data = data_req.read().decode('utf-8')
 
 >>> context = dp.Context.compositor(
 ...     data=data,
