@@ -26,6 +26,7 @@ use crate::{
     )
 )]
 /// Construct a Transformation from user-defined callbacks.
+/// Requires `honest-but-curious`: TODO
 ///
 /// # Arguments
 /// * `input_domain` - A domain describing the set of valid inputs for the function.

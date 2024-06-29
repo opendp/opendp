@@ -400,6 +400,7 @@ impl Domain for UserDomain {
 /// Construct a new UserDomain.
 /// Any two instances of an UserDomain are equal if their string descriptors are equal.
 /// Contains a function used to check if any value is a member of the domain.
+/// Requires `honest-but-curious`: TODO
 ///
 /// # Arguments
 /// * `identifier` - A string description of the data domain.

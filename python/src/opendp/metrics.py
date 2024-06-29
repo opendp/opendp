@@ -409,6 +409,7 @@ def user_distance(
 ) -> Metric:
     r"""Construct a new UserDistance.
     Any two instances of an UserDistance are equal if their string descriptors are equal.
+    Requires `honest-but-curious`: TODO
 
     :param descriptor: A string description of the metric.
     :type descriptor: str

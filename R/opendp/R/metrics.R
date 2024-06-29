@@ -336,6 +336,7 @@ symmetric_distance <- function(
 
 #' Construct a new UserDistance.
 #' Any two instances of an UserDistance are equal if their string descriptors are equal.
+#' Requires `honest-but-curious`: TODO
 #'
 #' @concept metrics
 #' @param descriptor A string description of the metric.
