@@ -3,7 +3,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import os
-from typing import Literal, Tuple
+from typing import Iterable, Literal, Tuple
 from opendp._lib import lib_path
 from opendp.mod import Domain, Measurement, assert_features
 from opendp.domains import series_domain, lazyframe_domain, option_domain, atom_domain
