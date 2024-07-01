@@ -23,7 +23,8 @@ __all__ = [
     "discrete_gaussian_scale_to_accuracy",
     "discrete_laplacian_scale_to_accuracy",
     "gaussian_scale_to_accuracy",
-    "laplacian_scale_to_accuracy"
+    "laplacian_scale_to_accuracy",
+    "onceframe_measurement_utility"
 ]
 
 
@@ -327,5 +328,35 @@ def laplacian_scale_to_accuracy(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_scale, c_alpha, c_T), AnyObjectPtr))
+
+    return output
+
+
+def onceframe_measurement_utility(
+    measurement: Measurement,
+    alpha = None
+):
+    r"""Get noise scale parameters from a measurement that returns a OnceFrame.
+
+    :param measurement: computation from which you want to read noise scale parameters from
+    :type measurement: Measurement
+    :param alpha: optional statistical significance to use to compute accuracy estimates
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_measurement = py_to_c(measurement, c_type=Measurement, type_name=AnyMeasurement)
+    c_alpha = py_to_c(alpha, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[f64]))
+
+    # Call library function.
+    lib_function = lib.opendp_accuracy__onceframe_measurement_utility
+    lib_function.argtypes = [Measurement, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_measurement, c_alpha), AnyObjectPtr))
 
     return output
