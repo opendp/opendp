@@ -348,6 +348,7 @@ try:
             "Sphinx always fails to find a reference to LazyFrame. Falling back to dummy class."
         )
     from polars.lazyframe.frame import LazyFrame as _LazyFrame  # type: ignore[import-not-found]
+    from polars import DataFrame as _DataFrame  # type: ignore[import-not-found]
     from polars.lazyframe.group_by import LazyGroupBy as _LazyGroupBy  # type: ignore[import-not-found]
 
     class LazyFrameQuery(_LazyFrame):
@@ -423,6 +424,17 @@ try:
             query = object.__getattribute__(self, "_query")
             resolve = object.__getattribute__(self, "resolve")
             return query._context(resolve())  # type: ignore[misc]
+        
+        def accuracy(self, alpha: float | None = None, confidence: float | None = None) -> _DataFrame:
+            """Retrieve noise scale parameters and accuracy estimates for each output."""
+            if alpha is not None and confidence is not None:
+                raise ValueError("only alpha or confidence may be set")
+            
+            if confidence is not None:
+                alpha = 1 - confidence / 100
+            
+            from opendp.accuracy import onceframe_measurement_utility
+            return onceframe_measurement_utility(self.resolve(), alpha)
 
 except ImportError:
     ERR_MSG = "LazyFrameQuery depends on Polars: `pip install 'opendp[polars]'`."
@@ -440,6 +452,11 @@ except ImportError:
 
         def release(self) -> OnceFrame:
             """Release the query. The query must be part of a context."""
+            raise ImportError(ERR_MSG)
+        
+        def accuracy(self, alpha: float | None = None, confidence: float | None = None):
+            """Retrieve noise scale parameters and accuracy estimates for each output."""
+            _ = alpha, confidence
             raise ImportError(ERR_MSG)
 
 

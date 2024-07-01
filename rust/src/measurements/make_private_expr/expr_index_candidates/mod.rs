@@ -42,8 +42,14 @@ where
     Expr: PrivateExpr<MI, MO>,
     (ExprDomain, MI): MetricSpace,
 {
-    let (input, IndexCandidatesArgs { candidates }) = match_index_candidates(&expr)?
-        .ok_or_else(|| err!(MakeMeasurement, "Expected Index Candidates function"))?;
+    let (input, IndexCandidatesArgs { candidates }) =
+        match_index_candidates(&expr)?.ok_or_else(|| {
+            err!(
+                MakeMeasurement,
+                "Expected {:?} function",
+                INDEX_CANDIDATES_PLUGIN
+            )
+        })?;
 
     let m_prior = input
         .clone()
@@ -61,6 +67,8 @@ where
         })
 }
 
+static INDEX_CANDIDATES_PLUGIN: &str = "index_candidates";
+
 /// Determine if the given expression is an index_candidates expression.
 ///
 /// # Arguments
@@ -71,14 +79,15 @@ where
 pub(crate) fn match_index_candidates(
     expr: &Expr,
 ) -> Fallible<Option<(&Expr, IndexCandidatesArgs)>> {
-    let Some((input, args)) = match_plugin(expr, "index_candidates")? else {
+    let Some((input, args)) = match_plugin(expr, INDEX_CANDIDATES_PLUGIN)? else {
         return Ok(None);
     };
 
     let Ok([input]) = <&[_; 1]>::try_from(input.as_slice()) else {
         return fallible!(
             MakeMeasurement,
-            "index_candidates expects a single input expression"
+            "{:?} expects a single input expression",
+            INDEX_CANDIDATES_PLUGIN
         );
     };
 
@@ -172,7 +181,7 @@ impl OpenDPPlugin for IndexCandidatesArgs {
     fn get_options(&self) -> FunctionOptions {
         FunctionOptions {
             collect_groups: ApplyOptions::ElementWise,
-            fmt_str: "index_candidates",
+            fmt_str: INDEX_CANDIDATES_PLUGIN,
             ..Default::default()
         }
     }
@@ -202,7 +211,7 @@ impl SeriesUdf for IndexCandidatesArgs {
 /// The Polars engine executes this function over chunks of data.
 fn index_candidates_udf(inputs: &[Series], kwargs: IndexCandidatesArgs) -> PolarsResult<Series> {
     let Ok([series]) = <&[_; 1]>::try_from(inputs) else {
-        polars_bail!(InvalidOperation: "index_candidates expects a single input field");
+        polars_bail!(InvalidOperation: "{:?} expects a single input field", INDEX_CANDIDATES_PLUGIN);
     };
     let selections = kwargs.candidates.0.take(series.u32()?)?;
     Ok(selections.with_name(series.name()))
@@ -216,7 +225,7 @@ pub(crate) fn index_candidates_type_udf(
     kwargs: IndexCandidatesArgs,
 ) -> PolarsResult<Field> {
     let Ok([field]) = <&[Field; 1]>::try_from(input_fields) else {
-        polars_bail!(InvalidOperation: "index_candidates expects a single input field")
+        polars_bail!(InvalidOperation: "{:?} expects a single input field", INDEX_CANDIDATES_PLUGIN)
     };
 
     if field.data_type() != &DataType::UInt32 {

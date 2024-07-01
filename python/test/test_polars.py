@@ -8,6 +8,7 @@ dp.enable_features("contrib", "honest-but-curious")
 def test_polars_version():
     pl = pytest.importorskip("polars")
     from opendp.mod import _EXPECTED_POLARS_VERSION
+
     assert pl.__version__ == _EXPECTED_POLARS_VERSION
 
 
@@ -306,7 +307,7 @@ def test_wrong_mechanism():
         dp.m.make_private_lazyframe(
             lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
         )
-    assert 'expected Laplace distribution, found Gaussian' in (err.value.message or '')
+    assert "expected Laplace distribution, found Gaussian" in (err.value.message or "")
 
 
 def test_polars_context():
@@ -346,6 +347,50 @@ def test_polars_context():
         .collect()
     )
 
+
+def test_polars_accuracy():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
+
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=2,
+        margins={
+            ("B",): dp.Margin(public_info="keys", max_partition_length=5),
+        },
+    )
+
+    expected = pl.DataFrame(
+        {
+            "column": ["len", "A"],
+            "aggregate": ["Len", "Sum"],
+            "distribution": ["Laplace", "Laplace"],
+            "scale": [8.0, 8.0],
+        }
+    )
+
+    query = (
+        context.query()
+        .group_by("B")
+        .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
+    )
+
+    actual = query.accuracy()  # type: ignore[union-attr]
+    pl_testing.assert_frame_equal(expected, actual)
+
+    expected = expected.with_columns(accuracy=23.965858188431927)
+    actual = query.accuracy(alpha=0.05)  # type: ignore[union-attr]
+    pl_testing.assert_frame_equal(expected, actual)
+
+    actual = query.accuracy(confidence=95.0)  # type: ignore[union-attr]
+    pl_testing.assert_frame_equal(expected, actual)
+
+    with pytest.raises(ValueError):
+        query.accuracy(alpha=.05, confidence=95.0)  # type: ignore[union-attr]
 
 
 def test_polars_non_wrapping():

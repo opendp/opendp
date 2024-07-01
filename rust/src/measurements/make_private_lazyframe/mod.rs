@@ -1,5 +1,7 @@
+use polars::prelude::LazyFrame;
+use polars_plan::{dsl::Expr, plans::DslPlan};
+
 use opendp_derive::bootstrap;
-use polars::prelude::*;
 
 use crate::{
     combinators::BasicCompositionMeasure,
