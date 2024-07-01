@@ -1,0 +1,135 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{trait SampleUniformIntBelow}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+\contrib
+
+\subsection*{PR History}
+\begin{itemize}
+    \item \vettingPR{473}
+\end{itemize}
+
+This document proves that the implementations of \rustdoc{traits/samplers/uniform/trait}{SampleUniformIntBelow} in \asOfCommit{mod.rs}{f5bb719} 
+satisfy the definition of the \texttt{SampleUniformIntBelow} trait.
+
+\begin{definition}
+    \label{sample-uniform-int-below}
+
+    The \texttt{SampleUniformIntBelow} trait defines a function \texttt{sample\_uniform\_int\_below}.
+
+    For any setting of the input parameter \texttt{upper},
+    \texttt{sample\_uniform\_int\_below} either
+    \begin{itemize}
+        \item raises an exception if there is a lack of system entropy,
+        \item returns \texttt{out} where \texttt{out} is uniformly distributed between $[0, upper)$.
+    \end{itemize}
+
+    If \texttt{trials} is specified, the function will attempt to sample uniformly at random \texttt{trials} times,
+    and will raise an exception if it fails to do so.
+    If \texttt{trials} is not specified, the function will attempt to sample uniformly at random indefinitely.
+    Setting \texttt{trials} causes the function to run in constant time.
+\end{definition}
+
+There are two \texttt{impl}'s (implementations): one for unsigned integers, and one for big integers.
+To prove correctness of each \texttt{impl}, we prove correctness of the implementation of \texttt{sample\_uniform\_int\_below}.
+
+\tableofcontents
+
+\section{\texttt{impl} for Unsigned Integers}
+This corresponds to \texttt{impl SampleUniformIntBelow for \$ty} in Rust.
+\texttt{sample\_uniform\_int\_below} uses rejection sampling. 
+In each round all bits of the integer are filled randomly, drawing an unsigned integer uniformly at random.
+The algorithm returns the sample, modulo the upper bound, so long as the sample is not one of the final "div" largest integers.
+
+\subsection{Hoare Triple}
+\subsubsection*{Preconditions}
+\begin{itemize}
+    \item \textbf{User-specified types:}
+    \begin{itemize}
+        \item Variable \texttt{upper} must be of type \texttt{T}
+        \item Variable \texttt{trials} is optional of type \texttt{int}, and is non-negative
+        \item Type \texttt{T} is the type the trait is implemented for (one of u8, u16, u32, u64, u128, usize)
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/sample_uniform_int_below_native.py}
+
+\subsubsection*{Postcondition}
+The postcondition is supplied by \ref{sample-uniform-int-below}.
+
+\subsection{Proof}
+\begin{proof} 
+\label{unsigned-integer-proof}
+Assuming that \texttt{T.sample\_uniform\_int()} is correctly implemented,
+then \texttt{v} is a sample between zero and \texttt{T.MAX} inclusive, the greatest representable number of type \texttt{T}.
+
+You could sample one of \texttt{upper} values uniformly at random by rejecting \texttt{v} if it is larger than \texttt{upper}.
+That is, only return \texttt{v} if \texttt{v} is less than \texttt{upper}.
+
+It is equivalent to extend the acceptance region, 
+by returning \texttt{v \% 2} if \texttt{v} is less than \texttt{upper * 2}, 
+so long as \texttt{upper * 2 <= T.MAX}.
+This reduces the rejection rate, which increases algorithm performance.
+
+There are \texttt{T.MAX \% upper} remaining elements if you were to 
+extend the acceptance region to the greatest multiple of \texttt{upper} that is less than \texttt{T.MAX}.
+Therefore conditioning \texttt{v} on being less than \texttt{T.MAX - T.MAX \% upper} 
+results in \texttt{v \% upper} being an unbiased, uniformly distributed sample.
+
+When \texttt{trials} is specified, the algorithm will attempt to sample uniformly at random \texttt{trials} times,
+and will raise an exception if it fails to do so.
+Only the first successful sample is kept.
+
+\noindent Therefore, for any value of \texttt{upper}, the function satisfies the postcondition.
+\end{proof}
+
+
+\section{\texttt{impl} for Big Integers}
+This corresponds to \texttt{impl SampleUniformIntBelow for UBig} in Rust.
+This algorithm uses the same algorithm and argument as used for unsigned native integers, 
+but this time the bit depth is dynamically chosen to fill the last byte of a series of bytes long enough to hold \texttt{upper}.
+
+\subsection{Hoare Triple}
+\subsubsection*{Preconditions}
+\begin{itemize}
+    \item \textbf{User-specified types:}
+    \begin{itemize}
+        \item Variable \texttt{upper} must be of type \texttt{UBig}
+        \item Variable \texttt{trials} is optional of type \texttt{int}, and is non-negative
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/sample_uniform_int_below_ubig.py}
+
+\subsubsection*{Postcondition}
+The postcondition is supplied by \ref{sample-uniform-int-below}.
+
+\subsection{Proof}
+\begin{proof} 
+
+\texttt{byte\_len} is the fewest number of bytes necessary to represent \texttt{upper}, 
+which is $ceil(ceil(log_2(upper)) / 8)$.
+
+This proof follows the same logic as in \ref{unsigned-integer-proof},
+but the constants are generalized.
+\texttt{max} is the largest representable number in \texttt{byte\_len} bytes, corresponding to \texttt{T.MAX}.
+\texttt{v} is an integer sampled uniformly below \texttt{max} by randomly filling bits with bernoulli samples.
+The algorithm terminates when \texttt{v} is below the same threshold.
+
+When \texttt{trials} is specified, the algorithm will attempt to sample uniformly at random \texttt{trials} times,
+and will raise an exception if it fails to do so.
+Only the first successful sample is kept.
+
+\noindent Therefore, for any value of \texttt{upper}, the function satisfies the postcondition.
+\end{proof}
+
+\end{document}
