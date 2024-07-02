@@ -2,11 +2,11 @@ use opendp_derive::bootstrap;
 use polars_plan::dsl::Expr;
 
 use crate::{
-    combinators::BasicCompositionMeasure,
+    combinators::{make_pureDP_to_fixed_approxDP, BasicCompositionMeasure},
     core::{Measure, Measurement, Metric, MetricSpace},
     domains::ExprDomain,
     error::Fallible,
-    measures::{MaxDivergence, ZeroConcentratedDivergence},
+    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
     polars::get_disabled_features_message,
     transformations::traits::UnboundedMetric,
@@ -127,6 +127,27 @@ impl<M: 'static + UnboundedMetric>
             self,
             global_scale,
         )
+    }
+}
+
+impl<M: 'static + UnboundedMetric>
+    PrivateExpr<PartitionDistance<M>, FixedSmoothedMaxDivergence<f64>> for Expr
+{
+    fn make_private(
+        self,
+        input_domain: ExprDomain,
+        input_metric: PartitionDistance<M>,
+        _output_measure: FixedSmoothedMaxDivergence<f64>,
+        global_scale: Option<f64>,
+    ) -> Fallible<
+        Measurement<ExprDomain, Expr, PartitionDistance<M>, FixedSmoothedMaxDivergence<f64>>,
+    > {
+        make_pureDP_to_fixed_approxDP(self.make_private(
+            input_domain,
+            input_metric,
+            MaxDivergence::default(),
+            global_scale,
+        )?)
     }
 }
 

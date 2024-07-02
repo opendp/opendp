@@ -16,6 +16,8 @@ use crate::error::Fallible;
 use crate::traits::InfCast;
 use std::fmt::Debug;
 
+pub(crate) mod tail_bounds;
+
 #[bootstrap(arguments(scale(c_type = "void *"), alpha(c_type = "void *")))]
 /// Convert a Laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
 ///
