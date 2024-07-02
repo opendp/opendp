@@ -128,8 +128,8 @@ fn test_make_laplace_grouped() -> Fallible<()> {
     )?;
 
     assert_eq!(
-        df_act.sort(["chunk_2_bool"], false, false)?,
-        df_exp.sort(["chunk_2_bool"], false, false)?
+        df_act.sort(["chunk_2_bool"], Default::default())?,
+        df_exp.sort(["chunk_2_bool"], Default::default())?
     );
     Ok(())
 }

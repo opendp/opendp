@@ -15,7 +15,7 @@ use crate::{
 use polars::{frame::DataFrame, lazy::frame::LazyFrame, prelude::NamedFrom, series::Series};
 use polars_plan::{
     dsl::{len, lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
-    logical_plan::Literal,
+    plans::Literal,
     prelude::FunctionOptions,
 };
 use serde::{Deserialize, Serialize};

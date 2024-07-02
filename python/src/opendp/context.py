@@ -178,7 +178,7 @@ def domain_of(T, infer: bool = False) -> Domain:
         if pl is not None and isinstance(T, pl.LazyFrame):
             from opendp.polars import _lazyframe_domain_from_schema
 
-            return _lazyframe_domain_from_schema(T.schema)
+            return _lazyframe_domain_from_schema(T.collect_schema())
 
     # normalize to a type descriptor
     if infer:

@@ -198,13 +198,7 @@ impl SeriesUdf for NoiseArgs {
     }
 
     fn get_output(&self) -> Option<GetOutput> {
-        Some(GetOutput::map_fields(|fields| {
-            noise_type_udf(fields)
-                // NOTE: it would be better if this didn't need to fall back,
-                // but Polars does not support raising an error
-                .ok()
-                .unwrap_or_else(|| fields[0].clone())
-        }))
+        Some(GetOutput::map_fields(|fields| noise_type_udf(fields)))
     }
 }
 

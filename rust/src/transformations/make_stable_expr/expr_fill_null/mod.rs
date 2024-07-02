@@ -77,8 +77,6 @@ where
     series_domain.drop_bounds().ok();
     series_domain.nullable = false;
 
-    let dtype = series_domain.field.dtype.clone();
-
     Transformation::new(
         input_domain,
         output_domain,
@@ -86,19 +84,8 @@ where
             let expr_data = t_data.invoke(arg)?.1;
             let expr_fill = t_fill.invoke(arg)?.1;
 
-            let mut expr_impute = expr_data.fill_null(expr_fill);
+            let expr_impute = expr_data.fill_null(expr_fill);
 
-            // Update the super type of the fill_null function
-            // This is necessary because it initializes to Unknown,
-            // and Unknown dtype panics when serialized for FFI.
-            let Expr::Function {
-                function: FunctionExpr::FillNull { super_type },
-                ..
-            } = &mut expr_impute
-            else {
-                unreachable!();
-            };
-            *super_type = dtype.clone();
             Ok((arg.0.clone(), expr_impute))
         }),
         input_metric.clone(),

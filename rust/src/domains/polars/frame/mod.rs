@@ -31,8 +31,8 @@ impl Frame for LazyFrame {
         Ok(IntoLazy::lazy(DataFrame::new(series)?))
     }
     fn schema(&self) -> Fallible<Schema> {
-        self.schema()
-            .map(|v| v.as_ref().clone())
+        LazyFrame::schema(&mut self.clone())
+            .map(|schema| Arc::unwrap_or_clone(schema))
             .map_err(Into::into)
     }
     fn lazyframe(self) -> LazyFrame {
@@ -42,12 +42,12 @@ impl Frame for LazyFrame {
         self.collect().map_err(Into::into)
     }
 }
-impl Frame for LogicalPlan {
+impl Frame for DslPlan {
     fn new(series: Vec<Series>) -> Fallible<Self> {
         <LazyFrame as Frame>::new(series).map(|v| v.logical_plan)
     }
     fn schema(&self) -> Fallible<Schema> {
-        Ok(self.schema()?.as_ref().as_ref().clone())
+        Ok(self.compute_schema()?.as_ref().clone())
     }
     fn lazyframe(self) -> LazyFrame {
         LazyFrame::from(self)
@@ -117,7 +117,7 @@ impl<F: Frame> PartialEq for FrameDomain<F> {
 }
 
 pub type LazyFrameDomain = FrameDomain<LazyFrame>;
-pub(crate) type LogicalPlanDomain = FrameDomain<LogicalPlan>;
+pub(crate) type DslPlanDomain = FrameDomain<DslPlan>;
 
 impl<F: Frame, M: DatasetMetric> MetricSpace for (FrameDomain<F>, M) {
     fn check_space(&self) -> Fallible<()> {
