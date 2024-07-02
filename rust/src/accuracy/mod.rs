@@ -3,6 +3,9 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[cfg(feature = "polars")]
+mod polars;
+
 use std::f64::consts::SQRT_2;
 
 use num::{Float, One, Zero};
