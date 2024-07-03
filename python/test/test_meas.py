@@ -66,7 +66,7 @@ def test_gaussian_smoothed_max_divergence():
 
 def test_gaussian_zcdp():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    meas = input_space >> dp.m.then_gaussian(scale=1.5, MO=dp.ZeroConcentratedDivergence[float])
+    meas = input_space >> dp.m.then_gaussian(scale=1.5, MO=dp.ZeroConcentratedDivergence)
     print("base gaussian:", meas(100.))
 
     rho = meas.map(d_in=1.)

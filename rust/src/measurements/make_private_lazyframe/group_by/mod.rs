@@ -8,7 +8,7 @@ use crate::domains::{DslPlanDomain, ExprContext, ExprDomain};
 use crate::error::*;
 use crate::measurements::expr_noise::Distribution;
 use crate::measurements::make_private_expr;
-use crate::measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence};
+use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
 use crate::metrics::PartitionDistance;
 use crate::traits::{InfAdd, InfMul, InfPowI, InfSub};
 use crate::transformations::traits::UnboundedMetric;
@@ -198,10 +198,10 @@ macro_rules! impl_measure_non_catastrophic {
     };
 }
 
-impl_measure_non_catastrophic!(MaxDivergence<f64>);
-impl_measure_non_catastrophic!(ZeroConcentratedDivergence<f64>);
+impl_measure_non_catastrophic!(MaxDivergence);
+impl_measure_non_catastrophic!(ZeroConcentratedDivergence);
 
-impl ApproximateMeasure for FixedSmoothedMaxDivergence<f64> {
+impl ApproximateMeasure for Approximate<MaxDivergence> {
     fn add_delta((epsilon, delta): Self::Distance, delta_p: f64) -> Fallible<Self::Distance> {
         Ok((epsilon, delta.inf_add(&delta_p)?))
     }

@@ -231,12 +231,13 @@ pub fn make_alp_state_with_hashers<K, CI, CO>(
     alpha: CO,
     projection_size: usize,
     hashers: Vec<HashFunction<K>>,
-) -> Fallible<Measurement<SparseDomain<K, CI>, AlpState<K, CO>, L1Distance<CI>, MaxDivergence<CO>>>
+) -> Fallible<Measurement<SparseDomain<K, CI>, AlpState<K, CO>, L1Distance<CI>, MaxDivergence>>
 where
     K: 'static + Hashable,
     CI: 'static + Integer + ToPrimitive,
     CO: 'static + Float + InfCast<FBig> + InfCast<CI>,
     FBig: InfCast<CO>,
+    f64: InfCast<CI> + InfCast<CO>,
     (SparseDomain<K, CI>, L1Distance<CI>): MetricSpace,
 {
     if input_domain.value_domain.nullable() {
@@ -272,7 +273,7 @@ where
         }),
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_from_constant(scale),
+        PrivacyMap::new_from_constant(f64::neg_inf_cast(scale)?),
     )
 }
 
@@ -287,12 +288,13 @@ pub fn make_alp_state<K, CI, CO>(
     value_limit: Option<CI>,
     size_factor: Option<u32>,
     alpha: Option<u32>,
-) -> Fallible<Measurement<SparseDomain<K, CI>, AlpState<K, CO>, L1Distance<CI>, MaxDivergence<CO>>>
+) -> Fallible<Measurement<SparseDomain<K, CI>, AlpState<K, CO>, L1Distance<CI>, MaxDivergence>>
 where
     K: 'static + Hashable,
     CI: 'static + Integer + InfCast<CO> + ToPrimitive,
     CO: 'static + Float + InfCast<FBig> + InfCast<CI>,
     FBig: InfCast<CO>,
+    f64: InfCast<CI> + InfCast<CO>,
     (SparseDomain<K, CI>, L1Distance<CI>): MetricSpace,
 {
     let value_limit: f64 = value_limit
@@ -393,7 +395,7 @@ pub fn make_alp_queryable<K, CI, CO>(
         MapDomain<AtomDomain<K>, AtomDomain<CI>>,
         Queryable<K, CO>,
         L1Distance<CI>,
-        MaxDivergence<CO>,
+        MaxDivergence,
     >,
 >
 where
@@ -401,6 +403,7 @@ where
     CI: 'static + Integer + InfCast<CO> + ToPrimitive,
     CO: 'static + Float + InfCast<FBig> + InfCast<CI>,
     FBig: InfCast<CO>,
+    f64: InfCast<CI> + InfCast<CO>,
     (MapDomain<AtomDomain<K>, AtomDomain<CI>>, L1Distance<CI>): MetricSpace,
 {
     // this constructor is a simple wrapper for make_alp_state that adds a postprocessing step

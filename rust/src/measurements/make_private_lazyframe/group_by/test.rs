@@ -26,7 +26,7 @@ fn test_aggregate() -> Fallible<()> {
     let error_variant_res = make_private_group_by::<_, SymmetricDistance, _>(
         lf_domain,
         SymmetricDistance,
-        MaxDivergence::<f64>::default(),
+        MaxDivergence,
         lf.group_by(&[col("A"), col("C")])
             .agg(&[col("B").sum()])
             .logical_plan,

@@ -4,6 +4,7 @@ mod ffi;
 use std::fmt::Display;
 
 use dashu::rational::RBig;
+use num::Zero;
 use opendp_derive::bootstrap;
 
 use crate::{
@@ -12,7 +13,7 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
     metrics::LInfDistance,
-    traits::{Float, InfAdd, InfCast, Number},
+    traits::{InfAdd, InfCast, InfDiv, Number},
 };
 
 use crate::traits::{
@@ -63,16 +64,15 @@ impl TryFrom<&str> for Optimize {
 ///
 /// # Generics
 /// * `TIA` - Atom Input Type. Type of each element in the score vector.
-/// * `QO` - Output Distance Type.
-pub fn make_report_noisy_max_gumbel<TIA, QO>(
+pub fn make_report_noisy_max_gumbel<TIA>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
     input_metric: LInfDistance<TIA>,
-    scale: QO,
+    scale: f64,
     optimize: Optimize,
-) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, MaxDivergence<QO>>>
+) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, MaxDivergence>>
 where
     TIA: Number + CastInternalRational,
-    QO: CastInternalRational + DistanceConstant<TIA> + Float,
+    f64: DistanceConstant<TIA>,
 {
     if input_domain.element_domain.nullable() {
         return fallible!(MakeMeasurement, "input domain must be non-nullable");
@@ -95,27 +95,27 @@ where
     )
 }
 
-pub(crate) fn report_noisy_max_gumbel_map<QI, QO>(
-    scale: QO,
+pub(crate) fn report_noisy_max_gumbel_map<QI>(
+    scale: f64,
     input_metric: LInfDistance<QI>,
-) -> impl Fn(&QI) -> Fallible<QO>
+) -> impl Fn(&QI) -> Fallible<f64>
 where
     QI: Clone + InfAdd,
-    QO: Float + InfCast<QI>,
+    f64: InfCast<QI>,
 {
     move |d_in: &QI| {
         // convert L_\infty distance to range distance
         let d_in = input_metric.range_distance(d_in.clone())?;
 
         // convert data type to QO
-        let d_in = QO::inf_cast(d_in)?;
+        let d_in = f64::inf_cast(d_in)?;
 
         if d_in.is_sign_negative() {
             return fallible!(InvalidDistance, "sensitivity must be non-negative");
         }
 
         if scale.is_zero() {
-            return Ok(QO::infinity());
+            return Ok(f64::INFINITY);
         }
 
         // d_out >= d_in / scale

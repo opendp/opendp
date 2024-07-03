@@ -9,7 +9,7 @@ use crate::{
         any::AnyMeasure,
         util::{self, into_c_char_p, to_str, ExtrinsicObject, Type},
     },
-    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
 };
 
 use super::SmoothedMaxDivergence;
@@ -74,80 +74,92 @@ pub extern "C" fn opendp_measures__measure_distance_type(
     )))
 }
 
-#[bootstrap(returns(c_type = "FfiResult<AnyMeasure *>"))]
+#[bootstrap(
+    generics(T(default = "f64")),
+    returns(c_type = "FfiResult<AnyMeasure *>")
+)]
 /// Construct an instance of the `MaxDivergence` measure.
 ///
 /// # Arguments
-/// * `T` - The type of the distance.
-fn max_divergence<T>() -> MaxDivergence<T> {
-    MaxDivergence::default()
+/// * `T` - DEPRECATED. The type of the distance.
+fn max_divergence<T>() -> MaxDivergence {
+    MaxDivergence
 }
 #[no_mangle]
 pub extern "C" fn opendp_measures__max_divergence(T: *const c_char) -> FfiResult<*mut AnyMeasure> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMeasure> {
-        Ok(AnyMeasure::new(max_divergence::<T>())).into()
-    }
     let T = try_!(Type::try_from(T));
-    dispatch!(monomorphize, [(T, @numbers)], ())
+    if T != Type::of::<f64>() {
+        return err!(FailedFunction, "T is deprecated, and may now only be f64.").into();
+    }
+    Ok(AnyMeasure::new(max_divergence::<f64>())).into()
 }
 
-#[bootstrap(returns(c_type = "FfiResult<AnyMeasure *>"))]
+#[bootstrap(
+    generics(T(default = "f64")),
+    returns(c_type = "FfiResult<AnyMeasure *>")
+)]
 /// Construct an instance of the `SmoothedMaxDivergence` measure.
 ///
 /// # Arguments
-/// * `T` - The type of the distance.
-fn smoothed_max_divergence<T>() -> SmoothedMaxDivergence<T> {
-    SmoothedMaxDivergence::default()
+/// * `T` - DEPRECATED. The type of the distance.
+fn smoothed_max_divergence<T>() -> SmoothedMaxDivergence {
+    SmoothedMaxDivergence
 }
 #[no_mangle]
 pub extern "C" fn opendp_measures__smoothed_max_divergence(
     T: *const c_char,
 ) -> FfiResult<*mut AnyMeasure> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMeasure> {
-        Ok(AnyMeasure::new(smoothed_max_divergence::<T>())).into()
-    }
     let T = try_!(Type::try_from(T));
-    dispatch!(monomorphize, [(T, @numbers)], ())
+    if T != Type::of::<f64>() {
+        return err!(FailedFunction, "T is deprecated, and may now only be f64.").into();
+    }
+    Ok(AnyMeasure::new(smoothed_max_divergence::<f64>())).into()
 }
 
-#[bootstrap(returns(c_type = "FfiResult<AnyMeasure *>"))]
+#[bootstrap(
+    generics(T(default = "f64")),
+    returns(c_type = "FfiResult<AnyMeasure *>")
+)]
 /// Construct an instance of the `FixedSmoothedMaxDivergence` measure.
 ///
 /// # Arguments
-/// * `T` - The atomic type of the distance.
-fn fixed_smoothed_max_divergence<T>() -> FixedSmoothedMaxDivergence<T> {
-    FixedSmoothedMaxDivergence::default()
+/// * `T` - DEPRECATED. The atomic type of the distance.
+fn fixed_smoothed_max_divergence<T>() -> Approximate<MaxDivergence> {
+    Approximate(MaxDivergence)
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_measures__fixed_smoothed_max_divergence(
     T: *const c_char,
 ) -> FfiResult<*mut AnyMeasure> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMeasure> {
-        Ok(AnyMeasure::new(fixed_smoothed_max_divergence::<T>())).into()
-    }
     let T = try_!(Type::try_from(T));
-    dispatch!(monomorphize, [(T, @numbers)], ())
+    if T != Type::of::<f64>() {
+        return err!(FailedFunction, "T is deprecated, and may now only be f64.").into();
+    }
+    Ok(AnyMeasure::new(fixed_smoothed_max_divergence::<f64>())).into()
 }
 
-#[bootstrap(returns(c_type = "FfiResult<AnyMeasure *>"))]
+#[bootstrap(
+    generics(T(default = "f64")),
+    returns(c_type = "FfiResult<AnyMeasure *>")
+)]
 /// Construct an instance of the `ZeroConcentratedDivergence` measure.
 ///
 /// # Arguments
-/// * `T` - The type of the distance.
-fn zero_concentrated_divergence<T>() -> ZeroConcentratedDivergence<T> {
-    ZeroConcentratedDivergence::default()
+/// * `T` - DEPRECATED. The type of the distance.
+fn zero_concentrated_divergence<T>() -> ZeroConcentratedDivergence {
+    ZeroConcentratedDivergence
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_measures__zero_concentrated_divergence(
     T: *const c_char,
 ) -> FfiResult<*mut AnyMeasure> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMeasure> {
-        Ok(AnyMeasure::new(zero_concentrated_divergence::<T>())).into()
-    }
     let T = try_!(Type::try_from(T));
-    dispatch!(monomorphize, [(T, @numbers)], ())
+    if T != Type::of::<f64>() {
+        return err!(FailedFunction, "T is deprecated, and may now only be f64.").into();
+    }
+    Ok(AnyMeasure::new(zero_concentrated_divergence::<f64>())).into()
 }
 
 #[derive(Clone, Default)]

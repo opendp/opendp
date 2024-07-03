@@ -351,7 +351,7 @@ struct FfiResult_____AnyMeasurement opendp_combinators__make_pureDP_to_fixed_app
 struct FfiResult_____AnyMeasurement opendp_combinators__make_pureDP_to_zCDP(const AnyMeasurement *measurement);
 
 struct FfiResult_____AnyMeasurement opendp_combinators__make_fix_delta(const AnyMeasurement *measurement,
-                                                                       const struct AnyObject *delta);
+                                                                       double delta);
 
 /**
  * Internal function. Free the memory associated with `error`.
@@ -701,7 +701,7 @@ struct FfiResult_____c_void opendp_data__extrinsic_object_free(struct ExtrinsicO
  * Epsilon at a given `delta`.
  */
 struct FfiResult_____AnyObject opendp_data__smd_curve_epsilon(const struct AnyObject *curve,
-                                                              const struct AnyObject *delta);
+                                                              double delta);
 
 /**
  * wrap an AnyObject in an FfiResult::Ok(this)
@@ -880,27 +880,24 @@ struct FfiResult_____AnyDomain opendp_domains__expr_domain(const struct AnyDomai
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_gaussian(const struct AnyDomain *input_domain,
                                                                        const struct AnyMetric *input_metric,
-                                                                       const void *scale,
+                                                                       double scale,
                                                                        const int32_t *k,
                                                                        const char *MO);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_geometric(const struct AnyDomain *input_domain,
                                                                         const struct AnyMetric *input_metric,
-                                                                        const void *scale,
-                                                                        const struct AnyObject *bounds,
-                                                                        const char *QO);
+                                                                        double scale,
+                                                                        const struct AnyObject *bounds);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_report_noisy_max_gumbel(const struct AnyDomain *input_domain,
                                                                                       const struct AnyMetric *input_metric,
-                                                                                      const struct AnyObject *scale,
-                                                                                      const char *optimize,
-                                                                                      const char *QO);
+                                                                                      double scale,
+                                                                                      const char *optimize);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_laplace(const struct AnyDomain *input_domain,
                                                                       const struct AnyMetric *input_metric,
-                                                                      const void *scale,
-                                                                      const int32_t *k,
-                                                                      const char *QO);
+                                                                      double scale,
+                                                                      const int32_t *k);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_private_expr(const struct AnyDomain *input_domain,
                                                                            const struct AnyMetric *input_metric,
@@ -924,18 +921,16 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_user_measurement(c
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_laplace_threshold(const struct AnyDomain *input_domain,
                                                                                 const struct AnyMetric *input_metric,
-                                                                                const void *scale,
+                                                                                double scale,
                                                                                 const void *threshold,
                                                                                 long k);
 
-struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_response_bool(const void *prob,
-                                                                                       c_bool constant_time,
-                                                                                       const char *QO);
+struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_response_bool(double prob,
+                                                                                       c_bool constant_time);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_response(const struct AnyObject *categories,
-                                                                                  const void *prob,
-                                                                                  const char *T,
-                                                                                  const char *QO);
+                                                                                  double prob,
+                                                                                  const char *T);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_response_bitvec(const struct AnyDomain *input_domain,
                                                                                          const struct AnyMetric *input_metric,

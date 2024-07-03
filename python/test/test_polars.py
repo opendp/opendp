@@ -96,7 +96,7 @@ def test_expr_ffi():
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
+    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
 )
 def test_private_lazyframe_explicit_sum(measure):
     pl = pytest.importorskip("polars")
@@ -123,7 +123,7 @@ def test_private_lazyframe_explicit_sum(measure):
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
+    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
 )
 def test_private_lazyframe_sum(measure):
     pl = pytest.importorskip("polars")
@@ -148,7 +148,7 @@ def test_private_lazyframe_sum(measure):
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
+    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
 )
 def test_private_lazyframe_mean(measure):
     pl = pytest.importorskip("polars")
@@ -198,7 +198,7 @@ def test_private_expr():
         dp.m.make_private_expr(
             domain,
             dp.symmetric_distance(),
-            dp.max_divergence(T=float),
+            dp.max_divergence(),
             pl.col("A").sum(),
         )
 
@@ -214,7 +214,7 @@ def test_private_lazyframe_median():
     expr = pl.col("B").dp.median(candidates, 1.0)
     plan = seed(lf.collect_schema()).group_by("A").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
-        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan, 0.0
     )
     expect = pl.DataFrame(
         [pl.Series("A", [1.0], dtype=pl.Float64), pl.Series("B", [3], dtype=pl.Int64)]
@@ -224,7 +224,7 @@ def test_private_lazyframe_median():
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
+    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
 )
 def test_filter(measure):
     """ensure that expr domain's carrier type can be passed to/from Rust"""
@@ -249,7 +249,7 @@ def test_onceframe_multi_collect():
     lf_domain, lf = example_lf()
     plan = seed(lf.collect_schema()).select(pl.len().dp.noise(0.0))
     m_lf = dp.m.make_private_lazyframe(
-        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
     )
 
     of = m_lf(lf)
@@ -264,7 +264,7 @@ def test_onceframe_lazy():
     lf_domain, lf = example_lf()
     plan = seed(lf.collect_schema()).select(pl.len().dp.noise(0.0))
     m_lf = dp.m.make_private_lazyframe(
-        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
     )
 
     of = m_lf(lf)
@@ -272,7 +272,7 @@ def test_onceframe_lazy():
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
+    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
 )
 def test_mechanisms(measure):
     pl_testing = pytest.importorskip("polars.testing")
@@ -281,7 +281,7 @@ def test_mechanisms(measure):
 
     lf_domain, lf = example_lf()
 
-    if measure == dp.max_divergence(T=float):
+    if measure == dp.max_divergence():
         expr = pl.len().dp.laplace(0.0)
     else:
         expr = pl.len().dp.gaussian(0.0)
@@ -303,7 +303,7 @@ def test_wrong_mechanism():
     plan = seed(lf.collect_schema()).select(pl.len().dp.gaussian(0.0))
     with pytest.raises(dp.OpenDPException) as err:
         dp.m.make_private_lazyframe(
-            lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
+            lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan, 0.0
         )
     assert "expected Laplace distribution, found Gaussian" in (err.value.message or "")
 

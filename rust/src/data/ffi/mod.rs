@@ -983,10 +983,7 @@ impl Shuffle for AnyObject {
 
 #[bootstrap(
     name = "smd_curve_epsilon",
-    arguments(
-        curve(rust_type = b"null"),
-        delta(rust_type = "$get_atom(object_type(curve))")
-    )
+    arguments(curve(rust_type = b"null"), delta(rust_type = "f64"))
 )]
 /// Internal function. Use an SMDCurve to find epsilon at a given `delta`.
 ///
@@ -999,18 +996,12 @@ impl Shuffle for AnyObject {
 #[no_mangle]
 pub extern "C" fn opendp_data__smd_curve_epsilon(
     curve: *const AnyObject,
-    delta: *const AnyObject,
+    delta: f64,
 ) -> FfiResult<*mut AnyObject> {
-    fn monomorphize<T: 'static>(curve: &AnyObject, delta: &AnyObject) -> Fallible<AnyObject> {
-        let delta = delta.downcast_ref::<T>()?;
-        curve
-            .downcast_ref::<SMDCurve<T>>()?
-            .epsilon(delta)
-            .map(AnyObject::new)
-    }
-    let curve = try_as_ref!(curve);
-    let delta = try_as_ref!(delta);
-    dispatch!(monomorphize, [(delta.type_, @floats)], (curve, delta)).into()
+    try_!(try_as_ref!(curve).downcast_ref::<SMDCurve>())
+        .epsilon(&delta)
+        .map(AnyObject::new)
+        .into()
 }
 
 #[cfg(feature = "polars")]
