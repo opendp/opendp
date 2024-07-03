@@ -4,7 +4,7 @@ use crate::error::*;
 use crate::measures::MaxDivergence;
 use crate::metrics::{AbsoluteDistance, L1Distance};
 use crate::traits::samplers::{sample_discrete_laplace_Z2k, CastInternalRational};
-use crate::traits::{ExactIntCast, Float, FloatBits};
+use crate::traits::{ExactIntCast, Float, FloatBits, InfCast};
 
 use super::laplace_puredp_map;
 
@@ -24,22 +24,29 @@ use super::laplace_puredp_map;
 pub fn make_scalar_float_laplace<T>(
     input_domain: AtomDomain<T>,
     input_metric: AbsoluteDistance<T>,
-    scale: T,
+    scale: f64,
     k: Option<i32>,
-) -> Fallible<Measurement<AtomDomain<T>, T, AbsoluteDistance<T>, MaxDivergence<T>>>
+) -> Fallible<Measurement<AtomDomain<T>, T, AbsoluteDistance<T>, MaxDivergence>>
 where
     T: Float + CastInternalRational,
     i32: ExactIntCast<<T as FloatBits>::Bits>,
+    f64: InfCast<T>,
 {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
 
-    let (k, relaxation) = get_discretization_consts(k)?;
+    let (k, relaxation) = get_discretization_consts::<T>(k)?;
+    let relaxation = f64::inf_cast(relaxation)?;
+    let f_scale = scale.into_rational()?;
 
     Measurement::new(
         input_domain,
-        Function::new_fallible(move |shift: &T| sample_discrete_laplace_Z2k(*shift, scale, k)),
+        Function::new_fallible(move |shift: &T| {
+            let sample = sample_discrete_laplace_Z2k(shift.into_rational()?, f_scale.clone(), k)?;
+
+            Ok(T::from_rational(sample))
+        }),
         input_metric,
         MaxDivergence::default(),
         PrivacyMap::new_fallible(laplace_puredp_map(scale, relaxation)),
@@ -60,18 +67,19 @@ where
 pub fn make_vector_float_laplace<T>(
     input_domain: VectorDomain<AtomDomain<T>>,
     input_metric: L1Distance<T>,
-    scale: T,
+    scale: f64,
     k: Option<i32>,
-) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, L1Distance<T>, MaxDivergence<T>>>
+) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, L1Distance<T>, MaxDivergence>>
 where
     T: Float + CastInternalRational,
     i32: ExactIntCast<<T as FloatBits>::Bits>,
+    f64: InfCast<T>,
 {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
 
-    let (k, mut relaxation): (i32, T) = get_discretization_consts(k)?;
+    let (k, mut relaxation) = get_discretization_consts::<T>(k)?;
 
     if !relaxation.is_zero() {
         let size = input_domain.size.ok_or_else(|| {
@@ -82,12 +90,18 @@ where
         })?;
         relaxation = relaxation.inf_mul(&T::inf_cast(size)?)?;
     }
+    let relaxation = f64::inf_cast(relaxation)?;
+    let r_scale = scale.into_rational()?;
 
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &Vec<T>| {
             arg.iter()
-                .map(|shift| sample_discrete_laplace_Z2k(*shift, scale, k))
+                .map(|shift| {
+                    let sample =
+                        sample_discrete_laplace_Z2k(shift.into_rational()?, r_scale.clone(), k)?;
+                    Ok(T::from_rational(sample))
+                })
                 .collect()
         }),
         input_metric,

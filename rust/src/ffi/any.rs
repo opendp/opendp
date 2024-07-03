@@ -690,18 +690,18 @@ mod tests {
 
     #[test]
     fn test_any_measure() -> Fallible<()> {
-        let measure1 = MaxDivergence::<f64>::default();
-        let measure2 = MaxDivergence::<f64>::default();
+        let measure1 = MaxDivergence;
+        let measure2 = MaxDivergence;
         assert_eq!(measure1, measure2);
 
-        let measure1 = AnyMeasure::new(MaxDivergence::<f64>::default());
-        let measure2 = AnyMeasure::new(MaxDivergence::<f64>::default());
-        let measure3 = AnyMeasure::new(SmoothedMaxDivergence::<f64>::default());
+        let measure1 = AnyMeasure::new(MaxDivergence);
+        let measure2 = AnyMeasure::new(MaxDivergence);
+        let measure3 = AnyMeasure::new(SmoothedMaxDivergence);
         assert_eq!(measure1, measure2);
         assert_ne!(measure1, measure3);
 
-        let _measure1: MaxDivergence<f64> = measure1.downcast()?;
-        let measure3: Fallible<MaxDivergence<f64>> = measure3.downcast();
+        let _measure1: MaxDivergence = measure1.downcast()?;
+        let measure3: Fallible<MaxDivergence> = measure3.downcast();
         assert_eq!(
             measure3.err().unwrap_test().variant,
             ErrorVariant::FailedCast

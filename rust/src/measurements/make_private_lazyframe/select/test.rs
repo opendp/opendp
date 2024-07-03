@@ -20,7 +20,7 @@ fn test_select_no_margin() -> Fallible<()> {
     let m_select = make_private_lazyframe(
         lf_domain,
         SymmetricDistance,
-        MaxDivergence::<f64>::default(),
+        MaxDivergence,
         lf.clone().select(&[len().dp().laplace(Some(0.))]),
         Some(1.),
         None,
@@ -44,7 +44,7 @@ fn test_select() -> Fallible<()> {
     let m_select = make_private_lazyframe(
         lf_domain,
         SymmetricDistance,
-        MaxDivergence::<f64>::default(),
+        MaxDivergence,
         lf.clone().select(&[
             col("A").dp().sum((0, 3), Some(0.)),
             len().dp().laplace(Some(0.)),
@@ -69,7 +69,7 @@ fn test_fail_select_invalid_expression() -> Fallible<()> {
     let error_variant_res = make_private_select::<_, SymmetricDistance, _>(
         lf_domain,
         SymmetricDistance,
-        MaxDivergence::<f64>::default(),
+        MaxDivergence,
         // this expression cannot be parsed into a measurement
         lf.select(&[col("A").sum()]).logical_plan,
         Some(1.),

@@ -55,11 +55,11 @@ Use the :func:`opendp.accuracy.laplacian_scale_to_accuracy` and :func:`opendp.ac
    * - :func:`opendp.measurements.make_laplace`
      - ``AtomDomain<T>``
      - ``AbsoluteDistance<T>``
-     - ``MaxDivergence<QO>``
+     - ``MaxDivergence``
    * - :func:`opendp.measurements.make_laplace`
      - ``VectorDomain<AtomDomain<T>>``
      - ``L1Distance<T>``
-     - ``MaxDivergence<QO>``
+     - ``MaxDivergence``
 
 
 Gaussian Noise
@@ -79,11 +79,11 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
    * - :func:`opendp.measurements.make_gaussian`
      - ``AtomDomain<T>``
      - ``AbsoluteDistance<QI>``
-     - ``ZeroConcentratedDivergence<QO>``
+     - ``ZeroConcentratedDivergence``
    * - :func:`opendp.measurements.make_gaussian`
      - ``VectorDomain<AtomDomain<T>>``
      - ``L2Distance<QI>``
-     - ``ZeroConcentratedDivergence<QO>``
+     - ``ZeroConcentratedDivergence``
 
 
 Geometric Noise
@@ -117,7 +117,7 @@ See the `Histograms notebook <../../../getting-started/examples/histograms.html>
    * - :func:`opendp.measurements.make_laplace_threshold`
      - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
      - ``L1Distance<TV>``
-     - ``SmoothedMaxDivergence<TV>``
+     - ``SmoothedMaxDivergence``
 
 Randomized Response
 -------------------
@@ -136,8 +136,8 @@ See the `Randomized Response notebook <randomized-response.html>`_ for code exam
    * - :func:`opendp.measurements.make_randomized_response_bool`
      - ``AtomDomain<bool>``
      - ``DiscreteDistance``
-     - ``MaxDivergence<QO>``
+     - ``MaxDivergence``
    * - :func:`opendp.measurements.make_randomized_response`
      - ``AtomDomain<T>``
      - ``DiscreteDistance``
-     - ``MaxDivergence<QO>``
+     - ``MaxDivergence``

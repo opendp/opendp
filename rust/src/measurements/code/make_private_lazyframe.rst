@@ -29,7 +29,7 @@ We now have all the pieces to make our measurement function using `make_private_
 >>> dp_sum_pets_by_grade = dp.m.make_private_lazyframe(
 ...     input_domain=lf_domain_with_margin,
 ...     input_metric=dp.symmetric_distance(),
-...     output_measure=dp.max_divergence(T=float),
+...     output_measure=dp.max_divergence(),
 ...     lazyframe=plan,
 ...     global_scale=1.0)
 
