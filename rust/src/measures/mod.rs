@@ -6,9 +6,7 @@
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
-use std::{
-    cmp::Ordering, fmt::{Debug, Formatter}, sync::Arc
-};
+use std::{fmt::{Debug, Formatter}, sync::Arc};
 
 use crate::{core::Measure, error::Fallible};
 
