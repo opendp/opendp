@@ -45,7 +45,7 @@ pub fn make_expr_report_noisy_max<MI: 'static + UnboundedMetric>(
     input_metric: PartitionDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MaxDivergence<f64>>>
+) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MaxDivergence>>
 where
     Expr: StableExpr<PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
     (ExprDomain, MI): MetricSpace,

@@ -10,7 +10,7 @@ use crate::{
     core::{Function, Measure, Measurement, Metric, MetricSpace},
     domains::{DslPlanDomain, ExprDomain, LazyFrameDomain},
     error::Fallible,
-    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
     polars::{get_disabled_features_message, OnceFrame},
     transformations::{traits::UnboundedMetric, DatasetMetric, StableDslPlan},
@@ -146,10 +146,10 @@ pub trait PrivateDslPlan<MI: Metric, MO: Measure> {
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MI, MO>>;
 }
 
-impl<MS> PrivateDslPlan<MS, MaxDivergence<f64>> for DslPlan
+impl<MS> PrivateDslPlan<MS, MaxDivergence> for DslPlan
 where
     MS: 'static + UnboundedMetric + DatasetMetric,
-    Expr: PrivateExpr<PartitionDistance<MS>, MaxDivergence<f64>>,
+    Expr: PrivateExpr<PartitionDistance<MS>, MaxDivergence>,
     DslPlan: StableDslPlan<MS, MS>,
     (DslPlanDomain, MS): MetricSpace,
     (ExprDomain, MS): MetricSpace,
@@ -158,10 +158,10 @@ where
         self,
         input_domain: DslPlanDomain,
         input_metric: MS,
-        output_measure: MaxDivergence<f64>,
+        output_measure: MaxDivergence,
         global_scale: Option<f64>,
         threshold: Option<u32>,
-    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, MaxDivergence<f64>>> {
+    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, MaxDivergence>> {
         if let Some(meas) = postprocess::match_postprocess(
             input_domain.clone(),
             input_metric.clone(),
@@ -184,10 +184,10 @@ where
     }
 }
 
-impl<MS> PrivateDslPlan<MS, ZeroConcentratedDivergence<f64>> for DslPlan
+impl<MS> PrivateDslPlan<MS, ZeroConcentratedDivergence> for DslPlan
 where
     MS: 'static + UnboundedMetric + DatasetMetric,
-    Expr: PrivateExpr<PartitionDistance<MS>, ZeroConcentratedDivergence<f64>>,
+    Expr: PrivateExpr<PartitionDistance<MS>, ZeroConcentratedDivergence>,
     DslPlan: StableDslPlan<MS, MS>,
     (DslPlanDomain, MS): MetricSpace,
     (ExprDomain, MS): MetricSpace,
@@ -196,10 +196,10 @@ where
         self,
         input_domain: DslPlanDomain,
         input_metric: MS,
-        output_measure: ZeroConcentratedDivergence<f64>,
+        output_measure: ZeroConcentratedDivergence,
         global_scale: Option<f64>,
         threshold: Option<u32>,
-    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, ZeroConcentratedDivergence<f64>>> {
+    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, ZeroConcentratedDivergence>> {
         if let Some(meas) = postprocess::match_postprocess(
             input_domain.clone(),
             input_metric.clone(),
@@ -222,11 +222,11 @@ where
     }
 }
 
-impl<MS> PrivateDslPlan<MS, FixedSmoothedMaxDivergence<f64>> for DslPlan
+impl<MS> PrivateDslPlan<MS, Approximate<MaxDivergence>> for DslPlan
 where
     MS: 'static + UnboundedMetric + DatasetMetric,
-    Expr: PrivateExpr<PartitionDistance<MS>, MaxDivergence<f64>>
-        + PrivateExpr<PartitionDistance<MS>, FixedSmoothedMaxDivergence<f64>>,
+    Expr: PrivateExpr<PartitionDistance<MS>, MaxDivergence>
+        + PrivateExpr<PartitionDistance<MS>, Approximate<MaxDivergence>>,
     DslPlan: StableDslPlan<MS, MS>,
     (DslPlanDomain, MS): MetricSpace,
     (ExprDomain, MS): MetricSpace,
@@ -235,10 +235,10 @@ where
         self,
         input_domain: DslPlanDomain,
         input_metric: MS,
-        output_measure: FixedSmoothedMaxDivergence<f64>,
+        output_measure: Approximate<MaxDivergence>,
         global_scale: Option<f64>,
         threshold: Option<u32>,
-    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, FixedSmoothedMaxDivergence<f64>>> {
+    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, Approximate<MaxDivergence>>> {
         if let Some(meas) = postprocess::match_postprocess(
             input_domain.clone(),
             input_metric.clone(),
@@ -264,7 +264,7 @@ where
         make_pureDP_to_fixed_approxDP(self.make_private(
             input_domain,
             input_metric,
-            MaxDivergence::<f64>::default(),
+            MaxDivergence,
             global_scale,
             threshold,
         )?)

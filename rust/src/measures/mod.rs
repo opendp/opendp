@@ -2,22 +2,15 @@
 //!
 //! A Measure is used to measure the distance between distributions.
 //! The distance is expressed in terms of an **associated type**.
-//!
-//! # Example
-//! `MaxDivergence<Q>` has an associated distance type of `Q`.
-//! This means that the symmetric distance between vectors is expressed in terms of the type `Q`.
-//! In this context Q is usually [`f32`] or [`f64`].
 
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
 use std::{
-    fmt::{Debug, Formatter},
-    marker::PhantomData,
-    sync::Arc,
+    cmp::Ordering, fmt::{Debug, Formatter}, sync::Arc
 };
 
-use crate::{core::Measure, domains::type_name, error::Fallible};
+use crate::{core::Measure, error::Fallible};
 
 /// $\epsilon$-pure differential privacy.
 ///
@@ -32,33 +25,33 @@ use crate::{core::Measure, domains::type_name, error::Fallible};
 /// ```math
 /// D_{\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S]}{\Pr[M(v) \in S]} \Big] \leq d.
 /// ```
-pub struct MaxDivergence<Q>(PhantomData<fn() -> Q>);
-impl<Q> Default for MaxDivergence<Q> {
+pub struct MaxDivergence;
+impl Default for MaxDivergence {
     fn default() -> Self {
-        MaxDivergence(PhantomData)
+        MaxDivergence
     }
 }
 
-impl<Q> Clone for MaxDivergence<Q> {
+impl Clone for MaxDivergence {
     fn clone(&self) -> Self {
-        MaxDivergence(PhantomData)
+        MaxDivergence
     }
 }
 
-impl<Q> PartialEq for MaxDivergence<Q> {
+impl PartialEq for MaxDivergence {
     fn eq(&self, _other: &Self) -> bool {
         true
     }
 }
 
-impl<Q> Debug for MaxDivergence<Q> {
+impl Debug for MaxDivergence {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "MaxDivergence({})", type_name!(Q))
+        write!(f, "MaxDivergence()")
     }
 }
 
-impl<Q> Measure for MaxDivergence<Q> {
-    type Distance = Q;
+impl Measure for MaxDivergence {
+    type Distance = f64;
 }
 
 /// $\epsilon(\delta)$-approximate differential privacy.
@@ -79,99 +72,101 @@ impl<Q> Measure for MaxDivergence<Q> {
 /// ```math
 /// D_{S\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S] + \delta}{\Pr[M(v) \in S]} \Big] \leq \epsilon.
 /// ```
-pub struct SmoothedMaxDivergence<Q>(PhantomData<fn() -> Q>);
+pub struct SmoothedMaxDivergence;
 
-impl<Q> Default for SmoothedMaxDivergence<Q> {
+impl Default for SmoothedMaxDivergence {
     fn default() -> Self {
-        SmoothedMaxDivergence(PhantomData)
+        SmoothedMaxDivergence
     }
 }
-impl<Q> Clone for SmoothedMaxDivergence<Q> {
+impl Clone for SmoothedMaxDivergence {
     fn clone(&self) -> Self {
-        SmoothedMaxDivergence(PhantomData)
+        SmoothedMaxDivergence
     }
 }
 
-impl<Q> PartialEq for SmoothedMaxDivergence<Q> {
+impl PartialEq for SmoothedMaxDivergence {
     fn eq(&self, _other: &Self) -> bool {
         true
     }
 }
-impl<Q> Debug for SmoothedMaxDivergence<Q> {
+impl Debug for SmoothedMaxDivergence {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "SmoothedMaxDivergence({})", type_name!(Q))
+        write!(f, "SmoothedMaxDivergence()")
     }
 }
 
-impl<Q> Measure for SmoothedMaxDivergence<Q> {
-    type Distance = SMDCurve<Q>;
+impl Measure for SmoothedMaxDivergence {
+    type Distance = SMDCurve;
 }
 
 /// A function mapping from $\delta$ to $\epsilon$
 ///
 /// SMD stands for "Smoothed Max Divergence".
 /// This is the distance type for [`SmoothedMaxDivergence`].
-pub struct SMDCurve<Q>(Arc<dyn Fn(&Q) -> Fallible<Q> + Send + Sync>);
+pub struct SMDCurve(Arc<dyn Fn(&f64) -> Fallible<f64> + Send + Sync>);
 
-impl<Q> Clone for SMDCurve<Q> {
+impl Clone for SMDCurve {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
 
-impl<Q> SMDCurve<Q> {
-    pub fn new(epsilon: impl Fn(&Q) -> Fallible<Q> + 'static + Send + Sync) -> Self {
+impl SMDCurve {
+    pub fn new(epsilon: impl Fn(&f64) -> Fallible<f64> + 'static + Send + Sync) -> Self {
         SMDCurve(Arc::new(epsilon))
     }
 
     // these functions allow direct invocation as a method, making parens unnecessary
-    pub fn epsilon(&self, delta: &Q) -> Fallible<Q> {
+    pub fn epsilon(&self, delta: &f64) -> Fallible<f64> {
         (self.0)(delta)
     }
 }
 
-/// $(\epsilon, \delta)$-approximate differential privacy.
-///
-/// The greatest divergence between any randomly selected subset of the support,
-/// with an additive tolerance for error.
+/// $\delta$-approximate differential privacy for any compatible privacy measure $MO$.
 ///
 /// # Proof Definition
 ///
 /// ### `d`-closeness
-/// For any two vectors $u, v \in \texttt{D}$ and any $d$ of type $(\texttt{Q}, \texttt{Q})$,
-/// where $d = (\epsilon, \delta)$,
-/// we say that $M(u), M(v)$ are $d$-close under the smoothed max divergence measure (abbreviated as $D_{S\infty}$) whenever
+/// For any two data sets $x, x' \in \texttt{D}$ and any $d$ of type $(\texttt{MO::Distance}, \texttt{MO::Distance})$,
+/// where $d = (d', \delta)$,
+/// we say that $M(x), M(x)$ are $d$-close under the $\delta$-approximate $MO$-DP (abbreviated as $D_{MO}^{\delta}$)
+/// when there exist events $E$ (depending on $M(x)$) and $E'$ (depending on $M(x')$)
+/// such that $\Pr[E] \ge 1 - \delta$, $\Pr[E'] \ge 1 - \delta$, and
 ///
 /// ```math
-/// D_{S\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S] + \delta}{\Pr[M(v) \in S]} \Big] \leq \epsilon.
+/// D_{MO}^{\delta}(M(x)|_E \|\| M(x')|_{E'}) = D_{MO}(M(x)|_E \|\| M(x')|_{E'})
 /// ```
-pub struct FixedSmoothedMaxDivergence<Q>(PhantomData<fn() -> Q>);
+///
+/// where $(M(x)|_E) denotes the distribution of $M(x)$ conditioned on the event $E$.
+///
+pub struct Approximate<M: Measure>(pub M);
 
-impl<Q> Default for FixedSmoothedMaxDivergence<Q> {
+impl<M: Measure + Default> Default for Approximate<M> {
     fn default() -> Self {
-        FixedSmoothedMaxDivergence(PhantomData)
+        Approximate(M::default())
     }
 }
-impl<Q> Clone for FixedSmoothedMaxDivergence<Q> {
+impl<M: Measure> Clone for Approximate<M> {
     fn clone(&self) -> Self {
-        FixedSmoothedMaxDivergence(PhantomData)
+        Approximate(self.0.clone())
     }
 }
 
-impl<Q> PartialEq for FixedSmoothedMaxDivergence<Q> {
-    fn eq(&self, _other: &Self) -> bool {
-        true
+impl<M: Measure> PartialEq for Approximate<M> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
     }
 }
 
-impl<Q> Debug for FixedSmoothedMaxDivergence<Q> {
+impl<M: Measure> Debug for Approximate<M> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "FixedSmoothedMaxDivergence({})", type_name!(Q))
+        write!(f, "Approximate({:?})", self.0)
     }
 }
 
-impl<Q> Measure for FixedSmoothedMaxDivergence<Q> {
-    type Distance = (Q, Q);
+impl<M: Measure> Measure for Approximate<M> {
+    type Distance = (M::Distance, f64);
 }
 
 /// $\rho$-zero concentrated differential privacy.
@@ -189,30 +184,30 @@ impl<Q> Measure for FixedSmoothedMaxDivergence<Q> {
 /// D_{\alpha}(P \| Q) = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Q} \Big[\ln \left( \dfrac{P(x)}{Q(x)} \right)^\alpha \Big] \leq d \alpha.
 /// ```
 /// for all possible choices of $\alpha \in (1, \infty)$.
-pub struct ZeroConcentratedDivergence<Q>(PhantomData<fn() -> Q>);
-impl<Q> Default for ZeroConcentratedDivergence<Q> {
+pub struct ZeroConcentratedDivergence;
+impl Default for ZeroConcentratedDivergence {
     fn default() -> Self {
-        ZeroConcentratedDivergence(PhantomData)
+        ZeroConcentratedDivergence
     }
 }
-impl<Q> Clone for ZeroConcentratedDivergence<Q> {
+impl Clone for ZeroConcentratedDivergence {
     fn clone(&self) -> Self {
-        ZeroConcentratedDivergence(PhantomData)
+        ZeroConcentratedDivergence
     }
 }
 
-impl<Q> PartialEq for ZeroConcentratedDivergence<Q> {
+impl PartialEq for ZeroConcentratedDivergence {
     fn eq(&self, _other: &Self) -> bool {
         true
     }
 }
 
-impl<Q> Debug for ZeroConcentratedDivergence<Q> {
+impl Debug for ZeroConcentratedDivergence {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "ZeroConcentratedDivergence({})", type_name!(Q))
+        write!(f, "ZeroConcentratedDivergence()")
     }
 }
 
-impl<Q> Measure for ZeroConcentratedDivergence<Q> {
-    type Distance = Q;
+impl Measure for ZeroConcentratedDivergence {
+    type Distance = f64;
 }

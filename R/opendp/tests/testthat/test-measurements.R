@@ -122,7 +122,7 @@ test_that("test_gaussian_smoothed_max_divergence", {
 
 test_that("test_gaussian_zcdp", {
   input_space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
-  meas <- input_space |> then_gaussian(scale = 1.5, .MO = "ZeroConcentratedDivergence<f64>")
+  meas <- input_space |> then_gaussian(scale = 1.5, .MO = "ZeroConcentratedDivergence")
   meas(arg = 100.)
 
   expect_lt(meas(d_in = 1.), 0.223)

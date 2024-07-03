@@ -40,6 +40,7 @@ pub extern "C" fn opendp_measurements__make_alp_queryable(
         CI: 'static + Integer + DistanceConstant<CI> + InfCast<CO> + ToPrimitive,
         CO: 'static + Float + DistanceConstant<CO> + InfCast<FBig> + InfCast<CI>,
         FBig: InfCast<CO>,
+        f64: InfCast<CI> + InfCast<CO>,
         (MapDomain<AtomDomain<K>, AtomDomain<CI>>, L1Distance<CI>): MetricSpace,
     {
         let input_domain =

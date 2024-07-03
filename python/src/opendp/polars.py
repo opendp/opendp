@@ -23,6 +23,7 @@ from opendp.mod import (
     binary_search_chain,
 )
 from opendp.domains import series_domain, lazyframe_domain, option_domain, atom_domain
+from opendp.measures import fixed_smoothed_max_divergence
 from opendp.measurements import make_private_lazyframe
 
 
@@ -531,7 +532,7 @@ try:
                 )
             
             # when the output measure is δ-approximate, then there are two free parameters to tune
-            if query._output_measure.type.origin == "FixedSmoothedMaxDivergence":  # type: ignore[union-attr]
+            if query._output_measure == fixed_smoothed_max_divergence():
 
                 # search for a scale parameter. Solve for epsilon first, 
                 # setting threshold to u32::MAX so as not to interfere with the search for a suitable scale parameter
@@ -639,14 +640,6 @@ try:
             Compute aggregations for each group of a group by operation.
             """
             lf_plan = self._lgb_plan.agg(*aggs, **named_aggs)
-            return LazyFrameQuery(lf_plan, self._query)
-        
-
-        def len(self, name: str | None = None) -> LazyFrameQuery:
-            """
-            Return the number of rows in each group.
-            """
-            lf_plan = self._lgb_plan.len(name=name)
             return LazyFrameQuery(lf_plan, self._query)
 
 

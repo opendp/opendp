@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{FixedSmoothedMaxDivergence, SmoothedMaxDivergence},
+    measures::{Approximate, MaxDivergence, SmoothedMaxDivergence},
 };
 
 #[cfg(feature = "ffi")]
@@ -17,10 +17,10 @@ mod ffi;
 /// * `DI` - Input Domain
 /// * `TO` - Output Type
 /// * `MI` - Input Metric.
-/// * `MO` - Output Measure of the input argument. Must be `SmoothedMaxDivergence<Q>`
+/// * `MO` - Output Measure of the input argument. Must be `SmoothedMaxDivergence`
 pub fn make_fix_delta<DI, TO, MI, MO>(
     m: &Measurement<DI, TO, MI, MO>,
-    delta: MO::Atom,
+    delta: f64,
 ) -> Fallible<Measurement<DI, TO, MI, MO::FixedMeasure>>
 where
     DI: Domain,
@@ -43,7 +43,6 @@ where
 }
 
 pub trait FixDeltaMeasure: Measure {
-    type Atom: Send + Sync;
     type FixedMeasure: Measure;
 
     // This fn is used for FFI support
@@ -52,18 +51,17 @@ pub trait FixDeltaMeasure: Measure {
     fn fix_delta(
         &self,
         curve: &Self::Distance,
-        delta: &Self::Atom,
+        delta: &f64,
     ) -> Fallible<<Self::FixedMeasure as Measure>::Distance>;
 }
 
-impl<Q: Clone + Send + Sync> FixDeltaMeasure for SmoothedMaxDivergence<Q> {
-    type Atom = Q;
-    type FixedMeasure = FixedSmoothedMaxDivergence<Q>;
+impl FixDeltaMeasure for SmoothedMaxDivergence {
+    type FixedMeasure = Approximate<MaxDivergence>;
 
     fn new_fixed_measure(&self) -> Fallible<Self::FixedMeasure> {
-        Ok(FixedSmoothedMaxDivergence::default())
+        Ok(Approximate::default())
     }
-    fn fix_delta(&self, curve: &Self::Distance, delta: &Q) -> Fallible<(Q, Q)> {
+    fn fix_delta(&self, curve: &Self::Distance, delta: &f64) -> Fallible<(f64, f64)> {
         curve.epsilon(delta).map(|v| (v, delta.clone()))
     }
 }

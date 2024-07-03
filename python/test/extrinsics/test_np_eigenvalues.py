@@ -25,6 +25,6 @@ def test_np_eigenvalues():
     assert trans.map(1) == 1
 
     # also test the private constructor
-    meas = space >> then_private_np_eigenvalues(dp.max_divergence(T=float), scale=1.0)
+    meas = space >> then_private_np_eigenvalues(dp.max_divergence(), scale=1.0)
     print(meas(data))
     assert meas.map(1) == 1.0
