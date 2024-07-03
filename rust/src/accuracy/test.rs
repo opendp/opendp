@@ -5,11 +5,12 @@ use super::*;
 use crate::domains::AtomDomain;
 use crate::error::ExplainUnwrap;
 use crate::measurements::{
-    make_gaussian, make_scalar_float_gaussian, make_scalar_float_laplace,
+    make_gaussian, make_laplace, make_scalar_float_gaussian, make_scalar_float_laplace,
     make_scalar_integer_laplace,
 };
 use crate::measures::ZeroConcentratedDivergence;
 use crate::metrics::AbsoluteDistance;
+use crate::traits::samplers::SampleUniformIntBelow;
 
 #[test]
 fn test_comparison() -> Fallible<()> {
@@ -306,6 +307,32 @@ pub fn test_empirical_discrete_gaussian_accuracy() -> Fallible<()> {
         / n as f64;
 
     println!("Discrete gaussian significance levels/alpha");
+    println!("Theoretical: {:?}", theoretical_alpha);
+    println!("Empirical:   {:?}", empirical_alpha);
+    assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
+    Ok(())
+}
+
+#[test]
+pub fn test_empirical_integrate_discrete_laplace_tail() -> Fallible<()> {
+    let scale = 1.;
+    let tail = 1 + u32::sample_uniform_int_below(10, None)?;
+    let theoretical_alpha = integrate_discrete_laplacian_tail(scale, tail)?;
+
+    println!("alpha: {}", theoretical_alpha);
+    let m_dlap = make_laplace(
+        AtomDomain::<i8>::default(),
+        AbsoluteDistance::default(),
+        scale,
+        None,
+    )?;
+    let n = 50_000;
+    let empirical_alpha = (0..n)
+        .filter(|_| m_dlap.invoke(&0).unwrap().clamp(-127, 127) > tail as i8)
+        .count() as f64
+        / n as f64;
+
+    println!("Discrete Laplace tail significance levels/alpha");
     println!("Theoretical: {:?}", theoretical_alpha);
     println!("Empirical:   {:?}", empirical_alpha);
     assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);

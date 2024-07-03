@@ -14,7 +14,14 @@ from dataclasses import dataclass
 import os
 from typing import Literal, Tuple
 from opendp._lib import lib_path
-from opendp.mod import Domain, Measurement, assert_features
+from opendp.mod import (
+    Domain,
+    Measurement,
+    OpenDPException,
+    assert_features,
+    binary_search,
+    binary_search_chain,
+)
 from opendp.domains import series_domain, lazyframe_domain, option_domain, atom_domain
 from opendp.measurements import make_private_lazyframe
 
@@ -142,6 +149,7 @@ class DPExpr(object):
         [(col("numbers").clip([...]).sum()...:noise()) / (len())]
         """
         import polars as pl  # type: ignore[import-not-found]
+
         return self.expr.dp.sum(bounds, scale) / pl.len()
 
     def _discrete_quantile_score(self, alpha: float, candidates: list[float]):
@@ -398,25 +406,46 @@ try:
 
         def resolve(self) -> Measurement:
             """Resolve the query into a measurement."""
-            from opendp.context import PartialChain
 
             # access attributes of self without getting intercepted by Self.__getattribute__
             lf_plan = object.__getattribute__(self, "_lf_plan")
             query = object.__getattribute__(self, "_query")
             input_domain, input_metric = query._chain
+            d_in, d_out = query._d_in, query._d_out
 
-            # create an updated query and then resolve it into a measurement
-            return query.new_with(
-                chain=PartialChain(
-                    lambda s: make_private_lazyframe(
-                        input_domain=input_domain,
-                        input_metric=input_metric,
-                        output_measure=query._output_measure,
-                        lazyframe=lf_plan,
-                        global_scale=s,
-                    )
+            def make(scale, threshold=None):
+                return make_private_lazyframe(
+                    input_domain=input_domain,
+                    input_metric=input_metric,
+                    output_measure=query._output_measure,
+                    lazyframe=lf_plan,
+                    global_scale=scale,
+                    threshold=threshold,
                 )
-            ).resolve()
+            
+            if query._output_measure.type.origin == "FixedSmoothedMaxDivergence":  # type: ignore[union-attr]
+
+                # search for a scale parameter. If threshold unknown, set it to u32::MAX so as not to interfere
+                scale = binary_search(
+                    lambda s: make(s, 2**32 - 1).map(d_in)[0] < d_out[0],  # type: ignore[index]
+                    T=float,
+                )
+
+                # attempt to return without setting a threshold
+                try:
+                    return make(scale)
+                except OpenDPException:
+                    pass
+                
+                # find a new threshold
+                threshold = binary_search(
+                    lambda t: make(scale, t).map(d_in)[1] < d_out[1],  # type: ignore[index]
+                    T=int,
+                )
+                
+                return make(scale, threshold)
+
+            return binary_search_chain(make, d_in, d_out, T=float)
 
         def release(self) -> OnceFrame:
             """Release the query. The query must be part of a context."""

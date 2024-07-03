@@ -388,6 +388,41 @@ def test_polars_describe():
     pl_testing.assert_frame_equal(expected, actual)
 
 
+def test_polars_accuracy_threshold():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=2,
+        margins={
+            ("B",): dp.Margin(max_partition_length=5),
+        },
+    )
+
+    expected = pl.DataFrame(
+        {
+            "column": ["len", "A"],
+            "aggregate": ["Len", "Sum"],
+            "distribution": ["Integer Laplace", "Integer Laplace"],
+            "scale": [8.0, 8.0],
+            "threshold": [130, None]
+        },
+        schema_overrides={"threshold": pl.UInt32}
+    )
+
+    query = (
+        context.query()
+        .group_by("B")
+        .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
+    )
+
+    actual = query.accuracy()  # type: ignore[union-attr]
+    pl_testing.assert_frame_equal(expected, actual)
+
+
 def test_polars_non_wrapping():
     pl = pytest.importorskip("polars")
 
@@ -422,3 +457,38 @@ def test_polars_collect_early():
 
     with pytest.raises(ValueError):
         context.query().describe()
+
+
+def test_polars_threshold():
+    pl = pytest.importorskip("polars")
+
+    lf = pl.LazyFrame(
+        {"A": [1] * 1000, "B": ["x"] * 500 + ["y"] * 500},
+        schema={"A": pl.Int32, "B": pl.String},
+    )
+
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=2,
+        margins={
+            ("A",): dp.Margin(public_info="keys"),
+        },
+    )
+
+    print(
+        context.query()
+        .group_by("A")
+        .agg(pl.len().dp.noise())
+        .release()  # type: ignore[union-attr]
+        .collect()
+    )
+
+    print(
+        context.query()
+        .group_by("B")
+        .agg(pl.len().dp.noise())
+        .release()  # type: ignore[union-attr]
+        .collect()
+    )

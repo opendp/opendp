@@ -1,0 +1,125 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn make\_private\_group\_by}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \texttt{fn make\_private\_group\_by} in \asOfCommit{mod.rs}{0db9c6036}.
+
+\subsection*{Vetting History}
+\begin{itemize}
+    \item \vettingPR{512}
+\end{itemize}
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+To ensure the correctness of the output, we require the following preconditions:
+
+\begin{itemize}
+    \item Type \texttt{MS} must have trait \texttt{DatasetMetric}.
+    \item Type \texttt{MI} must have trait \texttt{UnboundedMetric}.
+    \item Type \texttt{MO} must have trait \texttt{ApproximateMeasure}.
+\end{itemize}
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_private_group_by.py}
+
+\subsubsection*{Postconditions}
+\validMeasurement{\texttt{(input\_domain, input\_metric, output\_measure, \\plan, global\_scale, threshold)}}{\texttt{make\_private\_group\_by}}
+
+\section{Proof}
+
+We now prove the postcondition of \texttt{make\_private\_group\_by}.
+\begin{proof}
+
+Start by establishing proof properties of the following three variable.
+
+\begin{itemize}
+    \item By the postcondition of \texttt{StableDslPlan.make\_stable}, \texttt{t\_prior} is a valid transformation.
+    \item By the postcondition of \texttt{match\_grouping\_columns}, \texttt{grouping\_columns} holds the names of the grouping columns.
+        \texttt{margin} denotes what is considered public information about the key set, 
+        pulled from descriptors in the input domain.
+        By the postcondition of \texttt{make\_basic\_composition}, 
+    \item \texttt{m\_exprs} is a valid measurement that prepares a batch of expressions that, 
+    when executed, satisfies the privacy guarantee of \texttt{m\_exprs}.
+\end{itemize}
+In the case where grouping keys are considered public,
+no thresholding is performed.
+In the setting when grouping keys are considered private information,
+it is necessary to know if a suitable release for the data set length is made
+that can be used to filter sensitive keys.
+
+The function returns a DslPlan that applies each expression from \texttt{m\_exprs}
+to \texttt{arg} grouped by \texttt{keys}.
+
+The measurement for each expression expects data set distances in terms of a triple:
+\begin{itemize}
+    \item $L^0$: the greatest number of partitions that can be influenced by any one individual. 
+    This is no greater than the input distance (an individual can only ever influence as many partitions as they contribute rows), 
+    but could be tighter when supplemented by the \texttt{max\_influenced\_partitions} metric descriptor.
+    \item $L^\infty$: the greatest number of records that can be added or removed by any one individual in each partition. 
+    This is no greater than the input distance, 
+    but could be tighter when supplemented by the \texttt{max\_partition\_contributions} metric descriptor.
+    \item $L^1$: the greatest total number of records that can be added or removed across all partitions.
+    This is no greater than the input distance,
+    but could be tighter when accounting for the $L^0$ and $L^\infty$ distances.
+\end{itemize}
+
+By the postcondition of the map on \texttt{m\_exprs}, the privacy loss, 
+when grouped data sets may differ by this distance triple,
+is \texttt{d\_out}.
+
+% If the grouping keys are private, then the threshold has been prepared in \ref{reconcile-threshold}.
+% At this point, it is necessary to show that the probability that any unstable partition is released is at most $\delta$.
+% An unstable partition is any partition that may not exist on a neighboring data set:
+% that is, an unstable partition is a partition whose data is unique to an individual.
+% Therefore, unstable partitions have \texttt{li} records or fewer.
+
+% The distance to instability (\texttt{d\_instability}) denotes the gap between the size of the largest unstable partition and the threshold.
+% The additional delta parameter (\texttt{delta\_p}) denotes the worst-case probability 
+% that an unstable partition an individual contributes is still present in the release,
+% because noise added to release the DP count estimate exceeds \texttt{d\_instability}.
+
+Adapted from \cite{rogers2023unifyingprivacyanalysisframework} (Theorem 7).
+Consider $S$ to be the set of labels that are common between $x$ and $x'$.
+Define event $E$ to be any potential outcome of the mechanism for which all labels are in $S$
+(where only stable partitions are released).
+We then lower bound the probability of the mechanism returning an event $E$.
+In the following, $c_j$ denotes the exact count for partition $j$,
+and $Z_j$ is a random variable distributed according to the distribution used to release a noisy count.
+
+\begin{align*}
+    \Pr[E] &= \prod_{j \in x \backslash x'} \Pr[c_j + Z_j \le T] \\
+    &\ge \prod_{j \in x \backslash x'} \Pr[\Delta_\infty + Z_j \le T] \\
+    &\ge \Pr[\Delta_\infty + Z_j \le T]^{\Delta_0}
+\end{align*}
+
+The probability of returning a set of stable partitions ($\Pr[E]$) 
+is the probability of not returning any of the unstable partitions.
+We now solve for the choice of threshold $T$ such that $\Pr[E] \ge 1 - \delta$.
+
+\begin{align*}
+    \Pr[\Delta_\infty + Z_j \le T]^{\Delta_0} &= \Pr[Z_j \le T - \Delta_\infty]^{\Delta_0} \\
+    &= (1 - \Pr[Z_j > T - \Delta_\infty])^{\Delta_0}
+\end{align*}
+
+Let \texttt{d\_instability} denote the distance to instability of $T - \Delta_\infty$.
+By the postcondition of \\ \texttt{integrate\_discrete\_noise\_tail},
+the probability that a random noise sample exceeds \texttt{d\_instability} is at most \texttt{delta\_single}.
+Therefore $\delta = 1 - (1 - \texttt{delta\_single})^{\Delta_0}$.
+This privacy loss is then added to \texttt{d\_out}.
+
+Together with the potential increase in delta for the release of the key set,
+then it is shown that \function(u), \function(v) are \dout-close under \texttt{output\_measure}.
+
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{make_private_group_by}
+\end{document}
