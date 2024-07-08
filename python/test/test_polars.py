@@ -207,6 +207,7 @@ def test_private_expr():
 def test_private_lazyframe_median():
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
+    dp.enable_features("rust-stack-trace")
 
     lf_domain, lf = example_lf(
         margin=["A"], public_info="keys", max_partition_length=50

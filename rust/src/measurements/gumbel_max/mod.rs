@@ -1,8 +1,6 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use std::fmt::Display;
-
 use dashu::rational::RBig;
 use opendp_derive::bootstrap;
 
@@ -20,22 +18,20 @@ use crate::traits::{
     DistanceConstant,
 };
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Copy)]
+#[cfg_attr(feature = "polars", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "polars", serde(rename_all = "lowercase"))]
 pub enum Optimize {
     Min,
     Max,
 }
 
-impl Display for Optimize {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                Optimize::Min => "min",
-                Optimize::Max => "max",
-            }
-        )
+impl std::fmt::Debug for Optimize {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Optimize::Min => f.write_str("min"),
+            Optimize::Max => f.write_str("max"),
+        }
     }
 }
 
@@ -61,7 +57,7 @@ impl TryFrom<&str> for Optimize {
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable VectorDomain.
 /// * `input_metric` - Metric on the input domain. Must be LInfDistance
 /// * `scale` - Higher scales are more private.
-/// * `optimize` - Indicate whether to privately return the "Max" or "Min"
+/// * `optimize` - Indicate whether to privately return the "max" or "min"
 ///
 /// # Generics
 /// * `TIA` - Atom Input Type. Type of each element in the score vector.

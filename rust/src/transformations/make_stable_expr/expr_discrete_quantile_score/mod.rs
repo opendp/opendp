@@ -1,8 +1,7 @@
 use crate::core::{MetricSpace, StabilityMap, Transformation};
 use crate::domains::MarginPub;
-use crate::measurements::expr_index_candidates::Candidates;
 use crate::metrics::{LInfDistance, Parallel, PartitionDistance};
-use crate::polars::{apply_plugin, match_plugin, ExprFunction};
+use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
 use crate::traits::{InfCast, Number};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{
@@ -18,13 +17,11 @@ use polars::lazy::dsl::Expr;
 use polars::prelude::DataType::*;
 
 mod plugin_dq_score;
-pub(crate) use plugin_dq_score::DiscreteQuantileScoreArgs;
+pub(crate) use plugin_dq_score::{DiscreteQuantileScorePlugin, DiscreteQuantileScoreShim};
 use polars::series::Series;
 
 #[cfg(test)]
 pub mod test;
-
-static DQ_SCORE_PLUGIN_NAME: &str = "discrete_quantile_score";
 
 /// Make a measurement that adds Laplace noise to a Polars expression.
 ///
@@ -44,19 +41,13 @@ where
     Expr: StableExpr<PartitionDistance<MI>, PartitionDistance<MI>>,
     (ExprDomain, PartitionDistance<MI>): MetricSpace,
 {
-    let Some((input, args)) = match_discrete_quantile_score(&expr)? else {
+    let Some((input, alpha, candidates)) = match_discrete_quantile_score(&expr)? else {
         return fallible!(
             MakeTransformation,
             "Expected {} function",
-            DQ_SCORE_PLUGIN_NAME
+            DiscreteQuantileScoreShim::NAME
         );
     };
-
-    let DiscreteQuantileScoreArgs {
-        alpha,
-        candidates: Candidates(candidates),
-        ..
-    } = args;
 
     let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
@@ -68,6 +59,8 @@ where
             "Quantile estimation requires non-null inputs"
         );
     }
+    println!("{:?}", candidates.dtype());
+    let candidates = candidates.strict_cast(&active_series.field.dtype)?;
 
     match active_series.field.dtype {
         UInt32 => validate::<UInt32Type>(&candidates),
@@ -99,9 +92,9 @@ where
         .max_partition_length
         .ok_or_else(|| err!(MakeTransformation, "Must know max_partition_length"))?;
 
-    let constants = score_candidates_constants::<u64>(Some(mpl as u64), alpha)?;
     // alpha = alpha_num / alpha_den (numerator and denominator of alpha)
-    let (alpha_num, alpha_den, _) = constants.clone();
+    let (alpha_num, alpha_den, size_limit) =
+        score_candidates_constants::<u64>(Some(mpl as u64), alpha)?;
 
     t_prior
         >> Transformation::<_, _, PartitionDistance<MI>, Parallel<LInfDistance<_>>>::new(
@@ -111,10 +104,10 @@ where
                 apply_plugin(
                     input_expr,
                     expr.clone(),
-                    DiscreteQuantileScoreArgs {
-                        alpha,
-                        candidates: Candidates(candidates.clone()),
-                        constants: Some(constants),
+                    DiscreteQuantileScorePlugin {
+                        alpha: (alpha_num, alpha_den),
+                        candidates: candidates.clone(),
+                        size_limit,
                     },
                 )
             }),
@@ -164,20 +157,23 @@ where
 ///
 /// # Returns
 /// If matched, ipnut expression and discrete quantile score arguments
-pub(crate) fn match_discrete_quantile_score(
-    expr: &Expr,
-) -> Fallible<Option<(&Expr, DiscreteQuantileScoreArgs)>> {
-    let Some((score_input, args)) = match_plugin(expr, DQ_SCORE_PLUGIN_NAME)? else {
+pub(crate) fn match_discrete_quantile_score(expr: &Expr) -> Fallible<Option<(&Expr, f64, Series)>> {
+    let Some(input) = match_plugin::<DiscreteQuantileScoreShim>(expr)? else {
         return Ok(None);
     };
 
-    let [score_input] = <&[_; 1]>::try_from(score_input.as_slice()).map_err(|_| {
-        err!(
-            MakeTransformation,
-            "{} expects a single input expression",
-            DQ_SCORE_PLUGIN_NAME
-        )
-    })?;
+    let Ok([data, alpha, candidates]) = <&[_; 3]>::try_from(input.as_slice()) else {
+        return fallible!(
+            MakeMeasurement,
+            "{:?} expects three inputs: data, alpha and candidates",
+            DiscreteQuantileScoreShim::NAME
+        );
+    };
 
-    Ok(Some((score_input, args)))
+    let alpha = literal_value_of::<f64>(alpha)?
+        .ok_or_else(|| err!(MakeTransformation, "alpha must be known"))?;
+    let candidates = literal_value_of::<Series>(candidates)?
+        .ok_or_else(|| err!(MakeTransformation, "candidates must be known"))?;
+
+    Ok(Some((data, alpha, candidates)))
 }

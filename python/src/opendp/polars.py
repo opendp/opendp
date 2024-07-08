@@ -66,14 +66,14 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.len().dp.noise()
         >>> print(expression)
-        len()...:noise()
+        len()...:noise([...])
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars import lit  # type: ignore[import-not-found]
         return register_plugin_function(
             plugin_path=lib_path,
             function_name="noise",
-            kwargs={"scale": scale, "distribution": distribution},
-            args=self.expr,
+            args=[self.expr, lit(distribution), scale],
             is_elementwise=True,
         )
 
@@ -89,7 +89,7 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.len().dp.laplace()
         >>> print(expression)
-        len()...:noise()
+        len()...:noise([...])
         """
         return self.noise(scale=scale, distribution="Laplace")
 
@@ -105,7 +105,7 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.len().dp.gaussian()
         >>> print(expression)
-        len()...:noise()
+        len()...:noise([...])
         """
         return self.noise(scale=scale, distribution="Gaussian")
 
@@ -128,7 +128,7 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.sum((0, 10))
         >>> print(expression)
-        col("numbers").clip([...]).sum()...:noise()
+        col("numbers").clip([...]).sum()...:noise([...])
         """
         return self.expr.clip(*bounds).sum().dp.noise(scale)
 
@@ -146,7 +146,7 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.mean((0, 10))
         >>> print(expression)
-        [(col("numbers").clip([...]).sum()...:noise()) / (len())]
+        [(col("numbers").clip([...]).sum()...:noise([...])) / (len())]
         """
         import polars as pl  # type: ignore[import-not-found]
 
@@ -162,15 +162,15 @@ class DPExpr(object):
         :param candidates: Set of possible quantiles to evaluate the utility of.
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars import Series  # type: ignore[import-not-found]
         return register_plugin_function(
             plugin_path=lib_path,
             function_name="discrete_quantile_score",
-            kwargs={"alpha": alpha, "candidates": candidates},
-            args=self.expr,
+            args=[self.expr, alpha, Series(candidates)],
             returns_scalar=True,
         )
 
-    def _report_noisy_max_gumbel(
+    def _report_noisy_max(
         self, optimize: Literal["min", "max"], scale: float | None = None
     ):
         """Report the argmax or argmin after adding Gumbel noise.
@@ -182,27 +182,27 @@ class DPExpr(object):
         :param scale: Noise scale parameter for the Gumbel distribution.
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars import lit  # type: ignore[import-not-found]
         return register_plugin_function(
             plugin_path=lib_path,
-            function_name="report_noisy_max_gumbel",
-            kwargs={"optimize": optimize, "scale": scale},
-            args=self.expr,
+            function_name="report_noisy_max",
+            args=[self.expr, lit(optimize), scale],
             is_elementwise=True,
         )
 
     def _index_candidates(self, candidates: list[float]):
         """Index into a candidate set.
 
-        Typically used after :py:func:`_report_noisy_max_gumbel` to map selected indices to candidates.
+        Typically used after :py:func:`_report_noisy_max` to map selected indices to candidates.
 
         :param candidates: The values that each selected index corresponds to.
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars import Series  # type: ignore[import-not-found]
         return register_plugin_function(
             plugin_path=lib_path,
             function_name="index_candidates",
-            kwargs={"candidates": candidates},
-            args=self.expr,
+            args=[self.expr, Series(candidates)],
             is_elementwise=True,
         )
 
@@ -222,10 +222,10 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.quantile(0.5, [1, 2, 3])
         >>> print(expression)
-        col("numbers")...:discrete_quantile_score()...:report_noisy_max_gumbel()...:index_candidates()
+        col("numbers")...:discrete_quantile_score([...])...:report_noisy_max([...])...:index_candidates([...])
         """
         dq_score = self.expr.dp._discrete_quantile_score(alpha, candidates)
-        noisy_idx = dq_score.dp._report_noisy_max_gumbel("min", scale)
+        noisy_idx = dq_score.dp._report_noisy_max("min", scale)
         return noisy_idx.dp._index_candidates(candidates)
 
     def median(self, candidates: list[float], scale: float | None = None):
@@ -242,7 +242,7 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.quantile(0.5, [1, 2, 3])
         >>> print(expression)
-        col("numbers")...:discrete_quantile_score()...:report_noisy_max_gumbel()...:index_candidates()
+        col("numbers")...:discrete_quantile_score([...])...:report_noisy_max([...])...:index_candidates([...])
         """
         return self.expr.dp.quantile(0.5, candidates, scale)
 

@@ -159,16 +159,13 @@ where
             let mut d_out = privacy_map.eval(&(l0, l1, li))?;
 
             if let Some((_, noise, threshold_value, _)) = &threshold_info {
-                let distribution = noise.distribution.expect("distribution is known");
-                let scale = noise.scale.expect("scale is known");
-
                 if li >= *threshold_value {
                     return fallible!(FailedMap, "threshold must be greater than {:?}", li);
                 }
 
                 let d_instability = threshold_value.inf_sub(&li)?;
                 let delta_single =
-                    integrate_discrete_noise_tail(distribution, scale, d_instability)?;
+                    integrate_discrete_noise_tail(noise.distribution, noise.scale, d_instability)?;
                 let delta_joint =
                     (1.0).inf_sub(&(1.0).inf_sub(&delta_single)?.inf_powi(IBig::from(l0))?)?;
                 d_out = MO::add_delta(d_out, delta_joint)?;
