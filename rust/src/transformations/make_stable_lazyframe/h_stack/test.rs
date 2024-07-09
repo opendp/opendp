@@ -40,8 +40,8 @@ fn test_with_column() -> Fallible<()> {
 // LazyFrame::fill_nan works for "free", because it breaks down to pre-existing primitives:
 //    hstack with expressions that use fill_nan and alias
 #[test]
-// ignored because Polars 1.0.0 changes behavior of fill_nan to de-sugar into .with_columns(all().fill_nan(v)),
-// and we don't support all() at this time
+// TODO: ignored because Polars 1.0.0 changes behavior of fill_nan to de-sugar into .with_columns(all().fill_nan(v)),
+// and we don't support all() at this time. See https://github.com/opendp/opendp/issues/1772
 #[ignore]
 fn test_fill_nan() -> Fallible<()> {
     let lf = df!("f64" => [1f64, f64::NAN])?.lazy();

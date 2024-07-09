@@ -209,27 +209,6 @@ impl<T: CheckAtom + PrimitiveDataType> SeriesAtomDomain for OptionDomain<AtomDom
     const NULLABLE: bool = true;
 }
 
-// impl<T: MultiSize + Primitive + PrimitiveDataType + ProductOrd> SeriesAtomDomain for AtomDomain<DynLiteral<T>> {
-//     type Atom = T;
-
-//     fn atom_domain(self) -> AtomDomain<Self::Atom> {
-//         let map_bound = |bound: Bound<DynFloat>| match bound {
-//             Bound::Included(v) => Bound::Included(v.0),
-//             Bound::Excluded(v) => Bound::Included(v.0),
-//             Bound::Unbounded => Bound::Unbounded,
-//         };
-//         let bounds = self.bounds
-//             .map(|bds| crate::domains::Bounds {
-//                 lower: map_bound(bds.lower),
-//                 upper: map_bound(bds.upper),
-//             });
-
-//         AtomDomain::new(bounds, )
-//     }
-
-//     const NULLABLE: bool = false;
-// }
-
 /// Object-safe version of SeriesAtomDomain.
 pub trait DynSeriesAtomDomain: Send + Sync {
     fn as_any(&self) -> &dyn Any;

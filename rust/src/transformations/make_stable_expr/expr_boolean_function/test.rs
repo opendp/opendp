@@ -153,6 +153,7 @@ fn test_is_not_nan() -> Fallible<()> {
         df!(
             "f64" => [true, false, false, true],
             "i64" => [true, true, true, true],
+            // nulls propagate through nan check on floats
             "f64_null" => [Some(true), Some(false), None, Some(true)],
             "i64_null" => [true, true, true, true],
         )?
