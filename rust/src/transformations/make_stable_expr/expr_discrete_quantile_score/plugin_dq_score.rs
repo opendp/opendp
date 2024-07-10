@@ -67,8 +67,6 @@ impl SeriesUdf for DiscreteQuantileScoreArgs {
         let kwargs = self.clone();
         Some(GetOutput::map_fields(move |fields| {
             discrete_quantile_score_type_udf(fields, kwargs.clone())
-                .ok()
-                .unwrap_or_else(|| fields[0].clone())
         }))
     }
 }

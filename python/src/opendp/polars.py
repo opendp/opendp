@@ -121,7 +121,7 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.sum((0, 10))
         >>> print(expression)
-        col("numbers").clip([0, 10]).sum()...:noise()
+        col("numbers").clip([...]).sum()...:noise()
         """
         return self.expr.clip(*bounds).sum().dp.noise(scale)
 
@@ -139,7 +139,7 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.mean((0, 10))
         >>> print(expression)
-        [(col("numbers").clip([0, 10]).sum()...:noise()) / (len())]
+        [(col("numbers").clip([...]).sum()...:noise()) / (len())]
         """
         import polars as pl  # type: ignore[import-not-found]
         return self.expr.dp.sum(bounds, scale) / pl.len()
