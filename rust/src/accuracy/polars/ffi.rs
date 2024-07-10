@@ -5,10 +5,10 @@ use crate::polars::{ExtractLazyFrame, OnceFrame};
 use crate::{core::Measurement, domains::LazyFrameDomain};
 use polars::prelude::LazyFrame;
 
-use super::onceframe_measurement_utility;
+use super::describe_onceframe_measurement_accuracy;
 
 #[no_mangle]
-pub extern "C" fn opendp_accuracy__onceframe_measurement_utility(
+pub extern "C" fn opendp_accuracy__describe_onceframe_measurement_accuracy(
     measurement: *const AnyMeasurement,
     alpha: *const AnyObject,
 ) -> FfiResult<*mut AnyObject> {
@@ -35,7 +35,7 @@ pub extern "C" fn opendp_accuracy__onceframe_measurement_utility(
         m_untyped.privacy_map.clone()
     ));
 
-    onceframe_measurement_utility(m_typed, alpha)
+    describe_onceframe_measurement_accuracy(m_typed, alpha)
         .map(AnyObject::new)
         .into()
 }

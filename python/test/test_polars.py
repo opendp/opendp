@@ -348,7 +348,7 @@ def test_polars_context():
     )
 
 
-def test_polars_accuracy():
+def test_polars_describe():
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
 
@@ -368,7 +368,7 @@ def test_polars_accuracy():
         {
             "column": ["len", "A"],
             "aggregate": ["Len", "Sum"],
-            "distribution": ["Laplace", "Laplace"],
+            "distribution": ["Integer Laplace", "Integer Laplace"],
             "scale": [8.0, 8.0],
         }
     )
@@ -382,15 +382,9 @@ def test_polars_accuracy():
     actual = query.accuracy()  # type: ignore[union-attr]
     pl_testing.assert_frame_equal(expected, actual)
 
-    expected = expected.with_columns(accuracy=23.965858188431927)
+    expected = expected.with_columns(accuracy=24.450243350374137)
     actual = query.accuracy(alpha=0.05)  # type: ignore[union-attr]
     pl_testing.assert_frame_equal(expected, actual)
-
-    actual = query.accuracy(confidence=95.0)  # type: ignore[union-attr]
-    pl_testing.assert_frame_equal(expected, actual)
-
-    with pytest.raises(ValueError):
-        query.accuracy(alpha=.05, confidence=95.0)  # type: ignore[union-attr]
 
 
 def test_polars_non_wrapping():

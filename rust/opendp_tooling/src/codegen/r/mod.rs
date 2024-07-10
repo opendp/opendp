@@ -55,7 +55,7 @@ const BLACKLIST: &'static [&'static str] = &[
     "make_private_expr",
     "onceframe_collect",
     "onceframe_lazy",
-    "onceframe_measurement_utility",
+    "describe_onceframe_measurement_accuracy",
 ];
 
 /// Top-level function to generate R bindings, including all modules.

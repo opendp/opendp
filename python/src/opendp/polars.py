@@ -348,7 +348,6 @@ try:
             "Sphinx always fails to find a reference to LazyFrame. Falling back to dummy class."
         )
     from polars.lazyframe.frame import LazyFrame as _LazyFrame  # type: ignore[import-not-found]
-    from polars import DataFrame as _DataFrame  # type: ignore[import-not-found]
     from polars.lazyframe.group_by import LazyGroupBy as _LazyGroupBy  # type: ignore[import-not-found]
 
     class LazyFrameQuery(_LazyFrame):
@@ -425,16 +424,26 @@ try:
             resolve = object.__getattribute__(self, "resolve")
             return query._context(resolve())  # type: ignore[misc]
         
-        def accuracy(self, alpha: float | None = None, confidence: float | None = None) -> _DataFrame:
-            """Retrieve noise scale parameters and accuracy estimates for each output."""
-            if alpha is not None and confidence is not None:
-                raise ValueError("only alpha or confidence may be set")
+        def accuracy(self, alpha: float | None = None):
+            """Retrieve noise scale parameters and accuracy estimates for each output.
+
+            If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
+            The accuracy in any given row is interpreted as:
+
+            >>> def interpret_accuracy(distribution, scale, accuracy, alpha):
+            ...     return (
+            ...         f"When the {distribution} scale is {scale}, "
+            ...         f"the DP estimate differs from the true value by no more than {accuracy} "
+            ...         f"at a statistical significance level alpha of {alpha}, "
+            ...         f"or with (1 - {alpha})100% = {(1 - alpha) * 100}% confidence."
+            ...     )
+            ... 
+            >>> interpret_accuracy("Discrete Laplace", 1.0, 24.45, alpha=.05) # doctest:+SKIP
             
-            if confidence is not None:
-                alpha = 1 - confidence / 100
-            
-            from opendp.accuracy import onceframe_measurement_utility
-            return onceframe_measurement_utility(self.resolve(), alpha)
+            :param alpha: optional. A value in [0, 1] denoting the statistical significance.
+            """
+            from opendp.accuracy import describe_onceframe_measurement_accuracy
+            return describe_onceframe_measurement_accuracy(self.resolve(), alpha)
 
 except ImportError:
     ERR_MSG = "LazyFrameQuery depends on Polars: `pip install 'opendp[polars]'`."
@@ -456,7 +465,6 @@ except ImportError:
         
         def accuracy(self, alpha: float | None = None, confidence: float | None = None):
             """Retrieve noise scale parameters and accuracy estimates for each output."""
-            _ = alpha, confidence
             raise ImportError(ERR_MSG)
 
 
