@@ -177,16 +177,21 @@ pub extern "C" fn opendp_domains__atom_domain(
 
     if let Some(_) = dispatch!(in_set, [(T, [f32, f64])]) {
         dispatch!(monomorphize_float, [(T, [f32, f64])], (bounds, nullable))
-    } else if let Some(_) = dispatch!(in_set, [(T, [u8, u16, u32, u64, i8, i16, i32, i64, usize])])
-    {
+    } else if let Some(_) = dispatch!(
+        in_set,
+        [(
+            T,
+            [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize]
+        )]
+    ) {
         dispatch!(
             monomorphize_integer,
-            [(T, [u8, u16, u32, u64, i8, i16, i32, i64, usize])],
+            [(
+                T,
+                [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize]
+            )],
             (bounds, nullable)
         )
-    } else if T == Type::of::<usize>() {
-        // this is a hack to work around the fact that usize is not in the integer dispatch in debug builds
-        monomorphize_integer::<usize>(bounds, nullable).into()
     } else {
         dispatch!(
             monomorphize_simple,
@@ -228,7 +233,10 @@ pub extern "C" fn opendp_domains__option_domain(
         monomorphize_atom,
         [(
             T,
-            [u8, i16, u32, u64, i8, i16, i32, i64, usize, f32, f64, bool, String]
+            [
+                u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize, f32, f64, bool,
+                String
+            ]
         )],
         (element_domain)
     )
