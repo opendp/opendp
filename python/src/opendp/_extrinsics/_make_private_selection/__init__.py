@@ -37,7 +37,6 @@ def make_private_selection_threshold(meas: Measurement,
     if not 0 <= epsilon_selection <= 1:
         raise ValueError("epsilon must be between 0 and 1")
     
-    
     assert (stop_probability == 0) == (epsilon_selection == 0), "either both stop_probability and epsilon_selection should be 0, or neither should be 0."
 
     # From proof for (b), budget consumption
@@ -51,7 +50,7 @@ def make_private_selection_threshold(meas: Measurement,
         )
         epsilon_selection_contribution = epsilon_selection
 
-    steps = steps or min_steps
+    steps = steps if steps is not None else min_steps
 
     if steps < min_steps:
         raise ValueError(f"given the parameters, must run at least {min_steps} steps")

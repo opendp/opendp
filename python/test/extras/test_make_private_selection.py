@@ -1,6 +1,5 @@
 import numpy as np
 import opendp.prelude as dp
-import pytest
 
 
 def test_private_selection_threshold():
@@ -18,7 +17,7 @@ def test_private_selection_threshold():
 
     # score
     count = (dp.t.make_count(input_domain, input_metric)
-            >> dp.m.then_geometric(scale=2 / epsilon))
+             >> dp.m.then_geometric(scale=2 / epsilon))
 
     # output
     sum_ = (dp.t.make_clamp(input_domain, input_metric, bounds)
@@ -28,9 +27,9 @@ def test_private_selection_threshold():
     mech_with_score = dp.c.make_basic_composition([count, sum_])
 
     meas_pst = make_private_selection_threshold(mech_with_score,
-                                            threshold=threshold,
-                                            stop_probability=0,
-                                            epsilon_selection=0)
+                                                threshold=threshold,
+                                                stop_probability=0,
+                                                epsilon_selection=0)
 
     data = np.random.normal(10, 5, 20)
     
