@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 
 import opendp.prelude as dp
@@ -8,7 +10,7 @@ def make_private_selection_threshold(meas: Measurement,
                                      threshold: float,
                                      stop_probability: float,
                                      epsilon_selection: float,
-                                     steps: None | int=None):
+                                     steps: Optional[int] = None):
     
     """Measurement for private selection with known threshold.
 
