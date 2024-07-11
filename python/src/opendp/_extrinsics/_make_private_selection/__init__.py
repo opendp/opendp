@@ -11,7 +11,7 @@ def make_private_selection_threshold(meas: Measurement,
                                      stop_probability: float,
                                      epsilon_selection: float,
                                      steps: Optional[int] = None):
-    
+
     """Measurement for private selection with known threshold.
 
     This executes an ε-DP mechanism M that returns a tuple (q, x) repeatedly
@@ -30,29 +30,29 @@ def make_private_selection_threshold(meas: Measurement,
     """
 
     dp.assert_features("contrib", "floating-point")
-    
+
     if not 0 <= stop_probability <= 1:
         raise ValueError("stop_probability must be between 0 and 1")
-    
+
     if not 0 <= epsilon_selection <= 1:
         raise ValueError("epsilon must be between 0 and 1")
-    
+
     assert (stop_probability == 0) == (epsilon_selection == 0), "either both stop_probability and epsilon_selection should be 0, or neither should be 0."
 
     # From proof for (b), budget consumption
     # https://arxiv.org/pdf/1811.07971.pdf#page=25
     if stop_probability == 0 and epsilon_selection == 0:
-        min_steps = np.inf
-        epsilon_selection_contribution = 0
+        min_steps = None
+        epsilon_selection_contribution = 0.
     else:
         min_steps = int(
             np.ceil(max(np.log(2 / epsilon_selection) / stop_probability, 1 + 1 / (np.exp(1) * stop_probability)))
         )
         epsilon_selection_contribution = epsilon_selection
 
-    steps = steps if steps is not None else min_steps
+    max_steps = steps or min_steps
 
-    if steps < min_steps:
+    if min_steps is not None and max_steps is not None and max_steps < min_steps:
         raise ValueError(f"given the parameters, must run at least {min_steps} steps")
 
     if meas.output_measure != dp.max_divergence(T=float):
@@ -72,9 +72,9 @@ def make_private_selection_threshold(meas: Measurement,
             if biased_coin:
                 return
 
-            if step >= steps:
+            if max_steps is not None and step >= max_steps:
                 return
-            
+
             step += 1
 
     return dp.m.make_user_measurement(
