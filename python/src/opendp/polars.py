@@ -428,7 +428,37 @@ try:
             """Retrieve noise scale parameters and accuracy estimates for each output.
 
             If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
-            The accuracy in any given row is interpreted as:
+            
+            :example:
+
+            >>> import polars as pl
+            >>> data = pl.LazyFrame([pl.Series("convicted", [0, 1, 1, 0, 1] * 50, dtype=pl.Int32)])
+
+            >>> context = dp.Context.compositor(
+            ...     data=data,
+            ...     privacy_unit=dp.unit_of(contributions=1),
+            ...     privacy_loss=dp.loss_of(epsilon=1.0),
+            ...     split_evenly_over=1,
+            ...     margins={(): dp.Margin(max_partition_length=1000)},
+            ... )
+
+            >>> query = context.query().select(
+            ...     pl.len().dp.noise(), 
+            ...     pl.col("convicted").fill_null(0).dp.sum((0, 1))
+            ... )
+
+            >>> query.accuracy(alpha=.05)  # type: ignore[union-attr]
+            shape: (2, 5)
+            ┌───────────┬───────────┬─────────────────┬───────┬──────────┐
+            │ column    ┆ aggregate ┆ distribution    ┆ scale ┆ accuracy │
+            │ ---       ┆ ---       ┆ ---             ┆ ---   ┆ ---      │
+            │ str       ┆ str       ┆ str             ┆ f64   ┆ f64      │
+            ╞═══════════╪═══════════╪═════════════════╪═══════╪══════════╡
+            │ len       ┆ Len       ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │
+            │ convicted ┆ Sum       ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │
+            └───────────┴───────────┴─────────────────┴───────┴──────────┘
+
+            The accuracy in any given row can be interpreted with:
 
             >>> def interpret_accuracy(distribution, scale, accuracy, alpha):
             ...     return (
@@ -438,7 +468,7 @@ try:
             ...         f"or with (1 - {alpha})100% = {(1 - alpha) * 100}% confidence."
             ...     )
             ... 
-            >>> interpret_accuracy("Discrete Laplace", 1.0, 24.45, alpha=.05) # doctest:+SKIP
+            >>> interpret_accuracy("Integer Laplace", 2.0, 6.429605, alpha=.05) # doctest:+SKIP
             
             :param alpha: optional. A value in [0, 1] denoting the statistical significance.
             """
@@ -463,7 +493,7 @@ except ImportError:
             """Release the query. The query must be part of a context."""
             raise ImportError(ERR_MSG)
         
-        def accuracy(self, alpha: float | None = None, confidence: float | None = None):
+        def accuracy(self, alpha: float | None = None):
             """Retrieve noise scale parameters and accuracy estimates for each output."""
             raise ImportError(ERR_MSG)
 

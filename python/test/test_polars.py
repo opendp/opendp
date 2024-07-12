@@ -382,7 +382,8 @@ def test_polars_describe():
     actual = query.accuracy()  # type: ignore[union-attr]
     pl_testing.assert_frame_equal(expected, actual)
 
-    expected = expected.with_columns(accuracy=24.450243350374137)
+    accuracy = dp.discrete_laplacian_scale_to_accuracy(8.0, 0.05)
+    expected = expected.with_columns(accuracy=accuracy)
     actual = query.accuracy(alpha=0.05)  # type: ignore[union-attr]
     pl_testing.assert_frame_equal(expected, actual)
 

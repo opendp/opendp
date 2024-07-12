@@ -9,6 +9,9 @@ use polars_plan::{
     plans::DslPlan,
 };
 
+#[cfg(test)]
+mod test;
+
 use crate::{
     accuracy::{
         discrete_gaussian_scale_to_accuracy, discrete_laplacian_scale_to_accuracy,

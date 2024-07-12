@@ -42,14 +42,8 @@ where
     Expr: PrivateExpr<MI, MO>,
     (ExprDomain, MI): MetricSpace,
 {
-    let (input, IndexCandidatesArgs { candidates }) =
-        match_index_candidates(&expr)?.ok_or_else(|| {
-            err!(
-                MakeMeasurement,
-                "Expected {:?} function",
-                INDEX_CANDIDATES_PLUGIN
-            )
-        })?;
+    let (input, IndexCandidatesArgs { candidates }) = match_index_candidates(&expr)?
+        .ok_or_else(|| err!(MakeMeasurement, "Expected Index Candidates function"))?;
 
     let m_prior = input
         .clone()
