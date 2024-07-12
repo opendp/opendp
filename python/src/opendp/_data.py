@@ -19,6 +19,7 @@ __all__ = [
     "object_type",
     "onceframe_collect",
     "onceframe_lazy",
+    "set_opendp_lib_path",
     "slice_as_object",
     "slice_free",
     "smd_curve_epsilon",
@@ -307,6 +308,31 @@ def onceframe_lazy(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_onceframe), AnyObjectPtr))
+
+    return output
+
+
+def set_opendp_lib_path(
+    opendp_lib_path: str
+):
+    r"""Internal function. Configure the path to the OpenDP Library binary.
+
+    :param opendp_lib_path: Absolute path to the OpenDP Library binary.
+    :type opendp_lib_path: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_opendp_lib_path = py_to_c(opendp_lib_path, c_type=ctypes.c_char_p, type_name=None)
+
+    # Call library function.
+    lib_function = lib.opendp_data__set_opendp_lib_path
+    lib_function.argtypes = [ctypes.c_char_p]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_opendp_lib_path), ctypes.c_void_p))
 
     return output
 

@@ -1,11 +1,37 @@
+use std::{ffi::c_char, sync::Arc};
+
 use opendp_derive::bootstrap;
 use polars::lazy::frame::LazyFrame;
 
 use crate::{
     core::FfiResult,
-    ffi::any::{AnyObject, AnyQueryable, Downcast},
-    polars::{ExtractLazyFrame, OnceFrameAnswer, OnceFrameQuery},
+    ffi::{
+        any::{AnyObject, AnyQueryable, Downcast},
+        util::to_str,
+    },
+    polars::{ExtractLazyFrame, OnceFrameAnswer, OnceFrameQuery, OPENDP_LIB_PATH},
 };
+
+#[bootstrap(
+    name = "set_opendp_lib_path",
+    arguments(opendp_lib_path(c_type = "char *", rust_type = b"null")),
+    returns(c_type = "FfiResult<void *>")
+)]
+/// Internal function. Configure the path to the OpenDP Library binary.
+///
+/// # Arguments
+/// * `opendp_lib_path` - Absolute path to the OpenDP Library binary.
+#[no_mangle]
+pub extern "C" fn opendp_data__set_opendp_lib_path(
+    opendp_lib_path: *mut c_char,
+) -> FfiResult<*mut ()> {
+    let opendp_lib_path = Arc::from(try_!(to_str(opendp_lib_path)).to_string());
+    try_!(OPENDP_LIB_PATH
+        .try_lock()
+        .map_err(|_| err!(FFI, "failed to set OPENDP_LIB_PATH due to lock poisoning")))
+    .replace(opendp_lib_path);
+    Ok(()).into()
+}
 
 #[bootstrap(
     name = "onceframe_collect",

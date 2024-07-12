@@ -727,6 +727,14 @@ const struct FfiResult______AnyObject *ffiresult_err(char *message, char *backtr
 bool opendp_data__fill_bytes(uint8_t *ptr, uintptr_t len);
 
 /**
+ * Internal function. Configure the path to the OpenDP Library binary.
+ *
+ * # Arguments
+ * * `opendp_lib_path` - Absolute path to the OpenDP Library binary.
+ */
+struct FfiResult_____c_void opendp_data__set_opendp_lib_path(char *opendp_lib_path);
+
+/**
  * Internal function. Collects a DataFrame from a OnceFrame, exhausting the OnceFrame.
  *
  * # Arguments

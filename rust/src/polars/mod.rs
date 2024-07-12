@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use crate::{
     core::Function,
@@ -32,6 +32,11 @@ pub(crate) trait OpenDPPlugin:
 {
     const NAME: &'static str;
     fn function_options() -> FunctionOptions;
+}
+
+#[cfg(feature = "ffi")]
+lazy_static! {
+    pub(crate) static ref OPENDP_LIB_PATH: Mutex<Option<Arc<str>>> = Mutex::new(None);
 }
 
 static OPENDP_LIB_NAME: &str = "opendp";
@@ -127,7 +132,15 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
             options,
         } => {
             // overwrite the kwargs to update the noise scale parameter in the FFI plugin
-            if let FunctionExpr::FfiPlugin { symbol, kwargs, .. } = &mut function {
+            if let FunctionExpr::FfiPlugin {
+                lib,
+                symbol,
+                kwargs,
+            } = &mut function
+            {
+                if let Some(path) = OPENDP_LIB_PATH.lock().unwrap().as_ref() {
+                    *lib = path.clone();
+                }
                 *symbol = KW::NAME.into();
                 *kwargs = serde_pickle::to_vec(&kwargs_new, Default::default())
                     .expect("pickling does not fail")
