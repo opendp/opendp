@@ -425,9 +425,10 @@ try:
             
             if query._output_measure.type.origin == "FixedSmoothedMaxDivergence":  # type: ignore[union-attr]
 
-                # search for a scale parameter. If threshold unknown, set it to u32::MAX so as not to interfere
+                # search for a scale parameter. Solve for epsilon first, 
+                # setting threshold to u32::MAX so as not to interfere with the search for a suitable scale parameter
                 scale = binary_search(
-                    lambda s: make(s, 2**32 - 1).map(d_in)[0] < d_out[0],  # type: ignore[index]
+                    lambda s: make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0],  # type: ignore[index]
                     T=float,
                 )
 
@@ -437,7 +438,7 @@ try:
                 except OpenDPException:
                     pass
                 
-                # find a new threshold
+                # now that scale has been solved, find a suitable threshold
                 threshold = binary_search(
                     lambda t: make(scale, t).map(d_in)[1] < d_out[1],  # type: ignore[index]
                     T=int,
