@@ -20,7 +20,7 @@ __all__ = [
     "accuracy_to_discrete_laplacian_scale",
     "accuracy_to_gaussian_scale",
     "accuracy_to_laplacian_scale",
-    "describe_onceframe_measurement_accuracy",
+    "describe_polars_measurement_accuracy",
     "discrete_gaussian_scale_to_accuracy",
     "discrete_laplacian_scale_to_accuracy",
     "gaussian_scale_to_accuracy",
@@ -178,7 +178,7 @@ def accuracy_to_laplacian_scale(
     return output
 
 
-def describe_onceframe_measurement_accuracy(
+def describe_polars_measurement_accuracy(
     measurement: Measurement,
     alpha = None
 ):
@@ -213,7 +213,7 @@ def describe_onceframe_measurement_accuracy(
     ... )
 
     This function extracts utility information about each aggregate in the resulting data frame:
-    >>> dp.describe_onceframe_measurement_accuracy(meas)
+    >>> dp.describe_polars_measurement_accuracy(meas)
     shape: (2, 4)
     ┌────────┬───────────┬─────────────────┬───────┐
     │ column ┆ aggregate ┆ distribution    ┆ scale │
@@ -225,7 +225,7 @@ def describe_onceframe_measurement_accuracy(
     └────────┴───────────┴─────────────────┴───────┘
 
     If you pass an alpha argument, then you also get accuracy estimates:
-    >>> dp.describe_onceframe_measurement_accuracy(meas, alpha=.05)
+    >>> dp.describe_polars_measurement_accuracy(meas, alpha=.05)
     shape: (2, 5)
     ┌────────┬───────────┬─────────────────┬───────┬──────────┐
     │ column ┆ aggregate ┆ distribution    ┆ scale ┆ accuracy │
@@ -246,7 +246,7 @@ def describe_onceframe_measurement_accuracy(
     c_alpha = py_to_c(alpha, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[f64]))
 
     # Call library function.
-    lib_function = lib.opendp_accuracy__describe_onceframe_measurement_accuracy
+    lib_function = lib.opendp_accuracy__describe_polars_measurement_accuracy
     lib_function.argtypes = [Measurement, AnyObjectPtr]
     lib_function.restype = FfiResult
 

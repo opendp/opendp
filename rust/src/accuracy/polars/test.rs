@@ -15,10 +15,10 @@ use crate::{
     polars::PrivacyNamespace,
 };
 
-use super::describe_onceframe_measurement_accuracy;
+use super::describe_polars_measurement_accuracy;
 
 #[test]
-fn test_describe_onceframe_measurement_accuracy() -> Fallible<()> {
+fn test_describe_polars_measurement_accuracy() -> Fallible<()> {
     let lf_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<f64>::default()),
@@ -43,7 +43,7 @@ fn test_describe_onceframe_measurement_accuracy() -> Fallible<()> {
         Some(1.0),
     )?;
 
-    let description = describe_onceframe_measurement_accuracy(meas.clone(), None)?;
+    let description = describe_polars_measurement_accuracy(meas.clone(), None)?;
 
     let mut expected = df![
         "column" => &["len", "A"],
@@ -54,7 +54,7 @@ fn test_describe_onceframe_measurement_accuracy() -> Fallible<()> {
     println!("{:?}", expected);
     assert_eq!(expected, description);
 
-    let description = describe_onceframe_measurement_accuracy(meas.clone(), Some(0.05))?;
+    let description = describe_polars_measurement_accuracy(meas.clone(), Some(0.05))?;
 
     let accuracy = discrete_laplacian_scale_to_accuracy(1.0, 0.05)?;
     expected.with_column(Series::new("accuracy", &[accuracy, accuracy]))?;

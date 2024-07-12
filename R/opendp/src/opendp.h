@@ -321,8 +321,8 @@ typedef struct FfiResult_____ExtrinsicObject {
   };
 } FfiResult_____ExtrinsicObject;
 
-struct FfiResult_____AnyObject opendp_accuracy__describe_onceframe_measurement_accuracy(const AnyMeasurement *measurement,
-                                                                                        const struct AnyObject *alpha);
+struct FfiResult_____AnyObject opendp_accuracy__describe_polars_measurement_accuracy(const AnyMeasurement *measurement,
+                                                                                     const struct AnyObject *alpha);
 
 struct FfiResult_____AnyMeasurement opendp_combinators__make_population_amplification(const AnyMeasurement *measurement,
                                                                                       unsigned int population_size);

@@ -32,7 +32,7 @@ use crate::{
 mod ffi;
 
 #[bootstrap(
-    name = "describe_onceframe_measurement_accuracy",
+    name = "describe_polars_measurement_accuracy",
     features("contrib"),
     arguments(
         measurement(rust_type = "AnyMeasurement"),
@@ -46,7 +46,7 @@ mod ffi;
 /// # Arguments
 /// * `measurement` - computation from which you want to read noise scale parameters from
 /// * `alpha` - optional statistical significance to use to compute accuracy estimates
-pub fn describe_onceframe_measurement_accuracy<MI: Metric, MO: 'static + Measure>(
+pub fn describe_polars_measurement_accuracy<MI: Metric, MO: 'static + Measure>(
     measurement: Measurement<LazyFrameDomain, OnceFrame, MI, MO>,
     alpha: Option<f64>,
 ) -> Fallible<DataFrame>

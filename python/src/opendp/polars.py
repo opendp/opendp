@@ -472,8 +472,8 @@ try:
             
             :param alpha: optional. A value in [0, 1] denoting the statistical significance.
             """
-            from opendp.accuracy import describe_onceframe_measurement_accuracy
-            return describe_onceframe_measurement_accuracy(self.resolve(), alpha)
+            from opendp.accuracy import describe_polars_measurement_accuracy
+            return describe_polars_measurement_accuracy(self.resolve(), alpha)
 
 except ImportError:
     ERR_MSG = "LazyFrameQuery depends on Polars: `pip install 'opendp[polars]'`."
