@@ -1,11 +1,11 @@
-from typing import Callable
+from typing import Callable, Union
 
-import polars as pl
 from opendp.mod import Domain, Metric, Transformation
 import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
 from opendp._extrinsics._utilities import to_then, with_privacy
 
+pl = import_optional_dependency("polars")
 
 __all__ = ["make_faithfulness",
            "then_faithfulness",
@@ -18,7 +18,7 @@ def make_faithfulness(
         input_metric: Metric,
         *,
         reference_dataset: pl.LazyFrame,
-        similarity: Callable | dict[str, float]) -> Transformation:
+        similarity: Union[Callable, dict[str, float]]) -> Transformation:
     r"""Construct a Transformation that returns the optimal (maximal) faithfulness of two datasets.
     Faithfulness assesses whether the released dataset resemble the original dataset in a record-level granularity.
     Namely, there is a 1-to-1 matching between the records of released dataset and the records of the original dataset: each released record is matched with an original record.

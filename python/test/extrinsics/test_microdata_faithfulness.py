@@ -9,7 +9,7 @@ dp.enable_features("contrib", "floating-point")
 
 def test_microdataa_faithfulness():
     from opendp._extrinsics.microdata.faithfulness import make_faithfulness
-    
+
     # TODO: add optional_dependency("igraph")
     with optional_dependency("numpy"), optional_dependency("scipy"), optional_dependency("sklearn"):
 
