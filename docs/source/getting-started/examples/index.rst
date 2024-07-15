@@ -18,6 +18,7 @@ These introductory notebooks provide some solutions for real-world problems with
   :titlesonly:
 
   pums-data-analysis
+  accuracy 
   unknown-dataset-size
   histograms
 
