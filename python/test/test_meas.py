@@ -1,7 +1,6 @@
 import pytest
 import opendp.prelude as dp
 
-dp.enable_features('floating-point', 'contrib')
 
 def test_gaussian_curve():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)

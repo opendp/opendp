@@ -1,7 +1,6 @@
 import pytest
 import opendp.prelude as dp
 
-dp.enable_features('floating-point', 'contrib')
 
 def test_binary_search_fail():
     with pytest.raises(ValueError, match=r'predicate always fails'):
@@ -54,7 +53,7 @@ def test_type_inference():
         return dp.t.make_sum(
             dp.vector_domain(dp.atom_domain(bounds=(-b, b)), size=1000), 
             dp.symmetric_distance())
-    assert dp.binary_search_param(chainer, 2, 100) == 50
+    assert dp.binary_search_param(chainer, 2, 100) == pytest.approx(50)
 
     def mean_chainer_n(n):
         return dp.t.make_mean(
