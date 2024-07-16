@@ -97,9 +97,20 @@ Let's apply Laplace noise to a value.
             :end-before: /demo
 
 This is obviously not the easiest way to add noise to a number,
-but it demonstrates a number of OpenDP patterns:
+but it demonstrates a number of low-level OpenDP patterns:
 
 * Defining your metric space with ``space_of`` in Python's Context API, or a (domain, distance) tuple in any language..
 * Chaining operators together with ``>>`` in Python and Rust, or ``|>`` in R.
 * Constructing a ``Measurement`` function on your metric space with ``then_laplace``.
 * Invoking that measurement on a value to get a DP release.
+
+OpenDP has layered APIs which provide increasing abstraction and usability:
+
+* The **Framework API** is low-level. Available for Python and R, it mirrors the underlying Rust framework.
+* The **Context API** introduces a ``Context`` class which ensures that queries do not exceed the privacy budget. Currently available only for Python.
+* The **Polars API** provides a DP extension to the `Polars <https://docs.pola.rs/>`_ dataframe library. Currently available only for Python.
+
+Because the higher-level APIs are built on the Framework API, they are easier to use but less flexible: All calls ultimately pass through the Framework API.
+
+This page and the next will use the Framework and Context APIs to demonstrate the similarities between the Framework APIs in different languages.
+The remaining documentation focuses on the Polars API with Python.
