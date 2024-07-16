@@ -11,4 +11,5 @@ and for Python, R, and Rust library reference see the :doc:`../api/index` docume
 
   quickstart
   typical-workflow
+  utility/index
   examples/index
