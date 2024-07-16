@@ -135,7 +135,7 @@ where
     generics(D(suppress), M(suppress))
 )]
 /// Make a Transformation representing the identity function.
-/// Requires `honest-but-curious`: TODO
+/// Requires `honest-but-curious`: The resulting transformation is only valid if the input domain and input metric form a metric space.
 ///
 /// WARNING: In Python, this function does not ensure that the domain and metric form a valid metric space.
 /// However, if the domain and metric do not form a valid metric space,

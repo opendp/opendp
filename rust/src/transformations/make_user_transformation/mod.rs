@@ -26,7 +26,7 @@ use crate::{
     )
 )]
 /// Construct a Transformation from user-defined callbacks.
-/// Requires `honest-but-curious`: TODO
+/// Requires `honest-but-curious`: The OpenDP Library cannot verify that the stability of the resulting transformation is governed by the provided stability map.
 ///
 /// # Arguments
 /// * `input_domain` - A domain describing the set of valid inputs for the function.
