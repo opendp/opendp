@@ -12,6 +12,7 @@ use crate::{
     core::{Function, Measure},
     error::Fallible,
 };
+mod f_dp;
 
 /// Privacy measure used to define $\epsilon$-pure differential privacy.
 ///
