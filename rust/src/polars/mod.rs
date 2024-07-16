@@ -221,6 +221,7 @@ impl DPExpr {
             NoiseArgs {
                 scale,
                 distribution,
+                support: None,
             },
         )
     }
