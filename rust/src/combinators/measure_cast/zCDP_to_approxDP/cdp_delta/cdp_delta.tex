@@ -1,14 +1,14 @@
 \documentclass{article}
-\input{../../../lib.sty}
+\input{../../../../lib.sty}
 
 
-\title{\texttt{fn cdp\_epsilon}}
+\title{\texttt{fn cdp\_delta}}
 \author{Michael Shoemate}
 
 \begin{document}
 \maketitle
 
-Proves soundness of \texttt{fn cdp\_epsilon} in \asOfCommit{cdp_epsilon.rs}{0b8f4222}.
+Proves soundness of \texttt{fn cdp\_delta} in \asOfCommit{cdp_delta.rs}{0b8f4222}.
 This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.2.3}{subsection 2.3} of \cite{CKS20}.
 \section{Bound Derivation}
 
@@ -160,55 +160,27 @@ Let $M: \mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm satisfy
 This follows from \ref{renyidp-approxdp-epsilon} by taking the infimum over all divergence parameters $\alpha$.
 \end{proof}
 
-\subsection[Efficient computation of epsilon]{Efficient computation of $\epsilon$}
-
-From \ref{zcdp-approxdp-epsilon}, we have 
-\begin{align}
-    \epsilon(\alpha) &= \alpha \rho + \frac{\ln(1 / \delta) + (\alpha - 1) \ln((\alpha-1)/\alpha) - \ln(\alpha)}{\alpha - 1} \\
-    \epsilon'(\alpha) &= \rho + \frac{\ln(\alpha\delta)}{(\alpha - 1)^2} \\
-    \epsilon''(\alpha) &= \frac{2\alpha \ln(\alpha \delta) - \alpha + 1}{(\alpha -1)^3 \alpha}
-\end{align}
-
-Notice the curve is convex so long as 
-\begin{equation}
-    \delta < e^{1/2 - 1/(2\alpha)}/\alpha
-\end{equation}
-Otherwise the curve is concave, with a non-negative derivative for any choice of $\alpha$: 
-
-\begin{equation}
-    \epsilon'(\alpha) = \rho + \frac{\ln(\alpha\delta)}{(\alpha - 1)^2} 
-    \geq \rho + \frac{\alpha - 1}{2\alpha (\alpha + 1)^2} 
-    \geq 0
-\end{equation}
-
-We can find the minimizer $\alpha_{*}$ by conducting a binary search over the interval $(1, \alpha_{max})$, where $\alpha_{max}$ is discovered via exponential search for a positive derivative.
-
-
 \section{Pseudocode}
 \subsubsection*{Precondition}
-
-\begin{itemize}
-    \item Type \texttt{Q} must have trait \texttt{Float}.
-\end{itemize}
+None.
 
 \subsubsection*{Implementation}        
-\lstinputlisting[language=Python, firstline=2]{cdp_epsilon.py}
+See adjacent mod.rs file.
 
 \subsubsection*{Postcondition}
-Either a valid epsilon is returned or an error is returned.
-
-\section{Proof}
 
 \begin{theorem}
-For any possible setting of $\rho$ and $\delta$, $\texttt{cdp\_epsilon}$ either returns an error, or an $\epsilon$ such that any $\rho$-differentially private measurement is also $(\epsilon, \delta)$-differentially private.
+    For any possible setting of $\rho$ and $\epsilon$, $\texttt{cdp\_delta}$ either returns an error, or a $\delta$ such that any $\rho$-differentially private measurement is also $(\epsilon, \delta)$-differentially private.
 \end{theorem}
+
+\section{Proof}
 
 \begin{proof}
 The code always finds an $\alpha_{*} \approx \texttt{a\_max} \geq 1.01$.
 Since $\texttt{a\_max} \in (1, \infty)$, then by \ref{zcdp-approxdp-epsilon}, any $\rho$-differentially private measurement is also $(\epsilon(\texttt{a\_max}), \delta)$-differentially private.
-Define $\epsilon_{cons}(\alpha)$ as a ``conservative'' function for computing $\epsilon(\alpha)$, 
-where floating-point arithmetic is computed with conservative rounding such that $\epsilon_{cons}(\alpha) \geq \epsilon(\alpha)$ for $\forall \alpha \in (1, \infty)$.
-Since $\texttt{epsilon} = \epsilon_{cons}(\texttt{a\_max}) \geq \epsilon(\texttt{a\_max})$, then any $(\epsilon(\texttt{a\_max}), \delta)$-differentially private measurement is also $(\texttt{epsilon}, \delta)$-differentially private.
+Define $\delta_{cons}(\alpha)$ as a ``conservative'' function for computing $\delta(\epsilon)$, 
+where floating-point arithmetic is computed with conservative rounding such that $\delta_{cons}(\alpha) \geq \delta(\alpha)$ for $\forall \alpha \in (1, \infty)$.
+Since $\texttt{delta} = \delta_{cons}(\texttt{a\_max}) \geq \delta(\texttt{a\_max})$, then any $(\epsilon, \delta(\texttt{a\_max}))$-differentially private measurement is also $(\texttt{epsilon}, \delta)$-differentially private.
 \end{proof}
 
 

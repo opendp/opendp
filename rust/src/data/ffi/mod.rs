@@ -982,6 +982,29 @@ impl Shuffle for AnyObject {
 }
 
 #[bootstrap(
+    name = "privacy_profile_delta",
+    arguments(curve(rust_type = b"null"), delta(rust_type = "f64"))
+)]
+/// Internal function. Use a PrivacyProfile to find epsilon at a given `epsilon`.
+///
+/// # Arguments
+/// * `curve` - The PrivacyProfile.
+/// * `epsilon` - What to fix epsilon to compute delta.
+///
+/// # Returns
+/// Delta at a given `epsilon`.
+#[no_mangle]
+pub extern "C" fn opendp_data__privacy_profile_delta(
+    curve: *const AnyObject,
+    epsilon: f64,
+) -> FfiResult<*mut AnyObject> {
+    try_!(try_as_ref!(curve).downcast_ref::<PrivacyProfile>())
+        .delta(epsilon)
+        .map(AnyObject::new)
+        .into()
+}
+
+#[bootstrap(
     name = "privacy_profile_epsilon",
     arguments(profile(rust_type = b"null"), delta(rust_type = "f64"))
 )]
@@ -999,7 +1022,7 @@ pub extern "C" fn opendp_data__privacy_profile_epsilon(
     delta: f64,
 ) -> FfiResult<*mut AnyObject> {
     try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>())
-        .epsilon(&delta)
+        .epsilon(delta)
         .map(AnyObject::new)
         .into()
 }

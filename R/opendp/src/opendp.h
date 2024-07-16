@@ -691,6 +691,19 @@ struct FfiResult_____c_void opendp_data__bool_free(c_bool *this_);
 struct FfiResult_____c_void opendp_data__extrinsic_object_free(struct ExtrinsicObject *this_);
 
 /**
+ * Internal function. Use a PrivacyProfile to find epsilon at a given `epsilon`.
+ *
+ * # Arguments
+ * * `curve` - The PrivacyProfile.
+ * * `epsilon` - What to fix epsilon to compute delta.
+ *
+ * # Returns
+ * Delta at a given `epsilon`.
+ */
+struct FfiResult_____AnyObject opendp_data__privacy_profile_delta(const struct AnyObject *curve,
+                                                                  double epsilon);
+
+/**
  * Internal function. Use an PrivacyProfile to find epsilon at a given `delta`.
  *
  * # Arguments
@@ -1006,18 +1019,18 @@ struct FfiResult_____AnyMeasure opendp_measures__max_divergence(void);
  * The measurement's input metric defines the notion of adjacency,
  * and the measurement's input domain defines the set of possible datasets.
  *
- * Privacy profiles are represented by an SMDCurve.
- * This curve can be evaluated with a $\delta$ to retrieve a corresponding $\epsilon$.
+ * The distance $d$ is of type PrivacyProfile, so it can be invoked with an $\epsilon$
+ * to retrieve the corresponding $\delta$.
  *
  * # Proof Definition
  *
  * For any two distributions $Y, Y'$ and any curve $d(\cdot)$,
  * $Y, Y'$ are $d$-close under the smoothed max divergence measure whenever,
- * for any choice of $\delta \in [0, 1]$,
+ * for any choice of non-negative $\epsilon$, and $\delta = d(\epsilon)$,
  *
- * $D_\infty^\delta(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S] + \delta}{\Pr[Y' \in S]} \Big] \leq d(\delta)$.
+ * $D_\infty^\delta(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S] + \delta}{\Pr[Y' \in S]} \Big] \leq \epsilon$.
  *
- * Note that this $\delta$ is not privacy parameter $\delta$ until quantified over all adjacent datasets,
+ * Note that $\epsilon$ and $\delta$ are not privacy parameters $\epsilon$ and $\delta$ until quantified over all adjacent datasets,
  * as is done in the definition of a measurement.
  */
 struct FfiResult_____AnyMeasure opendp_measures__smoothed_max_divergence(void);

@@ -327,14 +327,18 @@ new_function <- function(ptr, log) {
   opendp_function
 }
 
-#' new Smoothed Max Divergence curve
+#' new privacy profile
 #'
 #' @concept mod
-#' @param ptr a pointer to a SMD curve
+#' @param ptr a pointer to a privacy profile
 new_privacy_profile <- function(ptr) {
-  privacy_profile <- function(attr, delta) {
-    if (missing(attr) + missing(delta) != 1) {
-      stop("expected exactly one of attr or delta")
+  privacy_profile <- function(attr, epsilon, delta) {
+    if (missing(attr) + missing(epsilon) + missing(delta) != 2) {
+      stop("expected exactly one of attr, epsilon or delta")
+    }
+
+    if (!missing(epsilon)) {
+      return(privacy_profile_delta(ptr, epsilon))
     }
 
     if (!missing(delta)) {

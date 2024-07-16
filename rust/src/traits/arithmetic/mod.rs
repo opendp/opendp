@@ -525,10 +525,122 @@ macro_rules! impl_float_inf_uni {
 }
 impl_float_inf_uni!(f64, f32; InfLn, inf_ln, neg_inf_ln, ln);
 impl_float_inf_uni!(f64, f32; InfLog2, inf_log2, neg_inf_log2, log2);
-impl_float_inf_uni!(f64, f32; InfExp, inf_exp, neg_inf_exp, exp);
 impl_float_inf_uni!(f64, f32; InfLn1P, inf_ln_1p, neg_inf_ln_1p, ln_1p);
 impl_float_inf_uni!(f64, f32; InfExpM1, inf_exp_m1, neg_inf_exp_m1, exp_m1);
 impl_float_inf_uni!(f64, f32; InfSqrt, inf_sqrt, neg_inf_sqrt, sqrt);
+
+// these implementations are expanded to catch errors in underflow.
+// when the input is very negative, resulting in an underflow, the output is min subnormal
+impl InfExp for f64 {
+    fn inf_exp(self) -> Fallible<Self> {
+        let not_finite = || {
+            err!(
+                Overflow,
+                concat!(
+                    "({}).",
+                    stringify!(inf_exp),
+                    "() is not finite. Consider tightening your parameters."
+                ),
+                self
+            )
+        };
+        if !self.exp().is_finite() {
+            return Err(not_finite());
+        }
+        let lhs = FBig::<Up>::inf_cast(self)?
+            .with_precision(<f64>::MANTISSA_DIGITS as usize)
+            .value();
+        let Ok(output) = catch_unwind_silent(|| lhs.exp()) else {
+            if self.is_sign_negative() {
+                return Ok(f64::from_bits(1));
+            }
+            return Err(not_finite());
+        };
+        let output = Self::inf_cast(output)?;
+        output.is_finite().then(|| output).ok_or_else(not_finite)
+    }
+
+    fn neg_inf_exp(self) -> Fallible<Self> {
+        let not_finite = || {
+            err!(
+                Overflow,
+                concat!(
+                    "({}).",
+                    stringify!(neg_inf_exp),
+                    "() is not finite. Consider tightening your parameters."
+                ),
+                self
+            )
+        };
+        if !self.exp().is_finite() {
+            return Err(not_finite());
+        }
+        let lhs = FBig::<Down>::inf_cast(self)?;
+        let Ok(output) = catch_unwind_silent(|| lhs.exp()) else {
+            if self.is_sign_negative() {
+                return Ok(0.0);
+            }
+            return Err(not_finite());
+        };
+        let output = Self::neg_inf_cast(output)?;
+        output.is_finite().then(|| output).ok_or_else(not_finite)
+    }
+}
+
+impl InfExp for f32 {
+    fn inf_exp(self) -> Fallible<Self> {
+        let not_finite = || {
+            err!(
+                Overflow,
+                concat!(
+                    "({}).",
+                    stringify!(inf_exp),
+                    "() is not finite. Consider tightening your parameters."
+                ),
+                self
+            )
+        };
+        if !self.exp().is_finite() {
+            return Err(not_finite());
+        }
+        let lhs = FBig::<Up>::inf_cast(self)?
+            .with_precision(<f32>::MANTISSA_DIGITS as usize)
+            .value();
+        let Ok(output) = catch_unwind_silent(|| lhs.exp()) else {
+            if self.is_sign_negative() {
+                return Ok(f32::from_bits(1));
+            }
+            return Err(not_finite());
+        };
+        let output = Self::inf_cast(output)?;
+        output.is_finite().then(|| output).ok_or_else(not_finite)
+    }
+    fn neg_inf_exp(self) -> Fallible<Self> {
+        let not_finite = || {
+            err!(
+                Overflow,
+                concat!(
+                    "({}).",
+                    stringify!(neg_inf_exp),
+                    "() is not finite. Consider tightening your parameters."
+                ),
+                self
+            )
+        };
+        if !self.exp().is_finite() {
+            return Err(not_finite());
+        }
+        let lhs = FBig::<Down>::inf_cast(self)?;
+        let Ok(output) = catch_unwind_silent(|| lhs.exp()) else {
+            if self.is_sign_negative() {
+                return Ok(0.0);
+            }
+            return Err(not_finite());
+        };
+        let output = Self::neg_inf_cast(output)?;
+        output.is_finite().then(|| output).ok_or_else(not_finite)
+    }
+}
 
 // TRAIT InfAdd, InfSub, InfMul, InfDiv (bivariate)
 macro_rules! impl_int_inf {

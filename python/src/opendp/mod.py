@@ -635,6 +635,10 @@ class PrivacyProfile(object):
     def __init__(self, curve):
         self.curve = curve
 
+    def delta(self, epsilon):
+        from opendp._data import privacy_profile_delta
+        return privacy_profile_delta(self.curve, epsilon)
+
     def epsilon(self, delta):
         from opendp._data import privacy_profile_epsilon
         return privacy_profile_epsilon(self.curve, delta)

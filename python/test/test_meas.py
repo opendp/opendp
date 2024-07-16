@@ -7,21 +7,30 @@ def test_gaussian_curve():
     meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.))
     profile = meas.map(d_in=1.)
     assert profile.epsilon(delta=0.) == float('inf')
-    assert profile.epsilon(delta=1e-3) == 0.6880024554878086
+    assert profile.epsilon(delta=1e-3) == 0.6880024554878085
     assert profile.epsilon(delta=1.) == 0.
+    assert profile.delta(epsilon=0.) == 0.1508457845622862
+    assert profile.delta(epsilon=0.6880024554878085) == 1e-3
 
     profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.)).map(d_in=0.0)
     assert profile.epsilon(0.0) == 0.0
     with pytest.raises(Exception):
         profile.epsilon(delta=-0.0)
-
+    with pytest.raises(Exception):
+        profile.delta(epsilon=-0.0)
+        
     profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.)).map(d_in=1.0)
     assert profile.epsilon(delta=0.0) == float('inf')
     assert profile.epsilon(delta=0.1) == float('inf')
+    assert profile.delta(epsilon=0.0) == 1.0
+    assert profile.delta(epsilon=0.1) == 1.0
 
     profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.)).map(d_in=0.0)
     assert profile.epsilon(delta=0.0) == 0.0
     assert profile.epsilon(delta=0.1) == 0.0
+    assert profile.delta(epsilon=0.0) == 0.0
+    assert profile.delta(epsilon=0.1) == 0.0
+
 
 
 def test_gaussian_search():
