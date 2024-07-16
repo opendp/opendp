@@ -1,6 +1,5 @@
 import opendp.prelude as dp
 
-dp.enable_features("floating-point", "contrib")
 
 
 def test_dp_mean():

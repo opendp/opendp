@@ -1,4 +1,4 @@
-use crate::domains::{AtomDomain, LogicalPlanDomain};
+use crate::domains::{AtomDomain, DslPlanDomain};
 use crate::metrics::SymmetricDistance;
 use crate::transformations::test_helper::get_test_data;
 
@@ -26,7 +26,7 @@ fn test_make_expr_clip() -> Fallible<()> {
         .unwrap();
     series_domain.element_domain = Arc::new(AtomDomain::<f64>::new_closed((0.0, 0.5))?);
 
-    let mut lf_domain_exp = LogicalPlanDomain::new(vec![series_domain])?;
+    let mut lf_domain_exp = DslPlanDomain::new(vec![series_domain])?;
     lf_domain_exp.margins = t_clip.output_domain.frame_domain.margins.clone();
 
     assert_eq!(t_clip.output_domain, lf_domain_exp.select());

@@ -32,8 +32,8 @@ fn test_make_count_expr_grouped() -> Fallible<()> {
     let df_exact = lf.group_by([col("chunk_2_bool")]).agg([len()]).collect()?;
 
     assert_eq!(
-        df_actual.sort(["chunk_2_bool"], false, false)?,
-        df_exact.sort(["chunk_2_bool"], false, false)?
+        df_actual.sort(["chunk_2_bool"], Default::default())?,
+        df_exact.sort(["chunk_2_bool"], Default::default())?
     );
     Ok(())
 }
