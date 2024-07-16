@@ -8,13 +8,11 @@ from opendp._extrinsics._utilities import with_privacy
 
 dp.enable_features("contrib", "floating-point")
 
+np = import_optional_dependency("numpy")
 pl = import_optional_dependency("polars")
 
 
 def test_microdataa_faithfulness():
-
-    np = import_optional_dependency("numpy")
-    pl = import_optional_dependency("polars")
 
     from opendp._extrinsics.microdata.universal_microdata_scheme import make_private_universal_microdata_scheme
 
@@ -71,8 +69,6 @@ def _make_max_marginal_abs_error(
 
     dp.assert_features("contrib", "floating-point")
 
-    pd = import_optional_dependency("pandas")
-
     if "LazyFrameDomain" not in str(input_domain.type):
         raise ValueError("input_domain must be a LazyFrame domain")
 
@@ -91,18 +87,22 @@ def _make_max_marginal_abs_error(
         for k_way in range(1, len(cols) + 1):
             for subset in it.combinations(cols, k_way):
 
-                # TODO: merge without pandas?
-                merged_df = (pd.merge(dataset.group_by(subset).len().collect().to_pandas(),
-                                      reference_dataset.group_by(subset).len().to_pandas(),
-                                      how="outer",
-                                      on=subset)
-                             .fillna(0)
-                             .astype("int32"))
+                merged_df = (dataset.group_by(subset).len().collect().join(
+                    reference_dataset.group_by(subset).len(),
+                    how="outer",
+                    on=subset,)
+                    .select([
+                        pl.col("len").alias("len_dataset").cast(pl.Int32),
+                        pl.col("len_right").alias("len_reference_dataset").cast(pl.Int32)
+                    ])
+                    .fill_null(0)
+                )
 
-                abs_diffs.append((merged_df["len_x"] - merged_df["len_y"]).abs())
+                abs_diffs.append((merged_df["len_dataset"] - merged_df["len_reference_dataset"])
+                                 .abs()
+                                 .to_numpy())
 
-        # TODO: seperate with max composition
-        return pd.concat(abs_diffs).max()
+        return np.concatenate(abs_diffs).max()
 
     return dp.t.make_user_transformation(
         input_domain,
@@ -124,9 +124,6 @@ def _make_max_univariate_rel_error(
 
     dp.assert_features("contrib", "floating-point")
 
-    np = import_optional_dependency("numpy")
-    pd = import_optional_dependency("pandas")
-
     if "LazyFrameDomain" not in str(input_domain.type):
         raise ValueError("input_domain must be a LazyFrame domain")
 
@@ -144,21 +141,24 @@ def _make_max_univariate_rel_error(
         ratios = []
         for col in cols:
 
-            # TODO: merge without pandas?
-            merged_df = (pd.merge(dataset.group_by(col).len().collect().to_pandas(),
-                                  reference_dataset.group_by(col).len().to_pandas(),
-                                  how="outer",
-                                  on=col)
-                         .fillna(0)
-                         .astype("int32"))
+            merged_df = (dataset.group_by(col).len().collect().join(
+                reference_dataset.group_by(col).len(),
+                how="outer",
+                on=col,)
+                .select([
+                    pl.col("len").alias("len_dataset").cast(pl.Int32),
+                    pl.col("len_right").alias("len_reference_dataset").cast(pl.Int32)
+                ])
+                .fill_null(0)
+            )
 
-            len_x_plus_one = merged_df["len_x"] + 1
-            len_y_plus_one = merged_df["len_y"] + 1
+            len_dataset_plus_one = merged_df["len_dataset"] + 1
+            len_reference_dataset_plus_one = merged_df["len_reference_dataset"] + 1
 
-            ratios.append(len_x_plus_one / len_y_plus_one)
-            ratios.append(len_y_plus_one / len_x_plus_one)
+            ratios.append(len_dataset_plus_one / len_reference_dataset_plus_one)
+            ratios.append(len_reference_dataset_plus_one / len_dataset_plus_one)
 
-        clipped_ratios = np.clip(pd.concat(ratios), 1, clipping_upper_bound)
+        clipped_ratios = np.clip(np.concatenate(ratios), 1, clipping_upper_bound)
 
         # TODO: seperate with max composition
         return np.max(clipped_ratios)
