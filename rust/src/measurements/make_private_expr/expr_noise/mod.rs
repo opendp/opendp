@@ -45,12 +45,21 @@ pub(crate) struct NoiseArgs {
     ///
     /// Scale may be left None, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
     pub scale: Option<f64>,
+
+    /// Distinguish between integer or floating-point support.
+    pub support: Option<Support>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub enum Distribution {
     Laplace,
     Gaussian,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+pub enum Support {
+    Integer,
+    Float,
 }
 
 pub trait NoiseExprMeasure: 'static + Measure<Distance = f64> {
@@ -98,6 +107,7 @@ where
     let NoiseArgs {
         scale,
         distribution,
+        ..
     } = args;
 
     let t_prior = input.clone().make_stable(input_domain, input_metric)?;
@@ -131,6 +141,18 @@ where
         }
     };
 
+    let support = match &middle_domain.active_series()?.field.dtype {
+        dt if dt.is_integer() => Support::Integer,
+        dt if dt.is_float() => Support::Float,
+        dt => {
+            return fallible!(
+                MakeMeasurement,
+                "expected numeric data type, found {:?}",
+                dt
+            )
+        }
+    };
+
     let m_noise = Measurement::<_, _, MO::Metric, _>::new(
         middle_domain,
         Function::then_expr(move |input_expr| {
@@ -140,6 +162,7 @@ where
                 NoiseArgs {
                     scale: Some(scale),
                     distribution: Some(MO::DISTRIBUTION),
+                    support: Some(support),
                 },
             )
         }),
@@ -198,13 +221,7 @@ impl SeriesUdf for NoiseArgs {
     }
 
     fn get_output(&self) -> Option<GetOutput> {
-        Some(GetOutput::map_fields(|fields| {
-            noise_type_udf(fields)
-                // NOTE: it would be better if this didn't need to fall back,
-                // but Polars does not support raising an error
-                .ok()
-                .unwrap_or_else(|| fields[0].clone())
-        }))
+        Some(GetOutput::map_fields(|fields| noise_type_udf(fields)))
     }
 }
 

@@ -63,7 +63,6 @@ static R_CMethodDef R_CDef[] = {
     {"core__transformation_output_metric", (DL_FUNC) &core__transformation_output_metric, 2},
     {"data__object_type", (DL_FUNC) &data__object_type, 2},
     {"data__smd_curve_epsilon", (DL_FUNC) &data__smd_curve_epsilon, 4},
-    {"data__to_string", (DL_FUNC) &data__to_string, 2},
     {"domains__atom_domain", (DL_FUNC) &domains__atom_domain, 5},
     {"domains__domain_carrier_type", (DL_FUNC) &domains__domain_carrier_type, 2},
     {"domains__domain_debug", (DL_FUNC) &domains__domain_debug, 2},

@@ -14,6 +14,9 @@ use crate::domains::{AtomDomain, OptionDomain};
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[cfg(test)]
+mod test;
+
 /// # Proof Definition
 /// `SeriesDomain` is the domain of polars `Series` where:
 /// * `field` - Holds Series name and type of underlying data.
@@ -264,5 +267,3 @@ impl PrimitiveDataType for bool {
 impl PrimitiveDataType for String {
     type Polars = StringType;
 }
-#[cfg(test)]
-mod test;

@@ -56,23 +56,3 @@ SEXP data__smd_curve_epsilon(
     return(anyobjectptr_to_sexp(_return_value));
 }
 
-
-SEXP data__to_string(
-    SEXP this, SEXP log
-) {
-    // Convert arguments to c types.
-    PROTECT(this);
-    PROTECT(log);
-
-    AnyObject * c_this = sexp_to_anyobjectptr(this, R_NilValue);
-
-    // Call library function.
-    FfiResult_____c_char _result = opendp_data__to_string(c_this);
-
-    UNPROTECT(2);
-    if(_result.tag == Err_____c_char)
-        return(extract_error(_result.err));
-    c_char* _return_value = _result.ok;
-    return(ScalarString(mkChar(_return_value)));
-}
-

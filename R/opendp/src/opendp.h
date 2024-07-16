@@ -49,17 +49,35 @@ typedef struct Measurement_AnyDomain__AnyObject__AnyMetric__AnyMeasure Measureme
  */
 typedef struct Transformation_AnyDomain__AnyDomain__AnyMetric__AnyMetric Transformation_AnyDomain__AnyDomain__AnyMetric__AnyMetric;
 
-/**
- * A Measurement with all generic types filled by Any types. This is the type of Measurements
- * passed back and forth over FFI.
- */
-typedef struct Measurement_AnyDomain__AnyObject__AnyMetric__AnyMeasure AnyMeasurement;
-
 typedef struct FfiError {
   char *variant;
   char *message;
   char *backtrace;
 } FfiError;
+
+enum FfiResult_____AnyObject_Tag {
+  Ok_____AnyObject,
+  Err_____AnyObject,
+};
+typedef uint32_t FfiResult_____AnyObject_Tag;
+
+typedef struct FfiResult_____AnyObject {
+  FfiResult_____AnyObject_Tag tag;
+  union {
+    struct {
+      struct AnyObject *ok;
+    };
+    struct {
+      struct FfiError *err;
+    };
+  };
+} FfiResult_____AnyObject;
+
+/**
+ * A Measurement with all generic types filled by Any types. This is the type of Measurements
+ * passed back and forth over FFI.
+ */
+typedef struct Measurement_AnyDomain__AnyObject__AnyMetric__AnyMeasure AnyMeasurement;
 
 enum FfiResult_____AnyMeasurement_Tag {
   Ok_____AnyMeasurement,
@@ -176,24 +194,6 @@ typedef struct FfiResult_____AnyFunction {
     };
   };
 } FfiResult_____AnyFunction;
-
-enum FfiResult_____AnyObject_Tag {
-  Ok_____AnyObject,
-  Err_____AnyObject,
-};
-typedef uint32_t FfiResult_____AnyObject_Tag;
-
-typedef struct FfiResult_____AnyObject {
-  FfiResult_____AnyObject_Tag tag;
-  union {
-    struct {
-      struct AnyObject *ok;
-    };
-    struct {
-      struct FfiError *err;
-    };
-  };
-} FfiResult_____AnyObject;
 
 typedef uint8_t c_bool;
 
@@ -320,6 +320,9 @@ typedef struct FfiResult_____ExtrinsicObject {
     };
   };
 } FfiResult_____ExtrinsicObject;
+
+struct FfiResult_____AnyObject opendp_accuracy__describe_polars_measurement_accuracy(const AnyMeasurement *measurement,
+                                                                                     const struct AnyObject *alpha);
 
 struct FfiResult_____AnyMeasurement opendp_combinators__make_population_amplification(const AnyMeasurement *measurement,
                                                                                       unsigned int population_size);
@@ -699,14 +702,6 @@ struct FfiResult_____c_void opendp_data__extrinsic_object_free(struct ExtrinsicO
  */
 struct FfiResult_____AnyObject opendp_data__smd_curve_epsilon(const struct AnyObject *curve,
                                                               const struct AnyObject *delta);
-
-/**
- * Internal function. Convert the AnyObject to a string representation.
- *
- * # Arguments
- * * `this` - The AnyObject to convert to a string representation.
- */
-struct FfiResult_____c_char opendp_data__to_string(const struct AnyObject *this_);
 
 /**
  * wrap an AnyObject in an FfiResult::Ok(this)

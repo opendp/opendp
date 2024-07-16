@@ -1,14 +1,16 @@
+use polars::prelude::LazyFrame;
+use polars_plan::{dsl::Expr, plans::DslPlan};
+
 use opendp_derive::bootstrap;
-use polars::prelude::*;
 
 use crate::{
     combinators::BasicCompositionMeasure,
     core::{Function, Measure, Measurement, Metric, MetricSpace},
-    domains::{ExprDomain, LazyFrameDomain, LogicalPlanDomain},
+    domains::{DslPlanDomain, ExprDomain, LazyFrameDomain},
     error::Fallible,
     metrics::PartitionDistance,
     polars::{get_disabled_features_message, OnceFrame},
-    transformations::{traits::UnboundedMetric, DatasetMetric, StableLogicalPlan},
+    transformations::{traits::UnboundedMetric, DatasetMetric, StableDslPlan},
 };
 
 use super::PrivateExpr;
@@ -17,7 +19,7 @@ use super::PrivateExpr;
 mod ffi;
 
 #[cfg(feature = "contrib")]
-mod aggregate;
+mod group_by;
 
 #[cfg(feature = "contrib")]
 mod postprocess;
@@ -52,8 +54,8 @@ pub fn make_private_lazyframe<MI: Metric, MO: 'static + Measure>(
     global_scale: Option<f64>,
 ) -> Fallible<Measurement<LazyFrameDomain, OnceFrame, MI, MO>>
 where
-    LogicalPlan: PrivateLogicalPlan<MI, MO>,
-    (LogicalPlanDomain, MI): MetricSpace,
+    DslPlan: PrivateDslPlan<MI, MO>,
+    (DslPlanDomain, MI): MetricSpace,
     (LazyFrameDomain, MI): MetricSpace,
 {
     let m_lp = lazyframe.logical_plan.make_private(
@@ -77,32 +79,32 @@ where
     )
 }
 
-pub trait PrivateLogicalPlan<MI: Metric, MO: Measure> {
+pub trait PrivateDslPlan<MI: Metric, MO: Measure> {
     fn make_private(
         self,
-        input_domain: LogicalPlanDomain,
+        input_domain: DslPlanDomain,
         input_metric: MI,
         output_measure: MO,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<LogicalPlanDomain, LogicalPlan, MI, MO>>;
+    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MI, MO>>;
 }
 
-impl<MS, MO> PrivateLogicalPlan<MS, MO> for LogicalPlan
+impl<MS, MO> PrivateDslPlan<MS, MO> for DslPlan
 where
     MS: 'static + UnboundedMetric + DatasetMetric,
     MO: 'static + BasicCompositionMeasure,
     Expr: PrivateExpr<PartitionDistance<MS>, MO>,
-    LogicalPlan: StableLogicalPlan<MS, MS>,
-    (LogicalPlanDomain, MS): MetricSpace,
+    DslPlan: StableDslPlan<MS, MS>,
+    (DslPlanDomain, MS): MetricSpace,
     (ExprDomain, MS): MetricSpace,
 {
     fn make_private(
         self,
-        input_domain: LogicalPlanDomain,
+        input_domain: DslPlanDomain,
         input_metric: MS,
         output_measure: MO,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<LogicalPlanDomain, LogicalPlan, MS, MO>> {
+    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, MO>> {
         if let Some(meas) = postprocess::match_postprocess(
             input_domain.clone(),
             input_metric.clone(),
@@ -115,8 +117,8 @@ where
 
         match &self {
             #[cfg(feature = "contrib")]
-            plan if matches!(plan, LogicalPlan::Aggregate { .. }) => {
-                aggregate::make_private_aggregate(
+            dsl if matches!(dsl, DslPlan::GroupBy { .. }) => {
+                group_by::make_private_group_by(
                     input_domain,
                     input_metric,
                     output_measure,
@@ -126,7 +128,7 @@ where
             }
 
             #[cfg(feature = "contrib")]
-            plan if matches!(plan, LogicalPlan::Projection { .. }) => select::make_private_select(
+            dsl if matches!(dsl, DslPlan::Select { .. }) => select::make_private_select(
                 input_domain,
                 input_metric,
                 output_measure,
@@ -134,10 +136,10 @@ where
                 global_scale,
             ),
 
-            lp => fallible!(
+            dsl => fallible!(
                 MakeMeasurement,
                 "A step in your query is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
-                lp,
+                dsl.describe()?,
                 get_disabled_features_message()
             )
         }

@@ -35,7 +35,10 @@ where
         return fallible!(MakeTransformation, "expected alias expression");
     };
 
-    let t_prior = input.make_stable(input_domain, input_metric)?;
+    let t_prior = input
+        .as_ref()
+        .clone()
+        .make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut output_domain = middle_domain.clone();

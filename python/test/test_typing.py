@@ -43,13 +43,10 @@ def test_typing_infer_to_object():
     with pytest.raises(UnknownTypeException, match=re.escape("<class 'object'>")):
         RuntimeType.infer(object())
     
-    # TODO: Raising an exception in __repr__ seems strange: Why not raise exception earlier, like infer(object())?
-    infer_none = RuntimeType.infer(None)
-    with pytest.raises(UnknownTypeException, match=re.escape("Constructed Option from a None variant")):
-        str(infer_none)
-    infer_empty = RuntimeType.infer([])
-    with pytest.raises(UnknownTypeException, match=re.escape('cannot infer atomic type when empty')):
-        str(infer_empty)
+    with pytest.raises(UnknownTypeException, match=re.escape("Type of Option cannot be inferred from None")):
+        RuntimeType.infer(None)
+    with pytest.raises(UnknownTypeException, match=re.escape('Cannot infer atomic type when empty')):
+        RuntimeType.infer([])
 
 def test_typing_parse():
     assert str(RuntimeType.parse(Tuple[int, float])) == "(i32, f64)" # type: ignore[arg-type]
