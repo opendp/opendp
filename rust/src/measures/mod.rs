@@ -6,7 +6,9 @@
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
-use std::{fmt::{Debug, Formatter}, sync::Arc};
+use std::{
+    cmp::Ordering, fmt::{Debug, Formatter}, sync::Arc
+};
 
 use crate::{core::Measure, error::Fallible};
 
@@ -102,7 +104,7 @@ impl Measure for SmoothedMaxDivergence {
 ///
 /// SMD stands for "Smoothed Max Divergence".
 /// This is the distance type for [`SmoothedMaxDivergence`].
-pub struct SMDCurve(Arc<dyn Fn(&f64) -> Fallible<f64> + Send + Sync>);
+pub struct SMDCurve(Arc<dyn Fn(f64) -> Fallible<f64> + Send + Sync>);
 
 impl Clone for SMDCurve {
     fn clone(&self) -> Self {
@@ -111,13 +113,64 @@ impl Clone for SMDCurve {
 }
 
 impl SMDCurve {
-    pub fn new(epsilon: impl Fn(&f64) -> Fallible<f64> + 'static + Send + Sync) -> Self {
-        SMDCurve(Arc::new(epsilon))
+    pub fn new(delta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync) -> Self {
+        SMDCurve(Arc::new(delta))
     }
 
     // these functions allow direct invocation as a method, making parens unnecessary
-    pub fn epsilon(&self, delta: &f64) -> Fallible<f64> {
-        (self.0)(delta)
+    pub fn epsilon(&self, delta: f64) -> Fallible<f64> {
+
+        if !(0.0..=1.0).contains(&delta) {
+            return fallible!(FailedMap, "delta must be between zero and one");
+        }
+
+        if delta == 1.0 {
+            // no, e.g. gaussian privacy profile for sigma = 1, sens = 1, eps=0 is 0.3892... -> delta should never be 1?
+            return Ok(0.0)
+        }
+        self.epsilon_unchecked(delta)        
+    }
+
+    pub(crate) fn epsilon_unchecked(&self, delta: f64) -> Fallible<f64> {
+        let mut e_min: f64 = 0.0;
+        let mut e_max: f64 = f64::MAX;
+
+        // delta(e_max) <= delta <= delta(e_min) -> always holds
+        // We always try to find the smallest e that minimizes |delta(e) - delta| and enforces delta(e) <= delta
+        //           -> if delta == delta(e_min), we can pick e_min, otherwise we have to take e_max 
+        // same as   -> if e
+        // For delta == 1.0, we find the largest e that gives delta(e) == 1.0 
+        // (so as not to create a discontinuity and go to zero.)
+        let mut e_mid = e_min;
+        loop {
+            let new_mid = e_min + ((e_max - e_min) / 2.0);
+
+            if new_mid == e_mid {
+                if delta == 1. {
+                    return Ok(e_max);
+                }
+
+                return Ok(if delta == self.delta(e_min)? {
+                    e_min
+                } else {
+                    e_max
+                })
+            }
+
+            e_mid = new_mid;
+
+            let d_mid: f64 = self.delta(e_mid)?;
+            match d_mid.partial_cmp(&delta) {
+                Some(Ordering::Greater) => e_min = e_mid,
+                Some(Ordering::Equal) => if delta == 1. { e_min = e_mid } else {e_max = e_mid}, 
+                Some(Ordering::Less) => e_max = e_mid,
+                None => return fallible!(FailedMap, "not comparable"),
+            }
+        }
+    }
+
+    pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
+        (self.0)(epsilon)
     }
 }
 

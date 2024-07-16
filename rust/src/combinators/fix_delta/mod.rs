@@ -37,7 +37,7 @@ where
         PrivacyMap::new_fallible(move |d_in| {
             // find the smallest epsilon at the given delta
             let curve = privacy_map.eval(d_in)?;
-            output_measure.fix_delta(&curve, &delta)
+            output_measure.fix_delta(&curve, delta)
         }),
     )
 }
@@ -51,7 +51,7 @@ pub trait FixDeltaMeasure: Measure {
     fn fix_delta(
         &self,
         curve: &Self::Distance,
-        delta: &f64,
+        delta: f64,
     ) -> Fallible<<Self::FixedMeasure as Measure>::Distance>;
 }
 
@@ -61,7 +61,7 @@ impl FixDeltaMeasure for SmoothedMaxDivergence {
     fn new_fixed_measure(&self) -> Fallible<Self::FixedMeasure> {
         Ok(Approximate::default())
     }
-    fn fix_delta(&self, curve: &Self::Distance, delta: &f64) -> Fallible<(f64, f64)> {
+    fn fix_delta(&self, curve: &Self::Distance, delta: f64) -> Fallible<(f64, f64)> {
         curve.epsilon(delta).map(|v| (v, delta.clone()))
     }
 }
