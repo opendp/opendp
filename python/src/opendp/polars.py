@@ -14,7 +14,14 @@ from dataclasses import dataclass
 import os
 from typing import Literal, Tuple
 from opendp._lib import lib_path
-from opendp.mod import Domain, Measurement, assert_features
+from opendp.mod import (
+    Domain,
+    Measurement,
+    OpenDPException,
+    assert_features,
+    binary_search,
+    binary_search_chain,
+)
 from opendp.domains import series_domain, lazyframe_domain, option_domain, atom_domain
 from opendp.measurements import make_private_lazyframe
 
@@ -142,6 +149,7 @@ class DPExpr(object):
         [(col("numbers").clip([...]).sum()...:noise()) / (len())]
         """
         import polars as pl  # type: ignore[import-not-found]
+
         return self.expr.dp.sum(bounds, scale) / pl.len()
 
     def _discrete_quantile_score(self, alpha: float, candidates: list[float]):
@@ -398,25 +406,51 @@ try:
 
         def resolve(self) -> Measurement:
             """Resolve the query into a measurement."""
-            from opendp.context import PartialChain
 
             # access attributes of self without getting intercepted by Self.__getattribute__
             lf_plan = object.__getattribute__(self, "_lf_plan")
             query = object.__getattribute__(self, "_query")
             input_domain, input_metric = query._chain
+            d_in, d_out = query._d_in, query._d_out
 
-            # create an updated query and then resolve it into a measurement
-            return query.new_with(
-                chain=PartialChain(
-                    lambda s: make_private_lazyframe(
-                        input_domain=input_domain,
-                        input_metric=input_metric,
-                        output_measure=query._output_measure,
-                        lazyframe=lf_plan,
-                        global_scale=s,
-                    )
+            def make(scale, threshold=None):
+                return make_private_lazyframe(
+                    input_domain=input_domain,
+                    input_metric=input_metric,
+                    output_measure=query._output_measure,
+                    lazyframe=lf_plan,
+                    global_scale=scale,
+                    threshold=threshold,
                 )
-            ).resolve()
+            
+            # when the output measure is δ-approximate, then there are two free parameters to tune
+            if query._output_measure.type.origin == "FixedSmoothedMaxDivergence":  # type: ignore[union-attr]
+
+                # search for a scale parameter. Solve for epsilon first, 
+                # setting threshold to u32::MAX so as not to interfere with the search for a suitable scale parameter
+                scale = binary_search(
+                    lambda s: make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0],  # type: ignore[index]
+                    T=float,
+                )
+
+                # attempt to return without setting a threshold
+                try:
+                    return make(scale, threshold=None)
+                except OpenDPException:
+                    pass
+                
+                # now that scale has been solved, find a suitable threshold
+                threshold = binary_search(
+                    lambda t: make(scale, t).map(d_in)[1] < d_out[1],  # type: ignore[index]
+                    T=int,
+                )
+                
+                # return a measurement with the discovered scale and threshold
+                return make(scale, threshold)
+
+            # when no delta parameter is involved, 
+            # finding a suitable measurement just comes down to finding scale
+            return binary_search_chain(make, d_in, d_out, T=float)
 
         def release(self) -> OnceFrame:
             """Release the query. The query must be part of a context."""
@@ -428,6 +462,10 @@ try:
             """Retrieve noise scale parameters and accuracy estimates for each output.
 
             If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
+
+            If a threshold is configured for censoring small/sensitive partitions,
+            a threshold column will be included,
+            containing the cutoff for the respective count query being thresholded.
             
             :example:
 

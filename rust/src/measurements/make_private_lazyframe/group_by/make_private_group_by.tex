@@ -1,0 +1,141 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn make\_private\_group\_by}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \texttt{fn make\_private\_group\_by} in \asOfCommit{mod.rs}{0db9c6036}.
+
+\subsection*{Vetting History}
+\begin{itemize}
+    \item \vettingPR{512}
+\end{itemize}
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+To ensure the correctness of the output, we require the following preconditions:
+
+\begin{itemize}
+    \item Type \texttt{MS} must have trait \texttt{DatasetMetric}.
+    \item Type \texttt{MI} must have trait \texttt{UnboundedMetric}.
+    \item Type \texttt{MO} must have trait \texttt{ApproximateMeasure}.
+\end{itemize}
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_private_group_by.py}
+
+\subsubsection*{Postconditions}
+\validMeasurement{\texttt{(input\_domain, input\_metric, output\_measure, \\plan, global\_scale, threshold)}}{\texttt{make\_private\_group\_by}}
+
+\section{Proof}
+
+We now prove the postcondition of \texttt{make\_private\_group\_by}.
+\begin{proof}
+
+Start by establishing properties of the following variables, 
+which hold for any setting of the input arguments.
+
+\begin{itemize}
+    \item By the postcondition of \texttt{StableDslPlan.make\_stable}, \texttt{t\_prior} is a valid transformation. \ref{line:tprior}
+    \item By the postcondition of \texttt{match\_grouping\_columns}, \texttt{grouping\_columns} holds the names of the grouping columns.
+        \texttt{margin} denotes what is considered public information about the key set, 
+        pulled from descriptors in the input domain. \ref{line:groupcols}
+    \item By the postcondition of \texttt{make\_basic\_composition}, 
+        \texttt{m\_exprs} is a valid measurement that prepares a batch of expressions that, 
+        when executed, satisfies the privacy guarantee of \texttt{m\_exprs}.  \ref{line:joint}
+\end{itemize}
+
+We now reconcile information about the censoring threshold. \ref{line:reconcile-threshold}
+In the setting where grouping keys are considered public, no thresholding is necessary.
+In the setting where grouping keys are considered private information,
+threshold information is prepared from either \texttt{predicate} or \texttt{threshold}.
+By the post-condition of \texttt{find\_len\_expr}, filtering on \texttt{name} can be used to satisfy 
+$\delta$-approximate DP.
+
+The final predicate to be applied is the intersection of conditions necessary for filtering, 
+and initial conditions set in the predicate.
+The thresholding predicate is only added to the final predicate 
+if the threshold is not already present in the predicate.
+
+We now move on to the implementation of the function. \ref{line:function}
+The function returns a DslPlan that applies each expression from \texttt{m\_exprs}
+to \texttt{arg} grouped by \texttt{keys}.
+\texttt{threshold\_info} is conveyed into the plan, if set, 
+to ensure that the keys are also privatized if necessary.
+It is assumed that the emitted DSL is executed in the same fashion as is done by Polars.
+This proof/implementation does not take into consideration side-channels involved in the execution of the DSL.
+
+We now move on to the implementation of the privacy map. \ref{line:privacy-map}
+The measurement for each expression expects data set distances in terms of a triple:
+\begin{itemize}
+    \item $L^0$: the greatest number of partitions that can be influenced by any one individual. 
+    This is no greater than the input distance (an individual can only ever influence as many partitions as they contribute rows), 
+    but could be smaller when supplemented by 
+    the \texttt{max\_influenced\_partitions} metric descriptor or \texttt{max\_num\_partitions} domain descriptor.
+    \item $L^\infty$: the greatest number of records that can be added or removed by any one individual in each partition. 
+    This is no greater than the input distance, 
+    but could be tighter when supplemented by 
+    the \texttt{max\_partition\_contributions} metric descriptor or the \texttt{max\_partition\_length} domain descriptor.
+    \item $L^1$: the greatest total number of records that can be added or removed across all partitions.
+    This is no greater than the input distance,
+    but could be tighter when accounting for the $L^0$ and $L^\infty$ distances.
+\end{itemize}
+
+By the postcondition of the map on \texttt{m\_exprs}, the privacy loss, 
+when grouped data sets may differ by this distance triple,
+is \texttt{d\_out}.
+
+% If the grouping keys are private, then the threshold has been prepared in \ref{reconcile-threshold}.
+% At this point, it is necessary to show that the probability that any unstable partition is released is at most $\delta$.
+% An unstable partition is any partition that may not exist on a neighboring data set:
+% that is, an unstable partition is a partition whose data is unique to an individual.
+% Therefore, unstable partitions have \texttt{li} records or fewer.
+
+% The distance to instability (\texttt{d\_instability}) denotes the gap between the size of the largest unstable partition and the threshold.
+% The additional delta parameter (\texttt{delta\_p}) denotes the worst-case probability 
+% that an unstable partition an individual contributes is still present in the release,
+% because noise added to release the DP count estimate exceeds \texttt{d\_instability}.
+
+We now adapt the proof from \cite{rogers2023unifyingprivacyanalysisframework} (Theorem 7).
+Consider $S$ to be the set of labels that are common between $x$ and $x'$.
+Define event $E$ to be any potential outcome of the mechanism for which all labels are in $S$
+(where only stable partitions are released).
+We then lower bound the probability of the mechanism returning an event $E$.
+In the following, $c_j$ denotes the exact count for partition $j$,
+and $Z_j$ is a random variable distributed according to the distribution used to release a noisy count.
+
+\begin{align*}
+    \Pr[E] &= \prod_{j \in x \backslash x'} \Pr[c_j + Z_j \le T] \\
+    &\ge \prod_{j \in x \backslash x'} \Pr[\Delta_\infty + Z_j \le T] \\
+    &\ge \Pr[\Delta_\infty + Z_j \le T]^{\Delta_0}
+\end{align*}
+
+The probability of returning a set of stable partitions ($\Pr[E]$) 
+is the probability of not returning any of the unstable partitions.
+We now solve for the choice of threshold $T$ such that $\Pr[E] \ge 1 - \delta$.
+
+\begin{align*}
+    \Pr[\Delta_\infty + Z_j \le T]^{\Delta_0} &= \Pr[Z_j \le T - \Delta_\infty]^{\Delta_0} \\
+    &= (1 - \Pr[Z_j > T - \Delta_\infty])^{\Delta_0}
+\end{align*}
+
+Let \texttt{d\_instability} denote the distance to instability of $T - \Delta_\infty$.
+By the postcondition of \\ \texttt{integrate\_discrete\_noise\_tail},
+the probability that a random noise sample exceeds \texttt{d\_instability} is at most \texttt{delta\_single}.
+Therefore $\delta = 1 - (1 - \texttt{delta\_single})^{\Delta_0}$.
+This privacy loss is then added to \texttt{d\_out}.
+
+Together with the potential increase in delta for the release of the key set,
+then it is shown that \function(x), \function(x') are \dout-close under \texttt{output\_measure}.
+
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{make_private_group_by}
+\end{document}

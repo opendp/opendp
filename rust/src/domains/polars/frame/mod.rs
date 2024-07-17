@@ -206,15 +206,15 @@ impl<F: Frame> FrameDomain<F> {
     #[must_use]
     pub fn with_margin<I: AsRef<str>>(
         mut self,
-        grouping_keys: &[I],
+        grouping_columns: &[I],
         margin: Margin,
     ) -> Fallible<Self> {
-        let grouping_keys =
-            BTreeSet::from_iter(grouping_keys.iter().map(|v| v.as_ref().to_string()));
-        if self.margins.contains_key(&grouping_keys) {
+        let grouping_columns =
+            BTreeSet::from_iter(grouping_columns.iter().map(|v| v.as_ref().to_string()));
+        if self.margins.contains_key(&grouping_columns) {
             return fallible!(MakeDomain, "margin already exists");
         }
-        self.margins.insert(grouping_keys, margin);
+        self.margins.insert(grouping_columns, margin);
         Ok(self)
     }
 }
@@ -259,9 +259,9 @@ impl<F: Frame> Domain for FrameDomain<F> {
         }
 
         // check that margins are satisfied
-        for (grouping_keys, margin) in self.margins.iter() {
-            let grouping_keys = grouping_keys.iter().map(|c| col(c)).collect::<Vec<_>>();
-            if !margin.member(val.clone().lazyframe().group_by(grouping_keys))? {
+        for (grouping_columns, margin) in self.margins.iter() {
+            let grouping_columns = grouping_columns.iter().map(|c| col(c)).collect::<Vec<_>>();
+            if !margin.member(val.clone().lazyframe().group_by(grouping_columns))? {
                 return Ok(false);
             }
         }

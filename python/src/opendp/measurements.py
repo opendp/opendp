@@ -663,7 +663,8 @@ def make_private_lazyframe(
     input_metric: Metric,
     output_measure: Measure,
     lazyframe,
-    global_scale = None
+    global_scale = None,
+    threshold = None
 ) -> Measurement:
     r"""Create a differentially private measurement from a [`LazyFrame`].
 
@@ -686,7 +687,8 @@ def make_private_lazyframe(
     :param output_measure: How to measure privacy loss.
     :type output_measure: Measure
     :param lazyframe: A description of the computations to be run, in the form of a [`LazyFrame`].
-    :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
+    :param global_scale: Optional. A tune-able parameter that affects the privacy-utility tradeoff.
+    :param threshold: Optional. Minimum number of rows in each released partition.
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -768,20 +770,22 @@ def make_private_lazyframe(
     c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=None)
     c_lazyframe = py_to_c(lazyframe, c_type=AnyObjectPtr, type_name=LazyFrame)
     c_global_scale = py_to_c(global_scale, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[f64]))
+    c_threshold = py_to_c(threshold, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[u32]))
 
     # Call library function.
     lib_function = lib.opendp_measurements__make_private_lazyframe
-    lib_function.argtypes = [Domain, Metric, Measure, AnyObjectPtr, AnyObjectPtr]
+    lib_function.argtypes = [Domain, Metric, Measure, AnyObjectPtr, AnyObjectPtr, AnyObjectPtr]
     lib_function.restype = FfiResult
 
-    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_lazyframe, c_global_scale), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_lazyframe, c_global_scale, c_threshold), Measurement))
 
     return output
 
 def then_private_lazyframe(
     output_measure: Measure,
     lazyframe,
-    global_scale = None
+    global_scale = None,
+    threshold = None
 ):  
     r"""partial constructor of make_private_lazyframe
 
@@ -791,7 +795,8 @@ def then_private_lazyframe(
     :param output_measure: How to measure privacy loss.
     :type output_measure: Measure
     :param lazyframe: A description of the computations to be run, in the form of a [`LazyFrame`].
-    :param global_scale: A tune-able parameter that affects the privacy-utility tradeoff.
+    :param global_scale: Optional. A tune-able parameter that affects the privacy-utility tradeoff.
+    :param threshold: Optional. Minimum number of rows in each released partition.
 
     :example:
 
@@ -865,7 +870,8 @@ def then_private_lazyframe(
         input_metric=input_metric,
         output_measure=output_measure,
         lazyframe=lazyframe,
-        global_scale=global_scale))
+        global_scale=global_scale,
+        threshold=threshold))
 
 
 

@@ -31,6 +31,7 @@ fn test_aggregate() -> Fallible<()> {
             .agg(&[col("B").sum()])
             .logical_plan,
         Some(1.),
+        None,
     )
     .map(|_| ())
     .unwrap_err()

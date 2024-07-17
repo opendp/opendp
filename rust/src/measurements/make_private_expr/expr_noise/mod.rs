@@ -37,7 +37,7 @@ mod test;
 
 /// Arguments for the noise expression
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub(crate) struct NoiseArgs {
+pub struct NoiseArgs {
     /// The distribution to sample from
     pub distribution: Option<Distribution>,
 
@@ -123,6 +123,9 @@ where
     let scale = scale.unwrap_or(1.);
     let global_scale = global_scale.unwrap_or(1.);
     let scale = scale.inf_mul(&global_scale)?;
+    if scale.is_sign_negative() {
+        return fallible!(MakeTransformation, "noise scale must not be negative");
+    }
 
     if middle_domain.active_series()?.nullable {
         return fallible!(

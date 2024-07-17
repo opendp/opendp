@@ -727,6 +727,7 @@ impl std::fmt::Debug for AnyObject {
         let type_arg = &self.type_;
         f.write_str(dispatch!(monomorphize, [(type_arg, [
             u32, u64, i32, i64, f32, f64, bool, String, u8, Column,
+            (f64, f64),
             Vec<u32>, Vec<u64>, Vec<i32>, Vec<i64>, Vec<f32>, Vec<f64>, Vec<bool>, Vec<String>, Vec<u8>, Vec<Column>, Vec<Vec<String>>,
             HashMap<String, Column>,
             // FIXME: The following are for Python demo use of compositions. Need to figure this out!!!

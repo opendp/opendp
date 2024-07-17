@@ -23,6 +23,7 @@ use crate::{
     measurements::{
         expr_noise::{match_noise, Distribution, Support},
         expr_report_noisy_max_gumbel::match_report_noisy_max_gumbel,
+        is_threshold_predicate,
     },
     polars::{ExtractLazyFrame, OnceFrame},
     transformations::expr_discrete_quantile_score::match_discrete_quantile_score,
@@ -42,6 +43,10 @@ mod ffi;
     returns(c_type = "FfiResult<AnyObject *>")
 )]
 /// Get noise scale parameters from a measurement that returns a OnceFrame.
+///
+/// If a threshold is configured for censoring small/sensitive partitions,
+/// a threshold column will be included,
+/// containing the cutoff for the respective count query being thresholded.
 ///
 /// # Arguments
 /// * `measurement` - computation from which you want to read noise scale parameters from
@@ -67,6 +72,7 @@ struct UtilitySummary {
     pub distribution: Option<String>,
     pub scale: f64,
     pub accuracy: Option<f64>,
+    pub threshold: Option<u32>,
 }
 
 /// Get noise scale parameters from a LazyFrame.
@@ -75,21 +81,29 @@ struct UtilitySummary {
 /// * `lazyframe` - computation from which you want to read noise scale parameters from
 /// * `alpha` - optional statistical significance to use to compute accuracy estimates
 pub fn lazyframe_utility(lazyframe: &LazyFrame, alpha: Option<f64>) -> Fallible<DataFrame> {
-    let mut utility = logical_plan_utility(&lazyframe.logical_plan, alpha)?;
+    let mut utility = logical_plan_utility(&lazyframe.logical_plan, alpha, None)?;
 
     // only include the accuracy column if alpha is passed
     if alpha.is_none() {
         utility = utility.drop("accuracy")?;
     }
+    // only include the threshold column if a threshold is set
+    if utility.column("threshold")?.is_null().all() {
+        utility = utility.drop("threshold")?;
+    }
     Ok(utility)
 }
 
-fn logical_plan_utility(logical_plan: &DslPlan, alpha: Option<f64>) -> Fallible<DataFrame> {
+fn logical_plan_utility(
+    logical_plan: &DslPlan,
+    alpha: Option<f64>,
+    threshold: Option<(String, u32)>,
+) -> Fallible<DataFrame> {
     match logical_plan {
         DslPlan::Select { expr: exprs, .. } | DslPlan::GroupBy { aggs: exprs, .. } => {
             let rows = exprs
                 .iter()
-                .map(|e| expr_utility(&e, alpha))
+                .map(|e| expr_utility(&e, alpha, threshold.clone()))
                 .collect::<Fallible<Vec<Vec<UtilitySummary>>>>()?;
 
             Ok(DataFrame::from_rows_and_schema(
@@ -104,6 +118,7 @@ fn logical_plan_utility(logical_plan: &DslPlan, alpha: Option<f64>) -> Fallible<
                             },
                             AnyValue::from(summary.scale),
                             AnyValue::from(summary.accuracy),
+                            AnyValue::from(summary.threshold),
                         ])
                     })
                     .collect::<Vec<_>>(),
@@ -113,20 +128,32 @@ fn logical_plan_utility(logical_plan: &DslPlan, alpha: Option<f64>) -> Fallible<
                     Field::new("distribution", DataType::String),
                     Field::new("scale", DataType::Float64),
                     Field::new("accuracy", DataType::Float64),
+                    Field::new("threshold", DataType::UInt32),
                 ]),
             )?)
         }
-        DslPlan::Filter { input, .. }
-        | DslPlan::Sort { input, .. }
+        DslPlan::Filter { input, predicate } => {
+            let threshold = is_threshold_predicate(predicate.clone());
+            logical_plan_utility(input.as_ref(), alpha, threshold)
+        }
+        DslPlan::Sort { input, .. }
         | DslPlan::Slice { input, .. }
-        | DslPlan::Sink { input, .. } => logical_plan_utility(input.as_ref(), alpha),
+        | DslPlan::Sink { input, .. } => logical_plan_utility(input.as_ref(), alpha, threshold),
         dsl => fallible!(FailedFunction, "unrecognized dsl: {:?}", dsl.describe()),
     }
 }
 
-fn expr_utility<'a>(expr: &Expr, alpha: Option<f64>) -> Fallible<Vec<UtilitySummary>> {
+fn expr_utility<'a>(
+    expr: &Expr,
+    alpha: Option<f64>,
+    threshold: Option<(String, u32)>,
+) -> Fallible<Vec<UtilitySummary>> {
     let name = expr.clone().meta().output_name()?.to_string();
     let expr = expr.clone().meta().undo_aliases();
+    let t_value = threshold
+        .clone()
+        .and_then(|(t_name, t_value)| (name == t_name).then_some(t_value));
+
     if let Some((input, plugin)) = match_noise(&expr)? {
         let scale = plugin
             .scale
@@ -158,6 +185,7 @@ fn expr_utility<'a>(expr: &Expr, alpha: Option<f64>) -> Fallible<Vec<UtilitySumm
             distribution: Some(format!("{:?} {:?}", support, distribution)),
             scale,
             accuracy,
+            threshold: t_value,
         }]);
     }
 
@@ -165,11 +193,12 @@ fn expr_utility<'a>(expr: &Expr, alpha: Option<f64>) -> Fallible<Vec<UtilitySumm
         return Ok(vec![UtilitySummary {
             name,
             aggregate: expr_aggregate(input)?.to_string(),
-            distribution: Some("Gumbel".to_string()),
+            distribution: Some("Gumbel Max".to_string()),
             scale: plugin
                 .scale
                 .ok_or_else(|| err!(FailedFunction, "scale must be known"))?,
             accuracy: None,
+            threshold: t_value,
         }]);
     }
 
@@ -180,11 +209,12 @@ fn expr_utility<'a>(expr: &Expr, alpha: Option<f64>) -> Fallible<Vec<UtilitySumm
             distribution: None,
             scale: 0.0,
             accuracy: alpha.is_some().then_some(0.0),
+            threshold: t_value,
         }]),
 
         Expr::Function { input, .. } => Ok(input
             .iter()
-            .map(|e| expr_utility(e, alpha))
+            .map(|e| expr_utility(e, alpha, threshold.clone()))
             .collect::<Fallible<Vec<_>>>()?
             .into_iter()
             .flatten()
