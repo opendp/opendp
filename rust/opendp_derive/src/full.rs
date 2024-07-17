@@ -59,7 +59,7 @@ pub(crate) fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStre
         .features
         .contains(&String::from("honest-but-curious"))
     {
-        confirm_note_for_honest_but_curious(function.name, &mut item_fn.attrs)
+        try_!(confirm_note_for_honest_but_curious(function.name, &mut item_fn.attrs));
     }
 
     let mut output = TokenStream::new();

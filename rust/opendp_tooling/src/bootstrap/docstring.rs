@@ -313,12 +313,13 @@ pub fn get_proof_path(
 }
 
 /// confirm prescence of note for honest-but-curious
-pub fn confirm_note_for_honest_but_curious(name: String, attributes: &mut Vec<Attribute>) -> () {
+pub fn confirm_note_for_honest_but_curious(name: String, attributes: &mut Vec<Attribute>) -> Result<()> {
     let doc_comment = get_doc_comment(attributes.to_vec());
     let requires = "Requires `honest-but-curious`";
     if !doc_comment.contains(requires) {
-        panic!("In {name} doc comment, add '{requires} because ...'")
+        return Err(Error::custom(format!("In {name} doc comment, please add '{requires} because ...'")));
     };
+    Ok(())
 }
 
 fn get_doc_comment(attributes: Vec<Attribute>) -> String {
