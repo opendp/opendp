@@ -532,3 +532,19 @@ def test_polars_threshold():
         .release()  # type: ignore[union-attr]
         .collect()
     )
+
+
+def test_replace_binary_path():
+    import os
+    os.environ["OPENDP_LIB_PATH"] = "testing!"
+    pl = pytest.importorskip("polars")
+
+    m_expr = dp.m.make_private_expr(
+        dp.expr_domain(example_lf()[0], grouping_columns=[]),
+        dp.partition_distance(dp.symmetric_distance()),
+        dp.max_divergence(T=float),
+        pl.len().dp.noise(scale=1.),
+    )
+    assert str(m_expr((pl.LazyFrame(dict()), pl.all()))) == "len().testing!:noise_plugin()"
+
+    del os.environ["OPENDP_LIB_PATH"]

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 use crate::{
     core::Function,
@@ -133,7 +133,7 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
                 kwargs,
             } = &mut function
             {
-                if let Some(path) = option_env!("OPENDP_LIB_PATH") {
+                if let Ok(path) = env::var("OPENDP_LIB_PATH") {
                     *lib = Arc::from(path);
                 }
                 *symbol = KW::NAME.into();
