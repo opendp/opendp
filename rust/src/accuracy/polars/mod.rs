@@ -21,11 +21,11 @@ use crate::{
     domains::LazyFrameDomain,
     error::Fallible,
     measurements::{
-        expr_noise::{match_noise, Distribution, Support},
-        expr_report_noisy_max_gumbel::match_report_noisy_max_gumbel,
+        expr_noise::{Distribution, NoisePlugin, Support},
+        expr_report_noisy_max::ReportNoisyMaxPlugin,
         is_threshold_predicate,
     },
-    polars::{ExtractLazyFrame, OnceFrame},
+    polars::{match_trusted_plugin, ExtractLazyFrame, OnceFrame},
     transformations::expr_discrete_quantile_score::match_discrete_quantile_score,
 };
 
@@ -70,7 +70,7 @@ struct UtilitySummary {
     pub name: String,
     pub aggregate: String,
     pub distribution: Option<String>,
-    pub scale: f64,
+    pub scale: Option<f64>,
     pub accuracy: Option<f64>,
     pub threshold: Option<u32>,
 }
@@ -154,26 +154,14 @@ fn expr_utility<'a>(
         .clone()
         .and_then(|(t_name, t_value)| (name == t_name).then_some(t_value));
 
-    if let Some((input, plugin)) = match_noise(&expr)? {
-        let scale = plugin
-            .scale
-            .ok_or_else(|| err!(FailedFunction, "scale must be known"))?;
-
-        let distribution = plugin
-            .distribution
-            .ok_or_else(|| err!(FailedFunction, "distribution must be known"))?;
-
-        let support = plugin
-            .support
-            .ok_or_else(|| err!(FailedFunction, "support must be known"))?;
-
+    if let Some((input, plugin)) = match_trusted_plugin::<NoisePlugin>(&expr)? {
         let accuracy = if let Some(alpha) = alpha {
             use {Distribution::*, Support::*};
-            Some(match (distribution, support) {
-                (Laplace, Float) => laplacian_scale_to_accuracy(scale, alpha),
-                (Gaussian, Float) => gaussian_scale_to_accuracy(scale, alpha),
-                (Laplace, Integer) => discrete_laplacian_scale_to_accuracy(scale, alpha),
-                (Gaussian, Integer) => discrete_gaussian_scale_to_accuracy(scale, alpha),
+            Some(match (plugin.distribution, plugin.support) {
+                (Laplace, Float) => laplacian_scale_to_accuracy(plugin.scale, alpha),
+                (Gaussian, Float) => gaussian_scale_to_accuracy(plugin.scale, alpha),
+                (Laplace, Integer) => discrete_laplacian_scale_to_accuracy(plugin.scale, alpha),
+                (Gaussian, Integer) => discrete_gaussian_scale_to_accuracy(plugin.scale, alpha),
             }?)
         } else {
             None
@@ -181,22 +169,20 @@ fn expr_utility<'a>(
 
         return Ok(vec![UtilitySummary {
             name,
-            aggregate: expr_aggregate(input)?.to_string(),
-            distribution: Some(format!("{:?} {:?}", support, distribution)),
-            scale,
+            aggregate: expr_aggregate(&input[0])?.to_string(),
+            distribution: Some(format!("{:?} {:?}", plugin.support, plugin.distribution)),
+            scale: Some(plugin.scale),
             accuracy,
             threshold: t_value,
         }]);
     }
 
-    if let Some((input, plugin)) = match_report_noisy_max_gumbel(&expr)? {
+    if let Some((inputs, plugin)) = match_trusted_plugin::<ReportNoisyMaxPlugin>(&expr)? {
         return Ok(vec![UtilitySummary {
             name,
-            aggregate: expr_aggregate(input)?.to_string(),
-            distribution: Some("Gumbel Max".to_string()),
-            scale: plugin
-                .scale
-                .ok_or_else(|| err!(FailedFunction, "scale must be known"))?,
+            aggregate: expr_aggregate(&inputs[0])?.to_string(),
+            distribution: Some(format!("Gumbel{:?}", plugin.optimize)),
+            scale: Some(plugin.scale),
             accuracy: None,
             threshold: t_value,
         }]);
@@ -207,7 +193,7 @@ fn expr_utility<'a>(
             name,
             aggregate: "Len".to_string(),
             distribution: None,
-            scale: 0.0,
+            scale: None,
             accuracy: alpha.is_some().then_some(0.0),
             threshold: t_value,
         }]),

@@ -7,7 +7,7 @@ use polars_plan::{
     utils::expr_output_name,
 };
 
-use crate::{measurements::expr_noise::NoiseArgs, polars::match_plugin};
+use crate::{measurements::expr_noise::NoisePlugin, polars::match_trusted_plugin};
 
 use super::Fallible;
 
@@ -83,7 +83,7 @@ pub fn match_grouping_columns(keys: Vec<Expr>) -> Fallible<BTreeSet<String>> {
 pub(super) fn find_len_expr(
     exprs: &Vec<Expr>,
     name: Option<&str>,
-) -> Fallible<(String, NoiseArgs)> {
+) -> Fallible<(String, NoisePlugin)> {
     // only keep expressions that compute the length
     (exprs.iter())
         .find_map(|e| is_len_expr(e, name))
@@ -96,7 +96,7 @@ pub(super) fn find_len_expr(
         })
 }
 
-fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoiseArgs)> {
+fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoisePlugin)> {
     let output_name = expr_output_name(expr).ok()?;
 
     // check if the expression matches the expected name
@@ -108,15 +108,13 @@ fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoiseArgs)> {
     // remove any aliasing in the expression
     let expr = expr.clone().meta().undo_aliases();
 
-    let (inputs, args) = match_plugin(&expr, "noise").ok().flatten()?;
+    let (inputs, args) = match_trusted_plugin::<NoisePlugin>(&expr).ok().flatten()?;
 
-    let [input] = <&[Expr; 1]>::try_from(inputs.as_slice()).ok()?;
-
-    if input != &Expr::Len {
-        return None;
+    if let Expr::Len = &inputs[0] {
+        Some((output_name.to_string(), args))
+    } else {
+        None
     }
-
-    Some((output_name.to_string(), args))
 }
 
 pub(crate) fn is_threshold_predicate(expr: Expr) -> Option<(String, u32)> {

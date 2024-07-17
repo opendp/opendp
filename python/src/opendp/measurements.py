@@ -1022,7 +1022,7 @@ def make_report_noisy_max_gumbel(
     :param input_metric: Metric on the input domain. Must be LInfDistance
     :type input_metric: Metric
     :param scale: Higher scales are more private.
-    :param optimize: Indicate whether to privately return the "Max" or "Min"
+    :param optimize: Indicate whether to privately return the "max" or "min"
     :type optimize: str
     :param QO: Output Distance Type.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
@@ -1078,7 +1078,7 @@ def then_report_noisy_max_gumbel(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.measurements.make_report_noisy_max_gumbel`
 
     :param scale: Higher scales are more private.
-    :param optimize: Indicate whether to privately return the "Max" or "Min"
+    :param optimize: Indicate whether to privately return the "max" or "min"
     :type optimize: str
     :param QO: Output Distance Type.
     :type QO: :py:ref:`RuntimeTypeDescriptor`

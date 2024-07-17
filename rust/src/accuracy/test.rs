@@ -318,6 +318,33 @@ pub fn test_empirical_discrete_gaussian_accuracy() -> Fallible<()> {
 }
 
 #[test]
+pub fn test_empirical_integrate_discrete_laplacian_tail() -> Fallible<()> {
+    let scale = 1.;
+    let tail = 2;
+    let theoretical_alpha = integrate_discrete_laplacian_tail(scale, tail)?;
+
+    println!("alpha: {}", theoretical_alpha);
+    let m_dlap = make_laplace(
+        AtomDomain::<i8>::default(),
+        AbsoluteDistance::default(),
+        scale,
+        None,
+    )?;
+    let n = 50_000;
+    let empirical_alpha = (0..n)
+        .filter(|_| m_dlap.invoke(&0).unwrap().clamp(-127, 127) > tail as i8)
+        .count() as f64
+        / n as f64;
+
+    println!("Discrete laplacian significance levels/alpha");
+    println!("Theoretical: {:?}", theoretical_alpha);
+    println!("Empirical:   {:?}", empirical_alpha);
+    // this test has a small likelihood of failing
+    assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
+    Ok(())
+}
+
+#[test]
 pub fn test_empirical_integrate_discrete_laplace_tail() -> Fallible<()> {
     let scale = 1.;
     let tail = 1 + u32::sample_uniform_int_below(10, None)?;

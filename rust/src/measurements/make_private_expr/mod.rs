@@ -31,7 +31,7 @@ mod expr_literal;
 mod expr_postprocess;
 
 #[cfg(feature = "contrib")]
-pub(crate) mod expr_report_noisy_max_gumbel;
+pub(crate) mod expr_report_noisy_max;
 
 #[bootstrap(
     features("contrib", "honest-but-curious"),
@@ -84,14 +84,17 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergen
         output_measure: MaxDivergence<f64>,
         global_scale: Option<f64>,
     ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, MaxDivergence<f64>>> {
-        if expr_noise::match_noise(&self)?.is_some() {
+        if expr_noise::match_noise_shim(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
 
-        if expr_report_noisy_max_gumbel::match_report_noisy_max_gumbel(&self)?.is_some() {
-            return expr_report_noisy_max_gumbel::make_expr_report_noisy_max_gumbel::<
-                PartitionDistance<M>,
-            >(input_domain, input_metric, self, global_scale);
+        if expr_report_noisy_max::match_report_noisy_max(&self)?.is_some() {
+            return expr_report_noisy_max::make_expr_report_noisy_max::<PartitionDistance<M>>(
+                input_domain,
+                input_metric,
+                self,
+                global_scale,
+            );
         }
 
         make_private_measure_agnostic(
@@ -116,7 +119,7 @@ impl<M: 'static + UnboundedMetric>
     ) -> Fallible<
         Measurement<ExprDomain, Expr, PartitionDistance<M>, ZeroConcentratedDivergence<f64>>,
     > {
-        if expr_noise::match_noise(&self)?.is_some() {
+        if expr_noise::match_noise_shim(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
 
