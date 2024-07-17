@@ -40,6 +40,7 @@ fn test_make_expr_private_lit_groupby() -> Fallible<()> {
             .agg([lit(1)])
             .sort(["chunk_2_bool"], Default::default()),
         None,
+        None,
     )?;
 
     let actual = m_lit.invoke(&lf)?.collect()?;

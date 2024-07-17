@@ -41,6 +41,7 @@ fn test_describe_polars_measurement_accuracy() -> Fallible<()> {
             col("A").dp().sum((0, 1), None),
         ]),
         Some(1.0),
+        None,
     )?;
 
     let description = describe_polars_measurement_accuracy(meas.clone(), None)?;

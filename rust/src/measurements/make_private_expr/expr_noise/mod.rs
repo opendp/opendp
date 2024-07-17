@@ -2,7 +2,7 @@ use crate::core::{Measure, Metric, MetricSpace, PrivacyMap};
 use crate::measurements::{gaussian_zcdp_map, get_discretization_consts, laplace_puredp_map};
 use crate::measures::ZeroConcentratedDivergence;
 use crate::metrics::{L1Distance, L2Distance};
-use crate::polars::{apply_plugin, match_plugin, ExprFunction, OpenDPPlugin};
+use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
 use crate::traits::samplers::{
     sample_discrete_gaussian, sample_discrete_gaussian_Z2k, sample_discrete_laplace,
     sample_discrete_laplace_Z2k,
@@ -17,6 +17,7 @@ use crate::{
     traits::SaturatingCast,
 };
 use dashu::{integer::IBig, rational::RBig};
+use serde::de::value::Error;
 
 use polars::chunked_array::ChunkedArray;
 use polars::datatypes::{
@@ -30,24 +31,82 @@ use polars::series::{IntoSeries, Series};
 use polars_plan::dsl::{GetOutput, SeriesUdf};
 use polars_plan::prelude::{ApplyOptions, FunctionOptions};
 use pyo3_polars::derive::polars_expr;
+use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 mod test;
 
+#[derive(Clone, Serialize, Deserialize)]
+pub(crate) struct NoiseShim;
+impl SeriesUdf for NoiseShim {
+    // makes it possible to downcast the AnonymousFunction trait object back to Self
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn call_udf(&self, _: &mut [Series]) -> PolarsResult<Option<Series>> {
+        polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
+    }
+
+    fn get_output(&self) -> Option<GetOutput> {
+        Some(GetOutput::map_fields(|fields| {
+            noise_plugin_type_udf(fields)
+        }))
+    }
+}
+
+impl OpenDPPlugin for NoiseShim {
+    const NAME: &'static str = "noise";
+    fn function_options() -> FunctionOptions {
+        FunctionOptions {
+            collect_groups: ApplyOptions::ElementWise,
+            fmt_str: Self::NAME,
+            ..Default::default()
+        }
+    }
+}
+
 /// Arguments for the noise expression
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub(crate) struct NoiseArgs {
+pub struct NoisePlugin {
     /// The distribution to sample from
-    pub distribution: Option<Distribution>,
+    pub distribution: Distribution,
 
-    /// The scale of the noise.
-    ///
-    /// Scale may be left None, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
-    pub scale: Option<f64>,
+    /// The scale of the noise
+    pub scale: f64,
 
     /// Distinguish between integer or floating-point support.
-    pub support: Option<Support>,
+    pub support: Support,
+}
+
+// allow the NoiseArgs struct to be stored inside an AnonymousFunction, when used from Rust directly
+impl SeriesUdf for NoisePlugin {
+    // makes it possible to downcast the AnonymousFunction trait object back to NoiseArgs
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn call_udf(&self, s: &mut [Series]) -> PolarsResult<Option<Series>> {
+        noise_udf(s, self.clone()).map(Some)
+    }
+
+    fn get_output(&self) -> Option<GetOutput> {
+        Some(GetOutput::map_fields(|fields| {
+            noise_plugin_type_udf(fields)
+        }))
+    }
+}
+
+impl OpenDPPlugin for NoisePlugin {
+    const NAME: &'static str = "noise_plugin";
+    fn function_options() -> FunctionOptions {
+        FunctionOptions {
+            collect_groups: ApplyOptions::ElementWise,
+            fmt_str: Self::NAME,
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
@@ -101,14 +160,9 @@ where
     (ExprDomain, MI): MetricSpace,
     (ExprDomain, MO::Metric): MetricSpace,
 {
-    let Some((input, args)) = match_noise(&expr)? else {
+    let Some((input, distribution, scale)) = match_noise_shim(&expr)? else {
         return fallible!(MakeMeasurement, "Expected noise function");
     };
-    let NoiseArgs {
-        scale,
-        distribution,
-        ..
-    } = args;
 
     let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
@@ -123,6 +177,9 @@ where
     let scale = scale.unwrap_or(1.);
     let global_scale = global_scale.unwrap_or(1.);
     let scale = scale.inf_mul(&global_scale)?;
+    if scale.is_sign_negative() {
+        return fallible!(MakeTransformation, "noise scale must not be negative");
+    }
 
     if middle_domain.active_series()?.nullable {
         return fallible!(
@@ -159,10 +216,10 @@ where
             apply_plugin(
                 input_expr,
                 expr.clone(),
-                NoiseArgs {
-                    scale: Some(scale),
-                    distribution: Some(MO::DISTRIBUTION),
-                    support: Some(support),
+                NoisePlugin {
+                    scale,
+                    distribution: MO::DISTRIBUTION,
+                    support,
                 },
             )
         }),
@@ -174,8 +231,6 @@ where
     t_prior >> m_noise
 }
 
-static NOISE_PLUGIN_NAME: &str = "noise";
-
 /// Determine if the given expression is a noise expression.
 ///
 /// # Arguments
@@ -183,66 +238,51 @@ static NOISE_PLUGIN_NAME: &str = "noise";
 ///
 /// # Returns
 /// The input to the Noise expression and optional scale of noise
-pub(crate) fn match_noise(expr: &Expr) -> Fallible<Option<(&Expr, NoiseArgs)>> {
-    let Some((input, args)) = match_plugin(expr, NOISE_PLUGIN_NAME)? else {
+pub(crate) fn match_noise_shim(
+    expr: &Expr,
+) -> Fallible<Option<(&Expr, Option<Distribution>, Option<f64>)>> {
+    let Some(input) = match_plugin::<NoiseShim>(expr)? else {
         return Ok(None);
     };
 
-    let Ok([input]) = <&[_; 1]>::try_from(input.as_slice()) else {
-        return fallible!(MakeMeasurement, "Noise expects a single input expression");
+    let Ok([data, distribution, scale]) = <&[_; 3]>::try_from(input.as_slice()) else {
+        return fallible!(MakeMeasurement, "Noise expects three input expressions");
     };
 
-    Ok(Some((input, args)))
+    let distribution = if let Some(dist) = literal_value_of::<String>(distribution)? {
+        let dist = Distribution::deserialize(dist.into_deserializer())
+            .map_err(|e: Error| err!(FailedFunction, "{:?}", e))?;
+        Some(dist)
+    } else {
+        None
+    };
+
+    let scale = literal_value_of::<f64>(scale)?;
+
+    Ok(Some((data, distribution, scale)))
 }
 
 // Code comment, not documentation:
 // When using the plugin API from other languages, the NoiseArgs struct is serialized inside a FunctionExpr::FfiPlugin.
 // When using the Rust API directly, the NoiseArgs struct is stored inside an AnonymousFunction.
 
-impl OpenDPPlugin for NoiseArgs {
-    fn get_options(&self) -> FunctionOptions {
-        FunctionOptions {
-            collect_groups: ApplyOptions::ElementWise,
-            fmt_str: NOISE_PLUGIN_NAME,
-            ..Default::default()
-        }
-    }
-}
-
-// allow the NoiseArgs struct to be stored inside an AnonymousFunction, when used from Rust directly
-impl SeriesUdf for NoiseArgs {
-    // makes it possible to downcast the AnonymousFunction trait object back to NoiseArgs
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn call_udf(&self, s: &mut [Series]) -> PolarsResult<Option<Series>> {
-        noise_udf(s, self.clone()).map(Some)
-    }
-
-    fn get_output(&self) -> Option<GetOutput> {
-        Some(GetOutput::map_fields(|fields| noise_type_udf(fields)))
-    }
-}
-
 /// Implementation of the noise expression.
 ///
 /// The Polars engine executes this function over chunks of data.
-fn noise_udf(inputs: &[Series], kwargs: NoiseArgs) -> PolarsResult<Series> {
+fn noise_udf(inputs: &[Series], kwargs: NoisePlugin) -> PolarsResult<Series> {
     let Ok([series]) = <&[_; 1]>::try_from(inputs) else {
         polars_bail!(InvalidOperation: "noise expects a single input expression");
     };
-    let Some(scale) = kwargs.scale else {
-        polars_bail!(InvalidOperation: "noise scale parameter must be known");
-    };
+
+    let NoisePlugin {
+        distribution,
+        scale,
+        ..
+    } = kwargs;
 
     if scale.is_sign_negative() {
         polars_bail!(InvalidOperation: "noise scale must be non-negative");
     }
-
-    let Some(distribution) = kwargs.distribution else {
-        polars_bail!(InvalidOperation: "distribution must be known. Please use `make_private_lazyframe` or explicitly set the noise distribution.");
-    };
 
     // PT stands for Polars Type
     fn noise_impl_integer<PT: 'static + PolarsDataType>(
@@ -330,10 +370,16 @@ fn noise_udf(inputs: &[Series], kwargs: NoiseArgs) -> PolarsResult<Series> {
     }
 }
 
+#[cfg(feature = "ffi")]
+#[polars_expr(output_type=Null)]
+fn noise(_: &[Series]) -> PolarsResult<Series> {
+    polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
+}
+
 /// Helper function for the Polars plan optimizer to determine the output type of the expression.
 ///
 /// Ensures that the input field is numeric.
-pub(crate) fn noise_type_udf(input_fields: &[Field]) -> PolarsResult<Field> {
+pub(crate) fn noise_plugin_type_udf(input_fields: &[Field]) -> PolarsResult<Field> {
     let Ok([field]) = <&[Field; 1]>::try_from(input_fields) else {
         polars_bail!(InvalidOperation: "noise expects a single input field")
     };
@@ -357,7 +403,7 @@ pub(crate) fn noise_type_udf(input_fields: &[Field]) -> PolarsResult<Field> {
 
 // generate the FFI plugin for the noise expression
 #[cfg(feature = "ffi")]
-#[polars_expr(output_type_func=noise_type_udf)]
-fn noise(inputs: &[Series], kwargs: NoiseArgs) -> PolarsResult<Series> {
+#[polars_expr(output_type_func=noise_plugin_type_udf)]
+fn noise_plugin(inputs: &[Series], kwargs: NoisePlugin) -> PolarsResult<Series> {
     noise_udf(inputs, kwargs)
 }

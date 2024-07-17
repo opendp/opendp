@@ -73,9 +73,13 @@ Setting a feature changes how the crate compiles:
         * - ``contrib``
           - Enable to include constructors that have not passed the vetting process.
         * - ``honest-but-curious``
-          - Enable to include constructors that are only private if the constructor arguments are honest.
+          - Enable to include constructors whose differential privacy (or stability) properties
+            rely on the constructor arguments being correct.
+            That is, if a user/adversary is 'honest' in specifying the constructor arguments,
+            then even if they later become 'curious' and try to learn something from the measurement outputs,
+            they will not be able to violate the differential privacy promises of the measurement.
         * - ``floating-point``
-          - Enable to include transformations/measurements with floating-point vulnerabilities.
+          - Enable to include transformations and measurements with floating-point vulnerabilities.
         * - ``bindings``
           - Enable to generate Python and R source code. Depends on the ``ffi`` and ``derive`` features. 
         * - ``partials``

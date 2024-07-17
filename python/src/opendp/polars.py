@@ -14,7 +14,14 @@ from dataclasses import dataclass
 import os
 from typing import Literal, Tuple
 from opendp._lib import lib_path
-from opendp.mod import Domain, Measurement, assert_features
+from opendp.mod import (
+    Domain,
+    Measurement,
+    OpenDPException,
+    assert_features,
+    binary_search,
+    binary_search_chain,
+)
 from opendp.domains import series_domain, lazyframe_domain, option_domain, atom_domain
 from opendp.measurements import make_private_lazyframe
 
@@ -59,14 +66,14 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.len().dp.noise()
         >>> print(expression)
-        len()...:noise()
+        len()...:noise([...])
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars import lit  # type: ignore[import-not-found]
         return register_plugin_function(
             plugin_path=lib_path,
             function_name="noise",
-            kwargs={"scale": scale, "distribution": distribution},
-            args=self.expr,
+            args=(self.expr, lit(distribution), scale),
             is_elementwise=True,
         )
 
@@ -82,7 +89,7 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.len().dp.laplace()
         >>> print(expression)
-        len()...:noise()
+        len()...:noise([...])
         """
         return self.noise(scale=scale, distribution="Laplace")
 
@@ -98,7 +105,7 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.len().dp.gaussian()
         >>> print(expression)
-        len()...:noise()
+        len()...:noise([...])
         """
         return self.noise(scale=scale, distribution="Gaussian")
 
@@ -121,7 +128,7 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.sum((0, 10))
         >>> print(expression)
-        col("numbers").clip([...]).sum()...:noise()
+        col("numbers").clip([...]).sum()...:noise([...])
         """
         return self.expr.clip(*bounds).sum().dp.noise(scale)
 
@@ -139,9 +146,10 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.mean((0, 10))
         >>> print(expression)
-        [(col("numbers").clip([...]).sum()...:noise()) / (len())]
+        [(col("numbers").clip([...]).sum()...:noise([...])) / (len())]
         """
         import polars as pl  # type: ignore[import-not-found]
+
         return self.expr.dp.sum(bounds, scale) / pl.len()
 
     def _discrete_quantile_score(self, alpha: float, candidates: list[float]):
@@ -154,15 +162,15 @@ class DPExpr(object):
         :param candidates: Set of possible quantiles to evaluate the utility of.
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars import Series  # type: ignore[import-not-found]
         return register_plugin_function(
             plugin_path=lib_path,
             function_name="discrete_quantile_score",
-            kwargs={"alpha": alpha, "candidates": candidates},
-            args=self.expr,
+            args=[self.expr, alpha, Series(candidates)],
             returns_scalar=True,
         )
 
-    def _report_noisy_max_gumbel(
+    def _report_noisy_max(
         self, optimize: Literal["min", "max"], scale: float | None = None
     ):
         """Report the argmax or argmin after adding Gumbel noise.
@@ -174,27 +182,27 @@ class DPExpr(object):
         :param scale: Noise scale parameter for the Gumbel distribution.
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars import lit  # type: ignore[import-not-found]
         return register_plugin_function(
             plugin_path=lib_path,
-            function_name="report_noisy_max_gumbel",
-            kwargs={"optimize": optimize, "scale": scale},
-            args=self.expr,
+            function_name="report_noisy_max",
+            args=[self.expr, lit(optimize), scale],
             is_elementwise=True,
         )
 
     def _index_candidates(self, candidates: list[float]):
         """Index into a candidate set.
 
-        Typically used after :py:func:`_report_noisy_max_gumbel` to map selected indices to candidates.
+        Typically used after :py:func:`_report_noisy_max` to map selected indices to candidates.
 
         :param candidates: The values that each selected index corresponds to.
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars import Series  # type: ignore[import-not-found]
         return register_plugin_function(
             plugin_path=lib_path,
             function_name="index_candidates",
-            kwargs={"candidates": candidates},
-            args=self.expr,
+            args=[self.expr, Series(candidates)],
             is_elementwise=True,
         )
 
@@ -214,10 +222,10 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.quantile(0.5, [1, 2, 3])
         >>> print(expression)
-        col("numbers")...:discrete_quantile_score()...:report_noisy_max_gumbel()...:index_candidates()
+        col("numbers")...:discrete_quantile_score([...])...:report_noisy_max([...])...:index_candidates([...])
         """
         dq_score = self.expr.dp._discrete_quantile_score(alpha, candidates)
-        noisy_idx = dq_score.dp._report_noisy_max_gumbel("min", scale)
+        noisy_idx = dq_score.dp._report_noisy_max("min", scale)
         return noisy_idx.dp._index_candidates(candidates)
 
     def median(self, candidates: list[float], scale: float | None = None):
@@ -234,7 +242,7 @@ class DPExpr(object):
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.quantile(0.5, [1, 2, 3])
         >>> print(expression)
-        col("numbers")...:discrete_quantile_score()...:report_noisy_max_gumbel()...:index_candidates()
+        col("numbers")...:discrete_quantile_score([...])...:report_noisy_max([...])...:index_candidates([...])
         """
         return self.expr.dp.quantile(0.5, candidates, scale)
 
@@ -398,25 +406,51 @@ try:
 
         def resolve(self) -> Measurement:
             """Resolve the query into a measurement."""
-            from opendp.context import PartialChain
 
             # access attributes of self without getting intercepted by Self.__getattribute__
             lf_plan = object.__getattribute__(self, "_lf_plan")
             query = object.__getattribute__(self, "_query")
             input_domain, input_metric = query._chain
+            d_in, d_out = query._d_in, query._d_out
 
-            # create an updated query and then resolve it into a measurement
-            return query.new_with(
-                chain=PartialChain(
-                    lambda s: make_private_lazyframe(
-                        input_domain=input_domain,
-                        input_metric=input_metric,
-                        output_measure=query._output_measure,
-                        lazyframe=lf_plan,
-                        global_scale=s,
-                    )
+            def make(scale, threshold=None):
+                return make_private_lazyframe(
+                    input_domain=input_domain,
+                    input_metric=input_metric,
+                    output_measure=query._output_measure,
+                    lazyframe=lf_plan,
+                    global_scale=scale,
+                    threshold=threshold,
                 )
-            ).resolve()
+            
+            # when the output measure is δ-approximate, then there are two free parameters to tune
+            if query._output_measure.type.origin == "FixedSmoothedMaxDivergence":  # type: ignore[union-attr]
+
+                # search for a scale parameter. Solve for epsilon first, 
+                # setting threshold to u32::MAX so as not to interfere with the search for a suitable scale parameter
+                scale = binary_search(
+                    lambda s: make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0],  # type: ignore[index]
+                    T=float,
+                )
+
+                # attempt to return without setting a threshold
+                try:
+                    return make(scale, threshold=None)
+                except OpenDPException:
+                    pass
+                
+                # now that scale has been solved, find a suitable threshold
+                threshold = binary_search(
+                    lambda t: make(scale, t).map(d_in)[1] < d_out[1],  # type: ignore[index]
+                    T=int,
+                )
+                
+                # return a measurement with the discovered scale and threshold
+                return make(scale, threshold)
+
+            # when no delta parameter is involved, 
+            # finding a suitable measurement just comes down to finding scale
+            return binary_search_chain(make, d_in, d_out, T=float)
 
         def release(self) -> OnceFrame:
             """Release the query. The query must be part of a context."""
@@ -428,6 +462,10 @@ try:
             """Retrieve noise scale parameters and accuracy estimates for each output.
 
             If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
+
+            If a threshold is configured for censoring small/sensitive partitions,
+            a threshold column will be included,
+            containing the cutoff for the respective count query being thresholded.
             
             :example:
 

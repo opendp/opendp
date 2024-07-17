@@ -742,7 +742,7 @@ then_randomized_response_bool <- function(
 #' @param input_domain Domain of the input vector. Must be a non-nullable VectorDomain.
 #' @param input_metric Metric on the input domain. Must be LInfDistance
 #' @param scale Higher scales are more private.
-#' @param optimize Indicate whether to privately return the "Max" or "Min"
+#' @param optimize Indicate whether to privately return the "max" or "min"
 #' @param .QO Output Distance Type.
 #' @return Measurement
 #' @export
@@ -782,7 +782,7 @@ make_report_noisy_max_gumbel <- function(
 #' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Higher scales are more private.
-#' @param optimize Indicate whether to privately return the "Max" or "Min"
+#' @param optimize Indicate whether to privately return the "max" or "min"
 #' @param .QO Output Distance Type.
 #' @return Measurement
 #' @export
