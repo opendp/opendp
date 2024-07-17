@@ -178,7 +178,7 @@ impl Measure for UserDivergence {
 )]
 /// Construct a new UserDivergence.
 /// Any two instances of an UserDivergence are equal if their string descriptors are equal.
-/// Requires `honest-but-curious`: A user-defined privacy measure is only a valid privacy measure if it offers closure of the privacy guarantee under post-processing. 
+/// Requires `honest-but-curious`: A user-defined privacy measure is only a valid privacy measure if it offers closure of the privacy guarantee under post-processing.
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the privacy measure.
