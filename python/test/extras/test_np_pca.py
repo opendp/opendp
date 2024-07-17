@@ -49,7 +49,7 @@ def test_pca_skl():
         data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
 
     with optional_dependency('sklearn'):
-        model = dp.x.sklearn.PCA(
+        model = dp.sklearn.PCA(
             epsilon=1.0,
             row_norm=1.0,
             n_samples=num_rows,
@@ -66,18 +66,18 @@ def test_pca_skl():
     loadings = model.singular_values_ * model.components_
     print("loadings", loadings)
 
-    model = dp.x.sklearn.PCA(
+    model = dp.sklearn.PCA(
         epsilon=1.0, row_norm=1.0, n_samples=num_rows, n_features=4, n_components="mle"
     )
 
     model.fit(data)
 
-    model = dp.x.sklearn.PCA(
+    model = dp.sklearn.PCA(
         epsilon=1.0, row_norm=1.0, n_samples=num_rows, n_features=4, n_components=0.4
     )
     model.fit(data)
 
-    model = dp.x.sklearn.PCA(
+    model = dp.sklearn.PCA(
         epsilon=1.0, row_norm=1.0, n_samples=num_rows, n_features=4, n_components=0.4
     )
     meas = model.measurement()
@@ -98,7 +98,7 @@ def flaky_assert_pca_compare_sklearn():
         data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
 
     with optional_dependency("sklearn"):
-        model_odp = dp.x.sklearn.PCA(
+        model_odp = dp.sklearn.PCA(
             epsilon=1_000_000.0,
             row_norm=64.0,
             n_samples=num_rows,

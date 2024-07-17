@@ -271,7 +271,6 @@ def proven(function):
         source_dir = os.path.dirname(inspect.getfile(function))
         absolute_proof_path = os.path.abspath(os.path.join(source_dir, matched_path))
 
-        # TODO: Is special handling for extras still needed?
         # split the path at the extras directory
         extras_path = os.path.join(os.path.dirname(__file__), "extras")
         relative_proof_path = os.path.relpath(absolute_proof_path, extras_path)
