@@ -59,7 +59,6 @@ where
             "Quantile estimation requires non-null inputs"
         );
     }
-    println!("{:?}", candidates.dtype());
     let candidates = candidates.strict_cast(&active_series.field.dtype)?;
 
     match active_series.field.dtype {

@@ -73,7 +73,7 @@ class DPExpr(object):
         return register_plugin_function(
             plugin_path=lib_path,
             function_name="noise",
-            args=[self.expr, lit(distribution), scale],
+            args=(self.expr, lit(distribution), scale),
             is_elementwise=True,
         )
 

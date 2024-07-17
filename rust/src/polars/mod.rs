@@ -374,7 +374,7 @@ impl DPExpr {
     /// * `optimize` - Distinguish between argmax and argmin.
     /// * `scale` - Noise scale parameter for the Gumbel distribution.
     pub(crate) fn report_noisy_max_gumbel(self, optimize: Optimize, scale: Option<f64>) -> Expr {
-        let optimize = lit(format!("{optimize:?}"));
+        let optimize = lit(format!("{optimize}"));
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
         apply_anonymous_function(vec![self.0, optimize, scale], ReportNoisyMaxShim)
     }

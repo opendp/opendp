@@ -1,6 +1,8 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
+use std::fmt::Display;
+
 use dashu::rational::RBig;
 use opendp_derive::bootstrap;
 
@@ -18,7 +20,7 @@ use crate::traits::{
     DistanceConstant,
 };
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 #[cfg_attr(feature = "polars", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "polars", serde(rename_all = "lowercase"))]
 pub enum Optimize {
@@ -26,7 +28,7 @@ pub enum Optimize {
     Max,
 }
 
-impl std::fmt::Debug for Optimize {
+impl Display for Optimize {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Optimize::Min => f.write_str("min"),
