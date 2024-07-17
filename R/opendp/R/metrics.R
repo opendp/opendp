@@ -336,7 +336,7 @@ symmetric_distance <- function(
 
 #' Construct a new UserDistance.
 #' Any two instances of an UserDistance are equal if their string descriptors are equal.
-#' Requires `honest-but-curious`: TODO
+#' Requires `honest-but-curious`: The OpenDP Library cannot verify that a user-defined metric forms a metric space when paired with any given domain.
 #'
 #' @concept metrics
 #' @param descriptor A string description of the metric.
