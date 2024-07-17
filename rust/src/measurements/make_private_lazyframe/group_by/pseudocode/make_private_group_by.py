@@ -7,19 +7,19 @@ def make_private_group_by(
     global_scale,
     threshold,
 ):
-    input_, keys, aggs, expr_threshold = match_group_by(plan)
+    input_expr, keys, aggs, predicate = match_group_by(plan)
 
-    t_prior = input_.make_stable(input_domain, input_metric)
+    t_prior = input_expr.make_stable(input_domain, input_metric)  # |\label{line:tprior}|
     middle_domain, middle_metric = t_prior.output_space()
 
-    grouping_columns = match_grouping_columns(keys)
+    grouping_columns = match_grouping_columns(keys)  # |\label{line:groupcols}|
 
-    margin = middle_domain \
-        .margins \
-        .get(grouping_columns, Margin.default())
+    margin = (middle_domain
+        .margins
+        .get(grouping_columns, Margin.default()))  # |\label{line:margin}|
 
-    # prepare a join measurement over all expressions
-    expr_domain = ExprDomain(
+    # prepare a joint measurement over all expressions
+    expr_domain = ExprDomain(  # |\label{line:joint}|
         middle_domain,
         ExprContext.Aggregate(grouping_columns),
     )
@@ -34,51 +34,62 @@ def make_private_group_by(
         ) for expr in aggs
     ])
 
-    # reconcile information about the threshold |\label{reconcile-threshold}|
-    dp_exprs = m_exprs.invoke((input_, all()))
-
-    if threshold is not None and expr_threshold is not None:
-        raise "two thresholds set"
+    # reconcile information about the threshold |\label{line:reconcile-threshold}|
+    dp_exprs = m_exprs.invoke((input_expr, all()))
 
     if margin.public_info is not None:
-        threshold = None
-    elif expr_threshold is not None:
-        name, threshold = expr_threshold
-        plugin = find_len_expr(dp_exprs, name.as_str())[1]
-        threshold = name, plugin, threshold
+        threshold_info = None
+    elif is_threshold_predicate(predicate) is not None:
+        name, threshold_value = is_threshold_predicate(predicate)
+        noise = find_len_expr(dp_exprs, name)[1]
+        threshold_info = name, noise, threshold_value, False
     elif threshold is not None:
-        name, plugin = find_len_expr(dp_exprs, None)
-        threshold = name, plugin, threshold
+        name, noise = find_len_expr(dp_exprs, None)[1]
+        threshold_info = name, noise, threshold_value, True
     else:
-        raise f"The key set of {grouping_columns} is unknown and cannot be released."
+        raise f"The key set of {grouping_columns} is private and cannot be released."
 
+    # prepare the final_predicate to be used in the function |\label{line:final-predicate}|
+    if threshold_info is not None:
+        name, _, threshold_value, is_present = threshold_info
+        if not is_present and predicate is not None:
+            final_predicate = threshold_expr.and_(predicate)
+        else:
+            final_predicate = threshold_expr
+    else:
+        final_predicate = predicate
+    
     # prepare supporting elements
-    def function(arg):
+    def function(arg):  # |\label{line:function}|
         output = DslPlan.GroupBy(
             input=arg,
             keys=keys,
             aggs=m_exprs((arg, all())),
             apply=None,
-            maintain_order=false,
+            maintain_order=False,
         )
 
-        if threshold is not None:
-            name, _, threshold_value = threshold
+        if final_predicate is not None:
             output = DslPlan.Filter(
                 input=output,
-                predicate=col(name).gt(lit(threshold_value)),
+                predicate=final_predicate,
             )
         return output
     
-    def privacy_map(d_in):
-        l0 = margin.max_influenced_partitions.unwrap_or(d_in).min(d_in)
-        li = margin.max_partition_contributions.unwrap_or(d_in).min(d_in)
+    def privacy_map(d_in):  # |\label{line:privacy-map}|
+        mip = margin.get("max_influenced_partitions", default=d_in)
+        mnp = margin.get("max_num_partitions", default=d_in)
+        mpc = margin.get("max_partition_contributions", default=d_in)
+        mpl = margin.get("max_partition_length", default=d_in)
+
+        l0 = min(mip, mnp, d_in)
+        li = min(mpc, mpl, d_in)
         l1 = l0.inf_mul(li).min(d_in)
 
         d_out = m_exprs.map((l0, l1, li))
 
         if threshold is not None:
-            _, plugin, threshold_value = threshold
+            _, plugin, threshold_value = threshold_info
             if li >= threshold_value:
                 raise f"Threshold must be greater than {li}."
             d_instability = f64.inf_cast(threshold_value.inf_sub(li))

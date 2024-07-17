@@ -55,16 +55,16 @@ where
     (ExprDomain, PartitionDistance<MI>): MetricSpace,
 {
     let Some(MatchGroupBy {
-        input,
+        input: input_expr,
         keys,
         aggs,
-        threshold: expr_threshold,
+        predicate,
     }) = match_group_by(plan)?
     else {
         return fallible!(MakeMeasurement, "expected group by");
     };
 
-    let t_prior = input.clone().make_stable(input_domain, input_metric)?;
+    let t_prior = input_expr.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let grouping_columns = match_grouping_columns(keys.clone())?;
@@ -98,31 +98,35 @@ where
 
     let f_comp = m_exprs.function.clone();
     let privacy_map = m_exprs.privacy_map.clone();
-    let dp_exprs = m_exprs.invoke(&(input, all()))?;
+    let dp_exprs = m_exprs.invoke(&(input_expr, all()))?;
 
-    if threshold.is_some() && expr_threshold.is_some() {
-        return fallible!(MakeMeasurement, "two thresholds set: one via the constructor and another via filtering. Please remove one");
-    }
-
-    let threshold = if margin.public_info.is_some() {
+    let threshold_info = if margin.public_info.is_some() {
         None
-    } else if let Some((name, threshold_value)) = expr_threshold {
+    } else if let Some((name, threshold_value)) =
+        predicate.clone().and_then(|p| is_threshold_predicate(p))
+    {
         let noise = find_len_expr(&dp_exprs, Some(name.as_str()))?.1;
-        Some((name, noise, threshold_value))
+        Some((name, noise, threshold_value, false))
     } else if let Some(threshold_value) = threshold {
         let (name, noise) = find_len_expr(&dp_exprs, None)?;
-        Some((name, noise, threshold_value))
+        Some((name, noise, threshold_value, true))
     } else {
-        // TODO: link to documentation page showing how to filter.
-        return fallible!(
-            MakeMeasurement,
-            "The key set of {:?} is unknown and cannot be released. Try adding filtering to your query.",
-            grouping_columns);
+        return fallible!(MakeMeasurement, "The key-set of {:?} is private and cannot be released without filtering. Please pass a filtering threshold into make_private_lazyframe.");
+    };
+
+    let final_predicate = if let Some((name, _, threshold_value, is_present)) = &threshold_info {
+        let threshold_expr = col(&name).gt(lit(*threshold_value));
+        Some(match (is_present, predicate) {
+            (false, Some(predicate)) => threshold_expr.and(predicate),
+            _ => threshold_expr,
+        })
+    } else {
+        predicate
     };
 
     let m_group_by_agg = Measurement::new(
         middle_domain,
-        Function::new_fallible(enclose!(threshold, move |arg: &DslPlan| {
+        Function::new_fallible(move |arg: &DslPlan| {
             let mut output = DslPlan::GroupBy {
                 input: Arc::new(arg.clone()),
                 keys: keys.clone(),
@@ -132,24 +136,29 @@ where
                 options: Default::default(),
             };
 
-            if let Some((name, _, threshold)) = &threshold {
+            if let Some(final_predicate) = &final_predicate {
                 output = DslPlan::Filter {
                     input: Arc::new(output),
-                    predicate: col(&name).gt(lit(*threshold)),
+                    predicate: final_predicate.clone(),
                 }
             }
             Ok(output)
-        })),
+        }),
         middle_metric,
-        output_measure,
+        output_measure.clone(),
         PrivacyMap::new_fallible(move |&d_in| {
-            let l0 = margin.max_influenced_partitions.unwrap_or(d_in).min(d_in);
-            let li = margin.max_partition_contributions.unwrap_or(d_in).min(d_in);
+            let mip = margin.max_influenced_partitions.unwrap_or(d_in);
+            let mnp = margin.max_num_partitions.unwrap_or(d_in);
+            let mpc = margin.max_partition_contributions.unwrap_or(d_in);
+            let mpl = margin.max_partition_length.unwrap_or(d_in);
+
+            let l0 = mip.min(mnp).min(d_in);
+            let li = mpc.min(mpl).min(d_in);
             let l1 = l0.inf_mul(&li)?.min(d_in);
 
             let mut d_out = privacy_map.eval(&(l0, l1, li))?;
 
-            if let Some((_, noise, threshold_value)) = &threshold {
+            if let Some((_, noise, threshold_value, _)) = &threshold_info {
                 let distribution = noise.distribution.expect("distribution is known");
                 let scale = noise.scale.expect("scale is known");
 
@@ -164,7 +173,7 @@ where
                     (1.0).inf_sub(&(1.0).inf_sub(&delta_single)?.inf_powi(IBig::from(l0))?)?;
                 d_out = MO::add_delta(d_out, delta_joint)?;
             } else if margin.public_info.is_none() {
-                return fallible!(FailedMap, "keys must be public if threshold is unknown");
+                return fallible!(FailedMap, "key-sets cannot be privatized under {:?}. FixedSmoothedMaxDivergence is necessary.", output_measure);
             }
 
             Ok(d_out)
@@ -210,7 +219,7 @@ fn integrate_discrete_noise_tail(
         Distribution::Laplace => integrate_discrete_laplacian_tail(scale, tail_bound),
         Distribution::Gaussian => fallible!(
             MakeMeasurement,
-            "gaussian tail bounds are not currently implemented"
+            "gaussian tail bounds are not currently implemented. See https://github.com/opendp/opendp/issues/1769"
         ),
     }
 }

@@ -7,6 +7,8 @@
 \begin{document}
 \maketitle
 
+\contrib
+
 Proof for \rustdoc{accuracy/tail\_bounds/fn}{integrate\_discrete\_laplace\_tail}.
 
 \begin{definition}
@@ -30,7 +32,7 @@ Proof for \rustdoc{accuracy/tail\_bounds/fn}{integrate\_discrete\_laplace\_tail}
         &= \frac{e^{1/s} - 1}{e^{1/s} + 1} \sum_{x=t + 1}^{\infty} e^{-x/s} 
             && \text{since } t > 0 \\
         &= \frac{e^{1/s} - 1}{e^{1/s} + 1} \frac{e^{(1-(t + 1))/s}}{e^{1/s} - 1} 
-            && \text{since } \sum_{x=t}^\infty p^x = \frac{p^x}{1 - p} \text{ if } |p| < 1 \text{, let } p = e^{1/s}\\
+            && \text{since } \sum_{x=t}^\infty p^x = \frac{p^t}{1 - p} \text{ if } |p| < 1 \text{, let } p = e^{1/s}\\
         &= \frac{e^{-t/s}}{e^{1/s} + 1}
     \end{align*}
 

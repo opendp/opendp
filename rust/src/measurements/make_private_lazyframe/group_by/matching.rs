@@ -15,13 +15,13 @@ pub(crate) struct MatchGroupBy {
     pub input: DslPlan,
     pub keys: Vec<Expr>,
     pub aggs: Vec<Expr>,
-    pub threshold: Option<(String, u32)>,
+    pub predicate: Option<Expr>,
 }
 
 pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>> {
-    let threshold = if let DslPlan::Filter { input, predicate } = plan {
+    let predicate = if let DslPlan::Filter { input, predicate } = plan {
         plan = input.as_ref().clone();
-        Some(is_threshold_predicate(predicate)?)
+        Some(predicate)
     } else {
         None
     };
@@ -54,7 +54,7 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
         input: Arc::unwrap_or_clone(input),
         keys,
         aggs,
-        threshold,
+        predicate,
     }))
 }
 
@@ -119,9 +119,9 @@ fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoiseArgs)> {
     Some((output_name.to_string(), args))
 }
 
-pub(crate) fn is_threshold_predicate(expr: Expr) -> Fallible<(String, u32)> {
+pub(crate) fn is_threshold_predicate(expr: Expr) -> Option<(String, u32)> {
     let Expr::BinaryExpr { left, op, right } = expr else {
-        return fallible!(MakeMeasurement, "threshold must be a binary expression");
+        return None;
     };
 
     use Operator::{Gt, Lt};
@@ -129,16 +129,8 @@ pub(crate) fn is_threshold_predicate(expr: Expr) -> Fallible<(String, u32)> {
     let (name, value) = match (left.as_ref(), op, right.as_ref()) {
         (Expr::Column(name), Gt, Expr::Literal(value)) => (name, value),
         (Expr::Literal(value), Lt, Expr::Column(name)) => (name, value),
-        _ => {
-            return fallible!(
-                MakeMeasurement,
-                "expected an expression of the form 'col(name) > threshold'"
-            )
-        }
+        _ => return None,
     };
 
-    Ok((
-        name.to_string(),
-        value.to_any_value().unwrap().extract().unwrap(),
-    ))
+    Some((name.to_string(), value.to_any_value()?.extract()?))
 }

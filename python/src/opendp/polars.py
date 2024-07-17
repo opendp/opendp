@@ -423,6 +423,7 @@ try:
                     threshold=threshold,
                 )
             
+            # when the output measure is δ-approximate, then there are two free parameters to tune
             if query._output_measure.type.origin == "FixedSmoothedMaxDivergence":  # type: ignore[union-attr]
 
                 # search for a scale parameter. Solve for epsilon first, 
@@ -434,7 +435,7 @@ try:
 
                 # attempt to return without setting a threshold
                 try:
-                    return make(scale)
+                    return make(scale, threshold=None)
                 except OpenDPException:
                     pass
                 
@@ -444,8 +445,11 @@ try:
                     T=int,
                 )
                 
+                # return a measurement with the discovered scale and threshold
                 return make(scale, threshold)
 
+            # when no delta parameter is involved, 
+            # finding a suitable measurement just comes down to finding scale
             return binary_search_chain(make, d_in, d_out, T=float)
 
         def release(self) -> OnceFrame:
@@ -458,6 +462,10 @@ try:
             """Retrieve noise scale parameters and accuracy estimates for each output.
 
             If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
+
+            If a threshold is configured for censoring small/sensitive partitions, 
+            a threshold column will be included,
+            containing the cutoff for the respective count query being thresholded.
             
             :example:
 

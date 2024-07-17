@@ -44,6 +44,10 @@ mod ffi;
 )]
 /// Get noise scale parameters from a measurement that returns a OnceFrame.
 ///
+/// If a threshold is configured for censoring small/sensitive partitions,
+/// a threshold column will be included,
+/// containing the cutoff for the respective count query being thresholded.
+///
 /// # Arguments
 /// * `measurement` - computation from which you want to read noise scale parameters from
 /// * `alpha` - optional statistical significance to use to compute accuracy estimates
@@ -129,7 +133,7 @@ fn logical_plan_utility(
             )?)
         }
         DslPlan::Filter { input, predicate } => {
-            let threshold = is_threshold_predicate(predicate.clone()).ok();
+            let threshold = is_threshold_predicate(predicate.clone());
             logical_plan_utility(input.as_ref(), alpha, threshold)
         }
         DslPlan::Sort { input, .. }

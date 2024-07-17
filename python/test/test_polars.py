@@ -461,6 +461,7 @@ def test_polars_collect_early():
 
 def test_polars_threshold():
     pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
 
     lf = pl.LazyFrame(
         {"A": [1] * 1000, "B": ["x"] * 500 + ["y"] * 500},
@@ -477,6 +478,25 @@ def test_polars_threshold():
         },
     )
 
+    actual = (
+        context.query()
+        .group_by("A")
+        .agg(pl.len().dp.noise())
+        .accuracy()  # type: ignore[union-attr]
+    )
+
+    expected = pl.DataFrame({
+        "column": ["len"],
+        "aggregate": ["Len"],
+        "distribution": ["Integer Laplace"],
+        "scale": [2.0]
+    })
+
+    # check that no threshold is set when keys are known
+    pl_testing.assert_frame_equal(actual, expected)
+
+    # check that query runs.
+    # output should be two columns ("A" and "len") with one row (1, ~1000)
     print(
         context.query()
         .group_by("A")
@@ -485,6 +505,26 @@ def test_polars_threshold():
         .collect()
     )
 
+    actual = (
+        context.query()
+        .group_by("B")
+        .agg(pl.len().dp.noise())
+        .accuracy()  # type: ignore[union-attr]
+    )
+
+    expected = pl.DataFrame({
+        "column": ["len"],
+        "aggregate": ["Len"],
+        "distribution": ["Integer Laplace"],
+        "scale": [2.0],
+        "threshold": [33]
+    }, schema_overrides={"threshold": pl.UInt32})
+
+    # threshold should work out to 33
+    pl_testing.assert_frame_equal(actual, expected)
+
+    # check that query runs.
+    # output should be two columns ("B" and "len") with two rows (1, ~500) each
     print(
         context.query()
         .group_by("B")

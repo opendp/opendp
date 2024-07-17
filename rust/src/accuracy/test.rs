@@ -236,6 +236,7 @@ pub fn test_empirical_laplace_accuracy() -> Fallible<()> {
     println!("Laplacian significance levels/alpha");
     println!("Theoretical: {:?}", theoretical_alpha);
     println!("Empirical:   {:?}", empirical_alpha);
+    // this test has a small likelihood of failing
     assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
     Ok(())
 }
@@ -260,6 +261,7 @@ pub fn test_empirical_gaussian_accuracy() -> Fallible<()> {
     println!("Gaussian significance levels/alpha");
     println!("Theoretical: {:?}", theoretical_alpha);
     println!("Empirical:   {:?}", empirical_alpha);
+    // this test has a small likelihood of failing
     assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
     Ok(())
 }
@@ -282,6 +284,7 @@ pub fn test_empirical_discrete_laplace_accuracy() -> Fallible<()> {
     println!("Discrete laplace significance levels/alpha");
     println!("Theoretical: {:?}", theoretical_alpha);
     println!("Empirical:   {:?}", empirical_alpha);
+    // this test has a small likelihood of failing
     assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
     Ok(())
 }
@@ -309,6 +312,7 @@ pub fn test_empirical_discrete_gaussian_accuracy() -> Fallible<()> {
     println!("Discrete gaussian significance levels/alpha");
     println!("Theoretical: {:?}", theoretical_alpha);
     println!("Empirical:   {:?}", empirical_alpha);
+    // this test has a small likelihood of failing
     assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
     Ok(())
 }
@@ -335,6 +339,7 @@ pub fn test_empirical_integrate_discrete_laplace_tail() -> Fallible<()> {
     println!("Discrete Laplace tail significance levels/alpha");
     println!("Theoretical: {:?}", theoretical_alpha);
     println!("Empirical:   {:?}", empirical_alpha);
+    // this test has a small likelihood of failing
     assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
     Ok(())
 }
