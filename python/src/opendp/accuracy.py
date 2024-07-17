@@ -184,7 +184,7 @@ def describe_polars_measurement_accuracy(
 ):
     r"""Get noise scale parameters from a measurement that returns a OnceFrame.
 
-    If a threshold is configured for censoring small/sensitive partitions, 
+    If a threshold is configured for censoring small/sensitive partitions,
     a threshold column will be included,
     containing the cutoff for the respective count query being thresholded.
 

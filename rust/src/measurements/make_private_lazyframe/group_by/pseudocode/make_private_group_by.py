@@ -14,9 +14,11 @@ def make_private_group_by(
 
     grouping_columns = match_grouping_columns(keys)  # |\label{line:groupcols}|
 
-    margin = (middle_domain
+    margin = (
+        middle_domain
         .margins
-        .get(grouping_columns, Margin.default()))  # |\label{line:margin}|
+        .get(grouping_columns, Margin.default())
+    )  # |\label{line:margin}|
 
     # prepare a joint measurement over all expressions
     expr_domain = ExprDomain(  # |\label{line:joint}|

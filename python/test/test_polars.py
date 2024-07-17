@@ -496,7 +496,7 @@ def test_polars_threshold():
     pl_testing.assert_frame_equal(actual, expected)
 
     # check that query runs.
-    # output should be two columns ("A" and "len") with one row (1, ~1000)
+    print('output should be two columns ("A" and "len") with one row (1, ~1000)')
     print(
         context.query()
         .group_by("A")
@@ -524,7 +524,7 @@ def test_polars_threshold():
     pl_testing.assert_frame_equal(actual, expected)
 
     # check that query runs.
-    # output should be two columns ("B" and "len") with two rows (1, ~500) each
+    print('output should be two columns ("B" and "len") with two rows (1, ~500) each')
     print(
         context.query()
         .group_by("B")

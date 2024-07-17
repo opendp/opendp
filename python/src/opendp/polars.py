@@ -463,7 +463,7 @@ try:
 
             If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
 
-            If a threshold is configured for censoring small/sensitive partitions, 
+            If a threshold is configured for censoring small/sensitive partitions,
             a threshold column will be included,
             containing the cutoff for the respective count query being thresholded.
             
