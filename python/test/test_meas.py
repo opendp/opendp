@@ -152,7 +152,7 @@ def test_make_count_by_ptr():
     meas = (
         input_space >>
         dp.t.then_count_by(MO=dp.L1Distance[float], TV=float) >> 
-        dp.m.then_base_laplace_threshold(scale=2., threshold=28.)
+        dp.m.then_laplace_threshold(scale=2., threshold=28.)
     )
     print("stability histogram:", meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
     print(meas.map(1))
@@ -191,12 +191,12 @@ def test_report_noisy_max_gumbel():
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
 
     input_metric = dp.linf_distance(T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "maximize")
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "max")
     print(meas(list(range(10))))
     assert meas.map(2) == 4
 
     input_metric = dp.linf_distance(monotonic=True, T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "maximize")
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "max")
     print(meas(list(range(10))))
     assert meas.map(2) == 2
 

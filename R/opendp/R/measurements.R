@@ -122,96 +122,6 @@ then_alp_queryable <- function(
 }
 
 
-#' base laplace threshold constructor
-#'
-#' Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
-#'
-#' This function takes a noise granularity in terms of 2^k.
-#' Larger granularities are more computationally efficient, but have a looser privacy map.
-#' If k is not set, k defaults to the smallest granularity.
-#'
-#' [make_base_laplace_threshold in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_laplace_threshold.html)
-#'
-#' **Supporting Elements:**
-#'
-#' * Input Domain:   `MapDomain<AtomDomain<TK>, AtomDomain<TV>>`
-#' * Output Type:    `HashMap<TK, TV>`
-#' * Input Metric:   `L1Distance<TV>`
-#' * Output Measure: `FixedSmoothedMaxDivergence<TV>`
-#'
-#' @concept measurements
-#' @param input_domain Domain of the input.
-#' @param input_metric Metric for the input domain.
-#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-#' @param threshold Exclude counts that are less than this minimum value.
-#' @param k The noise granularity in terms of 2^k.
-#' @return Measurement
-#' @export
-make_base_laplace_threshold <- function(
-  input_domain,
-  input_metric,
-  scale,
-  threshold,
-  k = -1074L
-) {
-  assert_features("contrib", "floating-point")
-
-  # Standardize type arguments.
-  .TV <- get_distance_type(input_metric)
-
-  log <- new_constructor_log("make_base_laplace_threshold", "measurements", new_hashtab(
-    list("input_domain", "input_metric", "scale", "threshold", "k"),
-    list(input_domain, input_metric, scale, threshold, unbox2(k))
-  ))
-
-  # Assert that arguments are correctly typed.
-  rt_assert_is_similar(expected = .TV, inferred = rt_infer(scale))
-  rt_assert_is_similar(expected = .TV, inferred = rt_infer(threshold))
-  rt_assert_is_similar(expected = i32, inferred = rt_infer(k))
-
-  # Call wrapper function.
-  output <- .Call(
-    "measurements__make_base_laplace_threshold",
-    input_domain, input_metric, scale, threshold, k, .TV,
-    log, PACKAGE = "opendp")
-  output
-}
-
-#' partial base laplace threshold constructor
-#'
-#' See documentation for [make_base_laplace_threshold()] for details.
-#'
-#' @concept measurements
-#' @param lhs The prior transformation or metric space.
-#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-#' @param threshold Exclude counts that are less than this minimum value.
-#' @param k The noise granularity in terms of 2^k.
-#' @return Measurement
-#' @export
-then_base_laplace_threshold <- function(
-  lhs,
-  scale,
-  threshold,
-  k = -1074L
-) {
-
-  log <- new_constructor_log("then_base_laplace_threshold", "measurements", new_hashtab(
-    list("scale", "threshold", "k"),
-    list(scale, threshold, unbox2(k))
-  ))
-
-  make_chain_dyn(
-    make_base_laplace_threshold(
-      output_domain(lhs),
-      output_metric(lhs),
-      scale = scale,
-      threshold = threshold,
-      k = k),
-    lhs,
-    log)
-}
-
-
 #' gaussian constructor
 #'
 #' Make a Measurement that adds noise from the Gaussian(`scale`) distribution to the input.
@@ -239,6 +149,29 @@ then_base_laplace_threshold <- function(
 #' @param k The noise granularity in terms of 2^k.
 #' @param .MO Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
 #' @return Measurement
+#' @examples
+#' library(opendp)
+#' enable_features("contrib")
+#' gaussian <- make_gaussian(
+#'   atom_domain(.T = f64),
+#'   absolute_distance(.T = f64),
+#'   scale = 1.0)
+#' gaussian(arg = 100.0)
+#'
+#' # Or, more readably, define the space and then chain:
+#' space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
+#' gaussian <- space |> then_gaussian(scale = 1.0)
+#' gaussian(arg = 100.0)
+#'
+#' # Sensitivity of this measurment:
+#' gaussian(d_in = 1)
+#' gaussian(d_in = 2)
+#' gaussian(d_in = 4)
+#'
+#' # Typically will be used with vectors rather than individual numbers:
+#' space <- c(vector_domain(atom_domain(.T = i32)), l2_distance(.T = i32))
+#' gaussian <- space |> then_gaussian(scale = 1.0)
+#' gaussian(arg = c(10L, 20L, 30L))
 #' @export
 make_gaussian <- function(
   input_domain,
@@ -282,6 +215,29 @@ make_gaussian <- function(
 #' @param k The noise granularity in terms of 2^k.
 #' @param .MO Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
 #' @return Measurement
+#' @examples
+#' library(opendp)
+#' enable_features("contrib")
+#' gaussian <- make_gaussian(
+#'   atom_domain(.T = f64),
+#'   absolute_distance(.T = f64),
+#'   scale = 1.0)
+#' gaussian(arg = 100.0)
+#'
+#' # Or, more readably, define the space and then chain:
+#' space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
+#' gaussian <- space |> then_gaussian(scale = 1.0)
+#' gaussian(arg = 100.0)
+#'
+#' # Sensitivity of this measurment:
+#' gaussian(d_in = 1)
+#' gaussian(d_in = 2)
+#' gaussian(d_in = 4)
+#'
+#' # Typically will be used with vectors rather than individual numbers:
+#' space <- c(vector_domain(atom_domain(.T = i32)), l2_distance(.T = i32))
+#' gaussian <- space |> then_gaussian(scale = 1.0)
+#' gaussian(arg = c(10L, 20L, 30L))
 #' @export
 then_gaussian <- function(
   lhs,
@@ -500,6 +456,96 @@ then_laplace <- function(
 }
 
 
+#' laplace threshold constructor
+#'
+#' Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
+#'
+#' This function takes a noise granularity in terms of 2^k.
+#' Larger granularities are more computationally efficient, but have a looser privacy map.
+#' If k is not set, k defaults to the smallest granularity.
+#'
+#' [make_laplace_threshold in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_laplace_threshold.html)
+#'
+#' **Supporting Elements:**
+#'
+#' * Input Domain:   `MapDomain<AtomDomain<TK>, AtomDomain<TV>>`
+#' * Output Type:    `HashMap<TK, TV>`
+#' * Input Metric:   `L1Distance<TV>`
+#' * Output Measure: `FixedSmoothedMaxDivergence<TV>`
+#'
+#' @concept measurements
+#' @param input_domain Domain of the input.
+#' @param input_metric Metric for the input domain.
+#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+#' @param threshold Exclude counts that are less than this minimum value.
+#' @param k The noise granularity in terms of 2^k.
+#' @return Measurement
+#' @export
+make_laplace_threshold <- function(
+  input_domain,
+  input_metric,
+  scale,
+  threshold,
+  k = -1074L
+) {
+  assert_features("contrib", "floating-point")
+
+  # Standardize type arguments.
+  .TV <- get_distance_type(input_metric)
+
+  log <- new_constructor_log("make_laplace_threshold", "measurements", new_hashtab(
+    list("input_domain", "input_metric", "scale", "threshold", "k"),
+    list(input_domain, input_metric, scale, threshold, unbox2(k))
+  ))
+
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = .TV, inferred = rt_infer(scale))
+  rt_assert_is_similar(expected = .TV, inferred = rt_infer(threshold))
+  rt_assert_is_similar(expected = i32, inferred = rt_infer(k))
+
+  # Call wrapper function.
+  output <- .Call(
+    "measurements__make_laplace_threshold",
+    input_domain, input_metric, scale, threshold, k, .TV,
+    log, PACKAGE = "opendp")
+  output
+}
+
+#' partial laplace threshold constructor
+#'
+#' See documentation for [make_laplace_threshold()] for details.
+#'
+#' @concept measurements
+#' @param lhs The prior transformation or metric space.
+#' @param scale Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+#' @param threshold Exclude counts that are less than this minimum value.
+#' @param k The noise granularity in terms of 2^k.
+#' @return Measurement
+#' @export
+then_laplace_threshold <- function(
+  lhs,
+  scale,
+  threshold,
+  k = -1074L
+) {
+
+  log <- new_constructor_log("then_laplace_threshold", "measurements", new_hashtab(
+    list("scale", "threshold", "k"),
+    list(scale, threshold, unbox2(k))
+  ))
+
+  make_chain_dyn(
+    make_laplace_threshold(
+      output_domain(lhs),
+      output_metric(lhs),
+      scale = scale,
+      threshold = threshold,
+      k = k),
+    lhs,
+    log)
+}
+
+
 #' randomized response constructor
 #'
 #' Make a Measurement that implements randomized response on a categorical value.
@@ -696,7 +742,7 @@ then_randomized_response_bool <- function(
 #' @param input_domain Domain of the input vector. Must be a non-nullable VectorDomain.
 #' @param input_metric Metric on the input domain. Must be LInfDistance
 #' @param scale Higher scales are more private.
-#' @param optimize Indicate whether to privately return the "Max" or "Min"
+#' @param optimize Indicate whether to privately return the "max" or "min"
 #' @param .QO Output Distance Type.
 #' @return Measurement
 #' @export
@@ -736,7 +782,7 @@ make_report_noisy_max_gumbel <- function(
 #' @concept measurements
 #' @param lhs The prior transformation or metric space.
 #' @param scale Higher scales are more private.
-#' @param optimize Indicate whether to privately return the "Max" or "Min"
+#' @param optimize Indicate whether to privately return the "max" or "min"
 #' @param .QO Output Distance Type.
 #' @return Measurement
 #' @export

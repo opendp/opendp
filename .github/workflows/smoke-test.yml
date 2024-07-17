@@ -1,5 +1,9 @@
 name: Smoke Test
 
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -8,7 +12,7 @@ on:
   pull_request:
 
 jobs:
-  rust-build-and-test:
+  rust-build:
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -49,53 +53,74 @@ jobs:
         run: cargo fmt --manifest-path=Cargo.toml --all --check
 
       - name: Build
-        run: cargo build --verbose --features untrusted,bindings,polars
+        run: cargo build --verbose --all-features
       
       - name: Check --no-default-features
-        run: cargo check --verbose --no-default-features --features untrusted,ffi,polars
-
-      - name: Test
-        run: cargo test --verbose --features untrusted,ffi,polars
+        run: cargo check --verbose --no-default-features --features untrusted,bindings
 
       - name: Check that generated python is up to date
         run: git diff --exit-code
 
-      - name: Upload libs
-        uses: actions/upload-artifact@v4
-        with:
-          name: libs
-          path: |
-            rust/target/debug/libopendp.so
-            rust/target/debug/libopendp.a
+      - name: Build (dynamic w/ polars)
+        run: cargo build --verbose --features untrusted,ffi,polars
       
-      - name: Prepare vendored sources
-        run: cd .. && bash tools/r_stage.sh -v
-          
-      - name: Upload vendored sources
+      - name: Upload (dynamic w/ polars)
         uses: actions/upload-artifact@v4
         with:
-          name: vendor
-          path: R/opendp/src/vendor.tar.xz
+          name: dynamic_lib
+          path: rust/target/debug/libopendp.so
 
-  rust-examples:
+      - name: Build (static w/o Polars)
+        run: cargo build --verbose --features untrusted,ffi
+      
+      - name: Upload (static w/o Polars)
+        uses: actions/upload-artifact@v4
+        with:
+          name: static_lib
+          path: rust/target/debug/libopendp.a
+      
+  rust-test:
+    needs: rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
-        working-directory: docs/source
+        working-directory: rust
     env:
       CARGO_TERM_COLOR: always
     steps:
+      
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false     # no: will remove rust
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: false        # no: little/no benefit
+          large-packages: false # no: slow
+          swap-storage: false   # no: having swap is useful
+
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Install nightly
-        run: rustup update nightly
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Cargo run
-        run: cargo +nightly -Zscript getting-started/code/quickstart-framework.rs
+      - name: Test
+        run: cargo test --verbose --all-features
+
+      - name: Run docs example
+        run: cd ../docs/source/getting-started/code/quickstart-framework-rust; cargo run
 
   python-test:
-    needs: rust-build-and-test
+    needs: rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -103,8 +128,8 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - 3.8
-          - 3.12
+          - '3.9'
+          - '3.12'
         extra-install:
           - '.'
           - '.[scikit-learn]'
@@ -136,22 +161,42 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
-      - name: Download libs
+      - name: Download dynamic lib
         uses: actions/download-artifact@v4
         with:
-          name: libs
+          name: dynamic_lib
           path: python/src/opendp/lib
       
       - name: Install package
         run: python -m pip install -e ${{ matrix.extra-install }}
 
       - name: Test
-        run: coverage run -m pytest -v
+        # There's not a "skipif" for doctests, so use "-k" to exclude based on name patterns.
+        # (Even in unittests we should use "importskip" rather than "skipif".)
+        run: coverage run -m pytest -v ${{ ! contains(matrix.extra-install, 'polars') && '-k "not lazyframe and not polars and not pca"' || ''}}
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
-        if: ${{ contains(matrix.extra-install, 'scikit-learn,polars') }}
-        run: coverage report
+        # "polars" implies "scikit-learn": see setup.cfg.
+        if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.12') }}
+        run: coverage report | tee /tmp/coverage.txt
+
+      - name: Upload coverage
+        if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.12') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: /tmp/coverage.txt
+
+  confirm-coverage:
+    needs: python-test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download coverage
+        # No additional action needed: We just need to confirm that at least one test produced a coverage report.
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
 
   docs-links:
     runs-on: ubuntu-22.04
@@ -175,7 +220,7 @@ jobs:
         run: linkchecker -f linkchecker.cfg build/html/index.html
 
   python-notebooks:
-    needs: rust-build-and-test
+    needs: rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -206,10 +251,10 @@ jobs:
           python -m pip install flake8 pytest nbmake pytest-xdist
           python -m pip install -r requirements_notebooks.txt
 
-      - name: Download libs
+      - name: Download dynamic lib
         uses: actions/download-artifact@v4
         with:
-          name: libs
+          name: dynamic_lib
           path: python/src/opendp/lib
 
       - name: Install package
@@ -221,19 +266,22 @@ jobs:
           pytest --nbmake source/**/*.ipynb -n=auto
 
   r-test:
-    needs: rust-build-and-test
+    needs: rust-build
     runs-on: ubuntu-22.04
     env:
       OPENDP_LIB_DIR: ${{ github.workspace }}/libs
       LINTR_ERROR_ON_LINT: true
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Download libs
         uses: actions/download-artifact@v4
         with:
-          name: libs
+          # R uses a static library build that doesn't include Polars 
+          # (Polars currently links against Python)
+          name: static_lib
           path: libs/
 
       - name: Set up R
@@ -242,7 +290,13 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: R/opendp
-          extra-packages: devtools, local::., RcppTOML, lintr
+          extra-packages: devtools, RcppTOML, lintr
+
+      # running the OpenDP install in a separate command (instead of local::. above)
+      #   provides significantly more debug info if it fails
+      - name: Install OpenDP
+        working-directory: R/opendp/
+        run: Rscript -e 'devtools::install()'
 
       - name: Unit tests
         working-directory: R/opendp/

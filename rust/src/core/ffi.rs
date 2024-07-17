@@ -848,7 +848,7 @@ pub extern "C" fn opendp_core__new_queryable(
 
 #[cfg(test)]
 mod tests {
-    use crate::combinators::tests::{make_test_measurement, make_test_transformation};
+    use crate::combinators::test::{make_test_measurement, make_test_transformation};
     use crate::ffi::any::Downcast;
     use crate::ffi::util::ToCharP;
 

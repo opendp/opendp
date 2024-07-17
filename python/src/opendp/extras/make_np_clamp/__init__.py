@@ -54,17 +54,15 @@ def make_np_clamp(
         arg += origin
         return arg
 
+    kwargs = input_domain.descriptor._asdict() | {
+        "norm": norm,
+        "p": p,
+        "origin": origin,
+    }
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        dp.x.np_array2_domain(
-            **{
-                **input_domain.descriptor._asdict(),
-                "norm": norm,
-                "p": p,
-                "origin": origin,
-            }
-        ),
+        dp.x.np_array2_domain(**kwargs),
         input_metric,
         function,
         lambda d_in: d_in,

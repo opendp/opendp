@@ -1,14 +1,21 @@
 import opendp.prelude as dp
-from typing import Dict, List
 
 def test_typed_space_of():
     # metric defaults to symmetric_distance on vector_domain
-    space = dp.space_of(List[int])  # can also do list[int] if python 3.8+
+    space = dp.space_of(list[int])
     assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())
 
     # can specify metric explicitly. If not fully specified, will infer distance type from domain
-    space = dp.space_of(List[int], dp.L1Distance)
-    assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.l1_distance(T=dp.i32))
+    space = dp.space_of(list[int], dp.L2Distance)
+    assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.l2_distance(T=dp.i32))
+
+    # not all metrics are parmeterized
+    space = dp.space_of(list[int], dp.HammingDistance)
+    assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.hamming_distance())
+    space = dp.space_of(list[int], dp.InsertDeleteDistance)
+    assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.insert_delete_distance())
+    space = dp.space_of(list[int], dp.ChangeOneDistance)
+    assert space == (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.change_one_distance())
 
     # when type is scalar, domain defaults to atom_domain and metric defaults to absolute_distance
     space = dp.space_of(float)
@@ -22,7 +29,7 @@ def test_typed_space_of():
     space = dp.space_of(int, dp.discrete_distance())
     assert space == (dp.atom_domain(T=dp.i32), dp.discrete_distance())
 
-    space = dp.space_of(Dict[str, int], dp.L1Distance[int])
+    space = dp.space_of(dict[str, int], dp.L1Distance[int])
     assert space == (dp.map_domain(dp.atom_domain(T=dp.String), dp.atom_domain(T=dp.i32)), dp.l1_distance(T=dp.i32))
 
 def test_infer_space_of():

@@ -12,7 +12,7 @@ We suggest importing under the conventional name ``dp``:
 '''
 
 import logging
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Union
 import importlib
 from inspect import signature
 from functools import partial
@@ -23,7 +23,7 @@ from opendp.combinators import (
     make_sequential_composition,
     make_zCDP_to_approxDP,
 )
-from opendp.domains import atom_domain, vector_domain
+from opendp.domains import atom_domain, vector_domain, with_margin
 from opendp.measurements import make_laplace, make_gaussian
 from opendp.measures import (
     fixed_smoothed_max_divergence,
@@ -50,7 +50,9 @@ from opendp.mod import (
     binary_search_param,
 )
 from opendp.typing import RuntimeType
-from opendp._lib import indent
+from opendp._lib import indent, import_optional_dependency
+from opendp.polars import LazyFrameQuery, Margin
+from dataclasses import asdict
 
 
 __all__ = [
@@ -87,15 +89,14 @@ for module_name in ["transformations", "measurements"]:
         constructors[name[5:]] = constructor, is_partial
 
 
-def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
+def space_of(T, M=None, infer: bool = False) -> tuple[Domain, Metric]:
     """A shorthand for building a metric space.
 
     A metric space consists of a domain and a metric.
 
     >>> import opendp.prelude as dp
-    >>> from typing import List # in Python 3.9, can just write list[int] below
     ...
-    >>> dp.space_of(List[int])
+    >>> dp.space_of(list[int])
     (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
     >>> # the verbose form allows greater control:
     >>> (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())
@@ -126,14 +127,13 @@ def space_of(T, M=None, infer=False) -> Tuple[Domain, Metric]:
     return domain, metric_of(M)
 
 
-def domain_of(T, infer=False) -> Domain:
+def domain_of(T, infer: bool = False) -> Domain:
     """Constructs an instance of a domain from carrier type ``T``, or from an example.
 
     Accepts a limited set of Python type expressions:
 
-    >>> from typing import List  # Or just use regular "list" after python 3.8.
     >>> import opendp.prelude as dp
-    >>> dp.domain_of(List[int])
+    >>> dp.domain_of(list[int])
     VectorDomain(AtomDomain(T=i32))
     
     As well as strings representing types in the underlying Rust syntax:
@@ -143,8 +143,7 @@ def domain_of(T, infer=False) -> Domain:
 
     Dictionaries, optional types, and a range of primitive types are supported:
 
-    >>> from typing import Dict  # Or just use regular "dict" after python 3.8.
-    >>> dp.domain_of(Dict[str, int])
+    >>> dp.domain_of(dict[str, int])
     MapDomain { key_domain: AtomDomain(T=String), value_domain: AtomDomain(T=i32) }
     
     .. TODO: Support python syntax for Option: https://github.com/opendp/opendp/issues/1389
@@ -157,7 +156,7 @@ def domain_of(T, infer=False) -> Domain:
 
     More complex types are not supported:
 
-    >>> dp.domain_of(List[List[int]]) # doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> dp.domain_of(list[list[int]]) # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ...
     opendp.mod.OpenDPException:
@@ -173,6 +172,13 @@ def domain_of(T, infer=False) -> Domain:
     """
     import opendp.typing as ty
     from opendp.domains import vector_domain, atom_domain, option_domain, map_domain
+
+    if infer:
+        pl = import_optional_dependency("polars", raise_error=False)
+        if pl is not None and isinstance(T, pl.LazyFrame):
+            from opendp.polars import _lazyframe_domain_from_schema
+
+            return _lazyframe_domain_from_schema(T.collect_schema())
 
     # normalize to a type descriptor
     if infer:
@@ -209,24 +215,28 @@ def metric_of(M) -> Metric:
             return metrics.absolute_distance(T=M.args[0])
         if M.origin == "L1Distance":
             return metrics.l1_distance(T=M.args[0])
-        if M.origin == "L2Distance": # pragma: no cover
+        if M.origin == "L2Distance":
             return metrics.l2_distance(T=M.args[0])
 
     if M == ty.HammingDistance:
-        return metrics.hamming_distance() # pragma: no cover
+        return metrics.hamming_distance()
     if M == ty.SymmetricDistance:
         return metrics.symmetric_distance()
     if M == ty.InsertDeleteDistance:
-        return metrics.insert_delete_distance() # pragma: no cover
+        return metrics.insert_delete_distance()
     if M == ty.ChangeOneDistance:
-        return metrics.change_one_distance() # pragma: no cover
+        return metrics.change_one_distance()
     if M == ty.DiscreteDistance:
         return metrics.discrete_distance()
 
     raise TypeError(f"unrecognized metric: {M}")
 
 
-def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]:
+def loss_of(
+        epsilon: Optional[float] = None,
+        delta: Optional[float] = None,
+        rho: Optional[float] = None,
+        U = None) -> tuple[Measure, Union[float, tuple[float, float]]]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
     >>> import opendp.prelude as dp
@@ -243,11 +253,6 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]
     :param U: The type of the privacy parameter; Inferred if not provided.
 
     """
-    if epsilon is None and rho is None:
-        raise ValueError("Either epsilon or rho must be specified.")
-    if epsilon is None and delta is not None:
-        raise ValueError("Epsilon must be specified if delta is given.")
-
     def range_warning(name, value, info_level, warn_level):
         if value > warn_level:
             if info_level == warn_level:
@@ -262,6 +267,9 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]
         U = RuntimeType.parse_or_infer(U, rho)
         return zero_concentrated_divergence(T=U), rho
 
+    if epsilon is None:
+        raise ValueError("Either epsilon or rho must be specified.")
+ 
     range_warning('epsilon', epsilon, 1, 5)
     if delta is None:
         U = RuntimeType.parse_or_infer(U, epsilon)
@@ -269,19 +277,19 @@ def loss_of(epsilon=None, delta=None, rho=None, U=None) -> Tuple[Measure, float]
 
     range_warning('delta', delta, 1e-6, 1e-6)
     U = RuntimeType.parse_or_infer(U, epsilon)
-    return fixed_smoothed_max_divergence(T=U), (epsilon, delta) # type: ignore[return-value]
+    return fixed_smoothed_max_divergence(T=U), (epsilon, delta)
 
 
 def unit_of(
     *,
-    contributions=None,
-    changes=None,
-    absolute=None,
-    l1=None,
-    l2=None,
-    ordered=False,
+    contributions: Optional[int] = None,
+    changes: Optional[int] = None,
+    absolute: Optional[float] = None,
+    l1: Optional[float] = None,
+    l2: Optional[float] = None,
+    ordered: bool = False,
     U=None,
-) -> Tuple[Metric, float]:
+) -> tuple[Metric, float]:
     """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
     The parameters are mutually exclusive.
 
@@ -348,10 +356,10 @@ class Context(object):
         self,
         accountant: Measurement,
         queryable: Queryable,
-        d_in,
-        d_mids=None,
-        d_out=None,
-        space_override=None,
+        d_in: float,
+        d_mids: Optional[list[float]] = None,
+        d_out: Optional[float] = None,
+        space_override: Optional[tuple[Domain, Metric]] = None, # TODO: Document or add leading underscore and explain that is is for internal use only.
     ):
         self.accountant = accountant
         self.queryable = queryable
@@ -370,11 +378,12 @@ class Context(object):
     @staticmethod
     def compositor(
         data: Any,
-        privacy_unit: Tuple[Metric, float],
-        privacy_loss: Tuple[Measure, Any],
+        privacy_unit: tuple[Metric, float],
+        privacy_loss: tuple[Measure, Any],
         split_evenly_over: Optional[int] = None,
-        split_by_weights: Optional[List[float]] = None,
+        split_by_weights: Optional[list[float]] = None,
         domain: Optional[Domain] = None,
+        margins: Optional[dict[tuple[str, ...], Margin]] = None,
     ) -> "Context":
         """Constructs a new context containing a sequential compositor with the given weights.
 
@@ -386,11 +395,16 @@ class Context(object):
         :param data: The data to be analyzed.
         :param privacy_unit: The privacy unit of the compositor.
         :param privacy_loss: The privacy loss of the compositor.
-        :param split_evenly_over: The number of parts to evenly distribute the privacy loss
-        :param split_by_weights: A list of weights for each intermediate privacy loss
-        :param domain: The domain of the data."""
+        :param split_evenly_over: The number of parts to evenly distribute the privacy loss.
+        :param split_by_weights: A list of weights for each intermediate privacy loss.
+        :param domain: The domain of the data.
+        :param margins: A dictionary where the keys are grouping columns and values describe known properties of the respective margins."""
         if domain is None:
             domain = domain_of(data, infer=True)
+
+        if margins:
+            for by, margin in margins.items():
+                domain = with_margin(domain, by=list(by), **asdict(margin))
 
         accountant, d_mids = _sequential_composition_by_weights(
             domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights
@@ -412,16 +426,14 @@ class Context(object):
             d_mids=d_mids,
         )
 
-    def __call__(self, query: Union["Query", Measurement]):
+    def __call__(self, query: Measurement):
         """Executes the given query on the context."""
-        if isinstance(query, Query):
-            query = query.resolve() # pragma: no cover
         answer = self.queryable(query)
         if self.d_mids is not None:
             self.d_mids.pop(0)
         return answer
 
-    def query(self, **kwargs) -> "Query":
+    def query(self, **kwargs) -> Union["Query", LazyFrameQuery]:
         """Starts a new Query to be executed in this context.
 
         If the context has been constructed with a sequence of privacy losses,
@@ -437,25 +449,35 @@ class Context(object):
                 raise ValueError("Privacy allowance has been exhausted")
             d_query = self.d_mids[0]
         elif kwargs: # pragma: no cover
-            measure, d_query = loss_of(**kwargs)
+            # TODO: Is there a way to reach this? The usual ways of constructing a Context will populate d_mids.
+            # TODO: Update the docstring if we do remove this.
+            measure, d_query = loss_of(**kwargs) # type: ignore[assignment]
             if measure != self.output_measure: # type: ignore[attr-defined]
                 raise ValueError(
                     f"Expected output measure {self.output_measure} but got {measure}" # type: ignore[attr-defined]
                 )
 
-        return Query(
-            chain=(
-                self.space_override
-                or (self.accountant.input_domain, self.accountant.input_metric)
-            ),
+        chain = self.space_override or self.accountant.input_space
+        query = Query(
+            chain=chain,
             output_measure=self.accountant.output_measure,
             d_in=self.d_in,
             d_out=d_query,
             context=self,
         )
+        
+        # return a LazyFrameQuery when dealing with Polars data, to better mimic the Polars API
+        if chain[0].type == "LazyFrameDomain":
+            from opendp.domains import _lazyframe_from_domain
+
+            # creates an empty lazyframe to hold the query plan
+            lf_plan = _lazyframe_from_domain(self.accountant.input_domain)
+            return LazyFrameQuery(lf_plan, query)
+
+        return query
 
 
-Chain = Union[Tuple[Domain, Metric], Transformation, Measurement, "PartialChain"]
+Chain = Union[tuple[Domain, Metric], Transformation, Measurement, "PartialChain"]
 
 
 class Query(object):
@@ -475,8 +497,8 @@ class Query(object):
         self,
         chain: Chain,
         output_measure: Measure = None, # type: ignore[assignment]
-        d_in=None,
-        d_out=None,
+        d_in: Optional[float] = None,
+        d_out: Optional[float] = None,
         context: "Context" = None, # type: ignore[assignment]
         _wrap_release=None,
     ) -> None:
@@ -555,16 +577,20 @@ class Query(object):
         )
 
     def __dir__(self):
-        """Returns the list of available constructors. Used by Python's error suggestion mechanism."""
-        return super().__dir__() + list(constructors.keys())  # type: ignore[operator] # pragma: no cover
+        """Returns the list of available constructors. Used by Python's error suggestion mechanism.
+        Without this, none of the transformations or measument methods are listed.
+        """
+        return super().__dir__() + list(constructors.keys())  # type: ignore[operator]
 
-    def resolve(self, allow_transformations=False):
+    def resolve(self, allow_transformations: bool = False):
         """Resolve the query into a measurement.
 
         :param allow_transformations: If true, allow the response to be a transformation instead of a measurement.
         """
         # resolve a partial chain into a measurement, by fixing the input and output distances
         if isinstance(self._chain, PartialChain):
+            assert self._d_in is not None
+            assert self._d_out is not None
             chain = self._chain.fix(self._d_in, self._d_out, self._output_measure)
         else:
             chain = self._chain
@@ -587,9 +613,9 @@ class Query(object):
     def compositor(
         self,
         split_evenly_over: Optional[int] = None,
-        split_by_weights: Optional[List[float]] = None,
-        d_out=None,
-        output_measure=None,
+        split_by_weights: Optional[list[float]] = None,
+        d_out: Optional[float] = None,
+        output_measure: Optional[Measure] = None,
     ) -> "Query":
         """Constructs a new context containing a sequential compositor with the given weights.
 
@@ -610,7 +636,7 @@ class Query(object):
                 d_out, self._output_measure, output_measure
             )
 
-        def compositor(chain: Union[Tuple[Domain, Metric], Transformation], d_in):
+        def compositor(chain: Union[tuple[Domain, Metric], Transformation], d_in):
             if isinstance(chain, tuple):
                 input_domain, input_metric = chain
             elif isinstance(chain, Transformation):
@@ -618,6 +644,7 @@ class Query(object):
                 d_in = chain.map(d_in)
 
             privacy_unit = input_metric, d_in
+            assert d_out is not None
             privacy_loss = output_measure or self._output_measure, d_out
 
             accountant, d_mids = _sequential_composition_by_weights(
@@ -646,6 +673,7 @@ class Query(object):
     def _compose_context(self, compositor):
         """Helper function for composition in a context."""
         if isinstance(self._chain, PartialChain):
+            # TODO: Can we exercise this?
             return PartialChain(lambda x: compositor(self._chain(x), self._d_in)) # pragma: no cover
         else:
             return compositor(self._chain, self._d_in)
@@ -666,25 +694,33 @@ class PartialChain(object):
 
     def __call__(self, v):
         """Returns the transformation or measurement with the given parameter."""
+        # TODO: Can we exercise this?
         return self.partial(v) # pragma: no cover
 
-    def fix(self, d_in, d_out, output_measure=None, T=None):
+    def fix(self, d_in: float, d_out: float, output_measure: Optional[Measure] = None, T=None):
         """Returns the closest transformation or measurement that satisfies the given stability or privacy constraint.
 
         The discovered parameter is assigned to the param attribute of the returned transformation or measurement.
         """
-        param = binary_search(
-            lambda x: _cast_measure(self.partial(x), output_measure, d_out).check(
-                d_in, d_out
-            ),
-            T=T,
-        )
+        # When the output measure corresponds to approx-DP, only optimize the epsilon parameter.
+        # The delta parameter should be fixed in _cast_measure, and if not, then the search will be impossible here anyways.
+        if output_measure == fixed_smoothed_max_divergence(T=float):
+            def predicate(param):
+                meas = _cast_measure(self.partial(param), output_measure, d_out)
+                return meas.map(d_in)[0] <= d_out[0] # type: ignore[index] 
+        else:
+            def predicate(param):
+                meas = _cast_measure(self.partial(param), output_measure, d_out)
+                return meas.check(d_in, d_out)
+        
+        param = binary_search(predicate, T=T)
         chain = self.partial(param)
         chain.param = param
         return chain
 
-    def __rshift__(self, other):
+    def __rshift__(self, other: Union[Transformation, Measurement]):
         # partials may be chained with other transformations or measurements to form a new partial
+        # TODO: Can we exercise this?
         if isinstance(other, (Transformation, Measurement)): # pragma: no cover
             return PartialChain(lambda x: self.partial(x) >> other)
 
@@ -702,11 +738,11 @@ class PartialChain(object):
 
 def _sequential_composition_by_weights(
     domain: Domain,
-    privacy_unit: Tuple[Metric, float],
-    privacy_loss: Tuple[Measure, float],
+    privacy_unit: tuple[Metric, float],
+    privacy_loss: tuple[Measure, float],
     split_evenly_over: Optional[int] = None,
-    split_by_weights: Optional[List[float]] = None,
-) -> Tuple[Measurement, List[Any]]:
+    split_by_weights: Optional[list[float]] = None,
+) -> tuple[Measurement, list[Any]]:
     """Constructs a sequential composition measurement
     where the ``d_mids`` are proportional to the weights.
 
@@ -735,16 +771,16 @@ def _sequential_composition_by_weights(
             "Must specify either `split_evenly_over` or `split_by_weights`"
         )
 
-    def mul(dist, scale):
+    def mul(dist, scale: float):
         if isinstance(dist, tuple):
             return dist[0] * scale, dist[1] * scale
         else:
             return dist * scale
 
-    def scale_weights(scale, weights):
+    def scale_weights(scale: float, weights):
         return [mul(w, scale) for w in weights]
 
-    def scale_sc(scale):
+    def scale_sc(scale: float):
         return make_sequential_composition(
             input_domain=domain,
             input_metric=input_metric,
@@ -759,7 +795,7 @@ def _sequential_composition_by_weights(
     return scale_sc(scale), scale_weights(scale, weights)
 
 
-def _cast_measure(chain, to_measure=None, d_to=None):
+def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
     """Casts the output measure of a given ``chain`` to ``to_measure``.
 
     If provided, ``d_to`` is the privacy loss wrt the new measure.
@@ -784,11 +820,20 @@ def _cast_measure(chain, to_measure=None, d_to=None):
     raise ValueError(f"Unable to cast measure from {from_to[0]} to {from_to[1]}")
 
 
-def _translate_measure_distance(d_from, from_measure, to_measure):
+def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measure):
     """Translate a privacy loss ``d_from`` from ``from_measure`` to ``to_measure``.
+
+    >>> _translate_measure_distance(1, dp.max_divergence(dp.f64), dp.max_divergence(dp.f64))
+    1
+    >>> _translate_measure_distance(1, dp.max_divergence(dp.f64), dp.fixed_smoothed_max_divergence(dp.f64))
+    (1, 0.0)
+    >>> _translate_measure_distance((1.5, 5e-07), dp.fixed_smoothed_max_divergence(dp.f64), dp.zero_concentrated_divergence(dp.f64))
+    0.0489...
+    >>> _translate_measure_distance(0.05, dp.zero_concentrated_divergence(dp.f64), dp.max_divergence(dp.f64))
+    0.316...
     """
     if from_measure == to_measure:
-        return d_from # pragma: no cover
+        return d_from
 
     from_to = from_measure.type.origin, to_measure.type.origin
     T = to_measure.type.args[0]
@@ -796,9 +841,9 @@ def _translate_measure_distance(d_from, from_measure, to_measure):
     constant = 1.0  # the choice of constant doesn't matter
 
     if from_to == ("MaxDivergence", "FixedSmoothedMaxDivergence"):
-        return (d_from, 0.0) # pragma: no cover
+        return (d_from, 0.0)
 
-    if from_to == ("ZeroConcentratedDivergence", "MaxDivergence"): # pragma: no cover
+    if from_to == ("ZeroConcentratedDivergence", "MaxDivergence"):
         space = atom_domain(T=T), absolute_distance(T=T)
         scale = binary_search_param(
             lambda eps: make_pureDP_to_zCDP(make_laplace(*space, eps)),

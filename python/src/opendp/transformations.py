@@ -218,7 +218,7 @@ def then_b_ary_tree(
 
 def make_bounded_float_checked_sum(
     size_limit: int,
-    bounds: Tuple[Any, Any],
+    bounds: tuple[Any, Any],
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded data with known dataset size.
@@ -254,7 +254,7 @@ def make_bounded_float_checked_sum(
     :param size_limit: Upper bound on number of records to keep in the input data.
     :type size_limit: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     :param S: Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
     :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -286,7 +286,7 @@ def make_bounded_float_checked_sum(
 
 def make_bounded_float_ordered_sum(
     size_limit: int,
-    bounds: Tuple[Any, Any],
+    bounds: tuple[Any, Any],
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded floats with known ordering.
@@ -323,7 +323,7 @@ def make_bounded_float_ordered_sum(
     :param size_limit: Upper bound on the number of records in input data. Used to bound sensitivity.
     :type size_limit: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     :param S: Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
     :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -354,7 +354,7 @@ def make_bounded_float_ordered_sum(
 
 
 def make_bounded_int_monotonic_sum(
-    bounds: Tuple[Any, Any],
+    bounds: tuple[Any, Any],
     T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded ints,
@@ -375,7 +375,7 @@ def make_bounded_int_monotonic_sum(
     * Output Metric:  `AbsoluteDistance<T>`
 
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -403,7 +403,7 @@ def make_bounded_int_monotonic_sum(
 
 
 def make_bounded_int_ordered_sum(
-    bounds: Tuple[Any, Any],
+    bounds: tuple[Any, Any],
     T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded ints.
@@ -424,7 +424,7 @@ def make_bounded_int_ordered_sum(
     * Output Metric:  `AbsoluteDistance<T>`
 
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -452,7 +452,7 @@ def make_bounded_int_ordered_sum(
 
 
 def make_bounded_int_split_sum(
-    bounds: Tuple[Any, Any],
+    bounds: tuple[Any, Any],
     T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded ints.
@@ -473,7 +473,7 @@ def make_bounded_int_split_sum(
     * Output Metric:  `AbsoluteDistance<T>`
 
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -751,7 +751,7 @@ def make_cdf(
 def make_clamp(
     input_domain: Domain,
     input_metric: Metric,
-    bounds: Tuple[Any, Any]
+    bounds: tuple[Any, Any]
 ) -> Transformation:
     r"""Make a Transformation that clamps numeric data in `Vec<TA>` to `bounds`.
 
@@ -776,7 +776,7 @@ def make_clamp(
     :param input_metric: Metric on input domain.
     :type input_metric: Metric
     :param bounds: Tuple of inclusive lower and upper bounds.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -802,7 +802,7 @@ def make_clamp(
     return output
 
 def then_clamp(
-    bounds: Tuple[Any, Any]
+    bounds: tuple[Any, Any]
 ):  
     r"""partial constructor of make_clamp
 
@@ -810,7 +810,7 @@ def then_clamp(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_clamp`
 
     :param bounds: Tuple of inclusive lower and upper bounds.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     """
     return PartialConstructor(lambda input_domain, input_metric: make_clamp(
         input_domain=input_domain,
@@ -1730,7 +1730,7 @@ def then_impute_constant(
 def make_impute_uniform_float(
     input_domain: Domain,
     input_metric: Metric,
-    bounds: Tuple[Any, Any]
+    bounds: tuple[Any, Any]
 ) -> Transformation:
     r"""Make a Transformation that replaces NaN values in `Vec<TA>` with uniformly distributed floats within `bounds`.
 
@@ -1748,7 +1748,7 @@ def make_impute_uniform_float(
     :param input_metric: Metric of the input.
     :type input_metric: Metric
     :param bounds: Tuple of inclusive lower and upper bounds.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -1774,7 +1774,7 @@ def make_impute_uniform_float(
     return output
 
 def then_impute_uniform_float(
-    bounds: Tuple[Any, Any]
+    bounds: tuple[Any, Any]
 ):  
     r"""partial constructor of make_impute_uniform_float
 
@@ -1782,7 +1782,7 @@ def then_impute_uniform_float(
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_impute_uniform_float`
 
     :param bounds: Tuple of inclusive lower and upper bounds.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     """
     return PartialConstructor(lambda input_domain, input_metric: make_impute_uniform_float(
         input_domain=input_domain,
@@ -1992,7 +1992,7 @@ def then_is_null(
 
 def make_lipschitz_float_mul(
     constant,
-    bounds: Tuple[Any, Any],
+    bounds: tuple[Any, Any],
     D: RuntimeTypeDescriptor = "AtomDomain<T>",
     M: RuntimeTypeDescriptor = "AbsoluteDistance<T>"
 ) -> Transformation:
@@ -2011,7 +2011,7 @@ def make_lipschitz_float_mul(
 
     :param constant: The constant to multiply aggregates by.
     :param bounds: Tuple of inclusive lower and upper bounds.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     :param D: Domain of the function. Must be `AtomDomain<T>` or `VectorDomain<AtomDomain<T>>`
     :type D: :py:ref:`RuntimeTypeDescriptor`
     :param M: Metric. Must be `AbsoluteDistance<T>`, `L1Distance<T>` or `L2Distance<T>`
@@ -2549,7 +2549,7 @@ def make_select_column(
 
 def make_sized_bounded_float_checked_sum(
     size: int,
-    bounds: Tuple[Any, Any],
+    bounds: tuple[Any, Any],
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded floats with known dataset size.
@@ -2584,7 +2584,7 @@ def make_sized_bounded_float_checked_sum(
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     :param S: Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
     :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -2616,7 +2616,7 @@ def make_sized_bounded_float_checked_sum(
 
 def make_sized_bounded_float_ordered_sum(
     size: int,
-    bounds: Tuple[Any, Any],
+    bounds: tuple[Any, Any],
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded floats with known ordering and dataset size.
@@ -2653,7 +2653,7 @@ def make_sized_bounded_float_ordered_sum(
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     :param S: Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
     :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -2685,7 +2685,7 @@ def make_sized_bounded_float_ordered_sum(
 
 def make_sized_bounded_int_checked_sum(
     size: int,
-    bounds: Tuple[Any, Any],
+    bounds: tuple[Any, Any],
     T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded ints.
@@ -2708,7 +2708,7 @@ def make_sized_bounded_int_checked_sum(
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -2738,7 +2738,7 @@ def make_sized_bounded_int_checked_sum(
 
 def make_sized_bounded_int_monotonic_sum(
     size: int,
-    bounds: Tuple[Any, Any],
+    bounds: tuple[Any, Any],
     T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded ints,
@@ -2761,7 +2761,7 @@ def make_sized_bounded_int_monotonic_sum(
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -2791,7 +2791,7 @@ def make_sized_bounded_int_monotonic_sum(
 
 def make_sized_bounded_int_ordered_sum(
     size: int,
-    bounds: Tuple[Any, Any],
+    bounds: tuple[Any, Any],
     T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded ints with known dataset size.
@@ -2816,7 +2816,7 @@ def make_sized_bounded_int_ordered_sum(
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -2846,7 +2846,7 @@ def make_sized_bounded_int_ordered_sum(
 
 def make_sized_bounded_int_split_sum(
     size: int,
-    bounds: Tuple[Any, Any],
+    bounds: tuple[Any, Any],
     T: Optional[RuntimeTypeDescriptor] = None
 ) -> Transformation:
     r"""Make a Transformation that computes the sum of bounded ints with known dataset size.
@@ -2871,7 +2871,7 @@ def make_sized_bounded_int_split_sum(
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
-    :type bounds: Tuple[Any, Any]
+    :type bounds: tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -3037,7 +3037,7 @@ def make_stable_expr(
     :type input_domain: Domain
     :param input_metric: How to measure distances between neighboring input data sets.
     :type input_metric: Metric
-    :param expr: The [`Expr`] to be privatized.
+    :param expr: The expression to be analyzed for stability.
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -3068,7 +3068,7 @@ def then_stable_expr(
     .. seealso:: 
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.transformations.make_stable_expr`
 
-    :param expr: The [`Expr`] to be privatized.
+    :param expr: The expression to be analyzed for stability.
     """
     return PartialConstructor(lambda input_domain, input_metric: make_stable_expr(
         input_domain=input_domain,

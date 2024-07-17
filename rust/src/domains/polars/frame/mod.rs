@@ -9,13 +9,13 @@ use crate::core::Domain;
 use crate::metrics::{LInfDistance, LpDistance};
 use crate::traits::ProductOrd;
 use crate::{
-    core::MetricSpace,
-    domains::{AtomDomain, OptionDomain, SeriesDomain},
-    error::Fallible,
-    transformations::DatasetMetric,
+    core::MetricSpace, domains::SeriesDomain, error::Fallible, transformations::DatasetMetric,
 };
 
 use super::NumericDataType;
+
+#[cfg(test)]
+mod test;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -31,8 +31,8 @@ impl Frame for LazyFrame {
         Ok(IntoLazy::lazy(DataFrame::new(series)?))
     }
     fn schema(&self) -> Fallible<Schema> {
-        self.schema()
-            .map(|v| v.as_ref().clone())
+        LazyFrame::schema(&mut self.clone())
+            .map(|schema| Arc::unwrap_or_clone(schema))
             .map_err(Into::into)
     }
     fn lazyframe(self) -> LazyFrame {
@@ -42,12 +42,12 @@ impl Frame for LazyFrame {
         self.collect().map_err(Into::into)
     }
 }
-impl Frame for LogicalPlan {
+impl Frame for DslPlan {
     fn new(series: Vec<Series>) -> Fallible<Self> {
         <LazyFrame as Frame>::new(series).map(|v| v.logical_plan)
     }
     fn schema(&self) -> Fallible<Schema> {
-        Ok(self.schema()?.as_ref().as_ref().clone())
+        Ok(self.compute_schema()?.as_ref().clone())
     }
     fn lazyframe(self) -> LazyFrame {
         LazyFrame::from(self)
@@ -117,7 +117,7 @@ impl<F: Frame> PartialEq for FrameDomain<F> {
 }
 
 pub type LazyFrameDomain = FrameDomain<LazyFrame>;
-pub(crate) type LogicalPlanDomain = FrameDomain<LogicalPlan>;
+pub(crate) type DslPlanDomain = FrameDomain<DslPlan>;
 
 impl<F: Frame, M: DatasetMetric> MetricSpace for (FrameDomain<F>, M) {
     fn check_space(&self) -> Fallible<()> {
@@ -162,6 +162,13 @@ impl<Q> MetricSpace for (LazyFrameDomain, LInfDistance<Q>) {
 
 impl<F: Frame> FrameDomain<F> {
     pub fn new(series_domains: Vec<SeriesDomain>) -> Fallible<Self> {
+        Self::new_with_margins(series_domains, HashMap::new())
+    }
+
+    pub(crate) fn new_with_margins(
+        series_domains: Vec<SeriesDomain>,
+        margins: HashMap<BTreeSet<String>, Margin>,
+    ) -> Fallible<Self> {
         let n_unique = series_domains
             .iter()
             .map(|s| &s.field.name)
@@ -172,41 +179,20 @@ impl<F: Frame> FrameDomain<F> {
         }
         Ok(FrameDomain {
             series_domains,
-            margins: HashMap::new(),
+            margins,
             _marker: PhantomData,
         })
     }
 
     pub fn new_from_schema(schema: Schema) -> Fallible<Self> {
         let series_domains = (schema.iter_fields())
-            .map(|field| {
-                macro_rules! new_series_domain {
-                    ($ty:ty, $func:ident) => {
-                        SeriesDomain::new(
-                            field.name.as_str(),
-                            OptionDomain::new(AtomDomain::<$ty>::$func()),
-                        )
-                    };
-                }
-
-                Ok(match field.data_type() {
-                    DataType::Boolean => new_series_domain!(bool, default),
-                    DataType::UInt8 => new_series_domain!(u8, default),
-                    DataType::UInt16 => new_series_domain!(u16, default),
-                    DataType::UInt32 => new_series_domain!(u32, default),
-                    DataType::UInt64 => new_series_domain!(u64, default),
-                    DataType::Int8 => new_series_domain!(i8, default),
-                    DataType::Int16 => new_series_domain!(i16, default),
-                    DataType::Int32 => new_series_domain!(i32, default),
-                    DataType::Int64 => new_series_domain!(i64, default),
-                    DataType::Float32 => new_series_domain!(f64, new_nullable),
-                    DataType::Float64 => new_series_domain!(f64, new_nullable),
-                    DataType::String => new_series_domain!(String, default),
-                    dtype => return fallible!(MakeDomain, "unsupported type {}", dtype),
-                })
-            })
+            .map(SeriesDomain::new_from_field)
             .collect::<Fallible<_>>()?;
         FrameDomain::new(series_domains)
+    }
+
+    pub fn schema(&self) -> Schema {
+        Schema::from_iter(self.series_domains.iter().map(|s| s.field.clone()))
     }
 
     pub(crate) fn cast_carrier<FO: Frame>(&self) -> FrameDomain<FO> {
@@ -220,15 +206,15 @@ impl<F: Frame> FrameDomain<F> {
     #[must_use]
     pub fn with_margin<I: AsRef<str>>(
         mut self,
-        grouping_keys: &[I],
+        grouping_columns: &[I],
         margin: Margin,
     ) -> Fallible<Self> {
-        let grouping_keys =
-            BTreeSet::from_iter(grouping_keys.iter().map(|v| v.as_ref().to_string()));
-        if self.margins.contains_key(&grouping_keys) {
+        let grouping_columns =
+            BTreeSet::from_iter(grouping_columns.iter().map(|v| v.as_ref().to_string()));
+        if self.margins.contains_key(&grouping_columns) {
             return fallible!(MakeDomain, "margin already exists");
         }
-        self.margins.insert(grouping_keys, margin);
+        self.margins.insert(grouping_columns, margin);
         Ok(self)
     }
 }
@@ -273,9 +259,9 @@ impl<F: Frame> Domain for FrameDomain<F> {
         }
 
         // check that margins are satisfied
-        for (grouping_keys, margin) in self.margins.iter() {
-            let grouping_keys = grouping_keys.iter().map(|c| col(c)).collect::<Vec<_>>();
-            if !margin.member(val.clone().lazyframe().group_by(grouping_keys))? {
+        for (grouping_columns, margin) in self.margins.iter() {
+            let grouping_columns = grouping_columns.iter().map(|c| col(c)).collect::<Vec<_>>();
+            if !margin.member(val.clone().lazyframe().group_by(grouping_columns))? {
                 return Ok(false);
             }
         }
@@ -286,7 +272,7 @@ impl<F: Frame> Domain for FrameDomain<F> {
 
 /// A restriction on the unique values in the margin, as well as possibly their counts,
 /// over a set of columns in a LazyFrame.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct Margin {
     /// The greatest number of records that can be present in any one partition.
     pub max_partition_length: Option<u32>,
@@ -308,7 +294,7 @@ pub struct Margin {
     pub public_info: Option<MarginPub>,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 /// Denote how margins interact with the metric.
 pub enum MarginPub {
     /// The distance between data sets with different margin keys are is infinite.
@@ -377,50 +363,5 @@ impl Margin {
             return Ok(false);
         }
         Ok(true)
-    }
-}
-
-#[cfg(test)]
-mod test_lazyframe {
-    use super::*;
-    use crate::domains::AtomDomain;
-
-    #[test]
-    fn test_frame_new() -> Fallible<()> {
-        let lf_domain = LazyFrameDomain::new(vec![
-            SeriesDomain::new("A", AtomDomain::<i32>::default()),
-            SeriesDomain::new("B", AtomDomain::<f64>::default()),
-        ])?;
-
-        let lf = df!("A" => &[3, 4, 5], "B" => &[1., 3., 7.])?.lazy();
-
-        assert!(lf_domain.member(&lf)?);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_margin() -> Fallible<()> {
-        let lf_domain = LazyFrameDomain::new(vec![
-            SeriesDomain::new("A", AtomDomain::<i32>::default()),
-            SeriesDomain::new("B", AtomDomain::<String>::default()),
-        ])?
-        .with_margin(
-            &["A"],
-            Margin::new()
-                .with_max_partition_length(1)
-                .with_max_num_partitions(2),
-        )?;
-
-        let lf_exceed_partition_size = df!("A" => [1, 2, 2], "B" => ["1", "1", "2"])?.lazyframe();
-        assert!(!lf_domain.member(&lf_exceed_partition_size)?);
-
-        let lf_exceed_num_partitions = df!("A" => [1, 2, 3], "B" => ["1", "1", "1"])?.lazyframe();
-        assert!(!lf_domain.member(&lf_exceed_num_partitions)?);
-
-        let lf = df!("A" => [1, 2], "B" => ["1", "1"])?.lazyframe();
-        assert!(lf_domain.member(&lf)?);
-
-        Ok(())
     }
 }

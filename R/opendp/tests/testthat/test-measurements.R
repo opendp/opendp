@@ -6,13 +6,18 @@ test_that("make_randomized_response_bool", {
 
   expect_type(meas(arg = TRUE), "logical")
   expect_equal(meas(d_in = 1L), 1.0986122886681098)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
-test_that("make_laplace", {
+test_that("then_laplace", {
   space <- c(atom_domain(.T = "i32"), absolute_distance(.T = "i32"))
   meas <- space |> then_laplace(1.)
   expect_type(meas(arg = 0L), "integer")
   expect_equal(meas(d_in = 1L), 1.0)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
+  expect_error(meas(0L), "numeric attr not allowed; Did you mean 'arg='?")
 
   space <- c(atom_domain(.T = "f64"), absolute_distance(.T = "f64"))
   (space |> then_laplace(1.))(arg = 0.)
@@ -22,6 +27,15 @@ test_that("make_laplace", {
 
   space <- c(vector_domain(atom_domain(.T = "int")), l1_distance(.T = "int"))
   (space |> then_laplace(1.))(arg = c(0L, 1L))
+})
+
+test_that("make_laplace", {
+  meas <- make_laplace(atom_domain(.T = "i32"), absolute_distance(.T = "i32"), 1.)
+  expect_type(meas(arg = 0L), "integer")
+  expect_equal(meas(d_in = 1L), 1.0)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
+  expect_error(meas(0L), "numeric attr not allowed; Did you mean 'arg='?")
 })
 
 test_that("make_geometric", {
@@ -189,7 +203,7 @@ test_that("test_laplace_threshold", {
   input_space <- c(vector_domain(atom_domain(.T = String)), symmetric_distance())
   meas <- input_space |>
     then_count_by(.MO = "L1Distance<f64>", .TV = f64) |>
-    then_base_laplace_threshold(scale = 2., threshold = 28.)
+    then_laplace_threshold(scale = 2., threshold = 28.)
 
   meas(arg = c(rep("CAT_A", each = 20), rep("CAT_B", each = 10)))
 

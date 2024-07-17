@@ -1,5 +1,4 @@
 import pytest
-from typing import List
 import logging
 import opendp.prelude as dp
 
@@ -70,7 +69,7 @@ def test_context_repr():
             privacy_unit=dp.unit_of(contributions=3),
             privacy_loss=dp.loss_of(epsilon=3.0),
             split_evenly_over=1,
-            domain=dp.domain_of(List[int]),
+            domain=dp.domain_of(list[int]),
         )
     ) == '''Context(
     accountant = Measurement(
@@ -87,7 +86,7 @@ def test_context_init_split_by_weights():
         privacy_unit=dp.unit_of(contributions=3),
         privacy_loss=dp.loss_of(epsilon=3.0),
         split_by_weights=[1, 1, 1],
-        domain=dp.domain_of(List[int]),
+        domain=dp.domain_of(list[int]),
     )
 
 
@@ -97,7 +96,7 @@ def test_context_init_split_evenly_over():
         privacy_unit=dp.unit_of(contributions=3),
         privacy_loss=dp.loss_of(epsilon=3.0),
         split_evenly_over=3,
-        domain=dp.domain_of(List[int]),
+        domain=dp.domain_of(list[int]),
     )
 
     dp_sum = context.query().clamp((1, 10)).sum().laplace(100.0)  # type: ignore

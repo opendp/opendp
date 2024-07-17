@@ -55,7 +55,7 @@ def test_mean_without_size():
 def test_int_mean():
     # Currently fails with:
     #   opendp.mod.OpenDPException:
-    #     FFI("No match for concrete type i32. You've got a debug binary! Debug binaries support fewer types. Consult https://docs.opendp.org/en/stable/contributor/development-environment.html#build-opendp")
+    #     FFI("No match for concrete type i32. You've got a debug binary! Debug binaries support fewer types. Consult https://docs.opendp.org/en/stable/contributing/development-environment.html#build-opendp")
     # Possible resolution:
     #   Should just be the same as any mean without a size.
     context = dp.Context.compositor(
@@ -77,3 +77,14 @@ def test_scalar_instead_of_vector():
             split_evenly_over=1,
             domain=dp.domain_of(int),
         )
+
+def test_query_dir():
+    context = dp.Context.compositor(
+        data=[1, 2, 3, 4, 5],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+    query_dir = dir(context.query())
+    assert 'count' in query_dir
+    assert 'laplace' in query_dir

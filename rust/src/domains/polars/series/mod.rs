@@ -14,6 +14,9 @@ use crate::domains::{AtomDomain, OptionDomain};
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[cfg(test)]
+mod test;
+
 /// # Proof Definition
 /// `SeriesDomain` is the domain of polars `Series` where:
 /// * `field` - Holds Series name and type of underlying data.
@@ -97,6 +100,33 @@ impl SeriesDomain {
         }
     }
 
+    /// Instantiates the broadest possible domain given the limited information available from a field.
+    /// The data could have NaNs or nulls, and is not bounded.
+    pub fn new_from_field(field: Field) -> Fallible<Self> {
+        macro_rules! new_series_domain {
+            ($ty:ty, $func:ident) => {
+                SeriesDomain::new(
+                    field.name.as_str(),
+                    OptionDomain::new(AtomDomain::<$ty>::$func()),
+                )
+            };
+        }
+
+        Ok(match field.data_type() {
+            DataType::Boolean => new_series_domain!(bool, default),
+            DataType::UInt32 => new_series_domain!(u32, default),
+            DataType::UInt64 => new_series_domain!(u64, default),
+            DataType::Int8 => new_series_domain!(i8, default),
+            DataType::Int16 => new_series_domain!(i16, default),
+            DataType::Int32 => new_series_domain!(i32, default),
+            DataType::Int64 => new_series_domain!(i64, default),
+            DataType::Float32 => new_series_domain!(f64, new_nullable),
+            DataType::Float64 => new_series_domain!(f64, new_nullable),
+            DataType::String => new_series_domain!(String, default),
+            dtype => return fallible!(MakeDomain, "unsupported type {}", dtype),
+        })
+    }
+
     pub fn drop_bounds(&mut self) -> Fallible<()> {
         macro_rules! drop_bounds {
             ($ty:ty) => {{
@@ -110,8 +140,6 @@ impl SeriesDomain {
         }
 
         match self.field.dtype {
-            DataType::UInt8 => drop_bounds!(u8),
-            DataType::UInt16 => drop_bounds!(u16),
             DataType::UInt32 => drop_bounds!(u32),
             DataType::UInt64 => drop_bounds!(u64),
             DataType::Int8 => drop_bounds!(i8),
@@ -203,7 +231,7 @@ impl PartialEq for dyn DynSeriesAtomDomain + '_ {
 
 /// Utility trait to construct the Polars runtime data-type indicator from an atomic type.
 pub trait NumericDataType:
-    NumericNative<PolarsType = Self::NumericPolars> + PrimitiveDataType
+    NumericNative<PolarsType = Self::NumericPolars> + PrimitiveDataType + Literal
 {
     type NumericPolars: PolarsDataType + PolarsNumericType<Native = Self>;
 }
@@ -225,8 +253,6 @@ macro_rules! impl_dtype_from {
         }
     };
 }
-impl_dtype_from!(u8, UInt8Type);
-impl_dtype_from!(u16, UInt16Type);
 impl_dtype_from!(u32, UInt32Type);
 impl_dtype_from!(u64, UInt64Type);
 impl_dtype_from!(i8, Int8Type);
@@ -240,81 +266,4 @@ impl PrimitiveDataType for bool {
 }
 impl PrimitiveDataType for String {
     type Polars = StringType;
-}
-#[cfg(test)]
-mod test_series {
-    use crate::domains::OptionDomain;
-
-    use super::*;
-
-    #[test]
-    fn test_series_new() -> Fallible<()> {
-        let series_domain = SeriesDomain::new("A", AtomDomain::<bool>::default());
-        assert!(series_domain == series_domain);
-
-        let series = Series::new("A", vec![true; 50]);
-        assert!(series_domain.member(&series)?);
-        Ok(())
-    }
-
-    #[test]
-    fn test_series_bounded() -> Fallible<()> {
-        let series_domain = SeriesDomain::new("A", AtomDomain::new_closed((1, 3))?);
-
-        let inside_bounds = Series::new("A", vec![1; 50]);
-        assert!(series_domain.member(&inside_bounds)?);
-
-        let outside_bounds = Series::new("A", vec![4; 50]);
-        assert!(!series_domain.member(&outside_bounds)?);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_series_non_nullable() -> Fallible<()> {
-        // option domain with non-nullable type
-        let series_domain =
-            SeriesDomain::new("A", OptionDomain::new(AtomDomain::<bool>::default()));
-
-        let series = Series::new("A", vec![Some(true), Some(false), None]);
-        assert!(series_domain.member(&series)?);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_series_nullable_without_option() -> Fallible<()> {
-        // nullable type without options
-        let series_domain = SeriesDomain::new("A", AtomDomain::<f64>::new_nullable());
-
-        let series_with_none = Series::new("A", vec![Some(1.), Some(f64::NAN), None]);
-        assert!(!series_domain.member(&series_with_none)?);
-
-        // series made with Option::Some are ok
-        let series_with_some = Series::new("A", vec![Some(1.), Some(f64::NAN)]);
-        assert!(series_domain.member(&series_with_some)?);
-
-        // series made without options are ok
-        let series_wo_some = Series::new("A", vec![1., f64::NAN]);
-        assert!(series_domain.member(&series_wo_some)?);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_series_nullable_with_option() -> Fallible<()> {
-        // permit both kinds of nullity
-        let series_domain =
-            SeriesDomain::new("A", OptionDomain::new(AtomDomain::<f64>::new_nullable()));
-
-        // None and NaN are both ok
-        let series_with_none = Series::new("A", vec![Some(1.), Some(f64::NAN), None]);
-        assert!(series_domain.member(&series_with_none)?);
-
-        // doesn't have to have NaN
-        let series_wo_none = Series::new("A", vec![1., 2.]);
-        assert!(series_domain.member(&series_wo_none)?);
-
-        Ok(())
-    }
 }

@@ -55,26 +55,3 @@ smd_curve_epsilon <- function(
     log, PACKAGE = "opendp")
   output
 }
-
-
-#' Internal function. Convert the AnyObject to a string representation.
-#'
-#' @concept data
-#' @param this The AnyObject to convert to a string representation.
-#' @return str
-to_string <- function(
-  this
-) {
-  # No type arguments to standardize.
-  log <- new_constructor_log("to_string", "data", new_hashtab(
-    list("this"),
-    list(this)
-  ))
-
-  # Call wrapper function.
-  output <- .Call(
-    "data__to_string",
-    this,
-    log, PACKAGE = "opendp")
-  output
-}

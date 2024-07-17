@@ -35,10 +35,10 @@ html:
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
 html-rustdoc:
-	cd ../rust && RUSTDOCFLAGS='-D warnings' cargo rustdoc --features untrusted,derive -- --html-in-header katex.html --document-private-items
+	cd ../rust && RUSTDOCFLAGS='-D warnings' cargo rustdoc --all-features -- --html-in-header katex.html --document-private-items
 
 doctest-rust:
-	cd ../rust && $(CARGO) test --doc --features untrusted,ffi
+	cd ../rust && $(CARGO) test --doc --all-features
 
 versions:
 	# "/en" is the default, but someday we might have translations

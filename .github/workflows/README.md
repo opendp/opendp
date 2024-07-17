@@ -4,7 +4,7 @@
 
 OpenDP uses a number of Github workflows: Some are started automaticly
 (pushes, PRs, and scheduled runs), and others are manual (via the github UI or API).
-The [Maintainer Notes](https://docs.opendp.org/en/stable/contributor/maintainer-notes.html)
+The [Maintainer Notes](https://docs.opendp.org/en/stable/contributing/maintainer-notes.html)
 provide a broader view of the the develpment and release process.
 
 ### Automatic
@@ -28,10 +28,11 @@ provide a broader view of the the develpment and release process.
 ```mermaid
 graph TD
     subgraph build.yml
-        bcc[credential-check] --> libs-windows --> python
-        bcc[credential-check] --> libs-macos --> python
-        bcc[credential-check] --> libs-linux --> python
-        bcc[credential-check] --> python-bindings --> python
+        credential-check --> bindings
+        bindings --> python
+        bindings --> python-aarch64
+        bindings --> python-sdist
+        bindings --> r
     end
     build.yml -.- build
 

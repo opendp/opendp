@@ -6,7 +6,7 @@ use crate::{
     core::{Function, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measurements::laplace::laplace_map,
+    measurements::laplace::laplace_puredp_map,
     measures::MaxDivergence,
     metrics::{AbsoluteDistance, L1Distance},
     traits::{samplers::sample_discrete_laplace, Float, InfCast, Integer, SaturatingCast},
@@ -56,7 +56,7 @@ where
         },
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_map(scale, QO::zero())),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, QO::zero())),
     )
 }
 
@@ -108,49 +108,9 @@ where
         },
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_map(scale, QO::zero())),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, QO::zero())),
     )
 }
 
 #[cfg(test)]
-mod test {
-
-    use super::*;
-    use crate::{domains::AtomDomain, metrics::AbsoluteDistance};
-
-    // there is a distributional test in the accuracy module
-
-    #[test]
-    fn test_discrete_laplace_cks20() -> Fallible<()> {
-        let meas = make_scalar_integer_laplace(
-            AtomDomain::default(),
-            AbsoluteDistance::default(),
-            1e30f64,
-        )?;
-        println!("{:?}", meas.invoke(&0)?);
-        assert!(meas.check(&1, &1e30f64)?);
-        Ok(())
-    }
-
-    #[test]
-    fn test_discrete_laplace_cks20_zero_scale() -> Fallible<()> {
-        let meas =
-            make_scalar_integer_laplace(AtomDomain::default(), AbsoluteDistance::default(), 0.)?;
-        assert_eq!(meas.invoke(&0)?, 0);
-        assert_eq!(meas.map(&0)?, 0.);
-        assert_eq!(meas.map(&1)?, f64::INFINITY);
-        Ok(())
-    }
-
-    #[test]
-    fn test_discrete_laplace_cks20_max_scale() -> Fallible<()> {
-        let meas = make_scalar_integer_laplace(
-            AtomDomain::default(),
-            AbsoluteDistance::default(),
-            f64::MAX,
-        )?;
-        println!("{:?} {:?}", meas.invoke(&0)?, i32::MAX);
-
-        Ok(())
-    }
-}
+mod test;

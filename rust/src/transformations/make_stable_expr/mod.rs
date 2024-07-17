@@ -1,19 +1,51 @@
 use opendp_derive::bootstrap;
-use polars_plan::dsl::Expr;
+use polars_plan::dsl::{AggExpr, Expr, FunctionExpr};
 
 use crate::{
     core::{Metric, MetricSpace, Transformation},
     domains::{ExprDomain, OuterMetric},
     error::Fallible,
+    metrics::{LInfDistance, LpDistance, Parallel, PartitionDistance},
+    polars::get_disabled_features_message,
 };
 
-use super::DatasetMetric;
+use super::{traits::UnboundedMetric, DatasetMetric};
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
 #[cfg(feature = "contrib")]
+mod expr_alias;
+
+#[cfg(feature = "contrib")]
+mod expr_binary;
+
+#[cfg(feature = "contrib")]
+mod expr_boolean_function;
+
+#[cfg(feature = "contrib")]
+mod expr_clip;
+
+#[cfg(feature = "contrib")]
 mod expr_col;
+
+#[cfg(feature = "contrib")]
+pub(crate) mod expr_discrete_quantile_score;
+
+#[cfg(feature = "contrib")]
+mod expr_fill_nan;
+
+#[cfg(feature = "contrib")]
+mod expr_fill_null;
+
+#[cfg(feature = "contrib")]
+mod expr_len;
+
+#[cfg(feature = "contrib")]
+mod expr_lit;
+
+#[cfg(feature = "contrib")]
+mod expr_sum;
 
 #[bootstrap(
     features("contrib"),
@@ -25,7 +57,7 @@ mod expr_col;
 /// # Arguments
 /// * `input_domain` - The domain of the input data.
 /// * `input_metric` - How to measure distances between neighboring input data sets.
-/// * `expr` - The [`Expr`] to be privatized.
+/// * `expr` - The expression to be analyzed for stability.
 pub fn make_stable_expr<MI: 'static + Metric, MO: 'static + Metric>(
     input_domain: ExprDomain,
     input_metric: MI,
@@ -58,70 +90,112 @@ where
         input_domain: ExprDomain,
         input_metric: M,
     ) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>> {
+        if expr_fill_nan::match_fill_nan(&self).is_some() {
+            return expr_fill_nan::make_expr_fill_nan(input_domain, input_metric, self);
+        }
+
+        use Expr::*;
+        use FunctionExpr::*;
+        match self {
+
+            #[cfg(feature = "contrib")]
+            Alias(_, _) => expr_alias::make_expr_alias(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Expr::BinaryExpr { .. } => expr_binary::make_expr_binary(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: Boolean(_),
+                ..
+            } => return expr_boolean_function::make_expr_boolean_function(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: Clip { .. },
+                ..
+            } => expr_clip::make_expr_clip(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: FillNull { .. },
+                ..
+            } => expr_fill_null::make_expr_fill_null(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Column(_) => expr_col::make_expr_col(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Literal(_) => expr_lit::make_expr_lit(input_domain, input_metric, self),
+
+            expr => fallible!(
+                MakeTransformation,
+                "Expr is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                expr,
+                get_disabled_features_message()
+            )
+        }
+    }
+}
+
+impl<MI, const P: usize> StableExpr<PartitionDistance<MI>, LpDistance<P, f64>> for Expr
+where
+    MI: 'static + UnboundedMetric,
+{
+    fn make_stable(
+        self,
+        input_domain: ExprDomain,
+        input_metric: PartitionDistance<MI>,
+    ) -> Fallible<Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, LpDistance<P, f64>>>
+    {
         use Expr::*;
         match self {
             #[cfg(feature = "contrib")]
-            Column(_) => expr_col::make_expr_col(input_domain, input_metric, self),
+            Agg(AggExpr::Sum(_)) => {
+                expr_sum::make_expr_sum(input_domain, input_metric, self)
+            }
+
+            #[cfg(feature = "contrib")]
+            Len => expr_len::make_expr_len(input_domain, input_metric, self),
+
             expr => fallible!(
                 MakeTransformation,
-                "Expr is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
-                expr
+                "Expr is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                expr,
+                get_disabled_features_message()
+            )
+        }
+    }
+}
+
+impl<MI> StableExpr<PartitionDistance<MI>, Parallel<LInfDistance<f64>>> for Expr
+where
+    MI: 'static + UnboundedMetric,
+{
+    fn make_stable(
+        self,
+        input_domain: ExprDomain,
+        input_metric: PartitionDistance<MI>,
+    ) -> Fallible<
+        Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
+    > {
+        if expr_discrete_quantile_score::match_discrete_quantile_score(&self)?.is_some() {
+            return expr_discrete_quantile_score::make_expr_discrete_quantile_score(
+                input_domain,
+                input_metric,
+                self,
+            );
+        }
+        match self {
+            expr => fallible!(
+                MakeTransformation,
+                "Expr is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                expr,
+                get_disabled_features_message()
             )
         }
     }
 }
 
 #[cfg(test)]
-pub mod polars_test {
-
-    use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
-    use crate::error::*;
-    use polars::prelude::*;
-
-    pub fn get_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
-        let lf_domain = LazyFrameDomain::new(vec![
-            SeriesDomain::new("chunk_2_bool", AtomDomain::<bool>::default()),
-            SeriesDomain::new("cycle_5_alpha", AtomDomain::<String>::default()),
-            SeriesDomain::new("const_1f64", AtomDomain::<f64>::default()),
-            SeriesDomain::new("chunk_(..10u32)", AtomDomain::<u32>::default()),
-            SeriesDomain::new("cycle_(..100i32)", AtomDomain::<i32>::default()),
-        ])?
-        .with_margin::<&str>(
-            &[],
-            Margin::new()
-                .with_public_lengths()
-                .with_max_partition_length(1000),
-        )?
-        .with_margin(
-            &["chunk_2_bool"],
-            Margin::new()
-                .with_public_lengths()
-                .with_max_partition_length(500)
-                .with_max_num_partitions(2)
-                .with_max_partition_contributions(1),
-        )?
-        .with_margin(
-            &["chunk_2_bool", "cycle_5_alpha"],
-            Margin::new()
-                .with_public_keys()
-                .with_max_partition_length(200),
-        )?
-        .with_margin(
-            &["chunk_(..10u32)"],
-            Margin::new()
-                .with_public_keys()
-                .with_max_partition_length(100),
-        )?;
-
-        let lf = df!(
-            "chunk_2_bool" => [[false; 500], [true; 500]].concat(),
-            "cycle_5_alpha" => ["A", "B", "C", "D", "E"].repeat(200),
-            "const_1f64" => [1.0; 1000],
-            "chunk_(..10u32)" => (0..10u32).flat_map(|i| [i; 100].into_iter()).collect::<Vec<_>>(),
-            "cycle_(..100i32)" => (0..100i32).cycle().take(1000).collect::<Vec<_>>()
-        )?
-        .lazy();
-
-        Ok((lf_domain, lf))
-    }
-}
+pub mod test_helper;

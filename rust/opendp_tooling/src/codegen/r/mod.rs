@@ -33,7 +33,7 @@ const BLACKLIST: &'static [&'static str] = &[
     "object_free",
     "extrinsic_object_free",
     "fill_bytes",
-    // udf
+    // plugins
     "make_user_transformation",
     "make_user_measurement",
     "new_function",
@@ -46,13 +46,16 @@ const BLACKLIST: &'static [&'static str] = &[
     "arrow_array_free",
     "dataframe_domain",
     "lazyframe_domain",
-    "infer_lazyframe_domain",
+    "_lazyframe_from_domain",
     "with_margin",
     "expr_domain",
     "make_stable_lazyframe",
     "make_stable_expr",
     "make_private_lazyframe",
     "make_private_expr",
+    "onceframe_collect",
+    "onceframe_lazy",
+    "describe_polars_measurement_accuracy",
 ];
 
 /// Top-level function to generate R bindings, including all modules.

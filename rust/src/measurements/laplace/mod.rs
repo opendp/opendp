@@ -22,7 +22,7 @@ pub use integer::*;
 #[cfg(feature = "ffi")]
 mod ffi;
 
-pub(crate) fn laplace_map<QI, QO>(scale: QO, relaxation: QO) -> impl Fn(&QI) -> Fallible<QO>
+pub(crate) fn laplace_puredp_map<QI, QO>(scale: QO, relaxation: QO) -> impl Fn(&QI) -> Fallible<QO>
 where
     QI: Clone,
     QO: Float + InfCast<QI>,
@@ -179,25 +179,4 @@ where
 }
 
 #[cfg(test)]
-mod test {
-
-    use super::*;
-    use num::{One, Zero};
-
-    #[test]
-    fn test_all() -> Fallible<()> {
-        macro_rules! test_laplace_with_ty {
-            ($($ty:ty),+) => {$(
-                let meas = make_laplace(AtomDomain::<$ty>::default(), Default::default(), 1., None)?;
-                meas.invoke(&<$ty>::zero())?;
-                meas.map(&<$ty>::one())?;
-
-                let meas = make_laplace(VectorDomain::new(AtomDomain::<$ty>::default()), Default::default(), 1., None)?;
-                meas.invoke(&vec![<$ty>::zero()])?;
-                meas.map(&<$ty>::one())?;
-            )+}
-        }
-        test_laplace_with_ty!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, f32, f64);
-        Ok(())
-    }
-}
+mod test;

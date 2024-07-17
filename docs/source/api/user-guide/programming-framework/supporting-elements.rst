@@ -1,7 +1,7 @@
 Supporting Elements
 ===================
 
-This section builds on the :ref:`core-user-guide` documentation to expand on the constituent pieces of Measurements and Transformations.
+This section builds on the :ref:`core-user-guide` documentation and explains the elements of Measurements and Transformations.
 
 
 .. _functions-user-guide:
@@ -10,7 +10,7 @@ Function
 --------
 
 As one would expect, all data processing is handled via a function.
-The function member stored in a Transformation or Measurement struct is a straightforward representation of an idealized mathematical function.
+The function member stored in a Transformation or Measurement instance is a straightforward representation of an idealized mathematical function.
 
 To use the function, the Transformation or Measurement can be called directly:
 
@@ -165,18 +165,18 @@ Transformations have both an ``input_metric`` and ``output_metric``, while measu
 
 .. _symmetric-distance:
 
-A concrete example of a metric in opendp is ``SymmetricDistance``, or "the symmetric distance metric ``|A △ B| = |(A\B) ∪ (B\A)|``."
-This is used to count the fewest number of additions or removals to convert one dataset ``A`` into another dataset ``B``.
+A concrete example of a metric in opendp is ``SymmetricDistance``, or :math:`|(A-B) \cap (B-A)|`.
+This is used to count the fewest number of additions or removals to convert one dataset :math:`A` into another dataset :math:`B`.
 
 .. _absolute-distance:
 
-Each metric is bundled together with a domain, and ``A`` and ``B`` are members of that domain.
-Since the symmetric distance metric is often paired with a ``VectorDomain<D>``, ``A`` and ``B`` are often vectors.
+Each metric is bundled together with a domain, and :math:`A` and :math:`B` are members of that domain.
+Since the symmetric distance metric is often paired with a ``VectorDomain<D>``, :math:`A` and :math:`B` are often vectors.
 If we had a dataset where each user can influence at most k records, we would say that the symmetric distance is bounded by `k`, so ``d_in=k`` 
 (where ``d_in`` denotes an upper bound on the distance between adjacent inputs).
 
 Another example metric is ``AbsoluteDistance<f64>``.
-This can be read as "the absolute distance metric ``|A - B|``, where distances are expressed in 64-bit floats."
+This can be read as "the absolute distance metric :math:`|A-B|`, where distances are expressed in 64-bit floats."
 This metric is used to represent global sensitivities
 (an upper bound on how much an aggregated value can change if you were to perturb an individual in the original dataset).
 In practice, you may not have a need to provide global sensitivities to stability/privacy maps,

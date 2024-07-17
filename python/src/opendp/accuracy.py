@@ -20,6 +20,7 @@ __all__ = [
     "accuracy_to_discrete_laplacian_scale",
     "accuracy_to_gaussian_scale",
     "accuracy_to_laplacian_scale",
+    "describe_polars_measurement_accuracy",
     "discrete_gaussian_scale_to_accuracy",
     "discrete_laplacian_scale_to_accuracy",
     "gaussian_scale_to_accuracy",
@@ -173,6 +174,87 @@ def accuracy_to_laplacian_scale(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_accuracy, c_alpha, c_T), AnyObjectPtr))
+
+    return output
+
+
+def describe_polars_measurement_accuracy(
+    measurement: Measurement,
+    alpha = None
+):
+    r"""Get noise scale parameters from a measurement that returns a OnceFrame.
+
+    If a threshold is configured for censoring small/sensitive partitions,
+    a threshold column will be included,
+    containing the cutoff for the respective count query being thresholded.
+
+    :param measurement: computation from which you want to read noise scale parameters from
+    :type measurement: Measurement
+    :param alpha: optional statistical significance to use to compute accuracy estimates
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+
+    :example:
+
+    First, create a measurement with the Polars API:
+    >>> import opendp.prelude as dp
+    >>> import polars as pl
+    >>> dp.enable_features("contrib")
+    ... 
+    >>> lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
+    >>> lf_domain = dp.lazyframe_domain([
+    ...     dp.series_domain("A", dp.atom_domain(T="i32")), 
+    ...     dp.series_domain("B", dp.atom_domain(T=str))
+    ... ])
+    >>> lf_domain = dp.with_margin(lf_domain, by=[], max_partition_length=1000)
+    >>> meas = dp.m.make_private_lazyframe(
+    ...     lf_domain,
+    ...     dp.symmetric_distance(),
+    ...     dp.max_divergence(T=float),
+    ...     lf.select([pl.len().dp.noise(), pl.col("A").dp.sum((0, 1))]),
+    ...     global_scale=1.0
+    ... )
+
+    This function extracts utility information about each aggregate in the resulting data frame:
+    >>> dp.describe_polars_measurement_accuracy(meas)
+    shape: (2, 4)
+    ┌────────┬───────────┬─────────────────┬───────┐
+    │ column ┆ aggregate ┆ distribution    ┆ scale │
+    │ ---    ┆ ---       ┆ ---             ┆ ---   │
+    │ str    ┆ str       ┆ str             ┆ f64   │
+    ╞════════╪═══════════╪═════════════════╪═══════╡
+    │ len    ┆ Len       ┆ Integer Laplace ┆ 1.0   │
+    │ A      ┆ Sum       ┆ Integer Laplace ┆ 1.0   │
+    └────────┴───────────┴─────────────────┴───────┘
+
+    If you pass an alpha argument, then you also get accuracy estimates:
+    >>> dp.describe_polars_measurement_accuracy(meas, alpha=.05)
+    shape: (2, 5)
+    ┌────────┬───────────┬─────────────────┬───────┬──────────┐
+    │ column ┆ aggregate ┆ distribution    ┆ scale ┆ accuracy │
+    │ ---    ┆ ---       ┆ ---             ┆ ---   ┆ ---      │
+    │ str    ┆ str       ┆ str             ┆ f64   ┆ f64      │
+    ╞════════╪═══════════╪═════════════════╪═══════╪══════════╡
+    │ len    ┆ Len       ┆ Integer Laplace ┆ 1.0   ┆ 3.375618 │
+    │ A      ┆ Sum       ┆ Integer Laplace ┆ 1.0   ┆ 3.375618 │
+    └────────┴───────────┴─────────────────┴───────┴──────────┘
+
+
+    """
+    assert_features("contrib")
+
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_measurement = py_to_c(measurement, c_type=Measurement, type_name=AnyMeasurement)
+    c_alpha = py_to_c(alpha, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[f64]))
+
+    # Call library function.
+    lib_function = lib.opendp_accuracy__describe_polars_measurement_accuracy
+    lib_function.argtypes = [Measurement, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_measurement, c_alpha), AnyObjectPtr))
 
     return output
 

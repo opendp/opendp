@@ -16,10 +16,7 @@ const char *ATOM_TYPES[] = {"u32", "u64", "i32", "i64", "f32", "f64", "usize", "
 
 NORET void error_unknown_type(const char *lhs, const char *rhs)
 {
-    int numchar = strlen(lhs) + 1 + strlen(rhs) + 1;
-    char *msg = (char *)R_alloc(1, numchar * sizeof(char));
-    snprintf(msg, numchar, "%s %s", lhs, rhs);
-    error(msg);
+    error("%s %s", lhs, rhs);
 }
 
 #define CharPtr(x) (const char *)CHAR(STRING_ELT(x, 0))
@@ -71,13 +68,13 @@ SEXP extract_error(FfiError *err)
     snprintf(msg, msg_len, "[%s] : %s", err->variant, err->message);
 
     if (str_equal(err->backtrace, "backtrace disabled"))
-        error(msg);
+        error("%s", msg);
     else
     {
         int msg_len_bt = strlen(msg) + strlen(err->backtrace) + 2;
         char *msg_backtrace = (char *)R_alloc(1, msg_len_bt * sizeof(char));
         snprintf(msg_backtrace, msg_len_bt, "%s\n%s", msg, err->backtrace);
-        error(msg_backtrace);
+        error("%s", msg_backtrace);
     }
 
     return (R_NilValue);

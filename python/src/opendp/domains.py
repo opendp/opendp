@@ -17,13 +17,13 @@ from opendp.typing import *
 
 __all__ = [
     "_domain_free",
+    "_lazyframe_from_domain",
     "_user_domain_descriptor",
     "atom_domain",
     "domain_carrier_type",
     "domain_debug",
     "domain_type",
     "expr_domain",
-    "infer_lazyframe_domain",
     "lazyframe_domain",
     "map_domain",
     "member",
@@ -56,6 +56,35 @@ def _domain_free(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+
+    return output
+
+
+def _lazyframe_from_domain(
+    domain: Domain
+):
+    r"""Construct an empty LazyFrame with the same schema as in the LazyFrameDomain.
+
+    This is useful for creating a dummy lazyframe used to write a query plan.
+
+    [_lazyframe_from_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn._lazyframe_from_domain.html)
+
+    :param domain: A LazyFrameDomain.
+    :type domain: Domain
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeException: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_domain = py_to_c(domain, c_type=Domain, type_name=LazyFrameDomain)
+
+    # Call library function.
+    lib_function = lib.opendp_domains___lazyframe_from_domain
+    lib_function.argtypes = [Domain]
+    lib_function.restype = FfiResult
+
+    output = c_to_py(unwrap(lib_function(c_domain), AnyObjectPtr))
 
     return output
 
@@ -106,7 +135,6 @@ def atom_domain(
 
     :example:
 
-    >>> import opendp.prelude as dp
     >>> dp.atom_domain(T=float)
     AtomDomain(T=f64)
 
@@ -209,7 +237,7 @@ def domain_type(
 
 def expr_domain(
     lazyframe_domain: Domain,
-    grouping_columns: Optional[List[str]] = None
+    grouping_columns: Optional[list[str]] = None
 ) -> Domain:
     r"""Construct an ExprDomain from a LazyFrameDomain.
 
@@ -218,7 +246,7 @@ def expr_domain(
     :param lazyframe_domain: the domain of the LazyFrame to be constructed
     :type lazyframe_domain: Domain
     :param grouping_columns: set when creating an expression that aggregates
-    :type grouping_columns: List[str]
+    :type grouping_columns: list[str]
     :rtype: Domain
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeException: if a type argument fails to parse
@@ -237,36 +265,6 @@ def expr_domain(
     lib_function.restype = FfiResult
 
     output = c_to_py(unwrap(lib_function(c_lazyframe_domain, c_grouping_columns), Domain))
-
-    return output
-
-
-def infer_lazyframe_domain(
-    lazyframe
-) -> Domain:
-    r"""Infer the lazyframe domain that a dataset is a member of.
-
-    WARNING: This function looks at the data to infer the domain,
-    and should only be used if you consider the column names and column types to be public information.
-
-    [infer_lazyframe_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.infer_lazyframe_domain.html)
-
-    :param lazyframe: The lazyframe to infer the domain from.
-    :rtype: Domain
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeException: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    # No type arguments to standardize.
-    # Convert arguments to c types.
-    c_lazyframe = py_to_c(lazyframe, c_type=AnyObjectPtr, type_name=LazyFrame)
-
-    # Call library function.
-    lib_function = lib.opendp_domains__infer_lazyframe_domain
-    lib_function.argtypes = [AnyObjectPtr]
-    lib_function.restype = FfiResult
-
-    output = c_to_py(unwrap(lib_function(c_lazyframe), Domain))
 
     return output
 

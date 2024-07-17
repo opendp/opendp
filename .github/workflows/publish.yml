@@ -70,13 +70,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
-          cache: pip
 
       - name: Download Python wheel
         uses: actions/download-artifact@v4
         with:
-          name: python_wheel
-          path: python/wheelhouse
+          pattern: python_wheel_*
+          path: python/dist
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: python_sdist
+          path: python/dist
 
       - name: Publish Python package
         env:
@@ -133,7 +138,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
-          cache: pip
 
       - name: Publish Rust crate
         env:
@@ -155,7 +159,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
-          cache: pip
 
       - name: Publish GitHub Release
         if: ${{ inputs.channel == 'stable' }}

@@ -1,12 +1,13 @@
 use opendp_derive::bootstrap;
 use polars::lazy::frame::LazyFrame;
-use polars_plan::logical_plan::LogicalPlan;
+use polars_plan::plans::DslPlan;
 
 use crate::{
     core::{Function, Metric, MetricSpace, Transformation},
-    domains::{LazyFrameDomain, LogicalPlanDomain},
+    domains::{DslPlanDomain, LazyFrameDomain},
     error::Fallible,
     metrics::SymmetricDistance,
+    polars::get_disabled_features_message,
 };
 
 #[cfg(feature = "ffi")]
@@ -14,6 +15,12 @@ mod ffi;
 
 #[cfg(feature = "contrib")]
 mod source;
+
+#[cfg(feature = "contrib")]
+mod filter;
+
+#[cfg(feature = "contrib")]
+mod h_stack;
 
 #[bootstrap(
     features("contrib"),
@@ -32,54 +39,60 @@ pub fn make_stable_lazyframe<MI: 'static + Metric, MO: 'static + Metric>(
     lazyframe: LazyFrame,
 ) -> Fallible<Transformation<LazyFrameDomain, LazyFrameDomain, MI, MO>>
 where
-    LogicalPlan: StableLogicalPlan<MI, MO>,
+    DslPlan: StableDslPlan<MI, MO>,
     (LazyFrameDomain, MI): MetricSpace,
     (LazyFrameDomain, MO): MetricSpace,
-    (LogicalPlanDomain, MI): MetricSpace,
-    (LogicalPlanDomain, MO): MetricSpace,
+    (DslPlanDomain, MI): MetricSpace,
+    (DslPlanDomain, MO): MetricSpace,
 {
-    let t_lp = lazyframe
+    let t_input = lazyframe
         .logical_plan
         .make_stable(input_domain.cast_carrier(), input_metric)?;
-    let f_lp = t_lp.function.clone();
+    let f_input = t_input.function.clone();
 
     Transformation::new(
-        t_lp.input_domain.cast_carrier(),
-        t_lp.output_domain.cast_carrier(),
+        t_input.input_domain.cast_carrier(),
+        t_input.output_domain.cast_carrier(),
         Function::new_fallible(move |arg: &LazyFrame| {
-            Ok(LazyFrame::from(f_lp.eval(&arg.logical_plan)?)
+            Ok(LazyFrame::from(f_input.eval(&arg.logical_plan)?)
                 .with_optimizations(arg.get_current_optimizations()))
         }),
-        t_lp.input_metric.clone(),
-        t_lp.output_metric.clone(),
-        t_lp.stability_map.clone(),
+        t_input.input_metric.clone(),
+        t_input.output_metric.clone(),
+        t_input.stability_map.clone(),
     )
 }
 
-pub trait StableLogicalPlan<MI: Metric, MO: Metric> {
+pub trait StableDslPlan<MI: Metric, MO: Metric> {
     fn make_stable(
         self,
-        input_domain: LogicalPlanDomain,
+        input_domain: DslPlanDomain,
         input_metric: MI,
-    ) -> Fallible<Transformation<LogicalPlanDomain, LogicalPlanDomain, MI, MO>>;
+    ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, MI, MO>>;
 }
 
-impl StableLogicalPlan<SymmetricDistance, SymmetricDistance> for LogicalPlan {
+impl StableDslPlan<SymmetricDistance, SymmetricDistance> for DslPlan {
     fn make_stable(
         self,
-        input_domain: LogicalPlanDomain,
+        input_domain: DslPlanDomain,
         input_metric: SymmetricDistance,
-    ) -> Fallible<
-        Transformation<LogicalPlanDomain, LogicalPlanDomain, SymmetricDistance, SymmetricDistance>,
-    > {
+    ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, SymmetricDistance, SymmetricDistance>>
+    {
         match &self {
-            LogicalPlan::DataFrameScan { .. } => {
+            DslPlan::DataFrameScan { .. } => {
                 source::make_stable_source(input_domain, input_metric, self)
             }
-            lp => fallible!(
+            DslPlan::Filter { .. } => {
+                filter::make_stable_filter(input_domain, input_metric, self)
+            }
+            DslPlan::HStack { .. } => {
+                h_stack::make_h_stack(input_domain, input_metric, self)
+            }
+            dsl => fallible!(
                 MakeTransformation,
-                "A step in your logical plan is not recognized at this time: {:?}. If you would like to see this supported, please file an issue.",
-                lp
+                "A step in your query is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                dsl.describe()?,
+                get_disabled_features_message()
             )
         }
     }
