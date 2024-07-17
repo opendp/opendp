@@ -410,6 +410,11 @@ try:
             return attr
         
 
+        # These definitions are primarily for mypy:
+        # Without them, a "# type: ignore[union-attr]" is needed on every line where these methods are used.
+        # The docstrings are not seen by Sphinx, but aren't doing any harm either.
+
+
         def sort(  # type: ignore[empty-body]
             self,
             by: IntoExpr | Iterable[IntoExpr],
@@ -440,6 +445,7 @@ try:
             OpenDP discards relevant margin descriptors in the domain when filtering.
             """
             ...
+        
         
         def select(  # type: ignore[empty-body]
             self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
