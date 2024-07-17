@@ -229,6 +229,8 @@ R/opendp-docs
 *.out
 *.synctex.gz
 *.pdf
+!docs/cla/*.pdf
+!docs/source/_static/opendp-cla-*.pdf
 *.aux
 *.bbl
 *.bcf
