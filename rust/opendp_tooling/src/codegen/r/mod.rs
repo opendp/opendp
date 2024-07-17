@@ -41,7 +41,6 @@ const BLACKLIST: &'static [&'static str] = &[
     "user_domain",
     "_user_domain_descriptor",
     // polars
-    "set_opendp_lib_path",
     "new_arrow_array",
     "series_domain",
     "arrow_array_free",

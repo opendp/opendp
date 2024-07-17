@@ -24,10 +24,6 @@ from opendp.mod import (
 )
 from opendp.domains import series_domain, lazyframe_domain, option_domain, atom_domain
 from opendp.measurements import make_private_lazyframe
-from opendp._data import set_opendp_lib_path
-
-if lib_path is not None:
-    set_opendp_lib_path(str(lib_path))
 
 
 class DPExpr(object):

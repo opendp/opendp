@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use crate::{
     core::Function,
@@ -32,11 +32,6 @@ pub(crate) trait OpenDPPlugin:
 {
     const NAME: &'static str;
     fn function_options() -> FunctionOptions;
-}
-
-#[cfg(feature = "ffi")]
-lazy_static! {
-    pub(crate) static ref OPENDP_LIB_PATH: Mutex<Option<Arc<str>>> = Mutex::new(None);
 }
 
 static OPENDP_LIB_NAME: &str = "opendp";
@@ -138,8 +133,8 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
                 kwargs,
             } = &mut function
             {
-                if let Some(path) = OPENDP_LIB_PATH.lock().unwrap().as_ref() {
-                    *lib = path.clone();
+                if let Some(path) = option_env!("OPENDP_LIB_PATH") {
+                    *lib = Arc::from(path);
                 }
                 *symbol = KW::NAME.into();
                 *kwargs = serde_pickle::to_vec(&kwargs_new, Default::default())
