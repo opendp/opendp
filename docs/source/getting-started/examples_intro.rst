@@ -9,6 +9,7 @@ We will use the `Labour Force Survey microdata <https://ec.europa.eu/eurostat/we
 
 1. **Generality:** The dataset is relatively general, with variables and contexts accessible to users across various domains.
 2. **Sample Utility:** The public microdata is a sample of the private, full microdata. Methods developed with the public microdata will also work on the private microdata, and researchers can request access to the full dataset through Eurostat. 
+3. **Realism**: Since the dataset tracks individuals over multiple years, we need to think more carefully about our unit of privacy.
 
 Dataset Description 
 -------------------
