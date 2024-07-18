@@ -13,7 +13,7 @@ use opendp_derive::bootstrap;
 use statrs::function::erf::erf_inv;
 
 use crate::error::Fallible;
-use crate::traits::InfCast;
+use crate::traits::{InfAdd, InfCast, InfDiv, InfExp};
 use std::fmt::Debug;
 
 #[bootstrap(arguments(scale(c_type = "void *"), alpha(c_type = "void *")))]
@@ -137,6 +137,29 @@ pub fn accuracy_to_discrete_laplacian_scale<T: Float + Zero + One + Debug>(
             s_min = s_mid;
         }
     }
+}
+
+/// Computes the probability of sampling a value greater than `t` from the discrete laplace distribution.
+///
+/// Arithmetic is controlled such that the resulting probability can only ever be slightly over-estimated due to numerical inaccuracy.
+///
+/// # Proof definition
+/// Returns `Ok(out)`, where `out` does not underestimate $\Pr[X > t]$
+/// for $X \sim \mathcal{L}_\mathbb{Z}(0, scale)$, assuming $t > 0$,
+/// or `Err(e)` if any numerical computation overflows.
+///
+/// $\mathcal{L}_\mathbb{Z}(0, scale)$ is distributed as follows:
+/// ```math
+/// \forall x \in \mathbb{Z}, \quad  
+/// P[X = x] = \frac{e^{-1/scale} - 1}{e^{-1/scale} + 1} e^{-|x|/scale}, \quad
+/// \text{where } X \sim \mathcal{L}_\mathbb{Z}(0, scale)
+/// ```
+pub fn integrate_discrete_laplacian_tail(scale: f64, t: u32) -> Fallible<f64> {
+    let t = f64::neg_inf_cast(t)?;
+    let numer = t.neg_inf_div(&-scale)?.inf_exp()?;
+    let denom = scale.recip().neg_inf_exp()?.neg_inf_add(&1.)?;
+
+    numer.inf_div(&denom)
 }
 
 #[bootstrap(arguments(scale(c_type = "void *"), alpha(c_type = "void *")))]

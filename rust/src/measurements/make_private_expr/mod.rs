@@ -2,11 +2,11 @@ use opendp_derive::bootstrap;
 use polars_plan::dsl::Expr;
 
 use crate::{
-    combinators::BasicCompositionMeasure,
+    combinators::{make_pureDP_to_fixed_approxDP, BasicCompositionMeasure},
     core::{Measure, Measurement, Metric, MetricSpace},
     domains::ExprDomain,
     error::Fallible,
-    measures::{MaxDivergence, ZeroConcentratedDivergence},
+    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
     polars::get_disabled_features_message,
     transformations::traits::UnboundedMetric,
@@ -31,7 +31,7 @@ mod expr_literal;
 mod expr_postprocess;
 
 #[cfg(feature = "contrib")]
-pub(crate) mod expr_report_noisy_max_gumbel;
+pub(crate) mod expr_report_noisy_max;
 
 #[bootstrap(
     features("contrib", "honest-but-curious"),
@@ -84,14 +84,17 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergen
         output_measure: MaxDivergence<f64>,
         global_scale: Option<f64>,
     ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, MaxDivergence<f64>>> {
-        if expr_noise::match_noise(&self)?.is_some() {
+        if expr_noise::match_noise_shim(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
 
-        if expr_report_noisy_max_gumbel::match_report_noisy_max_gumbel(&self)?.is_some() {
-            return expr_report_noisy_max_gumbel::make_expr_report_noisy_max_gumbel::<
-                PartitionDistance<M>,
-            >(input_domain, input_metric, self, global_scale);
+        if expr_report_noisy_max::match_report_noisy_max(&self)?.is_some() {
+            return expr_report_noisy_max::make_expr_report_noisy_max::<PartitionDistance<M>>(
+                input_domain,
+                input_metric,
+                self,
+                global_scale,
+            );
         }
 
         make_private_measure_agnostic(
@@ -116,7 +119,7 @@ impl<M: 'static + UnboundedMetric>
     ) -> Fallible<
         Measurement<ExprDomain, Expr, PartitionDistance<M>, ZeroConcentratedDivergence<f64>>,
     > {
-        if expr_noise::match_noise(&self)?.is_some() {
+        if expr_noise::match_noise_shim(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
 
@@ -127,6 +130,27 @@ impl<M: 'static + UnboundedMetric>
             self,
             global_scale,
         )
+    }
+}
+
+impl<M: 'static + UnboundedMetric>
+    PrivateExpr<PartitionDistance<M>, FixedSmoothedMaxDivergence<f64>> for Expr
+{
+    fn make_private(
+        self,
+        input_domain: ExprDomain,
+        input_metric: PartitionDistance<M>,
+        _output_measure: FixedSmoothedMaxDivergence<f64>,
+        global_scale: Option<f64>,
+    ) -> Fallible<
+        Measurement<ExprDomain, Expr, PartitionDistance<M>, FixedSmoothedMaxDivergence<f64>>,
+    > {
+        make_pureDP_to_fixed_approxDP(self.make_private(
+            input_domain,
+            input_metric,
+            MaxDivergence::default(),
+            global_scale,
+        )?)
     }
 }
 

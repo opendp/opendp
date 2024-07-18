@@ -46,11 +46,9 @@ impl ExprContext {
         let frame = LazyFrame::from(lp);
         match self {
             ExprContext::RowByRow => frame.select([expr]),
-            ExprContext::Aggregate {
-                grouping_columns: grouping_keys,
-            } => frame
+            ExprContext::Aggregate { grouping_columns } => frame
                 .group_by(
-                    &grouping_keys
+                    &grouping_columns
                         .iter()
                         .map(AsRef::as_ref)
                         .map(col)
