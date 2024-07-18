@@ -71,7 +71,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         from polars import lit  # type: ignore[import-not-found]
         return register_plugin_function(
-            plugin_path=lib_path,
+            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
             function_name="noise",
             args=(self.expr, lit(distribution), scale),
             is_elementwise=True,
@@ -164,7 +164,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         from polars import Series  # type: ignore[import-not-found]
         return register_plugin_function(
-            plugin_path=lib_path,
+            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
             function_name="discrete_quantile_score",
             args=[self.expr, alpha, Series(candidates)],
             returns_scalar=True,
@@ -184,7 +184,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         from polars import lit  # type: ignore[import-not-found]
         return register_plugin_function(
-            plugin_path=lib_path,
+            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
             function_name="report_noisy_max",
             args=[self.expr, lit(optimize), scale],
             is_elementwise=True,
@@ -200,7 +200,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         from polars import Series  # type: ignore[import-not-found]
         return register_plugin_function(
-            plugin_path=lib_path,
+            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
             function_name="index_candidates",
             args=[self.expr, Series(candidates)],
             is_elementwise=True,
