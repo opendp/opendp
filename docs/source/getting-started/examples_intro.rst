@@ -1,5 +1,8 @@
-Getting Started With Examples
-==========
+:orphan:
+:nosearch:
+
+Working with Tabular Data
+=========================
 
 Motivation 
 ----------
