@@ -83,4 +83,5 @@ The compositor is the foundation of our differentially private queries. It essen
     * *max_partition_length:* The upper bound on how many records (individuals in this case) can be in one partition. If you do not know the size of your dataset, this can be an upper bound on the population represented in your dataset. The population of France was about 60 million in 2004 so that's our maximum partition length. Source: `World Bank <https://datatopics.worldbank.org/world-development-indicators/>`_. 
     * *max_partition_contributions:* The number of contributions each individual can have per grouping. Since each individual is represented once for a particular quarter and year, they are represented 13 times for each quarter since there are 13 years in the dataset and 4 times each year since there are 4 quarters within a year. 
 
-Particular examples will require additional parameters, and the compositor will change slightly. You can read more about the parameters `here <https://docs.opendp.org/en/nightly/api/python/opendp.context.html#opendp.context.Context.compositor>`. 
+Particular examples will require additional parameters, and the compositor will change slightly.
+See :py:func:`opendp.context.Context.compositor` for more information.
