@@ -58,17 +58,29 @@ Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to ru
 In the above commands, the features ``untrusted`` and ``bindings`` are enabled.
 
 Setting a feature changes how the crate compiles. 
-In addition to the :ref:`feature-listing`, Rust also has the following features:
+The comprehensive feature listing for Rust:
 
 .. _rust-feature-listing:
 
-.. dropdown:: Rust-Exclusive Feature List
+.. dropdown:: Comprehensive Rust Feature List
 
     
    .. list-table::
       :widths: 25 75
       :header-rows: 1
 
+      * - Name
+        - Description
+      * - ``contrib``
+        - Enable to include constructors that have not passed the vetting process.
+      * - ``honest-but-curious``
+        - Enable to include constructors whose differential privacy (or stability) properties
+          rely on the constructor arguments being correct.
+          That is, if a user/adversary is 'honest' in specifying the constructor arguments,
+          then even if they later become 'curious' and try to learn something from the measurement outputs,
+          they will not be able to violate the differential privacy promises of the measurement.
+      * - ``floating-point``
+        - Enable to include transformations and measurements with floating-point vulnerabilities.
       * - ``untrusted``
         - Enables untrusted features ``contrib`` and ``floating-point``.
       * - ``ffi``
@@ -82,6 +94,7 @@ In addition to the :ref:`feature-listing`, Rust also has the following features:
       * - ``use-openssl``
         - Enabled by default. Use OpenSSL for secure noise generation.
 
+   A list of features available in bindings languages (R, Python) can be found in :ref:`feature-listing`.
 
 To make the crate compile faster, FFI functions in debug builds support a reduced set of primitive types.
 Release-mode builds support the full set of primitive types and undergo compiler optimizations, but take longer to compile.
@@ -176,6 +189,7 @@ The source code and developer documentation is
 `here <https://github.com/opendp/opendp/tree/main/docs#readme>`_.
 
 
+.. _r-setup:
 
 R Setup
 -------
@@ -276,27 +290,27 @@ Environment Variables
    * - Name
      - Description
    * - ``OPENDP_LIB_DIR``
-     - Overrides the directory in which OpenDP language bindings look for the OpenDP Library binary.
-       It is recommended to set this when developing with the R bindings.
+     - Overrides the directory in which the OpenDP language binding looks for the OpenDP Library binary.  
+       See example in :ref:`r-setup`. 
    * - ``OPENDP_POLARS_LIB_PATH``
      - Each OpenDP Polars plugin contains a path to the OpenDP Library binary.
        When OpenDP is used as a query server, library paths in queries submitted by clients are stale (local to the client).
-       This environment variable overrides paths in private or stable OnceFrames emitted by the library.
-       For Python, you can find this path at ``opendp._lib.lib_path``.
+       This environment variable overrides paths in new OpenDP Polars plugins and OnceFrames.
+       For Python, you can read this value from ``opendp._lib.lib_path`` (read-only).
    * - ``OPENDP_HEADLESS``
-     - Used by CI. When ``true``, OpenDP will import without the presence of the OpenDP Library binary.
+     - Used by CI. When ``true``, The Python ``opendp`` package will import without the presence of the OpenDP Library binary.
    * - ``OPENDP_SPHINX_PORT`` and ``OPENDP_SPHINX_URI``
      - When configured, links to proof documents hosted by Sphinx point to the URI and port.
        The URI defaults to localhost. 
        Allows for a local documentation site.
-       Start the server from ``\docs`` with ``make sphinx-server``.
+       Start the server from ``docs/`` with ``make sphinx-server``.
    * - ``OPENDP_RUSTDOC_PORT`` and ``OPENDP_RUSTDOC_URI``
-     - When configured, links to proof documents to Rustdocs point to the URI and port.
+     - When configured, links in proof documents to Rustdocs include the URI and port. 
        The URI defaults to localhost. 
        Allows for a local documentation site.
-       Start the server from ``\docs`` with ``make rustdoc-server``.
+       Start the server from ``docs/`` with ``make rustdoc-server``. 
    * - ``OPENDP_TEST_RELEASE``
-     - When enabled, and ``OPENDP_LIB_DIR`` is set, 
+     - When ``true``, and ``OPENDP_LIB_DIR`` is set, 
        the library will attempt to load the ``release`` binary instead of the ``debug`` binary.
 
 Developer Tooling

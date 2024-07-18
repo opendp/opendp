@@ -40,7 +40,7 @@ Features can be enabled via the following syntax:
          opendp = { features = ["contrib"] }
       
 
-Features that are available from Python, R and Rust:
+Features that are available from Python and R:
 
 .. list-table::
    :widths: 25 75
@@ -58,8 +58,10 @@ Features that are available from Python, R and Rust:
        they will not be able to violate the differential privacy promises of the measurement.
    * - ``floating-point``
      - Enable to include transformations and measurements with floating-point vulnerabilities.
+   * - ``rust-stack-trace``
+     - Enable to allow stack traces to include stack frames from Rust.
 
-See also the listing of :ref:`features that are exclusive to Rust<rust-feature-listing>`.
+See also the :ref:`comprehensive listing of features for Rust<rust-feature-listing>`.
 
 
 .. toctree::
