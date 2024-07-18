@@ -18,11 +18,10 @@ The data is organized by year and quarter for each nation in the European Union.
 
 The public microdata is protected using traditional statistical disclosure control methods such as global recoding, local suppression, and addition of noise. 
 
-Learn more about the dataset `here <https://ec.europa.eu/eurostat/web/microdata/public-microdata/labour-force-survey>`_! The `user guide <https://ec.europa.eu/eurostat/documents/1978984/6037342/EULFS-Database-UserGuide.pdf>`_ may also be helpful to learn more about the different variables.
 
 Core Variables 
 --------------
-There are many variables available. The examples will focus on the following key variables: 
+The `User Guide <https://ec.europa.eu/eurostat/documents/1978984/6037342/EULFS-Database-UserGuide.pdf>`_ describes many variables. Our examples will use just a few. (Descriptions are copied from the User Guide.) 
 
 .. list-table:: 
    :header-rows: 1
