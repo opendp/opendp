@@ -57,39 +57,30 @@ Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to ru
 
 In the above commands, the features ``untrusted`` and ``bindings`` are enabled.
 
-Setting a feature changes how the crate compiles:
+Setting a feature changes how the crate compiles. 
+In addition to the :ref:`feature-listing`, Rust also has the following features:
 
+.. _rust-feature-listing:
 
-.. dropdown:: Feature List
+.. dropdown:: Rust-Exclusive Feature List
 
-    .. list-table::
-        :widths: 25 75
-        :header-rows: 1
+    
+   .. list-table::
+      :widths: 25 75
+      :header-rows: 1
 
-        * - Name
-          - Description
-        * - ``untrusted``
-          - Enables untrusted features ``contrib`` and ``floating-point``.
-        * - ``contrib``
-          - Enable to include constructors that have not passed the vetting process.
-        * - ``honest-but-curious``
-          - Enable to include constructors whose differential privacy (or stability) properties
-            rely on the constructor arguments being correct.
-            That is, if a user/adversary is 'honest' in specifying the constructor arguments,
-            then even if they later become 'curious' and try to learn something from the measurement outputs,
-            they will not be able to violate the differential privacy promises of the measurement.
-        * - ``floating-point``
-          - Enable to include transformations and measurements with floating-point vulnerabilities.
-        * - ``bindings``
-          - Enable to generate Python and R source code. Depends on the ``ffi`` and ``derive`` features. 
-        * - ``partials``
-          - Enable to generate ``then_*`` functions from the corresponding ``make_*`` functions. Depends on the ``derive`` feature.
-        * - ``ffi``
-          - Enable to include C foreign function interfaces. Implicit in the ``bindings`` feature.
-        * - ``derive``
-          - Enable to support code generation and links to proofs in documentation. Implicit in the  ``bindings`` and ``partials`` features.
-        * - ``use-openssl``
-          - Already enabled. Use OpenSSL for secure noise generation.
+      * - ``untrusted``
+        - Enables untrusted features ``contrib`` and ``floating-point``.
+      * - ``ffi``
+        - Enable to include C foreign function interfaces.
+      * - ``derive``
+        - Enable to support code generation and links to proofs in documentation.
+      * - ``bindings``
+        - Enable to generate Python and R source code. Also enables the ``ffi`` and ``derive`` features. 
+      * - ``partials``
+        - Enabled by default. When enabled, ``then_*`` functions are generated from ``make_*`` functions. Also enables the ``derive`` feature.
+      * - ``use-openssl``
+        - Enabled by default. Use OpenSSL for secure noise generation.
 
 
 To make the crate compile faster, FFI functions in debug builds support a reduced set of primitive types.
@@ -274,6 +265,39 @@ and then uses ``pkgdown`` to render the documentation website.
 
     tools/r_stage.sh -d
 
+
+Environment Variables
+---------------------
+
+.. list-table::
+   :widths: 25 75
+   :header-rows: 1
+
+   * - Name
+     - Description
+   * - ``OPENDP_LIB_DIR``
+     - Overrides the directory in which OpenDP language bindings look for the OpenDP Library binary.
+       It is recommended to set this when developing with the R bindings.
+   * - ``OPENDP_POLARS_LIB_PATH``
+     - Each OpenDP Polars plugin contains a path to the OpenDP Library binary.
+       When OpenDP is used as a query server, library paths in queries submitted by clients are stale (local to the client).
+       This environment variable overrides paths in private or stable OnceFrames emitted by the library.
+       For Python, you can find this path at ``opendp._lib.lib_path``.
+   * - ``OPENDP_HEADLESS``
+     - Used by CI. When ``true``, OpenDP will import without the presence of the OpenDP Library binary.
+   * - ``OPENDP_SPHINX_PORT`` and ``OPENDP_SPHINX_URI``
+     - When configured, links to proof documents hosted by Sphinx point to the URI and port.
+       The URI defaults to localhost. 
+       Allows for a local documentation site.
+       Start the server from ``\docs`` with ``make sphinx-server``.
+   * - ``OPENDP_RUSTDOC_PORT`` and ``OPENDP_RUSTDOC_URI``
+     - When configured, links to proof documents to Rustdocs point to the URI and port.
+       The URI defaults to localhost. 
+       Allows for a local documentation site.
+       Start the server from ``\docs`` with ``make rustdoc-server``.
+   * - ``OPENDP_TEST_RELEASE``
+     - When enabled, and ``OPENDP_LIB_DIR`` is set, 
+       the library will attempt to load the ``release`` binary instead of the ``debug`` binary.
 
 Developer Tooling
 -----------------
