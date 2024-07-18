@@ -818,6 +818,7 @@ struct FfiResult_____AnyDomain opendp_domains__map_domain(const struct AnyDomain
  * Construct a new UserDomain.
  * Any two instances of an UserDomain are equal if their string descriptors are equal.
  * Contains a function used to check if any value is a member of the domain.
+ * Requires `honest-but-curious`: TODO
  *
  * # Arguments
  * * `identifier` - A string description of the data domain.
@@ -978,6 +979,7 @@ struct FfiResult_____AnyMeasure opendp_measures__zero_concentrated_divergence(co
 /**
  * Construct a new UserDivergence.
  * Any two instances of an UserDivergence are equal if their string descriptors are equal.
+ * Requires `honest-but-curious`: A user-defined privacy measure is only a valid privacy measure if it offers closure of the privacy guarantee under post-processing.
  *
  * # Arguments
  * * `descriptor` - A string description of the privacy measure.
@@ -1051,6 +1053,7 @@ struct FfiResult_____AnyMetric opendp_metrics__linf_distance(c_bool monotonic, c
 /**
  * Construct a new UserDistance.
  * Any two instances of an UserDistance are equal if their string descriptors are equal.
+ * Requires `honest-but-curious`: The OpenDP Library cannot verify that a user-defined metric forms a metric space when paired with any given domain.
  *
  * # Arguments
  * * `descriptor` - A string description of the metric.
@@ -1244,6 +1247,7 @@ struct FfiResult_____AnyTransformation opendp_transformations__make_lipschitz_fl
 
 /**
  * Construct a Transformation from user-defined callbacks.
+ * Requires `honest-but-curious`: The OpenDP Library cannot verify that the stability of the resulting transformation is governed by the provided stability map.
  *
  * # Arguments
  * * `input_domain` - A domain describing the set of valid inputs for the function.
