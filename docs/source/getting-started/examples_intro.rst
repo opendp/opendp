@@ -4,7 +4,8 @@ Getting Started With Examples
 Motivation 
 ----------
 
-In the following examples, we will use real data to demonstrate the utility of OpenDP functions. We will use the Labour Force Survey microdata released by Eurostat for a few reasons: 
+In the following examples, we will use real data to demonstrate the utility of OpenDP functions.
+We will use the `Labour Force Survey microdata <https://ec.europa.eu/eurostat/web/microdata/public-microdata/labour-force-survey>`_ released by Eurostat for a few reasons: 
 
 1. **Generality:** The dataset is relatively general, with variables and contexts accessible to users across various domains.
 2. **Sample Utility:** The public micro-data is a sample of the more thorough research microdata available through scientific use files. Methods developed with the public microdata are designed to also work on the scientific files. Researchers can request access to the full dataset through Eurostat. 
