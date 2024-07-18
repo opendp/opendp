@@ -16,7 +16,7 @@ Dataset Description
 
 The data is organized by year and quarter for each nation in the European Union. For this tutorial, we sampled 200,000 individuals from the public microdata of France across all study years. 
 
-The data is protected using traditional statistical disclosure control methods such as global recoding, local suppression, and addition of noise. 
+The public microdata is protected using traditional statistical disclosure control methods such as global recoding, local suppression, and addition of noise. 
 
 Learn more about the dataset `here <https://ec.europa.eu/eurostat/web/microdata/public-microdata/labour-force-survey>`_! The `user guide <https://ec.europa.eu/eurostat/documents/1978984/6037342/EULFS-Database-UserGuide.pdf>`_ may also be helpful to learn more about the different variables.
 
