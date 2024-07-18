@@ -1,9 +1,11 @@
 from __future__ import annotations
-from typing import Union
+from typing import Union, Callable
 
 import polars as pl
 
-from opendp._lib import import_optional_dependency
+from opendp.mod import Metric, Domain, Measurement, PartialConstructor, assert_features
+from opendp._extrinsics._utilities import to_then
+import opendp.prelude as dp
 
 
 SYNTH_MAP = {
@@ -25,8 +27,9 @@ class Synthesizer:
     # from Smart Noise
     # https://github.com/opendp/smartnoise-sdk/blob/main/synth/snsynth/base.py
     @classmethod
-    def create(cls, synth: Union[None, str, Synthesizer],
-               epsilon: float, *args, **kwargs) -> Synthesizer:
+    def _create(cls, synth: Union[None, str, Synthesizer],
+                input_domain: Domain, input_metric: Metric, epsilon: float,
+                *args, **kwargs) -> Synthesizer:
         """
         Create a differentially private synthesizer.
 
@@ -66,18 +69,63 @@ class Synthesizer:
             synth_module_name, synth_class_name = synth_class_name.rsplit('.', 1)
             synth_module = __import__(synth_module_name, fromlist=[synth_class_name])
             synth_class = getattr(synth_module, synth_class_name)
-            return synth_class(epsilon=epsilon, *args, **kwargs)
+            return synth_class(input_domain, input_metric, epsilon,
+                               *args, **kwargs)
         else:
             raise ValueError('Synthesizer must be a string or a class')
 
-    def __init__(self):
+    # OpenDP style make_private_... function
+    @staticmethod
+    def make(input_domain: Domain, input_metric: Metric,
+             synth: Union[str, Synthesizer], epsilon: float,
+             *args, **kwargs) -> Measurement:
+        
+        assert_features("contrib", "floating-point")
+
+        if "LazyFrameDomain" not in str(input_domain.type):
+            raise ValueError("input_domain must be a LazyFrame domain")
+
+        if input_metric != dp.symmetric_distance():
+            raise ValueError("input metric must be symmetric distance")
+
+        synthesizer = Synthesizer._create(synth,
+                                          input_domain,
+                                          input_metric,
+                                          epsilon=epsilon,
+                                          **kwargs)
+
+        def function(data):
+            synthesizer.fit(data.collect())
+            return synthesizer
+
+        return dp.m.make_user_measurement(
+            input_domain,
+            input_metric,
+            synthesizer.output_measure,
+            synthesizer.fit,
+            synthesizer.privacy_map)
+    
+    # OpenDP style then_private_... function
+    @staticmethod
+    def then(synth: Union[str, Synthesizer], epsilon: float,
+             *args, **kwargs) -> Callable[..., PartialConstructor]:
+        return to_then(Synthesizer.make)
+
+    def __init__(self, input_domain: Domain, input_metric: Metric, epsilon: float):
         self._is_fitted = False
+
+    @property
+    def output_measure(self):
+        raise NotImplementedError
+
+    def privacy_map(self, d_in):
+        raise NotImplementedError
 
     def fit(self, data: pl.LazyFrame):
         assert not self._is_fitted, "Synthesizer is already fitted"
         self._is_fitted = True
 
-    def sample(self, num_samples: int) -> pl.DataFrame:
+    def sample(self, num_samples: int):
         assert self._is_fitted, "Synthesizer must be fitted first"
 
     def releasable(self):

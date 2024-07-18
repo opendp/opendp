@@ -81,20 +81,21 @@ class SimpleLinearQuery:
         return f"SimpleLinearQuery(column_index={self.column_index}, value_index={self.value_index}, column={self.column}, value={self.value})"
 
 
+# Perhaps this one should be a measurment????
 class MWEMSynthesizer(Synthesizer):
 
     def __init__(self,
                  input_domain: Domain,
                  input_metric: Metric,
-                 schema: Schema,
                  epsilon: float,
+                 schema: Schema,
                  epsilon_split: float,
                  num_queries: int,
                  num_iterations: int,
                  num_mult_weights_iterations: int,
                  verbose: bool = False):
 
-        super().__init__()
+        super().__init__(input_domain, input_metric, epsilon)
 
         assert_features("contrib", "floating-point")
 
@@ -118,10 +119,18 @@ class MWEMSynthesizer(Synthesizer):
 
         self.distributions = None
         self.d_in = 1
+        self._output_measure = dp.max_divergence(T=float)
 
         self.verbose = verbose
         if verbose:
             self.tqdm = import_optional_dependency("tqdm")
+
+    @property
+    def output_measure(self) -> dp.Measure:
+        return self._output_measure
+
+    def privacy_map(self, d_in):
+        return d_in * self.epsilon
 
     def fit(self, data: pl.LazyFrame):
         super().fit(data)
@@ -161,6 +170,8 @@ class MWEMSynthesizer(Synthesizer):
 
         self.distributions = distributions
         self.dimensions = dimensions
+
+        return self
 
     def _iteration(self,
                         comp,
