@@ -19,10 +19,13 @@ class Schema:
     size: int
     dict_schema: dict[str, type] = field(init=False)
     lf_schema: pl.LazyFrame = field(init=False)
+    dims: list[np.ndarray] = field(init=False)
 
     def __post_init__(self):
         self.dict_schema = {col: pl.Int32 for col in self.bounds.keys()}
         self.lf_schema = pl.LazyFrame(schema=self.dict_schema)
+        self.dims = [upper - lower + 1
+                     for lower, upper in self.bounds.values()]
 
 
 class SimpleLinearQuery:
@@ -39,6 +42,11 @@ class SimpleLinearQuery:
         self.column = column
         self.value = value
 
+    def mask(self) -> np.ndarray:
+        mask = np.zeros(self.schema.dims, dtype=int)
+        mask.take(indices=self.value_index, axis=self.column_index)[:] = 1
+        return mask
+
     def plan(self, data: Optional[Union[pl.DataFrame, pl.LazyFrame]] = None) -> Union[pl.DataFrame, pl.LazyFrame]:
         if data is None:
             return (self.schema.lf_schema
@@ -49,7 +57,7 @@ class SimpleLinearQuery:
                     .filter(pl.col(self.column) == self.value)
                     .count())
 
-    def apply(self, data: Union[pl.DataFrame, pl.LazyFrame, np.ndarray]) -> Union[pl.DataFrame, pl.LazyFrame, np.ndarray]:
+    def apply(self, data: Union[pl.DataFrame, pl.LazyFrame, np.ndarray]) -> Union[pl.DataFrame, pl.LazyFrame, np.ndarray, float]:
         if isinstance(data, (pl.DataFrame, pl.LazyFrame)):
             return self.plan(data)
         elif isinstance(data, np.ndarray):
@@ -118,6 +126,8 @@ class MWEMSynthesizer(Synthesizer):
         self.num_mult_weights_iterations = num_mult_weights_iterations
 
         self.distributions = None
+        self.dimensions = None
+
         self.d_in = 1
         self._output_measure = dp.max_divergence(T=float)
 
@@ -174,11 +184,11 @@ class MWEMSynthesizer(Synthesizer):
         return self
 
     def _iteration(self,
-                        comp,
-                        epsilon_select: float,
-                        epsilon_measure: float,
-                        distribution: np.ndarray,
-                        query_collection: list[SimpleLinearQuery]) -> np.ndarray:
+                   comp,
+                   epsilon_select: float,
+                   epsilon_measure: float,
+                   distribution: np.ndarray,
+                   query_collection: list[SimpleLinearQuery]) -> np.ndarray:
 
         selected_query_index = comp(
             self._select(
@@ -204,8 +214,7 @@ class MWEMSynthesizer(Synthesizer):
         return new_distribution
 
     def _setup(self) -> tuple[np.ndarray, list[np.ndarray], list[SimpleLinearQuery]]:
-        initial_distribution = np.ones([upper - lower + 1
-                                        for lower, upper in self.schema.bounds.values()])
+        initial_distribution = np.ones(self.schema.dims)
         initial_distribution /= initial_distribution.size
 
         dimensions = [np.arange(lower, upper + 2, dtype=int)
@@ -221,6 +230,7 @@ class MWEMSynthesizer(Synthesizer):
                 distribution: np.ndarray,
                 query_collection: list[SimpleLinearQuery]) -> Measurement:
 
+        # TODO: consider using a more efficient implementation after profiling
         def score_function(data):
             return [np.abs(query.apply(data).collect().item() - query.apply(distribution))
                     for query in query_collection]
@@ -264,15 +274,21 @@ class MWEMSynthesizer(Synthesizer):
                 last_distribution: np.ndarray,
                 query: SimpleLinearQuery,
                 measurment: float) -> np.ndarray:
-        new_distribution = last_distribution.copy()
+        distribution = last_distribution.copy()
 
         for _ in range(self.num_mult_weights_iterations):
-            weights = ((measurment - query.apply(new_distribution))
-                       / (2 * self.schema.size))
-            new_distribution *= weights
+            error = measurment - query.apply(distribution)
 
-            new_distribution /= new_distribution.sum()
-        return new_distribution
+            multiplicative_weights = np.exp(
+                query.mask() * error
+                / (2 * self.schema.size)
+            )
+            multiplicative_weights[multiplicative_weights == 0.0] = 1.0
+
+            distribution *= multiplicative_weights
+            distribution /= distribution.sum()
+
+        return distribution
 
     def sample(self,
                num_samples: int,
