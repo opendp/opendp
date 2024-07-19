@@ -237,4 +237,6 @@ def test_randomized_response_bitvec():
     release = np.frombuffer(m_rr(data.tobytes()), dtype=np.uint8)
 
     print(np.unpackbits(data), np.unpackbits(release))
+    # epsilon is 2 * m * ln((2 - f) / f)
+    # where m = 4 and f = .95
     assert m_rr.map(1) == 0.8006676684558611

@@ -348,7 +348,7 @@ def _bitvector_to_slice(val: Sequence[Any]) -> FfiSlicePtr:
 
 def _slice_to_bitvector(raw: FfiSlicePtr) -> bytes:
     # raw.contents.len is the number of valid bits.
-    # ceiling division by 8 gives the number of bytes in the buffer
+    # Division by -8 is ceiling rather than floor: the number of bytes in the buffer
     n_bytes = -(raw.contents.len // -8)
     buffer = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))[0:n_bytes] # type: ignore
     return bytes(buffer)
