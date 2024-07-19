@@ -131,24 +131,35 @@ pub trait Measure: Default + Clone + PartialEq + Debug + Send + Sync {
 ///
 /// A `PrivacyMap` is implemented as a function that takes an input [`Metric::Distance`]
 /// and returns the smallest upper bound on distances between output distributions on neighboring input datasets.
-pub struct PrivacyMap<MI: Metric, MO: Measure>(
-    pub Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance> + Send + Sync>,
-);
+pub struct PrivacyMap<MI: Metric, MO: Measure> {
+    pub data: Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance> + Send + Sync>,
+    /// Maps from an input distance d_in to an output-conditional timing distance t_2
+    pub time: Option<Arc<dyn Fn(&MI::Distance) -> Fallible<TimeDistance> + Send + Sync>>,
+}
 
 impl<MI: Metric, MO: Measure> Clone for PrivacyMap<MI, MO> {
     fn clone(&self) -> Self {
-        PrivacyMap(self.0.clone())
+        PrivacyMap {
+            data: self.data.clone(),
+            time: self.time.clone(),
+        }
     }
 }
 
 impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static + Send + Sync) -> Self {
-        PrivacyMap(Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
+        PrivacyMap {
+            data: Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))),
+            time: None,
+        }
     }
     pub fn new_fallible(
         map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static + Send + Sync,
     ) -> Self {
-        PrivacyMap(Arc::new(map))
+        PrivacyMap {
+            data: Arc::new(move |d_in: &MI::Distance| map(d_in)),
+            time: None,
+        }
     }
     pub fn new_from_constant(c: MO::Distance) -> Self
     where
@@ -163,7 +174,14 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
         })
     }
     pub fn eval(&self, input_distance: &MI::Distance) -> Fallible<MO::Distance> {
-        (self.0)(input_distance)
+        (self.data)(input_distance)
+    }
+    pub fn with_timing(
+        mut self,
+        map: impl Fn(&MI::Distance) -> Fallible<TimeDistance> + 'static + Send + Sync,
+    ) -> Self {
+        self.time = Some(Arc::new(map));
+        self
     }
 }
 
@@ -172,9 +190,26 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
         map1: &PrivacyMap<MX, MO>,
         map0: &StabilityMap<MI, MX>,
     ) -> Self {
-        let map1 = map1.0.clone();
-        let map0 = map0.0.clone();
-        PrivacyMap(Arc::new(move |d_in: &MI::Distance| map1(&map0(d_in)?)))
+        let PrivacyMap {
+            data: pmap,
+            time: tmap1,
+        } = map1.clone();
+        let StabilityMap {
+            data: smap,
+            time: tmap0,
+        } = map0.clone();
+        let mut mapc = PrivacyMap::new_fallible(enclose!(smap, move |d_in: &MI::Distance| pmap(
+            &smap(d_in)?
+        )));
+
+        if let Some((tmap0, tmap1)) = tmap0.zip(tmap1) {
+            mapc = mapc.with_timing(move |d_in: &MI::Distance| {
+                let t1 = tmap0(d_in)?;
+                let t2 = tmap1(&smap(d_in)?)?;
+                Ok(t1 + t2)
+            })
+        }
+        mapc
     }
 }
 
@@ -182,24 +217,52 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
 ///
 /// A `StabilityMap` is implemented as a function that takes an input [`Metric::Distance`],
 /// and returns the smallest upper bound on distances between output datasets on neighboring input datasets.
-pub struct StabilityMap<MI: Metric, MO: Metric>(
-    pub Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance> + Send + Sync>,
-);
+pub struct StabilityMap<MI: Metric, MO: Metric> {
+    pub data: Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance> + Send + Sync>,
+    pub time: Option<Arc<dyn Fn(&MI::Distance) -> Fallible<TimeDistance> + Send + Sync>>,
+}
+
+type TimeDistance = u64;
+
+// mixing units
+// pub enum TimeDistance {
+//     Cycle(u64),
+//     Instructions(u64),
+//     Milliseconds(u64),
+// }
 
 impl<MI: Metric, MO: Metric> Clone for StabilityMap<MI, MO> {
     fn clone(&self) -> Self {
-        StabilityMap(self.0.clone())
+        StabilityMap {
+            data: self.data.clone(),
+            time: self.time.clone(),
+        }
     }
 }
 
 impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
     pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static + Send + Sync) -> Self {
-        StabilityMap(Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
+        StabilityMap {
+            data: Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))),
+            time: None,
+        }
     }
+
+    pub fn with_timing(
+        mut self,
+        map: impl Fn(&MI::Distance) -> Fallible<TimeDistance> + 'static + Send + Sync,
+    ) -> Self {
+        self.time = Some(Arc::new(map));
+        self
+    }
+
     pub fn new_fallible(
         map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static + Send + Sync,
     ) -> Self {
-        StabilityMap(Arc::new(map))
+        StabilityMap {
+            data: Arc::new(map),
+            time: None,
+        }
     }
     pub fn new_from_constant(c: MO::Distance) -> Self
     where
@@ -214,7 +277,7 @@ impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
         })
     }
     pub fn eval(&self, input_distance: &MI::Distance) -> Fallible<MO::Distance> {
-        (self.0)(input_distance)
+        (self.data)(input_distance)
     }
 }
 
@@ -223,9 +286,28 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
         map1: &StabilityMap<MX, MO>,
         map0: &StabilityMap<MI, MX>,
     ) -> Self {
-        let map1 = map1.0.clone();
-        let map0 = map0.0.clone();
-        StabilityMap(Arc::new(move |d_in: &MI::Distance| map1(&map0(d_in)?)))
+        let StabilityMap {
+            data: smap1,
+            time: tmap1,
+        } = map1.clone();
+        let StabilityMap {
+            data: smap0,
+            time: tmap0,
+        } = map0.clone();
+
+        let mut map_out = StabilityMap::new_fallible(enclose!(
+            smap0,
+            move |d_in: &MI::Distance| smap1(&smap0(d_in)?)
+        ));
+
+        if let Some((tmap0, tmap1)) = tmap0.zip(tmap1) {
+            map_out = map_out.with_timing(move |d_in: &MI::Distance| {
+                let t_out0 = tmap0(d_in)?;
+                let t_out1 = tmap1(&smap0(&d_in)?)?;
+                Ok(t_out0 + t_out1)
+            })
+        }
+        map_out
     }
 }
 
@@ -246,6 +328,7 @@ pub struct Measurement<DI: Domain, TO, MI: Metric, MO: Measure> {
     pub input_metric: MI,
     pub output_measure: MO,
     pub privacy_map: PrivacyMap<MI, MO>,
+    pub time_safe: bool,
 }
 
 impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, MO> {
@@ -256,6 +339,7 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, 
             input_metric: self.input_metric.clone(),
             output_measure: self.output_measure.clone(),
             privacy_map: self.privacy_map.clone(),
+            time_safe: self.time_safe,
         }
     }
 }
@@ -278,7 +362,13 @@ where
             input_metric,
             output_measure,
             privacy_map,
+            time_safe: false,
         })
+    }
+
+    pub(crate) fn with_time_safe(mut self, time_safe: bool) -> Self {
+        self.time_safe = time_safe;
+        self
     }
 
     #[allow(dead_code)]
