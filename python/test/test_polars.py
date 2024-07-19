@@ -369,7 +369,7 @@ def test_polars_describe():
             "column": ["len", "A"],
             "aggregate": ["Len", "Sum"],
             "distribution": ["Integer Laplace", "Integer Laplace"],
-            "scale": [8.0, 8.0],
+            "scale": [4.0, 12.0],
         }
     )
 
@@ -382,8 +382,11 @@ def test_polars_describe():
     actual = query.accuracy()
     pl_testing.assert_frame_equal(expected, actual)
 
-    accuracy = dp.discrete_laplacian_scale_to_accuracy(8.0, 0.05)
-    expected = expected.with_columns(accuracy=accuracy)
+    accuracy = [
+        dp.discrete_laplacian_scale_to_accuracy(4.0, 0.05),
+        dp.discrete_laplacian_scale_to_accuracy(12.0, 0.05)
+    ]
+    expected = expected.hstack([pl.Series("accuracy", accuracy)])
     actual = query.accuracy(alpha=0.05)
     pl_testing.assert_frame_equal(expected, actual)
 
@@ -407,8 +410,8 @@ def test_polars_accuracy_threshold():
             "column": ["len", "A"],
             "aggregate": ["Len", "Sum"],
             "distribution": ["Integer Laplace", "Integer Laplace"],
-            "scale": [8.0, 8.0],
-            "threshold": [130, None]
+            "scale": [4.000000000000001, 12.000000000000004],
+            "threshold": [65, None]
         },
         schema_overrides={"threshold": pl.UInt32}
     )
@@ -482,7 +485,7 @@ def test_polars_threshold():
         context.query()
         .group_by("A")
         .agg(pl.len().dp.noise())
-        .accuracy()  # type: ignore[union-attr]
+        .accuracy()
     )
 
     expected = pl.DataFrame({
@@ -509,7 +512,7 @@ def test_polars_threshold():
         context.query()
         .group_by("B")
         .agg(pl.len().dp.noise())
-        .accuracy()  # type: ignore[union-attr]
+        .accuracy()
     )
 
     expected = pl.DataFrame({
