@@ -48,7 +48,7 @@ where
     if T::int_sum_can_overflow(size, bounds.clone())? {
         return fallible!(
             MakeTransformation,
-            "potential for overflow when computing function"
+            "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds or by using a data type with greater bit-depth."
         );
     }
 
