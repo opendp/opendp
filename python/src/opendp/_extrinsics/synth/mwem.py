@@ -3,9 +3,9 @@ from typing import Optional, Union, Literal
 from dataclasses import dataclass, field
 
 import opendp.prelude as dp
-from opendp.mod import Domain, Metric, Measurement, assert_features
+from opendp.mod import Domain, Metric, Measurement
 from opendp._lib import import_optional_dependency, get_np_csprng
-from opendp._extrinsics.synth.base import Synthesizer
+from opendp._extrinsics.synth.base import Synthesizer, ReleasedSynthesizer
 
 import numpy as np
 import polars as pl
@@ -89,7 +89,6 @@ class SimpleLinearQuery:
         return f"SimpleLinearQuery(column_index={self.column_index}, value_index={self.value_index}, column={self.column}, value={self.value})"
 
 
-# Perhaps this one should be a measurment????
 class MWEMSynthesizer(Synthesizer):
 
     def __init__(self,
@@ -105,22 +104,9 @@ class MWEMSynthesizer(Synthesizer):
 
         super().__init__(input_domain, input_metric, epsilon)
 
-        assert_features("contrib", "floating-point")
-
-        if "LazyFrameDomain" not in str(input_domain.type):
-            raise ValueError("input_domain must be a LazyFrame domain")
-
-        if input_metric != dp.symmetric_distance():
-            raise ValueError("input metric must be symmetric distance")
-
-        self.input_domain = input_domain
-        self.input_metric = input_metric
-
         self.schema = schema
 
-        self.epsilon = epsilon
         self.epsilon_split = epsilon_split
-
         self.num_queries = num_queries
         self.num_iterations = num_iterations
         self.num_mult_weights_iterations = num_mult_weights_iterations
@@ -129,21 +115,12 @@ class MWEMSynthesizer(Synthesizer):
         self.dimensions = None
 
         self.d_in = 1
-        self._output_measure = dp.max_divergence(T=float)
 
         self.verbose = verbose
         if verbose:
             self.tqdm = import_optional_dependency("tqdm")
 
-    @property
-    def output_measure(self) -> dp.Measure:
-        return self._output_measure
-
-    def privacy_map(self, d_in):
-        return d_in * self.epsilon
-
     def fit(self, data: pl.LazyFrame):
-        super().fit(data)
 
         epsilon_per_iteration = self.epsilon / self.num_iterations
         epsilon_select = self.epsilon_split * epsilon_per_iteration
@@ -178,10 +155,18 @@ class MWEMSynthesizer(Synthesizer):
 
             distributions.append(new_distribution)
 
-        self.distributions = distributions
-        self.dimensions = dimensions
-
-        return self
+        configuration = {
+            "epsilon_split": self.epsilon_split,
+            "num_queries": self.num_queries,
+            "num_iterations": self.num_iterations,
+            "num_mult_weights_iterations": self.num_mult_weights_iterations,
+        }
+        return ReleasedMWEMSynthesizer(self.input_domain,
+                                       self.input_metric,
+                                       self.epsilon,
+                                       configuration,
+                                       self.schema,
+                                       distributions)
 
     def _iteration(self,
                    comp,
@@ -225,27 +210,33 @@ class MWEMSynthesizer(Synthesizer):
 
         return initial_distribution, dimensions, query_collection
 
+    def _score(self,
+               distribution: np.ndarray,
+               query_collection: list[SimpleLinearQuery]) -> dp.Transformation:
+
+        # TODO: consider using a more efficient implementation after profiling
+
+        def function(data):
+            return [np.abs(query.apply(data).collect().item()
+                           - query.apply(distribution))
+                    for query in query_collection]
+
+        return dp.t.make_user_transformation(
+            input_domain=self.input_domain,
+            input_metric=self.input_metric,
+            output_domain=dp.vector_domain(dp.atom_domain(T=float)),
+            output_metric=dp.linf_distance(T=float),
+            function=function,
+            stability_map=lambda d_in: float(d_in)
+        )
+
     def _select(self,
                 epsilon: float,
                 distribution: np.ndarray,
                 query_collection: list[SimpleLinearQuery]) -> Measurement:
 
-        # TODO: consider using a more efficient implementation after profiling
-        def score_function(data):
-            return [np.abs(query.apply(data).collect().item() - query.apply(distribution))
-                    for query in query_collection]
-
-        scores_trans = dp.t.make_user_transformation(
-            input_domain=self.input_domain,
-            input_metric=self.input_metric,
-            output_domain=dp.vector_domain(dp.atom_domain(T=float)),
-            output_metric=dp.linf_distance(T=float),
-            function=score_function,
-            stability_map=lambda d_in: float(d_in)
-        )
-
-        max_index_meas = dp.binary_search_chain(
-            lambda s: scores_trans 
+        return dp.binary_search_chain(
+            lambda s: self._score(distribution, query_collection)
             >> dp.m.then_report_noisy_max_gumbel(
                 scale=s,
                 optimize="max"),
@@ -253,11 +244,10 @@ class MWEMSynthesizer(Synthesizer):
             epsilon,
         )
 
-        return max_index_meas
-
     def _measure(self,
                  epsilon: float,
                  query: SimpleLinearQuery) -> Measurement:
+
         meas = dp.binary_search_chain(
             lambda s: dp.make_private_lazyframe(
                 self.input_domain,
@@ -290,10 +280,49 @@ class MWEMSynthesizer(Synthesizer):
 
         return distribution
 
+    # OpenDP style make_private_... function
+    @classmethod
+    def make(cls,
+             input_domain: Domain,
+             input_metric: Metric,
+             epsilon: float,
+             *args, **kwargs):
+
+        assert cls is MWEMSynthesizer
+
+        synthesizer = cls(input_domain,
+                          input_metric,
+                          epsilon,
+                          *args, **kwargs)
+
+        return dp.m.make_user_measurement(
+            input_domain,
+            input_metric,
+            dp.max_divergence(T=float),
+            synthesizer.fit,
+            lambda d_in: synthesizer.epsilon * d_in
+        )
+
+
+class ReleasedMWEMSynthesizer(ReleasedSynthesizer):
+    def __init__(self,
+                 input_domain: Domain,
+                 input_metric: Metric,
+                 epsilon: float,
+                 configuation: dict,
+                 schema: Schema,
+                 distributions: list[np.ndarray],
+                 ):
+        self.input_domain = input_domain
+        self.input_metric = input_metric
+        self.epsilon = epsilon
+        self.configuation = configuation
+        self.schema = schema
+        self.distributions = distributions
+    
     def sample(self,
                num_samples: int,
                agg_method: Union[Literal["last", "avg"]] = "last") -> pl.DataFrame:
-        super().sample(num_samples)
 
         match agg_method:
             case "last":
@@ -316,11 +345,7 @@ class MWEMSynthesizer(Synthesizer):
                                  schema=self.schema.dict_schema)
                     .with_columns(
                         [(pl.col(col) + lower).alias(col)
-                        for col, (lower, _) in self.schema.bounds.items()])
-        )
+                         for col, (lower, _) in self.schema.bounds.items()])
+                    )
 
         return synth_df
-
-    def releasable(self) -> list[np.ndarray]:
-        super().releasable()
-        return self.distributions
