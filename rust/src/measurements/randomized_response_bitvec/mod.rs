@@ -130,6 +130,7 @@ mod test {
         assert_eq!(m_rr.map(&1)?, 2.1972245773362196);
         Ok(())
     }
+
     #[test]
     fn test_debias_rr_bitvec() -> Fallible<()> {
         let f = 0.1;
