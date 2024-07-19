@@ -67,3 +67,11 @@ if (Sys.getenv("OPENDP_TEST_RELEASE", unset = "false") != "false") {
     expect_true(hashtab_eq(h_bool_i32, h_bool_i32_out))
   })
 }
+
+test_that("bitvec data loader", {
+  input_space <- c(bitvector_domain(max_weight = 4L), discrete_distance())
+  m_ident <- input_space |> then_identity()
+
+  expect_equal(m_ident(arg = charToRaw("")), charToRaw(""))
+  expect_equal(m_ident(arg = charToRaw("abc")), charToRaw("abc"))
+})
