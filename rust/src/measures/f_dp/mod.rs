@@ -11,6 +11,18 @@
 // . combinator for making a trivial δ(ε) from (ε, δ) (already have a conversion from ε, to (ε, 0))
 use crate::{core::Function, error::Fallible, measures::SMDCurve};
 
+impl SMDCurve<f64> {
+    /// Find beta at a given `alpha`.
+    pub fn beta(&self, alpha: f64) -> Fallible<f64> {
+        find_best_supporting_beta(&self, alpha)
+    }
+
+    /// Create an α(β) curve supported on num_approximations supporting functions.
+    pub fn tradeoff(&self) -> Fallible<Function<f64, f64>> {
+        profile_to_tradeoff(self.clone())
+    }
+}
+
 fn profile_to_tradeoff(curve: SMDCurve<f64>) -> Fallible<Function<f64, f64>> {
     Ok(Function::new_fallible(
         move |alpha: &f64| -> Fallible<f64> {

@@ -704,6 +704,32 @@ struct FfiResult_____AnyObject opendp_data__smd_curve_epsilon(const struct AnyOb
                                                               double delta);
 
 /**
+ * Internal function. Use an SMDCurve to find beta at a given `alpha`.
+ *
+ * # Arguments
+ * * `curve` - The SMDCurve.
+ * * `alpha` - What to fix alpha to compute beta.
+ *
+ * # Returns
+ * Beta at a given `alpha`.
+ */
+struct FfiResult_____AnyObject opendp_data__smd_curve_beta(const struct AnyObject *curve,
+                                                           double alpha);
+
+/**
+ * Internal function. Use an SMDCurve to construct a piecewise linear supporting function.
+ *
+ * # Arguments
+ * * `curve` - The SMDCurve.
+ * * `num_approximations` - Number of supporting functions to create.
+ *
+ * # Returns
+ * `α(β)` tradeoff function.
+ */
+struct FfiResult_____AnyFunction opendp_data__smd_curve_tradeoff(const struct AnyObject *curve,
+                                                                 const struct AnyObject *num_approximations);
+
+/**
  * wrap an AnyObject in an FfiResult::Ok(this)
  *
  * # Arguments

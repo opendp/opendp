@@ -638,6 +638,14 @@ class SMDCurve(object):
     def epsilon(self, delta):
         from opendp._data import smd_curve_epsilon
         return smd_curve_epsilon(self.curve, delta)
+    
+    def beta(self, alpha):
+        from opendp._data import smd_curve_beta
+        return smd_curve_beta(self.curve, alpha)
+    
+    def tradeoff(self, num_approximations=None):
+        from opendp._data import smd_curve_tradeoff
+        return smd_curve_tradeoff(self.curve, num_approximations)
 
 
 class PartialConstructor(object):

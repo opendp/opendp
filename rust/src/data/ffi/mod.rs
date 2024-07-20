@@ -23,8 +23,8 @@ mod polars;
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;
 use crate::error::Fallible;
-use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
-use crate::ffi::util::{self, into_c_char_p, AnyDomainPtr, ExtrinsicObject};
+use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyObject, AnyQueryable, Downcast};
+use crate::ffi::util::{self, as_ref, into_c_char_p, AnyDomainPtr, ExtrinsicObject};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 use crate::measures::SMDCurve;
 use crate::metrics::IntDistance;
@@ -956,6 +956,60 @@ pub extern "C" fn opendp_data__smd_curve_epsilon(
         .epsilon(&delta)
         .map(AnyObject::new)
         .into()
+}
+
+#[bootstrap(
+    name = "smd_curve_beta",
+    arguments(curve(rust_type = b"null"))
+)]
+/// Internal function. Use an SMDCurve to find beta at a given `alpha`.
+///
+/// # Arguments
+/// * `curve` - The SMDCurve.
+/// * `alpha` - What to fix alpha to compute beta.
+///
+/// # Returns
+/// Beta at a given `alpha`.
+#[no_mangle]
+pub extern "C" fn opendp_data__smd_curve_beta(
+    curve: *const AnyObject,
+    alpha: f64,
+) -> FfiResult<*mut AnyObject> {
+    let curve = try_as_ref!(curve);
+    try_!(curve.downcast_ref::<SMDCurve<f64>>())
+        .beta(alpha)
+        .map(AnyObject::new)
+        .into()
+}
+
+
+#[bootstrap(
+    name = "smd_curve_tradeoff",
+    arguments(
+        curve(rust_type = b"null"),
+        num_approximations(rust_type = "Option<u32>")
+    )
+)]
+/// Internal function. Use an SMDCurve to construct a piecewise linear supporting function.
+///
+/// # Arguments
+/// * `curve` - The SMDCurve.
+/// * `num_approximations` - Number of supporting functions to create.
+///
+/// # Returns
+/// `α(β)` tradeoff function.
+#[no_mangle]
+pub extern "C" fn opendp_data__smd_curve_tradeoff(
+    curve: *const AnyObject,
+    num_approximations: *const AnyObject,
+) -> FfiResult<*mut AnyFunction> {
+    let profile = try_!(try_as_ref!(curve).downcast_ref::<SMDCurve<f64>>());
+    let num_approximations = match as_ref(num_approximations) {
+        Some(n) => Some(*try_!(n.downcast_ref::<u32>())),
+        None => None
+    };
+    let tradeoff = try_!(profile.tradeoff(num_approximations));
+    Ok(tradeoff.into_any()).into()
 }
 
 #[cfg(feature = "polars")]
