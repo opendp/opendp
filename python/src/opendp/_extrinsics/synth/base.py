@@ -2,8 +2,6 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Callable
 
-import polars as pl
-
 import opendp.prelude as dp
 from opendp.mod import Metric, Domain, Measurement, PartialConstructor, assert_features
 from opendp._extrinsics._utilities import to_then

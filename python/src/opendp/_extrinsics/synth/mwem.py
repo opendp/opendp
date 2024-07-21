@@ -7,9 +7,6 @@ from opendp.mod import Domain, Metric, Measurement
 from opendp._lib import import_optional_dependency, get_np_csprng
 from opendp._extrinsics.synth.base import Synthesizer, ReleasedSynthesizer
 
-import numpy as np
-import polars as pl
-
 np_csprng = get_np_csprng()
 
 
