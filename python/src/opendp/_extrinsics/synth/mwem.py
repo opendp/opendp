@@ -7,8 +7,6 @@ from opendp.mod import Domain, Metric, Measurement
 from opendp._lib import import_optional_dependency, get_np_csprng
 from opendp._extrinsics.synth.base import SynthesizerTrainer, ReleasedSynthesizer
 
-np_csprng = get_np_csprng()
-
 
 @dataclass
 class Schema:
@@ -81,6 +79,8 @@ class SimpleLinearQuery:
 
     @staticmethod
     def random(schema: Schema) -> SimpleLinearQuery:
+        np_csprng = get_np_csprng()
+
         column_index = np_csprng.integers(0, len(schema.bounds))
         column = list(schema.bounds.keys())[column_index]
         lower, upper = schema.bounds[column]
@@ -336,6 +336,7 @@ class ReleasedMWEMSynthesizer(ReleasedSynthesizer):
 
         np = import_optional_dependency("numpy")
         pl = import_optional_dependency("polars")
+        np_csprng = get_np_csprng()
 
         if agg_method == "last":
             distribution = self.distributions[-1]
