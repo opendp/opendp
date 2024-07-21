@@ -28,15 +28,13 @@ class SimpleLinearQuery:
     def __init__(self,
                  schema: Schema,
                  column_index: int,
-                 value_index: int,
-                 column: str,
-                 value: int):
+                 value_index: int):
         self.schema = schema
 
         self.column_index = column_index
         self.value_index = value_index
-        self.column = column
-        self.value = value
+        self.column = list(self.schema.bounds.keys())[self.column_index]
+        self.value = self.schema.bounds[self.column][0] + self.value_index
 
     def stability_map(self, d_in):
         return float(d_in)
@@ -87,8 +85,7 @@ class SimpleLinearQuery:
         column = list(schema.bounds.keys())[column_index]
         lower, upper = schema.bounds[column]
         value_index = np_csprng.integers(0, upper - lower + 1)
-        value = lower + value_index
-        return SimpleLinearQuery(schema, column_index, value_index, column, value)
+        return SimpleLinearQuery(schema, column_index, value_index)
 
     def __hash__(self):
         return hash((self.column_index, self.value_index, self.column, self.value))
@@ -98,7 +95,7 @@ class SimpleLinearQuery:
                 == (other.column_index, other.value_index, other.column, other.value))
 
     def __repr__(self):
-        return f"SimpleLinearQuery(column_index={self.column_index}, value_index={self.value_index}, column={self.column}, value={self.value})"
+        return f"SimpleLinearQuery(column_index={self.column_index}, value_index={self.value_index})"
 
 
 class MWEMSynthesizerTrainer(SynthesizerTrainer):
