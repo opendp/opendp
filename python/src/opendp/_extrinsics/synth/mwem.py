@@ -31,9 +31,15 @@ class SimpleLinearQuery:
                  value_index: int):
         self.schema = schema
 
+        if not (0 <= column_index < len(self.schema.bounds)):
+            raise IndexError("column_index out of bounds")
         self.column_index = column_index
-        self.value_index = value_index
         self.column = list(self.schema.bounds.keys())[self.column_index]
+
+        lower, upper = self.schema.bounds[list(self.schema.bounds.keys())[column_index]]
+        if not (0 <= value_index <= upper - lower + 1):
+            raise IndexError("value_index out of bounds")
+        self.value_index = value_index
         self.value = self.schema.bounds[self.column][0] + self.value_index
 
     def stability_map(self, d_in):
@@ -110,6 +116,31 @@ class MWEMSynthesizerTrainer(SynthesizerTrainer):
                  num_iterations: int,
                  num_mult_weights_iterations: int,
                  verbose: bool = False):
+        """MWEM synthesizer trainer.
+
+        (http://users.cms.caltech.edu/~katrina/papers/mwem-nips.pdf)
+
+        Based on SmartNoise implementation.
+
+        :param input_domain: The domain of the input data.
+        :type input_domain: Domain
+        :param input_metric: The metric of the input data.
+        :type input_metric: Metric
+        :param epsilon: The privacy budget.
+        :type epsilon: float
+        :param schema: The schema of the input data.
+        :type schema: Schema
+        :param epsilon_split: The fraction of the privacy budget to use for selecting queries.
+        :type epsilon_split: float
+        :param num_queries: The number of queries to use.
+        :type num_queries: int
+        :param num_iterations: The number of iterations to run.
+        :type num_iterations: int
+        :param num_mult_weights_iterations: The number of iterations to run the multiplicative weights update.
+        :type num_mult_weights_iterations: int
+        :param verbose: Whether to print progress.
+        :type verbose: bool
+        """
 
         super().__init__(input_domain, input_metric, epsilon)
 
@@ -154,10 +185,10 @@ class MWEMSynthesizerTrainer(SynthesizerTrainer):
             last_histogram = histograms[-1]
 
             new_histogram = self._iteration(comp,
-                                               epsilon_select,
-                                               epsilon_measure,
-                                               last_histogram,
-                                               query_collection)
+                                            epsilon_select,
+                                            epsilon_measure,
+                                            last_histogram,
+                                            query_collection)
 
             histograms.append(new_histogram)
 
@@ -200,8 +231,8 @@ class MWEMSynthesizerTrainer(SynthesizerTrainer):
         ).collect().item()
 
         new_histogram = self._update(histogram,
-                                        selected_query,
-                                        selected_query_measurement)
+                                     selected_query,
+                                     selected_query_measurement)
 
         return new_histogram
 
