@@ -1,8 +1,7 @@
 from typing import Optional
 
-import numpy as np
-
 import opendp.prelude as dp
+from opendp._lib import import_optional_dependency
 from opendp.mod import Measurement
 
 
@@ -28,6 +27,8 @@ def make_private_selection_threshold(meas: Measurement,
     :param steps: Optional. The number of steps to run. If not specified, will run the minimum number of steps.
     :returns: A tuple from `meas` with the first element being the score.
     """
+
+    np = import_optional_dependency("numpy")
 
     dp.assert_features("contrib", "floating-point")
 
