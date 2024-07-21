@@ -50,7 +50,7 @@ class SimpleLinearQuery:
 
         mask = np.zeros(self.schema.dims, dtype=int)
         index_tuple = [slice(None)] * mask.ndim
-        index_tuple[self.column_index] = self.value_index
+        index_tuple[self.column_index] = slice(self.value_index, self.value_index + 1)
         mask[tuple(index_tuple)] = 1
 
         return mask
