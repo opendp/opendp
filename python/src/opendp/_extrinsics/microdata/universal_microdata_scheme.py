@@ -96,11 +96,11 @@ def make_private_universal_microdata_scheme(input_domain: Domain,
 
         acceptance_criteria_pipeline_comp = overall_pipline_comp(acceptance_criteria_pipeline)
 
-        acceptance_criteria_meas = []
-        acceptance_criteria_thresholds = []
+        acceptance_criteria_meas: list[Measurement] = []
+        acceptance_criteria_thresholds: list[float] = []
 
         # Quality Acceptance Criteria
-        if quality_epsilons is not None:
+        if quality_epsilons is not None and quality_acceptance_criteria is not None:
             (quality_acceptance_criteria_makers,
              quality_accaptance_criteria_thresholds) = zip(*quality_acceptance_criteria)
             assert (len(quality_acceptance_criteria_makers)
@@ -118,7 +118,7 @@ def make_private_universal_microdata_scheme(input_domain: Domain,
             acceptance_criteria_thresholds.extend(quality_accaptance_criteria_thresholds)
 
         # Faithfulness Acceptance Criteria
-        if faithfulness_epsilon is not None:
+        if faithfulness_epsilon is not None and faithfulness_threshold is not None:
             def faithfulness_meas(scale):
                 return make_private_faithfulness(input_domain,
                                                  input_metric,
