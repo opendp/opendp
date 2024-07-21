@@ -44,11 +44,10 @@ def make_private_synthesizer_trainer(input_domain: Domain,
     if input_metric != dp.symmetric_distance():
         raise ValueError("input metric must be symmetric distance")
 
-    match name.lower():
-        case "identity":
-            synthesizer = IdentitySynthesizer(epsilon)
-        case _:
-            raise ValueError(f"Synthesizer {name} not found")
+    if name.lower() == "identity":
+        synthesizer = IdentitySynthesizer(epsilon)
+    else:
+        raise ValueError(f"Synthesizer {name} not found")
 
     def function(data):
         synthesizer.fit(data.collect())
