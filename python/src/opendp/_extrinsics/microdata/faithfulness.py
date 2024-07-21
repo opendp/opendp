@@ -35,7 +35,6 @@ def make_faithfulness(
     """
 
     np = import_optional_dependency("numpy")
-    pl = import_optional_dependency("polars")
     scipy = import_optional_dependency("scipy")
     sklearn_neighbors = import_optional_dependency("sklearn.neighbors")
     igraph = import_optional_dependency("igraph")
@@ -74,7 +73,7 @@ def make_faithfulness(
         similar_record_indices = neigh.radius_neighbors(Y, return_distance=False)
         return similar_record_indices
 
-    def _compute_optimal_faithfulness_cardinality(dataset: pl.LazyFrame):        
+    def _compute_optimal_faithfulness_cardinality(dataset):        
         num_records = len(reference_dataset)
 
         similar_record_indices = similarity_fn(dataset.collect(), reference_dataset)
