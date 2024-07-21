@@ -7,7 +7,7 @@ from opendp.mod import Metric, Domain, Measurement, PartialConstructor, assert_f
 from opendp._extrinsics._utilities import to_then
 
 
-class Synthesizer:
+class SynthesizerTrainer:
     # OpenDP style make_private_... function
     @classmethod
     def make(cls, input_domain: Domain, input_metric: Metric, epsilon: float,

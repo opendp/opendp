@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 import opendp.prelude as dp
 from opendp.mod import Domain, Metric, Measurement
 from opendp._lib import import_optional_dependency, get_np_csprng
-from opendp._extrinsics.synth.base import Synthesizer, ReleasedSynthesizer
+from opendp._extrinsics.synth.base import SynthesizerTrainer, ReleasedSynthesizer
 
 np_csprng = get_np_csprng()
 
@@ -60,6 +60,7 @@ class SimpleLinearQuery:
 
     def apply(self, data):
         np = import_optional_dependency("numpy")
+        pl = import_optional_dependency("polars")
 
         if isinstance(data, (pl.DataFrame, pl.LazyFrame)):
             return self.plan(data)
@@ -95,7 +96,7 @@ class SimpleLinearQuery:
         return f"SimpleLinearQuery(column_index={self.column_index}, value_index={self.value_index}, column={self.column}, value={self.value})"
 
 
-class MWEMSynthesizer(Synthesizer):
+class MWEMSynthesizerTrainer(SynthesizerTrainer):
 
     def __init__(self,
                  input_domain: Domain,
@@ -294,7 +295,7 @@ class MWEMSynthesizer(Synthesizer):
              epsilon: float,
              *args, **kwargs):
 
-        assert cls is MWEMSynthesizer
+        assert cls is MWEMSynthesizerTrainer
 
         synthesizer = cls(input_domain,
                           input_metric,
