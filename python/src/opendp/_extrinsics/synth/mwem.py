@@ -45,7 +45,10 @@ class SimpleLinearQuery:
         np = import_optional_dependency("numpy")
 
         mask = np.zeros(self.schema.dims, dtype=int)
-        mask.take(indices=self.value_index, axis=self.column_index)[:] = 1
+        index_tuple = [slice(None)] * mask.ndim
+        index_tuple[self.column_index] = self.value_index
+        mask[tuple(index_tuple)] = 1
+
         return mask
 
     def plan(self, data=None):
@@ -67,11 +70,10 @@ class SimpleLinearQuery:
             return self.plan(data)
 
         elif isinstance(data, np.ndarray):
-            np.testing.assert_allclose(data.sum(), 1)
             marginal_axes = tuple(i for i in range(data.ndim)
                                   if i != self.column_index)
-            marginal_distribution = data.sum(axis=marginal_axes)
-            marginal_count = marginal_distribution[self.value_index] * self.schema.size
+            marginal_histogram = data.sum(axis=marginal_axes)
+            marginal_count = marginal_histogram[self.value_index]
             return marginal_count
 
         else:
@@ -133,9 +135,9 @@ class MWEMSynthesizerTrainer(SynthesizerTrainer):
         epsilon_select = self.epsilon_split * epsilon_per_iteration
         epsilon_measure = epsilon_per_iteration - epsilon_select
 
-        initial_distribution, query_collection = self._setup()
+        initial_histogram, query_collection = self._setup()
 
-        distributions = [initial_distribution]
+        histograms = [initial_histogram]
 
         mwem = dp.c.make_sequential_composition(
              self.input_domain,
@@ -152,40 +154,41 @@ class MWEMSynthesizerTrainer(SynthesizerTrainer):
 
         for _ in step_iter(self.num_iterations):
 
-            last_distribution = distributions[-1]
+            last_histogram = histograms[-1]
 
-            new_distribution = self._iteration(comp,
+            new_histogram = self._iteration(comp,
                                                epsilon_select,
                                                epsilon_measure,
-                                               last_distribution,
+                                               last_histogram,
                                                query_collection)
 
-            distributions.append(new_distribution)
+            histograms.append(new_histogram)
 
         configuration = {
             "epsilon_split": self.epsilon_split,
             "num_queries": self.num_queries,
             "num_iterations": self.num_iterations,
             "num_mult_weights_iterations": self.num_mult_weights_iterations,
+            "query_collection": query_collection,
         }
         return ReleasedMWEMSynthesizer(self.input_domain,
                                        self.input_metric,
                                        self.epsilon,
                                        configuration,
                                        self.schema,
-                                       distributions)
+                                       histograms)
 
     def _iteration(self,
                    comp,
                    epsilon_select: float,
                    epsilon_measure: float,
-                   distribution,
+                   histogram,
                    query_collection: list[SimpleLinearQuery]):
 
         selected_query_index = comp(
             self._select(
                 epsilon_select,
-                distribution,
+                histogram,
                 query_collection
             )
         )
@@ -199,25 +202,25 @@ class MWEMSynthesizerTrainer(SynthesizerTrainer):
             )
         ).collect().item()
 
-        new_distribution = self._update(distribution,
+        new_histogram = self._update(histogram,
                                         selected_query,
                                         selected_query_measurement)
 
-        return new_distribution
+        return new_histogram
 
     def _setup(self):
         np = import_optional_dependency("numpy")
 
-        initial_distribution = np.ones(self.schema.dims)
-        initial_distribution /= initial_distribution.size
+        initial_histogram = np.ones(self.schema.dims)
+        initial_histogram /= initial_histogram.size
 
         query_collection = list({SimpleLinearQuery.random(self.schema)
                                  for _ in range(self.num_queries)})
 
-        return initial_distribution, query_collection
+        return initial_histogram, query_collection
 
     def _score(self,
-               distribution,
+               histogram,
                query_collection: list[SimpleLinearQuery]) -> dp.Transformation:
 
         np = import_optional_dependency("numpy")
@@ -225,7 +228,7 @@ class MWEMSynthesizerTrainer(SynthesizerTrainer):
 
         def function(data):
             return [np.abs(query.apply(data).collect().item()
-                           - query.apply(distribution))
+                           - query.apply(histogram))
                     for query in query_collection]
 
         return dp.t.make_user_transformation(
@@ -239,11 +242,11 @@ class MWEMSynthesizerTrainer(SynthesizerTrainer):
 
     def _select(self,
                 epsilon: float,
-                distribution,
+                histogram,
                 query_collection: list[SimpleLinearQuery]) -> Measurement:
 
         return dp.binary_search_chain(
-            lambda s: self._score(distribution, query_collection)
+            lambda s: self._score(histogram, query_collection)
             >> dp.m.then_report_noisy_max_gumbel(
                 scale=s,
                 optimize="max"),
@@ -268,27 +271,26 @@ class MWEMSynthesizerTrainer(SynthesizerTrainer):
         return meas
 
     def _update(self,
-                last_distribution,
+                last_histogram,
                 query: SimpleLinearQuery,
                 measurment: float):
 
         np = import_optional_dependency("numpy")
 
-        distribution = last_distribution.copy()
+        histogram = last_histogram.copy()
 
         for _ in range(self.num_mult_weights_iterations):
-            error = measurment - query.apply(distribution)
+            error = measurment - query.apply(histogram)
 
             multiplicative_weights = np.exp(
                 query.mask() * error
                 / (2 * self.schema.size)
             )
-            multiplicative_weights[multiplicative_weights == 0.0] = 1.0
 
-            distribution *= multiplicative_weights
-            distribution /= distribution.sum()
+            histogram *= multiplicative_weights
+            histogram *= self.schema.size / histogram.sum()
 
-        return distribution
+        return histogram
 
     # OpenDP style make_private_... function
     @classmethod
@@ -321,14 +323,14 @@ class ReleasedMWEMSynthesizer(ReleasedSynthesizer):
                  epsilon: float,
                  configuation: dict,
                  schema: Schema,
-                 distributions: list,
+                 histograms: list,
                  ):
         self.input_domain = input_domain
         self.input_metric = input_metric
         self.epsilon = epsilon
         self.configuation = configuation
         self.schema = schema
-        self.distributions = distributions
+        self.histograms = histograms
 
     def sample(self,
                num_samples: int,
@@ -339,12 +341,13 @@ class ReleasedMWEMSynthesizer(ReleasedSynthesizer):
         np_csprng = get_np_csprng()
 
         if agg_method == "last":
-            distribution = self.distributions[-1]
+            histogram = self.histograms[-1]
         elif agg_method == "avg":
-            distribution = np.mean(self.distributions, axis=0)
-            distribution /= distribution.sum()
+            histogram = np.mean(self.histograms, axis=0)
         else:
             raise ValueError(f"Unsupported aggregation method: {agg_method}")
+
+        distribution = histogram / histogram.sum()
 
         flat_distribution = distribution.flatten()
 
