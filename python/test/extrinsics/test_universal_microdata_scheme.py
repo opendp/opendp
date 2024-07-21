@@ -1,20 +1,23 @@
 import itertools as it
 import functools as ft
 
+import pytest
+
 import opendp.prelude as dp
 from opendp.mod import Domain, Metric, Transformation
-from opendp._lib import import_optional_dependency
 from opendp._extrinsics._utilities import with_privacy
 
-dp.enable_features("contrib", "floating-point")
+from ..helpers import optional_dependency
 
-np = import_optional_dependency("numpy")
-pl = import_optional_dependency("polars")
+dp.enable_features("contrib", "floating-point")
 
 
 def test_microdataa_faithfulness():
 
     from opendp._extrinsics.microdata.universal_microdata_scheme import make_private_universal_microdata_scheme
+
+    np = pytest.importorskip("numpy")
+    pl = pytest.importorskip("polars")
 
     COLS = list("ABC")
     NUM_RECORDS = 5
@@ -35,26 +38,31 @@ def test_microdataa_faithfulness():
     def similarity_record_fn(x, y):
         return np.sum(np.abs((x - y)))
 
-    ums_meas = make_private_universal_microdata_scheme(
-        input_domain=lf_domain_with_margin,
-        input_metric=dp.symmetric_distance(),
-        synthesizer_epsilon=1.,
-        configuration_candidates=[{"synthesizer": {"name": "identity"}}],
-        quality_acceptance_criteria=[(_make_private_max_marginal_abs_error, 0.05 * NUM_RECORDS),
-                                     (ft.partial(_make_private_max_univariate_rel_error, clipping_upper_bound=3), 2)],
-        quality_epsilons=[1., 1.],
-        faithfulness_simiarlity=similarity_record_fn,
-        faithfulness_threshold=0.05,
-        faithfulness_epsilon=1.,
-        with_selection=True,
-        selection_stop_probability=0,
-        selection_epsilon=0,
-        selection_steps=None
-        )
+    with (optional_dependency("numpy"),
+          optional_dependency("polars"),
+          optional_dependency("scipy"),
+          optional_dependency("sklearn"),
+          optional_dependency("igraph")):
+        ums_meas = make_private_universal_microdata_scheme(
+            input_domain=lf_domain_with_margin,
+            input_metric=dp.symmetric_distance(),
+            synthesizer_epsilon=1.,
+            configuration_candidates=[{"synthesizer": {"name": "identity"}}],
+            quality_acceptance_criteria=[(_make_private_max_marginal_abs_error, 0.05 * NUM_RECORDS),
+                                         (ft.partial(_make_private_max_univariate_rel_error, clipping_upper_bound=3), 2)],
+            quality_epsilons=[1., 1.],
+            faithfulness_simiarlity=similarity_record_fn,
+            faithfulness_threshold=0.05,
+            faithfulness_epsilon=1.,
+            with_selection=True,
+            selection_stop_probability=0,
+            selection_epsilon=0,
+            selection_steps=None
+            )
 
-    assert ums_meas.map(1) == 8
+        assert ums_meas.map(1) == 8
 
-    score, output = ums_meas(real_df)
+        score, output = ums_meas(real_df)
 
     assert score
     assert len(output) == 4
@@ -64,8 +72,11 @@ def _make_max_marginal_abs_error(
         input_domain: Domain,
         input_metric: Metric,
         *,
-        reference_dataset: pl.LazyFrame) -> Transformation:
+        reference_dataset) -> Transformation:
     """Construct a Transformation that returns the maximal absoulte error over all k-way marginals."""
+
+    np = pytest.importorskip("numpy")
+    pl = pytest.importorskip("polars")
 
     dp.assert_features("contrib", "floating-point")
 
@@ -118,9 +129,12 @@ def _make_max_univariate_rel_error(
         input_domain: Domain,
         input_metric: Metric,
         *,
-        reference_dataset: pl.LazyFrame,
+        reference_dataset,
         clipping_upper_bound: float) -> Transformation:
     """Construct a Transformation that returns the maximal relative error over all 1-way marginals."""
+
+    np = pytest.importorskip("numpy")
+    pl = pytest.importorskip("polars")
 
     dp.assert_features("contrib", "floating-point")
 

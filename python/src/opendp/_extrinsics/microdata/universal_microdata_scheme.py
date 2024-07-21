@@ -105,7 +105,7 @@ def make_private_universal_microdata_scheme(input_domain: Domain,
              quality_accaptance_criteria_thresholds) = zip(*quality_acceptance_criteria)
             assert (len(quality_acceptance_criteria_makers)
                     == len(quality_accaptance_criteria_thresholds))
-            
+
             acceptance_criteria_meas = []
             for make_private_ac, epsilon in zip(quality_acceptance_criteria_makers,
                                                 quality_epsilons):
