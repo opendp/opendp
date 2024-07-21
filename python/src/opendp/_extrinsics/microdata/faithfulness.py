@@ -35,7 +35,6 @@ def make_faithfulness(
     """
 
     np = import_optional_dependency("numpy")
-    pl = import_optional_dependency("polars")
     scipy = import_optional_dependency("scipy")
     sklearn_neighbors = import_optional_dependency("sklearn.neighbors")
     igraph = import_optional_dependency("igraph")
