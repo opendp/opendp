@@ -40,6 +40,9 @@ class SimpleLinearQuery:
         self.column = column
         self.value = value
 
+    def stability_map(self, d_in):
+        return float(d_in)
+
     def mask(self):
         np = import_optional_dependency("numpy")
 
@@ -231,7 +234,7 @@ class MWEMSynthesizerTrainer(SynthesizerTrainer):
             output_domain=dp.vector_domain(dp.atom_domain(T=float)),
             output_metric=dp.linf_distance(T=float),
             function=function,
-            stability_map=lambda d_in: float(d_in)
+            stability_map=lambda d_in: max(query.stability_map(d_in) for query in query_collection)
         )
 
     def _select(self,
