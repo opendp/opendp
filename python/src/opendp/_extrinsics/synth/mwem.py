@@ -337,14 +337,13 @@ class ReleasedMWEMSynthesizer(ReleasedSynthesizer):
         np = import_optional_dependency("numpy")
         pl = import_optional_dependency("polars")
 
-        match agg_method:
-            case "last":
-                distribution = self.distributions[-1]
-            case "avg":
-                distribution = np.mean(self.distributions, axis=0)
-                distribution /= distribution.sum()
-            case _:
-                raise ValueError(f"Unsupported aggregation method: {agg_method}")
+        if agg_method == "last":
+            distribution = self.distributions[-1]
+        elif agg_method == "avg":
+            distribution = np.mean(self.distributions, axis=0)
+            distribution /= distribution.sum()
+        else:
+            raise ValueError(f"Unsupported aggregation method: {agg_method}")
 
         flat_distribution = distribution.flatten()
 
