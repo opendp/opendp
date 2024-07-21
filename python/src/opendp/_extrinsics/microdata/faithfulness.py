@@ -5,7 +5,6 @@ import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
 from opendp._extrinsics._utilities import to_then, with_privacy
 
-pl = import_optional_dependency("polars")
 
 __all__ = ["make_faithfulness",
            "then_faithfulness",
@@ -17,7 +16,7 @@ def make_faithfulness(
         input_domain: Domain,
         input_metric: Metric,
         *,
-        reference_dataset: pl.LazyFrame,
+        reference_dataset,
         similarity: Union[Callable, dict[str, float]]) -> Transformation:
     r"""Construct a Transformation that returns the optimal (maximal) faithfulness of two datasets.
     Faithfulness assesses whether the released dataset resemble the original dataset in a record-level granularity.
@@ -36,6 +35,7 @@ def make_faithfulness(
     """
 
     np = import_optional_dependency("numpy")
+    pl = import_optional_dependency("polars")
     scipy = import_optional_dependency("scipy")
     sklearn_neighbors = import_optional_dependency("sklearn.neighbors")
     igraph = import_optional_dependency("igraph")
