@@ -74,7 +74,7 @@ def make_faithfulness(
         similar_record_indices = neigh.radius_neighbors(Y, return_distance=False)
         return similar_record_indices
 
-    def _compute_optimal_faithfulness_cardinality(dataset: pl.LazyFrame):        
+    def _compute_optimal_faithfulness_cardinality(dataset):        
         num_records = len(reference_dataset)
 
         similar_record_indices = similarity_fn(dataset.collect(), reference_dataset)
