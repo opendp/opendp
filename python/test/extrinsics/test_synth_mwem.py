@@ -35,7 +35,7 @@ def test_mwem_learning():
     real_schema = Schema(bounds={col: (lower, upper) for col in cols},
                          size=num_records)
 
-    with optional_dependency("numpy"), optional_dependency("polars"):
+    with optional_dependency("numpy"), optional_dependency("polars"), optional_dependency("tqdm"):
         mwem_meas = MWEMSynthesizerTrainer.make(lf_domain_with_margin, dp.symmetric_distance(),
                                                 epsilon=10, schema=real_schema,
                                                 epsilon_split=0.5, num_queries=1000,
