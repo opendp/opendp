@@ -1,11 +1,16 @@
-import numpy as np
+import pytest
+
 import opendp.prelude as dp
+
+from ..helpers import optional_dependency
 
 
 def test_private_selection_threshold():
     from opendp._extrinsics._make_private_selection import make_private_selection_threshold
 
     dp.enable_features("contrib", "floating-point")
+
+    np = pytest.importorskip("numpy")
 
     bounds = (0., 100.)
     range_ = bounds[1] - bounds[0]
@@ -26,13 +31,14 @@ def test_private_selection_threshold():
 
     mech_with_score = dp.c.make_basic_composition([count, sum_])
 
-    meas_pst = make_private_selection_threshold(mech_with_score,
-                                                threshold=threshold,
-                                                stop_probability=0,
-                                                epsilon_selection=0)
+    with optional_dependency("numpy"):
+        meas_pst = make_private_selection_threshold(mech_with_score,
+                                                    threshold=threshold,
+                                                    stop_probability=0,
+                                                    epsilon_selection=0)
 
     data = np.random.normal(10, 5, 20)
-    
+
     score, _ = meas_pst(data)
     assert score >= threshold
 
