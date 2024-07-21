@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, Union, Literal
+from typing import Any, Union, Literal
 from dataclasses import dataclass, field
 
 import opendp.prelude as dp
@@ -18,10 +18,11 @@ class Schema:
     bounds: dict[str, tuple[int, int]]
     size: int
     dict_schema: dict[str, type] = field(init=False)
-    lf_schema: pl.LazyFrame = field(init=False)
-    dims: list[np.ndarray] = field(init=False)
+    lf_schema: Any = field(init=False)
+    dims: Any = field(init=False)
 
     def __post_init__(self):
+        pl = import_optional_dependency("polars")
         self.dict_schema = {col: pl.Int32 for col in self.bounds.keys()}
         self.lf_schema = pl.LazyFrame(schema=self.dict_schema)
         self.dims = [upper - lower + 1
@@ -42,12 +43,15 @@ class SimpleLinearQuery:
         self.column = column
         self.value = value
 
-    def mask(self) -> np.ndarray:
+    def mask(self):
+        np = import_optional_dependency("numpy")
+
         mask = np.zeros(self.schema.dims, dtype=int)
         mask.take(indices=self.value_index, axis=self.column_index)[:] = 1
         return mask
 
-    def plan(self, data: Optional[Union[pl.DataFrame, pl.LazyFrame]] = None) -> Union[pl.DataFrame, pl.LazyFrame]:
+    def plan(self, data=None):
+        pl = import_optional_dependency("polars")
         if data is None:
             return (self.schema.lf_schema
                     .filter(pl.col(self.column) == self.value)
@@ -57,9 +61,12 @@ class SimpleLinearQuery:
                     .filter(pl.col(self.column) == self.value)
                     .count())
 
-    def apply(self, data: Union[pl.DataFrame, pl.LazyFrame, np.ndarray]) -> Union[pl.DataFrame, pl.LazyFrame, np.ndarray, float]:
+    def apply(self, data):
+        np = import_optional_dependency("numpy")
+
         if isinstance(data, (pl.DataFrame, pl.LazyFrame)):
             return self.plan(data)
+
         elif isinstance(data, np.ndarray):
             np.testing.assert_allclose(data.sum(), 1)
             marginal_axes = tuple(i for i in range(data.ndim)
@@ -67,6 +74,7 @@ class SimpleLinearQuery:
             marginal_distribution = data.sum(axis=marginal_axes)
             marginal_count = marginal_distribution[self.value_index] * self.schema.size
             return marginal_count
+
         else:
             raise ValueError(f"Unsupported data type: {type(data)}")
 
@@ -83,7 +91,8 @@ class SimpleLinearQuery:
         return hash((self.column_index, self.value_index, self.column, self.value))
 
     def __eq__(self, other):
-        return (self.column_index, self.value_index, self.column, self.value) == (other.column_index, other.value_index, other.column, other.value)
+        return ((self.column_index, self.value_index, self.column, self.value)
+                == (other.column_index, other.value_index, other.column, other.value))
 
     def __repr__(self):
         return f"SimpleLinearQuery(column_index={self.column_index}, value_index={self.value_index}, column={self.column}, value={self.value})"
@@ -111,22 +120,19 @@ class MWEMSynthesizer(Synthesizer):
         self.num_iterations = num_iterations
         self.num_mult_weights_iterations = num_mult_weights_iterations
 
-        self.distributions = None
-        self.dimensions = None
-
         self.d_in = 1
 
         self.verbose = verbose
         if verbose:
             self.tqdm = import_optional_dependency("tqdm")
 
-    def fit(self, data: pl.LazyFrame):
+    def fit(self, data):
 
         epsilon_per_iteration = self.epsilon / self.num_iterations
         epsilon_select = self.epsilon_split * epsilon_per_iteration
         epsilon_measure = epsilon_per_iteration - epsilon_select
 
-        initial_distribution, dimensions, query_collection = self._setup()
+        initial_distribution, query_collection = self._setup()
 
         distributions = [initial_distribution]
 
@@ -172,8 +178,8 @@ class MWEMSynthesizer(Synthesizer):
                    comp,
                    epsilon_select: float,
                    epsilon_measure: float,
-                   distribution: np.ndarray,
-                   query_collection: list[SimpleLinearQuery]) -> np.ndarray:
+                   distribution,
+                   query_collection: list[SimpleLinearQuery]):
 
         selected_query_index = comp(
             self._select(
@@ -198,22 +204,22 @@ class MWEMSynthesizer(Synthesizer):
 
         return new_distribution
 
-    def _setup(self) -> tuple[np.ndarray, list[np.ndarray], list[SimpleLinearQuery]]:
+    def _setup(self):
+        np = import_optional_dependency("numpy")
+
         initial_distribution = np.ones(self.schema.dims)
         initial_distribution /= initial_distribution.size
-
-        dimensions = [np.arange(lower, upper + 2, dtype=int)
-                      for lower, upper in self.schema.bounds.values()]
 
         query_collection = list({SimpleLinearQuery.random(self.schema)
                                  for _ in range(self.num_queries)})
 
-        return initial_distribution, dimensions, query_collection
+        return initial_distribution, query_collection
 
     def _score(self,
-               distribution: np.ndarray,
+               distribution,
                query_collection: list[SimpleLinearQuery]) -> dp.Transformation:
 
+        np = import_optional_dependency("numpy")
         # TODO: consider using a more efficient implementation after profiling
 
         def function(data):
@@ -232,7 +238,7 @@ class MWEMSynthesizer(Synthesizer):
 
     def _select(self,
                 epsilon: float,
-                distribution: np.ndarray,
+                distribution,
                 query_collection: list[SimpleLinearQuery]) -> Measurement:
 
         return dp.binary_search_chain(
@@ -261,9 +267,12 @@ class MWEMSynthesizer(Synthesizer):
         return meas
 
     def _update(self,
-                last_distribution: np.ndarray,
+                last_distribution,
                 query: SimpleLinearQuery,
-                measurment: float) -> np.ndarray:
+                measurment: float):
+
+        np = import_optional_dependency("numpy")
+
         distribution = last_distribution.copy()
 
         for _ in range(self.num_mult_weights_iterations):
@@ -311,7 +320,7 @@ class ReleasedMWEMSynthesizer(ReleasedSynthesizer):
                  epsilon: float,
                  configuation: dict,
                  schema: Schema,
-                 distributions: list[np.ndarray],
+                 distributions: list,
                  ):
         self.input_domain = input_domain
         self.input_metric = input_metric
@@ -319,10 +328,13 @@ class ReleasedMWEMSynthesizer(ReleasedSynthesizer):
         self.configuation = configuation
         self.schema = schema
         self.distributions = distributions
-    
+
     def sample(self,
                num_samples: int,
-               agg_method: Union[Literal["last", "avg"]] = "last") -> pl.DataFrame:
+               agg_method: Union[Literal["last", "avg"]] = "last"):
+
+        np = import_optional_dependency("numpy")
+        pl = import_optional_dependency("polars")
 
         match agg_method:
             case "last":

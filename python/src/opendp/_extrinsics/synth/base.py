@@ -35,7 +35,7 @@ class Synthesizer:
         self.input_metric = input_metric
         self.epsilon = epsilon
 
-    def fit(self, data: pl.LazyFrame):
+    def fit(self, data):
         raise NotImplementedError
 
 
