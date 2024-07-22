@@ -6,7 +6,7 @@ dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 
 def test_np_count():
-    from opendp.extras._make_np_count import then_np_count
+    from opendp.extras.numpy._make_np_count import then_np_count
     with optional_dependency('numpy'):
         space = dp.x.np_array2_domain(T=float), dp.symmetric_distance()
     trans = space >> then_np_count()
@@ -16,7 +16,7 @@ def test_np_count():
 
 
 def test_private_np_count():
-    from opendp.extras._make_np_count import then_private_np_count
+    from opendp.extras.numpy._make_np_count import then_private_np_count
     with optional_dependency('numpy'):
         space = dp.x.np_array2_domain(T=float), dp.symmetric_distance()
     meas = space >> then_private_np_count(dp.zero_concentrated_divergence(T=float), scale=1.)
