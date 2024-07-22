@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 use crate::{
     core::Function,
@@ -127,7 +127,15 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
             options,
         } => {
             // overwrite the kwargs to update the noise scale parameter in the FFI plugin
-            if let FunctionExpr::FfiPlugin { symbol, kwargs, .. } = &mut function {
+            if let FunctionExpr::FfiPlugin {
+                lib,
+                symbol,
+                kwargs,
+            } = &mut function
+            {
+                if let Ok(path) = env::var("OPENDP_LIB_PATH") {
+                    *lib = Arc::from(path);
+                }
                 *symbol = KW::NAME.into();
                 *kwargs = serde_pickle::to_vec(&kwargs_new, Default::default())
                     .expect("pickling does not fail")

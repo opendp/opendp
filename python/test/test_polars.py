@@ -335,7 +335,7 @@ def test_polars_context():
         .with_columns(pl.col("B").is_null().alias("B_nulls"))
         .filter(pl.col("B_nulls"))
         .select(pl.col("A").fill_null(2.0).dp.sum((0, 3)))
-        .release()  # type: ignore[union-attr]
+        .release()
         .collect()
     )
 
@@ -343,7 +343,7 @@ def test_polars_context():
         context.query()
         .group_by("B")
         .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
-        .release()  # type: ignore[union-attr]
+        .release()
         .collect()
     )
 
@@ -379,12 +379,12 @@ def test_polars_describe():
         .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
     )
 
-    actual = query.accuracy()  # type: ignore[union-attr]
+    actual = query.accuracy()
     pl_testing.assert_frame_equal(expected, actual)
 
     accuracy = dp.discrete_laplacian_scale_to_accuracy(8.0, 0.05)
     expected = expected.with_columns(accuracy=accuracy)
-    actual = query.accuracy(alpha=0.05)  # type: ignore[union-attr]
+    actual = query.accuracy(alpha=0.05)
     pl_testing.assert_frame_equal(expected, actual)
 
 
@@ -419,7 +419,7 @@ def test_polars_accuracy_threshold():
         .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
     )
 
-    actual = query.accuracy()  # type: ignore[union-attr]
+    actual = query.accuracy()
     pl_testing.assert_frame_equal(expected, actual)
 
 
@@ -501,7 +501,7 @@ def test_polars_threshold():
         context.query()
         .group_by("A")
         .agg(pl.len().dp.noise())
-        .release()  # type: ignore[union-attr]
+        .release()
         .collect()
     )
 
@@ -529,6 +529,22 @@ def test_polars_threshold():
         context.query()
         .group_by("B")
         .agg(pl.len().dp.noise())
-        .release()  # type: ignore[union-attr]
+        .release()
         .collect()
     )
+
+
+def test_replace_binary_path():
+    import os
+    os.environ["OPENDP_LIB_PATH"] = "testing!"
+    pl = pytest.importorskip("polars")
+
+    m_expr = dp.m.make_private_expr(
+        dp.expr_domain(example_lf()[0], grouping_columns=[]),
+        dp.partition_distance(dp.symmetric_distance()),
+        dp.max_divergence(T=float),
+        pl.len().dp.noise(scale=1.),
+    )
+    assert str(m_expr((pl.LazyFrame(dict()), pl.all()))) == "len().testing!:noise_plugin()"
+
+    del os.environ["OPENDP_LIB_PATH"]

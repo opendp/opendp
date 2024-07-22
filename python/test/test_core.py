@@ -305,3 +305,20 @@ def test_user_distance():
 
     assert meas(2.0) == 0.0
     assert meas.map(2.0)(3.0) == 12.0
+
+
+def test_pointer_classes_dont_iter():
+    import opendp.prelude as dp
+
+    # since pointer classes like Domain, Transformation, etc. inherit from ctypes.POINTER,
+    # __iter__ is inherited and attempts to unpack the data behind the pointer 
+    # as if it were a pointer to an array of structs.
+
+    # However, structs from OpenDP are opaque, so are zero-sized.
+    # Python will infinitely yield the data directly behind the pointer, 
+    # stepping forward by zero bytes each time.
+
+    # We override __iter__ so as to make this infinite loop/lock impossible to accidentally trigger
+    with pytest.raises(ValueError):
+        [*dp.atom_domain(T=bool)]
+    

@@ -12,7 +12,7 @@ We suggest importing under the conventional name ``dp``:
 from __future__ import annotations
 from dataclasses import dataclass
 import os
-from typing import Literal, Tuple
+from typing import Any, Iterable, Literal, Sequence, Tuple
 from opendp._lib import lib_path
 from opendp.mod import (
     Domain,
@@ -71,7 +71,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         from polars import lit  # type: ignore[import-not-found]
         return register_plugin_function(
-            plugin_path=lib_path,
+            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
             function_name="noise",
             args=(self.expr, lit(distribution), scale),
             is_elementwise=True,
@@ -164,7 +164,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         from polars import Series  # type: ignore[import-not-found]
         return register_plugin_function(
-            plugin_path=lib_path,
+            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
             function_name="discrete_quantile_score",
             args=[self.expr, alpha, Series(candidates)],
             returns_scalar=True,
@@ -184,7 +184,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         from polars import lit  # type: ignore[import-not-found]
         return register_plugin_function(
-            plugin_path=lib_path,
+            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
             function_name="report_noisy_max",
             args=[self.expr, lit(optimize), scale],
             is_elementwise=True,
@@ -200,7 +200,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         from polars import Series  # type: ignore[import-not-found]
         return register_plugin_function(
-            plugin_path=lib_path,
+            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
             function_name="index_candidates",
             args=[self.expr, Series(candidates)],
             is_elementwise=True,
@@ -272,11 +272,11 @@ class OnceFrame(object):
         return onceframe_collect(self.queryable)
 
     def lazy(self):
-        """Extracts a LazyFrame from a OnceFrame,
+        """Extracts a ``LazyFrame`` from a ``OnceFrame``,
         circumventing protections against multiple evaluations.
 
         Each collection consumes the entire allocated privacy budget.
-        To remain DP at the advertised privacy level, only collect the LazyFrame once.
+        To remain DP at the advertised privacy level, only collect the ``LazyFrame`` once.
 
         **Features:**
 
@@ -357,6 +357,8 @@ try:
         )
     from polars.lazyframe.frame import LazyFrame as _LazyFrame  # type: ignore[import-not-found]
     from polars.lazyframe.group_by import LazyGroupBy as _LazyGroupBy  # type: ignore[import-not-found]
+    from polars._typing import IntoExpr, IntoExprColumn  # type: ignore[import-not-found]
+    import numpy as np  # type: ignore[import-not-found]
 
     class LazyFrameQuery(_LazyFrame):
         """
@@ -365,7 +367,7 @@ try:
         but makes a few additions and changes as documented below."""
         # Keep this docstring in sync with the docstring below for the dummy class.
 
-        def __init__(self, lf_plan: _LazyFrame | _LazyGroupBy, query):
+        def __init__(self, lf_plan: _LazyFrame, query):
             self._lf_plan = lf_plan
             self._query = query
             # do not initialize super() because inheritance is only used to mimic the API surface
@@ -396,13 +398,118 @@ try:
                     out = attr(*args, **kwargs)
 
                     # re-wrap any lazy outputs to keep the conveniences afforded by this class
-                    if isinstance(out, (_LazyGroupBy, _LazyFrame)):
+                    if isinstance(out, _LazyFrame):
                         return LazyFrameQuery(out, query)
+                    
+                    if isinstance(out, _LazyGroupBy):
+                        return LazyGroupByQuery(out, query)
 
                     return out
 
                 return wrap
             return attr
+        
+
+        # These definitions are primarily for mypy:
+        # Without them, a "# type: ignore[union-attr]" is needed on every line where these methods are used.
+        # The docstrings are not seen by Sphinx, but aren't doing any harm either.
+
+
+        def sort(  # type: ignore[empty-body]
+            self,
+            by: IntoExpr | Iterable[IntoExpr],
+            *more_by: IntoExpr,
+            descending: bool | Sequence[bool] = False,
+            nulls_last: bool | Sequence[bool] = False,
+            maintain_order: bool = False,
+            multithreaded: bool = True,
+        ) -> LazyFrameQuery:
+            """Sort the ``LazyFrame`` by the given columns."""
+            ...
+        
+
+        def filter(  # type: ignore[empty-body]
+            self,
+            *predicates: (
+                IntoExprColumn
+                | Iterable[IntoExprColumn]
+                | bool
+                | list[bool]
+                | np.ndarray[Any, Any]
+            ),
+            **constraints: Any,
+        ) -> LazyFrameQuery:
+            """
+            Filter the rows in the ``LazyFrame`` based on a predicate expression.
+
+            OpenDP discards relevant margin descriptors in the domain when filtering.
+            """
+            ...
+        
+        
+        def select(  # type: ignore[empty-body]
+            self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
+        ) -> LazyFrameQuery:
+            """
+            Select columns from this ``LazyFrame``.
+
+            OpenDP allows expressions in select statements that aggregate to not be row-by-row.
+            """
+            ...
+        
+
+        def select_seq(  # type: ignore[empty-body]
+            self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
+        ) -> LazyFrameQuery:
+            """
+            Select columns from this ``LazyFrame``.
+
+            OpenDP allows expressions in select statements that aggregate to not be row-by-row.
+            """
+            ...
+        
+
+        def group_by(  # type: ignore[empty-body]
+            self,
+            *by: IntoExpr | Iterable[IntoExpr],
+            maintain_order: bool = False,
+            **named_by: IntoExpr,
+        ) -> LazyGroupByQuery:
+            """
+            Start a group by operation.
+
+            OpenDP currently requires that grouping keys be simple column expressions.
+            """
+            ...
+    
+
+        def with_columns(  # type: ignore[empty-body]
+            self,
+            *exprs: IntoExpr | Iterable[IntoExpr],
+            **named_exprs: IntoExpr,
+        ) -> LazyFrameQuery:
+            """
+            Add columns to this ``LazyFrame``.
+
+            OpenDP requires that expressions in with_columns are row-by-row:
+            expressions may not change the number or order of records
+            """
+            ...
+        
+
+        def with_columns_seq(  # type: ignore[empty-body]
+            self,
+            *exprs: IntoExpr | Iterable[IntoExpr],
+            **named_exprs: IntoExpr,
+        ) -> LazyFrameQuery:
+            """
+            Add columns to this ``LazyFrame``.
+
+            OpenDP requires that expressions in with_columns are row-by-row:
+            expressions may not change the number or order of records
+            """
+            ...
+
 
         def resolve(self) -> Measurement:
             """Resolve the query into a measurement."""
@@ -512,6 +619,37 @@ try:
             """
             from opendp.accuracy import describe_polars_measurement_accuracy
             return describe_polars_measurement_accuracy(self.resolve(), alpha)
+        
+
+    class LazyGroupByQuery(_LazyGroupBy):
+        """
+        A ``LazyGroupByQuery`` is returned by :py:func:`opendp.polars.LazyFrameQuery.group_by`.
+        It mimics a `Polars LazyGroupBy <https://docs.pola.rs/api/python/stable/reference/lazyframe/group_by.html>`_,
+        but only supports APIs documented below."""
+        def __init__(self, lgb_plan: _LazyGroupBy, query):
+            self._lgb_plan = lgb_plan
+            self._query = query
+
+        def agg(
+            self,
+            *aggs: IntoExpr | Iterable[IntoExpr],
+            **named_aggs: IntoExpr,
+        ) -> LazyFrameQuery:
+            """
+            Compute aggregations for each group of a group by operation.
+            """
+            lf_plan = self._lgb_plan.agg(*aggs, **named_aggs)
+            return LazyFrameQuery(lf_plan, self._query)
+        
+
+        def len(self, name: str | None = None) -> LazyFrameQuery:
+            """
+            Return the number of rows in each group.
+            """
+            lf_plan = self._lgb_plan.len(name=name)
+            return LazyFrameQuery(lf_plan, self._query)
+
+
 
 except ImportError:
     ERR_MSG = "LazyFrameQuery depends on Polars: `pip install 'opendp[polars]'`."
@@ -520,7 +658,7 @@ except ImportError:
         """
         A ``LazyFrameQuery`` may be returned by :py:func:`opendp.context.Context.query`.
         It mimics a `Polars LazyFrame <https://docs.pola.rs/api/python/stable/reference/lazyframe/index.html>`_,
-        but makes a few additions and changes as documented below."""
+        but makes a few additions as documented below."""
         # Keep this docstring in sync with the docstring above for the real class.
                 
         def resolve(self) -> Measurement:
