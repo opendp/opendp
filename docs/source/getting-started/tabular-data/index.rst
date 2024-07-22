@@ -25,6 +25,10 @@ The specific methods that will be demonstrated are:
     * Grouping By Singular Variables
     * Grouping By Multiple Variables 
     * Filtering 
+* Using Known and Unknown Keys in Aggregrations
+* Data Preparation Limitations
+  * Limitations with ``with_columns``
+  * Limitations with ``filter`` 
 
 Dataset Description 
 -------------------
