@@ -36,8 +36,7 @@ For example:
 '''
 
 from opendp.mod import *
-from opendp.extras import sklearn 
-import opendp.extras as x
+from opendp.extras import sklearn, numpy
 import opendp.transformations as t
 import opendp.measurements as m
 import opendp.combinators as c
@@ -50,4 +49,4 @@ from opendp.core import new_function, new_queryable
 from opendp.context import *
 from opendp.polars import *
 
-__all__ = ["sklearn", "x", "t", "m", "c"]
+__all__ = ["t", "m", "c"]

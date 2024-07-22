@@ -62,7 +62,7 @@ def make_np_clamp(
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        dp.x.np_array2_domain(**kwargs),
+        dp.numpy.np_array2_domain(**kwargs),
         input_metric,
         function,
         lambda d_in: d_in,

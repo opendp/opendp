@@ -36,7 +36,7 @@ def test_eigenvector_integration():
 
     num_columns = 4
     with optional_dependency('numpy'):
-        domain = dp.x.np_array2_domain(num_columns=num_columns, T=float)
+        domain = dp.numpy.np_array2_domain(num_columns=num_columns, T=float)
     space = (
         domain,
         dp.symmetric_distance(),
@@ -61,7 +61,7 @@ def test_eigenvectors():
 
     num_columns = 4
     with optional_dependency('numpy'):
-        domain = dp.x.np_array2_domain(num_columns=num_columns, T=float)
+        domain = dp.numpy.np_array2_domain(num_columns=num_columns, T=float)
     space = (
         domain,
         dp.symmetric_distance(),

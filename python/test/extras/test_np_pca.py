@@ -31,7 +31,7 @@ def test_pca():
     num_rows = 10_000
     with optional_dependency('numpy'):
         space = (
-            dp.x.np_array2_domain(norm=1, p=2, origin=0, num_columns=num_columns, size=num_rows, T=float),
+            dp.numpy.np_array2_domain(norm=1, p=2, origin=0, num_columns=num_columns, size=num_rows, T=float),
             dp.symmetric_distance(),
         )
     with optional_dependency('scipy.linalg'):
