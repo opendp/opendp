@@ -366,25 +366,32 @@ def test_polars_describe():
 
     expected = pl.DataFrame(
         {
-            "column": ["len", "A"],
-            "aggregate": ["Len", "Sum"],
-            "distribution": ["Integer Laplace", "Integer Laplace"],
-            "scale": [4.0, 12.0],
+            "column": ["len", "A", "B"],
+            "aggregate": ["Len", "Sum", "Sum"],
+            "distribution": ["Integer Laplace", "Integer Laplace", "Integer Laplace"],
+            # * sensitivity of the count is 1 (adding/removing one row changes the count by at most one), 
+            # * sensitivity of each sum is 3 (adding/removing one row with value as big as three...) 
+            # Therefore the noise scale of the sum query should be 3x greater 
+            # in order to consume the same amount of budget as the count.
+            "scale": [6.0, 18.0, 18.0],
         }
     )
+
+    summer = pl.col("A").fill_null(2).dp.sum((0, 3))
 
     query = (
         context.query()
         .group_by("B")
-        .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
+        .agg(pl.len().dp.noise(), summer, summer.alias("B"))
     )
 
     actual = query.accuracy()
     pl_testing.assert_frame_equal(expected, actual)
 
     accuracy = [
-        dp.discrete_laplacian_scale_to_accuracy(4.0, 0.05),
-        dp.discrete_laplacian_scale_to_accuracy(12.0, 0.05)
+        dp.discrete_laplacian_scale_to_accuracy(6.0, 0.05),
+        dp.discrete_laplacian_scale_to_accuracy(18.0, 0.05),
+        dp.discrete_laplacian_scale_to_accuracy(18.0, 0.05)
     ]
     expected = expected.hstack([pl.Series("accuracy", accuracy)])
     actual = query.accuracy(alpha=0.05)
