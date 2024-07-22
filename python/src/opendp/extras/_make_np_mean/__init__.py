@@ -1,7 +1,7 @@
 from __future__ import annotations
 from opendp.extras.numpy.make_np_clamp import make_np_clamp
 from opendp.extras._utilities import to_then
-from opendp.extras._make_np_sum import make_private_np_sum
+from opendp.extras.numpy._make_np_sum import make_private_np_sum
 from opendp.mod import Domain, Metric, Measurement
 from opendp._lib import import_optional_dependency
 
