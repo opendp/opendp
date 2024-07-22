@@ -1,3 +1,9 @@
+'''
+.. TODO: Fix conflicts so we can get generated API docs for PCA.
+
+See our :ref:`tutorial on diffentially private PCA <dp-pca>`.
+'''
+
 from __future__ import annotations
 from opendp.extras.numpy.make_np_pca import make_private_np_pca
 from opendp.mod import Measurement
