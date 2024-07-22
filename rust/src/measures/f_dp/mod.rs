@@ -18,39 +18,14 @@ use crate::{
 
 fn profile_to_tradeoff(
     curve: SMDCurve<f64>,
-    num_approximations: Option<u32>,
 ) -> Fallible<Function<f64, f64>> {
-
-    let num_approximations = num_approximations.unwrap_or(100);
-    let alphas: Vec<f64> = (0..=num_approximations).map(|i| i as f64 / num_approximations as f64).collect();
-    let mut betas = Vec::new();
-
-    for alpha in alphas {
-        let beta = find_best_supporting_beta(&curve, alpha).unwrap(); // Will this panic if beta is an error?
-        betas.push(beta);
-    
-        //if beta > alpha {
-            // TODO Not sure we want to do a symmetry here
-            // If tradeoff curve is very "bad", ie. close to the lower left
-            // corner, we will end up with very few approximations.
-        //}
-    }
 
     Ok(Function::new_fallible(move |alpha: &f64| -> Fallible<f64> {
         if *alpha < 0.0 || *alpha > 1.0 {
             return fallible!(FailedMap, "alpha must be in [0, 1]");
         }
 
-        let index_left = (*alpha * num_approximations as f64).floor(); // index is closest approx of alpha * num_approximations
-        let alpha_left = index_left / num_approximations as f64;
-
-        if alpha_left == *alpha {
-            return Ok(betas[index_left as usize]);
-        }
-
-        let beta_left = betas[index_left as usize];
-        let beta_right = betas[(index_left as usize) + 1];
-        let beta = (beta_left + beta_right) / 2.0;
+        let beta = find_best_supporting_beta(&curve, *alpha)?;
 
         Ok(beta)
     }))
@@ -72,6 +47,14 @@ fn find_best_supporting_beta(curve: &SMDCurve<f64>, alpha: f64) -> Fallible<f64>
         let third = (delta_right - delta_left) / 3.0;
         let delta_mid_left = delta_left + third;
         let delta_mid_right = delta_right - third;
+
+        // Stopping criteria
+        if delta_left == delta_mid_left && delta_right == delta_mid_right {
+            // TODO what if there are still values between delta_left and delta_right? try them all?
+            let epsilon = curve.epsilon(&delta_left)?; // Arbitrary between left and right.
+            let beta = support_tradeoff(alpha, epsilon, delta_left);
+            return Ok(beta);
+        }
         
         let epsilon_mid_left = curve.epsilon(&delta_mid_left)?;
         let epsilon_mid_right = curve.epsilon(&delta_mid_right)?;
@@ -85,14 +68,6 @@ fn find_best_supporting_beta(curve: &SMDCurve<f64>, alpha: f64) -> Fallible<f64>
         } else { // beta_mid_left == beta_mid_right
             delta_left = delta_mid_left;
             delta_right = delta_mid_right;
-        }
-
-        // Stoping criteria
-        if delta_right - delta_left < 0.000001 { // TODO arbitrary -> can also select deltas directly and precompute?
-            let delta = (delta_right - delta_left) / 2.0;
-            let epsilon = curve.epsilon(&delta)?;
-            let beta = support_tradeoff(alpha, epsilon, delta);
-            return Ok(beta);
         }
     }
 }
@@ -123,7 +98,7 @@ fn support_tradeoff(alpha: f64, epsilon: f64, delta: f64) -> f64 {
 /// * `prior` - Attacker's prior probability.
 pub fn get_posterior_curve(tradeoff_curve: Function<f64, f64>, prior: f64) -> Fallible<Function<f64, f64>> {
     Ok(Function::new_fallible(move |alpha: &f64| {
-        let beta = tradeoff_curve.eval(alpha).unwrap();
+        let beta = tradeoff_curve.eval(alpha)?;
         Ok((prior * (1.0 - beta)) / ((1.0 - prior)* (*alpha) + prior * (1.0 - beta)))
     }))
 }
@@ -141,7 +116,7 @@ pub fn get_posterior_curve(tradeoff_curve: Function<f64, f64>, prior: f64) -> Fa
 pub fn get_relative_risk_curve(tradeoff_curve: Function<f64, f64>, prior: f64) -> Fallible<Function<f64, f64>> {
     
     Ok(Function::new_fallible(move |alpha: &f64| {
-        let beta = tradeoff_curve.eval(alpha).unwrap();
+        let beta = tradeoff_curve.eval(alpha)?;
         Ok((1.0 - beta) / ((1.0 - prior)* (*alpha) + prior * (1.0 - beta)))
     }))
 }
@@ -160,7 +135,7 @@ fn test_all() -> Fallible<()> {
     let smd_curve = SMDCurve::new(move |&delta| pure_dp_privacy_profile(delta));
     
     // Tradeoff
-    let tradeoff_curve = profile_to_tradeoff(smd_curve, None).unwrap();
+    let tradeoff_curve = profile_to_tradeoff(smd_curve).unwrap();
     println!("tradeoff(0) = {}", tradeoff_curve.eval(&0.0).unwrap());
     println!("tradeoff(0.27) = {}", tradeoff_curve.eval(&0.27).unwrap());
     println!("tradeoff(1) = {}", tradeoff_curve.eval(&1.0).unwrap());
@@ -178,7 +153,7 @@ fn test_all() -> Fallible<()> {
     println!("relative_risk(prior=0.5, alpha=0.5) = {}", relative_risk_curve.eval(&0.5).unwrap());
     println!("relative_risk(prior=0.5, alpha=1) = {}", relative_risk_curve.eval(&0.5).unwrap());
 
-    let alphas: Vec<f64> = (0..100).map(|i| i as f64 / 100.0).collect();
+    let alphas: Vec<f64> = (0..1000).map(|i| i as f64 / 1000.0).collect();
     for a in &alphas {
         println!("{}", relative_risk_curve.eval(&a).unwrap());
     }

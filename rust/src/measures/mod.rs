@@ -6,6 +6,8 @@
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
+mod f_dp;
+
 use std::{
     cmp::Ordering, fmt::{Debug, Formatter}, sync::Arc
 };
