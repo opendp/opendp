@@ -1,5 +1,5 @@
 from __future__ import annotations
-from opendp.extras.make_np_pca import make_private_np_pca
+from opendp.extras.numpy.make_np_pca import make_private_np_pca
 from opendp.mod import Measurement
 from opendp._lib import import_optional_dependency
 
