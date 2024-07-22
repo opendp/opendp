@@ -1,4 +1,4 @@
-from opendp.extras.domains import _np_sscp_domain
+from opendp.extras.numpy import _np_sscp_domain
 from opendp.extras._utilities import to_then
 from opendp._lib import get_np_csprng, import_optional_dependency
 from opendp.mod import Domain, Metric, Transformation, Measurement

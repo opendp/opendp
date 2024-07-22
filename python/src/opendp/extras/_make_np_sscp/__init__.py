@@ -1,5 +1,5 @@
 from opendp.extras._utilities import to_then
-from opendp.extras.domains import _np_sscp_domain
+from opendp.extras.numpy import _np_sscp_domain
 from opendp.mod import Domain, Metric, Transformation
 from opendp._lib import import_optional_dependency
 
