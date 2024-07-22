@@ -17,7 +17,7 @@ from typing import NamedTuple, Optional, TYPE_CHECKING
 from opendp.extras.numpy.make_np_clamp import then_np_clamp
 from opendp.extras._utilities import register_measurement, to_then
 from opendp.extras.numpy._make_np_mean import make_private_np_mean
-from opendp.extras._make_np_eigendecomposition import (
+from opendp.extras.numpy._make_np_eigendecomposition import (
     then_private_np_eigendecomposition,
 )
 from opendp.mod import Domain, Metric, Measurement

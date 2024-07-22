@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from opendp.extras._utilities import register_measurement
-from opendp.extras._make_np_eigenvector import then_private_np_eigenvectors
-from opendp.extras._make_np_eigenvalues import then_np_eigenvalues
+from opendp.extras.numpy._make_np_eigenvector import then_private_np_eigenvectors
+from opendp.extras.numpy._make_np_eigenvalues import then_np_eigenvalues
 from opendp.extras.numpy._make_np_sscp import make_np_sscp
 
 from opendp.mod import Domain, Metric, Measurement
