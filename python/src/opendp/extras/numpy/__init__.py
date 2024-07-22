@@ -8,7 +8,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The methods of this module will then be accessible at ``dp.x``.    
+The methods of this module will then be accessible at ``dp.numpy``.    
 '''
 
 from __future__ import annotations
