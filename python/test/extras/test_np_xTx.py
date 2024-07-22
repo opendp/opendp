@@ -6,7 +6,7 @@ dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 
 def test_np_sscp_sym():
-    from opendp.extras._make_np_sscp import then_np_sscp
+    from opendp.extras.numpy._make_np_sscp import then_np_sscp
 
     with optional_dependency('numpy'):
         space = dp.x.np_array2_domain(num_columns=4, T=float), dp.symmetric_distance()
@@ -18,7 +18,7 @@ def test_np_sscp_sym():
 
 
 def test_np_sscp_l2():
-    from opendp.extras._make_np_sscp import then_np_sscp
+    from opendp.extras.numpy._make_np_sscp import then_np_sscp
 
     with optional_dependency('numpy'):
         space = (
