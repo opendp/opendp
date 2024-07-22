@@ -14,7 +14,7 @@ The methods of this module will then be accessible at ``dp.x``.
 from __future__ import annotations
 from typing import NamedTuple, Optional, TYPE_CHECKING
 
-from opendp.extras.make_np_clamp import then_np_clamp
+from opendp.extras.numpy.make_np_clamp import then_np_clamp
 from opendp.extras._utilities import register_measurement, to_then
 from opendp.extras._make_np_mean import make_private_np_mean
 from opendp.extras._make_np_eigendecomposition import (

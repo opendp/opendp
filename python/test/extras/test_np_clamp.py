@@ -1,5 +1,5 @@
 import opendp.prelude as dp
-from opendp.extras.make_np_clamp import then_np_clamp
+from opendp.extras.numpy.make_np_clamp import then_np_clamp
 import pytest
 from ..helpers import optional_dependency
 
