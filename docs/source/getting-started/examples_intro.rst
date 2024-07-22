@@ -63,12 +63,7 @@ The compositor is the foundation of our differentially private queries. It essen
        privacy_loss=dp.loss_of(epsilon=1.0),
        split_evenly_over=10,
        margins={
-           ("SEX", ): dp.Margin(max_partition_length=60_000_000),
-           ("AGE", ): dp.Margin(max_partition_length=60_000_000),
-           ("ILOSTAT", ): dp.Margin(max_partition_length=60_000_000),
-           ("HWUSUAL", ): dp.Margin(max_partition_length=60_000_000),
            ("YEAR", ): dp.Margin(max_partition_length=60_000_000, max_partition_contributions=4),
-           ("QUARTER", ): dp.Margin(max_partition_length=60_000_000, max_partition_contributions=13),
            ("YEAR", "QUARTER",): dp.Margin(max_partition_length=60_000_000, max_partition_contributions=1),
            (): dp.Margin(max_partition_length=60_000_000),
        },
