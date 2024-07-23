@@ -223,7 +223,6 @@ def test_private_lazyframe_median():
 
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
 
-
 @pytest.mark.parametrize(
     "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
 )
@@ -546,7 +545,7 @@ def test_polars_threshold():
 
 def test_replace_binary_path():
     import os
-    os.environ["OPENDP_LIB_PATH"] = "testing!"
+    os.environ["OPENDP_POLARS_LIB_PATH"] = "testing!"
     pl = pytest.importorskip("polars")
 
     m_expr = dp.m.make_private_expr(
@@ -557,7 +556,7 @@ def test_replace_binary_path():
     )
     assert str(m_expr((pl.LazyFrame(dict()), pl.all()))) == "len().testing!:noise_plugin()"
 
-    del os.environ["OPENDP_LIB_PATH"]
+    del os.environ["OPENDP_POLARS_LIB_PATH"]
 
 
 def test_pickle_bomb():
