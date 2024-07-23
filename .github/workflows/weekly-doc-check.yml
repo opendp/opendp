@@ -47,45 +47,17 @@ jobs:
       - name: Check Rust version
         run: cargo --version
 
-      # - name: Check Format
-      #   # fix formatting with: cargo fmt --manifest-path=rust/Cargo.toml --all
-      #   run: cargo fmt --manifest-path=Cargo.toml --all --check
-
       - name: Build
         run: cargo build --verbose --all-features
-      
-      # - name: Check --no-default-features
-      #   run: cargo check --verbose --no-default-features --features untrusted,bindings
 
       - name: Build (dynamic w/ polars)
         run: cargo build --verbose --features untrusted,ffi,polars
-      
-      # - name: Upload (dynamic w/ polars)
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: dynamic_lib
-      #     path: rust/target/debug/libopendp.so
-
-      # - name: Build (static w/o Polars)
-      #   run: cargo build --verbose --features untrusted,ffi
-      
-      # - name: Upload (static w/o Polars)
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: static_lib
-      #     path: rust/target/debug/libopendp.a
   
       - name: Upload Python bindings
         uses: actions/upload-artifact@v4
         with:
           name: python_bindings
           path: python/src/opendp/
-
-      # - name: Upload R bindings
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: r_bindings
-      #     path: R/opendp/
 
   check-docs:
     needs: rust-build
