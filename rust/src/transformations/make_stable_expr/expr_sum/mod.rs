@@ -185,7 +185,7 @@ macro_rules! impl_accumulator_for_float {
                 if Sequential::<$t>::float_sum_can_overflow(size_limit, (lower, upper))? {
                     return fallible!(
                         MakeTransformation,
-                        "potential for overflow when computing function"
+                        "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds."
                     );
                 }
                 Sequential::<$t>::relaxation(size_limit, lower, upper)
@@ -204,7 +204,7 @@ macro_rules! impl_accumulator_for_int {
                 if <$t>::int_sum_can_overflow(size_limit, (lower, upper))? {
                     return fallible!(
                         MakeTransformation,
-                        "potential for overflow when computing function"
+                        "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds or by using a data type with greater bit-depth."
                     );
                 }
                 Ok(0)
