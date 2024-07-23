@@ -549,7 +549,7 @@ def test_replace_binary_path():
     os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
     pl = pytest.importorskip("polars")
 
-    with pytest.raises(dp.OpenDPException) as err:
+    with pytest.raises(dp.OpenDPException):
         dp.m.make_private_expr(
             dp.expr_domain(example_lf()[0], grouping_columns=[]),
             dp.partition_distance(dp.symmetric_distance()),
