@@ -223,6 +223,7 @@ def test_private_lazyframe_median():
 
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
 
+
 @pytest.mark.parametrize(
     "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
 )
@@ -542,20 +543,20 @@ def test_polars_threshold():
         .collect()
     )
 
-
+@pytest.mark.skip(reason="setting OPENDP_POLARS_LIB_PATH interferes with the execution of other tests")
 def test_replace_binary_path():
     import os
-    os.environ["OPENDP_POLARS_LIB_PATH"] = "testing!"
+    os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
     pl = pytest.importorskip("polars")
 
-    m_expr = dp.m.make_private_expr(
-        dp.expr_domain(example_lf()[0], grouping_columns=[]),
-        dp.partition_distance(dp.symmetric_distance()),
-        dp.max_divergence(T=float),
-        pl.len().dp.noise(scale=1.),
-    )
-    assert str(m_expr((pl.LazyFrame(dict()), pl.all()))) == "len().testing!:noise_plugin()"
-
+    with pytest.raises(dp.OpenDPException) as err:
+        dp.m.make_private_expr(
+            dp.expr_domain(example_lf()[0], grouping_columns=[]),
+            dp.partition_distance(dp.symmetric_distance()),
+            dp.max_divergence(T=float),
+            pl.len().dp.noise(scale=1.),
+        )
+    # be sure to restore lib path even if test fails
     del os.environ["OPENDP_POLARS_LIB_PATH"]
 
 
