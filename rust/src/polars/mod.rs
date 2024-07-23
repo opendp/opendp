@@ -48,13 +48,17 @@ where
                 FunctionExpr::FfiPlugin {
                     lib,
                     symbol,
-                    kwargs: _, // Don't un-pickle! subjects the library to arbitrary code execution.
+                    kwargs, // Don't un-pickle! subjects the library to arbitrary code execution.
                 },
             ..
         } => {
             // check that the plugin is from the opendp library and the plugin has a matching name
             if !lib.contains(OPENDP_LIB_NAME) || symbol.as_ref() != KW::NAME {
                 return Ok(None);
+            }
+
+            if !kwargs.is_empty() {
+                return fallible!(FailedFunction, "OpenDP does not allow pickled keyword arguments as they may enable remote code execution.");
             }
 
             input

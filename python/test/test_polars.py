@@ -548,3 +548,72 @@ def test_replace_binary_path():
     assert str(m_expr((pl.LazyFrame(dict()), pl.all()))) == "len().testing!:noise_plugin()"
 
     del os.environ["OPENDP_LIB_PATH"]
+
+
+def test_pickle_bomb():
+    pl = pytest.importorskip("polars")
+
+    from polars._utils.parse import parse_into_list_of_expressions  # type: ignore[import-not-found]
+    from polars._utils.wrap import wrap_expr  # type: ignore[import-not-found]
+    from opendp._lib import lib_path
+    import io
+    import re
+    import pickle
+
+    # modified from https://intoli.com/blog/dangerous-pickles/
+    poison_binary = b'c__builtin__\neval\n(V1 / 0\ntR.'
+
+    # poison_binary raises a ZeroDivisionError if it is ever unpickled
+    with pytest.raises(ZeroDivisionError):
+        pickle.loads(poison_binary)
+
+    # craft an expression that contains a poisoned pickle binary
+
+    py_exprs = parse_into_list_of_expressions((pl.len(), pl.lit("Laplace"), pl.lit(0.7)))
+
+    # Replicates parts of register_plugin_function from Polars,
+    # to allow injection of the specially-crafted pickle binary
+    bomb_expr = wrap_expr(
+        pl.polars.register_plugin_function(
+            plugin_path=str(lib_path),
+            function_name="noise",
+            args=py_exprs,
+            kwargs=poison_binary,
+            is_elementwise=True,
+            input_wildcard_expansion=False,
+            returns_scalar=False,
+            cast_to_supertype=False,
+            pass_name_to_apply=False,
+            changes_length=False,
+        )
+    )
+
+    # craft a lazyframe that contains a poisoned pickle binary
+    lf_domain, lf = example_lf()
+    bomb_lf = lf.select(bomb_expr)
+
+    # ensure that ser/de round-trip of expression does not trigger pickle
+    ser_expr = bomb_expr.meta.serialize()
+    pl.Expr.deserialize(io.BytesIO(ser_expr))
+
+    # ensure that ser/de round-trip of lazyframe does not trigger pickle
+    ser_lf = bomb_lf.serialize()
+    pl.LazyFrame.deserialize(io.BytesIO(ser_lf))
+
+    # OpenDP explicitly rejects any pickled data it finds
+    err_msg_re = re.escape("OpenDP does not allow pickled keyword arguments as they may enable remote code execution.")
+    with pytest.raises(dp.OpenDPException, match=err_msg_re):
+        dp.m.make_private_expr(
+            dp.expr_domain(lf_domain, grouping_columns=[]),
+            dp.partition_distance(dp.symmetric_distance()),
+            dp.max_divergence(T=float),
+            bomb_expr,
+        )
+
+    with pytest.raises(dp.OpenDPException, match=err_msg_re):
+        dp.m.make_private_lazyframe(
+            lf_domain,
+            dp.symmetric_distance(),
+            dp.max_divergence(T=float),
+            bomb_lf,
+        )
