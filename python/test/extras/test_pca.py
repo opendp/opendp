@@ -25,7 +25,7 @@ def sample_covariance(num_features):
 
 
 def test_pca():
-    from opendp.extras.numpy.make_pca import then_private_pca
+    from opendp.extras.sklearn.make_pca import then_private_pca
 
     num_columns = 4
     num_rows = 10_000
