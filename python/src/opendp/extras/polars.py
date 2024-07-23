@@ -1,5 +1,7 @@
 '''
-The ``opendp.polars`` module adds differential privacy to the
+This module requires extra installs: ``pip install opendp[polars]``
+
+The ``opendp.extras.polars`` module adds differential privacy to the
 `Polars DataFrame library <https://docs.pola.rs>`_.
 
 For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
@@ -8,6 +10,8 @@ We suggest importing under the conventional name ``dp``:
 .. code:: python
 
     >>> import opendp.prelude as dp
+
+The methods of this module will then be accessible at `dp.polars`.
 '''
 from __future__ import annotations
 from dataclasses import dataclass
@@ -39,7 +43,7 @@ class DPExpr(object):
 
     >>> import polars as pl
     >>> pl.len().dp
-    <opendp.polars.DPExpr object at ...>
+    <opendp.extras.polars.DPExpr object at ...>
     '''
     def __init__(self, expr):
         """Apply a differentially private plugin to a Polars expression."""
@@ -623,7 +627,7 @@ try:
 
     class LazyGroupByQuery(_LazyGroupBy):
         """
-        A ``LazyGroupByQuery`` is returned by :py:func:`opendp.polars.LazyFrameQuery.group_by`.
+        A ``LazyGroupByQuery`` is returned by :py:func:`opendp.extras.polars.LazyFrameQuery.group_by`.
         It mimics a `Polars LazyGroupBy <https://docs.pola.rs/api/python/stable/reference/lazyframe/group_by.html>`_,
         but only supports APIs documented below."""
         def __init__(self, lgb_plan: _LazyGroupBy, query):
