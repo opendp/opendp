@@ -48,7 +48,7 @@ def make_private_pca(
     :param norm: clamp each row to this norm bound
     :param num_components: optional, number of eigenvectors to release. defaults to num_columns from input_domain
 
-    :returns a Measurement that computes a tuple of (mean, S, Vt)
+    :returns: a Measurement that computes a tuple of (mean, S, Vt)
     """
     import opendp.prelude as dp
     np = import_optional_dependency('numpy')
