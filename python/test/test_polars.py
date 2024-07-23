@@ -120,7 +120,7 @@ def test_private_lazyframe_explicit_sum(measure):
         ]
     )
     df_act = m_lf(lf).collect()
-    pl_testing.assert_frame_equal(df_act, df_exp)
+    pl_testing.assert_frame_equal(df_act.sort("B"), df_exp)
 
 
 @pytest.mark.parametrize(
@@ -145,7 +145,7 @@ def test_private_lazyframe_sum(measure):
             pl.Series("A", [10.0] * 5, dtype=pl.Float64),
         ]
     )
-    pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
+    pl_testing.assert_frame_equal(m_lf(lf).collect().sort("B"), expect)
 
 
 @pytest.mark.parametrize(
@@ -171,7 +171,7 @@ def test_private_lazyframe_mean(measure):
             pl.Series("A", [1.0] * 5, dtype=pl.Float64),
         ]
     )
-    pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
+    pl_testing.assert_frame_equal(m_lf(lf).collect().sort("B"), expect)
 
 
 def test_stable_lazyframe():
