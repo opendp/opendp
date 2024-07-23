@@ -8,7 +8,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The methods of this module will then be accessible at ``dp.numpy.make_np_pca``.    
+The methods of this module will then be accessible at ``dp.numpy.make_pca``.    
 '''
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ class PCAEpsilons(NamedTuple):
     mean: Optional[float]
 
 
-def make_private_np_pca(
+def make_private_pca(
     input_domain: Domain,
     input_metric: Metric,
     unit_epsilon: float | PCAEpsilons,
@@ -149,7 +149,7 @@ def make_private_np_pca(
 
 
 # generate then variant of the constructor
-then_private_np_pca = register_measurement(make_private_np_pca)
+then_private_pca = register_measurement(make_private_pca)
 
 
 def _smaller(v):

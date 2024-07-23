@@ -5,7 +5,7 @@ See our :ref:`tutorial on diffentially private PCA <dp-pca>`.
 '''
 
 from __future__ import annotations
-from opendp.extras.numpy.make_np_pca import make_private_np_pca
+from opendp.extras.numpy.make_pca import make_private_pca
 from opendp.mod import Measurement
 from opendp._lib import import_optional_dependency
 
@@ -78,7 +78,7 @@ class PCA(_SKLPCA):
             else self.n_features_in_
         )
 
-        return make_private_np_pca(
+        return make_private_pca(
             input_domain,
             input_metric,
             self.epsilon / self.n_changes * 2,

@@ -25,7 +25,7 @@ def sample_covariance(num_features):
 
 
 def test_pca():
-    from opendp.extras.numpy.make_np_pca import then_private_np_pca
+    from opendp.extras.numpy.make_pca import then_private_pca
 
     num_columns = 4
     num_rows = 10_000
@@ -35,7 +35,7 @@ def test_pca():
             dp.symmetric_distance(),
         )
     with optional_dependency('scipy.linalg'):
-        m_pca = space >> then_private_np_pca(unit_epsilon=1.0)
+        m_pca = space >> then_private_pca(unit_epsilon=1.0)
 
     with optional_dependency('randomgen'):
         print(m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)))
