@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from opendp.extras._utilities import register_measurement
-from opendp.extras.numpy._make_np_eigenvector import then_private_np_eigenvectors
-from opendp.extras.numpy._make_np_eigenvalues import then_np_eigenvalues
+from opendp.extras.numpy._make_eigenvector import then_private_eigenvectors
+from opendp.extras.numpy._make_eigenvalues import then_eigenvalues
 from opendp.extras.numpy._make_np_sscp import make_np_sscp
 
 from opendp.mod import Domain, Metric, Measurement
@@ -52,13 +52,13 @@ def make_private_np_eigendecomposition(
         input_domain, input_metric, dp.symmetric_distance()
     )
 
-    t_eigvals = t_sscp.output_space >> then_np_eigenvalues()
+    t_eigvals = t_sscp.output_space >> then_eigenvalues()
     m_eigvals = dp.binary_search_chain(  # type: ignore[misc]
         lambda s: t_eigvals >> dp.m.then_laplace(s),
         d_in=2,  # the unit d_in: one change = 1 addition + 1 removal
         d_out=eigvals_epsilon,
     )
-    m_eigvecs = t_sscp.output_space >> then_private_np_eigenvectors(
+    m_eigvecs = t_sscp.output_space >> then_private_eigenvectors(
         eigvecs_epsilons,
     )
     return t_sscp >> dp.c.make_basic_composition([m_eigvals, m_eigvecs])

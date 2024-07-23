@@ -5,7 +5,7 @@ from opendp._lib import import_optional_dependency
 # planning to make this public, but may make more API changes
 
 
-def make_np_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transformation:
+def make_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transformation:
     """Construct a Transformation that computes the eigenvalues of a covariance matrix.
 
     :param input_domain: instance of `_np_sscp_domain(size=_, num_columns=_)`
@@ -45,6 +45,6 @@ def make_np_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transform
 
 
 # generate then and private variants of the constructor
-then_np_eigenvalues = to_then(make_np_eigenvalues)
-make_private_np_eigenvalues = with_privacy(make_np_eigenvalues)
-then_private_np_eigenvalues = to_then(make_private_np_eigenvalues)
+then_eigenvalues = to_then(make_eigenvalues)
+make_private_eigenvalues = with_privacy(make_eigenvalues)
+then_private_eigenvalues = to_then(make_private_eigenvalues)

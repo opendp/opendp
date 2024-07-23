@@ -6,7 +6,7 @@ from opendp.mod import Domain, Metric, Transformation, Measurement
 # planning to make this public, but may make more API changes
 
 
-def make_private_np_eigenvector(
+def make_private_eigenvector(
     input_domain: Domain, input_metric: Metric, unit_epsilon: float
 ) -> Measurement:
     """Construct a Measurement that releases a private eigenvector from a covariance matrix.
@@ -90,7 +90,7 @@ def make_private_np_eigenvector(
 
 
 # generate then variant of the constructor
-then_private_eigenvector = to_then(make_private_np_eigenvector)
+then_private_eigenvector = to_then(make_private_eigenvector)
 
 
 def make_np_sscp_projection(
@@ -134,7 +134,7 @@ def make_np_sscp_projection(
 then_np_sscp_projection = to_then(make_np_sscp_projection)
 
 
-def make_private_np_eigenvectors(
+def make_private_eigenvectors(
     input_domain: Domain, input_metric: Metric, unit_epsilons: list[float]
 ) -> Measurement:
     np = import_optional_dependency('numpy')
@@ -204,4 +204,4 @@ def make_private_np_eigenvectors(
 
 
 # generate then variant of the constructor
-then_private_np_eigenvectors = to_then(make_private_np_eigenvectors)
+then_private_eigenvectors = to_then(make_private_eigenvectors)
