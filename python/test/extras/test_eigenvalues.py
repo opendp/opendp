@@ -7,7 +7,7 @@ dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 
 def test_eigenvalues():
-    from opendp.extras.numpy._make_eigenvalues import (
+    from opendp.extras.sklearn._make_eigenvalues import (
         then_eigenvalues,
         then_private_eigenvalues,
     )
