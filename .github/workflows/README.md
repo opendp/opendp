@@ -113,21 +113,21 @@ on github, or with the `gh` command line tool. Parameters:
 
 ## Making a release
 
-1. Ensure that changelog is up-to-date and version in `main` matches the version you want to release (otherwise see step 3).
+1. Check that changelog is up-to-date and the `VERSION` file on the `main` branch matches the version you want to release. If not, see step 3.
 
-2. We use a release train with nightly, beta and stable channels. Repeatedly run the Release workflow through each channel (see [Making one-off releases](#Making-one-off-releases)).
+1. We use a release train with nightly, beta and stable channels. Repeatedly run the Release workflow through each channel (see preceding section).
 
     1. Wait until `nightly` is updated. It is also possible to update it yourself:
         * Use workflow from: `Branch: main`
         * Target Channel: `nightly`
         * Sync the channel from Upstream?: `yes`
 
-    2. Once `nightly` is updated, update `beta`.
+    1. Once `nightly` is updated, update `beta`.
         * Use workflow from: `Branch: nightly`
         * Target Channel: `beta`
         * Sync the channel from Upstream?: `yes`
 
-    3. Once `beta` is updated, update `stable`.
+    1. Once `beta` is updated, update `stable`.
         * Use workflow from: `Branch: beta`
         * Target Channel: `stable`
         * Sync the channel from Upstream?: `yes`
@@ -136,7 +136,7 @@ on github, or with the `gh` command line tool. Parameters:
     If beta release failed, don't forget to increment the beta version counter next time.
     If stable release failed, consider incrementing patch version and starting over.
 
-1. Update the version in `main`.
+1. Update `main`.
 
     1. Update version numbers:
 
@@ -145,7 +145,7 @@ on github, or with the `gh` command line tool. Parameters:
         ```
         Add arguments as needed to bump or set version.
 
-    2. Create a new changelog:
+    1. Create a new changelog:
         
         ```shell
         python tools/channel_tool.py changelog
