@@ -325,8 +325,8 @@ def test_polars_context():
         split_evenly_over=2,
         margins={
             # TODO: this is redundant with the second margin
-            (): dp.Margin(max_partition_length=5),
-            ("B",): dp.Margin(public_info="keys", max_partition_length=5),
+            (): dp.polars.Margin(max_partition_length=5),
+            ("B",): dp.polars.Margin(public_info="keys", max_partition_length=5),
         },
     )
 
@@ -360,7 +360,7 @@ def test_polars_describe():
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=2,
         margins={
-            ("B",): dp.Margin(public_info="keys", max_partition_length=5),
+            ("B",): dp.polars.Margin(public_info="keys", max_partition_length=5),
         },
     )
 
@@ -408,7 +408,7 @@ def test_polars_accuracy_threshold():
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=2,
         margins={
-            ("B",): dp.Margin(max_partition_length=5),
+            ("B",): dp.polars.Margin(max_partition_length=5),
         },
     )
 
@@ -484,7 +484,7 @@ def test_polars_threshold():
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=2,
         margins={
-            ("A",): dp.Margin(public_info="keys"),
+            ("A",): dp.polars.Margin(public_info="keys"),
         },
     )
 

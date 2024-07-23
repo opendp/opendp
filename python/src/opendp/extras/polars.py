@@ -588,7 +588,7 @@ try:
             ...     privacy_unit=dp.unit_of(contributions=1),
             ...     privacy_loss=dp.loss_of(epsilon=1.0),
             ...     split_evenly_over=1,
-            ...     margins={(): dp.Margin(max_partition_length=1000)},
+            ...     margins={(): dp.polars.Margin(max_partition_length=1000)},
             ... )
 
             >>> query = context.query().select(
