@@ -1,5 +1,5 @@
 from opendp.extras._utilities import to_then
-from opendp.extras.numpy import _np_sscp_domain
+from opendp.extras.numpy import _sscp_domain
 from opendp.mod import Domain, Metric, Transformation
 from opendp._lib import import_optional_dependency
 
@@ -11,7 +11,7 @@ def make_np_sscp(
 ) -> Transformation:
     """Construct a Transformation that computes a covariance matrix from the input data.
 
-    :param input_domain: instance of `np_array2_domain(size=_, num_columns=_)`
+    :param input_domain: instance of `array2_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
     :param output_metric: either `symmetric_distance()` or `l2_distance()`
 
@@ -50,7 +50,7 @@ def make_np_sscp(
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        _np_sscp_domain(
+        _sscp_domain(
             num_features=input_desc.num_columns,
             norm=input_desc.norm,
             p=input_desc.p,

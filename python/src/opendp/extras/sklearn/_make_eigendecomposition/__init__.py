@@ -17,7 +17,7 @@ def make_private_np_eigendecomposition(
 ) -> Measurement:
     """Construct a Measurement that releases eigenvalues and eigenvectors.
 
-    :param input_domain: instance of `np_array2_domain(size=_, num_columns=_)`
+    :param input_domain: instance of `array2_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
     :param eigvals_epsilon: eigvals ε-expenditure per changed record in the input data
     :param eigvecs_epsilons: eigvecs ε-expenditures per changed record in the input data

@@ -1,5 +1,5 @@
 import opendp.prelude as dp
-from opendp.extras.numpy import _np_sscp_domain
+from opendp.extras.numpy import _sscp_domain
 import pytest
 from ..helpers import optional_dependency
 
@@ -11,7 +11,7 @@ def test_private_eigenvector():
 
     with optional_dependency('numpy'):
         space = (
-            _np_sscp_domain(num_features=4, norm=1.0, p=2, T=float),
+            _sscp_domain(num_features=4, norm=1.0, p=2, T=float),
             dp.symmetric_distance(),
         )
     with optional_dependency('randomgen'):
@@ -36,7 +36,7 @@ def test_eigenvector_integration():
 
     num_columns = 4
     with optional_dependency('numpy'):
-        domain = dp.numpy.np_array2_domain(num_columns=num_columns, T=float)
+        domain = dp.numpy.array2_domain(num_columns=num_columns, T=float)
     space = (
         domain,
         dp.symmetric_distance(),
@@ -61,7 +61,7 @@ def test_eigenvectors():
 
     num_columns = 4
     with optional_dependency('numpy'):
-        domain = dp.numpy.np_array2_domain(num_columns=num_columns, T=float)
+        domain = dp.numpy.array2_domain(num_columns=num_columns, T=float)
     space = (
         domain,
         dp.symmetric_distance(),
