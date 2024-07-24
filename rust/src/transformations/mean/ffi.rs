@@ -1,6 +1,6 @@
 use dashu::integer::IBig;
 
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSpace};
+use crate::core::{Domain, FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
 use crate::error::Fallible;
@@ -24,6 +24,7 @@ pub extern "C" fn opendp_transformations__make_mean(
         MI: 'static + Metric,
         T: 'static + MakeSum<MI> + ExactIntCast<usize> + Float + InfMul,
         AtomDomain<T>: LipschitzMulFloatDomain<Atom = T>,
+        <AtomDomain<T> as Domain>::Carrier: Send + Sync,
         AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
         (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
         IBig: From<T::Bits>,

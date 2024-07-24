@@ -40,6 +40,7 @@ pub extern "C" fn opendp_transformations__make_lipschitz_float_mul(
         where
             D: 'static + LipschitzMulFloatDomain,
             D::Atom: Float + SaturatingMul,
+            D::Carrier: Send + Sync,
             M: 'static + LipschitzMulFloatMetric<Distance = D::Atom>,
             (D, M): MetricSpace,
             IBig: From<<D::Atom as FloatBits>::Bits>,
