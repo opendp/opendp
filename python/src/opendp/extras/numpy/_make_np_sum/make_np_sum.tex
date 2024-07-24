@@ -7,6 +7,7 @@
 
 \maketitle
 
+\floatingPoint
 \contrib
 
 Proves soundness of \texttt{make\_np\_sum} in \asOfCommit{__init__.py}{f5bb719}.
@@ -20,7 +21,7 @@ and returns a stable Transformation that computes the vector-valued sum with bou
 None
 
 \subsection*{Pseudocode}
-\lstinputlisting[language=Python,escapechar=|,firstline=8,lastline=48]{./__init__.py}
+\lstinputlisting[language=Python,escapechar=|,firstline=9,lastline=54]{./__init__.py}
 
 \subsection*{Postcondition}
 
@@ -30,15 +31,18 @@ None
 
 \begin{proof} 
 
-Let $u$ and $v$ be datasets that are \texttt{d\_in}-close with respect to \texttt{input\_metric}.
+Let $x$ and $x'$ be datasets that are \texttt{d\_in}-close with respect to \texttt{input\_metric}.
 By \ref{domain-check}, the input domain is \texttt{NPArray2Domain},
 and by \ref{metric-check} input metric is the \texttt{SymmetricDistance}. 
-By \ref{norm-check} and \ref{p-check}, the input data has row-p-norm bounded by at most $R$.
-
+By \ref{norm-check} and \ref{p-check}, the input data has row-p-norm bounded by at most \texttt{norm}, which we'll refer to as $R$,
+centered at \texttt{origin}, which we'll refer to as $O$.
 
 \subsection{Appropriate Output Domain}
 
-Since the input data is a 2-dimensional numpy array, then the output is a 1-dimensional numpy array of the same type.
+The input domain consists of 2-dimensional numpy arrays.
+Since the sum operation eliminates axis zero, only axis one remains, 
+resulting in a 1-dimensional numpy array of the same type.
+The data loader then reads this numpy array as a vector.
 Therefore the output is a member of the output vector domain.
 
 \subsection{Stability Guarantee}
@@ -46,7 +50,12 @@ Therefore the output is a member of the output vector domain.
 Now consider two cases: when the data set size is known, and when it is not known.
 
 \subsubsection{Known Size}
-    WLOG, assume $u, v$ only differ on the leading $\lfloor d_{in} / 2 \rfloor$ elements.
+    \label{known-size}
+    Under the floating-point feature flag, we do not consider numerical instability in this analysis.
+    Without numerical instability, addition is commutative and associative, 
+    so reordering rows in the data will not affect the outcome.
+    By this logic then, without loss of generality,
+    assume $x, x'$ only differ on the leading $\lfloor d_{in} / 2 \rfloor$ rows.
 
     \begin{align}
         & \ \max_{x \sim x'} d_{Lp}(\mathrm{sum}(x), \mathrm{sum}(x')) && \quad \text{by definition of stability}\\
@@ -57,12 +66,13 @@ Now consider two cases: when the data set size is known, and when it is not know
         =&\ \lfloor d_{in} / 2 \rfloor \cdot 2 \cdot R
     \end{align}
 
-    Therefore we've shown that for every pair of elements $u, v \in \texttt{input\_domain}$ and every $d_{Sym}(u, v) \le \din$, 
-    if $u, v$ are $\din$-close then $\function(u),\function(v)$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_metric}$ (the $L^p$ distance).
+    Therefore we've shown that for every pair of elements $x, x' \in \texttt{input\_domain}$ and every $d_{Sym}(x, x') \le \din$, 
+    if $x, x'$ are $\din$-close then $\function(x),\function(x')$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_metric}$ (the $L^p$ distance).
 
 \subsubsection{Unknown Size}
 
-    WLOG, assume $v$ has an additional $d_{in}$ trailing rows.
+    By similar ordering logic as in \ref{known-size},
+    then without loss of generality, assume $x'$ has an additional $d_{in}$ trailing rows.
 
     \begin{align}
         & \ \max_{x \sim x'} d_{Lp}(\mathrm{sum}(x), \mathrm{sum}(x')) && \quad \text{by definition of stability}\\
@@ -73,8 +83,8 @@ Now consider two cases: when the data set size is known, and when it is not know
         =&\ d_{in} \cdot (\lVert O \rVert_p + R)
     \end{align}
     
-    Therefore we've shown that for every pair of elements $u, v \in \texttt{input\_domain}$ and every $d_{Sym}(u, v) \le \din$, 
-    if $u, v$ are $\din$-close then $\function(u),\function(v)$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_metric}$ (the $L^p$ distance).
+    Therefore we've shown that for every pair of elements $x, x' \in \texttt{input\_domain}$ and every $d_{Sym}(x, x') \le \din$, 
+    if $x, x'$ are $\din$-close then $\function(x),\function(x')$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_metric}$ (the $L^p$ distance).
 
 \end{proof}
 
