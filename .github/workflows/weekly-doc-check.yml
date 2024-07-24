@@ -47,8 +47,10 @@ jobs:
       - name: Check Rust version
         run: cargo --version
 
-      - name: Build (dynamic w/ polars)
-        run: cargo build --verbose --features untrusted,ffi,polars
+      - name: Build
+        # We only need "bindings", but build fails without "untrusted".
+        # TODO: All combos of features should work: https://github.com/opendp/opendp/issues/1343
+        run: cargo build --verbose --features bindings,untrusted
   
       - name: Upload Python bindings
         uses: actions/upload-artifact@v4
