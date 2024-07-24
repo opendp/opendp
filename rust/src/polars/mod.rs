@@ -451,7 +451,7 @@ impl From<LazyFrame> for OnceFrame {
                 return fallible!(FailedFunction, "LazyFrame has been exhausted");
             };
             Ok(match query {
-                Query::External(q_external) => Answer::External(match q_external {
+                Query::External(q_external, _) => Answer::External(match q_external {
                     OnceFrameQuery::Collect => {
                         let dataframe = lazyframe.collect()?;
                         let n = dataframe.height();
@@ -474,17 +474,8 @@ impl From<LazyFrame> for OnceFrame {
 
 impl OnceFrame {
     pub fn collect(mut self) -> Fallible<DataFrame> {
-        if let Answer::External(OnceFrameAnswer::Collect(dataframe)) =
-            self.eval_query(Query::External(&OnceFrameQuery::Collect))?
-        {
-            Ok(dataframe)
-        } else {
-            // should never be reached
-            fallible!(
-                FailedFunction,
-                "Collect returned invalid answer: Please report this bug"
-            )
-        }
+        let OnceFrameAnswer::Collect(dataframe) = self.eval(&OnceFrameQuery::Collect)?;
+        Ok(dataframe)
     }
 
     /// Extract the compute plan with the private data.

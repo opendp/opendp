@@ -1,7 +1,5 @@
-use crate::core::{Domain, Measure, Measurement, Metric, MetricSpace};
 use std::any::{type_name, Any};
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 use crate::error::*;
 
@@ -9,11 +7,13 @@ use crate::error::*;
 /// 1. it takes an input of type `Query<Q>`,
 /// 2. updates its internal state,
 /// 3. and emits an answer of type `Answer<A>`
-pub struct Queryable<Q: ?Sized, A>(Rc<RefCell<dyn FnMut(&Self, Query<Q>) -> Fallible<Answer<A>>>>);
+pub struct Queryable<Q: ?Sized, A>(
+    Arc<Mutex<dyn FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + Send + Sync>>,
+);
 
 impl<Q: ?Sized, A> Queryable<Q, A> {
     pub fn eval(&mut self, query: &Q) -> Fallible<A> {
-        match self.eval_query(Query::External(query))? {
+        match self.eval_query(Query::External(query, None))? {
             Answer::External(ext) => Ok(ext),
             Answer::Internal(_) => fallible!(
                 FailedFunction,
@@ -22,12 +22,14 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
         }
     }
 
-    pub fn eval_wrap(
-        &mut self,
-        query: &Q,
-        wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static,
-    ) -> Fallible<A> {
-        wrap(wrapper, || self.eval(query))
+    pub fn eval_wrap(&mut self, query: &Q, wrapper: Option<WrapFn>) -> Fallible<A> {
+        match self.eval_query(Query::External(query, wrapper))? {
+            Answer::External(ext) => Ok(ext),
+            Answer::Internal(_) => fallible!(
+                FailedFunction,
+                "cannot return internal answer from an external query"
+            ),
+        }
     }
 
     pub(crate) fn eval_internal<'a, AI: 'static>(&mut self, query: &'a dyn Any) -> Fallible<AI> {
@@ -48,13 +50,13 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
 
     #[inline]
     pub(crate) fn eval_query(&mut self, query: Query<Q>) -> Fallible<Answer<A>> {
-        return (self.0.as_ref().borrow_mut())(self, query);
+        self.0.as_ref().lock()?(self, query)
     }
 }
 
 // in the Queryable struct definition, this 'a lifetime is supplied by an HRTB after `dyn`, and then elided
 pub(crate) enum Query<'a, Q: ?Sized> {
-    External(&'a Q),
+    External(&'a Q, Option<WrapFn>),
     Internal(&'a dyn Any),
 }
 
@@ -69,72 +71,55 @@ impl<A> Answer<A> {
     }
 }
 
-thread_local! {
-    static WRAPPER: RefCell<Option<Rc<dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>>>> = RefCell::new(None);
+pub(crate) fn merge_wrappers(inner: Option<WrapFn>, outer: Option<WrapFn>) -> Option<WrapFn> {
+    merge(inner, outer, |inner, outer| {
+        WrapFn::new(move |wrapper, queryable| {
+            outer.0(wrapper.clone(), inner.0(wrapper, queryable)?)
+        })
+    })
 }
 
-pub(crate) fn wrap<T>(
-    wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static,
-    f: impl FnOnce() -> T,
-) -> T {
-    let prev_wrapper = WRAPPER.with(|w| w.borrow_mut().take());
-
-    let new_wrapper = Some(if let Some(prev) = prev_wrapper.clone() {
-        Rc::new(move |qbl| (wrapper)((prev)(qbl)?)) as Rc<_>
-    } else {
-        Rc::new(wrapper) as Rc<_>
-    });
-
-    WRAPPER.with(|w| *w.borrow_mut() = new_wrapper);
-    let res = f();
-    WRAPPER.with(|w| *w.borrow_mut() = prev_wrapper);
-    res
-}
-
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO>
-where
-    (DI, MI): MetricSpace,
-{
-    pub fn invoke_wrap(
-        &self,
-        arg: &DI::Carrier,
-        wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static,
-    ) -> Fallible<TO> {
-        wrap(wrapper, || self.invoke(arg))
+fn merge<T>(l: Option<T>, r: Option<T>, merger: impl Fn(T, T) -> T) -> Option<T> {
+    match (l, r) {
+        (Some(l), Some(r)) => Some(merger(l, r)),
+        (l, r) => l.or(r),
     }
 }
-
 /// WrapFn is a utility for constructing a closure that wraps a PolyQueryable,
 /// in a way that recursively wraps any PolyQueryables that are returned.
 ///
 /// The use of a struct avoids an infinite recursion in the type system,
 /// as the first argument to the closure is the same type as the closure itself.
 #[derive(Clone)]
-pub(crate) struct WrapFn(pub Rc<dyn Fn(WrapFn, PolyQueryable) -> Fallible<PolyQueryable>>);
+pub struct WrapFn(pub Arc<dyn Fn(WrapFn, PolyQueryable) -> Fallible<PolyQueryable> + Send + Sync>);
 impl WrapFn {
-    // constructs a closure that wraps a PolyQueryable
-    pub(crate) fn as_map(&self) -> impl Fn(PolyQueryable) -> Fallible<PolyQueryable> {
-        let wrap_logic = self.clone();
-        move |qbl| (wrap_logic.0)(wrap_logic.clone(), qbl)
+    pub(crate) fn call(&self, queryable: PolyQueryable) -> Fallible<PolyQueryable> {
+        (self.0)(self.clone(), queryable)
     }
 
     pub(crate) fn new(
-        logic: impl Fn(WrapFn, PolyQueryable) -> Fallible<PolyQueryable> + 'static,
+        logic: impl Fn(WrapFn, PolyQueryable) -> Fallible<PolyQueryable> + Send + Sync + 'static,
     ) -> Self {
-        WrapFn(Rc::new(logic))
+        WrapFn(Arc::new(logic))
     }
 
-    pub(crate) fn new_pre_hook(pre_hook: impl FnMut() -> Fallible<()> + 'static) -> Self {
-        let pre_hook = Rc::new(RefCell::new(pre_hook));
+    pub(crate) fn new_pre_hook(
+        pre_hook: impl FnMut() -> Fallible<()> + Send + Sync + 'static,
+    ) -> Self {
+        let pre_hook = Arc::new(Mutex::new(pre_hook));
         WrapFn::new(move |wrap_logic, mut inner_qbl| {
             let pre_hook = pre_hook.clone();
             Ok(Queryable::new_raw(
-                move |_wrapper_qbl, query: Query<dyn Any>| {
+                move |_wrapper_qbl, mut query: Query<dyn Any>| {
                     // check the pre_hook for permission to execute
-                    (pre_hook.as_ref().borrow_mut())()?;
+                    (pre_hook.as_ref().lock().unwrap())()?;
 
+                    if let Query::External(_, inner_logic) = &mut query {
+                        *inner_logic =
+                            merge_wrappers(inner_logic.clone(), Some(wrap_logic.clone()));
+                    }
                     // evaluate the query and wrap the answer
-                    wrap(wrap_logic.as_map(), || inner_qbl.eval_query(query))
+                    inner_qbl.eval_query(query)
                 },
             ))
         })
@@ -146,43 +131,45 @@ where
     Self: IntoPolyQueryable + FromPolyQueryable,
 {
     pub(crate) fn new(
-        transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + 'static,
+        transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + 'static + Send + Sync,
+        wrapper: Option<WrapFn>,
     ) -> Fallible<Self> {
         let queryable = Queryable::new_raw(transition);
-        let wrapper = WRAPPER.with(|w| w.borrow().clone());
         Ok(match wrapper {
             None => queryable,
-            Some(w) => Queryable::from_poly(w(queryable.into_poly())?),
+            Some(w) => Queryable::from_poly(w.call(queryable.into_poly())?),
         })
     }
 
     pub(crate) fn new_raw(
-        transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + 'static,
+        transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + 'static + Send + Sync,
     ) -> Self {
-        Queryable(Rc::new(RefCell::new(transition)))
+        Queryable(Arc::new(Mutex::new(transition)))
     }
 
     #[allow(dead_code)]
     pub(crate) fn new_external(
-        mut transition: impl FnMut(&Q) -> Fallible<A> + 'static,
+        mut transition: impl FnMut(&Q, Option<WrapFn>) -> Fallible<A> + 'static + Send + Sync,
+        wrapper: Option<WrapFn>,
     ) -> Fallible<Self> {
         Queryable::new(
             move |_self: &Self, query: Query<Q>| -> Fallible<Answer<A>> {
                 match query {
-                    Query::External(q) => transition(q).map(Answer::External),
+                    Query::External(q, wrapper) => transition(q, wrapper).map(Answer::External),
                     Query::Internal(_) => fallible!(FailedFunction, "unrecognized internal query"),
                 }
             },
+            wrapper,
         )
     }
 
     pub(crate) fn new_raw_external(
-        mut transition: impl FnMut(&Q) -> Fallible<A> + 'static,
+        mut transition: impl FnMut(&Q) -> Fallible<A> + 'static + Send + Sync,
     ) -> Self {
         Queryable::new_raw(
             move |_self: &Self, query: Query<Q>| -> Fallible<Answer<A>> {
                 match query {
-                    Query::External(q) => transition(q).map(Answer::External),
+                    Query::External(q, _) => transition(q).map(Answer::External),
                     Query::Internal(_) => fallible!(FailedFunction, "unrecognized internal query"),
                 }
             },
@@ -207,11 +194,11 @@ impl<Q: 'static, A: 'static> IntoPolyQueryable for Queryable<Q, A> {
     fn into_poly(mut self) -> PolyQueryable {
         Queryable::new_raw(move |_self: &PolyQueryable, query: Query<dyn Any>| {
             Ok(match query {
-                Query::External(q) => {
-                    let answer = self.eval(q.downcast_ref::<Q>().ok_or_else(|| {
+                Query::External(q, wrapper) => {
+                    let q = q.downcast_ref::<Q>().ok_or_else(|| {
                         err!(FailedCast, "query must be of type {}", type_name::<Q>())
-                    })?)?;
-                    Answer::External(Box::new(answer))
+                    })?;
+                    Answer::External(Box::new(self.eval_wrap(q, wrapper)?))
                 }
                 Query::Internal(q) => {
                     let Answer::Internal(a) = self.eval_query(Query::Internal(q))? else {
@@ -244,8 +231,8 @@ impl<Q: 'static, A: 'static> FromPolyQueryable for Queryable<Q, A> {
     fn from_poly(mut self_: PolyQueryable) -> Self {
         Queryable::new_raw(move |_self: &Queryable<Q, A>, query: Query<Q>| {
             Ok(match query {
-                Query::External(query) => {
-                    let answer = self_.eval(query)?;
+                Query::External(query, wrapper) => {
+                    let answer = self_.eval_wrap(query, wrapper)?;
 
                     let answer = *answer.downcast::<A>().map_err(|_| {
                         err!(FailedCast, "failed to downcast to {:?}", type_name::<A>())

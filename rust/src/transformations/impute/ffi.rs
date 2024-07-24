@@ -1,4 +1,4 @@
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
+use crate::core::{Domain, FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::err;
 use crate::error::Fallible;
@@ -104,6 +104,7 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
                 AtomDomain<TA>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + InherentNull + Clone + CheckAtom,
                 M: 'static + DatasetMetric,
+                <AtomDomain<TA> as Domain>::Carrier: Send + Sync,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
                 let input_domain = input_domain
@@ -182,6 +183,7 @@ pub extern "C" fn opendp_transformations__make_drop_null(
             where
                 AtomDomain<TA>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + InherentNull + Clone + CheckAtom,
+                <AtomDomain<TA> as Domain>::Carrier: Send + Sync,
                 M: 'static + DatasetMetric,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
