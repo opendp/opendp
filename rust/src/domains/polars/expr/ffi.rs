@@ -3,7 +3,7 @@ use std::{ffi::c_char, os::raw::c_void};
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{FfiResult, Metric, MetricSpace},
+    core::{FfiResult, FfiSlice, Metric, MetricSpace},
     domains::{polars::ffi::unpack_series_domains, Margin, MarginPub},
     error::Fallible,
     ffi::{
@@ -44,7 +44,7 @@ use super::{Context, ExprDomain, WildExprDomain};
 /// * `by` - optional. Set if expression is applied to grouped data
 /// * `margin` - descriptors for grouped data
 pub extern "C" fn opendp_domains__wild_expr_domain(
-    columns: *const AnyObject,
+    columns: *const FfiSlice,
     by: *const AnyObject,
     max_partition_length: *const c_void,
     max_num_partitions: *const c_void,
