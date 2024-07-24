@@ -21,7 +21,7 @@ def make_np_clamp(
 ) -> Transformation:
     """Construct a Transformation that clamps the norm of input data.
 
-    :param input_domain: instance of `np_array2_domain(...)`
+    :param input_domain: instance of `array2_domain(...)`
     :param input_metric: instance of `symmetric_distance()`
     :param norm: clamp each row to this norm. Required if data is not already bounded
     :param p: designates L`p` norm
@@ -62,7 +62,7 @@ def make_np_clamp(
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        dp.numpy.np_array2_domain(**kwargs),
+        dp.numpy.array2_domain(**kwargs),
         input_metric,
         function,
         lambda d_in: d_in,

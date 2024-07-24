@@ -8,7 +8,7 @@ from opendp.extras._utilities import to_then, with_privacy
 def make_np_count(input_domain: Domain, input_metric: Metric) -> Measurement:
     """Construct a Transformation that returns the length of axis 0 of a 2-dimensional array.
 
-    :param input_domain: instance of `np_array2_domain(...)`
+    :param input_domain: instance of `array2_domain(...)`
     :param input_metric: instance of `symmetric_distance()`
     """
     dp.assert_features("contrib")

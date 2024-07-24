@@ -18,7 +18,7 @@ def make_private_np_mean(
 ) -> Measurement:
     """Construct a Measurement that releases the mean of a 2-dimensional array.
 
-    :param input_domain: instance of `np_array2_domain(size=_, num_columns=_)`
+    :param input_domain: instance of `array2_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
     :param scale: parameter for `make_laplace` or `make_gaussian`, depending on `p`
     :param norm: clamp each row to this norm. Required if data is not already bounded

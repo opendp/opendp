@@ -42,7 +42,7 @@ def make_private_pca(
 ) -> Measurement:
     """Construct a Measurement that returns the data mean, singular values and right singular vectors.
 
-    :param input_domain: instance of `np_array2_domain(size=_, num_columns=_)`
+    :param input_domain: instance of `array2_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
     :param unit_epsilon: ε-expenditure per changed record in the input data
     :param norm: clamp each row to this norm bound
@@ -186,7 +186,7 @@ def _make_center(input_domain, input_metric):
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        dp.numpy.np_array2_domain(**kwargs),
+        dp.numpy.array2_domain(**kwargs),
         input_metric,
         lambda arg: arg - input_desc.origin,
         lambda d_in: d_in,

@@ -51,7 +51,7 @@ def _fmt_attrs(attrs: NamedTuple) -> str:
     return ", ".join(f"{k}={v}" for k, v in attrs._asdict().items() if v is not None)
 
 
-def np_array2_domain(
+def array2_domain(
     *,
     norm: float | None = None,
     p: Literal[1, 2, None] = None,
@@ -162,7 +162,7 @@ def np_array2_domain(
     return dp.user_domain(f"NPArray2Domain({_fmt_attrs(desc)})", member, desc)
 
 
-def _np_sscp_domain(
+def _sscp_domain(
     *,
     norm: float | None = None,
     p: Literal[1, 2, None] = None,

@@ -1,4 +1,4 @@
-from opendp.extras.numpy import _np_sscp_domain
+from opendp.extras.numpy import _sscp_domain
 from opendp.extras._utilities import to_then
 from opendp._lib import get_np_csprng, import_optional_dependency
 from opendp.mod import Domain, Metric, Transformation, Measurement
@@ -11,7 +11,7 @@ def make_private_eigenvector(
 ) -> Measurement:
     """Construct a Measurement that releases a private eigenvector from a covariance matrix.
 
-    :param input_domain: instance of `_np_sscp_domain(size=_, num_columns=_)`
+    :param input_domain: instance of `_sscp_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
     :param unit_epsilon: ε-expenditure per changed record in the input data
     """
@@ -103,7 +103,7 @@ def make_np_sscp_projection(
     so as not to increase the row norms in the implied X matrix,
     as the row norms are simply passed through.
 
-    :param input_domain: instance of `_np_sscp_domain(size=_, num_columns=_)`
+    :param input_domain: instance of `_sscp_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
     :param P: a projection whose singular values are no greater than 1
     """
@@ -121,7 +121,7 @@ def make_np_sscp_projection(
     return dp.t.make_user_transformation(
         input_domain,
         input_metric,
-        _np_sscp_domain(**kwargs),
+        _sscp_domain(**kwargs),
         input_metric,
         # http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=5
         # Algorithm 1 step 2.c

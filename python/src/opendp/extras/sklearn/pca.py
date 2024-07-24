@@ -67,7 +67,7 @@ class PCA(_SKLPCA):
         if hasattr(self, "components_"):
             raise ValueError("DP-PCA model has already been fitted")
 
-        input_domain = dp.numpy.np_array2_domain(
+        input_domain = dp.numpy.array2_domain(
             num_columns=self.n_features_in_, size=self.n_samples, T=float
         )
         input_metric = dp.symmetric_distance()

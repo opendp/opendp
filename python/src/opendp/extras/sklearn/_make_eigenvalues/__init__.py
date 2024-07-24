@@ -8,7 +8,7 @@ from opendp._lib import import_optional_dependency
 def make_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transformation:
     """Construct a Transformation that computes the eigenvalues of a covariance matrix.
 
-    :param input_domain: instance of `_np_sscp_domain(size=_, num_columns=_)`
+    :param input_domain: instance of `_sscp_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
     """
     np = import_optional_dependency('numpy')

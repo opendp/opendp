@@ -9,7 +9,7 @@ from opendp._lib import import_optional_dependency
 def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
     """Construct a Transformation that computes a sum over the row axis of a 2-dimensional array.
 
-    :param input_domain: instance of `np_array2_domain(size=_, num_columns=_)`
+    :param input_domain: instance of `array2_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
 
     :returns a Measurement that computes the DP sum
