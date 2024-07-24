@@ -7,6 +7,7 @@
 
 \maketitle
 
+\idealizedNumerics
 \contrib
 
 Proves soundness of \texttt{make\_np\_sum} in \asOfCommit{__init__.py}{f5bb719}.
@@ -20,62 +21,86 @@ and returns a stable Transformation that computes the vector-valued sum with bou
 None
 
 \subsection*{Pseudocode}
-\lstinputlisting[language=Python,escapechar=|,firstline=8,lastline=48]{./__init__.py}
+\lstinputlisting[language=Python,escapechar=|,firstline=9,lastline=54]{./__init__.py}
 
 \subsection*{Postcondition}
 
+\begin{theorem}
 \validTransformation{\texttt{(input\_domain, input\_metric)}}{\\ \texttt{make\_np\_sum}}
+\end{theorem}
 
-\section{Proof}
+\begin{proof}
+Let $x$ and $x'$ be arbitrary members of \texttt{input\_domain}.
+By \ref{domain-check}, \texttt{input\_domain} is an \texttt{NPArray2Domain},
+and by \ref{metric-check}, \texttt{input\_metric} is \texttt{SymmetricDistance}.
+Let $R$ denote \texttt{input\_domain.descriptor.norm},
+and let $O$ denote \texttt{input\_domain.descriptor.origin}.
+By \ref{norm-check}, $R$ is defined, and by \ref{p-check}, the output metric is the $L^p$ metric with $p \in \{1, 2\}$.
+Because this proof is under \texttt{idealized-numerics}, we ignore machine arithmetic issues such as overflow and treat vector addition as associative and commutative.
 
-\begin{proof} 
+\textbf{Data-independent runtime errors.}
+All runtime checks in \texttt{make\_np\_sum} occur before the transformation is returned.
+For any member of \texttt{input\_domain}, the function on line \ref{function} applies \texttt{sum(axis=0)} to a 2-dimensional numpy array, which is defined for every such input.
+Therefore, for every pair $x, x' \in \texttt{input\_domain}$, neither $\texttt{invoke}(x)$ nor $\texttt{invoke}(x')$ raises a runtime error.
 
-Let $u$ and $v$ be datasets that are \texttt{d\_in}-close with respect to \texttt{input\_metric}.
-By \ref{domain-check}, the input domain is \texttt{NPArray2Domain},
-and by \ref{metric-check} input metric is the \texttt{SymmetricDistance}. 
-By \ref{norm-check} and \ref{p-check}, the input data has row-p-norm bounded by at most $R$.
+\textbf{Appropriate output domain.}
+Each member of \texttt{input\_domain} is a 2-dimensional numpy array whose entries have type \texttt{input\_domain.descriptor.T} and do not contain NaNs.
+Applying \texttt{sum(axis=0)} removes axis zero and returns a 1-dimensional numpy array of the same atomic type.
+Under idealized numerics, summing non-NaN values yields non-NaN values.
+Hence $\function(x)$ is a member of \texttt{output\_domain}.
 
+\textbf{Stability guarantee.}
+Fix any $\din$ and $\dout$ such that $x$ and $x'$ are \din-close under \texttt{input\_metric} and $\texttt{stability\_map}(\din) = \dout$.
+Let $M$ and $M'$ be the multisets of rows in $x$ and $x'$.
+Let $C = M \cap M'$, $A = M \setminus C$, and $B = M' \setminus C$.
+Since addition is commutative, all rows in $C$ cancel, so
+\[
+    \function(x) - \function(x') = \sum_{a \in A} a - \sum_{b \in B} b.
+\]
+By the definition of \texttt{SymmetricDistance},
+\[
+    |A| + |B| = d_{Sym}(x, x') \le \din.
+\]
 
-\subsection{Appropriate Output Domain}
+Now consider two cases.
 
-Since the input data is a 2-dimensional numpy array, then the output is a 1-dimensional numpy array of the same type.
-Therefore the output is a member of the output vector domain.
+\textbf{Case 1: Known size.}
+If \texttt{input\_domain.descriptor.size} is known, then $x$ and $x'$ have the same number of rows, so $|A| = |B|$.
+Let $m = |A| = |B|$.
+Then $2m \le \din$, so $m \le \lfloor \din / 2 \rfloor$.
+Enumerate $A = \{a_1, \ldots, a_m\}$ and $B = \{b_1, \ldots, b_m\}$.
+Since every row lies in the $L^p$ ball of radius $R$ centered at $O$,
+\begin{align*}
+    \norm{\function(x) - \function(x')}_p
+    &= \norm{\sum_{i = 1}^{m} (a_i - b_i)}_p \\
+    &\le \sum_{i = 1}^{m} \norm{a_i - b_i}_p && \text{by triangle inequality} \\
+    &\le \sum_{i = 1}^{m} \left(\norm{a_i - O}_p + \norm{b_i - O}_p\right) \\
+    &\le \sum_{i = 1}^{m} 2R \\
+    &= 2mR \\
+    &\le 2 \lfloor \din / 2 \rfloor R.
+\end{align*}
+This is exactly the known-size stability map returned by \texttt{make\_np\_sum}.
 
-\subsection{Stability Guarantee}
+\textbf{Case 2: Unknown size.}
+If \texttt{input\_domain.descriptor.size} is unknown, then \texttt{make\_np\_sum} sets
+\[
+    \texttt{stability\_map}(\din) = \din \cdot (R + \norm{O}_p).
+\]
+For every row $v$ in either $A$ or $B$,
+\[
+    \norm{v}_p \le \norm{v - O}_p + \norm{O}_p \le R + \norm{O}_p.
+\]
+Therefore,
+\begin{align*}
+    \norm{\function(x) - \function(x')}_p
+    &= \norm{\sum_{a \in A} a - \sum_{b \in B} b}_p \\
+    &\le \sum_{a \in A} \norm{a}_p + \sum_{b \in B} \norm{b}_p && \text{by triangle inequality} \\
+    &\le (|A| + |B|)(R + \norm{O}_p) \\
+    &\le \din (R + \norm{O}_p).
+\end{align*}
+This is exactly the unknown-size stability map returned by \texttt{make\_np\_sum}.
 
-Now consider two cases: when the data set size is known, and when it is not known.
-
-\subsubsection{Known Size}
-    WLOG, assume $u, v$ only differ on the leading $\lfloor d_{in} / 2 \rfloor$ elements.
-
-    \begin{align}
-        & \ \max_{x \sim x'} d_{Lp}(\mathrm{sum}(x), \mathrm{sum}(x')) && \quad \text{by definition of stability}\\
-        =&\ \max_{x \sim x'} \lVert\sum_{i = 1}^N x_i - \sum_{i = 1}^{N} x'_i \rVert_p && \quad \text{substitute the function and metric} \\
-        =&\ \max_{x \sim x'} \lVert\sum_{i = 1}^{\lfloor d_{in} / 2 \rfloor} x_{i} - \sum_{i = 1}^{\lfloor d_{in} / 2 \rfloor} x'_{i}\rVert_p && \quad\text{all trailing terms cancel} \\
-        \le&\ \max_{x \sim x'} \sum_{i = 1}^{\lfloor d_{in} / 2 \rfloor} \lVert x_i - x'_{i} \rVert_p && \quad \text{by triangle inequality} \\
-        \le&\ \sum_{i = 1}^{\lfloor d_{in} / 2 \rfloor} 2 \cdot R && \quad\text{each row has bounded p-norm of } R \\
-        =&\ \lfloor d_{in} / 2 \rfloor \cdot 2 \cdot R
-    \end{align}
-
-    Therefore we've shown that for every pair of elements $u, v \in \texttt{input\_domain}$ and every $d_{Sym}(u, v) \le \din$, 
-    if $u, v$ are $\din$-close then $\function(u),\function(v)$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_metric}$ (the $L^p$ distance).
-
-\subsubsection{Unknown Size}
-
-    WLOG, assume $v$ has an additional $d_{in}$ trailing rows.
-
-    \begin{align}
-        & \ \max_{x \sim x'} d_{Lp}(\mathrm{sum}(x), \mathrm{sum}(x')) && \quad \text{by definition of stability}\\
-        =&\ \max_{x \sim x'} \lVert\sum_{i = 1}^N x_i - \sum_{i = 1}^{N'} x'_i \rVert_p && \quad \text{substitute the function and metric} \\
-        =&\ \max_{x \sim x'} \lVert\sum_{i = 1}^{d_{in}} x'_{N + i}\rVert_p && \quad\text{all but the last terms cancel} \\
-        \le&\ \max_{x \sim x'} \sum_{i = 1}^{d_{in}} \lVert x'_{N + i} \rVert_p && \quad \text{by triangle inequality} \\
-        \le&\ \sum_{i = 1}^{d_{in}} (\lVert O \rVert_p + R) && \quad\text{each row has bounded p-norm of } R \text{ at } O \\
-        =&\ d_{in} \cdot (\lVert O \rVert_p + R)
-    \end{align}
-    
-    Therefore we've shown that for every pair of elements $u, v \in \texttt{input\_domain}$ and every $d_{Sym}(u, v) \le \din$, 
-    if $u, v$ are $\din$-close then $\function(u),\function(v)$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_metric}$ (the $L^p$ distance).
-
+In both cases, $\function(x)$ and $\function(x')$ are $\dout$-close under \texttt{output\_metric}.
 \end{proof}
 
 \end{document}
