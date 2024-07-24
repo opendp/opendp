@@ -1,5 +1,6 @@
 import pytest
 import opendp.prelude as dp
+import os
 
 
 dp.enable_features("contrib", "honest-but-curious")
@@ -543,7 +544,7 @@ def test_polars_threshold():
         .collect()
     )
 
-@pytest.mark.skip(reason="setting OPENDP_POLARS_LIB_PATH interferes with the execution of other tests")
+@pytest.mark.skipif(os.getenv('FORCE_TEST_REPLACE_BINARY_PATH') != "1", reason="setting OPENDP_POLARS_LIB_PATH interferes with the execution of other tests")
 def test_replace_binary_path():
     import os
     os.environ["OPENDP_POLARS_LIB_PATH"] = __file__

@@ -295,6 +295,8 @@ jobs:
         run: |
           shopt -s globstar
           pytest --nbmake source/**/*.ipynb -n=auto
+          # Messes with envvars, so can't be run in parallel!
+          FORCE_TEST_REPLACE_BINARY_PATH=1 pytest -k 'test_replace_binary_path'
 
   r-test:
     needs: rust-build
