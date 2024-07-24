@@ -1,6 +1,4 @@
-use num::{Float, One, Zero};
 use std::convert::TryFrom;
-use std::fmt::Debug;
 use std::os::raw::{c_char, c_void};
 
 use crate::accuracy::*;
@@ -9,7 +7,7 @@ use crate::err;
 use crate::ffi::any::AnyObject;
 use crate::ffi::util;
 use crate::ffi::util::Type;
-use crate::traits::InfCast;
+use crate::traits::{Float, InfCast};
 
 macro_rules! build_extern_accuracy {
     ($arg:ident, $ffi_func:ident, $func:ident) => {
@@ -22,7 +20,7 @@ macro_rules! build_extern_accuracy {
             fn monomorphize<T>(
                 $arg: *const c_void, alpha: *const c_void
             ) -> FfiResult<*mut AnyObject> where
-                T: 'static + Float + One + Zero + Debug + InfCast<f64>,
+                T: Float + InfCast<f64>,
                 f64: InfCast<T> {
                 let $arg = *try_as_ref!($arg as *const T);
                 let alpha = *try_as_ref!(alpha as *const T);

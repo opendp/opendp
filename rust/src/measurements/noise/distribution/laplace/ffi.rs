@@ -51,6 +51,7 @@ pub extern "C" fn opendp_measurements__make_laplace(
             k: Option<i32>,
         ) -> Fallible<AnyMeasurement>
         where
+            <<MI as LaplaceMetric<T>>::Domain as Domain>::Carrier: Send + Sync,
             MI: LaplaceMetric<T>,
             DiscreteLaplace: MakeNoise<MI::Domain, MI, MO>,
             (MI::Domain, MI): MetricSpace,

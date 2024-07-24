@@ -7,7 +7,7 @@ use crate::{
     core::{FfiResult, Function, Measurement, PrivacyMap},
     error::Fallible,
     ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
-    interactive::{Answer, Query, Queryable},
+    interactive::{Answer, Query, Queryable, Wrapper},
     measures::ffi::TypedMeasure,
     metrics::ffi::TypedMetric,
     traits::ProductOrd,
@@ -27,7 +27,7 @@ pub extern "C" fn opendp_combinators__make_adaptive_composition(
     let d_in = try_as_ref!(d_in).clone();
     let d_mids = try_as_ref!(d_mids);
 
-    fn repack_vec<T: 'static + Clone>(obj: &AnyObject) -> Fallible<Vec<AnyObject>> {
+    fn repack_vec<T: 'static + Clone + Send + Sync>(obj: &AnyObject) -> Fallible<Vec<AnyObject>> {
         Ok(obj
             .downcast_ref::<Vec<T>>()?
             .iter()
@@ -121,12 +121,14 @@ impl<QI: 'static + ProductOrd + Clone + Send + Sync, QO: 'static + ProductOrd + 
 
         Measurement::new(
             self.input_domain.clone(),
-            Function::new_fallible(
-                move |arg: &AnyObject| -> Fallible<Queryable<AnyMeasurement, AnyObject>> {
+            Function::new_interactive(
+                move |arg: &AnyObject,
+                      outer_wrapper: Option<Wrapper>|
+                      -> Fallible<Queryable<AnyMeasurement, AnyObject>> {
                     let mut inner_qbl = function.eval(arg)?;
 
                     Queryable::new(move |_self, query: Query<AnyMeasurement>| match query {
-                        Query::External(query) => {
+                        Query::External(query, wrapper) => {
                             let privacy_map = query.privacy_map.clone();
                             let meas = Measurement::new(
                                 query.input_domain.clone(),
@@ -137,7 +139,7 @@ impl<QI: 'static + ProductOrd + Clone + Send + Sync, QO: 'static + ProductOrd + 
                                     privacy_map.eval(&AnyObject::new(d_in.clone()))?.downcast()
                                 }),
                             )?;
-                            inner_qbl.eval(&meas).map(Answer::External)
+                            inner_qbl.eval_wrap(&meas, wrapper).map(Answer::External)
                         }
                         Query::Internal(query) => {
                             let Answer::Internal(a) =
@@ -151,6 +153,7 @@ impl<QI: 'static + ProductOrd + Clone + Send + Sync, QO: 'static + ProductOrd + 
                             Ok(Answer::Internal(a))
                         }
                     })
+                    .wrap(outer_wrapper)
                 },
             ),
             self.input_metric.clone(),

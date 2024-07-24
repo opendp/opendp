@@ -28,6 +28,7 @@ pub use ffi::*;
 use std::sync::Arc;
 
 use crate::error::*;
+use crate::interactive::Wrapper;
 use crate::traits::{DistanceConstant, InfCast, InfMul, ProductOrd};
 use num::Zero;
 use std::fmt::{Debug, Display};
@@ -69,7 +70,7 @@ pub trait Domain: Clone + PartialEq + Debug + Send + Sync {
 
 /// A mathematical function.
 pub struct Function<TI, TO> {
-    pub function: Arc<dyn Fn(&TI) -> Fallible<TO> + Send + Sync>,
+    function: Arc<dyn Fn(&TI, Option<Wrapper>) -> Fallible<TO> + Send + Sync>,
 }
 impl<TI, TO> Clone for Function<TI, TO> {
     fn clone(&self) -> Self {
@@ -85,13 +86,23 @@ impl<TI, TO> Function<TI, TO> {
     }
 
     pub fn new_fallible(function: impl Fn(&TI) -> Fallible<TO> + 'static + Send + Sync) -> Self {
+        Self::new_interactive(move |arg, _| function(arg))
+    }
+
+    pub fn new_interactive(
+        function: impl Fn(&TI, Option<Wrapper>) -> Fallible<TO> + 'static + Send + Sync,
+    ) -> Self {
         Self {
             function: Arc::new(function),
         }
     }
 
     pub fn eval(&self, arg: &TI) -> Fallible<TO> {
-        (self.function)(arg)
+        (self.function)(arg, None)
+    }
+
+    pub(crate) fn eval_wrap(&self, arg: &TI, wrapper: Option<Wrapper>) -> Fallible<TO> {
+        (self.function)(arg, wrapper)
     }
 }
 
@@ -102,7 +113,9 @@ impl<TI: 'static, TO: 'static> Function<TI, TO> {
     ) -> Function<TI, TO> {
         let function0 = function0.function.clone();
         let function1 = function1.function.clone();
-        Self::new_fallible(move |arg| function1(&function0(arg)?))
+        Self::new_interactive(move |arg, wrapper| {
+            function1(&function0(arg, wrapper.clone())?, wrapper)
+        })
     }
 }
 
@@ -124,7 +137,7 @@ pub trait Metric: Clone + PartialEq + Debug + Send + Sync {
 pub trait Measure: Default + Clone + PartialEq + Debug + Send + Sync {
     /// # Proof Definition
     /// `Self::Distance` is a type that represents distances in terms of a measure `Self`.
-    type Distance;
+    type Distance: Send + Sync;
 }
 
 /// A map evaluating the privacy of a [`Measurement`].
@@ -307,6 +320,10 @@ where
 impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
     pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<TO> {
         self.function.eval(arg)
+    }
+
+    pub(crate) fn invoke_wrap(&self, arg: &DI::Carrier, wrapper: Option<Wrapper>) -> Fallible<TO> {
+        self.function.eval_wrap(arg, wrapper)
     }
 
     pub fn map(&self, d_in: &MI::Distance) -> Fallible<MO::Distance> {

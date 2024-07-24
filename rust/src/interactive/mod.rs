@@ -1,19 +1,19 @@
-use crate::core::{Domain, Measure, Measurement, Metric, MetricSpace};
-use std::any::{Any, type_name};
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::error::*;
+use std::any::{Any, type_name};
+use std::ops::Deref;
+use std::sync::{Arc, Mutex};
 
 /// A queryable is like a state machine:
 /// 1. it takes an input of type `Query<Q>`,
 /// 2. updates its internal state,
 /// 3. and emits an answer of type `Answer<A>`
-pub struct Queryable<Q: ?Sized, A>(Rc<RefCell<dyn FnMut(&Self, Query<Q>) -> Fallible<Answer<A>>>>);
+pub struct Queryable<Q: ?Sized, A>(
+    Arc<Mutex<dyn FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + Send + Sync>>,
+);
 
 impl<Q: ?Sized, A> Queryable<Q, A> {
     pub fn eval(&mut self, query: &Q) -> Fallible<A> {
-        match self.eval_query(Query::External(query))? {
+        match self.eval_query(Query::External(query, None))? {
             Answer::External(ext) => Ok(ext),
             Answer::Internal(_) => fallible!(
                 FailedFunction,
@@ -22,12 +22,14 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
         }
     }
 
-    pub fn eval_wrap(
-        &mut self,
-        query: &Q,
-        wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static,
-    ) -> Fallible<A> {
-        wrap(wrapper, || self.eval(query))
+    pub fn eval_wrap(&mut self, query: &Q, wrapper: Option<Wrapper>) -> Fallible<A> {
+        match self.eval_query(Query::External(query, wrapper))? {
+            Answer::External(ext) => Ok(ext),
+            Answer::Internal(_) => fallible!(
+                FailedFunction,
+                "cannot return internal answer from an external query"
+            ),
+        }
     }
 
     pub(crate) fn eval_internal<'a, AI: 'static>(&mut self, query: &'a dyn Any) -> Fallible<AI> {
@@ -48,15 +50,23 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
 
     #[inline]
     pub(crate) fn eval_query(&mut self, query: Query<Q>) -> Fallible<Answer<A>> {
-        return (self.0.as_ref().borrow_mut())(self, query);
+        self.0.as_ref().lock()?(self, query)
     }
 }
 
 // in the Queryable struct definition, this 'a lifetime is supplied by an HRTB after `dyn`, and then elided
-#[derive(Debug)]
 pub(crate) enum Query<'a, Q: ?Sized> {
-    External(&'a Q),
+    External(&'a Q, Option<Wrapper>),
     Internal(&'a dyn Any),
+}
+
+impl<'a, Q: ?Sized + std::fmt::Debug> std::fmt::Debug for Query<'a, Q> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::External(arg0, _) => f.debug_tuple("External").field(arg0).finish(),
+            Self::Internal(arg0) => f.debug_tuple("Internal").field(arg0).finish(),
+        }
+    }
 }
 
 pub(crate) enum Answer<A> {
@@ -70,75 +80,76 @@ impl<A> Answer<A> {
     }
 }
 
-thread_local! {
-    static WRAPPER: RefCell<Option<Rc<dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>>>> = RefCell::new(None);
+pub(crate) fn compose_wrappers(outer: Option<Wrapper>, inner: Option<Wrapper>) -> Option<Wrapper> {
+    option_or_merge(inner, outer, |outer, inner| {
+        Wrapper::new(move |queryable| outer(inner(queryable)?))
+    })
 }
 
-pub(crate) fn wrap<T>(
-    wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static,
-    f: impl FnOnce() -> T,
-) -> T {
-    let prev_wrapper = WRAPPER.with(|w| w.borrow_mut().take());
-
-    let new_wrapper = Some(if let Some(prev) = prev_wrapper.clone() {
-        Rc::new(move |qbl| (wrapper)((prev)(qbl)?)) as Rc<_>
-    } else {
-        Rc::new(wrapper) as Rc<_>
-    });
-
-    WRAPPER.with(|w| *w.borrow_mut() = new_wrapper);
-    let res = f();
-    WRAPPER.with(|w| *w.borrow_mut() = prev_wrapper);
-    res
-}
-
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO>
-where
-    (DI, MI): MetricSpace,
-{
-    pub fn invoke_wrap(
-        &self,
-        arg: &DI::Carrier,
-        wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static,
-    ) -> Fallible<TO> {
-        wrap(wrapper, || self.invoke(arg))
+fn option_or_merge<T>(outer: Option<T>, inner: Option<T>, merge: impl Fn(T, T) -> T) -> Option<T> {
+    match (outer, inner) {
+        (Some(l), Some(r)) => Some(merge(l, r)),
+        (l, r) => l.or(r),
     }
 }
 
-/// WrapFn is a utility for constructing a closure that wraps a PolyQueryable,
-/// in a way that recursively wraps any PolyQueryables that are returned.
-///
-/// The use of a struct avoids an infinite recursion in the type system,
-/// as the first argument to the closure is the same type as the closure itself.
+/// Wrapper is a function that wraps a Queryable in another Queryable.
 #[derive(Clone)]
-pub(crate) struct WrapFn(pub Rc<dyn Fn(WrapFn, PolyQueryable) -> Fallible<PolyQueryable>>);
-impl WrapFn {
-    // constructs a closure that wraps a PolyQueryable
-    pub(crate) fn as_map(&self) -> impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + use<> {
-        let wrap_logic = self.clone();
-        move |qbl| (wrap_logic.0)(wrap_logic.clone(), qbl)
-    }
+pub struct Wrapper(Arc<dyn Fn(PolyQueryable) -> Fallible<PolyQueryable> + Send + Sync + 'static>);
 
-    pub(crate) fn new(
-        logic: impl Fn(WrapFn, PolyQueryable) -> Fallible<PolyQueryable> + 'static,
+// make Wrapper callable as a function
+impl Deref for Wrapper {
+    type Target = dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0
+    }
+}
+
+impl Wrapper {
+    pub fn new(
+        wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + Send + Sync + 'static,
     ) -> Self {
-        WrapFn(Rc::new(logic))
+        Wrapper(Arc::new(wrapper))
     }
 
-    pub(crate) fn new_pre_hook(pre_hook: impl FnMut() -> Fallible<()> + 'static) -> Self {
-        let pre_hook = Rc::new(RefCell::new(pre_hook));
-        WrapFn::new(move |wrap_logic, mut inner_qbl| {
-            let pre_hook = pre_hook.clone();
-            Ok(Queryable::new_raw(
-                move |_wrapper_qbl, query: Query<dyn Any>| {
-                    // check the pre_hook for permission to execute
-                    (pre_hook.as_ref().borrow_mut())()?;
+    /// Creates a recursive wrapper that recursively applies itself to child queryables.
+    /// `hook` is called any time the wrapped queryable or any of its children are queried.
+    pub fn new_recursive_pre_hook(
+        hook: impl FnMut() -> Fallible<()> + Send + Sync + Clone + 'static,
+    ) -> Wrapper {
+        RecursiveWrapper(Arc::new(move |recursive_wrapper, mut inner_qbl| {
+            let mut hook = hook.clone();
+            Ok(Queryable::new(move |_, mut query: Query<dyn Any>| {
+                // call the hook
+                hook()?;
 
-                    // evaluate the query and wrap the answer
-                    wrap(wrap_logic.as_map(), || inner_qbl.eval_query(query))
-                },
-            ))
-        })
+                if let Query::External(_, query_wrapper) = &mut query {
+                    *query_wrapper = compose_wrappers(
+                        Some(recursive_wrapper.clone().to_wrapper()),
+                        query_wrapper.clone(),
+                    );
+                }
+                // evaluate the query and wrap the answer
+                inner_qbl.eval_query(query)
+            }))
+        }))
+        .to_wrapper()
+    }
+}
+
+/// RecursiveWrapper is a utility for constructing a closure that wraps a Queryable,
+/// in a way that recursively wraps any children of the Queryable.
+// The use of a struct avoids an infinite recursion in the type system,
+// as the first argument to the closure is the same type as the closure itself.
+#[derive(Clone)]
+struct RecursiveWrapper(
+    pub Arc<dyn Fn(RecursiveWrapper, PolyQueryable) -> Fallible<PolyQueryable> + Send + Sync>,
+);
+
+impl RecursiveWrapper {
+    fn to_wrapper(self) -> Wrapper {
+        Wrapper::new(move |qbl: PolyQueryable| self.0(self.clone(), qbl))
     }
 }
 
@@ -147,30 +158,26 @@ where
     Self: IntoPolyQueryable + FromPolyQueryable,
 {
     pub(crate) fn new(
-        transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + 'static,
-    ) -> Fallible<Self> {
-        let queryable = Queryable::new_raw(transition);
-        let wrapper = WRAPPER.with(|w| w.borrow().clone());
-        Ok(match wrapper {
-            None => queryable,
-            Some(w) => Queryable::from_poly(w(queryable.into_poly())?),
-        })
+        transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + 'static + Send + Sync,
+    ) -> Self {
+        Queryable(Arc::new(Mutex::new(transition)))
     }
 
-    pub(crate) fn new_raw(
-        transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + 'static,
-    ) -> Self {
-        Queryable(Rc::new(RefCell::new(transition)))
+    pub(crate) fn wrap(self, wrapper: Option<Wrapper>) -> Fallible<Self> {
+        Ok(match wrapper {
+            None => self,
+            Some(wrap) => Queryable::from_poly(wrap(self.into_poly())?),
+        })
     }
 
     #[allow(dead_code)]
     pub(crate) fn new_external(
-        mut transition: impl FnMut(&Q) -> Fallible<A> + 'static,
-    ) -> Fallible<Self> {
+        mut transition: impl FnMut(&Q, Option<Wrapper>) -> Fallible<A> + 'static + Send + Sync,
+    ) -> Self {
         Queryable::new(
             move |_self: &Self, query: Query<Q>| -> Fallible<Answer<A>> {
                 match query {
-                    Query::External(q) => transition(q).map(Answer::External),
+                    Query::External(q, wrapper) => transition(q, wrapper).map(Answer::External),
                     Query::Internal(_) => fallible!(FailedFunction, "unrecognized internal query"),
                 }
             },
@@ -179,12 +186,12 @@ where
 
     #[allow(dead_code)]
     pub(crate) fn new_raw_external(
-        mut transition: impl FnMut(&Q) -> Fallible<A> + 'static,
+        mut transition: impl FnMut(&Q) -> Fallible<A> + 'static + Send + Sync,
     ) -> Self {
-        Queryable::new_raw(
+        Queryable::new(
             move |_self: &Self, query: Query<Q>| -> Fallible<Answer<A>> {
                 match query {
-                    Query::External(q) => transition(q).map(Answer::External),
+                    Query::External(q, _) => transition(q).map(Answer::External),
                     Query::Internal(_) => fallible!(FailedFunction, "unrecognized internal query"),
                 }
             },
@@ -207,13 +214,13 @@ pub trait IntoPolyQueryable {
 
 impl<Q: 'static, A: 'static> IntoPolyQueryable for Queryable<Q, A> {
     fn into_poly(mut self) -> PolyQueryable {
-        Queryable::new_raw(move |_self: &PolyQueryable, query: Query<dyn Any>| {
+        Queryable::new(move |_self: &PolyQueryable, query: Query<dyn Any>| {
             Ok(match query {
-                Query::External(q) => {
-                    let answer = self.eval(q.downcast_ref::<Q>().ok_or_else(|| {
+                Query::External(q, wrapper) => {
+                    let q = q.downcast_ref::<Q>().ok_or_else(|| {
                         err!(FailedCast, "query must be of type {}", type_name::<Q>())
-                    })?)?;
-                    Answer::External(Box::new(answer))
+                    })?;
+                    Answer::External(Box::new(self.eval_wrap(q, wrapper)?))
                 }
                 Query::Internal(q) => {
                     let Answer::Internal(a) = self.eval_query(Query::Internal(q))? else {
@@ -244,10 +251,10 @@ pub trait FromPolyQueryable {
 
 impl<Q: 'static, A: 'static> FromPolyQueryable for Queryable<Q, A> {
     fn from_poly(mut self_: PolyQueryable) -> Self {
-        Queryable::new_raw(move |_self: &Queryable<Q, A>, query: Query<Q>| {
+        Queryable::new(move |_self: &Queryable<Q, A>, query: Query<Q>| {
             Ok(match query {
-                Query::External(query) => {
-                    let answer = self_.eval(query)?;
+                Query::External(query, wrapper) => {
+                    let answer = self_.eval_wrap(query, wrapper)?;
 
                     let answer = *answer.downcast::<A>().map_err(|_| {
                         err!(FailedCast, "failed to downcast to {:?}", type_name::<A>())

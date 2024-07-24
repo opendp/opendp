@@ -11,6 +11,7 @@ use crate::{
     core::{Function, Measure, Measurement, Metric, MetricSpace, StabilityMap, Transformation},
     domains::{DslPlanDomain, Invariant, LazyFrameDomain, Margin},
     error::Fallible,
+    interactive::Wrapper,
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::{
         ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance, L01InfDistance,
@@ -128,10 +129,10 @@ where
 
     Measurement::new(
         m_lp.input_domain.cast_carrier(),
-        Function::new_fallible(move |arg: &LazyFrame| {
+        Function::new_interactive(move |arg: &LazyFrame, wrapper: Option<Wrapper>| {
             let lf = LazyFrame::from(f_lp.eval(&arg.logical_plan)?)
                 .with_optimizations(arg.get_current_optimizations());
-            Ok(OnceFrame::from(lf))
+            OnceFrame::new_onceframe(lf, wrapper)
         }),
         m_lp.input_metric.clone(),
         m_lp.output_measure.clone(),

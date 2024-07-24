@@ -13,7 +13,7 @@ use crate::core::{
     StabilityMap, Transformation,
 };
 use crate::error::*;
-use crate::interactive::{Answer, Query, Queryable};
+use crate::interactive::{Answer, Query, Queryable, Wrapper};
 use crate::{err, fallible};
 
 use super::util::{ExtrinsicObject, Type, into_owned};
@@ -28,18 +28,18 @@ pub trait Downcast {
 /// A struct that can wrap any object.
 pub struct AnyObject {
     pub type_: Type,
-    value: Box<dyn Any>,
+    value: Box<dyn Any + Send + Sync>,
 }
 
 impl AnyObject {
-    pub fn new<T: 'static>(value: T) -> Self {
+    pub fn new<T: 'static + Send + Sync>(value: T) -> Self {
         AnyObject {
             type_: Type::of::<T>(),
             value: Box::new(value),
         }
     }
 
-    pub fn new_raw<T: 'static>(value: T) -> *mut Self {
+    pub fn new_raw<T: 'static + Send + Sync>(value: T) -> *mut Self {
         crate::ffi::util::into_raw(Self::new(value))
     }
 }
@@ -372,13 +372,15 @@ where
 
         Measurement::new(
             self.input_domain.clone(),
-            Function::new_fallible(
-                move |arg: &DI::Carrier| -> Fallible<Queryable<AnyObject, A>> {
+            Function::new_interactive(
+                move |arg: &DI::Carrier,
+                      outer_wrapper: Option<Wrapper>|
+                      -> Fallible<Queryable<AnyObject, A>> {
                     let mut inner_qbl = function.eval(arg)?;
 
                     Queryable::new(move |_self, query: Query<AnyObject>| match query {
-                        Query::External(query) => inner_qbl
-                            .eval(query.downcast_ref::<Q>()?)
+                        Query::External(query, wrapper) => inner_qbl
+                            .eval_wrap(query.downcast_ref::<Q>()?, wrapper)
                             .map(Answer::External),
                         Query::Internal(query) => {
                             if query.downcast_ref::<QueryType>().is_some() {
@@ -395,6 +397,7 @@ where
                             Ok(Answer::Internal(a))
                         }
                     })
+                    .wrap(outer_wrapper)
                 },
             ),
             self.input_metric.clone(),
@@ -407,7 +410,7 @@ where
 
 pub struct QueryType;
 
-impl<DI: Domain, Q: 'static, A: 'static, MI: Metric, MO: Measure>
+impl<DI: Domain, Q: 'static, A: 'static + Send + Sync, MI: Metric, MO: Measure>
     Measurement<DI, Queryable<Q, A>, MI, MO>
 where
     DI::Carrier: 'static,
@@ -418,13 +421,15 @@ where
 
         Measurement::new(
             self.input_domain.clone(),
-            Function::new_fallible(
-                move |arg: &DI::Carrier| -> Fallible<Queryable<Q, AnyObject>> {
+            Function::new_interactive(
+                move |arg: &DI::Carrier,
+                      outer_wrapper: Option<Wrapper>|
+                      -> Fallible<Queryable<Q, AnyObject>> {
                     let mut inner_qbl = function.eval(arg)?;
 
                     Queryable::new(move |_self, query: Query<Q>| match query {
-                        Query::External(query) => inner_qbl
-                            .eval(query)
+                        Query::External(query, wrapper) => inner_qbl
+                            .eval_wrap(query, wrapper)
                             .map(AnyObject::new)
                             .map(Answer::External),
                         Query::Internal(query) => {
@@ -439,6 +444,7 @@ where
                             Ok(Answer::Internal(a))
                         }
                     })
+                    .wrap(outer_wrapper)
                 },
             ),
             self.input_metric.clone(),
@@ -458,23 +464,22 @@ impl<M: Metric> MetricSpace for (AnyDomain, M) {
     }
 }
 
-impl<TI: 'static, TO: 'static> Function<TI, TO> {
+impl<TI: 'static, TO: 'static + Send + Sync> Function<TI, TO> {
     pub fn into_any(self) -> AnyFunction {
-        Function::new_fallible(move |arg: &AnyObject| -> Fallible<AnyObject> {
-            let arg = arg.downcast_ref()?;
-            let res = self.eval(arg);
-            res.map(AnyObject::new)
-        })
+        Function::new_interactive(
+            move |arg: &AnyObject, wrapper: Option<Wrapper>| -> Fallible<AnyObject> {
+                self.eval_wrap(arg.downcast_ref::<TI>()?, wrapper)
+                    .map(AnyObject::new)
+            },
+        )
     }
 }
 
-impl<TO: 'static> Function<AnyObject, TO> {
+impl<TO: 'static + Send + Sync> Function<AnyObject, TO> {
     pub fn into_any_out(self) -> AnyFunction {
-        let function = move |arg: &AnyObject| -> Fallible<AnyObject> {
-            let res = self.eval(arg);
-            res.map(AnyObject::new)
-        };
-        Function::new_fallible(function)
+        Function::new_interactive(move |arg, wrapper| {
+            self.eval_wrap(arg, wrapper).map(AnyObject::new)
+        })
     }
 }
 
@@ -504,7 +509,7 @@ pub trait IntoAnyStabilityMapExt {
 impl<MI: Metric, MO: Metric> IntoAnyStabilityMapExt for StabilityMap<MI, MO>
 where
     MI::Distance: 'static,
-    MO::Distance: 'static,
+    MO::Distance: 'static + Send + Sync,
 {
     fn into_any(self) -> AnyStabilityMap {
         let map = self.0;
@@ -517,7 +522,7 @@ where
 pub type AnyMeasurement = Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>;
 
 /// Turn a Measurement into an AnyMeasurement.
-impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
+impl<DI: 'static + Domain, TO: 'static + Send + Sync, MI: 'static + Metric, MO: 'static + Measure>
     Measurement<DI, TO, MI, MO>
 where
     DI::Carrier: 'static,
@@ -537,7 +542,7 @@ where
     }
 }
 
-impl<TO: 'static> Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
+impl<TO: 'static + Send + Sync> Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
     pub fn into_any_out(self) -> AnyMeasurement {
         Measurement::new(
             self.input_domain.clone(),
@@ -558,9 +563,9 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
     Transformation<DI, DO, MI, MO>
 where
     DI::Carrier: 'static,
-    DO::Carrier: 'static,
+    DO::Carrier: 'static + Send + Sync,
     MI::Distance: 'static,
-    MO::Distance: 'static,
+    MO::Distance: 'static + Send + Sync,
     (DI, MI): MetricSpace,
     (DO, MO): MetricSpace,
 {
@@ -592,9 +597,9 @@ mod partials {
         PartialTransformation<DI, DO, MI, MO>
     where
         DI::Carrier: 'static,
-        DO::Carrier: 'static,
+        DO::Carrier: 'static + Send + Sync,
         MI::Distance: 'static,
-        MO::Distance: 'static,
+        MO::Distance: 'static + Send + Sync,
         (DI, MI): MetricSpace,
         (DO, MO): MetricSpace,
     {
@@ -613,12 +618,16 @@ mod partials {
     pub type AnyPartialMeasurement =
         PartialMeasurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>;
 
-    impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
-        PartialMeasurement<DI, TO, MI, MO>
+    impl<
+        DI: 'static + Domain,
+        TO: 'static + Send + Sync,
+        MI: 'static + Metric,
+        MO: 'static + Measure,
+    > PartialMeasurement<DI, TO, MI, MO>
     where
         DI::Carrier: 'static,
         MI::Distance: 'static,
-        MO::Distance: 'static,
+        MO::Distance: 'static + Send + Sync,
         (DI, MI): MetricSpace,
     {
         pub fn into_any(self) -> AnyPartialMeasurement {

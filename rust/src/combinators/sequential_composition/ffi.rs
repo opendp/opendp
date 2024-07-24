@@ -45,7 +45,7 @@ impl SequentialCompositionMeasure for AnyMeasure {
     }
 }
 
-impl<Q: 'static> SequentialCompositionMeasure for TypedMeasure<Q> {
+impl<Q: 'static + Send + Sync> SequentialCompositionMeasure for TypedMeasure<Q> {
     fn concurrent(&self) -> Fallible<bool> {
         self.measure.concurrent()
     }

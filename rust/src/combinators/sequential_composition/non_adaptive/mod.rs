@@ -7,7 +7,7 @@ mod test;
 use crate::{
     core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    interactive::wrap,
+    interactive::Wrapper,
 };
 
 use super::SequentialCompositionMeasure;
@@ -70,25 +70,19 @@ where
         .map(|m| m.privacy_map.clone())
         .collect::<Vec<_>>();
 
-    let concurrent = output_measure.concurrent()?;
+    let wrapper = (!output_measure.concurrent()?).then(|| Wrapper::new(|_qbl| {
+        fallible!(
+            FailedFunction,
+            "output_measure must allow concurrency to spawn queryables from a noninteractive compositor"
+        )
+    }));
+
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &DI::Carrier| {
-            let go = || functions.iter().map(|f| f.eval(arg)).collect();
-
-            if concurrent {
-                go()
-            } else {
-                wrap(
-                    |_qbl| {
-                        fallible!(
-                            FailedFunction,
-                            "output_measure must allow concurrency to spawn queryables from a noninteractive compositor"
-                        )
-                    },
-                    go,
-                )
-            }
+            (functions.iter())
+                .map(|f| f.eval_wrap(arg, wrapper.clone()))
+                .collect()
         }),
         input_metric,
         output_measure.clone(),

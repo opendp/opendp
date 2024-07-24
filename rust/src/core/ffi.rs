@@ -146,7 +146,7 @@ pub trait IntoAnyMeasurementFfiResultExt {
     fn into_any(self) -> Fallible<AnyMeasurement>;
 }
 
-impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
+impl<DI: 'static + Domain, TO: 'static + Send + Sync, MI: 'static + Metric, MO: 'static + Measure>
     IntoAnyMeasurementFfiResultExt for Fallible<Measurement<DI, TO, MI, MO>>
 where
     MO::Distance: 'static,
@@ -167,8 +167,8 @@ pub trait IntoAnyTransformationFfiResultExt {
 impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
     IntoAnyTransformationFfiResultExt for Fallible<Transformation<DI, DO, MI, MO>>
 where
-    DO::Carrier: 'static,
-    MO::Distance: 'static,
+    DO::Carrier: 'static + Send + Sync,
+    MO::Distance: 'static + Send + Sync,
     (DI, MI): MetricSpace,
     (DO, MO): MetricSpace,
 {
@@ -181,7 +181,9 @@ pub trait IntoAnyFunctionFfiResultExt {
     fn into_any(self) -> Fallible<AnyFunction>;
 }
 
-impl<TI: 'static, TO: 'static> IntoAnyFunctionFfiResultExt for Fallible<Function<TI, TO>> {
+impl<TI: 'static, TO: 'static + Send + Sync> IntoAnyFunctionFfiResultExt
+    for Fallible<Function<TI, TO>>
+{
     fn into_any(self) -> Fallible<AnyFunction> {
         self.map(Function::into_any)
     }
@@ -822,7 +824,15 @@ fn wrap_transition(
         let _ = &transition.lifeline;
 
         Ok(match arg {
-            Query::External(q) => Answer::External(eval(&transition, q, false)?),
+            Query::External(q, wrapper) => {
+                if wrapper.is_some() {
+                    return fallible!(
+                        FailedFunction,
+                        "queryable wrapping is not supported across languages"
+                    );
+                }
+                Answer::External(eval(&transition, q, false)?)
+            }
             Query::Internal(q) => {
                 if q.downcast_ref::<QueryType>().is_some() {
                     return Ok(Answer::internal(Q.clone()));
@@ -866,9 +876,9 @@ pub extern "C" fn opendp_core__new_queryable(
     let transition = try_as_ref!(transition).clone();
     let Q = try_!(Type::try_from(Q));
     let _A = A;
-    FfiResult::Ok(util::into_raw(AnyObject::new(try_!(Queryable::new(
-        wrap_transition(transition, Q)
-    )))))
+    FfiResult::Ok(util::into_raw(AnyObject::new(Queryable::new(
+        wrap_transition(transition, Q),
+    ))))
 }
 
 #[cfg(test)]

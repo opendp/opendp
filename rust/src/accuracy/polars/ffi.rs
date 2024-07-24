@@ -1,6 +1,7 @@
 use crate::core::{FfiResult, Function};
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
 use crate::ffi::util;
+use crate::interactive::Wrapper;
 use crate::polars::{ExtractLazyFrame, OnceFrame};
 use crate::{core::Measurement, domains::LazyFrameDomain};
 use polars::prelude::LazyFrame;
@@ -23,12 +24,12 @@ pub extern "C" fn opendp_accuracy__summarize_polars_measurement(
 
     let m_typed = try_!(Measurement::new(
         try_!(m_untyped.input_domain.downcast_ref::<LazyFrameDomain>()).clone(),
-        Function::new_fallible(move |arg: &LazyFrame| {
+        Function::new_interactive(move |arg: &LazyFrame, wrapper: Option<Wrapper>| {
             let mut qbl = f_untyped
                 .eval(&AnyObject::new(arg.clone()))?
                 .downcast::<AnyQueryable>()?;
             let lf: LazyFrame = qbl.eval_internal(&ExtractLazyFrame)?;
-            Ok(OnceFrame::from(lf))
+            OnceFrame::new_onceframe(lf, wrapper)
         }),
         m_untyped.input_metric.clone(),
         m_untyped.output_measure.clone(),

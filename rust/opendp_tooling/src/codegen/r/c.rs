@@ -289,6 +289,7 @@ fn r_to_c(arg: &Argument) -> String {
     // other conversions are handled by hand-written functions from `convert.c` and `convert_elements.c`
     match &c_type {
         ty if ty == "void *" => format!("sexp_to_voidptr({name}, {rust_type})"),
+        ty if ty == "FfiSlice *" => format!("sexp_to_ffisliceptr({name}, {rust_type})"),
         ty if ty == "AnyObject *" => format!("sexp_to_anyobjectptr({name}, {rust_type})"),
         ty if ty == "AnyTransformation *" => format!("sexp_to_anytransformationptr({name})"),
         ty if ty == "AnyMeasurement *" => format!("sexp_to_anymeasurementptr({name})"),

@@ -1,6 +1,6 @@
 use rand::distributions::uniform::SampleUniform;
 
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
+use crate::core::{Domain, FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::err;
 use crate::error::Fallible;
@@ -110,6 +110,7 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
                 AtomDomain<TA>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + HasNull + Clone + CheckAtom,
                 M: 'static + EventLevelMetric,
+                <AtomDomain<TA> as Domain>::Carrier: Send + Sync,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
                 let input_domain = input_domain
@@ -194,6 +195,7 @@ pub extern "C" fn opendp_transformations__make_drop_null(
                 AtomDomain<TA>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + HasNull + Clone + CheckAtom,
                 M: 'static + EventLevelMetric,
+                <AtomDomain<TA> as Domain>::Carrier: Send + Sync,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
                 let input_domain = input_domain

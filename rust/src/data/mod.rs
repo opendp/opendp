@@ -9,7 +9,7 @@ use crate::traits::CheckNull;
 use std::any::Any;
 use std::fmt::Debug;
 
-pub trait IsVec: Debug {
+pub trait IsVec: Debug + Send + Sync {
     // Not sure if we need into_any() (which consumes the Form), keeping it for now.
     fn into_any(self: Box<Self>) -> Box<dyn Any>;
     fn as_any(&self) -> &dyn Any;
@@ -20,7 +20,7 @@ pub trait IsVec: Debug {
 
 impl<T> IsVec for Vec<T>
 where
-    T: 'static + Debug + Clone + PartialEq,
+    T: 'static + Debug + Clone + PartialEq + Send + Sync,
 {
     fn into_any(self: Box<Self>) -> Box<dyn Any> {
         self
@@ -47,7 +47,7 @@ where
 
 impl<T> From<Vec<T>> for Column
 where
-    T: 'static + Debug + Clone + PartialEq,
+    T: 'static + Debug + Clone + PartialEq + Send + Sync,
 {
     fn from(src: Vec<T>) -> Self {
         Column::new(src)

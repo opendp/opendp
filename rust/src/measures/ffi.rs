@@ -387,7 +387,7 @@ impl<Q> Default for TypedMeasure<Q> {
     }
 }
 
-impl<Q> Measure for TypedMeasure<Q> {
+impl<Q: Send + Sync> Measure for TypedMeasure<Q> {
     type Distance = Q;
 }
 

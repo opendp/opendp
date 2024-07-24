@@ -31,7 +31,7 @@ use crate::polars::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
 use crate::transformations::DataFrameDomain;
 use crate::{err, fallible};
 
-use super::any::{AnyDomain, AnyMeasurement, AnyTransformation};
+use super::any::{AnyMeasurement, AnyTransformation};
 
 // If untrusted is not enabled, then these structs don't exist.
 #[cfg(feature = "untrusted")]
@@ -62,7 +62,11 @@ pub struct ExtrinsicObject {
     pub(crate) count: RefCountFn,
 }
 
+/// Rust does not directly manipulate the data behind pointers,
+/// the bindings language enforces Send.
 unsafe impl Send for ExtrinsicObject {}
+/// Rust does not directly manipulate the data behind pointers,
+/// the bindings language enforces Sync.
 unsafe impl Sync for ExtrinsicObject {}
 
 impl Clone for ExtrinsicObject {
@@ -294,7 +298,6 @@ macro_rules! type_vec {
 
 pub type AnyMeasurementPtr = *const AnyMeasurement;
 pub type AnyTransformationPtr = *const AnyTransformation;
-pub type AnyDomainPtr = *const AnyDomain;
 
 lazy_static! {
     /// The set of registered types. We don't need everything here, just the ones that will be looked up by descriptor

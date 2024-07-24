@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::c_char;
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure, Metric, MetricSpace};
+use crate::core::{Domain, FfiResult, IntoAnyMeasurementFfiResultExt, Measure, Metric, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, AnyObject, Downcast};
@@ -56,6 +56,7 @@ pub extern "C" fn opendp_measurements__make_geometric(
             )>,
         ) -> Fallible<AnyMeasurement>
         where
+            <<MI as GeometricMetric<T>>::Domain as Domain>::Carrier: Send + Sync,
             MI: GeometricMetric<T>,
             DiscreteLaplace: MakeNoise<MI::Domain, MI, MO>,
             ConstantTimeGeometric<<MI::Domain as NoiseDomain>::Atom>: MakeNoise<MI::Domain, MI, MO>,

@@ -32,6 +32,7 @@ pub extern "C" fn opendp_transformations__make_stable_expr(
         Expr: StableExpr<M, M>,
         (WildExprDomain, M): MetricSpace,
         (ExprDomain, M): MetricSpace,
+        M::Distance: Send + Sync,
     {
         let input_metric = input_metric.downcast_ref::<M>()?.clone();
         make_stable_expr::<M, M>(input_domain, input_metric, expr).into_any()

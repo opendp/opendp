@@ -1,8 +1,8 @@
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::FfiResult,
-    domains::{Margin, polars::ffi::unpack_series_domains},
+    core::{FfiResult, FfiSlice},
+    domains::{polars::ffi::unpack_series_domains, Margin},
     ffi::{
         any::{AnyDomain, AnyObject, Downcast},
         util,
@@ -27,9 +27,10 @@ use super::{Context, WildExprDomain};
 /// * `by` - optional. Set if expression is applied to grouped data
 /// * `margin` - descriptors for grouped data
 pub extern "C" fn opendp_domains__wild_expr_domain(
-    columns: *const AnyObject,
+    columns: *const FfiSlice,
     margin: *const AnyObject,
 ) -> FfiResult<*mut AnyDomain> {
+
     let columns = try_!(unpack_series_domains(columns));
 
     let context = if let Some(margin) = util::as_ref(margin) {

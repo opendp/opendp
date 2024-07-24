@@ -1,11 +1,10 @@
+use std::slice;
+
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{FfiResult, Measurement},
-    ffi::{
-        any::{AnyMeasurement, AnyObject, Downcast},
-        util::AnyMeasurementPtr,
-    },
+    core::{FfiResult, FfiSlice, Measurement},
+    ffi::{any::AnyMeasurement, util::AnyMeasurementPtr},
 };
 
 use super::make_composition;
@@ -13,7 +12,7 @@ use super::make_composition;
 #[bootstrap(
     name = "make_composition",
     features("contrib"),
-    arguments(measurements(rust_type = "Vec<AnyMeasurementPtr>"))
+    arguments(measurements(c_type = "FfiSlice *", rust_type = "Vec<AnyMeasurementPtr>"))
 )]
 /// Construct the DP composition \[`measurement0`, `measurement1`, ...\].
 /// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
@@ -31,15 +30,19 @@ use super::make_composition;
 /// * `measurements` - A vector of Measurements to compose.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_composition(
-    measurements: *const AnyObject,
+    measurements: *const FfiSlice,
 ) -> FfiResult<*mut AnyMeasurement> {
-    let meas_ptrs = try_!(try_as_ref!(measurements).downcast_ref::<Vec<AnyMeasurementPtr>>());
-
-    let measurements: Vec<AnyMeasurement> = try_!(
-        meas_ptrs
-            .iter()
-            .map(|ptr| Ok(try_as_ref!(*ptr).clone()))
-            .collect()
+    let measurements = try_as_ref!(measurements);
+    let measurements = try_!(
+        unsafe {
+            slice::from_raw_parts(
+                measurements.ptr as *const AnyMeasurementPtr,
+                measurements.len,
+            )
+        }
+        .into_iter()
+        .map(|ptr| Ok(try_as_ref!(*ptr).clone()))
+        .collect()
     );
     make_composition(measurements)
         .map(Measurement::into_any_out)
@@ -71,31 +74,34 @@ pub extern "C" fn opendp_combinators__make_composition(
 )]
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_basic_composition(
-    measurements: *const AnyObject,
+    measurements: *const FfiSlice,
 ) -> FfiResult<*mut AnyMeasurement> {
     opendp_combinators__make_composition(measurements)
 }
 
 #[cfg(test)]
 mod tests {
+    use std::ffi::c_void;
+
     use crate::combinators::test::make_test_measurement;
     use crate::core;
     use crate::error::Fallible;
     use crate::ffi::any::{AnyObject, Downcast};
-    use crate::ffi::util;
+    use crate::ffi::util::into_raw;
 
     use super::*;
 
     #[test]
     fn test_make_composition_ffi() -> Fallible<()> {
-        let measurement0 =
-            util::into_raw(make_test_measurement::<i32>()?.into_any()) as AnyMeasurementPtr;
-        let measurement1 =
-            util::into_raw(make_test_measurement::<i32>()?.into_any()) as AnyMeasurementPtr;
-        let measurements = vec![measurement0, measurement1];
-        let basic_composition = Result::from(opendp_combinators__make_composition(
-            AnyObject::new_raw(measurements),
-        ))?;
+        let measurement0 = make_test_measurement::<i32>()?.into_any();
+        let measurement1 = make_test_measurement::<i32>()?.into_any();
+        let measurements = vec![into_raw(measurement0), into_raw(measurement1)];
+        let slice = FfiSlice {
+            ptr: measurements.as_ptr() as *const c_void,
+            len: 2,
+        };
+        let basic_composition =
+            Result::from(opendp_combinators__make_composition(into_raw(slice)))?;
         let arg = AnyObject::new_raw(vec![999]);
         let res = core::opendp_core__measurement_invoke(&basic_composition, arg);
         let res: Vec<AnyObject> = Fallible::from(res)?.downcast()?;

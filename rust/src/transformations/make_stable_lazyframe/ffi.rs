@@ -43,6 +43,7 @@ pub extern "C" fn opendp_transformations__make_stable_lazyframe(
             lazyframe: LazyFrame,
         ) -> Fallible<AnyTransformation>
         where
+            MI::Distance: Send + Sync,
             DslPlan: StableDslPlan<MI, MI>,
             (LazyFrameDomain, MI): MetricSpace,
             (DslPlanDomain, MI): MetricSpace,

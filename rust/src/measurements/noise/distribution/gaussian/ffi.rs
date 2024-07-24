@@ -51,6 +51,7 @@ pub extern "C" fn opendp_measurements__make_gaussian(
             k: Option<i32>,
         ) -> Fallible<AnyMeasurement>
         where
+            <<MI as GaussianMetric<T>>::Domain as Domain>::Carrier: Send + Sync,
             MI: GaussianMetric<T>,
             DiscreteGaussian: MakeNoise<MI::Domain, MI, MO>,
             (MI::Domain, MI): MetricSpace,

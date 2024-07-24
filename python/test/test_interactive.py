@@ -1,6 +1,6 @@
 import opendp.prelude as dp
 import pytest
-
+import re
 
 
 def test_sequential_composition():
@@ -70,6 +70,28 @@ def test_sequential_composition_approxdp():
     )
     sum_meas = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(sum_meas), 1e-6)
     sc_qbl(sum_meas)
+
+
+def test_sequentiality_constraint():
+    space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
+    azcdp = dp.approximate(dp.zero_concentrated_divergence())
+
+    m_free = space >> dp.m.then_user_measurement(
+        azcdp, lambda x: x, lambda _: (0.0, 0.0)
+    )
+
+    m_sc0 = space >> dp.c.then_adaptive_composition(azcdp, 1, [(0.1, 1e-6)] * 2)
+    qbl_sc0 = m_sc0([1] * 200)
+
+    m_sc1 = space >> dp.c.then_adaptive_composition(azcdp, 1, [(0.05, 0.5e-6)] * 2)
+    qbl0_sc1 = qbl_sc0(m_sc1)
+
+    qbl0_sc1(m_free) # first child is not locked
+    qbl_sc0(m_sc1)   # make second child, locking first child
+
+    # check that first child is now locked
+    with pytest.raises(dp.OpenDPException, match=re.escape("Adaptive compositor has received a new query.")):
+        qbl0_sc1(m_free)
 
 
 def test_plugin_queryable_int():
