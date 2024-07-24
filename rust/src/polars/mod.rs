@@ -3,7 +3,7 @@ use std::{env, sync::Arc};
 use crate::{
     core::Function,
     error::Fallible,
-    interactive::{Answer, Query, Queryable},
+    interactive::{Answer, Query, Queryable, Wrapper},
     measurements::{
         expr_index_candidates::IndexCandidatesShim,
         expr_noise::{Distribution, NoiseShim},
@@ -443,48 +443,42 @@ pub(crate) struct ExtractLazyFrame;
 
 pub type OnceFrame = Queryable<OnceFrameQuery, OnceFrameAnswer>;
 
-impl From<LazyFrame> for OnceFrame {
-    fn from(value: LazyFrame) -> Self {
-        let mut state = Some(value);
-        Self::new_raw(move |_self: &Self, query: Query<OnceFrameQuery>| {
-            let Some(lazyframe) = state.clone() else {
-                return fallible!(FailedFunction, "OnceFrame has been exhausted");
-            };
-            Ok(match query {
-                Query::External(q_external) => Answer::External(match q_external {
-                    OnceFrameQuery::Collect => {
-                        let dataframe = lazyframe.collect()?;
-                        let n = dataframe.height();
-                        let dataframe = dataframe.sample_n_literal(n, false, true, None)?;
-                        state.take();
-                        OnceFrameAnswer::Collect(dataframe)
-                    }
-                }),
-                Query::Internal(q_internal) => Answer::Internal({
-                    if q_internal.downcast_ref::<ExtractLazyFrame>().is_some() {
-                        Box::new(lazyframe)
-                    } else {
-                        return fallible!(FailedFunction, "Unrecognized internal query");
-                    }
-                }),
-            })
-        })
+impl OnceFrame {
+    pub fn new_onceframe(lazyframe: LazyFrame, wrapper: Option<Wrapper>) -> Fallible<Self> {
+        let mut state = Some(lazyframe);
+        Self::new_interactive(
+            move |_self: &Self, query: Query<OnceFrameQuery>| {
+                let Some(lazyframe) = state.clone() else {
+                    return fallible!(FailedFunction, "OnceFrame has been exhausted");
+                };
+                Ok(match query {
+                    Query::External(q_external, _) => Answer::External(match q_external {
+                        OnceFrameQuery::Collect => {
+                            let dataframe = lazyframe.collect()?;
+                            let n = dataframe.height();
+                            let dataframe = dataframe.sample_n_literal(n, false, true, None)?;
+                            state.take();
+                            OnceFrameAnswer::Collect(dataframe)
+                        }
+                    }),
+                    Query::Internal(q_internal) => Answer::Internal({
+                        if q_internal.downcast_ref::<ExtractLazyFrame>().is_some() {
+                            Box::new(lazyframe)
+                        } else {
+                            return fallible!(FailedFunction, "Unrecognized internal query");
+                        }
+                    }),
+                })
+            },
+            wrapper,
+        )
     }
 }
 
 impl OnceFrame {
     pub fn collect(mut self) -> Fallible<DataFrame> {
-        if let Answer::External(OnceFrameAnswer::Collect(dataframe)) =
-            self.eval_query(Query::External(&OnceFrameQuery::Collect))?
-        {
-            Ok(dataframe)
-        } else {
-            // should never be reached
-            fallible!(
-                FailedFunction,
-                "Collect returned invalid answer: Please report this bug"
-            )
-        }
+        let OnceFrameAnswer::Collect(dataframe) = self.eval(&OnceFrameQuery::Collect)?;
+        Ok(dataframe)
     }
 
     /// Extract the compute plan with the private data.

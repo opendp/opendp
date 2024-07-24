@@ -26,8 +26,8 @@ use crate::data::Column;
 use crate::domains::BitVector;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
-use crate::ffi::util::{self, into_c_char_p, AnyDomainPtr, ExtrinsicObject};
-use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
+use crate::ffi::util::{self, into_c_char_p, ExtrinsicObject};
+use crate::ffi::util::{c_bool, Type, TypeContents};
 use crate::measures::PrivacyProfile;
 use crate::metrics::IntDistance;
 use crate::traits::samplers::{fill_bytes, Shuffle};
@@ -61,7 +61,7 @@ pub extern "C" fn opendp_data__slice_as_object(
 ) -> FfiResult<*mut AnyObject> {
     let raw = try_as_ref!(raw);
     let T_ = try_!(Type::try_from(T));
-    fn raw_to_plain<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+    fn raw_to_plain<T: 'static + Clone + Send + Sync>(raw: &FfiSlice) -> Fallible<AnyObject> {
         if raw.len != 1 {
             return fallible!(
                 FFI,
@@ -116,12 +116,12 @@ pub extern "C" fn opendp_data__slice_as_object(
         unimplemented!()
     }
     #[allow(clippy::unnecessary_wraps)]
-    fn raw_to_vec<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+    fn raw_to_vec<T: 'static + Clone + Send + Sync>(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const T, raw.len) };
         let vec = slice.to_vec();
         Ok(AnyObject::new(vec))
     }
-    fn raw_to_vec_obj<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+    fn raw_to_vec_obj<T: 'static + Clone + Send + Sync>(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const AnyObject, raw.len) };
         let vec = slice.iter()
             .map(|v| util::as_ref(*v)
@@ -131,7 +131,7 @@ pub extern "C" fn opendp_data__slice_as_object(
             .collect::<Fallible<Vec<T>>>()?;
         Ok(AnyObject::new(vec))
     }
-    fn raw_to_tuple2<T0: 'static + Clone, T1: 'static + Clone>(
+    fn raw_to_tuple2<T0: 'static + Clone + Send + Sync, T1: 'static + Clone + Send + Sync>(
         raw: &FfiSlice,
     ) -> Fallible<AnyObject> {
         if raw.len != 2 {
@@ -145,7 +145,7 @@ pub extern "C" fn opendp_data__slice_as_object(
             .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a tuple"))?;
         Ok(AnyObject::new(tuple))
     }
-    fn raw_to_tuple3_partition_distance<T: 'static + Clone>(
+    fn raw_to_tuple3_partition_distance<T: 'static + Clone + Send + Sync>(
         raw: &FfiSlice,
     ) -> Fallible<AnyObject> {
         if raw.len != 3 {
@@ -159,7 +159,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         let v2 = util::as_ref(slice[2] as *const T).ok_or_else(new_err)?.clone();
         Ok(AnyObject::new((v0, v1, v2)))
     }
-    fn raw_to_hashmap<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
+    fn raw_to_hashmap<K: 'static + Clone + Hash + Eq + Send + Sync, V: 'static + Clone + Send + Sync>(
         raw: &FfiSlice,
     ) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const AnyObject, raw.len) };
@@ -289,12 +289,9 @@ pub extern "C" fn opendp_data__slice_as_object(
             let element = try_!(Type::of_id(&element_id));
             match element.descriptor.as_str() {
                 "String" => raw_to_vec_string(raw),
-                "AnyMeasurementPtr" => raw_to_vec::<AnyMeasurementPtr>(raw),
-                "AnyTransformationPtr" => raw_to_vec::<AnyTransformationPtr>(raw),
                 "ExtrinsicObject" => raw_to_vec::<ExtrinsicObject>(raw),
                 "(f32, f32)" => raw_to_vec_obj::<(f32, f32)>(raw),
                 "(f64, f64)" => raw_to_vec_obj::<(f64, f64)>(raw),
-                "SeriesDomain" => raw_to_vec::<AnyDomainPtr>(raw),
                 _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw)),
             }
         }
@@ -444,7 +441,10 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             3,
         ))
     }
-    fn hashmap_to_raw<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
+    fn hashmap_to_raw<
+        K: 'static + Clone + Hash + Eq + Send + Sync,
+        V: 'static + Clone + Send + Sync,
+    >(
         obj: &AnyObject,
     ) -> Fallible<FfiSlice> {
         let data: &HashMap<K, V> = obj.downcast_ref()?;
@@ -860,22 +860,22 @@ impl ProductOrd for AnyObject {
 
 impl Clone for AnyObject {
     fn clone(&self) -> Self {
-        fn clone_plain<T: 'static + Clone>(obj: &AnyObject) -> Fallible<AnyObject> {
+        fn clone_plain<T: 'static + Clone + Send + Sync>(obj: &AnyObject) -> Fallible<AnyObject> {
             Ok(AnyObject::new(obj.downcast_ref::<T>()?.clone()))
         }
-        fn clone_tuple2<T0: 'static + Clone, T1: 'static + Clone>(
+        fn clone_tuple2<T0: 'static + Clone + Send + Sync, T1: 'static + Clone + Send + Sync>(
             obj: &AnyObject,
         ) -> Fallible<AnyObject> {
             Ok(AnyObject::new(obj.downcast_ref::<(T0, T1)>()?.clone()))
         }
-        fn clone_hashmap<T0: 'static + Clone, T1: 'static + Clone>(
+        fn clone_hashmap<T0: 'static + Clone + Send + Sync, T1: 'static + Clone + Send + Sync>(
             obj: &AnyObject,
         ) -> Fallible<AnyObject> {
             Ok(AnyObject::new(
                 obj.downcast_ref::<HashMap<T0, T1>>()?.clone(),
             ))
         }
-        fn clone_vec<T: 'static + Clone>(obj: &AnyObject) -> Fallible<AnyObject> {
+        fn clone_vec<T: 'static + Clone + Send + Sync>(obj: &AnyObject) -> Fallible<AnyObject> {
             Ok(AnyObject::new(obj.downcast_ref::<Vec<T>>()?.clone()))
         }
 
