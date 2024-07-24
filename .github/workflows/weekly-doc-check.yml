@@ -47,9 +47,6 @@ jobs:
       - name: Check Rust version
         run: cargo --version
 
-      - name: Build
-        run: cargo build --verbose --all-features
-
       - name: Build (dynamic w/ polars)
         run: cargo build --verbose --features untrusted,ffi,polars
   
