@@ -309,12 +309,24 @@ impl DPExpr {
     /// # Arguments
     /// * `scale` - Scale parameter for the noise distribution
     /// * `distribution` - Either Laplace, Gaussian or None.
+<<<<<<< HEAD
     pub fn noise(self, distribution: Option<Distribution>, scale: Option<f64>) -> Expr {
         let distribution = distribution
             .map(|d| lit(format!("{:?}", d)))
             .unwrap_or_else(|| lit(Null {}));
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
         apply_anonymous_function(vec![self.0, distribution, scale], NoiseShim)
+=======
+    pub fn noise(self, scale: Option<f64>, distribution: Option<Distribution>) -> Expr {
+        apply_anonymous_function(
+            vec![self.0],
+            NoiseArgs {
+                scale,
+                distribution,
+                support: None,
+            },
+        )
+>>>>>>> 8c46cf39eca322af8f42ac24eb462c01f8e1d5b3
     }
 
     /// Add Laplace noise to the expression.

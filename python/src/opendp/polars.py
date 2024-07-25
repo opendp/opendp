@@ -569,10 +569,13 @@ try:
             """Retrieve noise scale parameters and accuracy estimates for each output.
 
             If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
+<<<<<<< HEAD
 
             If a threshold is configured for censoring small/sensitive partitions,
             a threshold column will be included,
             containing the cutoff for the respective count query being thresholded.
+=======
+>>>>>>> 8c46cf39eca322af8f42ac24eb462c01f8e1d5b3
             
             :example:
 
@@ -619,6 +622,7 @@ try:
             """
             from opendp.accuracy import describe_polars_measurement_accuracy
             return describe_polars_measurement_accuracy(self.resolve(), alpha)
+<<<<<<< HEAD
         
 
     class LazyGroupByQuery(_LazyGroupBy):
@@ -650,6 +654,8 @@ try:
             return LazyFrameQuery(lf_plan, self._query)
 
 
+=======
+>>>>>>> 8c46cf39eca322af8f42ac24eb462c01f8e1d5b3
 
 except ImportError:
     ERR_MSG = "LazyFrameQuery depends on Polars: `pip install 'opendp[polars]'`."

@@ -5,3 +5,4 @@ pandas
 seaborn
 scipy
 scikit-learn
+polars 

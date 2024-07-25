@@ -74,6 +74,7 @@ pub struct NoisePlugin {
     /// The distribution to sample from
     pub distribution: Distribution,
 
+<<<<<<< HEAD
     /// The scale of the noise
     pub scale: f64,
 
@@ -108,6 +109,15 @@ impl OpenDPPlugin for NoisePlugin {
             ..Default::default()
         }
     }
+=======
+    /// The scale of the noise.
+    ///
+    /// Scale may be left None, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
+    pub scale: Option<f64>,
+
+    /// Distinguish between integer or floating-point support.
+    pub support: Option<Support>,
+>>>>>>> 8c46cf39eca322af8f42ac24eb462c01f8e1d5b3
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
@@ -164,6 +174,14 @@ where
     let Some((input, distribution, scale)) = match_noise_shim(&expr)? else {
         return fallible!(MakeMeasurement, "Expected noise function");
     };
+<<<<<<< HEAD
+=======
+    let NoiseArgs {
+        scale,
+        distribution,
+        ..
+    } = args;
+>>>>>>> 8c46cf39eca322af8f42ac24eb462c01f8e1d5b3
 
     let t_prior = input
         .clone()
@@ -226,10 +244,17 @@ where
             apply_plugin(
                 input_expr,
                 expr.clone(),
+<<<<<<< HEAD
                 NoisePlugin {
                     scale,
                     distribution: MO::DISTRIBUTION,
                     support,
+=======
+                NoiseArgs {
+                    scale: Some(scale),
+                    distribution: Some(MO::DISTRIBUTION),
+                    support: Some(support),
+>>>>>>> 8c46cf39eca322af8f42ac24eb462c01f8e1d5b3
                 },
             )
         }),
