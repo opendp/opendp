@@ -27,7 +27,7 @@ def test_private_selection_threshold():
 
     mech_with_score = dp.c.make_basic_composition([count, sum_])
 
-    with optional_dependency("numpy"):
+    with optional_dependency("numpy"), optional_dependency("randomgen"):
 
         import numpy as np
 
@@ -35,7 +35,7 @@ def test_private_selection_threshold():
                                                     threshold=threshold,
                                                     stop_probability=0)
 
-        data = np.random.normal(10, 5, 20)
+        data = np.random.default_rng(seed=42).normal(10, 5, 20)
 
         score, _ = meas_pst(data)
 
