@@ -17,10 +17,10 @@ def make_private_selection_threshold(meas: Measurement,
     until the score q is at least T, a predefined threshold.
     Only the last output of M is released.
 
-    Algorithm 1: https://arxiv.org/pdf/1811.07971.pdf#page=7
+    Algorithm 1 in `Private selection from private candidates <https://arxiv.org/pdf/1811.07971.pdf#page=7>`_ (Liu and Talwar, STOC 2019).
 
     :param meas: A measurement function that returns a 2-tuple when invoked,
-                 where the first element is a score.
+                 where the first element is a score and the second element is the output of intreset.
     :param threshold: The threshold score. Return immediately if the score is above this threshold.
     :param stop_probability: The probability of stopping early at any iteration.
     :param epsilon_selection: The epsilon allocated to the private selection.
