@@ -123,6 +123,11 @@ typedef struct FfiResult_____AnyTransformation {
 
 typedef struct Function_AnyObject__AnyObject AnyFunction;
 
+typedef struct FfiSlice {
+  const void *ptr;
+  uintptr_t len;
+} FfiSlice;
+
 enum FfiResult_____AnyDomain_Tag {
   Ok_____AnyDomain,
   Err_____AnyDomain,
@@ -255,11 +260,6 @@ typedef struct FfiResult_____AnyObject *(*CallbackFn)(const struct AnyObject*);
 
 typedef struct FfiResult_____AnyObject *(*TransitionFn)(const struct AnyObject*, c_bool);
 
-typedef struct FfiSlice {
-  const void *ptr;
-  uintptr_t len;
-} FfiSlice;
-
 enum FfiResult_____FfiSlice_Tag {
   Ok_____FfiSlice,
   Err_____FfiSlice,
@@ -336,7 +336,7 @@ struct FfiResult_____AnyTransformation opendp_combinators__make_chain_tt(const A
 struct FfiResult_____AnyMeasurement opendp_combinators__make_chain_pm(const AnyFunction *postprocess1,
                                                                       const AnyMeasurement *measurement0);
 
-struct FfiResult_____AnyMeasurement opendp_combinators__make_basic_composition(const struct AnyObject *measurements);
+struct FfiResult_____AnyMeasurement opendp_combinators__make_basic_composition(struct FfiSlice *measurements);
 
 struct FfiResult_____AnyMeasurement opendp_combinators__make_sequential_composition(const struct AnyDomain *input_domain,
                                                                                     const struct AnyMetric *input_metric,
@@ -843,7 +843,7 @@ struct FfiResult_____ExtrinsicObject opendp_domains___user_domain_descriptor(str
  * # Arguments
  * * `series_domains` - Domain of each series in the lazyframe.
  */
-struct FfiResult_____AnyDomain opendp_domains__lazyframe_domain(struct AnyObject *series_domains);
+struct FfiResult_____AnyDomain opendp_domains__lazyframe_domain(struct FfiSlice *series_domains);
 
 struct FfiResult_____AnyObject opendp_domains___lazyframe_from_domain(struct AnyDomain *domain);
 

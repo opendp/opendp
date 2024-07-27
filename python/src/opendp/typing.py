@@ -434,10 +434,11 @@ LazyFrame: str = 'LazyFrame'
 DataFrame: str = 'DataFrame'
 Series: str = 'Series'
 Expr: str = 'Expr'
-AnyMeasurementPtr: str = 'AnyMeasurementPtr'
-AnyTransformationPtr: str = 'AnyTransformationPtr'
 LazyFrameDomain: str = 'LazyFrame'
 SeriesDomain: str = 'SeriesDomain'
+
+AnyMeasurementPtr: str = 'AnyMeasurementPtr'
+AnyTransformationPtr: str = 'AnyTransformationPtr'
 
 class DomainDescriptor(RuntimeType):
     def __getitem__(self, subdomain):

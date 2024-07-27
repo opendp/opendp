@@ -4,7 +4,7 @@ use crate::{
     core::{FfiResult, Function, Measurement, PrivacyMap},
     error::Fallible,
     ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
-    interactive::{Answer, Query, Queryable},
+    interactive::{Answer, Query, Queryable, WrapFn},
     measures::ffi::TypedMeasure,
     metrics::ffi::TypedMetric,
     traits::ProductOrd,
@@ -82,7 +82,7 @@ pub extern "C" fn opendp_combinators__make_sequential_composition(
     let d_in = try_as_ref!(d_in).clone();
     let d_mids = try_as_ref!(d_mids);
 
-    fn repack_vec<T: 'static + Clone>(obj: &AnyObject) -> Fallible<Vec<AnyObject>> {
+    fn repack_vec<T: 'static + Clone + Send + Sync>(obj: &AnyObject) -> Fallible<Vec<AnyObject>> {
         Ok(obj
             .downcast_ref::<Vec<T>>()?
             .iter()
@@ -120,36 +120,41 @@ impl<
 
         Measurement::new(
             self.input_domain.clone(),
-            Function::new_fallible(
-                move |arg: &AnyObject| -> Fallible<Queryable<AnyMeasurement, AnyObject>> {
+            Function::new_wrappable(
+                move |arg: &AnyObject,
+                      outer_wrapper: Option<WrapFn>|
+                      -> Fallible<Queryable<AnyMeasurement, AnyObject>> {
                     let mut inner_qbl = function.eval(arg)?;
 
-                    Queryable::new(move |_self, query: Query<AnyMeasurement>| match query {
-                        Query::External(query) => {
-                            let privacy_map = query.privacy_map.clone();
-                            let meas = Measurement::new(
-                                query.input_domain.clone(),
-                                query.function.clone(),
-                                TypedMetric::<QI>::new(query.input_metric.clone())?,
-                                TypedMeasure::<QO>::new(query.output_measure.clone())?,
-                                PrivacyMap::new_fallible(move |d_in: &QI| {
-                                    privacy_map.eval(&AnyObject::new(d_in.clone()))?.downcast()
-                                }),
-                            )?;
-                            inner_qbl.eval(&meas).map(Answer::External)
-                        }
-                        Query::Internal(query) => {
-                            let Answer::Internal(a) =
-                                inner_qbl.eval_query(Query::Internal(query))?
-                            else {
-                                return fallible!(
-                                    FailedFunction,
-                                    "internal query returned external answer"
-                                );
-                            };
-                            Ok(Answer::Internal(a))
-                        }
-                    })
+                    Queryable::new(
+                        move |_self, query: Query<AnyMeasurement>| match query {
+                            Query::External(query, wrapper) => {
+                                let privacy_map = query.privacy_map.clone();
+                                let meas = Measurement::new(
+                                    query.input_domain.clone(),
+                                    query.function.clone(),
+                                    TypedMetric::<QI>::new(query.input_metric.clone())?,
+                                    TypedMeasure::<QO>::new(query.output_measure.clone())?,
+                                    PrivacyMap::new_fallible(move |d_in: &QI| {
+                                        privacy_map.eval(&AnyObject::new(d_in.clone()))?.downcast()
+                                    }),
+                                )?;
+                                inner_qbl.eval_wrap(&meas, wrapper).map(Answer::External)
+                            }
+                            Query::Internal(query) => {
+                                let Answer::Internal(a) =
+                                    inner_qbl.eval_query(Query::Internal(query))?
+                                else {
+                                    return fallible!(
+                                        FailedFunction,
+                                        "internal query returned external answer"
+                                    );
+                                };
+                                Ok(Answer::Internal(a))
+                            }
+                        },
+                        outer_wrapper,
+                    )
                 },
             ),
             self.input_metric.clone(),

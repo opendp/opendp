@@ -3,7 +3,7 @@ use std::os::raw::c_char;
 
 use dashu::rational::RBig;
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure, MetricSpace};
+use crate::core::{Domain, FfiResult, IntoAnyMeasurementFfiResultExt, Measure, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
@@ -20,7 +20,7 @@ pub extern "C" fn opendp_measurements__make_gaussian(
     k: *const i32,
     MO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize_float<T: 'static + Float>(
+    fn monomorphize_float<T: Float>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
         scale: f64,
@@ -31,6 +31,8 @@ pub extern "C" fn opendp_measurements__make_gaussian(
         RBig: TryFrom<T>,
         AtomDomain<T>: GaussianDomain<ZeroConcentratedDivergence, T>,
         VectorDomain<AtomDomain<T>>: GaussianDomain<ZeroConcentratedDivergence, T>,
+        <AtomDomain<T> as Domain>::Carrier: Send + Sync,
+        <VectorDomain<AtomDomain<T>> as Domain>::Carrier: Send + Sync,
         (
             AtomDomain<T>,
             <AtomDomain<T> as GaussianDomain<ZeroConcentratedDivergence, T>>::InputMetric,
@@ -47,6 +49,7 @@ pub extern "C" fn opendp_measurements__make_gaussian(
             k: Option<i32>,
         ) -> Fallible<AnyMeasurement>
         where
+            D::Carrier: Send + Sync,
             (D, D::InputMetric): MetricSpace,
         {
             let input_domain = input_domain.downcast_ref::<D>()?.clone();
@@ -76,6 +79,8 @@ pub extern "C" fn opendp_measurements__make_gaussian(
         f64: InfCast<QI>,
         AtomDomain<T>: GaussianDomain<ZeroConcentratedDivergence, QI>,
         VectorDomain<AtomDomain<T>>: GaussianDomain<ZeroConcentratedDivergence, QI>,
+        <AtomDomain<T> as Domain>::Carrier: Send + Sync,
+        <VectorDomain<AtomDomain<T>> as Domain>::Carrier: Send + Sync,
         (
             AtomDomain<T>,
             <AtomDomain<T> as GaussianDomain<ZeroConcentratedDivergence, QI>>::InputMetric,
@@ -97,6 +102,7 @@ pub extern "C" fn opendp_measurements__make_gaussian(
         ) -> Fallible<AnyMeasurement>
         where
             f64: Number + InfCast<QI>,
+            D::Carrier: Send + Sync,
             (D, D::InputMetric): MetricSpace,
         {
             let input_domain = input_domain.downcast_ref::<D>()?.clone();
