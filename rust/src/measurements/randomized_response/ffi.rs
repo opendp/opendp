@@ -1,60 +1,40 @@
 use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::iter::FromIterator;
-use std::os::raw::{c_char, c_void};
+use std::os::raw::c_char;
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util::{c_bool, to_bool, Type};
 use crate::measurements::{make_randomized_response, make_randomized_response_bool};
-use crate::traits::{ExactIntCast, Float, FloatBits, Hashable};
+use crate::traits::Hashable;
 
 #[no_mangle]
 pub extern "C" fn opendp_measurements__make_randomized_response_bool(
-    prob: *const c_void,
+    prob: f64,
     constant_time: c_bool,
-    QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize<QO>(prob: *const c_void, constant_time: bool) -> Fallible<AnyMeasurement>
-    where
-        QO: Float,
-        <QO as FloatBits>::Bits: ExactIntCast<usize>,
-        usize: ExactIntCast<<QO as FloatBits>::Bits>,
-    {
-        let prob = *try_as_ref!(prob as *const QO);
-        make_randomized_response_bool::<QO>(prob, constant_time).into_any()
-    }
-    let QO = try_!(Type::try_from(QO));
     let constant_time = to_bool(constant_time);
-    dispatch!(monomorphize, [
-        (QO, @floats)
-    ], (prob, constant_time))
-    .into()
+    make_randomized_response_bool(prob, constant_time)
+        .into_any()
+        .into()
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_measurements__make_randomized_response(
     categories: *const AnyObject,
-    prob: *const c_void,
+    prob: f64,
     constant_time: c_bool,
     T: *const c_char,
-    QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize<T, QO>(
+    fn monomorphize<T: Hashable>(
         categories: *const AnyObject,
-        prob: *const c_void,
+        prob: f64,
         constant_time: bool,
-    ) -> Fallible<AnyMeasurement>
-    where
-        T: Hashable,
-        QO: Float,
-        <QO as FloatBits>::Bits: ExactIntCast<usize>,
-        usize: ExactIntCast<<QO as FloatBits>::Bits>,
-    {
+    ) -> Fallible<AnyMeasurement> {
         let categories = try_as_ref!(categories).downcast_ref::<Vec<T>>()?.clone();
-        let prob = *try_as_ref!(prob as *const QO);
-        make_randomized_response::<T, QO>(
+        make_randomized_response::<T>(
             HashSet::from_iter(categories.into_iter()),
             prob,
             constant_time,
@@ -62,11 +42,9 @@ pub extern "C" fn opendp_measurements__make_randomized_response(
         .into_any()
     }
     let T = try_!(Type::try_from(T));
-    let QO = try_!(Type::try_from(QO));
     let constant_time = to_bool(constant_time);
     dispatch!(monomorphize, [
-        (T, @hashable),
-        (QO, @floats)
+        (T, @hashable)
     ], (categories, prob, constant_time))
     .into()
 }

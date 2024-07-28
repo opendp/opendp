@@ -5,7 +5,7 @@ use crate::{domains::AtomDomain, measures::ZeroConcentratedDivergence};
 
 #[test]
 fn test_make_scalar_integer_gaussian() -> Fallible<()> {
-    let meas = make_scalar_integer_gaussian::<_, ZeroConcentratedDivergence<_>, f32>(
+    let meas = make_scalar_integer_gaussian::<_, ZeroConcentratedDivergence, f32>(
         AtomDomain::default(),
         AbsoluteDistance::default(),
         1e30f64,
@@ -17,7 +17,7 @@ fn test_make_scalar_integer_gaussian() -> Fallible<()> {
 
 #[test]
 fn test_make_scalar_integer_gaussian_zero_scale() -> Fallible<()> {
-    let meas = make_scalar_integer_gaussian::<_, ZeroConcentratedDivergence<_>, i32>(
+    let meas = make_scalar_integer_gaussian::<_, ZeroConcentratedDivergence, i32>(
         AtomDomain::default(),
         AbsoluteDistance::default(),
         0.,
@@ -30,7 +30,7 @@ fn test_make_scalar_integer_gaussian_zero_scale() -> Fallible<()> {
 
 #[test]
 fn test_make_scalar_integer_gaussian_max_scale() -> Fallible<()> {
-    let meas = make_scalar_integer_gaussian::<_, ZeroConcentratedDivergence<_>, f64>(
+    let meas = make_scalar_integer_gaussian::<_, ZeroConcentratedDivergence, f64>(
         AtomDomain::default(),
         AbsoluteDistance::default(),
         f64::MAX,

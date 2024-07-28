@@ -104,7 +104,7 @@ def make_private_np_pca(
     compositor = dp.c.make_sequential_composition(
         input_domain,
         input_metric,
-        dp.max_divergence(T=input_desc.T),
+        dp.max_divergence(),
         d_in=unit_d_in,
         d_mids=[mean_epsilon, make_eigdecomp(norm, 0).map(unit_d_in)],
     )

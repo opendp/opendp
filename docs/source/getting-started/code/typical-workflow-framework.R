@@ -10,7 +10,7 @@ input_metric <- symmetric_distance() # ...in terms of additions/removals
 
 # privacy-loss
 d_out <- 1.0 # output distributions have distance at most d_out (ε)...
-privacy_measure <- max_divergence(.T = f64) # ...in terms of pure-DP
+privacy_measure <- max_divergence() # ...in terms of pure-DP
 
 # /privacy-loss
 

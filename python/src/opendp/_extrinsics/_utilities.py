@@ -1,5 +1,5 @@
 from typing import Callable, Union
-from opendp.mod import PartialConstructor, Measurement, Transformation
+from opendp.mod import Domain, Metric, PartialConstructor, Measurement, Transformation
 
 
 def to_then(constructor) -> Callable[..., PartialConstructor]:
@@ -54,7 +54,7 @@ def register_combinator(
 
 
 def with_privacy(
-    t_constructor: Callable,
+    t_constructor: Callable[[Domain, Metric], Transformation],
 ) -> Callable[..., Union[Transformation, Measurement]]:
     from opendp.mod import assert_features
     from opendp.measurements import then_gaussian, then_laplace
@@ -65,10 +65,10 @@ def with_privacy(
         m_constructor = {
             "ZeroConcentratedDivergence": then_gaussian,
             "MaxDivergence": then_laplace,
-        }[privacy_measure.type.origin]
+        }[str(privacy_measure.type)]
 
         return (t_constructor(input_domain, input_metric, *args, **kwargs)
-                >> m_constructor(scale))
+                >> m_constructor(scale)) # type: ignore[operator]
 
     private_constructor.__name__ = t_constructor.__name__.replace(
         "make_", "make_private_"

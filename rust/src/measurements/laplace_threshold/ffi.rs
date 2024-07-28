@@ -9,20 +9,20 @@ use crate::ffi::util::{Type, TypeContents};
 use crate::measurements::make_laplace_threshold;
 use crate::metrics::L1Distance;
 use crate::traits::samplers::CastInternalRational;
-use crate::traits::{ExactIntCast, Float, Hashable};
+use crate::traits::{ExactIntCast, Float, Hashable, InfCast};
 
 #[no_mangle]
 pub extern "C" fn opendp_measurements__make_laplace_threshold(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
-    scale: *const c_void,
+    scale: f64,
     threshold: *const c_void,
     k: c_long,
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<TK, TV>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-        scale: *const c_void,
+        scale: f64,
         threshold: *const c_void,
         k: i32,
     ) -> Fallible<AnyMeasurement>
@@ -30,12 +30,12 @@ pub extern "C" fn opendp_measurements__make_laplace_threshold(
         TK: Hashable,
         TV: Float + CastInternalRational,
         i32: ExactIntCast<TV::Bits>,
+        f64: InfCast<TV>,
     {
         let input_domain = input_domain
             .downcast_ref::<MapDomain<AtomDomain<TK>, AtomDomain<TV>>>()?
             .clone();
         let input_metric = input_metric.downcast_ref::<L1Distance<TV>>()?.clone();
-        let scale = *try_as_ref!(scale as *const TV);
         let threshold = *try_as_ref!(threshold as *const TV);
         make_laplace_threshold::<TK, TV>(input_domain, input_metric, scale, threshold, Some(k))
             .into_any()

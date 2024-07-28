@@ -96,8 +96,8 @@ fn test_make_chain_pm() -> Fallible<()> {
     let input_domain0 = AtomDomain::<u8>::default();
     let function0 = Function::new(|a: &u8| (a + 1) as i32);
     let input_metric0 = AbsoluteDistance::<i32>::default();
-    let output_measure0 = MaxDivergence::<i32>::default();
-    let privacy_map0 = PrivacyMap::new_from_constant(1);
+    let output_measure0 = MaxDivergence::default();
+    let privacy_map0 = PrivacyMap::new_from_constant(1.);
     let measurement0 = Measurement::new(
         input_domain0,
         function0,
@@ -114,7 +114,7 @@ fn test_make_chain_pm() -> Fallible<()> {
 
     let d_in = 99_i32;
     let d_out = chain.map(&d_in)?;
-    assert_eq!(d_out, 99);
+    assert_eq!(d_out, 99.);
 
     Ok(())
 }

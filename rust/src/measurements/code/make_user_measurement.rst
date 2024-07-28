@@ -6,7 +6,7 @@
 >>> space = dp.atom_domain(T=int), dp.absolute_distance(int)
 >>> user_measurement = dp.m.make_user_measurement(
 ...     *space,
-...     output_measure=dp.max_divergence(float),
+...     output_measure=dp.max_divergence(),
 ...     function=const_function,
 ...     privacy_map=privacy_map
 ... )

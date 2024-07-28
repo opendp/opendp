@@ -79,7 +79,7 @@ def test_make_basic_composition_approx():
 
 def test_cast_zcdp_approxdp():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    base_gaussian = input_space >> dp.m.then_gaussian(10., MO=dp.ZeroConcentratedDivergence[float])
+    base_gaussian = input_space >> dp.m.then_gaussian(10., MO=dp.ZeroConcentratedDivergence)
 
     print(base_gaussian.map(1.))
 

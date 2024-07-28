@@ -195,14 +195,13 @@ Transformations don't make use of a measure, but measurements do have an ``outpu
 
 .. _max-divergence:
 
-A concrete example is ``MaxDivergence<f64>``,
-read as "the max divergence metric where numbers are expressed in terms of 64-bit floats."
+A concrete example is ``MaxDivergence``, read as "the max divergence privacy measure."
 The max divergence measure has distances that correspond to ``epsilon`` in the definition of pure differential privacy.
 
 
 .. _smoothed-max-divergence:
 
-Another example is ``SmoothedMaxDivergence<f64>``.
+Another example is ``SmoothedMaxDivergence``.
 The smoothed max divergence measure corresponds to approximate differential privacy,
 where distances are ``(epsilon, delta)`` tuples.
 

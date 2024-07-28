@@ -1,7 +1,9 @@
+use dashu::rbig;
+
 use super::*;
 #[test]
 fn test_sample_discrete_laplace() -> Fallible<()> {
-    let dgeo: f64 = sample_discrete_laplace_Z2k(0f64, 1f64, 50)?;
+    let dgeo: RBig = sample_discrete_laplace_Z2k(RBig::ZERO, RBig::ONE, 50)?;
     println!("final: {:?}", dgeo);
 
     // let dgeo: f64 = f64::sample_discrete_laplace(0f64, 20f64, 14)?;
@@ -12,51 +14,117 @@ fn test_sample_discrete_laplace() -> Fallible<()> {
 #[test]
 fn test_sample_discrete_laplace_pos_k() -> Fallible<()> {
     // check rounding of negative arguments
-    assert_eq!(sample_discrete_laplace_Z2k(-4., 0f64, 2)?, -4.0);
-    assert_eq!(sample_discrete_laplace_Z2k(-3., 0f64, 2)?, -4.0);
-    assert_eq!(sample_discrete_laplace_Z2k(-2., 0f64, 2)?, -4.0);
-    assert_eq!(sample_discrete_laplace_Z2k(-1., 0f64, 2)?, 0.0);
     assert_eq!(
-        sample_discrete_laplace_Z2k(-3.6522343492937, 0f64, 2)?,
-        -4.0
+        sample_discrete_laplace_Z2k(rbig!(-4), rbig!(0), 2)?,
+        rbig!(-4)
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k(rbig!(-3), rbig!(0), 2)?,
+        rbig!(-4)
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k(rbig!(-2), rbig!(0), 2)?,
+        rbig!(-4)
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k(rbig!(-1), rbig!(0), 2)?,
+        rbig!(0)
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k((-3.6522343492937).into_rational()?, rbig!(0), 2)?,
+        rbig!(-4)
     );
 
-    assert_eq!(sample_discrete_laplace_Z2k(0., 0f64, 2)?, 0.0);
+    assert_eq!(
+        sample_discrete_laplace_Z2k(rbig!(0), rbig!(0), 2)?,
+        rbig!(0)
+    );
 
     // check rounding of positive arguments
-    assert_eq!(sample_discrete_laplace_Z2k(1., 0f64, 2)?, 0.0);
-    assert_eq!(sample_discrete_laplace_Z2k(2., 0f64, 2)?, 4.0);
-    assert_eq!(sample_discrete_laplace_Z2k(3., 0f64, 2)?, 4.0);
-    assert_eq!(sample_discrete_laplace_Z2k(4., 0f64, 2)?, 4.0);
-    assert_eq!(sample_discrete_laplace_Z2k(3.6522343492937, 0f64, 2)?, 4.0);
+    assert_eq!(
+        sample_discrete_laplace_Z2k(rbig!(1), rbig!(0), 2)?,
+        rbig!(0)
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k(rbig!(2), rbig!(0), 2)?,
+        rbig!(4)
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k(rbig!(3), rbig!(0), 2)?,
+        rbig!(4)
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k(rbig!(4), rbig!(0), 2)?,
+        rbig!(4)
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k((3.6522343492937).into_rational()?, rbig!(0), 2)?,
+        rbig!(4)
+    );
 
     // check that noise is applied in increments of 4
-    assert_eq!(sample_discrete_laplace_Z2k(4., 23f64, 2)? % 4., 0.);
-    assert_eq!(sample_discrete_laplace_Z2k(4., 2f64, 2)? % 4., 0.);
-    assert_eq!(sample_discrete_laplace_Z2k(4., 456e3f64, 2)? % 4., 0.);
+    assert_eq!(
+        sample_discrete_laplace_Z2k(rbig!(4), rbig!(23), 2)? % rbig!(4),
+        rbig!(0)
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k(rbig!(4), rbig!(2), 2)? % rbig!(4),
+        rbig!(0)
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k(rbig!(4), (456e3f64).into_rational()?, 2)? % rbig!(4),
+        rbig!(0)
+    );
 
     Ok(())
 }
 
 #[test]
 fn test_sample_discrete_laplace_neg_k() -> Fallible<()> {
-    assert_eq!(sample_discrete_laplace_Z2k(-100.23, 0f64, -2)?, -100.25);
-    assert_eq!(sample_discrete_laplace_Z2k(-34.29, 0f64, -2)?, -34.25);
-    assert_eq!(sample_discrete_laplace_Z2k(-0.1, 0f64, -2)?, 0.0);
-    assert_eq!(sample_discrete_laplace_Z2k(0., 0f64, -2)?, 0.0);
-    assert_eq!(sample_discrete_laplace_Z2k(0.1, 0f64, -2)?, 0.0);
-    assert_eq!(sample_discrete_laplace_Z2k(0.125, 0f64, -2)?, 0.25);
-    assert_eq!(sample_discrete_laplace_Z2k(0.13, 0f64, -2)?, 0.25);
+    assert_eq!(
+        sample_discrete_laplace_Z2k((-100.23).into_rational()?, rbig!(0), -2)?,
+        (-100.25).into_rational()?
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k((-34.29).into_rational()?, rbig!(0), -2)?,
+        (-34.25).into_rational()?
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k((-0.1).into_rational()?, rbig!(0), -2)?,
+        (0.0).into_rational()?
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k((0.).into_rational()?, rbig!(0), -2)?,
+        (0.0).into_rational()?
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k((0.1).into_rational()?, rbig!(0), -2)?,
+        (0.0).into_rational()?
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k((0.125).into_rational()?, rbig!(0), -2)?,
+        (0.25).into_rational()?
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k((0.13).into_rational()?, rbig!(0), -2)?,
+        (0.25).into_rational()?
+    );
 
     // check that noise is applied in increments of .25
     assert_eq!(
-        sample_discrete_laplace_Z2k(2342.234532, 23f64, -2)? % 0.25,
-        0.
+        sample_discrete_laplace_Z2k((2342.234532).into_rational()?, rbig!(23), -2)?
+            % (0.25).into_rational()?,
+        (0.).into_rational()?
     );
-    assert_eq!(sample_discrete_laplace_Z2k(2.8954, 2f64, -2)? % 0.25, 0.);
     assert_eq!(
-        sample_discrete_laplace_Z2k(834.349, 456e3f64, -2)? % 0.25,
-        0.
+        sample_discrete_laplace_Z2k((2.8954).into_rational()?, rbig!(2), -2)?
+            % (0.25).into_rational()?,
+        (0.).into_rational()?
+    );
+    assert_eq!(
+        sample_discrete_laplace_Z2k((834.349).into_rational()?, (456e3f64).into_rational()?, -2)?
+            % (0.25).into_rational()?,
+        (0.).into_rational()?
     );
 
     Ok(())
@@ -131,12 +199,18 @@ mod test_plotting {
     #[test]
     #[ignore] // Don't want to produce graphics in CI
     fn plot_laplace() -> Fallible<()> {
-        let shift = 0.;
-        let scale = 5.;
+        let shift = rbig!(0);
+        let scale = rbig!(5);
 
         let title = format!("Laplace(shift={}, scale={}) distribution", shift, scale);
         let data = (0..10_000)
-            .map(|_| sample_discrete_laplace_Z2k(shift, scale, -1074))
+            .map(|_| {
+                Ok(
+                    sample_discrete_laplace_Z2k(shift.clone(), scale.clone(), -1074)?
+                        .to_f64()
+                        .value(),
+                )
+            })
             .collect::<Fallible<Vec<f64>>>()?;
 
         plot_continuous(title, data).unwrap_test();
@@ -146,12 +220,18 @@ mod test_plotting {
     #[test]
     #[ignore] // Don't want to produce graphics in CI
     fn plot_gaussian() -> Fallible<()> {
-        let shift = 0.;
-        let scale = 5.;
+        let shift = rbig!(0);
+        let scale = rbig!(5);
 
         let title = format!("Gaussian(shift={}, scale={}) distribution", shift, scale);
         let data = (0..10_000)
-            .map(|_| sample_discrete_gaussian_Z2k(shift, scale, -1074))
+            .map(|_| {
+                Ok(
+                    sample_discrete_gaussian_Z2k(shift.clone(), scale.clone(), -1074)?
+                        .to_f64()
+                        .value(),
+                )
+            })
             .collect::<Fallible<Vec<f64>>>()?;
 
         plot_continuous(title, data).unwrap_test();

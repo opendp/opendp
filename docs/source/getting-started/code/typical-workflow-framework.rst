@@ -12,7 +12,7 @@
 
 # privacy-loss
 >>> d_out = 1. # output distributions have distance at most d_out (ε)...
->>> privacy_measure = dp.max_divergence(T=float) # ...in terms of pure-DP
+>>> privacy_measure = dp.max_divergence() # ...in terms of pure-DP
 
 # /privacy-loss
 

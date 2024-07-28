@@ -246,7 +246,7 @@ pub fn test_empirical_gaussian_accuracy() -> Fallible<()> {
     let accuracy = 1.0;
     let theoretical_alpha = 0.05;
     let scale = accuracy_to_gaussian_scale(accuracy, theoretical_alpha)?;
-    let base_gaussian = make_scalar_float_gaussian::<ZeroConcentratedDivergence<f64>, _>(
+    let base_gaussian = make_scalar_float_gaussian::<ZeroConcentratedDivergence, _>(
         AtomDomain::default(),
         AbsoluteDistance::default(),
         scale,
@@ -297,7 +297,7 @@ pub fn test_empirical_discrete_gaussian_accuracy() -> Fallible<()> {
     // let scale = 12.503562372734077;
 
     println!("scale: {}", scale);
-    let base_dg = make_gaussian::<_, ZeroConcentratedDivergence<f64>, i32>(
+    let base_dg = make_gaussian::<_, ZeroConcentratedDivergence, i32>(
         AtomDomain::<i8>::default(),
         AbsoluteDistance::default(),
         scale,
