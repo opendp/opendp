@@ -100,3 +100,63 @@ def test_plugin_queryable_error():
 
     with pytest.raises(TypeError):
         qbl(2)
+
+def test_sequential_odometer():
+    dp.enable_features("rust-stack-trace")
+    max_influence = 1
+    sc_odo = dp.c.make_sequential_odometer(
+        input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+        input_metric=dp.symmetric_distance(),
+        output_measure=dp.max_divergence(),
+    )
+
+    assert str(sc_odo) == """Odometer(
+    input_domain   = VectorDomain(AtomDomain(T=i32)),
+    input_metric   = SymmetricDistance(),
+    output_measure = MaxDivergence())"""
+
+    sc_odo.invoke([1] * 200)
+    sc_qbl: dp.Queryable = sc_odo([1] * 200)
+
+    print("SeqComp IM:", sc_qbl)
+    sum_query = sc_odo.input_space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum() >> dp.m.then_laplace(100.)
+
+    print("evaluating")
+    print(sc_qbl(sum_query))
+
+    sc_qbl.eval(sc_odo)
+
+    noise_query = dp.m.make_laplace(dp.atom_domain(T=int), dp.absolute_distance(T=int), 200.)
+    exact_sum = sc_odo.input_space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum()
+    print("exact sum:", exact_sum)
+    exact_sum_sc_qbl = sc_qbl(exact_sum >> dp.c.make_sequential_composition(
+        input_domain=exact_sum.output_domain,
+        input_metric=exact_sum.output_metric,
+        output_measure=dp.max_divergence(),
+        d_in=exact_sum.map(max_influence),
+        d_mids=[0.2, 0.09]
+    ))
+
+    print("child release:", exact_sum_sc_qbl(noise_query))
+    print("child release:", exact_sum_sc_qbl(noise_query))
+    print("root release: ", sc_qbl(sum_query))
+
+    print("privacy usage", sc_qbl.map(1))
+
+
+def test_odometer_supporting_elements():
+    sc_odo = dp.c.make_sequential_odometer(
+        input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+        input_metric=dp.symmetric_distance(),
+        output_measure=dp.max_divergence(),
+    )
+
+    assert sc_odo.input_domain == dp.vector_domain(dp.atom_domain(T=int))
+    assert sc_odo.input_metric == dp.symmetric_distance()
+    assert sc_odo.output_measure == dp.max_divergence()
+    assert sc_odo.input_space == (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
+    assert sc_odo.input_distance_type == dp.u32
+    assert sc_odo.output_distance_type == dp.f64
+    assert sc_odo.input_carrier_type == dp.Vec[dp.i32]
+
+    
