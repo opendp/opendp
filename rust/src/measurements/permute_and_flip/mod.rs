@@ -61,7 +61,7 @@ where
             exact_fisher_yates(permutation.as_mut_slice())?;
             let rational_elements = arg
                 .iter()
-                .map(|x| ((*x).into_rational().map(|x| x * sgn)))
+                .map(|x| (x.into_rational().map(|x| x * sgn)))
                 .collect::<Fallible<Vec<RBig>>>()?;
 
             // get argmax of the rational elements
@@ -79,10 +79,10 @@ where
                     return Ok(i);
                 }
             }
-            Err(err!(
+            fallible!(
                 FailedFunction,
                 "Enumerating over all the candidates should always terminate."
-            ))
+            )
         }),
         input_metric.clone(),
         MaxDivergence::default(),

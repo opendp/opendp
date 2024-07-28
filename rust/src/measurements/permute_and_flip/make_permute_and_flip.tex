@@ -6,7 +6,7 @@
 
 \begin{document}
 \maketitle\contrib
-This document proves soundness of \rustdoc{measurements}{make\_permute\_and\_flip} \cite{mckenna2020permute} in \asOfCommit{mod.rs}{e62b0aa2}. \texttt{make\_permut\_and\_flip} returns a Measurement that noisily selects the index of the greatest score from a vector of input scores. This released index can later be used to index into a public candidate set (postprocessing).
+This document proves soundness of \rustdoc{measurements}{make\_permute\_and\_flip} \cite{mckenna2020permute} in \asOfCommit{mod.rs}{e62b0aa2}. \texttt{make\_permute\_and\_flip} returns a Measurement that noisily selects the index of the greatest score from a vector of input scores. This released index can later be used to index into a public candidate set (postprocessing).
 
 \subsection*{Vetting history}
 \begin{itemize}
@@ -23,7 +23,7 @@ The algorithm requires two primitives that need to be carefully implemented to w
 Permute and flip is equivalent to report noisy max with exponential noise \cite{ding2021permute}. Implementation-wise, we will follow permute-and-flip, yet proving the correctness of the algorithm will be done via this equivalence.
 \subsection*{Metric}
 
-Permute and fip reuses the same metric as \rustdoc{measurements/gumbel_max}{RNM-gumbel}.
+Permute and flip reuses the same metric as \rustdoc{measurements/gumbel_max}{RNM-gumbel}.
 
 \section{Hoare Triple}
 \subsection*{Preconditions}
@@ -46,9 +46,9 @@ Permute and fip reuses the same metric as \rustdoc{measurements/gumbel_max}{RNM-
 Before proving the privacy guarantees, we state a few required definitions and lemmas:
 \begin{definition}
     \label{definition:rnm-exp}
- Report noisy max with exponential noise computes the index of the maximum element from a set of candidates $u \in \din $, add isotropic exponential noise $Z \sim Exp(1/\lambda)$ to each element in the candidate set $u$ and returns the maximum index as follows:
+ Report noisy max with exponential noise computes the index of the maximum element from a set of candidates $u \in \din $, add isotropic exponential noise $Z_i \sim Exp(1/\lambda)$ to each element in the candidate set $u$ and returns the maximum index as follows:
    \begin{equation}
- \texttt{RNM-Exp}(u) = argmax(u + Z), Z \sim Exp(1/\lambda \mathbb{I}_d)
+    \texttt{RNM-Exp}(u) = \mathrm{argmax}_i(u_i + Z_i), Z_i \sim \mathrm{Exp}(1/\lambda)
    \end{equation} 
 \end{definition}
 
@@ -68,12 +68,12 @@ Before proving the privacy guarantees, we state a few required definitions and l
     \begin{proof}
         \begin{align}
         & Pr[X_1 - X_2 \geq \Delta] \\
-        & = 1 - Pr[X_1 \geq \Delta + X_2]  && \text{by Law of Total Probability}\\
-        & = 1 - \int^\infty_0 Pr[X_1 \geq \Delta + X_2 | X_2 = x] Pr[X_2 = x] dx  \\
-        & = 1 - \int^\infty_0 Pr[X_1 \geq \Delta + x]Pr[X_2 = x] dx  && \text{by the fact that } \Delta >0 \\
+        & = 1 - Pr[X_1 \leq \Delta + X_2] \\
+        & = 1 - \int^\infty_0 Pr[X_1 \leq \Delta + X_2 | X_2 = x] Pr[X_2 = x] dx && \text{by Law of Total Probability} \\
+        & = 1 - \int^\infty_0 Pr[X_1 \leq \Delta + x]Pr[X_2 = x] dx  && \text{by the fact that } \Delta >0 \\
         & = 1 - \int^\infty_0 \lambda(1 - e^{-(x + \Delta)\lambda})e^{-x\lambda}dx  \\
         & = 1 - \lambda \int^\infty_0 e^{-x\lambda} dx + \lambda e^{-\Delta\lambda} \int_0^\infty e^{-2x\lambda}dx \\
-        & = 1 - 1 + e^{-\Delta\lambda} / 2 && \text{Observe $Pr[X_1 - X_2 \geq 0] = 1/2$} \\
+        & = 1 - 1 + e^{-\Delta\lambda} / 2 && \text{$Pr[X_1 - X_2 \leq 0] = Pr[X_1 - X_2 \geq 0] = 1/2$} \\
         & = e ^{-\Delta\lambda} Pr[X_1 - X_2 \geq 0] 
     \end{align}
     \end{proof}
@@ -81,37 +81,46 @@ Before proving the privacy guarantees, we state a few required definitions and l
 
 \newcommand\logeq{\mathrel{\vcentcolon\Leftrightarrow}}
 
+\begin{lemma}
+    \label{lemma:equiv}
+    Let $u, v \in \texttt{input\_domain}$ be two vector scores, where each score is associated with input neighbouring datasets $D$, respectively $D'$. Assume $u$, $v$ in \texttt{input\_domain} are \din-close under \rustdoc{metrics/struct}{LInfDistance} and $\texttt{privacy\_map}(\din) \le \dout$. Let $Z^* = min_{Z_i} \{ u_i + Z_i \geq u_j + Z_j \}, \forall i \neq j$. Then
+    \begin{equation}
+        \ln \left(\frac{Pr[\texttt{function}(u) = i]}{Pr[\texttt{function}(v) = i]}\right) = \ln \left( \frac{Pr[Z_i \geq  Z^*]}{Pr[Z_i \geq  Z^* + \din]} \right) \\
+    \end{equation}
+
+    \begin{proof}
+    \begin{align}
+        & \ln \left( \frac{{Pr[\texttt{function}(u) = i]}}{Pr[\texttt{function}(v) = i]} \right)  && \\  
+        & = \ln \left( \frac{Pr[\texttt{RNM-Exp(u)} = i]}{Pr[\texttt{RNM-Exp}(v) = i]} \right) && \text{by Lemma \ref{lemma:equivalence_pf_rnme}} \\
+        & = \ln \left( \frac{Pr[\text{argmax}_k(u_k + Z_k) = i]}{Pr[\text{argmax}_k(v_k + Z_k) = i]} \right) && \text{by Definition \ref{definition:rnm-exp}} \\
+ \intertext{Observe that for a fixed $i$, report noisy max outputs $i$ if:}
+        & u_i + Z^* \geq u_j + Z_j, \forall i \neq j & \iff && \\
+        & u_i + (v_i - v_i) + Z^* \geq u_j + (v_j - v_j) + Z_j & \iff && \\
+        & v_i + (u_i - v_i) + Z^* \geq v_j + (u_j - v_j) + Z_j & \iff && \\ 
+        & v_i + ((u_i - v_i) -(u_j - v_j) + Z^*) \geq v_j + Z_j & \iff && \\
+        & v_i + (\Delta + Z^*) \geq v_j + Z_j
+ \intertext{In other words, if $Z_i \geq (\Delta + Z^*)$, then $\texttt{function}(u) = \texttt{function}(v) = i$. This yields us:}
+        & \ln \left( \frac{Pr[\text{argmax}_k(u_k + Z_k) = i]}{Pr[\text{argmax}_k(v_k + Z_k) = i]} \right) = \ln \left( \frac{Pr[Z_i \geq Z^*]}{Pr[Z_i \geq \Delta + Z^*]} \right)
+    \end{align}
+\end{proof}
+\end{lemma}
+
 \begin{theorem}
  The permute-and-flip mechanism (a.k.a \texttt{function}) satisfies $(\epsilon, 0)$-DP
 \end{theorem}
 
-\begin{proof}
- Let $u, v \in \texttt{input\_domain}$ be two candidate sets associated with input neighbouring datasets $D$, respectively $D'$. Assume $u$, $v$ in \texttt{input\_domain} are \din-close under \rustdoc{metrics/struct}{LInfDistance} and $\texttt{privacy\_map}(\din) \le \dout$.  We will proceed by proving both directions of the differential privacy inequality:
 
-    \begin{align}
-        & Pr[\texttt{function}(u) = i] \geq e^{-\epsilon}Pr[\texttt{function}(v) = i], \forall i \in [m] \iff  && \text{by Lemma \ref{lemma:equivalence_pf_rnme}} \\  
-        & Pr[\texttt{RNM-Exp(u)} = i] \geq e^{-\epsilon}Pr[\texttt{RNM-Exp}(v) = i], \forall i \in [m] \iff && \text{by Definition \ref{definition:rnm-exp}} \\
-        & Pr[\text{argmax}_k(u_k + Z_k) = i] \geq e^{-\epsilon}Pr[\text{argmax}_k(v_k + Z_k) = i], \forall i \in [m] && \\
- \intertext{Where $Z_k \sim \texttt{Exp}(1/\lambda)$. Let $Z^* = min_{Z_i} \{ u_i + Z_i \geq u_j + Z_j \}, \forall i \neq j$. Observe that for a fixed $i$, report noisy max outputs $i$ if:}
-        & u_i + Z^* \geq u_j + Z_j, \forall i \neq j \iff \\
-        & u_i + (v_i - v_i) + Z^* \geq u_j + (v_j - v_j) + Z_j \iff \\
-        & v_i + (u_i - v_i) + Z^* \geq v_j + (u_j - v_j) + Z_j \iff \\ 
-        & v_i + ((u_i - v_i) -(u_j - v_j) + Z^*) \geq v_j + Z_j \iff \\
-        & v_i + (\Delta + Z^*) \geq v_j + Z_j
- \intertext{In other words, if $Z_i \geq (\Delta + Z^*)$, then $\texttt{function}(u) = \texttt{function}(v) = i$. Switching to a probability bound:}
-        & Pr[\texttt{function}(v) = i]  = Pr[Z_i \geq \Delta + Z^*] && \text{by Lemma \ref{lemma:diff_cdf}}\\
-        & \geq e^{-\Delta/\lambda} Pr[Z_i \geq Z^*] && \text{by the definition of $Z^*$} \\
-        & = e^{-\Delta / \lambda} Pr[\texttt{function}(u) = i] && \text{Set } \lambda = \Delta / \epsilon \\
-        & = e^{-\epsilon} Pr[\texttt{function}(u)] \iff \\
-        & Pr[\texttt{function}(v) = i] \geq e^{-\epsilon} Pr[\texttt{function}(u)] \iff \\
-        & \log \frac{Pr[\texttt{function}(u) = i]}{Pr[\texttt{function}(u) = i]} \leq \epsilon \\
-        & = \dout && \text{by } \texttt{RangeDistance}\\
- \intertext{The inverse case follows by symmetry, completing the proof. It has been shown that $\function(u)$ and $\function(v)$ are \dout-close under \texttt{output\_measure} 
- under the definitions of $\function$ and \texttt{privacy\_map}, 
- and the conditions on the input distance and privacy map.}
-    \end{align}
+ \begin{proof}
+\begin{align}
+    & \max_{u \sim v} D_\infty(M(u) | M(v)) \\
+    & = \max_{u \sim v} max_i \ln\left(\frac{\Pr[function(u) = i]}{\Pr[function(v) = i]}\right) && \\
+    & = \max_{u \sim v} max_i \ln\left(\frac{ Pr[\texttt{RNM-Exp(u)} = i]}{Pr[\texttt{RNM-Exp}(v) = i]} \right) &&  \text{by Lemma \ref{lemma:equivalence_pf_rnme}}\\
+    & = \max_{u \sim v} max_i \ln\left(\frac{Pr[\text{argmax}_k(u_k + Z_k) = i]}{Pr[\text{argmax}_k(v_k + Z_k) = i]}\right) && \text{by Definition \ref{definition:rnm-exp}}  \\
+    & = \max_{u \sim v} max_i \ln\left(\frac{Pr[Z_i \geq  Z^*]}{Pr[Z_i \geq  Z^* + \din]}\right) && \text{by Lemma \ref{lemma:equiv}}\\
+    & \le \frac{\din}{\lambda} && \text{by Lemma \ref{lemma:diff_cdf}} \\
+    & = \dout && \text{by setting $\lambda = \frac{\din}{\dout}$}
+\end{align}
 \end{proof}
-
 \label{sec:python-rnme-pseudocode}
 \lstinputlisting[language=Python,firstline=2]{./pseudocode/report_noisy_max_exponential.py}
 
