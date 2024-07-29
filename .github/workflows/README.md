@@ -106,7 +106,7 @@ One-off releases can be made with the
 on github, or with the `gh` command line tool. Parameters:
 
 - **Target channel** controls how the release is tagged, and what semantic version is given to the release. There is a git branch with the same name for each channel.
-- The **sync the Channel from upstream?** checkbox is for when you want to update the `nightly`, `beta` `stable` or `dev` branches. This replaces the contents of the respective branch with the branch the workflow is run from ("Use workflow from"). In practice, you'll almost always enable this.
+- The **sync the Channel from upstream?** checkbox is for when you want to update the `nightly`, `beta`, `stable`, or `dev` branches. This replaces the contents of the respective branch with the branch the workflow is run from ("Use workflow from"). In practice, you'll almost always enable this.
 - Update the **version counter** accordingly when you want to release multiple nightlies or betas in the same day.
 - **Dry runs** get sent to test-pypi, and don't update the docs
 - **Fake** is for developer convenience when debugging CI: it skips compilation and inserts dummy binaries instead
@@ -152,7 +152,6 @@ on github, or with the `gh` command line tool. Parameters:
     ```shell
     python tools/channel_tool.py bump_version --position patch
     ```
-    Add arguments as needed to bump or set version.
 
 
 ## Making a dev release
