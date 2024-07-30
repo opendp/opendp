@@ -12,7 +12,7 @@ use crate::traits::ProductOrd;
 use crate::transformations::DatasetMetric;
 use crate::{core::Domain, error::Fallible};
 
-use super::{Frame, FrameDomain, LogicalPlanDomain, Margin, NumericDataType, SeriesDomain};
+use super::{DslPlanDomain, Frame, FrameDomain, Margin, NumericDataType, SeriesDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -41,16 +41,14 @@ pub enum ExprContext {
 }
 
 impl ExprContext {
-    fn get_plan(&self, val: &(LogicalPlan, Expr)) -> LogicalPlan {
+    fn get_plan(&self, val: &(DslPlan, Expr)) -> DslPlan {
         let (lp, expr) = val.clone();
         let frame = LazyFrame::from(lp);
         match self {
             ExprContext::RowByRow => frame.select([expr]),
-            ExprContext::Aggregate {
-                grouping_columns: grouping_keys,
-            } => frame
+            ExprContext::Aggregate { grouping_columns } => frame
                 .group_by(
-                    &grouping_keys
+                    &grouping_columns
                         .iter()
                         .map(AsRef::as_ref)
                         .map(col)
@@ -100,7 +98,7 @@ impl ExprContext {
 #[derive(Clone, PartialEq)]
 pub struct ExprDomain {
     /// The domain that materialized data frames are a member of.
-    pub frame_domain: LogicalPlanDomain,
+    pub frame_domain: DslPlanDomain,
     /// Denotes how an expression must be applied to materialize a member of the domain.
     pub context: ExprContext,
 }
@@ -164,7 +162,7 @@ impl<F: Frame> FrameDomain<F> {
 }
 
 impl Domain for ExprDomain {
-    type Carrier = (LogicalPlan, Expr);
+    type Carrier = (DslPlan, Expr);
 
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         let frame = self.context.get_plan(val);

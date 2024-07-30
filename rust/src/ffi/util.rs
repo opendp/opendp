@@ -42,14 +42,14 @@ pub struct Pairwise<T>(PhantomData<T>);
 #[cfg(feature = "polars")]
 use crate::domains::{ExprDomain, LazyFrameDomain, SeriesDomain};
 #[cfg(feature = "polars")]
-use polars::prelude::{DataFrame, Expr, LazyFrame, LogicalPlan, Series};
+use polars::prelude::{DataFrame, DslPlan, Expr, LazyFrame, Series};
 
 #[cfg(not(feature = "polars"))]
 struct LazyFrame;
 #[cfg(not(feature = "polars"))]
 struct DataFrame;
 #[cfg(not(feature = "polars"))]
-struct LogicalPlan;
+struct DslPlan;
 #[cfg(not(feature = "polars"))]
 struct Series;
 #[cfg(not(feature = "polars"))]
@@ -326,9 +326,9 @@ lazy_static! {
             // these are used by PartitionDistance. The latter two values are the dtype of the inner metric
             vec![t!((u32, u32, u32)), t!((u32, u64, u64)), t!((u32, i32, i32)), t!((u32, i64, i64))],
             vec![t!((u32, usize, usize)), t!((u32, f32, f32)), t!((u32, f64, f64))],
-            type_vec![DataFrame, LazyFrame, LogicalPlan, Series, Expr, OnceFrame, OnceFrameQuery, OnceFrameAnswer],
-            vec![t!((LogicalPlan, Expr))],
-            type_vec![Vec, <(LogicalPlan, Expr)>],
+            type_vec![DataFrame, LazyFrame, DslPlan, Series, Expr, OnceFrame, OnceFrameQuery, OnceFrameAnswer],
+            vec![t!((DslPlan, Expr))],
+            type_vec![Vec, <(DslPlan, Expr)>],
             type_vec![Vec<Expr>],
 
             type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyQueryable, AnyMeasurement],

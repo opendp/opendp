@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use polars::datatypes::DataType;
-use polars_plan::dsl::{BooleanFunction, Expr, FunctionExpr};
+use polars_plan::dsl::Expr;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, ExprContext, ExprDomain, OuterMetric};
@@ -125,18 +125,13 @@ pub fn match_fill_nan(expr: &Expr) -> Option<(&Expr, &Expr)> {
         return None;
     };
 
-    let Expr::Function {
-        input,
-        function: FunctionExpr::Boolean(BooleanFunction::IsNotNan),
-        ..
-    } = predicate.as_ref()
-    else {
-        return None;
-    };
+    let expected_predicate = truthy
+        .as_ref()
+        .clone()
+        .is_not_nan()
+        .or(truthy.as_ref().clone().is_null());
 
-    let [input] = <&[_; 1]>::try_from(input.as_slice()).ok()?;
-
-    if input != truthy.as_ref() {
+    if predicate.as_ref() != &expected_predicate {
         return None;
     }
 

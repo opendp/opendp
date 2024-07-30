@@ -1,9 +1,9 @@
 use polars_plan::dsl::Expr;
-use polars_plan::logical_plan::LiteralValue;
+use polars_plan::plans::LiteralValue;
 use polars_plan::utils::expr_output_name;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprDomain, LogicalPlanDomain, Null, OuterMetric, SeriesDomain};
+use crate::domains::{AtomDomain, DslPlanDomain, ExprDomain, Null, OuterMetric, SeriesDomain};
 use crate::error::Fallible;
 use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
@@ -34,12 +34,12 @@ where
     let name = expr_output_name(&expr)?;
 
     macro_rules! series_domain {
-        ($ty:ty, $null:expr) => {
+        ($ty:ty, $null:expr) => {{
             SeriesDomain::new(name.as_ref(), AtomDomain::<$ty>::new(None, $null))
-        };
+        }};
     }
 
-    let series_domain = match literal_value {
+    let series_domain = match literal_value.clone().materialize() {
         LiteralValue::Boolean(_) => series_domain!(bool, None),
         LiteralValue::String(_) => series_domain!(String, None),
         LiteralValue::UInt32(_) => series_domain!(u32, None),
@@ -50,11 +50,11 @@ where
         LiteralValue::Int64(_) => series_domain!(i64, None),
         LiteralValue::Float32(v) => series_domain!(f32, v.is_nan().then(Null::new)),
         LiteralValue::Float64(v) => series_domain!(f64, v.is_nan().then(Null::new)),
-        _ => return fallible!(MakeTransformation, "unsupported literal type"),
+        value => return fallible!(MakeTransformation, "unsupported literal value: {:?}", value),
     };
 
     let output_domain = ExprDomain::new(
-        LogicalPlanDomain::new(vec![series_domain])?,
+        DslPlanDomain::new(vec![series_domain])?,
         input_domain.context.clone(),
     );
 
