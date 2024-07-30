@@ -59,14 +59,16 @@ def with_privacy(
     from opendp.mod import assert_features
     from opendp.measurements import then_gaussian, then_laplace
 
-    def private_constructor(input_domain, input_metric, privacy_measure, scale):
+    def private_constructor(input_domain, input_metric, privacy_measure, scale,
+                            *args, **kwargs):
         assert_features("contrib")
         m_constructor = {
             "ZeroConcentratedDivergence": then_gaussian,
             "MaxDivergence": then_laplace,
         }[privacy_measure.type.origin]
 
-        return t_constructor(input_domain, input_metric) >> m_constructor(scale)
+        return (t_constructor(input_domain, input_metric, *args, **kwargs)
+                >> m_constructor(scale))
 
     private_constructor.__name__ = t_constructor.__name__.replace(
         "make_", "make_private_"

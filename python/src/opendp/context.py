@@ -178,7 +178,7 @@ def domain_of(T, infer: bool = False) -> Domain:
         if pl is not None and isinstance(T, pl.LazyFrame):
             from opendp.polars import _lazyframe_domain_from_schema
 
-            return _lazyframe_domain_from_schema(T.schema)
+            return _lazyframe_domain_from_schema(T.collect_schema())
 
     # normalize to a type descriptor
     if infer:
@@ -702,12 +702,18 @@ class PartialChain(object):
 
         The discovered parameter is assigned to the param attribute of the returned transformation or measurement.
         """
-        param = binary_search(
-            lambda x: _cast_measure(self.partial(x), output_measure, d_out).check(
-                d_in, d_out
-            ),
-            T=T,
-        )
+        # When the output measure corresponds to approx-DP, only optimize the epsilon parameter.
+        # The delta parameter should be fixed in _cast_measure, and if not, then the search will be impossible here anyways.
+        if output_measure == fixed_smoothed_max_divergence(T=float):
+            def predicate(param):
+                meas = _cast_measure(self.partial(param), output_measure, d_out)
+                return meas.map(d_in)[0] <= d_out[0] # type: ignore[index] 
+        else:
+            def predicate(param):
+                meas = _cast_measure(self.partial(param), output_measure, d_out)
+                return meas.check(d_in, d_out)
+        
+        param = binary_search(predicate, T=T)
         chain = self.partial(param)
         chain.param = param
         return chain

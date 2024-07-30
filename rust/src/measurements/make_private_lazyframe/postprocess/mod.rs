@@ -1,14 +1,16 @@
+use std::sync::Arc;
+
 use crate::combinators::BasicCompositionMeasure;
 use crate::core::{Metric, MetricSpace};
-use crate::domains::{LazyFrameDomain, LogicalPlanDomain};
+use crate::domains::{DslPlanDomain, LazyFrameDomain};
 use crate::{
     core::{Function, Measurement},
     error::Fallible,
 };
 
-use polars_plan::logical_plan::LogicalPlan;
+use polars_plan::plans::DslPlan;
 
-use super::PrivateLogicalPlan;
+use super::PrivateDslPlan;
 
 #[cfg(test)]
 mod test;
@@ -20,31 +22,39 @@ mod test;
 /// This is a whitelist in the same code structure as in the case for expressions.
 /// If a DSL branch is not considered postprocessing, then execution will continue in the parent function.
 pub fn match_postprocess<MI: 'static + Metric, MO: 'static + BasicCompositionMeasure>(
-    input_domain: LogicalPlanDomain,
+    input_domain: DslPlanDomain,
     input_metric: MI,
     output_measure: MO,
-    plan: LogicalPlan,
+    plan: DslPlan,
     global_scale: Option<f64>,
-) -> Fallible<Option<Measurement<LogicalPlanDomain, LogicalPlan, MI, MO>>>
+    threshold: Option<u32>,
+) -> Fallible<Option<Measurement<DslPlanDomain, DslPlan, MI, MO>>>
 where
-    LogicalPlan: PrivateLogicalPlan<MI, MO>,
-    (LogicalPlanDomain, MI): MetricSpace,
+    DslPlan: PrivateDslPlan<MI, MO>,
+    (DslPlanDomain, MI): MetricSpace,
     (LazyFrameDomain, MI): MetricSpace,
 {
     match plan {
         #[cfg(feature = "contrib")]
-        LogicalPlan::Sort {
+        DslPlan::Sort {
             input,
             by_column,
-            args,
+            slice,
+            sort_options,
         } => {
-            let m_in =
-                input.make_private(input_domain, input_metric, output_measure, global_scale)?;
-            let sort = Function::new_fallible(move |arg: &LogicalPlan| {
-                Ok(LogicalPlan::Sort {
-                    input: Box::new(arg.clone()),
+            let m_in = input.as_ref().clone().make_private(
+                input_domain,
+                input_metric,
+                output_measure,
+                global_scale,
+                threshold,
+            )?;
+            let sort = Function::new_fallible(move |arg: &DslPlan| {
+                Ok(DslPlan::Sort {
+                    input: Arc::new(arg.clone()),
                     by_column: by_column.clone(),
-                    args: args.clone(),
+                    slice: slice.clone(),
+                    sort_options: sort_options.clone(),
                 })
             });
             m_in >> sort

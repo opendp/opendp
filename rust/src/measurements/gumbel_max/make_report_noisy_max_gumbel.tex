@@ -124,12 +124,12 @@ If $X_1 \sim Exp(\lambda_1)$, $X_2 \sim Exp(\lambda_2)$, then $P(X_1 \leq X_2) =
 
 
 \subsection{Metric}
-We need a metric that captures the distance between score vectors $u$ and $v$ respectively on neighboring datasets. 
+We need a metric that captures the distance between score vectors $x$ and $x'$ respectively on neighboring datasets. 
 The $i^{th}$ element of each score vector is the score for the $i^{th}$ candidate.
 The sensitivity of the scoring function can be measured in terms of the $L_\infty$ norm, which we name the \texttt{LInfDistance}. 
 It characterizes the greatest that any one score may change:
 \begin{equation}
-    \Delta_{\infty} = \max_{u \sim v} d_{\infty}(f(u), f(v)) = \max\limits_{u \sim v} \max\limits_{i} \abs{f(u)_i - f(v)_i}
+    \Delta_{\infty} = \max_{x \sim x'} d_{\infty}(f(x), f(x')) = \max_{x \sim x'} \max_i \abs{f(x)_i - f(x')_i}
 \end{equation}
 Unfortunately, this choice of metric always results in a loosening by a factor of 2 when evaluating the privacy guarantee of the exponential mechanism.
 This is because both the $i^{th}$ likelihood and normalization term may vary in opposite directions, resulting in a more distinguishing event.
@@ -137,11 +137,11 @@ However, this loosening is not necessary if we can prove that the scoring functi
 
 We instead use a slight adjustment to this metric, \texttt{RangeDistance}, characterizing the greatest difference in scores:
 \begin{equation}
-    \Delta_{\text{Range}} = \max_{u \sim v} d_{\text{Range}}(f(u), f(v)) = \max\limits_{u \sim v} \max\limits_{ij} \abs{(f(u)_i - f(v)_i) - (f(u)_j - f(v)_j)}
+    \Delta_{\text{Range}} = \max_{x \sim x'} d_{\text{Range}}(f(x), f(x')) = \max_{x \sim x'} \max_{ij} \abs{(f(x)_i - f(x')_i) - (f(x)_j - f(x')_j)}
 \end{equation}
 Consider when the scoring function is not monotonic.
-The sensitivity is maximized when $u_i - v_i$ and $u_j - v_j$ vary maximally in opposite directions, resulting in the same loosening factor of 2.
-On the other hand, when the scoring function is monotonic, the sign of the $u_i - v_i$ term matches the sign of the $u_j - v_j$ term,
+The sensitivity is maximized when $x_i - x'_i$ and $x_j - x'_j$ vary maximally in opposite directions, resulting in the same loosening factor of 2.
+On the other hand, when the scoring function is monotonic, the sign of the $x_i - x'_i$ term matches the sign of the $x_j - x'_j$ term,
 and their magnitudes cancel.
 Therefore, when the scorer is monotonic, the sensitivity is maximized when one term is zero. 
 It is shown in \ref{privacy-guarantee} that a tighter analysis of the exponential mechanism is compatible with a score vector whose sensitivity is expressed in terms of this metric.
@@ -190,63 +190,58 @@ The scale is also required to be positive.
 
 \begin{lemma}
     \label{priv-inequality}
-    Assume $u$, $v$ in \texttt{input\_domain}. Then
-    $\ln\left(\frac{\sum_{i} \exp(\frac{\epsilon v_i}{\Delta})}{\sum_{i} \exp(\frac{\epsilon u_i}{\Delta})}\right) \le \frac{\epsilon \max_j (v_j - u_j)}{\Delta}$.
+    Assume $x$, $x'$ in \texttt{input\_domain}. Then
+    $\ln\left(\frac{\sum_{i} \exp(\frac{\epsilon x'_i}{\Delta})}{\sum_{i} \exp(\frac{\epsilon x_i}{\Delta})}\right) \le \frac{\epsilon \max_j (x'_j - x_j)}{\Delta}$.
 \end{lemma}
 
 \begin{proof}
 \begin{align*}
-    \ln\left(\frac{\sum_{i} \exp(\frac{\epsilon v_i}{\Delta})}{\sum_{i} \exp(\frac{\epsilon u_i}{\Delta})}\right)
-    &= \ln\left(\frac{\sum_{i} \exp(\frac{\epsilon (v_i - u_i + u_i)}{\Delta})}{\sum_{i} \exp(\frac{\epsilon u_i}{\Delta})}\right) \\
-    &= \ln\left(\frac{\sum_{i} \exp(\frac{\epsilon (v_i - u_i)}{\Delta})\exp(\frac{\epsilon (u_i)}{\Delta})}{\sum_{i} \exp(\frac{\epsilon u_i}{\Delta})}\right) \\
-    &\le \ln\left(\frac{\exp(\frac{\epsilon \max_j(v_j - u_j)}{\Delta}) \sum_{i} \exp(\frac{\epsilon (u_i)}{\Delta})}{\sum_{i} \exp(\frac{\epsilon u_i}{\Delta})}\right) \\
-    &= \frac{\epsilon \max_j(v_j - u_j)}{\Delta}
+    \ln\left(\frac{\sum_{i} \exp(\frac{\epsilon x'_i}{\Delta})}{\sum_{i} \exp(\frac{\epsilon x_i}{\Delta})}\right)
+    &= \ln\left(\frac{\sum_{i} \exp(\frac{\epsilon (x'_i - x_i + x_i)}{\Delta})}{\sum_{i} \exp(\frac{\epsilon x_i}{\Delta})}\right) \\
+    &= \ln\left(\frac{\sum_{i} \exp(\frac{\epsilon (x'_i - x_i)}{\Delta})\exp(\frac{\epsilon (x_i)}{\Delta})}{\sum_{i} \exp(\frac{\epsilon x_i}{\Delta})}\right) \\
+    &\le \ln\left(\frac{\exp(\frac{\epsilon \max_j(x'_j - x_j)}{\Delta}) \sum_{i} \exp(\frac{\epsilon x_i}{\Delta})}{\sum_{i} \exp(\frac{\epsilon x_i}{\Delta})}\right) \\
+    &= \frac{\epsilon \max_j(x'_j - x_j)}{\Delta}
 \end{align*}
 \end{proof}
 
 \label{privacy-guarantee}
-Assume $u$, $v$ in \texttt{input\_domain} are \din-close under \rustdoc{metrics/struct}{LInfDistance} and $\texttt{privacy\_map}(\din) \le \dout$.
+Assume $x$, $x'$ in \texttt{input\_domain} are \din-close under \rustdoc{metrics/struct}{LInfDistance} and $\texttt{privacy\_map}(\din) \le \dout$.
+Let the output random variables be denoted $Y \sim \function(x)$ and $Y' \sim \function(x')$.
 
 \begin{align*}
-    &\quad \max\limits_{u \sim v} D_\infty(\function(u), \function(v)) \\
-    &= \max\limits_{u \sim v} \max\limits_{i} \ln\left(\frac{\Pr[\function(u) = i]}{\Pr[\function(v) = i]}\right) 
+    &\max_{x \sim x'} D_\infty(Y || Y') \\
+    \leq& \max_{x \sim x'} \max_i \ln\left(\frac{\Pr[\function(x) = i]}{\Pr[\function(x') = i]}\right) 
     &&\text{by } \rustdoc{measures/struct}{MaxDivergence}\\
-    &= \max\limits_{u \sim v} \max\limits_{i} \ln\left(\frac
-            {\Pr[\mathrm{argmax}_k (u_k / \tau - \ln(-\ln(U_k))) = i]}
-            {\Pr[\mathrm{argmax}_k (v_k / \tau - \ln(-\ln(U_k))) = i]}
+    =& \max_{x \sim x'} \max_i \ln\left(\frac
+            {\Pr[\mathrm{argmax}_k (x_k / \tau - \ln(-\ln(U_k))) = i]}
+            {\Pr[\mathrm{argmax}_k (x'_k / \tau - \ln(-\ln(U_k))) = i]}
         \right) &&\text{by \ref{function-prob}, substitute \function}\\
-    \intertext{Assume $\texttt{privacy\_map}(\din) \le \dout = \epsilon$. 
-    For convenience, we'll shorten $\Delta_\text{Range}$ to $\Delta$, the sensitivity wrt the range-distance. 
-    If monotonic, $\Delta = \din$, else $\Delta = 2 \cdot \din$. 
-    Now substitute the inequality that $ \tau \geq \Delta / \epsilon$.}
-    &\le \max\limits_{u \sim v} \max\limits_{i} \ln\left(\frac
-            {\Pr[\mathrm{argmax}_k (u_k \epsilon / \Delta - \ln(-\ln(U_k))) = i]}
-            {\Pr[\mathrm{argmax}_k (v_k \epsilon / \Delta - \ln(-\ln(U_k))) = i]}
-        \right)\\
-    &= \max\limits_{u \sim v} \max\limits_{i} \ln \left(
+    =& \max_{x \sim x'} \max_i \ln \left(
         \frac
-            {\exp(\frac{\epsilon u_i}{\Delta})}
-            {\sum_{k} \exp(\frac{\epsilon u_k}{\Delta})
+            {\exp \frac{x_i}{\tau}}
+            {\sum_{k} \exp\frac{x_k}{\tau}
         }
         \bigg/ \frac
-            {\exp(\frac{\epsilon v_i}{\Delta})}
-            {\sum_{k} \exp(\frac{\epsilon v_k}{\Delta})} \right)
+            {\exp\frac{x'_i}{\tau}}
+            {\sum_{k} \exp\frac{x'_k}{\tau}} \right)
         &&\text{by \ref{gumbel-reparam}} \\
-    &= \max\limits_{u \sim v} \max\limits_{i} \ln \left(\frac
-        {\exp(\frac{\epsilon u_i}{\Delta})}{\exp(\frac{\epsilon v_i}{\Delta})}
-        \frac{\sum_{k} \exp(\frac{\epsilon v_k}{\Delta})}{\sum_{k} \exp(\frac{\epsilon u_k}{\Delta})}\right) \\
-    &= \max\limits_{u \sim v} \max\limits_{i} \ln \left(\frac
-        {\exp(\frac{\epsilon u_i}{\Delta})}{\exp(\frac{\epsilon v_i}{\Delta})}\right) + \ln \left(
-        \frac{\sum_{k} \exp(\frac{\epsilon v_k}{\Delta})}{\sum_{k} \exp(\frac{\epsilon u_k}{\Delta})}\right) \\
-    &= \max\limits_{u \sim v} \max\limits_{i} \frac{\epsilon (u_i - v_i)}{\Delta} 
-        + \ln\left(\frac{\sum_{k} \exp(\frac{\epsilon v_k}{\Delta})}{\sum_{k} \exp(\frac{\epsilon u_k}{\Delta})}\right) \\
-    &\leq \max\limits_{u \sim v} \max\limits_{i} \frac{\epsilon (u_i - v_i)}{\Delta} + \frac{\epsilon \max_j (v_j - u_j)}{\Delta} &&\text{by \ref{priv-inequality}} \\
-    &\leq \epsilon \max\limits_{u \sim v} \frac{\max\limits_{ij} \abs{(u_i - v_i) - (u_j - v_j)}}{\Delta} \\
-    &\leq \epsilon &&\text{by }\texttt{RangeDistance}\\
-    &= \dout
-\end{align*}    
+    =& \max_{x \sim x'} \max_i \ln \left(\frac
+        {\exp\frac{x_i}{\tau}}{\exp\frac{x'_i}{\tau}}
+        \frac{\sum_{k} \exp\frac{x'_k}{\tau}}{\sum_{k} \exp\frac{x_k}{\tau}}\right) \\
+    =& \max_{x \sim x'} \max_i \ln \left(\frac
+        {\exp\frac{x_i}{\tau}}{\exp\frac{x'_i}{\tau}}\right) + \ln \left(
+        \frac{\sum_{k} \exp\frac{x'_k}{\tau}}{\sum_{k} \exp\frac{x_k}{\tau}}\right) \\
+    =& \max_{x \sim x'} \frac{\max_i (x_i - x'_i)}{\tau} 
+        + \ln\left(\frac{\sum_{k} \exp\frac{x'_k}{\tau}}{\sum_{k} \exp\frac{x_k}{\tau}}\right) \\
+    \leq& \max_{x \sim x'} \frac{\max_i (x_i - x'_i)}{\tau} + \frac{\max_j (x'_j - x_j)}{\tau} &&\text{by \ref{priv-inequality}} \\
+    \leq& \frac{\max_{x \sim x'} \max_{ij} \abs{(x_i - x'_i) - (x_j - x'_j)}}{\tau} \\
+    =& d_{in} / \tau &&\text{by }\texttt{RangeDistance}\\
+\end{align*}
+% If monotonic, $\Delta = \din$, else $\Delta = 2 \cdot \din$. 
+% Now substitute the inequality that $ \tau \geq \Delta / \epsilon$.
 
-It has been shown that $\function(u)$ and $\function(v)$ are \dout-close under \texttt{output\_measure} 
+Since this expression aligns with the pseudocode given for the privacy map,
+it has been shown that $\function(x)$ and $\function(x')$ are \dout-close under \texttt{output\_measure} 
 under the definitions of $\function$ and \texttt{privacy\_map}, 
 and the conditions on the input distance and privacy map.
 

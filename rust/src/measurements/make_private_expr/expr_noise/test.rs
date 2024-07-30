@@ -117,6 +117,7 @@ fn test_make_laplace_grouped() -> Fallible<()> {
         MaxDivergence::default(),
         lf.clone().group_by(["chunk_2_bool"]).agg([expr_exp]),
         Some(scale),
+        None,
     )?;
     // sum([0, 1, 2, 3, 4]) * 100 = 1000
     // sum([5, 6, 7, 8, 8]) * 100 = 3400
@@ -128,8 +129,8 @@ fn test_make_laplace_grouped() -> Fallible<()> {
     )?;
 
     assert_eq!(
-        df_act.sort(["chunk_2_bool"], false, false)?,
-        df_exp.sort(["chunk_2_bool"], false, false)?
+        df_act.sort(["chunk_2_bool"], Default::default())?,
+        df_exp.sort(["chunk_2_bool"], Default::default())?
     );
     Ok(())
 }

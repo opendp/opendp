@@ -1,43 +1,81 @@
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 use crate::{
     core::Function,
     error::Fallible,
     interactive::{Answer, Query, Queryable},
     measurements::{
-        expr_index_candidates::{Candidates, IndexCandidatesArgs},
-        expr_noise::{Distribution, NoiseArgs},
-        expr_report_noisy_max_gumbel::ReportNoisyMaxGumbelArgs,
+        expr_index_candidates::IndexCandidatesShim,
+        expr_noise::{Distribution, NoiseShim},
+        expr_report_noisy_max::ReportNoisyMaxShim,
         Optimize,
     },
-    transformations::expr_discrete_quantile_score::DiscreteQuantileScoreArgs,
+    transformations::expr_discrete_quantile_score::DiscreteQuantileScoreShim,
 };
 use polars::{frame::DataFrame, lazy::frame::LazyFrame, prelude::NamedFrom, series::Series};
 use polars_plan::{
     dsl::{len, lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
-    logical_plan::Literal,
+    plans::{Literal, LiteralValue, Null},
     prelude::FunctionOptions,
 };
 use serde::{Deserialize, Serialize};
 
 // this trait is used to make the Deserialize trait bound conditional on the feature flag
 #[cfg(not(feature = "ffi"))]
-pub(crate) trait OpenDPPlugin: 'static + Clone + SeriesUdf {
-    fn get_options(&self) -> FunctionOptions;
+pub(crate) trait OpenDPShim: 'static + Clone + SeriesUdf {
+    const NAME: &'static str;
+    fn function_options() -> FunctionOptions;
 }
 #[cfg(feature = "ffi")]
 pub(crate) trait OpenDPPlugin:
     'static + Clone + SeriesUdf + for<'de> Deserialize<'de> + Serialize
 {
-    fn get_options(&self) -> FunctionOptions;
+    const NAME: &'static str;
+    fn function_options() -> FunctionOptions;
 }
 
 static OPENDP_LIB_NAME: &str = "opendp";
 
-pub(crate) fn match_plugin<'e, KW>(
-    expr: &'e Expr,
-    name: &str,
-) -> Fallible<Option<(&'e Vec<Expr>, KW)>>
+pub(crate) fn match_plugin<'e, KW>(expr: &'e Expr) -> Fallible<Option<&'e Vec<Expr>>>
+where
+    KW: OpenDPPlugin,
+{
+    Ok(Some(match expr {
+        #[cfg(feature = "ffi")]
+        Expr::Function {
+            input,
+            function:
+                FunctionExpr::FfiPlugin {
+                    lib,
+                    symbol,
+                    kwargs, // Don't un-pickle! subjects the library to arbitrary code execution.
+                },
+            ..
+        } => {
+            // check that the plugin is from the opendp library and the plugin has a matching name
+            if !lib.contains(OPENDP_LIB_NAME) || symbol.as_ref() != KW::NAME {
+                return Ok(None);
+            }
+
+            if !kwargs.is_empty() {
+                return fallible!(FailedFunction, "OpenDP does not allow pickled keyword arguments as they may enable remote code execution.");
+            }
+
+            input
+        }
+        Expr::AnonymousFunction {
+            input, function, ..
+        } => {
+            if function.as_any().downcast_ref::<KW>().is_none() {
+                return Ok(None);
+            };
+            input
+        }
+        _ => return Ok(None),
+    }))
+}
+
+pub(crate) fn match_trusted_plugin<'e, KW>(expr: &'e Expr) -> Fallible<Option<(&'e Vec<Expr>, KW)>>
 where
     KW: OpenDPPlugin,
 {
@@ -54,7 +92,7 @@ where
             ..
         } => {
             // check that the plugin is from the opendp library and the plugin has a matching name
-            if !lib.contains(OPENDP_LIB_NAME) || symbol.as_ref() != name {
+            if !lib.contains(OPENDP_LIB_NAME) || symbol.as_ref() != KW::NAME {
                 return Ok(None);
             }
             let args = serde_pickle::from_slice(kwargs.as_ref(), Default::default())
@@ -93,7 +131,16 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
             options,
         } => {
             // overwrite the kwargs to update the noise scale parameter in the FFI plugin
-            if let FunctionExpr::FfiPlugin { kwargs, .. } = &mut function {
+            if let FunctionExpr::FfiPlugin {
+                lib,
+                symbol,
+                kwargs,
+            } = &mut function
+            {
+                if let Ok(path) = env::var("OPENDP_LIB_PATH") {
+                    *lib = Arc::from(path);
+                }
+                *symbol = KW::NAME.into();
                 *kwargs = serde_pickle::to_vec(&kwargs_new, Default::default())
                     .expect("pickling does not fail")
                     .into();
@@ -135,7 +182,54 @@ pub(crate) fn apply_anonymous_function<KW: OpenDPPlugin>(input: Vec<Expr>, kwarg
                 )
             })
             .unwrap(),
-        options: kwargs.get_options(),
+        options: KW::function_options(),
+    }
+}
+
+pub(crate) fn literal_value_of<T: ExtractValue>(expr: &Expr) -> Fallible<Option<T>> {
+    let Expr::Literal(literal) = expr else {
+        return fallible!(FailedFunction);
+    };
+
+    T::extract(literal.clone())
+}
+
+pub(crate) trait ExtractValue: Sized {
+    fn extract(literal: LiteralValue) -> Fallible<Option<Self>>;
+}
+macro_rules! impl_extract_value {
+    ($($ty:ty)+) => {$(impl ExtractValue for $ty {
+        fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
+            if let LiteralValue::Null = literal {
+                return Ok(None);
+            }
+            Ok(Some(literal
+                .to_any_value()
+                .ok_or_else(|| err!(FailedFunction))?
+                .try_extract()?))
+        }
+    })+}
+}
+
+impl_extract_value!(u32 u64 i32 i64 f32 f64);
+
+impl ExtractValue for Series {
+    fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
+        Ok(match literal {
+            LiteralValue::Null => None,
+            LiteralValue::Series(series) => Some((*series).clone()),
+            _ => return fallible!(FailedFunction, "expected series, found: {:?}", literal),
+        })
+    }
+}
+
+impl ExtractValue for String {
+    fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
+        Ok(match literal {
+            LiteralValue::Null => None,
+            LiteralValue::String(string) => Some(string),
+            _ => return fallible!(FailedFunction, "expected String, found: {:?}", literal),
+        })
     }
 }
 
@@ -215,14 +309,12 @@ impl DPExpr {
     /// # Arguments
     /// * `scale` - Scale parameter for the noise distribution
     /// * `distribution` - Either Laplace, Gaussian or None.
-    pub fn noise(self, scale: Option<f64>, distribution: Option<Distribution>) -> Expr {
-        apply_anonymous_function(
-            vec![self.0],
-            NoiseArgs {
-                scale,
-                distribution,
-            },
-        )
+    pub fn noise(self, distribution: Option<Distribution>, scale: Option<f64>) -> Expr {
+        let distribution = distribution
+            .map(|d| lit(format!("{:?}", d)))
+            .unwrap_or_else(|| lit(Null {}));
+        let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
+        apply_anonymous_function(vec![self.0, distribution, scale], NoiseShim)
     }
 
     /// Add Laplace noise to the expression.
@@ -233,7 +325,7 @@ impl DPExpr {
     /// # Arguments
     /// * `scale` - Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
     pub fn laplace(self, scale: Option<f64>) -> Expr {
-        self.noise(scale, Some(Distribution::Laplace))
+        self.noise(Some(Distribution::Laplace), scale)
     }
 
     /// Add Gaussian noise to the expression.
@@ -244,7 +336,7 @@ impl DPExpr {
     /// # Arguments
     /// * `scale` - Noise scale parameter for the Gaussian distribution. `scale` == standard_deviation.
     pub fn gaussian(self, scale: Option<f64>) -> Expr {
-        self.noise(scale, Some(Distribution::Gaussian))
+        self.noise(Some(Distribution::Gaussian), scale)
     }
 
     /// Compute the differentially private sum.
@@ -257,7 +349,7 @@ impl DPExpr {
             .clip(lit(bounds.0), lit(bounds.1))
             .sum()
             .dp()
-            .noise(scale, None)
+            .noise(None, scale)
     }
 
     /// Compute the differentially private mean.
@@ -280,12 +372,10 @@ impl DPExpr {
     /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
     /// * `candidates` - Set of possible quantiles to evaluate the utility of.
     pub(crate) fn quantile_score(self, alpha: f64, candidates: Series) -> Expr {
-        let args = DiscreteQuantileScoreArgs {
-            alpha,
-            candidates: Candidates(candidates),
-            constants: None,
-        };
-        apply_anonymous_function(vec![self.0], args)
+        apply_anonymous_function(
+            vec![self.0, lit(alpha), lit(candidates)],
+            DiscreteQuantileScoreShim,
+        )
     }
 
     /// Report the argmax or argmin after adding Gumbel noise.
@@ -296,7 +386,9 @@ impl DPExpr {
     /// * `optimize` - Distinguish between argmax and argmin.
     /// * `scale` - Noise scale parameter for the Gumbel distribution.
     pub(crate) fn report_noisy_max_gumbel(self, optimize: Optimize, scale: Option<f64>) -> Expr {
-        apply_anonymous_function(vec![self.0], ReportNoisyMaxGumbelArgs { optimize, scale })
+        let optimize = lit(format!("{optimize}"));
+        let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
+        apply_anonymous_function(vec![self.0, optimize, scale], ReportNoisyMaxShim)
     }
 
     /// Index into a candidate set.
@@ -306,12 +398,7 @@ impl DPExpr {
     /// # Arguments
     /// * `candidates` - The values that each selected index corresponds to.
     pub(crate) fn index_candidates(self, candidates: Series) -> Expr {
-        apply_anonymous_function(
-            vec![self.0],
-            IndexCandidatesArgs {
-                candidates: Candidates(candidates),
-            },
-        )
+        apply_anonymous_function(vec![self.0, lit(candidates)], IndexCandidatesShim)
     }
 
     /// Compute a differentially private quantile.
@@ -367,6 +454,8 @@ impl From<LazyFrame> for OnceFrame {
                 Query::External(q_external) => Answer::External(match q_external {
                     OnceFrameQuery::Collect => {
                         let dataframe = lazyframe.collect()?;
+                        let n = dataframe.height();
+                        let dataframe = dataframe.sample_n_literal(n, false, true, None)?;
                         state.take();
                         OnceFrameAnswer::Collect(dataframe)
                     }
@@ -398,6 +487,11 @@ impl OnceFrame {
         }
     }
 
+    /// Extract the compute plan with the private data.
+    ///
+    /// Requires "honest-but-curious" because the privacy guarantees only apply if:
+    /// 1. The LazyFrame (compute plan) is only ever executed once.
+    /// 2. The analyst does not observe ordering of rows in the output. To ensure this, shuffle the output.
     #[cfg(feature = "honest-but-curious")]
     pub fn lazyframe(&mut self) -> LazyFrame {
         let answer = self.eval_query(Query::Internal(&ExtractLazyFrame)).unwrap();

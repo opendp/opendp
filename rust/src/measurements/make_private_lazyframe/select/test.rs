@@ -23,6 +23,7 @@ fn test_select_no_margin() -> Fallible<()> {
         MaxDivergence::<f64>::default(),
         lf.clone().select(&[len().dp().laplace(Some(0.))]),
         Some(1.),
+        None,
     )?;
 
     let actual = m_select.invoke(&lf)?.collect()?;
@@ -49,6 +50,7 @@ fn test_select() -> Fallible<()> {
             len().dp().laplace(Some(0.)),
         ]),
         Some(1.),
+        None,
     )?;
 
     let actual = m_select.invoke(&lf)?.collect()?;
@@ -60,8 +62,7 @@ fn test_select() -> Fallible<()> {
 
 #[test]
 fn test_fail_select_invalid_expression() -> Fallible<()> {
-    let lf_domain =
-        LogicalPlanDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?;
+    let lf_domain = DslPlanDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?;
 
     let lf = df!("A" => &[1i32, 2, 2])?.lazy();
 

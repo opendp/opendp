@@ -112,7 +112,6 @@ SEXP anymeasurementptr_to_sexp(AnyMeasurement *input, SEXP log)
 {
     SEXP XPtr = PROTECT(R_MakeExternalPtr(input, AnyMeasurement_tag, R_NilValue));
     R_RegisterCFinalizerEx(XPtr, odp_AnyMeasurement_finalizer, TRUE);
-    UNPROTECT(1);
 
     int errorOccurred;
     SEXP new_measurement = PROTECT(get_private_func("new_measurement"));
@@ -121,7 +120,7 @@ SEXP anymeasurementptr_to_sexp(AnyMeasurement *input, SEXP log)
     if (errorOccurred)
         error("failed to construct measurement");
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     return measurement;
 }
 
