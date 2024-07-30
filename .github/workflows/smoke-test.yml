@@ -78,7 +78,19 @@ jobs:
         with:
           name: static_lib
           path: rust/target/debug/libopendp.a
-      
+  
+      - name: Upload Python bindings
+        uses: actions/upload-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+
+      - name: Upload R bindings
+        uses: actions/upload-artifact@v4
+        with:
+          name: r_bindings
+          path: R/opendp/
+
   rust-test:
     needs: rust-build
     runs-on: ubuntu-22.04
@@ -166,12 +178,20 @@ jobs:
         with:
           name: dynamic_lib
           path: python/src/opendp/lib
-      
+
+      - name: Download Python bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+
       - name: Install package
         run: python -m pip install -e ${{ matrix.extra-install }}
 
       - name: Test
-        run: coverage run -m pytest -v ${{ ! contains(matrix.extra-install, 'polars') && '-k "not lazyframe and not polars"' || ''}}
+        # There's not a "skipif" for doctests, so use "-k" to exclude based on name patterns.
+        # (Even in unittests we should use "importskip" rather than "skipif".)
+        run: coverage run -m pytest -v ${{ ! contains(matrix.extra-install, 'polars') && '-k "not lazyframe and not polars and not pca"' || ''}}
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
@@ -197,6 +217,7 @@ jobs:
           name: coverage-report
 
   docs-links:
+    needs: rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -204,6 +225,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Download Python bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/
 
       - name: Install Pandoc
         run: sudo apt-get install -y pandoc
@@ -226,6 +253,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Download Python bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -281,6 +314,12 @@ jobs:
           # (Polars currently links against Python)
           name: static_lib
           path: libs/
+
+      - name: Download R bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: r_bindings
+          path: R/opendp/
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
