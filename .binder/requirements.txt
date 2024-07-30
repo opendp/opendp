@@ -1,4 +1,4 @@
 # For https://mybinder.org
 # Pin to matching version
-opendp==0.10.0.dev0
+opendp[polars]==0.10.0.dev0
 -r ../docs/requirements_notebooks.txt
