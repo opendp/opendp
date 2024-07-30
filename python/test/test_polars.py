@@ -120,7 +120,7 @@ def test_private_lazyframe_explicit_sum(measure):
         ]
     )
     df_act = m_lf(lf).collect()
-    pl_testing.assert_frame_equal(df_act, df_exp)
+    pl_testing.assert_frame_equal(df_act.sort("B"), df_exp)
 
 
 @pytest.mark.parametrize(
@@ -145,7 +145,7 @@ def test_private_lazyframe_sum(measure):
             pl.Series("A", [10.0] * 5, dtype=pl.Float64),
         ]
     )
-    pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
+    pl_testing.assert_frame_equal(m_lf(lf).collect().sort("B"), expect)
 
 
 @pytest.mark.parametrize(
@@ -171,7 +171,7 @@ def test_private_lazyframe_mean(measure):
             pl.Series("A", [1.0] * 5, dtype=pl.Float64),
         ]
     )
-    pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
+    pl_testing.assert_frame_equal(m_lf(lf).collect().sort("B"), expect)
 
 
 def test_stable_lazyframe():
@@ -335,7 +335,7 @@ def test_polars_context():
         .with_columns(pl.col("B").is_null().alias("B_nulls"))
         .filter(pl.col("B_nulls"))
         .select(pl.col("A").fill_null(2.0).dp.sum((0, 3)))
-        .release()  # type: ignore[union-attr]
+        .release()
         .collect()
     )
 
@@ -343,7 +343,7 @@ def test_polars_context():
         context.query()
         .group_by("B")
         .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
-        .release()  # type: ignore[union-attr]
+        .release()
         .collect()
     )
 
@@ -366,25 +366,35 @@ def test_polars_describe():
 
     expected = pl.DataFrame(
         {
-            "column": ["len", "A"],
-            "aggregate": ["Len", "Sum"],
-            "distribution": ["Integer Laplace", "Integer Laplace"],
-            "scale": [8.0, 8.0],
+            "column": ["len", "A", "B"],
+            "aggregate": ["Len", "Sum", "Sum"],
+            "distribution": ["Integer Laplace", "Integer Laplace", "Integer Laplace"],
+            # * sensitivity of the count is 1 (adding/removing one row changes the count by at most one), 
+            # * sensitivity of each sum is 3 (adding/removing one row with value as big as three...) 
+            # Therefore the noise scale of the sum query should be 3x greater 
+            # in order to consume the same amount of budget as the count.
+            "scale": [6.0, 18.0, 18.0],
         }
     )
+
+    summer = pl.col("A").fill_null(2).dp.sum((0, 3))
 
     query = (
         context.query()
         .group_by("B")
-        .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
+        .agg(pl.len().dp.noise(), summer, summer.alias("B"))
     )
 
-    actual = query.accuracy()  # type: ignore[union-attr]
+    actual = query.accuracy()
     pl_testing.assert_frame_equal(expected, actual)
 
-    accuracy = dp.discrete_laplacian_scale_to_accuracy(8.0, 0.05)
-    expected = expected.with_columns(accuracy=accuracy)
-    actual = query.accuracy(alpha=0.05)  # type: ignore[union-attr]
+    accuracy = [
+        dp.discrete_laplacian_scale_to_accuracy(6.0, 0.05),
+        dp.discrete_laplacian_scale_to_accuracy(18.0, 0.05),
+        dp.discrete_laplacian_scale_to_accuracy(18.0, 0.05)
+    ]
+    expected = expected.hstack([pl.Series("accuracy", accuracy)])
+    actual = query.accuracy(alpha=0.05)
     pl_testing.assert_frame_equal(expected, actual)
 
 
@@ -407,8 +417,8 @@ def test_polars_accuracy_threshold():
             "column": ["len", "A"],
             "aggregate": ["Len", "Sum"],
             "distribution": ["Integer Laplace", "Integer Laplace"],
-            "scale": [8.0, 8.0],
-            "threshold": [130, None]
+            "scale": [4.000000000000001, 12.000000000000004],
+            "threshold": [65, None]
         },
         schema_overrides={"threshold": pl.UInt32}
     )
@@ -419,7 +429,7 @@ def test_polars_accuracy_threshold():
         .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
     )
 
-    actual = query.accuracy()  # type: ignore[union-attr]
+    actual = query.accuracy()
     pl_testing.assert_frame_equal(expected, actual)
 
 
@@ -482,7 +492,7 @@ def test_polars_threshold():
         context.query()
         .group_by("A")
         .agg(pl.len().dp.noise())
-        .accuracy()  # type: ignore[union-attr]
+        .accuracy()
     )
 
     expected = pl.DataFrame({
@@ -501,7 +511,7 @@ def test_polars_threshold():
         context.query()
         .group_by("A")
         .agg(pl.len().dp.noise())
-        .release()  # type: ignore[union-attr]
+        .release()
         .collect()
     )
 
@@ -509,7 +519,7 @@ def test_polars_threshold():
         context.query()
         .group_by("B")
         .agg(pl.len().dp.noise())
-        .accuracy()  # type: ignore[union-attr]
+        .accuracy()
     )
 
     expected = pl.DataFrame({
@@ -529,6 +539,91 @@ def test_polars_threshold():
         context.query()
         .group_by("B")
         .agg(pl.len().dp.noise())
-        .release()  # type: ignore[union-attr]
+        .release()
         .collect()
     )
+
+
+def test_replace_binary_path():
+    import os
+    os.environ["OPENDP_LIB_PATH"] = "testing!"
+    pl = pytest.importorskip("polars")
+
+    m_expr = dp.m.make_private_expr(
+        dp.expr_domain(example_lf()[0], grouping_columns=[]),
+        dp.partition_distance(dp.symmetric_distance()),
+        dp.max_divergence(T=float),
+        pl.len().dp.noise(scale=1.),
+    )
+    assert str(m_expr((pl.LazyFrame(dict()), pl.all()))) == "len().testing!:noise_plugin()"
+
+    del os.environ["OPENDP_LIB_PATH"]
+
+
+def test_pickle_bomb():
+    pl = pytest.importorskip("polars")
+
+    from polars._utils.parse import parse_into_list_of_expressions  # type: ignore[import-not-found]
+    from polars._utils.wrap import wrap_expr  # type: ignore[import-not-found]
+    from opendp._lib import lib_path
+    import io
+    import re
+    import pickle
+
+    # modified from https://intoli.com/blog/dangerous-pickles/
+    poison_binary = b'c__builtin__\neval\n(V1 / 0\ntR.'
+
+    # poison_binary raises a ZeroDivisionError if it is ever unpickled
+    with pytest.raises(ZeroDivisionError):
+        pickle.loads(poison_binary)
+
+    # craft an expression that contains a poisoned pickle binary
+
+    py_exprs = parse_into_list_of_expressions((pl.len(), pl.lit("Laplace"), pl.lit(0.7)))
+
+    # Replicates parts of register_plugin_function from Polars,
+    # to allow injection of the specially-crafted pickle binary
+    bomb_expr = wrap_expr(
+        pl.polars.register_plugin_function(
+            plugin_path=str(lib_path),
+            function_name="noise",
+            args=py_exprs,
+            kwargs=poison_binary,
+            is_elementwise=True,
+            input_wildcard_expansion=False,
+            returns_scalar=False,
+            cast_to_supertype=False,
+            pass_name_to_apply=False,
+            changes_length=False,
+        )
+    )
+
+    # craft a lazyframe that contains a poisoned pickle binary
+    lf_domain, lf = example_lf()
+    bomb_lf = lf.select(bomb_expr)
+
+    # ensure that ser/de round-trip of expression does not trigger pickle
+    ser_expr = bomb_expr.meta.serialize()
+    pl.Expr.deserialize(io.BytesIO(ser_expr))
+
+    # ensure that ser/de round-trip of lazyframe does not trigger pickle
+    ser_lf = bomb_lf.serialize()
+    pl.LazyFrame.deserialize(io.BytesIO(ser_lf))
+
+    # OpenDP explicitly rejects any pickled data it finds
+    err_msg_re = re.escape("OpenDP does not allow pickled keyword arguments as they may enable remote code execution.")
+    with pytest.raises(dp.OpenDPException, match=err_msg_re):
+        dp.m.make_private_expr(
+            dp.expr_domain(lf_domain, grouping_columns=[]),
+            dp.partition_distance(dp.symmetric_distance()),
+            dp.max_divergence(T=float),
+            bomb_expr,
+        )
+
+    with pytest.raises(dp.OpenDPException, match=err_msg_re):
+        dp.m.make_private_lazyframe(
+            lf_domain,
+            dp.symmetric_distance(),
+            dp.max_divergence(T=float),
+            bomb_lf,
+        )
