@@ -31,8 +31,8 @@ impl Frame for LazyFrame {
         Ok(IntoLazy::lazy(DataFrame::new(series)?))
     }
     fn schema(&self) -> Fallible<Schema> {
-        self.schema()
-            .map(|v| v.as_ref().clone())
+        LazyFrame::schema(&mut self.clone())
+            .map(|schema| Arc::unwrap_or_clone(schema))
             .map_err(Into::into)
     }
     fn lazyframe(self) -> LazyFrame {
@@ -42,12 +42,12 @@ impl Frame for LazyFrame {
         self.collect().map_err(Into::into)
     }
 }
-impl Frame for LogicalPlan {
+impl Frame for DslPlan {
     fn new(series: Vec<Series>) -> Fallible<Self> {
         <LazyFrame as Frame>::new(series).map(|v| v.logical_plan)
     }
     fn schema(&self) -> Fallible<Schema> {
-        Ok(self.schema()?.as_ref().as_ref().clone())
+        Ok(self.compute_schema()?.as_ref().clone())
     }
     fn lazyframe(self) -> LazyFrame {
         LazyFrame::from(self)
@@ -117,7 +117,7 @@ impl<F: Frame> PartialEq for FrameDomain<F> {
 }
 
 pub type LazyFrameDomain = FrameDomain<LazyFrame>;
-pub(crate) type LogicalPlanDomain = FrameDomain<LogicalPlan>;
+pub(crate) type DslPlanDomain = FrameDomain<DslPlan>;
 
 impl<F: Frame, M: DatasetMetric> MetricSpace for (FrameDomain<F>, M) {
     fn check_space(&self) -> Fallible<()> {
@@ -206,15 +206,15 @@ impl<F: Frame> FrameDomain<F> {
     #[must_use]
     pub fn with_margin<I: AsRef<str>>(
         mut self,
-        grouping_keys: &[I],
+        grouping_columns: &[I],
         margin: Margin,
     ) -> Fallible<Self> {
-        let grouping_keys =
-            BTreeSet::from_iter(grouping_keys.iter().map(|v| v.as_ref().to_string()));
-        if self.margins.contains_key(&grouping_keys) {
+        let grouping_columns =
+            BTreeSet::from_iter(grouping_columns.iter().map(|v| v.as_ref().to_string()));
+        if self.margins.contains_key(&grouping_columns) {
             return fallible!(MakeDomain, "margin already exists");
         }
-        self.margins.insert(grouping_keys, margin);
+        self.margins.insert(grouping_columns, margin);
         Ok(self)
     }
 }
@@ -259,9 +259,9 @@ impl<F: Frame> Domain for FrameDomain<F> {
         }
 
         // check that margins are satisfied
-        for (grouping_keys, margin) in self.margins.iter() {
-            let grouping_keys = grouping_keys.iter().map(|c| col(c)).collect::<Vec<_>>();
-            if !margin.member(val.clone().lazyframe().group_by(grouping_keys))? {
+        for (grouping_columns, margin) in self.margins.iter() {
+            let grouping_columns = grouping_columns.iter().map(|c| col(c)).collect::<Vec<_>>();
+            if !margin.member(val.clone().lazyframe().group_by(grouping_columns))? {
                 return Ok(false);
             }
         }
@@ -363,5 +363,19 @@ impl Margin {
             return Ok(false);
         }
         Ok(true)
+    }
+
+    pub(crate) fn l_0(&self, l_1: u32) -> u32 {
+        self.max_influenced_partitions
+            .or(self.max_num_partitions)
+            .unwrap_or(l_1)
+            .min(l_1)
+    }
+
+    pub(crate) fn l_inf(&self, l_1: u32) -> u32 {
+        self.max_partition_contributions
+            .or(self.max_partition_length)
+            .unwrap_or(l_1)
+            .min(l_1)
     }
 }

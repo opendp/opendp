@@ -411,7 +411,7 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
     if len(inner_type_names) != len(val):
         raise TypeError("type_name members must have same length as tuple")
 
-    if inner_type_names == ['LogicalPlan', 'Expr']:
+    if inner_type_names == ['DslPlan', 'Expr']:
         lf_slice = _lazyframe_to_slice(val[0])
         expr_slice = _expr_to_slice(val[1])
         array = (ctypes.c_void_p * len(val))(ctypes.cast(lf_slice, ctypes.c_void_p), ctypes.cast(expr_slice, ctypes.c_void_p))
@@ -443,7 +443,7 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
     # list of void*
     ptr_data = void_array_ptr[0:raw.contents.len]
 
-    if inner_type_names == ['LogicalPlan', 'Expr']:
+    if inner_type_names == ['DslPlan', 'Expr']:
         lp_slice = ctypes.cast(ptr_data[0], FfiSlicePtr)
         expr_slice = ctypes.cast(ptr_data[1], FfiSlicePtr)
         return _slice_to_lazyframe(lp_slice), _slice_to_expr(expr_slice)
