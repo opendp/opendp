@@ -3,7 +3,6 @@ import opendp.prelude as dp
 import os
 
 
-dp.enable_features("contrib", "honest-but-curious")
 
 
 def test_polars_version():
@@ -270,7 +269,6 @@ def test_onceframe_lazy():
     )
 
     of = m_lf(lf)
-    dp.enable_features("honest-but-curious")
     assert isinstance(of.lazy(), pl.LazyFrame)
 
 

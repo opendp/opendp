@@ -3,7 +3,6 @@ from opendp._extrinsics.domains import _np_sscp_domain
 import pytest
 from ..helpers import optional_dependency
 
-dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 
 def test_np_eigenvalues():

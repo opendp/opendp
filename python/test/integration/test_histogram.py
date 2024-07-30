@@ -1,7 +1,6 @@
 import pytest
 import opendp.prelude as dp
 
-dp.enable_features("contrib", "floating-point")
 
 
 def test_count_by_categories():

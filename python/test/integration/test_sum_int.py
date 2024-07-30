@@ -1,7 +1,6 @@
 import opendp.prelude as dp
 import pytest
 
-dp.enable_features("contrib")
 
 
 def test_make_sized_bounded_int_checked_sum():
