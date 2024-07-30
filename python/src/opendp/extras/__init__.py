@@ -1,3 +1,5 @@
 '''
-The ``extras`` module is a namespace for functionality that requires extra, optional Python dependencies.
+The ``extras`` module contains pure-python DP tools.
+These are not yet supported by the Rust or R bindings.
+ Some tools require extra, optional Python dependencies, and are grouped under corresponding namespaces.
 '''
