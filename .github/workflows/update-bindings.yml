@@ -1,0 +1,55 @@
+# Prepares a branch for a channel:
+# * Checks out the channel branch
+# * Downloads language binding artifacts
+# * Pushes the channel branch changes to origin
+#
+# INPUTS
+# * channel:  The release channel
+name: Prepare Channel
+on:
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        required: true
+
+jobs:
+  credential-check:
+    uses: ./.github/workflows/credential-check.yml
+    with:
+      assert_version: false
+
+  update-bindings:
+    needs: credential-check
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Configure git user
+        run: |
+          git config --global user.name "$GITHUB_ACTOR"
+          git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Download Python bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+
+      - name: Download R bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: r_bindings
+          path: R/opendp/
+      
+      - name: Show changes
+        run: git diff
+
+      - name: Push changes
+        run: |
+          git add --force . # Generated files are git-ignored, so we need --force.
+          git commit -m "Update bindings"
+          git push origin ${{ inputs.channel }}
