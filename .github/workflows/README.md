@@ -59,6 +59,11 @@ graph TD
     end
     latex-release.yml -.- rlatex[latex]
 
+    subgraph update-bindings.yml
+        ubcc[credential-check] --> update-bindings
+    end
+    update-bindings.yml -.- rub[update-bindings]
+
     subgraph prepare.yml
         precc[credential-check] --> prepare
     end
@@ -73,6 +78,7 @@ graph TD
         rpre[prepare] --> build --> sanity-test-pre --> publish
         rpre[prepare] --> publish --> sanity-test-post --> rdocs[docs]
         rpre[prepare] --> rlatex[latex] --> rdocs[docs]
+        build --> rub[update-bindings] --> rdocs[docs]
     end
 
     subgraph sanity-test.yml
