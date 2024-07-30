@@ -68,7 +68,7 @@ where
     if S::float_sum_can_overflow(size_limit, bounds)? {
         return fallible!(
             MakeTransformation,
-            "potential for overflow when computing function"
+            "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds."
         );
     }
 
@@ -152,7 +152,7 @@ where
     if S::float_sum_can_overflow(size, bounds)? {
         return fallible!(
             MakeTransformation,
-            "potential for overflow when computing function"
+            "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds."
         );
     }
 
