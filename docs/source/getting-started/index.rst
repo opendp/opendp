@@ -14,8 +14,3 @@ and for Python, R, and Rust library reference see the :doc:`../api/index` docume
   stats/index
   utility/index
   examples/index
-
-.. toctree::
-  :hidden:
-
-  tabular-data/keys
