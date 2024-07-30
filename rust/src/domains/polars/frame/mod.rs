@@ -364,4 +364,18 @@ impl Margin {
         }
         Ok(true)
     }
+
+    pub(crate) fn l_0(&self, l_1: u32) -> u32 {
+        self.max_influenced_partitions
+            .or(self.max_num_partitions)
+            .unwrap_or(l_1)
+            .min(l_1)
+    }
+
+    pub(crate) fn l_inf(&self, l_1: u32) -> u32 {
+        self.max_partition_contributions
+            .or(self.max_partition_length)
+            .unwrap_or(l_1)
+            .min(l_1)
+    }
 }

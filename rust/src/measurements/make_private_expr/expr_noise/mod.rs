@@ -1,13 +1,14 @@
 use crate::core::{Measure, Metric, MetricSpace, PrivacyMap};
 use crate::measurements::{gaussian_zcdp_map, get_discretization_consts, laplace_puredp_map};
 use crate::measures::ZeroConcentratedDivergence;
-use crate::metrics::{L1Distance, L2Distance};
+use crate::metrics::{L1Distance, L2Distance, PartitionDistance};
 use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
 use crate::traits::samplers::{
     sample_discrete_gaussian, sample_discrete_gaussian_Z2k, sample_discrete_laplace,
     sample_discrete_laplace_Z2k,
 };
 use crate::traits::{ExactIntCast, Float, FloatBits, InfCast, InfMul};
+use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
 use crate::{
     core::{Function, Measurement},
@@ -149,22 +150,24 @@ impl NoiseExprMeasure for ZeroConcentratedDivergence<f64> {
 /// * `input_metric` - The metric space under which neighboring LazyFrames are compared
 /// * `expr` - The expression to which the noise will be added
 /// * `global_scale` - (Re)scale the noise parameter for the noise distribution
-pub fn make_expr_noise<MI: 'static + Metric, MO: NoiseExprMeasure>(
+pub fn make_expr_noise<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
     input_domain: ExprDomain,
-    input_metric: MI,
+    input_metric: PartitionDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>
+) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MO>>
 where
-    Expr: StableExpr<MI, MO::Metric>,
-    (ExprDomain, MI): MetricSpace,
+    Expr: StableExpr<PartitionDistance<MI>, MO::Metric>,
+    (ExprDomain, PartitionDistance<MI>): MetricSpace,
     (ExprDomain, MO::Metric): MetricSpace,
 {
     let Some((input, distribution, scale)) = match_noise_shim(&expr)? else {
         return fallible!(MakeMeasurement, "Expected noise function");
     };
 
-    let t_prior = input.clone().make_stable(input_domain, input_metric)?;
+    let t_prior = input
+        .clone()
+        .make_stable(input_domain.clone(), input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     if scale.is_none() && global_scale.is_none() {
@@ -174,11 +177,18 @@ where
         );
     }
 
-    let scale = scale.unwrap_or(1.);
+    let scale = match scale {
+        Some(scale) => scale,
+        None => {
+            // when scale is unknown, set it relative to the sensitivity of the query
+            let margin = input_domain.active_margin().cloned().unwrap_or_default();
+            t_prior.map(&(margin.l_0(1), 1, margin.l_inf(1)))?
+        }
+    };
     let global_scale = global_scale.unwrap_or(1.);
     let scale = scale.inf_mul(&global_scale)?;
     if scale.is_sign_negative() {
-        return fallible!(MakeTransformation, "noise scale must not be negative");
+        return fallible!(MakeMeasurement, "noise scale must not be negative");
     }
 
     if middle_domain.active_series()?.nullable {

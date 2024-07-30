@@ -48,6 +48,6 @@ fn test_make_expr_private_lit_groupby() -> Fallible<()> {
         "chunk_2_bool" => [false, true],
         "literal" => [1, 1]
     )?;
-    assert_eq!(actual, expect);
+    assert_eq!(actual.sort(&["chunk_2_bool"], Default::default())?, expect);
     Ok(())
 }
