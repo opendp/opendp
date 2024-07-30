@@ -1,9 +1,10 @@
-use crate::core::{Metric, MetricSpace, PrivacyMap};
+use crate::core::{MetricSpace, PrivacyMap};
 use crate::measurements::{report_noisy_max_gumbel_map, select_score, Optimize};
-use crate::metrics::{IntDistance, LInfDistance, Parallel};
+use crate::metrics::{IntDistance, LInfDistance, Parallel, PartitionDistance};
 use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
 use crate::traits::samplers::CastInternalRational;
 use crate::traits::{InfCast, InfMul, Number};
+use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
 use crate::{
     core::{Function, Measurement},
@@ -39,20 +40,22 @@ mod test;
 /// * `input_metric` - The metric space under which neighboring LazyFrames are compared
 /// * `expr` - The expression to which the selection will be applied
 /// * `global_scale` - (Re)scale the noise parameter for the noise distribution
-pub fn make_expr_report_noisy_max<MI: 'static + Metric>(
+pub fn make_expr_report_noisy_max<MI: 'static + UnboundedMetric>(
     input_domain: ExprDomain,
-    input_metric: MI,
+    input_metric: PartitionDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<ExprDomain, Expr, MI, MaxDivergence<f64>>>
+) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MaxDivergence<f64>>>
 where
-    Expr: StableExpr<MI, Parallel<LInfDistance<f64>>>,
+    Expr: StableExpr<PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
     (ExprDomain, MI): MetricSpace,
 {
     let (input, optimize, scale) = match_report_noisy_max(&expr)?
         .ok_or_else(|| err!(MakeMeasurement, "Expected {}", ReportNoisyMaxPlugin::NAME))?;
 
-    let t_prior = input.clone().make_stable(input_domain, input_metric)?;
+    let t_prior = input
+        .clone()
+        .make_stable(input_domain.clone(), input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     if scale.is_none() && global_scale.is_none() {
@@ -63,7 +66,15 @@ where
         );
     }
 
-    let scale = scale.unwrap_or(1.);
+    let scale = match scale {
+        Some(scale) => scale,
+        None => {
+            // when scale is unknown, set it relative to the sensitivity of the query
+            let margin = input_domain.active_margin().cloned().unwrap_or_default();
+            let (l_0, l_inf) = t_prior.map(&(margin.l_0(1), 1, margin.l_inf(1)))?;
+            f64::inf_cast(l_0)?.inf_mul(&l_inf)?
+        }
+    };
     let global_scale = global_scale.unwrap_or(1.);
 
     if scale.is_nan() || scale.is_sign_negative() {
