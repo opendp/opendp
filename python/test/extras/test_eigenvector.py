@@ -30,7 +30,7 @@ def test_private_eigenvector():
 
 
 def test_eigenvector_integration():
-    from opendp.extras.numpy.make_np_clamp import then_np_clamp
+    from opendp.extras.numpy import then_np_clamp
     from opendp.extras.numpy._make_np_sscp import then_np_sscp
     from opendp.extras.sklearn._make_eigenvector import then_private_eigenvector
 
@@ -55,7 +55,7 @@ def test_eigenvector_integration():
 
 
 def test_eigenvectors():
-    from opendp.extras.numpy.make_np_clamp import then_np_clamp
+    from opendp.extras.numpy import then_np_clamp
     from opendp.extras.numpy._make_np_sscp import then_np_sscp
     from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
 
