@@ -297,6 +297,7 @@ Environment Variables
        When OpenDP is used as a query server, library paths in queries submitted by clients are stale (local to the client).
        This environment variable overrides paths in new OpenDP Polars plugins and OnceFrames.
        For Python, you can read this value from ``opendp._lib.lib_path`` (read-only).
+       This is separate from ``OPENDP_LIB_DIR`` because we anticipate it diverging for R.
    * - ``OPENDP_HEADLESS``
      - Used by CI. When ``true``, The Python ``opendp`` package will import without the presence of the OpenDP Library binary.
    * - ``OPENDP_SPHINX_PORT`` and ``OPENDP_SPHINX_URI``
