@@ -100,8 +100,7 @@ This is obviously not the easiest way to add noise to a number,
 but it demonstrates a number of low-level OpenDP patterns:
 
 * First, define your metric space.
-* Then, chaining operators together.
-* Construct a ``Measurement`` function on your metric space with ``then_laplace``.
+* Then, chain operators together and end with a ``Measurement`` function.
 * Invoke that measurement on a value to get a DP release.
 
 OpenDP has two APIs and we'll demonstrate how to use both:
@@ -112,5 +111,6 @@ OpenDP has two APIs and we'll demonstrate how to use both:
 Because the Context API is a wrapper around the Framework API, it is easier to use but less flexible:
 All calls ultimately pass through the Framework API.
 
-This page and the next will use the Framework and Context APIs to demonstrate the similarities between the Framework APIs in different languages.
+At a higher-level, OpenDP offers a plugin for the Polars dataframe library in Python.
+The next page will use the Framework and Context APIs to demonstrate the similarities between the Framework APIs in different languages;
 The remaining documentation focuses on the Polars API with Python.
