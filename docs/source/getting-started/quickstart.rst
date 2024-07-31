@@ -98,7 +98,7 @@ Let's apply Laplace noise to a value.
 
 This demonstrates a number of low-level OpenDP patterns:
 
-* First, define your metric space.
+* First, define your "metric space": a data domain and a definition of distance
 * Then, chain operators together to construct a ``Measurement`` (aka mechanism).
 * Invoke that measurement on a value to get a DP release.
 
