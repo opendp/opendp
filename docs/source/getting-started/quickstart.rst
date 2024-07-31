@@ -96,8 +96,7 @@ Let's apply Laplace noise to a value.
             :start-after: demo
             :end-before: /demo
 
-This is obviously not the easiest way to add noise to a number,
-but it demonstrates a number of low-level OpenDP patterns:
+This demonstrates a number of low-level OpenDP patterns:
 
 * First, define your metric space.
 * Then, chain operators together to construct a ``Measurement`` (aka mechanism).
