@@ -111,6 +111,5 @@ OpenDP has two APIs and we'll demonstrate how to use both:
 Because the Context API is a wrapper around the Framework API, it is easier to use but less flexible:
 All calls ultimately pass through the Framework API.
 
-At a higher-level, OpenDP offers a plugin for the Polars dataframe library in Python.
-The next page will use the Framework and Context APIs to demonstrate the similarities between the Framework APIs in different languages;
-The remaining documentation focuses on the Polars API with Python.
+The next page will use the Framework and Context APIs to demonstrate the similarities between the Framework APIs in different languages.
+After that, the remaining "Getting Started" documentation will focus just on Python.
