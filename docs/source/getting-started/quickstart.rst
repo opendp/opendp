@@ -100,16 +100,16 @@ This is obviously not the easiest way to add noise to a number,
 but it demonstrates a number of low-level OpenDP patterns:
 
 * First, define your metric space.
-* Then, chain operators together and end with a ``Measurement`` function.
+* Then, chain operators together to construct a ``Measurement`` (aka mechanism).
 * Invoke that measurement on a value to get a DP release.
 
 OpenDP has two APIs and we'll demonstrate how to use both:
 
 * The **Context API** is simpler and helps to enforce best practices. Currently available only for Python.
-* The **Framework API** is lower-level. Available for Python and R, it mirrors the underlying Rust framework.
+* The **Framework API** is lower-level. Available for Python, R and Rust, it directly implements the :ref:`OpenDP Programming Framework <programming-framework>`.
 
 Because the Context API is a wrapper around the Framework API, it is easier to use but less flexible:
 All calls ultimately pass through the Framework API.
 
-The next page will use the Framework and Context APIs to demonstrate the similarities between the Framework APIs in different languages.
+The next page will demonstrate usage of the Context API in Python, and Framework API in Python and R.
 After that, the remaining "Getting Started" documentation will focus just on Python.
