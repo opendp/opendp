@@ -1,8 +1,8 @@
 import pytest
 import opendp.prelude as dp
+import os
 
 
-dp.enable_features("contrib", "honest-but-curious")
 
 
 def test_polars_version():
@@ -269,7 +269,6 @@ def test_onceframe_lazy():
     )
 
     of = m_lf(lf)
-    dp.enable_features("honest-but-curious")
     assert isinstance(of.lazy(), pl.LazyFrame)
 
 
@@ -543,21 +542,33 @@ def test_polars_threshold():
         .collect()
     )
 
-
+@pytest.mark.skipif(
+    os.getenv('FORCE_TEST_REPLACE_BINARY_PATH') != "1", 
+    reason="setting OPENDP_POLARS_LIB_PATH interferes with the execution of other tests"
+)
 def test_replace_binary_path():
     import os
-    os.environ["OPENDP_LIB_PATH"] = "testing!"
     pl = pytest.importorskip("polars")
+    expr = pl.len().dp.noise(scale=1.)
+
+    # check that the library overwrites paths
+    os.environ["OPENDP_POLARS_LIB_PATH"] = "testing!"
 
     m_expr = dp.m.make_private_expr(
         dp.expr_domain(example_lf()[0], grouping_columns=[]),
         dp.partition_distance(dp.symmetric_distance()),
         dp.max_divergence(T=float),
-        pl.len().dp.noise(scale=1.),
+        expr,
     )
+
     assert str(m_expr((pl.LazyFrame(dict()), pl.all()))) == "len().testing!:noise_plugin()"
 
-    del os.environ["OPENDP_LIB_PATH"]
+    # check that local paths in new expressions get overwritten
+    os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
+    assert str(pl.len().dp.noise(scale=1.)) == f"len().{__file__}:noise([null, dyn float: 1.0])"
+
+    # cleanup
+    del os.environ["OPENDP_POLARS_LIB_PATH"]
 
 
 def test_pickle_bomb():
