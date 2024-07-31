@@ -137,7 +137,7 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
                 kwargs,
             } = &mut function
             {
-                if let Ok(path) = env::var("OPENDP_LIB_PATH") {
+                if let Ok(path) = env::var("OPENDP_POLARS_LIB_PATH") {
                     *lib = Arc::from(path);
                 }
                 *symbol = KW::NAME.into();

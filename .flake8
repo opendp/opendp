@@ -67,6 +67,4 @@ per-file-ignores =
     */opendp/__init__.py:F401
     */prelude.py:F401
     */sklearn/__init__.py:F401
-    # TODO: Just have everything import directly?
-    # >>> from opendp._extrinsics.domains import np_array2_domain
-    */_extrinsics/__init__.py:F401
+    */extras/__init__.py:F401

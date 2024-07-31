@@ -1,3 +1,5 @@
+.. _dp-pca:
+
 Differentially Private PCA
 ==========================
 
