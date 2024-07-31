@@ -4,44 +4,21 @@
 Working with Tabular Data
 =========================
 
-Motivation 
-----------
-
-In the following examples, we will use real data to demonstrate the utility of OpenDP functions.
-We will use the `Labour Force Survey microdata <https://ec.europa.eu/eurostat/web/microdata/public-microdata/labour-force-survey>`_ released by Eurostat for a few reasons: 
-
-1. **Generality:** The dataset is relatively general, with variables and contexts accessible to users across various domains.
-2. **Sample Utility:** The public microdata is a sample of the private, full microdata. Methods developed with the public microdata will also work on the private microdata, and researchers can request access to the full dataset through Eurostat. 
-3. **Realism**: Since the dataset tracks individuals over multiple years, we need to think more carefully about our unit of privacy.
-
-The specific methods that will be demonstrated are: 
-
-* Computing Fundemental Statistics 
-    * Sum 
-    * Mean 
-    * Median 
-    * Quantiles 
-* Aggregrations and Filtering 
-    * Grouping By Singular Variables
-    * Grouping By Multiple Variables 
-    * Filtering 
-* Using Known and Unknown Keys in Aggregrations
-* Data Preparation Limitations
-  * Limitations with ``with_columns``
-  * Limitations with ``filter`` 
-
 Dataset Description 
 -------------------
 
-The data is organized by year and quarter for each nation in the European Union. For this tutorial, we sampled 200,000 individuals from the public microdata of France across all study years. 
-
+For this section of the documentation, we will use the `Labour Force Survey microdata <https://ec.europa.eu/eurostat/web/microdata/public-microdata/labour-force-survey>`_ released by Eurostat.
+The data surveys working hours of individuals in the European Union collected on a quarterly cadence.
 The public microdata is protected using traditional statistical disclosure control methods such as global recoding, local suppression, and addition of noise. 
-The public microdata is protected using traditional statistical disclosure control methods such as global recoding, local suppression, and addition of noise. 
 
+We chose this dataset for a few reasons: 
 
-Core Variables 
---------------
-The `User Guide <https://ec.europa.eu/eurostat/documents/1978984/6037342/EULFS-Database-UserGuide.pdf>`_ describes many variables. Our examples will use just a few. (Descriptions are copied from the User Guide.) 
+1. **Generality:** The dataset is relatively general, with variables and contexts accessible to users across various domains.
+2. **Sample Utility:** The public microdata is a sample of the private, full microdata. Methods developed with the public microdata will also work on the private microdata, and researchers can request access to the full dataset through Eurostat. 
+3. **Realism**: This is a real dataset that tracks individuals over multiple years, so we need to think more carefully about our unit of privacy.
+
+For this tutorial, we sampled a total of 200,000 individuals from the public microdata of France across all study years. 
+
 The `User Guide <https://ec.europa.eu/eurostat/documents/1978984/6037342/EULFS-Database-UserGuide.pdf>`_ describes many variables. Our examples will use just a few. (Descriptions are copied from the User Guide.) 
 
 .. list-table:: 
@@ -69,9 +46,31 @@ The `User Guide <https://ec.europa.eu/eurostat/documents/1978984/6037342/EULFS-D
      - Fixed Reference Year
      - Single Year
 
+
+Overview
+----------
+
+The specific methods that will be demonstrated are: 
+
+* Computing Fundamental Statistics 
+    * Count
+    * Sum 
+    * Mean 
+    * Median 
+    * Quantiles 
+* Grouping
+    * Grouping By Multiple Variables 
+    * Filtering
+    * Public vs. Private Grouping Keys
+* Data Preparation
+  * Limitations with ``with_columns``
+  * Limitations with ``filter`` 
+
 Compositor Overview
 -------------------
-The compositor is the foundation of our differentially private queries. It essentially takes in our data and our specifications for the queries that we would like to run. At this point, we won't be directly referencing our data again and we could theoretically delete it! 
+The compositor is the foundation of our differentially private queries. 
+It mediates access to the sensitive data,
+ensuring that queries you would like to release satisfy necessary privacy properties. 
 
 .. code-block:: python
 
@@ -86,18 +85,30 @@ The compositor is the foundation of our differentially private queries. It essen
            (): dp.polars.Margin(max_partition_length=60_000_000),
        },
    )
+   # Once you construct the context, you should abstain from directly accessing your data again.
+   # In fact, it is good practice to delete it! 
+   del df
 
 **Parameters**:
 
-* *privacy_unit:* How many rows each individual or entity of interest contributes to our data frame. In this case, we are analyzing the data from across 13 years and each year has 4 quarters. Therefore, the unit of privacy is 36. If we were to analyze a particular quarter in a particular year, the unit of privacy would be 1 since each individual would be represented once. 
+* | *privacy_unit:* The greatest influence an individual may have on your dataset.
+  | In this case, the influence is measured in terms of the number of rows an individual may contribute to your dataset. 
+  | Since we are analyzing quarterly data across 13 years, where an individual contributes up to one record per quarter,
+  | the unit of privacy corresponds to 36 row contributions. 
+  | If we were to analyze a particular quarter in a particular year, the unit of privacy would be 1 since each individual would contribute at most one row. 
+* | *privacy_loss:* The greatest privacy loss suffered by an individual in your dataset. 
+  | The privacy loss is upper-bounded by privacy parameters; in this case epsilon (ε).
+* | *split_evenly_over:* This is the number of queries you want to distribute your privacy loss over. 
+  | Configure this parameter appropriately according to how many queries you would like to release. 
+* *margins:* Margins capture public information about groupings of your dataset.
+    * | *max_partition_length:* An upper bound on how many records can be in one partition. 
+      | If you do not know the size of your dataset, this can be an upper bound on the population represented in your dataset. 
+      | The population of France was about 60 million in 2004 so we'll use that as our maximum partition length. Source: `World Bank <https://datatopics.worldbank.org/world-development-indicators/>`_. 
+    * | *max_partition_contributions:* The number of contributions each individual can have per partition in your data. 
+      | Based on the known structure of the data, each individual is represented once for a particular quarter and year.
+      | In addition, you know an individual may contribute at most 13 records to each quarter since there are 13 years in the dataset,
+      | and as many as 4 records each year since there are 4 quarters within a year. 
 
-* *privacy_loss:* This parameter determines how much privacy we want to preserve. If ε is small, we will have more privacy but worse data accuracy. ε can range from 0 to infinity, but 1 is usually a standard. 
-
-* *split_evenly_over:* This is the number of queries you want to distribute your privacy loss over. For now we specified 10 to explore the API but in the final versions of your code, this parameter will be picked more carefully. 
-
-* *margins:* Margins capture the variables of interest in your analysis. This can include variables that you may want to group by or apply differential privacy techniques to. 
-    * *max_partition_length:* The upper bound on how many records (individuals in this case) can be in one partition. If you do not know the size of your dataset, this can be an upper bound on the population represented in your dataset. The population of France was about 60 million in 2004 so that's our maximum partition length. Source: `World Bank <https://datatopics.worldbank.org/world-development-indicators/>`_. 
-    * *max_partition_contributions:* The number of contributions each individual can have per grouping. Since each individual is represented once for a particular quarter and year, they are represented 13 times for each quarter since there are 13 years in the dataset and 4 times each year since there are 4 quarters within a year. 
-
-Particular examples will require additional parameters, and the compositor will change slightly.
+Particular examples in the coming sections may require additional parameters, 
+and parameters to the compositor may be adjusted slightly.
 See :py:func:`opendp.context.Context.compositor` for more information.
