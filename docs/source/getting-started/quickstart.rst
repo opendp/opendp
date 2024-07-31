@@ -104,13 +104,13 @@ but it demonstrates a number of low-level OpenDP patterns:
 * Constructing a ``Measurement`` function on your metric space with ``then_laplace``.
 * Invoking that measurement on a value to get a DP release.
 
-OpenDP has layered APIs which provide increasing abstraction and usability:
+OpenDP has two APIs and we'll demonstrate how to use both:
 
-* The **Framework API** is low-level. Available for Python and R, it mirrors the underlying Rust framework.
-* The **Context API** introduces a ``Context`` class which ensures that queries do not exceed the privacy budget. Currently available only for Python.
-* The **Polars API** provides a DP extension to the `Polars <https://docs.pola.rs/>`_ dataframe library. Currently available only for Python.
+* The **Context API** is simpler and helps to enforce best practices. Currently available only for Python.
+* The **Framework API** is lower-level. Available for Python and R, it mirrors the underlying Rust framework.
 
-Because the higher-level APIs are built on the Framework API, they are easier to use but less flexible: All calls ultimately pass through the Framework API.
+Because the Context API is a wrapper around the Framework API, it is easier to use but less flexible:
+All calls ultimately pass through the Framework API.
 
 This page and the next will use the Framework and Context APIs to demonstrate the similarities between the Framework APIs in different languages.
 The remaining documentation focuses on the Polars API with Python.
