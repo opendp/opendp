@@ -2,7 +2,6 @@ import pytest
 
 import opendp.prelude as dp
 
-dp.enable_features("floating-point", "contrib", "honest-but-curious")
 
 
 def test_type_getters():

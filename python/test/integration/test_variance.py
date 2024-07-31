@@ -1,5 +1,4 @@
 import opendp.prelude as dp
-dp.enable_features("contrib")
 
 def test_sized_bounded_variance():
     """known-n bounded float sum (assuming n is public)"""
