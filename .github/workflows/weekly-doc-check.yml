@@ -47,9 +47,7 @@ jobs:
         run: cargo --version
 
       - name: Build
-        # We only need "bindings", but build fails without "untrusted".
-        # TODO: All combos of features should work: https://github.com/opendp/opendp/issues/1343
-        run: cargo build --verbose --features bindings,untrusted
+        run: cargo check
   
       - name: Upload Python bindings
         uses: actions/upload-artifact@v4
