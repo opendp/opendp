@@ -11,4 +11,4 @@ We suggest importing under the conventional name ``dp``:
 The methods of this module will then be accessible at ``dp.sklearn``.    
 '''
 
-from .pca import PCA
+import opendp.extras.sklearn.decomposition

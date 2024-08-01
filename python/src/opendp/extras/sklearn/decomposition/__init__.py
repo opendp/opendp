@@ -8,7 +8,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The methods of this module will then be accessible at ``dp.sklearn.pca``.    
+The methods of this module will then be accessible at ``dp.sklearn.decomposition``.    
 
 See also our :ref:`tutorial on diffentially private PCA <dp-pca>`.
 '''
@@ -26,9 +26,9 @@ if TYPE_CHECKING: # pragma: no cover
     import numpy # type: ignore[import-not-found]
 
 
-decomposition = import_optional_dependency('sklearn.decomposition', False)
-if decomposition is not None:
-    class _SKLPCA(decomposition.PCA): # type: ignore[name-defined]
+_decomposition = import_optional_dependency('sklearn.decomposition', False)
+if _decomposition is not None:
+    class _SKLPCA(_decomposition.PCA): # type: ignore[name-defined]
         '''
         :meta private:
         '''
