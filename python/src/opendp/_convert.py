@@ -150,7 +150,7 @@ def c_to_py(value: Any) -> Any:
             query_type = RuntimeType.parse(queryable_query_type(value))
             
             if query_type == "OnceFrameQuery":
-                from opendp.polars import OnceFrame
+                from opendp.extras.polars import OnceFrame
                 return OnceFrame(value)
             
             return Queryable(value, query_type)

@@ -7,7 +7,8 @@
 # /init
 
 # demo
->>> laplace_mechanism = dp.space_of(float) >> dp.m.then_laplace(scale=1.)
+>>> space = (dp.atom_domain(T=float), dp.absolute_distance(T=float))
+>>> laplace_mechanism = space >> dp.m.then_laplace(scale=1.)
 >>> dp_value = laplace_mechanism(123.0)
 
 # /demo

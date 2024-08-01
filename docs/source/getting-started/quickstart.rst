@@ -96,10 +96,19 @@ Let's apply Laplace noise to a value.
             :start-after: demo
             :end-before: /demo
 
-This is obviously not the easiest way to add noise to a number,
-but it demonstrates a number of OpenDP patterns:
+This demonstrates a number of low-level OpenDP patterns:
 
-* Defining your metric space with ``space_of`` in Python's Context API, or a (domain, distance) tuple in any language..
-* Chaining operators together with ``>>`` in Python and Rust, or ``|>`` in R.
-* Constructing a ``Measurement`` function on your metric space with ``then_laplace``.
-* Invoking that measurement on a value to get a DP release.
+* First, define your "metric space": a data domain and a definition of distance.
+* Then, chain operators together to construct a ``Measurement`` (aka mechanism).
+* Invoke that measurement on a value to get a DP release.
+
+OpenDP has two APIs and we'll demonstrate how to use both:
+
+* The **Context API** is simpler and helps to enforce best practices. Currently available only for Python.
+* The **Framework API** is lower-level. Available for Python, R and Rust, it directly implements the `OpenDP Programming Framework <../theory/a-framework-to-understand-dp.html>`_.
+
+Because the Context API is a wrapper around the Framework API, it is easier to use but less flexible:
+All calls ultimately pass through the Framework API.
+
+The next page will demonstrate usage of the Context API in Python, and Framework API in Python and R.
+After that, the remaining "Getting Started" documentation will focus just on Python.
