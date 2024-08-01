@@ -936,6 +936,29 @@ impl Shuffle for AnyObject {
 }
 
 #[bootstrap(
+    name = "smd_curve_delta",
+    arguments(curve(rust_type = b"null"), epsilon(rust_type = "f64"))
+)]
+/// Internal function. Use an SMDCurve to find delta at a given `epsilon`.
+///
+/// # Arguments
+/// * `curve` - The SMDCurve.
+/// * `epsilon` - What to fix epsilon to compute delta.
+///
+/// # Returns
+/// Delta at a given `epsilon`.
+#[no_mangle]
+pub extern "C" fn opendp_data__smd_curve_delta(
+    curve: *const AnyObject,
+    epsilon: f64,
+) -> FfiResult<*mut AnyObject> {
+    try_!(try_as_ref!(curve).downcast_ref::<SMDCurve>())
+        .delta(epsilon)
+        .map(AnyObject::new)
+        .into()
+}
+
+#[bootstrap(
     name = "smd_curve_epsilon",
     arguments(curve(rust_type = b"null"), delta(rust_type = "f64"))
 )]
