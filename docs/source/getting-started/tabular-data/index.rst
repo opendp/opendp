@@ -43,11 +43,11 @@ The public microdata is protected using traditional statistical disclosure contr
 
 We chose this dataset for a few reasons: 
 
-1. **Generality:** The dataset is relatively general, with variables and contexts accessible to users across various domains.
+1. **Accessibility:** The dataset is accessible to users across various domains.
 2. **Sample Utility:** The public microdata is a sample of the private, full microdata. Methods developed with the public microdata will also work on the private microdata, and researchers can request access to the full dataset through Eurostat. 
-3. **Realism**: This is a real dataset that tracks individuals over multiple years, so we need to think more carefully about our unit of privacy.
+3. **Realism**: This is a real dataset that tracks individuals over multiple years, which will influence the unit of privacy since each individual can be represented multiple times in the dataset. 
 
-For this tutorial, we sampled a total of 200,000 individuals from the public microdata of France across all study years. 
+For this tutorial, we sampled a total of 200,000 rows from the public microdata of France across all study years. 
 
 The `User Guide <https://ec.europa.eu/eurostat/documents/1978984/6037342/EULFS-Database-UserGuide.pdf>`_ describes many variables. Our examples will use just a few. (Descriptions are copied from the User Guide.) 
 
@@ -92,19 +92,23 @@ Overview
 The specific methods that will be demonstrated are: 
 
 * Fundamental Statistics 
-    * Count
-    * Sum 
-    * Mean 
-    * Median 
-    * Quantiles 
+  * Count
+  * Sum 
+  * Mean 
+  * Median 
+  * Quantiles 
 * Grouping
-    * Grouping By Multiple Variables 
-    * Filtering
-    * Public vs. Private Grouping Keys
-* Data Preparation
-    * Limitations with ``with_columns``
-    * Limitations with ``filter`` 
+  * Grouping By Multiple Variables 
+  * Filtering
+* Public vs. Private Grouping Lengths 
 
+This section will explain the implications and limitations of having public and private keys and/or lengths when grouping. 
+
+* Data Preparation Limitations 
+  * Limitations with ``with_columns``
+  * Limitations with ``filter`` 
+
+This section will explain the limitations and properties of common Polars functions that are unique to their usage in OpenDP. 
 Compositor Overview
 -------------------
 The compositor is the foundation of our differentially private analysis. 
@@ -138,7 +142,7 @@ Context Parameters
 
 * ``privacy_unit``: The greatest influence an individual may have on your dataset.
   In this case, the influence is measured in terms of the number of rows an individual may contribute to your dataset. 
-  Since we are analyzing quarterly data across 13 years, where an individual contributes up to one record per quarter,
+  Since we are analyzing quarterly data across 9 years, where an individual contributes up to one record per quarter,
   the unit of privacy corresponds to 36 row contributions. 
   If we were to analyze a particular quarter in a particular year, the unit of privacy would be 1 since each individual would contribute at most one row. 
 * ``privacy_loss``: The greatest privacy loss suffered by an individual in your dataset. 
@@ -147,13 +151,16 @@ Context Parameters
   Configure this parameter appropriately according to how many queries you would like to release. 
 * ``margins``: Margins capture public information about groupings of your dataset.
 
-  * ``max_partition_length``: An upper bound on how many records can be in one partition. 
+ * ``max_partition_length``: An upper bound on how many records can be in one partition. 
     If you do not know the size of your dataset, this can be an upper bound on the population your dataset is a sample from. 
     The population of France was about 60 million in 2004 so we'll use that as our maximum partition length. 
     Source: `World Bank <https://datatopics.worldbank.org/world-development-indicators/>`_. 
-  * ``max_partition_contributions``: The number of contributions each individual can have per partition in your data. 
+
+    Partitioning the data set may be useful to increase scalability and utility.
+
+ * ``max_partition_contributions``: The number of contributions each individual can have per partition in your data. 
     Based on the known structure of the data, each individual is represented once for a particular quarter and year.
-    In addition, you know an individual may contribute at most 13 records to each quarter since there are 13 years in the dataset,
+    In addition, you know an individual may contribute at most 9 records to each quarter since there are 9 years in the dataset,
     and as many as 4 records each year since there are 4 quarters within a year. 
 
 Particular examples in the coming sections may require additional parameters, 
