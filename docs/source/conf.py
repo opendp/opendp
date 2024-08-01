@@ -81,14 +81,6 @@ def docstring(app, what, name, obj, options, lines):
 def setup(app):
     app.connect('autodoc-process-docstring', docstring)
 
-
-doctest_global_setup = '''
-try:
-    import polars as pl
-except ImportError:
-    pl = None
-'''
-
 # This prevents the RuntimeTypeDescriptors from expanding and making the signatures on API docs unreadable
 autodoc_typehints = "description"
 
