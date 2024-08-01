@@ -1099,6 +1099,71 @@ pub extern "C" fn opendp_data__privacy_profile_epsilon(
         .into()
 }
 
+#[bootstrap(name = "privacy_profile_beta", arguments(curve(rust_type = b"null")))]
+/// Internal function. Use a PrivacyProfile to find beta at a given `alpha`.
+///
+/// # Arguments
+/// * `curve` - The PrivacyProfile.
+/// * `alpha` - What to fix alpha to compute beta.
+///
+/// # Returns
+/// Beta at a given `alpha`.
+#[no_mangle]
+pub extern "C" fn opendp_data__privacy_profile_beta(
+    curve: *const AnyObject,
+    alpha: f64,
+) -> FfiResult<*mut AnyObject> {
+    let curve = try_as_ref!(curve);
+    try_!(curve.downcast_ref::<PrivacyProfile>())
+        .beta(alpha)
+        .map(AnyObject::new)
+        .into()
+}
+
+#[bootstrap(
+    name = "privacy_profile_posterior_curve",
+    arguments(curve(rust_type = b"null"))
+)]
+/// Internal function. Use a PrivacyProfile to create a posterior curve.
+///
+/// # Arguments
+/// * `curve` - The PrivacyProfile.
+/// * `prior` - Attacker's initial knowledge.
+///
+/// # Returns
+/// Beta at a given `alpha`.
+#[no_mangle]
+pub extern "C" fn opendp_data__privacy_profile_posterior_curve(
+    profile: *const AnyObject,
+    prior: f64,
+) -> FfiResult<*mut AnyFunction> {
+    let profile = try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>());
+    let curve = profile.posterior_curve(prior);
+    Ok(Function::new_fallible(move |alpha: &f64| curve(*alpha)).into_any()).into()
+}
+
+#[bootstrap(
+    name = "privacy_profile_relative_risk_curve",
+    arguments(curve(rust_type = b"null"))
+)]
+/// Internal function. Use a PrivacyProfile to create a posterior curve.
+///
+/// # Arguments
+/// * `profile` - The PrivacyProfile.
+/// * `prior` - Attacker's initial knowledge.
+///
+/// # Returns
+/// Beta at a given `alpha`.
+#[no_mangle]
+pub extern "C" fn opendp_data__privacy_profile_relative_risk_curve(
+    profile: *const AnyObject,
+    prior: f64,
+) -> FfiResult<*mut AnyFunction> {
+    let profile = try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>());
+    let curve = profile.relative_risk_curve(prior);
+    Ok(Function::new_fallible(move |alpha: &f64| curve(*alpha)).into_any()).into()
+}
+
 #[cfg(feature = "polars")]
 /// Allocate an empty ArrowArray and ArrowSchema that Rust owns the memory for.
 /// The ArrowArray and ArrowSchema are initialized empty, and are populated by the bindings language.
