@@ -564,6 +564,9 @@ impl InfExp for f64 {
                 self
             )
         };
+        if self == 0.0 {
+            return Ok(1.0);
+        }
         if !self.exp().is_finite() {
             return Err(not_finite());
         }
@@ -611,6 +614,9 @@ impl InfExp for f32 {
                 self
             )
         };
+        if self == 0.0 {
+            return Ok(1.0);
+        }
         if !self.exp().is_finite() {
             return Err(not_finite());
         }

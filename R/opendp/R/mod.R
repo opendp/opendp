@@ -332,9 +332,9 @@ new_function <- function(ptr, log) {
 #' @concept mod
 #' @param ptr a pointer to a privacy profile
 new_privacy_profile <- function(ptr) {
-  privacy_profile <- function(attr, epsilon, delta) {
-    if (missing(attr) + missing(epsilon) + missing(delta) != 2) {
-      stop("expected exactly one of attr, epsilon or delta")
+  privacy_profile <- function(attr, epsilon, delta, alpha) {
+    if (missing(attr) + missing(epsilon) + missing(delta) + missing(alpha) != 3) {
+      stop("expected exactly one of attr, epsilon, delta or alpha")
     }
 
     if (!missing(epsilon)) {
@@ -345,8 +345,14 @@ new_privacy_profile <- function(ptr) {
       return(privacy_profile_epsilon(ptr, delta))
     }
 
+    if (!missing(alpha)) {
+      return(privacy_profile_beta(ptr, alpha))
+    }
+
     switch(attr,
       ptr = ptr,
+      posterior = function(prior) privacy_profile_posterior_curve(ptr, prior),
+      relative_risk = function(prior) privacy_profile_relative_risk_curve(ptr, prior),
       stop("unrecognized attribute")
     )
   }
