@@ -91,26 +91,33 @@ Overview
 
 The specific methods that will be demonstrated are: 
 
-* Fundamental Statistics 
+* Fundamental Statistics
+
   * Count
   * Sum 
   * Mean 
   * Median 
   * Quantiles 
+
 * Grouping
+
   * Grouping By Multiple Variables 
   * Filtering
+
 * Public vs. Private Grouping Lengths 
 
 This section will explain the implications and limitations of having public and private keys and/or lengths when grouping. 
 
 * Data Preparation Limitations 
+
   * Limitations with ``with_columns``
   * Limitations with ``filter`` 
 
 This section will explain the limitations and properties of common Polars functions that are unique to their usage in OpenDP. 
+
 Compositor Overview
 -------------------
+
 The compositor is the foundation of our differentially private analysis. 
 It mediates access to the sensitive data,
 ensuring that queries you would like to release satisfy necessary privacy properties. 
@@ -151,14 +158,11 @@ Context Parameters
   Configure this parameter appropriately according to how many queries you would like to release. 
 * ``margins``: Margins capture public information about groupings of your dataset.
 
- * ``max_partition_length``: An upper bound on how many records can be in one partition. 
+  * ``max_partition_length``: An upper bound on how many records can be in one partition. 
     If you do not know the size of your dataset, this can be an upper bound on the population your dataset is a sample from. 
     The population of France was about 60 million in 2004 so we'll use that as our maximum partition length. 
-    Source: `World Bank <https://datatopics.worldbank.org/world-development-indicators/>`_. 
-
-    Partitioning the data set may be useful to increase scalability and utility.
-
- * ``max_partition_contributions``: The number of contributions each individual can have per partition in your data. 
+    Source: `World Bank <https://datatopics.worldbank.org/world-development-indicators/>`_.
+  * ``max_partition_contributions``: The number of contributions each individual can have per partition in your data. 
     Based on the known structure of the data, each individual is represented once for a particular quarter and year.
     In addition, you know an individual may contribute at most 9 records to each quarter since there are 9 years in the dataset,
     and as many as 4 records each year since there are 4 quarters within a year. 
