@@ -644,14 +644,6 @@ try:
             """
             lf_plan = self._lgb_plan.agg(*aggs, **named_aggs)
             return LazyFrameQuery(lf_plan, self._query)
-        
-
-        def len(self, name: str | None = None) -> LazyFrameQuery:
-            """
-            Return the number of rows in each group.
-            """
-            lf_plan = self._lgb_plan.len(name=name)
-            return LazyFrameQuery(lf_plan, self._query)
 
 
 

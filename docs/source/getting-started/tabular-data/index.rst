@@ -82,10 +82,11 @@ It mediates access to the sensitive data,
 ensuring that queries you would like to release satisfy necessary privacy properties. 
 
 .. testsetup::
+  :skipif: pl is None
 
     >>> df = pl.LazyFrame()
 
-.. code-block:: python
+.. doctest:: python
   :skipif: pl is None
 
     >>> context = dp.Context.compositor(
@@ -94,9 +95,9 @@ ensuring that queries you would like to release satisfy necessary privacy proper
     ...     privacy_loss=dp.loss_of(epsilon=1.0),
     ...     split_evenly_over=10,
     ...     margins={
-    ...         ("YEAR", ): dp.Margin(max_partition_length=60_000_000, max_partition_contributions=4),
-    ...         ("YEAR", "QUARTER",): dp.Margin(max_partition_length=60_000_000, max_partition_contributions=1),
-    ...         (): dp.Margin(max_partition_length=60_000_000),
+    ...         ("YEAR", ): dp.polars.Margin(max_partition_length=60_000_000, max_partition_contributions=4),
+    ...         ("YEAR", "QUARTER",): dp.polars.Margin(max_partition_length=60_000_000, max_partition_contributions=1),
+    ...         (): dp.polars.Margin(max_partition_length=60_000_000),
     ...     },
     ... )
     
