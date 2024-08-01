@@ -1225,22 +1225,22 @@ impl Shuffle for AnyObject {
 
 #[bootstrap(
     name = "privacy_profile_delta",
-    arguments(curve(rust_type = b"null"), delta(rust_type = "f64"))
+    arguments(profile(rust_type = b"null"), delta(rust_type = "f64"))
 )]
 /// Internal function. Use a PrivacyProfile to find epsilon at a given `epsilon`.
 ///
 /// # Arguments
-/// * `curve` - The PrivacyProfile.
+/// * `profile` - The PrivacyProfile.
 /// * `epsilon` - What to fix epsilon to compute delta.
 ///
 /// # Returns
 /// Delta at a given `epsilon`.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__privacy_profile_delta(
-    curve: *const AnyObject,
+    profile: *const AnyObject,
     epsilon: f64,
 ) -> FfiResult<*mut AnyObject> {
-    try_!(try_as_ref!(curve).downcast_ref::<PrivacyProfile>())
+    try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>())
         .delta(epsilon)
         .map(AnyObject::new)
         .into()
@@ -1267,6 +1267,73 @@ pub extern "C" fn opendp_data__privacy_profile_epsilon(
         .epsilon(delta)
         .map(AnyObject::new)
         .into()
+}
+
+#[bootstrap(name = "privacy_profile_beta", arguments(profile(rust_type = b"null")))]
+/// Internal function. Use a PrivacyProfile to find beta at a given `alpha`.
+///
+/// # Arguments
+/// * `profile` - The PrivacyProfile.
+/// * `alpha` - What to fix alpha to compute beta.
+///
+/// # Returns
+/// Beta at a given `alpha`.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data__privacy_profile_beta(
+    profile: *const AnyObject,
+    alpha: f64,
+) -> FfiResult<*mut AnyObject> {
+    let curve = try_as_ref!(profile);
+    try_!(curve.downcast_ref::<PrivacyProfile>())
+        .beta(alpha)
+        .map(AnyObject::new)
+        .into()
+}
+
+#[bootstrap(
+    name = "privacy_profile_posterior_curve",
+    arguments(profile(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyFunction *>", do_not_convert = true)
+)]
+/// Internal function. Use a PrivacyProfile to create a posterior curve.
+///
+/// # Arguments
+/// * `profile` - The PrivacyProfile.
+/// * `prior` - Attacker's initial knowledge.
+///
+/// # Returns
+/// Beta at a given `alpha`.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data__privacy_profile_posterior_curve(
+    profile: *const AnyObject,
+    prior: f64,
+) -> FfiResult<*mut AnyFunction> {
+    let profile = try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>());
+    let curve = try_!(profile.posterior_curve(prior));
+    Ok(Function::new_fallible(move |alpha: &f64| curve(*alpha)).into_any()).into()
+}
+
+#[bootstrap(
+    name = "privacy_profile_relative_risk_curve",
+    arguments(profile(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyFunction *>", do_not_convert = true)
+)]
+/// Internal function. Use a PrivacyProfile to create a posterior curve.
+///
+/// # Arguments
+/// * `profile` - The PrivacyProfile.
+/// * `prior` - Attacker's initial knowledge.
+///
+/// # Returns
+/// Beta at a given `alpha`.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data__privacy_profile_relative_risk_curve(
+    profile: *const AnyObject,
+    prior: f64,
+) -> FfiResult<*mut AnyFunction> {
+    let profile = try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>());
+    let curve = try_!(profile.relative_risk_curve(prior));
+    Ok(Function::new_fallible(move |alpha: &f64| curve(*alpha)).into_any()).into()
 }
 
 #[cfg(feature = "polars")]

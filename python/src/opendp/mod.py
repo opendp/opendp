@@ -926,12 +926,57 @@ class PrivacyProfile(object):
     def epsilon(self, delta):
         '''
         Returns the epsilon that corresponds to this delta.
+
+        Runs a binary search to find the smallest epsilon that corresponds to the given delta.
         
         :param delta: Allowance for an additive difference between the distributions of releases on adjacent datasets
         '''
         from opendp._data import privacy_profile_epsilon
         return privacy_profile_epsilon(self.curve, delta)
     
+    def beta(self, alpha: float) -> float:
+        '''
+        Returns the largest Type II error (beta) for a given Type I error (alpha).
+
+        The returned beta is a (slightly) conservative underestimate.
+
+        Each pareto-optimal pair of (epsilon, delta) defines a linear supporting curve.
+        The beta function is the maximum of the linear supporting curves at a given alpha.
+        Since the betas corresponding to the linear supporting curves are convex and unimodal over epsilon,
+        a ternary search is used to find the best linear supporting tradeoff curve on the privacy profile.
+
+        :param alpha: Type I error. Must be within [0, 1]
+        '''
+        from opendp._data import privacy_profile_beta
+        return privacy_profile_beta(self.curve, alpha)
+    
+    def relative_risk_curve(self, prior: float) -> Function:
+        '''
+        Returns a relative risk curve for a hypothetical adversary who has a prior
+        on the probability of an individual being a member of the dataset.
+
+        The relative risk curve computes the relative increase in the strength
+        of the adversary's prior at a given Type I error (alpha).
+
+        :param prior: Attacker's prior membership probability. Must be within [0, 1]
+        '''
+        from opendp._data import privacy_profile_relative_risk_curve
+        return privacy_profile_relative_risk_curve(self.curve, prior)
+    
+    def posterior_curve(self, prior: float) -> Function:
+        '''
+        Returns a posterior curve for a hypothetical adversary who has a prior
+        on the probability of an individual being a member of the dataset.
+
+        The posterior curve computes the adversary's posterior knowledge
+        about the probability of an individual being a member of the dataset
+        at a given Type I error (alpha).
+
+        :param prior: Attacker's prior membership probability. Must be within [0, 1]
+        '''
+        from opendp._data import privacy_profile_posterior_curve
+        return privacy_profile_posterior_curve(self.curve, prior)
+
 
 class _PartialConstructor(object):
     '''

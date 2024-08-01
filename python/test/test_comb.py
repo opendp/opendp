@@ -27,6 +27,25 @@ def test_fix_delta():
     assert m_gauss_fixed.map(1.0) == (0.42994146883694934, 1e-06)
 
 
+def test_f_dp_beta():
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+
+    m_gauss = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 10.0))
+    profile: dp.PrivacyProfile = m_gauss.map(1.0)
+
+    assert profile.beta(alpha=0.5) == 0.44224635725957645
+
+def test_relative_risk():
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+
+    m_gauss = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 10.0))
+    profile: dp.PrivacyProfile = m_gauss.map(1.0)
+    posterior = profile.posterior_curve(prior=0.5)
+    assert posterior(0.5) == 0.5273001389013399
+
+    risk = profile.relative_risk_curve(prior=0.5)
+    assert risk(0.5) == 1.0546002778026797
+
 def test_make_composition():
     input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
     composed = dp.c.make_composition(

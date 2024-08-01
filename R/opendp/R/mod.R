@@ -302,14 +302,15 @@ print.measure <- function(x, ...) {
 #' @concept mod
 #' @param ptr a pointer to a function
 #' @param log call history
-new_function <- function(ptr, log) {
+#' @param TI the type of the function argument
+new_function <- function(ptr, log, TI = NULL) {
   opendp_function <- function(attr, arg) {
     if (missing(attr) + missing(arg) != 1) {
       stop("expected exactly one of attr or arg", call. = FALSE)
     }
 
     if (!missing(arg)) {
-      return(function_eval(ptr, arg))
+      return(function_eval(ptr, arg, TI))
     }
 
     switch(attr,
@@ -328,9 +329,9 @@ new_function <- function(ptr, log) {
 #' @concept mod
 #' @param ptr a pointer to a privacy profile
 new_privacy_profile <- function(ptr) {
-  privacy_profile <- function(attr, epsilon, delta) {
-    if (missing(attr) + missing(epsilon) + missing(delta) != 2) {
-      stop("expected exactly one of attr, epsilon or delta", call. = FALSE)
+  privacy_profile <- function(attr, epsilon, delta, alpha) {
+    if (missing(attr) + missing(epsilon) + missing(delta) + missing(alpha) != 3) {
+      stop("expected exactly one of attr, epsilon, delta or alpha", call. = FALSE)
     }
 
     if (!missing(epsilon)) {
@@ -341,8 +342,20 @@ new_privacy_profile <- function(ptr) {
       return(privacy_profile_epsilon(ptr, delta))
     }
 
+    if (!missing(alpha)) {
+      return(privacy_profile_beta(ptr, alpha))
+    }
+
     switch(attr,
       ptr = ptr,
+      posterior = function(prior) {
+        p_curve <- privacy_profile_posterior_curve(ptr, prior)
+        new_function(p_curve("ptr"), p_curve("log"), TI = "f64")
+      },
+      relative_risk = function(prior) {
+        rr_curve <- privacy_profile_relative_risk_curve(ptr, prior)
+        new_function(rr_curve("ptr"), rr_curve("log"), TI = "f64")
+      },
       stop("unrecognized attribute", call. = FALSE)
     )
   }
