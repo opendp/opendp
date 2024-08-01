@@ -1,7 +1,6 @@
 import opendp.prelude as dp
 import pytest
 
-dp.enable_features("contrib", "honest-but-curious")
 
 
 def make_duplicate(multiplicity, raises=False):

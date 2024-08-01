@@ -1,5 +1,4 @@
 import opendp.prelude as dp
-dp.enable_features("floating-point", "contrib")
 
 
 def test_sized_bounded_float_sum():
