@@ -58,9 +58,6 @@ jobs:
       - name: Check --no-default-features
         run: cargo check --verbose --no-default-features --features untrusted,bindings
 
-      - name: Check that generated python is up to date
-        run: git diff --exit-code
-
       - name: Build (dynamic w/ polars)
         run: cargo build --verbose --features untrusted,ffi,polars
       

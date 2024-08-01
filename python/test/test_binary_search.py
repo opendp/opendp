@@ -1,7 +1,6 @@
 import pytest
 import opendp.prelude as dp
 
-dp.enable_features('floating-point', 'contrib')
 
 def test_binary_search_fail():
     with pytest.raises(ValueError, match=r'predicate always fails'):

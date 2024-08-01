@@ -123,7 +123,6 @@ def test_numpy_data():
 def test_numpy_trans():
     np = pytest.importorskip('numpy')
     import opendp.prelude as dp
-    dp.enable_features("contrib")
     assert dp.t.make_sum(
         dp.vector_domain(dp.atom_domain(bounds=(0, 10))), 
         dp.symmetric_distance(),

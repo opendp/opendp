@@ -15,13 +15,6 @@ A differentially private analysis in OpenDP typically has the following steps:
     :width: 60%
     :alt: Diagram representing typical data flow with OpenDP, from a raw CSV to a differentially private release. 
 
-OpenDP has two APIs and we'll demonstrate how to use both:
-
-* The **Context API** is simpler and helps to enforce best practices. Currently available only for Python.
-* The **Framework API** is lower-level. Available for Python and R, it mirrors the underlying Rust framework.
-
-Because the Context API is a wrapper around the Framework API, it is easier to use but less flexible: All calls ultimately pass through the Framework API.
-
 We'll illustrate these steps by doing a differentially private analysis of a teacher survey, which is a tabular dataset. The raw data consists of survey responses from teachers in primary and secondary schools in an unspecified U.S. state.
 
 1. Identify the Unit of Privacy

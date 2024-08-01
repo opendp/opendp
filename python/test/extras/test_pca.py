@@ -3,7 +3,6 @@ import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
 from ..helpers import optional_dependency
 
-dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 
 def sample_microdata(*, num_columns=None, num_rows=None, cov=None):

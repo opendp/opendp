@@ -1,6 +1,5 @@
 import opendp.prelude as dp
 
-dp.enable_features('contrib')
 
 
 def test_count():
@@ -42,7 +41,6 @@ def test_count_distinct():
 
 
 def test_float_count():
-    dp.enable_features("floating-point")
     preprocess = (
         dp.t.make_split_dataframe(",", ['A', 'B']) >>
         dp.t.make_select_column("A", TOA=str) >>
