@@ -1,7 +1,6 @@
 name: Weekly doc check
 
 on:
-  pull_request: # TODO: Remove this line before merging PR!
   # Runs every Sunday at midnight:
   schedule:
     - cron: '0 0 * * 0'
