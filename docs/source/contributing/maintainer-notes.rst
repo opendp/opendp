@@ -59,29 +59,21 @@ Branching Strategy
 ==================
 
 * Use a single, long-lived branch named ``main`` for core project history.
-* Maintain a linear history on ``main``, meaning every commit is based only on the previous commit.
-  Don't do merge commits onto ``main``.
-* Do development on short-lived feature branches, derived from ``main``.
-  Feature branches have the naming scheme ``<nnn>-<short-desc>``,
+* Maintain a linear history on ``main`` and a 1-to-1 correspondence between PRs and commits by using squash merges.
+* Feature branches have the naming scheme ``<nnn>-<short-desc>``,
   where ``<nnn>`` is the number of the GitHub issue tracking this task,
   and ``<short-desc>`` is a short description of the change. For instance, ``123-new-measurement``
-* Manage all changes using GitHub PRs from feature branches onto main.
+* Manage all changes using GitHub PRs.
   Check for test success and do code reviews before approving PRs.
-* To maintain linear history, require PRs to be up to date with main.
-  This means that developers may need to rebase feature branches periodically.
-* Try to keep PRs relatively small and self contained.
+* Try to keep PRs relatively small, self-contained, and focussed on a single issue.
   This simplifies code reviews, and reduces the likelihood of rebasing hassles.
-* Generally, squash feature branches when merging PRs,
-  so that there's a 1-to-1 correspondence between issues/PRs and commits.
 * To enforce this strategy, use the following branch protections on main:
 
   * Require pull request reviews before merging
+  * Require approvals
   * Dismiss stale pull request approvals when new commits are pushed
   * Require status checks to pass before merging
-  * Require branches to be up to date before merging
   * Require linear history
-
-* Because this is the real world, allow for exceptions to these rules in case of excessive misery!
 
 
 Release Workflows
