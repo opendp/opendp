@@ -213,7 +213,7 @@ jobs:
         if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.12') }}
         run: |
           shopt -s globstar
-          pytest --nbmake source/**/*.ipynb -n=auto
+          pytest --nbmake ../docs/source/**/*.ipynb -n=auto
 
   confirm-coverage:
     needs: python-test
