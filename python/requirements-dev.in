@@ -12,11 +12,11 @@ coverage ~= 7.3
 mypy ~= 1.7
 pip-tools==7.3.0
 
-# Notebook tests:
+# Notebook test machinery:
 nbmake
 pytest-xdist
 
-# Just needed for examples in documentation and notebooks:
+# Only needed for examples in documentation and notebook examples:
 pandas
 matplotlib
 numpy<2.0 # v2.0 incompatible with randomgen: https://github.com/bashtage/randomgen/issues/360
