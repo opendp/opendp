@@ -6,8 +6,8 @@ Development Environment
 .. toctree::
     :hidden:
 
-    rust-initiation
-    proof-initiation
+    init/rust-initiation
+    init/proof-initiation
 
 If you are writing code, the first task to tackle is setting up the development environment.
 

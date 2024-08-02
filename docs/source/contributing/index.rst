@@ -13,7 +13,6 @@ please consult :doc:`../getting-started/index` and :doc:`../api/index`.
 
    contact
    getting-involved
-   dev-environment/index
+   development-environment
    contribution-process
    cla
-   maintainer-notes
