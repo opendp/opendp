@@ -13,9 +13,7 @@ please consult :doc:`../getting-started/index` and :doc:`../api/index`.
 
    contact
    getting-involved
-   development-environment
-   rust-initiation
-   proof-initiation
+   dev-environment/index
    contribution-process
    cla
    maintainer-notes
