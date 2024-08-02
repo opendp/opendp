@@ -1,7 +1,6 @@
 import argparse
 import configupdater
 import datetime
-import io
 import re
 import zoneinfo
 
