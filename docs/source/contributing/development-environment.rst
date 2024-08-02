@@ -114,7 +114,7 @@ set the environment variable ``OPENDP_TEST_RELEASE=1`` before importing OpenDP.
 
 If you run into problems, please contact us!
 
-For more on our Rust programming patterns, see :doc:`rust-initiation`.
+For more on our Rust programming patterns, see :doc:`init/rust-initiation`.
 
 
 Python Setup
@@ -296,7 +296,7 @@ Docs Setup
 
 The documentation build is described in the `docs/README.md <https://github.com/opendp/opendp/tree/main/docs#readme>`_.
 
-For more on our LaTex proof patterns, see :doc:`proof-initiation`.
+For more on our LaTex proof patterns, see :doc:`init/proof-initiation`.
 
 Release Process
 -----------------
