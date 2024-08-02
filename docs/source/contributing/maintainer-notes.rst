@@ -55,26 +55,6 @@ Code Hygiene
   If ``main`` is ever broken, it should be the team's top priority to fix it.
 * Use GitHub Actions to check PRs automatically, and don't allow merges if checks fail.
 
-Branching Strategy
-==================
-
-* Use a single, long-lived branch named ``main`` for core project history.
-* Maintain a linear history on ``main`` and a 1-to-1 correspondence between PRs and commits by using squash merges.
-* Feature branches have the naming scheme ``<nnn>-<short-desc>``,
-  where ``<nnn>`` is the number of the GitHub issue tracking this task,
-  and ``<short-desc>`` is a short description of the change. For instance, ``123-new-measurement``
-* Manage all changes using GitHub PRs.
-  Check for test success and do code reviews before approving PRs.
-* Try to keep PRs relatively small, self-contained, and focussed on a single issue.
-  This simplifies code reviews, and reduces the likelihood of rebasing hassles.
-* To enforce this strategy, use the following branch protections on main:
-
-  * Require pull request reviews before merging
-  * Require approvals
-  * Dismiss stale pull request approvals when new commits are pushed
-  * Require status checks to pass before merging
-  * Require linear history
-
 
 Release Workflows
 -----------------
