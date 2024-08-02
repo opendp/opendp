@@ -17,6 +17,8 @@ Most developers will also install Python and/or R:
 If you are only interested in developing a feature in one of these languages,
 you will not need to set up the other.
 
+.. contents:: |toctitle|
+    :local:
 
 Clone the OpenDP Repo
 ---------------------
@@ -39,7 +41,7 @@ If you have not `set up SSH <https://docs.github.com/en/authentication/connectin
     git clone https://github.com/opendp/opendp.git
 
 
-Rust Build
+Rust Setup
 ----------
 
 If you have not already, install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
@@ -289,10 +291,10 @@ and then uses ``pkgdown`` to render the documentation website.
     tools/r_stage.sh -d
 
 
-Sphinx Documentation and LaTex Proofs
--------------------------------------
+Docs Setup
+----------
 
-The documentation build system is described in the `docs/README.md <https://github.com/opendp/opendp/tree/main/docs#readme>`_.
+The documentation build is described in the `docs/README.md <https://github.com/opendp/opendp/tree/main/docs#readme>`_.
 
 For more on our LaTex proof patterns, see :doc:`proof-initiation`.
 
