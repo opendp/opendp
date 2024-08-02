@@ -195,8 +195,7 @@ jobs:
         # There's not a "skipif" for doctests, so use "-k" to exclude based on name patterns.
         # (Even in unittests we should use "importskip" rather than "skipif".)
         run: |
-          shopt -s globstar
-          coverage run -m pytest -v --nbmake source/**/*.ipynb -n=auto ${{ ! contains(matrix.extra-install, 'polars') && '-k "not lazyframe and not polars and not pca and not rst"' || ''}}
+          coverage run -m pytest -v ${{ ! contains(matrix.extra-install, 'polars') && '-k "not lazyframe and not polars and not pca and not rst"' || ''}}
 
       - name: Test replace-binary-path
         if: ${{ contains(matrix.extra-install, 'polars') }}
@@ -215,6 +214,11 @@ jobs:
         with:
           name: coverage-report
           path: /tmp/coverage.txt
+
+      - name: Test notebooks
+        run: |
+          shopt -s globstar
+          pytest --nbmake source/**/*.ipynb -n=auto
 
   confirm-coverage:
     needs: python-test
