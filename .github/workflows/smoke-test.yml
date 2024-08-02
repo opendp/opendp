@@ -170,6 +170,12 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
+      - name: Install notebook dependencies
+        # TODO: Merge these with the regular dev dependencies.
+        run: |
+          python -m pip install flake8 pytest nbmake pytest-xdist
+          python -m pip install -r requirements_notebooks.txt
+
       - name: Download dynamic lib
         uses: actions/download-artifact@v4
         with:
@@ -188,7 +194,9 @@ jobs:
       - name: Test
         # There's not a "skipif" for doctests, so use "-k" to exclude based on name patterns.
         # (Even in unittests we should use "importskip" rather than "skipif".)
-        run: coverage run -m pytest -v ${{ ! contains(matrix.extra-install, 'polars') && '-k "not lazyframe and not polars and not pca and not rst"' || ''}}
+        run: |
+          shopt -s globstar
+          coverage run -m pytest -v --nbmake source/**/*.ipynb -n=auto ${{ ! contains(matrix.extra-install, 'polars') && '-k "not lazyframe and not polars and not pca and not rst"' || ''}}
 
       - name: Test replace-binary-path
         if: ${{ contains(matrix.extra-install, 'polars') }}
@@ -245,58 +253,6 @@ jobs:
 
       - name: Check links
         run: linkchecker -f linkchecker.cfg build/html/index.html
-
-  python-notebooks:
-    needs: rust-build
-    runs-on: ubuntu-22.04
-    defaults:
-      run:
-        working-directory: docs
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download Python bindings
-        uses: actions/download-artifact@v4
-        with:
-          name: python_bindings
-          path: python/src/opendp/
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.9
-
-      - name: Get pip cache dir
-        id: pip-cache
-        run: echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip-${{ hashFiles('python/setup.cfg') }}
-          restore-keys: ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install flake8 pytest nbmake pytest-xdist
-          python -m pip install -r requirements_notebooks.txt
-
-      - name: Download dynamic lib
-        uses: actions/download-artifact@v4
-        with:
-          name: dynamic_lib
-          path: python/src/opendp/lib
-
-      - name: Install package
-        run: (cd ../python && python -m pip install -e .)
-
-      - name: Test
-        run: |
-          shopt -s globstar
-          pytest --nbmake source/**/*.ipynb -n=auto
 
   r-test:
     needs: rust-build
