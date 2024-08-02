@@ -178,5 +178,5 @@ Playbook
 Release Workflows
 -----------------
 
-The `workflows README <https://github.com/opendp/opendp/tree/main/.github/workflows#readme>`_
+The `workflows README <https://github.com/opendp/opendp/tree/main/.github/workflows#making-a-release>`_
 describes in more detail the workflows that support release and CI.
