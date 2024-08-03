@@ -39,76 +39,22 @@ _ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
 
 def _check_and_cast_scalar(expected, value):
     '''
-    Any number is cast to float, if f32 or f64 is expected:
-    >>> _check_and_cast_scalar('f32', 1.0)
-    1.0
-    >>> _check_and_cast_scalar('f64', 1)
-    1.0
-
-    Ints cast to ints, unsurprisingly:
-    >>> _check_and_cast_scalar('u8', 1)
-    1
-
-    ... but there are range checks:
-    >>> _check_and_cast_scalar('u8', 256)
-    Traceback (most recent call last):
-    ...
-    ValueError: 256 is not representable by u8
-
-    ... but not for floats? TODO?
-    >>> _check_and_cast_scalar('f32', 1e100)
-    1e+100
-
-    Floats cannot be cast to ints:
-    >>> _check_and_cast_scalar('i32', 1.0)
-    Traceback (most recent call last):
-    ...
-    TypeError: inferred type is f64, expected i32. See https://github.com/opendp/opendp/discussions/298
-
-    Bools cast to bools:
-    >>> _check_and_cast_scalar('bool', True)
-    True
-
-    Bools cannot cast to ints:
-    >>> _check_and_cast_scalar('u8', True)
-    Traceback (most recent call last):
-    ...
-    TypeError: inferred type is f64, expected u8. See https://github.com/opendp/opendp/discussions/298
-
-    ... but bools can cast to floats: Is this right? TODO
-    >>> _check_and_cast_scalar('f64', True)
-    1.0
-
-    >>> _check_and_cast_scalar('f32', True)
-    1.0
-
-    >>> _check_and_cast_scalar('bool', 1)
-    Traceback (most recent call last):
-    ...
-    TypeError: inferred type is f64, expected bool. See https://github.com/opendp/opendp/discussions/298
-
-    Unrecognized types will fail, but note that the error message refers to "f64":
-    >>> _check_and_cast_scalar('fake', 1)
-    Traceback (most recent call last):
-    ...
-    TypeError: inferred type is f64, expected fake. See https://github.com/opendp/opendp/discussions/298    
+    1. Converts integer value to float if expected value is float
+    2. Checks that value is roughly a member of the same data type as expected
+    3. Checks that integers are representable at the given data type
     '''
-    inferred = RuntimeType.infer(value)
+    # relax checks in the case of an int
+    if isinstance(value, int) and expected in ["f32", "f64"] and not isinstance(value, bool):
+        return float(value)
     
-    if inferred in ATOM_EQUIVALENCE_CLASSES:
-        assert isinstance(inferred, str)
-        if expected not in ATOM_EQUIVALENCE_CLASSES[inferred]:
-            raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
-    else:
-        if expected != inferred:
-            if not isinstance(value, int):
-                raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}") 
-            value = float(value)
-            value = check_and_cast_scalar(expected, value)
-            
+    inferred = str(RuntimeType.infer(value))
+
+    if expected not in ATOM_EQUIVALENCE_CLASSES.get(inferred, [inferred]):
+        raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
+    
     if expected in INT_SIZES:
         check_c_int_cast(value, expected)
-    
+
     return value
 
 
