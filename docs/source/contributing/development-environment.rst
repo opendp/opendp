@@ -91,8 +91,6 @@ The comprehensive feature listing for Rust:
         - Enable to generate Python and R source code. Also enables the ``ffi`` and ``derive`` features. 
       * - ``partials``
         - Enabled by default. When enabled, ``then_*`` functions are generated from ``make_*`` functions. Also enables the ``derive`` feature.
-      * - ``use-openssl``
-        - Enabled by default. Use OpenSSL for secure noise generation.
 
    A list of features available in bindings languages (R, Python) can be found in :ref:`feature-listing`.
 
