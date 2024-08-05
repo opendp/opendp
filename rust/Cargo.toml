@@ -1,5 +1,5 @@
 [workspace.package]
-version = "0.9.2-dev"
+version = "0.10.0-dev"
 license-file = "../LICENSE"
 readme = "../README.md"
 homepage = "https://opendp.org/"
@@ -32,20 +32,20 @@ rust-version.workspace = true
 exclude = ["windows/*"]
 
 [dependencies]
-opendp_derive = { path = "opendp_derive", version = "0.9.2-dev" }
+opendp_derive = { path = "opendp_derive", version = "0.10.0-dev" }
 rand = "0.7.3"
 num = "0.3.1"
 thiserror = "1.0.24"
 statrs = "0.13.0"
 dashu = { version = "0.4.0", features = ["num-traits_v02"] }
 openssl = { version = "0.10.64", features = ["vendored"], optional = true }
-opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.9.2-dev" }
+opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.10.0-dev" }
 readonly = "0.2"
 
 # A strict version requirement is necessary to keep the serialization format of LazyFrames stable.
 # If you change the version of Polars, 
 # be sure to also change the Python package version requirement and test binary compatibility.
-polars = { version = "=0.38.3", features = [
+polars = { version = "=0.41.3", features = [
     "lazy",
     "csv",
     "dtype-struct",
@@ -57,13 +57,14 @@ polars = { version = "=0.38.3", features = [
     "rank",
     "polars-ops",
     "abs",
+    "meta",
 ], optional = true }
-polars-plan = { version = "=0.38.3", features = [
+polars-plan = { version = "=0.41.3", features = [
     "ffi_plugin",
 ], optional = true }
-polars-arrow = { version = "=0.38.3", optional = true }
-pyo3 = { version = "0.20", features = ["abi3-py39", "extension-module"], optional = true }
-pyo3-polars = { version = "=0.12.0", features = ["derive"], optional = true }
+polars-arrow = { version = "=0.41.3", optional = true }
+pyo3 = { version = "0.21.2", features = ["abi3-py39", "extension-module"], optional = true }
+pyo3-polars = { version = "=0.15.0", features = ["derive"], optional = true }
 serde = { version = "1.0", optional = true }
 serde-pickle = { version = "1.1", optional = true }
 ciborium = { version = "0.2.1", optional = true }
@@ -72,7 +73,7 @@ lazy_static = { version = "1.4.0", optional = true }
 vega_lite_4 = { version = "0.6.0", optional = true }
 
 [build-dependencies]
-opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.9.2-dev" }
+opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.10.0-dev" }
 syn = { workspace = true, optional = true }
 proc-macro2 = { workspace = true, optional = true }
 cbindgen = { version = "0.20.0", optional = true }

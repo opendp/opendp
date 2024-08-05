@@ -49,7 +49,7 @@ where
         Function::new_fallible(move |arg: &T| sample_discrete_gaussian_Z2k(*arg, scale, k)),
         input_metric,
         MO::default(),
-        MO::new_forward_map(scale, relaxation)?,
+        MO::new_forward_map(scale, relaxation),
     )
 }
 
@@ -104,7 +104,7 @@ where
         }),
         input_metric,
         MO::default(),
-        MO::new_forward_map(scale, relaxation)?,
+        MO::new_forward_map(scale, relaxation),
     )
 }
 

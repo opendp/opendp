@@ -2,8 +2,9 @@ use opendp_derive::bootstrap;
 use polars::lazy::frame::LazyFrame;
 
 use crate::{
-    core::{ExtractLazyFrame, FfiResult, OnceFrameAnswer, OnceFrameQuery},
+    core::FfiResult,
     ffi::any::{AnyObject, AnyQueryable, Downcast},
+    polars::{ExtractLazyFrame, OnceFrameAnswer, OnceFrameQuery},
 };
 
 #[bootstrap(
@@ -38,8 +39,9 @@ pub extern "C" fn opendp_data__onceframe_collect(
 /// Each collection consumes the entire allocated privacy budget.
 /// To remain DP at the advertised privacy level, only collect the LazyFrame once.
 ///
-/// # Features
-/// * `honest-but-curious` - LazyFrames can be collected an unlimited number of times.
+/// Requires ``honest-but-curious`` because the privacy guarantees only apply if:
+/// 1. The LazyFrame (compute plan) is only ever executed once.
+/// 2. The analyst does not observe ordering of rows in the output. To ensure this, shuffle the output.
 ///
 /// # Arguments
 /// * `onceframe` - The queryable holding a LazyFrame.

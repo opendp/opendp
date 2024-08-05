@@ -1,8 +1,9 @@
 use polars::prelude::*;
 
-use crate::core::{ExprFunction, Function, MetricSpace, StabilityMap, Transformation};
+use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric};
 use crate::error::{ErrorVariant::MakeTransformation, *};
+use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
 
 /// Make a Transformation that returns a `col(column_name)` expression for a Lazy Frame.

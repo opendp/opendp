@@ -18,12 +18,7 @@ def test_iterable_data():
     sum_query.laplace()
 
 
-@pytest.mark.xfail(raises=TypeError)
 def test_int_data_laplace_param():
-    # Currently fails with:
-    #   TypeError: inferred type is i32, expected f64. See https://github.com/opendp/opendp/discussions/298
-    # Possible resolution:
-    #   Explicit parameter on laplace works with int data, or the error message should suggest the fix.
     context = dp.Context.compositor(
         data=[1, 2, 3, 4, 5],
         privacy_unit=dp.unit_of(contributions=1),
@@ -55,7 +50,7 @@ def test_mean_without_size():
 def test_int_mean():
     # Currently fails with:
     #   opendp.mod.OpenDPException:
-    #     FFI("No match for concrete type i32. You've got a debug binary! Debug binaries support fewer types. Consult https://docs.opendp.org/en/stable/contributor/development-environment.html#build-opendp")
+    #     FFI("No match for concrete type i32. You've got a debug binary! Debug binaries support fewer types. Consult https://docs.opendp.org/en/stable/contributing/development-environment.html#build-opendp")
     # Possible resolution:
     #   Should just be the same as any mean without a size.
     context = dp.Context.compositor(

@@ -35,7 +35,7 @@ ELEMENTARY_TYPES: dict[Any, str] = {
 try:
     np = import_optional_dependency('numpy')
     # https://numpy.org/doc/stable/reference/arrays.scalars.html#sized-aliases
-    ELEMENTARY_TYPES.update({  # pragma: no cover
+    ELEMENTARY_TYPES.update({
         # np.bytes_: '&[u8]',  # np.string_ # not used in OpenDP
         np.str_: 'String',  # np.unicode_
         np.bool_: 'bool',  # np.bool_
@@ -93,7 +93,7 @@ def set_default_int_type(T: RuntimeTypeDescriptor) -> None:
     ELEMENTARY_TYPES[int] = T # type: ignore[assignment]
 
 
-def set_default_float_type(T: RuntimeTypeDescriptor) -> None: # pragma: no cover
+def set_default_float_type(T: RuntimeTypeDescriptor) -> None:
     """Set the default float type throughout the library.
     This function is particularly useful when building computation chains with constructors.
     When you build a computation chain, any unspecified float types default to this float type.
@@ -140,7 +140,7 @@ class RuntimeType(object):
         return result
     
     def __hash__(self) -> int:
-        return hash(str(self)) # pragma: no cover
+        return hash(str(self))
 
     @classmethod
     def parse(cls, type_name: RuntimeTypeDescriptor, generics: Optional[list[str]] = None) -> Union["RuntimeType", str]:
@@ -162,7 +162,6 @@ class RuntimeType(object):
 
         :examples:
 
-        >>> import opendp.prelude as dp
         >>> dp.RuntimeType.parse(int)
         'i32'
         >>> dp.RuntimeType.parse("i32")
@@ -181,7 +180,7 @@ class RuntimeType(object):
         if isinstance(type_name, _GenericAlias):
             hinted_type = typing.get_origin(type_name), typing.get_args(type_name)
         if isinstance(type_name, GenericAlias): # type: ignore[attr-defined]
-            hinted_type = type_name.__origin__, type_name.__args__ # type: ignore[attr-defined] # pragma: no cover
+            hinted_type = type_name.__origin__, type_name.__args__ # type: ignore[attr-defined]
     
         if hinted_type:
             origin, args = hinted_type
@@ -201,12 +200,6 @@ class RuntimeType(object):
 
         # parse a string-- "Vec<f32>",
         if isinstance(type_name, str):
-
-            if "AllDomain" in type_name: # pragma: no cover
-                import warnings
-                warnings.warn("AllDomain is deprecated. Use AtomDomain instead.", DeprecationWarning)
-                type_name = type_name.replace("AllDomain", "AtomDomain")
-
             type_name = type_name.strip()
             if type_name in generics:
                 return GenericType(type_name)
@@ -273,22 +266,25 @@ class RuntimeType(object):
 
         :examples:
 
-        >>> import opendp.prelude as dp
-        >>> assert dp.RuntimeType.infer(23) == "i32"
-        >>> assert dp.RuntimeType.infer(12.) == "f64"
-        >>> assert dp.RuntimeType.infer(["A", "B"]) == "Vec<String>"
-        >>> assert dp.RuntimeType.infer((12., True, "A")) == "(f64,  bool,String)" # eq doesn't care about whitespace
+        >>> dp.RuntimeType.infer(23)
+        'i32'
+        >>> dp.RuntimeType.infer(12.)
+        'f64'
+        >>> dp.RuntimeType.infer(["A", "B"])
+        Vec<String>
+        >>> dp.RuntimeType.infer((12., True, "A"))
+        (f64, bool, String)
         
-        >>> print(dp.RuntimeType.infer([]))
+        >>> dp.RuntimeType.infer([])
         Traceback (most recent call last):
         ...
-        opendp.mod.UnknownTypeException: attempted to create a type_name with an unknown type: cannot infer atomic type when empty
+        opendp.mod.UnknownTypeException: Cannot infer atomic type when empty
         """
         if type(public_example) in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type(public_example)]
         
         if isinstance(public_example, (Domain, Metric, Measure)):
-            return RuntimeType.parse(public_example.type) # pragma: no cover
+            return RuntimeType.parse(public_example.type)
         
         pl = import_optional_dependency("polars", raise_error=False)
         if pl is not None:
@@ -311,10 +307,10 @@ class RuntimeType(object):
             types = {cls.infer(v, py_object=py_object) for v in value}
 
             if len(types) == 0:
-                return UnknownType("cannot infer atomic type when empty") # pragma: no cover
+                raise UnknownTypeException("Cannot infer atomic type when empty")
             if len(types) == 1:
                 return next(iter(types))
-            if py_object: # pragma: no cover
+            if py_object:
                 return "ExtrinsicObject"
             raise TypeError(f"elements must be homogeneously typed. Found {types}")
         
@@ -322,10 +318,10 @@ class RuntimeType(object):
             return RuntimeType('Vec', [infer_homogeneous(public_example)])
 
         if np is not None and isinstance(public_example, np.ndarray):
-            if public_example.ndim == 0:  # pragma: no cover
+            if public_example.ndim == 0:
                 return cls.infer(public_example.item(), py_object)
 
-            if public_example.ndim == 1: # pragma: no cover
+            if public_example.ndim == 1:
                 inner_type = ELEMENTARY_TYPES.get(public_example.dtype.type)
                 if inner_type is None:
                     raise UnknownTypeException(f"Unknown numpy array dtype: {public_example.dtype.type}")
@@ -339,19 +335,13 @@ class RuntimeType(object):
                 infer_homogeneous(public_example.values())
             ])
 
-        if isinstance(public_example, Measurement): # pragma: no cover
-            return "AnyMeasurementPtr"
-
-        if isinstance(public_example, Transformation): # pragma: no cover
-            return "AnyTransformationPtr"
-
-        if public_example is None: # pragma: no cover
-            return RuntimeType('Option', [UnknownType("Constructed Option from a None variant")])
+        if public_example is None:
+            raise UnknownTypeException("Type of Option cannot be inferred from None")
         
-        if callable(public_example): # pragma: no cover
+        if callable(public_example):
             return "CallbackFn"
 
-        if py_object: # pragma: no cover
+        if py_object:
             return "ExtrinsicObject"
         raise UnknownTypeException(type(public_example))
 
@@ -390,22 +380,6 @@ class RuntimeType(object):
 class GenericType(RuntimeType):
     def __repr__(self):
         raise UnknownTypeException(f"attempted to create a type_name with an unknown generic: {self.origin}")
-
-
-class UnknownType(RuntimeType):
-    """Indicator for a type that cannot be inferred. Typically the atomic type of an empty list.
-    RuntimeTypes containing UnknownType cannot be used in FFI
-    """
-    origin: None # type: ignore[assignment]
-    args: None # type: ignore[assignment]
-
-    def __init__(self, reason): # pragma: no cover
-        self.origin = None
-        self.args = None
-        self.reason = reason
-
-    def __repr__(self):
-        raise UnknownTypeException(f"attempted to create a type_name with an unknown type: {self.reason}")
 
 
 SymmetricDistance = 'SymmetricDistance'
@@ -472,6 +446,7 @@ Series: str = 'Series'
 Expr: str = 'Expr'
 AnyMeasurementPtr: str = 'AnyMeasurementPtr'
 AnyTransformationPtr: str = 'AnyTransformationPtr'
+LazyFrameDomain: str = 'LazyFrame'
 SeriesDomain: str = 'SeriesDomain'
 
 class DomainDescriptor(RuntimeType):
@@ -503,7 +478,7 @@ MapDomain: DomainDescriptor = DomainDescriptor('MapDomain')
 def get_atom(type_name):
     type_name = RuntimeType.parse(type_name)
     while isinstance(type_name, RuntimeType):
-        if isinstance(type_name, (UnknownType, GenericType)):
+        if isinstance(type_name, GenericType):
             return
         type_name = type_name.args[0]
     return type_name

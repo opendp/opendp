@@ -23,7 +23,7 @@ from opendp.combinators import (
     make_sequential_composition,
     make_zCDP_to_approxDP,
 )
-from opendp.domains import atom_domain, vector_domain
+from opendp.domains import atom_domain, vector_domain, with_margin
 from opendp.measurements import make_laplace, make_gaussian
 from opendp.measures import (
     fixed_smoothed_max_divergence,
@@ -50,7 +50,9 @@ from opendp.mod import (
     binary_search_param,
 )
 from opendp.typing import RuntimeType
-from opendp._lib import indent
+from opendp._lib import indent, import_optional_dependency
+from opendp.extras.polars import LazyFrameQuery, Margin
+from dataclasses import asdict
 
 
 __all__ = [
@@ -171,6 +173,13 @@ def domain_of(T, infer: bool = False) -> Domain:
     import opendp.typing as ty
     from opendp.domains import vector_domain, atom_domain, option_domain, map_domain
 
+    if infer:
+        pl = import_optional_dependency("polars", raise_error=False)
+        if pl is not None and isinstance(T, pl.LazyFrame):
+            from opendp.extras.polars import _lazyframe_domain_from_schema
+
+            return _lazyframe_domain_from_schema(T.collect_schema())
+
     # normalize to a type descriptor
     if infer:
         T = ty.RuntimeType.infer(T)
@@ -226,8 +235,7 @@ def metric_of(M) -> Metric:
 def loss_of(
         epsilon: Optional[float] = None,
         delta: Optional[float] = None,
-        rho: Optional[float] = None,
-        U = None) -> tuple[Measure, Union[float, tuple[float, float]]]:
+        rho: Optional[float] = None) -> tuple[Measure, Union[float, tuple[float, float]]]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
     >>> import opendp.prelude as dp
@@ -241,7 +249,6 @@ def loss_of(
     :param epsilon: Parameter for pure ε-DP.
     :param delta: Parameter for approximate (ε,δ)-DP.
     :param rho: Parameter for zero-concentrated ρ-DP.
-    :param U: The type of the privacy parameter; Inferred if not provided.
 
     """
     def range_warning(name, value, info_level, warn_level):
@@ -255,20 +262,17 @@ def loss_of(
 
     if rho:
         range_warning('rho', rho, 0.25, 0.5)
-        U = RuntimeType.parse_or_infer(U, rho)
-        return zero_concentrated_divergence(T=U), rho
+        return zero_concentrated_divergence(T=float), rho
 
     if epsilon is None:
         raise ValueError("Either epsilon or rho must be specified.")
  
     range_warning('epsilon', epsilon, 1, 5)
     if delta is None:
-        U = RuntimeType.parse_or_infer(U, epsilon)
-        return max_divergence(T=U), epsilon
+        return max_divergence(T=float), epsilon
 
     range_warning('delta', delta, 1e-6, 1e-6)
-    U = RuntimeType.parse_or_infer(U, epsilon)
-    return fixed_smoothed_max_divergence(T=U), (epsilon, delta)
+    return fixed_smoothed_max_divergence(T=float), (epsilon, delta)
 
 
 def unit_of(
@@ -374,6 +378,7 @@ class Context(object):
         split_evenly_over: Optional[int] = None,
         split_by_weights: Optional[list[float]] = None,
         domain: Optional[Domain] = None,
+        margins: Optional[dict[tuple[str, ...], Margin]] = None,
     ) -> "Context":
         """Constructs a new context containing a sequential compositor with the given weights.
 
@@ -385,11 +390,16 @@ class Context(object):
         :param data: The data to be analyzed.
         :param privacy_unit: The privacy unit of the compositor.
         :param privacy_loss: The privacy loss of the compositor.
-        :param split_evenly_over: The number of parts to evenly distribute the privacy loss
-        :param split_by_weights: A list of weights for each intermediate privacy loss
-        :param domain: The domain of the data."""
+        :param split_evenly_over: The number of parts to evenly distribute the privacy loss.
+        :param split_by_weights: A list of weights for each intermediate privacy loss.
+        :param domain: The domain of the data.
+        :param margins: A dictionary where the keys are grouping columns and values describe known properties of the respective margins."""
         if domain is None:
             domain = domain_of(data, infer=True)
+
+        if margins:
+            for by, margin in margins.items():
+                domain = with_margin(domain, by=list(by), **asdict(margin))
 
         accountant, d_mids = _sequential_composition_by_weights(
             domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights
@@ -418,7 +428,7 @@ class Context(object):
             self.d_mids.pop(0)
         return answer
 
-    def query(self, **kwargs) -> "Query":
+    def query(self, **kwargs) -> Union["Query", LazyFrameQuery]:
         """Starts a new Query to be executed in this context.
 
         If the context has been constructed with a sequence of privacy losses,
@@ -442,16 +452,24 @@ class Context(object):
                     f"Expected output measure {self.output_measure} but got {measure}" # type: ignore[attr-defined]
                 )
 
-        return Query(
-            chain=(
-                self.space_override
-                or (self.accountant.input_domain, self.accountant.input_metric)
-            ),
+        chain = self.space_override or self.accountant.input_space
+        query = Query(
+            chain=chain,
             output_measure=self.accountant.output_measure,
             d_in=self.d_in,
             d_out=d_query,
             context=self,
         )
+        
+        # return a LazyFrameQuery when dealing with Polars data, to better mimic the Polars API
+        if chain[0].type == "LazyFrameDomain":
+            from opendp.domains import _lazyframe_from_domain
+
+            # creates an empty lazyframe to hold the query plan
+            lf_plan = _lazyframe_from_domain(self.accountant.input_domain)
+            return LazyFrameQuery(lf_plan, query)
+
+        return query
 
 
 Chain = Union[tuple[Domain, Metric], Transformation, Measurement, "PartialChain"]
@@ -679,12 +697,18 @@ class PartialChain(object):
 
         The discovered parameter is assigned to the param attribute of the returned transformation or measurement.
         """
-        param = binary_search(
-            lambda x: _cast_measure(self.partial(x), output_measure, d_out).check(
-                d_in, d_out
-            ),
-            T=T,
-        )
+        # When the output measure corresponds to approx-DP, only optimize the epsilon parameter.
+        # The delta parameter should be fixed in _cast_measure, and if not, then the search will be impossible here anyways.
+        if output_measure == fixed_smoothed_max_divergence(T=float):
+            def predicate(param):
+                meas = _cast_measure(self.partial(param), output_measure, d_out)
+                return meas.map(d_in)[0] <= d_out[0] # type: ignore[index] 
+        else:
+            def predicate(param):
+                meas = _cast_measure(self.partial(param), output_measure, d_out)
+                return meas.check(d_in, d_out)
+        
+        param = binary_search(predicate, T=T)
         chain = self.partial(param)
         chain.param = param
         return chain

@@ -14,7 +14,41 @@ def test_numpy_function():
     print(RuntimeType.infer(np.array(["A", "B"])))
 
 
-def test_typing_hint():
+def test_typing_infer_to_string():
+    # Currently these return actual strings, which we test with `is`.
+    # The plan is to change the response type to be consistent:
+    # https://github.com/opendp/opendp/issues/1665
+    assert RuntimeType.infer(23) is 'i32' # noqa: F632
+    assert RuntimeType.infer(12.) is 'f64' # noqa: F632
+    assert RuntimeType.infer('hello') is 'String' # noqa: F632
+    assert RuntimeType.infer(lambda: True) is 'CallbackFn' # noqa: F632    
+    assert RuntimeType.infer(object(), py_object=True) is 'ExtrinsicObject' # noqa: F632
+    
+
+def test_typing_infer_to_object():
+    # With py_object=True, it can fall back to a more general type:
+    assert RuntimeType.infer([1, True], py_object=True) == 'Vec<ExtrinsicObject>'
+    # Without py_object=True, it fails:
+    with pytest.raises(TypeError, match=re.escape("elements must be homogeneously typed")):
+        RuntimeType.infer([1, True])
+
+    infer_vec = RuntimeType.infer(["A", "B"])
+    assert infer_vec == 'Vec<String>'
+    assert isinstance(infer_vec, RuntimeType)
+
+    infer_tuple = RuntimeType.infer((12., True, "A"))
+    assert infer_tuple == '(f64, bool, String)'
+    assert isinstance(infer_tuple, RuntimeType)
+
+    with pytest.raises(UnknownTypeException, match=re.escape("<class 'object'>")):
+        RuntimeType.infer(object())
+    
+    with pytest.raises(UnknownTypeException, match=re.escape("Type of Option cannot be inferred from None")):
+        RuntimeType.infer(None)
+    with pytest.raises(UnknownTypeException, match=re.escape('Cannot infer atomic type when empty')):
+        RuntimeType.infer([])
+
+def test_typing_parse():
     assert str(RuntimeType.parse(Tuple[int, float])) == "(i32, f64)" # type: ignore[arg-type]
     assert str(RuntimeType.parse(tuple[int, float])) == "(i32, f64)" # type: ignore[arg-type]
     assert str(RuntimeType.parse(Tuple[int, Tuple[str]])) == "(i32, (String))" # type: ignore[arg-type]
@@ -26,12 +60,8 @@ def test_typing_hint():
     assert str(RuntimeType.parse((List[int], (int, bool)))) == '(Vec<i32>, (i32, bool))'
     assert str(RuntimeType.parse((list[int], (int, bool)))) == '(Vec<i32>, (i32, bool))'
     assert isinstance(RuntimeType.parse('L1Distance<f64>'), SensitivityMetric)
-
-    try:
+    with pytest.raises(UnknownTypeException):
         RuntimeType.parse(list[Any])
-        raise Exception("typing.Any should fail to parse")
-    except UnknownTypeException:
-        pass
 
 
 def test_sensitivity():
@@ -66,6 +96,18 @@ def test_set_feature():
 
     disable_features("A")
     assert "A" not in GLOBAL_FEATURES
+
+
+def test_default_float_type():
+    assert RuntimeType.parse(float) == f64
+
+    set_default_float_type(f64)
+    assert RuntimeType.parse(float) == f64
+
+    # Can't set to f32 because debug binary has fewer types.
+
+def test_runtime_type_hash():
+    assert {Vec[int]} == {RuntimeType.parse("Vec<int>")}
 
 
 disallowed_int_default_types = set([i128, u128, isize])

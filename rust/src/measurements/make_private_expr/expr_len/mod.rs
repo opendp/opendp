@@ -1,6 +1,7 @@
-use crate::core::{ExprFunction, Measure, MetricSpace, PrivacyMap};
+use crate::core::{Measure, MetricSpace, PrivacyMap};
 use crate::domains::MarginPub;
 use crate::metrics::PartitionDistance;
+use crate::polars::ExprFunction;
 use crate::transformations::traits::UnboundedMetric;
 use crate::{
     core::{Function, Measurement},
@@ -56,7 +57,7 @@ where
     if Some(MarginPub::Lengths) != margin.public_info {
         return fallible!(
             MakeMeasurement,
-            "The length of partitions when grouped by {:?} is not public information.",
+            "The length of partitions when grouped by {:?} is not public information. You may have forgotten to add noise to your query.",
             by
         );
     }

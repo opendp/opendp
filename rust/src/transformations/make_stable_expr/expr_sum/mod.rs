@@ -1,7 +1,8 @@
-use crate::core::{ExprFunction, Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{ExprDomain, Margin, MarginPub, NumericDataType, SeriesDomain};
+use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
+use crate::domains::{ExprDomain, Margin, MarginPub::Lengths, NumericDataType, SeriesDomain};
 use crate::error::*;
 use crate::metrics::{IntDistance, LpDistance, PartitionDistance};
+use crate::polars::ExprFunction;
 use crate::traits::{
     AlertingAbs, CheckAtom, ExactIntCast, InfAdd, InfCast, InfMul, InfSqrt, InfSub, Number,
     ProductOrd,
@@ -39,7 +40,10 @@ where
         return fallible!(MakeTransformation, "expected sum expression");
     };
 
-    let t_prior = prior_expr.make_stable(input_domain, input_metric)?;
+    let t_prior = prior_expr
+        .as_ref()
+        .clone()
+        .make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let dtype = &middle_domain.active_series()?.field.dtype;
@@ -55,8 +59,9 @@ where
 
     // we only care about the margin that matches the current grouping columns
     let margin_id = middle_domain.context.grouping_columns()?;
-    let input_margin = (output_domain.frame_domain.margins.remove(&margin_id))
-        .ok_or_else(|| err!(MakeTransformation, "failed to find margin {:?}", margin_id))?;
+    let input_margin = (output_domain.frame_domain.margins.get(&margin_id))
+        .cloned()
+        .unwrap_or_default();
 
     // Set the margins on the output domain to consist of only one margin: 1 row per group, with at most 1 record in each group.
     let output_margin = input_margin.clone().with_max_partition_length(1);
@@ -98,9 +103,7 @@ where
     let (l, u) = series_domain.atom_domain::<TI>()?.get_closed_bounds()?;
     let (l, u) = (TI::Sum::neg_inf_cast(l)?, TI::Sum::inf_cast(u)?);
 
-    let public_info = margin
-        .public_info
-        .ok_or_else(|| err!(MakeTransformation, "keys must be public information"))?;
+    let public_info = margin.public_info;
 
     let max_size = usize::exact_int_cast(margin.max_partition_length.ok_or_else(|| {
         err!(
@@ -118,8 +121,8 @@ where
     };
 
     let pp_map = move |d_in: &IntDistance| match public_info {
-        MarginPub::Keys => TI::Sum::inf_cast(*d_in)?.inf_mul(&l.alerting_abs()?.total_max(u)?),
-        MarginPub::Lengths => TI::Sum::inf_cast(*d_in / 2)?.inf_mul(&u.inf_sub(&l)?),
+        Some(Lengths) => TI::Sum::inf_cast(*d_in / 2)?.inf_mul(&u.inf_sub(&l)?),
+        _ => TI::Sum::inf_cast(*d_in)?.inf_mul(&l.alerting_abs()?.total_max(u)?),
     };
 
     Ok(StabilityMap::new_fallible(
@@ -182,7 +185,7 @@ macro_rules! impl_accumulator_for_float {
                 if Sequential::<$t>::float_sum_can_overflow(size_limit, (lower, upper))? {
                     return fallible!(
                         MakeTransformation,
-                        "potential for overflow when computing function"
+                        "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds."
                     );
                 }
                 Sequential::<$t>::relaxation(size_limit, lower, upper)
@@ -201,7 +204,7 @@ macro_rules! impl_accumulator_for_int {
                 if <$t>::int_sum_can_overflow(size_limit, (lower, upper))? {
                     return fallible!(
                         MakeTransformation,
-                        "potential for overflow when computing function"
+                        "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds or by using a data type with greater bit-depth."
                     );
                 }
                 Ok(0)

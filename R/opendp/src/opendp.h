@@ -49,17 +49,35 @@ typedef struct Measurement_AnyDomain__AnyObject__AnyMetric__AnyMeasure Measureme
  */
 typedef struct Transformation_AnyDomain__AnyDomain__AnyMetric__AnyMetric Transformation_AnyDomain__AnyDomain__AnyMetric__AnyMetric;
 
-/**
- * A Measurement with all generic types filled by Any types. This is the type of Measurements
- * passed back and forth over FFI.
- */
-typedef struct Measurement_AnyDomain__AnyObject__AnyMetric__AnyMeasure AnyMeasurement;
-
 typedef struct FfiError {
   char *variant;
   char *message;
   char *backtrace;
 } FfiError;
+
+enum FfiResult_____AnyObject_Tag {
+  Ok_____AnyObject,
+  Err_____AnyObject,
+};
+typedef uint32_t FfiResult_____AnyObject_Tag;
+
+typedef struct FfiResult_____AnyObject {
+  FfiResult_____AnyObject_Tag tag;
+  union {
+    struct {
+      struct AnyObject *ok;
+    };
+    struct {
+      struct FfiError *err;
+    };
+  };
+} FfiResult_____AnyObject;
+
+/**
+ * A Measurement with all generic types filled by Any types. This is the type of Measurements
+ * passed back and forth over FFI.
+ */
+typedef struct Measurement_AnyDomain__AnyObject__AnyMetric__AnyMeasure AnyMeasurement;
 
 enum FfiResult_____AnyMeasurement_Tag {
   Ok_____AnyMeasurement,
@@ -176,24 +194,6 @@ typedef struct FfiResult_____AnyFunction {
     };
   };
 } FfiResult_____AnyFunction;
-
-enum FfiResult_____AnyObject_Tag {
-  Ok_____AnyObject,
-  Err_____AnyObject,
-};
-typedef uint32_t FfiResult_____AnyObject_Tag;
-
-typedef struct FfiResult_____AnyObject {
-  FfiResult_____AnyObject_Tag tag;
-  union {
-    struct {
-      struct AnyObject *ok;
-    };
-    struct {
-      struct FfiError *err;
-    };
-  };
-} FfiResult_____AnyObject;
 
 typedef uint8_t c_bool;
 
@@ -320,6 +320,9 @@ typedef struct FfiResult_____ExtrinsicObject {
     };
   };
 } FfiResult_____ExtrinsicObject;
+
+struct FfiResult_____AnyObject opendp_accuracy__describe_polars_measurement_accuracy(const AnyMeasurement *measurement,
+                                                                                     const struct AnyObject *alpha);
 
 struct FfiResult_____AnyMeasurement opendp_combinators__make_population_amplification(const AnyMeasurement *measurement,
                                                                                       unsigned int population_size);
@@ -701,14 +704,6 @@ struct FfiResult_____AnyObject opendp_data__smd_curve_epsilon(const struct AnyOb
                                                               const struct AnyObject *delta);
 
 /**
- * Internal function. Convert the AnyObject to a string representation.
- *
- * # Arguments
- * * `this` - The AnyObject to convert to a string representation.
- */
-struct FfiResult_____c_char opendp_data__to_string(const struct AnyObject *this_);
-
-/**
  * wrap an AnyObject in an FfiResult::Ok(this)
  *
  * # Arguments
@@ -746,8 +741,9 @@ struct FfiResult_____AnyObject opendp_data__onceframe_collect(struct AnyObject *
  * Each collection consumes the entire allocated privacy budget.
  * To remain DP at the advertised privacy level, only collect the LazyFrame once.
  *
- * # Features
- * * `honest-but-curious` - LazyFrames can be collected an unlimited number of times.
+ * Requires ``honest-but-curious`` because the privacy guarantees only apply if:
+ * 1. The LazyFrame (compute plan) is only ever executed once.
+ * 2. The analyst does not observe ordering of rows in the output. To ensure this, shuffle the output.
  *
  * # Arguments
  * * `onceframe` - The queryable holding a LazyFrame.
@@ -849,7 +845,7 @@ struct FfiResult_____ExtrinsicObject opendp_domains___user_domain_descriptor(str
  */
 struct FfiResult_____AnyDomain opendp_domains__lazyframe_domain(struct AnyObject *series_domains);
 
-struct FfiResult_____AnyDomain opendp_domains__infer_lazyframe_domain(struct AnyObject *lazyframe);
+struct FfiResult_____AnyObject opendp_domains___lazyframe_from_domain(struct AnyDomain *domain);
 
 struct FfiResult_____AnyDomain opendp_domains__with_margin(struct AnyDomain *frame_domain,
                                                            struct AnyObject *by,
@@ -908,7 +904,8 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_private_lazyframe(
                                                                                 const struct AnyMetric *input_metric,
                                                                                 const struct AnyMeasure *output_measure,
                                                                                 const struct AnyObject *lazyframe,
-                                                                                const struct AnyObject *global_scale);
+                                                                                const struct AnyObject *global_scale,
+                                                                                const struct AnyObject *threshold);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_user_measurement(const struct AnyDomain *input_domain,
                                                                                const struct AnyMetric *input_metric,

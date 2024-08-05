@@ -6,7 +6,7 @@ use crate::{
     core::{Function, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measurements::laplace::laplace_map,
+    measurements::laplace::laplace_puredp_map,
     measures::MaxDivergence,
     metrics::{AbsoluteDistance, L1Distance},
     traits::{samplers::sample_discrete_laplace, Float, InfCast, Integer, SaturatingCast},
@@ -56,7 +56,7 @@ where
         },
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_map(scale, QO::zero())),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, QO::zero())),
     )
 }
 
@@ -108,7 +108,7 @@ where
         },
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_map(scale, QO::zero())),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, QO::zero())),
     )
 }
 

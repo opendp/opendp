@@ -42,7 +42,7 @@ jobs:
           extra-packages: devtools
 
       - name: Build docs
-        run: bash tools/r_stage.sh -d
+        run: bash tools/r_stage.sh -u
 
       - name: Upload docs
         uses: actions/upload-artifact@v4

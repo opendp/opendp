@@ -2,11 +2,11 @@ use polars::{df, lazy::frame::IntoLazy};
 use polars_plan::dsl::col;
 
 use crate::{
-    core::PrivacyNamespaceHelper,
     domains::{AtomDomain, Margin, SeriesDomain},
     measurements::make_private_lazyframe,
     measures::MaxDivergence,
     metrics::SymmetricDistance,
+    polars::PrivacyNamespace,
 };
 
 use super::*;
@@ -27,13 +27,14 @@ fn test_make_private_lazyframe_sort() -> Fallible<()> {
     let query = lf
         .group_by([col("B")])
         .agg([col("A").dp().sum((0, 1), Some(1.))])
-        .sort("len", Default::default());
+        .sort(["len"], Default::default());
 
     make_private_lazyframe(
         lf_domain,
         SymmetricDistance,
         MaxDivergence::default(),
         query,
+        None,
         None,
     )?;
 

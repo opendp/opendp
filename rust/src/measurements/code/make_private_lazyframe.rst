@@ -21,7 +21,8 @@ With that in place, we can plan the Polars computation, using the `dp` plugin.
 >>> plan = (
 ...     pl.LazyFrame(schema={'grade': pl.Int32, 'pet_count': pl.Int32})
 ...     .group_by("grade")
-...     .agg(pl.col("pet_count").dp.sum((0, 10), scale=1.0)))
+...     .agg(pl.col("pet_count").dp.sum((0, 10), scale=1.0))
+...     .sort("grade"))
 
 We now have all the pieces to make our measurement function using `make_private_lazyframe`:
 
@@ -46,10 +47,10 @@ It's only at this point that we need to introduce the private data.
 ...         [2, 1],
 ...         [2, 9]
 ...     ],
-...     schema=['grade', 'pet_count'])
+...     schema=['grade', 'pet_count'], orient="row")
 >>> lf = pl.LazyFrame(df)
->>> results = dp_sum_pets_by_grade(lf).sort("grade").collect()
->>> print(results) # doctest: +ELLIPSIS
+>>> results = dp_sum_pets_by_grade(lf).collect()
+>>> print(results.sort("grade")) # doctest: +ELLIPSIS
 shape: (3, 2)
 ┌───────┬───────────┐
 │ grade ┆ pet_count │

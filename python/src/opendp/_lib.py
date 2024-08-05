@@ -26,7 +26,7 @@ def _load_library():
         lib_dir = Path(__file__).parent / ".." / ".." / ".." / 'rust' / 'target' / build_dir  # pragma: no cover
 
     if lib_dir.exists():
-        lib_dir_file_names = [p for p in lib_dir.iterdir() if p.suffix in {".so", ".dylib", ".dll"}]
+        lib_dir_file_names = [p for p in lib_dir.iterdir() if p.suffix in {".so", ".dylib", ".dll", ".pyd"}]
         if len(lib_dir_file_names) != 1:
             raise Exception(f"Expected exactly one binary to be present. Got: {lib_dir_file_names}")
         
@@ -98,52 +98,6 @@ def get_np_csprng():
 
     _np_csprng = np.random.Generator(bit_generator=randomgen.UserBitGenerator(next_raw)) # type:ignore
     return _np_csprng
-
-
-pl = import_optional_dependency("polars", raise_error=False)
-if pl is not None:
-    @pl.api.register_expr_namespace("dp")
-    class DPNamespace(object):
-        def __init__(self, expr):
-            self.expr = expr
-
-        def laplace(self, scale=None):
-            """Add Laplace noise to the expression.
-
-            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
-
-            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
-            """
-            scale = float("nan") if scale is None else scale
-            return pl.plugins.register_plugin_function(
-                plugin_path=lib_path,
-                function_name="laplace",
-                kwargs={"scale": scale},
-                args=self.expr,
-                is_elementwise=True,
-            )
-
-        def sum(self, bounds, scale=None):
-            """Compute the differentially private sum.
-
-            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
-
-            :param bounds: The bounds of the input data.
-            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
-            """
-            return self.expr.clip(*bounds).sum().dp.laplace(scale)
-        
-        
-        def mean(self, bounds, scale=None):
-            """Compute the differentially private mean.
-
-            The amount of noise to be added to the sum is determined by the scale.
-            If scale is None it is filled by `global_scale` in :py:func:`opendp.measurement.make_private_lazyframe`.
-
-            :param bounds: The bounds of the input data.
-            :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2). 
-            """
-            return self.expr.dp.sum(bounds, scale) / pl.len()
 
 
 # This enables backtraces in Rust by default.
@@ -292,6 +246,11 @@ def unwrap(result, type_) -> Any:
         raise OpenDPException("Failed to free error.")
 
     # Rust stack traces follow from here:
+    pl = import_optional_dependency('polars', raise_error=False)
+    if pl is not None:
+        from opendp.mod import _EXPECTED_POLARS_VERSION
+        if 'polars' in str(message).lower() and pl.__version__ != _EXPECTED_POLARS_VERSION:
+            message = f'Installed python polars version ({pl.__version__}) != expected version ({_EXPECTED_POLARS_VERSION}). {message}' # pragma: no cover
     raise OpenDPException(variant, message, backtrace)
 
 
@@ -312,16 +271,15 @@ def proven(function):
         source_dir = os.path.dirname(inspect.getfile(function))
         absolute_proof_path = os.path.abspath(os.path.join(source_dir, matched_path))
 
-
-        # split the path at the extrinsics directory
-        extrinsics_path = os.path.join(os.path.dirname(__file__), "_extrinsics")
-        relative_proof_path = os.path.relpath(absolute_proof_path, extrinsics_path)
+        # split the path at the extras directory
+        extras_path = os.path.join(os.path.dirname(__file__), "extras")
+        relative_proof_path = os.path.relpath(absolute_proof_path, extras_path)
 
         # create the link
         proof_url = make_proof_link(
-            extrinsics_path,
+            extras_path,
             relative_path=relative_proof_path,
-            repo_path="python/src/opendp/_extrinsics",
+            repo_path="python/src/opendp/extras",
         )
 
         # replace the path with the link
@@ -411,8 +369,8 @@ def get_opendp_version_from_file():
     >>> import re
     >>> assert re.match(r'\\d+\\.\\d+\\.\\d+', get_opendp_version_from_file())
     '''
-    version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'VERSION')
-    return open(version_file, 'r').read().strip()
+    version_path = Path(__file__).parent.parent.parent.parent / 'VERSION'
+    return version_path.read_text().strip()
 
 
 def get_docs_ref(version):

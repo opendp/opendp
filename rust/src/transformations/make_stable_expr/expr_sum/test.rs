@@ -21,8 +21,8 @@ fn test_select_make_sum_expr() -> Fallible<()> {
 
     let sens = t_sum.map(&(4, 4, 1))?;
     println!("sens: {:?}", sens);
-    assert!(sens > (2.).into());
-    assert!(sens < (2.00001).into());
+    assert!(sens > 2.);
+    assert!(sens < 2.00001);
     Ok(())
 }
 
@@ -43,7 +43,7 @@ fn test_grouped_make_sum_expr() -> Fallible<()> {
         .group_by(["chunk_(..10u32)"])
         .agg([expr_res])
         .collect()?
-        .sort(["chunk_(..10u32)"], false, false)?;
+        .sort(["chunk_(..10u32)"], Default::default())?;
 
     let df_expected = df!(
         "chunk_(..10u32)" => [0u32, 1, 2, 3, 4, 5, 6, 7, 8, 9],
