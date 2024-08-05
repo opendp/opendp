@@ -1,7 +1,6 @@
 import pytest
 import opendp.prelude as dp
 
-dp.enable_features("contrib", "floating-point")
 
 
 def test_count_by_categories():
@@ -56,15 +55,11 @@ def test_count_by_threshold():
     )
     budget = (1.0, 1e-8)
 
-    scale = dp.binary_search_param(
-        lambda s: pre >> dp.m.then_laplace_threshold(scale=s, threshold=1e8),
-        d_in=1,
-        d_out=budget,
+    scale = dp.binary_search(
+        lambda s: (pre >> dp.m.then_laplace_threshold(scale=s, threshold=1e8)).map(1)[0] <= budget[0]
     )
-    threshold = dp.binary_search_param(
-        lambda t: pre >> dp.m.then_laplace_threshold(scale=scale, threshold=t),
-        d_in=1,
-        d_out=budget,
+    threshold = dp.binary_search(
+        lambda t: (pre >> dp.m.then_laplace_threshold(scale=scale, threshold=t)).map(1)[1] <= budget[1],
     )
 
     laplace_histogram_from_dataframe = pre >> dp.m.then_laplace_threshold(

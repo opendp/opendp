@@ -23,6 +23,7 @@ fn test_select_no_margin() -> Fallible<()> {
         MaxDivergence::<f64>::default(),
         lf.clone().select(&[len().dp().laplace(Some(0.))]),
         Some(1.),
+        None,
     )?;
 
     let actual = m_select.invoke(&lf)?.collect()?;
@@ -49,6 +50,7 @@ fn test_select() -> Fallible<()> {
             len().dp().laplace(Some(0.)),
         ]),
         Some(1.),
+        None,
     )?;
 
     let actual = m_select.invoke(&lf)?.collect()?;

@@ -15,7 +15,6 @@ This means you will need to choose a measurement that chains with your :ref:`agg
 
   additive-noise-mechanisms
   randomized-response
-  pca
 
 Additive Noise Mechanisms
 -------------------------

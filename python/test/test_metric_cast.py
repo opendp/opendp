@@ -1,5 +1,4 @@
 import opendp.prelude as dp
-dp.enable_features("contrib")
 
 
 def test_ordering():

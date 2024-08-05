@@ -2,7 +2,6 @@ import pytest
 import logging
 import opendp.prelude as dp
 
-dp.enable_features("contrib")
 
 
 def test_unit_of():
@@ -28,7 +27,7 @@ def test_unit_of():
 
 
 def test_privacy_loss_of():
-    assert dp.loss_of(epsilon=3.0) == (dp.max_divergence(T=float), 3.0)
+    assert dp.loss_of(epsilon=3) == (dp.max_divergence(T=float), 3.0)
     assert dp.loss_of(rho=2.0) == (dp.zero_concentrated_divergence(T=float), 2.0)
     assert dp.loss_of(epsilon=2.0, delta=1e-6) == (
         dp.fixed_smoothed_max_divergence(T=float),
@@ -94,7 +93,7 @@ def test_context_init_split_evenly_over():
     context = dp.Context.compositor(
         data=[1, 2, 3],
         privacy_unit=dp.unit_of(contributions=3),
-        privacy_loss=dp.loss_of(epsilon=3.0),
+        privacy_loss=dp.loss_of(epsilon=3),
         split_evenly_over=3,
         domain=dp.domain_of(list[int]),
     )

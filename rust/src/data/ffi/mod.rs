@@ -214,7 +214,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         // https://github.com/pola-rs/pyo3-polars/blob/5150d4ca27c287ff4be5cafef243d9a878a8879d/pyo3-polars/src/lib.rs#L147-L153
         // the slice is lf.__getstate__ from the python side and then deserialized here
         ciborium::de::from_reader(slice).map_err(
-            |e| err!(FFI, "Error when deserializing {}. {}", name, e)
+            |e| err!(FFI, "Error when deserializing {}. This may be because you're using features from Polars that are not currently supported. {}", name, e)
         )
     }
     #[cfg(feature = "polars")]
@@ -727,6 +727,7 @@ impl std::fmt::Debug for AnyObject {
         let type_arg = &self.type_;
         f.write_str(dispatch!(monomorphize, [(type_arg, [
             u32, u64, i32, i64, f32, f64, bool, String, u8, Column,
+            (f64, f64),
             Vec<u32>, Vec<u64>, Vec<i32>, Vec<i64>, Vec<f32>, Vec<f64>, Vec<bool>, Vec<String>, Vec<u8>, Vec<Column>, Vec<Vec<String>>,
             HashMap<String, Column>,
             // FIXME: The following are for Python demo use of compositions. Need to figure this out!!!

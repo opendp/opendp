@@ -15,8 +15,8 @@ fn test_index_candidates_udf() -> Fallible<()> {
 
     let selections = index_candidates_udf(
         &[selection_indices],
-        IndexCandidatesArgs {
-            candidates: Candidates(candidates.clone()),
+        IndexCandidatesPlugin {
+            candidates: candidates.clone(),
         },
     )?;
 
@@ -53,13 +53,13 @@ fn test_index_candidates_expr() -> Fallible<()> {
 fn test_index_candidates_serde() -> Fallible<()> {
     macro_rules! test_roundtrip {
         ($args:expr) => {{
-            let ic_args = IndexCandidatesArgs {
-                candidates: Candidates($args.clone()),
+            let ic_args = IndexCandidatesPlugin {
+                candidates: $args.clone(),
             };
             let serialized = serde_pickle::to_vec(&ic_args, Default::default()).unwrap();
-            let deserialized: IndexCandidatesArgs =
+            let deserialized: IndexCandidatesPlugin =
                 serde_pickle::from_slice(&serialized, Default::default()).unwrap();
-            assert_eq!($args, deserialized.candidates.0);
+            assert_eq!($args, deserialized.candidates);
         }};
     }
 

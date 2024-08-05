@@ -1,8 +1,7 @@
+use num::{Float, One, Zero};
 use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::os::raw::{c_char, c_void};
-
-use num::{Float, One, Zero};
 
 use crate::accuracy::*;
 use crate::core::{FfiError, FfiResult};
