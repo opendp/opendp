@@ -50,6 +50,6 @@ def make_private_selection_threshold(meas: Measurement,
     return dp.m.make_user_measurement(
         input_domain=meas.input_domain,
         input_metric=meas.input_metric,
-        output_measure=dp.max_divergence(T=float),
+        output_measure=meas.output_measure,
         function=function,
         privacy_map=lambda d_in: meas.map(d_in) * 2)
