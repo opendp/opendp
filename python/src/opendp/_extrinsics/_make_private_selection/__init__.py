@@ -10,13 +10,13 @@ def make_private_selection_threshold(meas: Measurement,
     """Measurement for private selection with known threshold.
 
     This executes an ε-DP mechanism M that returns a tuple (q, x) repeatedly
-    until the score q is at least T, a predefined threshold.
+    until the score q is at least `threshold`.
     Only the last output of M is released.
 
     Algorithm 1 in `Private selection from private candidates <https://arxiv.org/pdf/1811.07971.pdf#page=7>`_ (Liu and Talwar, STOC 2019).
 
     :param meas: A measurement function that returns a 2-tuple when invoked,
-                 where the first element is a score and the second element is the output of intreset.
+                 where the first element is a score and the second element is the output of interest.
     :param threshold: The threshold score. Return immediately if the score is above this threshold.
     :param stop_probability: The probability of stopping early at any iteration.
     :returns: A tuple from `meas` with the first element being the score.
@@ -26,13 +26,13 @@ def make_private_selection_threshold(meas: Measurement,
 
     np_csprng = get_np_csprng()
 
-    # If stop_probabily is 1, the measurement is executed only once with double of the privacy budget,
+    # If stop_probability is 1, the measurement is executed only once with double of the privacy budget,
     # so we prevent this inefficient case.
     if not 0 <= stop_probability < 1:
         raise ValueError("stop_probability must be between 0 and 1")
 
     if meas.output_measure != dp.max_divergence(T=float):
-        raise ValueError("meas must be pure differential privacy (max_divergence(T=float))")
+        raise ValueError("meas must satisfy pure differential privacy (max_divergence(T=float))")
 
     def function(data):
 
