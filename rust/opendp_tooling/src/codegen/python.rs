@@ -383,17 +383,27 @@ fn generate_docstring_return_arg(
 ///     makes the call, handles errors, and converts the response to python
 fn generate_body(module_name: &str, func: &Function, typemap: &HashMap<String, String>) -> String {
     format!(
-        r#"{flag_checker}{type_arg_formatter}
+        r#"{deprecation_warning}{flag_checker}{type_arg_formatter}
 {data_converter}
 {make_call}
 {set_dependencies}
 return output"#,
+        deprecation_warning = generate_deprecation_warning(module_name, func),
         flag_checker = generate_flag_check(&func.features),
         type_arg_formatter = generate_type_arg_formatter(func),
         data_converter = generate_data_converter(func, typemap),
         set_dependencies = set_dependencies(&func.dependencies),
         make_call = generate_call(module_name, func, typemap)
     )
+}
+
+fn generate_deprecation_warning(module_name: &str, func: &Function) -> String {
+    let func_name = &func.name;
+    let deprecation_path = format!("src/{}/deprecation/{}.rst", &module_name, func.name);
+    match fs::read_to_string(deprecation_path) {
+        Ok(_) => format!("print('{func_name} is deprecated: Use the polars plugin instead')\n"),
+        Err(_) => "".to_string(),
+    }
 }
 
 // generate code that checks that a set of feature flags are enabled
