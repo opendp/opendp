@@ -14,7 +14,7 @@ Learning About Differential Privacy
 * `Designing Access with Differential Privacy <https://admindatahandbook.mit.edu/book/latest/diffpriv.html>`_
 * `Programming Differential Privacy <https://programming-dp.com/>`_
 * `Privacy and Confidentiality Protection Overview <https://www2.census.gov/cac/nac/meetings/2019-05/garfinkel-privacy-confidentiality-protection.pdf>`_
-* `Hand-On Differential Privacy <https://www.oreilly.com/library/view/hands-on-differential-privacy/9781492097730/>_`
+* `Hand-On Differential Privacy <https://www.oreilly.com/library/view/hands-on-differential-privacy/9781492097730/>`_ is co-authored the lead OpenDP developer
 * A short list of `Educational Resources <https://opendp.github.io/learning/>`_ maintained by the community
 
 Papers
