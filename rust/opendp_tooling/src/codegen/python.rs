@@ -323,7 +323,7 @@ fn generate_docstring(
 
     let deprecation_path = format!("src/{}/deprecation/{}.rst", &module_name, func.name);
     let deprecation = match fs::read_to_string(deprecation_path) {
-        Ok(string) => tab_py(format!("{string}\n\n")),
+        Ok(string) => tab_py(format!("**{string}**\n\n")),
         Err(_) => "".to_string(),
     };
 

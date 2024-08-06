@@ -1,1 +1,1 @@
-This method is deprecated for Python. Please use the Polars plugin instead.
+This method is deprecated for Python. Please use the [Polars plugin](opendp.extras.polars.html) instead.
