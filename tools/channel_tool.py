@@ -1,7 +1,6 @@
 import argparse
 import configupdater
 import datetime
-import io
 import re
 import zoneinfo
 
@@ -114,19 +113,12 @@ def update_version(version):
     def dump_python_config(config, f):
         config.write(f)
     update_file("python/setup.cfg", load_python_config, munge_python_config, dump_python_config)
-
-    # Binder requirements
-    def munge_binder_requirements(lines):
-        opendp_line = f"opendp=={python_version}\n"
-        return [opendp_line if line.startswith("opendp==") else line for line in lines]
     
     # R Package
     log("Updating R/opendp/DESCRIPTION")
     with ControlEditor(path='R/opendp/DESCRIPTION') as control:
         # while it might not look like it, this mutates the DESCRIPTION file in-place
         next(iter(control.paragraphs))["Version"] = r_version
-    
-    update_file(".binder/requirements.txt", io.IOBase.readlines, munge_binder_requirements, lambda data, f: f.writelines(data))
 
 
 def configure(args):
