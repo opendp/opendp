@@ -1,6 +1,7 @@
 import pytest
 import opendp.prelude as dp
 import os
+import warnings
 
 
 
@@ -638,3 +639,33 @@ def test_pickle_bomb():
             dp.max_divergence(T=float),
             bomb_lf,
         )
+
+
+def test_cut():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    data = pl.LazyFrame({"x": [0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]})
+    with warnings.catch_warnings():
+        context = dp.Context.compositor(
+            data=data.with_columns(pl.col("x").cut([1.0, 2.0, 3.0]).to_physical()),
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=10000.0),
+            split_evenly_over=1,
+            margins={("x",): dp.polars.Margin(public_info="keys")},
+        )
+    actual = (
+        context.query()
+        .group_by("x")
+        .agg(pl.len().dp.noise())
+        .release()
+        .collect()
+        .sort("x")
+    )
+    expected = pl.DataFrame(
+        {"x": [0, 1, 2, 3], "len": [2, 2, 2, 1]}, 
+        schema={"x": pl.UInt32, "len": pl.UInt32},
+    )
+
+    pl_testing.assert_frame_equal(actual, expected)
+    
