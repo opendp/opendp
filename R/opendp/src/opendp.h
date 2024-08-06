@@ -726,6 +726,19 @@ struct FfiResult_____AnyObject opendp_data__smd_curve_epsilon(const struct AnyOb
                                                               double delta);
 
 /**
+ * Internal function. Use an SMDCurve to find beta at a given `alpha`.
+ *
+ * # Arguments
+ * * `curve` - The SMDCurve.
+ * * `alpha` - What to fix alpha to compute beta.
+ *
+ * # Returns
+ * Beta at a given `alpha`.
+ */
+struct FfiResult_____AnyObject opendp_data__smd_curve_beta(const struct AnyObject *curve,
+                                                           double alpha);
+
+/**
  * wrap an AnyObject in an FfiResult::Ok(this)
  *
  * # Arguments

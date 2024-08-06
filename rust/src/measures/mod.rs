@@ -14,8 +14,6 @@ use std::{
     sync::Arc,
 };
 
-mod f_dp;
-
 use crate::{core::Measure, error::Fallible};
 
 /// $\epsilon$-pure differential privacy.
