@@ -200,6 +200,20 @@ def test_report_noisy_max_gumbel():
     assert meas.map(2) == 2
 
 
+def test_report_noisy_max_exponential():
+    input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
+
+    input_metric = dp.linf_distance(T=dp.usize)
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_exponential(1., "max")
+    print(meas(list(range(10))))
+    assert meas.map(2) == 4
+
+    input_metric = dp.linf_distance(monotonic=True, T=dp.usize)
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_exponential(1., "max")
+    print(meas(list(range(10))))
+    assert meas.map(2) == 2
+
+
 def test_alp_histogram():
     import opendp.prelude as dp
 

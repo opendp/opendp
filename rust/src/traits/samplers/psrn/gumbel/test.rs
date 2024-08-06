@@ -6,7 +6,7 @@ use super::*;
 
 #[test]
 fn test_sample_gumbel_interval_progression() -> Fallible<()> {
-    let mut psrn = GumbelDist::new_psrn(RBig::ZERO, RBig::ONE);
+    let mut psrn = GumbelDist::new_psrn(FBig::ZERO, FBig::ONE);
     test_progression(&mut psrn, 100);
     Ok(())
 }
@@ -14,7 +14,7 @@ fn test_sample_gumbel_interval_progression() -> Fallible<()> {
 #[test]
 fn test_gumbel_psrn() -> Fallible<()> {
     fn sample_gumbel() -> Fallible<f64> {
-        let mut gumbel = GumbelDist::new_psrn(RBig::ZERO, RBig::ONE);
+        let mut gumbel = GumbelDist::new_psrn(FBig::ZERO, FBig::ONE);
         for _ in 0..10 {
             gumbel.refine()?;
         }

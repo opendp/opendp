@@ -3,7 +3,8 @@ mod ffi;
 
 use std::fmt::Display;
 
-use dashu::rational::RBig;
+use dashu::float::FBig;
+use num::Zero;
 use opendp_derive::bootstrap;
 
 use crate::{
@@ -12,7 +13,10 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
     metrics::LInfDistance,
-    traits::{Float, InfAdd, InfCast, Number},
+    traits::{
+        samplers::{ExponentialDist, InverseCDF, PSRN},
+        Float, InfAdd, InfCast, Number,
+    },
 };
 
 use crate::traits::{
@@ -61,7 +65,7 @@ impl TryFrom<&str> for Optimize {
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable VectorDomain.
 /// * `input_metric` - Metric on the input domain. Must be LInfDistance
-/// * `scale` - Higher scales are more private.
+/// * `scale` - Noise scale for the Gumbel distribution.
 /// * `optimize` - Indicate whether to privately return the "max" or "min"
 ///
 /// # Generics
@@ -76,7 +80,12 @@ pub fn make_report_noisy_max_gumbel<TIA, QO>(
 where
     TIA: Number + CastInternalRational,
     QO: CastInternalRational + DistanceConstant<TIA> + Float,
+    FBig: TryFrom<TIA> + TryFrom<QO>,
 {
+    if input_domain.element_domain.nullable() {
+        return fallible!(MakeMeasurement, "values must be non-null");
+    }
+
     if input_domain.element_domain.nullable() {
         return fallible!(MakeMeasurement, "input domain must be non-nullable");
     }
@@ -85,12 +94,13 @@ where
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
 
-    let scale_frac = scale.clone().into_rational()?;
+    let f_scale =
+        FBig::try_from(scale.clone()).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
 
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &Vec<TIA>| {
-            select_score(arg.iter().cloned(), optimize.clone(), scale_frac.clone())
+            select_score::<_, GumbelDist>(arg.iter().cloned(), optimize.clone(), f_scale.clone())
         }),
         input_metric.clone(),
         MaxDivergence::default(),
@@ -126,13 +136,29 @@ where
     }
 }
 
-pub fn select_score<TIA>(
+pub(crate) trait ArgmaxDist: InverseCDF + Sized {
+    fn new(shift: FBig, scale: FBig) -> PSRN<Self>;
+}
+
+impl ArgmaxDist for GumbelDist {
+    fn new(shift: FBig, scale: FBig) -> PSRN<Self> {
+        GumbelDist::new_psrn(shift, scale)
+    }
+}
+impl ArgmaxDist for ExponentialDist {
+    fn new(shift: FBig, scale: FBig) -> PSRN<Self> {
+        ExponentialDist::new_psrn(shift, scale)
+    }
+}
+
+pub(crate) fn select_score<TIA, D: ArgmaxDist>(
     iter: impl Iterator<Item = TIA>,
     optimize: Optimize,
-    scale: RBig,
+    scale: FBig,
 ) -> Fallible<usize>
 where
-    TIA: Number + CastInternalRational,
+    TIA: Number,
+    FBig: TryFrom<TIA>,
 {
     if scale.is_zero() {
         let cmp = |l: &TIA, r: &TIA| match optimize {
@@ -148,11 +174,11 @@ where
 
     (iter.enumerate())
         .map(|(i, v)| {
-            let mut shift = v.into_rational()?;
+            let mut shift = FBig::try_from(v).unwrap_or(FBig::ZERO);
             if optimize == Optimize::Min {
                 shift = -shift;
             }
-            Ok((i, GumbelDist::new_psrn(shift, scale.clone())))
+            Ok((i, D::new(shift, scale.clone())))
         })
         .reduce(|l, r| {
             let (mut l, mut r) = (l?, r?);
