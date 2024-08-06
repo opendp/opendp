@@ -8,8 +8,6 @@ pub(crate) mod ffi;
 
 use std::{cmp::Ordering, fmt::Debug, sync::Arc};
 
-mod f_dp;
-
 use crate::{core::Measure, error::Fallible};
 
 /// Privacy measure used to define $\epsilon$-pure differential privacy.
