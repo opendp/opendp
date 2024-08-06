@@ -4,7 +4,7 @@ from ..helpers import optional_dependency
 
 
 def test_private_selection_threshold():
-    from opendp.extra.pspc import make_private_selection_threshold
+    from opendp.extras.pspc import make_private_selection_threshold
 
     dp.enable_features("contrib", "floating-point")
 
