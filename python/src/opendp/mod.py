@@ -716,6 +716,9 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
         raise ValueError("Measure does not support iteration")  # pragma: no cover
 
 
+_DEFAULT_ALPHAS = [i / 100 for i in range(100)]
+
+
 class PrivacyProfile(object):
     '''
     Given a profile function provided by the user,
@@ -756,6 +759,81 @@ class PrivacyProfile(object):
     def relative_risk_curve(self, prior: float) -> Function:
         from opendp._data import privacy_profile_relative_risk_curve
         return privacy_profile_relative_risk_curve(self.curve, prior)
+
+    def plot_tradeoff_curve(self, roc=True, alphas = None):
+        import matplotlib.pyplot as plt
+
+        if alphas is None:
+            alphas = _DEFAULT_ALPHAS
+
+        if roc:
+            betas = [1 - self.beta(alpha) for alpha in alphas]
+            title = "ROC Curve"
+            y_label = "1 - beta"
+        else:
+            betas = [self.beta(alpha) for alpha in alphas]
+            title = "f-DP Curve"
+            y_label = "beta"
+
+        fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+        fig.suptitle(title)
+
+        ax.plot(alphas, betas, marker='', linewidth=1)
+        ax.set_xlabel('alpha')
+        ax.set_ylabel(y_label)
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+        ax.set_aspect('equal')
+
+        return fig
+
+    def plot_posteriors(self, priors=[0.1, 0.2, 0.5, 0.9, 0.99], alphas = None):
+        import matplotlib.pyplot as plt
+
+        if alphas is None:
+            alphas = _DEFAULT_ALPHAS
+        
+        posteriors = []
+        for prior in priors:
+            posterior_curve = self.posterior_curve(prior=prior)
+            posteriors.append(posterior_curve(alphas))
+
+        fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+        fig.suptitle("Posterior Probability for Membership Attacks")
+
+        for i in range(0, len(priors)):
+            ax.plot(alphas, posteriors[i], label=f"prior={priors[i]}", marker='', linewidth=1)
+        ax.set_xlabel('alpha')
+        ax.set_ylabel('posterior')
+        ax.legend()
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+        ax.set_aspect('equal')
+
+        return fig
+
+    def plot_relative_risks(self, priors=[0.1, 0.2, 0.5, 0.9, 0.99], alphas = None):
+        import matplotlib.pyplot as plt
+        
+        if alphas is None:
+            alphas = _DEFAULT_ALPHAS
+
+        rrisks = []
+        for prior in priors:
+            rrisk_curve = self.relative_risk_curve(prior=prior)
+            rrisks.append(rrisk_curve(alphas))
+
+        fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+        fig.suptitle("Relative Risk for Membership Attacks")
+
+        for i in range(0, len(priors)):
+            ax.plot(alphas, rrisks[i], label=f"prior={priors[i]}", marker='', linewidth=1)
+        ax.set_xlabel('alpha')
+        ax.set_ylabel('relative risk')
+        ax.legend()
+        ax.set_xlim(0, 1)
+
+        return fig
 
 class _PartialConstructor(object):
     '''
