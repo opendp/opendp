@@ -51,7 +51,7 @@ from opendp.mod import (
 )
 from opendp.typing import RuntimeType
 from opendp._lib import indent, import_optional_dependency
-from opendp.polars import LazyFrameQuery, Margin
+from opendp.extras.polars import LazyFrameQuery, Margin
 from dataclasses import asdict
 
 
@@ -176,7 +176,7 @@ def domain_of(T, infer: bool = False) -> Domain:
     if infer:
         pl = import_optional_dependency("polars", raise_error=False)
         if pl is not None and isinstance(T, pl.LazyFrame):
-            from opendp.polars import _lazyframe_domain_from_schema
+            from opendp.extras.polars import _lazyframe_domain_from_schema
 
             return _lazyframe_domain_from_schema(T.collect_schema())
 

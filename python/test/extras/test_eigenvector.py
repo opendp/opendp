@@ -3,7 +3,6 @@ from opendp.extras.numpy import _sscp_domain
 import pytest
 from ..helpers import optional_dependency
 
-dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 
 def test_private_eigenvector():
