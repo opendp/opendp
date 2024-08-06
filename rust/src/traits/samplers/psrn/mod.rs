@@ -17,6 +17,9 @@ pub use gumbel::GumbelDist;
 
 use crate::{error::Fallible, traits::RoundCast};
 
+mod laplace;
+pub use laplace::LaplaceDist;
+
 use super::sample_standard_bernoulli;
 
 pub trait InverseCDF {
