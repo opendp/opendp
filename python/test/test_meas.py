@@ -34,10 +34,6 @@ def test_f_dp_tradeoff():
     print(curve.beta(alpha=1e-3))
     print(curve.beta(alpha=1.))
 
-    tradeoff = curve.tradeoff()
-    print(tradeoff)
-    print(tradeoff(0.1))
-
     # TODO: function should throw error, not panic
     # tradeoff = curve.tradeoff(0)
     
@@ -49,6 +45,47 @@ def test_f_dp_tradeoff():
     print(curve.epsilon(delta=0.0))
     print(curve.epsilon(delta=0.1))
 
+def test_get_posterior_curve():
+    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    meas = dp.c.make_pureDP_to_fixed_approxDP(dp.m.make_laplace(*input_space, 1.))
+    meas = dp.c.make_fixed_approxDP_to_approxDP(meas)
+    profile: dp.SMDCurve = meas.map(d_in=1.)
+    posterior_curve = profile.get_posterior_curve(prior=0.5)
+
+    # a = # alphas, p = # priors
+    # O(ap) if passing prior into get_posterior_curve
+    # O(a) if passing alpha into get_posterior_curve
+
+    # slow! oh no! how to make faster:
+    # - compiling with --release typically helps by ~10x
+    # - could solve for beta only once (would only help by a factor of 4 in common case)
+    # - grid search? alternatively stop when error is below threshold?
+
+    # cargo build --release --features bindings,untrusted
+    # can enable in settings for extension
+    # set env var OPENDP_TEST_RELEASE=1, then when you run Python it will load the release binary instead
+
+    # profile.plot_
+    posteriors = posterior_curve([0.])
+    # posteriors = posterior_curve([i / 100 for i in range(1, 100)])
+    # print(posteriors)
+
+    # profile.plot_tradeoff_curve(roc=False)
+    # import matplotlib.pyplot as plt
+    # plt.show()
+    # 1 / 0
+# test_get_posterior_curve()
+
+
+def test_posterior_curve_gaussian():
+    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 1.))
+    profile: dp.SMDCurve = meas.map(1.0)
+
+    profile.plot_tradeoff_curve()
+    import matplotlib.pyplot as plt
+    plt.show()
+# test_posterior_curve_gaussian()
 
 def test_gaussian_search():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)

@@ -136,7 +136,11 @@ impl SMDCurve {
 
     pub(crate) fn epsilon_unchecked(&self, delta: f64) -> Fallible<f64> {
         let mut e_min: f64 = 0.0;
-        let mut e_max: f64 = f64::MAX;
+        let mut e_max = 1.0;
+
+        while self.delta(e_max)? > delta {
+            e_max *= 2.0;
+        }
 
         // delta(e_max) <= delta <= delta(e_min) -> always holds
         // We always try to find the smallest e that minimizes |delta(e) - delta| and enforces delta(e) <= delta

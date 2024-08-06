@@ -20,10 +20,10 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "polars")]
 mod polars;
 
-use crate::core::{FfiError, FfiResult, FfiSlice};
+use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::data::Column;
 use crate::error::Fallible;
-use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
+use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyObject, AnyQueryable, Downcast};
 use crate::ffi::util::{self, into_c_char_p, AnyDomainPtr, ExtrinsicObject};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 use crate::measures::SMDCurve;
@@ -1000,6 +1000,44 @@ pub extern "C" fn opendp_data__smd_curve_beta(
         .beta(alpha)
         .map(AnyObject::new)
         .into()
+}
+
+#[bootstrap(name = "smd_curve_get_posterior_curve", arguments(curve(rust_type = b"null")))]
+/// Internal function. Use an SMDCurve to create a posterior curve.
+///
+/// # Arguments
+/// * `curve` - The SMDCurve.
+/// * `prior` - Attacker's initial knowledge.
+///
+/// # Returns
+/// Beta at a given `alpha`.
+#[no_mangle]
+pub extern "C" fn opendp_data__smd_curve_get_posterior_curve(
+    curve: *const AnyObject,
+    prior: f64,
+) -> FfiResult<*mut AnyFunction> {
+    let curve = try_!(try_as_ref!(curve).downcast_ref::<SMDCurve>());
+    let posterior = curve.get_posterior_curve(prior);
+    Ok(Function::new_fallible(move |alphas: &Vec<f64>| alphas.iter().cloned().map(posterior.clone()).collect::<Fallible<Vec<f64>>>()).into_any()).into()
+}
+
+#[bootstrap(name = "smd_curve_get_relative_risk_curve", arguments(curve(rust_type = b"null")))]
+/// Internal function. Use an SMDCurve to create a posterior curve.
+///
+/// # Arguments
+/// * `curve` - The SMDCurve.
+/// * `prior` - Attacker's initial knowledge.
+///
+/// # Returns
+/// Beta at a given `alpha`.
+#[no_mangle]
+pub extern "C" fn opendp_data__smd_curve_get_relative_risk_curve(
+    curve: *const AnyObject,
+    prior: f64,
+) -> FfiResult<*mut AnyFunction> {
+    let curve = try_!(try_as_ref!(curve).downcast_ref::<SMDCurve>());
+    let rel_risk = curve.get_relative_risk_curve(prior);
+    Ok(Function::new_fallible(move |alphas: &Vec<f64>| alphas.iter().cloned().map(rel_risk.clone()).collect::<Fallible<Vec<f64>>>()).into_any()).into()
 }
 
 #[cfg(feature = "polars")]

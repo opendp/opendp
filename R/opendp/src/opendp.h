@@ -739,6 +739,32 @@ struct FfiResult_____AnyObject opendp_data__smd_curve_beta(const struct AnyObjec
                                                            double alpha);
 
 /**
+ * Internal function. Use an SMDCurve to create a posterior curve.
+ *
+ * # Arguments
+ * * `curve` - The SMDCurve.
+ * * `prior` - Attacker's initial knowledge.
+ *
+ * # Returns
+ * Beta at a given `alpha`.
+ */
+struct FfiResult_____AnyFunction opendp_data__smd_curve_get_posterior_curve(const struct AnyObject *curve,
+                                                                            double prior);
+
+/**
+ * Internal function. Use an SMDCurve to create a posterior curve.
+ *
+ * # Arguments
+ * * `curve` - The SMDCurve.
+ * * `prior` - Attacker's initial knowledge.
+ *
+ * # Returns
+ * Beta at a given `alpha`.
+ */
+struct FfiResult_____AnyFunction opendp_data__smd_curve_get_relative_risk_curve(const struct AnyObject *curve,
+                                                                                double prior);
+
+/**
  * wrap an AnyObject in an FfiResult::Ok(this)
  *
  * # Arguments
