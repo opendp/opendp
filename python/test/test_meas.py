@@ -25,6 +25,31 @@ def test_gaussian_curve():
     assert curve.epsilon(delta=0.1) == 0.0
 
 
+def test_f_dp_tradeoff():
+    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.))
+    curve = meas.map(d_in=1.)
+    # TODO: verify these and then change to assertions
+    print(curve.beta(alpha=0.0))
+    print(curve.beta(alpha=1e-3))
+    print(curve.beta(alpha=1.))
+
+    tradeoff = curve.tradeoff()
+    print(tradeoff)
+    print(tradeoff(0.1))
+
+    # TODO: function should throw error, not panic
+    # tradeoff = curve.tradeoff(0)
+    
+    curve = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.)).map(d_in=1.0)
+    print(curve.beta(alpha=0.0))
+    print(curve.beta(alpha=0.1))
+
+    curve = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.)).map(d_in=0.0)
+    print(curve.epsilon(delta=0.0))
+    print(curve.epsilon(delta=0.1))
+
+
 def test_gaussian_search():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
 

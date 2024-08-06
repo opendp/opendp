@@ -66,23 +66,6 @@ impl SMDCurve {
             Ok((1.0 - beta) / ((1.0 - prior) * alpha + prior * (1.0 - beta)))
         }
     }
-    
-    /// Computes the relative risk curve given tradeoff curve and attacker's prior probability
-    /// in a membership attack.
-    ///
-    /// The returned Function takes an alpha value and returns the relative risk.
-    /// TODO does the relative risk only take values in (0, 1] instead of [0, 1]?
-    ///
-    /// # Arguments
-    /// * `tradeoff_curve` - Tradeoff curve for the measurement
-    /// * `prior` - Attacker's prior probability.
-    pub fn get_relative_risk_curve(&self, prior: f64) -> impl Fn(f64) -> Fallible<f64> + Clone {
-        let curve = self.clone();
-        move |alpha: f64| {
-            let beta = curve.beta(alpha)?;
-            Ok((1.0 - beta) / ((1.0 - prior) * alpha + prior * (1.0 - beta)))
-        }
-    }
 
     /// Computes the posterior curve given tradeoff curve and attacker's prior probability
     /// in a membership attack.
