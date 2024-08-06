@@ -1269,6 +1269,31 @@ pub extern "C" fn opendp_data__privacy_profile_epsilon(
         .into()
 }
 
+#[bootstrap(
+    name = "smd_curve_beta",
+    arguments(curve(rust_type = b"null"))
+)]
+/// Internal function. Use an SMDCurve to find beta at a given `alpha`.
+///
+/// # Arguments
+/// * `curve` - The SMDCurve.
+/// * `alpha` - What to fix alpha to compute beta.
+///
+/// # Returns
+/// Beta at a given `alpha`.
+#[no_mangle]
+pub extern "C" fn opendp_data__smd_curve_beta(
+    curve: *const AnyObject,
+    alpha: f64,
+) -> FfiResult<*mut AnyObject> {
+    let curve = try_as_ref!(curve);
+    try_!(curve.downcast_ref::<SMDCurve>())
+        .beta(alpha)
+        .map(AnyObject::new)
+        .into()
+}
+
+
 #[cfg(feature = "polars")]
 /// Allocate an empty ArrowArray and ArrowSchema that Rust owns the memory for.
 /// The ArrowArray and ArrowSchema are initialized empty, and are populated by the bindings language.
