@@ -252,8 +252,13 @@ interactive compositors. In this example, we nest a zCDP sequential
 compositor inside an approximate-DP sequential compositor.
 
 We first make the approximate-DP sequential compositor, accepting two
+<<<<<<< HEAD
 queries. The first query must be (2, 10^-6)-DP, and the
 second (1, 0)-DP.
+=======
+queries. The first query must be :math:`(2 ε, 10^{-6} δ)`-DP, and the
+second :math:`(1 ε, 0 δ)`-DP.
+>>>>>>> ef80ebbf (Convert notebooks without images or wget to RST (#1700))
 
 .. tab-set::
 
@@ -273,7 +278,11 @@ second (1, 0)-DP.
             
 
 The first query to the approximate-DP sequential compositor must be an
+<<<<<<< HEAD
 approximate-DP measurement that satisfies (2, 10^{-6})-DP.
+=======
+approximate-DP measurement that satisfies :math:`(2 ε, 10^{-6} δ)`-DP.
+>>>>>>> ef80ebbf (Convert notebooks without images or wget to RST (#1700))
 We will now use the library to find a set of :math:`\rho` parameters
 that will satisfy this level of privacy, under a given set of weights.
 
@@ -284,7 +293,11 @@ that will satisfy this level of privacy, under a given set of weights.
 
         .. code:: python
 
+<<<<<<< HEAD
             >>> # find ρ_1, ρ_2 such that ρ_1 + ρ_2 = ρ <= (2, 1e-6), 
+=======
+            >>> # find ρ_1, ρ_2 such that ρ_1 + ρ_2 = ρ <= (2ε, 1e-6δ), 
+>>>>>>> ef80ebbf (Convert notebooks without images or wget to RST (#1700))
             >>> #    and ρ_1 is 5 times larger than ρ_2
             >>> weights = [5., 1.]
             

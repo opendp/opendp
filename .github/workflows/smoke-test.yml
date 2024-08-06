@@ -188,12 +188,16 @@ jobs:
       - name: Test
         # There's not a "skipif" for doctests, so use "-k" to exclude based on name patterns.
         # (Even in unittests we should use "importskip" rather than "skipif".)
+<<<<<<< HEAD
         run: coverage run -m pytest -v ${{ ! contains(matrix.extra-install, 'polars') && '-k "not lazyframe and not polars and not pca and not rst"' || ''}}
 
       - name: Test replace-binary-path
         if: ${{ contains(matrix.extra-install, 'polars') }}
         # Messes with envvars, so can't be run in parallel!
         run: FORCE_TEST_REPLACE_BINARY_PATH=1 pytest -k 'test_replace_binary_path'
+=======
+        run: coverage run -m pytest -v ${{ ! contains(matrix.extra-install, 'polars') && '-k "not lazyframe and not polars and not pca"' || ''}}
+>>>>>>> ef80ebbf (Convert notebooks without images or wget to RST (#1700))
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
