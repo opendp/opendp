@@ -7,7 +7,9 @@
 pub(crate) mod ffi;
 
 use std::{
-    cmp::Ordering, fmt::{Debug, Formatter}, sync::Arc
+    cmp::Ordering,
+    fmt::{Debug, Formatter},
+    sync::Arc,
 };
 
 use crate::{core::Measure, error::Fallible};
@@ -119,16 +121,15 @@ impl SMDCurve {
 
     // these functions allow direct invocation as a method, making parens unnecessary
     pub fn epsilon(&self, delta: f64) -> Fallible<f64> {
-
         if !(0.0..=1.0).contains(&delta) {
             return fallible!(FailedMap, "delta must be between zero and one");
         }
 
         if delta == 1.0 {
             // no, e.g. gaussian privacy profile for sigma = 1, sens = 1, eps=0 is 0.3892... -> delta should never be 1?
-            return Ok(0.0)
+            return Ok(0.0);
         }
-        self.epsilon_unchecked(delta)        
+        self.epsilon_unchecked(delta)
     }
 
     pub(crate) fn epsilon_unchecked(&self, delta: f64) -> Fallible<f64> {
@@ -137,9 +138,9 @@ impl SMDCurve {
 
         // delta(e_max) <= delta <= delta(e_min) -> always holds
         // We always try to find the smallest e that minimizes |delta(e) - delta| and enforces delta(e) <= delta
-        //           -> if delta == delta(e_min), we can pick e_min, otherwise we have to take e_max 
+        //           -> if delta == delta(e_min), we can pick e_min, otherwise we have to take e_max
         // same as   -> if e
-        // For delta == 1.0, we find the largest e that gives delta(e) == 1.0 
+        // For delta == 1.0, we find the largest e that gives delta(e) == 1.0
         // (so as not to create a discontinuity and go to zero.)
         let mut e_mid = e_min;
         loop {
@@ -154,7 +155,7 @@ impl SMDCurve {
                     e_min
                 } else {
                     e_max
-                })
+                });
             }
 
             e_mid = new_mid;
@@ -162,7 +163,13 @@ impl SMDCurve {
             let d_mid: f64 = self.delta(e_mid)?;
             match d_mid.partial_cmp(&delta) {
                 Some(Ordering::Greater) => e_min = e_mid,
-                Some(Ordering::Equal) => if delta == 1. { e_min = e_mid } else {e_max = e_mid}, 
+                Some(Ordering::Equal) => {
+                    if delta == 1. {
+                        e_min = e_mid
+                    } else {
+                        e_max = e_mid
+                    }
+                }
                 Some(Ordering::Less) => e_max = e_mid,
                 None => return fallible!(FailedMap, "not comparable"),
             }

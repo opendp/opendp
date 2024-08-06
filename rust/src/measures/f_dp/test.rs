@@ -51,11 +51,11 @@ fn test_beta() -> Fallible<()> {
     };
     let smd_curve = SMDCurve::new(move |epsilon| pure_dp_privacy_profile_delta(epsilon));
 
-    println!("{}", pure_dp_privacy_profile_delta(0.9999999999999999)?);
-    println!("{}", smd_curve.delta(0.9999999999999999)?);
+    //println!("{}", pure_dp_privacy_profile_delta(0.9999999999999999)?);
+    //println!("{}", smd_curve.delta(0.9999999999999999)?);
+    
     println!("{}", smd_curve.epsilon(0.0)?);
-    println!("{}", 0.9999999999999999_f64.exp());
-    println!("{}", 1.0_f64.exp());
+    println!("{}", smd_curve.epsilon(1.0)?);
     println!("{}", smd_curve.beta(0.0)?);
 
     let betas = (0..100)

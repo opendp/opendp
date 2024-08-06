@@ -344,6 +344,8 @@ struct FfiResult_____AnyMeasurement opendp_combinators__make_sequential_composit
                                                                                     const struct AnyObject *d_in,
                                                                                     const struct AnyObject *d_mids);
 
+struct FfiResult_____AnyMeasurement opendp_combinators__make_fixed_approxDP_to_approxDP(const AnyMeasurement *measurement);
+
 struct FfiResult_____AnyMeasurement opendp_combinators__make_zCDP_to_approxDP(const AnyMeasurement *measurement);
 
 struct FfiResult_____AnyMeasurement opendp_combinators__make_pureDP_to_fixed_approxDP(const AnyMeasurement *measurement);
