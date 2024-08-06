@@ -1,10 +1,13 @@
 use crate::{
     error::Fallible,
-    measures::SMDCurve,
+    measures::PrivacyProfile,
     traits::{InfExp, InfMul, InfSub},
 };
 
-impl SMDCurve {
+#[cfg(test)]
+mod test;
+
+impl PrivacyProfile {
     /// Finds the best supporting tradeoff curve and returns the highest
     /// beta for a given a privacy curve and alpha
     ///
@@ -59,7 +62,7 @@ impl SMDCurve {
     /// # Arguments
     /// * `tradeoff_curve` - Tradeoff curve for the measurement
     /// * `prior` - Attacker's prior probability.
-    pub fn get_relative_risk_curve(&self, prior: f64) -> impl Fn(f64) -> Fallible<f64> + Clone {
+    pub fn relative_risk_curve(&self, prior: f64) -> impl Fn(f64) -> Fallible<f64> + Clone {
         let curve = self.clone();
         move |alpha: f64| {
             let beta = curve.beta(alpha)?;
@@ -76,8 +79,8 @@ impl SMDCurve {
     /// # Arguments
     /// * `tradeoff_curve` - Tradeoff curve for the measurement
     /// * `prior` - Attacker's prior probability.
-    pub fn get_posterior_curve(&self, prior: f64) -> impl Fn(f64) -> Fallible<f64> + Clone {
-        let rel_risk_curve = self.get_relative_risk_curve(prior);
+    pub fn posterior_curve(&self, prior: f64) -> impl Fn(f64) -> Fallible<f64> + Clone {
+        let rel_risk_curve = self.relative_risk_curve(prior);
         move |alpha| Ok(prior * rel_risk_curve(alpha)?)
     }
 }
