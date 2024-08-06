@@ -3,12 +3,6 @@
 Development Environment
 =======================
 
-.. toctree::
-    :hidden:
-
-    init/rust-initiation
-    init/proof-initiation
-
 If you are writing code, the first task to tackle is setting up the development environment.
 
 You will need to check out the code, and at a minimum, build the Rust binaries.
@@ -112,10 +106,11 @@ In contrast to debug builds, release builds are located in ``opendp/rust/target/
 To use a release-mode binary from the Python bindings, 
 set the environment variable ``OPENDP_TEST_RELEASE=1`` before importing OpenDP.
 
-If you run into problems, please contact us!
+For more on our Rust programming patterns:
 
-For more on our Rust programming patterns, see :doc:`init/rust-initiation`.
+.. toctree::
 
+    rust-initiation
 
 Python Setup
 ------------
@@ -296,7 +291,11 @@ Docs Setup
 
 The documentation build is described in the `docs/README.md <https://github.com/opendp/opendp/tree/main/docs#readme>`_.
 
-For more on our LaTex proof patterns, see :doc:`init/proof-initiation`.
+For more on proof writing patterns:
+
+.. toctree::
+
+    proof-initiation
 
 Release Process
 -----------------
