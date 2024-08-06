@@ -981,10 +981,7 @@ pub extern "C" fn opendp_data__smd_curve_epsilon(
         .into()
 }
 
-#[bootstrap(
-    name = "smd_curve_beta",
-    arguments(curve(rust_type = b"null"))
-)]
+#[bootstrap(name = "smd_curve_beta", arguments(curve(rust_type = b"null")))]
 /// Internal function. Use an SMDCurve to find beta at a given `alpha`.
 ///
 /// # Arguments
@@ -1004,7 +1001,6 @@ pub extern "C" fn opendp_data__smd_curve_beta(
         .map(AnyObject::new)
         .into()
 }
-
 
 #[cfg(feature = "polars")]
 /// Allocate an empty ArrowArray and ArrowSchema that Rust owns the memory for.
