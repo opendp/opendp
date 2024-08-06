@@ -16,9 +16,12 @@ use crate::{
 };
 
 use crate::traits::{
-    samplers::{CastInternalRational, GumbelPSRN},
+    samplers::{CastInternalRational, GumbelDist},
     DistanceConstant,
 };
+
+#[cfg(test)]
+mod test;
 
 #[derive(PartialEq, Clone, Copy, Debug)]
 #[cfg_attr(feature = "polars", derive(serde::Serialize, serde::Deserialize))]
@@ -149,16 +152,12 @@ where
             if optimize == Optimize::Min {
                 shift = -shift;
             }
-            Ok((i, GumbelPSRN::new(shift, scale.clone())))
+            Ok((i, GumbelDist::new_psrn(shift, scale.clone())))
         })
         .reduce(|l, r| {
             let (mut l, mut r) = (l?, r?);
-            Ok(if l.1.greater_than(&mut r.1)? { l } else { r })
+            Ok(if l.1.is_gt(&mut r.1)? { l } else { r })
         })
         .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
         .map(|v| v.0)
 }
-
-#[cfg(feature = "floating-point")]
-#[cfg(test)]
-mod test;
