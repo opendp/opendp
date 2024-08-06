@@ -15,9 +15,11 @@ mod test;
 mod gumbel;
 pub use gumbel::GumbelDist;
 
+use super::sample_standard_bernoulli;
 use crate::{error::Fallible, traits::RoundCast};
 
-use super::sample_standard_bernoulli;
+mod tulap;
+pub use tulap::TulapDist;
 
 pub trait InverseCDF {
     /// Type of lower or upper bound on the true random sample.

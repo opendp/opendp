@@ -47,7 +47,8 @@ lib, lib_path = _load_library()
 
 
 install_names = {
-    'sklearn': 'scikit-learn'
+    'sklearn': 'scikit-learn',
+    'scipy': 'scikit-learn',
 }
 
 
