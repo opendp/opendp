@@ -111,4 +111,4 @@ def make_private_group_by(
         privacy_map,
     )
 
-    return t_prior >> m_group_by_agg
+    return t_prior >> m_group_by_aggintegrate_discrete_noise_tail

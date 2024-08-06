@@ -953,7 +953,7 @@ pub extern "C" fn opendp_data__smd_curve_epsilon(
     delta: f64,
 ) -> FfiResult<*mut AnyObject> {
     try_!(try_as_ref!(curve).downcast_ref::<SMDCurve>())
-        .epsilon(&delta)
+        .epsilon(delta)
         .map(AnyObject::new)
         .into()
 }
