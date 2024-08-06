@@ -69,30 +69,28 @@ The comprehensive feature listing for Rust:
       :widths: 25 75
       :header-rows: 1
 
-      * - Name
-        - Description
-      * - ``contrib``
-        - Enable to include constructors that have not passed the vetting process.
-      * - ``honest-but-curious``
-        - Enable to include constructors whose differential privacy (or stability) properties
-          rely on the constructor arguments being correct.
-          That is, if a user/adversary is 'honest' in specifying the constructor arguments,
-          then even if they later become 'curious' and try to learn something from the measurement outputs,
-          they will not be able to violate the differential privacy promises of the measurement.
-      * - ``floating-point``
-        - Enable to include transformations and measurements with floating-point vulnerabilities.
-      * - ``untrusted``
-        - Enables untrusted features ``contrib`` and ``floating-point``.
-      * - ``ffi``
-        - Enable to include C foreign function interfaces.
-      * - ``derive``
-        - Enable to support code generation and links to proofs in documentation.
-      * - ``bindings``
-        - Enable to generate Python and R source code. Also enables the ``ffi`` and ``derive`` features. 
-      * - ``partials``
-        - Enabled by default. When enabled, ``then_*`` functions are generated from ``make_*`` functions. Also enables the ``derive`` feature.
-      * - ``use-openssl``
-        - Enabled by default. Use OpenSSL for secure noise generation.
+        * - Name
+          - Description
+        * - ``untrusted``
+          - Enables untrusted features ``contrib`` and ``floating-point``.
+        * - ``contrib``
+          - Enable to include constructors that have not passed the vetting process.
+        * - ``honest-but-curious``
+          - Enable to include constructors that are only private if the constructor arguments are honest.
+            For example, population amplification relies on the assumption that the user is honest (and correct) in saying that the dataset under observation is a simple sample.
+            Similarly, library plugins rely on the assumption that the privacy or stability of a user-defined function is governed by a user-defined map.
+        * - ``floating-point``
+          - Enable to include transformations and measurements with floating-point vulnerabilities.
+        * - ``bindings``
+          - Enable to generate Python and R source code. Depends on the ``ffi`` and ``derive`` features. 
+        * - ``partials``
+          - Enable to generate ``then_*`` functions from the corresponding ``make_*`` functions. Depends on the ``derive`` feature.
+        * - ``ffi``
+          - Enable to include C foreign function interfaces. Implicit in the ``bindings`` feature.
+        * - ``derive``
+          - Enable to support code generation and links to proofs in documentation. Implicit in the  ``bindings`` and ``partials`` features.
+        * - ``use-openssl``
+          - Already enabled. Use OpenSSL for secure noise generation.
 
    A list of features available in bindings languages (R, Python) can be found in :ref:`feature-listing`.
 
