@@ -10,6 +10,7 @@ showing the source changes from the previous version.
 - Fix Windows install problem [#1779](https://github.com/opendp/opendp/pull/1779)
 - R: Fix null pointer error [#1820](https://github.com/opendp/opendp/pull/1820)
 - Fix Python freeze: Don't allow iteration over base classes [#1823](https://github.com/opendp/opendp/pull/1823)
+- R: Fix docs build by using `stable` [#1894](https://github.com/opendp/opendp/pull/1894)
 
 - URLs:
     - Update urls in docs to reflect new structure [#1692](https://github.com/opendp/opendp/pull/1692)
@@ -29,6 +30,7 @@ showing the source changes from the previous version.
     - Laplace thresholding for private key-sets [#1716](https://github.com/opendp/opendp/pull/1716)
     - Utility estimation [#1760](https://github.com/opendp/opendp/pull/1760)
     - Update Polars dependency to 1.1.0 [#1703](https://github.com/opendp/opendp/pull/1703)
+    - Enable cutqcut [#1883](https://github.com/opendp/opendp/pull/1883)
 
 - Testing:
     - Improved test coverage in generated code [#1656](https://github.com/opendp/opendp/pull/1656)
@@ -50,6 +52,7 @@ showing the source changes from the previous version.
 - misc:
     - `with_privacy` now passes `args` and `kwargs` [#1784](https://github.com/opendp/opendp/pull/1784)
     - More informative error message if python and rust polars versions don't match [#1695](https://github.com/opendp/opendp/pull/1695)
+    - Include directory in error message if binary not found [#1886](https://github.com/opendp/opendp/pull/1886)
 
 ### Changed
 
@@ -57,10 +60,6 @@ showing the source changes from the previous version.
     - Add release dtypes to ffi for atomdomain and optiondomain [#1705](https://github.com/opendp/opendp/pull/1705)
     - Remove `unknowntype` and instead immediately raise exception [#1694](https://github.com/opendp/opendp/pull/1694)
     - Cast int to float if needed in `py_to_c` [#1509](https://github.com/opendp/opendp/pull/1509)
-
-- gitignore the generated bindings [#1430](https://github.com/opendp/opendp/pull/1430)
-    - Update bindings in release channels [#1856](https://github.com/opendp/opendp/pull/1856)
-    - Build python bindings before weeks-doc-check [#1847](https://github.com/opendp/opendp/pull/1847)
 
 - Introduce `extras` namespace
     - Rename `_extrinsics` to `extras` [#1452](https://github.com/opendp/opendp/pull/1452)
@@ -79,6 +78,15 @@ showing the source changes from the previous version.
 
 Testing:
     - Enable all features at start of test run [#1858](https://github.com/opendp/opendp/pull/1858)
+
+### Removed
+
+- Remove references to Binder [#1877](https://github.com/opendp/opendp/pull/1877)
+- Remove old dataframe docs from API User Guide [#1875](https://github.com/opendp/opendp/pull/1875)
+- gitignore the generated bindings [#1430](https://github.com/opendp/opendp/pull/1430)
+    - Update bindings in release channels [#1856](https://github.com/opendp/opendp/pull/1856)
+    - Build python bindings before weeks-doc-check [#1847](https://github.com/opendp/opendp/pull/1847)
+
 
 
 ## [0.10.0](https://github.com/opendp/opendp/compare/v0.9.2...v0.10.0) - 2024-06-20
