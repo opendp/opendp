@@ -344,6 +344,13 @@ struct FfiResult_____AnyMeasurement opendp_combinators__make_sequential_composit
                                                                                     const struct AnyObject *d_in,
                                                                                     const struct AnyObject *d_mids);
 
+/**
+ * Constructs a new output measurement where the output measure
+ * is casted from `Approximate<MaxDivergence>` to `SmoothedMaxDivergence`.
+ *
+ * # Arguments
+ * * `measurement` - a measurement with a privacy measure to be casted
+ */
 struct FfiResult_____AnyMeasurement opendp_combinators__make_fixed_approxDP_to_approxDP(const AnyMeasurement *measurement);
 
 struct FfiResult_____AnyMeasurement opendp_combinators__make_zCDP_to_approxDP(const AnyMeasurement *measurement);
@@ -691,6 +698,19 @@ struct FfiResult_____c_void opendp_data__bool_free(c_bool *this_);
  * Used to clean up after the type getter functions.
  */
 struct FfiResult_____c_void opendp_data__extrinsic_object_free(struct ExtrinsicObject *this_);
+
+/**
+ * Internal function. Use an SMDCurve to find delta at a given `epsilon`.
+ *
+ * # Arguments
+ * * `curve` - The SMDCurve.
+ * * `epsilon` - What to fix epsilon to compute delta.
+ *
+ * # Returns
+ * Delta at a given `epsilon`.
+ */
+struct FfiResult_____AnyObject opendp_data__smd_curve_delta(const struct AnyObject *curve,
+                                                            double epsilon);
 
 /**
  * Internal function. Use an SMDCurve to find epsilon at a given `delta`.

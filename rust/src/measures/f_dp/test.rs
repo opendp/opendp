@@ -88,7 +88,7 @@ fn test_all() -> Fallible<()> {
 
     // Posterior
     let posterior_curve = smd_curve.get_posterior_curve(0.5);
-    println!("posterior(prior=0.5, alpha=0) = {}", posterior_curve(0.0)?);
+    /*println!("posterior(prior=0.5, alpha=0) = {}", posterior_curve(0.0)?);
     println!(
         "posterior(prior=0.5, alpha=0.5) = {}",
         posterior_curve(0.5)?
@@ -109,7 +109,7 @@ fn test_all() -> Fallible<()> {
     println!(
         "relative_risk(prior=0.5, alpha=1) = {}",
         relative_risk_curve(1.0)?
-    );
+    );*/
 
     let posts = (0..100)
         .map(|i| i as f64 / 100.0)
@@ -117,13 +117,13 @@ fn test_all() -> Fallible<()> {
         .collect::<Fallible<Vec<f64>>>()?;
 
     println!("{posts:?}");
-
+    /*/
     let rrisks = (0..100)
         .map(|i| i as f64 / 100.0)
         .map(|a| relative_risk_curve(a))
         .collect::<Fallible<Vec<f64>>>()?;
 
-    println!("{rrisks:?}");
+    println!("{rrisks:?}");*/
 
     Ok(())
 }

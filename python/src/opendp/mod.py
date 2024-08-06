@@ -638,6 +638,22 @@ class SMDCurve(object):
     def epsilon(self, delta):
         from opendp._data import smd_curve_epsilon
         return smd_curve_epsilon(self.curve, delta)
+    
+    def delta(self, epsilon):
+        from opendp._data import smd_curve_delta
+        return smd_curve_delta(self.curve, epsilon)
+    
+    def beta(self, alpha):
+        from opendp._data import smd_curve_beta
+        return smd_curve_beta(self.curve, alpha)
+    
+    def get_posterior_curve(self, prior: float) -> Function:
+        from opendp._data import smd_curve_get_posterior_curve
+        return smd_curve_get_posterior_curve(self.curve, prior)
+
+    def get_relative_risk_curve(self, prior: float) -> Function:
+        from opendp._data import smd_curve_get_relative_risk_curve
+        return smd_curve_get_relative_risk_curve(self.curve, prior)
 
 
 class PartialConstructor(object):

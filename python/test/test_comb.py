@@ -108,5 +108,16 @@ def test_make_pureDP_to_zCDP():
 
     print(meas.map(1.))
 
+
+def test_make_fixed_approxDP_to_approxDP():
+    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    fadp_meas = dp.c.make_pureDP_to_fixed_approxDP(dp.m.make_laplace(*input_space, 10.))
+
+    adp_meas = dp.c.make_fixed_approxDP_to_approxDP(fadp_meas)
+
+    print(adp_meas)
+    print(adp_meas.map(1.).epsilon(delta=1e-7))
+
+
 if __name__ == "__main__":
-    test_make_pureDP_to_fixed_approxDP()
+    test_make_fixed_approxDP_to_approxDP()
