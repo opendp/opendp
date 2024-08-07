@@ -8,7 +8,7 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 '''
 from __future__ import annotations
 import ctypes
-from typing import Any, Literal, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
+from typing import Any, Literal, Type, TypeVar, Callable, Optional, overload, TYPE_CHECKING, cast
 
 from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
 
@@ -113,7 +113,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
                 return False
             raise
 
-    def __rshift__(self, other: Union["Function", "Transformation", Callable]) -> "Measurement":
+    def __rshift__(self, other: "Function" | "Transformation" | Callable) -> "Measurement":
         if isinstance(other, Transformation):
             other = other.function
 
@@ -315,7 +315,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     def __rshift__(self, other: "PartialConstructor") -> "PartialConstructor":
         ...
 
-    def __rshift__(self, other: Union["Measurement", "Transformation", "PartialConstructor"]) -> Union["Measurement", "Transformation", "PartialConstructor", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
+    def __rshift__(self, other: "Measurement" | "Transformation" | "PartialConstructor") -> "Measurement" | "Transformation" | "PartialConstructor" | "PartialChain":  # type: ignore[name-defined] # noqa F821
         if isinstance(other, Measurement):
             from opendp.combinators import make_chain_mt
             return make_chain_mt(other, self)
@@ -760,7 +760,7 @@ def binary_search_chain(
     :param bounds: a 2-tuple of the lower and upper bounds on the input of `make_chain`
     :param T: type of argument to `make_chain`, one of {float, int}
     :return: a chain parameterized at the nearest passing value to the decision point of the relation
-    :rtype: Union[Transformation, Measurement]
+    :rtype: Transformation | Measurement
     :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
     :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.
 
@@ -806,7 +806,7 @@ def binary_search_chain(
 
 
 def binary_search_param(
-        make_chain: Callable[[float], Union[Transformation, Measurement]],
+        make_chain: Callable[[float], Transformation | Measurement],
         d_in: Any, d_out: Any,
         bounds: tuple[float, float] | None = None,
         T=None) -> float:

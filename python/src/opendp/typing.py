@@ -484,7 +484,7 @@ def get_atom(type_name):
     return type_name
 
 
-def get_atom_or_infer(type_name: Union[RuntimeType, str], example):
+def get_atom_or_infer(type_name: RuntimeType | str, example):
     return get_atom(type_name) or RuntimeType.infer(example)
 
 
@@ -493,19 +493,19 @@ def get_first(value):
         return None
     return next(iter(value))
 
-def parse_or_infer(type_name: RuntimeTypeDescriptor | None, example) -> Union[RuntimeType, str]:
+def parse_or_infer(type_name: RuntimeTypeDescriptor | None, example) -> RuntimeType | str:
     return RuntimeType.parse_or_infer(type_name, example)
 
 def pass_through(value: Any) -> Any:
     return value
 
-def get_dependencies(value: Union[Measurement, Transformation, Function]) -> Any:
+def get_dependencies(value: Measurement | Transformation | Function) -> Any:
     return getattr(value, "_dependencies", None)
 
-def get_dependencies_iterable(value: list[Union[Measurement, Transformation, Function]]) -> list[Any]:
+def get_dependencies_iterable(value: list[Measurement | Transformation | Function]) -> list[Any]:
     return list(map(get_dependencies, value))
 
-def get_carrier_type(value: Domain) -> Union[RuntimeType, str]:
+def get_carrier_type(value: Domain) -> RuntimeType | str:
     return value.carrier_type
 
 
@@ -515,5 +515,5 @@ def get_type(value):
 def get_value_type(type_name):
     return RuntimeType.parse(type_name).args[1] # type: ignore[union-attr]
 
-def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
+def get_distance_type(value: Metric | Measure) -> RuntimeType | str:
     return value.distance_type
