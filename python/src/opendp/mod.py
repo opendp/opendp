@@ -8,7 +8,7 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 '''
 from __future__ import annotations
 import ctypes
-from typing import Any, Literal, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
+from typing import Any, Literal, Type, TypeVar, Callable, Optional, overload, TYPE_CHECKING, cast
 
 from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
 
@@ -113,7 +113,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
                 return False
             raise
 
-    def __rshift__(self, other: Union["Function", "Transformation", Callable]) -> "Measurement":
+    def __rshift__(self, other: "Function" | "Transformation" | Callable) -> "Measurement":
         if isinstance(other, Transformation):
             other = other.function
 
@@ -151,7 +151,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return measurement_function(self)
     
     @property
-    def input_distance_type(self) -> Union["RuntimeType", str]:
+    def input_distance_type(self) -> "RuntimeType" | str:
         """Retrieve the distance type of the input metric.
         This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
         
@@ -162,7 +162,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return RuntimeType.parse(measurement_input_distance_type(self))
 
     @property
-    def output_distance_type(self) -> Union["RuntimeType", str]:
+    def output_distance_type(self) -> "RuntimeType" | str:
         """Retrieve the distance type of the output measure.
         This is the type that the budget is expressed in.
         
@@ -173,7 +173,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return RuntimeType.parse(measurement_output_distance_type(self))
 
     @property
-    def input_carrier_type(self) -> Union["RuntimeType", str]:
+    def input_carrier_type(self) -> "RuntimeType" | str:
         """Retrieve the carrier type of the input domain.
         Any member of the input domain is a member of the carrier type.
         
@@ -315,7 +315,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     def __rshift__(self, other: "PartialConstructor") -> "PartialConstructor":
         ...
 
-    def __rshift__(self, other: Union["Measurement", "Transformation", "PartialConstructor"]) -> Union["Measurement", "Transformation", "PartialConstructor", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
+    def __rshift__(self, other: "Measurement" | "Transformation" | "PartialConstructor") -> "Measurement" | "Transformation" | "PartialConstructor" | "PartialChain":  # type: ignore[name-defined] # noqa F821
         if isinstance(other, Measurement):
             from opendp.combinators import make_chain_mt
             return make_chain_mt(other, self)
@@ -370,7 +370,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         return transformation_function(self)
 
     @property
-    def input_distance_type(self) -> Union["RuntimeType", str]:
+    def input_distance_type(self) -> "RuntimeType" | str:
         """Retrieve the distance type of the input metric.
         This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
 
@@ -381,7 +381,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         return RuntimeType.parse(transformation_input_distance_type(self))
 
     @property
-    def output_distance_type(self) -> Union["RuntimeType", str]:
+    def output_distance_type(self) -> "RuntimeType" | str:
         """Retrieve the distance type of the output metric.
         This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
 
@@ -392,7 +392,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         return RuntimeType.parse(transformation_output_distance_type(self))
     
     @property
-    def input_carrier_type(self) -> Union["RuntimeType", str]:
+    def input_carrier_type(self) -> "RuntimeType" | str:
         """Retrieve the carrier type of the input domain.
         Any member of the input domain is a member of the carrier type.
 
@@ -491,13 +491,13 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         return member(self, val)
 
     @property
-    def type(self) -> Union["RuntimeType", str]:
+    def type(self) -> "RuntimeType" | str:
         from opendp.domains import domain_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(domain_type(self))
     
     @property
-    def carrier_type(self) -> Union["RuntimeType", str]:
+    def carrier_type(self) -> "RuntimeType" | str:
         from opendp.domains import domain_carrier_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(domain_carrier_type(self))
@@ -551,7 +551,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
         return RuntimeType.parse(metric_type(self))
     
     @property
-    def distance_type(self) -> Union["RuntimeType", str]:
+    def distance_type(self) -> "RuntimeType" | str:
         from opendp.metrics import metric_distance_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(metric_distance_type(self))
@@ -603,7 +603,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
         return RuntimeType.parse(measure_type(self))
     
     @property
-    def distance_type(self) -> Union["RuntimeType", str]:
+    def distance_type(self) -> "RuntimeType" | str:
         from opendp.measures import measure_distance_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(measure_distance_type(self))
@@ -760,7 +760,7 @@ def binary_search_chain(
     :param bounds: a 2-tuple of the lower and upper bounds on the input of `make_chain`
     :param T: type of argument to `make_chain`, one of {float, int}
     :return: a chain parameterized at the nearest passing value to the decision point of the relation
-    :rtype: Union[Transformation, Measurement]
+    :rtype: Transformation | Measurement
     :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
     :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.
 
@@ -806,7 +806,7 @@ def binary_search_chain(
 
 
 def binary_search_param(
-        make_chain: Callable[[float], Union[Transformation, Measurement]],
+        make_chain: Callable[[float], Transformation | Measurement],
         d_in: Any, d_out: Any,
         bounds: tuple[float, float] | None = None,
         T=None) -> float:

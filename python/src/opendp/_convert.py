@@ -1,4 +1,5 @@
-from typing import Sequence, Union, cast
+from __future__ import annotations
+from typing import Sequence, cast
 from inspect import signature
 
 from opendp._lib import *
@@ -192,7 +193,7 @@ def c_to_py(value: Any) -> Any:
     return value
 
 
-def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
+def _slice_to_py(raw: FfiSlicePtr, type_name: RuntimeType | str) -> Any:
     """Convert from `raw` FfiSlicePtr to Python type.
     This is the postprocessing step after _object_to_slice that unloads data from a ctypes representation.
     External checks allow this function to assume that `raw` is compatible with the type_name type.
@@ -237,7 +238,7 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
     raise UnknownTypeException(type_name)
 
 
-def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
+def _py_to_slice(value: Any, type_name: RuntimeType | str) -> FfiSlicePtr:
     """Convert from Python `value` to FfiSlicePtr.
     The initial preprocessing step for _slice_to_object that loads data into a ctypes representation.
     External checks allow this function to assume that `value` is compatible with the type_name type.
@@ -409,7 +410,7 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> list[Any]:
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len]
 
 
-def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
+def _tuple_to_slice(val: tuple[Any, ...], type_name: RuntimeType | str) -> FfiSlicePtr:
     type_name = cast(RuntimeType, type_name)
     inner_type_names = type_name.args
     if not isinstance(val, tuple):

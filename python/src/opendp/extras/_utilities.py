@@ -1,4 +1,5 @@
-from typing import Callable, Union
+from __future__ import annotations
+from typing import Callable
 from opendp.mod import PartialConstructor, Measurement, Transformation
 
 
@@ -48,14 +49,14 @@ def register_measurement(
 
 
 def register_combinator(
-    constructor: Callable[..., Union[Transformation, Measurement]],
+    constructor: Callable[..., Transformation | Measurement],
 ) -> Callable[..., PartialConstructor]:
     return _register("combinators", constructor)  # pragma: no cover
 
 
 def with_privacy(
     t_constructor: Callable,
-) -> Callable[..., Union[Transformation, Measurement]]:
+) -> Callable[..., Transformation | Measurement]:
     from opendp.mod import assert_features
     from opendp.measurements import then_gaussian, then_laplace
 

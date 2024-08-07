@@ -116,7 +116,7 @@ class RuntimeType(object):
     """Utility for validating, manipulating, inferring and parsing/normalizing type information.
     """
     origin: str
-    args: list[Union["RuntimeType", str]]
+    args: list[RuntimeType | str]
 
     def __init__(self, origin, args=None):
         if not isinstance(origin, str):
@@ -143,7 +143,7 @@ class RuntimeType(object):
         return hash(str(self))
 
     @classmethod
-    def parse(cls, type_name: RuntimeTypeDescriptor, generics: Optional[list[str]] = None) -> Union["RuntimeType", str]:
+    def parse(cls, type_name: RuntimeTypeDescriptor, generics: Optional[list[str]] = None) -> RuntimeType | str:
         """Parse type descriptor into a normalized Rust type.
 
         Type descriptor may be expressed as:
@@ -157,7 +157,7 @@ class RuntimeType(object):
         :param generics: For internal use. List of type names to consider generic when parsing.
         :type: list[str]
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
-        :rtype: Union["RuntimeType", str]
+        :rtype: RuntimeType | str
         :raises UnknownTypeException: if `type_name` fails to parse
 
         :examples:
@@ -255,13 +255,13 @@ class RuntimeType(object):
         return [cls.parse(v, generics=generics) for v in re.split(r",\s*(?![^()<>]*\))", args)]
 
     @classmethod
-    def infer(cls, public_example: Any, py_object=False) -> Union["RuntimeType", str]:
+    def infer(cls, public_example: Any, py_object=False) -> RuntimeType | str:
         """Infer the normalized type from a public example.
 
         :param public_example: data used to infer the type
         :param py_object: return "ExtrinsicObject" when type not recognized, instead of error
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
-        :rtype: Union["RuntimeType", str]
+        :rtype: RuntimeType | str
         :raises UnknownTypeException: if inference fails on `public_example`
 
         :examples:
@@ -351,13 +351,13 @@ class RuntimeType(object):
             type_name: RuntimeTypeDescriptor | None = None,
             public_example: Any = None,
             generics: Optional[list[str]] = None
-    ) -> Union["RuntimeType", str]:
+    ) -> RuntimeType | str:
         """If type_name is supplied, normalize it. Otherwise, infer the normalized type from a public example.
 
         :param type_name: type specifier. See RuntimeType.parse for documentation on valid inputs
         :param public_example: data used to infer the type
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
-        :rtype: Union["RuntimeType", str]
+        :rtype: RuntimeType | str
         :param generics: For internal use. List of type names to consider generic when parsing.
         :type: list[str]
         :raises ValueError: if `type_name` fails to parse
@@ -369,7 +369,7 @@ class RuntimeType(object):
             return cls.infer(public_example)
         raise UnknownTypeException("either type_name or public_example must be passed")
 
-    def substitute(self: Union["RuntimeType", str], **kwargs):
+    def substitute(self: RuntimeType | str, **kwargs):
         if isinstance(self, GenericType):
             return kwargs.get(self.origin, self)
         if isinstance(self, RuntimeType):
@@ -484,7 +484,7 @@ def get_atom(type_name):
     return type_name
 
 
-def get_atom_or_infer(type_name: Union[RuntimeType, str], example):
+def get_atom_or_infer(type_name: RuntimeType | str, example):
     return get_atom(type_name) or RuntimeType.infer(example)
 
 
@@ -493,19 +493,19 @@ def get_first(value):
         return None
     return next(iter(value))
 
-def parse_or_infer(type_name: RuntimeTypeDescriptor | None, example) -> Union[RuntimeType, str]:
+def parse_or_infer(type_name: RuntimeTypeDescriptor | None, example) -> RuntimeType | str:
     return RuntimeType.parse_or_infer(type_name, example)
 
 def pass_through(value: Any) -> Any:
     return value
 
-def get_dependencies(value: Union[Measurement, Transformation, Function]) -> Any:
+def get_dependencies(value: Measurement | Transformation | Function) -> Any:
     return getattr(value, "_dependencies", None)
 
-def get_dependencies_iterable(value: list[Union[Measurement, Transformation, Function]]) -> list[Any]:
+def get_dependencies_iterable(value: list[Measurement | Transformation | Function]) -> list[Any]:
     return list(map(get_dependencies, value))
 
-def get_carrier_type(value: Domain) -> Union[RuntimeType, str]:
+def get_carrier_type(value: Domain) -> RuntimeType | str:
     return value.carrier_type
 
 
@@ -515,5 +515,5 @@ def get_type(value):
 def get_value_type(type_name):
     return RuntimeType.parse(type_name).args[1] # type: ignore[union-attr]
 
-def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
+def get_distance_type(value: Metric | Measure) -> RuntimeType | str:
     return value.distance_type

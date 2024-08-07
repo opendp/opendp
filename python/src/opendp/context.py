@@ -235,7 +235,7 @@ def metric_of(M) -> Metric:
 def loss_of(
         epsilon: Optional[float] = None,
         delta: Optional[float] = None,
-        rho: Optional[float] = None) -> tuple[Measure, Union[float, tuple[float, float]]]:
+        rho: Optional[float] = None) -> tuple[Measure, float | tuple[float, float]]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
     >>> import opendp.prelude as dp
@@ -631,7 +631,7 @@ class Query(object):
                 d_out, self._output_measure, output_measure
             )
 
-        def compositor(chain: Union[tuple[Domain, Metric], Transformation], d_in):
+        def compositor(chain: tuple[Domain, Metric] | Transformation, d_in):
             if isinstance(chain, tuple):
                 input_domain, input_metric = chain
             elif isinstance(chain, Transformation):
@@ -681,7 +681,7 @@ class PartialChain(object):
     which returns the closest transformation or measurement that satisfies the given stability or privacy constraint.
     """
 
-    partial: Callable[[float], Union[Transformation, Measurement]]
+    partial: Callable[[float], Transformation | Measurement]
     """The partial transformation or measurement."""
 
     def __init__(self, f, *args, **kwargs):
@@ -713,7 +713,7 @@ class PartialChain(object):
         chain.param = param
         return chain
 
-    def __rshift__(self, other: Union[Transformation, Measurement]):
+    def __rshift__(self, other: Transformation | Measurement):
         # partials may be chained with other transformations or measurements to form a new partial
         # TODO: Can we exercise this?
         if isinstance(other, (Transformation, Measurement)): # pragma: no cover
