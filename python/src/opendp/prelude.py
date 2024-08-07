@@ -36,7 +36,7 @@ For example:
 '''
 
 from opendp.mod import *
-from opendp._extrinsics import sklearn, np_array2_domain
+from opendp.extras import sklearn, numpy, polars
 import opendp.transformations as t
 import opendp.measurements as m
 import opendp.combinators as c
@@ -47,6 +47,5 @@ from opendp.typing import *
 from opendp.accuracy import *
 from opendp.core import new_function, new_queryable
 from opendp.context import *
-from opendp.polars import *
 
 __all__ = ["t", "m", "c"]

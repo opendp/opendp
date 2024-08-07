@@ -1,5 +1,5 @@
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprDomain, LogicalPlanDomain, MarginPub, SeriesDomain};
+use crate::domains::{AtomDomain, DslPlanDomain, ExprDomain, MarginPub, SeriesDomain};
 use crate::error::*;
 use crate::metrics::{IntDistance, LpDistance, PartitionDistance};
 use crate::polars::ExprFunction;
@@ -40,7 +40,7 @@ where
 
     // build output domain
     let output_domain = ExprDomain::new(
-        LogicalPlanDomain::new(vec![SeriesDomain::new("len", AtomDomain::<u32>::default())])?,
+        DslPlanDomain::new(vec![SeriesDomain::new("len", AtomDomain::<u32>::default())])?,
         input_domain.context.clone(),
     );
 

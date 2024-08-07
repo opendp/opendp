@@ -26,9 +26,9 @@ def _load_library():
         lib_dir = Path(__file__).parent / ".." / ".." / ".." / 'rust' / 'target' / build_dir  # pragma: no cover
 
     if lib_dir.exists():
-        lib_dir_file_names = [p for p in lib_dir.iterdir() if p.suffix in {".so", ".dylib", ".dll"}]
+        lib_dir_file_names = [p for p in lib_dir.iterdir() if p.suffix in {".so", ".dylib", ".dll", ".pyd"}]
         if len(lib_dir_file_names) != 1:
-            raise Exception(f"Expected exactly one binary to be present. Got: {lib_dir_file_names}")
+            raise Exception(f"Expected exactly one binary to be present in {lib_dir}. Got: {lib_dir_file_names}")
         
         lib_path = lib_dir / lib_dir_file_names[0]
         try:
@@ -271,16 +271,15 @@ def proven(function):
         source_dir = os.path.dirname(inspect.getfile(function))
         absolute_proof_path = os.path.abspath(os.path.join(source_dir, matched_path))
 
-
-        # split the path at the extrinsics directory
-        extrinsics_path = os.path.join(os.path.dirname(__file__), "_extrinsics")
-        relative_proof_path = os.path.relpath(absolute_proof_path, extrinsics_path)
+        # split the path at the extras directory
+        extras_path = os.path.join(os.path.dirname(__file__), "extras")
+        relative_proof_path = os.path.relpath(absolute_proof_path, extras_path)
 
         # create the link
         proof_url = make_proof_link(
-            extrinsics_path,
+            extras_path,
             relative_path=relative_proof_path,
-            repo_path="python/src/opendp/_extrinsics",
+            repo_path="python/src/opendp/extras",
         )
 
         # replace the path with the link
@@ -370,8 +369,8 @@ def get_opendp_version_from_file():
     >>> import re
     >>> assert re.match(r'\\d+\\.\\d+\\.\\d+', get_opendp_version_from_file())
     '''
-    version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'VERSION')
-    return open(version_file, 'r').read().strip()
+    version_path = Path(__file__).parent.parent.parent.parent / 'VERSION'
+    return version_path.read_text().strip()
 
 
 def get_docs_ref(version):
