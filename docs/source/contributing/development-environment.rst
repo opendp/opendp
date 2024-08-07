@@ -2,6 +2,7 @@
 
 Development Environment
 =======================
+
 If you are writing code, the first task to tackle is setting up the development environment.
 
 You will need to check out the code, and at a minimum, build the Rust binaries.
@@ -10,6 +11,8 @@ Most developers will also install Python and/or R:
 If you are only interested in developing a feature in one of these languages,
 you will not need to set up the other.
 
+.. contents:: |toctitle|
+    :local:
 
 Clone the OpenDP Repo
 ---------------------
@@ -32,7 +35,7 @@ If you have not `set up SSH <https://docs.github.com/en/authentication/connectin
     git clone https://github.com/opendp/opendp.git
 
 
-Rust Build
+Rust Setup
 ----------
 
 If you have not already, install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
@@ -53,7 +56,7 @@ Now run ``cargo build`` in the ``rust`` subdirectory of the repo:
 This will compile a debug build of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. 
 (The specific name of the library file will vary depending on your platform.)
 
-Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to run a lightweight check that the code is valid.
+Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to regenerate Python and R bindings and check syntax.
 
 In the above commands, the features ``untrusted`` and ``bindings`` are enabled.
 
@@ -103,8 +106,11 @@ In contrast to debug builds, release builds are located in ``opendp/rust/target/
 To use a release-mode binary from the Python bindings, 
 set the environment variable ``OPENDP_TEST_RELEASE=1`` before importing OpenDP.
 
-If you run into problems, please contact us!
+For more on our Rust programming patterns:
 
+.. toctree::
+
+    rust-initiation
 
 Python Setup
 ------------
@@ -279,6 +285,23 @@ and then uses ``pkgdown`` to render the documentation website.
 
     tools/r_stage.sh -d
 
+
+Docs Setup
+----------
+
+The documentation build is described in the `docs/README.md <https://github.com/opendp/opendp/tree/main/docs#readme>`_.
+
+For more on proof writing patterns:
+
+.. toctree::
+
+    proof-initiation
+
+Release Process
+-----------------
+
+Our `release process <https://github.com/opendp/opendp/tree/main/.github/workflows#making-a-release>`_
+uses github workflows.
 
 Environment Variables
 ---------------------
