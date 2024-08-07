@@ -11,7 +11,6 @@ We suggest importing under the conventional name ``dp``:
     >>> import opendp.prelude as dp
 '''
 
-from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional, Union
 import importlib
@@ -429,7 +428,7 @@ class Context(object):
             self.d_mids.pop(0)
         return answer
 
-    def query(self, **kwargs) -> Query | LazyFrameQuery:
+    def query(self, **kwargs) -> Union["Query", LazyFrameQuery]:
         """Starts a new Query to be executed in this context.
 
         If the context has been constructed with a sequence of privacy losses,
