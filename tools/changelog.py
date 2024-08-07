@@ -62,7 +62,8 @@ def parse_log(lines):
 def main():
     parser = argparse.ArgumentParser(description="Helps generate CHANGELOG entries")
     parser.parse_args()
-    lines = log_until(get_prev_version())
+    prev_version = get_prev_version()
+    lines = log_until(prev_version.replace('-dev', ''))
     print(parse_log(lines))
 
 
