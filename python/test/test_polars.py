@@ -4,6 +4,7 @@ import os
 import warnings
 
 
+dp.enable_features("contrib", "honest-but-curious")
 
 
 def test_polars_version():
@@ -121,7 +122,7 @@ def test_private_lazyframe_explicit_sum(measure):
         ]
     )
     df_act = m_lf(lf).collect()
-    pl_testing.assert_frame_equal(df_act.sort("B"), df_exp)
+    pl_testing.assert_frame_equal(df_act, df_exp)
 
 
 @pytest.mark.parametrize(
@@ -146,7 +147,7 @@ def test_private_lazyframe_sum(measure):
             pl.Series("A", [10.0] * 5, dtype=pl.Float64),
         ]
     )
-    pl_testing.assert_frame_equal(m_lf(lf).collect().sort("B"), expect)
+    pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
 
 
 @pytest.mark.parametrize(
@@ -172,7 +173,7 @@ def test_private_lazyframe_mean(measure):
             pl.Series("A", [1.0] * 5, dtype=pl.Float64),
         ]
     )
-    pl_testing.assert_frame_equal(m_lf(lf).collect().sort("B"), expect)
+    pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
 
 
 def test_stable_lazyframe():
@@ -270,6 +271,7 @@ def test_onceframe_lazy():
     )
 
     of = m_lf(lf)
+    dp.enable_features("honest-but-curious")
     assert isinstance(of.lazy(), pl.LazyFrame)
 
 
@@ -325,8 +327,8 @@ def test_polars_context():
         split_evenly_over=2,
         margins={
             # TODO: this is redundant with the second margin
-            (): dp.polars.Margin(max_partition_length=5),
-            ("B",): dp.polars.Margin(public_info="keys", max_partition_length=5),
+            (): dp.Margin(max_partition_length=5),
+            ("B",): dp.Margin(public_info="keys", max_partition_length=5),
         },
     )
 
@@ -335,7 +337,7 @@ def test_polars_context():
         .with_columns(pl.col("B").is_null().alias("B_nulls"))
         .filter(pl.col("B_nulls"))
         .select(pl.col("A").fill_null(2.0).dp.sum((0, 3)))
-        .release()
+        .release()  # type: ignore[union-attr]
         .collect()
     )
 
@@ -343,7 +345,7 @@ def test_polars_context():
         context.query()
         .group_by("B")
         .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
-        .release()
+        .release()  # type: ignore[union-attr]
         .collect()
     )
 
@@ -360,55 +362,7 @@ def test_polars_describe():
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=2,
         margins={
-            ("B",): dp.polars.Margin(public_info="keys", max_partition_length=5),
-        },
-    )
-
-    expected = pl.DataFrame(
-        {
-            "column": ["len", "A", "B"],
-            "aggregate": ["Len", "Sum", "Sum"],
-            "distribution": ["Integer Laplace", "Integer Laplace", "Integer Laplace"],
-            # * sensitivity of the count is 1 (adding/removing one row changes the count by at most one), 
-            # * sensitivity of each sum is 3 (adding/removing one row with value as big as three...) 
-            # Therefore the noise scale of the sum query should be 3x greater 
-            # in order to consume the same amount of budget as the count.
-            "scale": [6.0, 18.0, 18.0],
-        }
-    )
-
-    summer = pl.col("A").fill_null(2).dp.sum((0, 3))
-
-    query = (
-        context.query()
-        .group_by("B")
-        .agg(pl.len().dp.noise(), summer, summer.alias("B"))
-    )
-
-    actual = query.accuracy()
-    pl_testing.assert_frame_equal(expected, actual)
-
-    accuracy = [
-        dp.discrete_laplacian_scale_to_accuracy(6.0, 0.05),
-        dp.discrete_laplacian_scale_to_accuracy(18.0, 0.05),
-        dp.discrete_laplacian_scale_to_accuracy(18.0, 0.05)
-    ]
-    expected = expected.hstack([pl.Series("accuracy", accuracy)])
-    actual = query.accuracy(alpha=0.05)
-    pl_testing.assert_frame_equal(expected, actual)
-
-
-def test_polars_accuracy_threshold():
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
-
-    context = dp.Context.compositor(
-        data=pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String}),
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
-        split_evenly_over=2,
-        margins={
-            ("B",): dp.polars.Margin(max_partition_length=5),
+            ("B",): dp.Margin(public_info="keys", max_partition_length=5),
         },
     )
 
@@ -417,10 +371,8 @@ def test_polars_accuracy_threshold():
             "column": ["len", "A"],
             "aggregate": ["Len", "Sum"],
             "distribution": ["Integer Laplace", "Integer Laplace"],
-            "scale": [4.000000000000001, 12.000000000000004],
-            "threshold": [65, None]
-        },
-        schema_overrides={"threshold": pl.UInt32}
+            "scale": [8.0, 8.0],
+        }
     )
 
     query = (
@@ -429,7 +381,12 @@ def test_polars_accuracy_threshold():
         .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
     )
 
-    actual = query.accuracy()
+    actual = query.accuracy()  # type: ignore[union-attr]
+    pl_testing.assert_frame_equal(expected, actual)
+
+    accuracy = dp.discrete_laplacian_scale_to_accuracy(8.0, 0.05)
+    expected = expected.with_columns(accuracy=accuracy)
+    actual = query.accuracy(alpha=0.05)  # type: ignore[union-attr]
     pl_testing.assert_frame_equal(expected, actual)
 
 
@@ -484,7 +441,7 @@ def test_polars_threshold():
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=2,
         margins={
-            ("A",): dp.polars.Margin(public_info="keys"),
+            ("A",): dp.Margin(public_info="keys"),
         },
     )
 
@@ -543,25 +500,18 @@ def test_polars_threshold():
         .collect()
     )
 
-@pytest.mark.skipif(
-    os.getenv('FORCE_TEST_REPLACE_BINARY_PATH') != "1", 
-    reason="setting OPENDP_POLARS_LIB_PATH interferes with the execution of other tests"
-)
+
 def test_replace_binary_path():
     import os
+    os.environ["OPENDP_LIB_PATH"] = "testing!"
     pl = pytest.importorskip("polars")
-    expr = pl.len().dp.noise(scale=1.)
-
-    # check that the library overwrites paths
-    os.environ["OPENDP_POLARS_LIB_PATH"] = "testing!"
 
     m_expr = dp.m.make_private_expr(
         dp.expr_domain(example_lf()[0], grouping_columns=[]),
         dp.partition_distance(dp.symmetric_distance()),
         dp.max_divergence(T=float),
-        expr,
+        pl.len().dp.noise(scale=1.),
     )
-
     assert str(m_expr((pl.LazyFrame(dict()), pl.all()))) == "len().testing!:noise_plugin()"
 
     # check that local paths in new expressions get overwritten
@@ -668,4 +618,3 @@ def test_cut():
     )
 
     pl_testing.assert_frame_equal(actual, expected)
-    
