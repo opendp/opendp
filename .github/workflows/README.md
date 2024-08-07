@@ -145,7 +145,8 @@ on github, or with the `gh` command line tool. Parameters:
         python channel_tool.py changelog
         python changelog.py
         ```
-        Additional manual edits will be useful to arrange individual commits thematically.
+        Additional manual edits will be useful to arrange individual commits thematically,
+        and to add a new release header.
 
     1. Update `VERSION` file on the `main` branch to match the version you want to release.
 

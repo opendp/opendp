@@ -135,7 +135,7 @@ Playbook
    GM tag          ``v<MAJ>.<MIN>.<PAT>``           ``v1.2.0``
    ==============  ===============================  =================  ==============================
 
-#. Update ``CHANGELOG.md`` on ``main`` (based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_). Start with the output of ``docs/tools/changelog.py --until PREV_VERSION`` and edit as needed.
+#. Update ``CHANGELOG.md`` on ``main`` (based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_) .
 #. Create/update the release branch:
 
    * Major or minor release ONLY: Create a *new* release branch, based on the desired point in ``main``.
