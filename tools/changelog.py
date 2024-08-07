@@ -21,7 +21,7 @@ def log_until(match):
     return head
 
 
-def parse_log(lines):
+def get_changelog_update(lines):
     '''
     >>> print(parse_log([
     ...     'abcd0000 Add: Colon and capital (#3)',
@@ -62,9 +62,21 @@ def parse_log(lines):
 def main():
     parser = argparse.ArgumentParser(description="Helps generate CHANGELOG entries")
     parser.parse_args()
+
+    old_changelog_lines = (Path(__file__).parent.parent / 'CHANGELOG.md').read_text().splitlines()
+    new_changelog_lines = []
+
     prev_version = get_prev_version()
-    lines = log_until(prev_version.replace('-dev', ''))
-    print(parse_log(lines))
+    log_lines = log_until(prev_version.replace('-dev', ''))
+    changelog_update = get_changelog_update(log_lines)
+
+    for line in old_changelog_lines:
+        if prev_version in line:
+            new_changelog_lines.append(changelog_update)
+            new_changelog_lines.append('')
+        new_changelog_lines.append(line)
+
+    (Path(__file__).parent.parent / 'CHANGELOG.md').write_text('\n'.join(new_changelog_lines))
 
 
 if __name__ == "__main__":
