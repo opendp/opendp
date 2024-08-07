@@ -1,5 +1,7 @@
 import pytest
 import opendp.prelude as dp
+import os
+import warnings
 
 
 dp.enable_features("contrib", "honest-but-curious")
@@ -512,4 +514,107 @@ def test_replace_binary_path():
     )
     assert str(m_expr((pl.LazyFrame(dict()), pl.all()))) == "len().testing!:noise_plugin()"
 
-    del os.environ["OPENDP_LIB_PATH"]
+    # check that local paths in new expressions get overwritten
+    os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
+    assert str(pl.len().dp.noise(scale=1.)) == f"len().{__file__}:noise([null, dyn float: 1.0])"
+
+    # cleanup
+    del os.environ["OPENDP_POLARS_LIB_PATH"]
+
+
+def test_pickle_bomb():
+    pl = pytest.importorskip("polars")
+
+    from polars._utils.parse import parse_into_list_of_expressions  # type: ignore[import-not-found]
+    from polars._utils.wrap import wrap_expr  # type: ignore[import-not-found]
+    from opendp._lib import lib_path
+    import io
+    import re
+    import pickle
+
+    # modified from https://intoli.com/blog/dangerous-pickles/
+    poison_binary = b'c__builtin__\neval\n(V1 / 0\ntR.'
+
+    # poison_binary raises a ZeroDivisionError if it is ever unpickled
+    with pytest.raises(ZeroDivisionError):
+        pickle.loads(poison_binary)
+
+    # craft an expression that contains a poisoned pickle binary
+
+    py_exprs = parse_into_list_of_expressions((pl.len(), pl.lit("Laplace"), pl.lit(0.7)))
+
+    # Replicates parts of register_plugin_function from Polars,
+    # to allow injection of the specially-crafted pickle binary
+    bomb_expr = wrap_expr(
+        pl.polars.register_plugin_function(
+            plugin_path=str(lib_path),
+            function_name="noise",
+            args=py_exprs,
+            kwargs=poison_binary,
+            is_elementwise=True,
+            input_wildcard_expansion=False,
+            returns_scalar=False,
+            cast_to_supertype=False,
+            pass_name_to_apply=False,
+            changes_length=False,
+        )
+    )
+
+    # craft a lazyframe that contains a poisoned pickle binary
+    lf_domain, lf = example_lf()
+    bomb_lf = lf.select(bomb_expr)
+
+    # ensure that ser/de round-trip of expression does not trigger pickle
+    ser_expr = bomb_expr.meta.serialize()
+    pl.Expr.deserialize(io.BytesIO(ser_expr))
+
+    # ensure that ser/de round-trip of lazyframe does not trigger pickle
+    ser_lf = bomb_lf.serialize()
+    pl.LazyFrame.deserialize(io.BytesIO(ser_lf))
+
+    # OpenDP explicitly rejects any pickled data it finds
+    err_msg_re = re.escape("OpenDP does not allow pickled keyword arguments as they may enable remote code execution.")
+    with pytest.raises(dp.OpenDPException, match=err_msg_re):
+        dp.m.make_private_expr(
+            dp.expr_domain(lf_domain, grouping_columns=[]),
+            dp.partition_distance(dp.symmetric_distance()),
+            dp.max_divergence(T=float),
+            bomb_expr,
+        )
+
+    with pytest.raises(dp.OpenDPException, match=err_msg_re):
+        dp.m.make_private_lazyframe(
+            lf_domain,
+            dp.symmetric_distance(),
+            dp.max_divergence(T=float),
+            bomb_lf,
+        )
+
+
+def test_cut():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    data = pl.LazyFrame({"x": [0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]})
+    with warnings.catch_warnings():
+        context = dp.Context.compositor(
+            data=data.with_columns(pl.col("x").cut([1.0, 2.0, 3.0]).to_physical()),
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=10000.0),
+            split_evenly_over=1,
+            margins={("x",): dp.polars.Margin(public_info="keys")},
+        )
+    actual = (
+        context.query()
+        .group_by("x")
+        .agg(pl.len().dp.noise())
+        .release()
+        .collect()
+        .sort("x")
+    )
+    expected = pl.DataFrame(
+        {"x": [0, 1, 2, 3], "len": [2, 2, 2, 1]}, 
+        schema={"x": pl.UInt32, "len": pl.UInt32},
+    )
+
+    pl_testing.assert_frame_equal(actual, expected)
