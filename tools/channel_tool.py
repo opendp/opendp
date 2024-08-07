@@ -3,6 +3,7 @@ import configupdater
 import datetime
 import re
 import zoneinfo
+from pathlib import Path
 
 import tomlkit
 from debmutate.control import ControlEditor
@@ -155,8 +156,8 @@ def changelog(args):
     date = args.date or datetime.date.today()
 
     log("Reading CHANGELOG")
-    with open("CHANGELOG.md") as f:
-        lines = f.readlines()
+    changelog_path = (Path(__file__).parent.parent / 'CHANGELOG.md')
+    lines = changelog_path.read_text().splitlines()
     url_base = "https://github.com/opendp/opendp/compare/"
     i, match = first_match(lines, fr"^## \[(\d+\.\d+\.\d+(?:-\S+)?)\]\({re.escape(url_base)}(\S+)\.\.\.\S+\) - \S+$")
     heading_version = semver.Version.parse(match.group(1))
@@ -187,8 +188,7 @@ def changelog(args):
         log(f"Prepending new heading for {version}")
         lines[i:i] = [f"## [{version}]({url_base}{diff_source}...HEAD) - TBD\n", "\n", "\n"]
 
-    with open("CHANGELOG.md", "w") as f:
-        f.writelines(lines)
+    changelog_path.write_text('\n'.join(lines))
 
 
 def bump_version(args):

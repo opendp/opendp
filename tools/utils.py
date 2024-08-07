@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 import semver
 
@@ -38,8 +39,7 @@ def run_command_with_retries(description, args, timeout, backoff, capture_output
 
 def get_version(version_str=None):
     if not version_str:
-        with open("VERSION") as f:
-            version_str = f.read().strip()
+        version_str = (Path(__file__).parent.parent / 'VERSION').read_text().strip()
     return semver.Version.parse(version_str)
 
 

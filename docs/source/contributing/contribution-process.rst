@@ -21,7 +21,12 @@ A pull request is a request to have your changes "pulled" into the OpenDP codeba
 * `Creating a pull request <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request>`_
 * `Creating a pull request from a fork <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork>`_
 
-The branch naming convention is the issue number followed by a short description, such as ``123-typo-in-readme``.
+The branch naming convention is the issue number followed by a short description begining with a verb.
+For example: ``123-fix-typo-in-readme``.
+
+Github will name the PR from this branch ``123 fix typo in readme``; Retitle to ``Fix typo in readme``.
+(Our script groups changelog entries by the first word of the PR title, so these name conventions help.)
+
 Once you have opened your Pull Request, it will appear in the `list of open PRs <https://github.com/opendp/opendp/pulls>`_.
 Please check back later for feedback!
 
