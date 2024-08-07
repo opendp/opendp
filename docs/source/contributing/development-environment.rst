@@ -56,7 +56,7 @@ Now run ``cargo build`` in the ``rust`` subdirectory of the repo:
 This will compile a debug build of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. 
 (The specific name of the library file will vary depending on your platform.)
 
-Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to run a lightweight check that the code is valid.
+Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to regenerate Python and R bindings and check syntax.
 
 In the above commands, the features ``untrusted`` and ``bindings`` are enabled.
 
