@@ -4,6 +4,7 @@ from opendp._convert import (
     _vector_to_slice, _slice_to_vector,
     _hashmap_to_slice, _slice_to_hashmap,
 )
+from opendp._convert import _check_and_cast_scalar
 from opendp.typing import *
 import pytest
 
@@ -11,7 +12,13 @@ import pytest
 def test_data_object_int():
     val_in = 123
     obj = py_to_c(val_in, c_type=AnyObjectPtr)
-    print(obj)
+    val_out = c_to_py(obj)
+    assert val_out == val_in
+
+
+def test_data_object_int_to_float():
+    val_in = 123
+    obj = py_to_c(val_in, c_type=AnyObjectPtr, type_name='f64')
     val_out = c_to_py(obj)
     assert val_out == val_in
 
@@ -159,3 +166,40 @@ def test_polars_expr():
     obj = py_to_c(val_in, AnyObjectPtr, "Expr")
     val_out = c_to_py(obj)
     assert str(val_out) == str(val_in)
+
+
+def test_check_and_cast_scalar():
+    # Any number is cast to float, if f32 or f64 is expected:
+    assert _check_and_cast_scalar('f32', 1.0) == 1.0
+    assert _check_and_cast_scalar('f64', 1) == 1.0
+
+    # Ints cast to ints, unsurprisingly:
+    assert _check_and_cast_scalar('u8', 1) == 1
+
+    # There are range checks for ints:
+    with pytest.raises(ValueError, match="256 is not representable by u8"):
+        _check_and_cast_scalar('u8', 256)
+
+    # Floats don't have range checks because inf is a valid float:
+    assert _check_and_cast_scalar('f32', 1e100) == 1e+100
+
+    # Floats cannot be cast to ints:
+    with pytest.raises(TypeError, match="inferred type is f64, expected i32."):
+        _check_and_cast_scalar('i32', 1.0)
+    
+    # Bools can only cast to bools:
+    assert _check_and_cast_scalar('bool', True)
+
+    # Bools cannot cast to ints:
+    with pytest.raises(TypeError, match="inferred type is bool, expected u8."):
+        _check_and_cast_scalar('u8', True)
+    
+    # Bools cannot cast to floats:
+    with pytest.raises(TypeError, match="inferred type is bool, expected f64."):
+        _check_and_cast_scalar('f64', True)
+    
+    with pytest.raises(TypeError, match="inferred type is i32, expected bool."):
+        _check_and_cast_scalar('bool', 1)
+    
+    with pytest.raises(TypeError, match="inferred type is i32, expected fake."):
+        _check_and_cast_scalar('fake', 1)

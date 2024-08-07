@@ -235,8 +235,7 @@ def metric_of(M) -> Metric:
 def loss_of(
         epsilon: Optional[float] = None,
         delta: Optional[float] = None,
-        rho: Optional[float] = None,
-        U = None) -> tuple[Measure, Union[float, tuple[float, float]]]:
+        rho: Optional[float] = None) -> tuple[Measure, Union[float, tuple[float, float]]]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
     >>> import opendp.prelude as dp
@@ -250,7 +249,6 @@ def loss_of(
     :param epsilon: Parameter for pure ε-DP.
     :param delta: Parameter for approximate (ε,δ)-DP.
     :param rho: Parameter for zero-concentrated ρ-DP.
-    :param U: The type of the privacy parameter; Inferred if not provided.
 
     """
     def range_warning(name, value, info_level, warn_level):
@@ -264,20 +262,17 @@ def loss_of(
 
     if rho:
         range_warning('rho', rho, 0.25, 0.5)
-        U = RuntimeType.parse_or_infer(U, rho)
-        return zero_concentrated_divergence(T=U), rho
+        return zero_concentrated_divergence(T=float), rho
 
     if epsilon is None:
         raise ValueError("Either epsilon or rho must be specified.")
  
     range_warning('epsilon', epsilon, 1, 5)
     if delta is None:
-        U = RuntimeType.parse_or_infer(U, epsilon)
-        return max_divergence(T=U), epsilon
+        return max_divergence(T=float), epsilon
 
     range_warning('delta', delta, 1e-6, 1e-6)
-    U = RuntimeType.parse_or_infer(U, epsilon)
-    return fixed_smoothed_max_divergence(T=U), (epsilon, delta)
+    return fixed_smoothed_max_divergence(T=float), (epsilon, delta)
 
 
 def unit_of(

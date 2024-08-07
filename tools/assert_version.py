@@ -31,12 +31,6 @@ config.read('python/setup.cfg')
 assert config['metadata']['version'] == str(python_version), \
     "python/setup.cfg package version is incorrect"
 
-binder_requirements = open('.binder/requirements.txt').readlines()
-for line in binder_requirements:
-    if line.startswith("opendp=="):
-        assert line == f"opendp=={python_version}\n", \
-            ".binder/requirements.txt opendp dependency is incorrect"
-
 with ControlEditor(path='R/opendp/DESCRIPTION') as control:
     version = next(iter(control.paragraphs))["Version"]
     assert version == r_version

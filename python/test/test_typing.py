@@ -106,6 +106,9 @@ def test_default_float_type():
 
     # Can't set to f32 because debug binary has fewer types.
 
+def test_runtime_type_hash():
+    assert {Vec[int]} == {RuntimeType.parse("Vec<int>")}
+
 
 disallowed_int_default_types = set([i128, u128, isize])
 

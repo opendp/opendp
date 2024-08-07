@@ -230,27 +230,6 @@ rst_prolog = """
 .. |toctitle| replace:: Contents:
 """
 
-# insert this header on nbsphinx pages to link to binder and github:
-# we have to resolve the link ref here, at runtime, because sphinx-multiversion mediates the reading of this config
-nbsphinx_prolog = r"""
-{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}
-{% if env.config.release.endswith('-dev') %}
-    {% set frag = 'main' %}
-{% elif '-' in env.config.release %}
-    {% set frag = env.config.release.split('-', 1)[1].split('.', 1)[0] %}
-{% else %}
-    {% set frag = 'v' ~ env.config.version %}
-{% endif %}
-.. raw:: html
-
-    <div class="admonition note">
-      This page was generated from
-      <a class="reference external" href="https://github.com/opendp/opendp/tree/{{ frag|e }}/{{ docname|e }}" target="_blank">{{ docname|e }}</a>.
-      Interactive online version:
-      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp/{{ frag|e }}?filepath={{ docname|e }}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
-    </div>
-"""
-
 class CustomClassDocumenter(autodoc.ClassDocumenter):
     '''
     Removes unneeded note from base classes.

@@ -28,7 +28,7 @@ def _load_library():
     if lib_dir.exists():
         lib_dir_file_names = [p for p in lib_dir.iterdir() if p.suffix in {".so", ".dylib", ".dll", ".pyd"}]
         if len(lib_dir_file_names) != 1:
-            raise Exception(f"Expected exactly one binary to be present. Got: {lib_dir_file_names}")
+            raise Exception(f"Expected exactly one binary to be present in {lib_dir}. Got: {lib_dir_file_names}")
         
         lib_path = lib_dir / lib_dir_file_names[0]
         try:
