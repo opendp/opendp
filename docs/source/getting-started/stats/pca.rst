@@ -61,7 +61,7 @@ provides an API similar to scikit-learn:
 
         .. code:: python
 
-            >>> model = dp.sklearn.PCA(
+            >>> model = dp.sklearn.decomposition.PCA(
             ...     epsilon=1.,
             ...     row_norm=1.,
             ...     n_samples=num_rows,
@@ -111,7 +111,7 @@ allocated to estimating each eigenvector internally.
 
         .. code:: python
 
-            >>> model = dp.sklearn.PCA(
+            >>> model = dp.sklearn.decomposition.PCA(
             ...     epsilon=1.,
             ...     row_norm=1.,
             ...     n_samples=num_rows,

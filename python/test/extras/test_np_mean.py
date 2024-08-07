@@ -2,7 +2,6 @@ import opendp.prelude as dp
 import pytest
 from ..helpers import optional_dependency
 
-dp.enable_features("honest-but-curious", "contrib", "floating-point")
 
 
 def test_private_np_mean():
