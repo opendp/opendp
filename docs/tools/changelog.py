@@ -2,6 +2,11 @@ import argparse
 import subprocess
 import re
 from collections import defaultdict
+from pathlib import Path
+
+
+def get_prev_version():
+    return (Path(__file__).parent.parent / 'VERSION').read_text().strip()
 
 
 def log_until(match):
@@ -56,9 +61,8 @@ def parse_log(lines):
 
 def main():
     parser = argparse.ArgumentParser(description="Helps generate CHANGELOG entries")
-    parser.add_argument("--until", help="Read from git log until match found", required=False)
-    args = parser.parse_args()
-    lines = log_until(args.until)
+    parser.parse_args()
+    lines = log_until(get_prev_version())
     print(parse_log(lines))
 
 

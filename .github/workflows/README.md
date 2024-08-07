@@ -119,46 +119,48 @@ on github, or with the `gh` command line tool. Parameters:
 
 ## Making a release
 
-1. Create (if you haven't already) and activate `.venv-tools`
-    
-    ```shell
-    cd tools
-    python -m venv .venv-tools
-    . .venv-tools/bin/activate
-    pip install -r requirements-tools.txt
-    ```
+1. Update the changelog and version
 
-1. Make a branch for the version bump and changelog updates
+    1. Create (if you haven't already) and activate `.venv-tools`
+        
+        ```shell
+        cd tools
+        python -m venv .venv-tools
+        . .venv-tools/bin/activate
+        pip install -r requirements-tools.txt
+        ```
 
-    ```shell
-    git checkout main
-    git pull
-    git branch -D version-changelog
-    git checkout -b version-changelog
-    ``` 
+    1. Make a branch for the changelog and version updates
 
-1. Update `VERSION` file on the `main` branch to match the version you want to release.
+        ```shell
+        git checkout main
+        git pull
+        git branch -D version-changelog
+        git checkout -b version-changelog
+        ``` 
 
-    - If it's a patch release, no change to the version number should be needed: The patch should have been incremented after the previous release.
-    - If it's a minor release, run `python channel_tool.py bump_version --position minor`
-    - Similarly, if it's a major release, run `python channel_tool.py bump_version --position major`
+    1. Update changelog
 
-1. Update changelog.
+        ```shell
+        python channel_tool.py changelog
+        python changelog.py
+        ```
+        Additional manual edits will be useful to arrange individual commits thematically.
 
-    ```shell
-    python channel_tool.py changelog
-    ```
+    1. Update `VERSION` file on the `main` branch to match the version you want to release.
 
-    Edit the contents manually. PR [#1672](https://github.com/opendp/opendp/pull/1672) provides a script to get you started (TODO: update these instructions once it is merged).
+        - If it's a patch release, no change to the version number should be needed: The patch should have been incremented after the previous release.
+        - If it's a minor release, run `python channel_tool.py bump_version --position minor`
+        - Similarly, if it's a major release, run `python channel_tool.py bump_version --position major`
 
-1. Commit your updates
+    1. Commit your updates
 
-    ```
-    git commit -m 'version bump and changelog'
-    git push
-    ```
+        ```
+        git commit -m 'version bump and changelog'
+        git push
+        ```
 
-    Then on github, make a PR and get it merged.
+        Then on github, make a PR and get it merged.
 
 
 1. We use a release train with nightly, beta and stable channels. Repeatedly run the Release workflow through each channel (see preceding section).
