@@ -741,8 +741,9 @@ struct FfiResult_____AnyObject opendp_data__onceframe_collect(struct AnyObject *
  * Each collection consumes the entire allocated privacy budget.
  * To remain DP at the advertised privacy level, only collect the LazyFrame once.
  *
- * # Features
- * * `honest-but-curious` - LazyFrames can be collected an unlimited number of times.
+ * Requires ``honest-but-curious`` because the privacy guarantees only apply if:
+ * 1. The LazyFrame (compute plan) is only ever executed once.
+ * 2. The analyst does not observe ordering of rows in the output. To ensure this, shuffle the output.
  *
  * # Arguments
  * * `onceframe` - The queryable holding a LazyFrame.
@@ -903,7 +904,8 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_private_lazyframe(
                                                                                 const struct AnyMetric *input_metric,
                                                                                 const struct AnyMeasure *output_measure,
                                                                                 const struct AnyObject *lazyframe,
-                                                                                const struct AnyObject *global_scale);
+                                                                                const struct AnyObject *global_scale,
+                                                                                const struct AnyObject *threshold);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_user_measurement(const struct AnyDomain *input_domain,
                                                                                const struct AnyMetric *input_metric,

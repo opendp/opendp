@@ -57,7 +57,7 @@ where
     if Some(MarginPub::Lengths) != margin.public_info {
         return fallible!(
             MakeMeasurement,
-            "The length of partitions when grouped by {:?} is not public information.",
+            "The length of partitions when grouped by {:?} is not public information. You may have forgotten to add noise to your query.",
             by
         );
     }

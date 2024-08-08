@@ -202,6 +202,11 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     input_metric   = {self.input_metric},
     output_measure = {self.output_measure})"""
 
+    def __iter__(self):
+        # this overrides the implementation of __iter__ on POINTER, 
+        # which yields infinitely on zero-sized types
+        raise ValueError("Measurement does not support iteration")
+
 
 class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     """A non-differentially private unit of computation.
@@ -227,8 +232,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         input_domain   = VectorDomain(AtomDomain(T=i32)),
         output_domain  = AtomDomain(T=i32),
         input_metric   = SymmetricDistance(),
-        output_metric  = AbsoluteDistance(i32)
-    )
+        output_metric  = AbsoluteDistance(i32))
 
     >>> count.input_space
     (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
@@ -412,7 +416,15 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
             pass
 
     def __repr__(self) -> str:
-        return f"Transformation(\n    input_domain   = {self.input_domain},\n    output_domain  = {self.output_domain},\n    input_metric   = {self.input_metric},\n    output_metric  = {self.output_metric}\n)"
+        return f"""Transformation(
+    input_domain   = {self.input_domain},
+    output_domain  = {self.output_domain},
+    input_metric   = {self.input_metric},
+    output_metric  = {self.output_metric})"""
+    
+    def __iter__(self):
+        raise ValueError("Transformation does not support iteration")
+
 
 Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
 
@@ -460,6 +472,9 @@ class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
+
+    def __iter__(self):
+        raise ValueError("Function does not support iteration")
 
 
 class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
@@ -516,6 +531,8 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         """Extends the memory lifetime of args to the lifetime of self."""
         setattr(self, "_dependencies", args)
 
+    def __iter__(self):
+        raise ValueError("Domain does not support iteration")
 
 
 class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
@@ -558,6 +575,9 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     
     def __hash__(self) -> int:
         return hash(str(self))
+    
+    def __iter__(self):
+        raise ValueError("Metric does not support iteration")
 
 
 class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
@@ -606,6 +626,9 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     
     def __hash__(self) -> int:
         return hash(str(self))
+    
+    def __iter__(self):
+        raise ValueError("Measure does not support iteration")
 
 
 class SMDCurve(object):
