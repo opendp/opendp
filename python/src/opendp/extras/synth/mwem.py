@@ -287,7 +287,7 @@ class MWEMSynthesizerTrainer(SynthesizerTrainer):
                  query: SimpleLinearQuery) -> Measurement:
 
         meas = dp.binary_search_chain(
-            lambda s: dp.make_private_lazyframe(
+            lambda s: dp.m.make_private_lazyframe(
                 self.input_domain,
                 self.input_metric,
                 dp.max_divergence(T=float),
