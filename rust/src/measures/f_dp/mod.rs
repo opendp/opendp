@@ -63,6 +63,11 @@ impl SMDCurve {
         let curve = self.clone();
         move |alpha: f64| {
             let beta = curve.beta(alpha)?;
+
+            // TODO what should be do here?
+            // if beta == 1.0 && alpha == 0.0 { // 0 / 0
+            //     return Ok(-1.0);
+            // }
             Ok((1.0 - beta) / ((1.0 - prior) * alpha + prior * (1.0 - beta)))
         }
     }
@@ -77,8 +82,21 @@ impl SMDCurve {
     /// * `tradeoff_curve` - Tradeoff curve for the measurement
     /// * `prior` - Attacker's prior probability.
     pub fn get_posterior_curve(&self, prior: f64) -> impl Fn(f64) -> Fallible<f64> + Clone {
-        let rel_risk_curve = self.get_relative_risk_curve(prior);
-        move |alpha| Ok(prior * rel_risk_curve(alpha)?)
+        // Old
+        // let rel_risk_curve = self.get_relative_risk_curve(prior);
+        // move |alpha| Ok(prior * rel_risk_curve(alpha)?)
+        let curve = self.clone();
+        move |alpha: f64| {
+            let beta = curve.beta(alpha)?;
+            println!("{}", beta);
+
+            // We get 0 / 0 in this case.
+            // Since false negative rate is 0 and 
+            if beta == 1.0 && alpha == 0.0 {
+                return Ok(-1.0); // TODO what should be do here?
+            }
+            Ok(((1.0 - beta) * prior) / ((1.0 - prior) * alpha + prior * (1.0 - beta)))
+        }
     }
 }
 
@@ -113,6 +131,9 @@ fn conservative_support_tradeoff(alpha: f64, epsilon: f64, delta: f64) -> Fallib
 
     Ok(left.max(right).max(0.0))
 }
+
+#[cfg(test)]
+mod test;
 
 // fn exhaustive_search() {
 //     // Function not strictly convex, walk again until we find two different betas
