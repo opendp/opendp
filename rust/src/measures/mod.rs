@@ -122,31 +122,61 @@ impl SMDCurve {
     }
 
     // these functions allow direct invocation as a method, making parens unnecessary
+
+    /// Given $\delta$ a binary search to find the smallest $\epsilon$ that minimizes $|\delta(\epsilon) - \delta|
+    /// while also satisfying $\delta(\epsilon) <= \delta$.
+    /// 
+    /// # Arguments
+    /// * delta - delta value to find epsilon for.
+    /// 
+    /// # Returns
+    /// * Smallest $\epsilon$ that minimizes $|\delta(\epsilon) - \delta| while also satisfying $\delta(\epsilon) <= \delta$.\
+    /// * An error if $\delta \notin [0, 1]$
     pub fn epsilon(&self, delta: f64) -> Fallible<f64> {
         if !(0.0..=1.0).contains(&delta) {
             return fallible!(FailedMap, "delta must be between zero and one");
         }
 
         if delta == 1.0 {
-            // no, e.g. gaussian privacy profile for sigma = 1, sens = 1, eps=0 is 0.3892... -> delta should never be 1?
             return Ok(0.0);
         }
         self.epsilon_unchecked(delta)
     }
 
+    /// Given $\delta$ a binary search to find the smallest $\epsilon$ that minimizes $|\delta(\epsilon) - \delta|
+    /// while also satisfying $\delta(\epsilon) <= \delta$.
+    /// 
+    /// This works because the $\delta(epsilon)$ curve is monotonically decreasing by definition.
+    /// 
+    /// Special case: for $delta = 1$, the function returns the highest $\epsilon$ that satisfies $\delta(\epsilon) = 1$
+    ///        
+    /// # Arguments
+    /// * delta - must be within [0, 1]
+    /// 
+    /// # Returns
+    /// * Smallest $\epsilon$ that minimizes $|\delta(\epsilon) - \delta| while also satisfying $\delta(\epsilon) <= \delta$.\
+    ///   Special case: for $delta = 1$, the function returns the highest $\epsilon$ that satisfies $\delta(\epsilon) = 1$
     pub(crate) fn epsilon_unchecked(&self, delta: f64) -> Fallible<f64> {
         let mut e_min: f64 = 0.0;
         let mut e_max = 1.0;
 
         while self.delta(e_max)? > delta {
             e_max *= 2.0;
+            if e_max > f64::MAX {
+                // For mechanisms that are not pureDP, e_max will be infinity.
+                // This loop can be very long running.
+                return Ok(f64::INFINITY);
+            }
         }
 
+        // TODO What should we do if if e_max is very very large? -> there is a risk of overflow in the code below.
+        //fallible!(FailedMap, "Epsilon too large to be represented");
+        
         // delta(e_max) <= delta <= delta(e_min) -> always holds
         // We always try to find the smallest e that minimizes |delta(e) - delta| and enforces delta(e) <= delta
         //           -> if delta == delta(e_min), we can pick e_min, otherwise we have to take e_max
         // same as   -> if e
-        // For delta == 1.0, we find the largest e that gives delta(e) == 1.0
+        // Special case: for delta == 1.0, we find the largest e that gives delta(e) == 1.0 
         // (so as not to create a discontinuity and go to zero.)
         let mut e_mid = e_min;
         loop {
