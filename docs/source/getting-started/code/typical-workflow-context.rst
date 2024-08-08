@@ -17,20 +17,15 @@
 
 
 # public-info
->>> col_names = [
-...    "name", "sex", "age", "maritalStatus", "hasChildren", "highestEducationLevel", 
-...    "sourceOfStress", "smoker", "optimism", "lifeSatisfaction", "selfEsteem"
-... ]
+>>> bounds = (0.0, 100.0)
+>>> imputed_value = 50.0
 
 # /public-info
 
 
 # mediate
->>> import urllib.request
->>> data_url = "https://raw.githubusercontent.com/opendp/opendp/sydney/teacher_survey.csv"
->>> with urllib.request.urlopen(data_url) as data_req:
-...     data = data_req.read().decode('utf-8')
-
+>>> from random import randint
+>>> data = [float(randint(0, 100)) for _ in range(100)]
 >>> context = dp.Context.compositor(
 ...     data=data,
 ...     privacy_unit=privacy_unit,
@@ -44,8 +39,6 @@
 # count
 >>> count_query = (
 ...     context.query()
-...     .split_dataframe(",", col_names=col_names)
-...     .select_column("age", str) # temporary until OpenDP 0.10 (Polars dataframe)
 ...     .count()
 ...     .laplace()
 ... )
@@ -67,15 +60,8 @@
 # mean
 >>> mean_query = (
 ...     context.query()
-...     .split_dataframe(",", col_names=col_names)
-...     .select_column("age", str)
-...     .cast_default(float)
-...     .clamp((18.0, 70.0))  # a best-guess based on public information
-...     # Explanation for `constant=42`:
-...     #    since dp_count may be larger than the true size, 
-...     #    imputed rows will be given an age of 42.0 
-...     #    (also a best guess based on public information)
-...     .resize(size=dp_count, constant=42.0)
+...     .clamp(bounds)
+...     .resize(size=dp_count, constant=imputed_value)
 ...     .mean()
 ...     .laplace()
 ... )
