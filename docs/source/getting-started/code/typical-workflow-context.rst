@@ -1,17 +1,20 @@
 :orphan:
+
 # unit-of-privacy
 >>> import opendp.prelude as dp
 >>> dp.enable_features("contrib")
 
 >>> privacy_unit = dp.unit_of(contributions=1)
->>> input_metric, d_in = privacy_unit
+>>> privacy_unit
+(SymmetricDistance(), 1)
 
 # /unit-of-privacy
 
 
 # privacy-loss
 >>> privacy_loss = dp.loss_of(epsilon=1.)
->>> privacy_measure, d_out = privacy_loss
+>>> privacy_loss
+(MaxDivergence(f64), 1.0)
 
 # /privacy-loss
 
@@ -26,6 +29,7 @@
 # mediate
 >>> from random import randint
 >>> data = [float(randint(0, 100)) for _ in range(100)]
+
 >>> context = dp.Context.compositor(
 ...     data=data,
 ...     privacy_unit=privacy_unit,
