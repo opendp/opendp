@@ -41,10 +41,10 @@ class SynthesizerTrainer:
         """Fit the synthesizer to the data.
 
         :param data: The data to fit a synthesizer to.
-        :type data: pl.LazyFrame
         return: A synthesizer that can generate records.
         :rtype: ReleasedSynthesizer
         """
+
         raise NotImplementedError
 
 
@@ -62,6 +62,6 @@ class ReleasedSynthesizer:
         :param num_samples: The number of records to generate.
         :type num_samples: int
         :return: A sample of records.
-        :rtype: pl.DataFrame
         """
+
         pass
