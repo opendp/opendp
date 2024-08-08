@@ -1,5 +1,8 @@
+import ctypes
+
 import pytest
 import opendp.prelude as dp
+import polars as pl
 
 
 @pytest.mark.xfail(raises=dp.UnknownTypeException)
@@ -113,3 +116,35 @@ def test_string_instead_of_tuple_for_margin_key():
     )
     counts.summarize()
     # counts.release().collect()
+
+@pytest.mark.xfail(raises=ctypes.ArgumentError)
+def test_queryable_errors_human_readable():
+    # Currently fails with:
+    #   ctypes.ArgumentError: argument 1: TypeError: wrong type
+    # Possible resolution:
+    #   Describes what type it was expecting.
+    input_domain = dp.lazyframe_domain([
+        dp.series_domain("A", dp.option_domain(dp.atom_domain(T=dp.i32))),
+        dp.series_domain("B", dp.atom_domain(T=dp.i32))
+    ])
+    input_metric = dp.symmetric_distance()
+    output_measure = dp.max_divergence(T=float)
+    d_in = 1
+    eps1 = 1.0
+    eps21 = eps22 = 0.5
+    eps2 = eps21 + eps22
+
+    data = pl.LazyFrame({
+        "A": pl.Series([100, 1, 300], dtype=pl.Int32),
+        "B": pl.Series([4, 4, 6], dtype=pl.Int32)
+    })
+
+    overall_pipeline = dp.c.make_sequential_composition(
+        input_domain, input_metric, output_measure, d_in,
+        d_mids=[eps1, eps2])
+    overall_pipline_comp = overall_pipeline(data)
+
+    specific_pipeline = dp.c.make_sequential_composition(
+        input_domain, input_metric, output_measure, d_in,
+        d_mids = [eps21, eps22])            
+    specific_pipeline(overall_pipline_comp)
