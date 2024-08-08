@@ -15,14 +15,14 @@ A differentially private analysis in OpenDP typically has the following steps:
     :width: 60%
     :alt: Diagram representing typical data flow with OpenDP, from a raw CSV to a differentially private release. 
 
-We'll illustrate these steps by doing a differentially private analysis of a teacher survey, which is a tabular dataset. The raw data consists of survey responses from teachers in primary and secondary schools in an unspecified U.S. state.
+We'll illustrate these steps by making a differentially private sum of a small vector of random numbers.
 
 1. Identify the Unit of Privacy
 -------------------------------
 
 The first step in a differentially private analysis is to determine what you are protecting: the unit of privacy.
 
-Releases on the teacher survey should conceal the addition or removal of any one teacher's data, and each teacher contributes at most one row to the data set, so the unit of privacy corresponds to one row contribution.
+In this case we'll take the unit of privacy as a single element from the vector.
 
 .. tab-set::
 
@@ -101,13 +101,13 @@ The privacy loss specifies how distances are measured between distributions (``p
 3. Collect Public Information
 -----------------------------
 
-The next step is to identify public information about the data set.
+The next step is to identify public information about the data set. This could include:
 
-* Information that is invariant across all potential input data sets (may include column names and per-column categories)
+* Information that is invariant across all potential input data sets
 * Information that is publicly available from other sources
 * Information from other DP releases
 
-This is the same under either API.
+Frequently we'll specify bounds on data, based on prior knowledge of the domain.
 
 .. tab-set::
 
@@ -135,8 +135,6 @@ This is the same under either API.
             :start-after: public-info
             :end-before: /public-info
 
-In this case (and in most cases), we consider column names public/invariant to the data because they weren't picked in response to the data, they were "fixed" before collecting the data.
-
 A data invariant is information about your data set that you are explicitly choosing not to protect, typically because it is already public or non-sensitive. Be careful, if an invariant does contain sensitive information, then you risk violating the privacy of individuals in your data set.
 
 On the other hand, using public information significantly improves the utility of your results.
@@ -144,7 +142,7 @@ On the other hand, using public information significantly improves the utility o
 4. Mediate Access to Data
 -------------------------
 
-Ideally, at this point, you have not yet accessed the sensitive data set. This is the only point in the process where we access the sensitive data set. To ensure that your specified differential privacy protections are maintained, the OpenDP Library should mediate all access to the sensitive data set. When using Python, use the Context API to mediate access.
+Ideally, at this point, you have not yet accessed the sensitive data set. This is the only point in the process where we access the sensitive data set. To ensure that your specified differential privacy protections are maintained, the OpenDP Library should mediate all access to the sensitive data set.
 
 .. tab-set::
 
