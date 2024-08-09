@@ -2,7 +2,6 @@ import ctypes
 
 import pytest
 import opendp.prelude as dp
-import polars as pl
 
 
 @pytest.mark.xfail(raises=dp.UnknownTypeException)
@@ -123,6 +122,7 @@ def test_queryable_errors_human_readable():
     #   ctypes.ArgumentError: argument 1: TypeError: wrong type
     # Possible resolution:
     #   Describes what type it was expecting.
+    pl = pytest.importorskip('polars')
     input_domain = dp.lazyframe_domain([
         dp.series_domain("A", dp.option_domain(dp.atom_domain(T=dp.i32))),
         dp.series_domain("B", dp.atom_domain(T=dp.i32))
