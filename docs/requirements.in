@@ -1,0 +1,19 @@
+# To add doc dependencies, make changes here and then
+# regenerate requirements.txt by running
+#
+#   pip-compile requirements.in
+#
+# and then commit this file and requirements.txt.
+
+sphinx
+sphinx-prompt
+sphinx-design
+git+https://github.com/samtygier-stfc/sphinx-multiversion.git@prebuild_command
+pydata-sphinx-theme==0.15.3rc1 # TODO: Remove version pin when RC is released.
+nbsphinx
+ipython  # for notebook syntax highlighting in docs
+pandoc
+pypandoc
+semver
+linkchecker
+pip-tools
