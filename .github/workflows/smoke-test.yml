@@ -58,9 +58,6 @@ jobs:
       - name: Check --no-default-features
         run: cargo check --verbose --no-default-features --features untrusted,bindings
 
-      - name: Check that generated python is up to date
-        run: git diff --exit-code
-
       - name: Build (dynamic w/ polars)
         run: cargo build --verbose --features untrusted,ffi,polars
       
@@ -191,7 +188,12 @@ jobs:
       - name: Test
         # There's not a "skipif" for doctests, so use "-k" to exclude based on name patterns.
         # (Even in unittests we should use "importskip" rather than "skipif".)
-        run: coverage run -m pytest -v ${{ ! contains(matrix.extra-install, 'polars') && '-k "not lazyframe and not polars and not pca"' || ''}}
+        run: coverage run -m pytest -v ${{ ! contains(matrix.extra-install, 'polars') && '-k "not lazyframe and not polars and not pca and not rst"' || ''}}
+
+      - name: Test replace-binary-path
+        if: ${{ contains(matrix.extra-install, 'polars') }}
+        # Messes with envvars, so can't be run in parallel!
+        run: FORCE_TEST_REPLACE_BINARY_PATH=1 pytest -k 'test_replace_binary_path'
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.

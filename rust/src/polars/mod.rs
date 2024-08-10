@@ -48,13 +48,17 @@ where
                 FunctionExpr::FfiPlugin {
                     lib,
                     symbol,
-                    kwargs: _, // Don't un-pickle! subjects the library to arbitrary code execution.
+                    kwargs, // Don't un-pickle! subjects the library to arbitrary code execution.
                 },
             ..
         } => {
             // check that the plugin is from the opendp library and the plugin has a matching name
             if !lib.contains(OPENDP_LIB_NAME) || symbol.as_ref() != KW::NAME {
                 return Ok(None);
+            }
+
+            if !kwargs.is_empty() {
+                return fallible!(FailedFunction, "OpenDP does not allow pickled keyword arguments as they may enable remote code execution.");
             }
 
             input
@@ -133,7 +137,7 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
                 kwargs,
             } = &mut function
             {
-                if let Ok(path) = env::var("OPENDP_LIB_PATH") {
+                if let Ok(path) = env::var("OPENDP_POLARS_LIB_PATH") {
                     *lib = Arc::from(path);
                 }
                 *symbol = KW::NAME.into();
@@ -450,6 +454,8 @@ impl From<LazyFrame> for OnceFrame {
                 Query::External(q_external) => Answer::External(match q_external {
                     OnceFrameQuery::Collect => {
                         let dataframe = lazyframe.collect()?;
+                        let n = dataframe.height();
+                        let dataframe = dataframe.sample_n_literal(n, false, true, None)?;
                         state.take();
                         OnceFrameAnswer::Collect(dataframe)
                     }
@@ -481,6 +487,11 @@ impl OnceFrame {
         }
     }
 
+    /// Extract the compute plan with the private data.
+    ///
+    /// Requires "honest-but-curious" because the privacy guarantees only apply if:
+    /// 1. The LazyFrame (compute plan) is only ever executed once.
+    /// 2. The analyst does not observe ordering of rows in the output. To ensure this, shuffle the output.
     #[cfg(feature = "honest-but-curious")]
     pub fn lazyframe(&mut self) -> LazyFrame {
         let answer = self.eval_query(Query::Internal(&ExtractLazyFrame)).unwrap();
