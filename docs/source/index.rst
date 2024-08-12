@@ -16,7 +16,7 @@ For more background on differential privacy and its applications:
 * The `Resources list <https://differentialprivacy.org/resources/>`_ from *differentialprivacy.org*
 * A shorter list of `Educational Resources <https://opendp.github.io/learning/>`_
 * OpenDP's own :doc:`theory/resources`
-* `Hand-On Differential Privacy <https://www.oreilly.com/library/view/hands-on-differential-privacy/9781492097730/>`_ is co-authored the lead OpenDP developer
+* `Hand-On Differential Privacy <https://www.oreilly.com/library/view/hands-on-differential-privacy/9781492097730/>`_ is co-authored by the OpenDP Library architect
 
 Why OpenDP?
 -----------
