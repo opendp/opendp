@@ -18,7 +18,7 @@ NULL
 #' * noninteractive: all mechanisms specified up-front (but each can be interactive)
 #' * compositor: all privacy parameters specified up-front (via the map)
 #'
-#' [make_basic_composition in Rust documentation.](https://docs.rs/opendp/0.11.0-nightly.20240812.1/opendp/combinators/fn.make_basic_composition.html)
+#' [make_basic_composition in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/combinators/fn.make_basic_composition.html)
 #'
 #' @concept combinators
 #' @param measurements A vector of Measurements to compose.
@@ -80,7 +80,7 @@ then_basic_composition <- function(
 #' Construct the functional composition (`measurement1` ○ `transformation0`).
 #' Returns a Measurement that when invoked, computes `measurement1(transformation0(x))`.
 #'
-#' [make_chain_mt in Rust documentation.](https://docs.rs/opendp/0.11.0-nightly.20240812.1/opendp/combinators/fn.make_chain_mt.html)
+#' [make_chain_mt in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/combinators/fn.make_chain_mt.html)
 #'
 #' @concept combinators
 #' @param measurement1 outer mechanism
@@ -143,7 +143,7 @@ then_chain_mt <- function(
 #' Returns a Measurement that when invoked, computes `postprocess1(measurement0(x))`.
 #' Used to represent non-interactive postprocessing.
 #'
-#' [make_chain_pm in Rust documentation.](https://docs.rs/opendp/0.11.0-nightly.20240812.1/opendp/combinators/fn.make_chain_pm.html)
+#' [make_chain_pm in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/combinators/fn.make_chain_pm.html)
 #'
 #' @concept combinators
 #' @param postprocess1 outer postprocessor
@@ -205,7 +205,7 @@ then_chain_pm <- function(
 #' Construct the functional composition (`transformation1` ○ `transformation0`).
 #' Returns a Transformation that when invoked, computes `transformation1(transformation0(x))`.
 #'
-#' [make_chain_tt in Rust documentation.](https://docs.rs/opendp/0.11.0-nightly.20240812.1/opendp/combinators/fn.make_chain_tt.html)
+#' [make_chain_tt in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/combinators/fn.make_chain_tt.html)
 #'
 #' @concept combinators
 #' @param transformation1 outer transformation
@@ -266,7 +266,7 @@ then_chain_tt <- function(
 #'
 #' Fix the delta parameter in the privacy map of a `measurement` with a SmoothedMaxDivergence output measure.
 #'
-#' [make_fix_delta in Rust documentation.](https://docs.rs/opendp/0.11.0-nightly.20240812.1/opendp/combinators/fn.make_fix_delta.html)
+#' [make_fix_delta in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/combinators/fn.make_fix_delta.html)
 #'
 #' @concept combinators
 #' @param measurement a measurement with a privacy curve to be fixed
@@ -339,7 +339,7 @@ then_fix_delta <- function(
 #' Protected by the "honest-but-curious" feature flag
 #' because a dishonest adversary could set the population size to be arbitrarily large.
 #'
-#' [make_population_amplification in Rust documentation.](https://docs.rs/opendp/0.11.0-nightly.20240812.1/opendp/combinators/fn.make_population_amplification.html)
+#' [make_population_amplification in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/combinators/fn.make_population_amplification.html)
 #'
 #' @concept combinators
 #' @param measurement the computation to amplify
@@ -405,7 +405,7 @@ then_population_amplification <- function(
 #' Constructs a new output measurement where the output measure
 #' is casted from `MaxDivergence<QO>` to `FixedSmoothedMaxDivergence<QO>`.
 #'
-#' [make_pureDP_to_fixed_approxDP in Rust documentation.](https://docs.rs/opendp/0.11.0-nightly.20240812.1/opendp/combinators/fn.make_pureDP_to_fixed_approxDP.html)
+#' [make_pureDP_to_fixed_approxDP in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/combinators/fn.make_pureDP_to_fixed_approxDP.html)
 #'
 #' @concept combinators
 #' @param measurement a measurement with a privacy measure to be casted
@@ -465,7 +465,7 @@ then_pureDP_to_fixed_approxDP <- function(
 #' Constructs a new output measurement where the output measure
 #' is casted from `MaxDivergence<QO>` to `ZeroConcentratedDivergence<QO>`.
 #'
-#' [make_pureDP_to_zCDP in Rust documentation.](https://docs.rs/opendp/0.11.0-nightly.20240812.1/opendp/combinators/fn.make_pureDP_to_zCDP.html)
+#' [make_pureDP_to_zCDP in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/combinators/fn.make_pureDP_to_zCDP.html)
 #'
 #' **Citations:**
 #'
@@ -540,7 +540,7 @@ then_pureDP_to_zCDP <- function(
 #' this compositor allows you to spawn multiple interactive mechanisms
 #' and interleave your queries amongst them.
 #'
-#' [make_sequential_composition in Rust documentation.](https://docs.rs/opendp/0.11.0-nightly.20240812.1/opendp/combinators/fn.make_sequential_composition.html)
+#' [make_sequential_composition in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/combinators/fn.make_sequential_composition.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -628,7 +628,7 @@ then_sequential_composition <- function(
 #' Constructs a new output measurement where the output measure
 #' is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
 #'
-#' [make_zCDP_to_approxDP in Rust documentation.](https://docs.rs/opendp/0.11.0-nightly.20240812.1/opendp/combinators/fn.make_zCDP_to_approxDP.html)
+#' [make_zCDP_to_approxDP in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/combinators/fn.make_zCDP_to_approxDP.html)
 #'
 #' @concept combinators
 #' @param measurement a measurement with a privacy measure to be casted

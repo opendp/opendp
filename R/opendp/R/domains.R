@@ -6,7 +6,7 @@ NULL
 
 #' Construct an instance of `AtomDomain`.
 #'
-#' [atom_domain in Rust documentation.](https://docs.rs/opendp/0.11.0-nightly.20240812.1/opendp/domains/fn.atom_domain.html)
+#' [atom_domain in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/domains/fn.atom_domain.html)
 #'
 #' @concept domains
 #' @param bounds undocumented
@@ -178,7 +178,7 @@ member <- function(
 
 #' Construct an instance of `OptionDomain`.
 #'
-#' [option_domain in Rust documentation.](https://docs.rs/opendp/0.11.0-nightly.20240812.1/opendp/domains/fn.option_domain.html)
+#' [option_domain in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/domains/fn.option_domain.html)
 #'
 #' @concept domains
 #' @param element_domain undocumented
