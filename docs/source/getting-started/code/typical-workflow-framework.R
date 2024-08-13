@@ -24,7 +24,7 @@ imputed_value <- 50.0
 
 
 # mediate
-data <- sample(100L, 100L, replace=TRUE)
+data <- runif(100L, min=0.0, max=100.0)
 
 m_sc <- make_sequential_composition(
   input_domain = input_domain,
@@ -35,14 +35,14 @@ m_sc <- make_sequential_composition(
 )
 
 # Call measurement with data to create a queryable:
-qbl_sc <- m_sc(arg = data_string) # Different from Python, which does not require "arg".
+qbl_sc <- m_sc(arg = data) # Different from Python, which does not require "arg".
 
 # /mediate
 
 
 # count
 count_transformation <- (
-  dp.t.make_count(input_domain, input_metric)
+  make_count(input_domain, input_metric)
 )
 
 count_sensitivity <- count_transformation(d_in = d_in) # Different from Python, which uses ".map".
