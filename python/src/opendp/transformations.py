@@ -117,7 +117,7 @@ def choose_branching_factor(
     r"""Returns an approximation to the ideal `branching_factor` for a dataset of a given size,
     that minimizes error in cdf and quantile estimates based on b-ary trees.
 
-    [choose_branching_factor in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.choose_branching_factor.html)
+    [choose_branching_factor in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.choose_branching_factor.html)
 
     **Citations:**
 
@@ -154,7 +154,7 @@ def make_b_ary_tree(
     r"""Expand a vector of counts into a b-ary tree of counts,
     where each branch is the sum of its `b` immediate children.
 
-    [make_b_ary_tree in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_b_ary_tree.html)
+    [make_b_ary_tree in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_b_ary_tree.html)
 
     **Supporting Elements:**
 
@@ -237,7 +237,7 @@ def make_bounded_float_checked_sum(
     For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
     set `S` to `Pairwise<f32>`.
 
-    [make_bounded_float_checked_sum in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_bounded_float_checked_sum.html)
+    [make_bounded_float_checked_sum in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_bounded_float_checked_sum.html)
 
     **Citations:**
 
@@ -306,7 +306,7 @@ def make_bounded_float_ordered_sum(
     For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
     set `S` to `Pairwise<f32>`.
 
-    [make_bounded_float_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_bounded_float_ordered_sum.html)
+    [make_bounded_float_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_bounded_float_ordered_sum.html)
 
     **Citations:**
 
@@ -360,7 +360,7 @@ def make_bounded_int_monotonic_sum(
     r"""Make a Transformation that computes the sum of bounded ints,
     where all values share the same sign.
 
-    [make_bounded_int_monotonic_sum in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_bounded_int_monotonic_sum.html)
+    [make_bounded_int_monotonic_sum in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_bounded_int_monotonic_sum.html)
 
     **Citations:**
 
@@ -409,7 +409,7 @@ def make_bounded_int_ordered_sum(
     r"""Make a Transformation that computes the sum of bounded ints.
     You may need to use `make_ordered_random` to impose an ordering on the data.
 
-    [make_bounded_int_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_bounded_int_ordered_sum.html)
+    [make_bounded_int_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_bounded_int_ordered_sum.html)
 
     **Citations:**
 
@@ -458,7 +458,7 @@ def make_bounded_int_split_sum(
     r"""Make a Transformation that computes the sum of bounded ints.
     Adds the saturating sum of the positives to the saturating sum of the negatives.
 
-    [make_bounded_int_split_sum in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_bounded_int_split_sum.html)
+    [make_bounded_int_split_sum in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_bounded_int_split_sum.html)
 
     **Citations:**
 
@@ -510,7 +510,7 @@ def make_cast(
 
     Can be chained with `make_impute_constant` or `make_drop_null` to handle nullity.
 
-    [make_cast in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_cast.html)
+    [make_cast in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_cast.html)
 
     **Supporting Elements:**
 
@@ -583,7 +583,7 @@ def make_cast_default(
     | string | `""`             |
     | bool   | `false`          |
 
-    [make_cast_default in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_cast_default.html)
+    [make_cast_default in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_cast_default.html)
 
     **Supporting Elements:**
 
@@ -654,7 +654,7 @@ def make_cast_inherent(
     | ------ | ---------------- |
     | float  | NaN              |
 
-    [make_cast_inherent in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_cast_inherent.html)
+    [make_cast_inherent in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_cast_inherent.html)
 
     **Supporting Elements:**
 
@@ -716,7 +716,7 @@ def make_cdf(
 ) -> Function:
     r"""Postprocess a noisy array of float summary counts into a cumulative distribution.
 
-    [make_cdf in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_cdf.html)
+    [make_cdf in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_cdf.html)
 
     **Supporting Elements:**
 
@@ -758,7 +758,7 @@ def make_clamp(
     If datum is less than lower, let datum be lower.
     If datum is greater than upper, let datum be upper.
 
-    [make_clamp in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_clamp.html)
+    [make_clamp in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_clamp.html)
 
     **Supporting Elements:**
 
@@ -769,7 +769,7 @@ def make_clamp(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/transformations/clamp/make_clamp.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.11.0/proofs/rust/src/transformations/clamp/make_clamp.pdf)
 
     :param input_domain: Domain of input data.
     :type input_domain: Domain
@@ -833,7 +833,7 @@ def make_consistent_b_ary_tree(
     The output remains consistent even when leaf nodes are missing.
     This is due to an adjustment to the original algorithm to apportion corrections to children relative to their variance.
 
-    [make_consistent_b_ary_tree in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_consistent_b_ary_tree.html)
+    [make_consistent_b_ary_tree in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_consistent_b_ary_tree.html)
 
     **Citations:**
 
@@ -883,7 +883,7 @@ def make_count(
 ) -> Transformation:
     r"""Make a Transformation that computes a count of the number of records in data.
 
-    [make_count in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_count.html)
+    [make_count in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_count.html)
 
     **Citations:**
 
@@ -898,7 +898,7 @@ def make_count(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/transformations/count/make_count.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.11.0/proofs/rust/src/transformations/count/make_count.pdf)
 
     :param input_domain: Domain of the data type to be privatized.
     :type input_domain: Domain
@@ -957,7 +957,7 @@ def make_count_by(
     r"""Make a Transformation that computes the count of each unique value in data.
     This assumes that the category set is unknown.
 
-    [make_count_by in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_count_by.html)
+    [make_count_by in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_count_by.html)
 
     **Citations:**
 
@@ -1038,7 +1038,7 @@ def make_count_by_categories(
     r"""Make a Transformation that computes the number of times each category appears in the data.
     This assumes that the category set is known.
 
-    [make_count_by_categories in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_count_by_categories.html)
+    [make_count_by_categories in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_count_by_categories.html)
 
     **Citations:**
 
@@ -1129,7 +1129,7 @@ def make_count_distinct(
 ) -> Transformation:
     r"""Make a Transformation that computes a count of the number of unique, distinct records in data.
 
-    [make_count_distinct in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_count_distinct.html)
+    [make_count_distinct in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_count_distinct.html)
 
     **Citations:**
 
@@ -1196,7 +1196,7 @@ def make_create_dataframe(
 ) -> Transformation:
     r"""Make a Transformation that constructs a dataframe from a `Vec<Vec<String>>` (a vector of records).
 
-    [make_create_dataframe in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_create_dataframe.html)
+    [make_create_dataframe in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_create_dataframe.html)
 
     **Supporting Elements:**
 
@@ -1250,7 +1250,7 @@ def make_df_cast_default(
     | string | `""`             |
     | bool   | `false`          |
 
-    [make_df_cast_default in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_df_cast_default.html)
+    [make_df_cast_default in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_df_cast_default.html)
 
     **Supporting Elements:**
 
@@ -1331,7 +1331,7 @@ def make_df_is_equal(
 ) -> Transformation:
     r"""Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`.
 
-    [make_df_is_equal in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_df_is_equal.html)
+    [make_df_is_equal in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_df_is_equal.html)
 
     **Supporting Elements:**
 
@@ -1412,7 +1412,7 @@ def make_drop_null(
     | `vector_domain(option_domain(atom_domain(TA)))` |
     | `vector_domain(atom_domain(TA))`                |
 
-    [make_drop_null in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_drop_null.html)
+    [make_drop_null in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_drop_null.html)
 
     **Supporting Elements:**
 
@@ -1473,7 +1473,7 @@ def make_find(
     If an index is found, returns `Some(index)`, else `None`.
     Chain with `make_impute_constant` or `make_drop_null` to handle nullity.
 
-    [make_find in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_find.html)
+    [make_find in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_find.html)
 
     **Supporting Elements:**
 
@@ -1543,7 +1543,7 @@ def make_find_bin(
     To be valid, `edges` must be unique and ordered.
     `edges` are left inclusive, right exclusive.
 
-    [make_find_bin in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_find_bin.html)
+    [make_find_bin in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_find_bin.html)
 
     **Supporting Elements:**
 
@@ -1609,7 +1609,7 @@ def make_identity(
     then the resulting Transformation won't be chainable with any valid Transformation,
     so it cannot be used to introduce an invalid metric space into a chain of valid Transformations.
 
-    [make_identity in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_identity.html)
+    [make_identity in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_identity.html)
 
     **Supporting Elements:**
 
@@ -1674,7 +1674,7 @@ def make_impute_constant(
     | `vector_domain(option_domain(atom_domain(TA)))` | `Vec<Option<TA>>` |
     | `vector_domain(atom_domain(TA))`                | `Vec<TA>`         |
 
-    [make_impute_constant in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_impute_constant.html)
+    [make_impute_constant in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_impute_constant.html)
 
     **Supporting Elements:**
 
@@ -1734,7 +1734,7 @@ def make_impute_uniform_float(
 ) -> Transformation:
     r"""Make a Transformation that replaces NaN values in `Vec<TA>` with uniformly distributed floats within `bounds`.
 
-    [make_impute_uniform_float in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_impute_uniform_float.html)
+    [make_impute_uniform_float in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_impute_uniform_float.html)
 
     **Supporting Elements:**
 
@@ -1800,7 +1800,7 @@ def make_index(
 ) -> Transformation:
     r"""Make a transformation that treats each element as an index into a vector of categories.
 
-    [make_index in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_index.html)
+    [make_index in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_index.html)
 
     **Supporting Elements:**
 
@@ -1874,7 +1874,7 @@ def make_is_equal(
 ) -> Transformation:
     r"""Make a Transformation that checks if each element is equal to `value`.
 
-    [make_is_equal in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_is_equal.html)
+    [make_is_equal in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_is_equal.html)
 
     **Supporting Elements:**
 
@@ -1885,7 +1885,7 @@ def make_is_equal(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/trans/manipulation/make_is_equal.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.11.0/proofs/rust/src/trans/manipulation/make_is_equal.pdf)
 
     :param input_domain: 
     :type input_domain: Domain
@@ -1940,7 +1940,7 @@ def make_is_null(
 ) -> Transformation:
     r"""Make a Transformation that checks if each element in a vector is null.
 
-    [make_is_null in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_is_null.html)
+    [make_is_null in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_is_null.html)
 
     **Supporting Elements:**
 
@@ -2000,7 +2000,7 @@ def make_lipschitz_float_mul(
 
     The bounds clamp the input, in order to bound the increase in sensitivity from float rounding.
 
-    [make_lipschitz_float_mul in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_lipschitz_float_mul.html)
+    [make_lipschitz_float_mul in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_lipschitz_float_mul.html)
 
     **Supporting Elements:**
 
@@ -2055,7 +2055,7 @@ def make_mean(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size.
     Use `make_clamp` to bound data and `make_resize` to establish dataset size.
 
-    [make_mean in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_mean.html)
+    [make_mean in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_mean.html)
 
     **Supporting Elements:**
 
@@ -2120,7 +2120,7 @@ def make_metric_bounded(
     | SymmetricDistance    | ChangeOneDistance   |
     | InsertDeleteDistance | HammingDistance     |
 
-    [make_metric_bounded in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_metric_bounded.html)
+    [make_metric_bounded in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_metric_bounded.html)
 
     **Supporting Elements:**
 
@@ -2182,7 +2182,7 @@ def make_metric_unbounded(
     | ChangeOneDistance | SymmetricDistance     |
     | HammingDistance   | InsertDeleteDistance  |
 
-    [make_metric_unbounded in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_metric_unbounded.html)
+    [make_metric_unbounded in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_metric_unbounded.html)
 
     **Supporting Elements:**
 
@@ -2244,7 +2244,7 @@ def make_ordered_random(
     | SymmetricDistance | InsertDeleteDistance |
     | ChangeOneDistance | HammingDistance      |
 
-    [make_ordered_random in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_ordered_random.html)
+    [make_ordered_random in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_ordered_random.html)
 
     **Supporting Elements:**
 
@@ -2302,7 +2302,7 @@ def make_quantile_score_candidates(
 ) -> Transformation:
     r"""Makes a Transformation that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
 
-    [make_quantile_score_candidates in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_quantile_score_candidates.html)
+    [make_quantile_score_candidates in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_quantile_score_candidates.html)
 
     **Supporting Elements:**
 
@@ -2313,7 +2313,7 @@ def make_quantile_score_candidates(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/transformations/quantile_score_candidates/make_quantile_score_candidates.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.11.0/proofs/rust/src/transformations/quantile_score_candidates/make_quantile_score_candidates.pdf)
 
     :param input_domain: Uses a tighter sensitivity when the size of vectors in the input domain is known.
     :type input_domain: Domain
@@ -2377,7 +2377,7 @@ def make_quantiles_from_counts(
 ) -> Function:
     r"""Postprocess a noisy array of summary counts into quantiles.
 
-    [make_quantiles_from_counts in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_quantiles_from_counts.html)
+    [make_quantiles_from_counts in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_quantiles_from_counts.html)
 
     **Supporting Elements:**
 
@@ -2430,7 +2430,7 @@ def make_resize(
     r"""Make a Transformation that either truncates or imputes records
     with `constant` to match a provided `size`.
 
-    [make_resize in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_resize.html)
+    [make_resize in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_resize.html)
 
     **Supporting Elements:**
 
@@ -2507,7 +2507,7 @@ def make_select_column(
 ) -> Transformation:
     r"""Make a Transformation that retrieves the column `key` from a dataframe as `Vec<TOA>`.
 
-    [make_select_column in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_select_column.html)
+    [make_select_column in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_select_column.html)
 
     **Supporting Elements:**
 
@@ -2567,7 +2567,7 @@ def make_sized_bounded_float_checked_sum(
     For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
     set `S` to `Pairwise<f32>`.
 
-    [make_sized_bounded_float_checked_sum in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_sized_bounded_float_checked_sum.html)
+    [make_sized_bounded_float_checked_sum in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_sized_bounded_float_checked_sum.html)
 
     **Citations:**
 
@@ -2636,7 +2636,7 @@ def make_sized_bounded_float_ordered_sum(
     For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
     set `S` to `Pairwise<f32>`.
 
-    [make_sized_bounded_float_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_sized_bounded_float_ordered_sum.html)
+    [make_sized_bounded_float_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_sized_bounded_float_ordered_sum.html)
 
     **Citations:**
 
@@ -2691,7 +2691,7 @@ def make_sized_bounded_int_checked_sum(
     r"""Make a Transformation that computes the sum of bounded ints.
     The effective range is reduced, as (bounds * size) must not overflow.
 
-    [make_sized_bounded_int_checked_sum in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_sized_bounded_int_checked_sum.html)
+    [make_sized_bounded_int_checked_sum in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_sized_bounded_int_checked_sum.html)
 
     **Citations:**
 
@@ -2744,7 +2744,7 @@ def make_sized_bounded_int_monotonic_sum(
     r"""Make a Transformation that computes the sum of bounded ints,
     where all values share the same sign.
 
-    [make_sized_bounded_int_monotonic_sum in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_sized_bounded_int_monotonic_sum.html)
+    [make_sized_bounded_int_monotonic_sum in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_sized_bounded_int_monotonic_sum.html)
 
     **Citations:**
 
@@ -2799,7 +2799,7 @@ def make_sized_bounded_int_ordered_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     You may need to use `make_ordered_random` to impose an ordering on the data.
 
-    [make_sized_bounded_int_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_sized_bounded_int_ordered_sum.html)
+    [make_sized_bounded_int_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_sized_bounded_int_ordered_sum.html)
 
     **Citations:**
 
@@ -2854,7 +2854,7 @@ def make_sized_bounded_int_split_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     Adds the saturating sum of the positives to the saturating sum of the negatives.
 
-    [make_sized_bounded_int_split_sum in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_sized_bounded_int_split_sum.html)
+    [make_sized_bounded_int_split_sum in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_sized_bounded_int_split_sum.html)
 
     **Citations:**
 
@@ -2907,7 +2907,7 @@ def make_split_dataframe(
     r"""Make a Transformation that splits each record in a String into a `Vec<Vec<String>>`,
     and loads the resulting table into a dataframe keyed by `col_names`.
 
-    [make_split_dataframe in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_split_dataframe.html)
+    [make_split_dataframe in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_split_dataframe.html)
 
     **Supporting Elements:**
 
@@ -2951,7 +2951,7 @@ def make_split_lines(
 ) -> Transformation:
     r"""Make a Transformation that takes a string and splits it into a `Vec<String>` of its lines.
 
-    [make_split_lines in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_split_lines.html)
+    [make_split_lines in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_split_lines.html)
 
     **Supporting Elements:**
 
@@ -2985,7 +2985,7 @@ def make_split_records(
 ) -> Transformation:
     r"""Make a Transformation that splits each record in a `Vec<String>` into a `Vec<Vec<String>>`.
 
-    [make_split_records in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_split_records.html)
+    [make_split_records in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_split_records.html)
 
     **Supporting Elements:**
 
@@ -3024,7 +3024,7 @@ def make_stable_expr(
 ) -> Transformation:
     r"""Create a stable transformation from an [`Expr`].
 
-    [make_stable_expr in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_stable_expr.html)
+    [make_stable_expr in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_stable_expr.html)
 
     **Supporting Elements:**
 
@@ -3084,7 +3084,7 @@ def make_stable_lazyframe(
 ) -> Transformation:
     r"""Create a stable transformation from a [`LazyFrame`].
 
-    [make_stable_lazyframe in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_stable_lazyframe.html)
+    [make_stable_lazyframe in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_stable_lazyframe.html)
 
     **Supporting Elements:**
 
@@ -3144,7 +3144,7 @@ def make_subset_by(
 ) -> Transformation:
     r"""Make a Transformation that subsets a dataframe by a boolean column.
 
-    [make_subset_by in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_subset_by.html)
+    [make_subset_by in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_subset_by.html)
 
     **Supporting Elements:**
 
@@ -3191,7 +3191,7 @@ def make_sum(
 
     If dataset size is known, uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
 
-    [make_sum in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_sum.html)
+    [make_sum in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_sum.html)
 
     **Citations:**
 
@@ -3267,7 +3267,7 @@ def make_sum_of_squared_deviations(
     For example, to construct a transformation that computes the SSD of `f32` half-precision floats,
     set `S` to `Pairwise<f32>`.
 
-    [make_sum_of_squared_deviations in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_sum_of_squared_deviations.html)
+    [make_sum_of_squared_deviations in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_sum_of_squared_deviations.html)
 
     **Citations:**
 
@@ -3343,7 +3343,7 @@ def make_unordered(
     | InsertDeleteDistance | SymmetricDistance     |
     | HammingDistance      | ChangeOneDistance     |
 
-    [make_unordered in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_unordered.html)
+    [make_unordered in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_unordered.html)
 
     **Supporting Elements:**
 
@@ -3450,7 +3450,7 @@ def make_variance(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size.
     Use `make_clamp` to bound data and `make_resize` to establish dataset size.
 
-    [make_variance in Rust documentation.](https://docs.rs/opendp/0.11.0-beta.20240812.1/opendp/transformations/fn.make_variance.html)
+    [make_variance in Rust documentation.](https://docs.rs/opendp/0.11.0/opendp/transformations/fn.make_variance.html)
 
     **Citations:**
 
