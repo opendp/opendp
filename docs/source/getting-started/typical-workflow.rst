@@ -166,7 +166,7 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
             :end-before: /mediate
 
         ``dp.c.make_sequential_composition`` creates a sequential composition measurement.
-        You can now submit up to three queries to ``qbl_sc``, in the form of measurements.
+        You can now submit up to three queries to ``queryable``, in the form of measurements.
 
     .. tab-item:: Framework API (R)
         :sync: r
@@ -177,7 +177,7 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
             :end-before: /mediate
 
         ``make_sequential_composition`` creates a sequential composition measurement.
-        You can now submit up to three queries to ``qbl_sc``, in the form of measurements.
+        You can now submit up to three queries to ``queryable``, in the form of measurements.
 
 Since the privacy loss budget is at most ε = 1, and we are partitioning our budget evenly amongst three queries, then each query will be calibrated to satisfy ε = 1/3.
 
