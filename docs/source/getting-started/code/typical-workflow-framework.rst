@@ -38,7 +38,7 @@
 ... )
 
 >>> # Call measurement with data to create a queryable:
->>> qbl_sc = m_sc(data)
+>>> queryable = m_sc(data)
 
 # /mediate
 
@@ -57,7 +57,7 @@
 ...     d_in,
 ...     d_out / 3
 ... )
->>> dp_count = qbl_sc(count_measurement)
+>>> dp_count = queryable(count_measurement)
 
 # /count
 
@@ -73,6 +73,6 @@
 ...     lambda scale: mean_transformation >> dp.m.then_laplace(scale), d_in, d_out / 3
 ... )
 
->>> dp_mean = qbl_sc(mean_measurement)
+>>> dp_mean = queryable(mean_measurement)
 
 # /mean

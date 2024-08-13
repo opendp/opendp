@@ -35,7 +35,7 @@ m_sc <- make_sequential_composition(
 )
 
 # Call measurement with data to create a queryable:
-qbl_sc <- m_sc(arg = data) # Different from Python, which does not require "arg".
+queryable <- m_sc(arg = data) # Different from Python, which does not require "arg".
 
 # /mediate
 
@@ -52,7 +52,7 @@ cat("count_sensitivity:", count_sensitivity, "\n")
 count_measurement <- binary_search_chain(
   function(scale) count_transformation |> then_laplace(scale), d_in, d_out / 3L
 )
-dp_count <- qbl_sc(query = count_measurement) # Different from Python, which does not require "query".
+dp_count <- queryable(query = count_measurement) # Different from Python, which does not require "query".
 cat("dp_count:", dp_count, "\n")
 # /count
 
@@ -68,6 +68,6 @@ mean_measurement <- binary_search_chain(
   function(scale) mean_transformation |> then_laplace(scale), d_in, d_out / 3L
 )
 
-dp_mean <- qbl_sc(query = mean_measurement) # Different from Python, which does not require "query".
+dp_mean <- queryable(query = mean_measurement) # Different from Python, which does not require "query".
 cat("dp_mean:", dp_mean, "\n")
 # /mean
