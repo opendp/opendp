@@ -24,7 +24,7 @@ imputed_value <- 50.0
 
 
 # mediate
-data <- runif(100L, min=0.0, max=100.0)
+data <- runif(100L, min = 0.0, max = 100.0)
 
 m_sc <- make_sequential_composition(
   input_domain = input_domain,
