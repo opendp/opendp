@@ -111,7 +111,7 @@ where
         let (name, noise) = find_len_expr(&dp_exprs, None)?;
         Some((name, noise, threshold_value, true))
     } else {
-        return fallible!(MakeMeasurement, "The key-set of {:?} is private and cannot be released without filtering. Please pass a filtering threshold into make_private_lazyframe.");
+        return fallible!(MakeMeasurement, "The key-set of {:?} is private and cannot be released without filtering. Please pass a filtering threshold into make_private_lazyframe.", grouping_columns);
     };
 
     let final_predicate = if let Some((name, _, threshold_value, is_present)) = &threshold_info {
