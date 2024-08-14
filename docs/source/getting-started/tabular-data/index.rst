@@ -100,20 +100,18 @@ The specific methods that will be demonstrated are:
   * Quantiles 
 
 * Grouping
+  * Protected Group Keys
+  * Public Group Keys
+  * Public Group Lengths
 
-  * Grouping By Multiple Variables 
-  * Filtering
+This section explains strategies for how to release statistics on grouped data. 
 
-* Public vs. Private Grouping Lengths 
+* Data Preparation
 
-This section will explain the implications and limitations of having public and private keys and/or lengths when grouping. 
+  * using ``with_columns``
+  * using ``filter`` 
 
-* Data Preparation Limitations 
-
-  * Limitations with ``with_columns``
-  * Limitations with ``filter`` 
-
-This section will explain the limitations and properties of common Polars functions that are unique to their usage in OpenDP. 
+This section explains how to build stable dataframe transformations with Polars. 
 
 Compositor Overview
 -------------------
