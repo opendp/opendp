@@ -66,6 +66,7 @@ where
     lazyframe_utility(&lf, alpha)
 }
 
+#[derive(Clone)]
 struct UtilitySummary {
     pub name: String,
     pub aggregate: String,
@@ -188,26 +189,38 @@ fn expr_utility<'a>(
         }]);
     }
 
-    match expr {
-        Expr::Len => Ok(vec![UtilitySummary {
-            name,
+    Ok(match expr {
+        Expr::Len => vec![UtilitySummary {
+            name: name.clone(),
             aggregate: "Len".to_string(),
             distribution: None,
             scale: None,
             accuracy: alpha.is_some().then_some(0.0),
             threshold: t_value,
-        }]),
+        }],
 
-        Expr::Function { input, .. } => Ok(input
+        Expr::Function { input, .. } => input
             .iter()
             .map(|e| expr_utility(e, alpha, threshold.clone()))
             .collect::<Fallible<Vec<_>>>()?
             .into_iter()
             .flatten()
-            .collect()),
+            .collect(),
 
-        _ => fallible!(FailedFunction, "unrecognized primitive"),
+        Expr::BinaryExpr { left, op: _, right } => [
+            expr_utility(&left, alpha, threshold.clone())?,
+            expr_utility(&right, alpha, threshold)?,
+        ]
+        .concat(),
+
+        e => return fallible!(FailedFunction, "unrecognized primitive: {:?}", e),
     }
+    .into_iter()
+    .map(|mut summary| {
+        summary.name = name.clone();
+        summary
+    })
+    .collect())
 }
 
 fn expr_aggregate(expr: &Expr) -> Fallible<&'static str> {
