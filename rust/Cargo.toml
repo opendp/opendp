@@ -41,6 +41,7 @@ dashu = { version = "0.4.0", features = ["num-traits_v02"] }
 openssl = { version = "0.10.64", features = ["vendored"], optional = true }
 opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.11.0-dev" }
 readonly = "0.2"
+bitvec = "1.0"
 
 # A strict version requirement is necessary to keep the serialization format of LazyFrames stable.
 # If you change the version of Polars, 
