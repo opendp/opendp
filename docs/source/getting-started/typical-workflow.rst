@@ -15,14 +15,16 @@ A differentially private analysis in OpenDP typically has the following steps:
     :width: 60%
     :alt: Diagram representing typical data flow with OpenDP, from a raw CSV to a differentially private release. 
 
-We'll illustrate these steps by making a differentially private sum of a small vector of random numbers.
+We'll illustrate these steps by releasing a differentially private mean of a small vector of random numbers.
 
 1. Identify the Unit of Privacy
 -------------------------------
 
 The first step in a differentially private analysis is to determine what you are protecting: the unit of privacy.
 
-In this case we'll take the unit of privacy as a single element from the vector.
+Releases on the data should conceal the addition or removal of any one individual's data.
+Assuming you know an individual may contribute at most one row to the data set, 
+then the unit of privacy corresponds to one row contribution.
 
 .. tab-set::
 
