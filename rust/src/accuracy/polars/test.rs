@@ -64,3 +64,48 @@ fn test_describe_polars_measurement_accuracy() -> Fallible<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_describe_polars_measurement_accuracy_mean() -> Fallible<()> {
+    let lf_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin::<&str>(
+        &[],
+        Margin::new()
+            .with_public_lengths()
+            .with_max_partition_length(10),
+    )?;
+
+    let lf = df!("A" => &[3, 4, 5], "B" => &[1., 3., 7.])?.lazy();
+
+    let meas = make_private_lazyframe(
+        lf_domain,
+        SymmetricDistance,
+        MaxDivergence::default(),
+        lf.select([col("A").dp().mean((3, 5), Some(1.0))]),
+        None,
+        None,
+    )?;
+
+    let description = describe_polars_measurement_accuracy(meas.clone(), None)?;
+
+    let mut expected = df![
+        "column" => &["A", "A"],
+        "aggregate" => &["Sum", "Len"],
+        "distribution" => &[Some("Integer Laplace"), None],
+        "scale" => &[Some(1.0), None]
+    ]?;
+    println!("{:?}", expected);
+    assert_eq!(expected, description);
+
+    let description = describe_polars_measurement_accuracy(meas.clone(), Some(0.05))?;
+
+    let accuracy = discrete_laplacian_scale_to_accuracy(1.0, 0.05)?;
+    expected.with_column(Series::new("accuracy", &[Some(accuracy), Some(0.0)]))?;
+    println!("{:?}", expected);
+    assert_eq!(expected, description);
+
+    Ok(())
+}
