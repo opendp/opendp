@@ -100,6 +100,7 @@ The specific methods that will be demonstrated are:
   * Quantiles 
 
 * Grouping
+
   * Protected Group Keys
   * Public Group Keys
   * Public Group Lengths
