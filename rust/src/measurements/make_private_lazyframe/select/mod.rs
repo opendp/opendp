@@ -62,10 +62,6 @@ where
         .margins
         .entry(BTreeSet::new())
         .or_insert_with(Default::default);
-    margin.public_info.get_or_insert(MarginPub::Keys);
-
-    // now that the domain is set up, we can clone it for use in the closure
-    let margin = margin.clone();
 
     if margin.max_partition_contributions.is_some() {
         return fallible!(
@@ -82,6 +78,11 @@ where
             "There is only one partition in select, so both max_influenced_partitions and max_num_partitions must either be unset or one"
         );
     }
+
+    // use the knowledge that we're only working with a single partition
+    margin.public_info.get_or_insert(MarginPub::Keys);
+    margin.max_influenced_partitions = Some(1);
+    margin.max_num_partitions = Some(1);
 
     let t_group_by = Transformation::new(
         expr_domain.clone(),
