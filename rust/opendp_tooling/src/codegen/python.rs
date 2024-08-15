@@ -228,9 +228,15 @@ def {then_name}(
         String::new()
     };
 
+    let deprecated = func
+        .deprecated
+        .as_ref()
+        .map(|msg| format!("@deprecated(\"{msg}\")\n"))
+        .unwrap_or_default();
+
     format!(
         r#"
-def {func_name}(
+{deprecated}def {func_name}(
 {args}
 ){sig_return}:
 {docstring}

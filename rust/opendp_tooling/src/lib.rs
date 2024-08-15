@@ -27,6 +27,8 @@ pub struct Function {
     pub supports_partial: bool,
     // whether to generate FFI
     pub has_ffi: bool,
+    // deprecation warning if applicable
+    pub deprecated: Option<String>,
 }
 
 // Metadata for function arguments, derived types and returns.

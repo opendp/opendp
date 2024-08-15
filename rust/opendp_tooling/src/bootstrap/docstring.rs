@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env, path::PathBuf};
 
-use darling::{Error, Result};
+use darling::{Error, FromMeta, Result};
 use proc_macro2::{Literal, Punct, Spacing, TokenStream, TokenTree};
 use quote::format_ident;
 use syn::{
@@ -18,6 +18,13 @@ pub struct BootstrapDocstring {
     pub arguments: HashMap<String, String>,
     pub generics: HashMap<String, String>,
     pub returns: Option<String>,
+    pub deprecated: Option<String>,
+}
+
+#[derive(Debug, FromMeta, Clone)]
+pub struct DeprecationArguments {
+    pub since: Option<String>,
+    pub note: Option<String>,
 }
 
 impl BootstrapDocstring {
@@ -26,6 +33,23 @@ impl BootstrapDocstring {
         output: &ReturnType,
         path: Option<(&str, &str)>,
     ) -> Result<BootstrapDocstring> {
+        // look for this attr:
+        // #[deprecated(note="please use `new_method` instead")]
+        let deprecated = attrs
+            .iter()
+            .find(|attr| {
+                attr.path.get_ident().map(ToString::to_string).as_deref() == Some("deprecated")
+            })
+            .map(|attr| {
+                // TODO: more nicely format this message
+                Result::Ok(
+                    DeprecationArguments::from_meta(&attr.parse_meta()?)?
+                        .note
+                        .unwrap_or_default(),
+                )
+            })
+            .transpose()?;
+
         let mut doc_sections = parse_docstring_sections(attrs)?;
 
         if let Some(sup_elements) = parse_sig_output(output)? {
@@ -67,6 +91,7 @@ impl BootstrapDocstring {
                 .map(parse_docstring_args)
                 .unwrap_or_else(HashMap::new),
             returns: doc_sections.remove("Returns"),
+            deprecated,
         })
     }
 }
