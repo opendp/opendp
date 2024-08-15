@@ -86,7 +86,7 @@ def test_c():
 
 
 def test_feature_fails():
-    with pytest.raises(AssertionError):
+    with pytest.raises(OpenDPException):
         assert_features("A")
 
 
