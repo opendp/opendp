@@ -735,8 +735,10 @@ def disable_features(*features: str) -> None:
 
 
 def assert_features(*features: str) -> None:
-    for feature in features:
-        assert feature in GLOBAL_FEATURES, f"Attempted to use function that requires {feature}, but {feature} is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"{feature}\")"
+    missing_features = [f for f in features if f not in GLOBAL_FEATURES]
+    if missing_features:
+        features_string = ', '.join(f'"{f}"' for f in features)
+        raise OpenDPException(f"Attempted to use function that requires {features_string}, but not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features({features_string})")
 
 
 M = TypeVar("M", Transformation, Measurement)
