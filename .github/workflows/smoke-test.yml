@@ -228,6 +228,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Look for md links that should be relative
+        run: "! grep 'https://docs.opendp.org' -r source --binary-file=without-match"
+
       - name: Download Python bindings
         uses: actions/download-artifact@v4
         with:
