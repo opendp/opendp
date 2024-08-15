@@ -1,3 +1,5 @@
+.. _programming-framework:
+
 Programming Framework
 =====================
 
