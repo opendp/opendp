@@ -123,6 +123,11 @@ First, build a debug binary that works with Python. (Note that the resulting bin
     cd rust
     cargo build --all-features
 
+If you only need to regenerate the Python bindings, this is sufficient:
+
+.. code-block:: bash
+
+    cargo check --all-features
 
 If you have not already, install `Python version 3.9 or higher <https://www.python.org>`_.
 
