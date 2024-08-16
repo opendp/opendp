@@ -230,7 +230,7 @@ jobs:
 
       - name: Look for URLs that should be relative
         # API index page excluded: It points to R docs which are copied into place after build.
-        run: "! grep 'https://docs.opendp.org' -r source --exclude '*/api/index.rst' --binary-file=without-match"
+        run: "! grep 'https://docs.opendp.org' -r source --exclude source/api/index.rst --binary-file=without-match"
 
       - name: Download Python bindings
         uses: actions/download-artifact@v4
