@@ -1,4 +1,5 @@
 use crate::core::{MetricSpace, PrivacyMap};
+use crate::domains::MarginPub;
 use crate::measurements::{report_noisy_max_gumbel_map, select_score, Optimize};
 use crate::metrics::{IntDistance, LInfDistance, Parallel, PartitionDistance};
 use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
@@ -71,7 +72,11 @@ where
         None => {
             // when scale is unknown, set it relative to the sensitivity of the query
             let margin = input_domain.active_margin().cloned().unwrap_or_default();
-            let (l_0, l_inf) = t_prior.map(&(margin.l_0(1), 1, margin.l_inf(1)))?;
+            let d_in = match margin.public_info {
+                Some(MarginPub::Lengths) => 2,
+                _ => 1,
+            };
+            let (l_0, l_inf) = t_prior.map(&(margin.l_0(d_in), d_in, margin.l_inf(d_in)))?;
             f64::inf_cast(l_0)?.inf_mul(&l_inf)?
         }
     };
