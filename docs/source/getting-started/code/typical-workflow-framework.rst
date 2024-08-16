@@ -1,4 +1,5 @@
 :orphan:
+:nosearch:
 
 # unit-of-privacy
 >>> import opendp.prelude as dp

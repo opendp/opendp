@@ -1,4 +1,5 @@
 :orphan:
+:nosearch:
 
 # init
 >>> import opendp.prelude as dp
