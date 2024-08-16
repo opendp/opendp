@@ -116,7 +116,7 @@ impl fmt::Display for Error {
 #[cfg(all(test, feature = "test-plot"))]
 impl From<String> for Error {
     fn from(v: String) -> Self {
-        err!(FailedFunction, v)
+        err!(FailedFunction, "{}", v)
     }
 }
 
