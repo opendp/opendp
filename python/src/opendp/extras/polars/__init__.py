@@ -569,8 +569,8 @@ try:
             resolve = object.__getattribute__(self, "resolve")
             return query._context(resolve())  # type: ignore[misc]
         
-        def accuracy(self, alpha: float | None = None):
-            """Retrieve noise scale parameters and accuracy estimates for each output.
+        def summarize(self, alpha: float | None = None):
+            """Summarize the statistics released by this query.
 
             If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
 
@@ -596,7 +596,7 @@ try:
             ...     pl.col("convicted").fill_null(0).dp.sum((0, 1))
             ... )
 
-            >>> query.accuracy(alpha=.05)  # type: ignore[union-attr]
+            >>> query.summarize(alpha=.05)  # type: ignore[union-attr]
             shape: (2, 5)
             ┌───────────┬───────────┬─────────────────┬───────┬──────────┐
             │ column    ┆ aggregate ┆ distribution    ┆ scale ┆ accuracy │
@@ -621,8 +621,8 @@ try:
             
             :param alpha: optional. A value in [0, 1] denoting the statistical significance.
             """
-            from opendp.accuracy import describe_polars_measurement_accuracy
-            return describe_polars_measurement_accuracy(self.resolve(), alpha)
+            from opendp.accuracy import summarize_polars_measurement
+            return summarize_polars_measurement(self.resolve(), alpha)
         
 
     class LazyGroupByQuery(_LazyGroupBy):
@@ -665,8 +665,8 @@ except ImportError:
             """Release the query. The query must be part of a context."""
             raise ImportError(ERR_MSG)
         
-        def accuracy(self, alpha: float | None = None):
-            """Retrieve noise scale parameters and accuracy estimates for each output."""
+        def summarize(self, alpha: float | None = None):
+            """Summarize the statistics released by this query."""
             raise ImportError(ERR_MSG)
 
 

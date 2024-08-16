@@ -15,10 +15,10 @@ use crate::{
     polars::PrivacyNamespace,
 };
 
-use super::describe_polars_measurement_accuracy;
+use super::summarize_polars_measurement;
 
 #[test]
-fn test_describe_polars_measurement_accuracy() -> Fallible<()> {
+fn test_summarize_polars_measurement() -> Fallible<()> {
     let lf_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<f64>::default()),
@@ -44,7 +44,7 @@ fn test_describe_polars_measurement_accuracy() -> Fallible<()> {
         None,
     )?;
 
-    let description = describe_polars_measurement_accuracy(meas.clone(), None)?;
+    let description = summarize_polars_measurement(meas.clone(), None)?;
 
     let mut expected = df![
         "column" => &["len", "A"],
@@ -55,7 +55,7 @@ fn test_describe_polars_measurement_accuracy() -> Fallible<()> {
     println!("{:?}", expected);
     assert_eq!(expected, description);
 
-    let description = describe_polars_measurement_accuracy(meas.clone(), Some(0.05))?;
+    let description = summarize_polars_measurement(meas.clone(), Some(0.05))?;
 
     let accuracy = discrete_laplacian_scale_to_accuracy(1.0, 0.05)?;
     expected.with_column(Series::new("accuracy", &[accuracy, accuracy]))?;
@@ -66,7 +66,7 @@ fn test_describe_polars_measurement_accuracy() -> Fallible<()> {
 }
 
 #[test]
-fn test_describe_polars_measurement_accuracy_mean() -> Fallible<()> {
+fn test_summarize_polars_measurement_mean() -> Fallible<()> {
     let lf_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<f64>::default()),
@@ -89,7 +89,7 @@ fn test_describe_polars_measurement_accuracy_mean() -> Fallible<()> {
         None,
     )?;
 
-    let description = describe_polars_measurement_accuracy(meas.clone(), None)?;
+    let description = summarize_polars_measurement(meas.clone(), None)?;
 
     let mut expected = df![
         "column" => &["A", "A"],
@@ -100,7 +100,7 @@ fn test_describe_polars_measurement_accuracy_mean() -> Fallible<()> {
     println!("{:?}", expected);
     assert_eq!(expected, description);
 
-    let description = describe_polars_measurement_accuracy(meas.clone(), Some(0.05))?;
+    let description = summarize_polars_measurement(meas.clone(), Some(0.05))?;
 
     let accuracy = discrete_laplacian_scale_to_accuracy(1.0, 0.05)?;
     expected.with_column(Series::new("accuracy", &[Some(accuracy), Some(0.0)]))?;
