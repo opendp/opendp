@@ -86,8 +86,8 @@ def test_c():
 
 
 def test_feature_fails():
-    with pytest.raises(AssertionError):
-        assert_features("A")
+    with pytest.raises(OpenDPException, match=re.escape('enable_features("A", "Z")')):
+        assert_features("A", "Z")
 
 
 def test_set_feature():

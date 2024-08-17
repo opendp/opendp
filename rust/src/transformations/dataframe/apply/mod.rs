@@ -40,7 +40,11 @@ where
         Function::new_fallible(move |arg: &DataFrame<K>| {
             let mut data = arg.clone();
             let column = data.remove(&column_name).ok_or_else(|| {
-                err!(FailedFunction, "{:?} does not exist in the input dataframe")
+                err!(
+                    FailedFunction,
+                    "{:?} does not exist in the input dataframe",
+                    column_name
+                )
             })?;
 
             data.insert(
