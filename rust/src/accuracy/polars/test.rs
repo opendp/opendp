@@ -109,3 +109,53 @@ fn test_summarize_polars_measurement_mean() -> Fallible<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_summarize_polars_measurement_quantile() -> Fallible<()> {
+    let lf_domain =
+        LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?
+            .with_margin::<&str>(
+                &[],
+                Margin::new()
+                    .with_public_lengths()
+                    .with_max_partition_length(100),
+            )?;
+
+    let lf = df!("A" => (0..=100i32).collect::<Vec<_>>())?.lazy();
+
+    let cands = Series::new("candidates", (0..=10).map(|v| v * 10).collect::<Vec<_>>());
+    let meas = make_private_lazyframe(
+        lf_domain,
+        SymmetricDistance,
+        MaxDivergence::default(),
+        lf.select([
+            col("A")
+                .dp()
+                .quantile(0.25, cands.clone(), Some(1.0))
+                .alias("25"),
+            col("A")
+                .dp()
+                .quantile(0.50, cands.clone(), Some(1.0))
+                .alias("50"),
+            col("A")
+                .dp()
+                .quantile(0.75, cands.clone(), Some(1.0))
+                .alias("75"),
+        ]),
+        None,
+        None,
+    )?;
+
+    let description = summarize_polars_measurement(meas.clone(), None)?;
+
+    let expected = df![
+        "column" => &["25", "50", "75"],
+        "aggregate" => &["0.25-Quantile", "0.5-Quantile", "0.75-Quantile"],
+        "distribution" => &[Some("GumbelMin"); 3],
+        "scale" => &[Some(1.0); 3]
+    ]?;
+    println!("{:?}", expected);
+    assert_eq!(expected, description);
+
+    Ok(())
+}

@@ -107,6 +107,7 @@ fn summarize_logical_plan(
             let rows = exprs
                 .iter()
                 .map(|e| {
+                    // ensures that the column name is right when summarizing columns with multiple statistics
                     let name = e.clone().meta().output_name()?.to_string();
                     Ok(summarize_expr(&e, alpha, threshold.clone())?
                         .into_iter()
@@ -190,6 +191,7 @@ fn summarize_expr<'a>(
         }]);
     }
 
+    // summarize quantile statistics
     if let Some((inputs, _)) = match_trusted_plugin::<IndexCandidatesPlugin>(&expr)? {
         return summarize_expr(&inputs[0], alpha, threshold);
     }
