@@ -56,12 +56,11 @@ Now run ``cargo build`` in the ``rust`` subdirectory of the repo:
 This will compile a debug build of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. 
 (The specific name of the library file will vary depending on your platform.)
 
-Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to regenerate Python and R bindings and check syntax.
+Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to check syntax.
 
-In the above commands, the features ``untrusted`` and ``bindings`` are enabled.
-
-Setting a feature changes how the crate compiles. 
-The comprehensive feature listing for Rust:
+Note that Python and R require builds with different features.
+Details are in the :ref:`python-setup` and :ref:`r-setup` sections below.
+Setting a feature changes how the crate compiles.
 
 .. _rust-feature-listing:
 
@@ -112,8 +111,23 @@ For more on our Rust programming patterns:
 
     rust-initiation
 
+.. _python-setup:
+
 Python Setup
 ------------
+
+First, build a debug binary that works with Python. (Note that the resulting binary will not work with R.)
+
+.. code-block:: bash
+
+    cd rust
+    cargo build --all-features
+
+If you only need to regenerate the Python bindings, this is sufficient:
+
+.. code-block:: bash
+
+    cargo check --all-features
 
 If you have not already, install `Python version 3.9 or higher <https://www.python.org>`_.
 
@@ -126,7 +140,7 @@ You can install a local Python package that uses your new OpenDP binary.
     .. code-block:: bash
 
         # recommended. conda is just as valid
-        cd opendp
+        cd python
         python3 -m venv .venv
         source .venv/bin/activate
 
@@ -200,13 +214,20 @@ The source code and developer documentation is
 R Setup
 -------
 
+First, build a debug binary that works with R. (Note that the resulting binary will not work with Python.)
+
+.. code-block:: bash
+
+    cd rust
+    cargo build --features untrusted,bindings
+
 If you have not already, `install R <https://cran.r-project.org/>`_.
 
 Then, set an environment variable to the absolute path of the OpenDP Library binary directory:
 
 .. code-block:: bash
 
-    export OPENDP_LIB_DIR=`realpath rust/target/debug`
+    export OPENDP_LIB_DIR=`realpath target/debug`
 
 The default R install for MacOS also includes GUI elements like Tcl/Tk,
 so for the smoothest development experience we suggest these additional installs:
