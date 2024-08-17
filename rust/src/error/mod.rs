@@ -26,14 +26,17 @@ macro_rules! err {
         backtrace: err!(@backtrace)
     });
     // error with explicit message
-    ($variant:ident, $message:expr) => ($crate::error::Error {
+    ($variant:ident, $message:expr) =>
+        (err!(@new $variant, format!($message)));
+    // error with template formatting
+    ($variant:ident, $template:expr, $($args:expr),+) =>
+        (err!(@new $variant, format!($template, $($args,)+)));
+
+    (@new $variant:ident, $message:expr) => ($crate::error::Error {
         variant: $crate::error::ErrorVariant::$variant,
-        message: Some($message.to_string()), // ToString is impl'ed for String
+        message: Some($message),
         backtrace: err!(@backtrace)
     });
-    // args to format into message
-    ($variant:ident, $template:expr, $($args:expr),+) =>
-        (err!($variant, format!($template, $($args,)+)));
 
     (@backtrace) => (std::backtrace::Backtrace::capture());
 }
@@ -113,7 +116,7 @@ impl fmt::Display for Error {
 #[cfg(all(test, feature = "test-plot"))]
 impl From<String> for Error {
     fn from(v: String) -> Self {
-        err!(FailedFunction, v)
+        err!(FailedFunction, "{}", v)
     }
 }
 

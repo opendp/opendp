@@ -96,7 +96,7 @@ where
                 return Ok(None);
             }
             let args = serde_pickle::from_slice(kwargs.as_ref(), Default::default())
-                .map_err(|e| err!(FailedFunction, e.to_string()))?;
+                .map_err(|e| err!(FailedFunction, "{}", e))?;
             (input, args)
         }
         Expr::AnonymousFunction {
