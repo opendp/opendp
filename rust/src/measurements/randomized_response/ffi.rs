@@ -37,14 +37,12 @@ pub extern "C" fn opendp_measurements__make_randomized_response_bool(
 pub extern "C" fn opendp_measurements__make_randomized_response(
     categories: *const AnyObject,
     prob: *const c_void,
-    constant_time: c_bool,
     T: *const c_char,
     QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<T, QO>(
         categories: *const AnyObject,
         prob: *const c_void,
-        constant_time: bool,
     ) -> Fallible<AnyMeasurement>
     where
         T: Hashable,
@@ -53,20 +51,19 @@ pub extern "C" fn opendp_measurements__make_randomized_response(
         usize: ExactIntCast<<QO as FloatBits>::Bits>,
     {
         let categories = try_as_ref!(categories).downcast_ref::<Vec<T>>()?.clone();
+        let num_categories = categories.len();
+        let categories_set = HashSet::from_iter(categories.into_iter());
+        if categories_set.len() != num_categories {
+            return fallible!(MakeMeasurement, "all categories must be unique");
+        }
         let prob = *try_as_ref!(prob as *const QO);
-        make_randomized_response::<T, QO>(
-            HashSet::from_iter(categories.into_iter()),
-            prob,
-            constant_time,
-        )
-        .into_any()
+        make_randomized_response::<T, QO>(categories_set, prob).into_any()
     }
     let T = try_!(Type::try_from(T));
     let QO = try_!(Type::try_from(QO));
-    let constant_time = to_bool(constant_time);
     dispatch!(monomorphize, [
         (T, @hashable),
         (QO, @floats)
-    ], (categories, prob, constant_time))
+    ], (categories, prob))
     .into()
 }
