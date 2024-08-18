@@ -22,12 +22,26 @@ pub use integer::*;
 #[cfg(feature = "ffi")]
 mod ffi;
 
-pub(crate) fn laplace_puredp_map<QI, QO>(scale: QO, relaxation: QO) -> impl Fn(&QI) -> Fallible<QO>
+/// Prepares a function used to build a privacy map for the Laplace mechanism.
+///
+/// # Proof Definition
+/// Given any possible inputs `scale` and `relaxation` of type QO
+pub(crate) fn laplace_puredp_map<QI, QO>(
+    scale: QO,
+    relaxation: QO,
+) -> Fallible<impl Fn(&QI) -> Fallible<QO>>
 where
     QI: Clone,
     QO: Float + InfCast<QI>,
 {
-    move |d_in: &QI| {
+    if scale.is_sign_negative() || scale.is_nan() {
+        return fallible!(MakeMeasurement, "scale must not be non-negative");
+    }
+
+    if relaxation.is_sign_negative() || relaxation.is_nan() {
+        return fallible!(MakeMeasurement, "relaxation must not be negative");
+    }
+    Ok(move |d_in: &QI| {
         let d_in = QO::inf_cast(d_in.clone())?;
 
         if d_in.is_sign_negative() {
@@ -49,7 +63,7 @@ where
 
         // d_in / scale
         d_in.inf_div(&scale)
-    }
+    })
 }
 
 pub trait LaplaceDomain<QO>: Domain

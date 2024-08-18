@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use dashu::{integer::IBig, rational::RBig};
-use num::{Float as _, Zero};
+use num::Zero;
 
 use crate::{
     core::{Function, Measurement},
@@ -37,9 +37,6 @@ where
     MO::Atom: Float,
     RBig: TryFrom<MO::Atom>,
 {
-    if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
-    }
     let scale_rational =
         RBig::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
 
@@ -60,7 +57,7 @@ where
         },
         input_metric,
         MO::default(),
-        MO::new_forward_map(scale, MO::Atom::zero()),
+        MO::new_forward_map(scale, MO::Atom::zero())?,
     )
 }
 
@@ -88,9 +85,6 @@ where
     MO::Atom: Float,
     RBig: TryFrom<MO::Atom>,
 {
-    if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
-    }
     let scale_rational =
         RBig::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
 
@@ -115,7 +109,7 @@ where
         },
         input_metric,
         MO::default(),
-        MO::new_forward_map(scale, MO::Atom::zero()),
+        MO::new_forward_map(scale, MO::Atom::zero())?,
     )
 }
 

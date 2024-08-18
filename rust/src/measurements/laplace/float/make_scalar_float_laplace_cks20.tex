@@ -13,7 +13,9 @@
 
 Proves soundness of \rustdoc{measurements/fn}{make\_scalar\_float\_laplace\_cks20} in \asOfCommit{mod.rs}{f5bb719}.
 The function on the resulting measurement takes in a data set \texttt{x} (a single float), 
-and returns a sample from the Discrete Laplace Distribution centered at \texttt{x}, with a fixed noise scale.
+and returns a sample from the discrete laplace distribution centered at \texttt{x}, with a fixed noise scale.
+The granularity of the laplace distribution is controlled via an argument \texttt{k}:
+The distance between adjacent elements of the support is $2^k$.
 
 \subsection*{PR History}
 \begin{itemize}
@@ -47,7 +49,9 @@ and returns a sample from the Discrete Laplace Distribution centered at \texttt{
 \begin{tcolorbox}
     The proof assumes the following lemma.
     \begin{lemma}
-        \texttt{get\_discretization\_consts}, \texttt{sample\_discrete\_laplace\_Z2k} and \texttt{laplace\_map} each satisfy their postcondition.
+        \rustdoc{measurements/laplace/float/fn}{get\_discretization\_consts}, 
+        \rustdoc{traits/samplers/discretize/fn}{sample\_discrete\_laplace\_Z2k} and 
+        \rustdoc{measurements/laplace/fn}{laplace\_puredp\_map} each satisfy their postcondition.
     \end{lemma}
 \end{tcolorbox}
 
@@ -89,7 +93,7 @@ the output of the function follows the Discrete Laplace Distribution with scale 
     }{
         \frac{\exp^{1/b} - 1}{\exp^{1/b} + 1} \exp \left( -\frac{|x' - z|}{b} \right)
     }\right) 
-        &&\text{use pdf of Discrete Laplace} \\
+        &&\text{use PMF of Discrete Laplace} \\
     =& \max_{x \sim x'} \max_{z \in \mathbb{Z}} \ln\left(\frac{
     \exp \left( -\frac{|x - z|}{b} \right)
     }{
