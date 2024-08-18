@@ -727,14 +727,23 @@ GLOBAL_FEATURES = set()
 
 
 def enable_features(*features: str) -> None:
+    '''
+    Allow the use of optional features. See :ref:`feature-listing` for details.
+    '''
     GLOBAL_FEATURES.update(set(features))
 
 
 def disable_features(*features: str) -> None:
+    '''
+    Disallow the use of optional features. See :ref:`feature-listing` for details.
+    '''
     GLOBAL_FEATURES.difference_update(set(features))
 
 
 def assert_features(*features: str) -> None:
+    '''
+    Check whether a given feature is enabled. See :ref:`feature-listing` for details.
+    '''
     missing_features = [f for f in features if f not in GLOBAL_FEATURES]
     if missing_features:
         features_string = ', '.join(f'"{f}"' for f in features)
