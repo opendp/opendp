@@ -37,9 +37,6 @@ where
     usize: ExactIntCast<QO::Bits> + ExactIntCast<T>,
     QO::Bits: ExactIntCast<usize>,
 {
-    if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
-    }
     if bounds
         .as_ref()
         .map(|(lower, upper)| lower > upper)
@@ -53,7 +50,7 @@ where
         Function::new_fallible(move |v: &T| sample_discrete_laplace_linear(*v, scale, bounds)),
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_puredp_map(scale, QO::zero())),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, QO::zero())?),
     )
 }
 
@@ -87,9 +84,6 @@ where
     usize: ExactIntCast<QO::Bits> + ExactIntCast<T>,
     QO::Bits: ExactIntCast<usize>,
 {
-    if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
-    }
     if bounds
         .as_ref()
         .map(|(lower, upper)| lower > upper)
@@ -107,7 +101,7 @@ where
         }),
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_puredp_map(scale, QO::zero())),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, QO::zero())?),
     )
 }
 

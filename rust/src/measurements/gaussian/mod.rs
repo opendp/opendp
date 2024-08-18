@@ -28,16 +28,28 @@ where
     MI: Metric,
 {
     type Atom;
-    fn new_forward_map(scale: Self::Atom, relaxation: Self::Atom) -> PrivacyMap<MI, Self>;
+    fn new_forward_map(scale: Self::Atom, relaxation: Self::Atom)
+        -> Fallible<PrivacyMap<MI, Self>>;
 }
 
-pub(crate) fn gaussian_zcdp_map<QI, QO>(scale: QO, relaxation: QO) -> impl Fn(&QI) -> Fallible<QO>
+pub(crate) fn gaussian_zcdp_map<QI, QO>(
+    scale: QO,
+    relaxation: QO,
+) -> Fallible<impl Fn(&QI) -> Fallible<QO>>
 where
     QI: Clone,
     QO: Float + InfCast<QI>,
 {
-    let _2 = QO::exact_int_cast(2).unwrap();
-    move |d_in: &QI| {
+    if scale.is_sign_negative() || scale.is_nan() {
+        return fallible!(MakeMeasurement, "scale must be a non-negative number");
+    }
+
+    if relaxation.is_sign_negative() || relaxation.is_nan() {
+        return fallible!(MakeMeasurement, "relaxation must be a non-negative number");
+    }
+
+    let _2 = QO::exact_int_cast(2)?;
+    Ok(move |d_in: &QI| {
         let d_in = QO::inf_cast(d_in.clone())?;
 
         if d_in.is_sign_negative() {
@@ -59,7 +71,7 @@ where
 
         // (d_in / scale)^2 / 2
         (d_in.inf_div(&scale)?).inf_powi(2.into())?.inf_div(&_2)
-    }
+    })
 }
 
 impl<MI, QO> GaussianMeasure<MI> for ZeroConcentratedDivergence<QO>
@@ -71,8 +83,13 @@ where
 {
     type Atom = QO;
 
-    fn new_forward_map(scale: Self::Atom, relaxation: Self::Atom) -> PrivacyMap<MI, Self> {
-        PrivacyMap::new_fallible(gaussian_zcdp_map(scale, relaxation))
+    fn new_forward_map(
+        scale: Self::Atom,
+        relaxation: Self::Atom,
+    ) -> Fallible<PrivacyMap<MI, Self>> {
+        Ok(PrivacyMap::new_fallible(gaussian_zcdp_map(
+            scale, relaxation,
+        )?))
     }
 }
 

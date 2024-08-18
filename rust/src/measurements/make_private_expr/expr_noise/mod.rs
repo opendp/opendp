@@ -125,20 +125,21 @@ pub enum Support {
 pub trait NoiseExprMeasure: 'static + Measure<Distance = f64> {
     type Metric: 'static + Metric<Distance = f64>;
     const DISTRIBUTION: Distribution;
-    fn map_function(scale: f64) -> impl Fn(&f64) -> Fallible<f64> + 'static + Send + Sync;
+    fn map_function(scale: f64)
+        -> Fallible<impl Fn(&f64) -> Fallible<f64> + 'static + Send + Sync>;
 }
 impl NoiseExprMeasure for MaxDivergence<f64> {
     type Metric = L1Distance<f64>;
     const DISTRIBUTION: Distribution = Distribution::Laplace;
 
-    fn map_function(scale: f64) -> impl Fn(&f64) -> Fallible<f64> {
+    fn map_function(scale: f64) -> Fallible<impl Fn(&f64) -> Fallible<f64>> {
         laplace_puredp_map(scale, 0.)
     }
 }
 impl NoiseExprMeasure for ZeroConcentratedDivergence<f64> {
     type Metric = L2Distance<f64>;
     const DISTRIBUTION: Distribution = Distribution::Gaussian;
-    fn map_function(scale: f64) -> impl Fn(&f64) -> Fallible<f64> {
+    fn map_function(scale: f64) -> Fallible<impl Fn(&f64) -> Fallible<f64>> {
         gaussian_zcdp_map(scale, 0.)
     }
 }
@@ -235,7 +236,7 @@ where
         }),
         middle_metric,
         MO::default(),
-        PrivacyMap::new_fallible(MO::map_function(scale)),
+        PrivacyMap::new_fallible(MO::map_function(scale)?),
     )?;
 
     t_prior >> m_noise

@@ -38,10 +38,6 @@ where
     MO: GaussianMeasure<AbsoluteDistance<T>, Atom = T>,
     i32: ExactIntCast<<T as FloatBits>::Bits>,
 {
-    if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
-    }
-
     let (k, relaxation) = get_discretization_consts(k)?;
 
     Measurement::new(
@@ -49,7 +45,7 @@ where
         Function::new_fallible(move |arg: &T| sample_discrete_gaussian_Z2k(*arg, scale, k)),
         input_metric,
         MO::default(),
-        MO::new_forward_map(scale, relaxation),
+        MO::new_forward_map(scale, relaxation)?,
     )
 }
 
@@ -79,10 +75,6 @@ where
     MO: GaussianMeasure<L2Distance<T>, Atom = T>,
     i32: ExactIntCast<<T as FloatBits>::Bits>,
 {
-    if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
-    }
-
     let (k, mut relaxation): (i32, T) = get_discretization_consts(k)?;
 
     if !relaxation.is_zero() {
@@ -104,7 +96,7 @@ where
         }),
         input_metric,
         MO::default(),
-        MO::new_forward_map(scale, relaxation),
+        MO::new_forward_map(scale, relaxation)?,
     )
 }
 

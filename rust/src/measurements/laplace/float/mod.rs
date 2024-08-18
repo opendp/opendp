@@ -31,10 +31,6 @@ where
     T: Float + CastInternalRational,
     i32: ExactIntCast<<T as FloatBits>::Bits>,
 {
-    if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
-    }
-
     let (k, relaxation) = get_discretization_consts(k)?;
 
     Measurement::new(
@@ -42,7 +38,7 @@ where
         Function::new_fallible(move |shift: &T| sample_discrete_laplace_Z2k(*shift, scale, k)),
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_puredp_map(scale, relaxation)),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, relaxation)?),
     )
 }
 
@@ -67,10 +63,6 @@ where
     T: Float + CastInternalRational,
     i32: ExactIntCast<<T as FloatBits>::Bits>,
 {
-    if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
-    }
-
     let (k, mut relaxation): (i32, T) = get_discretization_consts(k)?;
 
     if !relaxation.is_zero() {
@@ -92,7 +84,7 @@ where
         }),
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_puredp_map(scale, relaxation)),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, relaxation)?),
     )
 }
 

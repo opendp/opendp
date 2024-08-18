@@ -37,9 +37,6 @@ where
     IBig: From<T>,
     RBig: TryFrom<QO>,
 {
-    if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
-    }
     let r_scale =
         RBig::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
 
@@ -56,7 +53,7 @@ where
         },
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_puredp_map(scale, QO::zero())),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, QO::zero())?),
     )
 }
 
@@ -85,9 +82,6 @@ where
     IBig: From<T>,
     RBig: TryFrom<QO>,
 {
-    if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
-    }
     let r_scale =
         RBig::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
 
@@ -108,7 +102,7 @@ where
         },
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_puredp_map(scale, QO::zero())),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, QO::zero())?),
     )
 }
 
