@@ -3,8 +3,8 @@ use polars_plan::dsl::Expr;
 
 use crate::{
     combinators::{make_pureDP_to_fixed_approxDP, BasicCompositionMeasure},
-    core::{Measure, Measurement, Metric, MetricSpace},
-    domains::ExprDomain,
+    core::{Measure, Measurement, Metric, MetricSpace, Transformation},
+    domains::{ExprDomain, MarginPub},
     error::Fallible,
     measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
@@ -14,6 +14,9 @@ use crate::{
 
 #[cfg(feature = "ffi")]
 mod ffi;
+
+#[cfg(test)]
+mod test;
 
 #[cfg(feature = "contrib")]
 mod expr_len;
@@ -206,4 +209,29 @@ where
             get_disabled_features_message()
         ),
     }
+}
+
+/// Approximate the c-stability of a transformation.
+///
+/// See section 2.3 in [Privacy Integrated Queries, Frank McSherry](https://css.csail.mit.edu/6.5660/2024/readings/pinq.pdf)
+/// Since OpenDP uses privacy maps, the stability constant may vary as d_in is varied.
+///
+/// This function only approximates the stability constant `c`, when...
+/// * one row is added/removed in unbounded-DP
+/// * one row is changed in bounded-DP
+pub(crate) fn approximate_c_stability<MI: UnboundedMetric, MO: Metric>(
+    trans: &Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, MO>,
+) -> Fallible<MO::Distance> {
+    let margin = trans
+        .input_domain
+        .active_margin()
+        .cloned()
+        .unwrap_or_default();
+
+    let d_in = match margin.public_info {
+        // smallest valid dataset distance is 2 in bounded-DP
+        Some(MarginPub::Lengths) => 2,
+        _ => 1,
+    };
+    trans.map(&(margin.l_0(d_in), d_in, margin.l_inf(d_in)))
 }

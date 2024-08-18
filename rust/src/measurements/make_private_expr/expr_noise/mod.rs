@@ -1,5 +1,4 @@
 use crate::core::{Measure, Metric, MetricSpace, PrivacyMap};
-use crate::domains::MarginPub;
 use crate::measurements::{gaussian_zcdp_map, get_discretization_consts, laplace_puredp_map};
 use crate::measures::ZeroConcentratedDivergence;
 use crate::metrics::{L1Distance, L2Distance, PartitionDistance};
@@ -35,6 +34,8 @@ use polars_plan::prelude::{ApplyOptions, FunctionOptions};
 use pyo3_polars::derive::polars_expr;
 use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
+
+use super::approximate_c_stability;
 
 #[cfg(test)]
 mod test;
@@ -180,15 +181,7 @@ where
 
     let scale = match scale {
         Some(scale) => scale,
-        None => {
-            // when scale is unknown, set it relative to the sensitivity of the query
-            let margin = input_domain.active_margin().cloned().unwrap_or_default();
-            let d_in = match margin.public_info {
-                Some(MarginPub::Lengths) => 2,
-                _ => 1,
-            };
-            t_prior.map(&(margin.l_0(d_in), d_in, margin.l_inf(d_in)))?
-        }
+        None => approximate_c_stability(&t_prior)?,
     };
     let global_scale = global_scale.unwrap_or(1.);
     let scale = scale.inf_mul(&global_scale)?;
