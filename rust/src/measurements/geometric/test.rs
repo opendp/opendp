@@ -11,7 +11,7 @@ fn test_make_geometric_bounded() -> Fallible<()> {
         AtomDomain::<i32>::default(),
         AbsoluteDistance::<i32>::default(),
         10.0,
-        Some((200, 210)),
+        (200, 210),
     )?;
     let arg = 205;
     let _ret = measurement.invoke(&arg)?;

@@ -1,4 +1,3 @@
-use super::LaplaceDomain;
 use crate::{
     core::{FfiResult, IntoAnyMeasurementFfiResultExt, Metric, MetricSpace},
     domains::{AtomDomain, VectorDomain},

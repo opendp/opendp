@@ -74,9 +74,19 @@ mod impute;
 pub use crate::transformations::impute::*;
 
 #[cfg(feature = "contrib")]
+mod ibig;
+#[cfg(feature = "contrib")]
+pub use crate::transformations::ibig::*;
+
+#[cfg(feature = "contrib")]
 mod index;
 #[cfg(feature = "contrib")]
 pub use crate::transformations::index::*;
+
+#[cfg(feature = "contrib")]
+mod integerize;
+#[cfg(feature = "contrib")]
+pub use crate::transformations::integerize::*;
 
 #[cfg(feature = "contrib")]
 mod lipschitz_mul;
@@ -107,3 +117,9 @@ pub use crate::transformations::cast_metric::*;
 mod resize;
 #[cfg(feature = "contrib")]
 pub use crate::transformations::resize::*;
+
+
+#[cfg(feature = "contrib")]
+mod scalar_to_vector;
+#[cfg(feature = "contrib")]
+pub use crate::transformations::scalar_to_vector::*;

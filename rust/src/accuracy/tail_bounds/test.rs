@@ -3,13 +3,10 @@ use std::thread::{self, JoinHandle};
 use dashu::{integer::IBig, rational::RBig};
 
 use crate::{
-    domains::AtomDomain,
-    measurements::make_laplace,
-    metrics::AbsoluteDistance,
-    traits::{
+    domains::AtomDomain, measurements::make_laplace, measures::MaxDivergence, metrics::AbsoluteDistance, traits::{
         samplers::{sample_discrete_gaussian, sample_uniform_uint_below},
         ExactIntCast,
-    },
+    }
 };
 
 use super::*;
@@ -18,9 +15,9 @@ fn test_laplace_tail(tail: u32, theoretical_alpha: f64, label: &str) -> Fallible
     let scale = 1.;
 
     println!("alpha: {}", theoretical_alpha);
-    let m_dlap = make_laplace(
-        AtomDomain::<i8>::default(),
-        AbsoluteDistance::default(),
+    let m_dlap = make_laplace::<AtomDomain<i8>, AbsoluteDistance<i8>, MaxDivergence>(
+        Default::default(),
+        Default::default(),
         scale,
         None,
     )?;

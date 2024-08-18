@@ -100,12 +100,7 @@ where
 ///
 /// # Proof Definition
 /// Sample from the censored two-sided geometric distribution with parameter `scale`.
-/// If `bounds` is None, there are no timing protections, and the support is:
-/// ```text
-///     [Self::MIN, Self::MAX]
-/// ```
-///
-/// If `bounds` is Some, execution runs in constant time, and the support is
+/// The support is truncated to:
 /// ```text
 ///     [Self::MIN, Self::MAX] ∩ {shift ± {1, 2, 3, ..., trials}}
 /// ```
@@ -115,7 +110,7 @@ where
 /// # Arguments
 /// * `shift` - Parameter to shift the output by
 /// * `scale` - Parameter to scale the output by
-/// * `bounds` - If Some, run the algorithm in constant time with both inputs and outputs clamped to this value.
+/// * `bounds` - Run the algorithm with both inputs and outputs clamped to this value.
 ///
 /// # Return
 /// A draw from the two-sided censored geometric distribution defined above.
@@ -123,16 +118,11 @@ where
 /// # Example
 /// ```
 /// use opendp::traits::samplers::sample_discrete_laplace_linear;
-/// let geom = sample_discrete_laplace_linear(0, 0.1, Some((20, 30)));
+/// let geom = sample_discrete_laplace_linear(0, 0.1, (20, 30));
 /// # geom.unwrap();
 /// ```
 ///
-/// When no bounds are given, there are no protections against timing attacks.
-///     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.
-///     The output of this mechanism is as if samples were taken from the
-///         uncensored two-sided geometric distribution and saturated at the bounds of T.
-///
-/// When bounds are given, samples are taken from the censored two-sided geometric distribution,
+/// Samples are taken from the censored two-sided geometric distribution,
 ///     where the tail probabilities are accumulated in the +/- (upper - lower)th bucket from taking (upper - lower - 1) bernoulli trials.
 ///     This special bucket may at most appear at the clamping bound of the output distribution-
 ///     Should the shift be outside the bounds, this irregular bucket and its zero-neighbor bucket would both be present in the output.
@@ -143,7 +133,7 @@ where
 pub fn sample_discrete_laplace_linear<T, P>(
     mut shift: T,
     scale: P,
-    bounds: Option<(T, T)>,
+    (lower, upper): (T, T),
 ) -> Fallible<T>
 where
     T: Integer,
@@ -154,26 +144,21 @@ where
     if scale.is_zero() {
         return Ok(shift);
     }
-    let trials: Option<usize> = if let Some((lower, upper)) = bounds {
-        // if the output interval is a point
-        if lower == upper {
-            return Ok(lower);
-        }
-        Some(usize::exact_int_cast(
-            upper.alerting_sub(&lower)?.alerting_sub(&T::one())?,
-        )?)
-    } else {
-        None
-    };
+    // if the output interval is a point
+    if lower == upper {
+        return Ok(lower);
+    }
+
+    let trials: Option<usize> = Some(usize::exact_int_cast(
+        upper.alerting_sub(&lower)?.alerting_sub(&T::one())?,
+    )?);
 
     // make prob conservatively smaller, because a smaller probability means greater noise
     let prob = P::one().neg_inf_sub(&(-scale.recip()).inf_exp()?)?;
 
     // It should be possible to drop the input clamp at a cost of `delta = 2^(-(upper - lower))`.
     // Thanks for the input @ctcovington (Christian Covington)
-    if let Some((lower, upper)) = bounds {
-        shift = shift.total_clamp(lower, upper)?;
-    }
+    shift = shift.total_clamp(lower, upper)?;
 
     let noised = loop {
         let direction = sample_standard_bernoulli()?;
@@ -184,11 +169,7 @@ where
         }
     };
 
-    if let Some((lower, upper)) = bounds {
-        noised.total_clamp(lower, upper)
-    } else {
-        Ok(noised)
-    }
+    noised.total_clamp(lower, upper)
 }
 
 #[proven]

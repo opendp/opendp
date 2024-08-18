@@ -1,4 +1,4 @@
-use std::{env, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     core::Function,
@@ -14,15 +14,18 @@ use crate::{
 };
 use polars::{frame::DataFrame, lazy::frame::LazyFrame, prelude::NamedFrom, series::Series};
 use polars_plan::{
-    dsl::{len, lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
+    dsl::{len, lit, Expr, SeriesUdf, SpecialEq},
     plans::{Literal, LiteralValue, Null},
     prelude::FunctionOptions,
 };
+#[cfg(feature = "ffi")]
+use polars_plan::dsl::FunctionExpr;
+#[cfg(feature = "ffi")]
 use serde::{Deserialize, Serialize};
 
 // this trait is used to make the Deserialize trait bound conditional on the feature flag
 #[cfg(not(feature = "ffi"))]
-pub(crate) trait OpenDPShim: 'static + Clone + SeriesUdf {
+pub(crate) trait OpenDPPlugin: 'static + Clone + SeriesUdf {
     const NAME: &'static str;
     fn function_options() -> FunctionOptions;
 }
@@ -137,7 +140,7 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
                 kwargs,
             } = &mut function
             {
-                if let Ok(path) = env::var("OPENDP_POLARS_LIB_PATH") {
+                if let Ok(path) = std::env::var("OPENDP_POLARS_LIB_PATH") {
                     *lib = Arc::from(path);
                 }
                 *symbol = KW::NAME.into();

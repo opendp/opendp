@@ -1,5 +1,7 @@
 use std::os::raw::{c_long, c_void};
 
+use dashu::rational::RBig;
+
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::domains::{AtomDomain, MapDomain};
 use crate::err;
@@ -30,6 +32,7 @@ pub extern "C" fn opendp_measurements__make_laplace_threshold(
         TV: Float + CastInternalRational,
         i32: ExactIntCast<TV::Bits>,
         f64: InfCast<TV>,
+        RBig: TryFrom<TV>,
     {
         let input_domain = input_domain
             .downcast_ref::<MapDomain<AtomDomain<TK>, AtomDomain<TV>>>()?

@@ -1,144 +1,28 @@
-use opendp_derive::bootstrap;
+use core::f64;
 
+use dashu::{base::Signed, rational::RBig};
+
+use crate::core::{Measure, Metric, MetricSpace};
 use crate::{
-    core::{Domain, Measurement, Metric, MetricSpace},
-    domains::{AtomDomain, VectorDomain},
+    core::{Measurement, PrivacyMap},
     error::Fallible,
     measures::MaxDivergence,
-    metrics::{AbsoluteDistance, L1Distance},
-    traits::{Float, InfCast},
+    metrics::L1Distance,
+    traits::InfCast,
 };
 
-#[cfg(feature = "contrib")]
-mod float;
-#[cfg(feature = "contrib")]
-pub use float::*;
+use super::{make_noise, MakeNoise, Nature, NoisePrivacyMap, ZExpFamily};
 
-#[cfg(feature = "contrib")]
-mod integer;
-#[cfg(feature = "contrib")]
-pub use integer::*;
+use super::NoiseDomain;
 
-#[cfg(feature = "ffi")]
-mod ffi;
+#[cfg(test)]
+mod test;
 
-pub(crate) fn laplace_puredp_map<QI, QO>(scale: QO, relaxation: QO) -> impl Fn(&QI) -> Fallible<QO>
-where
-    QI: Clone,
-    QO: Float + InfCast<QI>,
-{
-    move |d_in: &QI| {
-        let d_in = QO::inf_cast(d_in.clone())?;
-
-        if d_in.is_sign_negative() {
-            return fallible!(InvalidDistance, "sensitivity must be non-negative");
-        }
-
-        // increase d_in by the relaxation
-        //   * if float, this will be the worst-case rounding of the discretization
-        //   * if integer, this will be zero
-        let d_in = d_in.inf_add(&relaxation)?;
-
-        if d_in.is_zero() {
-            return Ok(QO::zero());
-        }
-
-        if scale.is_zero() {
-            return Ok(QO::infinity());
-        }
-
-        // d_in / scale
-        d_in.inf_div(&scale)
-    }
-}
-
-pub trait LaplaceDomain: Domain
-where
-    (Self, Self::InputMetric): MetricSpace,
-{
-    type InputMetric: Metric;
-    fn make_laplace(
-        input_domain: Self,
-        input_metric: Self::InputMetric,
-        scale: f64,
-        k: Option<i32>,
-    ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence>>;
-}
-
-macro_rules! impl_make_laplace_float {
-    ($($ty:ty)+) => {$(
-        impl LaplaceDomain for AtomDomain<$ty> {
-            type InputMetric = AbsoluteDistance<$ty>;
-            fn make_laplace(
-                input_domain: Self,
-                input_metric: Self::InputMetric,
-                scale: f64,
-                k: Option<i32>,
-            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence>>
-            {
-                make_scalar_float_laplace(input_domain, input_metric, scale, k)
-            }
-        }
-
-        impl LaplaceDomain for VectorDomain<AtomDomain<$ty>> {
-            type InputMetric = L1Distance<$ty>;
-            fn make_laplace(
-                input_domain: Self,
-                input_metric: Self::InputMetric,
-                scale: f64,
-                k: Option<i32>,
-            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence>>
-            {
-                make_vector_float_laplace(input_domain, input_metric, scale, k)
-            }
-        }
-    )+}
-}
-
-impl_make_laplace_float!(f32 f64);
-
-macro_rules! impl_make_laplace_int {
-    ($($T:ty)+) => {$(
-        impl LaplaceDomain for AtomDomain<$T> {
-            type InputMetric = AbsoluteDistance<$T>;
-            fn make_laplace(
-                input_domain: Self,
-                input_metric: Self::InputMetric,
-                scale: f64,
-                k: Option<i32>,
-            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence>>
-            {
-                if k.is_some() {
-                    return fallible!(MakeMeasurement, "k is only valid for domains over floats");
-                }
-                make_scalar_integer_laplace(input_domain, input_metric, scale)
-            }
-        }
-
-        impl LaplaceDomain for VectorDomain<AtomDomain<$T>> {
-            type InputMetric = L1Distance<$T>;
-            fn make_laplace(
-                input_domain: Self,
-                input_metric: Self::InputMetric,
-                scale: f64,
-                k: Option<i32>,
-            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence>>
-            {
-                if k.is_some() {
-                    return fallible!(MakeMeasurement, "k is only valid for domains over floats");
-                }
-                make_vector_integer_laplace(input_domain, input_metric, scale)
-            }
-        }
-    )+};
-}
-impl_make_laplace_int!(i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
-
-#[bootstrap(
-    features("contrib"),
-    arguments(k(default = b"null")),
-    generics(D(suppress))
-)]
+// #[bootstrap(
+//     features("contrib"),
+//     arguments(k(default = b"null")),
+//     generics(D(suppress))
+// )]
 /// Make a Measurement that adds noise from the Laplace(`scale`) distribution to the input.
 ///
 /// Valid inputs for `input_domain` and `input_metric` are:
@@ -162,17 +46,46 @@ impl_make_laplace_int!(i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
 ///
 /// # Generics
 /// * `D` - Domain of the data to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
-pub fn make_laplace<D: LaplaceDomain>(
-    input_domain: D,
-    input_metric: D::InputMetric,
+pub fn make_laplace<DI: NoiseDomain, MI: Metric, MO: Measure>(
+    input_domain: DI,
+    input_metric: MI,
     scale: f64,
     k: Option<i32>,
-) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence>>
+) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>>
 where
-    (D, D::InputMetric): MetricSpace,
+    DI::Atom: Nature<1>,
+    ((DI, MI), <DI::Atom as Nature<1>>::Dist): MakeNoise<DI, MI, <DI::Atom as Nature<1>>::Dist, MO>,
+    (DI, MI): MetricSpace,
 {
-    D::make_laplace(input_domain, input_metric, scale, k)
+    let distribution = DI::Atom::new_distribution(scale, k)?;
+    make_noise(input_domain, input_metric, distribution)
 }
 
-#[cfg(test)]
-mod test;
+impl NoisePrivacyMap<L1Distance<RBig>, MaxDivergence, ZExpFamily<1>>
+    for ((L1Distance<RBig>, MaxDivergence), ZExpFamily<1>)
+{
+    fn privacy_map(
+        distribution: ZExpFamily<1>,
+    ) -> Fallible<PrivacyMap<L1Distance<RBig>, MaxDivergence>> {
+        let ZExpFamily { scale } = distribution;
+        if scale < RBig::ZERO {
+            return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
+        }
+        Ok(PrivacyMap::new_fallible(move |d_in: &RBig| {
+            if d_in.is_negative() {
+                return fallible!(FailedMap, "sensitivity ({}) must be positive", d_in);
+            }
+
+            if d_in.is_zero() {
+                return Ok(0.0);
+            }
+
+            if scale.is_zero() {
+                return Ok(f64::INFINITY);
+            }
+
+            // d_in / scale
+            f64::inf_cast(d_in / scale.clone())
+        }))
+    }
+}

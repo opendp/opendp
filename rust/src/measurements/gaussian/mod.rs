@@ -1,183 +1,26 @@
-use num::Zero;
-use opendp_derive::bootstrap;
+use dashu::{rational::RBig, rbig};
 
 use crate::{
-    core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
-    domains::{AtomDomain, VectorDomain},
+    core::{Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     measures::ZeroConcentratedDivergence,
-    metrics::{AbsoluteDistance, L2Distance},
-    traits::{InfAdd, InfCast, InfDiv, InfPowI, Number},
+    metrics::L2Distance,
+    traits::InfCast,
 };
 
-#[cfg(feature = "contrib")]
-mod float;
-#[cfg(feature = "contrib")]
-pub use float::*;
+use super::{make_noise, MakeNoise, Nature, NoiseDomain, NoisePrivacyMap, ZExpFamily};
 
-#[cfg(feature = "contrib")]
-mod integer;
-#[cfg(feature = "contrib")]
-pub use integer::*;
+#[cfg(test)]
+mod test;
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
-pub trait GaussianMeasure<MI>: Measure + Default
-where
-    MI: Metric,
-{
-    fn new_forward_map(scale: f64, relaxation: f64) -> PrivacyMap<MI, Self>;
-}
-
-pub(crate) fn gaussian_zcdp_map<QI>(scale: f64, relaxation: f64) -> impl Fn(&QI) -> Fallible<f64>
-where
-    QI: Clone,
-    f64: InfCast<QI>,
-{
-    move |d_in: &QI| {
-        let d_in = f64::inf_cast(d_in.clone())?;
-
-        if d_in.is_sign_negative() {
-            return fallible!(InvalidDistance, "sensitivity must be non-negative");
-        }
-
-        // increase d_in by the relaxation
-        //   * if float, this will be the worst-case rounding of the discretization
-        //   * if integer, this will be zero
-        let d_in = d_in.inf_add(&relaxation)?;
-
-        if d_in.is_zero() {
-            return Ok(0.0);
-        }
-
-        if scale.is_zero() {
-            return Ok(f64::INFINITY);
-        }
-
-        // (d_in / scale)^2 / 2
-        d_in.inf_div(&scale)?.inf_powi(2.into())?.inf_div(&2.)
-    }
-}
-
-impl<MI> GaussianMeasure<MI> for ZeroConcentratedDivergence
-where
-    MI: Metric,
-    MI::Distance: Number,
-    f64: InfCast<MI::Distance>,
-{
-    fn new_forward_map(scale: f64, relaxation: f64) -> PrivacyMap<MI, Self> {
-        PrivacyMap::new_fallible(gaussian_zcdp_map(scale, relaxation))
-    }
-}
-
-pub trait GaussianDomain<MO, QI>: Domain
-where
-    (Self, Self::InputMetric): MetricSpace,
-    MO: Measure,
-{
-    type InputMetric: Metric<Distance = QI>;
-    fn make_gaussian(
-        input_domain: Self,
-        input_metric: Self::InputMetric,
-        scale: f64,
-        k: Option<i32>,
-    ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MO>>;
-}
-
-macro_rules! impl_make_gaussian_float {
-    ($($ty:ty)+) => {$(
-        impl GaussianDomain<ZeroConcentratedDivergence, $ty> for AtomDomain<$ty> {
-            type InputMetric = AbsoluteDistance<$ty>;
-            fn make_gaussian(
-                input_domain: Self,
-                input_metric: Self::InputMetric,
-                scale: f64,
-                k: Option<i32>
-            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, ZeroConcentratedDivergence>>
-            {
-                make_scalar_float_gaussian(input_domain, input_metric, scale, k)
-            }
-        }
-
-        impl GaussianDomain<ZeroConcentratedDivergence, $ty> for VectorDomain<AtomDomain<$ty>> {
-            type InputMetric = L2Distance<$ty>;
-            fn make_gaussian(
-                input_domain: Self,
-                input_metric: Self::InputMetric,
-                scale: f64,
-                k: Option<i32>
-            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, ZeroConcentratedDivergence>>
-            {
-                make_vector_float_gaussian(input_domain, input_metric, scale, k)
-            }
-        }
-    )+}
-}
-
-impl_make_gaussian_float!(f32 f64);
-
-macro_rules! impl_make_gaussian_int {
-    ($($T:ty)+) => {
-        $(impl<QI: Number> GaussianDomain<ZeroConcentratedDivergence, QI> for AtomDomain<$T>
-        where
-            f64: InfCast<QI>,
-        {
-            type InputMetric = AbsoluteDistance<QI>;
-            fn make_gaussian(
-                input_domain: Self,
-                input_metric: Self::InputMetric,
-                scale: f64,
-                k: Option<i32>,
-            ) -> Fallible<
-                Measurement<
-                    Self,
-                    Self::Carrier,
-                    Self::InputMetric,
-                    ZeroConcentratedDivergence,
-                >,
-            > {
-                if k.is_some() {
-                    return fallible!(MakeMeasurement, "k is only valid for domains over floats");
-                }
-                make_scalar_integer_gaussian(input_domain, input_metric, scale)
-            }
-        }
-
-        impl<QI: Number> GaussianDomain<ZeroConcentratedDivergence, QI>
-            for VectorDomain<AtomDomain<$T>>
-        where
-            f64: InfCast<QI>,
-        {
-            type InputMetric = L2Distance<QI>;
-            fn make_gaussian(
-                input_domain: Self,
-                input_metric: Self::InputMetric,
-                scale: f64,
-                k: Option<i32>,
-            ) -> Fallible<
-                Measurement<
-                    Self,
-                    Self::Carrier,
-                    Self::InputMetric,
-                    ZeroConcentratedDivergence,
-                >,
-            > {
-                if k.is_some() {
-                    return fallible!(MakeMeasurement, "k is only valid for domains over floats");
-                }
-                make_vector_integer_gaussian(input_domain, input_metric, scale)
-            }
-        })+
-    };
-}
-impl_make_gaussian_int!(i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
-
-#[bootstrap(
-    features("contrib"),
-    arguments(k(default = b"null")),
-    generics(D(suppress), MO(default = "ZeroConcentratedDivergence"), QI(suppress))
-)]
+// #[bootstrap(
+//     features("contrib"),
+//     arguments(k(default = b"null")),
+//     generics(D(suppress), MO(default = "ZeroConcentratedDivergence"), QI(suppress))
+// )]
 /// Make a Measurement that adds noise from the Gaussian(`scale`) distribution to the input.
 ///
 /// Valid inputs for `input_domain` and `input_metric` are:
@@ -194,20 +37,51 @@ impl_make_gaussian_int!(i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
-/// * `D` - Domain of the data to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
+/// * `DI` - Domain of the data to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
+/// * `MI` - Input Metric to measure distances between members of the input domain.
 /// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence`.
-/// * `QI` - Input distance. The type of sensitivities. Can be any integer or float.
-pub fn make_gaussian<D: GaussianDomain<MO, QI>, MO: 'static + Measure, QI: 'static>(
-    input_domain: D,
-    input_metric: D::InputMetric,
+pub fn make_gaussian<DI: NoiseDomain, MI: Metric, MO: Measure>(
+    input_domain: DI,
+    input_metric: MI,
     scale: f64,
     k: Option<i32>,
-) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MO>>
+) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>>
 where
-    (D, D::InputMetric): MetricSpace,
+    DI::Atom: Nature<2>,
+    ((DI, MI), <DI::Atom as Nature<2>>::Dist): MakeNoise<DI, MI, <DI::Atom as Nature<2>>::Dist, MO>,
+    (DI, MI): MetricSpace,
 {
-    D::make_gaussian(input_domain, input_metric, scale, k)
+    let distribution = DI::Atom::new_distribution(scale, k)?;
+    make_noise(input_domain, input_metric, distribution)
 }
 
-#[cfg(test)]
-mod test;
+impl NoisePrivacyMap<L2Distance<RBig>, ZeroConcentratedDivergence, ZExpFamily<2>>
+    for (
+        (L2Distance<RBig>, ZeroConcentratedDivergence),
+        ZExpFamily<2>,
+    )
+{
+    fn privacy_map(
+        distribution: ZExpFamily<2>,
+    ) -> Fallible<PrivacyMap<L2Distance<RBig>, ZeroConcentratedDivergence>> {
+        let ZExpFamily { scale } = distribution;
+        if scale < RBig::ZERO {
+            return fallible!(MakeMeasurement, "scale must not be negative");
+        }
+        Ok(PrivacyMap::new_fallible(move |d_in: &RBig| {
+            if d_in < &RBig::ZERO {
+                return fallible!(FailedMap, "sensitivity ({}) must be positive", d_in);
+            }
+
+            if d_in.is_zero() {
+                return Ok(0.0);
+            }
+
+            if scale.is_zero() {
+                return Ok(f64::INFINITY);
+            }
+
+            f64::inf_cast((d_in / scale.clone()).pow(2) / rbig!(2))
+        }))
+    }
+}

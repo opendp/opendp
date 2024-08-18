@@ -1,87 +1,106 @@
-use opendp_derive::bootstrap;
+use dashu::{integer::IBig, rational::RBig};
 
 use crate::{
-    core::{Measurement, Metric, MetricSpace},
+    core::{Function, Measure, Measurement, Metric, MetricSpace},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measures::MaxDivergence,
+    metrics::{AbsoluteDistance, L1Distance},
+    traits::{samplers::sample_discrete_laplace_linear, ExactIntCast, Integer, SaturatingCast},
+    transformations::{make_vec, then_index},
 };
 
-mod integer;
-use integer::{make_scalar_geometric, make_vector_geometric};
-
-use super::LaplaceDomain;
+use super::{
+    make_noise, MakeNoise, NoiseDomain, NoisePrivacyMap, ZExpFamily, IntExpFamily, Nature
+};
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
-pub trait GeometricDomain: LaplaceDomain
-where
-    (Self, Self::InputMetric): MetricSpace,
-{
-    fn make_geometric(
-        input_domain: Self,
-        input_metric: Self::InputMetric,
-        scale: f64,
-        bounds: Option<(
-            <Self::InputMetric as Metric>::Distance,
-            <Self::InputMetric as Metric>::Distance,
-        )>,
-    ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence>>;
+#[derive(Clone)]
+pub struct ConstantTimeGeometric<T> {
+    scale: f64,
+    bounds: (T, T),
 }
 
-macro_rules! impl_make_geometric_int {
-    ($($T:ty)+) => {$(
-        impl GeometricDomain for AtomDomain<$T> {
-            fn make_geometric(
-                input_domain: Self,
-                input_metric: Self::InputMetric,
-                scale: f64,
-                bounds: Option<(
-                    <Self::InputMetric as Metric>::Distance,
-                    <Self::InputMetric as Metric>::Distance,
-                )>,
-            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence>>
-            {
-                if bounds.is_some() {
-                    make_scalar_geometric(input_domain, input_metric, scale, bounds)
-                } else {
-                    Self::make_laplace(input_domain, input_metric, scale, None)
-                }
-            }
+impl<MO: 'static + Measure, T: Integer>
+    MakeNoise<AtomDomain<T>, AbsoluteDistance<T>, ConstantTimeGeometric<T>, MO>
+    for (
+        (AtomDomain<T>, AbsoluteDistance<T>),
+        ConstantTimeGeometric<T>,
+    )
+where
+    T: Integer + SaturatingCast<IBig>,
+    IBig: From<T>,
+    RBig: TryFrom<T>,
+    usize: ExactIntCast<T>,
+    (
+        (VectorDomain<AtomDomain<T>>, L1Distance<T>),
+        ConstantTimeGeometric<T>,
+    ): MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<T>, ConstantTimeGeometric<T>, MO>,
+    ((L1Distance<T>, MO), ConstantTimeGeometric<T>):
+        NoisePrivacyMap<L1Distance<T>, MO, ConstantTimeGeometric<T>>,
+{
+    fn make_noise(self) -> Fallible<Measurement<AtomDomain<T>, T, AbsoluteDistance<T>, MO>> {
+        let (input_space, distribution) = self;
+        let t_vec = make_vec(input_space)?;
+        let m_geom = (t_vec.output_space(), distribution).make_noise()?;
+        t_vec >> m_geom >> then_index(0)
+    }
+}
+
+impl<MO: 'static + Measure, T: Integer>
+    MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<T>, ConstantTimeGeometric<T>, MO>
+    for (
+        (VectorDomain<AtomDomain<T>>, L1Distance<T>),
+        ConstantTimeGeometric<T>,
+    )
+where
+    T: Integer + SaturatingCast<IBig>,
+    IBig: From<T>,
+    usize: ExactIntCast<T>,
+    ((L1Distance<T>, MO), ZExpFamily<2>):
+        NoisePrivacyMap<L1Distance<T>, MO, ZExpFamily<2>>,
+{
+    fn make_noise(
+        self,
+    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, L1Distance<T>, MO>> {
+        let ((input_domain, input_metric), distribution) = self;
+        let ConstantTimeGeometric {
+            scale,
+            bounds: (lower, upper),
+        } = distribution;
+        if lower > upper {
+            return fallible!(MakeMeasurement, "lower may not be greater than upper");
         }
 
-        impl GeometricDomain for VectorDomain<AtomDomain<$T>> {
-            fn make_geometric(
-                input_domain: Self,
-                input_metric: Self::InputMetric,
-                scale: f64,
-                bounds: Option<(
-                    <Self::InputMetric as Metric>::Distance,
-                    <Self::InputMetric as Metric>::Distance,
-                )>,
-            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence>>
-            {
-                if bounds.is_some() {
-                    make_vector_geometric(input_domain, input_metric, scale, bounds)
-                } else {
-                    Self::make_laplace(input_domain, input_metric, scale, None)
-                }
-            }
-        })+
-    };
-}
-impl_make_geometric_int!(i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
+        let distribution = ZExpFamily {
+            scale: RBig::try_from(scale)
+                .map_err(|_| err!(MakeTransformation, "scale ({}) must be finite", scale))?,
+        };
 
-#[bootstrap(
-    features("contrib"),
-    arguments(bounds(rust_type = "OptionT", default = b"null")),
-    generics(D(suppress)),
-    derived_types(
-        T = "$get_atom(get_carrier_type(input_domain))",
-        OptionT = "Option<(T, T)>"
-    )
-)]
+        Measurement::new(
+            input_domain,
+            Function::new_fallible(move |arg: &Vec<T>| {
+                arg.iter()
+                    .map(|v| sample_discrete_laplace_linear::<T, f64>(*v, scale, (lower, upper)))
+                    .collect()
+            }),
+            input_metric,
+            MO::default(),
+            <((L1Distance<T>, MO), ZExpFamily<2>)>::privacy_map(distribution)?,
+        )
+    }
+}
+
+// #[bootstrap(
+//     features("contrib"),
+//     arguments(bounds(rust_type = "OptionT", default = b"null")),
+//     generics(D(suppress)),
+//     derived_types(
+//         T = "$get_atom(get_carrier_type(input_domain))",
+//         OptionT = "Option<(T, T)>"
+//     )
+// )]
 /// Equivalent to `make_laplace` but restricted to an integer support.
 /// Can specify `bounds` to run the algorithm in near constant-time.
 ///
@@ -96,21 +115,23 @@ impl_make_geometric_int!(i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
 ///
 /// # Arguments
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
-pub fn make_geometric<D: 'static + GeometricDomain>(
-    input_domain: D,
-    input_metric: D::InputMetric,
+pub fn make_geometric<DI: NoiseDomain, MI: Metric, MO: Measure>(
+    input_domain: DI,
+    input_metric: MI,
     scale: f64,
-    bounds: Option<(
-        <D::InputMetric as Metric>::Distance,
-        <D::InputMetric as Metric>::Distance,
-    )>,
-) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence>>
+    bounds: Option<(DI::Atom, DI::Atom)>,
+) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>>
 where
-    (D, D::InputMetric): MetricSpace,
+    ((DI, MI), IntExpFamily<1>): MakeNoise<DI, MI, IntExpFamily<1>, MO>,
+    ((DI, MI), ConstantTimeGeometric<DI::Atom>): MakeNoise<DI, MI, ConstantTimeGeometric<DI::Atom>, MO>,
+    (DI, MI): MetricSpace,
+    DI::Atom: Nature<1, Dist=IntExpFamily<1>>,
 {
-    if bounds.is_none() {
-        D::make_laplace(input_domain, input_metric, scale, None)
+    if let Some(bounds) = bounds {
+        let distribution = ConstantTimeGeometric { scale, bounds };
+        make_noise(input_domain, input_metric, distribution)
     } else {
-        D::make_geometric(input_domain, input_metric, scale, bounds)
+        let distribution: IntExpFamily<1> = DI::Atom::new_distribution(scale, None)?;
+        make_noise(input_domain, input_metric, distribution)
     }
 }

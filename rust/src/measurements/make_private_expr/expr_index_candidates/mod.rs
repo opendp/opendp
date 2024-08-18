@@ -7,8 +7,10 @@ use crate::{
 };
 
 use polars::datatypes::{DataType, Field};
+use polars::error::polars_bail;
+#[cfg(feature = "ffi")]
+use polars::error::polars_err;
 use polars::error::PolarsResult;
-use polars::error::{polars_bail, polars_err};
 use polars::series::Series;
 use polars_plan::dsl::{Expr, GetOutput, SeriesUdf};
 use polars_plan::prelude::{ApplyOptions, FunctionOptions};
@@ -92,7 +94,8 @@ pub(crate) fn match_index_candidates(
     Ok(Some((input, IndexCandidatesPlugin { candidates })))
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone)]
+#[cfg_attr(feature = "ffi", Serialize, Deserialize)]
 pub(crate) struct IndexCandidatesShim;
 impl SeriesUdf for IndexCandidatesShim {
     // makes it possible to downcast the AnonymousFunction trait object back to Self

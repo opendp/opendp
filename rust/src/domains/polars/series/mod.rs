@@ -8,6 +8,7 @@ use crate::transformations::traits::UnboundedMetric;
 use crate::{core::Domain, traits::CheckAtom};
 
 use polars::prelude::*;
+use polars_arrow::array::PrimitiveArray;
 
 use crate::domains::{AtomDomain, CategoricalDomain, OptionDomain};
 

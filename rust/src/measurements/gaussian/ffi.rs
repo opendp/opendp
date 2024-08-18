@@ -8,7 +8,8 @@ use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::{as_ref, Type};
-use crate::measurements::{make_gaussian, GaussianDomain};
+use crate::measurements::gaussian::GaussianMeasure;
+use crate::measurements::make_gaussian;
 use crate::measures::ZeroConcentratedDivergence;
 use crate::traits::{CheckAtom, Float, InfCast, Number};
 
@@ -20,6 +21,32 @@ pub extern "C" fn opendp_measurements__make_gaussian(
     k: *const i32,
     MO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
+    fn monomorphize<MO: GaussianMeasure, T: Number, QI: Number>(
+        input_domain: &AnyDomain,
+        input_metric: &AnyMetric,
+        scale: f64,
+        k: Option<i32>,
+    ) {
+        let input_domain = input_domain.downcast_ref::<DI>()?.clone();
+        let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
+        make_gaussian::<D, MO, QI>(input_domain, input_metric, scale, k).into_any()
+    }
+
+    let input_domain = try_as_ref!(input_domain);
+    let input_metric = try_as_ref!(input_metric);
+    let k = as_ref(k as *const i32).map(Clone::clone);
+    let QI_ = try_!(input_metric.type_.get_atom());
+    let T_ = try_!(input_domain.type_.get_atom());
+    let MO = try_!(Type::try_from(MO));
+
+    dispatch!(monomorphize_float, [
+        (MO, [ZeroConcentratedDivergence]),
+        (T_, @numbers),
+        (QI, @numbers),
+    ], (input_domain, input_metric, scale, k, MO));
+
+
+
     fn monomorphize_float<T: 'static + Float>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
