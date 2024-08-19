@@ -236,7 +236,7 @@ def {then_name}(
         .as_ref()
         .map(|_| {
             format!(
-                "@deprecated(version='0.11.1', reason='Use :mod:`opendp.extras.polars` instead')\n"
+                "@deprecated(version='0.11.1', reason='Use `opendp.extras.polars` instead')\n"
             )
         })
         .unwrap_or_default();
