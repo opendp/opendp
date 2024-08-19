@@ -64,9 +64,7 @@ fn generate_module(
     let constructor_mods = ["combinators", "measurements", "transformations"];
 
     let extra_imports = if constructor_mods.contains(&module_name) {
-        r#"from deprecated.sphinx import deprecated
-
-from opendp.core import *
+        r#"from opendp.core import *
 from opendp.domains import *
 from opendp.metrics import *
 from opendp.measures import *"#
@@ -141,6 +139,8 @@ We suggest importing under the conventional name ``dp``:
 '''
 {module_docs}
 '''
+from deprecated.sphinx import deprecated # noqa: F401 (Not every file actually has deprecated functions)
+
 from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
