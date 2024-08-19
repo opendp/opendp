@@ -64,7 +64,9 @@ fn generate_module(
     let constructor_mods = ["combinators", "measurements", "transformations"];
 
     let extra_imports = if constructor_mods.contains(&module_name) {
-        r#"from opendp.core import *
+        r#"from deprecated.sphinx import deprecated
+
+from opendp.core import *
 from opendp.domains import *
 from opendp.metrics import *
 from opendp.measures import *"#
@@ -228,10 +230,11 @@ def {then_name}(
         String::new()
     };
 
+    // TODO: If match for "polars" substring, show python specific message.
     let deprecated = func
         .deprecated
         .as_ref()
-        .map(|msg| format!("@deprecated(\"{msg}\")\n"))
+        .map(|_| format!("@deprecated(version='0.11.1', reason='Use :mod:`opendp.extras.polars` instead')\n"))
         .unwrap_or_default();
 
     format!(
