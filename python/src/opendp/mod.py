@@ -1102,8 +1102,11 @@ def exponential_bounds_search(
     if exception_bounds is None:
         try:
             predicate(center)
-        except Exception:
-            raise ValueError(f"predicate always fails. An example traceback is shown above at {center}.")
+        except Exception as e:
+            # enrich the error message if in Python 3.11+.
+            if hasattr(e, "add_note"):
+                e.add_note(f"Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at {center}.")
+            raise
     
 
     center, sign = binary_search(exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
