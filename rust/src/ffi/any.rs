@@ -715,8 +715,10 @@ mod tests {
         use crate::metrics::AbsoluteDistance;
         use crate::{measurements, transformations};
 
+        #[allow(deprecated)]
         let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?
             .into_any();
+        #[allow(deprecated)]
         let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
         let t3 = transformations::then_cast_default::<SymmetricDistance, String, f64>().into_any();
         let t4 = transformations::then_clamp::<_, SymmetricDistance>((0.0, 10.0)).into_any();
