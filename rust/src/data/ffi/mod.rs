@@ -58,7 +58,7 @@ pub extern "C" fn opendp_data__slice_as_object(
     T: *const c_char,
 ) -> FfiResult<*mut AnyObject> {
     let raw = try_as_ref!(raw);
-    let T = try_!(Type::try_from(T));
+    let T_ = try_!(Type::try_from(T));
     fn raw_to_plain<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
         if raw.len != 1 {
             return fallible!(
@@ -244,7 +244,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         
         Ok(AnyObject::new((dsl, expr)))
     }
-    match T.contents {
+    match T_.contents {
         TypeContents::PLAIN("String") => raw_to_string(raw),
         TypeContents::PLAIN("ExtrinsicObject") => raw_to_plain::<ExtrinsicObject>(raw),
 
@@ -319,7 +319,7 @@ pub extern "C" fn opendp_data__slice_as_object(
             dispatch!(
             raw_to_plain,
             [(
-                T,
+                T_,
                 [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyQueryable]
             )],
             (raw)

@@ -127,7 +127,7 @@ pub extern "C" fn opendp_domains__with_margin(
     };
 
     let frame_domain = try_as_ref!(frame_domain);
-    let F = match frame_domain.type_.id {
+    let F_ = match frame_domain.type_.id {
         x if x == TypeId::of::<LazyFrameDomain>() => Type::of::<LazyFrame>(),
         _ => {
             return err!(
@@ -158,7 +158,7 @@ pub extern "C" fn opendp_domains__with_margin(
 
     dispatch!(
         monomorphize,
-        [(F, [DataFrame, LazyFrame])],
+        [(F_, [DataFrame, LazyFrame])],
         (domain, by, margin)
     )
     .into()
