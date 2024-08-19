@@ -10,28 +10,25 @@ showing the source changes from the previous version.
 ### Added
 
 - Randomized response bitvec [#1279](https://github.com/opendp/opendp/pull/1279)
-- Randomized Response bitvec ffi [#1680](https://github.com/opendp/opendp/pull/1680)
+- Randomized response bitvec ffi [#1680](https://github.com/opendp/opendp/pull/1680)
+- Proof for `make_randomized_response` [#1315](https://github.com/opendp/opendp/pull/1315)
 - Polars:
     - Auto-calibrate noise scale in bounded-dp [#1943](https://github.com/opendp/opendp/pull/1943)
     - Rename accuracy to summarize [#1942](https://github.com/opendp/opendp/pull/1942)
     - Support means in accuracy utility [#1922](https://github.com/opendp/opendp/pull/1922)
+- Docs:
+    - Computing fundamental statistics notebook [#1834](https://github.com/opendp/opendp/pull/1834)
+    - Polars groupby [#1836](https://github.com/opendp/opendp/pull/1836)
+    - Pointer to list of features from api docs [#1931](https://github.com/opendp/opendp/pull/1931)
+    - Documentation for python vs r cargo build [#1927](https://github.com/opendp/opendp/pull/1927)
+    - Js redirect for getting-started [#1935](https://github.com/opendp/opendp/pull/1935)
+    - Logo on readme [#1936](https://github.com/opendp/opendp/pull/1936)
+    - Link to the new learning resources list, and to hands-on differential privacy [#1896](https://github.com/opendp/opendp/pull/1896)
+    - Switch typical-workflow from old dataframe methods to just a vector of numbers [#1909](https://github.com/opendp/opendp/pull/1909)
+    - Copy existing code-of-conduct [#1905](https://github.com/opendp/opendp/pull/1905)
+    - Clean up old maintainer notes [#1879](https://github.com/opendp/opendp/pull/1879)
+    - Remove unused todo files in docs [#1907](https://github.com/opendp/opendp/pull/1907)
 - A script to help create changelog [#1672](https://github.com/opendp/opendp/pull/1672)
-- Proof for `make_randomized_response` [#1315](https://github.com/opendp/opendp/pull/1315)
-
-
-### Docs
-
-- Computing fundamental statistics notebook [#1834](https://github.com/opendp/opendp/pull/1834)
-- Polars groupby [#1836](https://github.com/opendp/opendp/pull/1836)
-- Pointer to list of features from api docs [#1931](https://github.com/opendp/opendp/pull/1931)
-- Documentation for python vs r cargo build [#1927](https://github.com/opendp/opendp/pull/1927)
-- Js redirect for getting-started [#1935](https://github.com/opendp/opendp/pull/1935)
-- Logo on readme [#1936](https://github.com/opendp/opendp/pull/1936)
-- Link to the new learning resources list, and to hands-on differential privacy [#1896](https://github.com/opendp/opendp/pull/1896)
-- Switch typical-workflow from old dataframe methods to just a vector of numbers [#1909](https://github.com/opendp/opendp/pull/1909)
-- Copy existing code-of-conduct [#1905](https://github.com/opendp/opendp/pull/1905)
-- Clean up old maintainer notes [#1879](https://github.com/opendp/opendp/pull/1879)
-- Remove unused todo files in docs [#1907](https://github.com/opendp/opendp/pull/1907)
 
 ### Change
 
@@ -44,6 +41,11 @@ showing the source changes from the previous version.
 - Fill in rust error message templates [#1917](https://github.com/opendp/opendp/pull/1917)
 - `assert_feature` check [#1933](https://github.com/opendp/opendp/pull/1933)
 - `master` to `main` in two notebooks [#1915](https://github.com/opendp/opendp/pull/1915)
+
+### Migration
+
+- rename `.accuracy` to `.summarize` in Polars Context queries
+
 
 
 
@@ -131,6 +133,15 @@ Testing:
     - Update bindings in release channels [#1856](https://github.com/opendp/opendp/pull/1856)
     - Build python bindings before weeks-doc-check [#1847](https://github.com/opendp/opendp/pull/1847)
 
+
+### Migration
+
+- Changed to product ordering for tuples, which breaks `binary_search_param` for `make_laplace_threshold`
+    - Updated parameter calibration code [can be found here](https://docs.opendp.org/en/v0.11.0/getting-started/examples/histograms.html#Private-histogram-via-make_count_by-and-make_laplace_threshold)
+- renamed `dp.np_array2_domain` to `dp.numpy.array2_domain`
+- moved Numpy `dp.np_*` methods to `dp.numpy.np_*`
+- moved SciKit-Learn `dp.sklearn.PCA` to `dp.sklearn.decomposition.PCA`
+- moved `dp.Margin` to `dp.polars.Margin`
 
 
 ## [0.10.0](https://github.com/opendp/opendp/compare/v0.9.2...v0.10.0) - 2024-06-20
