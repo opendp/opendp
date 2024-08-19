@@ -68,7 +68,7 @@ def _lazyframe_from_domain(
 
     This is useful for creating a dummy lazyframe used to write a query plan.
 
-    [_lazyframe_from_domain in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/domains/fn._lazyframe_from_domain.html)
+    [_lazyframe_from_domain in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/domains/fn._lazyframe_from_domain.html)
 
     :param domain: A LazyFrameDomain.
     :type domain: Domain
@@ -122,7 +122,7 @@ def atom_domain(
 ) -> Domain:
     r"""Construct an instance of `AtomDomain`.
 
-    [atom_domain in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/domains/fn.atom_domain.html)
+    [atom_domain in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/domains/fn.atom_domain.html)
 
     :param bounds: 
     :param nullable: 
@@ -384,7 +384,7 @@ def option_domain(
 ) -> Domain:
     r"""Construct an instance of `OptionDomain`.
 
-    [option_domain in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/domains/fn.option_domain.html)
+    [option_domain in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/domains/fn.option_domain.html)
 
     :param element_domain: 
     :type element_domain: Domain
@@ -418,7 +418,7 @@ def series_domain(
 ) -> Domain:
     r"""Construct an instance of `SeriesDomain`.
 
-    [series_domain in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/domains/fn.series_domain.html)
+    [series_domain in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/domains/fn.series_domain.html)
 
     :param name: The name of the series.
     :type name: str
