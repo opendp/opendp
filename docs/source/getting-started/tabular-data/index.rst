@@ -1,6 +1,3 @@
-:orphan:
-:nosearch:
-
 Working with Tabular Data
 =========================
 
@@ -86,34 +83,6 @@ The `User Guide <https://ec.europa.eu/eurostat/documents/1978984/6037342/EULFS-D
      - Single Year
 
 
-Overview
-----------
-
-The specific methods that will be demonstrated are: 
-
-* Fundamental Statistics
-
-  * Count
-  * Sum 
-  * Mean 
-  * Median 
-  * Quantiles 
-
-* Grouping
-
-  * Protected Group Keys
-  * Public Group Keys
-  * Public Group Lengths
-
-This section explains strategies for how to release statistics on grouped data. 
-
-* Data Preparation
-
-  * using ``with_columns``
-  * using ``filter`` 
-
-This section explains how to build stable dataframe transformations with Polars. 
-
 Compositor Overview
 -------------------
 
@@ -154,3 +123,9 @@ Context Parameters
 Particular examples in the coming sections may require additional parameters, 
 and parameters to the compositor may be adjusted slightly.
 See :py:func:`opendp.context.Context.compositor` for more information.
+
+
+.. toctree::
+
+  essential-statistics
+  grouping
