@@ -53,7 +53,7 @@ def debias_randomized_response_bitvec(
 ):
     r"""Convert a vector of randomized response bitvec responses to a frequency estimate
 
-    [debias_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/measurements/fn.debias_randomized_response_bitvec.html)
+    [debias_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measurements/fn.debias_randomized_response_bitvec.html)
 
     :param answers: A vector of BitVectors with consistent size
     :param f: The per bit flipping probability used to encode `answers`
@@ -103,7 +103,7 @@ def make_alp_queryable(
     There is a memory/utility trade-off.
     The value should be sufficiently large to limit hash collisions.
 
-    [make_alp_queryable in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/measurements/fn.make_alp_queryable.html)
+    [make_alp_queryable in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measurements/fn.make_alp_queryable.html)
 
     **Citations:**
 
@@ -206,7 +206,7 @@ def make_gaussian(
     | `atom_domain(T)`                | `T`          | `absolute_distance(QI)` |
     | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l2_distance(QI)`       |
 
-    [make_gaussian in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/measurements/fn.make_gaussian.html)
+    [make_gaussian in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measurements/fn.make_gaussian.html)
 
     **Supporting Elements:**
 
@@ -315,7 +315,7 @@ def make_geometric(
     r"""Equivalent to `make_laplace` but restricted to an integer support.
     Can specify `bounds` to run the algorithm in near constant-time.
 
-    [make_geometric in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/measurements/fn.make_geometric.html)
+    [make_geometric in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measurements/fn.make_geometric.html)
 
     **Citations:**
 
@@ -436,7 +436,7 @@ def make_laplace(
 
     Internally, all sampling is done using the discrete Laplace distribution.
 
-    [make_laplace in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/measurements/fn.make_laplace.html)
+    [make_laplace in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measurements/fn.make_laplace.html)
 
     **Citations:**
 
@@ -553,7 +553,7 @@ def make_laplace_threshold(
     Larger granularities are more computationally efficient, but have a looser privacy map.
     If k is not set, k defaults to the smallest granularity.
 
-    [make_laplace_threshold in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/measurements/fn.make_laplace_threshold.html)
+    [make_laplace_threshold in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measurements/fn.make_laplace_threshold.html)
 
     **Supporting Elements:**
 
@@ -629,7 +629,7 @@ def make_private_expr(
 ) -> Measurement:
     r"""Create a differentially private measurement from an [`Expr`].
 
-    [make_private_expr in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/measurements/fn.make_private_expr.html)
+    [make_private_expr in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measurements/fn.make_private_expr.html)
 
     **Supporting Elements:**
 
@@ -711,7 +711,7 @@ def make_private_lazyframe(
     Any data inside the [`LazyFrame`] is ignored,
     but it is still recommended to start with an empty [`DataFrame`] and build up the computation using the [`LazyFrame`] API.
 
-    [make_private_lazyframe in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/measurements/fn.make_private_lazyframe.html)
+    [make_private_lazyframe in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measurements/fn.make_private_lazyframe.html)
 
     **Supporting Elements:**
 
@@ -923,7 +923,7 @@ def make_randomized_response(
 ) -> Measurement:
     r"""Make a Measurement that implements randomized response on a categorical value.
 
-    [make_randomized_response in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/measurements/fn.make_randomized_response.html)
+    [make_randomized_response in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measurements/fn.make_randomized_response.html)
 
     **Supporting Elements:**
 
@@ -934,7 +934,7 @@ def make_randomized_response(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/randomized_response/make_randomized_response.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/randomized_response/make_randomized_response.pdf)
 
     :param categories: Set of valid outcomes
     :param prob: Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
@@ -987,7 +987,7 @@ def make_randomized_response_bitvec(
 
     This primitive can be useful for implementing RAPPOR.
 
-    [make_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/measurements/fn.make_randomized_response_bitvec.html)
+    [make_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measurements/fn.make_randomized_response_bitvec.html)
 
     **Citations:**
 
@@ -1002,7 +1002,7 @@ def make_randomized_response_bitvec(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/randomized_response_bitvec/make_randomized_response_bitvec.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/randomized_response_bitvec/make_randomized_response_bitvec.pdf)
 
     :param input_domain: BitVectorDomain with max_weight
     :type input_domain: Domain
@@ -1064,7 +1064,7 @@ def make_randomized_response_bool(
 ) -> Measurement:
     r"""Make a Measurement that implements randomized response on a boolean value.
 
-    [make_randomized_response_bool in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/measurements/fn.make_randomized_response_bool.html)
+    [make_randomized_response_bool in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measurements/fn.make_randomized_response_bool.html)
 
     **Supporting Elements:**
 
@@ -1075,7 +1075,7 @@ def make_randomized_response_bool(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/randomized_response/make_randomized_response_bool.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/randomized_response/make_randomized_response_bool.pdf)
 
     :param prob: Probability of returning the correct answer. Must be in `[0.5, 1)`
     :param constant_time: Set to true to enable constant time. Slower.
@@ -1124,7 +1124,7 @@ def make_report_noisy_max_gumbel(
 ) -> Measurement:
     r"""Make a Measurement that takes a vector of scores and privately selects the index of the highest score.
 
-    [make_report_noisy_max_gumbel in Rust documentation.](https://docs.rs/opendp/0.11.1-nightly.20240819.1/opendp/measurements/fn.make_report_noisy_max_gumbel.html)
+    [make_report_noisy_max_gumbel in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measurements/fn.make_report_noisy_max_gumbel.html)
 
     **Supporting Elements:**
 
@@ -1135,7 +1135,7 @@ def make_report_noisy_max_gumbel(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/gumbel_max/make_report_noisy_max_gumbel.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/gumbel_max/make_report_noisy_max_gumbel.pdf)
 
     :param input_domain: Domain of the input vector. Must be a non-nullable VectorDomain.
     :type input_domain: Domain
