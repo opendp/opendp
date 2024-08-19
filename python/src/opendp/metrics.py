@@ -64,7 +64,7 @@ def absolute_distance(
 ) -> Metric:
     r"""Construct an instance of the `AbsoluteDistance` metric.
 
-    [absolute_distance in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/metrics/fn.absolute_distance.html)
+    [absolute_distance in Rust documentation.](https://docs.rs/opendp/0.11.1/opendp/metrics/fn.absolute_distance.html)
 
     :param T: 
     :type T: :py:ref:`RuntimeTypeDescriptor`
@@ -186,7 +186,7 @@ def l1_distance(
 ) -> Metric:
     r"""Construct an instance of the `L1Distance` metric.
 
-    [l1_distance in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/metrics/fn.l1_distance.html)
+    [l1_distance in Rust documentation.](https://docs.rs/opendp/0.11.1/opendp/metrics/fn.l1_distance.html)
 
     :param T: 
     :type T: :py:ref:`RuntimeTypeDescriptor`
@@ -216,7 +216,7 @@ def l2_distance(
 ) -> Metric:
     r"""Construct an instance of the `L2Distance` metric.
 
-    [l2_distance in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/metrics/fn.l2_distance.html)
+    [l2_distance in Rust documentation.](https://docs.rs/opendp/0.11.1/opendp/metrics/fn.l2_distance.html)
 
     :param T: 
     :type T: :py:ref:`RuntimeTypeDescriptor`
@@ -247,7 +247,7 @@ def linf_distance(
 ) -> Metric:
     r"""Construct an instance of the `LInfDistance` metric.
 
-    [linf_distance in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/metrics/fn.linf_distance.html)
+    [linf_distance in Rust documentation.](https://docs.rs/opendp/0.11.1/opendp/metrics/fn.linf_distance.html)
 
     :param monotonic: set to true if non-monotonicity implies infinite distance
     :type monotonic: bool
@@ -358,7 +358,7 @@ def partition_distance(
 ) -> Metric:
     r"""Construct an instance of the `PartitionDistance` metric.
 
-    [partition_distance in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/metrics/fn.partition_distance.html)
+    [partition_distance in Rust documentation.](https://docs.rs/opendp/0.11.1/opendp/metrics/fn.partition_distance.html)
 
     :param metric: The metric used to compute distance between partitions.
     :type metric: Metric
