@@ -230,14 +230,17 @@ def {then_name}(
         String::new()
     };
 
-    // TODO: If match for "polars" substring, show python specific message.
     let deprecated = func
         .deprecated
         .as_ref()
-        .map(|_| {
-            format!(
-                "@deprecated(version='0.11.1', reason='Use `opendp.extras.polars` instead')\n"
-            )
+        .map(|msg| {
+            if msg.contains("Polars") {
+                format!(
+                    "@deprecated(version='0.11.1', reason='Use `opendp.extras.polars` instead')\n"
+                )
+            } else {
+                panic!("Unexpected deprecation: {msg}")
+            }
         })
         .unwrap_or_default();
 
