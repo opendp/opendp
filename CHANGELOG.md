@@ -3,7 +3,51 @@
 This file documents the version history of OpenDP. The links on each version number will take you to a comparison
 showing the source changes from the previous version.
 
-## [0.11.0](https://github.com/opendp/opendp/compare/v0.10.0...HEAD) - TBD
+
+
+## [0.11.1](https://github.com/opendp/opendp/compare/v0.11.0...HEAD) - TBD
+
+### Added
+
+- Randomized response bitvec [#1279](https://github.com/opendp/opendp/pull/1279)
+- Randomized Response bitvec ffi [#1680](https://github.com/opendp/opendp/pull/1680)
+- Polars:
+    - Auto-calibrate noise scale in bounded-dp [#1943](https://github.com/opendp/opendp/pull/1943)
+    - Rename accuracy to summarize [#1942](https://github.com/opendp/opendp/pull/1942)
+    - Support means in accuracy utility [#1922](https://github.com/opendp/opendp/pull/1922)
+- A script to help create changelog [#1672](https://github.com/opendp/opendp/pull/1672)
+- Proof for `make_randomized_response` [#1315](https://github.com/opendp/opendp/pull/1315)
+
+
+### Docs
+
+- Computing fundamental statistics notebook [#1834](https://github.com/opendp/opendp/pull/1834)
+- Polars groupby [#1836](https://github.com/opendp/opendp/pull/1836)
+- Pointer to list of features from api docs [#1931](https://github.com/opendp/opendp/pull/1931)
+- Documentation for python vs r cargo build [#1927](https://github.com/opendp/opendp/pull/1927)
+- Js redirect for getting-started [#1935](https://github.com/opendp/opendp/pull/1935)
+- Logo on readme [#1936](https://github.com/opendp/opendp/pull/1936)
+- Link to the new learning resources list, and to hands-on differential privacy [#1896](https://github.com/opendp/opendp/pull/1896)
+- Switch typical-workflow from old dataframe methods to just a vector of numbers [#1909](https://github.com/opendp/opendp/pull/1909)
+- Copy existing code-of-conduct [#1905](https://github.com/opendp/opendp/pull/1905)
+- Clean up old maintainer notes [#1879](https://github.com/opendp/opendp/pull/1879)
+- Remove unused todo files in docs [#1907](https://github.com/opendp/opendp/pull/1907)
+
+### Change
+
+- Don't mask predicate error in binary search [#1956](https://github.com/opendp/opendp/pull/1956)
+
+### Fix
+
+- Nightly docs.rs build fails on shadowed generics [#1947](https://github.com/opendp/opendp/pull/1947)
+- Infinite loop in data download [#1945](https://github.com/opendp/opendp/pull/1945)
+- Fill in rust error message templates [#1917](https://github.com/opendp/opendp/pull/1917)
+- `assert_feature` check [#1933](https://github.com/opendp/opendp/pull/1933)
+- `master` to `main` in two notebooks [#1915](https://github.com/opendp/opendp/pull/1915)
+
+
+
+## [0.11.0](https://github.com/opendp/opendp/compare/v0.10.0...v0.11.0) - 2024-08-13
 
 ### Fixed
 
