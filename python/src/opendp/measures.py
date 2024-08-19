@@ -58,7 +58,7 @@ def fixed_smoothed_max_divergence(
 ) -> Measure:
     r"""Construct an instance of the `FixedSmoothedMaxDivergence` measure.
 
-    [fixed_smoothed_max_divergence in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measures/fn.fixed_smoothed_max_divergence.html)
+    [fixed_smoothed_max_divergence in Rust documentation.](https://docs.rs/opendp/0.11.1/opendp/measures/fn.fixed_smoothed_max_divergence.html)
 
     :param T: 
     :type T: :py:ref:`RuntimeTypeDescriptor`
@@ -88,7 +88,7 @@ def max_divergence(
 ) -> Measure:
     r"""Construct an instance of the `MaxDivergence` measure.
 
-    [max_divergence in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measures/fn.max_divergence.html)
+    [max_divergence in Rust documentation.](https://docs.rs/opendp/0.11.1/opendp/measures/fn.max_divergence.html)
 
     :param T: 
     :type T: :py:ref:`RuntimeTypeDescriptor`
@@ -196,7 +196,7 @@ def smoothed_max_divergence(
 ) -> Measure:
     r"""Construct an instance of the `SmoothedMaxDivergence` measure.
 
-    [smoothed_max_divergence in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measures/fn.smoothed_max_divergence.html)
+    [smoothed_max_divergence in Rust documentation.](https://docs.rs/opendp/0.11.1/opendp/measures/fn.smoothed_max_divergence.html)
 
     :param T: 
     :type T: :py:ref:`RuntimeTypeDescriptor`
@@ -255,7 +255,7 @@ def zero_concentrated_divergence(
 ) -> Measure:
     r"""Construct an instance of the `ZeroConcentratedDivergence` measure.
 
-    [zero_concentrated_divergence in Rust documentation.](https://docs.rs/opendp/0.11.1-beta.20240819.1/opendp/measures/fn.zero_concentrated_divergence.html)
+    [zero_concentrated_divergence in Rust documentation.](https://docs.rs/opendp/0.11.1/opendp/measures/fn.zero_concentrated_divergence.html)
 
     :param T: 
     :type T: :py:ref:`RuntimeTypeDescriptor`
