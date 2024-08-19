@@ -1,0 +1,188 @@
+% common styling and macros shared by all proof files
+
+\usepackage[top=1in, right=1in, left=1in, bottom=1.5in]{geometry}
+
+\usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{xr}
+
+\usepackage{enumerate} 
+\usepackage{physics}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{tcolorbox}
+\usepackage{catchfile}
+\usepackage{pdftexcmds}
+\usepackage[T1]{fontenc}
+
+% hyperref
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  linkbordercolor={0 0 1}
+}
+
+% \contrib macro to indicate inclusion in "contrib".
+\usepackage{tcolorbox}
+\newtcolorbox{warn_box}{colback=red!5!white,colframe=red!75!black}
+\newcommand{\contrib}{{\begin{warn_box}This proof resides in \textbf{``contrib''} because it has not completed the vetting process.\end{warn_box}}} 
+\newcommand{\floatingPoint}{{\begin{warn_box}This implementation is susceptible to floating-point vulnerabilities.\end{warn_box}}} 
+
+% asOfCommit macro to version a code dependency. Arguments:
+%    #1: relative path to file you are dependent on
+%    #2: commit hash it was last edited. If outdated, this should be the second hash in the footnoote. Otherwise,
+%            git log -n 1 --pretty=format:%h -- path/to/file.rs
+\makeatletter
+\ifnum\pdf@shellescape=1
+   % "private" command that builds a link to a blob
+  \newcommand{\linkOpendpBlob}[3]{%
+    \href{https://github.com/opendp/opendp/blob/#1/#2#3}{\path{#3} at commit #1}}
+
+  % latex macro expansion has a separate phase for \input evaluation
+  %     immediately evaluate a command to write a temp file to ./out containing the current directory
+  \immediate\write18{[ ! -f out/cwd.txt ] && (mkdir -p out && git rev-parse --show-prefix | sed "s|_|\@backslashchar\@backslashchar\@backslashchar_|g" > out/cwd.txt)}
+  %     ...and then retrieve the current working directory by loading the temp file
+  \CatchFileDef\GitWorkingDir{out/cwd.txt}{\endlinechar=-1}
+
+  % command for building the (up to date) or (outdated) status
+  \newcommand{\fileStatus}[2]{%
+  \setbox0=\hbox{\input|"git --no-pager log -n1 --pretty='\@percentchar H' #1 | grep -E '^#2.*'"\unskip}\ifdim\wd0=0pt
+        (outdated\footnote{See new changes with \texttt{git diff #2..\input|"git --no-pager log -n1 --pretty='\@percentchar h' #1" \GitWorkingDir\path{#1}}})\else
+        (up to date)\fi
+  }
+
+  \newcommand{\asOfCommit}[2]{%
+      % permalink the target
+      \linkOpendpBlob{#2}{\GitWorkingDir}{#1}
+      % conditionally add (outdated) or (up to date) depending on matching commit hash
+      \fileStatus{#1}{#2}%
+  }
+\else
+  % simplified command if shell-escape not enabled
+  \newcommand{\asOfCommit}[2]{#1 at commit #2 (unknown status\footnote{Shell-escape is not enabled. Enable \texttt{--shell-escape} to check if this proof is up-to-date with the code.})}
+\fi
+\makeatother
+
+% \vettingPR macro to link a PR. Arguments:
+%    #1: PR number
+\newcommand{\vettingPR}[1]{\href{https://github.com/opendp/opendp/pull/#1}{Pull Request \##1}}
+
+% for links to rustdoc items in OpenDP. Arguments:
+%    #1: path to item, and designation as trait, struct, fn, etc.
+%    #2: item name
+\makeatletter
+\ifnum\pdf@shellescape=1
+  % latex macro expansion has a separate phase for \input evaluation
+  %     immediately evaluate a command to write a temp file to ./out containing the base path
+  \immediate\write18{[ ! -f out/rustdoc.txt ] && mkdir -p out && ([ -z `kpsewhich --var-value OPENDP_RUSTDOC_PORT` ] && echo "https://docs.rs/opendp/`head -n 1 \@backslashchar`git rev-parse --show-toplevel\@backslashchar`/VERSION | sed 's|.*-dev.*|latest|g'`" || echo "http://localhost:`kpsewhich --var-value OPENDP_RUSTDOC_PORT`") > out/rustdoc.txt}
+  %     ...and then retrieve the base path by loading the temp file
+  \CatchFileDef\OpenDPRustdocBase{out/rustdoc.txt}{\endlinechar=-1}
+\else
+  % if shell commands are not enabled, just claim latest
+  \newcommand{\OpenDPRustdocBase}{https://docs.rs/opendp/latest}
+\fi
+\makeatother
+\newcommand{\rustdoc}[2]{\href{\OpenDPRustdocBase/opendp/#1.#2.html}{\texttt{#2}}}
+
+% for links to external dependencies. Arguments:
+%    #1: crate name
+%    #2: path to item, and designation as trait, struct, fn, etc.
+%    #3: item name
+\newcommand{\docsrs}[3]{\href{https://docs.rs/#1/latest/#1/#2.#3.html}{\texttt{#3}}}
+
+% minted (pseudocode)
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+% common commands
+\theoremstyle{definition}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{warning}{Warning}
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+\newtheorem{remark}{Remark}
+\newtheorem{observation}{Observation}
+\newtheorem{note}{Note}
+
+\newcommand{\vicki}[1]{{ {\color{olive}{(vicki)~#1}}}}
+\newcommand{\hanwen}[1]{{ {\color{purple}{(hanwen)~#1}}}}
+\newcommand{\zach}[1]{{ {\color{red}{(zach)~#1}}}}
+
+\newcommand{\MultiSet}{\mathrm{MultiSet}}
+\newcommand{\len}{\mathrm{len}}
+\newcommand{\din}{\texttt{d\_in}}
+\newcommand{\dout}{\texttt{d\_out}}
+\newcommand{\T}{\texttt{T} }
+\newcommand{\F}{\texttt{F} }
+\newcommand{\Map}{\texttt{Map}}
+\newcommand{\X}{\mathcal{X}}
+\newcommand{\Y}{\mathcal{Y}}
+\newcommand{\True}{\texttt{True}}
+\newcommand{\False}{\texttt{False}}
+\newcommand{\clamp}{\texttt{clamp}}
+\newcommand{\function}{\texttt{function}}
+\newcommand{\float}{\texttt{float }}
+\newcommand{\questionc}[1]{\textcolor{red}{\textbf{Question:} #1}}
+
+
+\newcommand{\validTransformation}[2]{%
+  \begin{theorem}
+  For every setting of the input parameters #1 to #2 such that the given preconditions
+  hold, #2 raises an exception (at compile time or run time) or returns a valid transformation. A valid transformation has the following properties:
+  \begin{enumerate}
+      \item \textup{(Appropriate output domain).} 
+      For every element $x$ in \texttt{input\_domain}, $\function(x)$ is in \texttt{output\_domain} or raises a data-independent runtime exception.
+      
+      \item \textup{(Stability guarantee).} 
+      For every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$, 
+      where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_metric}, 
+      if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{stability\_map}(\din)$ does not raise an exception,
+      and $\texttt{stability\_map}(\din) \leq \dout$, 
+      then $\function(x), \function(x')$ are $\dout$-close under \texttt{output\_metric}.
+  \end{enumerate}
+  \end{theorem}
+}
+
+
+\newcommand{\validMeasurement}[2]{%
+  \begin{theorem}
+  For every setting of the input parameters #1 to #2 such that the given preconditions
+  hold, #2 raises an exception (at compile time or run time) or returns a valid measurement. A valid measurement has the following property:
+  \begin{enumerate}
+      \item \textup{(Privacy guarantee).}
+      For every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$,
+      where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_measure},
+      if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{privacy\_map}(\din)$ does not raise an exception,
+      and $\texttt{privacy\_map}(\din) \leq \dout$,
+      then $\function(x), \function(x')$ are $\dout$-close under \texttt{output\_measure}.
+  \end{enumerate}
+  \end{theorem}
+}
