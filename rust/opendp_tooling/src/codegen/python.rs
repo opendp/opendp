@@ -139,7 +139,7 @@ We suggest importing under the conventional name ``dp``:
 '''
 {module_docs}
 '''
-from deprecated.sphinx import deprecated # noqa: F401 (Not every file actually has deprecated functions)
+from deprecated.sphinx import deprecated # noqa: F401 (Not every file actually has deprecated functions.)
 
 from opendp._convert import *
 from opendp._lib import *
