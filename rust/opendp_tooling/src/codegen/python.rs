@@ -234,7 +234,11 @@ def {then_name}(
     let deprecated = func
         .deprecated
         .as_ref()
-        .map(|_| format!("@deprecated(version='0.11.1', reason='Use :mod:`opendp.extras.polars` instead')\n"))
+        .map(|_| {
+            format!(
+                "@deprecated(version='0.11.1', reason='Use :mod:`opendp.extras.polars` instead')\n"
+            )
+        })
         .unwrap_or_default();
 
     format!(
