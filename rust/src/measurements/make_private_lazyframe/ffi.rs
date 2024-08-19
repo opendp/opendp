@@ -28,7 +28,7 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
     let input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<LazyFrameDomain>()).clone();
     let input_metric = try_!(try_as_ref!(input_metric).downcast_ref::<SymmetricDistance>()).clone();
     let output_measure = try_as_ref!(output_measure);
-    let MO = output_measure.type_.clone();
+    let MO_ = output_measure.type_.clone();
 
     let lazyframe = try_!(try_as_ref!(lazyframe).downcast_ref::<LazyFrame>()).clone();
 
@@ -71,7 +71,7 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
 
     dispatch!(
         monomorphize,
-        [(MO, [MaxDivergence<f64>, FixedSmoothedMaxDivergence<f64>, ZeroConcentratedDivergence<f64>])],
+        [(MO_, [MaxDivergence<f64>, FixedSmoothedMaxDivergence<f64>, ZeroConcentratedDivergence<f64>])],
         (
             input_domain,
             input_metric,

@@ -166,7 +166,7 @@ pub extern "C" fn opendp_domains__atom_domain(
         }
         Ok(AnyDomain::new(atom_domain::<T>(None, None)))
     }
-    let T = try_!(Type::try_from(T));
+    let T_ = try_!(Type::try_from(T));
     let nullable = util::to_bool(nullable);
 
     // This is used to check if the type is in a dispatch set,
@@ -175,19 +175,19 @@ pub extern "C" fn opendp_domains__atom_domain(
         Some(())
     }
 
-    if let Some(_) = dispatch!(in_set, [(T, [f32, f64])]) {
-        dispatch!(monomorphize_float, [(T, [f32, f64])], (bounds, nullable))
+    if let Some(_) = dispatch!(in_set, [(T_, [f32, f64])]) {
+        dispatch!(monomorphize_float, [(T_, [f32, f64])], (bounds, nullable))
     } else if let Some(_) = dispatch!(
         in_set,
         [(
-            T,
+            T_,
             [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize]
         )]
     ) {
         dispatch!(
             monomorphize_integer,
             [(
-                T,
+                T_,
                 [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize]
             )],
             (bounds, nullable)
@@ -195,7 +195,7 @@ pub extern "C" fn opendp_domains__atom_domain(
     } else {
         dispatch!(
             monomorphize_simple,
-            [(T, [bool, String])],
+            [(T_, [bool, String])],
             (bounds, nullable)
         )
     }
