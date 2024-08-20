@@ -11,6 +11,10 @@ wheel ~= 0.41
 coverage ~= 7.3
 mypy ~= 1.7
 pip-tools==7.3.0
+
+# Deprecated is also specified in setup.cfg, but as a library dependency it is unpinned.
+# For development and testing we still want to pin the dependency.
+Deprecated
 types-Deprecated
 
 # Just needed for examples in documentation:
