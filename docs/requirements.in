@@ -17,3 +17,6 @@ pypandoc
 semver
 linkchecker
 pip-tools
+
+# Also specified in setup.cfg.
+Deprecated
