@@ -120,7 +120,7 @@ partials = ["derive", "opendp_derive/partials"]
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [package.metadata.docs.rs]
-features = ["derive", "untrusted", "ffi"]
+features = ["derive", "untrusted", "ffi", "polars"]
 rustdoc-args = [
     # so that latex renders
     "--html-in-header", "katex.html",
