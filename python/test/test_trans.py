@@ -1,6 +1,9 @@
 import opendp.prelude as dp
 from opendp.mod import enable_features
 
+import re
+import pytest
+
 enable_features('contrib')
 
 INT_DATA = list(range(1, 10))
@@ -316,6 +319,17 @@ def test_lipschitz_mul_float():
 
     print(trans([3.] * 10))
     print(trans.map(2))
+
+
+# pytest.mark will override pytest.ini and reenable DeprecationWarnings,
+# so we can confirm that they are in fact happening.
+@pytest.mark.filterwarnings("error::DeprecationWarning")
+def test_df_deprecation_warning():
+    with pytest.warns(DeprecationWarning, match=re.escape(
+        'Call to deprecated function (or staticmethod) make_split_dataframe. '
+        '(Use `opendp.extras.polars` instead) -- Deprecated since version 0.11.1.')
+    ):
+        dp.t.make_split_dataframe(separator=",", col_names=["A", "B"])
 
 
 def test_df_cast_default():
