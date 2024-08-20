@@ -10,8 +10,6 @@ click==8.1.7
     # via pip-tools
 coverage==7.3.2
     # via -r requirements-dev.in
-deprecated==1.2.14
-    # via -r requirements-dev.in
 flake8==7.0.0
     # via -r requirements-dev.in
 iniconfig==2.0.0
@@ -58,8 +56,6 @@ wheel==0.42.0
     # via
     #   -r requirements-dev.in
     #   pip-tools
-wrapt==1.16.0
-    # via deprecated
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip
