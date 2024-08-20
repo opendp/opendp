@@ -30,6 +30,8 @@ use pyo3_polars::derive::polars_expr;
 use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 
+use super::approximate_c_stability;
+
 #[cfg(test)]
 mod test;
 
@@ -69,9 +71,7 @@ where
     let scale = match scale {
         Some(scale) => scale,
         None => {
-            // when scale is unknown, set it relative to the sensitivity of the query
-            let margin = input_domain.active_margin().cloned().unwrap_or_default();
-            let (l_0, l_inf) = t_prior.map(&(margin.l_0(1), 1, margin.l_inf(1)))?;
+            let (l_0, l_inf) = approximate_c_stability(&t_prior)?;
             f64::inf_cast(l_0)?.inf_mul(&l_inf)?
         }
     };

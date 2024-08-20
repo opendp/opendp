@@ -220,3 +220,23 @@ def test_alp_histogram():
     print(alp_qbl("B"))
     print(alp_qbl("C"))
     print(alp_meas.map(1))
+
+def test_randomized_response_bitvec():
+    np = pytest.importorskip('numpy')
+
+    m_rr = dp.m.make_randomized_response_bitvec(
+        dp.bitvector_domain(max_weight=4), dp.discrete_distance(), f=0.95
+    )
+
+    data = np.packbits(
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0]
+    )
+    assert np.array_equal(data, np.array([0, 8, 12], dtype=np.uint8))
+
+    # roundtrip: bytes -> mech -> numpy
+    release = np.frombuffer(m_rr(data.tobytes()), dtype=np.uint8)
+
+    print(np.unpackbits(data), np.unpackbits(release))
+    # epsilon is 2 * m * ln((2 - f) / f)
+    # where m = 4 and f = .95
+    assert m_rr.map(1) == 0.8006676684558611

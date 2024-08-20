@@ -321,8 +321,8 @@ typedef struct FfiResult_____ExtrinsicObject {
   };
 } FfiResult_____ExtrinsicObject;
 
-struct FfiResult_____AnyObject opendp_accuracy__describe_polars_measurement_accuracy(const AnyMeasurement *measurement,
-                                                                                     const struct AnyObject *alpha);
+struct FfiResult_____AnyObject opendp_accuracy__summarize_polars_measurement(const AnyMeasurement *measurement,
+                                                                             const struct AnyObject *alpha);
 
 struct FfiResult_____AnyMeasurement opendp_combinators__make_population_amplification(const AnyMeasurement *measurement,
                                                                                       unsigned int population_size);
@@ -806,6 +806,14 @@ struct FfiResult_____AnyDomain opendp_domains__vector_domain(const struct AnyDom
                                                              const struct AnyObject *size);
 
 /**
+ * Construct an instance of `BitVectorDomain`.
+ *
+ * # Arguments
+ * * `max_weight` - The maximum number of positive bits.
+ */
+struct FfiResult_____AnyDomain opendp_domains__bitvector_domain(const struct AnyObject *max_weight);
+
+/**
  * Construct an instance of `MapDomain`.
  *
  * # Arguments
@@ -926,9 +934,16 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_respons
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_response(const struct AnyObject *categories,
                                                                                   const void *prob,
-                                                                                  c_bool constant_time,
                                                                                   const char *T,
                                                                                   const char *QO);
+
+struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_response_bitvec(const struct AnyDomain *input_domain,
+                                                                                         const struct AnyMetric *input_metric,
+                                                                                         double f,
+                                                                                         c_bool constant_time);
+
+struct FfiResult_____AnyObject opendp_measurements__debias_randomized_response_bitvec(const struct AnyObject *answers,
+                                                                                      double f);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_alp_queryable(const struct AnyDomain *input_domain,
                                                                             const struct AnyMetric *input_metric,

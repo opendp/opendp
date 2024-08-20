@@ -33,7 +33,7 @@ pub fn laplacian_scale_to_accuracy<T: Float + Zero + One + Debug>(
         return fallible!(InvalidDistance, "scale may not be negative");
     }
     if alpha <= T::zero() || T::one() < alpha {
-        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]");
+        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]", alpha);
     }
     Ok(-scale * alpha.ln())
 }
@@ -61,7 +61,7 @@ pub fn discrete_laplacian_scale_to_accuracy<T: Float + Zero + One + Debug>(
         return fallible!(InvalidDistance, "scale may not be negative");
     }
     if alpha <= T::zero() || T::one() < alpha {
-        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]");
+        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]", alpha);
     }
 
     let _1 = T::one();
@@ -95,7 +95,7 @@ pub fn accuracy_to_laplacian_scale<T: Float + Zero + One + Debug>(
         return fallible!(InvalidDistance, "accuracy may not be negative");
     }
     if alpha <= T::zero() || T::one() <= alpha {
-        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1)");
+        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1)", alpha);
     }
     Ok(-accuracy / alpha.ln())
 }
@@ -182,7 +182,7 @@ where
         return fallible!(InvalidDistance, "scale may not be negative");
     }
     if alpha <= 0. || 1. < alpha {
-        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]");
+        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]", alpha);
     }
     T::inf_cast(scale * SQRT_2 * erf_inv(1. - alpha))
 }
@@ -238,7 +238,7 @@ where
         return fallible!(InvalidDistance, "accuracy may not be negative");
     }
     if alpha <= 0. || 1. <= alpha {
-        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1)");
+        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1)", alpha);
     }
     T::inf_cast(accuracy / SQRT_2 / erf_inv(1. - alpha))
 }

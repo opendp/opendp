@@ -1,6 +1,3 @@
-:orphan:
-:nosearch:
-
 Working with Tabular Data
 =========================
 
@@ -86,34 +83,6 @@ The `User Guide <https://ec.europa.eu/eurostat/documents/1978984/6037342/EULFS-D
      - Single Year
 
 
-Overview
-----------
-
-The specific methods that will be demonstrated are: 
-
-* Fundamental Statistics
-
-  * Count
-  * Sum 
-  * Mean 
-  * Median 
-  * Quantiles 
-
-* Grouping
-
-  * Protected Group Keys
-  * Public Group Keys
-  * Public Group Lengths
-
-This section explains strategies for how to release statistics on grouped data. 
-
-* Data Preparation
-
-  * using ``with_columns``
-  * using ``filter`` 
-
-This section explains how to build stable dataframe transformations with Polars. 
-
 Compositor Overview
 -------------------
 
@@ -132,11 +101,6 @@ ensuring that queries you would like to release satisfy necessary privacy proper
     ...     privacy_unit=dp.unit_of(contributions=36),
     ...     privacy_loss=dp.loss_of(epsilon=1.0),
     ...     split_evenly_over=10,
-    ...     margins={
-    ...         ("YEAR", ): dp.polars.Margin(max_partition_length=60_000_000, max_partition_contributions=4),
-    ...         ("YEAR", "QUARTER",): dp.polars.Margin(max_partition_length=60_000_000, max_partition_contributions=1),
-    ...         (): dp.polars.Margin(max_partition_length=60_000_000),
-    ...     },
     ... )
     
     >>> # Once you construct the context, you should abstain from directly accessing your data again.
@@ -155,17 +119,13 @@ Context Parameters
   The privacy loss is upper-bounded by privacy parameters; in this case epsilon (ε).
 * ``split_evenly_over``: This is the number of queries you want to distribute your privacy loss over. 
   Configure this parameter appropriately according to how many queries you would like to release. 
-* ``margins``: Margins capture public information about groupings of your dataset.
-
-  * ``max_partition_length``: An upper bound on how many records can be in one partition. 
-    If you do not know the size of your dataset, this can be an upper bound on the population your dataset is a sample from. 
-    The population of France was about 60 million in 2004 so we'll use that as our maximum partition length. 
-    Source: `World Bank <https://datatopics.worldbank.org/world-development-indicators/>`_.
-  * ``max_partition_contributions``: The number of contributions each individual can have per partition in your data. 
-    Based on the known structure of the data, each individual is represented once for a particular quarter and year.
-    In addition, you know an individual may contribute at most 9 records to each quarter since there are 9 years in the dataset,
-    and as many as 4 records each year since there are 4 quarters within a year. 
 
 Particular examples in the coming sections may require additional parameters, 
 and parameters to the compositor may be adjusted slightly.
 See :py:func:`opendp.context.Context.compositor` for more information.
+
+
+.. toctree::
+
+  essential-statistics
+  grouping

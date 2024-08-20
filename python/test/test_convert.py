@@ -203,3 +203,13 @@ def test_check_and_cast_scalar():
     
     with pytest.raises(TypeError, match="inferred type is i32, expected fake."):
         _check_and_cast_scalar('fake', 1)
+
+def test_bitvec():
+    np = pytest.importorskip('numpy') 
+
+    for i in range(1, 20):
+        data = np.packbits([1] * i)
+        obj = py_to_c(data.tobytes(), AnyObjectPtr, "BitVector")
+        val_out = np.frombuffer(c_to_py(obj), dtype=np.uint8)
+        bits = np.unpackbits(val_out)
+        assert (bits.tolist() + [0]).index(0) == i
