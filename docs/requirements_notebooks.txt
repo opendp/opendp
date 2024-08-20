@@ -8,3 +8,4 @@ scikit-learn
 polars==1.1.0
 pyarrow
 hvplot
+deprecated
