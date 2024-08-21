@@ -229,8 +229,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Look for URLs that should be relative
-        # API index page excluded: It points to R docs which are copied into place after build.
-        run: "! grep 'https://docs.opendp.org' -r source --exclude source/api/index.rst --binary-file=without-match"
+        # R docs are copied into place after build, so they do not use relative URLs.
+        # Negative lookahead could also be used, but it is only supported by PCRE, which not all greps support.
+        run: "! ( grep 'https://docs.opendp.org' -r source --binary-file=without-match | grep -v https://docs.opendp.org/en/stable/api/r )"
 
       - name: Download Python bindings
         uses: actions/download-artifact@v4
