@@ -294,6 +294,8 @@ fn generate_docstring(
     func: &Function,
     hierarchy: &HashMap<String, Vec<String>>,
 ) -> String {
+    let flag_doc = generate_flag_doc(&func.features);
+
     let description = (func.description.as_ref())
         .map(|v| format!("{}\n", v))
         .unwrap_or_else(String::new);
@@ -322,7 +324,7 @@ fn generate_docstring(
     };
 
     format!(
-        r#"r"""{description}
+        r#"r"""{flag_doc}{description}
 {doc_args}{ret_arg}
 {raises}{example}
 """"#,
@@ -403,6 +405,15 @@ fn generate_flag_check(features: &Vec<String>) -> String {
                 .collect::<Vec<_>>()
                 .join(", ")
         )
+    }
+}
+
+fn generate_flag_doc(features: &Vec<String>) -> String {
+    if features.is_empty() {
+        String::default()
+    } else {
+        let flag_check = generate_flag_check(features);
+        format!("Requires `{flag_check}`. ")
     }
 }
 
