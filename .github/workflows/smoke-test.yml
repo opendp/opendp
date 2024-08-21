@@ -228,6 +228,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check for nosearch on included code
+        run: "! ( find source -name '*.rst' | grep '/code/' | xargs grep -L ':nosearch:' | grep . )"
+
       - name: Download Python bindings
         uses: actions/download-artifact@v4
         with:
