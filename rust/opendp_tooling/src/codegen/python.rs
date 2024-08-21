@@ -413,7 +413,7 @@ fn generate_flag_doc(features: &Vec<String>) -> String {
         String::default()
     } else {
         let flag_check = generate_flag_check(features);
-        format!("Requires `{flag_check}`. ")
+        format!("Requires `{}`. ", flag_check.trim())
     }
 }
 
