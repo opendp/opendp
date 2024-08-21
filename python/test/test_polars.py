@@ -385,7 +385,7 @@ def test_polars_describe():
         .agg(pl.len().dp.noise(), summer, summer.alias("B"))
     )
 
-    actual = query.accuracy()
+    actual = query.summarize()
     pl_testing.assert_frame_equal(expected, actual)
 
     accuracy = [
@@ -394,7 +394,7 @@ def test_polars_describe():
         dp.discrete_laplacian_scale_to_accuracy(18.0, 0.05)
     ]
     expected = expected.hstack([pl.Series("accuracy", accuracy)])
-    actual = query.accuracy(alpha=0.05)
+    actual = query.summarize(alpha=0.05)
     pl_testing.assert_frame_equal(expected, actual)
 
 
@@ -429,7 +429,7 @@ def test_polars_accuracy_threshold():
         .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
     )
 
-    actual = query.accuracy()
+    actual = query.summarize()
     pl_testing.assert_frame_equal(expected, actual)
 
 
@@ -492,7 +492,7 @@ def test_polars_threshold():
         context.query()
         .group_by("A")
         .agg(pl.len().dp.noise())
-        .accuracy()
+        .summarize()
     )
 
     expected = pl.DataFrame({
@@ -519,7 +519,7 @@ def test_polars_threshold():
         context.query()
         .group_by("B")
         .agg(pl.len().dp.noise())
-        .accuracy()
+        .summarize()
     )
 
     expected = pl.DataFrame({

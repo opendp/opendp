@@ -29,8 +29,8 @@ pub extern "C" fn opendp_transformations__make_is_equal(
     let input_metric = try_as_ref!(input_metric);
     let value = try_as_ref!(value);
 
-    let TIA = try_!(input_domain.type_.get_atom());
-    let M = input_metric.type_.clone();
+    let TIA_ = try_!(input_domain.type_.get_atom());
+    let M_ = input_metric.type_.clone();
 
     fn monomorphize<TIA, M>(
         input_domain: &AnyDomain,
@@ -51,8 +51,8 @@ pub extern "C" fn opendp_transformations__make_is_equal(
         make_is_equal::<TIA, M>(input_domain, input_metric, value).into_any()
     }
     dispatch!(monomorphize, [
-        (TIA, @primitives),
-        (M, @dataset_metrics)
+        (TIA_, @primitives),
+        (M_, @dataset_metrics)
     ], (input_domain, input_metric, value))
     .into()
 }

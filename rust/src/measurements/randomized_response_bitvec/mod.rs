@@ -1,3 +1,5 @@
+use opendp_derive::bootstrap;
+
 use crate::core::{Function, Measurement, PrivacyMap};
 use crate::domains::{BitVector, BitVectorDomain};
 use crate::error::Fallible;
@@ -5,6 +7,10 @@ use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
 use crate::traits::{samplers::sample_bernoulli_float, InfCast, InfDiv, InfLn, InfMul, InfSub};
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
+#[bootstrap(features("contrib"), arguments(constant_time(default = false)))]
 /// Make a Measurement that implements randomized response on a bit vector.
 ///
 /// This primitive can be useful for implementing RAPPOR.
@@ -71,6 +77,7 @@ pub fn make_randomized_response_bitvec(
     )
 }
 
+#[bootstrap(features("contrib"))]
 /// Convert a vector of randomized response bitvec responses to a frequency estimate
 ///
 /// # Arguments

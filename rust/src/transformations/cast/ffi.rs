@@ -19,9 +19,9 @@ pub extern "C" fn opendp_transformations__make_cast(
 ) -> FfiResult<*mut AnyTransformation> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
-    let M = input_metric.type_.clone();
-    let TIA = try_!(input_domain.type_.get_atom());
-    let TOA = try_!(Type::try_from(TOA));
+    let M_ = input_metric.type_.clone();
+    let TIA_ = try_!(input_domain.type_.get_atom());
+    let TOA_ = try_!(Type::try_from(TOA));
 
     fn monomorphize<M, TIA, TOA>(
         input_domain: &AnyDomain,
@@ -41,9 +41,9 @@ pub extern "C" fn opendp_transformations__make_cast(
         make_cast::<M, TIA, TOA>(input_domain, input_metric).into_any()
     }
     dispatch!(monomorphize, [
-        (M, @dataset_metrics),
-        (TIA, @primitives), 
-        (TOA, @primitives)
+        (M_, @dataset_metrics),
+        (TIA_, @primitives), 
+        (TOA_, @primitives)
     ], (input_domain, input_metric))
     .into()
 }
@@ -56,9 +56,9 @@ pub extern "C" fn opendp_transformations__make_cast_default(
 ) -> FfiResult<*mut AnyTransformation> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
-    let TIA = try_!(input_domain.type_.get_atom());
-    let TOA = try_!(Type::try_from(TOA));
-    let M = input_metric.type_.clone();
+    let TIA_ = try_!(input_domain.type_.get_atom());
+    let TOA_ = try_!(Type::try_from(TOA));
+    let M_ = input_metric.type_.clone();
 
     fn monomorphize<M, TIA, TOA>(
         input_domain: &AnyDomain,
@@ -78,9 +78,9 @@ pub extern "C" fn opendp_transformations__make_cast_default(
         make_cast_default::<M, TIA, TOA>(input_domain, input_metric).into_any()
     }
     dispatch!(monomorphize, [
-        (M, @dataset_metrics),
-        (TIA, @primitives), 
-        (TOA, @primitives)
+        (M_, @dataset_metrics),
+        (TIA_, @primitives), 
+        (TOA_, @primitives)
     ], (input_domain, input_metric))
     .into()
 }
@@ -93,9 +93,9 @@ pub extern "C" fn opendp_transformations__make_cast_inherent(
 ) -> FfiResult<*mut AnyTransformation> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
-    let M = input_metric.type_.clone();
-    let TIA = try_!(input_domain.type_.get_atom());
-    let TOA = try_!(Type::try_from(TOA));
+    let M_ = input_metric.type_.clone();
+    let TIA_ = try_!(input_domain.type_.get_atom());
+    let TOA_ = try_!(Type::try_from(TOA));
 
     fn monomorphize<M, TIA, TOA>(
         input_domain: &AnyDomain,
@@ -115,9 +115,9 @@ pub extern "C" fn opendp_transformations__make_cast_inherent(
         make_cast_inherent::<M, TIA, TOA>(input_domain, input_metric).into_any()
     }
     dispatch!(monomorphize, [
-        (M, @dataset_metrics),
-        (TIA, @primitives), 
-        (TOA, @floats)
+        (M_, @dataset_metrics),
+        (TIA_, @primitives), 
+        (TOA_, @floats)
     ], (input_domain, input_metric))
     .into()
 }

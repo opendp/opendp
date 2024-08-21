@@ -2,9 +2,10 @@ use super::*;
 use polars::prelude::*;
 
 use crate::{
+    domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
     error::ErrorVariant,
-    measurements::{make_private_expr, make_private_lazyframe},
-    metrics::{PartitionDistance, SymmetricDistance},
+    measurements::{make_private_expr, make_private_lazyframe, PrivateExpr},
+    metrics::{InsertDeleteDistance, PartitionDistance, SymmetricDistance},
     polars::PrivacyNamespace,
     transformations::test_helper::get_test_data,
 };
@@ -133,4 +134,56 @@ fn test_make_laplace_grouped() -> Fallible<()> {
         df_exp.sort(["chunk_2_bool"], Default::default())?
     );
     Ok(())
+}
+
+fn check_autocalibration(
+    margin: Margin,
+    bounds: (u32, u32),
+    d_in: (u32, u32, u32),
+) -> Fallible<()> {
+    let lf_domain =
+        LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?
+            .with_margin::<&str>(&[], margin)?;
+    let expr_domain = lf_domain.select();
+
+    // Get resulting sum (expression result)
+    let m_sum = col("A")
+        .clip(lit(bounds.0), lit(bounds.1))
+        .sum()
+        .dp()
+        .noise(None, None)
+        .make_private(
+            expr_domain,
+            PartitionDistance(InsertDeleteDistance),
+            MaxDivergence::default(),
+            Some(1.),
+        )?;
+
+    let epsilon = m_sum.map(&d_in)?;
+    // autocalibration chooses a noise scale based on the sensitivity.
+    // because of this, epsilon will always work out to 1.
+    println!("epsilon: {:?}", epsilon);
+    assert_eq!(epsilon, 1.0);
+
+    Ok(())
+}
+
+#[test]
+fn test_sum_unbounded_dp_autocalibration() -> Fallible<()> {
+    check_autocalibration(
+        Margin::new().with_max_partition_length(100),
+        (4, 7),
+        (1, 1, 1),
+    )
+}
+
+#[test]
+fn test_sum_bounded_dp_autocalibration() -> Fallible<()> {
+    check_autocalibration(
+        Margin::new()
+            .with_max_partition_length(100)
+            .with_public_lengths(),
+        (4, 7),
+        (1, 2, 2),
+    )
 }

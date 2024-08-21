@@ -26,11 +26,11 @@ pub extern "C" fn opendp_measurements__make_report_noisy_max_gumbel(
 ) -> FfiResult<*mut AnyMeasurement> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
-    let TIA = try_!(input_domain.type_.get_atom());
+    let TIA_ = try_!(input_domain.type_.get_atom());
     let scale = try_as_ref!(scale);
 
     let optimize = try_!(Optimize::try_from(try_!(to_str(optimize))));
-    let QO = try_!(Type::try_from(QO));
+    let QO_ = try_!(Type::try_from(QO));
 
     fn monomorphize<TIA, QO>(
         input_domain: &AnyDomain,
@@ -52,8 +52,8 @@ pub extern "C" fn opendp_measurements__make_report_noisy_max_gumbel(
     }
 
     dispatch!(monomorphize, [
-        (TIA, [u32, u64, i32, i64, usize, f32, f64]),
-        (QO, @floats)
+        (TIA_, [u32, u64, i32, i64, usize, f32, f64]),
+        (QO_, @floats)
     ], (input_domain, input_metric, scale, optimize))
     .into()
 }
