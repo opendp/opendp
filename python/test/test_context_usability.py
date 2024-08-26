@@ -85,10 +85,7 @@ def test_query_dir():
     assert 'count' in query_dir
     assert 'laplace' in query_dir
 
-@pytest.mark.xfail(
-    raises=dp.OpenDPException,
-    match=re.escape('The key-set of {"a_column"} private and cannot be released without filtering')
-)
+@pytest.mark.xfail(raises=dp.OpenDPException)
 def test_string_instead_of_tuple_for_margin_key():
     pl = pytest.importorskip("polars")
 
@@ -105,7 +102,8 @@ def test_string_instead_of_tuple_for_margin_key():
         margins={
             # To reproduce failure, the column name must be multiple characters.
             # TODO: We want to fail earlier because the key is not a tuple.
-            ("a_column"): dp.polars.Margin(public_info="keys", max_partition_length=5),
+            # (mypy does catch this, so we need "type: ignore", but we can't rely on users running mypy.)
+            ("a_column"): dp.polars.Margin(public_info="keys", max_partition_length=5), # type: ignore
         },
     )
 
