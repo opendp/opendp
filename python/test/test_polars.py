@@ -671,7 +671,7 @@ def test_cut():
     pl_testing.assert_frame_equal(actual, expected)
 
 
-@pytest.mark.xfail(raises=AssertionError, match=re.escape("value mismatch for column 'name'"))
+@pytest.mark.xfail(raises=AssertionError)
 def test_csv_bad_encoding_loading():
     # See https://github.com/opendp/opendp/issues/1976
     # If a CSV is misencoded, Polars loads an empty dataframe.
