@@ -8,6 +8,9 @@ use crate::{Argument, TypeRecipe};
 pub mod python;
 pub mod r;
 
+#[cfg(test)]
+mod test;
+
 pub fn write_bindings(base_dir: PathBuf, files: HashMap<PathBuf, String>) {
     for (file_path, file_contents) in files {
         File::create(base_dir.join(file_path))
