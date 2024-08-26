@@ -182,7 +182,8 @@ html_last_updated_fmt = '%b %d, %Y'
 
 # Custom sidebar templates, maps document names to template names.
 html_theme_options = {
-    "github_url": "https://github.com/opendp"
+    "github_url": "https://github.com/opendp",
+    "article_header_start": ["breadcrumbs", "old-version-warning"]
 }
 
 html_theme = 'pydata_sphinx_theme'
