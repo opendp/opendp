@@ -1,9 +1,9 @@
-{% if current_version.name != latest_version_name %}
+{% if current_version.name not in [latest_version_name, 'stable'] %}
 <div class="admonition warning" style="position: relative;">
   <!--
    Without the style, the region for the article title overlaps, and the link is unclickable.
   -->
-  <p class="admonition-title">This documention is for an old version.</p>
-  <p>The latest version of OpenDP is <a href="https://docs.opendp.org">{{ latest_version_name }}</a>.</p>
+  <p class="admonition-title">This is not the latest documentation.</p>
+  <p>The latest release of OpenDP is <a href="https://docs.opendp.org">{{ latest_version_name }}</a>.</p>
 </div>
 {% endif %}
