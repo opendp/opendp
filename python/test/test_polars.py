@@ -686,6 +686,8 @@ def test_csv_bad_encoding_loading():
     name_b = name.encode('iso-8859-1') # Polars only handles 'utf-8'.
 
     with tempfile.NamedTemporaryFile(delete=False) as fp:
+        # By default, would delete file on "close()";
+        # With "delete=False", clean up when exiting "with" instead.
         fp.write(b'name\n' + name_b)
         fp.close()
         df = pl.scan_csv(fp.name, ignore_errors=True)
