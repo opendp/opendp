@@ -668,4 +668,19 @@ def test_cut():
     )
 
     pl_testing.assert_frame_equal(actual, expected)
-    
+
+
+def test_csv_bad_encoding_loading():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(delete=False) as fp:
+        fp.write(b'name\nChuck')
+        fp.close()
+        df = pl.scan_csv(fp.name, ignore_errors=True)
+        expected = pl.LazyFrame(
+            {"name": ["Chuck"]},
+            schema={"name": pl.String},
+        )
+        pl_testing.assert_frame_equal(df, expected)
