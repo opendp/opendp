@@ -675,12 +675,15 @@ def test_csv_bad_encoding_loading():
     pl_testing = pytest.importorskip("polars.testing")
     import tempfile
 
+    name = 'André'
+    name_b = name.encode('utf-8')
+
     with tempfile.NamedTemporaryFile(delete=False) as fp:
-        fp.write(b'name\nChuck')
+        fp.write(b'name\n' + name_b)
         fp.close()
         df = pl.scan_csv(fp.name, ignore_errors=True)
         expected = pl.LazyFrame(
-            {"name": ["Chuck"]},
+            {"name": [name]},
             schema={"name": pl.String},
         )
         pl_testing.assert_frame_equal(df, expected)
