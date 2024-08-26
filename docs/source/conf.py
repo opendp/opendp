@@ -181,9 +181,10 @@ html_static_path = ['_static']
 html_last_updated_fmt = '%b %d, %Y'
 
 # Custom sidebar templates, maps document names to template names.
+# Full list of options at https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/layout.html#references
 html_theme_options = {
     "github_url": "https://github.com/opendp",
-    "article_header_start": ["breadcrumbs", "old-version-warning"]
+    "article_header_end": ["old-version-warning"]
 }
 
 html_theme = 'pydata_sphinx_theme'
@@ -195,6 +196,10 @@ html_css_files = [
 # Note: Overridden in the Makefile for local builds. Be sure to update both places.
 html_sidebars = {
    '**': ['sidebar-nav-bs.html', 'versioning.html'],
+}
+html_context = {
+    # Expected sphinx-multiversion to set "latest_version", but it was None, so set it manually.
+    'latest_version_name': f'v{version}'
 }
 
 # SPHINX-MULTIVERSION STUFF
