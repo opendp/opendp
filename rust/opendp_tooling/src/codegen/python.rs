@@ -394,18 +394,14 @@ return output"#,
 
 // generate code that checks that a set of feature flags are enabled
 fn generate_flag_check(features: &Vec<String>) -> String {
-    if features.is_empty() {
-        String::default()
-    } else {
-        format!(
-            "assert_features({})\n\n",
-            features
-                .iter()
-                .map(|f| format!("\"{}\"", f))
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
-    }
+    format!(
+        "dp.enable_features({})\n\n",
+        features
+            .iter()
+            .map(|f| format!("\"{}\"", f))
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
 }
 
 fn generate_flag_doc(features: &Vec<String>) -> String {
