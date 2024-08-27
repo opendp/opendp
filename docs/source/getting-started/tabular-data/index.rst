@@ -1,47 +1,51 @@
-:orphan:
-:nosearch:
-
 Working with Tabular Data
 =========================
 
-Motivation 
-----------
 
-In the following examples, we will use real data to demonstrate the utility of OpenDP functions.
-We will use the `Labour Force Survey microdata <https://ec.europa.eu/eurostat/web/microdata/public-microdata/labour-force-survey>`_ released by Eurostat for a few reasons: 
+OpenDP uses `Polars <https://pola.rs/>`_ to work with dataframes.
+This functionality is not enabled by default.
 
-1. **Generality:** The dataset is relatively general, with variables and contexts accessible to users across various domains.
-2. **Sample Utility:** The public microdata is a sample of the private, full microdata. Methods developed with the public microdata will also work on the private microdata, and researchers can request access to the full dataset through Eurostat. 
-3. **Realism**: Since the dataset tracks individuals over multiple years, we need to think more carefully about our unit of privacy.
 
-The specific methods that will be demonstrated are: 
+.. tab-set::
 
-* Computing Fundemental Statistics 
-    * Sum 
-    * Mean 
-    * Median 
-    * Quantiles 
-* Aggregrations and Filtering 
-    * Grouping By Singular Variables
-    * Grouping By Multiple Variables 
-    * Filtering 
-* Using Known and Unknown Keys in Aggregrations
-* Data Preparation Limitations
-  * Limitations with ``with_columns``
-  * Limitations with ``filter`` 
+    .. tab-item:: Python
+        :sync: python
+
+        Add ``[polars]`` to the package installation to enable Polars functionality.
+
+        .. prompt:: bash
+
+            pip install opendp[polars]
+
+        This installs the specific version of the Python Polars package that is compatible with the OpenDP Library.
+
+    .. tab-item:: R
+        :sync: r
+
+        OpenDP does not currently support Polars in R. 
+        For the current status of this, see `issue #1872 <https://github.com/opendp/opendp/issues/1872>`_.
+
+    .. tab-item:: Rust
+        :sync: rust
+
+        Add ``"polars"`` to the features of the ``opendp`` dependency in your ``Cargo.toml``.
+
 
 Dataset Description 
 -------------------
 
-The data is organized by year and quarter for each nation in the European Union. For this tutorial, we sampled 200,000 individuals from the public microdata of France across all study years. 
-
+For this section of the documentation, we will use the `Labour Force Survey microdata <https://ec.europa.eu/eurostat/web/microdata/public-microdata/labour-force-survey>`_ released by Eurostat.
+The data surveys working hours of individuals in the European Union collected on a quarterly cadence.
 The public microdata is protected using traditional statistical disclosure control methods such as global recoding, local suppression, and addition of noise. 
-The public microdata is protected using traditional statistical disclosure control methods such as global recoding, local suppression, and addition of noise. 
 
+We chose this dataset for a few reasons: 
 
-Core Variables 
---------------
-The `User Guide <https://ec.europa.eu/eurostat/documents/1978984/6037342/EULFS-Database-UserGuide.pdf>`_ describes many variables. Our examples will use just a few. (Descriptions are copied from the User Guide.) 
+1. **Accessibility:** The dataset is accessible to users across various domains.
+2. **Sample Utility:** The public microdata is a sample of the private, full microdata. Methods developed with the public microdata will also work on the private microdata, and researchers can request access to the full dataset through Eurostat. 
+3. **Realism**: This is a real dataset that tracks individuals over multiple years, which will influence the unit of privacy since each individual can be represented multiple times in the dataset. 
+
+For this tutorial, we sampled a total of 200,000 rows from the public microdata of France across all study years. 
+
 The `User Guide <https://ec.europa.eu/eurostat/documents/1978984/6037342/EULFS-Database-UserGuide.pdf>`_ describes many variables. Our examples will use just a few. (Descriptions are copied from the User Guide.) 
 
 .. list-table:: 
@@ -52,16 +56,25 @@ The `User Guide <https://ec.europa.eu/eurostat/documents/1978984/6037342/EULFS-D
      - Coding
    * - ``SEX``
      - Sex
-     - 1: Male; 2: Female
+     - | ``1``: Male
+       | ``2``: Female
    * - ``AGE``
      - Age of the Individual During the Reference Week
      - Single Years
    * - ``ILOSTAT``
      - Labour Status During the Reference Week
-     - 1: Did any work for pay or profit during the reference week - one hour or more (including family workers but excluding conscripts on compulsory military or community service); 2: Was not working but had a job or business from which he/she was absent during the reference week (including family workers but excluding conscripts on compulsory military or community service); 3: Was not working because of lay-off; 4: Was a conscript on compulsory military or community service; 5: Other (15 years or more) who neither worked nor had a job or business during the reference week; 9: Not applicable (child less than 15 years old)
+     - | ``1``: Did any work for pay or profit during the reference week - one hour or more (including family workers but excluding conscripts on compulsory military or community service)
+       | ``2``: Was not working but had a job or business from which he/she was absent during the reference week (including family workers but excluding conscripts on compulsory military or community service)
+       | ``3``: Was not working because of lay-off
+       | ``4``: Was a conscript on compulsory military or community service
+       | ``5``: Other (15 years or more) who neither worked nor had a job or business during the reference week
+       | ``9``: Not applicable (child less than 15 years old)
    * - ``HWUSUAL``
      - Number of Hours Per Week Usually Worked
-     - 00: Usual hours cannot be given because hours worked vary considerably from week to week or from month to month; 01-98: Number of hours usually worked in the main job; 99: Not applicable; blank: No answer
+     - | ``00``: Usual hours cannot be given because hours worked vary considerably from week to week or from month to month
+       | ``01`` - ``98``: Number of hours usually worked in the main job
+       | ``99``: Not applicable
+       | *blank*: No answer
    * - ``QUARTER``
      - Fixed Reference Quarter
      - Single Quarter
@@ -69,35 +82,50 @@ The `User Guide <https://ec.europa.eu/eurostat/documents/1978984/6037342/EULFS-D
      - Fixed Reference Year
      - Single Year
 
+
 Compositor Overview
 -------------------
-The compositor is the foundation of our differentially private queries. It essentially takes in our data and our specifications for the queries that we would like to run. At this point, we won't be directly referencing our data again and we could theoretically delete it! 
 
-.. code-block:: python
+The compositor is the foundation of our differentially private analysis. 
+It mediates access to the sensitive data,
+ensuring that queries you would like to release satisfy necessary privacy properties. 
 
-   context = dp.Context.compositor(
-       data=df,
-       privacy_unit=dp.unit_of(contributions=36),
-       privacy_loss=dp.loss_of(epsilon=1.0),
-       split_evenly_over=10,
-       margins={
-           ("YEAR", ): dp.Margin(max_partition_length=60_000_000, max_partition_contributions=4),
-           ("YEAR", "QUARTER",): dp.Margin(max_partition_length=60_000_000, max_partition_contributions=1),
-           (): dp.Margin(max_partition_length=60_000_000),
-       },
-   )
+.. testsetup::
+    >>> import polars as pl
+    >>> df = pl.LazyFrame()
 
-**Parameters**:
+.. doctest:: python
 
-* *privacy_unit:* How many rows each individual or entity of interest contributes to our data frame. In this case, we are analyzing the data from across 13 years and each year has 4 quarters. Therefore, the unit of privacy is 36. If we were to analyze a particular quarter in a particular year, the unit of privacy would be 1 since each individual would be represented once. 
+    >>> context = dp.Context.compositor(
+    ...     data=df,
+    ...     privacy_unit=dp.unit_of(contributions=36),
+    ...     privacy_loss=dp.loss_of(epsilon=1.0),
+    ...     split_evenly_over=10,
+    ... )
+    
+    >>> # Once you construct the context, you should abstain from directly accessing your data again.
+    >>> # In fact, it is good practice to delete it! 
+    >>> del df
 
-* *privacy_loss:* This parameter determines how much privacy we want to preserve. If ε is small, we will have more privacy but worse data accuracy. ε can range from 0 to infinity, but 1 is usually a standard. 
+Context Parameters
+~~~~~~~~~~~~~~~~~~
 
-* *split_evenly_over:* This is the number of queries you want to distribute your privacy loss over. For now we specified 10 to explore the API but in the final versions of your code, this parameter will be picked more carefully. 
+* ``privacy_unit``: The greatest influence an individual may have on your dataset.
+  In this case, the influence is measured in terms of the number of rows an individual may contribute to your dataset. 
+  Since we are analyzing quarterly data across 9 years, where an individual contributes up to one record per quarter,
+  the unit of privacy corresponds to 36 row contributions. 
+  If we were to analyze a particular quarter in a particular year, the unit of privacy would be 1 since each individual would contribute at most one row. 
+* ``privacy_loss``: The greatest privacy loss suffered by an individual in your dataset. 
+  The privacy loss is upper-bounded by privacy parameters; in this case epsilon (ε).
+* ``split_evenly_over``: This is the number of queries you want to distribute your privacy loss over. 
+  Configure this parameter appropriately according to how many queries you would like to release. 
 
-* *margins:* Margins capture the variables of interest in your analysis. This can include variables that you may want to group by or apply differential privacy techniques to. 
-    * *max_partition_length:* The upper bound on how many records (individuals in this case) can be in one partition. If you do not know the size of your dataset, this can be an upper bound on the population represented in your dataset. The population of France was about 60 million in 2004 so that's our maximum partition length. Source: `World Bank <https://datatopics.worldbank.org/world-development-indicators/>`_. 
-    * *max_partition_contributions:* The number of contributions each individual can have per grouping. Since each individual is represented once for a particular quarter and year, they are represented 13 times for each quarter since there are 13 years in the dataset and 4 times each year since there are 4 quarters within a year. 
-
-Particular examples will require additional parameters, and the compositor will change slightly.
+Particular examples in the coming sections may require additional parameters, 
+and parameters to the compositor may be adjusted slightly.
 See :py:func:`opendp.context.Context.compositor` for more information.
+
+
+.. toctree::
+
+  essential-statistics
+  grouping

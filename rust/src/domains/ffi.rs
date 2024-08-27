@@ -13,7 +13,7 @@ use crate::{
     traits::{CheckAtom, Float, Hashable, Integer, Primitive},
 };
 
-use super::{Bounds, Null, OptionDomain};
+use super::{BitVectorDomain, Bounds, Null, OptionDomain};
 
 #[bootstrap(
     name = "_domain_free",
@@ -166,7 +166,7 @@ pub extern "C" fn opendp_domains__atom_domain(
         }
         Ok(AnyDomain::new(atom_domain::<T>(None, None)))
     }
-    let T = try_!(Type::try_from(T));
+    let T_ = try_!(Type::try_from(T));
     let nullable = util::to_bool(nullable);
 
     // This is used to check if the type is in a dispatch set,
@@ -175,19 +175,19 @@ pub extern "C" fn opendp_domains__atom_domain(
         Some(())
     }
 
-    if let Some(_) = dispatch!(in_set, [(T, [f32, f64])]) {
-        dispatch!(monomorphize_float, [(T, [f32, f64])], (bounds, nullable))
+    if let Some(_) = dispatch!(in_set, [(T_, [f32, f64])]) {
+        dispatch!(monomorphize_float, [(T_, [f32, f64])], (bounds, nullable))
     } else if let Some(_) = dispatch!(
         in_set,
         [(
-            T,
+            T_,
             [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize]
         )]
     ) {
         dispatch!(
             monomorphize_integer,
             [(
-                T,
+                T_,
                 [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize]
             )],
             (bounds, nullable)
@@ -195,7 +195,7 @@ pub extern "C" fn opendp_domains__atom_domain(
     } else {
         dispatch!(
             monomorphize_simple,
-            [(T, [bool, String])],
+            [(T_, [bool, String])],
             (bounds, nullable)
         )
     }
@@ -290,6 +290,27 @@ pub extern "C" fn opendp_domains__vector_domain(
         TypeContents::PLAIN("UserDomain") => monomorphize_user_domain(atom_domain, size),
         _ => fallible!(FFI, "VectorDomain constructor only supports AtomDomain or UserDomain inner domains")
     }.into()
+}
+
+#[bootstrap(
+    name = "bitvector_domain",
+    arguments(max_weight(rust_type = "Option<u32>", default = b"null")),
+    returns(c_type = "FfiResult<AnyDomain *>")
+)]
+/// Construct an instance of `BitVectorDomain`.
+///
+/// # Arguments
+/// * `max_weight` - The maximum number of positive bits.
+#[no_mangle]
+pub extern "C" fn opendp_domains__bitvector_domain(
+    max_weight: *const AnyObject,
+) -> FfiResult<*mut AnyDomain> {
+    let mut bitvector_domain = BitVectorDomain::new();
+    if let Some(max_weight) = util::as_ref(max_weight) {
+        let max_weight = *try_!(max_weight.downcast_ref::<u32>()) as usize;
+        bitvector_domain = bitvector_domain.with_max_weight(max_weight)
+    };
+    Ok(AnyDomain::new(bitvector_domain)).into()
 }
 
 #[bootstrap(name = "map_domain", returns(c_type = "FfiResult<AnyDomain *>"))]

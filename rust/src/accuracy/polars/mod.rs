@@ -21,19 +21,20 @@ use crate::{
     domains::LazyFrameDomain,
     error::Fallible,
     measurements::{
+        expr_index_candidates::IndexCandidatesPlugin,
         expr_noise::{Distribution, NoisePlugin, Support},
         expr_report_noisy_max::ReportNoisyMaxPlugin,
         is_threshold_predicate,
     },
     polars::{match_trusted_plugin, ExtractLazyFrame, OnceFrame},
-    transformations::expr_discrete_quantile_score::match_discrete_quantile_score,
+    transformations::expr_discrete_quantile_score::DiscreteQuantileScorePlugin,
 };
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
 #[bootstrap(
-    name = "describe_polars_measurement_accuracy",
+    name = "summarize_polars_measurement",
     features("contrib"),
     arguments(
         measurement(rust_type = "AnyMeasurement"),
@@ -42,7 +43,7 @@ mod ffi;
     generics(MI(suppress), MO(suppress)),
     returns(c_type = "FfiResult<AnyObject *>")
 )]
-/// Get noise scale parameters from a measurement that returns a OnceFrame.
+/// Summarize the statistics to be released from a measurement that returns a OnceFrame.
 ///
 /// If a threshold is configured for censoring small/sensitive partitions,
 /// a threshold column will be included,
@@ -51,7 +52,7 @@ mod ffi;
 /// # Arguments
 /// * `measurement` - computation from which you want to read noise scale parameters from
 /// * `alpha` - optional statistical significance to use to compute accuracy estimates
-pub fn describe_polars_measurement_accuracy<MI: Metric, MO: 'static + Measure>(
+pub fn summarize_polars_measurement<MI: Metric, MO: 'static + Measure>(
     measurement: Measurement<LazyFrameDomain, OnceFrame, MI, MO>,
     alpha: Option<f64>,
 ) -> Fallible<DataFrame>
@@ -63,9 +64,10 @@ where
     let mut of = measurement.invoke(&lf)?;
     let lf: LazyFrame = of.eval_internal(&ExtractLazyFrame)?;
 
-    lazyframe_utility(&lf, alpha)
+    summarize_lazyframe(&lf, alpha)
 }
 
+#[derive(Clone)]
 struct UtilitySummary {
     pub name: String,
     pub aggregate: String,
@@ -75,13 +77,13 @@ struct UtilitySummary {
     pub threshold: Option<u32>,
 }
 
-/// Get noise scale parameters from a LazyFrame.
+/// Summarize the statistics to be computed in a LazyFrame
 ///
 /// # Arguments
 /// * `lazyframe` - computation from which you want to read noise scale parameters from
 /// * `alpha` - optional statistical significance to use to compute accuracy estimates
-pub fn lazyframe_utility(lazyframe: &LazyFrame, alpha: Option<f64>) -> Fallible<DataFrame> {
-    let mut utility = logical_plan_utility(&lazyframe.logical_plan, alpha, None)?;
+pub fn summarize_lazyframe(lazyframe: &LazyFrame, alpha: Option<f64>) -> Fallible<DataFrame> {
+    let mut utility = summarize_logical_plan(&lazyframe.logical_plan, alpha, None)?;
 
     // only include the accuracy column if alpha is passed
     if alpha.is_none() {
@@ -94,7 +96,8 @@ pub fn lazyframe_utility(lazyframe: &LazyFrame, alpha: Option<f64>) -> Fallible<
     Ok(utility)
 }
 
-fn logical_plan_utility(
+/// Summarize the statistics to be computed in a LogicalPlan
+fn summarize_logical_plan(
     logical_plan: &DslPlan,
     alpha: Option<f64>,
     threshold: Option<(String, u32)>,
@@ -103,7 +106,17 @@ fn logical_plan_utility(
         DslPlan::Select { expr: exprs, .. } | DslPlan::GroupBy { aggs: exprs, .. } => {
             let rows = exprs
                 .iter()
-                .map(|e| expr_utility(&e, alpha, threshold.clone()))
+                .map(|e| {
+                    // ensures that the column name is right when summarizing columns with multiple statistics
+                    let name = e.clone().meta().output_name()?.to_string();
+                    Ok(summarize_expr(&e, alpha, threshold.clone())?
+                        .into_iter()
+                        .map(|mut summary| {
+                            summary.name = name.clone();
+                            summary
+                        })
+                        .collect())
+                })
                 .collect::<Fallible<Vec<Vec<UtilitySummary>>>>()?;
 
             Ok(DataFrame::from_rows_and_schema(
@@ -134,16 +147,17 @@ fn logical_plan_utility(
         }
         DslPlan::Filter { input, predicate } => {
             let threshold = is_threshold_predicate(predicate.clone());
-            logical_plan_utility(input.as_ref(), alpha, threshold)
+            summarize_logical_plan(input.as_ref(), alpha, threshold)
         }
         DslPlan::Sort { input, .. }
         | DslPlan::Slice { input, .. }
-        | DslPlan::Sink { input, .. } => logical_plan_utility(input.as_ref(), alpha, threshold),
+        | DslPlan::Sink { input, .. } => summarize_logical_plan(input.as_ref(), alpha, threshold),
         dsl => fallible!(FailedFunction, "unrecognized dsl: {:?}", dsl.describe()),
     }
 }
 
-fn expr_utility<'a>(
+/// Summarize the statistics to be computed in an Expr
+fn summarize_expr<'a>(
     expr: &Expr,
     alpha: Option<f64>,
     threshold: Option<(String, u32)>,
@@ -177,6 +191,11 @@ fn expr_utility<'a>(
         }]);
     }
 
+    // summarize quantile statistics
+    if let Some((inputs, _)) = match_trusted_plugin::<IndexCandidatesPlugin>(&expr)? {
+        return summarize_expr(&inputs[0], alpha, threshold);
+    }
+
     if let Some((inputs, plugin)) = match_trusted_plugin::<ReportNoisyMaxPlugin>(&expr)? {
         return Ok(vec![UtilitySummary {
             name,
@@ -188,35 +207,43 @@ fn expr_utility<'a>(
         }]);
     }
 
-    match expr {
-        Expr::Len => Ok(vec![UtilitySummary {
-            name,
+    Ok(match expr {
+        Expr::Len => vec![UtilitySummary {
+            name: name.clone(),
             aggregate: "Len".to_string(),
             distribution: None,
             scale: None,
             accuracy: alpha.is_some().then_some(0.0),
             threshold: t_value,
-        }]),
+        }],
 
-        Expr::Function { input, .. } => Ok(input
+        Expr::Function { input, .. } => input
             .iter()
-            .map(|e| expr_utility(e, alpha, threshold.clone()))
+            .map(|e| summarize_expr(e, alpha, threshold.clone()))
             .collect::<Fallible<Vec<_>>>()?
             .into_iter()
             .flatten()
-            .collect()),
+            .collect(),
 
-        _ => fallible!(FailedFunction, "unrecognized primitive"),
-    }
+        Expr::BinaryExpr { left, op: _, right } => [
+            summarize_expr(&left, alpha, threshold.clone())?,
+            summarize_expr(&right, alpha, threshold)?,
+        ]
+        .concat(),
+
+        e => return fallible!(FailedFunction, "unrecognized primitive: {:?}", e),
+    })
 }
 
-fn expr_aggregate(expr: &Expr) -> Fallible<&'static str> {
-    if match_discrete_quantile_score(expr)?.is_some() {
-        return Ok("Quantile");
+fn expr_aggregate(expr: &Expr) -> Fallible<String> {
+    if let Some((_, plugin)) = match_trusted_plugin::<DiscreteQuantileScorePlugin>(&expr)? {
+        let (num, den) = plugin.alpha;
+        return Ok(format!("{}-Quantile", num as f64 / den as f64));
     }
     Ok(match expr {
         Expr::Agg(AggExpr::Sum(_)) => "Sum",
         Expr::Len => "Len",
         expr => return fallible!(FailedFunction, "unrecognized aggregation: {:?}", expr),
-    })
+    }
+    .to_string())
 }

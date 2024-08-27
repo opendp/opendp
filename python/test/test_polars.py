@@ -1,6 +1,7 @@
 import pytest
 import opendp.prelude as dp
 import os
+import warnings
 
 
 
@@ -324,8 +325,8 @@ def test_polars_context():
         split_evenly_over=2,
         margins={
             # TODO: this is redundant with the second margin
-            (): dp.Margin(max_partition_length=5),
-            ("B",): dp.Margin(public_info="keys", max_partition_length=5),
+            (): dp.polars.Margin(max_partition_length=5),
+            ("B",): dp.polars.Margin(public_info="keys", max_partition_length=5),
         },
     )
 
@@ -359,7 +360,7 @@ def test_polars_describe():
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=2,
         margins={
-            ("B",): dp.Margin(public_info="keys", max_partition_length=5),
+            ("B",): dp.polars.Margin(public_info="keys", max_partition_length=5),
         },
     )
 
@@ -384,7 +385,7 @@ def test_polars_describe():
         .agg(pl.len().dp.noise(), summer, summer.alias("B"))
     )
 
-    actual = query.accuracy()
+    actual = query.summarize()
     pl_testing.assert_frame_equal(expected, actual)
 
     accuracy = [
@@ -393,7 +394,7 @@ def test_polars_describe():
         dp.discrete_laplacian_scale_to_accuracy(18.0, 0.05)
     ]
     expected = expected.hstack([pl.Series("accuracy", accuracy)])
-    actual = query.accuracy(alpha=0.05)
+    actual = query.summarize(alpha=0.05)
     pl_testing.assert_frame_equal(expected, actual)
 
 
@@ -407,7 +408,7 @@ def test_polars_accuracy_threshold():
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=2,
         margins={
-            ("B",): dp.Margin(max_partition_length=5),
+            ("B",): dp.polars.Margin(max_partition_length=5),
         },
     )
 
@@ -428,7 +429,7 @@ def test_polars_accuracy_threshold():
         .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
     )
 
-    actual = query.accuracy()
+    actual = query.summarize()
     pl_testing.assert_frame_equal(expected, actual)
 
 
@@ -483,7 +484,7 @@ def test_polars_threshold():
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=2,
         margins={
-            ("A",): dp.Margin(public_info="keys"),
+            ("A",): dp.polars.Margin(public_info="keys"),
         },
     )
 
@@ -491,7 +492,7 @@ def test_polars_threshold():
         context.query()
         .group_by("A")
         .agg(pl.len().dp.noise())
-        .accuracy()
+        .summarize()
     )
 
     expected = pl.DataFrame({
@@ -518,7 +519,7 @@ def test_polars_threshold():
         context.query()
         .group_by("B")
         .agg(pl.len().dp.noise())
-        .accuracy()
+        .summarize()
     )
 
     expected = pl.DataFrame({
@@ -638,3 +639,33 @@ def test_pickle_bomb():
             dp.max_divergence(T=float),
             bomb_lf,
         )
+
+
+def test_cut():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    data = pl.LazyFrame({"x": [0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]})
+    with warnings.catch_warnings():
+        context = dp.Context.compositor(
+            data=data.with_columns(pl.col("x").cut([1.0, 2.0, 3.0]).to_physical()),
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=10000.0),
+            split_evenly_over=1,
+            margins={("x",): dp.polars.Margin(public_info="keys")},
+        )
+    actual = (
+        context.query()
+        .group_by("x")
+        .agg(pl.len().dp.noise())
+        .release()
+        .collect()
+        .sort("x")
+    )
+    expected = pl.DataFrame(
+        {"x": [0, 1, 2, 3], "len": [2, 2, 2, 1]}, 
+        schema={"x": pl.UInt32, "len": pl.UInt32},
+    )
+
+    pl_testing.assert_frame_equal(actual, expected)
+    

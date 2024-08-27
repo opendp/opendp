@@ -3,7 +3,148 @@
 This file documents the version history of OpenDP. The links on each version number will take you to a comparison
 showing the source changes from the previous version.
 
-## [0.10.0-dev](https://github.com/opendp/opendp/compare/v0.9.2...HEAD) - TBD
+
+
+## [0.11.1](https://github.com/opendp/opendp/compare/v0.11.0...HEAD) - TBD
+
+### Added
+
+- Randomized response bitvec [#1279](https://github.com/opendp/opendp/pull/1279)
+- Randomized response bitvec ffi [#1680](https://github.com/opendp/opendp/pull/1680)
+- Proof for `make_randomized_response` [#1315](https://github.com/opendp/opendp/pull/1315)
+- Polars:
+    - Auto-calibrate noise scale in bounded-dp [#1943](https://github.com/opendp/opendp/pull/1943)
+    - Rename accuracy to summarize [#1942](https://github.com/opendp/opendp/pull/1942)
+    - Support means in accuracy utility [#1922](https://github.com/opendp/opendp/pull/1922)
+- Docs:
+    - Computing fundamental statistics notebook [#1834](https://github.com/opendp/opendp/pull/1834)
+    - Polars groupby [#1836](https://github.com/opendp/opendp/pull/1836)
+    - Pointer to list of features from api docs [#1931](https://github.com/opendp/opendp/pull/1931)
+    - Documentation for python vs r cargo build [#1927](https://github.com/opendp/opendp/pull/1927)
+    - Js redirect for getting-started [#1935](https://github.com/opendp/opendp/pull/1935)
+    - Logo on readme [#1936](https://github.com/opendp/opendp/pull/1936)
+    - Link to the new learning resources list, and to hands-on differential privacy [#1896](https://github.com/opendp/opendp/pull/1896)
+    - Switch typical-workflow from old dataframe methods to just a vector of numbers [#1909](https://github.com/opendp/opendp/pull/1909)
+    - Copy existing code-of-conduct [#1905](https://github.com/opendp/opendp/pull/1905)
+    - Clean up old maintainer notes [#1879](https://github.com/opendp/opendp/pull/1879)
+    - Remove unused todo files in docs [#1907](https://github.com/opendp/opendp/pull/1907)
+- A script to help create changelog [#1672](https://github.com/opendp/opendp/pull/1672)
+
+### Change
+
+- Don't mask predicate error in binary search [#1956](https://github.com/opendp/opendp/pull/1956)
+
+### Fix
+
+- Nightly docs.rs build fails on shadowed generics [#1947](https://github.com/opendp/opendp/pull/1947)
+- Infinite loop in data download [#1945](https://github.com/opendp/opendp/pull/1945)
+- Fill in rust error message templates [#1917](https://github.com/opendp/opendp/pull/1917)
+- `assert_feature` check [#1933](https://github.com/opendp/opendp/pull/1933)
+- `master` to `main` in two notebooks [#1915](https://github.com/opendp/opendp/pull/1915)
+
+### Migration
+
+- rename `.accuracy` to `.summarize` in Polars Context queries
+
+
+
+
+## [0.11.0](https://github.com/opendp/opendp/compare/v0.10.0...v0.11.0) - 2024-08-13
+
+### Fixed
+
+- Fix Windows install problem [#1779](https://github.com/opendp/opendp/pull/1779)
+- R: Fix null pointer error [#1820](https://github.com/opendp/opendp/pull/1820)
+- Fix Python freeze: Don't allow iteration over base classes [#1823](https://github.com/opendp/opendp/pull/1823)
+- R: Fix docs build by using `stable` [#1894](https://github.com/opendp/opendp/pull/1894)
+
+- URLs:
+    - Update urls in docs to reflect new structure [#1692](https://github.com/opendp/opendp/pull/1692)
+    - Links in pums-data-analysis [#1729](https://github.com/opendp/opendp/pull/1729)
+
+### Added
+
+- Polars:
+    - Opendp_lib_path -> opendp_polars_lib_path [#1839](https://github.com/opendp/opendp/pull/1839)
+    - Test pickle bombs [#1841](https://github.com/opendp/opendp/pull/1841)
+    - Shuffle onceframe output [#1827](https://github.com/opendp/opendp/pull/1827)
+    - Evenly allocate budget amongst queries, by default [#1825](https://github.com/opendp/opendp/pull/1825)
+    - Nit error messages [#1824](https://github.com/opendp/opendp/pull/1824)
+    - Emulate polars apis for type annotations [#1786](https://github.com/opendp/opendp/pull/1786)
+    - Rewrite binary paths in polars plugins [#1785](https://github.com/opendp/opendp/pull/1785)
+    - No kwargs in public apis [#1767](https://github.com/opendp/opendp/pull/1767)
+    - Laplace thresholding for private key-sets [#1716](https://github.com/opendp/opendp/pull/1716)
+    - Utility estimation [#1760](https://github.com/opendp/opendp/pull/1760)
+    - Update Polars dependency to 1.1.0 [#1703](https://github.com/opendp/opendp/pull/1703)
+    - Enable cutqcut [#1883](https://github.com/opendp/opendp/pull/1883)
+
+- Testing:
+    - Improved test coverage in generated code [#1656](https://github.com/opendp/opendp/pull/1656)
+    - Improved test coverage in `typing.py` [#1652](https://github.com/opendp/opendp/pull/1652)
+    - Treat test warnings as errors [#1727](https://github.com/opendp/opendp/pull/1727)
+
+- Docs:
+    - Noise mechanism comparison [#1735](https://github.com/opendp/opendp/pull/1735)
+    - Features and env vars [#1815](https://github.com/opendp/opendp/pull/1815)
+    - Revise tabular data index.rst [#1864](https://github.com/opendp/opendp/pull/1864)
+    - Stub out getting-started/utility [#1797](https://github.com/opendp/opendp/pull/1797)
+    - getting-started/stats [#1799](https://github.com/opendp/opendp/pull/1799)
+    - Added dependencies for polars notebooks [#1855](https://github.com/opendp/opendp/pull/1855)
+    - Partitioning with known and unknown lengths [#1845](https://github.com/opendp/opendp/pull/1845)
+    - Add examples in Polars API docs [#1688](https://github.com/opendp/opendp/pull/1688)
+    - Tabular data index.rst [#1812](https://github.com/opendp/opendp/pull/1812)
+    - Plugin example with regression [#1770](https://github.com/opendp/opendp/pull/1770)
+
+- misc:
+    - `with_privacy` now passes `args` and `kwargs` [#1784](https://github.com/opendp/opendp/pull/1784)
+    - More informative error message if python and rust polars versions don't match [#1695](https://github.com/opendp/opendp/pull/1695)
+    - Include directory in error message if binary not found [#1886](https://github.com/opendp/opendp/pull/1886)
+
+### Changed
+
+- Typing:
+    - Add release dtypes to ffi for atomdomain and optiondomain [#1705](https://github.com/opendp/opendp/pull/1705)
+    - Remove `unknowntype` and instead immediately raise exception [#1694](https://github.com/opendp/opendp/pull/1694)
+    - Cast int to float if needed in `py_to_c` [#1509](https://github.com/opendp/opendp/pull/1509)
+
+- Introduce `extras` namespace
+    - Rename `_extrinsics` to `extras` [#1452](https://github.com/opendp/opendp/pull/1452)
+    - `dp.np_array2_domain` -> `dp.numpy.array2_domain` [#1861](https://github.com/opendp/opendp/pull/1861)
+    - `polars` to `extras` [#1844](https://github.com/opendp/opendp/pull/1844)
+    - Follow sklearn namespace precedents: `extras.sklearn.decomposition.PCA` [#1866](https://github.com/opendp/opendp/pull/1866)
+
+- Docs:
+    - On docs homepage, replace youtube link with Swiss FSO blog post [#1696](https://github.com/opendp/opendp/pull/1696)
+    - Standardize notation for neighboring data sets [#1319](https://github.com/opendp/opendp/pull/1319)
+    - Document API layers [#1800](https://github.com/opendp/opendp/pull/1800)
+    - Update release process notes [#1817](https://github.com/opendp/opendp/pull/1817)
+    - Notebooks without images or wget to RST [#1700](https://github.com/opendp/opendp/pull/1700)
+    - Improved explanation of `honest-but-curious` [#1810](https://github.com/opendp/opendp/pull/1810),  [#1730](https://github.com/opendp/opendp/pull/1730)
+    - Remove epsilon/delta units in docs [#1822](https://github.com/opendp/opendp/pull/1822)
+
+Testing:
+    - Enable all features at start of test run [#1858](https://github.com/opendp/opendp/pull/1858)
+
+### Removed
+
+- Remove references to Binder [#1877](https://github.com/opendp/opendp/pull/1877)
+- Remove old dataframe docs from API User Guide [#1875](https://github.com/opendp/opendp/pull/1875)
+- gitignore the generated bindings [#1430](https://github.com/opendp/opendp/pull/1430)
+    - Update bindings in release channels [#1856](https://github.com/opendp/opendp/pull/1856)
+    - Build python bindings before weeks-doc-check [#1847](https://github.com/opendp/opendp/pull/1847)
+
+
+### Migration
+
+- Changed to product ordering for tuples, which breaks `binary_search_param` for `make_laplace_threshold`
+    - Updated parameter calibration code [can be found here](https://docs.opendp.org/en/v0.11.0/getting-started/examples/histograms.html#Private-histogram-via-make_count_by-and-make_laplace_threshold)
+- renamed `dp.np_array2_domain` to `dp.numpy.array2_domain`
+- moved Numpy `dp.np_*` methods to `dp.numpy.np_*`
+- moved SciKit-Learn `dp.sklearn.PCA` to `dp.sklearn.decomposition.PCA`
+- moved `dp.Margin` to `dp.polars.Margin`
+
+
+## [0.10.0](https://github.com/opendp/opendp/compare/v0.9.2...v0.10.0) - 2024-06-20
 
 ### Added
 

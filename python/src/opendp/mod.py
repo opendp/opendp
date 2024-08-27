@@ -727,16 +727,27 @@ GLOBAL_FEATURES = set()
 
 
 def enable_features(*features: str) -> None:
+    '''
+    Allow the use of optional features. See :ref:`feature-listing` for details.
+    '''
     GLOBAL_FEATURES.update(set(features))
 
 
 def disable_features(*features: str) -> None:
+    '''
+    Disallow the use of optional features. See :ref:`feature-listing` for details.
+    '''
     GLOBAL_FEATURES.difference_update(set(features))
 
 
 def assert_features(*features: str) -> None:
-    for feature in features:
-        assert feature in GLOBAL_FEATURES, f"Attempted to use function that requires {feature}, but {feature} is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"{feature}\")"
+    '''
+    Check whether a given feature is enabled. See :ref:`feature-listing` for details.
+    '''
+    missing_features = [f for f in features if f not in GLOBAL_FEATURES]
+    if missing_features:
+        features_string = ', '.join(f'"{f}"' for f in features)
+        raise OpenDPException(f"Attempted to use function that requires {features_string}, but not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features({features_string})")
 
 
 M = TypeVar("M", Transformation, Measurement)
@@ -1091,8 +1102,11 @@ def exponential_bounds_search(
     if exception_bounds is None:
         try:
             predicate(center)
-        except Exception:
-            raise ValueError(f"predicate always fails. An example traceback is shown above at {center}.")
+        except Exception as e:
+            # enrich the error message if in Python 3.11+.
+            if hasattr(e, "add_note"):
+                e.add_note(f"Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at {center}.")
+            raise
     
 
     center, sign = binary_search(exception_predicate, bounds=exception_bounds, T=T, return_sign=True)

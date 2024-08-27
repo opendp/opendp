@@ -113,7 +113,7 @@ pub extern "C" fn opendp_measurements__make_gaussian(
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
     let k = as_ref(k as *const i32).map(Clone::clone);
-    let T = try_!(input_domain.type_.get_atom());
+    let T_ = try_!(input_domain.type_.get_atom());
     let MO = try_!(Type::try_from(MO));
     let QO = try_!(MO.get_atom());
 
@@ -123,33 +123,33 @@ pub extern "C" fn opendp_measurements__make_gaussian(
         Some(())
     }
 
-    if let Some(_) = dispatch!(in_set, [(T, @floats)]) {
+    if let Some(_) = dispatch!(in_set, [(T_, @floats)]) {
         let QI = try_!(input_metric.distance_type.get_atom());
-        if T != QI {
+        if T_ != QI {
             return err!(
                 FFI,
                 "since data type is float, input distance type ({}) must match data type ({})",
                 QI.descriptor,
-                T.descriptor
+                T_.descriptor
             )
             .into();
         }
-        if T != QO {
+        if T_ != QO {
             return err!(
                 FFI,
                 "since data type is float, output distance type ({}) must match data type ({})",
                 QO.descriptor,
-                T.descriptor
+                T_.descriptor
             )
             .into();
         }
         dispatch!(monomorphize_float, [
-            (T, @floats)
+            (T_, @floats)
         ], (input_domain, input_metric, scale, k, MO))
     } else {
         let QI = input_metric.distance_type.clone();
         dispatch!(monomorphize_integer, [
-            (T, @integers),
+            (T_, @integers),
             (QI, @numbers),
             (QO, @floats)
         ], (input_domain, input_metric, scale, k, MO, QI))
