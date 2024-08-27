@@ -2,9 +2,6 @@ import pytest
 import opendp.prelude as dp
 import os
 import warnings
-import re
-
-
 
 
 def test_polars_version():
