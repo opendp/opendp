@@ -16,9 +16,13 @@
   {%- for tag in versions.tags %}
     {%- set extended_name = tag.name if "-rc" in tag.name else tag.name + "-rc.~" %}
     {%- set weight = "bold" if current_version.name == tag.name else "normal" %}
-    {%- set ns.items = ns.items + [{"extended_name": extended_name, "tag": tag, "weight": weight}] %}
+    {%- set ns.items = ns.items + [{
+            "tag": tag,
+            "weight": weight,
+            "sort_key": '{:0>3}.{:0>3}.{:0>3}'.format(*extended_name.split("."))
+    }] %}
   {%- endfor %}
-  {%- for item in ns.items|sort(attribute="extended_name", reverse=True) %}
+  {%- for item in ns.items | sort(attribute="sort_key", reverse=True) %}
     <li><a href="{{ item.tag.url }}" style="font-weight: {{ item.weight }}">{{ item.tag.name }}</a></li>
   {%- endfor %}
 </ul>
