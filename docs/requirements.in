@@ -5,7 +5,7 @@
 #
 # and then commit this file and requirements.txt.
 
-sphinx
+sphinx==7.2.6 # TODO: upgrade breaks "make html". https://github.com/opendp/opendp/issues/1910
 sphinx-prompt
 sphinx-design
 git+https://github.com/samtygier-stfc/sphinx-multiversion.git@prebuild_command
