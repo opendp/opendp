@@ -1,9 +1,5 @@
-use crate::error::Fallible;
-
 #[test]
-fn test_python_code_generation() -> Fallible<()> {
-    
-    assert_eq!(expected, description);
-
-    Ok(())
+fn test_python_code_generation() {
+    let result = 2 + 2;
+    assert_eq!(result, 5);
 }
