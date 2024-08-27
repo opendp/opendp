@@ -1,4 +1,4 @@
-{% if current_version.name not in [latest_version_name, 'stable'] %}
+{% if current_version and current_version.name not in [latest_version_name, 'stable'] %}
 <div class="admonition warning" style="position: relative;">
   <!--
    Without the style, the region for the article title overlaps, and the link is unclickable.
