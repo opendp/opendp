@@ -1,6 +1,5 @@
 import pytest
 import opendp.prelude as dp
-import re
 
 
 @pytest.mark.xfail(raises=dp.UnknownTypeException)
