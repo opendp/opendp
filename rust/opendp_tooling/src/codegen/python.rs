@@ -4,9 +4,7 @@ use std::path::PathBuf;
 
 use crate::{Argument, Function, TypeRecipe, Value};
 
-use crate::codegen::tab_py;
-
-use super::flatten_type_recipe;
+use crate::codegen::{flatten_type_recipe, generate_flag_check, generate_flag_doc, tab_py};
 
 /// Top-level function to generate Python bindings, including all modules.
 pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<PathBuf, String> {
@@ -390,34 +388,6 @@ return output"#,
         set_dependencies = set_dependencies(&func.dependencies),
         make_call = generate_call(module_name, func, typemap)
     )
-}
-
-fn generate_flag_list(features: &Vec<String>) -> String {
-    features
-        .iter()
-        .map(|f| format!("\"{}\"", f))
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
-// generate code that checks that a set of feature flags are enabled
-fn generate_flag_check(features: &Vec<String>) -> String {
-    if features.is_empty() {
-        String::default()
-    } else {
-        format!("assert_features({})\n\n", generate_flag_list(features))
-    }
-}
-
-fn generate_flag_doc(features: &Vec<String>) -> String {
-    if features.is_empty() {
-        String::default()
-    } else {
-        format!(
-            "Requires `dp.enable_features({})`. ",
-            generate_flag_list(features)
-        )
-    }
 }
 
 /// generate code that provides an example of the type of the type_arg

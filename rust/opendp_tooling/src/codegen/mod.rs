@@ -159,3 +159,33 @@ impl Argument {
         self.c_type().split('<').next().unwrap().to_string()
     }
 }
+
+fn generate_flag_list(features: &Vec<String>) -> String {
+    features
+        .iter()
+        .map(|f| format!("\"{}\"", f))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+// Generates code that checks that a set of feature flags are enabled,
+// for either Python or R.
+pub fn generate_flag_check(features: &Vec<String>) -> String {
+    if features.is_empty() {
+        String::default()
+    } else {
+        format!("assert_features({})\n\n", generate_flag_list(features))
+    }
+}
+
+// Generates human-readable reminder of the required flags.
+pub fn generate_flag_doc(features: &Vec<String>) -> String {
+    if features.is_empty() {
+        String::default()
+    } else {
+        format!(
+            "Requires `enable_features({})`. ",
+            generate_flag_list(features)
+        )
+    }
+}

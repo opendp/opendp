@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fs, iter::once};
 
 use crate::{
-    codegen::{flatten_type_recipe, tab_r},
+    codegen::{flatten_type_recipe, generate_flag_check, generate_flag_doc, tab_r},
     Argument, Function, TypeRecipe, Value,
 };
 
@@ -557,34 +557,6 @@ fn generate_wrapper_call(module_name: &str, func: &Function) -> String {
         r#"# Call wrapper function.
 output <- {call}"#
     )
-}
-
-fn generate_flag_list(features: &Vec<String>) -> String {
-    features
-        .iter()
-        .map(|f| format!("\"{}\"", f))
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
-// generate code that checks that a set of feature flags are enabled
-fn generate_flag_check(features: &Vec<String>) -> String {
-    if features.is_empty() {
-        String::default()
-    } else {
-        format!("assert_features({})\n\n", generate_flag_list(features))
-    }
-}
-
-fn generate_flag_doc(features: &Vec<String>) -> String {
-    if features.is_empty() {
-        String::default()
-    } else {
-        format!(
-            "Requires `enable_features({})`. ",
-            generate_flag_list(features)
-        )
-    }
 }
 
 // ensures that `name` is a valid R variable name, and prefixes types with dots
