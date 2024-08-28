@@ -25,7 +25,7 @@
 >>> release = np.frombuffer(m_rr(data.tobytes()), dtype=np.uint8)
 
 >>> # compare the two bit vectors:
->>> list(np.unpackbits(data))
+>>> [int(bit) for bit in np.unpackbits(data)]
 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0]
->>> list(np.unpackbits(release))
+>>> [int(bit) for bit in np.unpackbits(release)]
 [...]
