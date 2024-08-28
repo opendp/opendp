@@ -2,9 +2,8 @@ use crate::codegen::python::generate_function;
 use crate::{Argument, Function, TypeRecipe, Value};
 use std::collections::HashMap;
 
-#[test]
-fn test_python_code_generation() {
-    let argument = Argument {
+fn make_argument() -> Argument {
+    Argument {
         name: Some("fake_argument".to_string()),
         c_type: Some("double".to_string()),
         rust_type: Some(TypeRecipe::Name("f64".to_string())),
@@ -15,32 +14,28 @@ fn test_python_code_generation() {
         is_type: false,
         do_not_convert: false,
         example: None,
-    };
+    }
+}
 
-    let return_argument = Argument {
-        name: Some("fake_argument".to_string()),
-        c_type: Some("double".to_string()),
-        rust_type: Some(TypeRecipe::Name("f64".to_string())),
-        hint: None,
-        description: Some("fake description".to_string()),
-        default:  Some(Value::Float(99.9)),
-        generics: vec![],
-        is_type: false,
-        do_not_convert: false,
-        example: None,
-    };
-
-    let function = Function {
+fn make_function(parameter_argument: Argument, return_argument: Argument) -> Function {
+    Function {
         name: "fake_function".to_string(),
         description: Some("fake description".to_string()),
         features: vec!["fake_feature".to_string()],
-        args: vec![argument],
+        args: vec![parameter_argument],
         derived_types: vec![],
         ret: return_argument,
         dependencies: vec![],
         supports_partial: false,
         has_ffi: true,
-    };
+    }
+}
+
+#[test]
+fn test_python_code_generation() {
+    let parameter_argument = make_argument();
+    let return_argument = make_argument();
+    let function = make_function(parameter_argument, return_argument);
 
     let typemap: HashMap<String, String> =
         serde_json::from_str(&include_str!("python_typemap.json")).unwrap();
