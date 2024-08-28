@@ -254,7 +254,7 @@ class DPExpr(object):
 try:
     from polars.api import register_expr_namespace  # type: ignore[import-not-found]
     register_expr_namespace("dp")(DPExpr)
-except ImportError:
+except ImportError: # pragma: no cover
     pass
 
 
@@ -647,7 +647,7 @@ try:
 
 
 
-except ImportError:
+except ImportError: # pragma: no cover
     ERR_MSG = "LazyFrameQuery depends on Polars: `pip install 'opendp[polars]'`."
 
     class LazyFrameQuery(object):  # type: ignore[no-redef]

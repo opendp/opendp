@@ -5,11 +5,11 @@
 #
 # and then commit this file and requirements-dev.txt.
 
-flake8 ~= 7.0
-pytest ~= 7.4
-wheel ~= 0.41
-coverage ~= 7.3
-mypy ~= 1.7
+flake8
+pytest
+wheel
+coverage
+mypy
 pip-tools==7.3.0
 types-Deprecated
 

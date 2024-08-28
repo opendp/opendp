@@ -309,7 +309,7 @@ def _refcounter(ptr, increment):
             ctypes.pythonapi.Py_IncRef(ctypes.py_object(ptr))
         else:
             ctypes.pythonapi.Py_DecRef(ctypes.py_object(ptr))
-    except Exception:
+    except Exception: # pragma: no cover
         return False
     return True
 

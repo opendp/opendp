@@ -110,7 +110,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
             return measurement_check(self, d_in, d_out)
         except OpenDPException as err:
             if err.variant == "RelationDebug":
-                return False
+                return False # pragma: no cover
             raise
 
     def __rshift__(self, other: Union["Function", "Transformation", Callable]) -> "Measurement":
@@ -191,7 +191,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         try:
             from opendp.core import _measurement_free
             _measurement_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -298,7 +298,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
 
         try:
             return transformation_check(self, d_in, d_out)
-        except OpenDPException as err:
+        except OpenDPException as err: # pragma: no cover
             if err.variant == "RelationDebug":
                 return False
             raise
@@ -410,7 +410,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         try:
             from opendp.core import _transformation_free
             _transformation_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -468,7 +468,7 @@ class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
         try:
             from opendp.core import _function_free
             _function_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -515,7 +515,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         try:
             from opendp.domains import _domain_free
             _domain_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -564,7 +564,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
         try:
             from opendp.metrics import _metric_free
             _metric_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -616,7 +616,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
         try:
             from opendp.measures import _measure_free
             _measure_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -1042,7 +1042,7 @@ def exponential_bounds_search(
                 return False
             except OpenDPException as e:
                 if "No match for concrete type" in (e.message or ""):
-                    return False
+                    return False # pragma: no cover
             return True
         
         if check_type(0.):
