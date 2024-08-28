@@ -310,7 +310,7 @@ fn noise_udf(inputs: &[Series], kwargs: NoisePlugin) -> PolarsResult<Series> {
         ChunkedArray<PT>: IntoSeries,
     {
         let Ok(scale) = RBig::try_from(scale) else {
-            polars_bail!(InvalidOperation: "scale must be finite")
+            polars_bail!(InvalidOperation: "scale ({}) must be representable as a fraction", scale)
         };
 
         Ok(series

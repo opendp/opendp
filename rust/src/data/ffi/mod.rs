@@ -314,12 +314,7 @@ pub extern "C" fn opendp_data__slice_as_object(
                     dispatch!(raw_to_tuple2, [(types[0], @primitives), (types[1], @primitives)], (raw))
                 },
                 3 => {
-                    if types[0] != Type::of::<IntDistance>() || types[1] != types[2] {
-                        return err!(FFI, 
-                            "3-tuples are only implemented for partition distances. First type must be a u32, and next two types must be numbers of the same type. Found {}",
-                            types.iter().map(|t| t.to_string()).collect::<Vec<String>>().join(", ")
-                        ).into();
-                    }
+                    try_!(check_partition_distance_types(&types));
                     dispatch!(raw_to_tuple3_partition_distance, [(types[1], @numbers)], (raw))
                 },
                 l => return err!(FFI, "Only tuples of length 2 or 3 are supported, found a length of {}", l).into()
@@ -587,12 +582,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                     dispatch!(tuple2_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))
                 },
                 3 => {
-                    if types[0] != Type::of::<IntDistance>() || types[1] != types[2] {
-                        return err!(FFI,
-                            "3-tuples are only implemented for partition distances. First type must be a u32, and next two types must be numbers of the same type. Found {}",
-                            types.iter().map(|t| t.to_string()).collect::<Vec<String>>().join(", ")
-                        ).into();
-                    }
+                    try_!(check_partition_distance_types(&types));
                     dispatch!(tuple3_partition_distance_to_raw, [(types[1], @numbers)], (obj))
                 },
                 l => return err!(FFI, "Only tuples of length 2 or 3 are supported, found length of {}", l).into()
@@ -613,6 +603,23 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         // This list is explicit because it allows us to avoid including u32 in the @primitives, and queryables
         _ => { dispatch!(plain_to_raw, [(obj.type_, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyQueryable])], (obj)) }
     }.into()
+}
+
+/// Checks that a vector of three types satisfies the requirements of a partition distance.
+fn check_partition_distance_types(types: &Vec<Type>) -> Fallible<()> {
+    if types[0] != Type::of::<IntDistance>() {
+        return fallible!(FFI,
+            "3-tuples are only implemented for partition distances. First type must be a u32, found {}",
+            types[0].to_string()
+        );
+    }
+    if types[1] != types[2] {
+        return fallible!(FFI,
+            "3-tuples are only implemented for partition distances. Last two types must be numbers of the same type, found {} and {}",
+            types[1].to_string(), types[2].to_string()
+        );
+    }
+    Ok(())
 }
 
 #[bootstrap(

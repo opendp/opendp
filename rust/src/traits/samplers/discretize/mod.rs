@@ -124,7 +124,13 @@ macro_rules! impl_cast_internal_rational_float {
                 v.$method().value()
             }
             fn into_rational(self) -> Fallible<RBig> {
-                RBig::try_from(self).map_err(|_| err!(FailedFunction, "shift must be finite"))
+                RBig::try_from(self).map_err(|_| {
+                    err!(
+                        FailedFunction,
+                        "{} must be representable as a fraction",
+                        self
+                    )
+                })
             }
         }
     };

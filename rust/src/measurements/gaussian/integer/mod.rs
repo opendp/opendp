@@ -40,8 +40,13 @@ where
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
     }
-    let scale_rational = RBig::try_from(scale)
-        .map_err(|_| err!(MakeMeasurement, "scale ({}) must be finite", scale))?;
+    let scale_rational = RBig::try_from(scale).map_err(|_| {
+        err!(
+            MakeMeasurement,
+            "scale ({}) is not representable as a fraction",
+            scale
+        )
+    })?;
 
     Measurement::new(
         input_domain,
@@ -91,8 +96,13 @@ where
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
     }
-    let scale_rational = RBig::try_from(scale)
-        .map_err(|_| err!(MakeMeasurement, "scale ({}) must be finite", scale))?;
+    let scale_rational = RBig::try_from(scale).map_err(|_| {
+        err!(
+            MakeMeasurement,
+            "scale ({}) is not representable as a fraction",
+            scale
+        )
+    })?;
 
     Measurement::new(
         input_domain,

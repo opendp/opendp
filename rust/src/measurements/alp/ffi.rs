@@ -71,8 +71,8 @@ pub extern "C" fn opendp_measurements__make_alp_queryable(
     let TypeContents::GENERIC { name, args } = &input_domain.carrier_type.contents else {
         return err!(
             FFI,
-            "Expected input domain to be MapDomain, found {:?}",
-            input_domain
+            "Expected input domain to be MapDomain, found {}",
+            input_domain.type_.to_string()
         )
         .into();
     };
@@ -80,8 +80,8 @@ pub extern "C" fn opendp_measurements__make_alp_queryable(
     if name != &"HashMap" {
         return err!(
             FFI,
-            "Expected input domain to be MapDomain, found {:?}",
-            input_domain
+            "Expected input domain to be MapDomain, found {}",
+            input_domain.type_.to_string()
         )
         .into();
     }
