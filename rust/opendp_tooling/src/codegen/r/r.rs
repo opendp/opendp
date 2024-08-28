@@ -230,7 +230,7 @@ fn generate_doc_block(
     };
 
     format!(
-        r#"{flag_doc}{description}
+        r#"{description}{flag_doc}
 {concept}{doc_args}{ret_arg}{examples}{export}"#,
         concept = concept,
         description = description,

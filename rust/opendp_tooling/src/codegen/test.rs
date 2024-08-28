@@ -45,7 +45,8 @@ fn test_python_code_generation() {
 def fake_function(
     fake_argument = 99.9
 ):
-    r\"\"\"Requires `enable_features(\"fake_feature\")`. fake description
+    r\"\"\"fake description
+    Requires `enable_features(\"fake_feature\")`.
 
     :param fake_argument: fake description
     :return: fake description
@@ -82,7 +83,8 @@ fn test_r_code_generation() {
         serde_json::from_str(&include_str!("type_hierarchy.json")).unwrap();
     let generated_code = r::r::generate_r_function("fake_module", &function, &hierarchy);
     let expected_code = "
-#' Requires `enable_features(\"fake_feature\")`. fake description
+#' fake description
+#' Requires `enable_features(\"fake_feature\")`.
 #'
 #' @concept fake_module
 #' @param fake_argument fake description

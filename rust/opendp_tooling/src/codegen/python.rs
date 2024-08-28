@@ -322,7 +322,7 @@ fn generate_docstring(
     };
 
     format!(
-        r#"r"""{flag_doc}{description}
+        r#"r"""{description}{flag_doc}
 {doc_args}{ret_arg}
 {raises}{example}
 """"#,

@@ -184,7 +184,7 @@ pub fn generate_flag_doc(features: &Vec<String>) -> String {
         String::default()
     } else {
         format!(
-            "Requires `enable_features({})`. ",
+            "Requires `enable_features({})`.\n",
             generate_flag_list(features)
         )
     }
