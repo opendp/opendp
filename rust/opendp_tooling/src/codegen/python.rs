@@ -412,8 +412,14 @@ fn generate_flag_doc(features: &Vec<String>) -> String {
     if features.is_empty() {
         String::default()
     } else {
-        let flag_check = generate_flag_check(features);
-        format!("Requires `{}`. ", flag_check.trim())
+        format!(
+            "Requires `dp.enable_features({})`. ",
+            features
+                .iter()
+                .map(|f| format!("\"{}\"", f))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
 }
 
