@@ -4,8 +4,6 @@ import os
 import warnings
 
 
-
-
 def test_polars_version():
     pl = pytest.importorskip("polars")
     from opendp.mod import _EXPECTED_POLARS_VERSION
@@ -668,4 +666,30 @@ def test_cut():
     )
 
     pl_testing.assert_frame_equal(actual, expected)
-    
+
+
+@pytest.mark.xfail(raises=AssertionError)
+def test_csv_bad_encoding_loading():
+    # See https://github.com/opendp/opendp/issues/1976
+    # If a CSV is misencoded, Polars loads an empty dataframe.
+    # Since we tell users not to look at their data,
+    # we may want to try harder to load the csv,
+    # or give more information on failure.
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+    import tempfile
+
+    name = 'André'
+    name_b = name.encode('iso-8859-1') # Polars only handles 'utf-8'.
+
+    with tempfile.NamedTemporaryFile(delete=False) as fp:
+        # By default, would delete file on "close()";
+        # With "delete=False", clean up when exiting "with" instead.
+        fp.write(b'name\n' + name_b)
+        fp.close()
+        df = pl.scan_csv(fp.name, ignore_errors=True)
+        expected = pl.LazyFrame(
+            {"name": [name]},
+            schema={"name": pl.String},
+        )
+        pl_testing.assert_frame_equal(df, expected)
