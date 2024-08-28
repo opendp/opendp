@@ -46,6 +46,7 @@ def fake_function(
     fake_argument = 99.9
 ):
     r\"\"\"fake description
+
     Requires `enable_features(\"fake_feature\")`.
 
     :param fake_argument: fake description
@@ -84,6 +85,7 @@ fn test_r_code_generation() {
     let generated_code = r::r::generate_r_function("fake_module", &function, &hierarchy);
     let expected_code = "
 #' fake description
+#'
 #' Requires `enable_features(\"fake_feature\")`.
 #'
 #' @concept fake_module
