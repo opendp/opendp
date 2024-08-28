@@ -392,19 +392,20 @@ return output"#,
     )
 }
 
+fn generate_flag_list(features: &Vec<String>) -> String {
+    features
+        .iter()
+        .map(|f| format!("\"{}\"", f))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 // generate code that checks that a set of feature flags are enabled
 fn generate_flag_check(features: &Vec<String>) -> String {
     if features.is_empty() {
         String::default()
     } else {
-        format!(
-            "assert_features({})\n\n",
-            features
-                .iter()
-                .map(|f| format!("\"{}\"", f))
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
+        format!("assert_features({})\n\n", generate_flag_list(features))
     }
 }
 
@@ -414,11 +415,7 @@ fn generate_flag_doc(features: &Vec<String>) -> String {
     } else {
         format!(
             "Requires `dp.enable_features({})`. ",
-            features
-                .iter()
-                .map(|f| format!("\"{}\"", f))
-                .collect::<Vec<_>>()
-                .join(", ")
+            generate_flag_list(features)
         )
     }
 }
