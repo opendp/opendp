@@ -204,6 +204,7 @@ fn generate_doc_block(
     func: &Function,
     hierarchy: &HashMap<String, Vec<String>>,
 ) -> String {
+    let flag_doc = generate_flag_doc(&func.features);
     let title = generate_constructor_title(&func.name);
     let description = (func.description.as_ref())
         .map(|v| {
@@ -229,7 +230,7 @@ fn generate_doc_block(
     };
 
     format!(
-        r#"{description}
+        r#"{flag_doc}{description}
 {concept}{doc_args}{ret_arg}{examples}{export}"#,
         concept = concept,
         description = description,
