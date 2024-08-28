@@ -228,6 +228,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Look for URLs that should be relative
+        # R docs are copied into place after build, so they do not use relative URLs.
+        # Negative lookahead could also be used, but it is only supported by PCRE, which not all greps support.
+        run: "! ( grep 'https://docs.opendp.org' -r source --binary-file=without-match | grep -v https://docs.opendp.org/en/stable/api/r )"
+
       - name: Download Python bindings
         uses: actions/download-artifact@v4
         with:

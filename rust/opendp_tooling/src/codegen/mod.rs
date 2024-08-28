@@ -189,3 +189,6 @@ pub fn generate_flag_doc(features: &Vec<String>) -> String {
         )
     }
 }
+
+#[cfg(test)]
+mod test;

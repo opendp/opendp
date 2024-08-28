@@ -9,7 +9,7 @@ use self::{
 };
 
 mod c;
-mod r;
+pub(crate) mod r;
 
 // some functions are called directly by R's C layer instead of through the codegen
 const BLACKLIST: &'static [&'static str] = &[
