@@ -64,7 +64,12 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
             "Vec must have one type argument."
         )))))
     } else {
-        return err!(FFI, "Invalid type name.").into();
+        return err!(
+            FFI,
+            "Invalid type name. Expected VectorDomain, found {}",
+            DI.to_string()
+        )
+        .into();
     };
 
     let TA = try_!(DIA.get_atom());
@@ -146,7 +151,12 @@ pub extern "C" fn opendp_transformations__make_drop_null(
             "Vec must have one type argument."
         )))))
     } else {
-        return err!(FFI, "Invalid type name.").into();
+        return err!(
+            FFI,
+            "Invalid input domain. Expected VectorDomain, found {}",
+            DI.to_string()
+        )
+        .into();
     };
 
     let TA = try_!(DIA.get_atom());

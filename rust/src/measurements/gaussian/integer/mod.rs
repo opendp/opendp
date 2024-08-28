@@ -38,10 +38,10 @@ where
     RBig: TryFrom<MO::Atom>,
 {
     if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
+        return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
     }
-    let scale_rational =
-        RBig::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
+    let scale_rational = RBig::try_from(scale)
+        .map_err(|_| err!(MakeMeasurement, "scale ({}) must be finite", scale))?;
 
     Measurement::new(
         input_domain,
@@ -89,10 +89,10 @@ where
     RBig: TryFrom<MO::Atom>,
 {
     if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
+        return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
     }
-    let scale_rational =
-        RBig::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
+    let scale_rational = RBig::try_from(scale)
+        .map_err(|_| err!(MakeMeasurement, "scale ({}) must be finite", scale))?;
 
     Measurement::new(
         input_domain,

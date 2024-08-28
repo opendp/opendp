@@ -71,10 +71,9 @@ pub extern "C" fn opendp_transformations__make_is_null(
         args,
     } = DI.contents
     {
-        try_!(Type::of_id(try_!(args.get(0).ok_or_else(|| err!(
-            FFI,
-            "Vec must have one type argument."
-        )))))
+        try_!(Type::of_id(try_!(args
+            .get(0)
+            .ok_or_else(|| err!(FFI, "Vec must have one type argument")))))
     } else {
         return err!(FFI, "Invalid type name.").into();
     };

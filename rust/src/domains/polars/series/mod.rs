@@ -132,7 +132,13 @@ impl SeriesDomain {
             ($ty:ty) => {{
                 let mut element_domain = (self.element_domain.as_any())
                     .downcast_ref::<AtomDomain<$ty>>()
-                    .ok_or_else(|| err!(FailedFunction, "unrecognized element domain"))?
+                    .ok_or_else(|| {
+                        err!(
+                            FailedFunction,
+                            "unrecognized element domain. Expected AtomDomain<{}>",
+                            stringify!($ty)
+                        )
+                    })?
                     .clone();
                 element_domain.bounds = None;
                 self.element_domain = Arc::new(element_domain) as Arc<dyn DynSeriesAtomDomain>;

@@ -38,10 +38,10 @@ where
     RBig: TryFrom<QO>,
 {
     if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
+        return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
     }
-    let r_scale =
-        RBig::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
+    let r_scale = RBig::try_from(scale)
+        .map_err(|_| err!(MakeMeasurement, "scale ({}) must be finite", scale))?;
 
     Measurement::new(
         input_domain,
@@ -86,10 +86,10 @@ where
     RBig: TryFrom<QO>,
 {
     if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
+        return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
     }
-    let r_scale =
-        RBig::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
+    let r_scale = RBig::try_from(scale)
+        .map_err(|_| err!(MakeMeasurement, "scale ({}) must be finite", scale))?;
 
     Measurement::new(
         input_domain,

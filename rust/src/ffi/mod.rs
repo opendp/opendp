@@ -99,15 +99,21 @@ macro_rules! try_ {
 #[macro_export]
 macro_rules! try_as_ref {
     ($value:expr) => {
-        try_!($crate::ffi::util::as_ref($value)
-            .ok_or_else(|| err!(FFI, concat!("null pointer: ", stringify!($value)))))
+        try_!($crate::ffi::util::as_ref($value).ok_or_else(|| err!(
+            FFI,
+            "null pointer: {}",
+            stringify!($value)
+        )))
     };
 }
 
 #[macro_export]
 macro_rules! try_as_mut_ref {
     ($value:expr) => {
-        try_!($crate::ffi::util::as_mut_ref($value)
-            .ok_or_else(|| err!(FFI, concat!("null pointer: ", stringify!($value)))))
+        try_!($crate::ffi::util::as_mut_ref($value).ok_or_else(|| err!(
+            FFI,
+            "null pointer: {}",
+            stringify!($value)
+        )))
     };
 }
