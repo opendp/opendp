@@ -71,7 +71,10 @@ def fake_function(
 ";
     let esc_generated_code = generated_code.replace("\"", "\\\"");
     let esc_expected_code = expected_code.replace("\"", "\\\"");
-    assert_eq!(generated_code, expected_code, "\nGenerated:{esc_generated_code}\nExpected:{esc_expected_code}");
+    assert_eq!(
+        generated_code, expected_code,
+        "\nGenerated:{esc_generated_code}\nExpected:{esc_expected_code}"
+    );
 }
 
 #[test]
@@ -116,5 +119,8 @@ fake_function <- function(
 ";
     let esc_generated_code = generated_code.replace("\"", "\\\"");
     let esc_expected_code = expected_code.replace("\"", "\\\"");
-    assert_eq!(generated_code, expected_code, "\nGenerated:{esc_generated_code}\nExpected:{esc_expected_code}");
+    assert_eq!(
+        generated_code, expected_code,
+        "\nGenerated:{esc_generated_code}\nExpected:{esc_expected_code}"
+    );
 }
