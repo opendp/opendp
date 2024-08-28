@@ -1,4 +1,4 @@
-use crate::codegen::python::generate_function;
+use crate::codegen::{python, r};
 use crate::{Argument, Function, TypeRecipe, Value};
 use std::collections::HashMap;
 
@@ -9,7 +9,7 @@ fn make_argument() -> Argument {
         rust_type: Some(TypeRecipe::Name("f64".to_string())),
         hint: None,
         description: Some("fake description".to_string()),
-        default:  Some(Value::Float(99.9)),
+        default: Some(Value::Float(99.9)),
         generics: vec![],
         is_type: false,
         do_not_convert: false,
@@ -39,7 +39,8 @@ fn test_python_code_generation() {
 
     let typemap: HashMap<String, String> =
         serde_json::from_str(&include_str!("python_typemap.json")).unwrap();
-    let actual_code = generate_function("fake_module", &function, &typemap, &HashMap::new());
+    let actual_code =
+        python::generate_function("fake_module", &function, &typemap, &HashMap::new());
     let expected_code = "
 def fake_function(
     fake_argument = 99.9
@@ -65,6 +66,47 @@ def fake_function(
     output = c_to_py(lib_function(c_fake_argument))
 
     return output
+";
+    assert_eq!(actual_code, expected_code);
+}
+
+#[test]
+fn test_r_code_generation() {
+    let parameter_argument = make_argument();
+    let return_argument = make_argument();
+    let function = make_function(parameter_argument, return_argument);
+
+    let hierarchy: HashMap<String, Vec<String>> =
+        serde_json::from_str(&include_str!("type_hierarchy.json")).unwrap();
+    let actual_code = r::r::generate_r_function("fake_module", &function, &hierarchy);
+    let expected_code = "
+#' fake description
+#'
+#' @concept fake_module
+#' @param fake_argument fake description
+#' @return fake description
+#' @export
+fake_function <- function(
+  fake_argument = 99.9
+) {
+  assert_features(\"fake_feature\")
+
+  # No type arguments to standardize.
+  log <- new_constructor_log(\"fake_function\", \"fake_module\", new_hashtab(
+    list(\"fake_argument\"),
+    list(unbox2(fake_argument))
+  ))
+
+  # Assert that arguments are correctly typed.
+  rt_assert_is_similar(expected = f64, inferred = rt_infer(fake_argument))
+
+  # Call wrapper function.
+  output <- .Call(
+    \"fake_module__fake_function\",
+    fake_argument,
+    log, PACKAGE = \"opendp\")
+  output
+}
 ";
     assert_eq!(actual_code, expected_code);
 }
