@@ -1,3 +1,5 @@
+use std::any::TypeId;
+
 use crate::core::MetricSpace;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
@@ -71,10 +73,10 @@ pub extern "C" fn opendp_transformations__make_is_null(
         args,
     } = DI.contents
     {
-        try_!(Type::of_id(try_!(args.get(0).ok_or_else(|| err!(
-            FFI,
-            "Vec must have one type argument."
-        )))))
+        let type_id =
+            try_!(<[TypeId; 1]>::try_from(args)
+                .map_err(|_| err!(FFI, "Vec must have one type argument")))[0];
+        try_!(Type::of_id(&type_id))
     } else {
         return err!(FFI, "Invalid type name.").into();
     };

@@ -96,7 +96,9 @@ where
     if population_size < sample_size {
         return fallible!(
             MakeMeasurement,
-            "population size cannot be less than sample size"
+            "population size ({:?}) cannot be less than sample size ({:?})",
+            population_size,
+            sample_size
         );
     }
 

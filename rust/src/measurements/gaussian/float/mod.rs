@@ -39,7 +39,7 @@ where
     i32: ExactIntCast<<T as FloatBits>::Bits>,
 {
     if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
+        return fallible!(MakeMeasurement, "scale ({:?}) must not be negative", scale);
     }
 
     let (k, relaxation) = get_discretization_consts(k)?;
@@ -80,7 +80,7 @@ where
     i32: ExactIntCast<<T as FloatBits>::Bits>,
 {
     if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
+        return fallible!(MakeMeasurement, "scale ({:?}) must not be negative", scale);
     }
 
     let (k, mut relaxation): (i32, T) = get_discretization_consts(k)?;

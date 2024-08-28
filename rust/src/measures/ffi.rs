@@ -197,7 +197,12 @@ pub struct TypedMeasure<Q> {
 impl<Q: 'static> TypedMeasure<Q> {
     pub fn new(measure: AnyMeasure) -> Fallible<TypedMeasure<Q>> {
         if measure.distance_type != Type::of::<Q>() {
-            return fallible!(FFI, "unexpected distance type");
+            return fallible!(
+                FFI,
+                "unexpected distance type in measure. Expected {}, got {}",
+                Type::of::<Q>().to_string(),
+                measure.distance_type.to_string()
+            );
         }
 
         Ok(TypedMeasure {

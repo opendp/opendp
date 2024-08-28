@@ -245,10 +245,10 @@ where
     }
 
     if scale.is_sign_negative() || scale.is_zero() {
-        return fallible!(MakeMeasurement, "scale must be positive");
+        return fallible!(MakeMeasurement, "scale ({}) must be positive", scale);
     }
     if alpha.is_sign_negative() || alpha.is_zero() {
-        return fallible!(MakeMeasurement, "alpha must be positive");
+        return fallible!(MakeMeasurement, "alpha ({}) must be positive", alpha);
     }
     if projection_size == 0 {
         return fallible!(MakeMeasurement, "projection_size must be positive");
