@@ -39,13 +39,13 @@ fn test_python_code_generation() {
 
     let typemap: HashMap<String, String> =
         serde_json::from_str(&include_str!("python_typemap.json")).unwrap();
-    let actual_code =
+    let generated_code =
         python::generate_function("fake_module", &function, &typemap, &HashMap::new());
     let expected_code = "
 def fake_function(
     fake_argument = 99.9
 ):
-    r\"\"\"fake description
+    r\"\"\"Requires `enable_features(\"fake_feature\")`. fake description
 
     :param fake_argument: fake description
     :return: fake description
@@ -67,7 +67,9 @@ def fake_function(
 
     return output
 ";
-    assert_eq!(actual_code, expected_code);
+    let esc_generated_code = generated_code.replace("\"", "\\\"");
+    let esc_expected_code = expected_code.replace("\"", "\\\"");
+    assert_eq!(generated_code, expected_code, "\nGenerated:{esc_generated_code}\nExpected:{esc_expected_code}");
 }
 
 #[test]
@@ -78,9 +80,9 @@ fn test_r_code_generation() {
 
     let hierarchy: HashMap<String, Vec<String>> =
         serde_json::from_str(&include_str!("type_hierarchy.json")).unwrap();
-    let actual_code = r::r::generate_r_function("fake_module", &function, &hierarchy);
+    let generated_code = r::r::generate_r_function("fake_module", &function, &hierarchy);
     let expected_code = "
-#' fake description
+#' Requires `enable_features(\"fake_feature\")`. fake description
 #'
 #' @concept fake_module
 #' @param fake_argument fake description
@@ -108,5 +110,7 @@ fake_function <- function(
   output
 }
 ";
-    assert_eq!(actual_code, expected_code);
+    let esc_generated_code = generated_code.replace("\"", "\\\"");
+    let esc_expected_code = expected_code.replace("\"", "\\\"");
+    assert_eq!(generated_code, expected_code, "\nGenerated:{esc_generated_code}\nExpected:{esc_expected_code}");
 }
