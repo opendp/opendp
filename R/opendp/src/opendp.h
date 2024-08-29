@@ -691,17 +691,17 @@ struct FfiResult_____c_void opendp_data__bool_free(c_bool *this_);
 struct FfiResult_____c_void opendp_data__extrinsic_object_free(struct ExtrinsicObject *this_);
 
 /**
- * Internal function. Use an SMDCurve to find epsilon at a given `delta`.
+ * Internal function. Use an PrivacyProfile to find epsilon at a given `delta`.
  *
  * # Arguments
- * * `curve` - The SMDCurve.
+ * * `profile` - The PrivacyProfile.
  * * `delta` - What to fix delta to compute epsilon.
  *
  * # Returns
  * Epsilon at a given `delta`.
  */
-struct FfiResult_____AnyObject opendp_data__smd_curve_epsilon(const struct AnyObject *curve,
-                                                              double delta);
+struct FfiResult_____AnyObject opendp_data__privacy_profile_epsilon(const struct AnyObject *profile,
+                                                                    double delta);
 
 /**
  * wrap an AnyObject in an FfiResult::Ok(this)

@@ -4,7 +4,7 @@ use crate::{
     core::{FfiResult, Measurement, PrivacyMap},
     error::Fallible,
     ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
-    measures::{SMDCurve, SmoothedMaxDivergence},
+    measures::{PrivacyProfile, SmoothedMaxDivergence},
 };
 
 #[bootstrap(
@@ -28,7 +28,7 @@ fn make_fix_delta(measurement: &AnyMeasurement, delta: f64) -> Fallible<AnyMeasu
             .downcast_ref::<SmoothedMaxDivergence>()?
             .clone(),
         PrivacyMap::new_fallible(move |d_in: &AnyObject| {
-            privacy_map.eval(d_in)?.downcast::<SMDCurve>()
+            privacy_map.eval(d_in)?.downcast::<PrivacyProfile>()
         }),
     )?;
     let meas = super::make_fix_delta(&meas, delta)?;

@@ -13,7 +13,7 @@ use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
 use crate::measures::ffi::UserDivergence;
 use crate::measures::{
-    Approximate, MaxDivergence, SMDCurve, SmoothedMaxDivergence, ZeroConcentratedDivergence,
+    Approximate, MaxDivergence, PrivacyProfile, SmoothedMaxDivergence, ZeroConcentratedDivergence,
 };
 use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
@@ -359,7 +359,7 @@ lazy_static! {
             type_vec![Approximate, <MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, UserDivergence>],
 
             // measure distances
-            type_vec![SMDCurve],
+            type_vec![PrivacyProfile],
         ].into_iter().flatten().collect();
         let descriptors: HashSet<_> = types.iter().map(|e| &e.descriptor).collect();
         assert_eq!(descriptors.len(), types.len(), "detected duplicate TYPES");

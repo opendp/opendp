@@ -82,9 +82,9 @@ def test_cast_zcdp_approxdp():
 
     print(base_gaussian.map(1.))
 
-    smd_gaussian = dp.c.make_zCDP_to_approxDP(base_gaussian)
+    approx_gaussian = dp.c.make_zCDP_to_approxDP(base_gaussian)
 
-    print(smd_gaussian.map(1.).epsilon(1e-6))
+    print(approx_gaussian.map(1.).epsilon(1e-6))
     
 
 def test_make_approximate():

@@ -2,7 +2,7 @@ from typing import Sequence, Union, cast
 from inspect import signature
 
 from opendp._lib import *
-from opendp.mod import Domain, UnknownTypeException, Transformation, Measurement, SMDCurve, Queryable
+from opendp.mod import Domain, UnknownTypeException, Transformation, Measurement, PrivacyProfile, Queryable
 from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 
 ATOM_MAP = {
@@ -150,8 +150,8 @@ def c_to_py(value: Any) -> Any:
         from opendp._data import object_type, object_as_slice, slice_free
         obj_type = object_type(value)
         
-        if "SMDCurve" in obj_type:
-            return SMDCurve(value)
+        if "PrivacyProfile" in obj_type:
+            return PrivacyProfile(value)
         
         if "Queryable" in obj_type:
             from opendp.core import queryable_query_type

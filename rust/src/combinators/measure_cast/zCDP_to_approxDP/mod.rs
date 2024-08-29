@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{SMDCurve, SmoothedMaxDivergence, ZeroConcentratedDivergence},
+    measures::{PrivacyProfile, SmoothedMaxDivergence, ZeroConcentratedDivergence},
 };
 
 use self::cdp_epsilon::cdp_epsilon;
@@ -38,7 +38,9 @@ where
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             let rho = privacy_map.eval(d_in)?;
 
-            Ok(SMDCurve::new(move |&delta: &f64| cdp_epsilon(rho, delta)))
+            Ok(PrivacyProfile::new(move |&delta: &f64| {
+                cdp_epsilon(rho, delta)
+            }))
         }),
     )
 }

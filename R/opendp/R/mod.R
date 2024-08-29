@@ -331,14 +331,14 @@ new_function <- function(ptr, log) {
 #'
 #' @concept mod
 #' @param ptr a pointer to a SMD curve
-new_smd_curve <- function(ptr) {
-  smd_curve <- function(attr, delta) {
+new_privacy_profile <- function(ptr) {
+  privacy_profile <- function(attr, delta) {
     if (missing(attr) + missing(delta) != 1) {
       stop("expected exactly one of attr or delta")
     }
 
     if (!missing(delta)) {
-      return(smd_curve_epsilon(ptr, delta))
+      return(privacy_profile_epsilon(ptr, delta))
     }
 
     switch(attr,
@@ -346,8 +346,8 @@ new_smd_curve <- function(ptr) {
       stop("unrecognized attribute")
     )
   }
-  class(smd_curve) <- "smd_curve"
-  smd_curve
+  class(privacy_profile) <- "privacy_profile"
+  privacy_profile
 }
 
 #' new queryable
