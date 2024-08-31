@@ -136,6 +136,20 @@ impl BasicCompositionMeasure for Approximate<MaxDivergence> {
     }
 }
 
+impl BasicCompositionMeasure for Approximate<ZeroConcentratedDivergence> {
+    fn concurrent(&self) -> Fallible<bool> {
+        Ok(false)
+    }
+    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        let (d_i0, deltas): (Vec<_>, Vec<_>) = d_i.into_iter().unzip();
+        let delta = deltas
+            .iter()
+            .try_fold(0.0, |sum, delta| sum.inf_add(delta))?;
+
+        Ok((self.0.compose(d_i0)?, delta))
+    }
+}
+
 // UNIT TESTS
 #[cfg(test)]
 mod test;

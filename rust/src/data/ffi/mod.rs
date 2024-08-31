@@ -543,6 +543,17 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             2,
         ))
     }
+    fn tuple_curve_f64_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let (curve, delta) = obj.downcast_ref::<(PrivacyProfile, f64)>()?;
+
+        Ok(FfiSlice::new(
+            util::into_raw([
+                AnyObject::new_raw(curve.clone()) as *const c_void,
+                util::into_raw(*delta) as *const c_void,
+            ]) as *mut c_void,
+            2,
+        ))
+    }
     match &obj.type_.contents {
         TypeContents::PLAIN("BitVector") => bitvector_to_raw(obj),
         TypeContents::PLAIN("ExtrinsicObject") => plain_to_raw::<ExtrinsicObject>(obj),
@@ -578,6 +589,9 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                     #[cfg(feature = "polars")]
                     if types == vec![Type::of::<DslPlan>(), Type::of::<Expr>()] {
                         return tuple_lf_expr_to_raw(obj).into();
+                    }
+                    if types == vec![Type::of::<PrivacyProfile>(), Type::of::<f64>()] {
+                        return tuple_curve_f64_to_raw(obj).into();
                     }
                     dispatch!(tuple2_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))
                 },

@@ -86,6 +86,21 @@ def test_cast_zcdp_approxdp():
 
     print(approx_gaussian.map(1.).epsilon(1e-6))
     
+def test_cast_azcdp_approxdp():
+    m_azcdp = dp.m.make_user_measurement(
+        dp.atom_domain(T=bool), dp.absolute_distance(T=float),
+        dp.approximate(dp.zero_concentrated_divergence()),
+        lambda x: x,
+        # rho, and catastrophic delta
+        lambda d_in: (d_in * .05, d_in * 1e-7)
+    )
+    m_asdp = dp.c.make_zCDP_to_approxDP(m_azcdp)
+    curve, delta = m_asdp.map(1.)
+    assert delta == 1e-7
+    
+    m_adp = dp.c.make_fix_delta(m_asdp, delta=1e-6)
+    assert m_adp.map(1.) == (curve.epsilon(1e-6 - 1e-7), 1e-6)
+
 
 def test_make_approximate():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)

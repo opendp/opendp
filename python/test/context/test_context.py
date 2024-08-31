@@ -33,6 +33,10 @@ def test_privacy_loss_of():
         dp.approximate(dp.max_divergence()),
         (2.0, 1e-6),
     )
+    assert dp.loss_of(rho=0.5, delta=1e-7) == (
+        dp.approximate(dp.zero_concentrated_divergence()),
+        (0.5, 1e-7),
+    )
 
 
 def test_loss_of_logging(caplog):
@@ -235,6 +239,30 @@ def test_rho_to_eps():
     dp_sum = context.query().clamp((1, 10)).sum().laplace()  # type: ignore
 
     print(dp_sum.release())
+
+
+def test_approx_to_approx_zCDP():
+    context = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-6),
+        split_evenly_over=1,
+    )
+
+    azcdp_measure = dp.approximate(dp.zero_concentrated_divergence())
+    context_azcdp = context.query().compositor(3, output_measure=azcdp_measure, alpha=0.3).release()
+
+    dom, met = context_azcdp.accountant.input_space
+    # the important test is that the following is a valid query for an approx-zCDP compositor
+    release = context_azcdp(dp.m.make_user_measurement(
+        dom, met,
+        azcdp_measure,
+        lambda x: x,
+        # remaining rho, and catastrophic delta
+        lambda _: (.006, 1e-6 * .3 / 3)
+    ))
+
+    assert release == [1, 2, 3]
 
 
 def test_transformation_release_error():

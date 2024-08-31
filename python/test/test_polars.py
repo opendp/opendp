@@ -542,6 +542,7 @@ def test_polars_threshold():
         .collect()
     )
 
+
 @pytest.mark.skipif(
     os.getenv('FORCE_TEST_REPLACE_BINARY_PATH') != "1", 
     reason="setting OPENDP_POLARS_LIB_PATH interferes with the execution of other tests"

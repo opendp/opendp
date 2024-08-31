@@ -541,7 +541,7 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 #' @concept mod
 #' @param predicate a monotonic unary function from a number to a boolean
 #' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
-#' @param .T type of argument to `predicate`, one of {float, int}
+#' @param .T type of argument to `predicate`, one of float or int
 #' @param return_sign if True, also return the direction away from the decision boundary
 #' @return the discovered parameter within the bounds
 #' @export

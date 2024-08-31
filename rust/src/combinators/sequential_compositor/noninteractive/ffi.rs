@@ -57,7 +57,7 @@ impl BasicCompositionMeasure for AnyMeasure {
             self_.downcast_ref::<M>()?.concurrent()
         }
         dispatch!(monomorphize, [
-            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence])
+            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])
         ], (self))
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
@@ -78,7 +78,7 @@ impl BasicCompositionMeasure for AnyMeasure {
                 .map(AnyObject::new)
         }
         dispatch!(monomorphize, [
-            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence])
+            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])
         ], (self, d_i))
     }
 }
