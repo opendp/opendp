@@ -1,18 +1,19 @@
 use std::{ffi::c_char, fmt::Debug, marker::PhantomData};
 
+use crate::ffi::any::{wrap_func, AnyObject, CallbackFn, Downcast};
 use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, Measure},
     error::Fallible,
     ffi::{
-        any::{AnyMeasure, Downcast},
+        any::AnyMeasure,
         util::{self, into_c_char_p, to_str, ExtrinsicObject, Type},
     },
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
 };
 
-use super::SmoothedMaxDivergence;
+use super::{PrivacyProfile, SmoothedMaxDivergence};
 
 #[bootstrap(
     name = "_measure_free",
@@ -339,4 +340,37 @@ impl<Q> Default for TypedMeasure<Q> {
 
 impl<Q> Measure for TypedMeasure<Q> {
     type Distance = Q;
+}
+
+#[bootstrap(
+    name = "new_privacy_profile",
+    features("contrib", "honest-but-curious"),
+    arguments(curve(rust_type = "f64")),
+    returns(rust_type = "PrivacyProfile"),
+    dependencies("c_curve")
+)]
+/// Construct a PrivacyProfile from a user-defined callback.
+///
+/// Requires "honest-but-curious" because the privacy profile should implement a well-defined $\delta(\epsilon)$ curve.
+///
+/// * monotonically decreasing
+/// * rejects epsilon values that are less than zero or nan
+/// * returns delta values only within [0, 1]
+///
+/// # Arguments
+/// * `curve` - A privacy curve mapping epsilon to delta
+#[allow(dead_code)]
+fn new_privacy_profile(curve: CallbackFn) -> Fallible<AnyObject> {
+    let _ = curve;
+    panic!("this signature only exists for code generation")
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_measures__new_privacy_profile(
+    curve: CallbackFn,
+) -> FfiResult<*mut AnyObject> {
+    let curve = wrap_func(curve);
+    FfiResult::Ok(AnyObject::new_raw(PrivacyProfile::new(
+        move |epsilon: f64| curve(&AnyObject::new(epsilon))?.downcast::<f64>(),
+    )))
 }

@@ -39,6 +39,7 @@ const BLACKLIST: &'static [&'static str] = &[
     "make_user_measurement",
     "new_function",
     "new_queryable",
+    "new_privacy_profile",
     "user_domain",
     "_user_domain_descriptor",
     // polars

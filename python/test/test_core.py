@@ -137,6 +137,12 @@ def test_function():
     print(mechanism(0.0))
 
 
+def test_privacy_profile():
+    from opendp.measures import new_privacy_profile
+    profile = new_privacy_profile(lambda eps: 1e-8 if eps >= 1.0 else 1.0)
+    assert profile.epsilon(delta=1e-8) == 1.0
+
+
 def test_member():
     from opendp.domains import atom_domain, vector_domain
     from opendp.metrics import symmetric_distance
