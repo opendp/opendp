@@ -92,10 +92,10 @@ impl Domain for SeriesDomain {
 }
 
 impl SeriesDomain {
-    pub fn new<DA: 'static + SeriesAtomDomain>(name: &str, element_domain: DA) -> Self {
+    pub fn new<DA: 'static + SeriesElementDomain>(name: &str, element_domain: DA) -> Self {
         SeriesDomain {
-            field: Field::new(name, DA::Atom::dtype()),
-            element_domain: Arc::new(element_domain.atom_domain()),
+            field: Field::new(name, DA::dtype()),
+            element_domain: Arc::new(element_domain.inner_domain()),
             nullable: DA::NULLABLE,
         }
     }
@@ -191,28 +191,81 @@ impl<D: UnboundedMetric> MetricSpace for (SeriesDomain, D) {
 // BEGIN UTILITY TRAITS
 
 /// Common trait for domains that can be used to describe the space of typed elements within a series.
-pub trait SeriesAtomDomain: Domain + Send + Sync {
-    type Atom: CheckAtom + PrimitiveDataType;
-    fn atom_domain(self) -> AtomDomain<Self::Atom>;
+pub trait SeriesElementDomain: Domain + Send + Sync {
+    type InnerDomain: SeriesElementDomain;
+    fn dtype() -> DataType;
+    fn inner_domain(self) -> Self::InnerDomain;
     const NULLABLE: bool;
 }
-impl<T: CheckAtom + PrimitiveDataType> SeriesAtomDomain for AtomDomain<T> {
-    type Atom = T;
+impl<T: CheckAtom + PrimitiveDataType> SeriesElementDomain for AtomDomain<T> {
+    type InnerDomain = Self;
 
-    fn atom_domain(self) -> AtomDomain<Self::Atom> {
+    fn dtype() -> DataType {
+        T::dtype()
+    }
+    fn inner_domain(self) -> Self {
         self
     }
 
     const NULLABLE: bool = false;
 }
-impl<T: CheckAtom + PrimitiveDataType> SeriesAtomDomain for OptionDomain<AtomDomain<T>> {
-    type Atom = T;
+impl<D: SeriesElementDomain> SeriesElementDomain for OptionDomain<D> {
+    type InnerDomain = D;
 
-    fn atom_domain(self) -> AtomDomain<Self::Atom> {
+    fn dtype() -> DataType {
+        D::dtype()
+    }
+    fn inner_domain(self) -> D {
         self.element_domain
     }
 
     const NULLABLE: bool = true;
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct CategoricalDomain {
+    /// The encoding used to assign numerical indices to each known possible category.
+    encoding: Option<PlIndexSet<String>>,
+}
+
+impl CategoricalDomain {
+    /// Only use this constructor if you know both the category set,
+    /// as well as how the categories are encoded.
+    ///
+    /// Typically when Polars constructs categorical data,
+    /// it assigns indices by the order encountered in the data, making the encoding data-dependent.
+    /// An example where this can be called is for categorical data emitted by the Polars cut expression,
+    /// where the categories and encoding are pre-determined by the expression (the bin edges).
+    pub fn new_with_encoding(encoding: Vec<String>) -> Fallible<Self> {
+        let (len, encoding) = (encoding.len(), PlIndexSet::from_iter(encoding));
+        if len != encoding.len() {
+            return fallible!(MakeDomain, "categories in encoding must be distinct");
+        }
+        Ok(CategoricalDomain {
+            encoding: Some(encoding),
+        })
+    }
+}
+
+impl Domain for CategoricalDomain {
+    type Carrier = String;
+
+    fn member(&self, _: &Self::Carrier) -> Fallible<bool> {
+        Ok(true)
+    }
+}
+
+impl SeriesElementDomain for CategoricalDomain {
+    type InnerDomain = Self;
+
+    fn dtype() -> DataType {
+        DataType::Categorical(None, Default::default())
+    }
+    fn inner_domain(self) -> Self {
+        self
+    }
+
+    const NULLABLE: bool = false;
 }
 
 /// Object-safe version of SeriesAtomDomain.
@@ -220,7 +273,7 @@ pub trait DynSeriesAtomDomain: Send + Sync {
     fn as_any(&self) -> &dyn Any;
     fn dyn_partial_eq(&self, other: &dyn DynSeriesAtomDomain) -> bool;
 }
-impl<D: 'static + SeriesAtomDomain> DynSeriesAtomDomain for D {
+impl<D: 'static + SeriesElementDomain> DynSeriesAtomDomain for D {
     fn as_any(&self) -> &dyn Any {
         self
     }

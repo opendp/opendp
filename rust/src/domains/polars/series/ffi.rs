@@ -14,7 +14,7 @@ use crate::{
     transformations::DatasetMetric,
 };
 
-use super::{SeriesAtomDomain, SeriesDomain};
+use super::{SeriesDomain, SeriesElementDomain};
 
 #[bootstrap(
     arguments(element_domain(c_type = "AnyDomain *", rust_type = b"null")),
@@ -26,7 +26,10 @@ use super::{SeriesAtomDomain, SeriesDomain};
 /// # Arguments
 /// * `name` - The name of the series.
 /// * `element_domain` - The domain of elements in the series.
-fn series_domain<DI: 'static + SeriesAtomDomain>(name: &str, element_domain: DI) -> SeriesDomain {
+fn series_domain<DI: 'static + SeriesElementDomain>(
+    name: &str,
+    element_domain: DI,
+) -> SeriesDomain {
     SeriesDomain::new(name, element_domain)
 }
 

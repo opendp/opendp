@@ -33,6 +33,9 @@ mod expr_clip;
 mod expr_col;
 
 #[cfg(feature = "contrib")]
+mod expr_cut;
+
+#[cfg(feature = "contrib")]
 pub(crate) mod expr_discrete_quantile_score;
 
 #[cfg(feature = "contrib")]
@@ -130,6 +133,12 @@ where
 
             #[cfg(feature = "contrib")]
             Column(_) => expr_col::make_expr_col(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: Cut { .. },
+                ..
+            } => expr_cut::make_expr_cut(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Literal(_) => expr_lit::make_expr_lit(input_domain, input_metric, self),
