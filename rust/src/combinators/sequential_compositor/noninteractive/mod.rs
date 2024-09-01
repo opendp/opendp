@@ -5,7 +5,7 @@ use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     interactive::wrap,
-    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
     traits::InfAdd,
 };
 
@@ -122,7 +122,7 @@ impl BasicCompositionMeasure for ZeroConcentratedDivergence {
     }
 }
 
-impl<M: BasicCompositionMeasure> BasicCompositionMeasure for Approximate<M> {
+impl BasicCompositionMeasure for FixedSmoothedMaxDivergence {
     fn concurrent(&self) -> Fallible<bool> {
         Ok(true)
     }
@@ -132,7 +132,7 @@ impl<M: BasicCompositionMeasure> BasicCompositionMeasure for Approximate<M> {
             .iter()
             .try_fold(0.0, |sum, delta| sum.inf_add(delta))?;
 
-        Ok((self.0.compose(d_i0)?, delta))
+        Ok((MaxDivergence.compose(d_i0)?, delta))
     }
 }
 

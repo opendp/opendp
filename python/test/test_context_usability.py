@@ -1,6 +1,5 @@
 import pytest
 import opendp.prelude as dp
-dp.enable_features("contrib")
 
 
 @pytest.mark.xfail(raises=dp.UnknownTypeException)

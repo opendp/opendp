@@ -49,7 +49,7 @@ fn test_sample_hash() -> Fallible<()> {
 #[test]
 fn test_alp_construction() -> Fallible<()> {
     let beta = 10;
-    let alp = make_alp_state_with_hashers::<u32, u32, f64>(
+    let alp = make_alp_state_with_hashers::<u32, u32>(
         MapDomain::default(),
         L1Distance::default(),
         1.0,
@@ -79,7 +79,7 @@ fn test_alp_construction_out_of_range() -> Fallible<()> {
     // Handle silently using modulo
     // Returning an error would violate privacy
     let h = index_identify_functions(20);
-    let alp = make_alp_state_with_hashers::<u32, u32, f64>(
+    let alp = make_alp_state_with_hashers::<u32, u32>(
         MapDomain::default(),
         L1Distance::default(),
         1.0,
@@ -99,13 +99,13 @@ fn test_alp_construction_out_of_range() -> Fallible<()> {
 #[test]
 fn test_estimate_unary() -> Fallible<()> {
     let z1 = vec![true, true, true, false, true, false, false, true];
-    assert!(estimate_unary::<f64>(&z1) == 4.0);
+    assert!(estimate_unary(&z1) == 4.0);
 
     let z2 = vec![true, false, false, false, true, false, false, true];
-    assert!(estimate_unary::<f64>(&z2) == 1.0);
+    assert!(estimate_unary(&z2) == 1.0);
 
     let z3 = vec![false, true, true, false, false, true, false, true];
-    assert!(estimate_unary::<f64>(&z3) == 3.0);
+    assert!(estimate_unary(&z3) == 3.0);
 
     Ok(())
 }
@@ -161,7 +161,7 @@ fn test_construct_and_post_process() -> Fallible<()> {
     x.insert(42, 12);
     x.insert(100, 5);
 
-    let alp_meas = make_alp_state::<i32, i32, f64>(
+    let alp_meas = make_alp_state::<i32, i32>(
         MapDomain::default(),
         L1Distance::default(),
         2.,
@@ -190,7 +190,7 @@ fn test_post_process_measurement() -> Fallible<()> {
     x.insert(42, 12);
     x.insert(100, 5);
 
-    let alp_meas = make_alp_queryable::<i32, i32, f64>(
+    let alp_meas = make_alp_queryable::<i32, i32>(
         MapDomain {
             key_domain: AtomDomain::default(),
             value_domain: AtomDomain::default(),

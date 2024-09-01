@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, SmoothedMaxDivergence},
+    measures::{FixedSmoothedMaxDivergence, SmoothedMaxDivergence},
 };
 
 #[cfg(feature = "ffi")]
@@ -56,10 +56,10 @@ pub trait FixDeltaMeasure: Measure {
 }
 
 impl FixDeltaMeasure for SmoothedMaxDivergence {
-    type FixedMeasure = Approximate<MaxDivergence>;
+    type FixedMeasure = FixedSmoothedMaxDivergence;
 
     fn new_fixed_measure(&self) -> Fallible<Self::FixedMeasure> {
-        Ok(Approximate::default())
+        Ok(FixedSmoothedMaxDivergence)
     }
     fn fix_delta(&self, curve: &Self::Distance, delta: &f64) -> Fallible<(f64, f64)> {
         curve.epsilon(delta).map(|v| (v, delta.clone()))

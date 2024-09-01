@@ -51,13 +51,13 @@ input metric, and output measure:
             count: Measurement(
                 input_domain   = VectorDomain(AtomDomain(T=i32)),
                 input_metric   = SymmetricDistance(),
-                output_measure = MaxDivergence())
+                output_measure = MaxDivergence)
 
             >>> print("sum:", sum_meas)
             sum: Measurement(
                 input_domain   = VectorDomain(AtomDomain(T=i32)),
                 input_metric   = SymmetricDistance(),
-                output_measure = MaxDivergence())
+                output_measure = MaxDivergence)
 
 This is important, because compositors require these three supporting
 elements to match for all queries.

@@ -74,7 +74,7 @@ def test_context_repr():
     accountant = Measurement(
         input_domain   = VectorDomain(AtomDomain(T=i32)),
         input_metric   = SymmetricDistance(),
-        output_measure = MaxDivergence()),
+        output_measure = MaxDivergence),
     d_in       = 3,
     d_mids     = [3.0])'''
 
@@ -132,14 +132,14 @@ def test_query_repr():
     )
     assert repr(context.query()) == '''Query(
     chain          = (VectorDomain(AtomDomain(T=i32)), SymmetricDistance()),
-    output_measure = MaxDivergence(),
+    output_measure = MaxDivergence,
     d_in           = 1,
     d_out          = 1.0,
     context        = Context(
         accountant = Measurement(
             input_domain   = VectorDomain(AtomDomain(T=i32)),
             input_metric   = SymmetricDistance(),
-            output_measure = MaxDivergence()),
+            output_measure = MaxDivergence),
         d_in       = 1,
         d_mids     = [1.0]))'''
 

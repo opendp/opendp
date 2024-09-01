@@ -7,7 +7,9 @@ use crate::{
         any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
         util::AnyMeasurementPtr,
     },
-    measures::{ffi::TypedMeasure, Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{
+        ffi::TypedMeasure, FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence,
+    },
 };
 
 use super::BasicCompositionMeasure;
@@ -56,9 +58,18 @@ impl BasicCompositionMeasure for AnyMeasure {
         {
             self_.downcast_ref::<M>()?.concurrent()
         }
-        dispatch!(monomorphize, [
-            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])
-        ], (self))
+        dispatch!(
+            monomorphize,
+            [(
+                self.type_,
+                [
+                    MaxDivergence,
+                    FixedSmoothedMaxDivergence,
+                    ZeroConcentratedDivergence
+                ]
+            )],
+            (self)
+        )
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         fn monomorphize<M: 'static + BasicCompositionMeasure>(
@@ -77,9 +88,18 @@ impl BasicCompositionMeasure for AnyMeasure {
                 )
                 .map(AnyObject::new)
         }
-        dispatch!(monomorphize, [
-            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])
-        ], (self, d_i))
+        dispatch!(
+            monomorphize,
+            [(
+                self.type_,
+                [
+                    MaxDivergence,
+                    FixedSmoothedMaxDivergence,
+                    ZeroConcentratedDivergence
+                ]
+            )],
+            (self, d_i)
+        )
     }
 }
 

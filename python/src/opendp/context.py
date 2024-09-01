@@ -240,11 +240,11 @@ def loss_of(
 
     >>> import opendp.prelude as dp
     >>> dp.loss_of(epsilon=1.0)
-    (MaxDivergence(), 1.0)
+    (MaxDivergence, 1.0)
     >>> dp.loss_of(epsilon=1.0, delta=1e-9)
-    (Approximate(MaxDivergence()), (1.0, 1e-09))
+    (FixedSmoothedMaxDivergence, (1.0, 1e-09))
     >>> dp.loss_of(rho=1.0)
-    (ZeroConcentratedDivergence(), 1.0)
+    (ZeroConcentratedDivergence, 1.0)
 
     :param epsilon: Parameter for pure ε-DP.
     :param delta: Parameter for approximate (ε,δ)-DP.
@@ -800,7 +800,7 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
 
     from_to = str(chain.output_measure.type), str(to_measure.type)
 
-    if from_to == ("MaxDivergence", "Approximate<MaxDivergence>"):
+    if from_to == ("MaxDivergence", "FixedSmoothedMaxDivergence"):
         return make_pureDP_to_fixed_approxDP(chain)
 
     if from_to == ("MaxDivergence", "ZeroConcentratedDivergence"):
@@ -808,7 +808,7 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
 
     if from_to == (
         "ZeroConcentratedDivergence",
-        "Approximate<MaxDivergence>",
+        "FixedSmoothedMaxDivergence",
     ):
         return make_fix_delta(make_zCDP_to_approxDP(chain), d_to[1])
 
@@ -834,7 +834,7 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
 
     constant = 1.0  # the choice of constant doesn't matter
 
-    if from_to == ("MaxDivergence", "Approximate<MaxDivergence>"):
+    if from_to == ("MaxDivergence", "FixedSmoothedMaxDivergence"):
         return (d_from, 0.0)
 
     if from_to == ("ZeroConcentratedDivergence", "MaxDivergence"):
@@ -848,7 +848,7 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
         return make_laplace(*space, scale).map(constant)
 
     if from_to == (
-        "Approximate<MaxDivergence>",
+        "FixedSmoothedMaxDivergence",
         "ZeroConcentratedDivergence",
     ):
         def caster(measurement):

@@ -201,8 +201,6 @@ def test_report_noisy_max_gumbel():
 
 
 def test_alp_histogram():
-    import opendp.prelude as dp
-
     counter = dp.t.make_count_by(
         dp.vector_domain(dp.atom_domain(T=str)),
         dp.symmetric_distance(),

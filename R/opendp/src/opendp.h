@@ -942,12 +942,11 @@ struct FfiResult_____AnyObject opendp_measurements__debias_randomized_response_b
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_alp_queryable(const struct AnyDomain *input_domain,
                                                                             const struct AnyMetric *input_metric,
-                                                                            const void *scale,
+                                                                            double scale,
                                                                             const void *total_limit,
                                                                             const void *value_limit,
-                                                                            const unsigned int *size_factor,
-                                                                            const void *alpha,
-                                                                            const char *CO);
+                                                                            const uint32_t *size_factor,
+                                                                            const uint32_t *alpha);
 
 /**
  * Internal function. Free the memory associated with `this`.

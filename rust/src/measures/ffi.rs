@@ -9,7 +9,7 @@ use crate::{
         any::AnyMeasure,
         util::{self, into_c_char_p, to_str, ExtrinsicObject, Type},
     },
-    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
 };
 
 use super::SmoothedMaxDivergence;
@@ -124,8 +124,8 @@ pub extern "C" fn opendp_measures__smoothed_max_divergence(
 ///
 /// # Arguments
 /// * `T` - DEPRECATED. The atomic type of the distance.
-fn fixed_smoothed_max_divergence<T>() -> Approximate<MaxDivergence> {
-    Approximate(MaxDivergence)
+fn fixed_smoothed_max_divergence<T>() -> FixedSmoothedMaxDivergence {
+    FixedSmoothedMaxDivergence
 }
 
 #[no_mangle]

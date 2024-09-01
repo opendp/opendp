@@ -41,7 +41,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     Measurement(
         input_domain   = AtomDomain(T=i32),
         input_metric   = AbsoluteDistance(i32),
-        output_measure = MaxDivergence())
+        output_measure = MaxDivergence)
 
     >>> # invoke the measurement (invoke and __call__ are equivalent)
     >>> print('explicit: ', laplace.invoke(100))  # -> 101   # doctest: +ELLIPSIS
@@ -49,7 +49,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     >>> print('concise: ', laplace(100))  # -> 99            # doctest: +ELLIPSIS
     concise: ...
     >>> # check the measurement's relation at
-    >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence())
+    >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence)
     >>> assert laplace.check(1, 0.5)
 
     >>> # chain with a transformation from the trans module
@@ -591,7 +591,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     >>> import opendp.prelude as dp
     >>> measure, distance = dp.loss_of(epsilon=1.0)
     >>> measure, distance
-    (MaxDivergence(), 1.0)
+    (MaxDivergence, 1.0)
 
     '''
     _type_ = AnyMeasure

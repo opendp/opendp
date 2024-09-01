@@ -10,7 +10,7 @@ use crate::{
     core::{Function, Measure, Measurement, Metric, MetricSpace},
     domains::{DslPlanDomain, ExprDomain, LazyFrameDomain},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
     polars::{get_disabled_features_message, OnceFrame},
     transformations::{traits::UnboundedMetric, DatasetMetric, StableDslPlan},
@@ -222,11 +222,11 @@ where
     }
 }
 
-impl<MS> PrivateDslPlan<MS, Approximate<MaxDivergence>> for DslPlan
+impl<MS> PrivateDslPlan<MS, FixedSmoothedMaxDivergence> for DslPlan
 where
     MS: 'static + UnboundedMetric + DatasetMetric,
     Expr: PrivateExpr<PartitionDistance<MS>, MaxDivergence>
-        + PrivateExpr<PartitionDistance<MS>, Approximate<MaxDivergence>>,
+        + PrivateExpr<PartitionDistance<MS>, FixedSmoothedMaxDivergence>,
     DslPlan: StableDslPlan<MS, MS>,
     (DslPlanDomain, MS): MetricSpace,
     (ExprDomain, MS): MetricSpace,
@@ -235,10 +235,10 @@ where
         self,
         input_domain: DslPlanDomain,
         input_metric: MS,
-        output_measure: Approximate<MaxDivergence>,
+        output_measure: FixedSmoothedMaxDivergence,
         global_scale: Option<f64>,
         threshold: Option<u32>,
-    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, Approximate<MaxDivergence>>> {
+    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, FixedSmoothedMaxDivergence>> {
         if let Some(meas) = postprocess::match_postprocess(
             input_domain.clone(),
             input_metric.clone(),

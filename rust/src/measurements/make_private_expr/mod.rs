@@ -6,7 +6,7 @@ use crate::{
     core::{Measure, Measurement, Metric, MetricSpace, Transformation},
     domains::{ExprDomain, MarginPub},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
     polars::get_disabled_features_message,
     transformations::traits::UnboundedMetric,
@@ -132,21 +132,21 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, ZeroConcent
     }
 }
 
-impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, Approximate<MaxDivergence>>
+impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, FixedSmoothedMaxDivergence>
     for Expr
 {
     fn make_private(
         self,
         input_domain: ExprDomain,
         input_metric: PartitionDistance<M>,
-        output_measure: Approximate<MaxDivergence>,
+        _output_measure: FixedSmoothedMaxDivergence,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, Approximate<MaxDivergence>>>
+    ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, FixedSmoothedMaxDivergence>>
     {
         make_pureDP_to_fixed_approxDP(self.make_private(
             input_domain,
             input_metric,
-            output_measure.0,
+            MaxDivergence,
             global_scale,
         )?)
     }

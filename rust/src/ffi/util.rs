@@ -12,7 +12,8 @@ use crate::domains::{AtomDomain, BitVector, OptionDomain, VectorDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
 use crate::measures::{
-    Approximate, MaxDivergence, SMDCurve, SmoothedMaxDivergence, ZeroConcentratedDivergence,
+    FixedSmoothedMaxDivergence, MaxDivergence, SMDCurve, SmoothedMaxDivergence,
+    ZeroConcentratedDivergence,
 };
 use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
@@ -354,8 +355,7 @@ lazy_static! {
             type_vec![L2Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
 
             // measures
-            type_vec![MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence],
-            type_vec![Approximate, <MaxDivergence, ZeroConcentratedDivergence>],
+            type_vec![MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, FixedSmoothedMaxDivergence],
 
             // measure distances
             type_vec![SMDCurve],
