@@ -8,7 +8,7 @@ use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util::Type;
-use crate::measures::{FixedSmoothedMaxDivergence, MaxDivergence};
+use crate::measures::{Approximate, MaxDivergence};
 use crate::traits::{CheckAtom, ProductOrd};
 
 impl AmplifiableMeasure for AnyMeasure {
@@ -32,7 +32,7 @@ impl AmplifiableMeasure for AnyMeasure {
         }
         dispatch!(
             monomorphize,
-            [(self.type_, [MaxDivergence, FixedSmoothedMaxDivergence])],
+            [(self.type_, [MaxDivergence, Approximate<MaxDivergence>])],
             (self, budget, population_size, sample_size)
         )
     }

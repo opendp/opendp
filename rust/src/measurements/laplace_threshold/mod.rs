@@ -9,7 +9,7 @@ use opendp_derive::bootstrap;
 use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
 use crate::domains::{AtomDomain, MapDomain};
 use crate::error::{Error, ErrorVariant, Fallible};
-use crate::measures::FixedSmoothedMaxDivergence;
+use crate::measures::{Approximate, MaxDivergence};
 use crate::metrics::L1Distance;
 use crate::traits::samplers::{sample_discrete_laplace_Z2k, CastInternalRational};
 use crate::traits::{
@@ -54,7 +54,7 @@ pub fn make_laplace_threshold<TK, TV>(
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
         HashMap<TK, TV>,
         L1Distance<TV>,
-        FixedSmoothedMaxDivergence,
+        Approximate<MaxDivergence>,
     >,
 >
 where
@@ -106,7 +106,7 @@ where
                 .collect()
         }),
         input_metric,
-        FixedSmoothedMaxDivergence,
+        Approximate::default(),
         PrivacyMap::new_fallible(move |d_in: &TV| {
             let d_in = f64::inf_cast(*d_in)?;
             if d_in.is_sign_negative() {

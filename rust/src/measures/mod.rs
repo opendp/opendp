@@ -92,10 +92,12 @@ impl SMDCurve {
     }
 }
 
-/// Privacy measure used to define $(\epsilon, \delta)$-approximate differential privacy.
+/// Privacy measure used to define $\delta$-approximate PM-differential privacy.
 ///
-/// In the following definition, $d$ corresponds to $(\epsilon, \delta)$ when also quantified over all adjacent datasets.
-/// That is, $(\epsilon, \delta)$ is no smaller than $d$ (by product ordering),
+/// In the following definition, $d$ corresponds to privacy parameters $(d', \delta)$
+/// when also quantified over all adjacent datasets
+/// ($d'$ is the privacy parameter corresponding to privacy measure PM).
+/// That is, $(d', \delta)$ is no smaller than $d$ (by product ordering),
 /// over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
 /// $M(\cdot)$ is a measurement (commonly known as a mechanism).
 /// The measurement's input metric defines the notion of adjacency,
@@ -104,21 +106,26 @@ impl SMDCurve {
 /// # Proof Definition
 ///
 /// ### `d`-closeness
-///
-/// For any two distributions $Y, Y'$ and any 2-tuple $d$ of non-negative numbers $\epsilon$ and $\delta$,
-/// $Y, Y'$ are $d$-close under the fixed smoothed max divergence measure whenever
+/// For any two distributions $Y, Y'$ and 2-tuple $d = (d', \delta)$,
+/// where $d'$ is the distance with respect to privacy measure PM,
+/// $Y, Y'$ are $d$-close under the approximate PM measure whenever,
+/// for any choice of $\delta \in [0, 1]$,
+/// there exist events $E$ (depending on $Y$) and $E'$ (depending on $Y'$)
+/// such that $\Pr[E] \ge 1 - \delta$, $\Pr[E'] \ge 1 - \delta$, and
 ///
 /// ```math
-/// D_\infty^\delta(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S] + \delta}{\Pr[Y' \in S]} \Big] \leq \epsilon.
+/// D_{\mathrm{PM}}^\delta(Y|_E, Y'|_{E'}) = D_{\mathrm{PM}}(Y|_E, Y'|_{E'})
 /// ```
 ///
-/// Note that this $\epsilon$ and $\delta$ are not privacy parameters $\epsilon$ and $\delta$ until quantified over all adjacent datasets,
+/// where $Y|_E$ denotes the distribution of $Y$ conditioned on the event $E$.
+///
+/// Note that this $\delta$ is not privacy parameter $\delta$ until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
 #[derive(Clone, PartialEq, Debug, Default)]
-pub struct FixedSmoothedMaxDivergence;
+pub struct Approximate<PM: Measure>(pub PM);
 
-impl Measure for FixedSmoothedMaxDivergence {
-    type Distance = (f64, f64);
+impl<M: Measure> Measure for Approximate<M> {
+    type Distance = (M::Distance, f64);
 }
 
 /// Privacy measure used to define $\rho$-zero concentrated differential privacy.

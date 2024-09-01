@@ -6,11 +6,11 @@ use opendp_derive::bootstrap;
 use std::fmt::Debug;
 
 use crate::{
-    combinators::make_pureDP_to_fixed_approxDP,
+    combinators::make_approximate,
     core::{Function, Measure, Measurement, Metric, MetricSpace},
     domains::{DslPlanDomain, ExprDomain, LazyFrameDomain},
     error::Fallible,
-    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
     polars::{get_disabled_features_message, OnceFrame},
     transformations::{traits::UnboundedMetric, DatasetMetric, StableDslPlan},
@@ -222,11 +222,11 @@ where
     }
 }
 
-impl<MS> PrivateDslPlan<MS, FixedSmoothedMaxDivergence> for DslPlan
+impl<MS> PrivateDslPlan<MS, Approximate<MaxDivergence>> for DslPlan
 where
     MS: 'static + UnboundedMetric + DatasetMetric,
     Expr: PrivateExpr<PartitionDistance<MS>, MaxDivergence>
-        + PrivateExpr<PartitionDistance<MS>, FixedSmoothedMaxDivergence>,
+        + PrivateExpr<PartitionDistance<MS>, Approximate<MaxDivergence>>,
     DslPlan: StableDslPlan<MS, MS>,
     (DslPlanDomain, MS): MetricSpace,
     (ExprDomain, MS): MetricSpace,
@@ -235,10 +235,10 @@ where
         self,
         input_domain: DslPlanDomain,
         input_metric: MS,
-        output_measure: FixedSmoothedMaxDivergence,
+        output_measure: Approximate<MaxDivergence>,
         global_scale: Option<f64>,
         threshold: Option<u32>,
-    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, FixedSmoothedMaxDivergence>> {
+    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, Approximate<MaxDivergence>>> {
         if let Some(meas) = postprocess::match_postprocess(
             input_domain.clone(),
             input_metric.clone(),
@@ -261,7 +261,7 @@ where
             return Ok(meas);
         }
 
-        make_pureDP_to_fixed_approxDP(self.make_private(
+        make_approximate(self.make_private(
             input_domain,
             input_metric,
             MaxDivergence,

@@ -4,7 +4,7 @@ mod ffi;
 use crate::core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap};
 use crate::domains::VectorDomain;
 use crate::error::Fallible;
-use crate::measures::{FixedSmoothedMaxDivergence, MaxDivergence};
+use crate::measures::{Approximate, MaxDivergence};
 use crate::traits::{ExactIntCast, InfDiv, InfExpM1, InfLn1P, InfMul};
 
 pub trait IsSizedDomain: Domain {
@@ -41,7 +41,7 @@ impl AmplifiableMeasure for MaxDivergence {
             .inf_ln_1p()
     }
 }
-impl AmplifiableMeasure for FixedSmoothedMaxDivergence {
+impl AmplifiableMeasure for Approximate<MaxDivergence> {
     fn amplify(
         &self,
         (epsilon, delta): &(f64, f64),

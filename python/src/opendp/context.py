@@ -18,7 +18,7 @@ from inspect import signature
 from functools import partial
 from opendp.combinators import (
     make_fix_delta,
-    make_pureDP_to_fixed_approxDP,
+    make_approximate,
     make_pureDP_to_zCDP,
     make_sequential_composition,
     make_zCDP_to_approxDP,
@@ -242,7 +242,7 @@ def loss_of(
     >>> dp.loss_of(epsilon=1.0)
     (MaxDivergence, 1.0)
     >>> dp.loss_of(epsilon=1.0, delta=1e-9)
-    (FixedSmoothedMaxDivergence, (1.0, 1e-09))
+    (Approximate(MaxDivergence), (1.0, 1e-09))
     >>> dp.loss_of(rho=1.0)
     (ZeroConcentratedDivergence, 1.0)
 
@@ -800,15 +800,15 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
 
     from_to = str(chain.output_measure.type), str(to_measure.type)
 
-    if from_to == ("MaxDivergence", "FixedSmoothedMaxDivergence"):
-        return make_pureDP_to_fixed_approxDP(chain)
+    if from_to == ("MaxDivergence", "Approximate<MaxDivergence>"):
+        return make_approximate(chain)
 
     if from_to == ("MaxDivergence", "ZeroConcentratedDivergence"):
         return make_pureDP_to_zCDP(chain)
 
     if from_to == (
         "ZeroConcentratedDivergence",
-        "FixedSmoothedMaxDivergence",
+        "Approximate<MaxDivergence>",
     ):
         return make_fix_delta(make_zCDP_to_approxDP(chain), d_to[1])
 
@@ -820,9 +820,9 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
 
     >>> _translate_measure_distance(1, dp.max_divergence(), dp.max_divergence())
     1
-    >>> _translate_measure_distance(1, dp.max_divergence(), dp.fixed_smoothed_max_divergence())
+    >>> _translate_measure_distance(1, dp.max_divergence(), dp.approximate(dp.max_divergence()))
     (1, 0.0)
-    >>> _translate_measure_distance((1.5, 5e-07), dp.fixed_smoothed_max_divergence(), dp.zero_concentrated_divergence())
+    >>> _translate_measure_distance((1.5, 5e-07), dp.approximate(dp.max_divergence()), dp.zero_concentrated_divergence())
     0.0489...
     >>> _translate_measure_distance(0.05, dp.zero_concentrated_divergence(), dp.max_divergence())
     0.316...
@@ -834,7 +834,7 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
 
     constant = 1.0  # the choice of constant doesn't matter
 
-    if from_to == ("MaxDivergence", "FixedSmoothedMaxDivergence"):
+    if from_to == ("MaxDivergence", "Approximate<MaxDivergence>"):
         return (d_from, 0.0)
 
     if from_to == ("ZeroConcentratedDivergence", "MaxDivergence"):
@@ -848,7 +848,7 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
         return make_laplace(*space, scale).map(constant)
 
     if from_to == (
-        "FixedSmoothedMaxDivergence",
+        "Approximate<MaxDivergence>",
         "ZeroConcentratedDivergence",
     ):
         def caster(measurement):

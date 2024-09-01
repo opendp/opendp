@@ -87,11 +87,11 @@ def test_cast_zcdp_approxdp():
     print(smd_gaussian.map(1.).epsilon(1e-6))
     
 
-def test_make_pureDP_to_fixed_approxDP():
+def test_make_approximate():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
 
     meas = dp.c.make_basic_composition([
-        dp.c.make_pureDP_to_fixed_approxDP(dp.m.make_laplace(*input_space, 10.)),
+        dp.c.make_approximate(dp.m.make_laplace(*input_space, 10.)),
         dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 10.)), delta=1e-6)
     ])
 
@@ -108,4 +108,4 @@ def test_make_pureDP_to_zCDP():
     print(meas.map(1.))
 
 if __name__ == "__main__":
-    test_make_pureDP_to_fixed_approxDP()
+    test_make_approximate()
