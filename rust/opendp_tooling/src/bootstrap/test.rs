@@ -14,5 +14,8 @@ fn test_docstring_description_from_attrs() {
     let docstring = result.expect("from_attrs failed");
     let description = docstring.description.unwrap();
 
-    assert_eq!(description, "Required features: `feature_1`, `feature_2`".to_string());
+    assert_eq!(
+        description,
+        "Required features: `feature_1`, `feature_2`".to_string()
+    );
 }
