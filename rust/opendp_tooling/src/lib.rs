@@ -9,8 +9,8 @@ pub mod codegen;
 
 #[derive(Debug)]
 struct Deprecation {
-	version: String,
-	note: String,
+    version: String,
+    note: String,
 }
 
 // metadata for each function in a module
