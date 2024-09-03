@@ -24,14 +24,14 @@ mod full;
 /// Depending on the environment, this link will go directly to a versioned docs site, or to a local file.
 ///
 /// you can also specify the location of the proof file directly:
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap(
 ///     proof = "transformations/make_clamp.tex"
 /// )]
 /// fn my_func() {}
 /// ```
 /// Expands to:
-/// ```no_run
+/// ```compile_fail
 /// /// [(Proof Link)](link/to/proof.pdf)
 /// fn my_func() {}
 /// ```
@@ -40,7 +40,7 @@ mod full;
 ///
 /// # Features
 /// You can indicate a list of features that must be enabled by the user for the function to exist.
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap(
 ///     features("contrib", "floating-point")
 /// )]
@@ -53,14 +53,14 @@ mod full;
 /// from the name of the function in the rust code.
 /// This is useful in situations where the bootstrap macro is invoked directly on extern "C" functions,
 /// like in the core and data modules. You can ignore this in most contexts.
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap(
 ///     name = "my_func_renamed"
 /// )]
 /// fn my_func() {}
 /// ```
 /// Generates in Python:
-/// ```no_run
+/// ```compile_fail
 /// def my_func_renamed():
 ///     pass
 /// ```
@@ -68,7 +68,7 @@ mod full;
 /// # Arguments, Generics and Return
 /// You can pass additional metadata that is specific to each argument or generic.
 ///
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap(
 ///     // can specify multiple. Everything is optional
 ///     arguments(my_arg1(default = "example"), my_arg2(hint = "int")),
@@ -84,7 +84,7 @@ mod full;
 ///
 /// ## Default Value
 /// You can set the default value for arguments and generics in bindings languages:
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap(
 ///     arguments(value(default = -1074)),
 ///     generics(T(default = "i32"))
@@ -103,7 +103,7 @@ mod full;
 /// This metadata is specific to default values for generic arguments.
 /// It is used when you want to specify a default type,
 /// but let the atomic type be filled in based on context.
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap(
 ///     generics(
 ///         D(default = "AtomDomain<T>", generics = "T"),
@@ -125,7 +125,7 @@ mod full;
 ///
 /// This breaks down when the public example is embedded in another data structure, like a tuple.
 /// You can provide instructions on how to retrieve an example that can be used to infer a type:
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap(
 ///     generics(T(example = "$get_first(bounds)"))
 /// )]
@@ -148,14 +148,14 @@ mod full;
 /// However, it is not always necessary to construct an AnyObject; a raw pointer will do.
 ///
 /// In the following example, the generated bindings would expect `value` to be passed as an "AnyObject *" because it is generic.
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap()]
 /// fn my_func<T: Number>(value: T) -> T {
 ///     value
 /// }
 /// ```
 /// However, we know `value` is a number that we can place behind a simple raw pointer "void *".
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap(
 ///     arguments(value(c_type = "void *"))
 /// )]
@@ -176,7 +176,7 @@ mod full;
 /// In the previous example, the rust type for `value` is automatically inferred to be "T".
 ///
 /// The rust type for `bounds` in the following function is `(T, T)`.
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap()]
 /// fn my_func<T>(bounds: (T, T)) -> T {
 ///     unimplemented!()
@@ -188,7 +188,7 @@ mod full;
 /// It is unclear what the memory layout of the bound enum is in C.
 /// For simplicity, the extern C function slightly changes the interface to be less general by assuming that the bounds are inclusive.
 /// We can communicate this to the bindings generation by setting the rust type manually.
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap(
 ///     arguments(bounds(rust_type = "(T, T)")),
 ///     generics(TA(example = "$get_first(bounds)"))
@@ -211,7 +211,7 @@ mod full;
 /// We can instead derive a type, by saying there exists some type T that is inferred from the first bound.
 /// As a developer we have knowledge that our naive tooling doesn't-- that T is the same as S::Atom.
 /// We can then use this inferred type to specify the rust type.
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap(
 ///     arguments(bounds(rust_type = "(T, T)")),
 ///     derived_types(T = "$get_first(bounds)")
@@ -227,7 +227,7 @@ mod full;
 ///
 /// It is also possible to specify the rust type via a macro.
 /// Here is an example for the invoke function:
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap(
 ///     name = "measurement_invoke",
 ///     arguments(
@@ -254,7 +254,7 @@ mod full;
 /// ## Hints
 /// This metadata contains a fair amount of Python-only syntax.
 /// It is added as a type hint to the argument in Python.
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap(
 ///     generics(MO(hint = "SensitivityMetric"))
 /// )]
@@ -263,7 +263,7 @@ mod full;
 /// The above type MO has a trait bound `SensitivityMetric` that restricts the set of possible types MO can be.
 ///
 /// The generated code downgrades this to just a type hint.
-/// ```no_run
+/// ```compile_fail
 /// def my_func(
 ///     MO: SensitivityMetric
 /// ):
@@ -275,7 +275,7 @@ mod full;
 /// In some cases you want generated code not to include a type argument for a particular generic,
 /// because it is unambiguously determined by another argument.
 /// This comes up often when the type is already captured in the `input_domain` or `input_metric` argument.
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap(
 ///     generics(DI(suppress))
 /// )]
@@ -297,7 +297,7 @@ mod full;
 /// This is because foreign languages may not know the return value is still holding a reference to the data.
 ///
 /// For example, when you construct a domain that holds a member check function that was allocated in Python.
-/// ```no_run
+/// ```compile_fail
 /// #[bootstrap(
 ///     dependencies(member)
 /// )]
@@ -307,7 +307,7 @@ mod full;
 /// ```
 ///
 /// The generated code will add a reference to `member` to the return type, which keeps the refcount up.
-/// ```no_run
+/// ```compile_fail
 /// def example_user_domain(
 ///     member: Callable[[Any], bool]
 /// ):
