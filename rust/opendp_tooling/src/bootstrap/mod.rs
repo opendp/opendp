@@ -18,6 +18,9 @@ use self::{
     signature::{BootSigArgType, BootstrapSignature},
 };
 
+#[cfg(test)]
+mod test;
+
 impl Function {
     pub fn from_ast(
         attr_args: AttributeArgs,

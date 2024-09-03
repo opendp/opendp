@@ -21,6 +21,8 @@ fn make_argument() -> Argument {
 fn make_function(parameter_argument: Argument, return_argument: Argument) -> Function {
     Function {
         name: "fake_function".to_string(),
+        // In practice, the description string will already include info about features.
+        // This is tested separately.
         description: Some("fake description".to_string()),
         features: vec!["fake_feature".to_string()],
         args: vec![parameter_argument],
@@ -47,8 +49,6 @@ def fake_function(
     fake_argument = 99.9
 ):
     r\"\"\"fake description
-
-    Required features: `fake_feature_1`, `fake_feature_2`
 
     :param fake_argument: fake description
     :return: fake description
@@ -84,8 +84,6 @@ fn test_r_code_generation() {
     let actual_code = r::r::generate_r_function("fake_module", &function, &hierarchy);
     let expected_code = "
 #' fake description
-#'
-#' Required features: `fake_feature_1`, `fake_feature_2`
 #'
 #' @concept fake_module
 #' @param fake_argument fake description
