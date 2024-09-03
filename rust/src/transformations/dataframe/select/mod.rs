@@ -14,7 +14,7 @@ use super::{DataFrame, DataFrameDomain};
 mod ffi;
 
 #[bootstrap(features("contrib"))]
-#[deprecated(note = "Use Polars instead", version = "0.11.1")]
+#[deprecated(note = "Use Polars instead", since = "0.11.1")]
 /// Make a Transformation that retrieves the column `key` from a dataframe as `Vec<TOA>`.
 ///
 /// # Arguments
