@@ -7,6 +7,12 @@ pub mod proven;
 // logic for generating bindings from the core structures below
 pub mod codegen;
 
+#[derive(Debug)]
+struct Deprecation {
+	version: String,
+	note: String,
+}
+
 // metadata for each function in a module
 #[derive(Debug)]
 pub struct Function {
@@ -28,7 +34,7 @@ pub struct Function {
     // whether to generate FFI
     pub has_ffi: bool,
     // deprecation warning if applicable
-    pub deprecated: Option<String>,
+    pub deprecation: Option<Deprecation>,
 }
 
 // Metadata for function arguments, derived types and returns.

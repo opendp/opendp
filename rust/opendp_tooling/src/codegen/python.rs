@@ -230,23 +230,17 @@ def {then_name}(
         String::new()
     };
 
-    let deprecated = func
-        .deprecated
+    let deprecated_decorator = func
+        .deprecation
         .as_ref()
-        .map(|msg| {
-            if msg.contains("Polars") {
-                format!(
-                    "@deprecated(version='0.11.1', reason='Use `opendp.extras.polars` instead')\n"
-                )
-            } else {
-                panic!("Unexpected deprecation: {msg}")
-            }
+        .map(|deprecation| {
+            format!("@deprecated(version={}, reason={})\n", deprecation.version, deprecation.note)
         })
         .unwrap_or_default();
 
     format!(
         r#"
-{deprecated}def {func_name}(
+{deprecated_decorator}def {func_name}(
 {args}
 ){sig_return}:
 {docstring}
