@@ -235,7 +235,7 @@ def {then_name}(
         .as_ref()
         .map(|deprecation| {
             format!(
-                "@deprecated(version={}, reason={})\n",
+                "@deprecated(version=\"{}\", reason=\"{}\")\n",
                 deprecation.version, deprecation.note
             )
         })
