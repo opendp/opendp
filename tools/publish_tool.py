@@ -16,7 +16,9 @@ def rust(args):
         # As of https://github.com/rust-lang/cargo/pull/11062, cargo publish blocks until the index is propagated,
         # so we don't have to wait here anymore.
         run_command("Publishing opendp_derive crate", "cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml")
-        run_command("Publishing opendp crate", "cargo publish --verbose --manifest-path=rust/Cargo.toml")
+        # We've expanded default-members so "cargo test" tests more packages,
+        # but that means we need to be explit with "cargo publish".
+        run_command("Publishing opendp crate", "cargo publish --verbose --manifest-path=rust/Cargo.toml --package opendp")
 
 
 def python(args):

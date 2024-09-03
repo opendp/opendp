@@ -159,3 +159,6 @@ impl Argument {
         self.c_type().split('<').next().unwrap().to_string()
     }
 }
+
+#[cfg(test)]
+mod test;

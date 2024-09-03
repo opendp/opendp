@@ -87,7 +87,8 @@ where
     if global_scale.is_nan() || global_scale.is_sign_negative() {
         return fallible!(
             MakeMeasurement,
-            "global_scale must be a non-negative number"
+            "global_scale ({}) must be a non-negative number",
+            global_scale
         );
     }
 
@@ -146,8 +147,13 @@ pub(crate) fn match_report_noisy_max(
         );
     };
 
-    let optimize = literal_value_of::<String>(optimize)?
-        .ok_or_else(|| err!(MakeMeasurement, "Optimize must be \"max\" or \"min\"."))?;
+    let optimize = literal_value_of::<String>(optimize)?.ok_or_else(|| {
+        err!(
+            MakeMeasurement,
+            "Optimize must be \"max\" or \"min\", found \"{}\".",
+            optimize
+        )
+    })?;
     let optimize = Optimize::deserialize(optimize.as_str().into_deserializer())
         .map_err(|e: serde::de::value::Error| err!(FailedFunction, "{:?}", e))?;
 

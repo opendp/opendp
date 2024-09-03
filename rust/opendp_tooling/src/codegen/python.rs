@@ -154,7 +154,7 @@ __all__ = [
     )
 }
 
-fn generate_function(
+pub(crate) fn generate_function(
     module_name: &str,
     func: &Function,
     typemap: &HashMap<String, String>,

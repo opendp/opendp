@@ -6,7 +6,7 @@ def test_binary_search_fail():
     with pytest.raises(ZeroDivisionError) as e:
         dp.binary_search(lambda _: bool(1 / 0), T=float)
     if hasattr(e.value, "add_note"):
-        assert e.value.__notes__[0] == "Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at 0.0."
+        assert e.value.__notes__[0] == "Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at 0.0." # type: ignore[attr-defined]
 
 def test_binary_search_overflow():
 

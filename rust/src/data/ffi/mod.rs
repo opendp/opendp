@@ -65,7 +65,8 @@ pub extern "C" fn opendp_data__slice_as_object(
         if raw.len != 1 {
             return fallible!(
                 FFI,
-                "The slice length must be one when creating a scalar from FfiSlice"
+                "The slice length must be one when creating a scalar from FfiSlice, but is {}",
+                raw.len
             );
         }
         let plain = util::as_ref(raw.ptr as *const T)
@@ -98,7 +99,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         Ok(AnyObject::new(BitVector::from_bitslice(&bitslice[..raw.len])))
     }
     fn raw_to_string(raw: &FfiSlice) -> Fallible<AnyObject> {
-        let str_ptr = *util::as_ref(raw.ptr as *const *const c_char).ok_or_else(|| err!(FFI, "null pointer"))?;
+        let str_ptr = *util::as_ref(raw.ptr as *const *const c_char).ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a string"))?;
         let string = util::to_str(str_ptr)?.to_owned();
         Ok(AnyObject::new(string))
     }
@@ -124,7 +125,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const AnyObject, raw.len) };
         let vec = slice.iter()
             .map(|v| util::as_ref(*v)
-                .ok_or_else(|| err!(FFI, "null pointer"))
+                .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a vector"))
                 .and_then(|v| v.downcast_ref::<T>())
                 .map(Clone::clone))
             .collect::<Fallible<Vec<T>>>()?;
@@ -148,7 +149,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         raw: &FfiSlice,
     ) -> Fallible<AnyObject> {
         if raw.len != 3 {
-            return fallible!(FFI, "Expected a slice length of three");
+            return fallible!(FFI, "Expected a slice length of three, found a length of {}", raw.len);
         }
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, 3) };
 
@@ -165,7 +166,7 @@ pub extern "C" fn opendp_data__slice_as_object(
 
         // unpack keys and values into slices
         if slice.len() != 2 {
-            return fallible!(FFI, "HashMap FfiSlice must have length 2");
+            return fallible!(FFI, "HashMap FfiSlice must have length 2, found a length of {}", slice.len());
         }
         let keys = try_as_ref!(slice[0]).downcast_ref::<Vec<K>>()?;
         let vals = try_as_ref!(slice[1]).downcast_ref::<Vec<V>>()?;
@@ -174,7 +175,8 @@ pub extern "C" fn opendp_data__slice_as_object(
         if keys.len() != vals.len() {
             return fallible!(
                 FFI,
-                "HashMap FfiSlice must have an equivalent number of keys and values"
+                "HashMap FfiSlice must have an equivalent number of keys and values. Found {} keys and {} values.",
+                keys.len(), vals.len()
             );
         };
 
@@ -192,7 +194,7 @@ pub extern "C" fn opendp_data__slice_as_object(
     ) -> Fallible<Series> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
         if slice.len() != 3 {
-            return fallible!(FFI, "Series FfiSlice must have length 3");
+            return fallible!(FFI, "Series FfiSlice must have length 3, found a length of {}", slice.len());
         }
         Ok(unsafe {
             // consume the arrow array eagerly
@@ -312,18 +314,16 @@ pub extern "C" fn opendp_data__slice_as_object(
                     dispatch!(raw_to_tuple2, [(types[0], @primitives), (types[1], @primitives)], (raw))
                 },
                 3 => {
-                    if types[0] != Type::of::<IntDistance>() || types[1] != types[2] {
-                        return err!(FFI, "3-tuples are only implemented for partition distances").into();
-                    }
+                    try_!(check_partition_distance_types(&types));
                     dispatch!(raw_to_tuple3_partition_distance, [(types[1], @numbers)], (raw))
                 },
-                _ => return err!(FFI, "Only tuples of length 2 or 3 are supported").into()
+                l => return err!(FFI, "Only tuples of length 2 or 3 are supported, found a length of {}", l).into()
             }
         }
         TypeContents::GENERIC { name, args } => {
             if name == "HashMap" {
                 if args.len() != 2 {
-                    return err!(FFI, "HashMaps should have 2 type arguments").into();
+                    return err!(FFI, "HashMaps should have 2 type arguments, but found {}", args.len()).into();
                 }
                 let K = try_!(Type::of_id(&args[0]));
                 let V = try_!(Type::of_id(&args[1]));
@@ -582,17 +582,15 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                     dispatch!(tuple2_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))
                 },
                 3 => {
-                    if types[0] != Type::of::<IntDistance>() || types[1] != types[2] {
-                        return err!(FFI, "3-tuples are only implemented for partition distances").into();
-                    }
+                    try_!(check_partition_distance_types(&types));
                     dispatch!(tuple3_partition_distance_to_raw, [(types[1], @numbers)], (obj))
                 },
-                _ => return err!(FFI, "Only tuples of length 2 or 3 are supported").into()
+                l => return err!(FFI, "Only tuples of length 2 or 3 are supported, found length of {}", l).into()
             }
         }
         TypeContents::GENERIC { name, args } => {
             if name == &"HashMap" {
-                if args.len() != 2 { return err!(FFI, "HashMaps should have 2 type arguments").into(); }
+                if args.len() != 2 { return err!(FFI, "HashMaps should have 2 type arguments, found {}", args.len()).into(); }
                 let K = try_!(Type::of_id(&args[0]));
                 let V = try_!(Type::of_id(&args[1]));
                 if matches!(V.contents, TypeContents::PLAIN("ExtrinsicObject")) {
@@ -605,6 +603,23 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         // This list is explicit because it allows us to avoid including u32 in the @primitives, and queryables
         _ => { dispatch!(plain_to_raw, [(obj.type_, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyQueryable])], (obj)) }
     }.into()
+}
+
+/// Checks that a vector of three types satisfies the requirements of a partition distance.
+fn check_partition_distance_types(types: &Vec<Type>) -> Fallible<()> {
+    if types[0] != Type::of::<IntDistance>() {
+        return fallible!(FFI,
+            "3-tuples are only implemented for partition distances. First type must be a u32, found {}",
+            types[0].to_string()
+        );
+    }
+    if types[1] != types[2] {
+        return fallible!(FFI,
+            "3-tuples are only implemented for partition distances. Last two types must be numbers of the same type, found {} and {}",
+            types[1].to_string(), types[2].to_string()
+        );
+    }
+    Ok(())
 }
 
 #[bootstrap(

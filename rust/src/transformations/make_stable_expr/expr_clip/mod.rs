@@ -42,8 +42,14 @@ where
         return fallible!(MakeTransformation, "Clip must have min and max");
     }
 
-    let [input, lower, upper] = <[Expr; 3]>::try_from(input)
-        .map_err(|_| err!(MakeTransformation, "Clip expects 3 arguments"))?;
+    let n_args = input.len();
+    let [input, lower, upper] = <[Expr; 3]>::try_from(input).map_err(|_| {
+        err!(
+            MakeTransformation,
+            "Clip expects 3 arguments, found {}",
+            n_args
+        )
+    })?;
 
     let t_prior = input.make_stable(input_domain.clone(), input_metric.clone())?;
     let (middle_domain, middle_metric) = t_prior.output_space();

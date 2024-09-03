@@ -39,7 +39,7 @@ NULL
 /// Generate the code for a user-facing R function.
 ///
 /// This internally calls a C function that wraps the Rust OpenDP Library
-fn generate_r_function(
+pub(crate) fn generate_r_function(
     module_name: &str,
     func: &Function,
     hierarchy: &HashMap<String, Vec<String>>,

@@ -69,7 +69,7 @@ where
     (DI, MI): MetricSpace,
 {
     if d_mids.len() == 0 {
-        return fallible!(MakeMeasurement, "must be at least one d_mid");
+        return fallible!(MakeMeasurement, "d_mids must have at least one element");
     }
 
     // we'll iteratively pop from the end
@@ -172,7 +172,7 @@ where
                             if *id != d_mids.len() {
                                 return fallible!(
                                     FailedFunction,
-                                    "sequential compositor has received a new query"
+                                    "Adaptive compositor has received a new query. To satisfy the sequentiality constraint of adaptive composition, only the most recent release from the parent compositor may be interacted with."
                                 );
                             }
                             // otherwise, return Ok to approve the change
@@ -180,7 +180,7 @@ where
                         }
                     }
 
-                    fallible!(FailedFunction, "unrecognized query!")
+                    fallible!(FailedFunction, "unrecognized query: {:?}", query)
                 })
             }
         )),

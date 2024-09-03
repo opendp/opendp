@@ -134,7 +134,7 @@ impl<T: CheckAtom + InherentNull> AtomDomain<T> {
         }
     }
 }
-impl<T: CheckAtom + ProductOrd> AtomDomain<T> {
+impl<T: CheckAtom + ProductOrd + Debug> AtomDomain<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Ok(AtomDomain {
             bounds: Some(Bounds::new_closed(bounds)?),
@@ -212,7 +212,7 @@ pub struct Bounds<T> {
     lower: Bound<T>,
     upper: Bound<T>,
 }
-impl<T: ProductOrd> Bounds<T> {
+impl<T: ProductOrd + Debug> Bounds<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Self::new((Bound::Included(bounds.0), Bound::Included(bounds.1)))
     }
@@ -230,16 +230,28 @@ impl<T: ProductOrd> Bounds<T> {
             if v_lower > v_upper {
                 return fallible!(
                     MakeDomain,
-                    "lower bound may not be greater than upper bound"
+                    "lower bound ({:?}) may not be greater than upper bound ({:?})",
+                    v_lower,
+                    v_upper
                 );
             }
             if v_lower == v_upper {
                 match (&lower, &upper) {
-                    (Bound::Included(_l), Bound::Excluded(_u)) => {
-                        return fallible!(MakeDomain, "upper bound excludes inclusive lower bound")
+                    (Bound::Included(l), Bound::Excluded(u)) => {
+                        return fallible!(
+                            MakeDomain,
+                            "upper bound ({:?}) excludes inclusive lower bound ({:?})",
+                            l,
+                            u
+                        )
                     }
-                    (Bound::Excluded(_l), Bound::Included(_u)) => {
-                        return fallible!(MakeDomain, "lower bound excludes inclusive upper bound")
+                    (Bound::Excluded(l), Bound::Included(u)) => {
+                        return fallible!(
+                            MakeDomain,
+                            "lower bound ({:?}) excludes inclusive upper bound ({:?})",
+                            l,
+                            u
+                        )
                     }
                     _ => (),
                 }
