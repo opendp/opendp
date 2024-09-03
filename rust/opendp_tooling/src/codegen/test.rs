@@ -48,6 +48,8 @@ def fake_function(
 ):
     r\"\"\"fake description
 
+    Required features: `fake_feature_1`, `fake_feature_2`
+
     :param fake_argument: fake description
     :return: fake description
     :raises TypeError: if an argument's type differs from the expected type
@@ -82,6 +84,8 @@ fn test_r_code_generation() {
     let actual_code = r::r::generate_r_function("fake_module", &function, &hierarchy);
     let expected_code = "
 #' fake description
+#'
+#' Required features: `fake_feature_1`, `fake_feature_2`
 #'
 #' @concept fake_module
 #' @param fake_argument fake description
