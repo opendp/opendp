@@ -31,7 +31,7 @@ mod full;
 /// fn my_func() {}
 /// ```
 /// Expands to:
-/// ```compile_fail
+/// ```no_run
 /// /// [(Proof Link)](link/to/proof.pdf)
 /// fn my_func() {}
 /// ```
