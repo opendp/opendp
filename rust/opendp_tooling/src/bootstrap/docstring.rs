@@ -35,9 +35,13 @@ impl BootstrapDocstring {
 
         let mut description = Vec::from_iter(doc_sections.remove("Description"));
 
-        for feature in features.iter() {
-            // TODO: better formatting.
-            description.push(feature.to_string());
+        if !features.is_empty() {
+            let features_list = features
+                .into_iter()
+                .map(|f| format!("`{f}`"))
+                .collect::<Vec<_>>()
+                .join(", ");
+            description.push(format!("\n\nRequired features: {features_list}"));
         }
 
         // add a link to rust documentation (with a gap line)
