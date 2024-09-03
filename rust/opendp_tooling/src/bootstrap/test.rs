@@ -10,9 +10,8 @@ fn test_docstring_description_from_attrs() {
 
     let result = BootstrapDocstring::from_attrs(attrs, &output, path);
 
-    if let Ok(docstring) = result {
-        if let Some(description) = docstring.description {
-            assert_eq!(description, "TODO".to_string())
-        }
-    }
+    let docstring = result.expect("from_attrs failed");
+    let description = docstring.description.unwrap();
+    
+    assert_eq!(description, "TODO".to_string());
 }
