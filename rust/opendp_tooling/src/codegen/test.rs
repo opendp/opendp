@@ -1,7 +1,7 @@
 use crate::codegen::{python, r};
 use crate::{Argument, Function, TypeRecipe, Value};
-use std::collections::HashMap;
 use pretty_assertions::assert_eq;
+use std::collections::HashMap;
 
 fn make_argument() -> Argument {
     Argument {

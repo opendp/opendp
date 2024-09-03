@@ -39,7 +39,6 @@ impl BootstrapDocstring {
             // TODO: better formatting.
             description.push(feature.to_string());
         }
-        
 
         // add a link to rust documentation (with a gap line)
         if let Some((module, name)) = &path {
