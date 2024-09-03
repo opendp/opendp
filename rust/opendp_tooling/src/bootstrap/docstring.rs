@@ -61,8 +61,6 @@ impl BootstrapDocstring {
         add_section_to_description("Supporting Elements");
         add_section_to_description("Proof Definition");
 
-        // description.push("\nRequired Features:\n".to_string());
-
         Ok(BootstrapDocstring {
             description: if description.is_empty() {
                 None
