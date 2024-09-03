@@ -50,7 +50,6 @@ impl BootstrapDocstring {
         add_section_to_description("Citations");
         add_section_to_description("Supporting Elements");
         add_section_to_description("Proof Definition");
-        add_section_to_description("Features");
 
         // description.push("\nRequired Features:\n".to_string());
 
