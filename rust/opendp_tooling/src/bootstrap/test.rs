@@ -1,5 +1,5 @@
-use syn::ReturnType;
 use pretty_assertions::assert_eq;
+use syn::ReturnType;
 
 use super::docstring::BootstrapDocstring;
 
