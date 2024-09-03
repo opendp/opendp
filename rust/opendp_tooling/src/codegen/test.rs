@@ -1,5 +1,6 @@
 use crate::codegen::{python, r};
 use crate::{Argument, Deprecation, Function, TypeRecipe, Value};
+use pretty_assertions::assert_eq;
 use std::collections::HashMap;
 
 fn make_argument() -> Argument {
@@ -46,6 +47,7 @@ fn test_python_code_generation() {
     let actual_code =
         python::generate_function("fake_module", &function, &typemap, &HashMap::new());
     let expected_code = "
+@deprecated(version=\"1.2.3.4\", reason=\"fake note\")
 def fake_function(
     fake_argument = 99.9
 ):
