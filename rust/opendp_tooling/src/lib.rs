@@ -8,7 +8,7 @@ pub mod proven;
 pub mod codegen;
 
 #[derive(Debug)]
-struct Deprecation {
+pub struct Deprecation {
     version: String,
     note: String,
 }

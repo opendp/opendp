@@ -8,7 +8,10 @@ use syn::{
     ReturnType, Type, TypePath,
 };
 
-use crate::proven::filesystem::{get_src_dir, make_proof_link};
+use crate::{
+    proven::filesystem::{get_src_dir, make_proof_link},
+    Deprecation,
+};
 
 use super::arguments::BootstrapArguments;
 
@@ -18,7 +21,7 @@ pub struct BootstrapDocstring {
     pub arguments: HashMap<String, String>,
     pub generics: HashMap<String, String>,
     pub returns: Option<String>,
-    pub deprecated: Option<String>,
+    pub deprecated: Option<Deprecation>,
 }
 
 #[derive(Debug, FromMeta, Clone)]
@@ -41,12 +44,11 @@ impl BootstrapDocstring {
                 attr.path.get_ident().map(ToString::to_string).as_deref() == Some("deprecated")
             })
             .map(|attr| {
-                // TODO: more nicely format this message
-                Result::Ok(
-                    DeprecationArguments::from_meta(&attr.parse_meta()?)?
-                        .note
-                        .unwrap_or_default(),
-                )
+                let meta = DeprecationArguments::from_meta(&attr.parse_meta()?)?;
+                Result::Ok(Deprecation {
+                    version: meta.since.unwrap_or_default(),
+                    note: meta.note.unwrap_or_default(),
+                })
             })
             .transpose()?;
 
