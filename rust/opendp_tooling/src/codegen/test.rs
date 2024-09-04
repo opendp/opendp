@@ -21,6 +21,8 @@ fn make_argument() -> Argument {
 fn make_function(parameter_argument: Argument, return_argument: Argument) -> Function {
     Function {
         name: "fake_function".to_string(),
+        // In practice, the description string will already include info about features.
+        // This is tested separately.
         description: Some("fake description".to_string()),
         features: vec!["fake_feature".to_string()],
         args: vec![parameter_argument],
