@@ -9,7 +9,7 @@ pub mod codegen;
 
 #[derive(Debug)]
 pub struct Deprecation {
-    version: String,
+    since: String,
     note: String,
 }
 

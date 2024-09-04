@@ -47,7 +47,7 @@ impl BootstrapDocstring {
             .map(|attr| {
                 let meta = DeprecationArguments::from_meta(&attr.parse_meta()?)?;
                 Result::Ok(Deprecation {
-                    version: meta.since.unwrap_or_default(),
+                    since: meta.since.unwrap_or_default(),
                     note: meta.note.unwrap_or_default(),
                 })
             })

@@ -32,7 +32,7 @@ fn make_function(parameter_argument: Argument, return_argument: Argument) -> Fun
         supports_partial: false,
         has_ffi: true,
         deprecation: Some(Deprecation {
-            version: "1.2.3.4".to_string(),
+            since: "1.2.3.4".to_string(),
             note: "fake note".to_string(),
         }),
     }
