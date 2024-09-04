@@ -2,10 +2,8 @@
 
 ## Summary
 
-OpenDP uses a number of Github workflows: Some are started automaticly
+OpenDP uses a number of Github workflows: Some are started automatically
 (pushes, PRs, and scheduled runs), and others are manual (via the github UI or API).
-The [Maintainer Notes](https://docs.opendp.org/en/stable/contributing/maintainer-notes.html)
-provide a broader view of the the develpment and release process.
 
 ### Automatic
 
