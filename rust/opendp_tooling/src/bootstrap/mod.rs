@@ -18,6 +18,9 @@ use self::{
     signature::{BootSigArgType, BootstrapSignature},
 };
 
+#[cfg(test)]
+mod test;
+
 impl Function {
     pub fn from_ast(
         attr_args: AttributeArgs,
@@ -39,7 +42,12 @@ impl Function {
         } else {
             None
         };
-        let docstring = BootstrapDocstring::from_attrs(item_fn.attrs, &item_fn.sig.output, path)?;
+        let docstring = BootstrapDocstring::from_attrs(
+            item_fn.attrs,
+            &item_fn.sig.output,
+            path,
+            arguments.features.0.clone(),
+        )?;
 
         // aggregate info from all sources
         reconcile_function(arguments, docstring, signature)

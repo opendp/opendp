@@ -1,5 +1,6 @@
 use crate::codegen::{python, r};
 use crate::{Argument, Function, TypeRecipe, Value};
+use pretty_assertions::assert_eq;
 use std::collections::HashMap;
 
 fn make_argument() -> Argument {
@@ -20,6 +21,8 @@ fn make_argument() -> Argument {
 fn make_function(parameter_argument: Argument, return_argument: Argument) -> Function {
     Function {
         name: "fake_function".to_string(),
+        // In practice, the description string will already include info about features.
+        // This is tested separately.
         description: Some("fake description".to_string()),
         features: vec!["fake_feature".to_string()],
         args: vec![parameter_argument],
