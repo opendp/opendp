@@ -18,12 +18,7 @@ def test_iterable_data():
     sum_query.laplace()
 
 
-@pytest.mark.xfail(raises=TypeError)
 def test_int_data_laplace_param():
-    # Currently fails with:
-    #   TypeError: inferred type is i32, expected f64. See https://github.com/opendp/opendp/discussions/298
-    # Possible resolution:
-    #   Explicit parameter on laplace works with int data, or the error message should suggest the fix.
     context = dp.Context.compositor(
         data=[1, 2, 3, 4, 5],
         privacy_unit=dp.unit_of(contributions=1),
@@ -88,3 +83,33 @@ def test_query_dir():
     query_dir = dir(context.query())
     assert 'count' in query_dir
     assert 'laplace' in query_dir
+
+@pytest.mark.xfail(raises=dp.OpenDPException)
+def test_string_instead_of_tuple_for_margin_key():
+    pl = pytest.importorskip("polars")
+
+    lf = pl.LazyFrame(
+        {"a_column": [1, 2, 3, 4]},
+        schema={"a_column": pl.Int32},
+    )
+
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+        margins={
+            # To reproduce failure, the column name must be multiple characters.
+            # TODO: We want to fail earlier because the key is not a tuple.
+            # (mypy does catch this, so we need "type: ignore", but we can't rely on users running mypy.)
+            ("a_column"): dp.polars.Margin(public_info="keys", max_partition_length=5), # type: ignore
+        },
+    )
+
+    counts = (
+        context.query()
+        .group_by("a_column")
+        .agg(pl.len().dp.noise())
+    )
+    counts.summarize()
+    # counts.release().collect()

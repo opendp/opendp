@@ -160,7 +160,7 @@ nitpick_ignore = [
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = ['**/code/*.rst']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -181,8 +181,10 @@ html_static_path = ['_static']
 html_last_updated_fmt = '%b %d, %Y'
 
 # Custom sidebar templates, maps document names to template names.
+# Full list of options at https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/layout.html#references
 html_theme_options = {
-    "github_url": "https://github.com/opendp"
+    "github_url": "https://github.com/opendp",
+    "article_header_end": ["old-version-warning"]
 }
 
 html_theme = 'pydata_sphinx_theme'
@@ -194,6 +196,10 @@ html_css_files = [
 # Note: Overridden in the Makefile for local builds. Be sure to update both places.
 html_sidebars = {
    '**': ['sidebar-nav-bs.html', 'versioning.html'],
+}
+html_context = {
+    # Expected sphinx-multiversion to set "latest_version", but it was None, so set it manually.
+    'latest_version_name': f'v{version}'
 }
 
 # SPHINX-MULTIVERSION STUFF
@@ -228,27 +234,6 @@ html_logo = "_static/images/opendp-logo.png"
 
 rst_prolog = """
 .. |toctitle| replace:: Contents:
-"""
-
-# insert this header on nbsphinx pages to link to binder and github:
-# we have to resolve the link ref here, at runtime, because sphinx-multiversion mediates the reading of this config
-nbsphinx_prolog = r"""
-{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}
-{% if env.config.release.endswith('-dev') %}
-    {% set frag = 'main' %}
-{% elif '-' in env.config.release %}
-    {% set frag = env.config.release.split('-', 1)[1].split('.', 1)[0] %}
-{% else %}
-    {% set frag = 'v' ~ env.config.version %}
-{% endif %}
-.. raw:: html
-
-    <div class="admonition note">
-      This page was generated from
-      <a class="reference external" href="https://github.com/opendp/opendp/tree/{{ frag|e }}/{{ docname|e }}" target="_blank">{{ docname|e }}</a>.
-      Interactive online version:
-      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp/{{ frag|e }}?filepath={{ docname|e }}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
-    </div>
 """
 
 class CustomClassDocumenter(autodoc.ClassDocumenter):

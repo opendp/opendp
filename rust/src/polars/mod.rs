@@ -96,7 +96,7 @@ where
                 return Ok(None);
             }
             let args = serde_pickle::from_slice(kwargs.as_ref(), Default::default())
-                .map_err(|e| err!(FailedFunction, e.to_string()))?;
+                .map_err(|e| err!(FailedFunction, "{}", e))?;
             (input, args)
         }
         Expr::AnonymousFunction {
@@ -448,7 +448,7 @@ impl From<LazyFrame> for OnceFrame {
         let mut state = Some(value);
         Self::new_raw(move |_self: &Self, query: Query<OnceFrameQuery>| {
             let Some(lazyframe) = state.clone() else {
-                return fallible!(FailedFunction, "LazyFrame has been exhausted");
+                return fallible!(FailedFunction, "OnceFrame has been exhausted");
             };
             Ok(match query {
                 Query::External(q_external) => Answer::External(match q_external {

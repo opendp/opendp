@@ -29,6 +29,8 @@ use crate::error::Fallible;
 use crate::traits::{CheckAtom, InherentNull, ProductOrd};
 use std::fmt::{Debug, Formatter};
 
+use bitvec::prelude::{BitVec, Lsb0};
+
 #[cfg(feature = "contrib")]
 mod poly;
 
@@ -132,7 +134,7 @@ impl<T: CheckAtom + InherentNull> AtomDomain<T> {
         }
     }
 }
-impl<T: CheckAtom + ProductOrd> AtomDomain<T> {
+impl<T: CheckAtom + ProductOrd + Debug> AtomDomain<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Ok(AtomDomain {
             bounds: Some(Bounds::new_closed(bounds)?),
@@ -210,7 +212,7 @@ pub struct Bounds<T> {
     lower: Bound<T>,
     upper: Bound<T>,
 }
-impl<T: ProductOrd> Bounds<T> {
+impl<T: ProductOrd + Debug> Bounds<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Self::new((Bound::Included(bounds.0), Bound::Included(bounds.1)))
     }
@@ -228,16 +230,28 @@ impl<T: ProductOrd> Bounds<T> {
             if v_lower > v_upper {
                 return fallible!(
                     MakeDomain,
-                    "lower bound may not be greater than upper bound"
+                    "lower bound ({:?}) may not be greater than upper bound ({:?})",
+                    v_lower,
+                    v_upper
                 );
             }
             if v_lower == v_upper {
                 match (&lower, &upper) {
-                    (Bound::Included(_l), Bound::Excluded(_u)) => {
-                        return fallible!(MakeDomain, "upper bound excludes inclusive lower bound")
+                    (Bound::Included(l), Bound::Excluded(u)) => {
+                        return fallible!(
+                            MakeDomain,
+                            "upper bound ({:?}) excludes inclusive lower bound ({:?})",
+                            l,
+                            u
+                        )
                     }
-                    (Bound::Excluded(_l), Bound::Included(_u)) => {
-                        return fallible!(MakeDomain, "lower bound excludes inclusive upper bound")
+                    (Bound::Excluded(l), Bound::Included(u)) => {
+                        return fallible!(
+                            MakeDomain,
+                            "lower bound ({:?}) excludes inclusive upper bound ({:?})",
+                            l,
+                            u
+                        )
                     }
                     _ => (),
                 }
@@ -452,6 +466,54 @@ impl<D: Domain> Domain for VectorDomain<D> {
             }
         }
         Ok(true)
+    }
+}
+
+/// Alias for BitVec<u8,Lsb0>
+pub type BitVector = BitVec<u8, Lsb0>;
+
+/// A domain that contains all vectors of only Boolean values
+///
+/// If a maximum weight is specified, then it is restricted to all vectors up to a specified Hamming weight
+#[derive(Clone, PartialEq)]
+pub struct BitVectorDomain {
+    pub max_weight: Option<usize>,
+}
+impl Debug for BitVectorDomain {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        let weight_str = self
+            .max_weight
+            .map(|max_weight| format!("weight={:?}", max_weight))
+            .unwrap_or_default();
+        write!(f, "BitVectorDomain({})", weight_str)
+    }
+}
+impl Default for BitVectorDomain {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl BitVectorDomain {
+    pub fn new() -> Self {
+        BitVectorDomain { max_weight: None }
+    }
+    pub fn with_max_weight(mut self, max_weight: usize) -> Self {
+        self.max_weight = Some(max_weight);
+        self
+    }
+    pub fn without_max_weight(mut self) -> Self {
+        self.max_weight = None;
+        self
+    }
+}
+impl Domain for BitVectorDomain {
+    type Carrier = BitVector; //
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        Ok(if let Some(max_weight) = self.max_weight {
+            val.count_ones() <= max_weight
+        } else {
+            true
+        })
     }
 }
 

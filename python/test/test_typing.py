@@ -86,8 +86,8 @@ def test_c():
 
 
 def test_feature_fails():
-    with pytest.raises(AssertionError):
-        assert_features("A")
+    with pytest.raises(OpenDPException, match=re.escape('enable_features("A", "Z")')):
+        assert_features("A", "Z")
 
 
 def test_set_feature():
@@ -105,6 +105,9 @@ def test_default_float_type():
     assert RuntimeType.parse(float) == f64
 
     # Can't set to f32 because debug binary has fewer types.
+
+def test_runtime_type_hash():
+    assert {Vec[int]} == {RuntimeType.parse("Vec<int>")}
 
 
 disallowed_int_default_types = set([i128, u128, isize])

@@ -28,7 +28,7 @@ jobs:
           android: true         # 8.7GiB
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
-          haskell: false        # no: little/no benefit
+          haskell: true         # ?
           large-packages: false # no: slow
           swap-storage: false   # no: having swap is useful
 
@@ -105,7 +105,7 @@ jobs:
           android: true         # 8.7GiB
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
-          haskell: false        # no: little/no benefit
+          haskell: true         # 5.4GiB
           large-packages: false # no: slow
           swap-storage: false   # no: having swap is useful
 
@@ -234,6 +234,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Look for URLs that should be relative
+        # R docs are copied into place after build, so they do not use relative URLs.
+        # Negative lookahead could also be used, but it is only supported by PCRE, which not all greps support.
+        run: "! ( grep 'https://docs.opendp.org' -r source --binary-file=without-match | grep -v https://docs.opendp.org/en/stable/api/r )"
 
       - name: Download Python bindings
         uses: actions/download-artifact@v4

@@ -130,7 +130,8 @@ where
     if candidates.null_count() > 0 {
         return fallible!(
             MakeTransformation,
-            "Candidates must not contain null values"
+            "Candidates must not contain null values, found {} null value(s)",
+            candidates.null_count()
         );
     }
     validate_candidates(&series_to_vec::<T>(&candidates.cast(&T::get_dtype())?)?)

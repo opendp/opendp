@@ -35,6 +35,8 @@ use pyo3_polars::derive::polars_expr;
 use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 
+use super::approximate_c_stability;
+
 #[cfg(test)]
 mod test;
 
@@ -179,11 +181,7 @@ where
 
     let scale = match scale {
         Some(scale) => scale,
-        None => {
-            // when scale is unknown, set it relative to the sensitivity of the query
-            let margin = input_domain.active_margin().cloned().unwrap_or_default();
-            t_prior.map(&(margin.l_0(1), 1, margin.l_inf(1)))?
-        }
+        None => approximate_c_stability(&t_prior)?,
     };
     let global_scale = global_scale.unwrap_or(1.);
     let scale = scale.inf_mul(&global_scale)?;
@@ -312,7 +310,7 @@ fn noise_udf(inputs: &[Series], kwargs: NoisePlugin) -> PolarsResult<Series> {
         ChunkedArray<PT>: IntoSeries,
     {
         let Ok(scale) = RBig::try_from(scale) else {
-            polars_bail!(InvalidOperation: "scale must be finite")
+            polars_bail!(InvalidOperation: "scale ({}) must be representable as a fraction", scale)
         };
 
         Ok(series

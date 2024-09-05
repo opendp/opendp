@@ -1,8 +1,7 @@
 import pytest
 import opendp.prelude as dp
 import os
-
-
+import warnings
 
 
 def test_polars_version():
@@ -384,7 +383,7 @@ def test_polars_describe():
         .agg(pl.len().dp.noise(), summer, summer.alias("B"))
     )
 
-    actual = query.accuracy()
+    actual = query.summarize()
     pl_testing.assert_frame_equal(expected, actual)
 
     accuracy = [
@@ -393,7 +392,7 @@ def test_polars_describe():
         dp.discrete_laplacian_scale_to_accuracy(18.0, 0.05)
     ]
     expected = expected.hstack([pl.Series("accuracy", accuracy)])
-    actual = query.accuracy(alpha=0.05)
+    actual = query.summarize(alpha=0.05)
     pl_testing.assert_frame_equal(expected, actual)
 
 
@@ -428,7 +427,7 @@ def test_polars_accuracy_threshold():
         .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
     )
 
-    actual = query.accuracy()
+    actual = query.summarize()
     pl_testing.assert_frame_equal(expected, actual)
 
 
@@ -491,7 +490,7 @@ def test_polars_threshold():
         context.query()
         .group_by("A")
         .agg(pl.len().dp.noise())
-        .accuracy()
+        .summarize()
     )
 
     expected = pl.DataFrame({
@@ -518,7 +517,7 @@ def test_polars_threshold():
         context.query()
         .group_by("B")
         .agg(pl.len().dp.noise())
-        .accuracy()
+        .summarize()
     )
 
     expected = pl.DataFrame({
@@ -638,3 +637,59 @@ def test_pickle_bomb():
             dp.max_divergence(T=float),
             bomb_lf,
         )
+
+
+def test_cut():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    data = pl.LazyFrame({"x": [0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]})
+    with warnings.catch_warnings():
+        context = dp.Context.compositor(
+            data=data.with_columns(pl.col("x").cut([1.0, 2.0, 3.0]).to_physical()),
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=10000.0),
+            split_evenly_over=1,
+            margins={("x",): dp.polars.Margin(public_info="keys")},
+        )
+    actual = (
+        context.query()
+        .group_by("x")
+        .agg(pl.len().dp.noise())
+        .release()
+        .collect()
+        .sort("x")
+    )
+    expected = pl.DataFrame(
+        {"x": [0, 1, 2, 3], "len": [2, 2, 2, 1]}, 
+        schema={"x": pl.UInt32, "len": pl.UInt32},
+    )
+
+    pl_testing.assert_frame_equal(actual, expected)
+
+
+@pytest.mark.xfail(raises=AssertionError)
+def test_csv_bad_encoding_loading():
+    # See https://github.com/opendp/opendp/issues/1976
+    # If a CSV is misencoded, Polars loads an empty dataframe.
+    # Since we tell users not to look at their data,
+    # we may want to try harder to load the csv,
+    # or give more information on failure.
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+    import tempfile
+
+    name = 'André'
+    name_b = name.encode('iso-8859-1') # Polars only handles 'utf-8'.
+
+    with tempfile.NamedTemporaryFile(delete=False) as fp:
+        # By default, would delete file on "close()";
+        # With "delete=False", clean up when exiting "with" instead.
+        fp.write(b'name\n' + name_b)
+        fp.close()
+        df = pl.scan_csv(fp.name, ignore_errors=True)
+        expected = pl.LazyFrame(
+            {"name": [name]},
+            schema={"name": pl.String},
+        )
+        pl_testing.assert_frame_equal(df, expected)

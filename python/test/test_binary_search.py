@@ -3,8 +3,10 @@ import opendp.prelude as dp
 
 
 def test_binary_search_fail():
-    with pytest.raises(ValueError, match=r'predicate always fails'):
-        dp.binary_search(lambda x: bool(1/0), T=float)
+    with pytest.raises(ZeroDivisionError) as e:
+        dp.binary_search(lambda _: bool(1 / 0), T=float)
+    if hasattr(e.value, "add_note"):
+        assert e.value.__notes__[0] == "Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at 0.0." # type: ignore[attr-defined]
 
 def test_binary_search_overflow():
 
@@ -53,7 +55,7 @@ def test_type_inference():
         return dp.t.make_sum(
             dp.vector_domain(dp.atom_domain(bounds=(-b, b)), size=1000), 
             dp.symmetric_distance())
-    assert dp.binary_search_param(chainer, 2, 100) == 50
+    assert dp.binary_search_param(chainer, 2, 100) == pytest.approx(50)
 
     def mean_chainer_n(n):
         return dp.t.make_mean(
@@ -66,3 +68,4 @@ def test_type_inference():
             dp.vector_domain(dp.atom_domain(bounds=(-b, b)), size=1000), 
             dp.symmetric_distance())
     assert 499.999 < dp.binary_search_param(mean_chainer_b, 2, 1.) < 500.
+

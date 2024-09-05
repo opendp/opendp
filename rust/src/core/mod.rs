@@ -30,7 +30,7 @@ use std::sync::Arc;
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, InfMul, ProductOrd};
 use num::Zero;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 /// A set which constrains the input or output of a [`Function`].
 ///
@@ -153,11 +153,11 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     pub fn new_from_constant(c: MO::Distance) -> Self
     where
         MI::Distance: Clone,
-        MO::Distance: DistanceConstant<MI::Distance>,
+        MO::Distance: DistanceConstant<MI::Distance> + Display,
     {
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             if c < MO::Distance::zero() {
-                return fallible!(FailedMap, "constant must be non-negative");
+                return fallible!(FailedMap, "constant ({}) must be non-negative", c);
             }
             MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
         })
@@ -204,11 +204,11 @@ impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
     pub fn new_from_constant(c: MO::Distance) -> Self
     where
         MI::Distance: Clone,
-        MO::Distance: DistanceConstant<MI::Distance>,
+        MO::Distance: DistanceConstant<MI::Distance> + Display,
     {
         StabilityMap::new_fallible(move |d_in: &MI::Distance| {
             if c < MO::Distance::zero() {
-                return fallible!(FailedMap, "constant must be non-negative");
+                return fallible!(FailedMap, "constant ({}) must be non-negative", c);
             }
             MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
         })
@@ -321,6 +321,16 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
     }
 }
 
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Debug for Measurement<DI, TO, MI, MO> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Measurement")
+            .field("input_domain", &self.input_domain)
+            .field("input_metric", &self.input_metric)
+            .field("output_measure", &self.output_measure)
+            .finish()
+    }
+}
+
 pub trait MetricSpace {
     fn check_space(&self) -> Fallible<()>;
 }
@@ -414,6 +424,17 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
         MO::Distance: ProductOrd,
     {
         d_out.total_ge(&self.map(d_in)?)
+    }
+}
+
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Debug for Transformation<DI, DO, MI, MO> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Transformation")
+            .field("input_domain", &self.input_domain)
+            .field("input_metric", &self.input_metric)
+            .field("output_domain", &self.output_domain)
+            .field("output_metric", &self.output_metric)
+            .finish()
     }
 }
 
