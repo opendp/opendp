@@ -72,8 +72,12 @@ fn test_subnormal_fail() -> Fallible<()> {
     let min = FBig::<Up>::try_from(f32::from_bits(1))?;
     let half: FBig<Up> = min / 2;
     // this behavior is wrong. The conversion should be conducted with rounding up, but is not
-    // if this test fails, then check to see if the bug has been fixed in dashu:
+    // If this test fails, then check to see if the bug has been fixed in dashu:
     // https://github.com/cmpute/dashu/issues/53
+
+    // When Dashu is fixed, you should be able to replace `to_fxx_rounded()` with `to_fxx().value()`.
+    // This PR introduced these changes:
+    // https://github.com/opendp/opendp/pull/1998
     assert_eq!(half.to_f32().value(), 0.);
 
     // valid subnormals still convert exactly, as expected
