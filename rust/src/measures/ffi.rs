@@ -147,10 +147,9 @@ pub extern "C" fn opendp_measures__fixed_smoothed_max_divergence() -> FfiResult<
     Ok(AnyMeasure::new(Approximate(MaxDivergence))).into()
 }
 
-
 #[bootstrap(
     generics(M(suppress)),
-    arguments(measure(c_type = "AnyMeasure", rust_type = b"null")),
+    arguments(measure(c_type = "AnyMeasure *", rust_type = b"null")),
     returns(c_type = "FfiResult<AnyMeasure *>")
 )]
 /// Privacy measure used to define $\delta$-approximate PM-differential privacy.
@@ -163,6 +162,9 @@ pub extern "C" fn opendp_measures__fixed_smoothed_max_divergence() -> FfiResult<
 /// $M(\cdot)$ is a measurement (commonly known as a mechanism).
 /// The measurement's input metric defines the notion of adjacency,
 /// and the measurement's input domain defines the set of possible datasets.
+///
+/// # Arguments
+/// * `measure` - inner privacy measure
 ///
 /// # Proof Definition
 ///

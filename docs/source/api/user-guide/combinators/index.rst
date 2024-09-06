@@ -197,8 +197,8 @@ Similarly, :func:`opendp.combinators.make_pureDP_to_zCDP` is used for casting an
         >>> curve.epsilon(delta=1e-6)
         11.688596249354896
 
-:func:`opendp.combinators.make_fix_delta` changes the output measure from ``SmoothedMaxDivergence`` to ``FixedSmoothedMaxDivergence``.
-It fixes the delta parameter in the curve, so that the resulting measurement can be composed with other ``FixedSmoothedMaxDivergence`` measurements.
+:func:`opendp.combinators.make_fix_delta` changes the output measure from ``SmoothedMaxDivergence`` to ``Approximate<MaxDivergence>``.
+It fixes the delta parameter in the curve, so that the resulting measurement can be composed with other ``Approximate<MaxDivergence>`` measurements.
 
 .. tab-set::
 
