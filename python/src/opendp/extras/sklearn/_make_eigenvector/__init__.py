@@ -82,7 +82,7 @@ def make_private_eigenvector(
     return dp.m.make_user_measurement(
         input_domain,
         input_metric,
-        dp.max_divergence(T=float),
+        dp.max_divergence(),
         function,
         lambda d_in: d_in / 2 * unit_epsilon,
         TO=dp.Vec[input_desc.T],

@@ -296,7 +296,7 @@ that will satisfy this level of privacy, under a given set of weights.
             ...     return dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.c.make_sequential_composition(
             ...         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
             ...         input_metric=dp.symmetric_distance(),
-            ...         output_measure=dp.zero_concentrated_divergence(T=float),
+            ...         output_measure=dp.zero_concentrated_divergence(),
             ...         d_in=1,
             ...         d_mids=scale_weights(scale, weights)
             ...     )), delta=1e-6)

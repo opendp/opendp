@@ -15,7 +15,7 @@ def test_TODOs():
     the real tests for the FFI may be on the Rust side in many cases.
     '''
     # TODO: Add meaningful tests of measures:
-    assert str(dp.smoothed_max_divergence(float)) == 'SmoothedMaxDivergence'
+    assert str(dp.smoothed_max_divergence()) == 'SmoothedMaxDivergence'
 
     # TODO: Add meaningful tests of partial constructors:
     dp.m.then_private_expr(None, None) # type: ignore[arg-type]

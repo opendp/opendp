@@ -28,7 +28,7 @@ def test_private_np_sum():
     from opendp.extras.numpy._make_np_sum import then_private_np_sum
     with optional_dependency('numpy'):
         space = dp.numpy.array2_domain(norm=1., p=2, T=float), dp.symmetric_distance()
-    meas = space >> then_private_np_sum(dp.zero_concentrated_divergence(T=float), scale=1.)
+    meas = space >> then_private_np_sum(dp.zero_concentrated_divergence(), scale=1.)
     np = pytest.importorskip('numpy')
     data = np.random.normal(size=(1000, 4))
     print(meas(data))

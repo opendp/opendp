@@ -556,7 +556,7 @@ def test_replace_binary_path():
     m_expr = dp.m.make_private_expr(
         dp.expr_domain(example_lf()[0], grouping_columns=[]),
         dp.partition_distance(dp.symmetric_distance()),
-        dp.max_divergence(T=float),
+        dp.max_divergence(),
         expr,
     )
 
@@ -626,7 +626,7 @@ def test_pickle_bomb():
         dp.m.make_private_expr(
             dp.expr_domain(lf_domain, grouping_columns=[]),
             dp.partition_distance(dp.symmetric_distance()),
-            dp.max_divergence(T=float),
+            dp.max_divergence(),
             bomb_expr,
         )
 
@@ -634,7 +634,7 @@ def test_pickle_bomb():
         dp.m.make_private_lazyframe(
             lf_domain,
             dp.symmetric_distance(),
-            dp.max_divergence(T=float),
+            dp.max_divergence(),
             bomb_lf,
         )
 

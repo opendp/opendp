@@ -204,7 +204,7 @@ def test_sc_query():
     # build a child sequential compositor in zCDP, and then use it to release some gaussian queries
     sub_context_2 = context.query().compositor(  # type: ignore[attr-defined]
         split_evenly_over=2, 
-        output_measure=dp.zero_concentrated_divergence(T=float)
+        output_measure=dp.zero_concentrated_divergence()
     ).release()
     dp_sum_2 = sub_context_2.query().clamp((1, 10)).sum().gaussian()
     # with partials, fusing, and measure convention, would shorten to
