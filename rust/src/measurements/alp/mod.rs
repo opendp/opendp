@@ -14,7 +14,7 @@ use crate::interactive::Queryable;
 use crate::measures::MaxDivergence;
 use crate::metrics::L1Distance;
 use crate::traits::samplers::{fill_bytes, sample_bernoulli_float};
-use crate::traits::{Float, Hashable, InfCast, Integer};
+use crate::traits::{Float, Hashable, InfCast, Integer, ToFloatRounded};
 use std::collections::hash_map::DefaultHasher;
 
 #[cfg(feature = "ffi")]
@@ -104,8 +104,7 @@ where
         .with_precision(
             (f64::MANTISSA_DIGITS as i32 - scale.exp())
                 .max(FBig::ONE)
-                .to_f64()
-                .value() as usize,
+                .to_f64_rounded() as usize,
         )
         .value();
 
