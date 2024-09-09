@@ -36,13 +36,13 @@ where
         mut options,
     } = expr
     else {
-        return fallible!(MakeTransformation, "expected function expression");
+        return fallible!(MakeTransformation, "expected cast expression");
     };
 
-    // strict casting makes the transformation unstable: errors tell you things about private data
-    // Could throw an error if strict, but it is the default,
-    // so for ease-of-use it is forced to be non-strict
-    if let CastOptions::Strict = options {
+    // Strict casting makes the transformation unstable: errors tell you things about private data.
+    // Could throw an error if strict, but it is the default, so for ease-of-use it is forced to be non-strict.
+    // It is also ok for overflow to wraparound.
+    if matches!(options, CastOptions::Strict) {
         options = CastOptions::NonStrict;
     }
 
@@ -68,7 +68,7 @@ where
             Function::then_expr(move |expr| Expr::Cast {
                 expr: Arc::new(expr),
                 data_type: to_type.clone(),
-                // in order to be stable, casting failures should always manifest as nulls
+                // Specify behavior for when casting fails (this is forced to be non-strict).
                 options,
             }),
             middle_metric.clone(),
