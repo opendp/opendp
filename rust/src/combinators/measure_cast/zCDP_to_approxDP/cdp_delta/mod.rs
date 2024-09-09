@@ -8,15 +8,15 @@ use crate::{
 };
 
 #[cfg(test)]
-mod test;
+pub(crate) mod test;
 
 pub(crate) fn cdp_delta(rho: f64, eps: f64) -> Fallible<f64> {
     if rho.is_sign_negative() {
-        return fallible!(FailedMap, "rho must be non-negative");
+        return fallible!(FailedMap, "rho ({}) must be non-negative", rho);
     }
 
     if eps.is_sign_negative() {
-        return fallible!(FailedMap, "epsilon must be non-negative");
+        return fallible!(FailedMap, "epsilon ({}) must be non-negative", eps);
     }
 
     if rho.is_zero() || eps.is_infinite() {
@@ -65,7 +65,7 @@ pub(crate) fn cdp_delta(rho: f64, eps: f64) -> Fallible<f64> {
 
         // calculate derivative
         let deriv = (2.0 * a_mid - 1.0) * rho - eps + a_mid.recip().neg().ln_1p();
-        //        = (2α - 1)            ρ   - ε   + ln1p(-1/α)
+        //        = (2α - 1)            * ρ   - ε   + ln1p(-1/α)
 
         if deriv.is_sign_negative() {
             a_min = a_mid;

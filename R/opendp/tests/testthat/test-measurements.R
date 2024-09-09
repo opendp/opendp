@@ -64,11 +64,13 @@ test_that("test_gaussian_curve", {
   meas <- make_zCDP_to_approxDP(input_space |> then_gaussian(4.))
   curve <- meas(d_in = 1.)
   expect_equal(curve(delta = 0.), Inf)
-  expect_equal(curve(delta = 1e-3), 0.6880024554878086)
+  # see cdp_delta for formula of 0.688...
+  expect_equal(curve(delta = 1e-3), 0.6880024554878085)
   expect_equal(curve(delta = 1.), 0.)
 
+  # see cdp_delta for formula of 0.1508...
   expect_equal(curve(epsilon = 0.), 0.1508457845622862)
-  expect_equal(curve(epsilon = 0.6880024554878086), 1e-3)
+  expect_equal(curve(epsilon = 0.6880024554878085), 1e-3)
 
   curve <- make_zCDP_to_approxDP(input_space |> then_gaussian(4.))(d_in = 0.0)
   expect_equal(curve(delta = 0.0), 0.0)

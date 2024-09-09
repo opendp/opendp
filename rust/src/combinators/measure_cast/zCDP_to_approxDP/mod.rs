@@ -9,6 +9,9 @@ use self::cdp_delta::cdp_delta;
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[cfg(test)]
+mod test;
+
 mod cdp_delta;
 
 /// Constructs a new output measurement where the output measure

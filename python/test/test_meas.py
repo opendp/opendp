@@ -7,6 +7,7 @@ def test_gaussian_curve():
     meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.))
     profile = meas.map(d_in=1.)
     assert profile.epsilon(delta=0.) == float('inf')
+    # see cdp_delta for formula of 0.688...
     assert profile.epsilon(delta=1e-3) == 0.6880024554878085
     assert profile.epsilon(delta=1.) == 0.
     assert profile.delta(epsilon=0.) == 0.1508457845622862
@@ -14,9 +15,9 @@ def test_gaussian_curve():
 
     profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.)).map(d_in=0.0)
     assert profile.epsilon(0.0) == 0.0
-    with pytest.raises(Exception):
+    with pytest.raises(dp.OpenDPException):
         profile.epsilon(delta=-0.0)
-    with pytest.raises(Exception):
+    with pytest.raises(dp.OpenDPException):
         profile.delta(epsilon=-0.0)
         
     profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.)).map(d_in=1.0)

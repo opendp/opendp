@@ -536,11 +536,7 @@ impl InfExp for f64 {
         let not_finite = || {
             err!(
                 Overflow,
-                concat!(
-                    "({}).",
-                    stringify!(inf_exp),
-                    "() is not finite. Consider tightening your parameters."
-                ),
+                "({}).inf_exp() is not finite. Consider tightening your parameters.",
                 self
             )
         };
@@ -564,11 +560,7 @@ impl InfExp for f64 {
         let not_finite = || {
             err!(
                 Overflow,
-                concat!(
-                    "({}).",
-                    stringify!(neg_inf_exp),
-                    "() is not finite. Consider tightening your parameters."
-                ),
+                "({}).neg_inf_exp() is not finite. Consider tightening your parameters.",
                 self
             )
         };
@@ -592,11 +584,7 @@ impl InfExp for f32 {
         let not_finite = || {
             err!(
                 Overflow,
-                concat!(
-                    "({}).",
-                    stringify!(inf_exp),
-                    "() is not finite. Consider tightening your parameters."
-                ),
+                "({}).inf_exp() is not finite. Consider tightening your parameters.",
                 self
             )
         };
@@ -619,11 +607,7 @@ impl InfExp for f32 {
         let not_finite = || {
             err!(
                 Overflow,
-                concat!(
-                    "({}).",
-                    stringify!(neg_inf_exp),
-                    "() is not finite. Consider tightening your parameters."
-                ),
+                "({}).neg_inf_exp() is not finite. Consider tightening your parameters.",
                 self
             )
         };

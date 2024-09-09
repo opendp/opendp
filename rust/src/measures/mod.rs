@@ -72,13 +72,8 @@ impl Measure for SmoothedMaxDivergence {
 /// A function mapping from $\epsilon$ to $\delta$
 ///
 /// This is the distance type for [`SmoothedMaxDivergence`].
+#[derive(Clone)]
 pub struct PrivacyProfile(Arc<dyn Fn(f64) -> Fallible<f64> + Send + Sync>);
-
-impl Clone for PrivacyProfile {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
-}
 
 impl PrivacyProfile {
     pub fn new(delta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync) -> Self {
@@ -88,11 +83,11 @@ impl PrivacyProfile {
     pub fn epsilon(&self, delta: f64) -> Fallible<f64> {
         // reject negative zero
         if delta.is_sign_negative() {
-            return fallible!(FailedMap, "delta must not be negative");
+            return fallible!(FailedMap, "delta ({}) must not be negative", delta);
         }
 
         if !(0.0..=1.0).contains(&delta) {
-            return fallible!(FailedMap, "delta must be between zero and one");
+            return fallible!(FailedMap, "delta ({}) must be between zero and one", delta);
         }
 
         if delta == 1.0 {
