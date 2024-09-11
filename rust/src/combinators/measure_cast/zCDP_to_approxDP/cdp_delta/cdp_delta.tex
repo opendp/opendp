@@ -164,20 +164,22 @@ This follows from \ref{renyidp-approxdp-epsilon} by taking the infimum over all 
 \subsubsection*{Precondition}
 None.
 
-\subsubsection*{Implementation}        
-See adjacent mod.rs file.
+\subsubsection*{Implementation}
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/cdp_delta.py}
+
 
 \subsubsection*{Postcondition}
 
 \begin{theorem}
-    For any possible setting of $\rho$ and $\epsilon$, $\texttt{cdp\_delta}$ either returns an error, or a $\delta$ such that any $\rho$-differentially private measurement is also $(\epsilon, \delta)$-differentially private.
+    For any possible setting of $\rho$ and $\epsilon$, $\texttt{cdp\_delta}$ either returns an error, 
+    or a $\delta$ such that any $\rho$-differentially private measurement is also $(\epsilon, \delta)$-differentially private.
 \end{theorem}
 
 \section{Proof}
 
 \begin{proof}
 The code always finds an $\alpha_{*} \approx \texttt{a\_max} \geq 1.01$.
-Since $\texttt{a\_max} \in (1, \infty)$, then by \ref{zcdp-approxdp-epsilon}, any $\rho$-differentially private measurement is also $(\epsilon(\texttt{a\_max}), \delta)$-differentially private.
+Since $\texttt{a\_max} \in (1, \infty)$, then by \ref{renyidp-approxdp-epsilon}, any $\rho$-differentially private measurement is also $(\epsilon(\texttt{a\_max}), \delta)$-differentially private.
 Define $\delta_{cons}(\alpha)$ as a ``conservative'' function for computing $\delta(\epsilon)$, 
 where floating-point arithmetic is computed with conservative rounding such that $\delta_{cons}(\alpha) \geq \delta(\alpha)$ for $\forall \alpha \in (1, \infty)$.
 Since $\texttt{delta} = \delta_{cons}(\texttt{a\_max}) \geq \delta(\texttt{a\_max})$, then any $(\epsilon, \delta(\texttt{a\_max}))$-differentially private measurement is also $(\texttt{epsilon}, \delta)$-differentially private.
