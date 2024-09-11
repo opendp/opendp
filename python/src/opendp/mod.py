@@ -631,13 +631,13 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
         raise ValueError("Measure does not support iteration")
 
 
-class SMDCurve(object):
+class PrivacyProfile(object):
     def __init__(self, curve):
         self.curve = curve
 
     def epsilon(self, delta):
-        from opendp._data import smd_curve_epsilon
-        return smd_curve_epsilon(self.curve, delta)
+        from opendp._data import privacy_profile_epsilon
+        return privacy_profile_epsilon(self.curve, delta)
 
 
 class PartialConstructor(object):

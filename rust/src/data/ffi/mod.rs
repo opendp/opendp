@@ -28,7 +28,7 @@ use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
 use crate::ffi::util::{self, into_c_char_p, AnyDomainPtr, ExtrinsicObject};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
-use crate::measures::SMDCurve;
+use crate::measures::PrivacyProfile;
 use crate::metrics::IntDistance;
 use crate::traits::samplers::{fill_bytes, Shuffle};
 use crate::traits::ProductOrd;
@@ -982,23 +982,23 @@ impl Shuffle for AnyObject {
 }
 
 #[bootstrap(
-    name = "smd_curve_epsilon",
-    arguments(curve(rust_type = b"null"), delta(rust_type = "f64"))
+    name = "privacy_profile_epsilon",
+    arguments(profile(rust_type = b"null"), delta(rust_type = "f64"))
 )]
-/// Internal function. Use an SMDCurve to find epsilon at a given `delta`.
+/// Internal function. Use an PrivacyProfile to find epsilon at a given `delta`.
 ///
 /// # Arguments
-/// * `curve` - The SMDCurve.
+/// * `profile` - The PrivacyProfile.
 /// * `delta` - What to fix delta to compute epsilon.
 ///
 /// # Returns
 /// Epsilon at a given `delta`.
 #[no_mangle]
-pub extern "C" fn opendp_data__smd_curve_epsilon(
-    curve: *const AnyObject,
+pub extern "C" fn opendp_data__privacy_profile_epsilon(
+    profile: *const AnyObject,
     delta: f64,
 ) -> FfiResult<*mut AnyObject> {
-    try_!(try_as_ref!(curve).downcast_ref::<SMDCurve>())
+    try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>())
         .epsilon(&delta)
         .map(AnyObject::new)
         .into()

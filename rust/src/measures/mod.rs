@@ -45,8 +45,8 @@ impl Measure for MaxDivergence {
 /// The measurement's input metric defines the notion of adjacency,
 /// and the measurement's input domain defines the set of possible datasets.
 ///
-/// Privacy profiles are represented by the type [`SMDCurve`].
-/// This curve can be evaluated with a $\delta$ to retrieve a corresponding $\epsilon$.
+/// The distance $d$ is of type [`PrivacyProfile`], so it can be invoked with a $\delta$
+/// to retrieve the tightest corresponding $\epsilon$.
 ///
 /// # Proof Definition
 ///
@@ -66,24 +66,23 @@ impl Measure for MaxDivergence {
 pub struct SmoothedMaxDivergence;
 
 impl Measure for SmoothedMaxDivergence {
-    type Distance = SMDCurve;
+    type Distance = PrivacyProfile;
 }
 
 /// A function mapping from $\delta$ to $\epsilon$
 ///
-/// SMD stands for "Smoothed Max Divergence".
 /// This is the distance type for [`SmoothedMaxDivergence`].
-pub struct SMDCurve(Arc<dyn Fn(&f64) -> Fallible<f64> + Send + Sync>);
+pub struct PrivacyProfile(Arc<dyn Fn(&f64) -> Fallible<f64> + Send + Sync>);
 
-impl Clone for SMDCurve {
+impl Clone for PrivacyProfile {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
 
-impl SMDCurve {
+impl PrivacyProfile {
     pub fn new(epsilon: impl Fn(&f64) -> Fallible<f64> + 'static + Send + Sync) -> Self {
-        SMDCurve(Arc::new(epsilon))
+        PrivacyProfile(Arc::new(epsilon))
     }
 
     // these functions allow direct invocation as a method, making parens unnecessary

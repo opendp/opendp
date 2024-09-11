@@ -25,9 +25,9 @@ SEXP anymeasureptr_to_sexp(AnyMeasure *input, SEXP info);
 AnyFunction *sexp_to_anyfunctionptr(SEXP data);
 SEXP anyfunctionptr_to_sexp(AnyFunction *input, SEXP info);
 
-// smd curve
-AnyObject *sexp_to_smdcurveptr(SEXP data);
-SEXP smdcurveptr_to_sexp(AnyObject *input, SEXP info);
+// privacy profile
+AnyObject *sexp_to_privacyprofileptr(SEXP data);
+SEXP privacyprofileptr_to_sexp(AnyObject *input, SEXP info);
 
 // queryable
 AnyObject *sexp_to_anyqueryableptr(SEXP data);

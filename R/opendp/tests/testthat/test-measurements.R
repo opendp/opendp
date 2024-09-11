@@ -83,18 +83,18 @@ test_that("test_gaussian_curve", {
 test_that("test_gaussian_search", {
   input_space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
 
-  make_smd_gauss <- function(scale, delta) {
+  make_approx_gauss <- function(scale, delta) {
     make_fix_delta(make_zCDP_to_approxDP(input_space |> then_gaussian(scale)), delta)
   }
 
-  fixed_meas <- make_smd_gauss(1., 1e-5)
+  fixed_meas <- make_approx_gauss(1., 1e-5)
   fixed_meas(d_in = 1.)
 
   scale <- binary_search_param(
-    function(s) make_smd_gauss(s, 1e-5),
+    function(s) make_approx_gauss(s, 1e-5),
     d_in = 1., d_out = c(1., 1e-5)
   )
-  expect_equal(make_smd_gauss(scale, 1e-5)(d_in = 1.)[[1]], 1.)
+  expect_equal(make_approx_gauss(scale, 1e-5)(d_in = 1.)[[1]], 1.)
 })
 
 test_that("test_laplace", {

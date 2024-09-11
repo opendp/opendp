@@ -36,8 +36,8 @@ where
         m.output_measure.new_fixed_measure()?,
         PrivacyMap::new_fallible(move |d_in| {
             // find the smallest epsilon at the given delta
-            let curve = privacy_map.eval(d_in)?;
-            output_measure.fix_delta(&curve, &delta)
+            let profile = privacy_map.eval(d_in)?;
+            output_measure.fix_delta(&profile, &delta)
         }),
     )
 }
@@ -61,7 +61,7 @@ impl FixDeltaMeasure for SmoothedMaxDivergence {
     fn new_fixed_measure(&self) -> Fallible<Self::FixedMeasure> {
         Ok(Approximate::default())
     }
-    fn fix_delta(&self, curve: &Self::Distance, delta: &f64) -> Fallible<(f64, f64)> {
-        curve.epsilon(delta).map(|v| (v, delta.clone()))
+    fn fix_delta(&self, profile: &Self::Distance, delta: &f64) -> Fallible<(f64, f64)> {
+        profile.epsilon(delta).map(|v| (v, delta.clone()))
     }
 }

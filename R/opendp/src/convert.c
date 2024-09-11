@@ -620,11 +620,11 @@ SEXP anyobjectptr_to_sexp(AnyObject *obj)
         error("failed to parse type");
 
     const char *c_origin = sexp_to_charptr(get_origin(type_name));
-    if (str_equal(c_origin, "SMDCurve"))
+    if (str_equal(c_origin, "PrivacyProfile"))
     {
-        SEXP curve = smdcurveptr_to_sexp(obj, R_NilValue);
+        SEXP profile = privacyprofileptr_to_sexp(obj, R_NilValue);
         UNPROTECT(4);
-        return curve;
+        return profile;
     }
 
     if (str_equal(c_origin, "AnyQueryable"))

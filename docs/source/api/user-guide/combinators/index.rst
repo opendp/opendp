@@ -192,9 +192,9 @@ Similarly, :func:`opendp.combinators.make_pureDP_to_zCDP` is used for casting an
         >>> # convert the output measure to `SmoothedMaxDivergence`
         >>> meas_approxDP = dp.c.make_zCDP_to_approxDP(meas_zCDP)
         ...
-        >>> # SmoothedMaxDivergence distances are ε(δ) curves
-        >>> curve = meas_approxDP.map(d_in=1.)
-        >>> curve.epsilon(delta=1e-6)
+        >>> # SmoothedMaxDivergence distances are privacy profiles (ε(δ) curves)
+        >>> profile = meas_approxDP.map(d_in=1.)
+        >>> profile.epsilon(delta=1e-6)
         11.688596249354896
 
 :func:`opendp.combinators.make_fix_delta` changes the output measure from ``SmoothedMaxDivergence`` to ``Approximate<MaxDivergence>``.
