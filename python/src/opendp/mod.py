@@ -642,6 +642,18 @@ class PrivacyProfile(object):
     def epsilon(self, delta):
         from opendp._data import privacy_profile_epsilon
         return privacy_profile_epsilon(self.curve, delta)
+    
+    def beta(self, alpha):
+        from opendp._data import privacy_profile_beta
+        return privacy_profile_beta(self.curve, alpha)
+    
+    def posterior_curve(self, prior: float) -> Function:
+        from opendp._data import privacy_profile_posterior_curve
+        return privacy_profile_posterior_curve(self.curve, prior)
+
+    def relative_risk_curve(self, prior: float) -> Function:
+        from opendp._data import privacy_profile_relative_risk_curve
+        return privacy_profile_relative_risk_curve(self.curve, prior)
 
 
 class PartialConstructor(object):

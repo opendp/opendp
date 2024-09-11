@@ -726,6 +726,45 @@ struct FfiResult_____AnyObject opendp_data__privacy_profile_epsilon(const struct
                                                                     double delta);
 
 /**
+ * Internal function. Use a PrivacyProfile to find beta at a given `alpha`.
+ *
+ * # Arguments
+ * * `curve` - The PrivacyProfile.
+ * * `alpha` - What to fix alpha to compute beta.
+ *
+ * # Returns
+ * Beta at a given `alpha`.
+ */
+struct FfiResult_____AnyObject opendp_data__privacy_profile_beta(const struct AnyObject *curve,
+                                                                 double alpha);
+
+/**
+ * Internal function. Use a PrivacyProfile to create a posterior curve.
+ *
+ * # Arguments
+ * * `curve` - The PrivacyProfile.
+ * * `prior` - Attacker's initial knowledge.
+ *
+ * # Returns
+ * Beta at a given `alpha`.
+ */
+struct FfiResult_____AnyFunction opendp_data__privacy_profile_posterior_curve(const struct AnyObject *profile,
+                                                                              double prior);
+
+/**
+ * Internal function. Use a PrivacyProfile to create a posterior curve.
+ *
+ * # Arguments
+ * * `profile` - The PrivacyProfile.
+ * * `prior` - Attacker's initial knowledge.
+ *
+ * # Returns
+ * Beta at a given `alpha`.
+ */
+struct FfiResult_____AnyFunction opendp_data__privacy_profile_relative_risk_curve(const struct AnyObject *profile,
+                                                                                  double prior);
+
+/**
  * wrap an AnyObject in an FfiResult::Ok(this)
  *
  * # Arguments

@@ -116,7 +116,6 @@ fn test_all() -> Fallible<()> {
         .collect::<Fallible<Vec<f64>>>()?;
 
     println!("{posts:?}");
-
     let rrisks = (0..100)
         .map(|i| i as f64 / 100.0)
         .map(|a| relative_risk_curve(a))
