@@ -37,11 +37,20 @@ Proof for \rustdoc{accuracy/tail\_bounds/fn}{conservative\_continuous\_gaussian\
 
 \begin{lemma}
     \label{erfc-err}
-    By exhaustive search in \texttt{erfc\_err\_analysis.py}, the implementation of \texttt{erfc} errs by no greater than one 32-bit float ulp.
+    The implementation of \texttt{erfc} differs from a conservatively rounded implementation by no greater than one 32-bit float ulp.
 \end{lemma}
 
+\begin{proof}
+    An exhaustive search is conducted in the following code, 
+    included here from the adjacent \texttt{erfc\_err\_analysis.py} file.
+    \label{sec:erfc-err-check}
+    \lstinputlisting[language=Python,firstline=2]{./erfc_err_analysis.py}
+
+    Upon completion, the greatest discovered error is at most 1 ulp.
+\end{proof}
+
 \begin{theorem}
-    Assume $X \sim \mathcal{L}_\mathbb{Z}(0, s)$, and $t > 0$.
+    Assume $X \sim \mathcal{N}(0, s)$, and $t > 0$.
     \begin{equation}
         \alpha = P[X \ge t] = \frac{1}{2} \mathrm{erfc}\left(\frac{t}{\sigma \sqrt{2}}\right)
     \end{equation}

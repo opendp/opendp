@@ -4,24 +4,15 @@
 # First disagreement is at 0.5.
 # Execution is slowest at inputs around 15, before switching to the next approximating curve.
 
-# To use all CPUs, floats are sharded modulo the number of CPUs (less two)
+# To use all CPUs, floats are sharded modulo the number of CPUs (less two).
+# It may be necessary to restart this program at a later float to free memory.
 
 import struct
 import multiprocessing
 
 # pip install gmpy2
 import gmpy2
-
-# add the following to rust/src/data/ffi/mod.rs and recompile
-# #[bootstrap(name = "erfc")]
-# /// Internal function. Compute erfc.
-# #[no_mangle]
-# pub extern "C" fn opendp_data__erfc(value: f64) -> f64 {
-#     use statrs::function::erf::erfc;
-#     erfc(value)
-# }
 from opendp._data import erfc
-
 
 # specifically check max ulp distance from a conservative upper bound
 gmpy2.get_context().round = gmpy2.RoundUp
@@ -64,14 +55,3 @@ if __name__ == "__main__":
         processes.append(p)
 
     [p.join() for p in processes]
-
-
-# max_err = 0
-# # edges taken from statrs source
-# edges = [0., 1e-10, 0.5, 0.75, 1.25, 2.25, 3.5, 5.25, 8.0, 11.5, 17.0, 24.0, 38.0, 60.0, 85.0, 110.0]
-# from math import nextafter
-# def check_err(v):
-#     print(v, abs(floatToBits(erfc(v)) - floatToBits(gmpy2.erfc(v))))
-# for edge in edges:
-#     check_err(nextafter(edge, -1))
-#     check_err(edge)

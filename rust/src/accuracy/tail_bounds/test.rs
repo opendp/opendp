@@ -25,7 +25,7 @@ fn test_laplace_tail(tail: u32, theoretical_alpha: f64, label: &str) -> Fallible
 
     println!("{} significance levels/alpha", label);
     println!("Theoretical: {:?}", theoretical_alpha);
-    println!("Empirical:   {:?}", empirical_alpha);
+    println!("Empirical:   {:?}f", empirical_alpha);
     // this test has a small likelihood of failing
     assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
     Ok(())
