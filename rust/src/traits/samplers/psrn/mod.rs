@@ -11,7 +11,6 @@ use dashu::{
 
 use super::sample_from_uniform_bytes;
 use crate::{error::Fallible, traits::RoundCast};
-use super::sample_from_uniform_bytes;
 
 #[cfg(test)]
 mod test;
