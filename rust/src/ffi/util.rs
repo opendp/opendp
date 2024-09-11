@@ -360,6 +360,7 @@ lazy_static! {
 
             // measure distances
             type_vec![PrivacyProfile],
+            vec![t!((PrivacyProfile, f64))]
         ].into_iter().flatten().collect();
         let descriptors: HashSet<_> = types.iter().map(|e| &e.descriptor).collect();
         assert_eq!(descriptors.len(), types.len(), "detected duplicate TYPES");
