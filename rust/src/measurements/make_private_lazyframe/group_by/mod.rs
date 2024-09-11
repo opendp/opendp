@@ -198,10 +198,10 @@ macro_rules! impl_measure_non_catastrophic {
     };
 }
 
-impl_measure_non_catastrophic!(MaxDivergence<f64>);
-impl_measure_non_catastrophic!(ZeroConcentratedDivergence<f64>);
+impl_measure_non_catastrophic!(MaxDivergence);
+impl_measure_non_catastrophic!(ZeroConcentratedDivergence);
 
-impl ApproximateMeasure for FixedSmoothedMaxDivergence<f64> {
+impl ApproximateMeasure for FixedSmoothedMaxDivergence {
     fn add_delta((epsilon, delta): Self::Distance, delta_p: f64) -> Fallible<Self::Distance> {
         Ok((epsilon, delta.inf_add(&delta_p)?))
     }

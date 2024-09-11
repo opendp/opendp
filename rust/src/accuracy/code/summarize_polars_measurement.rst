@@ -12,7 +12,7 @@ First, create a measurement with the Polars API:
 >>> meas = dp.m.make_private_lazyframe(
 ...     lf_domain,
 ...     dp.symmetric_distance(),
-...     dp.max_divergence(T=float),
+...     dp.max_divergence(),
 ...     lf.select([pl.len().dp.noise(), pl.col("A").dp.sum((0, 1))]),
 ...     global_scale=1.0
 ... )

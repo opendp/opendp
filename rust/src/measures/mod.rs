@@ -1,218 +1,149 @@
-//! Various implementations of Measures (and associated Distance).
+//! Various definitions of Measures (and associated Distances).
 //!
-//! A Measure is used to measure the distance between distributions.
+//! A Privacy Measure is used to measure the distance between distributions.
 //! The distance is expressed in terms of an **associated type**.
-//!
-//! # Example
-//! `MaxDivergence<Q>` has an associated distance type of `Q`.
-//! This means that the symmetric distance between vectors is expressed in terms of the type `Q`.
-//! In this context Q is usually [`f32`] or [`f64`].
 
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
-use std::{
-    fmt::{Debug, Formatter},
-    marker::PhantomData,
-    sync::Arc,
-};
+use std::{fmt::Debug, sync::Arc};
 
-use crate::{core::Measure, domains::type_name, error::Fallible};
+use crate::{core::Measure, error::Fallible};
 
-/// $\epsilon$-pure differential privacy.
+/// Privacy measure used to define $\epsilon$-pure differential privacy.
 ///
-/// The greatest divergence between any randomly selected subset of the support.
-///
-/// # Proof Definition
-///
-/// ### `d`-closeness
-/// For any two vectors $u, v \in \texttt{D}$ and any $d$ of generic type $\texttt{Q}$,
-/// we say that $M(u), M(v)$ are $d$-close under the max divergence measure (abbreviated as $D_{\infty}$) whenever
-///
-/// ```math
-/// D_{\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S]}{\Pr[M(v) \in S]} \Big] \leq d.
-/// ```
-pub struct MaxDivergence<Q>(PhantomData<fn() -> Q>);
-impl<Q> Default for MaxDivergence<Q> {
-    fn default() -> Self {
-        MaxDivergence(PhantomData)
-    }
-}
-
-impl<Q> Clone for MaxDivergence<Q> {
-    fn clone(&self) -> Self {
-        MaxDivergence(PhantomData)
-    }
-}
-
-impl<Q> PartialEq for MaxDivergence<Q> {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-
-impl<Q> Debug for MaxDivergence<Q> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "MaxDivergence({})", type_name!(Q))
-    }
-}
-
-impl<Q> Measure for MaxDivergence<Q> {
-    type Distance = Q;
-}
-
-/// $\epsilon(\delta)$-approximate differential privacy.
-///
-/// The greatest divergence between any randomly selected subset of the support,
-/// with an additive tolerance for error.
-///
-/// The distance $d$ is of type [`SMDCurve`], so it can be invoked with a $\delta$
-/// to retrieve the tightest corresponding $\epsilon$.
+/// In the following proof definition, $d$ corresponds to $\epsilon$ when also quantified over all adjacent datasets.
+/// That is, $\epsilon$ is the greatest possible $d$
+/// over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
+/// $M(\cdot)$ is a measurement (commonly known as a mechanism).
+/// The measurement's input metric defines the notion of adjacency,
+/// and the measurement's input domain defines the set of possible datasets.
 ///
 /// # Proof Definition
 ///
 /// ### `d`-closeness
-/// For any two vectors $u, v \in \texttt{D}$
-/// and any choice of $\epsilon, \delta$ such that $\epsilon \ge d(\delta)$,
-/// we say that $M(u), M(v)$ are $d$-close under the smoothed max divergence measure (abbreviated as $D_{S\infty}$) whenever
+///
+/// For any two distributions $Y, Y'$ and any non-negative $d$,
+/// $Y, Y'$ are $d$-close under the max divergence measure whenever
 ///
 /// ```math
-/// D_{S\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S] + \delta}{\Pr[M(v) \in S]} \Big] \leq \epsilon.
+/// D_\infty(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S]}{\Pr[Y' \in S]} \Big] \leq d.
 /// ```
-pub struct SmoothedMaxDivergence<Q>(PhantomData<fn() -> Q>);
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct MaxDivergence;
 
-impl<Q> Default for SmoothedMaxDivergence<Q> {
-    fn default() -> Self {
-        SmoothedMaxDivergence(PhantomData)
-    }
-}
-impl<Q> Clone for SmoothedMaxDivergence<Q> {
-    fn clone(&self) -> Self {
-        SmoothedMaxDivergence(PhantomData)
-    }
+impl Measure for MaxDivergence {
+    type Distance = f64;
 }
 
-impl<Q> PartialEq for SmoothedMaxDivergence<Q> {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-impl<Q> Debug for SmoothedMaxDivergence<Q> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "SmoothedMaxDivergence({})", type_name!(Q))
-    }
-}
+/// Privacy measure used to define $\epsilon(\delta)$-approximate differential privacy.
+///
+/// In the following proof definition, $d$ corresponds to a privacy profile when also quantified over all adjacent datasets.
+/// That is, a privacy profile $\epsilon(\delta)$ is no smaller than $d(\delta)$ for all possible choices of $\delta$,
+/// and over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
+/// $M(\cdot)$ is a measurement (commonly known as a mechanism).
+/// The measurement's input metric defines the notion of adjacency,
+/// and the measurement's input domain defines the set of possible datasets.
+///
+/// Privacy profiles are represented by the type [`SMDCurve`].
+/// This curve can be evaluated with a $\delta$ to retrieve a corresponding $\epsilon$.
+///
+/// # Proof Definition
+///
+/// ### `d`-closeness
+///
+/// For any two distributions $Y, Y'$ and any curve $d(\cdot)$,
+/// $Y, Y'$ are $d$-close under the smoothed max divergence measure whenever,
+/// for any choice of $\delta \in [0, 1]$,
+///
+/// ```math
+/// D_\infty^\delta(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S] + \delta}{\Pr[Y' \in S]} \Big] \leq d(\delta).
+/// ```
+///
+/// Note that this $\delta$ is not privacy parameter $\delta$ until quantified over all adjacent datasets,
+/// as is done in the definition of a measurement.
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct SmoothedMaxDivergence;
 
-impl<Q> Measure for SmoothedMaxDivergence<Q> {
-    type Distance = SMDCurve<Q>;
+impl Measure for SmoothedMaxDivergence {
+    type Distance = SMDCurve;
 }
 
 /// A function mapping from $\delta$ to $\epsilon$
 ///
 /// SMD stands for "Smoothed Max Divergence".
 /// This is the distance type for [`SmoothedMaxDivergence`].
-pub struct SMDCurve<Q>(Arc<dyn Fn(&Q) -> Fallible<Q> + Send + Sync>);
+pub struct SMDCurve(Arc<dyn Fn(&f64) -> Fallible<f64> + Send + Sync>);
 
-impl<Q> Clone for SMDCurve<Q> {
+impl Clone for SMDCurve {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
 
-impl<Q> SMDCurve<Q> {
-    pub fn new(epsilon: impl Fn(&Q) -> Fallible<Q> + 'static + Send + Sync) -> Self {
+impl SMDCurve {
+    pub fn new(epsilon: impl Fn(&f64) -> Fallible<f64> + 'static + Send + Sync) -> Self {
         SMDCurve(Arc::new(epsilon))
     }
 
     // these functions allow direct invocation as a method, making parens unnecessary
-    pub fn epsilon(&self, delta: &Q) -> Fallible<Q> {
+    pub fn epsilon(&self, delta: &f64) -> Fallible<f64> {
         (self.0)(delta)
     }
 }
 
-/// $(\epsilon, \delta)$-approximate differential privacy.
+/// Privacy measure used to define $(\epsilon, \delta)$-approximate differential privacy.
 ///
-/// The greatest divergence between any randomly selected subset of the support,
-/// with an additive tolerance for error.
-///
-/// # Proof Definition
-///
-/// ### `d`-closeness
-/// For any two vectors $u, v \in \texttt{D}$ and any $d$ of type $(\texttt{Q}, \texttt{Q})$,
-/// where $d = (\epsilon, \delta)$,
-/// we say that $M(u), M(v)$ are $d$-close under the smoothed max divergence measure (abbreviated as $D_{S\infty}$) whenever
-///
-/// ```math
-/// D_{S\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S] + \delta}{\Pr[M(v) \in S]} \Big] \leq \epsilon.
-/// ```
-pub struct FixedSmoothedMaxDivergence<Q>(PhantomData<fn() -> Q>);
-
-impl<Q> Default for FixedSmoothedMaxDivergence<Q> {
-    fn default() -> Self {
-        FixedSmoothedMaxDivergence(PhantomData)
-    }
-}
-impl<Q> Clone for FixedSmoothedMaxDivergence<Q> {
-    fn clone(&self) -> Self {
-        FixedSmoothedMaxDivergence(PhantomData)
-    }
-}
-
-impl<Q> PartialEq for FixedSmoothedMaxDivergence<Q> {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-
-impl<Q> Debug for FixedSmoothedMaxDivergence<Q> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "FixedSmoothedMaxDivergence({})", type_name!(Q))
-    }
-}
-
-impl<Q> Measure for FixedSmoothedMaxDivergence<Q> {
-    type Distance = (Q, Q);
-}
-
-/// $\rho$-zero concentrated differential privacy.
-///
-/// The greatest zero-concentrated divergence between any randomly selected subset of the support.
+/// In the following definition, $d$ corresponds to $(\epsilon, \delta)$ when also quantified over all adjacent datasets.
+/// That is, $(\epsilon, \delta)$ is no smaller than $d$ (by product ordering),
+/// over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
+/// $M(\cdot)$ is a measurement (commonly known as a mechanism).
+/// The measurement's input metric defines the notion of adjacency,
+/// and the measurement's input domain defines the set of possible datasets.
 ///
 /// # Proof Definition
 ///
 /// ### `d`-closeness
-/// For any two vectors $u, v \in \texttt{D}$ and any $d$ of generic type $\texttt{Q}$,
-/// define $P$ and $Q$ to be the distributions of $M(u)$ and $M(v)$.
-/// We say that $u, v$ are $d$-close under the alpha-Renyi divergence measure (abbreviated as $D_{\alpha}$) whenever
+///
+/// For any two distributions $Y, Y'$ and any 2-tuple $d$ of non-negative numbers $\epsilon$ and $\delta$,
+/// $Y, Y'$ are $d$-close under the fixed smoothed max divergence measure whenever
 ///
 /// ```math
-/// D_{\alpha}(P \| Q) = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Q} \Big[\ln \left( \dfrac{P(x)}{Q(x)} \right)^\alpha \Big] \leq d \alpha.
+/// D_\infty^\delta(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S] + \delta}{\Pr[Y' \in S]} \Big] \leq \epsilon.
 /// ```
-/// for all possible choices of $\alpha \in (1, \infty)$.
-pub struct ZeroConcentratedDivergence<Q>(PhantomData<fn() -> Q>);
-impl<Q> Default for ZeroConcentratedDivergence<Q> {
-    fn default() -> Self {
-        ZeroConcentratedDivergence(PhantomData)
-    }
-}
-impl<Q> Clone for ZeroConcentratedDivergence<Q> {
-    fn clone(&self) -> Self {
-        ZeroConcentratedDivergence(PhantomData)
-    }
+///
+/// Note that this $\epsilon$ and $\delta$ are not privacy parameters $\epsilon$ and $\delta$ until quantified over all adjacent datasets,
+/// as is done in the definition of a measurement.
+#[derive(Clone, PartialEq, Debug, Default)]
+pub struct FixedSmoothedMaxDivergence;
+
+impl Measure for FixedSmoothedMaxDivergence {
+    type Distance = (f64, f64);
 }
 
-impl<Q> PartialEq for ZeroConcentratedDivergence<Q> {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
+/// Privacy measure used to define $\rho$-zero concentrated differential privacy.
+///
+/// In the following proof definition, $d$ corresponds to $\rho$ when also quantified over all adjacent datasets.
+/// That is, $\rho$ is the greatest possible $d$
+/// over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
+/// $M(\cdot)$ is a measurement (commonly known as a mechanism).
+/// The measurement's input metric defines the notion of adjacency,
+/// and the measurement's input domain defines the set of possible datasets.
+///
+/// # Proof Definition
+///
+/// ### `d`-closeness
+///
+/// For any two distributions $Y, Y'$ and any non-negative $d$,
+/// $Y, Y'$ are $d$-close under the zero-concentrated divergence measure if,
+/// for every possible choice of $\alpha \in (1, \infty)$,
+///
+/// ```math
+/// D_\alpha(Y, Y') = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Y'} \Big[\ln \left( \dfrac{\Pr[Y = x]}{\Pr[Y' = x]} \right)^\alpha \Big] \leq d \cdot \alpha.
+/// ```
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct ZeroConcentratedDivergence;
 
-impl<Q> Debug for ZeroConcentratedDivergence<Q> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "ZeroConcentratedDivergence({})", type_name!(Q))
-    }
-}
-
-impl<Q> Measure for ZeroConcentratedDivergence<Q> {
-    type Distance = Q;
+impl Measure for ZeroConcentratedDivergence {
+    type Distance = f64;
 }

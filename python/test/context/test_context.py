@@ -27,23 +27,23 @@ def test_unit_of():
 
 
 def test_privacy_loss_of():
-    assert dp.loss_of(epsilon=3) == (dp.max_divergence(T=float), 3.0)
-    assert dp.loss_of(rho=2.0) == (dp.zero_concentrated_divergence(T=float), 2.0)
+    assert dp.loss_of(epsilon=3) == (dp.max_divergence(), 3.0)
+    assert dp.loss_of(rho=2.0) == (dp.zero_concentrated_divergence(), 2.0)
     assert dp.loss_of(epsilon=2.0, delta=1e-6) == (
-        dp.fixed_smoothed_max_divergence(T=float),
+        dp.fixed_smoothed_max_divergence(),
         (2.0, 1e-6),
     )
 
 
 def test_loss_of_logging(caplog):
     with caplog.at_level(logging.INFO):
-        dp.loss_of(epsilon=100)
+        dp.loss_of(epsilon=100.)
         assert caplog.record_tuples == [
             ('opendp.context', logging.WARN, 'epsilon should be less than or equal to 5, and is typically less than or equal to 1')
         ]
         caplog.clear()
 
-        dp.loss_of(epsilon=2, delta=1e-5)
+        dp.loss_of(epsilon=2., delta=1e-5)
         assert caplog.record_tuples == [
             ('opendp.context', logging.INFO, 'epsilon is typically less than or equal to 1'),
             ('opendp.context', logging.WARN, 'delta should be less than or equal to 1e-06')
@@ -74,7 +74,7 @@ def test_context_repr():
     accountant = Measurement(
         input_domain   = VectorDomain(AtomDomain(T=i32)),
         input_metric   = SymmetricDistance(),
-        output_measure = MaxDivergence(f64)),
+        output_measure = MaxDivergence),
     d_in       = 3,
     d_mids     = [3.0])'''
 
@@ -132,14 +132,14 @@ def test_query_repr():
     )
     assert repr(context.query()) == '''Query(
     chain          = (VectorDomain(AtomDomain(T=i32)), SymmetricDistance()),
-    output_measure = MaxDivergence(f64),
+    output_measure = MaxDivergence,
     d_in           = 1,
     d_out          = 1.0,
     context        = Context(
         accountant = Measurement(
             input_domain   = VectorDomain(AtomDomain(T=i32)),
             input_metric   = SymmetricDistance(),
-            output_measure = MaxDivergence(f64)),
+            output_measure = MaxDivergence),
         d_in       = 1,
         d_mids     = [1.0]))'''
 
@@ -204,7 +204,7 @@ def test_sc_query():
     # build a child sequential compositor in zCDP, and then use it to release some gaussian queries
     sub_context_2 = context.query().compositor(  # type: ignore[attr-defined]
         split_evenly_over=2, 
-        output_measure=dp.zero_concentrated_divergence(T=float)
+        output_measure=dp.zero_concentrated_divergence()
     ).release()
     dp_sum_2 = sub_context_2.query().clamp((1, 10)).sum().gaussian()
     # with partials, fusing, and measure convention, would shorten to

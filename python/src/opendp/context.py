@@ -240,11 +240,11 @@ def loss_of(
 
     >>> import opendp.prelude as dp
     >>> dp.loss_of(epsilon=1.0)
-    (MaxDivergence(f64), 1.0)
+    (MaxDivergence, 1.0)
     >>> dp.loss_of(epsilon=1.0, delta=1e-9)
-    (FixedSmoothedMaxDivergence(f64), (1.0, 1e-09))
+    (FixedSmoothedMaxDivergence, (1.0, 1e-09))
     >>> dp.loss_of(rho=1.0)
-    (ZeroConcentratedDivergence(f64), 1.0)
+    (ZeroConcentratedDivergence, 1.0)
 
     :param epsilon: Parameter for pure ε-DP.
     :param delta: Parameter for approximate (ε,δ)-DP.
@@ -262,17 +262,17 @@ def loss_of(
 
     if rho:
         range_warning('rho', rho, 0.25, 0.5)
-        return zero_concentrated_divergence(T=float), rho
+        return zero_concentrated_divergence(), rho
 
     if epsilon is None:
         raise ValueError("Either epsilon or rho must be specified.")
  
     range_warning('epsilon', epsilon, 1, 5)
     if delta is None:
-        return max_divergence(T=float), epsilon
+        return max_divergence(), epsilon
 
     range_warning('delta', delta, 1e-6, 1e-6)
-    return fixed_smoothed_max_divergence(T=float), (epsilon, delta)
+    return fixed_smoothed_max_divergence(), (epsilon, delta)
 
 
 def unit_of(
@@ -699,7 +699,7 @@ class PartialChain(object):
         """
         # When the output measure corresponds to approx-DP, only optimize the epsilon parameter.
         # The delta parameter should be fixed in _cast_measure, and if not, then the search will be impossible here anyways.
-        if output_measure == fixed_smoothed_max_divergence(T=float):
+        if output_measure == fixed_smoothed_max_divergence():
             def predicate(param):
                 meas = _cast_measure(self.partial(param), output_measure, d_out)
                 return meas.map(d_in)[0] <= d_out[0] # type: ignore[index] 
@@ -798,7 +798,7 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
     if to_measure is None or chain.output_measure == to_measure:
         return chain
 
-    from_to = chain.output_measure.type.origin, to_measure.type.origin
+    from_to = str(chain.output_measure.type), str(to_measure.type)
 
     if from_to == ("MaxDivergence", "FixedSmoothedMaxDivergence"):
         return make_pureDP_to_fixed_approxDP(chain)
@@ -818,20 +818,19 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
 def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measure):
     """Translate a privacy loss ``d_from`` from ``from_measure`` to ``to_measure``.
 
-    >>> _translate_measure_distance(1, dp.max_divergence(dp.f64), dp.max_divergence(dp.f64))
+    >>> _translate_measure_distance(1, dp.max_divergence(), dp.max_divergence())
     1
-    >>> _translate_measure_distance(1, dp.max_divergence(dp.f64), dp.fixed_smoothed_max_divergence(dp.f64))
+    >>> _translate_measure_distance(1, dp.max_divergence(), dp.fixed_smoothed_max_divergence())
     (1, 0.0)
-    >>> _translate_measure_distance((1.5, 5e-07), dp.fixed_smoothed_max_divergence(dp.f64), dp.zero_concentrated_divergence(dp.f64))
+    >>> _translate_measure_distance((1.5, 5e-07), dp.fixed_smoothed_max_divergence(), dp.zero_concentrated_divergence())
     0.0489...
-    >>> _translate_measure_distance(0.05, dp.zero_concentrated_divergence(dp.f64), dp.max_divergence(dp.f64))
+    >>> _translate_measure_distance(0.05, dp.zero_concentrated_divergence(), dp.max_divergence())
     0.316...
     """
     if from_measure == to_measure:
         return d_from
 
-    from_to = from_measure.type.origin, to_measure.type.origin
-    T = to_measure.type.args[0]
+    from_to = str(from_measure.type), str(to_measure.type)
 
     constant = 1.0  # the choice of constant doesn't matter
 
@@ -839,7 +838,7 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
         return (d_from, 0.0)
 
     if from_to == ("ZeroConcentratedDivergence", "MaxDivergence"):
-        space = atom_domain(T=T), absolute_distance(T=T)
+        space = atom_domain(T=float), absolute_distance(T=float)
         scale = binary_search_param(
             lambda eps: make_pureDP_to_zCDP(make_laplace(*space, eps)),
             d_in=constant,
@@ -855,7 +854,7 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
         def caster(measurement):
             return make_fix_delta(make_zCDP_to_approxDP(measurement), delta=d_from[1])
 
-        space = atom_domain(T=int), absolute_distance(T=T)
+        space = atom_domain(T=int), absolute_distance(T=float)
         scale = binary_search_param(
             lambda scale: caster(make_gaussian(*space, scale)),
             d_in=constant,

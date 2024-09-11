@@ -245,7 +245,7 @@ def test_extrinsic_free():
     space = dp.user_domain("anything", lambda _: True), dp.symmetric_distance()
 
     sc_meas = space >> dp.c.then_sequential_composition(
-        dp.max_divergence(T=float),
+        dp.max_divergence(),
         d_in=1,
         d_mids=[1.0],
     )
@@ -256,7 +256,7 @@ def test_extrinsic_free():
     # however, a pointer to [] is stored inside qbl
 
     query = space >> dp.m.then_user_measurement(
-        dp.max_divergence(T=float),
+        dp.max_divergence(),
         lambda x: x,
         lambda _: 0.0,
     )

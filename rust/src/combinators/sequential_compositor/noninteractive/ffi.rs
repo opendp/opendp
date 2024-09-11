@@ -1,4 +1,3 @@
-use num::Zero;
 use opendp_derive::bootstrap;
 
 use crate::{
@@ -11,7 +10,6 @@ use crate::{
     measures::{
         ffi::TypedMeasure, FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence,
     },
-    traits::InfAdd,
 };
 
 use super::BasicCompositionMeasure;
@@ -54,50 +52,54 @@ pub extern "C" fn opendp_combinators__make_basic_composition(
 
 impl BasicCompositionMeasure for AnyMeasure {
     fn concurrent(&self) -> Fallible<bool> {
-        fn monomorphize1<Q: 'static + Clone + InfAdd + Zero>(self_: &AnyMeasure) -> Fallible<bool> {
-            fn monomorphize2<M: 'static + BasicCompositionMeasure>(
-                self_: &AnyMeasure,
-            ) -> Fallible<bool>
-            where
-                M::Distance: Clone,
-            {
-                self_.downcast_ref::<M>()?.concurrent()
-            }
-            dispatch!(monomorphize2, [
-                (self_.type_, [MaxDivergence<Q>, FixedSmoothedMaxDivergence<Q>, ZeroConcentratedDivergence<Q>])
-            ], (self_))
+        fn monomorphize<M: 'static + BasicCompositionMeasure>(self_: &AnyMeasure) -> Fallible<bool>
+        where
+            M::Distance: Clone,
+        {
+            self_.downcast_ref::<M>()?.concurrent()
         }
-        let Q_Atom = self.type_.get_atom()?;
-        dispatch!(monomorphize1, [(Q_Atom, @floats)], (self))
+        dispatch!(
+            monomorphize,
+            [(
+                self.type_,
+                [
+                    MaxDivergence,
+                    FixedSmoothedMaxDivergence,
+                    ZeroConcentratedDivergence
+                ]
+            )],
+            (self)
+        )
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        fn monomorphize1<Q: 'static + Clone + InfAdd + Zero>(
+        fn monomorphize<M: 'static + BasicCompositionMeasure>(
             self_: &AnyMeasure,
             d_i: Vec<AnyObject>,
-        ) -> Fallible<AnyObject> {
-            fn monomorphize2<M: 'static + BasicCompositionMeasure>(
-                self_: &AnyMeasure,
-                d_i: Vec<AnyObject>,
-            ) -> Fallible<AnyObject>
-            where
-                M::Distance: Clone,
-            {
-                self_
-                    .downcast_ref::<M>()?
-                    .compose(
-                        d_i.iter()
-                            .map(|d_i| d_i.downcast_ref::<M::Distance>().map(Clone::clone))
-                            .collect::<Fallible<Vec<M::Distance>>>()?,
-                    )
-                    .map(AnyObject::new)
-            }
-            dispatch!(monomorphize2, [
-                (self_.type_, [MaxDivergence<Q>, FixedSmoothedMaxDivergence<Q>, ZeroConcentratedDivergence<Q>])
-            ], (self_, d_i))
+        ) -> Fallible<AnyObject>
+        where
+            M::Distance: Clone,
+        {
+            self_
+                .downcast_ref::<M>()?
+                .compose(
+                    d_i.iter()
+                        .map(|d_i| d_i.downcast_ref::<M::Distance>().map(Clone::clone))
+                        .collect::<Fallible<Vec<M::Distance>>>()?,
+                )
+                .map(AnyObject::new)
         }
-
-        let Q_Atom = try_!(self.type_.get_atom());
-        dispatch!(monomorphize1, [(Q_Atom, @floats)], (self, d_i))
+        dispatch!(
+            monomorphize,
+            [(
+                self.type_,
+                [
+                    MaxDivergence,
+                    FixedSmoothedMaxDivergence,
+                    ZeroConcentratedDivergence
+                ]
+            )],
+            (self, d_i)
+        )
     }
 }
 

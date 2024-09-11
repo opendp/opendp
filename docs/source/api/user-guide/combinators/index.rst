@@ -146,17 +146,17 @@ These combinators are used to cast the output measure of a Measurement.
    * - Input Measure
      - Output Measure
      - Constructor
-   * - ``MaxDivergence<Q>``
-     - ``FixedSmoothedMaxDivergence<Q>``
+   * - ``MaxDivergence``
+     - ``FixedSmoothedMaxDivergence``
      - :func:`opendp.combinators.make_pureDP_to_fixed_approxDP`
-   * - ``MaxDivergence<Q>``
-     - ``ZeroConcentratedDivergence<Q>``
+   * - ``MaxDivergence``
+     - ``ZeroConcentratedDivergence``
      - :func:`opendp.combinators.make_pureDP_to_zCDP`
-   * - ``ZeroConcentratedDivergence<Q>``
-     - ``SmoothedMaxDivergence<Q>``
+   * - ``ZeroConcentratedDivergence``
+     - ``SmoothedMaxDivergence``
      - :func:`opendp.combinators.make_zCDP_to_approxDP`
-   * - ``SmoothedMaxDivergence<Q>``
-     - ``FixedSmoothedMaxDivergence<Q>``
+   * - ``SmoothedMaxDivergence``
+     - ``FixedSmoothedMaxDivergence``
      - :func:`opendp.combinators.make_fix_delta`
 
 :func:`opendp.combinators.make_pureDP_to_fixed_approxDP` is used for casting an output measure from ``MaxDivergence`` to ``FixedSmoothedMaxDivergence``.

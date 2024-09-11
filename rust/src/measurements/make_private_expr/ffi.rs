@@ -62,7 +62,14 @@ pub extern "C" fn opendp_measurements__make_private_expr(
 
     dispatch!(
         monomorphize,
-        [(MO_, [MaxDivergence<f64>, ZeroConcentratedDivergence<f64>])],
-        (input_domain, input_metric, output_measure, expr, global_scale))
+        [(MO_, [MaxDivergence, ZeroConcentratedDivergence])],
+        (
+            input_domain,
+            input_metric,
+            output_measure,
+            expr,
+            global_scale
+        )
+    )
     .into()
 }

@@ -18,7 +18,7 @@ def test_private_np_count():
     from opendp.extras.numpy._make_np_count import then_private_np_count
     with optional_dependency('numpy'):
         space = dp.numpy.array2_domain(T=float), dp.symmetric_distance()
-    meas = space >> then_private_np_count(dp.zero_concentrated_divergence(T=float), scale=1.)
+    meas = space >> then_private_np_count(dp.zero_concentrated_divergence(), scale=1.)
     np = pytest.importorskip('numpy')
     print(meas(np.zeros(1000)))
     assert meas.map(1) == 0.5

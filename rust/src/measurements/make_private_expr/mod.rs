@@ -76,14 +76,14 @@ pub trait PrivateExpr<MI: Metric, MO: Measure> {
     ) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>;
 }
 
-impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergence<f64>> for Expr {
+impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergence> for Expr {
     fn make_private(
         self,
         input_domain: ExprDomain,
         input_metric: PartitionDistance<M>,
-        output_measure: MaxDivergence<f64>,
+        output_measure: MaxDivergence,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, MaxDivergence<f64>>> {
+    ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, MaxDivergence>> {
         if expr_noise::match_noise_shim(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
@@ -107,18 +107,17 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergen
     }
 }
 
-impl<M: 'static + UnboundedMetric>
-    PrivateExpr<PartitionDistance<M>, ZeroConcentratedDivergence<f64>> for Expr
+impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, ZeroConcentratedDivergence>
+    for Expr
 {
     fn make_private(
         self,
         input_domain: ExprDomain,
         input_metric: PartitionDistance<M>,
-        output_measure: ZeroConcentratedDivergence<f64>,
+        output_measure: ZeroConcentratedDivergence,
         global_scale: Option<f64>,
-    ) -> Fallible<
-        Measurement<ExprDomain, Expr, PartitionDistance<M>, ZeroConcentratedDivergence<f64>>,
-    > {
+    ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, ZeroConcentratedDivergence>>
+    {
         if expr_noise::match_noise_shim(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
@@ -133,22 +132,21 @@ impl<M: 'static + UnboundedMetric>
     }
 }
 
-impl<M: 'static + UnboundedMetric>
-    PrivateExpr<PartitionDistance<M>, FixedSmoothedMaxDivergence<f64>> for Expr
+impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, FixedSmoothedMaxDivergence>
+    for Expr
 {
     fn make_private(
         self,
         input_domain: ExprDomain,
         input_metric: PartitionDistance<M>,
-        _output_measure: FixedSmoothedMaxDivergence<f64>,
+        _output_measure: FixedSmoothedMaxDivergence,
         global_scale: Option<f64>,
-    ) -> Fallible<
-        Measurement<ExprDomain, Expr, PartitionDistance<M>, FixedSmoothedMaxDivergence<f64>>,
-    > {
+    ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, FixedSmoothedMaxDivergence>>
+    {
         make_pureDP_to_fixed_approxDP(self.make_private(
             input_domain,
             input_metric,
-            MaxDivergence::default(),
+            MaxDivergence,
             global_scale,
         )?)
     }

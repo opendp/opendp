@@ -7,11 +7,11 @@ use num::{One, Zero};
 fn test_all() -> Fallible<()> {
     macro_rules! test_gaussian_with_ty {
         ($($ty:ty),+) => {$(
-            let meas = make_gaussian::<_, ZeroConcentratedDivergence<_>, _>(AtomDomain::<$ty>::default(), AbsoluteDistance::<$ty>::default(), 1., None)?;
+            let meas = make_gaussian::<_, ZeroConcentratedDivergence, _>(AtomDomain::<$ty>::default(), AbsoluteDistance::<$ty>::default(), 1., None)?;
             meas.invoke(&<$ty>::zero())?;
             meas.map(&<$ty>::one())?;
 
-            let meas = make_gaussian::<_, ZeroConcentratedDivergence<_>, _>(VectorDomain::new(AtomDomain::<$ty>::default()), L2Distance::<$ty>::default(), 1., None)?;
+            let meas = make_gaussian::<_, ZeroConcentratedDivergence, _>(VectorDomain::new(AtomDomain::<$ty>::default()), L2Distance::<$ty>::default(), 1., None)?;
             meas.invoke(&vec![<$ty>::zero()])?;
             meas.map(&<$ty>::one())?;
         )+}
@@ -24,11 +24,11 @@ fn test_all() -> Fallible<()> {
 fn test_other_qi() -> Fallible<()> {
     macro_rules! test_gaussian_with_ty {
         ($($ty:ty),+) => {$(
-            let meas = make_gaussian::<_, ZeroConcentratedDivergence<_>, _>(AtomDomain::<$ty>::default(), AbsoluteDistance::<f64>::default(), 1., None)?;
+            let meas = make_gaussian::<_, ZeroConcentratedDivergence, _>(AtomDomain::<$ty>::default(), AbsoluteDistance::<f64>::default(), 1., None)?;
             meas.invoke(&<$ty>::zero())?;
             meas.map(&1.)?;
 
-            let meas = make_gaussian::<_, ZeroConcentratedDivergence<_>, _>(VectorDomain::new(AtomDomain::<$ty>::default()), L2Distance::<f64>::default(), 1., None)?;
+            let meas = make_gaussian::<_, ZeroConcentratedDivergence, _>(VectorDomain::new(AtomDomain::<$ty>::default()), L2Distance::<f64>::default(), 1., None)?;
             meas.invoke(&vec![<$ty>::zero()])?;
             meas.map(&1.)?;
         )+}

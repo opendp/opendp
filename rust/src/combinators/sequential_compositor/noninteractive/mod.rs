@@ -1,8 +1,6 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use num::Zero;
-
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
@@ -106,33 +104,35 @@ pub trait BasicCompositionMeasure: Measure {
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance>;
 }
 
-impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for MaxDivergence<Q> {
+impl BasicCompositionMeasure for MaxDivergence {
     fn concurrent(&self) -> Fallible<bool> {
         Ok(true)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_i.iter().try_fold(Q::zero(), |sum, d_i| sum.inf_add(d_i))
+        d_i.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
     }
 }
 
-impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for FixedSmoothedMaxDivergence<Q> {
+impl BasicCompositionMeasure for ZeroConcentratedDivergence {
     fn concurrent(&self) -> Fallible<bool> {
         Ok(true)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_i.iter()
-            .try_fold((Q::zero(), Q::zero()), |(e1, d1), (e2, d2)| {
-                Ok((e1.inf_add(e2)?, d1.inf_add(d2)?))
-            })
+        d_i.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
     }
 }
 
-impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for ZeroConcentratedDivergence<Q> {
+impl BasicCompositionMeasure for FixedSmoothedMaxDivergence {
     fn concurrent(&self) -> Fallible<bool> {
         Ok(true)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_i.iter().try_fold(Q::zero(), |sum, d_i| sum.inf_add(d_i))
+        let (d_i0, deltas): (Vec<_>, Vec<_>) = d_i.into_iter().unzip();
+        let delta = deltas
+            .iter()
+            .try_fold(0.0, |sum, delta| sum.inf_add(delta))?;
+
+        Ok((MaxDivergence.compose(d_i0)?, delta))
     }
 }
 

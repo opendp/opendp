@@ -28,7 +28,7 @@ pub fn make_randomized_response_bitvec(
     input_metric: DiscreteDistance,
     f: f64,
     constant_time: bool,
-) -> Fallible<Measurement<BitVectorDomain, BitVector, DiscreteDistance, MaxDivergence<f64>>> {
+) -> Fallible<Measurement<BitVectorDomain, BitVector, DiscreteDistance, MaxDivergence>> {
     let m = match input_domain.max_weight {
         Some(m) => m,
         None => {

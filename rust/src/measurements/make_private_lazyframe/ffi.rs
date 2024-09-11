@@ -71,7 +71,14 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
 
     dispatch!(
         monomorphize,
-        [(MO_, [MaxDivergence<f64>, FixedSmoothedMaxDivergence<f64>, ZeroConcentratedDivergence<f64>])],
+        [(
+            MO_,
+            [
+                MaxDivergence,
+                FixedSmoothedMaxDivergence,
+                ZeroConcentratedDivergence
+            ]
+        )],
         (
             input_domain,
             input_metric,

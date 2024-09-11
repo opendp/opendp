@@ -11,7 +11,7 @@ input_domain <- vector_domain(atom_domain(.T = f64))
 
 # privacy-loss
 d_out <- 1.0 # output distributions have distance at most d_out (ε)...
-privacy_measure <- max_divergence(.T = f64) # ...in terms of pure-DP
+privacy_measure <- max_divergence() # ...in terms of pure-DP
 
 # /privacy-loss
 

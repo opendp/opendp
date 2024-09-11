@@ -351,7 +351,7 @@ struct FfiResult_____AnyMeasurement opendp_combinators__make_pureDP_to_fixed_app
 struct FfiResult_____AnyMeasurement opendp_combinators__make_pureDP_to_zCDP(const AnyMeasurement *measurement);
 
 struct FfiResult_____AnyMeasurement opendp_combinators__make_fix_delta(const AnyMeasurement *measurement,
-                                                                       const struct AnyObject *delta);
+                                                                       double delta);
 
 /**
  * Internal function. Free the memory associated with `error`.
@@ -701,7 +701,7 @@ struct FfiResult_____c_void opendp_data__extrinsic_object_free(struct ExtrinsicO
  * Epsilon at a given `delta`.
  */
 struct FfiResult_____AnyObject opendp_data__smd_curve_epsilon(const struct AnyObject *curve,
-                                                              const struct AnyObject *delta);
+                                                              double delta);
 
 /**
  * wrap an AnyObject in an FfiResult::Ok(this)
@@ -880,27 +880,24 @@ struct FfiResult_____AnyDomain opendp_domains__expr_domain(const struct AnyDomai
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_gaussian(const struct AnyDomain *input_domain,
                                                                        const struct AnyMetric *input_metric,
-                                                                       const void *scale,
+                                                                       double scale,
                                                                        const int32_t *k,
                                                                        const char *MO);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_geometric(const struct AnyDomain *input_domain,
                                                                         const struct AnyMetric *input_metric,
-                                                                        const void *scale,
-                                                                        const struct AnyObject *bounds,
-                                                                        const char *QO);
+                                                                        double scale,
+                                                                        const struct AnyObject *bounds);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_report_noisy_max_gumbel(const struct AnyDomain *input_domain,
                                                                                       const struct AnyMetric *input_metric,
-                                                                                      const struct AnyObject *scale,
-                                                                                      const char *optimize,
-                                                                                      const char *QO);
+                                                                                      double scale,
+                                                                                      const char *optimize);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_laplace(const struct AnyDomain *input_domain,
                                                                       const struct AnyMetric *input_metric,
-                                                                      const void *scale,
-                                                                      const int32_t *k,
-                                                                      const char *QO);
+                                                                      double scale,
+                                                                      const int32_t *k);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_private_expr(const struct AnyDomain *input_domain,
                                                                            const struct AnyMetric *input_metric,
@@ -924,18 +921,16 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_user_measurement(c
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_laplace_threshold(const struct AnyDomain *input_domain,
                                                                                 const struct AnyMetric *input_metric,
-                                                                                const void *scale,
+                                                                                double scale,
                                                                                 const void *threshold,
                                                                                 long k);
 
-struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_response_bool(const void *prob,
-                                                                                       c_bool constant_time,
-                                                                                       const char *QO);
+struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_response_bool(double prob,
+                                                                                       c_bool constant_time);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_response(const struct AnyObject *categories,
-                                                                                  const void *prob,
-                                                                                  const char *T,
-                                                                                  const char *QO);
+                                                                                  double prob,
+                                                                                  const char *T);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_response_bitvec(const struct AnyDomain *input_domain,
                                                                                          const struct AnyMetric *input_metric,
@@ -947,12 +942,11 @@ struct FfiResult_____AnyObject opendp_measurements__debias_randomized_response_b
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_alp_queryable(const struct AnyDomain *input_domain,
                                                                             const struct AnyMetric *input_metric,
-                                                                            const void *scale,
+                                                                            double scale,
                                                                             const void *total_limit,
                                                                             const void *value_limit,
-                                                                            const unsigned int *size_factor,
-                                                                            const void *alpha,
-                                                                            const char *CO);
+                                                                            const uint32_t *size_factor,
+                                                                            const uint32_t *alpha);
 
 /**
  * Internal function. Free the memory associated with `this`.
@@ -983,17 +977,110 @@ struct FfiResult_____c_char opendp_measures__measure_type(struct AnyMeasure *thi
  */
 struct FfiResult_____c_char opendp_measures__measure_distance_type(struct AnyMeasure *this_);
 
-struct FfiResult_____AnyMeasure opendp_measures__max_divergence(const char *T);
-
-struct FfiResult_____AnyMeasure opendp_measures__smoothed_max_divergence(const char *T);
-
-struct FfiResult_____AnyMeasure opendp_measures__fixed_smoothed_max_divergence(const char *T);
-
-struct FfiResult_____AnyMeasure opendp_measures__zero_concentrated_divergence(const char *T);
+/**
+ * Privacy measure used to define $\epsilon$-pure differential privacy.
+ *
+ * In the following proof definition, $d$ corresponds to $\epsilon$ when also quantified over all adjacent datasets.
+ * That is, $\epsilon$ is the greatest possible $d$
+ * over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
+ * $M(\cdot)$ is a measurement (commonly known as a mechanism).
+ * The measurement's input metric defines the notion of adjacency,
+ * and the measurement's input domain defines the set of possible datasets.
+ *
+ * # Proof Definition
+ *
+ * For any two distributions $Y, Y'$ and any non-negative $d$,
+ * $Y, Y'$ are $d$-close under the max divergence measure whenever
+ *
+ * $D_\infty(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S]}{\Pr[Y' \in S]} \Big] \leq d$.
+ */
+struct FfiResult_____AnyMeasure opendp_measures__max_divergence(void);
 
 /**
- * Construct a new UserDivergence.
- * Any two instances of an UserDivergence are equal if their string descriptors are equal.
+ * Privacy measure used to define $\epsilon(\delta)$-approximate differential privacy.
+ *
+ * In the following proof definition, $d$ corresponds to a privacy profile when also quantified over all adjacent datasets.
+ * That is, a privacy profile $\epsilon(\delta)$ is no smaller than $d(\delta)$ for all possible choices of $\delta$,
+ * and over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
+ * $M(\cdot)$ is a measurement (commonly known as a mechanism).
+ * The measurement's input metric defines the notion of adjacency,
+ * and the measurement's input domain defines the set of possible datasets.
+ *
+ * Privacy profiles are represented by an SMDCurve.
+ * This curve can be evaluated with a $\delta$ to retrieve a corresponding $\epsilon$.
+ *
+ * # Proof Definition
+ *
+ * For any two distributions $Y, Y'$ and any curve $d(\cdot)$,
+ * $Y, Y'$ are $d$-close under the smoothed max divergence measure whenever,
+ * for any choice of $\delta \in [0, 1]$,
+ *
+ * $D_\infty^\delta(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S] + \delta}{\Pr[Y' \in S]} \Big] \leq d(\delta)$.
+ *
+ * Note that this $\delta$ is not privacy parameter $\delta$ until quantified over all adjacent datasets,
+ * as is done in the definition of a measurement.
+ */
+struct FfiResult_____AnyMeasure opendp_measures__smoothed_max_divergence(void);
+
+/**
+ * Privacy measure used to define $(\epsilon, \delta)$-approximate differential privacy.
+ *
+ * In the following definition, $d$ corresponds to $(\epsilon, \delta)$ when also quantified over all adjacent datasets.
+ * That is, $(\epsilon, \delta)$ is no smaller than $d$ (by product ordering),
+ * over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
+ * $M(\cdot)$ is a measurement (commonly known as a mechanism).
+ * The measurement's input metric defines the notion of adjacency,
+ * and the measurement's input domain defines the set of possible datasets.
+ *
+ * # Proof Definition
+ *
+ * For any two distributions $Y, Y'$ and any 2-tuple $d$ of non-negative numbers $\epsilon$ and $\delta$,
+ * $Y, Y'$ are $d$-close under the fixed smoothed max divergence measure whenever
+ *
+ * $D_\infty^\delta(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S] + \delta}{\Pr[Y' \in S]} \Big] \leq \epsilon$.
+ *
+ * Note that this $\epsilon$ and $\delta$ are not privacy parameters $\epsilon$ and $\delta$ until quantified over all adjacent datasets,
+ * as is done in the definition of a measurement.
+ */
+struct FfiResult_____AnyMeasure opendp_measures__fixed_smoothed_max_divergence(void);
+
+/**
+ * Privacy measure used to define $\rho$-zero concentrated differential privacy.
+ *
+ * In the following proof definition, $d$ corresponds to $\rho$ when also quantified over all adjacent datasets.
+ * That is, $\rho$ is the greatest possible $d$
+ * over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
+ * $M(\cdot)$ is a measurement (commonly known as a mechanism).
+ * The measurement's input metric defines the notion of adjacency,
+ * and the measurement's input domain defines the set of possible datasets.
+ *
+ * # Proof Definition
+ *
+ * For any two distributions $Y, Y'$ and any non-negative $d$,
+ * $Y, Y'$ are $d$-close under the zero-concentrated divergence measure if,
+ * for every possible choice of $\alpha \in (1, \infty)$,
+ *
+ * $D_\alpha(Y, Y') = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Y'} \Big[\ln \left( \dfrac{\Pr[Y = x]}{\Pr[Y' = x]} \right)^\alpha \Big] \leq d \cdot \alpha$.
+ */
+struct FfiResult_____AnyMeasure opendp_measures__zero_concentrated_divergence(void);
+
+/**
+ * Privacy measure with meaning defined by an OpenDP Library user (you).
+ *
+ * Any two instances of UserDivergence are equal if their string descriptors are equal.
+ *
+ * "honest-but-curious" is required because your definition of the measure
+ * must have the property of closure under postprocessing.
+ *
+ * # Proof definition
+ *
+ * For any two distributions $Y, Y'$ and any $d$,
+ * $Y, Y'$ are $d$-close under the user divergence measure ($D_U$) if,
+ *
+ * $D_U(Y, Y') \le d$.
+ *
+ * For $D_U$ to qualify as a privacy measure, then for any postprocessing function $f$,
+ * $D_U(Y, Y') \ge D_U(f(Y), f(Y'))$.
  *
  * # Arguments
  * * `descriptor` - A string description of the privacy measure.
