@@ -43,6 +43,7 @@ const BLACKLIST: &'static [&'static str] = &[
     // polars
     "new_arrow_array",
     "series_domain",
+    "categorical_domain",
     "arrow_array_free",
     "dataframe_domain",
     "lazyframe_domain",

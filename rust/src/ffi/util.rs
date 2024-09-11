@@ -8,7 +8,7 @@ use std::os::raw::c_char;
 use std::str::Utf8Error;
 
 use crate::domains::ffi::UserDomain;
-use crate::domains::{AtomDomain, BitVector, OptionDomain, VectorDomain};
+use crate::domains::{AtomDomain, BitVector, CategoricalDomain, OptionDomain, VectorDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
 use crate::measures::ffi::UserDivergence;
@@ -346,6 +346,8 @@ lazy_static! {
             type_vec![UserDomain],
             type_vec![DataFrameDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>],
             type_vec![ExprDomain, LazyFrameDomain, SeriesDomain],
+            type_vec![CategoricalDomain],
+            type_vec![OptionDomain, <CategoricalDomain>],
 
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],

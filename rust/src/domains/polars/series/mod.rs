@@ -9,7 +9,7 @@ use crate::{core::Domain, traits::CheckAtom};
 
 use polars::prelude::*;
 
-use crate::domains::{AtomDomain, OptionDomain};
+use crate::domains::{AtomDomain, CategoricalDomain, OptionDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -220,39 +220,6 @@ impl<D: SeriesElementDomain> SeriesElementDomain for OptionDomain<D> {
     }
 
     const NULLABLE: bool = true;
-}
-
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct CategoricalDomain {
-    /// The encoding used to assign numerical indices to each known possible category.
-    encoding: Option<PlIndexSet<String>>,
-}
-
-impl CategoricalDomain {
-    /// Only use this constructor if you know both the category set,
-    /// as well as how the categories are encoded.
-    ///
-    /// Typically when Polars constructs categorical data,
-    /// it assigns indices by the order encountered in the data, making the encoding data-dependent.
-    /// An example where this can be called is for categorical data emitted by the Polars cut expression,
-    /// where the categories and encoding are pre-determined by the expression (the bin edges).
-    pub fn new_with_encoding(encoding: Vec<String>) -> Fallible<Self> {
-        let (len, encoding) = (encoding.len(), PlIndexSet::from_iter(encoding));
-        if len != encoding.len() {
-            return fallible!(MakeDomain, "categories in encoding must be distinct");
-        }
-        Ok(CategoricalDomain {
-            encoding: Some(encoding),
-        })
-    }
-}
-
-impl Domain for CategoricalDomain {
-    type Carrier = String;
-
-    fn member(&self, _: &Self::Carrier) -> Fallible<bool> {
-        Ok(true)
-    }
 }
 
 impl SeriesElementDomain for CategoricalDomain {

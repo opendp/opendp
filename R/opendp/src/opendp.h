@@ -880,6 +880,12 @@ struct FfiResult_____AnyDomain opendp_domains__series_domain(char *name,
                                                              const struct AnyDomain *element_domain);
 
 /**
+ * Construct an instance of `CategoricalDomain`.
+ * Can be used as an argument to a Polars series domain.
+ */
+struct FfiResult_____AnyDomain opendp_domains__categorical_domain(void);
+
+/**
  * Construct an ExprDomain from a LazyFrameDomain.
  *
  * Must pass either `context` or `grouping_columns`.

@@ -4,11 +4,11 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, MetricSpace},
-    domains::{AtomDomain, OptionDomain, PrimitiveDataType},
+    domains::{AtomDomain, CategoricalDomain, OptionDomain, PrimitiveDataType},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMetric, Downcast},
-        util,
+        util::{self, Type},
     },
     traits::CheckAtom,
     transformations::DatasetMetric,
@@ -44,6 +44,12 @@ pub extern "C" fn opendp_domains__series_domain(
     let T = try_!(DA.get_atom());
 
     if DA.descriptor.starts_with("OptionDomain") {
+        if T == Type::of::<CategoricalDomain>() {
+            let element_domain =
+                try_!(element_domain.downcast_ref::<OptionDomain<CategoricalDomain>>()).clone();
+            return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
+        }
+
         fn monomorphize_option<T: 'static + CheckAtom + PrimitiveDataType>(
             name: &str,
             element_domain: &AnyDomain,
@@ -53,6 +59,7 @@ pub extern "C" fn opendp_domains__series_domain(
                 .clone();
             Ok(AnyDomain::new(series_domain(name, element_domain)))
         }
+
         dispatch!(
             monomorphize_option,
             // These types are the Polars primitive datatypes.
@@ -62,6 +69,11 @@ pub extern "C" fn opendp_domains__series_domain(
         )
         .into()
     } else {
+        if T == Type::of::<CategoricalDomain>() {
+            let element_domain = try_!(element_domain.downcast_ref::<CategoricalDomain>()).clone();
+            return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
+        }
+
         fn monomorphize_atom<T: 'static + CheckAtom + PrimitiveDataType>(
             name: &str,
             element_domain: &AnyDomain,
@@ -76,6 +88,17 @@ pub extern "C" fn opendp_domains__series_domain(
         )
         .into()
     }
+}
+
+#[bootstrap(
+    name = "categorical_domain",
+    returns(c_type = "FfiResult<AnyDomain *>")
+)]
+/// Construct an instance of `CategoricalDomain`.
+/// Can be used as an argument to a Polars series domain.
+#[no_mangle]
+pub extern "C" fn opendp_domains__categorical_domain() -> FfiResult<*mut AnyDomain> {
+    Ok(AnyDomain::new(CategoricalDomain::default())).into()
 }
 
 impl MetricSpace for (SeriesDomain, AnyMetric) {
