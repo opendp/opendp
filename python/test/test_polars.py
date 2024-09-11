@@ -806,3 +806,18 @@ def test_categorical_context():
         .collect()
     )
     assert release.shape == (2, 2)
+
+
+def test_to_physical_unordered():
+    pl = pytest.importorskip("polars")
+    lf_domain = dp.lazyframe_domain([dp.series_domain("A", dp.categorical_domain())])
+    lf = pl.LazyFrame([pl.Series("A", ["Texas", "New York"], dtype=pl.Categorical)])
+
+    # check that row ordering is protected
+    with pytest.raises(dp.OpenDPException, match=re.escape("to_physical: to prevent")):
+        dp.t.make_stable_lazyframe(
+            lf_domain, dp.symmetric_distance(),
+            lf.with_columns(pl.col("A").to_physical())
+        )
+
+

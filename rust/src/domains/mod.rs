@@ -597,6 +597,10 @@ impl CategoricalDomain {
             encoding: Some(encoding),
         })
     }
+
+    pub fn encoding(&self) -> Option<&Vec<String>> {
+        self.encoding.as_ref()
+    }
 }
 
 impl Domain for CategoricalDomain {

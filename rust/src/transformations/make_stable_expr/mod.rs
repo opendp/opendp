@@ -53,6 +53,9 @@ mod expr_lit;
 #[cfg(feature = "contrib")]
 mod expr_sum;
 
+#[cfg(feature = "contrib")]
+mod expr_to_physical;
+
 #[bootstrap(
     features("contrib"),
     arguments(output_metric(c_type = "AnyMetric *", rust_type = b"null")),
@@ -142,6 +145,13 @@ where
 
             #[cfg(feature = "contrib")]
             Literal(_) => expr_lit::make_expr_lit(input_domain, input_metric, self),
+
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: ToPhysical,
+                ..
+            } => expr_to_physical::make_expr_to_physical(input_domain, input_metric, self),
 
             expr => fallible!(
                 MakeTransformation,
