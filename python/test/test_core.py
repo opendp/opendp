@@ -139,8 +139,10 @@ def test_function():
 
 def test_privacy_profile():
     from opendp.measures import new_privacy_profile
-    profile = new_privacy_profile(lambda eps: 1e-8 if eps >= 1.0 else 1.0)
-    assert profile.epsilon(delta=1e-8) == 1.0
+    import math
+    profile = new_privacy_profile(lambda eps: math.exp(-eps))
+    # formula is -ln(1e-7)
+    assert profile.epsilon(delta=1e-7) == 16.11809565095832
 
 
 def test_member():
