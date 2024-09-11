@@ -6,7 +6,7 @@ use opendp_derive::bootstrap;
 use std::fmt::Debug;
 
 use crate::{
-    combinators::make_approximate,
+    combinators::{make_approximate, BasicCompositionMeasure},
     core::{Function, Measure, Measurement, Metric, MetricSpace},
     domains::{DslPlanDomain, ExprDomain, LazyFrameDomain},
     error::Fallible,
@@ -222,12 +222,15 @@ where
     }
 }
 
-impl<MS> PrivateDslPlan<MS, Approximate<MaxDivergence>> for DslPlan
+impl<MS, MO> PrivateDslPlan<MS, Approximate<MO>> for DslPlan
 where
     MS: 'static + UnboundedMetric + DatasetMetric,
-    Expr: PrivateExpr<PartitionDistance<MS>, MaxDivergence>
-        + PrivateExpr<PartitionDistance<MS>, Approximate<MaxDivergence>>,
-    DslPlan: StableDslPlan<MS, MS>,
+    MO: 'static + BasicCompositionMeasure,
+    Approximate<MO>: 'static + ApproximateMeasure,
+    <Approximate<MO> as Measure>::Distance: Debug,
+    Expr: PrivateExpr<PartitionDistance<MS>, MO>
+        + PrivateExpr<PartitionDistance<MS>, Approximate<MO>>,
+    DslPlan: StableDslPlan<MS, MS> + PrivateDslPlan<MS, MO>,
     (DslPlanDomain, MS): MetricSpace,
     (ExprDomain, MS): MetricSpace,
 {
@@ -235,11 +238,11 @@ where
         self,
         input_domain: DslPlanDomain,
         input_metric: MS,
-        output_measure: Approximate<MaxDivergence>,
+        output_measure: Approximate<MO>,
         global_scale: Option<f64>,
         threshold: Option<u32>,
-    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, Approximate<MaxDivergence>>> {
-        if let Some(meas) = postprocess::match_postprocess(
+    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, Approximate<MO>>> {
+        if let Some(meas) = postprocess::match_postprocess::<MS, Approximate<MO>>(
             input_domain.clone(),
             input_metric.clone(),
             output_measure.clone(),
@@ -264,7 +267,7 @@ where
         make_approximate(self.make_private(
             input_domain,
             input_metric,
-            MaxDivergence,
+            output_measure.0,
             global_scale,
             threshold,
         )?)

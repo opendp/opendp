@@ -237,7 +237,7 @@ impl ExactIntBounds for f32 {
     const MIN_CONSECUTIVE: Self = -16_777_216.0;
 }
 
-trait NextFloat {
+pub(crate) trait NextFloat {
     // naming has a trailing underscore so as not to conflict with stabilization of the corresponding methods in Rust STD
     fn next_up_(self) -> Self;
     fn next_down_(self) -> Self;

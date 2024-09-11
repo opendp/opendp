@@ -132,17 +132,18 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, ZeroConcent
     }
 }
 
-impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, Approximate<MaxDivergence>>
-    for Expr
+impl<MI: 'static + UnboundedMetric, MO: 'static + Measure>
+    PrivateExpr<PartitionDistance<MI>, Approximate<MO>> for Expr
+where
+    Expr: PrivateExpr<PartitionDistance<MI>, MO>,
 {
     fn make_private(
         self,
         input_domain: ExprDomain,
-        input_metric: PartitionDistance<M>,
-        output_measure: Approximate<MaxDivergence>,
+        input_metric: PartitionDistance<MI>,
+        output_measure: Approximate<MO>,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, Approximate<MaxDivergence>>>
-    {
+    ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, Approximate<MO>>> {
         make_approximate(self.make_private(
             input_domain,
             input_metric,

@@ -652,6 +652,13 @@ struct FfiResult_____FfiSlice opendp_data__ffislice_of_anyobjectptrs(const struc
 struct FfiResult_____c_void opendp_data__object_free(struct AnyObject *this_);
 
 /**
+ * Internal function. Compute erfc.
+ *
+ * Used to prove an upper bound on the error of erfc.
+ */
+double opendp_data__erfc(double value);
+
+/**
  * Internal function. Free the memory associated with `this`, an FfiSlicePtr.
  * Used to clean up after object_as_slice.
  * Frees the slice, but not what the slice references!

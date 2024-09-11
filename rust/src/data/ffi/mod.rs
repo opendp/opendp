@@ -680,6 +680,16 @@ pub extern "C" fn opendp_data__object_free(this: *mut AnyObject) -> FfiResult<*m
     util::into_owned(this).map(|_| ()).into()
 }
 
+#[bootstrap(name = "erfc")]
+/// Internal function. Compute erfc.
+///
+/// Used to prove an upper bound on the error of erfc.
+#[no_mangle]
+pub extern "C" fn opendp_data__erfc(value: f64) -> f64 {
+    use statrs::function::erf::erfc;
+    erfc(value)
+}
+
 #[bootstrap(
     name = "slice_free",
     arguments(this(do_not_convert = true)),
