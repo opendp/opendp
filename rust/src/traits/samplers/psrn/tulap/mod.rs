@@ -17,6 +17,7 @@ mod test;
 
 /// An infinite-precision sample from the Tulap(shift, b, q) distribution,
 /// where $b = \exp(-\epsilon)$ and $q = \frac{2\delta b}{1-b+2\delta b}$.
+#[derive(Clone)]
 pub struct TulapRV {
     shift: RBig,
     exp_eps: RBig,
