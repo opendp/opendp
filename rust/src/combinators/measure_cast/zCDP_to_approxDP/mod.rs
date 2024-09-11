@@ -4,12 +4,15 @@ use crate::{
     measures::{PrivacyProfile, SmoothedMaxDivergence, ZeroConcentratedDivergence},
 };
 
-use self::cdp_epsilon::cdp_epsilon;
+use self::cdp_delta::cdp_delta;
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
-mod cdp_epsilon;
+#[cfg(test)]
+mod test;
+
+mod cdp_delta;
 
 /// Constructs a new output measurement where the output measure
 /// is casted from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`.
@@ -38,8 +41,8 @@ where
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             let rho = privacy_map.eval(d_in)?;
 
-            Ok(PrivacyProfile::new(move |&delta: &f64| {
-                cdp_epsilon(rho, delta)
+            Ok(PrivacyProfile::new(move |epsilon: f64| {
+                cdp_delta(rho, epsilon)
             }))
         }),
     )
