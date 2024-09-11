@@ -78,8 +78,8 @@ where
                     )
                 })?;
 
-            if !cat_domain.encoding().is_some() {
-                return fallible!(MakeTransformation, "to_physical: to prevent potentially revealing information about row ordering, category ordering must be statically known");
+            if cat_domain.encoding().is_none() {
+                return fallible!(MakeTransformation, "to_physical: to prevent potentially revealing information about row ordering, category ordering must be statically known. Convert to String first.");
             }
 
             active_series.element_domain = Arc::new(AtomDomain::<u32>::default());

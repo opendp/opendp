@@ -4,10 +4,7 @@ use crate::transformations::make_stable_lazyframe;
 
 use super::*;
 
-fn helper_test_expr_to_physical<
-    DI: 'static + SeriesElementDomain,
-    DO: 'static + SeriesElementDomain,
->(
+fn assert_expr_to_physical<DI: 'static + SeriesElementDomain, DO: 'static + SeriesElementDomain>(
     in_elem_domain: DI,
     in_series: Series,
     out_elem_domain: DO,
@@ -52,27 +49,27 @@ fn test_expr_to_physical_categorical() -> Fallible<()> {
 
     let out_elem_domain = AtomDomain::<u32>::default();
     let out_series = Series::new("data", [0u32, 1, 1, 2, 3]);
-    helper_test_expr_to_physical(in_elem_domain, in_series, out_elem_domain, out_series)
+    assert_expr_to_physical(in_elem_domain, in_series, out_elem_domain, out_series)
 }
 
 #[test]
 fn test_expr_to_physical_same() -> Fallible<()> {
-    fn helper<D: 'static + SeriesElementDomain>(elem_domain: D, series: Series) -> Fallible<()> {
-        helper_test_expr_to_physical(elem_domain.clone(), series.clone(), elem_domain, series)
+    fn assert<D: 'static + SeriesElementDomain>(elem_domain: D, series: Series) -> Fallible<()> {
+        assert_expr_to_physical(elem_domain.clone(), series.clone(), elem_domain, series)
     }
-    helper(
+    assert(
         AtomDomain::<i32>::default(),
         Series::new("x", [1i32, 4, 7, 3]),
     )?;
-    helper(
+    assert(
         AtomDomain::<String>::default(),
         Series::new("x", ["C".to_string(), "A".to_string(), "B".to_string()]),
     )?;
-    helper(
+    assert(
         AtomDomain::<bool>::default(),
         Series::new("x", [true, false, false]),
     )?;
-    helper(
+    assert(
         AtomDomain::<f32>::default(),
         Series::new("x", [1.0f32, 2.0, 7.0]),
     )?;
