@@ -9,7 +9,7 @@ use crate::{core::Domain, traits::CheckAtom};
 
 use polars::prelude::*;
 
-use crate::domains::{AtomDomain, OptionDomain};
+use crate::domains::{AtomDomain, CategoricalDomain, OptionDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -92,10 +92,10 @@ impl Domain for SeriesDomain {
 }
 
 impl SeriesDomain {
-    pub fn new<DA: 'static + SeriesAtomDomain>(name: &str, element_domain: DA) -> Self {
+    pub fn new<DA: 'static + SeriesElementDomain>(name: &str, element_domain: DA) -> Self {
         SeriesDomain {
-            field: Field::new(name, DA::Atom::dtype()),
-            element_domain: Arc::new(element_domain.atom_domain()),
+            field: Field::new(name, DA::dtype()),
+            element_domain: Arc::new(element_domain.inner_domain()),
             nullable: DA::NULLABLE,
         }
     }
@@ -191,28 +191,48 @@ impl<D: UnboundedMetric> MetricSpace for (SeriesDomain, D) {
 // BEGIN UTILITY TRAITS
 
 /// Common trait for domains that can be used to describe the space of typed elements within a series.
-pub trait SeriesAtomDomain: Domain + Send + Sync {
-    type Atom: CheckAtom + PrimitiveDataType;
-    fn atom_domain(self) -> AtomDomain<Self::Atom>;
+pub trait SeriesElementDomain: Domain + Send + Sync {
+    type InnerDomain: SeriesElementDomain;
+    fn dtype() -> DataType;
+    fn inner_domain(self) -> Self::InnerDomain;
     const NULLABLE: bool;
 }
-impl<T: CheckAtom + PrimitiveDataType> SeriesAtomDomain for AtomDomain<T> {
-    type Atom = T;
+impl<T: CheckAtom + PrimitiveDataType> SeriesElementDomain for AtomDomain<T> {
+    type InnerDomain = Self;
 
-    fn atom_domain(self) -> AtomDomain<Self::Atom> {
+    fn dtype() -> DataType {
+        T::dtype()
+    }
+    fn inner_domain(self) -> Self {
         self
     }
 
     const NULLABLE: bool = false;
 }
-impl<T: CheckAtom + PrimitiveDataType> SeriesAtomDomain for OptionDomain<AtomDomain<T>> {
-    type Atom = T;
+impl<D: SeriesElementDomain> SeriesElementDomain for OptionDomain<D> {
+    type InnerDomain = D;
 
-    fn atom_domain(self) -> AtomDomain<Self::Atom> {
+    fn dtype() -> DataType {
+        D::dtype()
+    }
+    fn inner_domain(self) -> D {
         self.element_domain
     }
 
     const NULLABLE: bool = true;
+}
+
+impl SeriesElementDomain for CategoricalDomain {
+    type InnerDomain = Self;
+
+    fn dtype() -> DataType {
+        DataType::Categorical(None, Default::default())
+    }
+    fn inner_domain(self) -> Self {
+        self
+    }
+
+    const NULLABLE: bool = false;
 }
 
 /// Object-safe version of SeriesAtomDomain.
@@ -220,7 +240,7 @@ pub trait DynSeriesAtomDomain: Send + Sync {
     fn as_any(&self) -> &dyn Any;
     fn dyn_partial_eq(&self, other: &dyn DynSeriesAtomDomain) -> bool;
 }
-impl<D: 'static + SeriesAtomDomain> DynSeriesAtomDomain for D {
+impl<D: 'static + SeriesElementDomain> DynSeriesAtomDomain for D {
     fn as_any(&self) -> &dyn Any {
         self
     }

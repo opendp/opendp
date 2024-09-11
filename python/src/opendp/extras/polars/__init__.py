@@ -26,7 +26,7 @@ from opendp.mod import (
     binary_search,
     binary_search_chain,
 )
-from opendp.domains import series_domain, lazyframe_domain, option_domain, atom_domain
+from opendp.domains import series_domain, lazyframe_domain, option_domain, atom_domain, categorical_domain
 from opendp.measurements import make_private_lazyframe
 
 
@@ -303,6 +303,9 @@ def _series_domain_from_field(field) -> Domain:
     """Builds the broadest possible SeriesDomain that matches a given field."""
     import polars as pl
     name, dtype = field
+    if dtype == pl.Categorical:
+        return series_domain(name, option_domain(categorical_domain()))
+
     T = {
         pl.UInt32: "u32",
         pl.UInt64: "u64",

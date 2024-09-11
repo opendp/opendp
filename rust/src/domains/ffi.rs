@@ -13,6 +13,9 @@ use crate::{
     traits::{CheckAtom, Float, Hashable, Integer, Primitive},
 };
 
+#[cfg(feature = "polars")]
+use crate::domains::CategoricalDomain;
+
 use super::{BitVectorDomain, Bounds, Null, OptionDomain};
 
 #[bootstrap(
@@ -221,14 +224,21 @@ pub extern "C" fn opendp_domains__option_domain(
     D: *const c_char,
 ) -> FfiResult<*mut AnyDomain> {
     fn monomorphize_atom<T: 'static + CheckAtom>(
-        element_domain: *const AnyDomain,
+        element_domain: &AnyDomain,
     ) -> Fallible<AnyDomain> {
-        let element_domain = try_as_ref!(element_domain)
-            .downcast_ref::<AtomDomain<T>>()?
-            .clone();
+        let element_domain = element_domain.downcast_ref::<AtomDomain<T>>()?.clone();
         Ok(AnyDomain::new(option_domain(element_domain)))
     }
+
+    let element_domain = try_as_ref!(element_domain);
     let T = try_!(try_!(Type::try_from(D)).get_atom());
+
+    #[cfg(feature = "polars")]
+    if T == Type::of::<CategoricalDomain>() {
+        let element_domain = try_!(element_domain.downcast_ref::<CategoricalDomain>()).clone();
+        return Ok(AnyDomain::new(option_domain(element_domain))).into();
+    }
+
     dispatch!(
         monomorphize_atom,
         [(

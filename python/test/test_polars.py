@@ -2,6 +2,7 @@ import pytest
 import opendp.prelude as dp
 import os
 import warnings
+import re
 
 
 def test_polars_version():
@@ -579,7 +580,6 @@ def test_pickle_bomb():
     from polars._utils.wrap import wrap_expr  # type: ignore[import-not-found]
     from opendp._lib import lib_path
     import io
-    import re
     import pickle
 
     # modified from https://intoli.com/blog/dangerous-pickles/
@@ -695,3 +695,54 @@ def test_csv_bad_encoding_loading():
             schema={"name": pl.String},
         )
         pl_testing.assert_frame_equal(df, expected)
+
+
+def test_categorical_domain():
+    pl = pytest.importorskip("polars")
+
+    lf = pl.LazyFrame([pl.Series("A", ["Texas", "New York", None], dtype=pl.Categorical)])
+
+    # query should be rejected even when data is known to be non-null, 
+    # because Polars will still raise a warning if the fill value is not in the encoding
+    for element_domain in [
+        dp.option_domain(dp.categorical_domain()),
+        dp.categorical_domain(),
+    ]:
+        lf_domain = dp.lazyframe_domain([dp.series_domain("A", element_domain)])
+        assert str(lf_domain) == "FrameDomain(A: cat; margins=[])"
+        match_msg = re.escape("fill_null cannot be applied to categorical data")
+        with pytest.raises(dp.OpenDPException, match=match_msg):
+            dp.t.make_stable_lazyframe(
+                lf_domain, dp.symmetric_distance(),
+                lf.with_columns(pl.col("A").fill_null("A"))
+            )
+
+
+def test_categorical_context():
+    pl = pytest.importorskip("polars")
+
+    lf = pl.LazyFrame(
+        {"A": [1] * 1000, "B": ["x"] * 500 + ["y"] * 500},
+        schema_overrides={"A": pl.Int32, "B": pl.Categorical},
+    )
+
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+        margins={
+            ("B",): dp.polars.Margin(public_info="keys"),
+        },
+    )
+
+    # check that query runs.
+    print('output should be two columns ("B" and "len") with two rows (1, ~500)')
+    release = (
+        context.query()
+        .group_by("B")
+        .agg(pl.len().dp.noise())
+        .release()
+        .collect()
+    )
+    assert release.shape == (2, 2)
