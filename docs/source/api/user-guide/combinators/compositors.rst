@@ -265,7 +265,7 @@ second (1, 0)-DP.
             >>> sc_meas = dp.c.make_sequential_composition(
             ...     input_domain=dp.vector_domain(dp.atom_domain(T=int)),
             ...     input_metric=dp.symmetric_distance(),
-            ...     output_measure=dp.fixed_smoothed_max_divergence(),
+            ...     output_measure=dp.approximate(dp.max_divergence()),
             ...     d_in=1,
             ...     d_mids=[(2., 1e-6), (1., 0.)]
             ... )
@@ -352,7 +352,7 @@ sequentiality, ``zcdp_sc_qbl`` becomes locked.
         .. code:: python
 
             >>> # convert the pure-DP count measurement to a approx-DP count measurement (where δ=0.)
-            >>> adp_count_meas = dp.c.make_pureDP_to_fixed_approxDP(count_meas)
+            >>> adp_count_meas = dp.c.make_approximate(count_meas)
             
             >>> # submit the count measurement to the root approx-DP compositor queryable
             >>> print('adp:', adp_sc_qbl(adp_count_meas))

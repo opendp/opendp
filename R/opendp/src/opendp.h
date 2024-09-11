@@ -346,7 +346,7 @@ struct FfiResult_____AnyMeasurement opendp_combinators__make_sequential_composit
 
 struct FfiResult_____AnyMeasurement opendp_combinators__make_zCDP_to_approxDP(const AnyMeasurement *measurement);
 
-struct FfiResult_____AnyMeasurement opendp_combinators__make_pureDP_to_fixed_approxDP(const AnyMeasurement *measurement);
+struct FfiResult_____AnyMeasurement opendp_combinators__make_approximate(const AnyMeasurement *measurement);
 
 struct FfiResult_____AnyMeasurement opendp_combinators__make_pureDP_to_zCDP(const AnyMeasurement *measurement);
 
@@ -1043,6 +1043,8 @@ struct FfiResult_____AnyMeasure opendp_measures__smoothed_max_divergence(void);
  * as is done in the definition of a measurement.
  */
 struct FfiResult_____AnyMeasure opendp_measures__fixed_smoothed_max_divergence(void);
+
+struct FfiResult_____AnyMeasure opendp_measures__approximate(const struct AnyMeasure *measure);
 
 /**
  * Privacy measure used to define $\rho$-zero concentrated differential privacy.

@@ -147,8 +147,8 @@ These combinators are used to cast the output measure of a Measurement.
      - Output Measure
      - Constructor
    * - ``MaxDivergence``
-     - ``FixedSmoothedMaxDivergence``
-     - :func:`opendp.combinators.make_pureDP_to_fixed_approxDP`
+     - ``Approximate<MaxDivergence>``
+     - :func:`opendp.combinators.make_approximate`
    * - ``MaxDivergence``
      - ``ZeroConcentratedDivergence``
      - :func:`opendp.combinators.make_pureDP_to_zCDP`
@@ -156,10 +156,10 @@ These combinators are used to cast the output measure of a Measurement.
      - ``SmoothedMaxDivergence``
      - :func:`opendp.combinators.make_zCDP_to_approxDP`
    * - ``SmoothedMaxDivergence``
-     - ``FixedSmoothedMaxDivergence``
+     - ``Approximate<MaxDivergence>``
      - :func:`opendp.combinators.make_fix_delta`
 
-:func:`opendp.combinators.make_pureDP_to_fixed_approxDP` is used for casting an output measure from ``MaxDivergence`` to ``FixedSmoothedMaxDivergence``.
+:func:`opendp.combinators.make_approximate` is used for casting an output measure from ``MaxDivergence`` to ``Approximate<MaxDivergence>``.
 This is useful if you want to compose pure-DP measurements with approximate-DP measurements.
 
 .. tab-set::
@@ -170,10 +170,10 @@ This is useful if you want to compose pure-DP measurements with approximate-DP m
 
         >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
         >>> meas_pureDP = input_space >> dp.m.then_laplace(scale=10.)
-        >>> # convert the output measure to `FixedSmoothedMaxDivergence`
-        >>> meas_fixed_approxDP = dp.c.make_pureDP_to_fixed_approxDP(meas_pureDP)
+        >>> # convert the output measure to `Approximate<MaxDivergence>`
+        >>> meas_fixed_approxDP = dp.c.make_approximate(meas_pureDP)
         ...
-        >>> # FixedSmoothedMaxDivergence distances are (ε, δ) tuples
+        >>> # `Approximate<MaxDivergence>` distances are (ε, δ) tuples
         >>> meas_fixed_approxDP.map(d_in=1.)
         (0.1, 0.0)
 
@@ -197,8 +197,8 @@ Similarly, :func:`opendp.combinators.make_pureDP_to_zCDP` is used for casting an
         >>> curve.epsilon(delta=1e-6)
         11.688596249354896
 
-:func:`opendp.combinators.make_fix_delta` changes the output measure from ``SmoothedMaxDivergence`` to ``FixedSmoothedMaxDivergence``.
-It fixes the delta parameter in the curve, so that the resulting measurement can be composed with other ``FixedSmoothedMaxDivergence`` measurements.
+:func:`opendp.combinators.make_fix_delta` changes the output measure from ``SmoothedMaxDivergence`` to ``Approximate<MaxDivergence>``.
+It fixes the delta parameter in the curve, so that the resulting measurement can be composed with other ``Approximate<MaxDivergence>`` measurements.
 
 .. tab-set::
 
