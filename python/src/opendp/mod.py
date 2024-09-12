@@ -642,6 +642,10 @@ class PrivacyProfile(object):
     def epsilon(self, delta):
         from opendp._data import privacy_profile_epsilon
         return privacy_profile_epsilon(self.curve, delta)
+    
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
 
 
 class PartialConstructor(object):

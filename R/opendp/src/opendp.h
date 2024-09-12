@@ -1115,6 +1115,8 @@ struct FfiResult_____AnyMeasure opendp_measures__zero_concentrated_divergence(vo
  */
 struct FfiResult_____AnyMeasure opendp_measures__user_divergence(char *descriptor);
 
+struct FfiResult_____AnyObject opendp_measures__new_privacy_profile(CallbackFn curve);
+
 /**
  * Internal function. Free the memory associated with `this`.
  */
