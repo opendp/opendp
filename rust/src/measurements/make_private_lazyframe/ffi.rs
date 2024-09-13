@@ -10,7 +10,7 @@ use crate::{
         util,
     },
     measurements::PrivateDslPlan,
-    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::SymmetricDistance,
 };
 
@@ -71,7 +71,7 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
 
     dispatch!(
         monomorphize,
-        [(MO_, [MaxDivergence<f64>, FixedSmoothedMaxDivergence<f64>, ZeroConcentratedDivergence<f64>])],
+        [(MO_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])],
         (
             input_domain,
             input_metric,

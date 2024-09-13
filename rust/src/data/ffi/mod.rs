@@ -28,7 +28,7 @@ use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
 use crate::ffi::util::{self, into_c_char_p, AnyDomainPtr, ExtrinsicObject};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
-use crate::measures::SMDCurve;
+use crate::measures::PrivacyProfile;
 use crate::metrics::IntDistance;
 use crate::traits::samplers::{fill_bytes, Shuffle};
 use crate::traits::ProductOrd;
@@ -543,6 +543,17 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             2,
         ))
     }
+    fn tuple_curve_f64_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let (curve, delta) = obj.downcast_ref::<(PrivacyProfile, f64)>()?;
+
+        Ok(FfiSlice::new(
+            util::into_raw([
+                AnyObject::new_raw(curve.clone()) as *const c_void,
+                util::into_raw(*delta) as *const c_void,
+            ]) as *mut c_void,
+            2,
+        ))
+    }
     match &obj.type_.contents {
         TypeContents::PLAIN("BitVector") => bitvector_to_raw(obj),
         TypeContents::PLAIN("ExtrinsicObject") => plain_to_raw::<ExtrinsicObject>(obj),
@@ -578,6 +589,9 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                     #[cfg(feature = "polars")]
                     if types == vec![Type::of::<DslPlan>(), Type::of::<Expr>()] {
                         return tuple_lf_expr_to_raw(obj).into();
+                    }
+                    if types == vec![Type::of::<PrivacyProfile>(), Type::of::<f64>()] {
+                        return tuple_curve_f64_to_raw(obj).into();
                     }
                     dispatch!(tuple2_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))
                 },
@@ -664,6 +678,16 @@ pub extern "C" fn opendp_data__ffislice_of_anyobjectptrs(
 #[no_mangle]
 pub extern "C" fn opendp_data__object_free(this: *mut AnyObject) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
+}
+
+#[bootstrap(name = "erfc")]
+/// Internal function. Compute erfc.
+///
+/// Used to prove an upper bound on the error of erfc.
+#[no_mangle]
+pub extern "C" fn opendp_data__erfc(value: f64) -> f64 {
+    use statrs::function::erf::erfc;
+    erfc(value)
 }
 
 #[bootstrap(
@@ -982,35 +1006,49 @@ impl Shuffle for AnyObject {
 }
 
 #[bootstrap(
-    name = "smd_curve_epsilon",
-    arguments(
-        curve(rust_type = b"null"),
-        delta(rust_type = "$get_atom(object_type(curve))")
-    )
+    name = "privacy_profile_delta",
+    arguments(curve(rust_type = b"null"), delta(rust_type = "f64"))
 )]
-/// Internal function. Use an SMDCurve to find epsilon at a given `delta`.
+/// Internal function. Use a PrivacyProfile to find epsilon at a given `epsilon`.
 ///
 /// # Arguments
-/// * `curve` - The SMDCurve.
+/// * `curve` - The PrivacyProfile.
+/// * `epsilon` - What to fix epsilon to compute delta.
+///
+/// # Returns
+/// Delta at a given `epsilon`.
+#[no_mangle]
+pub extern "C" fn opendp_data__privacy_profile_delta(
+    curve: *const AnyObject,
+    epsilon: f64,
+) -> FfiResult<*mut AnyObject> {
+    try_!(try_as_ref!(curve).downcast_ref::<PrivacyProfile>())
+        .delta(epsilon)
+        .map(AnyObject::new)
+        .into()
+}
+
+#[bootstrap(
+    name = "privacy_profile_epsilon",
+    arguments(profile(rust_type = b"null"), delta(rust_type = "f64"))
+)]
+/// Internal function. Use an PrivacyProfile to find epsilon at a given `delta`.
+///
+/// # Arguments
+/// * `profile` - The PrivacyProfile.
 /// * `delta` - What to fix delta to compute epsilon.
 ///
 /// # Returns
 /// Epsilon at a given `delta`.
 #[no_mangle]
-pub extern "C" fn opendp_data__smd_curve_epsilon(
-    curve: *const AnyObject,
-    delta: *const AnyObject,
+pub extern "C" fn opendp_data__privacy_profile_epsilon(
+    profile: *const AnyObject,
+    delta: f64,
 ) -> FfiResult<*mut AnyObject> {
-    fn monomorphize<T: 'static>(curve: &AnyObject, delta: &AnyObject) -> Fallible<AnyObject> {
-        let delta = delta.downcast_ref::<T>()?;
-        curve
-            .downcast_ref::<SMDCurve<T>>()?
-            .epsilon(delta)
-            .map(AnyObject::new)
-    }
-    let curve = try_as_ref!(curve);
-    let delta = try_as_ref!(delta);
-    dispatch!(monomorphize, [(delta.type_, @floats)], (curve, delta)).into()
+    try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>())
+        .epsilon(delta)
+        .map(AnyObject::new)
+        .into()
 }
 
 #[cfg(feature = "polars")]

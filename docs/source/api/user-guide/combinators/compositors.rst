@@ -51,13 +51,13 @@ input metric, and output measure:
             count: Measurement(
                 input_domain   = VectorDomain(AtomDomain(T=i32)),
                 input_metric   = SymmetricDistance(),
-                output_measure = MaxDivergence(f64))
+                output_measure = MaxDivergence)
 
             >>> print("sum:", sum_meas)
             sum: Measurement(
                 input_domain   = VectorDomain(AtomDomain(T=i32)),
                 input_metric   = SymmetricDistance(),
-                output_measure = MaxDivergence(f64))
+                output_measure = MaxDivergence)
 
 This is important, because compositors require these three supporting
 elements to match for all queries.
@@ -123,7 +123,7 @@ distances (``d_in``), and the privacy consumption allowed for each query
             >>> sc_meas = dp.c.make_sequential_composition(
             ...     input_domain=dp.vector_domain(dp.atom_domain(T=int)),
             ...     input_metric=dp.symmetric_distance(),
-            ...     output_measure=dp.max_divergence(T=float),
+            ...     output_measure=dp.max_divergence(),
             ...     d_in=1,
             ...     d_mids=[2., 1.]
             ... )
@@ -232,7 +232,7 @@ the output distance from the previous transformation:
             >>> sc_meas = sum_trans >> dp.c.make_sequential_composition(
             ...     input_domain=sum_trans.output_domain,
             ...     input_metric=sum_trans.output_metric,
-            ...     output_measure=dp.max_divergence(T=float),
+            ...     output_measure=dp.max_divergence(),
             ...     d_in=sum_trans.map(max_contributions),
             ...     d_mids=[2., 1.]
             ... )
@@ -265,7 +265,7 @@ second (1, 0)-DP.
             >>> sc_meas = dp.c.make_sequential_composition(
             ...     input_domain=dp.vector_domain(dp.atom_domain(T=int)),
             ...     input_metric=dp.symmetric_distance(),
-            ...     output_measure=dp.fixed_smoothed_max_divergence(T=float),
+            ...     output_measure=dp.approximate(dp.max_divergence()),
             ...     d_in=1,
             ...     d_mids=[(2., 1e-6), (1., 0.)]
             ... )
@@ -296,7 +296,7 @@ that will satisfy this level of privacy, under a given set of weights.
             ...     return dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.c.make_sequential_composition(
             ...         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
             ...         input_metric=dp.symmetric_distance(),
-            ...         output_measure=dp.zero_concentrated_divergence(T=float),
+            ...         output_measure=dp.zero_concentrated_divergence(),
             ...         d_in=1,
             ...         d_mids=scale_weights(scale, weights)
             ...     )), delta=1e-6)
@@ -352,7 +352,7 @@ sequentiality, ``zcdp_sc_qbl`` becomes locked.
         .. code:: python
 
             >>> # convert the pure-DP count measurement to a approx-DP count measurement (where δ=0.)
-            >>> adp_count_meas = dp.c.make_pureDP_to_fixed_approxDP(count_meas)
+            >>> adp_count_meas = dp.c.make_approximate(count_meas)
             
             >>> # submit the count measurement to the root approx-DP compositor queryable
             >>> print('adp:', adp_sc_qbl(adp_count_meas))

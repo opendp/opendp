@@ -137,6 +137,14 @@ def test_function():
     print(mechanism(0.0))
 
 
+def test_privacy_profile():
+    from opendp.measures import new_privacy_profile
+    import math
+    profile = new_privacy_profile(lambda eps: math.exp(-eps))
+    # formula is -ln(1e-7)
+    assert profile.epsilon(delta=1e-7) == 16.11809565095832
+
+
 def test_member():
     from opendp.domains import atom_domain, vector_domain
     from opendp.metrics import symmetric_distance
@@ -245,7 +253,7 @@ def test_extrinsic_free():
     space = dp.user_domain("anything", lambda _: True), dp.symmetric_distance()
 
     sc_meas = space >> dp.c.then_sequential_composition(
-        dp.max_divergence(T=float),
+        dp.max_divergence(),
         d_in=1,
         d_mids=[1.0],
     )
@@ -256,7 +264,7 @@ def test_extrinsic_free():
     # however, a pointer to [] is stored inside qbl
 
     query = space >> dp.m.then_user_measurement(
-        dp.max_divergence(T=float),
+        dp.max_divergence(),
         lambda x: x,
         lambda _: 0.0,
     )

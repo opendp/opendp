@@ -2,7 +2,7 @@ from typing import Sequence, Union, cast
 from inspect import signature
 
 from opendp._lib import *
-from opendp.mod import Domain, UnknownTypeException, Transformation, Measurement, SMDCurve, Queryable
+from opendp.mod import Domain, UnknownTypeException, Transformation, Measurement, PrivacyProfile, Queryable
 from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 
 ATOM_MAP = {
@@ -150,8 +150,8 @@ def c_to_py(value: Any) -> Any:
         from opendp._data import object_type, object_as_slice, slice_free
         obj_type = object_type(value)
         
-        if "SMDCurve" in obj_type:
-            return SMDCurve(value)
+        if "PrivacyProfile" == obj_type:
+            return PrivacyProfile(value)
         
         if "Queryable" in obj_type:
             from opendp.core import queryable_query_type
@@ -482,6 +482,11 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
         lp_slice = ctypes.cast(ptr_data[0], FfiSlicePtr)
         expr_slice = ctypes.cast(ptr_data[1], FfiSlicePtr)
         return _slice_to_lazyframe(lp_slice), _slice_to_expr(expr_slice)
+    
+    if inner_type_names == ['PrivacyProfile', 'f64']:
+        curve = ctypes.cast(ptr_data[0], AnyObjectPtr)
+        delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))
+        return PrivacyProfile(curve), delta.contents.value
     
     # tuple of instances of Python types
     return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value # type: ignore[index,attr-defined]

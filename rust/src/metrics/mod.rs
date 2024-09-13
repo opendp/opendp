@@ -542,20 +542,9 @@ impl<T: CheckAtom> MetricSpace
 ///
 /// # Compatible Domains
 /// * `AtomDomain<T>` for any valid `T`.
-#[derive(Clone)]
+#[derive(Clone, Default, PartialEq)]
 pub struct DiscreteDistance;
 
-impl Default for DiscreteDistance {
-    fn default() -> Self {
-        DiscreteDistance
-    }
-}
-
-impl PartialEq for DiscreteDistance {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
 impl Debug for DiscreteDistance {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "DiscreteDistance()")

@@ -41,7 +41,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     Measurement(
         input_domain   = AtomDomain(T=i32),
         input_metric   = AbsoluteDistance(i32),
-        output_measure = MaxDivergence(f64))
+        output_measure = MaxDivergence)
 
     >>> # invoke the measurement (invoke and __call__ are equivalent)
     >>> print('explicit: ', laplace.invoke(100))  # -> 101   # doctest: +ELLIPSIS
@@ -591,7 +591,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     >>> import opendp.prelude as dp
     >>> measure, distance = dp.loss_of(epsilon=1.0)
     >>> measure, distance
-    (MaxDivergence(f64), 1.0)
+    (MaxDivergence, 1.0)
 
     '''
     _type_ = AnyMeasure
@@ -631,13 +631,21 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
         raise ValueError("Measure does not support iteration")
 
 
-class SMDCurve(object):
+class PrivacyProfile(object):
     def __init__(self, curve):
         self.curve = curve
 
+    def delta(self, epsilon):
+        from opendp._data import privacy_profile_delta
+        return privacy_profile_delta(self.curve, epsilon)
+
     def epsilon(self, delta):
-        from opendp._data import smd_curve_epsilon
-        return smd_curve_epsilon(self.curve, delta)
+        from opendp._data import privacy_profile_epsilon
+        return privacy_profile_epsilon(self.curve, delta)
+    
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
 
 
 class PartialConstructor(object):

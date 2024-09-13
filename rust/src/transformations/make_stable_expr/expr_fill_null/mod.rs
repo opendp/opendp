@@ -1,3 +1,4 @@
+use polars::prelude::DataType;
 use polars_plan::dsl::{Expr, FunctionExpr};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
@@ -63,6 +64,13 @@ where
             data_metric,
             fill_metric
         );
+    }
+
+    if matches!(
+        data_domain.active_series()?.field.dtype,
+        DataType::Categorical(_, _)
+    ) {
+        return fallible!(MakeTransformation, "fill_null cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars");
     }
 
     if fill_domain.active_series()?.nullable {

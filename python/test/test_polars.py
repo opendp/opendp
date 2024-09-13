@@ -2,6 +2,7 @@ import pytest
 import opendp.prelude as dp
 import os
 import warnings
+import re
 
 
 def test_polars_version():
@@ -96,7 +97,7 @@ def test_expr_ffi():
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
+    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
 )
 def test_private_lazyframe_explicit_sum(measure):
     pl = pytest.importorskip("polars")
@@ -123,7 +124,7 @@ def test_private_lazyframe_explicit_sum(measure):
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
+    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
 )
 def test_private_lazyframe_sum(measure):
     pl = pytest.importorskip("polars")
@@ -148,7 +149,7 @@ def test_private_lazyframe_sum(measure):
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
+    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
 )
 def test_private_lazyframe_mean(measure):
     pl = pytest.importorskip("polars")
@@ -173,15 +174,16 @@ def test_private_lazyframe_mean(measure):
     pl_testing.assert_frame_equal(m_lf(lf).collect().sort("B"), expect)
 
 
-def test_stable_lazyframe():
+def test_cast():
     pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()
-    with pytest.raises(dp.OpenDPException):
-        dp.t.make_stable_lazyframe(
-            lf_domain,
-            dp.symmetric_distance(),
-            lf.with_columns(pl.col("A").cast(int)),
-        )
+    m_lf = dp.t.make_stable_lazyframe(
+        lf_domain,
+        dp.symmetric_distance(),
+        lf.with_columns(pl.col("A").cast(int)),
+    )
+
+    assert m_lf(lf).collect()["A"].dtype == pl.Int64
 
 
 def test_stable_expr():
@@ -198,7 +200,7 @@ def test_private_expr():
         dp.m.make_private_expr(
             domain,
             dp.symmetric_distance(),
-            dp.max_divergence(T=float),
+            dp.max_divergence(),
             pl.col("A").sum(),
         )
 
@@ -214,7 +216,7 @@ def test_private_lazyframe_median():
     expr = pl.col("B").dp.median(candidates, 1.0)
     plan = seed(lf.collect_schema()).group_by("A").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
-        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan, 0.0
     )
     expect = pl.DataFrame(
         [pl.Series("A", [1.0], dtype=pl.Float64), pl.Series("B", [3], dtype=pl.Int64)]
@@ -224,7 +226,7 @@ def test_private_lazyframe_median():
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
+    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
 )
 def test_filter(measure):
     """ensure that expr domain's carrier type can be passed to/from Rust"""
@@ -249,7 +251,7 @@ def test_onceframe_multi_collect():
     lf_domain, lf = example_lf()
     plan = seed(lf.collect_schema()).select(pl.len().dp.noise(0.0))
     m_lf = dp.m.make_private_lazyframe(
-        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
     )
 
     of = m_lf(lf)
@@ -264,7 +266,7 @@ def test_onceframe_lazy():
     lf_domain, lf = example_lf()
     plan = seed(lf.collect_schema()).select(pl.len().dp.noise(0.0))
     m_lf = dp.m.make_private_lazyframe(
-        lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
     )
 
     of = m_lf(lf)
@@ -272,7 +274,7 @@ def test_onceframe_lazy():
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(T=float), dp.zero_concentrated_divergence(T=float)]
+    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
 )
 def test_mechanisms(measure):
     pl_testing = pytest.importorskip("polars.testing")
@@ -281,7 +283,7 @@ def test_mechanisms(measure):
 
     lf_domain, lf = example_lf()
 
-    if measure == dp.max_divergence(T=float):
+    if measure == dp.max_divergence():
         expr = pl.len().dp.laplace(0.0)
     else:
         expr = pl.len().dp.gaussian(0.0)
@@ -303,7 +305,7 @@ def test_wrong_mechanism():
     plan = seed(lf.collect_schema()).select(pl.len().dp.gaussian(0.0))
     with pytest.raises(dp.OpenDPException) as err:
         dp.m.make_private_lazyframe(
-            lf_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan, 0.0
+            lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan, 0.0
         )
     assert "expected Laplace distribution, found Gaussian" in (err.value.message or "")
 
@@ -467,7 +469,7 @@ def test_polars_collect_early():
         context.query().describe()
 
 
-def test_polars_threshold():
+def test_polars_threshold_epsilon():
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
 
@@ -541,6 +543,67 @@ def test_polars_threshold():
         .collect()
     )
 
+
+def test_polars_threshold_rho():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    lf = pl.LazyFrame(
+        {"A": [1] * 1000, "B": ["x"] * 500 + ["y"] * 500},
+        schema={"A": pl.Int32, "B": pl.String},
+    )
+
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(rho=0.5, delta=1e-7),
+        split_evenly_over=2
+    )
+
+    query = (
+        context.query()
+        .group_by("B")
+        .agg(pl.len().dp.noise())
+    )
+
+    actual = query.summarize()
+    expected = pl.DataFrame({
+        "column": ["len"],
+        "aggregate": ["Len"],
+        "distribution": ["Integer Gaussian"],
+        # rho = .5, split over two queries, so rho_0 = 0.25.
+        # gaussian formula is rho_0 = (d_in / scale)^2 / 2, now solve for scale:
+        # scale = 1 / sqrt(2 * rho_0) = sqrt(2) ~= 1.414
+        "scale": [1.4142135623730954],
+        # probability of a partition with a unique individual being present in outcome must be at most 1e-7
+        # since d_in = 1, only at most one partition may change
+        # (when d_in is greater, then must consider union bound over up to L0 partitions)
+        # 
+        # probability of returning an unstable partition 
+        # is the probability that noise added to the count in the unstable partition exceeds the threshold
+        # therefore we must limit probability of sampling noise values greater than t to at most delta
+        # 
+        # mass of discrete gaussian tail greater than t is bounded above by mass of continuous gaussian tail gte t
+        # mass of continuous gaussian tail gte t is:
+        # erfc(t / scale / sqrt(2)) / 2
+        # 
+        # if you let t = 7, then mass is 3.7e-7 (too heavy by a factor of ~3.7)
+        # if you let t = 8, then mass is 7.7e-9 (sufficiently unlikely enough)
+        # 
+        # noise added to a true count d_in of 1 results in a threshold of 9
+        "threshold": [9]
+    }, schema_overrides={"threshold": pl.UInt32})
+
+    # threshold should work out to 9
+    pl_testing.assert_frame_equal(actual, expected)
+
+    # check that query runs.
+    print('output should be two columns ("B" and "len") with two rows (1, ~500) each')
+    release = query.release().collect()
+    assert release.columns == ["B", "len"]
+    assert len(release) == 2
+
+
 @pytest.mark.skipif(
     os.getenv('FORCE_TEST_REPLACE_BINARY_PATH') != "1", 
     reason="setting OPENDP_POLARS_LIB_PATH interferes with the execution of other tests"
@@ -556,7 +619,7 @@ def test_replace_binary_path():
     m_expr = dp.m.make_private_expr(
         dp.expr_domain(example_lf()[0], grouping_columns=[]),
         dp.partition_distance(dp.symmetric_distance()),
-        dp.max_divergence(T=float),
+        dp.max_divergence(),
         expr,
     )
 
@@ -577,7 +640,6 @@ def test_pickle_bomb():
     from polars._utils.wrap import wrap_expr  # type: ignore[import-not-found]
     from opendp._lib import lib_path
     import io
-    import re
     import pickle
 
     # modified from https://intoli.com/blog/dangerous-pickles/
@@ -626,7 +688,7 @@ def test_pickle_bomb():
         dp.m.make_private_expr(
             dp.expr_domain(lf_domain, grouping_columns=[]),
             dp.partition_distance(dp.symmetric_distance()),
-            dp.max_divergence(T=float),
+            dp.max_divergence(),
             bomb_expr,
         )
 
@@ -634,7 +696,7 @@ def test_pickle_bomb():
         dp.m.make_private_lazyframe(
             lf_domain,
             dp.symmetric_distance(),
-            dp.max_divergence(T=float),
+            dp.max_divergence(),
             bomb_lf,
         )
 
@@ -693,3 +755,69 @@ def test_csv_bad_encoding_loading():
             schema={"name": pl.String},
         )
         pl_testing.assert_frame_equal(df, expected)
+
+
+def test_categorical_domain():
+    pl = pytest.importorskip("polars")
+
+    lf = pl.LazyFrame([pl.Series("A", ["Texas", "New York", None], dtype=pl.Categorical)])
+
+    # query should be rejected even when data is known to be non-null, 
+    # because Polars will still raise a warning if the fill value is not in the encoding
+    for element_domain in [
+        dp.option_domain(dp.categorical_domain()),
+        dp.categorical_domain(),
+    ]:
+        lf_domain = dp.lazyframe_domain([dp.series_domain("A", element_domain)])
+        assert str(lf_domain) == "FrameDomain(A: cat; margins=[])"
+        match_msg = re.escape("fill_null cannot be applied to categorical data")
+        with pytest.raises(dp.OpenDPException, match=match_msg):
+            dp.t.make_stable_lazyframe(
+                lf_domain, dp.symmetric_distance(),
+                lf.with_columns(pl.col("A").fill_null("A"))
+            )
+
+
+def test_categorical_context():
+    pl = pytest.importorskip("polars")
+
+    lf = pl.LazyFrame(
+        {"A": [1] * 1000, "B": ["x"] * 500 + ["y"] * 500},
+        schema_overrides={"A": pl.Int32, "B": pl.Categorical},
+    )
+
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+        margins={
+            ("B",): dp.polars.Margin(public_info="keys"),
+        },
+    )
+
+    # check that query runs.
+    print('output should be two columns ("B" and "len") with two rows (1, ~500)')
+    release = (
+        context.query()
+        .group_by("B")
+        .agg(pl.len().dp.noise())
+        .release()
+        .collect()
+    )
+    assert release.shape == (2, 2)
+
+
+def test_to_physical_unordered():
+    pl = pytest.importorskip("polars")
+    lf_domain = dp.lazyframe_domain([dp.series_domain("A", dp.categorical_domain())])
+    lf = pl.LazyFrame([pl.Series("A", ["Texas", "New York"], dtype=pl.Categorical)])
+
+    # check that row ordering is protected
+    with pytest.raises(dp.OpenDPException, match=re.escape("to_physical: to prevent")):
+        dp.t.make_stable_lazyframe(
+            lf_domain, dp.symmetric_distance(),
+            lf.with_columns(pl.col("A").to_physical())
+        )
+
+

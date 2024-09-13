@@ -8,12 +8,12 @@ use std::os::raw::c_char;
 use std::str::Utf8Error;
 
 use crate::domains::ffi::UserDomain;
-use crate::domains::{AtomDomain, BitVector, OptionDomain, VectorDomain};
+use crate::domains::{AtomDomain, BitVector, CategoricalDomain, OptionDomain, VectorDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
+use crate::measures::ffi::UserDivergence;
 use crate::measures::{
-    FixedSmoothedMaxDivergence, MaxDivergence, SMDCurve, SmoothedMaxDivergence,
-    ZeroConcentratedDivergence,
+    Approximate, MaxDivergence, PrivacyProfile, SmoothedMaxDivergence, ZeroConcentratedDivergence,
 };
 use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
@@ -346,6 +346,8 @@ lazy_static! {
             type_vec![UserDomain],
             type_vec![DataFrameDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>],
             type_vec![ExprDomain, LazyFrameDomain, SeriesDomain],
+            type_vec![CategoricalDomain],
+            type_vec![OptionDomain, <CategoricalDomain>],
 
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],
@@ -355,13 +357,12 @@ lazy_static! {
             type_vec![L2Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
 
             // measures
-            type_vec![MaxDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
-            type_vec![SmoothedMaxDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
-            type_vec![FixedSmoothedMaxDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
-            type_vec![ZeroConcentratedDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, UserDivergence],
+            type_vec![Approximate, <MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, UserDivergence>],
 
             // measure distances
-            type_vec![SMDCurve, <f32, f64>],
+            type_vec![PrivacyProfile],
+            vec![t!((PrivacyProfile, f64))]
         ].into_iter().flatten().collect();
         let descriptors: HashSet<_> = types.iter().map(|e| &e.descriptor).collect();
         assert_eq!(descriptors.len(), types.len(), "detected duplicate TYPES");

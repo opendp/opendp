@@ -26,7 +26,7 @@ from opendp.mod import (
     binary_search,
     binary_search_chain,
 )
-from opendp.domains import series_domain, lazyframe_domain, option_domain, atom_domain
+from opendp.domains import series_domain, lazyframe_domain, option_domain, atom_domain, categorical_domain
 from opendp.measurements import make_private_lazyframe
 
 
@@ -303,6 +303,9 @@ def _series_domain_from_field(field) -> Domain:
     """Builds the broadest possible SeriesDomain that matches a given field."""
     import polars as pl
     name, dtype = field
+    if dtype == pl.Categorical:
+        return series_domain(name, option_domain(categorical_domain()))
+
     T = {
         pl.UInt32: "u32",
         pl.UInt64: "u64",
@@ -535,7 +538,7 @@ try:
                 )
             
             # when the output measure is δ-approximate, then there are two free parameters to tune
-            if query._output_measure.type.origin == "FixedSmoothedMaxDivergence":  # type: ignore[union-attr]
+            if getattr(query._output_measure.type, "origin", None) == "Approximate":
 
                 # search for a scale parameter. Solve for epsilon first, 
                 # setting threshold to u32::MAX so as not to interfere with the search for a suitable scale parameter

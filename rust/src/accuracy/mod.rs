@@ -6,15 +6,20 @@ mod ffi;
 #[cfg(feature = "polars")]
 mod polars;
 
-use std::f64::consts::SQRT_2;
+mod tail_bounds;
+pub use tail_bounds::*;
 
 use num::{Float, One, Zero};
 use opendp_derive::bootstrap;
 use statrs::function::erf::erf_inv;
+use std::f64::consts::SQRT_2;
 
 use crate::error::Fallible;
-use crate::traits::{InfAdd, InfCast, InfDiv, InfExp};
+use crate::traits::InfCast;
 use std::fmt::Debug;
+
+#[cfg(all(test, feature = "untrusted"))]
+pub mod test;
 
 #[bootstrap(arguments(scale(c_type = "void *"), alpha(c_type = "void *")))]
 /// Convert a Laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
@@ -143,29 +148,6 @@ pub fn accuracy_to_discrete_laplacian_scale<T: Float + Zero + One + Debug>(
     }
 }
 
-/// Computes the probability of sampling a value greater than `t` from the discrete laplace distribution.
-///
-/// Arithmetic is controlled such that the resulting probability can only ever be slightly over-estimated due to numerical inaccuracy.
-///
-/// # Proof definition
-/// Returns `Ok(out)`, where `out` does not underestimate $\Pr[X > t]$
-/// for $X \sim \mathcal{L}_\mathbb{Z}(0, scale)$, assuming $t > 0$,
-/// or `Err(e)` if any numerical computation overflows.
-///
-/// $\mathcal{L}_\mathbb{Z}(0, scale)$ is distributed as follows:
-/// ```math
-/// \forall x \in \mathbb{Z}, \quad  
-/// P[X = x] = \frac{e^{-1/scale} - 1}{e^{-1/scale} + 1} e^{-|x|/scale}, \quad
-/// \text{where } X \sim \mathcal{L}_\mathbb{Z}(0, scale)
-/// ```
-pub fn integrate_discrete_laplacian_tail(scale: f64, t: u32) -> Fallible<f64> {
-    let t = f64::neg_inf_cast(t)?;
-    let numer = t.neg_inf_div(&-scale)?.inf_exp()?;
-    let denom = scale.recip().neg_inf_exp()?.neg_inf_add(&1.)?;
-
-    numer.inf_div(&denom)
-}
-
 #[bootstrap(arguments(scale(c_type = "void *"), alpha(c_type = "void *")))]
 /// Convert a gaussian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
 ///
@@ -208,12 +190,12 @@ where
     let scale = f64::inf_cast(scale)?;
     let alpha = f64::inf_cast(alpha)?;
 
-    let mut total = (1. - alpha) * dg_normalization_term(scale);
+    let mut total = (1. - alpha) * tail_bounds::dg_normalization_term(scale);
     let mut i = 0;
     total -= dg_pdf(i, scale);
     while total > 0. {
         i += 1;
-        let dens = 2. * dg_pdf(i, scale);
+        let dens = 2. * tail_bounds::dg_pdf(i, scale);
         if dens.is_zero() {
             return fallible!(FailedFunction, "could not determine accuracy");
         }
@@ -292,23 +274,3 @@ where
         }
     }
 }
-
-fn dg_pdf(x: i32, scale: f64) -> f64 {
-    (-(x as f64 / scale).powi(2) / 2.).exp()
-}
-
-fn dg_normalization_term(scale: f64) -> f64 {
-    let mut i = 0;
-    let mut total = dg_pdf(i, scale);
-    loop {
-        i += 1;
-        let density_i = 2. * dg_pdf(i, scale);
-        if density_i.is_zero() {
-            return total;
-        }
-        total += density_i;
-    }
-}
-
-#[cfg(all(test, feature = "untrusted"))]
-pub mod test;
