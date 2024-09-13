@@ -562,9 +562,11 @@ output <- {call}"#
 // generate call to ".Deprecated()" if needed
 fn generate_deprecated(func: &Function) -> String {
     if let Some(deprecation) = &func.deprecation {
-        format!(".Deprecated(msg = \"{}\")\n", deprecation.note.replace("\"", "\\\""))
-    }
-    else {
+        format!(
+            ".Deprecated(msg = \"{}\")\n",
+            deprecation.note.replace("\"", "\\\"")
+        )
+    } else {
         String::default()
     }
 }
