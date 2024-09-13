@@ -54,30 +54,43 @@ class DPExpr(object):
         * - Method
           - Operators
           - Use for
+          - Usage
         * - `alias <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.alias.html>`_
           -
           - Renaming the expression
+          - 
+            >>> import polars as pl
+            >>> print(pl.col('numbers').dp.noise().alias('noisy'))
+            col("numbers")...alias("noisy")
+
         * - `eq, ne, lt, le, gt, ge <https://docs.pola.rs/api/python/stable/reference/expressions/operators.html#comparison>`_
           - ``==`` ``!=`` ``<`` ``<=`` ``>`` ``>=``
           - Comparison
+          -
         * - `and, or, xor <https://docs.pola.rs/api/python/stable/reference/expressions/operators.html#conjunction>`_
           - ``&`` ``|`` ``^``
           - Bit-wise operators
+          -
         * - `is_null, is_not_null, is_finite, is_not_finite, is_nan, is_not_nan, not <https://docs.pola.rs/api/python/stable/reference/expressions/boolean.html>`_
           -
-          - Boolean information    
+          - Boolean information  
+          -  
         * - `clip <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.clip.html>`_
           -
           - Set values outside boundaries to the boundary value
+          -
         * - `fill_null <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.fill_null.html>`_, `fill_nan <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.fill_nan.html>`_
           -
           - Fill missing values
+          -
         * - `len <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.len.html>`_
           -
           - Return the number of rows
+          -
         * - `lit <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.lit.html>`_
           -
           - Return an expression representing a literal value 
+          -
     '''
     def __init__(self, expr):
         """Apply a differentially private plugin to a Polars expression."""
