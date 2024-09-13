@@ -31,24 +31,7 @@ To ensure the correctness of the output, we require the following preconditions:
 \end{itemize}
 
 \subsection*{Pseudocode}
-\begin{lstlisting}[language=Python, escapechar=|] 
-def make_is_equal(
-    input_domain: VectorDomain[AtomDomain[TIA]], 
-    input_metric: M, 
-    value: TIA
-): |\label{line:def}|
-    output_row_domain = atom_domain(T=bool)
-
-    def is_equal(arg: TA) -> TA: |\label{line:function}|
-        return value == arg
-
-    return make_row_by_row( |\label{line:row-by-row}|
-        input_domain, 
-        input_metric, 
-        output_row_domain, 
-        is_equal
-    )
-\end{lstlisting}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_is_equal.py}
 
 \subsubsection*{Postconditions}
 \validTransformation{\texttt{(input\_domain, input\_metric, value)}}{\texttt{make\_is\_equal}}

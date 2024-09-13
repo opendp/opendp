@@ -26,15 +26,7 @@ This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsec
 
 
 \subsection*{Pseudocode}        
-\begin{lstlisting}[language=Python, escapechar=|]
-def sample_bernoulli_exp1(x) -> bool:
-    k = 1
-    while True:
-        if bool.sample_bernoulli(x / k, false): |\label{line:B_i}|
-            k += 1
-        else: 
-            return is_odd(k) |\label{line:K}|
-\end{lstlisting}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_bernoulli_exp1.py}
 
 \subsection*{Postcondition}
 \label{postcondition}

@@ -10,7 +10,7 @@ use crate::{
     },
     measurements::{make_report_noisy_max_gumbel, Optimize},
     metrics::LInfDistance,
-    traits::{samplers::CastInternalRational, CheckNull, DistanceConstant, Number},
+    traits::{CastInternalRational, CheckNull, DistanceConstant, Number},
 };
 
 #[no_mangle]

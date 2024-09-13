@@ -21,15 +21,7 @@ This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsec
 $\texttt{x} \in \mathbb{Q} \land \texttt{x} > 0$
 
 \subsection*{Pseudocode}        
-\begin{lstlisting}[language=Python, escapechar=|]
-def sample_geometric_exp_slow(x) -> int:
-    k = 0
-    while True:
-        if sample_bernoulli_exp(x): |\label{line:B}|
-            k += 1
-        else:
-            return k
-\end{lstlisting}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_geometric_exp_slow.py}
 
 \subsection*{Postcondition}\label{postcondition}
 For any setting of the input parameter \texttt{x} such that the given preconditions hold, \\

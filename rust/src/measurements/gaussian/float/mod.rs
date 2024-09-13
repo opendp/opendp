@@ -5,8 +5,8 @@ use crate::{
     measurements::get_discretization_consts,
     metrics::{AbsoluteDistance, L2Distance},
     traits::{
-        samplers::{sample_discrete_gaussian_Z2k, CastInternalRational},
-        ExactIntCast, Float, FloatBits, InfCast,
+        samplers::sample_discrete_gaussian_Z2k, CastInternalRational, ExactIntCast, Float,
+        FloatBits, InfCast,
     },
 };
 

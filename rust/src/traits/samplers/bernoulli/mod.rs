@@ -1,15 +1,16 @@
-use dashu::{
-    integer::{Sign, UBig},
-    rational::RBig,
-};
+use dashu::{integer::Sign, rational::RBig};
 use num::{One, Zero};
+use opendp_derive::proven;
 
 use crate::{
     error::Fallible,
     traits::{ExactIntCast, Float, InfDiv},
 };
 
-use super::{fill_bytes, sample_geometric_buffer, SampleUniformIntBelow};
+use super::{fill_bytes, sample_geometric_buffer, sample_uniform_ubig_below};
+
+#[cfg(test)]
+mod test;
 
 /// Sample from `Bernoulli(p=0.5)`.
 ///
@@ -22,6 +23,7 @@ pub fn sample_standard_bernoulli() -> Fallible<bool> {
     Ok(buffer[0] & 1 == 1)
 }
 
+#[proven]
 /// Sample a single bit with arbitrary probability of success.
 ///
 /// Uses only an unbiased source of coin flips.
@@ -46,7 +48,7 @@ pub fn sample_standard_bernoulli() -> Fallible<bool> {
 /// # Proof Definition
 /// For any setting of the input parameters,
 /// where `prob` is within $[0, 1]$,
-/// returns `Err(e)` if there is a lack of system entropy or `constant_time` is not supported,
+/// returns `Err(e)` if there is a lack of system entropy,
 /// or `Ok(out)` where `out` is `true` with probability `prob`, otherwise `false`.
 ///
 /// If `constant_time` is set, the implementation's runtime is constant.
@@ -125,7 +127,31 @@ where
     })
 }
 
-pub fn sample_bernoulli_rational(prob: RBig, trials: Option<usize>) -> Fallible<bool> {
+#[proven]
+/// Sample a single bit with arbitrary probability of success.
+///
+/// # Arguments
+/// * `prob`- The desired probability of success (bit = 1).
+///
+/// # Return
+/// A true boolean with probability "prob".
+///
+/// # Examples
+///
+/// ```
+/// // returns a true with Pr(bit = 1) = 0.7
+/// use dashu::rbig;
+/// use opendp::traits::samplers::sample_bernoulli_rational;
+/// let n = sample_bernoulli_rational(rbig!(7 / 10));
+/// # n.unwrap();
+/// ```
+///
+/// # Proof Definition
+/// For any setting of the input parameters,
+/// where `prob` is within $[0, 1]$,
+/// returns `Err(e)` if there is a lack of system entropy,
+/// or `Ok(out)` where `out` is `true` with probability `prob`, otherwise `false`.
+pub fn sample_bernoulli_rational(prob: RBig) -> Fallible<bool> {
     let (numer, denom) = prob.into_parts();
     let (Sign::Positive, numer) = numer.into_parts() else {
         return fallible!(FailedFunction, "numerator must not be negative");
@@ -133,8 +159,5 @@ pub fn sample_bernoulli_rational(prob: RBig, trials: Option<usize>) -> Fallible<
     if numer > denom {
         return fallible!(FailedFunction, "prob must not be greater than one");
     }
-    UBig::sample_uniform_int_below(denom, trials).map(|s| numer > s)
+    sample_uniform_ubig_below(denom).map(|s| numer > s)
 }
-
-#[cfg(test)]
-mod test;

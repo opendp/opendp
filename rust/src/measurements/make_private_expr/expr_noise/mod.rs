@@ -5,9 +5,9 @@ use crate::metrics::{L1Distance, L2Distance, PartitionDistance};
 use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
 use crate::traits::samplers::{
     sample_discrete_gaussian, sample_discrete_gaussian_Z2k, sample_discrete_laplace,
-    sample_discrete_laplace_Z2k, CastInternalRational,
+    sample_discrete_laplace_Z2k,
 };
-use crate::traits::{ExactIntCast, Float, FloatBits, InfCast, InfMul};
+use crate::traits::{CastInternalRational, ExactIntCast, Float, FloatBits, InfCast, InfMul};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
 use crate::{
