@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::combinators::SequentialCompositionMeasure;
+use crate::combinators::CompositionMeasure;
 use crate::core::{Metric, MetricSpace};
 use crate::domains::{DslPlanDomain, LazyFrameDomain};
 use crate::{
@@ -15,7 +15,7 @@ use super::PrivateDslPlan;
 #[cfg(test)]
 mod test;
 
-pub fn match_postprocess<MI: 'static + Metric, MO: 'static + SequentialCompositionMeasure>(
+pub fn match_postprocess<MI: 'static + Metric, MO: 'static + CompositionMeasure>(
     input_domain: DslPlanDomain,
     input_metric: MI,
     output_measure: MO,

@@ -1,4 +1,5 @@
 use crate::{
+    combinators::Sequentiality,
     error::Fallible,
     ffi::any::{AnyMeasure, AnyObject, Downcast},
     measures::{
@@ -6,24 +7,25 @@ use crate::{
     },
 };
 
-use super::SequentialCompositionMeasure;
+use super::{Adaptivity, CompositionMeasure};
 
-impl SequentialCompositionMeasure for AnyMeasure {
-    fn concurrent(&self) -> Fallible<bool> {
-        fn monomorphize<M: 'static + SequentialCompositionMeasure>(
+impl CompositionMeasure for AnyMeasure {
+    fn theorem(&self, adaptivity: Adaptivity) -> Fallible<Sequentiality> {
+        fn monomorphize<M: 'static + CompositionMeasure>(
             self_: &AnyMeasure,
-        ) -> Fallible<bool>
+            adaptivity: Adaptivity,
+        ) -> Fallible<Sequentiality>
         where
             M::Distance: Clone,
         {
-            self_.downcast_ref::<M>()?.concurrent()
+            self_.downcast_ref::<M>()?.theorem(adaptivity)
         }
         dispatch!(monomorphize, [
-            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])
-        ], (self))
+            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
+        ], (self, adaptivity))
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        fn monomorphize<M: 'static + SequentialCompositionMeasure>(
+        fn monomorphize<M: 'static + CompositionMeasure>(
             self_: &AnyMeasure,
             d_i: Vec<AnyObject>,
         ) -> Fallible<AnyObject>
@@ -45,9 +47,9 @@ impl SequentialCompositionMeasure for AnyMeasure {
     }
 }
 
-impl<Q: 'static> SequentialCompositionMeasure for TypedMeasure<Q> {
-    fn concurrent(&self) -> Fallible<bool> {
-        self.measure.concurrent()
+impl<Q: 'static> CompositionMeasure for TypedMeasure<Q> {
+    fn theorem(&self, adaptivity: Adaptivity) -> Fallible<Sequentiality> {
+        self.measure.theorem(adaptivity)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         self.measure
