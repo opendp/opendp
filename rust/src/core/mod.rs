@@ -115,7 +115,7 @@ impl<TI: 'static, TO: 'static> Function<TI, TO> {
 pub trait Metric: Clone + PartialEq + Debug + Send + Sync {
     /// # Proof Definition
     /// `Self::Distance` is a type that represents distances in terms of a metric `Self`.
-    type Distance;
+    type Distance: Clone;
 }
 
 /// A representation of the distance between two distributions.
@@ -450,6 +450,7 @@ pub struct Odometer<DI: Domain, MI: Metric, MO: Measure, Q, A> {
     pub input_metric: MI,
     pub output_measure: MO,
     pub function: Function<DI::Carrier, OdometerQueryable<Q, A, MO::Distance>>,
+    pub d_in: MI::Distance,
 }
 
 impl<DI: Domain, MI: Metric, MO: Measure, Q, A> Clone for Odometer<DI, MI, MO, Q, A> {
@@ -459,6 +460,7 @@ impl<DI: Domain, MI: Metric, MO: Measure, Q, A> Clone for Odometer<DI, MI, MO, Q
             function: self.function.clone(),
             input_metric: self.input_metric.clone(),
             output_measure: self.output_measure.clone(),
+            d_in: self.d_in.clone(),
         }
     }
 }
@@ -472,6 +474,7 @@ where
         input_metric: MI,
         output_measure: MO,
         function: Function<DI::Carrier, OdometerQueryable<Q, A, MO::Distance>>,
+        d_in: MI::Distance,
     ) -> Fallible<Self> {
         (input_domain.clone(), input_metric.clone()).check_space()?;
         Ok(Self {
@@ -479,6 +482,7 @@ where
             input_metric,
             output_measure,
             function,
+            d_in,
         })
     }
 }
