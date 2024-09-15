@@ -115,7 +115,7 @@ impl<TI: 'static, TO: 'static> Function<TI, TO> {
 pub trait Metric: Clone + PartialEq + Debug + Send + Sync {
     /// # Proof Definition
     /// `Self::Distance` is a type that represents distances in terms of a metric `Self`.
-    type Distance;
+    type Distance: Clone;
 }
 
 /// A representation of the distance between two distributions.

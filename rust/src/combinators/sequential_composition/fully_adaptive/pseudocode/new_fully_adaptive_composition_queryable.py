@@ -83,6 +83,18 @@ def new_fully_adaptive_composition_queryable(
                     # otherwise, return Ok to approve the change
                     return Answer.internal(())
                 
+                # handler to see privacy usage after running a query.
+                # Someone is passing in an OdometerQuery internally,
+                # so return the potential privacy loss of this odometer after running this query
+                if isinstance(query, OdometerQuery): # `\label{pending-loss-handler}`
+                    match query:
+                        case OdometerQuery.Invoke(meas):
+                            pending_d_mids = [*d_mids, meas.map(d_in)] # `\label{pending-d-mid}`
+                            pending_d_out = output_measure.compose(pending_d_mids)
+                            return Answer.internal(PendingLoss.New(pending_d_out))
+                        
+                        case OdometerQuery.PrivacyLoss():
+                            return Answer.internal(PendingLoss.Same()) # `\label{pending-same}`
 
                 raise ValueError("query not recognized")
 

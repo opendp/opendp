@@ -237,7 +237,7 @@ impl<M: 'static + Metric> OuterMetric for L0InfDistance<M> {
     }
 }
 
-impl<const P: usize, Q: 'static> OuterMetric for LpDistance<P, Q> {
+impl<const P: usize, Q: 'static + Clone> OuterMetric for LpDistance<P, Q> {
     type InnerMetric = AbsoluteDistance<Q>;
 
     fn inner_metric(&self) -> Self::InnerMetric {
@@ -321,7 +321,7 @@ impl<Q: ProductOrd> MetricSpace for (ExprDomain, LInfDistance<Q>) {
     }
 }
 
-impl<Q: ProductOrd> MetricSpace for (ExprDomain, L0InfDistance<LInfDistance<Q>>) {
+impl<Q: Clone + ProductOrd> MetricSpace for (ExprDomain, L0InfDistance<LInfDistance<Q>>) {
     fn check_space(&self) -> Fallible<()> {
         let (expr_domain, L0InfDistance(inner_metric)) = self;
         (expr_domain.clone(), inner_metric.clone()).check_space()

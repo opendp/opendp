@@ -237,5 +237,15 @@
     and $\texttt{queryable.eval(privacy\_loss)} = \dout$, 
     then $\texttt{View}(\mathcal{A} \leftrightarrow \texttt{queryable}_x), \texttt{View}(\mathcal{A} \leftrightarrow \texttt{queryable}_{x'})$ are $\dout$-close under \texttt{output\_measure},
     where $\texttt{queryable}_x$ denotes all messages received by $\mathcal{A}$ under $x$.
+
+    \item \textup{(Pending Privacy Guarantee).}
+    For every pair of members $x$ and $x'$ in \texttt{input\_domain}, 
+    every adversary $\mathcal{A}$, every \rustdoc{core/enum}{OdometerQuery} $q$, and for every pair $(\din, \dout)$, 
+    where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_measure}, 
+    if $x$ and $x'$ are \din-close under \texttt{input\_metric}, $\texttt{queryable.eval\_internal}(q)$ does not return an error, 
+    and $\texttt{queryable.eval\_internal}(q) = \dout$, 
+    then the privacy loss remains the same if $\dout = \texttt{PendingLoss.Same}$,
+    otherwise $\texttt{View}(\mathcal{A} \leftrightarrow \texttt{queryable}'_x), \texttt{View}(\mathcal{A} \leftrightarrow \texttt{queryable}'_{x'})$ are $\dout$-close under \texttt{output\_measure},
+    where $\texttt{queryable}'_x$ denotes all messages received by $\mathcal{A}$ under $x$, as well as $\texttt{queryable.eval}(q)$.
   \end{enumerate}
 }

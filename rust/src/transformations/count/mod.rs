@@ -254,13 +254,13 @@ pub trait CountByMetric: Metric {
     fn stability_map(d_in: u32) -> Fallible<Self::Distance>;
 }
 
-impl<Q: InfCast<u32>> CountByMetric for L1Distance<Q> {
+impl<Q: InfCast<u32> + Clone> CountByMetric for L1Distance<Q> {
     fn stability_map(d_in: u32) -> Fallible<Self::Distance> {
         Q::inf_cast(d_in)
     }
 }
 
-impl<Q: InfCast<u32>> CountByMetric for L01InfDistance<AbsoluteDistance<Q>> {
+impl<Q: InfCast<u32> + Clone> CountByMetric for L01InfDistance<AbsoluteDistance<Q>> {
     fn stability_map(d_in: u32) -> Fallible<Self::Distance> {
         Ok((d_in, Q::inf_cast(d_in)?, Q::inf_cast(d_in)?))
     }

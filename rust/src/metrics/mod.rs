@@ -344,7 +344,7 @@ impl<const P: usize, Q> Debug for LpDistance<P, Q> {
         write!(f, "L{}Distance({})", P, type_name!(Q))
     }
 }
-impl<const P: usize, Q> Metric for LpDistance<P, Q> {
+impl<const P: usize, Q: Clone> Metric for LpDistance<P, Q> {
     type Distance = Q;
 }
 
@@ -373,7 +373,7 @@ where
     }
 }
 
-impl<K: CheckAtom, V: CheckAtom, const P: usize, Q> MetricSpace
+impl<K: CheckAtom, V: CheckAtom, const P: usize, Q: Clone> MetricSpace
     for (
         MapDomain<AtomDomain<K>, AtomDomain<V>>,
         L0PInfDistance<P, AbsoluteDistance<Q>>,
@@ -440,7 +440,7 @@ impl<Q> Debug for AbsoluteDistance<Q> {
         write!(f, "AbsoluteDistance({})", type_name!(Q))
     }
 }
-impl<Q> Metric for AbsoluteDistance<Q> {
+impl<Q: Clone> Metric for AbsoluteDistance<Q> {
     type Distance = Q;
 }
 impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
@@ -662,7 +662,7 @@ impl<Q> Debug for LInfDistance<Q> {
     }
 }
 
-impl<Q> Metric for LInfDistance<Q> {
+impl<Q: Clone> Metric for LInfDistance<Q> {
     type Distance = Q;
 }
 
