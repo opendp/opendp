@@ -181,7 +181,6 @@ pub mod combinators;
 pub mod core;
 pub mod data;
 pub mod domains;
-#[cfg(feature = "contrib")]
 pub mod interactive;
 #[cfg(feature = "ffi")]
 pub mod internal;

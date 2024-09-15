@@ -199,3 +199,49 @@
       If both raise an error, then they both raise the same error.
   \end{enumerate}
 }
+
+\newcommand{\validOdometer}[2]{%
+  For every setting of the input parameters #1 to #2 such that the given preconditions
+  hold, #2 raises an exception (at compile time or run time) or returns a valid odometer. 
+  A valid odometer has the following properties:
+  \begin{enumerate}
+      \item \textup{(Data-independent exceptions).}
+      For every pair of elements $x, x'$ in \texttt{input\_domain},
+      $\function(x)$ and $\function(x')$ either both raise an exception, 
+      or neither raise an exception. 
+
+      \item \textup{(Wrapping guarantee).}
+      Interactive measurement queryables spawned while evaluating external queries 
+      are wrapped by the wrapper function accompanying the external query.
+
+      \item \textup{(Valid odometer queryable).}
+      For every element $x$ in \texttt{input\_domain},
+      where $\function(x)$ does not raise an exception,
+      $\function(x)$ returns a valid odometer queryable.
+  \end{enumerate}
+}
+
+\newcommand{\validOdometerQueryable}[2]{%
+  For every setting of the input parameters #1 to #2 such that the given preconditions
+  hold, #2 raises an exception (at compile time or run time) or returns a valid odometer queryable. 
+  A valid odometer queryable is an \rustdoc{core/type}{OdometerQueryable} with the following properties:
+  \begin{enumerate}
+      \item \textup{(Data-independent exceptions).}
+      For every pair of elements $x, x'$ in \texttt{input\_domain},
+      $\texttt{invoke}(x)$ and $\texttt{invoke}(x')$ either both raise an exception, 
+      or neither raise an exception. 
+
+      \item \textup{(Wrapping guarantee).}
+      Interactive measurement queryables spawned while evaluating external queries 
+      are wrapped by the wrapper function accompanying the external query.
+
+      \item \textup{(Privacy Guarantee).}
+      For every pair of elements $x, x'$ in \texttt{input\_domain}, every interactive algorithm \mathcal{A}, and for every pair $(\din, \dout)$,
+      where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_measure},
+      if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{privacy\_loss}(\din)$ does not raise an exception,
+      and $\texttt{privacy\_loss}(\din) \leq \dout$,
+      then $\texttt{View}(\mathcal{A} \leftrightarrow \function(x)), \texttt{View}(\mathcal{A} \leftrightarrow \function(x'))$ 
+      are $\dout$-close under \texttt{output\_measure}.
+  \end{enumerate}
+  \end{theorem}
+}

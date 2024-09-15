@@ -25,9 +25,11 @@ mod ffi;
 #[cfg(feature = "ffi")]
 pub use ffi::*;
 
+use std::any::Any;
 use std::sync::Arc;
 
 use crate::error::*;
+use crate::interactive::Queryable;
 use crate::traits::{DistanceConstant, InfCast, InfMul, ProductOrd};
 use num::Zero;
 use std::fmt::{Debug, Display};
@@ -438,6 +440,97 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Debug for Transformation<DI
             .field("output_domain", &self.output_domain)
             .field("output_metric", &self.output_metric)
             .finish()
+    }
+}
+
+/// A privacy odometer that can track privacy loss over multiple queries.
+#[readonly::make]
+pub struct Odometer<DI: Domain, MI: Metric, MO: Measure, Q, A> {
+    pub input_domain: DI,
+    pub input_metric: MI,
+    pub function: Function<DI::Carrier, OdometerQueryable<Q, A, MO::Distance>>,
+    pub output_measure: MO,
+}
+
+impl<DI: Domain, MI: Metric, MO: Measure, Q, A> Clone for Odometer<DI, MI, MO, Q, A> {
+    fn clone(&self) -> Self {
+        Self {
+            input_domain: self.input_domain.clone(),
+            function: self.function.clone(),
+            input_metric: self.input_metric.clone(),
+            output_measure: self.output_measure.clone(),
+        }
+    }
+}
+
+impl<DI: Domain, Q, A, MI: Metric, MO: Measure> Odometer<DI, MI, MO, Q, A>
+where
+    (DI, MI): MetricSpace,
+{
+    pub fn new(
+        input_domain: DI,
+        function: Function<DI::Carrier, OdometerQueryable<Q, A, MO::Distance>>,
+        input_metric: MI,
+        output_measure: MO,
+    ) -> Fallible<Self> {
+        (input_domain.clone(), input_metric.clone()).check_space()?;
+        Ok(Self {
+            input_domain,
+            function,
+            input_metric,
+            output_measure,
+        })
+    }
+}
+
+impl<DI: Domain, MI: Metric, MO: Measure, Q, A> Odometer<DI, MI, MO, Q, A> {
+    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<OdometerQueryable<Q, A, MO::Distance>> {
+        self.function.eval(arg)
+    }
+}
+
+pub type OdometerQueryable<Q, A, AB> = Queryable<OdometerQuery<Q>, OdometerAnswer<A, AB>>;
+
+pub enum OdometerQuery<Q> {
+    Invoke(Q),
+    PrivacyLoss,
+}
+
+pub enum OdometerAnswer<A, AB> {
+    Invoke(A),
+    PrivacyLoss(AB),
+}
+
+// convenience methods for invoking or mapping distances over the odometer queryable
+impl<Q, A, AB> OdometerQueryable<Q, A, AB> {
+    pub fn invoke(&mut self, query: Q) -> Fallible<A> {
+        if let OdometerAnswer::Invoke(answer) = self.eval(&OdometerQuery::Invoke(query))? {
+            Ok(answer)
+        } else {
+            fallible!(FailedCast, "return type is not an answer")
+        }
+    }
+    pub fn privacy_loss(&mut self) -> Fallible<AB> {
+        if let OdometerAnswer::PrivacyLoss(map) = self.eval(&OdometerQuery::PrivacyLoss)? {
+            Ok(map)
+        } else {
+            fallible!(FailedCast, "return type is not a privacy map")
+        }
+    }
+}
+
+impl<Q, AB: 'static> OdometerQueryable<Q, Box<dyn Any>, AB> {
+    pub fn invoke_poly<A: 'static>(&mut self, query: Q) -> Fallible<A> {
+        self.invoke(query)?
+            .downcast()
+            .map_err(|_| {
+                err!(
+                    FailedCast,
+                    "eval_invoke_poly failed to downcast to {}",
+                    std::any::type_name::<A>()
+                )
+            })
+            .map(|b| *b)
     }
 }
 
