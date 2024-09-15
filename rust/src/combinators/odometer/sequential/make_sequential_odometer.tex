@@ -1,0 +1,66 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn make\_sequential\_odometer}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \texttt{fn make\_sequential\_odometer}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{input\_domain} of type \texttt{DI}.
+    \item Argument \texttt{input\_metric} of type \texttt{MI}.
+    \item Argument \texttt{output\_measure} of type \texttt{MO}.
+    \item Generic \texttt{DI} implements \rustdoc{core/trait}{Domain}.
+    \item Generic \texttt{MI} implements \rustdoc{core/trait}{Metric}.
+    \item Generic \texttt{MO} implements \rustdoc{core/trait}{Measure}.
+    \item \texttt{(DI, MI)} implements \rustdoc{core/trait}{MetricSpace}.
+\end{itemize}
+\subsubsection*{User-verified}
+
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/make_sequential_odometer.py}
+
+\subsubsection*{Postconditions}
+\validOdometer{\texttt{(input\_domain, input\_metric, output\_measure, DI, TO, MI, MO)}}{\texttt{make\_sequential\_odometer}}
+
+\section{Proof}
+
+\begin{lemma}
+    The invocation of \rustdoc{transformations/manipulation/fn}{make\_row\_by\_row\_fallible} (line \ref{line:row-by-row}) satisfies its preconditions.
+\end{lemma}
+
+\begin{proof}
+    \label{lemma:row-by-row-precondition}
+    The preconditions of \texttt{make\_clamp} and pseudocode definition (line \ref{line:def}) ensure that the type preconditions of \texttt{make\_row\_by\_row\_fallible} are satisfied. 
+    The remaining preconditions of \texttt{make\_row\_by\_row\_fallible} are:
+    \begin{itemize}
+        \item \texttt{row\_function} has no side-effects.
+        \item If the input to \texttt{row\_function} is a member of \texttt{input\_domain}'s row domain, then the output is a member of \texttt{output\_row\_domain}.
+    \end{itemize}
+
+    The first precondition is satisfied by the definition of \texttt{clamper} (line \ref{line:clamper}) in the pseudocode.
+
+    For the second precondition, assume the input is a member of \texttt{input\_domain}'s row domain. 
+    Therefore, by \ref{line:assert-non-null}, the input is non-null.
+    In addition, since \texttt{Bounds.new\_closed} did not raise an exception, then by the definition of \texttt{Bounds.new\_closed}, the bounds are non-null.
+    Thus, by the definition of \rustdoc{traits/trait}{ProductOrd}, the preconditions of \texttt{total\_clamp} are satisfied, so the output is within the bounds.
+    Therefore, the output is a member of \texttt{output\_row\_domain}.
+\end{proof}
+
+We now prove the postcondition of \texttt{make\_clamp}.
+\begin{proof}
+By \ref{lemma:row-by-row-precondition}, the preconditions of \rustdoc{transformations/manipulation/fn}{make\_row\_by\_row\_fallible} are satisfied.
+Thus, by the definition of \\\texttt{make\_row\_by\_row\_fallible}, the output is a valid transformation.
+\end{proof}
+
+\end{document}

@@ -27,6 +27,7 @@ pub use ffi::*;
 
 use std::sync::Arc;
 
+use crate::combinators::OdometerQueryable;
 use crate::error::*;
 use crate::interactive::Wrapper;
 use crate::traits::{DistanceConstant, InfCast, InfMul, ProductOrd};
@@ -453,6 +454,52 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Debug for Transformation<DI
             .field("output_domain", &self.output_domain)
             .field("output_metric", &self.output_metric)
             .finish()
+    }
+}
+
+/// A privacy odometer that can track privacy loss over multiple queries.
+#[readonly::make]
+pub struct Odometer<DI: Domain, MI: Metric, MO: Measure, Q, A> {
+    pub input_domain: DI,
+    pub input_metric: MI,
+    pub function: Function<DI::Carrier, OdometerQueryable<MI, MO, Q, A>>,
+    pub output_measure: MO,
+}
+
+impl<DI: Domain, MI: Metric, MO: Measure, Q, A> Clone for Odometer<DI, MI, MO, Q, A> {
+    fn clone(&self) -> Self {
+        Self {
+            input_domain: self.input_domain.clone(),
+            function: self.function.clone(),
+            input_metric: self.input_metric.clone(),
+            output_measure: self.output_measure.clone(),
+        }
+    }
+}
+
+impl<DI: Domain, Q, A, MI: Metric, MO: Measure> Odometer<DI, MI, MO, Q, A>
+where
+    (DI, MI): MetricSpace,
+{
+    pub fn new(
+        input_domain: DI,
+        function: Function<DI::Carrier, OdometerQueryable<MI, MO, Q, A>>,
+        input_metric: MI,
+        output_measure: MO,
+    ) -> Fallible<Self> {
+        (input_domain.clone(), input_metric.clone()).check_space()?;
+        Ok(Self {
+            input_domain,
+            function,
+            input_metric,
+            output_measure,
+        })
+    }
+}
+
+impl<DI: Domain, MI: Metric, MO: Measure, Q, A> Odometer<DI, MI, MO, Q, A> {
+    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<OdometerQueryable<MI, MO, Q, A>> {
+        self.function.eval(arg)
     }
 }
 
