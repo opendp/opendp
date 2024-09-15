@@ -8,6 +8,11 @@ mod adaptive;
 #[cfg(feature = "contrib")]
 pub use adaptive::*;
 
+#[cfg(feature = "contrib")]
+mod fully_adaptive;
+#[cfg(feature = "contrib")]
+pub use fully_adaptive::*;
+
 #[cfg(feature = "ffi")]
 mod ffi;
 
