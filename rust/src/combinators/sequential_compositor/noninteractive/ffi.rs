@@ -7,7 +7,9 @@ use crate::{
         any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
         util::AnyMeasurementPtr,
     },
-    measures::{ffi::TypedMeasure, Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{
+        ffi::TypedMeasure, Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence,
+    },
 };
 
 use super::BasicCompositionMeasure;
@@ -78,7 +80,7 @@ impl BasicCompositionMeasure for AnyMeasure {
                 .map(AnyObject::new)
         }
         dispatch!(monomorphize, [
-            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])
+            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
         ], (self, d_i))
     }
 }

@@ -230,6 +230,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
             return _slice_to_vector(raw, type_name)
+        
+        if type_name.origin == "Function":
+            return _slice_to_function(raw)
 
         if type_name.origin == "HashMap":
             return _slice_to_hashmap(raw)
@@ -514,6 +517,11 @@ def _hashmap_to_slice(val: dict[Any, Any], type_name: RuntimeType) -> FfiSlicePt
     ffislice.depends_on(keys, vals)
     return ffislice
 
+def _slice_to_function(raw: FfiSlicePtr) -> dict[Any, Any]:
+    from opendp.mod import Function
+    function = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyFunction)).contents
+    # put the contents behind a new, python pointer
+    return ctypes.cast(ctypes.pointer(function), Function)
 
 def _slice_to_hashmap(raw: FfiSlicePtr) -> dict[Any, Any]:
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))

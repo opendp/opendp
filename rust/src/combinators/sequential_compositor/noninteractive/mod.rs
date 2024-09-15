@@ -5,7 +5,7 @@ use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     interactive::wrap,
-    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
     traits::InfAdd,
 };
 
@@ -147,6 +147,19 @@ impl BasicCompositionMeasure for Approximate<ZeroConcentratedDivergence> {
             .try_fold(0.0, |sum, delta| sum.inf_add(delta))?;
 
         Ok((self.0.compose(d_i0)?, delta))
+    }
+}
+
+impl BasicCompositionMeasure for RenyiDivergence {
+    fn concurrent(&self) -> Fallible<bool> {
+        Ok(true)
+    }
+    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        Ok(Function::new_fallible(move |alpha| {
+            d_i.iter()
+                .map(|f| f.eval(alpha))
+                .try_fold(0.0, |sum, e2| sum.inf_add(&e2?))
+        }))
     }
 }
 

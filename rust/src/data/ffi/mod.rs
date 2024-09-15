@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 mod polars;
 use bitvec::slice::BitSlice;
 
-use crate::core::{FfiError, FfiResult, FfiSlice};
+use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::data::Column;
 use crate::domains::BitVector;
 use crate::error::Fallible;
@@ -433,6 +433,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             2,
         ))
     }
+
     fn tuple3_partition_distance_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let tuple: &(IntDistance, T, T) = obj.downcast_ref()?;
         Ok(FfiSlice::new(
@@ -444,6 +445,15 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             3,
         ))
     }
+
+    fn function_to_raw<I: 'static + Clone, O: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let func: &Function<I, O> = obj.downcast_ref::<Function<I, O>>()?;
+        Ok(FfiSlice::new(
+            util::into_raw(func.clone().into_any()) as *mut c_void,
+            1,
+        ))
+    }
+
     fn hashmap_to_raw<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
         obj: &AnyObject,
     ) -> Fallible<FfiSlice> {
@@ -603,7 +613,12 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             }
         }
         TypeContents::GENERIC { name, args } => {
-            if name == &"HashMap" {
+            if name == &"Function" {
+                if args.len() != 2 { return err!(FFI, "Functions should have 2 type arguments").into(); }
+                let I = try_!(Type::of_id(&args[0]));
+                let O = try_!(Type::of_id(&args[1]));
+                dispatch!(function_to_raw, [(I, @primitives), (O, @primitives)], (obj))
+            } else if name == &"HashMap" {
                 if args.len() != 2 { return err!(FFI, "HashMaps should have 2 type arguments, found {}", args.len()).into(); }
                 let K = try_!(Type::of_id(&args[0]));
                 let V = try_!(Type::of_id(&args[1]));
