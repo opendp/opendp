@@ -2,10 +2,10 @@ use opendp_derive::bootstrap;
 use std::fmt::Debug;
 
 use crate::{
-    combinators::assert_components_match,
+    combinators::{Adaptivity, Sequentiality, assert_components_match},
     core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    interactive::{Answer, Query, Queryable, WrapFn},
+    interactive::{Answer, Query, Queryable, Wrapper},
     traits::ProductOrd,
 };
 
@@ -15,7 +15,7 @@ mod test;
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use super::SequentialCompositionMeasure;
+use super::CompositionMeasure;
 
 #[bootstrap(
     features("contrib"),
@@ -57,7 +57,7 @@ pub fn make_adaptive_composition<
     DI: Domain + 'static,
     TO: 'static,
     MI: Metric + 'static,
-    MO: SequentialCompositionMeasure + 'static,
+    MO: CompositionMeasure + 'static,
 >(
     input_domain: DI,
     input_metric: MI,
@@ -79,6 +79,11 @@ where
     d_mids.reverse();
 
     let d_out = output_measure.compose(d_mids.clone())?;
+
+    let sequential = matches!(
+        output_measure.theorem(Adaptivity::Adaptive)?,
+        Sequentiality::Sequential
+    );
 
     Measurement::new(
         input_domain.clone(),
@@ -141,24 +146,22 @@ where
                             );
                         }
 
-                        let answer = if output_measure.concurrent()? {
-                            // evaluate the query directly; no wrapping is necessary
-                            measurement.invoke(&arg)
-                        } else {
-                            // if the answer contains a queryable,
-                            // wrap it so that when the child gets a query it sends an AskPermission query to this parent queryable
-                            // it gives this sequential composition queryable (or any parent of this queryable)
+                        let seq_wrapper = sequential.then(|| {
+                            // when the output measure doesn't allow concurrent composition,
+                            // wrap any interactive queryables spawned.
+                            // This way, when the child gets a query it sends an AskPermission query to this parent queryable
+                            // giving this sequential composition queryable
                             // a chance to deny the child permission to execute
                             let child_id = d_mids.len() - 1;
 
                             let mut sc_qbl = sc_qbl.clone();
-                            let wrap_logic = WrapFn::new_pre_hook(move || {
+                            Wrapper::new_recursive_pre_hook(move || {
                                 sc_qbl.eval_internal(&AskPermission(child_id))
-                            });
+                            })
+                        });
 
-                            // evaluate the query and wrap the answer
-                            measurement.invoke_wrap(&arg, wrap_logic.as_map())
-                        }?;
+                        // evaluate the query and wrap the answer
+                        let answer = measurement.invoke_wrap(&arg, seq_wrapper)?;
 
                         // we've now consumed the last d_mid. This is our only state modification
                         d_mids.pop();
@@ -246,7 +249,7 @@ pub fn make_sequential_composition<
     DI: Domain + 'static,
     TO: 'static,
     MI: Metric + 'static,
-    MO: SequentialCompositionMeasure + 'static,
+    MO: CompositionMeasure + 'static,
 >(
     input_domain: DI,
     input_metric: MI,

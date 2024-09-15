@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::combinators::{SequentialCompositionMeasure, make_composition};
+use crate::combinators::{CompositionMeasure, make_composition};
 use crate::core::{Metric, MetricSpace};
 use crate::domains::{ExprPlan, WildExprDomain};
 use crate::{
@@ -24,7 +24,7 @@ mod test;
 /// * `input_exprs` - expressions to be post-processed
 /// * `postprocessor` - function that applies post-processing to the expressions
 /// * `param` - global noise (re)scale parameter
-pub fn make_expr_postprocess<MI: 'static + Metric, MO: 'static + SequentialCompositionMeasure>(
+pub fn make_expr_postprocess<MI: 'static + Metric, MO: 'static + CompositionMeasure>(
     input_domain: WildExprDomain,
     input_metric: MI,
     output_measure: MO,
@@ -75,7 +75,7 @@ where
     )
 }
 
-pub fn match_postprocess<MI: 'static + Metric, MO: 'static + SequentialCompositionMeasure>(
+pub fn match_postprocess<MI: 'static + Metric, MO: 'static + CompositionMeasure>(
     input_domain: WildExprDomain,
     input_metric: MI,
     output_measure: MO,

@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::accuracy::{
     conservative_discrete_gaussian_tail_to_alpha, conservative_discrete_laplacian_tail_to_alpha,
 };
-use crate::combinators::{SequentialCompositionMeasure, make_composition};
+use crate::combinators::{CompositionMeasure, make_composition};
 use crate::core::{Function, Measurement, PrivacyMap};
 use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
@@ -315,7 +315,7 @@ fn match_filter(key_sanitizer: &Option<KeySanitizer>) -> Option<(String, u32)> {
         .and_then(is_threshold_predicate)
 }
 
-pub trait ApproximateMeasure: SequentialCompositionMeasure {
+pub trait ApproximateMeasure: CompositionMeasure {
     fn add_delta(d_out: Self::Distance, delta_p: f64) -> Fallible<Self::Distance>;
 }
 
@@ -336,9 +336,9 @@ macro_rules! impl_measure_non_catastrophic {
 impl_measure_non_catastrophic!(MaxDivergence);
 impl_measure_non_catastrophic!(ZeroConcentratedDivergence);
 
-impl<MO: SequentialCompositionMeasure> ApproximateMeasure for Approximate<MO>
+impl<MO: CompositionMeasure> ApproximateMeasure for Approximate<MO>
 where
-    Self: SequentialCompositionMeasure<Distance = (MO::Distance, f64)>,
+    Self: CompositionMeasure<Distance = (MO::Distance, f64)>,
 {
     fn add_delta((d_out, delta): Self::Distance, delta_p: f64) -> Fallible<Self::Distance> {
         Ok((d_out, delta.inf_add(&delta_p)?))
