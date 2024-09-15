@@ -95,6 +95,16 @@ Types matching those in the pseudocode.
     The transition function is then used to construct a queryable on line \ref{queryable}.
 \end{proof}
 
+\begin{proof}[Proof of pending privacy guarantee]
+    The relevant handler is on line \ref{pending-loss-handler}.
+    The proof follows similarly to the proof of the privacy guarantee,
+    but with the addition of the privacy loss of the pending query on line \ref{pending-d-mid}.
+    
+    In the case of a pending privacy loss query,
+    since the privacy loss query does not change the privacy loss of the odometer,
+    \texttt{PendingLoss.Same} is returned on line \ref{pending-same}.
+\end{proof}
+
 \bibliographystyle{alpha}
 \bibliography{ref}
 
