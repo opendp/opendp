@@ -97,6 +97,7 @@ fn test_r_code_generation() {
 fake_function <- function(
   fake_argument = 99.9
 ) {
+  .Deprecated(msg = \"fake note\")
   assert_features(\"fake_feature\")
 
   # No type arguments to standardize.
