@@ -46,51 +46,44 @@ class DPExpr(object):
     <opendp.extras.polars.DPExpr object at ...>
 
     In addition to the DP-specific methods documented below, many Polars ``Expr`` methods are also supported.
-    For these, the best documentation is the official Polars documentation.
+    For these, the best documentation is the `official Polars documentation <https://docs.pola.rs/api/python/stable/reference/expressions/index.html>`_.
 
     .. list-table:: Supported Polars ``Expr`` Methods
         :header-rows: 1
 
         * - Method
-          - Operators
-          - Use for
-          - Usage
+          - Comments
         * - `alias <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.alias.html>`_
-          -
-          - Renaming the expression
-          - 
-            >>> import polars as pl
-            >>> print(pl.col('numbers').dp.noise().alias('noisy'))
-            col("numbers")...alias("noisy")
-
+          - Rename the expression
         * - `eq, ne, lt, le, gt, ge <https://docs.pola.rs/api/python/stable/reference/expressions/operators.html#comparison>`_
-          - ``==`` ``!=`` ``<`` ``<=`` ``>`` ``>=``
-          - Comparison
-          -
+          - Comparison operators may be more readable: ``==`` ``!=`` ``<`` ``<=`` ``>`` ``>=``
         * - `and, or, xor <https://docs.pola.rs/api/python/stable/reference/expressions/operators.html#conjunction>`_
-          - ``&`` ``|`` ``^``
-          - Bit-wise operators
-          -
+          - Bit-wise operators may be more readable: ``&`` ``|`` ``^``
         * - `is_null, is_not_null, is_finite, is_not_finite, is_nan, is_not_nan, not <https://docs.pola.rs/api/python/stable/reference/expressions/boolean.html>`_
-          -
-          - Boolean information  
-          -  
+          - Boolean information
         * - `clip <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.clip.html>`_
-          -
-          - Set values outside boundaries to the boundary value
-          -
+          - Set value outside bounds to boundary value
         * - `fill_null <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.fill_null.html>`_, `fill_nan <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.fill_nan.html>`_
-          -
-          - Fill missing values
-          -
-        * - `len <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.len.html>`_
-          -
-          - Return the number of rows
-          -
+          - Fill missing values with provided value
         * - `lit <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.lit.html>`_
-          -
           - Return an expression representing a literal value 
-          -
+
+    A few ``Expr`` aggregation methods are also available:
+
+    .. list-table:: Supported Polars ``Expr`` Methods
+        :header-rows: 1
+
+        * - Method
+          - Comments
+        * - `len <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.len.html>`_
+          - Number of rows, including nulls
+        * - `count <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.count.html>`_
+          - Number of rows, not including nulls
+        * - `n_unique <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.n_unique.html>`_
+          - Number of unique rows
+
+
+              
     '''
     def __init__(self, expr):
         """Apply a differentially private plugin to a Polars expression."""
