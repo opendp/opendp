@@ -45,7 +45,7 @@ class DPExpr(object):
     >>> pl.len().dp
     <opendp.extras.polars.DPExpr object at ...>
 
-    In addition to the DP-specific methods documented below, many Polars ``Expr`` methods are also supported.
+    In addition to the DP-specific methods documented below, some Polars ``Expr`` methods are also supported.
     For these, the best documentation is the `official Polars documentation <https://docs.pola.rs/api/python/stable/reference/expressions/index.html>`_.
 
     .. list-table:: Supported Polars ``Expr`` Methods
@@ -77,13 +77,10 @@ class DPExpr(object):
           - Comments
         * - `len <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.len.html>`_
           - Number of rows, including nulls
-        * - `count <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.count.html>`_
+        * - `count <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.count.html>`_
           - Number of rows, not including nulls
-        * - `n_unique <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.n_unique.html>`_
+        * - `n_unique <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.n_unique.html>`_
           - Number of unique rows
-
-
-              
     '''
     def __init__(self, expr):
         """Apply a differentially private plugin to a Polars expression."""
