@@ -137,12 +137,17 @@ pub(crate) fn cdp_delta(rho: f64, eps: f64) -> Fallible<f64> {
     //  t2 = α ln1p(-1/α)
     let t2 = a_max.inf_mul(&a_max.recip().neg().inf_ln_1p()?)?;
 
+    println!("t1: {t1}");
+    println!("t2: {t2}");
+    println!("a_max: {a_max}");
     //  delta = exp((α-1) (αρ - ε) + α ln1p(-1/α)) / (α-1)
     //        = exp(t1             + t2          ) / (α-1)
-    let delta = t1
-        .inf_add(&t2)?
-        .inf_exp()?
-        .inf_div(&(a_max.inf_sub(&1.0)?))?;
+    let t = t1.inf_add(&t2)?;
+    println!("t: {t}");
+    let exp_t = t.inf_exp()?;
+    println!("exp_t: {exp_t}");
+    let delta = exp_t.inf_div(&(a_max.inf_sub(&1.0)?))?;
+    println!("delta: {delta}");
 
     // delta is always <= 1
     Ok(delta.min(1.0))

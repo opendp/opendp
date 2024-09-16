@@ -1021,6 +1021,7 @@ pub extern "C" fn opendp_data__privacy_profile_epsilon(
     profile: *const AnyObject,
     delta: f64,
 ) -> FfiResult<*mut AnyObject> {
+    println!("opendp_data__privacy_profile_epsilon(profile, {delta})");
     try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>())
         .epsilon(delta)
         .map(AnyObject::new)

@@ -546,7 +546,12 @@ impl InfExp for f64 {
         let lhs = FBig::<Up>::inf_cast(self)?
             .with_precision(<f64>::MANTISSA_DIGITS as usize)
             .value();
-        let Ok(output) = catch_unwind_silent(|| lhs.exp()) else {
+        let Ok(output) = catch_unwind_silent(|| {
+            println!("lhs? {lhs}");
+            let lhs_exp = lhs.exp();
+            println!("lhs_exp?");
+            lhs_exp
+        }) else {
             if self.is_sign_negative() {
                 return Ok(f64::from_bits(1));
             }
@@ -581,6 +586,7 @@ impl InfExp for f64 {
 
 impl InfExp for f32 {
     fn inf_exp(self) -> Fallible<Self> {
+        println!("f32");
         let not_finite = || {
             err!(
                 Overflow,

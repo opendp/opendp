@@ -641,6 +641,7 @@ class PrivacyProfile(object):
 
     def epsilon(self, delta):
         from opendp._data import privacy_profile_epsilon
+        print(f'PrivacyProfile.epsilon(self.curve, {delta})')
         return privacy_profile_epsilon(self.curve, delta)
 
 

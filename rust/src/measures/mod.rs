@@ -81,6 +81,7 @@ impl PrivacyProfile {
     }
 
     pub fn epsilon(&self, delta: f64) -> Fallible<f64> {
+        println!("epsilon(self, {delta})");
         // reject negative zero
         if delta.is_sign_negative() {
             return fallible!(FailedMap, "delta ({}) must not be negative", delta);
@@ -98,6 +99,7 @@ impl PrivacyProfile {
     }
 
     pub(crate) fn epsilon_unchecked(&self, delta: f64) -> Fallible<f64> {
+        println!("epsilon_unchecked(self, {delta})");
         let mut e_min: f64 = 0.0;
         let mut e_max: f64 = 2.0;
         while self.delta(e_max)? > delta {
@@ -152,6 +154,7 @@ impl PrivacyProfile {
     }
 
     pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
+        println!("delta(self, {epsilon})");
         (self.0)(epsilon)
     }
 }
