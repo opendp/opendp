@@ -14,3 +14,6 @@ pip-tools==7.3.0
 
 # Just needed for examples in documentation:
 pandas
+# numpy is a transitive dependency of pandas;
+# Version constraint comes from opendp's setup.cfg.
+numpy<2.0
