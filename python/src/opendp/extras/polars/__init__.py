@@ -70,7 +70,7 @@ class DPExpr(object):
 
     A few ``Expr`` aggregation methods are also available:
 
-    .. list-table:: Supported Polars ``Expr`` Methods
+    .. list-table:: Supported Polars ``Expr`` Aggregation Methods
         :header-rows: 1
 
         * - Method
