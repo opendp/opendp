@@ -15,7 +15,7 @@ jobs:
       - name: Collect diffs
         id: "diffs"
         run: |
-          files=$(git --no-pager diff --name-only origin/${{ github.event.pull_request.base.ref }} -- '*.tex')
+          files=$(git --no-pager diff --diff-filter=d --name-only origin/${{ github.event.pull_request.base.ref }} -- '*.tex')
           
           # using syntax from: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
           # construct list of .tex files
