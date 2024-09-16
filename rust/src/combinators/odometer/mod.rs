@@ -1,5 +1,8 @@
 pub mod sequential;
 
+pub mod filter;
+pub use filter::*;
+
 use std::any::Any;
 
 use crate::{
