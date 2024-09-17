@@ -74,6 +74,17 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false     # no: will remove rust
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: false        # no: little/no benefit
+          large-packages: false # no: slow
+          swap-storage: false   # no: having swap is useful
+
       - name: Create bindings
         if: ${{ !inputs.fake }}
         run: bash tools/rust_build.sh -r -n -f "$FEATURES,bindings"
@@ -132,6 +143,17 @@ jobs:
         with:
           python-version: 3.9
           cache: pip
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false     # no: will remove rust
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: false        # no: little/no benefit
+          large-packages: false # no: slow
+          swap-storage: false   # no: having swap is useful
 
       - name: Install cibuildwheel
         run: |
