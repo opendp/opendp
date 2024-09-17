@@ -40,6 +40,9 @@ thiserror = "1.0.24"
 statrs = "0.13.0"
 dashu = { version = "0.4.0", features = ["num-traits_v02"] }
 openssl = { version = "0.10.64", features = ["vendored"], optional = true }
+# Pin to older openssl version until bug is fixed.
+# https://github.com/openssl/openssl/pull/25367#issuecomment-2336747983
+openssl-src = { version = "300.3.2+3.3.2" }
 opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.11.1-dev" }
 readonly = "0.2"
 bitvec = "1.0"
