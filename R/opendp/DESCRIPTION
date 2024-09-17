@@ -1,5 +1,5 @@
 Package: opendp
-Version: 0.11.0
+Version: 0.11.1
 Title: R Bindings for the OpenDP Library
 Authors@R: c(
     person("Stefano", "Iacus",
@@ -26,7 +26,7 @@ URL: https://opendp.org/, https://github.com/opendp/opendp, https://docs.opendp.
 BugReports: https://github.com/opendp/opendp/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 SystemRequirements: Cargo (Rust's package manager), rustc
 Config/testthat/edition: 3
 Config/opendp/MSRV: 1.64.0

@@ -14,12 +14,14 @@ Measures
 Metrics
     :py:func:`user_distance <opendp.metrics.user_distance>`
 Transformations
-    :py:func:`make_user_transform <opendp.transformations.make_user_transformation>`
+    :py:func:`make_user_transformation <opendp.transformations.make_user_transformation>`
 Postprocessors
     :py:func:`new_function <opendp.core.new_function>`
+Privacy Profiles
+    :py:func:`new_privacy_profile <opendp.measures.new_privacy_profile>`
 
 OpenDP itself uses the plugin machinery in some cases.
-It is usually easier to implement ideas in Python or R than in Rust,
+It is usually easier to prototype ideas in Python than in Rust,
 so this provides a lower barrier to entry to contributing to OpenDP.
 If the contribution proves to be useful to the broader community,
 it can then be translated to Rust.

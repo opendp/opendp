@@ -12,13 +12,13 @@ First, create a measurement with the Polars API:
 >>> meas = dp.m.make_private_lazyframe(
 ...     lf_domain,
 ...     dp.symmetric_distance(),
-...     dp.max_divergence(T=float),
+...     dp.max_divergence(),
 ...     lf.select([pl.len().dp.noise(), pl.col("A").dp.sum((0, 1))]),
 ...     global_scale=1.0
 ... )
 
 This function extracts utility information about each aggregate in the resulting data frame:
->>> dp.describe_polars_measurement_accuracy(meas)
+>>> dp.summarize_polars_measurement(meas)
 shape: (2, 4)
 ┌────────┬───────────┬─────────────────┬───────┐
 │ column ┆ aggregate ┆ distribution    ┆ scale │
@@ -30,7 +30,7 @@ shape: (2, 4)
 └────────┴───────────┴─────────────────┴───────┘
 
 If you pass an alpha argument, then you also get accuracy estimates:
->>> dp.describe_polars_measurement_accuracy(meas, alpha=.05)
+>>> dp.summarize_polars_measurement(meas, alpha=.05)
 shape: (2, 5)
 ┌────────┬───────────┬─────────────────┬───────┬──────────┐
 │ column ┆ aggregate ┆ distribution    ┆ scale ┆ accuracy │

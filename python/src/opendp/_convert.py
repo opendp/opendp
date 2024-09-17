@@ -2,7 +2,7 @@ from typing import Sequence, Union, cast
 from inspect import signature
 
 from opendp._lib import *
-from opendp.mod import Domain, UnknownTypeException, Transformation, Measurement, SMDCurve, Queryable
+from opendp.mod import Domain, UnknownTypeException, Transformation, Measurement, PrivacyProfile, Queryable
 from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 
 ATOM_MAP = {
@@ -150,8 +150,8 @@ def c_to_py(value: Any) -> Any:
         from opendp._data import object_type, object_as_slice, slice_free
         obj_type = object_type(value)
         
-        if "SMDCurve" in obj_type:
-            return SMDCurve(value)
+        if "PrivacyProfile" == obj_type:
+            return PrivacyProfile(value)
         
         if "Queryable" in obj_type:
             from opendp.core import queryable_query_type
@@ -206,6 +206,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
         if type_name in ATOM_MAP:
             return _slice_to_scalar(raw, type_name)
         
+        if type_name == "BitVector":
+            return _slice_to_bitvector(raw)
+        
         if type_name == "ExtrinsicObject":
             return _slice_to_extrinsic(raw)
         
@@ -249,6 +252,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
     if isinstance(type_name, str):
         if type_name in ATOM_MAP:
             return _scalar_to_slice(value, type_name)
+        
+        if type_name == "BitVector":
+            return _bitvector_to_slice(value)
     
         if type_name == "ExtrinsicObject":
             return _extrinsic_to_slice(value)
@@ -303,7 +309,7 @@ def _refcounter(ptr, increment):
             ctypes.pythonapi.Py_IncRef(ctypes.py_object(ptr))
         else:
             ctypes.pythonapi.Py_DecRef(ctypes.py_object(ptr))
-    except Exception:
+    except Exception: # pragma: no cover
         return False
     return True
 
@@ -326,6 +332,26 @@ def _slice_to_string(raw: FfiSlicePtr) -> str:
     value = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p)).contents.value
     assert value is not None 
     return value.decode()
+
+
+def _bitvector_to_slice(val: Sequence[Any]) -> FfiSlicePtr:
+    np = import_optional_dependency('numpy', raise_error=False)
+    if np is not None and isinstance(val, np.ndarray):
+        val = val.tobytes()
+    
+    if not isinstance(val, (bytes, bytearray)):
+        raise TypeError("Expected type is BitVector but input data is not bytes or bytearray.")
+
+    array = (ctypes.c_uint8 * len(val)).from_buffer_copy(val) # type: ignore[operator]
+    return _wrap_in_slice(array, len(val) * 8)
+
+
+def _slice_to_bitvector(raw: FfiSlicePtr) -> bytes:
+    # raw.contents.len is the number of valid bits.
+    # Division by -8 is ceiling rather than floor: the number of bytes in the buffer
+    n_bytes = -(raw.contents.len // -8)
+    buffer = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))[0:n_bytes] # type: ignore
+    return bytes(buffer)
 
 
 def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
@@ -456,6 +482,11 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
         lp_slice = ctypes.cast(ptr_data[0], FfiSlicePtr)
         expr_slice = ctypes.cast(ptr_data[1], FfiSlicePtr)
         return _slice_to_lazyframe(lp_slice), _slice_to_expr(expr_slice)
+    
+    if inner_type_names == ['PrivacyProfile', 'f64']:
+        curve = ctypes.cast(ptr_data[0], AnyObjectPtr)
+        delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))
+        return PrivacyProfile(curve), delta.contents.value
     
     # tuple of instances of Python types
     return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value # type: ignore[index,attr-defined]

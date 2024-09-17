@@ -222,7 +222,11 @@ impl SampleUniformIntBelow for UBig {
 impl SampleUniformIntBelow for IBig {
     fn sample_uniform_int_below(upper: Self, trials: Option<usize>) -> Fallible<Self> {
         if upper.is_negative() {
-            return fallible!(FailedFunction, "upper bound must not be negative");
+            return fallible!(
+                FailedFunction,
+                "upper bound ({}) must not be negative",
+                upper
+            );
         }
 
         let upper = UBig::try_from(upper)?;

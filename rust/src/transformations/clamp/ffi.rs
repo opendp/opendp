@@ -15,8 +15,8 @@ pub extern "C" fn opendp_transformations__make_clamp(
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
     let bounds = try_as_ref!(bounds);
-    let TA = try_!(input_domain.type_.get_atom());
-    let M = input_metric.type_.clone();
+    let TA_ = try_!(input_domain.type_.get_atom());
+    let M_ = input_metric.type_.clone();
 
     fn monomorphize_dataset<TA, M>(
         input_domain: &AnyDomain,
@@ -35,8 +35,8 @@ pub extern "C" fn opendp_transformations__make_clamp(
         make_clamp::<TA, M>(input_domain, input_metric, bounds).into_any()
     }
     dispatch!(monomorphize_dataset, [
-        (TA, @numbers),
-        (M, @dataset_metrics)
+        (TA_, @numbers),
+        (M_, @dataset_metrics)
     ], (input_domain, input_metric, bounds))
     .into()
 }

@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-use std::os::raw::{c_char, c_void};
+use std::os::raw::c_char;
 
 use dashu::rational::RBig;
 
@@ -16,34 +16,34 @@ use crate::traits::{CheckAtom, Float, InfCast, Number};
 pub extern "C" fn opendp_measurements__make_gaussian(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
-    scale: *const c_void,
+    scale: f64,
     k: *const i32,
     MO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize_float<T: 'static + Float>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-        scale: *const c_void,
+        scale: f64,
         k: Option<i32>,
         MO: Type,
     ) -> Fallible<AnyMeasurement>
     where
         RBig: TryFrom<T>,
-        AtomDomain<T>: GaussianDomain<ZeroConcentratedDivergence<T>, T>,
-        VectorDomain<AtomDomain<T>>: GaussianDomain<ZeroConcentratedDivergence<T>, T>,
+        AtomDomain<T>: GaussianDomain<ZeroConcentratedDivergence, T>,
+        VectorDomain<AtomDomain<T>>: GaussianDomain<ZeroConcentratedDivergence, T>,
         (
             AtomDomain<T>,
-            <AtomDomain<T> as GaussianDomain<ZeroConcentratedDivergence<T>, T>>::InputMetric,
+            <AtomDomain<T> as GaussianDomain<ZeroConcentratedDivergence, T>>::InputMetric,
         ): MetricSpace,
         (
             VectorDomain<AtomDomain<T>>,
-            <VectorDomain<AtomDomain<T>> as GaussianDomain<ZeroConcentratedDivergence<T>, T>>::InputMetric,
+            <VectorDomain<AtomDomain<T>> as GaussianDomain<ZeroConcentratedDivergence, T>>::InputMetric,
         ): MetricSpace,
     {
-        fn monomorphize2<D: 'static + GaussianDomain<MO, MO::Distance>, MO: 'static + Measure>(
+        fn monomorphize2<D: 'static + GaussianDomain<MO, QI>, MO: 'static + Measure, QI: 'static>(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
-            scale: MO::Distance,
+            scale: f64,
             k: Option<i32>,
         ) -> Fallible<AnyMeasurement>
         where
@@ -51,37 +51,38 @@ pub extern "C" fn opendp_measurements__make_gaussian(
         {
             let input_domain = input_domain.downcast_ref::<D>()?.clone();
             let input_metric = input_metric.downcast_ref::<D::InputMetric>()?.clone();
-            make_gaussian::<D, MO, MO::Distance>(input_domain, input_metric, scale, k).into_any()
+            make_gaussian::<D, MO, QI>(input_domain, input_metric, scale, k).into_any()
         }
         let D = input_domain.type_.clone();
-        let scale = *try_as_ref!(scale as *const T);
+        let QI = input_metric.distance_type.clone();
         dispatch!(monomorphize2, [
             (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
-            (MO, [ZeroConcentratedDivergence<T>])
+            (MO, [ZeroConcentratedDivergence]),
+            (QI, [T])
         ], (input_domain, input_metric, scale, k))
     }
     fn monomorphize_integer<
         T: 'static + CheckAtom,
         QI: 'static + Copy,
-        QO: 'static + Number + InfCast<QI>,
     >(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-        scale: *const c_void,
+        scale: f64,
         k: Option<i32>,
         MO: Type,
         QI: Type,
     ) -> Fallible<AnyMeasurement>
     where
-        AtomDomain<T>: GaussianDomain<ZeroConcentratedDivergence<QO>, QI>,
-        VectorDomain<AtomDomain<T>>: GaussianDomain<ZeroConcentratedDivergence<QO>, QI>,
+        f64: InfCast<QI>,
+        AtomDomain<T>: GaussianDomain<ZeroConcentratedDivergence, QI>,
+        VectorDomain<AtomDomain<T>>: GaussianDomain<ZeroConcentratedDivergence, QI>,
         (
             AtomDomain<T>,
-            <AtomDomain<T> as GaussianDomain<ZeroConcentratedDivergence<QO>, QI>>::InputMetric,
+            <AtomDomain<T> as GaussianDomain<ZeroConcentratedDivergence, QI>>::InputMetric,
         ): MetricSpace,
         (
             VectorDomain<AtomDomain<T>>,
-            <VectorDomain<AtomDomain<T>> as GaussianDomain<ZeroConcentratedDivergence<QO>, QI>>::InputMetric,
+            <VectorDomain<AtomDomain<T>> as GaussianDomain<ZeroConcentratedDivergence, QI>>::InputMetric,
         ): MetricSpace,
     {
         fn monomorphize2<
@@ -91,11 +92,11 @@ pub extern "C" fn opendp_measurements__make_gaussian(
         >(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
-            scale: MO::Distance,
+            scale: f64,
             k: Option<i32>,
         ) -> Fallible<AnyMeasurement>
         where
-            MO::Distance: Number + InfCast<QI>,
+            f64: Number + InfCast<QI>,
             (D, D::InputMetric): MetricSpace,
         {
             let input_domain = input_domain.downcast_ref::<D>()?.clone();
@@ -103,19 +104,17 @@ pub extern "C" fn opendp_measurements__make_gaussian(
             make_gaussian::<D, MO, QI>(input_domain, input_metric, scale, k).into_any()
         }
         let D = input_domain.type_.clone();
-        let scale = *try_as_ref!(scale as *const QO);
         dispatch!(monomorphize2, [
             (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
-            (MO, [ZeroConcentratedDivergence<QO>]),
+            (MO, [ZeroConcentratedDivergence]),
             (QI, [QI])
         ], (input_domain, input_metric, scale, k))
     }
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
     let k = as_ref(k as *const i32).map(Clone::clone);
-    let T = try_!(input_domain.type_.get_atom());
+    let T_ = try_!(input_domain.type_.get_atom());
     let MO = try_!(Type::try_from(MO));
-    let QO = try_!(MO.get_atom());
 
     // This is used to check if the type is in a dispatch set,
     // without constructing an expensive backtrace upon failed match
@@ -123,35 +122,25 @@ pub extern "C" fn opendp_measurements__make_gaussian(
         Some(())
     }
 
-    if let Some(_) = dispatch!(in_set, [(T, @floats)]) {
+    if let Some(_) = dispatch!(in_set, [(T_, @floats)]) {
         let QI = try_!(input_metric.distance_type.get_atom());
-        if T != QI {
+        if T_ != QI {
             return err!(
                 FFI,
                 "since data type is float, input distance type ({}) must match data type ({})",
                 QI.descriptor,
-                T.descriptor
-            )
-            .into();
-        }
-        if T != QO {
-            return err!(
-                FFI,
-                "since data type is float, output distance type ({}) must match data type ({})",
-                QO.descriptor,
-                T.descriptor
+                T_.descriptor
             )
             .into();
         }
         dispatch!(monomorphize_float, [
-            (T, @floats)
+            (T_, @floats)
         ], (input_domain, input_metric, scale, k, MO))
     } else {
         let QI = input_metric.distance_type.clone();
         dispatch!(monomorphize_integer, [
-            (T, @integers),
-            (QI, @numbers),
-            (QO, @floats)
+            (T_, @integers),
+            (QI, @numbers)
         ], (input_domain, input_metric, scale, k, MO, QI))
     }
     .into()
@@ -174,9 +163,9 @@ mod tests {
         let measurement = Result::from(opendp_measurements__make_gaussian(
             util::into_raw(AnyDomain::new(AtomDomain::<i32>::default())),
             util::into_raw(AnyMetric::new(AbsoluteDistance::<i32>::default())),
-            util::into_raw(0.0) as *const c_void,
+            0.0,
             null(),
-            "ZeroConcentratedDivergence<f64>".to_char_p(),
+            "ZeroConcentratedDivergence".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(99);
         let res = core::opendp_core__measurement_invoke(&measurement, arg);

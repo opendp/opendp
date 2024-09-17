@@ -53,6 +53,7 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
 }
 
 // in the Queryable struct definition, this 'a lifetime is supplied by an HRTB after `dyn`, and then elided
+#[derive(Debug)]
 pub(crate) enum Query<'a, Q: ?Sized> {
     External(&'a Q),
     Internal(&'a dyn Any),

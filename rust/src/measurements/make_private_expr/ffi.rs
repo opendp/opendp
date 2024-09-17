@@ -29,7 +29,7 @@ pub extern "C" fn opendp_measurements__make_private_expr(
             .clone();
 
     let output_measure = try_as_ref!(output_measure);
-    let MO = output_measure.type_.clone();
+    let MO_ = output_measure.type_.clone();
 
     let expr = try_!(try_as_ref!(expr).downcast_ref::<Expr>()).clone();
 
@@ -62,7 +62,14 @@ pub extern "C" fn opendp_measurements__make_private_expr(
 
     dispatch!(
         monomorphize,
-        [(MO, [MaxDivergence<f64>, ZeroConcentratedDivergence<f64>])],
-        (input_domain, input_metric, output_measure, expr, global_scale))
+        [(MO_, [MaxDivergence, ZeroConcentratedDivergence])],
+        (
+            input_domain,
+            input_metric,
+            output_measure,
+            expr,
+            global_scale
+        )
+    )
     .into()
 }

@@ -20,8 +20,8 @@ pub extern "C" fn opendp_transformations__make_impute_uniform_float(
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
     let bounds = try_as_ref!(bounds);
-    let M = input_metric.type_.clone();
-    let TA = try_!(input_domain.type_.get_atom());
+    let M_ = input_metric.type_.clone();
+    let TA_ = try_!(input_domain.type_.get_atom());
 
     fn monomorphize<M, TA>(
         input_domain: &AnyDomain,
@@ -40,7 +40,7 @@ pub extern "C" fn opendp_transformations__make_impute_uniform_float(
         let bounds = *try_as_ref!(bounds).downcast_ref::<(TA, TA)>()?;
         make_impute_uniform_float(input_domain, input_metric, bounds).into_any()
     }
-    dispatch!(monomorphize, [(M, @dataset_metrics), (TA, @floats)], (input_domain, input_metric, bounds)).into()
+    dispatch!(monomorphize, [(M_, @dataset_metrics), (TA_, @floats)], (input_domain, input_metric, bounds)).into()
 }
 
 #[no_mangle]
@@ -64,7 +64,12 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
             "Vec must have one type argument."
         )))))
     } else {
-        return err!(FFI, "Invalid type name.").into();
+        return err!(
+            FFI,
+            "Invalid type name. Expected VectorDomain, found {}",
+            DI.to_string()
+        )
+        .into();
     };
 
     let TA = try_!(DIA.get_atom());
@@ -146,7 +151,12 @@ pub extern "C" fn opendp_transformations__make_drop_null(
             "Vec must have one type argument."
         )))))
     } else {
-        return err!(FFI, "Invalid type name.").into();
+        return err!(
+            FFI,
+            "Invalid input domain. Expected VectorDomain, found {}",
+            DI.to_string()
+        )
+        .into();
     };
 
     let TA = try_!(DIA.get_atom());

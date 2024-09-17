@@ -35,7 +35,7 @@ This example mocks the typical API of the OpenDP library to make the *most priva
         ...     return dp.m.make_user_measurement(
         ...         input_domain=dp.atom_domain(T=int),
         ...         input_metric=dp.absolute_distance(T=int),
-        ...         output_measure=dp.max_divergence(T=float),
+        ...         output_measure=dp.max_divergence(),
         ...         function=function,
         ...         privacy_map=privacy_map,
         ...         TO=type(constant),  # the expected type of the output

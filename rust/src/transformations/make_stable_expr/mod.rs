@@ -24,10 +24,16 @@ mod expr_binary;
 mod expr_boolean_function;
 
 #[cfg(feature = "contrib")]
+mod expr_cast;
+
+#[cfg(feature = "contrib")]
 mod expr_clip;
 
 #[cfg(feature = "contrib")]
 mod expr_col;
+
+#[cfg(feature = "contrib")]
+mod expr_cut;
 
 #[cfg(feature = "contrib")]
 pub(crate) mod expr_discrete_quantile_score;
@@ -46,6 +52,9 @@ mod expr_lit;
 
 #[cfg(feature = "contrib")]
 mod expr_sum;
+
+#[cfg(feature = "contrib")]
+mod expr_to_physical;
 
 #[bootstrap(
     features("contrib"),
@@ -111,6 +120,9 @@ where
             } => return expr_boolean_function::make_expr_boolean_function(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
+            Cast { .. } => expr_cast::make_expr_cast(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
             Function {
                 function: Clip { .. },
                 ..
@@ -126,7 +138,20 @@ where
             Column(_) => expr_col::make_expr_col(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
+            Function {
+                function: Cut { .. },
+                ..
+            } => expr_cut::make_expr_cut(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
             Literal(_) => expr_lit::make_expr_lit(input_domain, input_metric, self),
+
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: ToPhysical,
+                ..
+            } => expr_to_physical::make_expr_to_physical(input_domain, input_metric, self),
 
             expr => fallible!(
                 MakeTransformation,

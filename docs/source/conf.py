@@ -160,7 +160,7 @@ nitpick_ignore = [
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = ['**/code/*.rst']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -181,8 +181,10 @@ html_static_path = ['_static']
 html_last_updated_fmt = '%b %d, %Y'
 
 # Custom sidebar templates, maps document names to template names.
+# Full list of options at https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/layout.html#references
 html_theme_options = {
-    "github_url": "https://github.com/opendp"
+    "github_url": "https://github.com/opendp",
+    "article_header_end": ["old-version-warning"]
 }
 
 html_theme = 'pydata_sphinx_theme'
@@ -194,6 +196,10 @@ html_css_files = [
 # Note: Overridden in the Makefile for local builds. Be sure to update both places.
 html_sidebars = {
    '**': ['sidebar-nav-bs.html', 'versioning.html'],
+}
+html_context = {
+    # Expected sphinx-multiversion to set "latest_version", but it was None, so set it manually.
+    'latest_version_name': f'v{version}'
 }
 
 # SPHINX-MULTIVERSION STUFF

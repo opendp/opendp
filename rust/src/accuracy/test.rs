@@ -5,12 +5,11 @@ use super::*;
 use crate::domains::AtomDomain;
 use crate::error::ExplainUnwrap;
 use crate::measurements::{
-    make_gaussian, make_laplace, make_scalar_float_gaussian, make_scalar_float_laplace,
+    make_gaussian, make_scalar_float_gaussian, make_scalar_float_laplace,
     make_scalar_integer_laplace,
 };
 use crate::measures::ZeroConcentratedDivergence;
 use crate::metrics::AbsoluteDistance;
-use crate::traits::samplers::SampleUniformIntBelow;
 
 #[test]
 fn test_comparison() -> Fallible<()> {
@@ -246,7 +245,7 @@ pub fn test_empirical_gaussian_accuracy() -> Fallible<()> {
     let accuracy = 1.0;
     let theoretical_alpha = 0.05;
     let scale = accuracy_to_gaussian_scale(accuracy, theoretical_alpha)?;
-    let base_gaussian = make_scalar_float_gaussian::<ZeroConcentratedDivergence<f64>, _>(
+    let base_gaussian = make_scalar_float_gaussian::<ZeroConcentratedDivergence, _>(
         AtomDomain::default(),
         AbsoluteDistance::default(),
         scale,
@@ -297,7 +296,7 @@ pub fn test_empirical_discrete_gaussian_accuracy() -> Fallible<()> {
     // let scale = 12.503562372734077;
 
     println!("scale: {}", scale);
-    let base_dg = make_gaussian::<_, ZeroConcentratedDivergence<f64>, i32>(
+    let base_dg = make_gaussian::<_, ZeroConcentratedDivergence, i32>(
         AtomDomain::<i8>::default(),
         AbsoluteDistance::default(),
         scale,
@@ -310,60 +309,6 @@ pub fn test_empirical_discrete_gaussian_accuracy() -> Fallible<()> {
         / n as f64;
 
     println!("Discrete gaussian significance levels/alpha");
-    println!("Theoretical: {:?}", theoretical_alpha);
-    println!("Empirical:   {:?}", empirical_alpha);
-    // this test has a small likelihood of failing
-    assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
-    Ok(())
-}
-
-#[test]
-pub fn test_empirical_integrate_discrete_laplacian_tail() -> Fallible<()> {
-    let scale = 1.;
-    let tail = 2;
-    let theoretical_alpha = integrate_discrete_laplacian_tail(scale, tail)?;
-
-    println!("alpha: {}", theoretical_alpha);
-    let m_dlap = make_laplace(
-        AtomDomain::<i8>::default(),
-        AbsoluteDistance::default(),
-        scale,
-        None,
-    )?;
-    let n = 50_000;
-    let empirical_alpha = (0..n)
-        .filter(|_| m_dlap.invoke(&0).unwrap().clamp(-127, 127) > tail as i8)
-        .count() as f64
-        / n as f64;
-
-    println!("Discrete laplacian significance levels/alpha");
-    println!("Theoretical: {:?}", theoretical_alpha);
-    println!("Empirical:   {:?}", empirical_alpha);
-    // this test has a small likelihood of failing
-    assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
-    Ok(())
-}
-
-#[test]
-pub fn test_empirical_integrate_discrete_laplace_tail() -> Fallible<()> {
-    let scale = 1.;
-    let tail = 1 + u32::sample_uniform_int_below(10, None)?;
-    let theoretical_alpha = integrate_discrete_laplacian_tail(scale, tail)?;
-
-    println!("alpha: {}", theoretical_alpha);
-    let m_dlap = make_laplace(
-        AtomDomain::<i8>::default(),
-        AbsoluteDistance::default(),
-        scale,
-        None,
-    )?;
-    let n = 50_000;
-    let empirical_alpha = (0..n)
-        .filter(|_| m_dlap.invoke(&0).unwrap().clamp(-127, 127) > tail as i8)
-        .count() as f64
-        / n as f64;
-
-    println!("Discrete Laplace tail significance levels/alpha");
     println!("Theoretical: {:?}", theoretical_alpha);
     println!("Empirical:   {:?}", empirical_alpha);
     // this test has a small likelihood of failing

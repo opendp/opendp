@@ -30,6 +30,8 @@ use pyo3_polars::derive::polars_expr;
 use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 
+use super::approximate_c_stability;
+
 #[cfg(test)]
 mod test;
 
@@ -45,7 +47,7 @@ pub fn make_expr_report_noisy_max<MI: 'static + UnboundedMetric>(
     input_metric: PartitionDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MaxDivergence<f64>>>
+) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MaxDivergence>>
 where
     Expr: StableExpr<PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
     (ExprDomain, MI): MetricSpace,
@@ -69,9 +71,7 @@ where
     let scale = match scale {
         Some(scale) => scale,
         None => {
-            // when scale is unknown, set it relative to the sensitivity of the query
-            let margin = input_domain.active_margin().cloned().unwrap_or_default();
-            let (l_0, l_inf) = t_prior.map(&(margin.l_0(1), 1, margin.l_inf(1)))?;
+            let (l_0, l_inf) = approximate_c_stability(&t_prior)?;
             f64::inf_cast(l_0)?.inf_mul(&l_inf)?
         }
     };
@@ -87,7 +87,8 @@ where
     if global_scale.is_nan() || global_scale.is_sign_negative() {
         return fallible!(
             MakeMeasurement,
-            "global_scale must be a non-negative number"
+            "global_scale ({}) must be a non-negative number",
+            global_scale
         );
     }
 
@@ -146,8 +147,13 @@ pub(crate) fn match_report_noisy_max(
         );
     };
 
-    let optimize = literal_value_of::<String>(optimize)?
-        .ok_or_else(|| err!(MakeMeasurement, "Optimize must be \"max\" or \"min\"."))?;
+    let optimize = literal_value_of::<String>(optimize)?.ok_or_else(|| {
+        err!(
+            MakeMeasurement,
+            "Optimize must be \"max\" or \"min\", found \"{}\".",
+            optimize
+        )
+    })?;
     let optimize = Optimize::deserialize(optimize.as_str().into_deserializer())
         .map_err(|e: serde::de::value::Error| err!(FailedFunction, "{:?}", e))?;
 

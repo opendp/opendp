@@ -154,6 +154,7 @@
 
 
 \newcommand{\validTransformation}[2]{%
+  \begin{theorem}
   For every setting of the input parameters #1 to #2 such that the given preconditions
   hold, #2 raises an exception (at compile time or run time) or returns a valid transformation. A valid transformation has the following properties:
   \begin{enumerate}
@@ -167,10 +168,12 @@
       and $\texttt{stability\_map}(\din) \leq \dout$, 
       then $\function(x), \function(x')$ are $\dout$-close under \texttt{output\_metric}.
   \end{enumerate}
+  \end{theorem}
 }
 
 
 \newcommand{\validMeasurement}[2]{%
+  \begin{theorem}
   For every setting of the input parameters #1 to #2 such that the given preconditions
   hold, #2 raises an exception (at compile time or run time) or returns a valid measurement. A valid measurement has the following property:
   \begin{enumerate}
@@ -181,4 +184,5 @@
       and $\texttt{privacy\_map}(\din) \leq \dout$,
       then $\function(x), \function(x')$ are $\dout$-close under \texttt{output\_measure}.
   \end{enumerate}
+  \end{theorem}
 }

@@ -26,7 +26,7 @@ from opendp.mod import (
     binary_search,
     binary_search_chain,
 )
-from opendp.domains import series_domain, lazyframe_domain, option_domain, atom_domain
+from opendp.domains import series_domain, lazyframe_domain, option_domain, atom_domain, categorical_domain
 from opendp.measurements import make_private_lazyframe
 
 
@@ -254,7 +254,7 @@ class DPExpr(object):
 try:
     from polars.api import register_expr_namespace  # type: ignore[import-not-found]
     register_expr_namespace("dp")(DPExpr)
-except ImportError:
+except ImportError: # pragma: no cover
     pass
 
 
@@ -303,6 +303,9 @@ def _series_domain_from_field(field) -> Domain:
     """Builds the broadest possible SeriesDomain that matches a given field."""
     import polars as pl
     name, dtype = field
+    if dtype == pl.Categorical:
+        return series_domain(name, option_domain(categorical_domain()))
+
     T = {
         pl.UInt32: "u32",
         pl.UInt64: "u64",
@@ -535,7 +538,7 @@ try:
                 )
             
             # when the output measure is δ-approximate, then there are two free parameters to tune
-            if query._output_measure.type.origin == "FixedSmoothedMaxDivergence":  # type: ignore[union-attr]
+            if getattr(query._output_measure.type, "origin", None) == "Approximate":
 
                 # search for a scale parameter. Solve for epsilon first, 
                 # setting threshold to u32::MAX so as not to interfere with the search for a suitable scale parameter
@@ -569,8 +572,8 @@ try:
             resolve = object.__getattribute__(self, "resolve")
             return query._context(resolve())  # type: ignore[misc]
         
-        def accuracy(self, alpha: float | None = None):
-            """Retrieve noise scale parameters and accuracy estimates for each output.
+        def summarize(self, alpha: float | None = None):
+            """Summarize the statistics released by this query.
 
             If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
 
@@ -596,7 +599,7 @@ try:
             ...     pl.col("convicted").fill_null(0).dp.sum((0, 1))
             ... )
 
-            >>> query.accuracy(alpha=.05)  # type: ignore[union-attr]
+            >>> query.summarize(alpha=.05)  # type: ignore[union-attr]
             shape: (2, 5)
             ┌───────────┬───────────┬─────────────────┬───────┬──────────┐
             │ column    ┆ aggregate ┆ distribution    ┆ scale ┆ accuracy │
@@ -621,8 +624,8 @@ try:
             
             :param alpha: optional. A value in [0, 1] denoting the statistical significance.
             """
-            from opendp.accuracy import describe_polars_measurement_accuracy
-            return describe_polars_measurement_accuracy(self.resolve(), alpha)
+            from opendp.accuracy import summarize_polars_measurement
+            return summarize_polars_measurement(self.resolve(), alpha)
         
 
     class LazyGroupByQuery(_LazyGroupBy):
@@ -647,7 +650,7 @@ try:
 
 
 
-except ImportError:
+except ImportError: # pragma: no cover
     ERR_MSG = "LazyFrameQuery depends on Polars: `pip install 'opendp[polars]'`."
 
     class LazyFrameQuery(object):  # type: ignore[no-redef]
@@ -665,8 +668,8 @@ except ImportError:
             """Release the query. The query must be part of a context."""
             raise ImportError(ERR_MSG)
         
-        def accuracy(self, alpha: float | None = None):
-            """Retrieve noise scale parameters and accuracy estimates for each output."""
+        def summarize(self, alpha: float | None = None):
+            """Summarize the statistics released by this query."""
             raise ImportError(ERR_MSG)
 
 

@@ -25,6 +25,7 @@ impl BootstrapDocstring {
         attrs: Vec<Attribute>,
         output: &ReturnType,
         path: Option<(&str, &str)>,
+        features: Vec<String>,
     ) -> Result<BootstrapDocstring> {
         let mut doc_sections = parse_docstring_sections(attrs)?;
 
@@ -33,6 +34,15 @@ impl BootstrapDocstring {
         }
 
         let mut description = Vec::from_iter(doc_sections.remove("Description"));
+
+        if !features.is_empty() {
+            let features_list = features
+                .into_iter()
+                .map(|f| format!("`{f}`"))
+                .collect::<Vec<_>>()
+                .join(", ");
+            description.push(format!("\n\nRequired features: {features_list}"));
+        }
 
         // add a link to rust documentation (with a gap line)
         if let Some((module, name)) = &path {
@@ -50,7 +60,6 @@ impl BootstrapDocstring {
         add_section_to_description("Citations");
         add_section_to_description("Supporting Elements");
         add_section_to_description("Proof Definition");
-        add_section_to_description("Features");
 
         Ok(BootstrapDocstring {
             description: if description.is_empty() {

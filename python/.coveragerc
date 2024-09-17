@@ -21,6 +21,5 @@ fail_under = 100
 exclude_also =
   # TODO: Improve coverage and shorten this list!
   ^\s*raise\b
-  ^\s*except\b
   os\.environ
   ^\s*\.\.\.\s*$

@@ -10,7 +10,7 @@ use super::sample_discrete_gaussian;
 #[allow(non_snake_case)]
 /// Sample from the discrete laplace distribution on $\mathbb{Z} \cdot 2^k$.
 ///
-/// Implemented for floating-point types f32 and f64.
+/// Implemented for rational numbers.
 ///
 /// k can be chosen to be very negative,
 /// to get an arbitrarily fine approximation to continuous laplacian noise.
@@ -22,26 +22,22 @@ use super::sample_discrete_gaussian;
 ///
 /// The modifications to the discrete laplace are as follows:
 /// - the `shift` is rounded to the nearest multiple of $2^k$
-/// - the `sample` is rounded to the nearest value of type `T`.
 /// - the noise granularity is in increments of $2^k$.
-pub fn sample_discrete_laplace_Z2k<T>(shift: T, scale: T, k: i32) -> Fallible<T>
-where
-    T: CastInternalRational,
-{
+pub fn sample_discrete_laplace_Z2k(shift: RBig, scale: RBig, k: i32) -> Fallible<RBig> {
     // integerize
-    let mut i = find_nearest_multiple_of_2k(shift.into_rational()?, k);
+    let mut i = find_nearest_multiple_of_2k(shift, k);
 
     // sample from the discrete laplace on ℤ*2^k
-    i += sample_discrete_laplace(shr(scale.into_rational()?, k))?;
+    i += sample_discrete_laplace(shr(scale, k))?;
 
-    // postprocess! int -> rational -> T
-    Ok(T::from_rational(x_mul_2k(i, k)))
+    // postprocess! int -> rational
+    Ok(x_mul_2k(i, k))
 }
 
 #[allow(non_snake_case)]
 /// Sample from the discrete gaussian distribution on $\mathbb{Z} \cdot 2^k$.
 ///
-/// Implemented for floating-point types f32 and f64.
+/// Implemented for rational numbers.
 ///
 /// k can be chosen to be very negative,
 /// to get an arbitrarily fine approximation to continuous gaussian noise.
@@ -53,20 +49,16 @@ where
 ///
 /// The modifications to the discrete gaussian are as follows:
 /// - the `shift` is rounded to the nearest multiple of $2^k$
-/// - the `sample` is rounded to the nearest value of type `T`.
 /// - the noise granularity is in increments of $2^k$.
-pub fn sample_discrete_gaussian_Z2k<T>(shift: T, scale: T, k: i32) -> Fallible<T>
-where
-    T: CastInternalRational,
-{
+pub fn sample_discrete_gaussian_Z2k(shift: RBig, scale: RBig, k: i32) -> Fallible<RBig> {
     // integerize
-    let mut i = find_nearest_multiple_of_2k(shift.into_rational()?, k);
+    let mut i = find_nearest_multiple_of_2k(shift, k);
 
     // sample from the discrete gaussian on ℤ*2^k
-    i += sample_discrete_gaussian(shr(scale.into_rational()?, k))?;
+    i += sample_discrete_gaussian(shr(scale, k))?;
 
-    // postprocess! int -> rational -> T
-    Ok(T::from_rational(x_mul_2k(i, k)))
+    // postprocess! int -> rational
+    Ok(x_mul_2k(i, k))
 }
 
 fn shr(lhs: RBig, rhs: i32) -> RBig {
@@ -124,7 +116,13 @@ macro_rules! impl_cast_internal_rational_float {
                 v.$method().value()
             }
             fn into_rational(self) -> Fallible<RBig> {
-                RBig::try_from(self).map_err(|_| err!(FailedFunction, "shift must be finite"))
+                RBig::try_from(self).map_err(|_| {
+                    err!(
+                        FailedFunction,
+                        "{} must be representable as a fraction",
+                        self
+                    )
+                })
             }
         }
     };
