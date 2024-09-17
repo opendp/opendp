@@ -117,7 +117,7 @@ def test_priv_map_fails():
 
     # Construct and collect a measurement with bad_domain works
     # TODO: Should it fail here?
-    bad_meas = dp.m.make_private_lazyframe(bad_domain, dp.symmetric_distance(), dp.max_divergence(T=float), plan)
+    bad_meas = dp.m.make_private_lazyframe(bad_domain, dp.symmetric_distance(), dp.max_divergence(), plan)
     _ = bad_meas(lf).collect()
 
     # Privacy map fails: This is expected?
