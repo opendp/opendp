@@ -11,10 +11,15 @@
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
+#[cfg(feature = "polars")]
+mod polars;
+#[cfg(feature = "polars")]
+pub use polars::*;
+
 // Once we have things using `Any` that are outside of `contrib`, this should specify `feature="ffi"`.
 #[cfg(feature = "contrib")]
 use std::any::Any;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::Bound;
@@ -23,6 +28,8 @@ use crate::core::Domain;
 use crate::error::Fallible;
 use crate::traits::{CheckAtom, InherentNull, ProductOrd};
 use std::fmt::{Debug, Formatter};
+
+use bitvec::prelude::{BitVec, Lsb0};
 
 #[cfg(feature = "contrib")]
 mod poly;
@@ -127,7 +134,7 @@ impl<T: CheckAtom + InherentNull> AtomDomain<T> {
         }
     }
 }
-impl<T: CheckAtom + ProductOrd> AtomDomain<T> {
+impl<T: CheckAtom + ProductOrd + Debug> AtomDomain<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Ok(AtomDomain {
             bounds: Some(Bounds::new_closed(bounds)?),
@@ -135,12 +142,17 @@ impl<T: CheckAtom + ProductOrd> AtomDomain<T> {
         })
     }
 
-    pub fn get_closed_bounds(&self) -> Option<(T, T)> {
-        let bounds = self.bounds.as_ref()?;
+    pub fn get_closed_bounds(&self) -> Fallible<(T, T)> {
+        let bounds = self.bounds.as_ref().ok_or_else(|| {
+            err!(
+                MakeTransformation,
+                "input domain must consist of bounded data. Either specify bounds in the input domain or use make_clamp."
+            )
+        })?;
 
         match (&bounds.lower, &bounds.upper) {
-            (Bound::Included(l), Bound::Included(u)) => Some((l.clone(), u.clone())),
-            _ => None,
+            (Bound::Included(l), Bound::Included(u)) => Ok((l.clone(), u.clone())),
+            _ => fallible!(MakeTransformation, "bounds are not closed"),
         }
     }
 }
@@ -200,7 +212,7 @@ pub struct Bounds<T> {
     lower: Bound<T>,
     upper: Bound<T>,
 }
-impl<T: ProductOrd> Bounds<T> {
+impl<T: ProductOrd + Debug> Bounds<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Self::new((Bound::Included(bounds.0), Bound::Included(bounds.1)))
     }
@@ -218,16 +230,28 @@ impl<T: ProductOrd> Bounds<T> {
             if v_lower > v_upper {
                 return fallible!(
                     MakeDomain,
-                    "lower bound may not be greater than upper bound"
+                    "lower bound ({:?}) may not be greater than upper bound ({:?})",
+                    v_lower,
+                    v_upper
                 );
             }
             if v_lower == v_upper {
                 match (&lower, &upper) {
-                    (Bound::Included(_l), Bound::Excluded(_u)) => {
-                        return fallible!(MakeDomain, "upper bound excludes inclusive lower bound")
+                    (Bound::Included(l), Bound::Excluded(u)) => {
+                        return fallible!(
+                            MakeDomain,
+                            "upper bound ({:?}) excludes inclusive lower bound ({:?})",
+                            l,
+                            u
+                        )
                     }
-                    (Bound::Excluded(_l), Bound::Included(_u)) => {
-                        return fallible!(MakeDomain, "lower bound excludes inclusive upper bound")
+                    (Bound::Excluded(l), Bound::Included(u)) => {
+                        return fallible!(
+                            MakeDomain,
+                            "lower bound ({:?}) excludes inclusive upper bound ({:?})",
+                            l,
+                            u
+                        )
                     }
                     _ => (),
                 }
@@ -445,6 +469,54 @@ impl<D: Domain> Domain for VectorDomain<D> {
     }
 }
 
+/// Alias for BitVec<u8,Lsb0>
+pub type BitVector = BitVec<u8, Lsb0>;
+
+/// A domain that contains all vectors of only Boolean values
+///
+/// If a maximum weight is specified, then it is restricted to all vectors up to a specified Hamming weight
+#[derive(Clone, PartialEq)]
+pub struct BitVectorDomain {
+    pub max_weight: Option<usize>,
+}
+impl Debug for BitVectorDomain {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        let weight_str = self
+            .max_weight
+            .map(|max_weight| format!("weight={:?}", max_weight))
+            .unwrap_or_default();
+        write!(f, "BitVectorDomain({})", weight_str)
+    }
+}
+impl Default for BitVectorDomain {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl BitVectorDomain {
+    pub fn new() -> Self {
+        BitVectorDomain { max_weight: None }
+    }
+    pub fn with_max_weight(mut self, max_weight: usize) -> Self {
+        self.max_weight = Some(max_weight);
+        self
+    }
+    pub fn without_max_weight(mut self) -> Self {
+        self.max_weight = None;
+        self
+    }
+}
+impl Domain for BitVectorDomain {
+    type Carrier = BitVector; //
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        Ok(if let Some(max_weight) = self.max_weight {
+            val.count_ones() <= max_weight
+        } else {
+            true
+        })
+    }
+}
+
 /// A domain that represents nullity via the Option type.
 ///
 /// # Proof Definition
@@ -494,6 +566,54 @@ impl<D: Domain> Domain for OptionDomain<D> {
             .as_ref()
             .map(|v| self.element_domain.member(v))
             .unwrap_or(Ok(true))
+    }
+}
+
+/// A domain that represents categorical data.
+///
+/// Categorical data is ostensibly a string,
+/// however the data is stored as a vector of indices into an encoding.
+/// This gives memory speedups when the number of unique values is small.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct CategoricalDomain {
+    /// The encoding used to assign numerical indices to each known possible category.
+    encoding: Option<Vec<String>>,
+}
+
+impl CategoricalDomain {
+    /// Only use this constructor if you know both the category set,
+    /// as well as how categories are encoded as integers.
+    ///
+    /// Typically when categorical data is encoded,
+    /// indices are assigned by the order encountered in the data, making the encoding data-dependent.
+    ///
+    /// An example where this can be happen is for categorical data emitted by the Polars cut expression,
+    /// where the categories and encoding are pre-determined by the expression (the bin edges).
+    pub fn new_with_encoding(encoding: Vec<String>) -> Fallible<Self> {
+        if encoding.len() != HashSet::<_>::from_iter(encoding.iter()).len() {
+            return fallible!(MakeDomain, "categories in encoding must be distinct");
+        }
+        Ok(CategoricalDomain {
+            encoding: Some(encoding),
+        })
+    }
+
+    pub fn encoding(&self) -> Option<&Vec<String>> {
+        self.encoding.as_ref()
+    }
+}
+
+impl Domain for CategoricalDomain {
+    /// This domain is used in conjunction with another domain, like Polars SeriesDomain,
+    /// where the carrier type reflects the encoding used to efficiently store categorical data.
+    type Carrier = String;
+
+    fn member(&self, value: &Self::Carrier) -> Fallible<bool> {
+        Ok(self
+            .encoding
+            .as_ref()
+            .map(|e| e.contains(value))
+            .unwrap_or(true))
     }
 }
 

@@ -4,7 +4,7 @@ mod ffi;
 use crate::core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap};
 use crate::domains::VectorDomain;
 use crate::error::Fallible;
-use crate::measures::{FixedSmoothedMaxDivergence, MaxDivergence};
+use crate::measures::{Approximate, MaxDivergence};
 use crate::traits::{ExactIntCast, InfDiv, InfExpM1, InfLn1P, InfMul};
 
 pub trait IsSizedDomain: Domain {
@@ -30,13 +30,10 @@ pub trait AmplifiableMeasure: Measure {
     ) -> Fallible<Self::Distance>;
 }
 
-impl<Q> AmplifiableMeasure for MaxDivergence<Q>
-where
-    Q: ExactIntCast<usize> + InfMul + InfExpM1 + InfLn1P + InfDiv + Clone,
-{
-    fn amplify(&self, epsilon: &Q, population_size: usize, sample_size: usize) -> Fallible<Q> {
+impl AmplifiableMeasure for MaxDivergence {
+    fn amplify(&self, epsilon: &f64, population_size: usize, sample_size: usize) -> Fallible<f64> {
         let sampling_rate =
-            Q::exact_int_cast(sample_size)?.inf_div(&Q::exact_int_cast(population_size)?)?;
+            f64::exact_int_cast(sample_size)?.inf_div(&f64::exact_int_cast(population_size)?)?;
         epsilon
             .clone()
             .inf_exp_m1()?
@@ -44,18 +41,15 @@ where
             .inf_ln_1p()
     }
 }
-impl<Q> AmplifiableMeasure for FixedSmoothedMaxDivergence<Q>
-where
-    Q: ExactIntCast<usize> + InfMul + InfExpM1 + InfLn1P + InfDiv + Clone,
-{
+impl AmplifiableMeasure for Approximate<MaxDivergence> {
     fn amplify(
         &self,
-        (epsilon, delta): &(Q, Q),
+        (epsilon, delta): &(f64, f64),
         population_size: usize,
         sample_size: usize,
-    ) -> Fallible<(Q, Q)> {
+    ) -> Fallible<(f64, f64)> {
         let sampling_rate =
-            Q::exact_int_cast(sample_size)?.inf_div(&Q::exact_int_cast(population_size)?)?;
+            f64::exact_int_cast(sample_size)?.inf_div(&f64::exact_int_cast(population_size)?)?;
         Ok((
             epsilon
                 .clone()
@@ -96,7 +90,9 @@ where
     if population_size < sample_size {
         return fallible!(
             MakeMeasurement,
-            "population size cannot be less than sample size"
+            "population size ({:?}) cannot be less than sample size ({:?})",
+            population_size,
+            sample_size
         );
     }
 
@@ -113,26 +109,4 @@ where
 }
 
 #[cfg(all(test, feature = "partials"))]
-mod test {
-    use crate::combinators::make_population_amplification;
-    use crate::domains::{AtomDomain, VectorDomain};
-    use crate::error::Fallible;
-    use crate::measurements::then_laplace;
-    use crate::metrics::SymmetricDistance;
-    use crate::transformations::make_mean;
-
-    #[test]
-    fn test_amplifier() -> Fallible<()> {
-        let meas = (make_mean(
-            VectorDomain::new(AtomDomain::new_closed((0., 10.))?).with_size(10),
-            SymmetricDistance::default(),
-        ) >> then_laplace(0.5, None))?;
-        let amp = make_population_amplification(&meas, 100)?;
-        amp.function.eval(&vec![1.; 10])?;
-        assert!(meas.check(&2, &(2. + 1e-6))?);
-        assert!(!meas.check(&2, &2.)?);
-        assert!(amp.check(&2, &0.4941)?);
-        assert!(!amp.check(&2, &0.494)?);
-        Ok(())
-    }
-}
+mod test;

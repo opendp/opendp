@@ -1,43 +1,56 @@
 import pytest
 import opendp.prelude as dp
 
-dp.enable_features('floating-point', 'contrib')
 
 def test_gaussian_curve():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
     meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.))
-    curve = meas.map(d_in=1.)
-    assert curve.epsilon(delta=0.) == float('inf')
-    assert curve.epsilon(delta=1e-3) == 0.6880024554878086
-    assert curve.epsilon(delta=1.) == 0.
+    profile = meas.map(d_in=1.)
+    assert profile.epsilon(delta=0.) == float('inf')
+    # see cdp_delta for formula of 0.688 and 0.151
 
-    curve = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.)).map(d_in=0.0)
-    assert curve.epsilon(0.0) == 0.0
-    with pytest.raises(Exception):
-        curve.epsilon(delta=-0.0)
+    # cdp_epsilon(rho=(1/4)^2 / 2, delta=1e-3)
+    assert profile.epsilon(delta=1e-3) == 0.6880024554878085
+    assert profile.epsilon(delta=1.) == 0.
+    # cdp_delta(rho=(1/4)^2 / 2, epsilon=0.0)
+    assert profile.delta(epsilon=0.) == 0.1508457845622862
+    # reuse the constant above
+    assert profile.delta(epsilon=0.6880024554878085) == 1e-3
 
-    curve = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.)).map(d_in=1.0)
-    assert curve.epsilon(delta=0.0) == float('inf')
-    assert curve.epsilon(delta=0.1) == float('inf')
+    profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.)).map(d_in=0.0)
+    assert profile.epsilon(0.0) == 0.0
+    with pytest.raises(dp.OpenDPException):
+        profile.epsilon(delta=-0.0)
+    with pytest.raises(dp.OpenDPException):
+        profile.delta(epsilon=-0.0)
+        
+    profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.)).map(d_in=1.0)
+    assert profile.epsilon(delta=0.0) == float('inf')
+    assert profile.epsilon(delta=0.1) == float('inf')
+    assert profile.delta(epsilon=0.0) == 1.0
+    assert profile.delta(epsilon=0.1) == 1.0
 
-    curve = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.)).map(d_in=0.0)
-    assert curve.epsilon(delta=0.0) == 0.0
-    assert curve.epsilon(delta=0.1) == 0.0
+    profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.)).map(d_in=0.0)
+    assert profile.epsilon(delta=0.0) == 0.0
+    assert profile.epsilon(delta=0.1) == 0.0
+    assert profile.delta(epsilon=0.0) == 0.0
+    assert profile.delta(epsilon=0.1) == 0.0
+
 
 
 def test_gaussian_search():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
 
-    def make_smd_gauss(scale, delta):
+    def make_approx_gauss(scale, delta):
         return dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, scale)), delta)
 
-    fixed_meas = make_smd_gauss(1., 1e-5)
+    fixed_meas = make_approx_gauss(1., 1e-5)
     ideal_dist = fixed_meas.map(1.)
     print("ideal dist", ideal_dist)
     print("check with ideal dist:", fixed_meas.check(1., ideal_dist))
 
     print("Standard", dp.binary_search_param(
-        lambda s: make_smd_gauss(s, 1e-5),
+        lambda s: make_approx_gauss(s, 1e-5),
         d_in=1., d_out=(1., 1e-5)))
 
 
@@ -67,7 +80,7 @@ def test_gaussian_smoothed_max_divergence():
 
 def test_gaussian_zcdp():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    meas = input_space >> dp.m.then_gaussian(scale=1.5, MO=dp.ZeroConcentratedDivergence[float])
+    meas = input_space >> dp.m.then_gaussian(scale=1.5, MO=dp.ZeroConcentratedDivergence)
     print("base gaussian:", meas(100.))
 
     rho = meas.map(d_in=1.)
@@ -152,7 +165,7 @@ def test_make_count_by_ptr():
     meas = (
         input_space >>
         dp.t.then_count_by(MO=dp.L1Distance[float], TV=float) >> 
-        dp.m.then_base_laplace_threshold(scale=2., threshold=28.)
+        dp.m.then_laplace_threshold(scale=2., threshold=28.)
     )
     print("stability histogram:", meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
     print(meas.map(1))
@@ -191,19 +204,17 @@ def test_report_noisy_max_gumbel():
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
 
     input_metric = dp.linf_distance(T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "maximize")
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "max")
     print(meas(list(range(10))))
     assert meas.map(2) == 4
 
     input_metric = dp.linf_distance(monotonic=True, T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "maximize")
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "max")
     print(meas(list(range(10))))
     assert meas.map(2) == 2
 
 
 def test_alp_histogram():
-    import opendp.prelude as dp
-
     counter = dp.t.make_count_by(
         dp.vector_domain(dp.atom_domain(T=str)),
         dp.symmetric_distance(),
@@ -221,3 +232,23 @@ def test_alp_histogram():
     print(alp_qbl("B"))
     print(alp_qbl("C"))
     print(alp_meas.map(1))
+
+def test_randomized_response_bitvec():
+    np = pytest.importorskip('numpy')
+
+    m_rr = dp.m.make_randomized_response_bitvec(
+        dp.bitvector_domain(max_weight=4), dp.discrete_distance(), f=0.95
+    )
+
+    data = np.packbits(
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0]
+    )
+    assert np.array_equal(data, np.array([0, 8, 12], dtype=np.uint8))
+
+    # roundtrip: bytes -> mech -> numpy
+    release = np.frombuffer(m_rr(data.tobytes()), dtype=np.uint8)
+
+    print(np.unpackbits(data), np.unpackbits(release))
+    # epsilon is 2 * m * ln((2 - f) / f)
+    # where m = 4 and f = .95
+    assert m_rr.map(1) == 0.8006676684558611

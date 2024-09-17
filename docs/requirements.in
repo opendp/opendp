@@ -5,11 +5,11 @@
 #
 # and then commit this file and requirements.txt.
 
-sphinx
+sphinx==7.2.6 # TODO: upgrade breaks "make html". https://github.com/opendp/opendp/issues/1910
 sphinx-prompt
 sphinx-design
 git+https://github.com/samtygier-stfc/sphinx-multiversion.git@prebuild_command
-pydata-sphinx-theme
+pydata-sphinx-theme==0.15.3rc1 # TODO: Remove version pin when RC is released.
 nbsphinx
 ipython  # for notebook syntax highlighting in docs
 pandoc

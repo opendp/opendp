@@ -6,30 +6,7 @@ on:
     - cron: '45 3 * * *'
 
 jobs:
-  check:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Get last run
-        id: get_last_run
-        uses: octokit/request-action@v2.x
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          route: GET /repos/${{ github.repository }}/actions/workflows/nightly.yml/runs?per_page=1&status=completed
-
-      - name: Parse last run
-        id: parse_last_run
-        env:
-          SHA: ${{ fromJson(steps.get_last_run.outputs.data).workflow_runs[0].head_sha }}
-        run: |
-          echo "LAST=$SHA CURRENT=${{ github.sha }}"
-          echo "changed=${{ github.sha != env.SHA }}" >> $GITHUB_OUTPUT
-    outputs:
-      changed: ${{ steps.parse_last_run.outputs.changed }}
-
   release:
-    needs: check
-    if: ${{ fromJson(needs.check.outputs.changed) }}
     uses: ./.github/workflows/release.yml
     with:
       channel: nightly

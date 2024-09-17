@@ -1,52 +1,52 @@
 use opendp_derive::bootstrap;
 
 use crate::{
+    combinators::ConcentratedMeasure,
     core::{FfiResult, Measurement, PrivacyMap},
     error::Fallible,
     ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
-    measures::ZeroConcentratedDivergence,
-    traits::Float,
+    measures::{Approximate, ZeroConcentratedDivergence},
 };
 
 #[bootstrap(features("contrib"), dependencies("$get_dependencies(measurement)"))]
 /// Constructs a new output measurement where the output measure
-/// is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
+/// is casted from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`.
 ///
 /// # Arguments
 /// * `measurement` - a measurement with a privacy measure to be casted
 fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
-    fn monomorphize<QO: Float>(m: &AnyMeasurement) -> Fallible<AnyMeasurement> {
-        let privacy_map = m.privacy_map.clone();
-        let measurement = Measurement::new(
-            m.input_domain.clone(),
-            m.function.clone(),
-            m.input_metric.clone(),
-            try_!(m
-                .output_measure
-                .clone()
-                .downcast::<ZeroConcentratedDivergence<QO>>()),
+    fn monomorphize<MO: 'static + ConcentratedMeasure>(
+        meas: &AnyMeasurement,
+    ) -> Fallible<AnyMeasurement> {
+        let privacy_map = meas.privacy_map.clone();
+        let meas = Measurement::new(
+            meas.input_domain.clone(),
+            meas.function.clone(),
+            meas.input_metric.clone(),
+            meas.output_measure.downcast_ref::<MO>()?.clone(),
             PrivacyMap::new_fallible(move |d_in: &AnyObject| {
-                privacy_map.eval(d_in)?.downcast::<QO>()
+                privacy_map.eval(d_in)?.downcast::<MO::Distance>()
             }),
         )?;
-
-        let m = super::make_zCDP_to_approxDP(measurement)?;
-
-        let privacy_map = m.privacy_map.clone();
-        m.with_map(
-            m.input_metric.clone(),
-            AnyMeasure::new(m.output_measure.clone()),
+        let meas = super::make_zCDP_to_approxDP(meas)?;
+        let privacy_map = meas.privacy_map.clone();
+        Measurement::new(
+            meas.input_domain.clone(),
+            meas.function.clone(),
+            meas.input_metric.clone(),
+            AnyMeasure::new(meas.output_measure.clone()),
             PrivacyMap::new_fallible(move |d_in: &AnyObject| {
-                privacy_map.eval(d_in).map(AnyObject::new)
+                Ok(AnyObject::new(privacy_map.eval(d_in)?))
             }),
         )
     }
 
-    let Q = measurement.output_measure.distance_type.clone();
-
-    dispatch!(monomorphize, [
-        (Q, @floats)
-    ], (measurement))
+    let MO = measurement.output_measure.type_.clone();
+    dispatch!(
+        monomorphize,
+        [(MO, [ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])],
+        (measurement)
+    )
 }
 
 #[no_mangle]

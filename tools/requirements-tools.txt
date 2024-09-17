@@ -1,0 +1,7 @@
+semver==3.0
+tomlkit==0.11.8
+debmutate==0.61
+twine==5.1.1
+setuptools==69.2.0
+wheel
+configupdater==3.2

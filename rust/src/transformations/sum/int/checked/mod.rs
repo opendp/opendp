@@ -48,7 +48,7 @@ where
     if T::int_sum_can_overflow(size, bounds.clone())? {
         return fallible!(
             MakeTransformation,
-            "potential for overflow when computing function"
+            "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds or by using a data type with greater bit-depth."
         );
     }
 
@@ -69,17 +69,4 @@ where
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_make_sized_bounded_int_checked_sum() -> Fallible<()> {
-        let trans = make_sized_bounded_int_checked_sum(4, (1, 10))?;
-        let sum = trans.invoke(&vec![1, 2, 3, 4])?;
-        assert_eq!(sum, 10);
-
-        // should error under these conditions
-        assert!(make_sized_bounded_int_checked_sum::<u8>(2, (0, 255)).is_err());
-        Ok(())
-    }
-}
+mod test;

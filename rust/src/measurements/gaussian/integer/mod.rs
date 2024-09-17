@@ -1,14 +1,14 @@
 use std::convert::TryFrom;
 
 use dashu::{integer::IBig, rational::RBig};
-use num::{Float as _, Zero};
+use num::Zero;
 
 use crate::{
     core::{Function, Measurement},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, L2Distance},
-    traits::{samplers::sample_discrete_gaussian, CheckAtom, Float, SaturatingCast},
+    traits::{samplers::sample_discrete_gaussian, CheckAtom, SaturatingCast},
 };
 
 use super::GaussianMeasure;
@@ -22,26 +22,29 @@ use super::GaussianMeasure;
 ///
 /// # Generics
 /// * `T` - Type of input data.
-/// * `MO` - Output measure. The only valid measure is `ZeroConcentratedDivergence<QO>`, but QO can be any float.
+/// * `MO` - Output measure. The only valid measure is `ZeroConcentratedDivergence`.
 /// * `QI` - Input distance. The type of sensitivities. Can be any integer or float.
 pub fn make_scalar_integer_gaussian<T, MO, QI>(
     input_domain: AtomDomain<T>,
     input_metric: AbsoluteDistance<QI>,
-    scale: MO::Atom,
+    scale: f64,
 ) -> Fallible<Measurement<AtomDomain<T>, T, AbsoluteDistance<QI>, MO>>
 where
     T: CheckAtom + SaturatingCast<IBig>,
     IBig: From<T>,
 
     MO: GaussianMeasure<AbsoluteDistance<QI>>,
-    MO::Atom: Float,
-    RBig: TryFrom<MO::Atom>,
 {
     if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
+        return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
     }
-    let scale_rational =
-        RBig::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
+    let scale_rational = RBig::try_from(scale).map_err(|_| {
+        err!(
+            MakeMeasurement,
+            "scale ({}) is not representable as a fraction",
+            scale
+        )
+    })?;
 
     Measurement::new(
         input_domain,
@@ -60,7 +63,7 @@ where
         },
         input_metric,
         MO::default(),
-        MO::new_forward_map(scale, MO::Atom::zero())?,
+        MO::new_forward_map(scale, 0.0),
     )
 }
 
@@ -73,26 +76,29 @@ where
 ///
 /// # Generics
 /// * `T` - Type of input data.
-/// * `MO` - Output measure. The only valid measure is `ZeroConcentratedDivergence<QO>`, but QO can be any float.
+/// * `MO` - Output measure. The only valid measure is `ZeroConcentratedDivergence`.
 /// * `QI` - Input distance. The type of sensitivities. Can be any integer or float.
 pub fn make_vector_integer_gaussian<T, MO, QI>(
     input_domain: VectorDomain<AtomDomain<T>>,
     input_metric: L2Distance<QI>,
-    scale: MO::Atom,
+    scale: f64,
 ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, L2Distance<QI>, MO>>
 where
     T: CheckAtom + SaturatingCast<IBig>,
     IBig: From<T>,
 
     MO: GaussianMeasure<L2Distance<QI>>,
-    MO::Atom: Float,
-    RBig: TryFrom<MO::Atom>,
 {
     if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
+        return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
     }
-    let scale_rational =
-        RBig::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
+    let scale_rational = RBig::try_from(scale).map_err(|_| {
+        err!(
+            MakeMeasurement,
+            "scale ({}) is not representable as a fraction",
+            scale
+        )
+    })?;
 
     Measurement::new(
         input_domain,
@@ -115,52 +121,9 @@ where
         },
         input_metric,
         MO::default(),
-        MO::new_forward_map(scale, MO::Atom::zero())?,
+        MO::new_forward_map(scale, 0.0),
     )
 }
 
 #[cfg(test)]
-mod test {
-
-    use super::*;
-    use crate::{domains::AtomDomain, measures::ZeroConcentratedDivergence};
-
-    // there is a distributional test in the accuracy module
-
-    #[test]
-    fn test_make_scalar_integer_gaussian() -> Fallible<()> {
-        let meas = make_scalar_integer_gaussian::<_, ZeroConcentratedDivergence<_>, f32>(
-            AtomDomain::default(),
-            AbsoluteDistance::default(),
-            1e30f64,
-        )?;
-        println!("{:?}", meas.invoke(&0)?);
-        assert!(meas.check(&1., &1e30f64.recip().powi(2))?);
-        Ok(())
-    }
-
-    #[test]
-    fn test_make_scalar_integer_gaussian_zero_scale() -> Fallible<()> {
-        let meas = make_scalar_integer_gaussian::<_, ZeroConcentratedDivergence<_>, i32>(
-            AtomDomain::default(),
-            AbsoluteDistance::default(),
-            0.,
-        )?;
-        assert_eq!(meas.invoke(&0)?, 0);
-        assert_eq!(meas.map(&0)?, 0.);
-        assert_eq!(meas.map(&1)?, f64::INFINITY);
-        Ok(())
-    }
-
-    #[test]
-    fn test_make_scalar_integer_gaussian_max_scale() -> Fallible<()> {
-        let meas = make_scalar_integer_gaussian::<_, ZeroConcentratedDivergence<_>, f64>(
-            AtomDomain::default(),
-            AbsoluteDistance::default(),
-            f64::MAX,
-        )?;
-        println!("{:?} {:?}", meas.invoke(&0)?, i32::MAX);
-
-        Ok(())
-    }
-}
+mod test;

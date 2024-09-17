@@ -22,7 +22,7 @@ on:
       counter:
         type: number
         required: false
-        default: 0
+        default: 1
       dry_run:
         type: boolean
         required: false
@@ -51,7 +51,7 @@ on:
         description: Version Counter
         type: number
         required: false
-        default: 0
+        default: 1
       dry_run:
         description: Dry Run?
         type: boolean
@@ -86,7 +86,7 @@ jobs:
           cache: pip
 
       - name: Install requirements
-        run: pip install -r tools/requirements-channel_tool.txt
+        run: pip install -r tools/requirements-tools.txt
 
       - name: Initialize channel
         env:
@@ -106,7 +106,8 @@ jobs:
       - name: Push changes
         if: ${{ !inputs.dry_run }}
         run: |
-          git commit -a -m "Initialize and configure channel"
+          git add --force . # Generated files are git-ignored, so we need --force.
+          git commit -m "Initialize and configure channel"
           git push --force origin ${{ inputs.channel }}
     outputs:
       date: ${{ steps.configure.outputs.date }}

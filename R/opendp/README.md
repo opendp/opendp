@@ -10,3 +10,5 @@ These hints will help you apply the Python examples to R.
 - All portions of the Python API that are derived from Rust have parallels in the R API, but packages like `context` that exist only in Python have not yet been implemented in R.
 
 Next: [Reference](reference/index.html)
+
+<!-- The line above works in the rendered docs, but not in github. This file is skipped by link checker. -->

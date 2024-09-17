@@ -25,8 +25,8 @@ pub extern "C" fn opendp_transformations__make_resize(
     let input_metric = try_as_ref!(input_metric);
     let constant = try_as_ref!(constant);
     let T = try_!(input_domain.type_.get_atom());
-    let MI = input_metric.type_.clone();
-    let MO = try_!(Type::try_from(MO));
+    let MI_ = input_metric.type_.clone();
+    let MO_ = try_!(Type::try_from(MO));
 
     fn monomorphize_all<MI, MO, TA: 'static + CheckAtom + Clone>(
         input_domain: &AnyDomain,
@@ -49,8 +49,8 @@ pub extern "C" fn opendp_transformations__make_resize(
     }
 
     dispatch!(monomorphize_all, [
-        (MI, [SymmetricDistance, InsertDeleteDistance]),
-        (MO, [SymmetricDistance, InsertDeleteDistance]),
+        (MI_, [SymmetricDistance, InsertDeleteDistance]),
+        (MO_, [SymmetricDistance, InsertDeleteDistance]),
         (T, @primitives)
     ], (input_domain, input_metric, size, constant))
     .into()

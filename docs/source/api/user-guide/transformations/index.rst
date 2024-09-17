@@ -1,12 +1,14 @@
-.. _transformation-constructors:
+.. _transformations-user-guide:
 
 Transformations
 ===============
 
+(See also :py:mod:`opendp.transformations` in the API reference.)
+
 This section gives a high-level overview of the transformations that are available in the library.
 Refer to the :ref:`transformation` section for an explanation of what a transformation is.
 
-As covered in the :ref:`chaining` section, the intermediate :ref:`domains <domains>` need to match when chaining.
+As covered in the :ref:`chaining` section, the intermediate :ref:`domains <domains-user-guide>` need to match when chaining.
 Each transformation has a carefully chosen input domain and output domain that supports their relation.
 
 
@@ -24,74 +26,6 @@ You will need to choose the proper transformations from the sections below in or
 The sections below are in the order you would typically chain transformations together,
 but you may want to peek at the aggregator section at the end first,
 to identify the input domain that you'll need to preprocess to.
-
-Dataframe
----------
-These transformations are for loading data into a dataframe and retrieving columns from a dataframe.
-If you just want to load data from a CSV or TSV into a dataframe,
-you'll probably want to use :func:`opendp.transformations.make_split_dataframe`.
-
-Use :func:`opendp.transformations.make_select_column` to retrieve a column from the dataframe.
-
-The other dataframe transformations are more situational.
-
-Be warned that it is not currently possible to directly load and unload dataframes from the library in bindings languages!
-You need to chain with ``make_select_column`` first.
-
-.. list-table::
-   :header-rows: 1
-
-   * - Preprocessor
-     - Input Domain
-     - Output Domain
-     - Input/Output Metric
-   * - :func:`opendp.transformations.make_split_dataframe`
-     - ``AtomDomain<String>``
-     - ``DataFrameDomain<K>``
-     - ``SymmetricDistance``
-   * - :func:`opendp.transformations.make_split_lines`
-     - ``AtomDomain<String>``
-     - ``VectorDomain<AtomDomain<String>>``
-     - ``SymmetricDistance``
-   * - :func:`opendp.transformations.make_split_records`
-     - ``VectorDomain<AtomDomain<String>>``
-     - ``VectorDomain<VectorDomain<AtomDomain<String>>>``
-     - ``SymmetricDistance``
-   * - :func:`opendp.transformations.make_create_dataframe`
-     - ``VectorDomain<VectorDomain<AtomDomain<String>>>``
-     - ``DataFrameDomain<K>``
-     - ``SymmetricDistance``
-   * - :func:`opendp.transformations.make_select_column`
-     - ``DataFrameDomain<K>``
-     - ``VectorDomain<AtomDomain<TOA>>``
-     - ``SymmetricDistance``
-
-
-Dataframe Subsetting
---------------------
-It can be useful to subset to data that meets a certain condition. 
-The library contains some transformations that can be used to create a predicate column,
-and :func:`opendp.transformations.make_subset_by` to filter by the predicate column.
-
-.. list-table::
-   :header-rows: 1
-
-   * - Preprocessor
-     - Input Domain
-     - Output Domain
-     - Input/Output Metric
-   * - :func:`opendp.transformations.make_df_cast_default`
-     - ``DataFrameDomain<K>``
-     - ``DataFrameDomain<K>``
-     - ``SymmetricDistance``
-   * - :func:`opendp.transformations.make_df_is_equal`
-     - ``DataFrameDomain<K>``
-     - ``DataFrameDomain<K>``
-     - ``SymmetricDistance``
-   * - :func:`opendp.transformations.make_subset_by`
-     - ``DataFrameDomain<K>``
-     - ``DataFrameDomain<K>``
-     - ``SymmetricDistance``
      
 
 Casting
@@ -195,7 +129,7 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> import opendp.prelude as dp
         >>> dp.enable_features('contrib')
@@ -216,7 +150,7 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> binner = dp.t.make_find_bin(
         ...     dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance(),
@@ -230,7 +164,7 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
         >>> indexer = dp.t.make_index(
         ...     dp.vector_domain(dp.atom_domain(T=dp.usize)), dp.symmetric_distance(),
@@ -397,7 +331,7 @@ These default to ``L1Distance[TOA]``, which chains with L1 noise mechanisms like
 If you set the output metric to ``L2Distance[TOA]``, you can chain with L2 mechanisms like :func:`opendp.measurements.make_gaussian`.
 
 The constructor :func:`opendp.transformations.make_count_by` does a similar aggregation as :func:`opendp.transformations.make_count_by_categories`,
-but does not need a category set (you instead chain with :func:`opendp.measurements.make_base_laplace_threshold`).
+but does not need a category set (you instead chain with :func:`opendp.measurements.make_laplace_threshold`).
 
 The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time because data loaders for data of type ``Vec<(T, T)>`` are not implemented.
 
@@ -539,74 +473,3 @@ See the following notebook for more information:
    aggregation-quantile
 
 These use :func:`opendp.transformations.make_b_ary_tree`, :func:`opendp.transformations.make_consistent_b_ary_tree` and :func:`opendp.transformations.make_quantiles_from_counts`.
-
-
-Bring Your Own
---------------
-
-Use :func:`opendp.transformations.make_user_transformation` to construct your own transformation.
-
-.. note::
-
-    This requires a looser trust model, as we cannot verify any privacy or stability properties of user-defined functions.
-
-    .. doctest::
-
-        >>> import opendp.prelude as dp
-        >>> dp.enable_features("honest-but-curious")
-
-In this example, we mock the typical API of the OpenDP library to make a transformation that duplicates each record `multiplicity` times:
-
-.. tab-set::
-
-  .. tab-item:: Python
-
-    .. doctest::
-
-        >>> import opendp.prelude as dp
-        >>> from typing import List
-        ...
-        >>> def make_repeat(multiplicity):
-        ...     """Constructs a Transformation that duplicates each record `multiplicity` times"""
-        ...     def function(arg: List[int]) -> List[int]:
-        ...         return arg * multiplicity
-        ... 
-        ...     def stability_map(d_in: int) -> int:
-        ...         # if a user could influence at most `d_in` records before, 
-        ...         # they can now influence `d_in` * `multiplicity` records
-        ...         return d_in * multiplicity
-        ...
-        ...     return dp.t.make_user_transformation(
-        ...         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
-        ...         input_metric=dp.symmetric_distance(),
-        ...         output_domain=dp.vector_domain(dp.atom_domain(T=int)),
-        ...         output_metric=dp.symmetric_distance(),
-        ...         function=function,
-        ...         stability_map=stability_map,
-        ...     )
-    
-The resulting Transformation may be used interchangeably with those constructed via the library:
-
-.. tab-set::
-
-  .. tab-item:: Python
-
-    .. doctest::
-
-        >>> trans = (
-        ...     (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance())
-        ...     >> dp.t.then_cast_default(TOA=int)
-        ...     >> make_repeat(2)  # our custom transformation
-        ...     >> dp.t.then_clamp((1, 2))
-        ...     >> dp.t.then_sum()
-        ...     >> dp.m.then_laplace(1.0)
-        ... )
-        ...
-        >>> release = trans(["0", "1", "2", "3"])
-        >>> trans.map(1) # computes epsilon
-        4.0
-
-The code snip may form a basis for you to create your own data transformations, 
-and mix them into an OpenDP analysis.
-
-You can also define your own measurements (:func:`opendp.measurements.make_user_measurement`) and postprocessors (:func:`opendp.core.new_function`).

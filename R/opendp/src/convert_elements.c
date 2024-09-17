@@ -112,7 +112,6 @@ SEXP anymeasurementptr_to_sexp(AnyMeasurement *input, SEXP log)
 {
     SEXP XPtr = PROTECT(R_MakeExternalPtr(input, AnyMeasurement_tag, R_NilValue));
     R_RegisterCFinalizerEx(XPtr, odp_AnyMeasurement_finalizer, TRUE);
-    UNPROTECT(1);
 
     int errorOccurred;
     SEXP new_measurement = PROTECT(get_private_func("new_measurement"));
@@ -121,7 +120,7 @@ SEXP anymeasurementptr_to_sexp(AnyMeasurement *input, SEXP log)
     if (errorOccurred)
         error("failed to construct measurement");
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     return measurement;
 }
 
@@ -371,8 +370,8 @@ void odp_AnyObject_finalizer(SEXP XPtr)
     R_ClearExternalPtr(XPtr);
 }
 
-// AnyObject: SMDCurve
-AnyObject *sexp_to_smdcurveptr(SEXP value)
+// AnyObject: PrivacyProfile
+AnyObject *sexp_to_privacyprofileptr(SEXP value)
 {
     PROTECT(value);
 
@@ -382,7 +381,7 @@ AnyObject *sexp_to_smdcurveptr(SEXP value)
     if (errorOccurred)
         error("could not determine class");
 
-    if (str_equal(sexp_to_charptr(class), "smd_curve"))
+    if (str_equal(sexp_to_charptr(class), "privacy_profile"))
     {
         SEXP call = PROTECT(Rf_lang2(value, PROTECT(Rf_mkString("ptr"))));
         value = Rf_eval(call, R_GlobalEnv);
@@ -394,20 +393,20 @@ AnyObject *sexp_to_smdcurveptr(SEXP value)
     return (AnyObject *)R_ExternalPtrAddr(value);
 }
 
-SEXP smdcurveptr_to_sexp(AnyObject *input, SEXP info)
+SEXP privacyprofileptr_to_sexp(AnyObject *input, SEXP info)
 {
     SEXP XPtr = PROTECT(R_MakeExternalPtr(input, AnyObject_tag, info));
     R_RegisterCFinalizerEx(XPtr, odp_AnyObject_finalizer, TRUE);
 
     int errorOccurred;
-    SEXP new_smd_curve = get_private_func("new_smd_curve");
-    SEXP smdcurve_expr = lang2(new_smd_curve, XPtr);
-    SEXP smdcurve = R_tryEval(smdcurve_expr, R_GlobalEnv, &errorOccurred);
+    SEXP new_privacy_profile = get_private_func("new_privacy_profile");
+    SEXP privacyprofile_expr = lang2(new_privacy_profile, XPtr);
+    SEXP privacyprofile = R_tryEval(privacyprofile_expr, R_GlobalEnv, &errorOccurred);
     if (errorOccurred)
-        error("failed to construct smd_curve");
+        error("failed to construct privacy_profile");
 
     UNPROTECT(1);
-    return smdcurve;
+    return privacyprofile;
 }
 
 // AnyObject: Queryable

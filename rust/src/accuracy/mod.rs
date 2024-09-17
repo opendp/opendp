@@ -3,15 +3,23 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use std::f64::consts::SQRT_2;
+#[cfg(feature = "polars")]
+mod polars;
+
+mod tail_bounds;
+pub use tail_bounds::*;
 
 use num::{Float, One, Zero};
 use opendp_derive::bootstrap;
 use statrs::function::erf::erf_inv;
+use std::f64::consts::SQRT_2;
 
 use crate::error::Fallible;
 use crate::traits::InfCast;
 use std::fmt::Debug;
+
+#[cfg(all(test, feature = "untrusted"))]
+pub mod test;
 
 #[bootstrap(arguments(scale(c_type = "void *"), alpha(c_type = "void *")))]
 /// Convert a Laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
@@ -27,10 +35,10 @@ pub fn laplacian_scale_to_accuracy<T: Float + Zero + One + Debug>(
     alpha: T,
 ) -> Fallible<T> {
     if scale.is_sign_negative() {
-        return fallible!(InvalidDistance, "scale may not be negative");
+        return fallible!(InvalidDistance, "scale ({:?}) may not be negative", scale);
     }
     if alpha <= T::zero() || T::one() < alpha {
-        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]");
+        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]", alpha);
     }
     Ok(-scale * alpha.ln())
 }
@@ -55,10 +63,10 @@ pub fn discrete_laplacian_scale_to_accuracy<T: Float + Zero + One + Debug>(
     alpha: T,
 ) -> Fallible<T> {
     if scale.is_sign_negative() {
-        return fallible!(InvalidDistance, "scale may not be negative");
+        return fallible!(InvalidDistance, "scale ({:?}) may not be negative", scale);
     }
     if alpha <= T::zero() || T::one() < alpha {
-        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]");
+        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]", alpha);
     }
 
     let _1 = T::one();
@@ -89,10 +97,14 @@ pub fn accuracy_to_laplacian_scale<T: Float + Zero + One + Debug>(
     alpha: T,
 ) -> Fallible<T> {
     if accuracy.is_sign_negative() {
-        return fallible!(InvalidDistance, "accuracy may not be negative");
+        return fallible!(
+            InvalidDistance,
+            "accuracy ({:?}) may not be negative",
+            accuracy
+        );
     }
     if alpha <= T::zero() || T::one() <= alpha {
-        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1)");
+        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1)", alpha);
     }
     Ok(-accuracy / alpha.ln())
 }
@@ -153,10 +165,10 @@ where
     let scale = f64::inf_cast(scale)?;
     let alpha = f64::inf_cast(alpha)?;
     if scale.is_sign_negative() {
-        return fallible!(InvalidDistance, "scale may not be negative");
+        return fallible!(InvalidDistance, "scale ({:?}) may not be negative", scale);
     }
     if alpha <= 0. || 1. < alpha {
-        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]");
+        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]", alpha);
     }
     T::inf_cast(scale * SQRT_2 * erf_inv(1. - alpha))
 }
@@ -178,12 +190,12 @@ where
     let scale = f64::inf_cast(scale)?;
     let alpha = f64::inf_cast(alpha)?;
 
-    let mut total = (1. - alpha) * dg_normalization_term(scale);
+    let mut total = (1. - alpha) * tail_bounds::dg_normalization_term(scale);
     let mut i = 0;
     total -= dg_pdf(i, scale);
     while total > 0. {
         i += 1;
-        let dens = 2. * dg_pdf(i, scale);
+        let dens = 2. * tail_bounds::dg_pdf(i, scale);
         if dens.is_zero() {
             return fallible!(FailedFunction, "could not determine accuracy");
         }
@@ -209,10 +221,14 @@ where
     let accuracy = f64::inf_cast(accuracy)?;
     let alpha = f64::inf_cast(alpha)?;
     if accuracy.is_sign_negative() {
-        return fallible!(InvalidDistance, "accuracy may not be negative");
+        return fallible!(
+            InvalidDistance,
+            "accuracy ({:?}) may not be negative",
+            accuracy
+        );
     }
     if alpha <= 0. || 1. <= alpha {
-        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1)");
+        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1)", alpha);
     }
     T::inf_cast(accuracy / SQRT_2 / erf_inv(1. - alpha))
 }
@@ -256,354 +272,5 @@ where
         } else {
             s_min = s_mid;
         }
-    }
-}
-
-fn dg_pdf(x: i32, scale: f64) -> f64 {
-    (-(x as f64 / scale).powi(2) / 2.).exp()
-}
-
-fn dg_normalization_term(scale: f64) -> f64 {
-    let mut i = 0;
-    let mut total = dg_pdf(i, scale);
-    loop {
-        i += 1;
-        let density_i = 2. * dg_pdf(i, scale);
-        if density_i.is_zero() {
-            return total;
-        }
-        total += density_i;
-    }
-}
-
-#[cfg(all(test, feature = "untrusted"))]
-pub mod test {
-    use std::fmt::Debug;
-    use std::ops::{Mul, Sub};
-
-    use super::*;
-    use crate::domains::AtomDomain;
-    use crate::error::ExplainUnwrap;
-    use crate::measurements::{
-        make_gaussian, make_scalar_float_gaussian, make_scalar_float_laplace,
-        make_scalar_integer_laplace,
-    };
-    use crate::measures::ZeroConcentratedDivergence;
-    use crate::metrics::AbsoluteDistance;
-
-    #[test]
-    fn test_comparison() -> Fallible<()> {
-        let alpha = 0.05;
-        let scale = 20.;
-        let accuracy = 20.;
-
-        let c_acc = laplacian_scale_to_accuracy(scale, alpha)?;
-        let d_acc = discrete_laplacian_scale_to_accuracy(scale, alpha)?;
-        assert!(c_acc < d_acc);
-        println!("lap cont accuracy: {}", c_acc);
-        println!("lap disc accuracy: {}", d_acc);
-
-        let c_scale = accuracy_to_laplacian_scale(accuracy, alpha)?;
-        let d_scale = accuracy_to_discrete_laplacian_scale(accuracy, alpha)?;
-        assert!(c_scale > d_scale);
-        println!("lap cont scale: {}", c_scale);
-        println!("lap disc scale: {}", d_scale);
-
-        let c_acc = gaussian_scale_to_accuracy(scale, alpha)?;
-        let d_acc = discrete_gaussian_scale_to_accuracy(scale, alpha)?;
-        assert!(c_acc < d_acc);
-        println!("gauss cont accuracy: {}", c_acc);
-        println!("gauss disc accuracy: {}", d_acc);
-
-        let c_scale = accuracy_to_gaussian_scale(accuracy, alpha)?;
-        let d_scale = accuracy_to_discrete_gaussian_scale(accuracy, alpha)?;
-        assert!(c_scale > d_scale);
-        println!("gauss cont scale: {}", c_scale);
-        println!("gauss disc scale: {}", d_scale);
-        Ok(())
-    }
-
-    fn print_statement<T: Copy + Debug + One + From<i8> + Sub<Output = T> + Mul<Output = T>>(
-        dist: &str,
-        scale: T,
-        accuracy: T,
-        alpha: T,
-    ) {
-        let _100 = T::from(100);
-        println!(
-            "When the {dist} scale is {scale:?}, the DP estimate differs from the true value \
-                    by no more than {accuracy:?} at a level-alpha of {alpha:?}, \
-                    or with (1 - {alpha:?})100% = {perc:.2?}% confidence.",
-            dist = dist,
-            scale = scale,
-            accuracy = accuracy,
-            alpha = alpha,
-            perc = (T::one() - alpha) * _100
-        );
-    }
-
-    #[test]
-    fn test_laplacian_scale_to_accuracy() -> Fallible<()> {
-        macro_rules! check_laplacian_scale_to_accuracy {
-            (scale=$scale:literal, alpha=$alpha:literal) => {
-                print_statement(
-                    "laplacian",
-                    $scale,
-                    laplacian_scale_to_accuracy($scale, $alpha)?,
-                    $alpha,
-                )
-            };
-        }
-        check_laplacian_scale_to_accuracy!(scale = 1., alpha = 0.05);
-        check_laplacian_scale_to_accuracy!(scale = 2., alpha = 0.05);
-        check_laplacian_scale_to_accuracy!(scale = 0., alpha = 0.55);
-        Ok(())
-    }
-
-    #[test]
-    pub fn test_accuracy_to_laplacian_scale() -> Fallible<()> {
-        macro_rules! check_accuracy_to_laplacian_scale {
-            (accuracy=$accuracy:literal, alpha=$alpha:literal) => {
-                print_statement(
-                    "laplacian",
-                    accuracy_to_laplacian_scale($accuracy, $alpha)?,
-                    $accuracy,
-                    $alpha,
-                )
-            };
-        }
-        check_accuracy_to_laplacian_scale!(accuracy = 1., alpha = 0.05);
-        check_accuracy_to_laplacian_scale!(accuracy = 2., alpha = 0.05);
-        check_accuracy_to_laplacian_scale!(accuracy = 0.01, alpha = 0.1);
-        Ok(())
-    }
-
-    #[test]
-    pub fn test_gaussian_scale_to_accuracy() -> Fallible<()> {
-        macro_rules! check_gaussian_scale_to_accuracy {
-            (scale=$scale:literal, alpha=$alpha:literal) => {
-                print_statement(
-                    "gaussian",
-                    $scale,
-                    gaussian_scale_to_accuracy($scale, $alpha)?,
-                    $alpha,
-                )
-            };
-        }
-
-        check_gaussian_scale_to_accuracy!(scale = 1., alpha = 0.05);
-        check_gaussian_scale_to_accuracy!(scale = 2., alpha = 0.10);
-        check_gaussian_scale_to_accuracy!(scale = 3., alpha = 0.55);
-        Ok(())
-    }
-
-    #[test]
-    pub fn test_accuracy_to_gaussian_scale() -> Fallible<()> {
-        macro_rules! check_accuracy_to_gaussian_scale {
-            (accuracy=$accuracy:literal, alpha=$alpha:literal) => {
-                print_statement(
-                    "gaussian",
-                    accuracy_to_gaussian_scale($accuracy, $alpha)?,
-                    $accuracy,
-                    $alpha,
-                )
-            };
-        }
-        check_accuracy_to_gaussian_scale!(accuracy = 1., alpha = 0.05);
-        check_accuracy_to_gaussian_scale!(accuracy = 2., alpha = 0.05);
-        check_accuracy_to_gaussian_scale!(accuracy = 1.2, alpha = 0.1);
-        Ok(())
-    }
-
-    #[test]
-    fn test_relative_laplacian_scale_to_accuracy() -> Fallible<()> {
-        // fix the scale.
-        // you get a tighter accuracy interval when you require greater statistical significance
-        // a higher confidence accuracy interval is wider than a lower confidence accuracy interval
-        assert!(
-            laplacian_scale_to_accuracy(1., 0.05)? // 95% confidence
-            > laplacian_scale_to_accuracy(1., 0.06)?
-        ); // 94% confidence
-
-        // fix the alpha/statistical significance.
-        // you get a tighter accuracy interval when there is less noise
-        // a less noisy sample produces a tighter/smaller accuracy interval
-        assert!(
-            laplacian_scale_to_accuracy(2., 0.05)? // 95% confidence
-            > laplacian_scale_to_accuracy(1., 0.05)?
-        ); // 95% confidence
-
-        Ok(())
-    }
-
-    #[test]
-    pub fn test_relative_accuracy_to_laplacian_scale() -> Fallible<()> {
-        // fix the size of the accuracy interval.
-        // if I want more confidence in the result, then I should have less noise
-        // you get a larger noise scale when you require greater statistical significance
-        // a higher confidence laplace scale is smaller than a lower confidence laplace scale
-        assert!(
-            accuracy_to_laplacian_scale(1., 0.05)? // 95% confidence
-            < accuracy_to_laplacian_scale(1., 0.06)?
-        ); // 94% confidence
-
-        // fix alpha/statistical significance.
-        // you get a larger noise scale when there is a wider accuracy interval
-        assert!(
-            accuracy_to_laplacian_scale(2., 0.05)? // 95% confidence
-            > accuracy_to_laplacian_scale(1., 0.05)?
-        ); // 95% confidence
-
-        Ok(())
-    }
-
-    #[test]
-    pub fn test_relative_gaussian_scale_to_accuracy() -> Fallible<()> {
-        // fix the scale.
-        // you get a tighter accuracy interval when you require greater statistical significance
-        // a higher confidence accuracy interval is wider than a lower confidence accuracy interval
-        assert!(
-            gaussian_scale_to_accuracy(1., 0.05)? // 95% confidence
-            > gaussian_scale_to_accuracy(1., 0.06)?
-        ); // 94% confidence
-
-        // fix the alpha/statistical significance.
-        // you get a tighter accuracy interval when there is less noise
-        // a less noisy sample produces a tighter/smaller accuracy interval
-        assert!(
-            gaussian_scale_to_accuracy(2., 0.05)? // 95% confidence
-            > gaussian_scale_to_accuracy(1., 0.05)?
-        ); // 95% confidence
-
-        Ok(())
-    }
-
-    #[test]
-    pub fn test_relative_accuracy_to_gaussian_scale() -> Fallible<()> {
-        // fix the size of the accuracy interval.
-        // if I want more confidence in the result, then I should have less noise
-        // you get a larger noise scale when you require greater statistical significance
-        // a higher confidence noise scale is smaller than a lower confidence noise scale
-        assert!(
-            accuracy_to_gaussian_scale(1., 0.05)? // 95% confidence
-            < accuracy_to_gaussian_scale(1., 0.06)?
-        ); // 94% confidence
-
-        // fix alpha/statistical significance.
-        // you get a larger noise scale when there is a wider accuracy interval
-        assert!(
-            accuracy_to_gaussian_scale(2., 0.05)? // 95% confidence
-            > accuracy_to_gaussian_scale(1., 0.05)?
-        ); // 95% confidence
-        Ok(())
-    }
-
-    #[test]
-    pub fn test_empirical_laplace_accuracy() -> Fallible<()> {
-        let accuracy = 1.0;
-        let theoretical_alpha = 0.05;
-        let scale = accuracy_to_laplacian_scale(accuracy, theoretical_alpha)?;
-        let input_domain = AtomDomain::default();
-        let input_metric = AbsoluteDistance::default();
-        let base_laplace =
-            make_scalar_float_laplace(input_domain, input_metric, scale, Some(-100))?;
-        let n = 50_000;
-        let empirical_alpha = (0..n)
-            .filter(|_| base_laplace.invoke(&0.0).unwrap().abs() > accuracy)
-            .count() as f64
-            / n as f64;
-
-        println!("Laplacian significance levels/alpha");
-        println!("Theoretical: {:?}", theoretical_alpha);
-        println!("Empirical:   {:?}", empirical_alpha);
-        assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
-        Ok(())
-    }
-
-    #[test]
-    pub fn test_empirical_gaussian_accuracy() -> Fallible<()> {
-        let accuracy = 1.0;
-        let theoretical_alpha = 0.05;
-        let scale = accuracy_to_gaussian_scale(accuracy, theoretical_alpha)?;
-        let base_gaussian = make_scalar_float_gaussian::<ZeroConcentratedDivergence<f64>, _>(
-            AtomDomain::default(),
-            AbsoluteDistance::default(),
-            scale,
-            Some(-100),
-        )?;
-        let n = 50_000;
-        let empirical_alpha = (0..n)
-            .filter(|_| base_gaussian.invoke(&0.0).unwrap_test().abs() > accuracy)
-            .count() as f64
-            / n as f64;
-
-        println!("Gaussian significance levels/alpha");
-        println!("Theoretical: {:?}", theoretical_alpha);
-        println!("Empirical:   {:?}", empirical_alpha);
-        assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
-        Ok(())
-    }
-
-    #[test]
-    pub fn test_empirical_discrete_laplace_accuracy() -> Fallible<()> {
-        let accuracy = 25;
-        let theoretical_alpha = 0.05;
-        let scale = accuracy_to_discrete_laplacian_scale(accuracy as f64, theoretical_alpha)?;
-        println!("scale: {scale}");
-        let input_domain = AtomDomain::<i32>::default();
-        let input_metric = AbsoluteDistance::default();
-        let base_dl = make_scalar_integer_laplace(input_domain, input_metric, scale)?;
-        let n = 50_000;
-        let empirical_alpha = (0..n)
-            .filter(|_| base_dl.invoke(&0).unwrap().clamp(-127, 127).abs() >= accuracy)
-            .count() as f64
-            / n as f64;
-
-        println!("Discrete laplace significance levels/alpha");
-        println!("Theoretical: {:?}", theoretical_alpha);
-        println!("Empirical:   {:?}", empirical_alpha);
-        assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
-        Ok(())
-    }
-
-    #[test]
-    pub fn test_empirical_discrete_gaussian_accuracy() -> Fallible<()> {
-        let accuracy = 25;
-        let theoretical_alpha = 0.05;
-        let scale = accuracy_to_discrete_gaussian_scale(accuracy as f64, theoretical_alpha)?;
-        // let scale = 12.503562372734077;
-
-        println!("scale: {}", scale);
-        let base_dg = make_gaussian::<_, ZeroConcentratedDivergence<f64>, i32>(
-            AtomDomain::<i8>::default(),
-            AbsoluteDistance::default(),
-            scale,
-            None,
-        )?;
-        let n = 50_000;
-        let empirical_alpha = (0..n)
-            .filter(|_| base_dg.invoke(&0).unwrap().clamp(-127, 127).abs() >= accuracy)
-            .count() as f64
-            / n as f64;
-
-        println!("Discrete gaussian significance levels/alpha");
-        println!("Theoretical: {:?}", theoretical_alpha);
-        println!("Empirical:   {:?}", empirical_alpha);
-        assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
-        Ok(())
-    }
-
-    #[test]
-    pub fn test_roundtrip() -> Fallible<()> {
-        let accuracy = 1.;
-        let alpha = 0.05;
-        let accuracy_2 =
-            gaussian_scale_to_accuracy(accuracy_to_gaussian_scale(accuracy, alpha)?, alpha)?;
-        assert!((accuracy - accuracy_2).abs() < 1e-8);
-
-        let accuracy_2 =
-            laplacian_scale_to_accuracy(accuracy_to_laplacian_scale(accuracy, alpha)?, alpha)?;
-        assert!((accuracy - accuracy_2).abs() < 1e-8);
-        Ok(())
     }
 }

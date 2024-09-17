@@ -1,5 +1,9 @@
 name: Smoke Test
 
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -8,7 +12,7 @@ on:
   pull_request:
 
 jobs:
-  rust-build-and-test:
+  rust-build:
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -16,6 +20,18 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
     steps:
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false     # no: will remove rust
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: true         # ?
+          large-packages: false # no: slow
+          swap-storage: false   # no: having swap is useful
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -37,60 +53,97 @@ jobs:
         run: cargo fmt --manifest-path=Cargo.toml --all --check
 
       - name: Build
-        run: cargo build --verbose --features untrusted,bindings
+        run: cargo build --verbose --all-features
       
       - name: Check --no-default-features
-        run: cargo check --verbose --no-default-features --features untrusted,ffi
+        run: cargo check --verbose --no-default-features --features untrusted,bindings
 
-      - name: Test
-        run: cargo test --verbose --features untrusted,ffi
-
-      - name: Check that generated python is up to date
-        run: git diff --exit-code
-
-      - name: Upload libs
-        uses: actions/upload-artifact@v4
-        with:
-          name: libs
-          path: |
-            rust/target/debug/libopendp.so
-            rust/target/debug/libopendp.a
+      - name: Build (dynamic w/ polars)
+        run: cargo build --verbose --features untrusted,ffi,polars
       
-      - name: Prepare vendored sources
-        run: cd .. && bash tools/r_stage.sh -v
-          
-      - name: Upload vendored sources
+      - name: Upload (dynamic w/ polars)
         uses: actions/upload-artifact@v4
         with:
-          name: vendor
-          path: R/opendp/src/vendor.tar.xz
+          name: dynamic_lib
+          path: rust/target/debug/libopendp.so
 
-  rust-examples:
+      - name: Build (static w/o Polars)
+        run: cargo build --verbose --features untrusted,ffi
+      
+      - name: Upload (static w/o Polars)
+        uses: actions/upload-artifact@v4
+        with:
+          name: static_lib
+          path: rust/target/debug/libopendp.a
+  
+      - name: Upload Python bindings
+        uses: actions/upload-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+
+      - name: Upload R bindings
+        uses: actions/upload-artifact@v4
+        with:
+          name: r_bindings
+          path: R/opendp/
+
+  rust-test:
+    needs: rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
-        working-directory: docs/source
+        working-directory: rust
     env:
       CARGO_TERM_COLOR: always
     steps:
+      
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false     # no: will remove rust
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: true         # 5.4GiB
+          large-packages: false # no: slow
+          swap-storage: false   # no: having swap is useful
+
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Install nightly
-        run: rustup update nightly
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Cargo run
-        run: cargo +nightly -Zscript getting-started/quickstart.rs
+      - name: Test
+        run: cargo test --verbose --all-features
+
+      - name: Run docs example
+        run: cd ../docs/source/getting-started/code/quickstart-framework-rust; cargo run
 
   python-test:
-    needs: rust-build-and-test
+    needs: rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
         working-directory: python
     strategy:
       matrix:
-        python-version: [3.8, 3.12]
+        python-version:
+          - '3.9'
+          - '3.12'
+        extra-install:
+          - '.'
+          - '.[scikit-learn]'
+          - '.[polars]'
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -100,39 +153,73 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Get pip cache dir
-        id: pip-cache
-        run: echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip-${{ hashFiles('python/setup.cfg') }}
-          restore-keys: ${{ runner.os }}-pip-
+      # Disabled so that cached dependencies don't collide
+      # - name: Get pip cache dir
+      #   id: pip-cache
+      #   run: echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+      #
+      # - name: Cache pip dependencies
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: ${{ steps.pip-cache.outputs.dir }}
+      #     key: ${{ runner.os }}-pip-${{ hashFiles('python/setup.cfg') }}
+      #     restore-keys: ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
-      - name: Download libs
+      - name: Download dynamic lib
         uses: actions/download-artifact@v4
         with:
-          name: libs
+          name: dynamic_lib
           path: python/src/opendp/lib
-      
+
+      - name: Download Python bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+
       - name: Install package
-        run: python -m pip install -e .[scikit-learn]
+        run: python -m pip install -e ${{ matrix.extra-install }}
 
       - name: Test
-        run: coverage run -m pytest -v
+        # There's not a "skipif" for doctests, so use "-k" to exclude based on name patterns.
+        # (Even in unittests we should use "importskip" rather than "skipif".)
+        run: coverage run -m pytest -v ${{ ! contains(matrix.extra-install, 'polars') && '-k "not lazyframe and not polars and not pca and not rst"' || ''}}
+
+      - name: Test replace-binary-path
+        if: ${{ contains(matrix.extra-install, 'polars') }}
+        # Messes with envvars, so can't be run in parallel!
+        run: FORCE_TEST_REPLACE_BINARY_PATH=1 pytest -k 'test_replace_binary_path'
 
       - name: Test coverage
-        run: coverage report
+        # We only expect test coverage with all extra dependencies.
+        # "polars" implies "scikit-learn": see setup.cfg.
+        if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.12') }}
+        run: coverage report | tee /tmp/coverage.txt
+
+      - name: Upload coverage
+        if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.12') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: /tmp/coverage.txt
+
+  confirm-coverage:
+    needs: python-test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download coverage
+        # No additional action needed: We just need to confirm that at least one test produced a coverage report.
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
 
   docs-links:
-    needs: rust-build-and-test # TODO: Is this needed?
+    needs: rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -140,6 +227,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Look for URLs that should be relative
+        # R docs are copied into place after build, so they do not use relative URLs.
+        # Negative lookahead could also be used, but it is only supported by PCRE, which not all greps support.
+        run: "! ( grep 'https://docs.opendp.org' -r source --binary-file=without-match | grep -v https://docs.opendp.org/en/stable/api/r )"
+
+      - name: Download Python bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/
 
       - name: Install Pandoc
         run: sudo apt-get install -y pandoc
@@ -154,7 +252,7 @@ jobs:
         run: linkchecker -f linkchecker.cfg build/html/index.html
 
   python-notebooks:
-    needs: rust-build-and-test
+    needs: rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -162,6 +260,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Download Python bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -185,10 +289,10 @@ jobs:
           python -m pip install flake8 pytest nbmake pytest-xdist
           python -m pip install -r requirements_notebooks.txt
 
-      - name: Download libs
+      - name: Download dynamic lib
         uses: actions/download-artifact@v4
         with:
-          name: libs
+          name: dynamic_lib
           path: python/src/opendp/lib
 
       - name: Install package
@@ -200,20 +304,29 @@ jobs:
           pytest --nbmake source/**/*.ipynb -n=auto
 
   r-test:
-    needs: rust-build-and-test
+    needs: rust-build
     runs-on: ubuntu-22.04
     env:
       OPENDP_LIB_DIR: ${{ github.workspace }}/libs
       LINTR_ERROR_ON_LINT: true
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Download libs
         uses: actions/download-artifact@v4
         with:
-          name: libs
+          # R uses a static library build that doesn't include Polars 
+          # (Polars currently links against Python)
+          name: static_lib
           path: libs/
+
+      - name: Download R bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: r_bindings
+          path: R/opendp/
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
@@ -221,20 +334,23 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: R/opendp
-          extra-packages: devtools, local::., RcppTOML, lintr
+          extra-packages: devtools, RcppTOML, lintr
+
+      # running the OpenDP install in a separate command (instead of local::. above)
+      #   provides significantly more debug info if it fails
+      - name: Install OpenDP
+        working-directory: R/opendp/
+        run: Rscript -e 'devtools::install()'
 
       - name: Unit tests
         working-directory: R/opendp/
         run: Rscript -e 'devtools::test(reporter = c("summary", "fail"))'
 
-      - name: Documentation examples
-        run: |
-          STATUS=0
-          for R in `find docs/source -type f -name '*.R'`; do
-            echo $R
-            Rscript "$R" || STATUS=1
-          done
-          exit $STATUS
+      - name: Run sphinx examples
+        run: python tools/r_doc_examples.py
+
+      - name: Lint sphinx examples
+        run: Rscript -e 'lintr::lint_dir("docs/source")'
 
       - name: Document
         run: cd R/opendp/ && Rscript -e 'devtools::document()'

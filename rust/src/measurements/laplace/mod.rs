@@ -6,7 +6,7 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
     metrics::{AbsoluteDistance, L1Distance},
-    traits::{cartesian, Float, InfCast},
+    traits::{Float, InfCast},
 };
 
 #[cfg(feature = "contrib")]
@@ -22,7 +22,7 @@ pub use integer::*;
 #[cfg(feature = "ffi")]
 mod ffi;
 
-pub(crate) fn laplace_map<QI, QO>(scale: QO, relaxation: QO) -> impl Fn(&QI) -> Fallible<QO>
+pub(crate) fn laplace_puredp_map<QI, QO>(scale: QO, relaxation: QO) -> impl Fn(&QI) -> Fallible<QO>
 where
     QI: Clone,
     QO: Float + InfCast<QI>,
@@ -52,7 +52,7 @@ where
     }
 }
 
-pub trait LaplaceDomain<QO>: Domain
+pub trait LaplaceDomain: Domain
 where
     (Self, Self::InputMetric): MetricSpace,
 {
@@ -60,34 +60,34 @@ where
     fn make_laplace(
         input_domain: Self,
         input_metric: Self::InputMetric,
-        scale: QO,
+        scale: f64,
         k: Option<i32>,
-    ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence<QO>>>;
+    ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence>>;
 }
 
 macro_rules! impl_make_laplace_float {
     ($($ty:ty)+) => {$(
-        impl LaplaceDomain<$ty> for AtomDomain<$ty> {
+        impl LaplaceDomain for AtomDomain<$ty> {
             type InputMetric = AbsoluteDistance<$ty>;
             fn make_laplace(
                 input_domain: Self,
                 input_metric: Self::InputMetric,
-                scale: $ty,
+                scale: f64,
                 k: Option<i32>,
-            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence<$ty>>>
+            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence>>
             {
                 make_scalar_float_laplace(input_domain, input_metric, scale, k)
             }
         }
 
-        impl LaplaceDomain<$ty> for VectorDomain<AtomDomain<$ty>> {
+        impl LaplaceDomain for VectorDomain<AtomDomain<$ty>> {
             type InputMetric = L1Distance<$ty>;
             fn make_laplace(
                 input_domain: Self,
                 input_metric: Self::InputMetric,
-                scale: $ty,
+                scale: f64,
                 k: Option<i32>,
-            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence<$ty>>>
+            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence>>
             {
                 make_vector_float_laplace(input_domain, input_metric, scale, k)
             }
@@ -98,15 +98,15 @@ macro_rules! impl_make_laplace_float {
 impl_make_laplace_float!(f32 f64);
 
 macro_rules! impl_make_laplace_int {
-    ($T:ty, $QO:ty) => {
-        impl LaplaceDomain<$QO> for AtomDomain<$T> {
+    ($($T:ty)+) => {$(
+        impl LaplaceDomain for AtomDomain<$T> {
             type InputMetric = AbsoluteDistance<$T>;
             fn make_laplace(
                 input_domain: Self,
                 input_metric: Self::InputMetric,
-                scale: $QO,
+                scale: f64,
                 k: Option<i32>,
-            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence<$QO>>>
+            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence>>
             {
                 if k.is_some() {
                     return fallible!(MakeMeasurement, "k is only valid for domains over floats");
@@ -115,14 +115,14 @@ macro_rules! impl_make_laplace_int {
             }
         }
 
-        impl LaplaceDomain<$QO> for VectorDomain<AtomDomain<$T>> {
+        impl LaplaceDomain for VectorDomain<AtomDomain<$T>> {
             type InputMetric = L1Distance<$T>;
             fn make_laplace(
                 input_domain: Self,
                 input_metric: Self::InputMetric,
-                scale: $QO,
+                scale: f64,
                 k: Option<i32>,
-            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence<$QO>>>
+            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MaxDivergence>>
             {
                 if k.is_some() {
                     return fallible!(MakeMeasurement, "k is only valid for domains over floats");
@@ -130,17 +130,14 @@ macro_rules! impl_make_laplace_int {
                 make_vector_integer_laplace(input_domain, input_metric, scale)
             }
         }
-    };
+    )+};
 }
-cartesian! {[i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize], [f32, f64], impl_make_laplace_int}
+impl_make_laplace_int!(i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
 
 #[bootstrap(
     features("contrib"),
-    arguments(
-        scale(c_type = "void *", rust_type = "$get_atom(QO)"),
-        k(default = b"null")
-    ),
-    generics(D(suppress), QO(default = "float"))
+    arguments(k(default = b"null")),
+    generics(D(suppress))
 )]
 /// Make a Measurement that adds noise from the Laplace(`scale`) distribution to the input.
 ///
@@ -165,13 +162,12 @@ cartesian! {[i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize], [f
 ///
 /// # Generics
 /// * `D` - Domain of the data to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
-/// * `QO` - Data type of the output distance and scale. `f32` or `f64`.
-pub fn make_laplace<D: LaplaceDomain<QO>, QO: 'static>(
+pub fn make_laplace<D: LaplaceDomain>(
     input_domain: D,
     input_metric: D::InputMetric,
-    scale: QO,
+    scale: f64,
     k: Option<i32>,
-) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence>>
 where
     (D, D::InputMetric): MetricSpace,
 {
@@ -179,25 +175,4 @@ where
 }
 
 #[cfg(test)]
-mod test {
-
-    use super::*;
-    use num::{One, Zero};
-
-    #[test]
-    fn test_all() -> Fallible<()> {
-        macro_rules! test_laplace_with_ty {
-            ($($ty:ty),+) => {$(
-                let meas = make_laplace(AtomDomain::<$ty>::default(), Default::default(), 1., None)?;
-                meas.invoke(&<$ty>::zero())?;
-                meas.map(&<$ty>::one())?;
-
-                let meas = make_laplace(VectorDomain::new(AtomDomain::<$ty>::default()), Default::default(), 1., None)?;
-                meas.invoke(&vec![<$ty>::zero()])?;
-                meas.map(&<$ty>::one())?;
-            )+}
-        }
-        test_laplace_with_ty!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, f32, f64);
-        Ok(())
-    }
-}
+mod test;

@@ -5,12 +5,11 @@ use crate::{
     error::Fallible,
     ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
     measures::MaxDivergence,
-    traits::Float,
 };
 
 #[bootstrap(features("contrib"))]
 /// Constructs a new output measurement where the output measure
-/// is casted from `MaxDivergence<QO>` to `ZeroConcentratedDivergence<QO>`.
+/// is casted from `MaxDivergence` to `ZeroConcentratedDivergence`.
 ///
 /// # Citations
 /// - [BS16 Concentrated Differential Privacy: Simplifications, Extensions, and Lower Bounds](https://arxiv.org/pdf/1605.02065.pdf#subsection.3.1)
@@ -18,33 +17,26 @@ use crate::{
 /// # Arguments
 /// * `measurement` - a measurement with a privacy measure to be casted
 fn make_pureDP_to_zCDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
-    fn monomorphize<QO: Float>(m: &AnyMeasurement) -> Fallible<AnyMeasurement> {
-        let privacy_map = m.privacy_map.clone();
-        let measurement = m.with_map(
-            m.input_metric.clone(),
-            try_!(m.output_measure.clone().downcast::<MaxDivergence<QO>>()),
-            PrivacyMap::new_fallible(move |d_in: &AnyObject| {
-                privacy_map.eval(d_in)?.downcast::<QO>()
-            }),
-        )?;
+    let privacy_map = measurement.privacy_map.clone();
+    let measurement = measurement.with_map(
+        measurement.input_metric.clone(),
+        measurement
+            .output_measure
+            .clone()
+            .downcast::<MaxDivergence>()?,
+        PrivacyMap::new_fallible(move |d_in: &AnyObject| privacy_map.eval(d_in)?.downcast::<f64>()),
+    )?;
 
-        let m = super::make_pureDP_to_zCDP(measurement)?;
+    let m = super::make_pureDP_to_zCDP(measurement)?;
 
-        let privacy_map = m.privacy_map.clone();
-        m.with_map(
-            m.input_metric.clone(),
-            AnyMeasure::new(m.output_measure.clone()),
-            PrivacyMap::new_fallible(move |d_in: &AnyObject| {
-                privacy_map.eval(d_in).map(AnyObject::new)
-            }),
-        )
-    }
-
-    let Q = measurement.output_measure.distance_type.clone();
-
-    dispatch!(monomorphize, [
-        (Q, @floats)
-    ], (measurement))
+    let privacy_map = m.privacy_map.clone();
+    m.with_map(
+        m.input_metric.clone(),
+        AnyMeasure::new(m.output_measure.clone()),
+        PrivacyMap::new_fallible(move |d_in: &AnyObject| {
+            privacy_map.eval(d_in).map(AnyObject::new)
+        }),
+    )
 }
 
 #[no_mangle]

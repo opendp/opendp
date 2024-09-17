@@ -23,7 +23,7 @@ In the unlikely event that we need to modify the CLA, these are the steps to fol
     $ pandoc opendp-cla-company-X.Y.Z.md -o ../source/_static/opendp-cla-pandoc-X.Y.Z.pdf
     ```
 4. Update the URL references for the new version number in these files:
-   * [Main CLA file](../source/contributor/cla.rst)
+   * [Main CLA file](../source/contributing/cla.rst)
    * [Individual Workflow](https://github.com/opendp/clabot-config/blob/main/.github/workflows/sign-individual.yml)
    * [Company Workflow](https://github.com/opendp/clabot-config/blob/main/.github/workflows/sign-company.yml)
    * [`cla_tool.py`](https://github.com/opendp/clabot-config/blob/main/tools/cla_tool.py)

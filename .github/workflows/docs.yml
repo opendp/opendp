@@ -32,6 +32,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: stable
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
@@ -42,12 +44,12 @@ jobs:
           extra-packages: devtools
 
       - name: Build docs
-        run: bash tools/r_stage.sh -d
+        run: bash tools/r_stage.sh -u
 
       - name: Upload docs
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
-          name: r-docs
+          name: r_docs
           path: R/opendp/docs
 
   docs:
@@ -101,7 +103,7 @@ jobs:
       - name: Download R Docs
         uses: actions/download-artifact@v4
         with:
-          name: r-docs
+          name: r_docs
           path: en/stable/api/r
       
       - name: Checkout artifacts

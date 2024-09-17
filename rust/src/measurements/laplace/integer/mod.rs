@@ -1,15 +1,16 @@
 use std::convert::TryFrom;
 
 use dashu::{integer::IBig, rational::RBig};
+use num::Zero;
 
 use crate::{
     core::{Function, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measurements::laplace::laplace_map,
+    measurements::laplace::laplace_puredp_map,
     measures::MaxDivergence,
     metrics::{AbsoluteDistance, L1Distance},
-    traits::{samplers::sample_discrete_laplace, Float, InfCast, Integer, SaturatingCast},
+    traits::{samplers::sample_discrete_laplace, InfCast, Integer, SaturatingCast},
 };
 
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
@@ -25,23 +26,26 @@ use crate::{
 ///
 /// # Generics
 /// * `T` - Data type of input data
-/// * `QO` - Data type of the output distance and scale.
-pub fn make_scalar_integer_laplace<T, QO>(
+pub fn make_scalar_integer_laplace<T>(
     input_domain: AtomDomain<T>,
     input_metric: AbsoluteDistance<T>,
-    scale: QO,
-) -> Fallible<Measurement<AtomDomain<T>, T, AbsoluteDistance<T>, MaxDivergence<QO>>>
+    scale: f64,
+) -> Fallible<Measurement<AtomDomain<T>, T, AbsoluteDistance<T>, MaxDivergence>>
 where
     T: Integer + SaturatingCast<IBig>,
-    QO: Float + InfCast<T>,
+    f64: InfCast<T>,
     IBig: From<T>,
-    RBig: TryFrom<QO>,
 {
     if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
+        return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
     }
-    let r_scale =
-        RBig::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
+    let r_scale = RBig::try_from(scale).map_err(|_| {
+        err!(
+            MakeMeasurement,
+            "scale ({}) must be representable as a fraction",
+            scale
+        )
+    })?;
 
     Measurement::new(
         input_domain,
@@ -56,7 +60,7 @@ where
         },
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_map(scale, QO::zero())),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, 0.0)),
     )
 }
 
@@ -73,23 +77,26 @@ where
 ///
 /// # Generics
 /// * `T` - Data type of input data
-/// * `QO` - Data type of the output distance and scale.
-pub fn make_vector_integer_laplace<T, QO>(
+pub fn make_vector_integer_laplace<T>(
     input_domain: VectorDomain<AtomDomain<T>>,
     input_metric: L1Distance<T>,
-    scale: QO,
-) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, L1Distance<T>, MaxDivergence<QO>>>
+    scale: f64,
+) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, L1Distance<T>, MaxDivergence>>
 where
     T: Integer + SaturatingCast<IBig>,
-    QO: Float + InfCast<T>,
+    f64: InfCast<T>,
     IBig: From<T>,
-    RBig: TryFrom<QO>,
 {
     if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
+        return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
     }
-    let r_scale =
-        RBig::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
+    let r_scale = RBig::try_from(scale).map_err(|_| {
+        err!(
+            MakeMeasurement,
+            "scale ({}) must be representable as a fraction",
+            scale
+        )
+    })?;
 
     Measurement::new(
         input_domain,
@@ -108,49 +115,9 @@ where
         },
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_map(scale, QO::zero())),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, 0.0)),
     )
 }
 
 #[cfg(test)]
-mod test {
-
-    use super::*;
-    use crate::{domains::AtomDomain, metrics::AbsoluteDistance};
-
-    // there is a distributional test in the accuracy module
-
-    #[test]
-    fn test_discrete_laplace_cks20() -> Fallible<()> {
-        let meas = make_scalar_integer_laplace(
-            AtomDomain::default(),
-            AbsoluteDistance::default(),
-            1e30f64,
-        )?;
-        println!("{:?}", meas.invoke(&0)?);
-        assert!(meas.check(&1, &1e30f64)?);
-        Ok(())
-    }
-
-    #[test]
-    fn test_discrete_laplace_cks20_zero_scale() -> Fallible<()> {
-        let meas =
-            make_scalar_integer_laplace(AtomDomain::default(), AbsoluteDistance::default(), 0.)?;
-        assert_eq!(meas.invoke(&0)?, 0);
-        assert_eq!(meas.map(&0)?, 0.);
-        assert_eq!(meas.map(&1)?, f64::INFINITY);
-        Ok(())
-    }
-
-    #[test]
-    fn test_discrete_laplace_cks20_max_scale() -> Fallible<()> {
-        let meas = make_scalar_integer_laplace(
-            AtomDomain::default(),
-            AbsoluteDistance::default(),
-            f64::MAX,
-        )?;
-        println!("{:?} {:?}", meas.invoke(&0)?, i32::MAX);
-
-        Ok(())
-    }
-}
+mod test;

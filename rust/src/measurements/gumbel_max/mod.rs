@@ -1,7 +1,10 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use dashu::integer::Sign;
+use std::fmt::Display;
+
+use dashu::rational::RBig;
+use num::Zero;
 use opendp_derive::bootstrap;
 
 use crate::{
@@ -10,7 +13,7 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
     metrics::LInfDistance,
-    traits::{Float, Number},
+    traits::{InfAdd, InfCast, InfDiv, Number},
 };
 
 use crate::traits::{
@@ -18,10 +21,32 @@ use crate::traits::{
     DistanceConstant,
 };
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy, Debug)]
+#[cfg_attr(feature = "polars", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "polars", serde(rename_all = "lowercase"))]
 pub enum Optimize {
-    Max,
     Min,
+    Max,
+}
+
+impl Display for Optimize {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Optimize::Min => f.write_str("min"),
+            Optimize::Max => f.write_str("max"),
+        }
+    }
+}
+
+impl TryFrom<&str> for Optimize {
+    type Error = crate::error::Error;
+    fn try_from(s: &str) -> Fallible<Self> {
+        Ok(match s {
+            "min" => Optimize::Min,
+            "max" => Optimize::Max,
+            _ => return fallible!(FailedCast, "optimize must be \"min\" or \"max\""),
+        })
+    }
 }
 
 #[bootstrap(
@@ -35,20 +60,19 @@ pub enum Optimize {
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable VectorDomain.
 /// * `input_metric` - Metric on the input domain. Must be LInfDistance
 /// * `scale` - Higher scales are more private.
-/// * `optimize` - Indicate whether to privately return the "Max" or "Min"
+/// * `optimize` - Indicate whether to privately return the "max" or "min"
 ///
 /// # Generics
 /// * `TIA` - Atom Input Type. Type of each element in the score vector.
-/// * `QO` - Output Distance Type.
-pub fn make_report_noisy_max_gumbel<TIA, QO>(
+pub fn make_report_noisy_max_gumbel<TIA>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
     input_metric: LInfDistance<TIA>,
-    scale: QO,
+    scale: f64,
     optimize: Optimize,
-) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, MaxDivergence<QO>>>
+) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, MaxDivergence>>
 where
     TIA: Number + CastInternalRational,
-    QO: CastInternalRational + DistanceConstant<TIA> + Float,
+    f64: DistanceConstant<TIA>,
 {
     if input_domain.element_domain.nullable() {
         return fallible!(MakeMeasurement, "input domain must be non-nullable");
@@ -63,59 +87,78 @@ where
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &Vec<TIA>| {
-            (arg.iter().cloned().enumerate())
-                .map(|(i, v)| {
-                    let shift = v.into_rational()?
-                        * match optimize {
-                            Optimize::Max => Sign::Positive,
-                            Optimize::Min => Sign::Negative,
-                        };
-                    Ok((i, GumbelPSRN::new(shift, scale_frac.clone())))
-                })
-                .reduce(|l, r| {
-                    let (mut l, mut r) = (l?, r?);
-                    Ok(if l.1.greater_than(&mut r.1)? { l } else { r })
-                })
-                .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
-                .map(|v| v.0)
+            select_score(arg.iter().cloned(), optimize.clone(), scale_frac.clone())
         }),
         input_metric.clone(),
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(move |d_in: &TIA| {
-            // convert L_\infty distance to range distance
-            let d_in = input_metric.range_distance(*d_in)?;
-
-            // convert data type to QO
-            let d_in = QO::inf_cast(d_in)?;
-
-            if d_in.is_sign_negative() {
-                return fallible!(InvalidDistance, "sensitivity must be non-negative");
-            }
-
-            if scale.is_zero() {
-                return Ok(QO::infinity());
-            }
-
-            // d_out >= d_in / scale
-            d_in.inf_div(&scale)
-        }),
+        PrivacyMap::new_fallible(report_noisy_max_gumbel_map(scale, input_metric)),
     )
 }
 
-#[cfg(test)]
-pub mod test_exponential {
-    use crate::error::Fallible;
+pub(crate) fn report_noisy_max_gumbel_map<QI>(
+    scale: f64,
+    input_metric: LInfDistance<QI>,
+) -> impl Fn(&QI) -> Fallible<f64>
+where
+    QI: Clone + InfAdd,
+    f64: InfCast<QI>,
+{
+    move |d_in: &QI| {
+        // convert L_\infty distance to range distance
+        let d_in = input_metric.range_distance(d_in.clone())?;
 
-    use super::*;
+        // convert data type to QO
+        let d_in = f64::inf_cast(d_in)?;
 
-    #[test]
-    fn test_exponential() -> Fallible<()> {
-        let input_domain = VectorDomain::new(AtomDomain::default());
-        let input_metric = LInfDistance::default();
-        let de = make_report_noisy_max_gumbel(input_domain, input_metric, 1., Optimize::Max)?;
-        let release = de.invoke(&vec![1., 2., 3., 2., 1.])?;
-        println!("{:?}", release);
+        if d_in.is_sign_negative() {
+            return fallible!(InvalidDistance, "sensitivity must be non-negative");
+        }
 
-        Ok(())
+        if scale.is_zero() {
+            return Ok(f64::INFINITY);
+        }
+
+        // d_out >= d_in / scale
+        d_in.inf_div(&scale)
     }
 }
+
+pub fn select_score<TIA>(
+    iter: impl Iterator<Item = TIA>,
+    optimize: Optimize,
+    scale: RBig,
+) -> Fallible<usize>
+where
+    TIA: Number + CastInternalRational,
+{
+    if scale.is_zero() {
+        let cmp = |l: &TIA, r: &TIA| match optimize {
+            Optimize::Max => l > r,
+            Optimize::Min => l < r,
+        };
+        return Ok(iter
+            .enumerate()
+            .reduce(|l, r| if cmp(&l.1, &r.1) { l } else { r })
+            .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
+            .0);
+    }
+
+    (iter.enumerate())
+        .map(|(i, v)| {
+            let mut shift = v.into_rational()?;
+            if optimize == Optimize::Min {
+                shift = -shift;
+            }
+            Ok((i, GumbelPSRN::new(shift, scale.clone())))
+        })
+        .reduce(|l, r| {
+            let (mut l, mut r) = (l?, r?);
+            Ok(if l.1.greater_than(&mut r.1)? { l } else { r })
+        })
+        .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
+        .map(|v| v.0)
+}
+
+#[cfg(feature = "floating-point")]
+#[cfg(test)]
+mod test;

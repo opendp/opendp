@@ -1,13 +1,15 @@
 use std::cmp::Ordering;
 
+use dashu::{integer::UBig, rational::RBig};
+use num::NumCast;
 use opendp_derive::bootstrap;
 
 use crate::{
     core::{Function, MetricSpace, StabilityMap, Transformation},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    metrics::LInfDistance,
-    traits::{AlertingMul, ExactIntCast, InfDiv, Number, RoundCast},
+    metrics::{IntDistance, LInfDistance},
+    traits::{ExactIntCast, Integer, Number, RoundCast},
 };
 
 use super::traits::UnboundedMetric;
@@ -52,53 +54,102 @@ where
         return fallible!(MakeTransformation, "input must be non-null");
     }
 
-    if candidates.windows(2).any(|w| w[0] >= w[1]) {
-        return fallible!(MakeTransformation, "candidates must be increasing");
-    }
+    validate_candidates(&candidates)?;
 
-    let alpha_den = if let Some(size) = input_domain.size {
-        // choose the finest granularity that won't overflow
-        // must have that size * denom < MAX, so let denom = MAX // size
-        (usize::MAX).neg_inf_div(&size)?
-    } else {
-        // default to an alpha granularity of .00001
-        10_000
-    };
-    // numer = alpha * denom
-    let alpha_num = usize::round_cast(alpha * f64::round_cast(alpha_den.clone())?)?;
-    if alpha_num > alpha_den || alpha_den == 0 {
-        return fallible!(MakeTransformation, "alpha must be within [0, 1]");
-    }
-
-    let size_limit = if let Some(size_limit) = input_domain.size {
-        // ensures that there is no overflow
-        size_limit.alerting_mul(&alpha_den)?;
-        size_limit
-    } else {
-        (usize::MAX).neg_inf_div(&alpha_den)?
-    };
-
-    let stability_map = if input_domain.size.is_some() {
-        StabilityMap::new_fallible(move |d_in| {
-            usize::exact_int_cast(d_in / 2)?
-                .alerting_mul(&2)?
-                .alerting_mul(&alpha_den)
-        })
-    } else {
-        let abs_dist_const = alpha_num.max(alpha_den - alpha_num);
-        StabilityMap::new_from_constant(abs_dist_const)
-    };
+    let (alpha_num, alpha_den, size_limit) = score_candidates_constants(input_domain.size, alpha)?;
 
     Transformation::<_, VectorDomain<AtomDomain<usize>>, _, _>::new(
-        input_domain,
+        input_domain.clone(),
         VectorDomain::default().with_size(candidates.len()),
         Function::new(move |arg: &Vec<TIA>| {
             compute_score(arg.clone(), &candidates, alpha_num, alpha_den, size_limit)
         }),
         input_metric,
-        LInfDistance::new(true),
-        stability_map,
+        LInfDistance::default(),
+        StabilityMap::new_fallible(score_candidates_map(
+            alpha_num,
+            alpha_den,
+            input_domain.size.is_some(),
+        )),
     )
+}
+
+pub(crate) fn validate_candidates<T: Number>(candidates: &Vec<T>) -> Fallible<()> {
+    if candidates.is_empty() {
+        return fallible!(MakeTransformation, "candidates must be non-empty");
+    }
+    if candidates.windows(2).any(|w| {
+        w[0].partial_cmp(&w[1])
+            .map(|c| c != Ordering::Less)
+            .unwrap_or(true)
+    }) {
+        return fallible!(
+            MakeTransformation,
+            "candidates must be non-null and increasing"
+        );
+    }
+    Ok(())
+}
+
+pub(crate) fn score_candidates_constants<T: Integer>(
+    size: Option<T>,
+    alpha: f64,
+) -> Fallible<(T, T, T)>
+where
+    f64: RoundCast<T>,
+    T: RoundCast<f64> + NumCast,
+    UBig: From<T>,
+{
+    if !(0.0..=1.0).contains(&alpha) {
+        return fallible!(MakeTransformation, "alpha must be within [0, 1]");
+    }
+
+    let (alpha_num_exact, alpha_den_exact) = RBig::try_from(alpha)?.into_parts();
+
+    let alpha_den_approx = if let Some(size) = size {
+        // choose the finest granularity that won't overflow
+        // must have that size * denom < MAX, so let denom = MAX // size
+        T::MAX_FINITE.neg_inf_div(&size)?
+    } else {
+        // default to an alpha granularity of .00001
+        T::exact_int_cast(10_000)?
+    };
+
+    let (alpha_num, alpha_den) = if alpha_den_exact < UBig::from(alpha_den_approx) {
+        T::from(alpha_num_exact.into_parts().1)
+            .zip(T::from(alpha_den_exact))
+            .unwrap()
+    } else {
+        // numer = alpha * denom
+        let alpha_num_approx = T::round_cast(alpha * f64::round_cast(alpha_den_approx.clone())?)?;
+        (alpha_num_approx, alpha_den_approx)
+    };
+
+    let size_limit = if let Some(size_limit) = size {
+        // ensures that there is no overflow
+        size_limit.alerting_mul(&alpha_den)?;
+        size_limit
+    } else {
+        T::MAX_FINITE.neg_inf_div(&alpha_den)?
+    };
+
+    Ok((alpha_num, alpha_den, size_limit))
+}
+
+pub(crate) fn score_candidates_map<T: Integer + ExactIntCast<IntDistance>>(
+    alpha_num: T,
+    alpha_den: T,
+    known_size: bool,
+) -> impl Fn(&IntDistance) -> Fallible<T> {
+    move |d_in| {
+        if known_size {
+            T::exact_int_cast(d_in / 2 * 2)? // round down to even
+                .alerting_mul(&alpha_den)
+        } else {
+            let abs_dist_const = alpha_num.max(alpha_den - alpha_num);
+            T::exact_int_cast(*d_in)?.alerting_mul(&abs_dist_const)
+        }
+    }
 }
 
 /// Compute score of each candidate on a dataset
@@ -127,7 +178,7 @@ where
 /// * `alpha_num` - numerator of alpha fraction
 /// * `alpha_den` - denominator of alpha fraction. alpha fraction is {0: min, 0.5: median, 1: max, ...}
 /// * `size_limit` - maximum size of `x`. If `x` is larger than `size_limit`, scores are truncated
-fn compute_score<TIA: PartialOrd>(
+pub(crate) fn compute_score<TIA: PartialOrd>(
     mut x: Vec<TIA>,
     candidates: &Vec<TIA>,
     alpha_num: usize,
@@ -264,178 +315,4 @@ fn count_lt_eq<TI: PartialOrd>(x: &[TI], target: &TI) -> (usize, usize) {
 }
 
 #[cfg(test)]
-mod test_scorer {
-    use super::*;
-
-    #[test]
-    fn test_count_lte() {
-        let x = (5..20).collect::<Vec<i32>>();
-        let edges = vec![2, 4, 7, 12, 22];
-        let mut count_lt = vec![0; edges.len()];
-        let mut count_eq = vec![0; edges.len()];
-        count_lt_eq_recursive(
-            count_lt.as_mut_slice(),
-            count_eq.as_mut_slice(),
-            edges.as_slice(),
-            x.as_slice(),
-            0,
-        );
-        println!("{:?}", count_lt);
-        println!("{:?}", count_eq);
-        assert_eq!(count_lt, vec![0, 0, 2, 7, 15]);
-        assert_eq!(count_eq, vec![0, 0, 1, 1, 0]);
-    }
-
-    #[test]
-    fn test_count_lte_repetition() {
-        let x = vec![0, 2, 2, 3, 5, 7, 7, 7];
-        let edges = vec![-1, 2, 4, 7, 12, 22];
-        let mut count_lt = vec![0; edges.len()];
-        let mut count_eq = vec![0; edges.len()];
-        count_lt_eq_recursive(
-            count_lt.as_mut_slice(),
-            count_eq.as_mut_slice(),
-            edges.as_slice(),
-            x.as_slice(),
-            0,
-        );
-        println!("{:?}", count_lt);
-        println!("{:?}", count_eq);
-        assert_eq!(count_lt, vec![0, 1, 4, 5, 8, 8]);
-        assert_eq!(count_eq, vec![0, 2, 0, 3, 0, 0]);
-    }
-
-    fn test_case(x: Vec<i32>, edges: Vec<i32>, true_lt: Vec<usize>, true_eq: Vec<usize>) {
-        let mut count_lt = vec![0; edges.len()];
-        let mut count_eq = vec![0; edges.len()];
-        count_lt_eq_recursive(
-            count_lt.as_mut_slice(),
-            count_eq.as_mut_slice(),
-            edges.as_slice(),
-            x.as_slice(),
-            0,
-        );
-        println!("LT");
-        println!("{:?}", true_lt);
-        println!("{:?}", count_lt);
-
-        println!("EQ");
-        println!("{:?}", true_eq);
-        println!("{:?}", count_eq);
-
-        assert_eq!(true_lt, count_lt);
-        assert_eq!(true_eq, count_eq);
-    }
-
-    #[test]
-    fn test_count_lte_edge_cases() {
-        // check constant x
-        test_case(vec![0; 10], vec![-1], vec![0], vec![0]);
-        test_case(vec![0; 10], vec![0], vec![0], vec![10]);
-        test_case(vec![0; 10], vec![1], vec![10], vec![0]);
-
-        // below first split
-        test_case(vec![1, 2, 3, 3, 3, 3], vec![2], vec![1], vec![1]);
-        test_case(vec![1, 2, 3, 3, 3, 3, 3], vec![2], vec![1], vec![1]);
-        // above first split
-        test_case(vec![1, 1, 1, 1, 2, 3], vec![2], vec![4], vec![1]);
-        test_case(vec![1, 1, 1, 1, 2, 3, 3], vec![2], vec![4], vec![1]);
-    }
-
-    #[test]
-    fn test_scorer() -> Fallible<()> {
-        let edges = vec![-1, 2, 4, 7, 12, 22];
-
-        let x = vec![0, 2, 2, 3, 5, 7, 7, 7];
-        let scores = compute_score(x, &edges, 1, 2, 8);
-        println!("{:?}", scores);
-
-        let x = vec![0, 2, 2, 3, 4, 7, 7, 7];
-        let scores = compute_score(x, &edges, 1, 2, 8);
-        println!("{:?}", scores);
-        Ok(())
-    }
-}
-
-#[cfg(all(test, feature = "derive"))]
-mod test_trans {
-    use crate::{
-        measurements::{make_report_noisy_max_gumbel, Optimize},
-        metrics::SymmetricDistance,
-    };
-
-    use super::*;
-
-    #[test]
-    fn test_scorer() -> Fallible<()> {
-        let candidates = vec![7, 12, 14, 72, 76];
-        let input_domain = VectorDomain::new(AtomDomain::default());
-        let input_metric = SymmetricDistance::default();
-        let trans =
-            make_quantile_score_candidates(input_domain, input_metric, candidates.clone(), 0.75)?;
-
-        let input_domain = VectorDomain::new(AtomDomain::default()).with_size(100);
-        let input_metric = SymmetricDistance::default();
-        let trans_sized =
-            make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
-
-        let _scores = trans.invoke(&(0..100).collect())?;
-        let _scores_sized = trans_sized.invoke(&(0..100).collect())?;
-
-        // because alpha is .75, sensitivity is 1.5 (because not monotonic)
-        // granularity of quantile is .00001, so scores are integerized at a scale of 10000x
-        assert_eq!(trans.map(&1)?, 7500);
-
-        // alpha does not affect sensitivity- it's solely based on the size of the input domain
-        // using all of the range of the usize,
-        //     so scores can be scaled up by a factor of usize::MAX / 100 before being converted to integers and not overflow
-        // factor of 4 breaks into:
-        //   * a factor of 2 from non-monotonicity
-        //   * a factor of 2 from difference in score after moving one record from above to below a candidate
-        assert_eq!(trans_sized.map(&2)?, usize::MAX / 100 * 2);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_release() -> Fallible<()> {
-        let candidates = vec![7, 12, 14, 72, 76];
-        let input_domain = VectorDomain::new(AtomDomain::default());
-        let input_metric = SymmetricDistance::default();
-        let trans = make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
-        let exp_mech = make_report_noisy_max_gumbel(
-            trans.output_domain.clone(),
-            trans.output_metric.clone(),
-            trans.map(&1)? as f64 * 2.,
-            Optimize::Min,
-        )?;
-
-        let quantile_meas = (trans >> exp_mech)?;
-        let idx = quantile_meas.invoke(&(0..100).collect())?;
-        println!("idx {:?}", idx);
-        assert!(quantile_meas.check(&1, &1.)?);
-        Ok(())
-    }
-
-    #[test]
-    fn test_release_sized() -> Fallible<()> {
-        let candidates = vec![7, 12, 14, 72, 76];
-        let input_domain = VectorDomain::new(AtomDomain::default()).with_size(100);
-        let input_metric = SymmetricDistance::default();
-        let trans_sized =
-            make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
-        let exp_mech = make_report_noisy_max_gumbel(
-            trans_sized.output_domain.clone(),
-            trans_sized.output_metric.clone(),
-            trans_sized.map(&2)? as f64 * 2.,
-            Optimize::Min,
-        )?;
-
-        let quantile_sized_meas = (trans_sized >> exp_mech)?;
-        let idx = quantile_sized_meas.invoke(&(0..100).collect())?;
-        println!("idx sized {:?}", idx);
-        assert!(quantile_sized_meas.check(&1, &1.)?);
-
-        Ok(())
-    }
-}
+mod test;

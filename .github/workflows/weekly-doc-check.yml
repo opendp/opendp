@@ -10,7 +10,53 @@ on:
   workflow_dispatch:
 
 jobs:
+  rust-build:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: rust
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false     # no: will remove rust
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: false        # no: little/no benefit
+          large-packages: false # no: slow
+          swap-storage: false   # no: having swap is useful
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Check Rust version
+        run: cargo --version
+
+      - name: Build
+        run: cargo check --verbose --features bindings,untrusted
+  
+      - name: Upload Python bindings
+        uses: actions/upload-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+
   check-docs:
+    needs: rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -19,18 +65,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Download Python bindings
+        uses: actions/download-artifact@v4
         with:
-          python-version: 3.9
+          name: python_bindings
+          path: python/src/opendp/
 
       - name: Install deps
         run: python -m pip install -r requirements.txt
 
       - name: Check markdown links
         run: |
-          find .. | grep '.md$' | grep -v 'venv/\|.git/\|CHANGELOG' \
-          | xargs linkchecker -f linkchecker-external.cfg
+          find .. | grep '\.md$' | grep -v 'venv/\|.git/\|CHANGELOG\|vendor/\|R/opendp/README.md' \
+          | xargs linkchecker --no-warnings -f linkchecker-external.cfg
 
       - name: Install Pandoc
         run: sudo apt-get install -y pandoc
@@ -39,7 +86,9 @@ jobs:
         run: make html
 
       - name: Check links
-        run: linkchecker -f linkchecker-external.cfg build/html/index.html
+        run: linkchecker --no-warnings -f linkchecker-external.cfg build/html/index.html
 
-      - name: Build Rust docs
-        run: make html-rustdoc
+      # We could also build and check the Rust docs, but:
+      # - The build here doesn't replicate errors reported by docs.rs.
+      # - There are more than 10K internal links, but the ones that don't
+      #   come from the Rust docs build are also in the Sphinx docs.

@@ -30,7 +30,7 @@ use std::sync::Arc;
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, InfMul, ProductOrd};
 use num::Zero;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 /// A set which constrains the input or output of a [`Function`].
 ///
@@ -153,11 +153,11 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     pub fn new_from_constant(c: MO::Distance) -> Self
     where
         MI::Distance: Clone,
-        MO::Distance: DistanceConstant<MI::Distance>,
+        MO::Distance: DistanceConstant<MI::Distance> + Display,
     {
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             if c < MO::Distance::zero() {
-                return fallible!(FailedMap, "constant must be non-negative");
+                return fallible!(FailedMap, "constant ({}) must be non-negative", c);
             }
             MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
         })
@@ -204,11 +204,11 @@ impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
     pub fn new_from_constant(c: MO::Distance) -> Self
     where
         MI::Distance: Clone,
-        MO::Distance: DistanceConstant<MI::Distance>,
+        MO::Distance: DistanceConstant<MI::Distance> + Display,
     {
         StabilityMap::new_fallible(move |d_in: &MI::Distance| {
             if c < MO::Distance::zero() {
-                return fallible!(FailedMap, "constant must be non-negative");
+                return fallible!(FailedMap, "constant ({}) must be non-negative", c);
             }
             MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
         })
@@ -298,6 +298,10 @@ where
             privacy_map,
         )
     }
+
+    pub fn input_space(&self) -> (DI, MI) {
+        (self.input_domain.clone(), self.input_metric.clone())
+    }
 }
 
 impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
@@ -314,6 +318,16 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
         MO::Distance: ProductOrd,
     {
         d_out.total_ge(&self.map(d_in)?)
+    }
+}
+
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Debug for Measurement<DI, TO, MI, MO> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Measurement")
+            .field("input_domain", &self.input_domain)
+            .field("input_metric", &self.input_metric)
+            .field("output_measure", &self.output_measure)
+            .finish()
     }
 }
 
@@ -386,6 +400,14 @@ where
             privacy_map,
         )
     }
+
+    pub fn input_space(&self) -> (DI, MI) {
+        (self.input_domain.clone(), self.input_metric.clone())
+    }
+
+    pub fn output_space(&self) -> (DO, MO) {
+        (self.output_domain.clone(), self.output_metric.clone())
+    }
 }
 
 impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, MO> {
@@ -405,55 +427,19 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::domains::AtomDomain;
-    use crate::metrics::AbsoluteDistance;
-
-    use super::*;
-
-    #[test]
-    #[cfg(feature = "ffi")]
-    fn test_threading() -> Fallible<()> {
-        use crate::{
-            measurements::make_randomized_response_bool, transformations::make_split_lines,
-        };
-
-        fn is_send_sync<T: Send + Sync>(_arg: &T) {}
-
-        let meas = make_randomized_response_bool(0.75, false)?;
-        is_send_sync(&meas);
-        is_send_sync(&meas.into_any());
-
-        let trans = make_split_lines()?;
-        is_send_sync(&trans);
-        is_send_sync(&trans.into_any());
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_identity() -> Fallible<()> {
-        let input_domain = AtomDomain::<i32>::default();
-        let output_domain = AtomDomain::<i32>::default();
-        let function = Function::new(|arg: &i32| arg.clone());
-        let input_metric = AbsoluteDistance::<i32>::default();
-        let output_metric = AbsoluteDistance::<i32>::default();
-        let stability_map = StabilityMap::new_from_constant(1);
-        let identity = Transformation::new(
-            input_domain,
-            output_domain,
-            function,
-            input_metric,
-            output_metric,
-            stability_map,
-        )?;
-        let arg = 99;
-        let ret = identity.invoke(&arg)?;
-        assert_eq!(ret, 99);
-        Ok(())
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Debug for Transformation<DI, DO, MI, MO> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Transformation")
+            .field("input_domain", &self.input_domain)
+            .field("input_metric", &self.input_metric)
+            .field("output_domain", &self.output_domain)
+            .field("output_metric", &self.output_metric)
+            .finish()
     }
 }
+
+#[cfg(test)]
+mod test;
 
 #[cfg(feature = "partials")]
 mod partials {

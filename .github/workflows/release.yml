@@ -41,7 +41,7 @@ on:
           - beta
           - stable
         required: true
-        default: nightly
+        default: dev
       sync:
         description: Sync the Channel from Upstream?
         type: boolean
@@ -51,7 +51,7 @@ on:
         description: Version Counter
         type: number
         required: false
-        default: 0
+        default: 1
       kind:
         description: A "dry-run" is a complete build except for deploy, while "fake" skips every slow step.
         type: choice
@@ -80,6 +80,13 @@ jobs:
     with:
       channel: ${{ inputs.channel }}
       fake: ${{ inputs.kind == 'fake' }}
+
+  update-bindings:
+    needs: build
+    uses: ./.github/workflows/update-bindings.yml
+    if: ${{ inputs.kind != 'fake' }}
+    with:
+      channel: ${{ inputs.channel }}
 
   sanity-test-pre:
     needs: build
@@ -117,7 +124,7 @@ jobs:
     secrets: inherit
 
   docs:
-    needs: [ sanity-test-post, latex ]
+    needs: [ sanity-test-post, update-bindings, latex ]
     uses: ./.github/workflows/docs.yml
     with:
       dry_run: ${{ inputs.kind != 'real' }}

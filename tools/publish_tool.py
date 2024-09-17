@@ -1,5 +1,4 @@
 import argparse
-import configparser
 import datetime
 import os
 
@@ -17,7 +16,9 @@ def rust(args):
         # As of https://github.com/rust-lang/cargo/pull/11062, cargo publish blocks until the index is propagated,
         # so we don't have to wait here anymore.
         run_command("Publishing opendp_derive crate", "cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml")
-        run_command("Publishing opendp crate", "cargo publish --verbose --manifest-path=rust/Cargo.toml")
+        # We've expanded default-members so "cargo test" tests more packages,
+        # but that means we need to be explit with "cargo publish".
+        run_command("Publishing opendp crate", "cargo publish --verbose --manifest-path=rust/Cargo.toml --package opendp")
 
 
 def python(args):
@@ -25,14 +26,8 @@ def python(args):
     # https://pypi.org/help/#apitoken
     os.environ["TWINE_USERNAME"] = "__token__"
     os.environ["TWINE_PASSWORD"] = os.environ["PYPI_API_TOKEN"]
-    config = configparser.RawConfigParser()
-    config.read("python/setup.cfg")
-    version = config["metadata"]["version"]
-
-    # Note, version naming will comply with:
-    # https://packaging.python.org/en/latest/specifications/version-specifiers/
-    wheel = f"opendp-{version}-py3-none-any.whl"
-    run_command("Publishing opendp package", f"python -m twine upload -r {args.repository} --verbose python/wheelhouse/{wheel}")
+    
+    run_command("Publishing opendp package", f"python -m twine upload -r {args.repository} --verbose python/dist/*")
     # Unfortunately, twine doesn't have an option to block until the index is propagated. Polling the index is unreliable,
     # because often the new item will appear, but installs will still fail (probably because of stale caches).
     # So downstream things like sanity test will have to retry.
@@ -46,7 +41,8 @@ def sanity(args):
     version = get_python_version(version)
     run_command("Creating venv", f"rm -rf {args.venv} && python -m venv {args.venv}")
     if args.python_repository == "local":
-        package = f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
+        package_name = f"opendp-{version}-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+        package = f"python/dist/{package_name}"
         run_command(f"Installing opendp {version}", f". {args.venv}/bin/activate && pip install {package}")
     else:
         index_url = "https://test.pypi.org/simple" if args.python_repository == "testpypi" else "https://pypi.org/simple"

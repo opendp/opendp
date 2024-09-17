@@ -1,7 +1,7 @@
 //! Traits that enable building stable and private algorithms.
 
 use crate::metrics::IntDistance;
-use num::{One, Zero};
+use num::{NumCast, One, Zero};
 use std::hash::Hash;
 use std::ops::{AddAssign, DivAssign, MulAssign, SubAssign};
 
@@ -16,6 +16,8 @@ pub use cast::*;
 
 mod operations;
 pub use operations::*;
+
+use self::samplers::CastInternalRational;
 
 pub mod samplers;
 
@@ -80,13 +82,23 @@ impl<TI, TO> DistanceConstant<TI> for TO where
 /// test_func(1i8);
 /// ```
 pub trait Primitive:
-    'static + Clone + std::fmt::Debug + CheckNull + PartialEq + Default + CheckAtom + Send + Sync
+    'static
+    + Clone
+    + std::fmt::Debug
+    + std::fmt::Display
+    + CheckNull
+    + PartialEq
+    + Default
+    + CheckAtom
+    + Send
+    + Sync
 {
 }
 impl<T> Primitive for T where
     T: 'static
         + Clone
         + std::fmt::Debug
+        + std::fmt::Display
         + CheckNull
         + PartialEq
         + Default
@@ -150,6 +162,7 @@ impl<T> Hashable for T where T: Primitive + Eq + Hash {}
 pub trait Number:
     Primitive
     + Copy
+    + NumCast
     + AlertingAbs
     + num::traits::NumOps
     + SaturatingAdd
@@ -179,6 +192,7 @@ pub trait Number:
 impl<T> Number for T where
     T: Primitive
         + Copy
+        + NumCast
         + AlertingAbs
         + num::traits::NumOps
         + SaturatingAdd
@@ -273,6 +287,7 @@ pub trait Float:
     + InfPowI
     + InfSqrt
     + FloatBits
+    + CastInternalRational
     + ExactIntCast<Self::Bits>
     + RoundCast<f64>
 {
@@ -289,6 +304,7 @@ impl<T> Float for T where
         + InfPowI
         + InfSqrt
         + FloatBits
+        + CastInternalRational
         + ExactIntCast<Self::Bits>
         + RoundCast<f64>
 {

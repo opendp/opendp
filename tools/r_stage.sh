@@ -4,7 +4,7 @@
 # (but not target)
 # 
 # vendors dependencies
-# zips contents to avoid paths
+# zips contents to avoid paths being too long, which can cause issues in R CMD check
 
 # exit immediately upon failure, unset vars
 set -e -u
@@ -33,7 +33,7 @@ function clean() {
   if [ -f "R/opendp/src/rust/Cargo.toml" ]; then
     run cargo clean --manifest-path R/opendp/src/rust/Cargo.toml
   fi
-  # "-X" removes only git-ignored files: Other local changes are preserved.
+  # "-x" removes ignored and untracked files
   run git clean -x --force R
   Rscript -e 'try(remove.packages("opendp"), silent=TRUE)'
 }
@@ -86,6 +86,20 @@ function docs() {
   clean
 
   log "***** DOCS *****"
+
+  log "build the docs, and then website"
+  Rscript -e 'devtools::document("R/opendp")'
+  Rscript -e 'pkgdown::build_site("R/opendp")'
+
+  log "R package docs are ready in R/opendp/docs/index.html"
+}
+
+function dummydocs() {
+  # builds the documentation without running 
+  clean
+
+  log "***** DUMMY DOCS *****"
+
   # We don't directly expose any APIs from compiled code, 
   # so we don't actually have to build the binary in order to build docs.
   # To avoid the overhead of building the binary, 
@@ -125,7 +139,7 @@ if (($# == 0)); then
   exit 0
 fi
 
-while getopts ":cbsvnd" OPT; do
+while getopts ":cbsvndu" OPT; do
   case "$OPT" in
     c) clean ;;
     b) binary_tar ;;
@@ -133,6 +147,7 @@ while getopts ":cbsvnd" OPT; do
     v) vendor_tar ;;
     n) notes ;;
     d) docs ;;
+    u) dummydocs ;;
     *) usage && exit 1 ;;
   esac
 done

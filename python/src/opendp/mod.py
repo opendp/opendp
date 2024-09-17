@@ -8,7 +8,7 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 '''
 from __future__ import annotations
 import ctypes
-from typing import Any, Literal, Type, TypeVar, Union, Tuple, Callable, Optional, overload, TYPE_CHECKING, cast
+from typing import Any, Literal, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
 
 from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
 
@@ -41,8 +41,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     Measurement(
         input_domain   = AtomDomain(T=i32),
         input_metric   = AbsoluteDistance(i32),
-        output_measure = MaxDivergence(f64)
-    )
+        output_measure = MaxDivergence)
 
     >>> # invoke the measurement (invoke and __call__ are equivalent)
     >>> print('explicit: ', laplace.invoke(100))  # -> 101   # doctest: +ELLIPSIS
@@ -111,7 +110,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
             return measurement_check(self, d_in, d_out)
         except OpenDPException as err:
             if err.variant == "RelationDebug":
-                return False
+                return False # pragma: no cover
             raise
 
     def __rshift__(self, other: Union["Function", "Transformation", Callable]) -> "Measurement":
@@ -138,7 +137,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return measurement_input_metric(self)
 
     @property
-    def input_space(self) -> Tuple["Domain", "Metric"]:
+    def input_space(self) -> tuple["Domain", "Metric"]:
         return self.input_domain, self.input_metric
     
     @property
@@ -192,13 +191,21 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         try:
             from opendp.core import _measurement_free
             _measurement_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
     
     def __repr__(self) -> str:
-        return f"Measurement(\n    input_domain   = {self.input_domain},\n    input_metric   = {self.input_metric},\n    output_measure = {self.output_measure}\n)" # pragma: no cover
+        return f"""Measurement(
+    input_domain   = {self.input_domain},
+    input_metric   = {self.input_metric},
+    output_measure = {self.output_measure})"""
+
+    def __iter__(self):
+        # this overrides the implementation of __iter__ on POINTER, 
+        # which yields infinitely on zero-sized types
+        raise ValueError("Measurement does not support iteration")
 
 
 class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
@@ -225,9 +232,11 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         input_domain   = VectorDomain(AtomDomain(T=i32)),
         output_domain  = AtomDomain(T=i32),
         input_metric   = SymmetricDistance(),
-        output_metric  = AbsoluteDistance(i32)
-    )
+        output_metric  = AbsoluteDistance(i32))
 
+    >>> count.input_space
+    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
+    
     >>> # invoke the transformation (invoke and __call__ are equivalent)
     >>> count.invoke([1, 2, 3])
     3
@@ -258,8 +267,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         :return: non-differentially-private answer
         :raises OpenDPException: packaged error from the core OpenDP library
         """
-        from opendp.core import transformation_invoke # pragma: no cover
-        return transformation_invoke(self, arg)  # pragma: no cover
+        from opendp.core import transformation_invoke
+        return transformation_invoke(self, arg) 
 
     def __call__(self, arg):
         from opendp.core import transformation_invoke
@@ -285,11 +294,11 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         from opendp.core import transformation_check
 
         if debug:
-            return transformation_check(self, d_in, d_out) # pragma: no cover
+            return transformation_check(self, d_in, d_out)
 
         try:
             return transformation_check(self, d_in, d_out)
-        except OpenDPException as err:
+        except OpenDPException as err: # pragma: no cover
             if err.variant == "RelationDebug":
                 return False
             raise
@@ -348,17 +357,17 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         return transformation_output_metric(self)
     
     @property
-    def input_space(self) -> Tuple["Domain", "Metric"]:
-        return self.input_domain, self.input_metric # pragma: no cover
+    def input_space(self) -> tuple["Domain", "Metric"]:
+        return self.input_domain, self.input_metric
     
     @property
-    def output_space(self) -> Tuple["Domain", "Metric"]:
+    def output_space(self) -> tuple["Domain", "Metric"]:
         return self.output_domain, self.output_metric
     
     @property
     def function(self) -> "Function":
-        from opendp.core import transformation_function # pragma: no cover
-        return transformation_function(self) # pragma: no cover
+        from opendp.core import transformation_function
+        return transformation_function(self)
 
     @property
     def input_distance_type(self) -> Union["RuntimeType", str]:
@@ -401,19 +410,28 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         try:
             from opendp.core import _transformation_free
             _transformation_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
     def __repr__(self) -> str:
-        return f"Transformation(\n    input_domain   = {self.input_domain},\n    output_domain  = {self.output_domain},\n    input_metric   = {self.input_metric},\n    output_metric  = {self.output_metric}\n)"
+        return f"""Transformation(
+    input_domain   = {self.input_domain},
+    output_domain  = {self.output_domain},
+    input_metric   = {self.input_metric},
+    output_metric  = {self.output_metric})"""
+    
+    def __iter__(self):
+        raise ValueError("Transformation does not support iteration")
+
 
 Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
 
 class Queryable(object):
-    def __init__(self, value):
+    def __init__(self, value, query_type):
         self.value = value
+        self.query_type = query_type
 
     def __call__(self, query):
         from opendp.core import queryable_eval
@@ -422,12 +440,6 @@ class Queryable(object):
     def eval(self, query):
         from opendp.core import queryable_eval # pragma: no cover
         return queryable_eval(self.value, query) # pragma: no cover
-
-    @property
-    def query_type(self):
-        from opendp.core import queryable_query_type
-        from opendp.typing import RuntimeType
-        return RuntimeType.parse(queryable_query_type(self.value))
 
     def __repr__(self) -> str:
         return f"Queryable(Q={self.query_type})"
@@ -456,10 +468,13 @@ class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
         try:
             from opendp.core import _function_free
             _function_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
+
+    def __iter__(self):
+        raise ValueError("Function does not support iteration")
 
 
 class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
@@ -500,7 +515,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         try:
             from opendp.domains import _domain_free
             _domain_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -516,6 +531,8 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         """Extends the memory lifetime of args to the lifetime of self."""
         setattr(self, "_dependencies", args)
 
+    def __iter__(self):
+        raise ValueError("Domain does not support iteration")
 
 
 class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
@@ -547,7 +564,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
         try:
             from opendp.metrics import _metric_free
             _metric_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -558,6 +575,9 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     
     def __hash__(self) -> int:
         return hash(str(self))
+    
+    def __iter__(self):
+        raise ValueError("Metric does not support iteration")
 
 
 class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
@@ -571,7 +591,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     >>> import opendp.prelude as dp
     >>> measure, distance = dp.loss_of(epsilon=1.0)
     >>> measure, distance
-    (MaxDivergence(f64), 1.0)
+    (MaxDivergence, 1.0)
 
     '''
     _type_ = AnyMeasure
@@ -596,7 +616,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
         try:
             from opendp.measures import _measure_free
             _measure_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -606,15 +626,26 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     
     def __hash__(self) -> int:
         return hash(str(self))
+    
+    def __iter__(self):
+        raise ValueError("Measure does not support iteration")
 
 
-class SMDCurve(object):
+class PrivacyProfile(object):
     def __init__(self, curve):
         self.curve = curve
 
+    def delta(self, epsilon):
+        from opendp._data import privacy_profile_delta
+        return privacy_profile_delta(self.curve, epsilon)
+
     def epsilon(self, delta):
-        from opendp._data import smd_curve_epsilon
-        return smd_curve_epsilon(self.curve, delta)
+        from opendp._data import privacy_profile_epsilon
+        return privacy_profile_epsilon(self.curve, delta)
+    
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
 
 
 class PartialConstructor(object):
@@ -643,6 +674,8 @@ class OpenDPException(Exception):
     Error variants may change in library updates.
 
     See `Rust ErrorVariant <https://docs.rs/opendp/latest/opendp/error/enum.ErrorVariant.html>`_ for values variant may take on.
+
+    Run ``dp.enable_features('rust-stack-trace')`` to see wrapped Rust stack traces.
     """
     raw_traceback: Optional[str]
 
@@ -651,22 +684,45 @@ class OpenDPException(Exception):
         self.message = message
         self.raw_traceback = raw_traceback
 
-    def raw_frames(self): # pragma: no cover
+    def _raw_frames(self):
         import re
         return re.split(r"\s*[0-9]+: ", self.raw_traceback or "")
     
-    def frames(self): # pragma: no cover
+    def _frames(self):
         def format_frame(frame):
             return "\n  ".join(line.strip() for line in frame.split("\n"))
-        return [format_frame(f) for f in self.raw_frames() if f.startswith("opendp") or f.startswith("<opendp")]
+        return [format_frame(f) for f in self._raw_frames() if f.startswith("opendp") or f.startswith("<opendp")]
 
-    def __str__(self) -> str: # pragma: no cover
+    def _continued_stack_trace(self):
+        # join and split by newlines because frames may be multi-line
+        lines = "\n".join(self._frames()[::-1]).split('\n')
+        return "Continued Rust stack trace:\n" + '\n'.join('    ' + line for line in lines)
+
+    def __str__(self) -> str:
+        '''
+        >>> raw_traceback = """
+        ... 0: top
+        ... 1: opendp single line
+        ... 2: opendp multi
+        ...             line
+        ... 3: bottom
+        ... """
+        >>> e = OpenDPException(variant='SomeVariant', message='my message', raw_traceback=raw_traceback)
+        >>> dp.enable_features('rust-stack-trace')
+        >>> print(e)
+        Continued Rust stack trace:
+            opendp multi
+              line
+            opendp single line
+          SomeVariant("my message")
+        >>> dp.disable_features('rust-stack-trace')
+        >>> print(e)
+        <BLANKLINE>
+          SomeVariant("my message")
+        '''
         response = ''
         if self.raw_traceback and 'rust-stack-trace' in GLOBAL_FEATURES:
-            # join and split by newlines because frames may be multi-line
-            lines = "\n".join(self.frames()[::-1]).split('\n')
-            response += "Continued Rust stack trace:\n" + '\n'.join('    ' + line for line in lines)
-
+            response += self._continued_stack_trace()
         response += '\n  ' + self.variant
 
         if self.message:
@@ -679,16 +735,27 @@ GLOBAL_FEATURES = set()
 
 
 def enable_features(*features: str) -> None:
+    '''
+    Allow the use of optional features. See :ref:`feature-listing` for details.
+    '''
     GLOBAL_FEATURES.update(set(features))
 
 
 def disable_features(*features: str) -> None:
+    '''
+    Disallow the use of optional features. See :ref:`feature-listing` for details.
+    '''
     GLOBAL_FEATURES.difference_update(set(features))
 
 
 def assert_features(*features: str) -> None:
-    for feature in features:
-        assert feature in GLOBAL_FEATURES, f"Attempted to use function that requires {feature}, but {feature} is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"{feature}\")"
+    '''
+    Check whether a given feature is enabled. See :ref:`feature-listing` for details.
+    '''
+    missing_features = [f for f in features if f not in GLOBAL_FEATURES]
+    if missing_features:
+        features_string = ', '.join(f'"{f}"' for f in features)
+        raise OpenDPException(f"Attempted to use function that requires {features_string}, but not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features({features_string})")
 
 
 M = TypeVar("M", Transformation, Measurement)
@@ -696,7 +763,7 @@ M = TypeVar("M", Transformation, Measurement)
 def binary_search_chain(
         make_chain: Callable[[float], M],
         d_in: Any, d_out: Any,
-        bounds: Tuple[float, float] | None = None,
+        bounds: tuple[float, float] | None = None,
         T=None) -> M:
     """Find the highest-utility (`d_in`, `d_out`)-close Transformation or Measurement.
     
@@ -719,15 +786,14 @@ def binary_search_chain(
 
     :examples:
 
-    Find a base_laplace measurement with the smallest noise scale that is still (d_in, d_out)-close.
+    Find a laplace measurement with the smallest noise scale that is still (d_in, d_out)-close.
 
-    >>> from typing import List
     >>> import opendp.prelude as dp
     >>> dp.enable_features("floating-point", "contrib")
     ...
     >>> # The majority of the chain only needs to be defined once.
     >>> pre = (
-    ...     dp.space_of(List[float]) >>
+    ...     dp.space_of(list[float]) >>
     ...     dp.t.then_clamp(bounds=(0., 1.)) >>
     ...     dp.t.then_resize(size=10, constant=0.) >>
     ...     dp.t.then_mean()
@@ -761,7 +827,7 @@ def binary_search_chain(
 def binary_search_param(
         make_chain: Callable[[float], Union[Transformation, Measurement]],
         d_in: Any, d_out: Any,
-        bounds: Tuple[float, float] | None = None,
+        bounds: tuple[float, float] | None = None,
         T=None) -> float:
     """Solve for the ideal constructor argument to `make_chain`.
     
@@ -829,7 +895,7 @@ def binary_search_param(
 @overload
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: Tuple[float, float] | None = ...,
+        bounds: tuple[float, float] | None = ...,
         T: Type[float] | None = ...,
         return_sign: Literal[False] = False) -> float:
     ...
@@ -839,27 +905,27 @@ def binary_search(
 @overload
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: Tuple[float, float] | None = ...,
+        bounds: tuple[float, float] | None = ...,
         T: Type[float] | None = ...,
         *, # see https://stackoverflow.com/questions/66435480/overload-following-optional-argument
-        return_sign: Literal[True]) -> Tuple[float, int]:
+        return_sign: Literal[True]) -> tuple[float, int]:
     ...
 
 # when setting return sign to true as a positional argument, return both
 @overload
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: Tuple[float, float] | None,
+        bounds: tuple[float, float] | None,
         T: Type[float] | None,
-        return_sign: Literal[True]) -> Tuple[float, int]:
+        return_sign: Literal[True]) -> tuple[float, int]:
     ...
 
 
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: Tuple[float, float] | None = None,
+        bounds: tuple[float, float] | None = None,
         T: Type[float] | None = None,
-        return_sign: bool = False) -> float | Tuple[float, int]:
+        return_sign: bool = False) -> float | tuple[float, int]:
     """Find the closest passing value to the decision boundary of `predicate`.
 
     If bounds are not passed, conducts an exponential search.
@@ -874,22 +940,21 @@ def binary_search(
 
     :example:
 
-    >>> from opendp.mod import binary_search
-    >>> binary_search(lambda x: x >= 5.)
+    >>> import opendp.prelude as dp
+    >>> dp.binary_search(lambda x: x >= 5.)
     5.0
-    >>> binary_search(lambda x: x <= 5.)
+    >>> dp.binary_search(lambda x: x <= 5.)
     5.0
 
-    >>> binary_search(lambda x: x > 5, T=int)
+    >>> dp.binary_search(lambda x: x > 5, T=int)
     6
-    >>> binary_search(lambda x: x < 5, T=int)
+    >>> dp.binary_search(lambda x: x < 5, T=int)
     4
 
     Find epsilon usage of the gaussian(scale=1.) mechanism applied on a dp mean.
     Assume neighboring datasets differ by up to three additions/removals, and fix delta to 1e-8.
 
     >>> # build a histogram that emits float counts
-    >>> import opendp.prelude as dp
     >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 100.)), 1000), dp.symmetric_distance()
     >>> dp_mean = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(
     ...     input_space >> dp.t.then_mean() >> dp.m.then_gaussian(1.)), 
@@ -903,7 +968,6 @@ def binary_search(
 
     Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.
 
-    >>> from opendp.transformations import make_count_by_categories
     >>> histogram = dp.t.make_count_by_categories(
     ...     dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance(),
     ...     categories=["a"], MO=dp.L2Distance[int])
@@ -962,8 +1026,8 @@ def binary_search(
 
 
 def exponential_bounds_search(
-        predicate: Callable[[Union[float, int]], bool], 
-        T: Optional[Union[Type[float], Type[int]]]) -> Optional[Union[Tuple[float, float], Tuple[int, int]]]:
+        predicate: Callable[[float], bool], 
+        T: Optional[Type[float]]) -> Optional[tuple[float, float]]:
     """Determine bounds for a binary search via an exponential search,
     in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
     Will attempt to recover once if `predicate` throws an exception, 
@@ -986,7 +1050,7 @@ def exponential_bounds_search(
                 return False
             except OpenDPException as e:
                 if "No match for concrete type" in (e.message or ""):
-                    return False
+                    return False # pragma: no cover
             return True
         
         if check_type(0.):
@@ -1044,13 +1108,18 @@ def exponential_bounds_search(
             return False
     exception_bounds = exponential_bounds_search(exception_predicate, T=T)
     if exception_bounds is None:
-        try: # pragma: no cover
+        try:
             predicate(center)
-        except Exception:
-            raise ValueError(f"predicate always fails. An example traceback is shown above at {center}.")
+        except Exception as e:
+            # enrich the error message if in Python 3.11+.
+            if hasattr(e, "add_note"):
+                e.add_note(f"Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at {center}.")
+            raise
     
 
     center, sign = binary_search(exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
     at_center = predicate(center)
     return signed_band_search(center, at_center, sign)
 
+
+_EXPECTED_POLARS_VERSION = '1.1.0' # Keep in sync with setup.cfg.

@@ -351,14 +351,24 @@ fn min_by<T, F: FnOnce(&T, &T) -> Fallible<Ordering>>(v1: T, v2: T, compare: F) 
     })
 }
 
-impl<T1: ProductOrd, T2: ProductOrd> ProductOrd for (T1, T2) {
+impl<T1: ProductOrd + Debug, T2: ProductOrd + Debug> ProductOrd for (T1, T2) {
     fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {
-        let cmp = self.0.total_cmp(&other.0)?;
-        if Ordering::Equal == cmp {
-            self.1.total_cmp(&other.1)
-        } else {
-            Ok(cmp)
-        }
+        use Ordering::*;
+        Ok(
+            match (self.0.total_cmp(&other.0)?, self.1.total_cmp(&other.1)?) {
+                (Equal, Equal) => Equal,
+                (Less | Equal, Less | Equal) => Less,
+                (Greater | Equal, Greater | Equal) => Greater,
+                _ => {
+                    return fallible!(
+                        FailedFunction,
+                        "unknown ordering between {:?} and {:?}",
+                        self,
+                        other
+                    )
+                }
+            },
+        )
     }
 }
 
@@ -392,19 +402,4 @@ impl FloatBits for f32 {
 }
 
 #[cfg(test)]
-mod test_floatbits {
-    use super::*;
-    use crate::traits::samplers::SampleUniform;
-
-    #[test]
-    fn roundtrip_sign_exponent_mantissa() -> Fallible<()> {
-        for _ in 0..1000 {
-            let unif = f64::sample_standard_uniform(false)?;
-            println!("{:?}", unif);
-            let (sign, raw_exponent, mantissa) = unif.to_raw_components();
-            let reconst = f64::from_raw_components(sign, raw_exponent, mantissa);
-            assert_eq!(unif, reconst);
-        }
-        Ok(())
-    }
-}
+mod test;

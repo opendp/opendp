@@ -2,7 +2,6 @@ import pytest
 
 import opendp.prelude as dp
 
-dp.enable_features("floating-point", "contrib", "honest-but-curious")
 
 
 def test_type_getters():
@@ -138,6 +137,14 @@ def test_function():
     print(mechanism(0.0))
 
 
+def test_privacy_profile():
+    from opendp.measures import new_privacy_profile
+    import math
+    profile = new_privacy_profile(lambda eps: math.exp(-eps))
+    # formula is -ln(1e-7)
+    assert profile.epsilon(delta=1e-7) == 16.11809565095832
+
+
 def test_member():
     from opendp.domains import atom_domain, vector_domain
     from opendp.metrics import symmetric_distance
@@ -226,17 +233,18 @@ def test_user_domain():
 
     # nest inside a vector domain
     vec_domain = dp.vector_domain(domain)
-    assert vec_domain.member([datetime.now()])
+    january_1 = datetime.fromisoformat('2024-01-01')
+    assert vec_domain.member([january_1])
     trans = dp.t.make_identity(vec_domain, dp.symmetric_distance())
-    misc_data = [1, datetime.now(), "abc", 1j + 2]
+    misc_data = [1, january_1, "abc", 1j + 2]
     assert trans(misc_data) == misc_data
     assert not vec_domain.member(misc_data)
 
     # nest inside a hashmap domain
     map_domain = dp.map_domain(dp.atom_domain(T=str), domain)
-    assert map_domain.member({"A": datetime.now(), "B": datetime.now()})
+    assert map_domain.member({"A": january_1, "B": january_1})
     trans = dp.t.make_identity(map_domain, dp.symmetric_distance())
-    misc_data = {"A": datetime.now(), "C": 1j + 2}  # type: ignore[assignment]
+    misc_data = {"A": january_1, "C": 1j + 2}  # type: ignore[assignment]
     assert trans(misc_data) == misc_data
     assert not map_domain.member(misc_data)
 
@@ -245,7 +253,7 @@ def test_extrinsic_free():
     space = dp.user_domain("anything", lambda _: True), dp.symmetric_distance()
 
     sc_meas = space >> dp.c.then_sequential_composition(
-        dp.max_divergence(T=float),
+        dp.max_divergence(),
         d_in=1,
         d_mids=[1.0],
     )
@@ -256,7 +264,7 @@ def test_extrinsic_free():
     # however, a pointer to [] is stored inside qbl
 
     query = space >> dp.m.then_user_measurement(
-        dp.max_divergence(T=float),
+        dp.max_divergence(),
         lambda x: x,
         lambda _: 0.0,
     )
@@ -285,7 +293,8 @@ def test_user_distance():
         lambda d_in: d_in.total_seconds() * 1000,
     )
 
-    data = [datetime.now(), datetime.now()]
+    january_1 = datetime.fromisoformat('2024-01-01')
+    data = [january_1, january_1]
     assert trans(data) == sum(datetime.timestamp(x) for x in data)
 
     d_in = timedelta(days=2.4, seconds=45.2)
@@ -303,3 +312,20 @@ def test_user_distance():
 
     assert meas(2.0) == 0.0
     assert meas.map(2.0)(3.0) == 12.0
+
+
+def test_pointer_classes_dont_iter():
+    import opendp.prelude as dp
+
+    # since pointer classes like Domain, Transformation, etc. inherit from ctypes.POINTER,
+    # __iter__ is inherited and attempts to unpack the data behind the pointer 
+    # as if it were a pointer to an array of structs.
+
+    # However, structs from OpenDP are opaque, so are zero-sized.
+    # Python will infinitely yield the data directly behind the pointer, 
+    # stepping forward by zero bytes each time.
+
+    # We override __iter__ so as to make this infinite loop/lock impossible to accidentally trigger
+    with pytest.raises(ValueError):
+        [*dp.atom_domain(T=bool)]
+    

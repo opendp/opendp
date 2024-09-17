@@ -18,7 +18,7 @@ proc-macro = true
 [dependencies]
 syn = { workspace = true, optional = true }
 quote = { workspace = true, optional = true }
-opendp_tooling = { path = "../opendp_tooling", optional = true, version = "0.9.2-dev" }
+opendp_tooling = { path = "../opendp_tooling", optional = true, version = "0.11.1-dev" }
 
 [features]
 full = ["syn", "quote", "opendp_tooling"]

@@ -3,18 +3,28 @@ The ``typing`` module provides utilities that bridge between Python and Rust typ
 OpenDP relies on precise descriptions of data types to make its security guarantees:
 These are more natural in Rust with its fine-grained type system,
 but they may feel out of place in Python. These utilities try to fill that gap.
+
+For more context, see :ref:`typing in the User Guide <typing-user-guide>`.
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
 '''
 from __future__ import annotations
-import sys
 import typing
 from collections.abc import Hashable
-from typing import Dict, Optional, Union, Any, Type, List
+from typing import Optional, Union, Any, Type, _GenericAlias # type: ignore[attr-defined]
+from types import GenericAlias
+import re
 
 from opendp.mod import Function, UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
-from opendp._lib import ATOM_EQUIVALENCE_CLASSES
+from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency
 
 
-ELEMENTARY_TYPES: Dict[Any, str] = {
+ELEMENTARY_TYPES: dict[Any, str] = {
     int: 'i32',
     float: 'f64',
     str: 'String',
@@ -23,9 +33,9 @@ ELEMENTARY_TYPES: Dict[Any, str] = {
     Transformation: 'AnyTransformationPtr'
 }
 try:
-    import numpy as np # type: ignore[import-not-found]
+    np = import_optional_dependency('numpy')
     # https://numpy.org/doc/stable/reference/arrays.scalars.html#sized-aliases
-    ELEMENTARY_TYPES.update({  # pragma: no cover
+    ELEMENTARY_TYPES.update({
         # np.bytes_: '&[u8]',  # np.string_ # not used in OpenDP
         np.str_: 'String',  # np.unicode_
         np.bool_: 'bool',  # np.bool_
@@ -45,7 +55,7 @@ try:
         np.float32: 'f32',
         np.float64: 'f64',  # np.double, np.float_
     })
-except ImportError:
+except ImportError: # pragma: no cover
     np = None # type: ignore[assignment]
 
 INTEGER_TYPES = {"i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "usize"}
@@ -58,19 +68,11 @@ PRIMITIVE_TYPES = NUMERIC_TYPES | {"bool", "String"}
 RuntimeTypeDescriptor = Union[
     "RuntimeType",  # as the normalized type -- ChangeOneDistance; RuntimeType.parse("i32")
     str,  # plaintext string in terms of Rust types -- "Vec<i32>"
-    Type[Union[typing.List[Any], typing.Tuple[Any, Any], int, float, str, bool]],  # using the Python type class itself -- int, float
-    typing.Tuple["RuntimeTypeDescriptor", ...],  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, List[int])
+    Type[Union[list[Any], tuple[Any, Any], float, str, bool]],  # using the Python type class itself -- int, float
+    tuple["RuntimeTypeDescriptor", ...],  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, list[int])
+    _GenericAlias, # a Python type hint from the std typing module -- List[int]
+    GenericAlias, # a Python type hint from the std types module -- list[int]
 ]
-
-if sys.version_info >= (3, 8):
-    from typing import _GenericAlias # type: ignore[attr-defined]
-    # a Python type hint from the std typing module -- List[int]
-    RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (_GenericAlias,) # type: ignore[attr-defined]
-
-if sys.version_info >= (3, 9):  # pragma: no cover
-    from types import GenericAlias
-    # a Python type hint from the std types module -- list[int]
-    RuntimeTypeDescriptor.__args__ = RuntimeTypeDescriptor.__args__ + (GenericAlias,) # type: ignore[attr-defined]
 
 
 def set_default_int_type(T: RuntimeTypeDescriptor) -> None:
@@ -91,7 +93,7 @@ def set_default_int_type(T: RuntimeTypeDescriptor) -> None:
     ELEMENTARY_TYPES[int] = T # type: ignore[assignment]
 
 
-def set_default_float_type(T: RuntimeTypeDescriptor) -> None: # pragma: no cover
+def set_default_float_type(T: RuntimeTypeDescriptor) -> None:
     """Set the default float type throughout the library.
     This function is particularly useful when building computation chains with constructors.
     When you build a computation chain, any unspecified float types default to this float type.
@@ -114,7 +116,7 @@ class RuntimeType(object):
     """Utility for validating, manipulating, inferring and parsing/normalizing type information.
     """
     origin: str
-    args: List[Union["RuntimeType", str]]
+    args: list[Union["RuntimeType", str]]
 
     def __init__(self, origin, args=None):
         if not isinstance(origin, str):
@@ -138,10 +140,10 @@ class RuntimeType(object):
         return result
     
     def __hash__(self) -> int:
-        return hash(str(self)) # pragma: no cover
+        return hash(str(self))
 
     @classmethod
-    def parse(cls, type_name: RuntimeTypeDescriptor, generics: Optional[List[str]] = None) -> Union["RuntimeType", str]:
+    def parse(cls, type_name: RuntimeTypeDescriptor, generics: Optional[list[str]] = None) -> Union["RuntimeType", str]:
         """Parse type descriptor into a normalized Rust type.
 
         Type descriptor may be expressed as:
@@ -153,21 +155,20 @@ class RuntimeType(object):
 
         :param type_name: type specifier
         :param generics: For internal use. List of type names to consider generic when parsing.
-        :type: List[str]
+        :type: list[str]
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
         :raises UnknownTypeException: if `type_name` fails to parse
 
         :examples:
 
-        >>> from opendp.typing import RuntimeType, L1Distance
-        >>> RuntimeType.parse(int)
+        >>> dp.RuntimeType.parse(int)
         'i32'
-        >>> RuntimeType.parse("i32")
+        >>> dp.RuntimeType.parse("i32")
         'i32'
-        >>> print(RuntimeType.parse(L1Distance[int]))
+        >>> dp.RuntimeType.parse(L1Distance[int])
         L1Distance<i32>
-        >>> print(RuntimeType.parse(L1Distance["f32"]))
+        >>> dp.RuntimeType.parse(L1Distance["f32"])
         L1Distance<f32>
         """
         generics = generics or []
@@ -176,14 +177,10 @@ class RuntimeType(object):
 
         # parse type hints from the typing module
         hinted_type = None
-        if sys.version_info >= (3, 8):
-            from typing import _GenericAlias # type: ignore[attr-defined]
-            if isinstance(type_name, _GenericAlias):
-                hinted_type = typing.get_origin(type_name), typing.get_args(type_name)
-        if sys.version_info >= (3, 9):  # pragma: no cover
-            from types import GenericAlias
-            if isinstance(type_name, GenericAlias): # type: ignore[attr-defined]
-                hinted_type = type_name.__origin__, type_name.__args__ # type: ignore[attr-defined] # pragma: no cover
+        if isinstance(type_name, _GenericAlias):
+            hinted_type = typing.get_origin(type_name), typing.get_args(type_name)
+        if isinstance(type_name, GenericAlias): # type: ignore[attr-defined]
+            hinted_type = type_name.__origin__, type_name.__args__ # type: ignore[attr-defined]
     
         if hinted_type:
             origin, args = hinted_type
@@ -197,18 +194,12 @@ class RuntimeType(object):
             
             return RuntimeType(RuntimeType.parse(origin, generics=generics), args)
 
-        # parse a tuple of types-- (int, "f64"); (List[int], (int, bool))
+        # parse a tuple of types-- (int, "f64"); (list[int], (int, bool))
         if isinstance(type_name, tuple):
             return RuntimeType('Tuple', list(cls.parse(v, generics=generics) for v in type_name))
 
         # parse a string-- "Vec<f32>",
         if isinstance(type_name, str):
-
-            if "AllDomain" in type_name: # pragma: no cover
-                import warnings
-                warnings.warn("AllDomain is deprecated. Use AtomDomain instead.", DeprecationWarning)
-                type_name = type_name.replace("AllDomain", "AtomDomain")
-
             type_name = type_name.strip()
             if type_name in generics:
                 return GenericType(type_name)
@@ -216,7 +207,7 @@ class RuntimeType(object):
                 return RuntimeType('Tuple', cls._parse_args(type_name[1:-1], generics=generics))
             start, end = type_name.find('<'), type_name.rfind('>')
 
-            # attempt to upgrade strings to the metric/measure instance
+            # attempt to upgrade strings to the metric instance
             origin = type_name[:start] if 0 < start else type_name
             closeness: RuntimeType = { # type: ignore[assignment]
                 'ChangeOneDistance': ChangeOneDistance,
@@ -224,11 +215,9 @@ class RuntimeType(object):
                 'AbsoluteDistance': AbsoluteDistance,
                 'L1Distance': L1Distance,
                 'L2Distance': L2Distance,
-                'MaxDivergence': MaxDivergence,
-                'SmoothedMaxDivergence': SmoothedMaxDivergence
             }.get(origin)
             if closeness is not None:
-                if isinstance(closeness, (SensitivityMetric, PrivacyMeasure)):
+                if isinstance(closeness, SensitivityMetric):
                     return closeness[cls._parse_args(type_name[start + 1: end], generics=generics)[0]]
                 return closeness
 
@@ -259,7 +248,7 @@ class RuntimeType(object):
         raise UnknownTypeException(f"unable to parse type: {type_name}")
 
     @classmethod
-    def _parse_args(cls, args, generics: Optional[List[str]] = None):
+    def _parse_args(cls, args, generics: Optional[list[str]] = None):
         import re
         return [cls.parse(v, generics=generics) for v in re.split(r",\s*(?![^()<>]*\))", args)]
 
@@ -275,22 +264,39 @@ class RuntimeType(object):
 
         :examples:
 
-        >>> from opendp.typing import RuntimeType, L1Distance
-        >>> assert RuntimeType.infer(23) == "i32"
-        >>> assert RuntimeType.infer(12.) == "f64"
-        >>> assert RuntimeType.infer(["A", "B"]) == "Vec<String>"
-        >>> assert RuntimeType.infer((12., True, "A")) == "(f64,  bool,String)" # eq doesn't care about whitespace
+        >>> dp.RuntimeType.infer(23)
+        'i32'
+        >>> dp.RuntimeType.infer(12.)
+        'f64'
+        >>> dp.RuntimeType.infer(["A", "B"])
+        Vec<String>
+        >>> dp.RuntimeType.infer((12., True, "A"))
+        (f64, bool, String)
         
-        >>> print(RuntimeType.infer([]))
+        >>> dp.RuntimeType.infer([])
         Traceback (most recent call last):
         ...
-        opendp.mod.UnknownTypeException: attempted to create a type_name with an unknown type: cannot infer atomic type when empty
+        opendp.mod.UnknownTypeException: Cannot infer atomic type when empty
         """
         if type(public_example) in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type(public_example)]
         
         if isinstance(public_example, (Domain, Metric, Measure)):
-            return RuntimeType.parse(public_example.type) # pragma: no cover
+            return RuntimeType.parse(public_example.type)
+        
+        pl = import_optional_dependency("polars", raise_error=False)
+        if pl is not None:
+            if isinstance(public_example, pl.LazyFrame):
+                return LazyFrame
+            
+            if isinstance(public_example, pl.DataFrame):
+                return DataFrame
+            
+            if isinstance(public_example, pl.Series):
+                return Series
+            
+            if isinstance(public_example, pl.Expr):
+                return Expr
 
         if isinstance(public_example, tuple):
             return RuntimeType('Tuple', [cls.infer(e, py_object) for e in public_example])
@@ -299,10 +305,10 @@ class RuntimeType(object):
             types = {cls.infer(v, py_object=py_object) for v in value}
 
             if len(types) == 0:
-                return UnknownType("cannot infer atomic type when empty") # pragma: no cover
+                raise UnknownTypeException("Cannot infer atomic type when empty")
             if len(types) == 1:
                 return next(iter(types))
-            if py_object: # pragma: no cover
+            if py_object:
                 return "ExtrinsicObject"
             raise TypeError(f"elements must be homogeneously typed. Found {types}")
         
@@ -310,10 +316,10 @@ class RuntimeType(object):
             return RuntimeType('Vec', [infer_homogeneous(public_example)])
 
         if np is not None and isinstance(public_example, np.ndarray):
-            if public_example.ndim == 0:  # pragma: no cover
+            if public_example.ndim == 0:
                 return cls.infer(public_example.item(), py_object)
 
-            if public_example.ndim == 1: # pragma: no cover
+            if public_example.ndim == 1:
                 inner_type = ELEMENTARY_TYPES.get(public_example.dtype.type)
                 if inner_type is None:
                     raise UnknownTypeException(f"Unknown numpy array dtype: {public_example.dtype.type}")
@@ -327,19 +333,13 @@ class RuntimeType(object):
                 infer_homogeneous(public_example.values())
             ])
 
-        if isinstance(public_example, Measurement): # pragma: no cover
-            return "AnyMeasurementPtr"
-
-        if isinstance(public_example, Transformation): # pragma: no cover
-            return "AnyTransformationPtr"
-
-        if public_example is None: # pragma: no cover
-            return RuntimeType('Option', [UnknownType("Constructed Option from a None variant")])
+        if public_example is None:
+            raise UnknownTypeException("Type of Option cannot be inferred from None")
         
-        if callable(public_example): # pragma: no cover
+        if callable(public_example):
             return "CallbackFn"
 
-        if py_object: # pragma: no cover
+        if py_object:
             return "ExtrinsicObject"
         raise UnknownTypeException(type(public_example))
 
@@ -348,7 +348,7 @@ class RuntimeType(object):
             cls,
             type_name: RuntimeTypeDescriptor | None = None,
             public_example: Any = None,
-            generics: Optional[List[str]] = None
+            generics: Optional[list[str]] = None
     ) -> Union["RuntimeType", str]:
         """If type_name is supplied, normalize it. Otherwise, infer the normalized type from a public example.
 
@@ -357,7 +357,7 @@ class RuntimeType(object):
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
         :param generics: For internal use. List of type names to consider generic when parsing.
-        :type: List[str]
+        :type: list[str]
         :raises ValueError: if `type_name` fails to parse
         :raises UnknownTypeException: if inference fails on `public_example` or no args are supplied
         """
@@ -378,22 +378,6 @@ class RuntimeType(object):
 class GenericType(RuntimeType):
     def __repr__(self):
         raise UnknownTypeException(f"attempted to create a type_name with an unknown generic: {self.origin}")
-
-
-class UnknownType(RuntimeType):
-    """Indicator for a type that cannot be inferred. Typically the atomic type of an empty list.
-    RuntimeTypes containing UnknownType cannot be used in FFI
-    """
-    origin: None # type: ignore[assignment]
-    args: None # type: ignore[assignment]
-
-    def __init__(self, reason): # pragma: no cover
-        self.origin = None
-        self.args = None
-        self.reason = reason
-
-    def __repr__(self):
-        raise UnknownTypeException(f"attempted to create a type_name with an unknown type: {self.reason}")
 
 
 SymmetricDistance = 'SymmetricDistance'
@@ -417,18 +401,10 @@ L1Distance: SensitivityMetric = SensitivityMetric('L1Distance')
 L2Distance: SensitivityMetric = SensitivityMetric('L2Distance')
 
 
-class PrivacyMeasure(RuntimeType):
-    """All measure RuntimeTypes inherit from PrivacyMeasure.
-    Provides static type checking in user-code for privacy measures and a getitem interface like stdlib typing.
-    """
-    def __getitem__(self, associated_type):
-        return PrivacyMeasure(self.origin, [self.parse(type_name=associated_type)])
-
-
-MaxDivergence: PrivacyMeasure = PrivacyMeasure('MaxDivergence')
-SmoothedMaxDivergence: PrivacyMeasure = PrivacyMeasure('SmoothedMaxDivergence')
-FixedSmoothedMaxDivergence: PrivacyMeasure = PrivacyMeasure('FixedSmoothedMaxDivergence')
-ZeroConcentratedDivergence: PrivacyMeasure = PrivacyMeasure('ZeroConcentratedDivergence')
+MaxDivergence = 'MaxDivergence'
+SmoothedMaxDivergence = 'SmoothedMaxDivergence'
+FixedSmoothedMaxDivergence = 'FixedSmoothedMaxDivergence'
+ZeroConcentratedDivergence = 'ZeroConcentratedDivergence'
 
 class Carrier(RuntimeType):
     def __getitem__(self, subdomains):
@@ -454,15 +430,33 @@ usize: str = 'usize'
 f32: str = 'f32'
 f64: str = 'f64'
 String: str = 'String'
-AnyMeasurementPtr: str = "AnyMeasurementPtr"
-AnyTransformationPtr: str = "AnyTransformationPtr"
-
+BitVector: str = 'BitVector'
+LazyFrame: str = 'LazyFrame'
+DataFrame: str = 'DataFrame'
+Series: str = 'Series'
+Expr: str = 'Expr'
+AnyMeasurementPtr: str = 'AnyMeasurementPtr'
+AnyTransformationPtr: str = 'AnyTransformationPtr'
+LazyFrameDomain: str = 'LazyFrame'
+SeriesDomain: str = 'SeriesDomain'
 
 class DomainDescriptor(RuntimeType):
     def __getitem__(self, subdomain):
         if not isinstance(subdomain, tuple):
             subdomain = (subdomain,)
-        return DomainDescriptor(self.origin, [self.parse(type_name=sub_i) for sub_i in subdomain])    
+        return DomainDescriptor(self.origin, [self.parse(type_name=sub_i) for sub_i in subdomain])
+
+    def __call__(self, *args, **kwargs):
+        '''
+        >>> FakeDomain = DomainDescriptor('FakeDomain')
+        >>> FakeDomain(int)
+        Traceback (most recent call last):
+        ...
+        Exception: Use dp.fake_domain to construst a new FakeDomain
+        '''
+        # https://stackoverflow.com/a/12867228/10727889
+        lc_name = re.sub('(?!^)([A-Z])', r'_\1', self.origin).lower()
+        raise Exception(f'Use dp.{lc_name} to construst a new {self.origin}')
 
 
 AtomDomain: DomainDescriptor = DomainDescriptor('AtomDomain')
@@ -475,7 +469,7 @@ MapDomain: DomainDescriptor = DomainDescriptor('MapDomain')
 def get_atom(type_name):
     type_name = RuntimeType.parse(type_name)
     while isinstance(type_name, RuntimeType):
-        if isinstance(type_name, (UnknownType, GenericType)):
+        if isinstance(type_name, GenericType):
             return
         type_name = type_name.args[0]
     return type_name
@@ -499,7 +493,7 @@ def pass_through(value: Any) -> Any:
 def get_dependencies(value: Union[Measurement, Transformation, Function]) -> Any:
     return getattr(value, "_dependencies", None)
 
-def get_dependencies_iterable(value: List[Union[Measurement, Transformation, Function]]) -> List[Any]:
+def get_dependencies_iterable(value: list[Union[Measurement, Transformation, Function]]) -> list[Any]:
     return list(map(get_dependencies, value))
 
 def get_carrier_type(value: Domain) -> Union[RuntimeType, str]:

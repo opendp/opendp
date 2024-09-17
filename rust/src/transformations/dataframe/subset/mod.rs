@@ -33,7 +33,13 @@ pub fn make_subset_by<TK: Hashable>(
         Function::new_fallible(move |data: &DataFrame<TK>| {
             // the partition to move each row into
             let indicator = (data.get(&indicator_column))
-                .ok_or_else(|| err!(FailedFunction, "{:?} does not exist in the input dataframe"))?
+                .ok_or_else(|| {
+                    err!(
+                        FailedFunction,
+                        "{:?} does not exist in the input dataframe",
+                        indicator_column
+                    )
+                })?
                 .as_form::<Vec<bool>>()?;
 
             // where to collect partitioned data
@@ -43,7 +49,11 @@ pub fn make_subset_by<TK: Hashable>(
             keep_columns.iter().try_for_each(|column_name| {
                 // retrieve a Column from the dataframe
                 let column = data.get(&column_name).ok_or_else(|| {
-                    err!(FailedFunction, "{:?} does not exist in the input dataframe")
+                    err!(
+                        FailedFunction,
+                        "{:?} does not exist in the input dataframe",
+                        column_name
+                    )
                 })?;
 
                 subsetted.insert(column_name.clone(), column.subset(&indicator));
@@ -60,27 +70,4 @@ pub fn make_subset_by<TK: Hashable>(
 }
 
 #[cfg(test)]
-mod test {
-    use crate::error::ExplainUnwrap;
-
-    use super::*;
-
-    #[test]
-    fn test_subset_by() -> Fallible<()> {
-        let trans = make_subset_by::<String>("filter".to_string(), vec!["values".to_string()])?;
-
-        let mut df = DataFrame::new();
-        df.insert("filter".to_string(), vec![true, false, false, true].into());
-        df.insert("values".to_string(), vec!["1", "2", "3", "4"].into());
-        let res = trans.invoke(&df)?;
-
-        let subset = res
-            .get("values")
-            .unwrap_test()
-            .as_form::<Vec<&str>>()?
-            .clone();
-
-        assert_eq!(subset, vec!["1", "4"]);
-        Ok(())
-    }
-}
+mod test;

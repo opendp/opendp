@@ -17,13 +17,15 @@ RUST_TO_R <- list(
   f32 = "numeric",
   f64 = "numeric",
   bool = "logical",
-  String = "character"
+  String = "character",
+  BitVector = "raw"
 )
 R_TO_RUST <- list(
   integer = "i32",
   numeric = "f64",
   logical = "bool",
   character = "String",
+  raw = "BitVector",
   domain = "AnyDomain",
   metric = "AnyMetric",
   measure = "AnyMeasure",
@@ -31,13 +33,6 @@ R_TO_RUST <- list(
   transformation = "AnyTransformation",
   `function` = "AnyFunction"
 )
-
-parse_or_infer <- function(type_name, public_example) {
-  if (is.null(type_name)) {
-    type_name <- rt_infer(public_example)
-  }
-  type_name
-}
 
 as_rt_vec <- function(atom_type) {
   new_runtime_type("Vec", list(atom_type))
@@ -47,7 +42,7 @@ rt_infer <- function(public_example) {
   prospect <- R_TO_RUST[[class(public_example)]]
   if (!is.null(prospect)) {
     runtime_type <- new_runtime_type(prospect)
-    if (length(public_example) > 1) {
+    if (!is.raw(public_example) && length(public_example) > 1) {
       runtime_type <- as_rt_vec(runtime_type)
     }
     return(runtime_type)
@@ -388,6 +383,12 @@ String <- new_runtime_type("String")
 #' @concept typing
 #' @export
 bool <- new_runtime_type("bool")
+
+#' type signature for a BitVector
+#'
+#' @concept typing
+#' @export
+BitVector <- new_runtime_type("BitVector")
 
 AnyMeasurementPtr <- new_runtime_type("AnyMeasurementPtr")
 AnyMeasurement <- AnyMeasurementPtr

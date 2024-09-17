@@ -13,8 +13,10 @@ Differential privacy achieves this by carefully injecting random noise into the 
 For more background on differential privacy and its applications:
 
 * "`Designing Access with Differential Privacy <https://admindatahandbook.mit.edu/book/v1.0/diffpriv.html>`_" from *Handbook on Using Administrative Data for Research and Evidence-based Policy*
-* `Resources list <https://differentialprivacy.org/resources/>`_ from *differentialprivacy.org*
+* The `Resources list <https://differentialprivacy.org/resources/>`_ from *differentialprivacy.org*
+* A shorter list of `Educational Resources <https://opendp.github.io/learning/>`_
 * OpenDP's own :doc:`theory/resources`
+* `Hand-On Differential Privacy <https://www.oreilly.com/library/view/hands-on-differential-privacy/9781492097730/>`_ is co-authored by the OpenDP Library architect
 
 Why OpenDP?
 -----------
@@ -37,12 +39,15 @@ which is built on the OpenDP library.
 Who is using OpenDP?
 --------------------
 
-Some of the applications of OpenDP in finance, healthcare, government, and tech include:
+Some of the applications of OpenDP in healthcare, government, and tech include:
 
-* `Spectus <https://spectus.ai/>`_ using OpenDP to create `privacy enhanced mobility data <https://spectus.ai/wp-content/uploads/2022/10/Spectus_DPWhitepaper_v01b.pdf>`_
-* The `Swiss Federal Statistical Office <https://www.bfs.admin.ch/bfs/en/home.html>`_ using OpenDP to `release income statistics <https://www.youtube.com/watch?v=71cR0Jx0RgM&t=526s>`_
-* `Sarus <https://www.sarus.tech/>`_ contributing an `implementation of f-DP <https://medium.com/sarus/sarus-implements-differential-privacy-in-opendp-47350a94da03>`_
-* `LiveRamp <https://liveramp.com>`_ using OpenDP to `support COVID research <https://liveramp.com/developers/blog/two-liveramp-engineers-named-harvard-opendp-fellows/>`_
+* The `Swiss Federal Statistical Office <https://www.bfs.admin.ch/bfs/en/home.html>`_ is using OpenDP to `release income statistics <https://www.bfs.admin.ch/bfs/en/home/dscc/blog/2024-02-opendp.html>`_
+* `Oblivious <https://www.oblivious.com>`_ has used OpenDP for major U.N. and telecom pilot projects as part of their `Antigranular <https://docs.antigranular.com/private-python/packages/opendp/>`_ data privacy platform.
+* `OpenMined <https://openmined.org>`_ is using OpenDP as part of PySyft deployments with Microsoft and DailyMotion, with pilots at multiple national statistical organizations.
+* `Microsoft <https://microsoft.com>`_ uses OpenDP and the `SmartNoise SDK <https://github.com/opendp/smartnoise-sdk>`_ (which is based on OpenDP) both internally as well as for several public research projects, including the `United States Broadband Percentages Database <https://github.com/microsoft/USBroadbandUsagePercentages>`_.
+* `Spectus <https://spectus.ai/>`_ is using OpenDP to create `privacy enhanced mobility data <https://spectus.ai/wp-content/uploads/2022/10/Spectus_DPWhitepaper_v01b.pdf>`_
+* `LiveRamp <https://liveramp.com>`_ is using OpenDP to `support COVID research <https://liveramp.com/developers/blog/two-liveramp-engineers-named-harvard-opendp-fellows/>`_
+
 
 What next?
 ----------

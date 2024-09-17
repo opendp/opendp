@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter::once};
+use std::{collections::HashMap, fs, iter::once};
 
 use crate::{
     codegen::{flatten_type_recipe, tab_r},
@@ -20,6 +20,7 @@ pub fn generate_r_module(
 ) -> String {
     let body = module
         .into_iter()
+        .filter(|func| func.has_ffi)
         .filter(|func| !BLACKLIST.contains(&func.name.as_str()))
         .map(|func| generate_r_function(module_name, &func, hierarchy))
         .collect::<Vec<String>>()
@@ -38,7 +39,7 @@ NULL
 /// Generate the code for a user-facing R function.
 ///
 /// This internally calls a C function that wraps the Rust OpenDP Library
-fn generate_r_function(
+pub(crate) fn generate_r_function(
     module_name: &str,
     func: &Function,
     hierarchy: &HashMap<String, Vec<String>>,
@@ -229,11 +230,12 @@ fn generate_doc_block(
 
     format!(
         r#"{description}
-{concept}{doc_args}{ret_arg}{export}"#,
+{concept}{doc_args}{ret_arg}{examples}{export}"#,
         concept = concept,
         description = description,
         doc_args = doc_args,
-        ret_arg = generate_docstring_return_arg(&func.ret, hierarchy)
+        ret_arg = generate_docstring_return_arg(&func.ret, hierarchy),
+        examples = generate_docstring_examples(module_name, func),
     )
     .split("\n")
     .map(|l| format!("#' {}", l).trim().to_string())
@@ -261,10 +263,11 @@ fn generate_then_doc_block(
 
 @concept {module_name}
 @param lhs The prior transformation or metric space.
-{doc_args}{ret_arg}
+{doc_args}{ret_arg}{examples}
 @export"#,
         func_name = func.name,
-        ret_arg = generate_docstring_return_arg(&func.ret, hierarchy)
+        ret_arg = generate_docstring_return_arg(&func.ret, hierarchy),
+        examples = generate_docstring_examples(module_name, func),
     )
     .split("\n")
     .map(|l| format!("#' {}", l).trim().to_string())
@@ -299,6 +302,14 @@ fn generate_docstring_return_arg(
         return String::new();
     };
     format!("\n@return {description}")
+}
+
+fn generate_docstring_examples(module_name: &str, func: &Function) -> String {
+    let example_path = format!("src/{}/code/{}.R", &module_name, &func.name);
+    match fs::read_to_string(example_path) {
+        Ok(example) => format!("\n@examples\n{example}"),
+        Err(_) => "".to_string(),
+    }
 }
 
 /// generate the function body, consisting of type args formatters, data converters, and the call

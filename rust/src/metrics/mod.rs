@@ -19,7 +19,7 @@ use std::marker::PhantomData;
 
 use crate::{
     core::{Domain, Metric, MetricSpace},
-    domains::{type_name, AtomDomain, MapDomain, VectorDomain},
+    domains::{type_name, AtomDomain, BitVectorDomain, MapDomain, VectorDomain},
     error::Fallible,
     traits::{CheckAtom, InfAdd},
 };
@@ -431,6 +431,96 @@ impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
     }
 }
 
+/// The $L^0$, $L\infty$ norms of the per-partition distances between data sets.
+///
+/// The $L^0$ norm counts the number of partitions that have changed.
+/// The $L\infty$ norm is the greatest change in any one partition.
+///
+/// # Proof Definition
+///
+/// ### $d$-closeness
+/// For any two partitionings $x, x' \in \texttt{D}$ and $d$ of type `(u32, M::Distance)`,
+/// we say that $x, x'$ are $d = (l0, li)$-close under the the partition distance metric whenever
+///
+/// ```math
+/// d(x, x') = (|d_M(x, x')|_0, |d_M(x, x')|_\infty) \leq (l0, li) = d
+/// ```
+///
+/// Both numbers in the 2-tuple must be less than their respective values to be $d$-close.
+///
+#[derive(Clone, PartialEq)]
+pub struct Parallel<M: Metric>(pub M);
+impl<M: Metric> Default for Parallel<M> {
+    fn default() -> Self {
+        Parallel(M::default())
+    }
+}
+impl<M: Metric> Debug for Parallel<M> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "Parallel({:?})", self.0)
+    }
+}
+
+impl<M: Metric> Metric for Parallel<M> {
+    //               L^0          L^\infty
+    type Distance = (IntDistance, M::Distance);
+}
+
+/// The $L^0$, $L^1$, $L\infty$ norms of the per-partition distances between data sets.
+///
+/// The $L^0$ norm counts the number of partitions that have changed.
+/// The $L^1$ norm is the total change.
+/// The $L\infty$ norm is the greatest change in any one partition.
+///
+/// # Proof Definition
+///
+/// ### $d$-closeness
+/// For any two partitionings $u, v \in \texttt{D}$ and $d$ of type `(usize, M::Distance, M::Distance)`,
+/// we say that $u, v$ are $d$-close under the the partition distance metric whenever
+///
+/// ```math
+/// d(x, x') = |d_M(x, x')|_0, |d_M(x, x')|_1, |d_M(x, x')|_\infty \leq d
+/// ```
+///
+/// All three numbers in the triple must be less than their respective values in $d$ to be $d$-close.
+///
+#[derive(Clone, PartialEq)]
+pub struct PartitionDistance<M: Metric>(pub M);
+impl<M: Metric> Default for PartitionDistance<M> {
+    fn default() -> Self {
+        PartitionDistance(M::default())
+    }
+}
+
+impl<M: Metric> Debug for PartitionDistance<M> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "PartitionDistance({:?})", self.0)
+    }
+}
+
+impl<M: Metric> Metric for PartitionDistance<M> {
+    //               L^0          L^1          L^\infty
+    type Distance = (IntDistance, M::Distance, M::Distance);
+}
+
+impl<T: CheckAtom> MetricSpace
+    for (
+        VectorDomain<AtomDomain<T>>,
+        PartitionDistance<AbsoluteDistance<T>>,
+    )
+{
+    fn check_space(&self) -> Fallible<()> {
+        if self.0.element_domain.nullable() {
+            fallible!(
+                MetricSpace,
+                "PartitionDistance requires non-nullable elements"
+            )
+        } else {
+            Ok(())
+        }
+    }
+}
+
 /// Indicates if two elements are equal to each other.
 ///
 /// This is used in the context of randomized response,
@@ -452,20 +542,9 @@ impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
 ///
 /// # Compatible Domains
 /// * `AtomDomain<T>` for any valid `T`.
-#[derive(Clone)]
+#[derive(Clone, Default, PartialEq)]
 pub struct DiscreteDistance;
 
-impl Default for DiscreteDistance {
-    fn default() -> Self {
-        DiscreteDistance
-    }
-}
-
-impl PartialEq for DiscreteDistance {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
 impl Debug for DiscreteDistance {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "DiscreteDistance()")
@@ -476,6 +555,12 @@ impl Metric for DiscreteDistance {
 }
 
 impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
+    }
+}
+
+impl MetricSpace for (BitVectorDomain, DiscreteDistance) {
     fn check_space(&self) -> Fallible<()> {
         Ok(())
     }
@@ -492,9 +577,20 @@ impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
 /// ```math
 /// d_{\infty}(u, v) = max_{i} |u_i - v_i|
 /// ```
+///
+/// If `monotonic` is `true`, then the distance is infinity if any of the differences have opposing signs.
 pub struct LInfDistance<Q> {
     pub monotonic: bool,
     _marker: PhantomData<fn() -> Q>,
+}
+
+impl<Q> LInfDistance<Q> {
+    pub fn new(monotonic: bool) -> Self {
+        LInfDistance {
+            monotonic,
+            _marker: PhantomData,
+        }
+    }
 }
 
 impl<Q: InfAdd> LInfDistance<Q> {
@@ -510,14 +606,8 @@ impl<Q: InfAdd> LInfDistance<Q> {
             d_in.inf_add(&d_in)
         }
     }
-
-    pub fn new(monotonic: bool) -> Self {
-        LInfDistance {
-            monotonic,
-            _marker: PhantomData,
-        }
-    }
 }
+
 impl<Q> Default for LInfDistance<Q> {
     fn default() -> Self {
         LInfDistance {

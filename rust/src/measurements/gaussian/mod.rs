@@ -1,4 +1,4 @@
-use dashu::rational::RBig;
+use num::Zero;
 use opendp_derive::bootstrap;
 
 use crate::{
@@ -7,7 +7,7 @@ use crate::{
     error::Fallible,
     measures::ZeroConcentratedDivergence,
     metrics::{AbsoluteDistance, L2Distance},
-    traits::{cartesian, Float, InfCast, Number},
+    traits::{InfAdd, InfCast, InfDiv, InfPowI, Number},
 };
 
 #[cfg(feature = "contrib")]
@@ -27,49 +27,47 @@ pub trait GaussianMeasure<MI>: Measure + Default
 where
     MI: Metric,
 {
-    type Atom;
-    fn new_forward_map(scale: Self::Atom, relaxation: Self::Atom)
-        -> Fallible<PrivacyMap<MI, Self>>;
+    fn new_forward_map(scale: f64, relaxation: f64) -> PrivacyMap<MI, Self>;
 }
 
-impl<MI, QO> GaussianMeasure<MI> for ZeroConcentratedDivergence<QO>
+pub(crate) fn gaussian_zcdp_map<QI>(scale: f64, relaxation: f64) -> impl Fn(&QI) -> Fallible<f64>
+where
+    QI: Clone,
+    f64: InfCast<QI>,
+{
+    move |d_in: &QI| {
+        let d_in = f64::inf_cast(d_in.clone())?;
+
+        if d_in.is_sign_negative() {
+            return fallible!(InvalidDistance, "sensitivity must be non-negative");
+        }
+
+        // increase d_in by the relaxation
+        //   * if float, this will be the worst-case rounding of the discretization
+        //   * if integer, this will be zero
+        let d_in = d_in.inf_add(&relaxation)?;
+
+        if d_in.is_zero() {
+            return Ok(0.0);
+        }
+
+        if scale.is_zero() {
+            return Ok(f64::INFINITY);
+        }
+
+        // (d_in / scale)^2 / 2
+        d_in.inf_div(&scale)?.inf_powi(2.into())?.inf_div(&2.)
+    }
+}
+
+impl<MI> GaussianMeasure<MI> for ZeroConcentratedDivergence
 where
     MI: Metric,
     MI::Distance: Number,
-    QO: Float + InfCast<MI::Distance>,
-    RBig: TryFrom<QO>,
+    f64: InfCast<MI::Distance>,
 {
-    type Atom = QO;
-
-    fn new_forward_map(
-        scale: Self::Atom,
-        relaxation: Self::Atom,
-    ) -> Fallible<PrivacyMap<MI, Self>> {
-        let _2 = QO::exact_int_cast(2)?;
-
-        Ok(PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
-            let d_in = QO::inf_cast(*d_in)?;
-
-            if d_in.is_sign_negative() {
-                return fallible!(InvalidDistance, "sensitivity must be non-negative");
-            }
-
-            // increase d_in by the relaxation
-            //   * if float, this will be the worst-case rounding of the discretization
-            //   * if integer, this will be zero
-            let d_in = d_in.inf_add(&relaxation)?;
-
-            if d_in.is_zero() {
-                return Ok(QO::zero());
-            }
-
-            if scale.is_zero() {
-                return Ok(QO::infinity());
-            }
-
-            // (d_in / scale)^2 / 2
-            (d_in.inf_div(&scale)?).inf_powi(2.into())?.inf_div(&_2)
-        }))
+    fn new_forward_map(scale: f64, relaxation: f64) -> PrivacyMap<MI, Self> {
+        PrivacyMap::new_fallible(gaussian_zcdp_map(scale, relaxation))
     }
 }
 
@@ -82,34 +80,34 @@ where
     fn make_gaussian(
         input_domain: Self,
         input_metric: Self::InputMetric,
-        scale: MO::Distance,
+        scale: f64,
         k: Option<i32>,
     ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, MO>>;
 }
 
 macro_rules! impl_make_gaussian_float {
     ($($ty:ty)+) => {$(
-        impl GaussianDomain<ZeroConcentratedDivergence<$ty>, $ty> for AtomDomain<$ty> {
+        impl GaussianDomain<ZeroConcentratedDivergence, $ty> for AtomDomain<$ty> {
             type InputMetric = AbsoluteDistance<$ty>;
             fn make_gaussian(
                 input_domain: Self,
                 input_metric: Self::InputMetric,
-                scale: $ty,
+                scale: f64,
                 k: Option<i32>
-            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, ZeroConcentratedDivergence<$ty>>>
+            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, ZeroConcentratedDivergence>>
             {
                 make_scalar_float_gaussian(input_domain, input_metric, scale, k)
             }
         }
 
-        impl GaussianDomain<ZeroConcentratedDivergence<$ty>, $ty> for VectorDomain<AtomDomain<$ty>> {
+        impl GaussianDomain<ZeroConcentratedDivergence, $ty> for VectorDomain<AtomDomain<$ty>> {
             type InputMetric = L2Distance<$ty>;
             fn make_gaussian(
                 input_domain: Self,
                 input_metric: Self::InputMetric,
-                scale: $ty,
+                scale: f64,
                 k: Option<i32>
-            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, ZeroConcentratedDivergence<$ty>>>
+            ) -> Fallible<Measurement<Self, Self::Carrier, Self::InputMetric, ZeroConcentratedDivergence>>
             {
                 make_vector_float_gaussian(input_domain, input_metric, scale, k)
             }
@@ -120,23 +118,23 @@ macro_rules! impl_make_gaussian_float {
 impl_make_gaussian_float!(f32 f64);
 
 macro_rules! impl_make_gaussian_int {
-    ($T:ty, $QO:ty) => {
-        impl<QI: Number> GaussianDomain<ZeroConcentratedDivergence<$QO>, QI> for AtomDomain<$T>
+    ($($T:ty)+) => {
+        $(impl<QI: Number> GaussianDomain<ZeroConcentratedDivergence, QI> for AtomDomain<$T>
         where
-            $QO: InfCast<QI>,
+            f64: InfCast<QI>,
         {
             type InputMetric = AbsoluteDistance<QI>;
             fn make_gaussian(
                 input_domain: Self,
                 input_metric: Self::InputMetric,
-                scale: $QO,
+                scale: f64,
                 k: Option<i32>,
             ) -> Fallible<
                 Measurement<
                     Self,
                     Self::Carrier,
                     Self::InputMetric,
-                    ZeroConcentratedDivergence<$QO>,
+                    ZeroConcentratedDivergence,
                 >,
             > {
                 if k.is_some() {
@@ -146,23 +144,23 @@ macro_rules! impl_make_gaussian_int {
             }
         }
 
-        impl<QI: Number> GaussianDomain<ZeroConcentratedDivergence<$QO>, QI>
+        impl<QI: Number> GaussianDomain<ZeroConcentratedDivergence, QI>
             for VectorDomain<AtomDomain<$T>>
         where
-            $QO: InfCast<QI>,
+            f64: InfCast<QI>,
         {
             type InputMetric = L2Distance<QI>;
             fn make_gaussian(
                 input_domain: Self,
                 input_metric: Self::InputMetric,
-                scale: $QO,
+                scale: f64,
                 k: Option<i32>,
             ) -> Fallible<
                 Measurement<
                     Self,
                     Self::Carrier,
                     Self::InputMetric,
-                    ZeroConcentratedDivergence<$QO>,
+                    ZeroConcentratedDivergence,
                 >,
             > {
                 if k.is_some() {
@@ -170,20 +168,15 @@ macro_rules! impl_make_gaussian_int {
                 }
                 make_vector_integer_gaussian(input_domain, input_metric, scale)
             }
-        }
+        })+
     };
 }
-cartesian! {[i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize], [f32, f64], impl_make_gaussian_int}
+impl_make_gaussian_int!(i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
 
 #[bootstrap(
     features("contrib"),
-    arguments(scale(c_type = "void *", rust_type = "QO"), k(default = b"null")),
-    generics(
-        D(suppress),
-        MO(default = "ZeroConcentratedDivergence<QO>", generics = "QO"),
-        QI(suppress)
-    ),
-    derived_types(QO = "$get_atom_or_infer(MO, scale)")
+    arguments(k(default = b"null")),
+    generics(D(suppress), MO(default = "ZeroConcentratedDivergence"), QI(suppress))
 )]
 /// Make a Measurement that adds noise from the Gaussian(`scale`) distribution to the input.
 ///
@@ -202,12 +195,12 @@ cartesian! {[i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize], [f
 ///
 /// # Generics
 /// * `D` - Domain of the data to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
-/// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
+/// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence`.
 /// * `QI` - Input distance. The type of sensitivities. Can be any integer or float.
 pub fn make_gaussian<D: GaussianDomain<MO, QI>, MO: 'static + Measure, QI: 'static>(
     input_domain: D,
     input_metric: D::InputMetric,
-    scale: MO::Distance,
+    scale: f64,
     k: Option<i32>,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MO>>
 where
@@ -217,44 +210,4 @@ where
 }
 
 #[cfg(test)]
-mod test {
-
-    use crate::metrics::{AbsoluteDistance, L2Distance};
-
-    use super::*;
-    use num::{One, Zero};
-
-    #[test]
-    fn test_all() -> Fallible<()> {
-        macro_rules! test_gaussian_with_ty {
-            ($($ty:ty),+) => {$(
-                let meas = make_gaussian::<_, ZeroConcentratedDivergence<_>, _>(AtomDomain::<$ty>::default(), AbsoluteDistance::<$ty>::default(), 1., None)?;
-                meas.invoke(&<$ty>::zero())?;
-                meas.map(&<$ty>::one())?;
-
-                let meas = make_gaussian::<_, ZeroConcentratedDivergence<_>, _>(VectorDomain::new(AtomDomain::<$ty>::default()), L2Distance::<$ty>::default(), 1., None)?;
-                meas.invoke(&vec![<$ty>::zero()])?;
-                meas.map(&<$ty>::one())?;
-            )+}
-        }
-        test_gaussian_with_ty!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, f32, f64);
-        Ok(())
-    }
-
-    #[test]
-    fn test_other_qi() -> Fallible<()> {
-        macro_rules! test_gaussian_with_ty {
-            ($($ty:ty),+) => {$(
-                let meas = make_gaussian::<_, ZeroConcentratedDivergence<_>, _>(AtomDomain::<$ty>::default(), AbsoluteDistance::<f64>::default(), 1., None)?;
-                meas.invoke(&<$ty>::zero())?;
-                meas.map(&1.)?;
-
-                let meas = make_gaussian::<_, ZeroConcentratedDivergence<_>, _>(VectorDomain::new(AtomDomain::<$ty>::default()), L2Distance::<f64>::default(), 1., None)?;
-                meas.invoke(&vec![<$ty>::zero()])?;
-                meas.map(&1.)?;
-            )+}
-        }
-        test_gaussian_with_ty!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128);
-        Ok(())
-    }
-}
+mod test;

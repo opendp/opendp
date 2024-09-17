@@ -1,3 +1,5 @@
+use std::any::TypeId;
+
 use crate::core::MetricSpace;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
@@ -29,8 +31,8 @@ pub extern "C" fn opendp_transformations__make_is_equal(
     let input_metric = try_as_ref!(input_metric);
     let value = try_as_ref!(value);
 
-    let TIA = try_!(input_domain.type_.get_atom());
-    let M = input_metric.type_.clone();
+    let TIA_ = try_!(input_domain.type_.get_atom());
+    let M_ = input_metric.type_.clone();
 
     fn monomorphize<TIA, M>(
         input_domain: &AnyDomain,
@@ -51,8 +53,8 @@ pub extern "C" fn opendp_transformations__make_is_equal(
         make_is_equal::<TIA, M>(input_domain, input_metric, value).into_any()
     }
     dispatch!(monomorphize, [
-        (TIA, @primitives),
-        (M, @dataset_metrics)
+        (TIA_, @primitives),
+        (M_, @dataset_metrics)
     ], (input_domain, input_metric, value))
     .into()
 }
@@ -71,10 +73,10 @@ pub extern "C" fn opendp_transformations__make_is_null(
         args,
     } = DI.contents
     {
-        try_!(Type::of_id(try_!(args.get(0).ok_or_else(|| err!(
-            FFI,
-            "Vec must have one type argument."
-        )))))
+        let type_id =
+            try_!(<[TypeId; 1]>::try_from(args)
+                .map_err(|_| err!(FFI, "Vec must have one type argument")))[0];
+        try_!(Type::of_id(&type_id))
     } else {
         return err!(FFI, "Invalid type name.").into();
     };

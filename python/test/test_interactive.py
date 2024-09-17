@@ -1,7 +1,6 @@
 import opendp.prelude as dp
 import pytest
 
-dp.enable_features("contrib")
 
 
 def test_sequential_composition():
@@ -9,7 +8,7 @@ def test_sequential_composition():
     sc_meas = dp.c.make_sequential_composition(
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
         input_metric=dp.symmetric_distance(),
-        output_measure=dp.max_divergence(float),
+        output_measure=dp.max_divergence(),
         d_in=max_influence,
         d_mids=[0.2, 0.3, 0.4, 0.7],
     )
@@ -38,7 +37,7 @@ def test_sequential_composition():
         >> dp.c.make_sequential_composition(
             input_domain=exact_sum.output_domain,
             input_metric=exact_sum.output_metric,
-            output_measure=dp.max_divergence(float),
+            output_measure=dp.max_divergence(),
             d_in=exact_sum.map(max_influence),
             d_mids=[0.2, 0.09],
         )
@@ -55,7 +54,7 @@ def test_sequential_composition_approxdp():
     sc_meas = dp.c.make_sequential_composition(
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
         input_metric=dp.symmetric_distance(),
-        output_measure=dp.fixed_smoothed_max_divergence(float),
+        output_measure=dp.fixed_smoothed_max_divergence(),
         d_in=max_influence,
         d_mids=[(1.0, 1e-6), (1.0, 1e-6)],
     )
@@ -74,7 +73,7 @@ def test_sequential_composition_approxdp():
     sc_qbl(sum_meas)
 
 
-def test_udf_queryable_int():
+def test_plugin_queryable_int():
     def transition(query):
         assert query == 2
         return query + 1
@@ -82,7 +81,7 @@ def test_udf_queryable_int():
     assert qbl(2) == 3
 
 
-def test_udf_queryable_list():
+def test_plugin_queryable_list():
     def transition(query, _is_internal):
         assert query == [2, 3]
         return query[-1]
@@ -90,7 +89,7 @@ def test_udf_queryable_list():
     assert qbl([2, 3]) == 3
 
 
-def test_udf_queryable_error():
+def test_plugin_queryable_error():
     def transition(_query, _is_internal):
         raise ValueError("test clean stack trace")
     qbl = dp.new_queryable(transition, "Vec<i32>", int)

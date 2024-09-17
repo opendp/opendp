@@ -1,9 +1,9 @@
 import argparse
-import configparser
+import configupdater
 import datetime
-import io
 import re
 import zoneinfo
+from pathlib import Path
 
 import tomlkit
 from debmutate.control import ControlEditor
@@ -105,28 +105,21 @@ def update_version(version):
 
     # Python config
     def load_python_config(f):
-        config = configparser.RawConfigParser()
+        config = configupdater.ConfigUpdater()
         config.read_file(f)
         return config
     def munge_python_config(config):
-        config.set("metadata", "version", str(python_version))
+        config["metadata"]["version"].value = str(python_version)
         return config
     def dump_python_config(config, f):
         config.write(f)
     update_file("python/setup.cfg", load_python_config, munge_python_config, dump_python_config)
-
-    # Binder requirements
-    def munge_binder_requirements(lines):
-        opendp_line = f"opendp=={python_version}\n"
-        return [opendp_line if line.startswith("opendp==") else line for line in lines]
     
     # R Package
     log("Updating R/opendp/DESCRIPTION")
     with ControlEditor(path='R/opendp/DESCRIPTION') as control:
         # while it might not look like it, this mutates the DESCRIPTION file in-place
         next(iter(control.paragraphs))["Version"] = r_version
-    
-    update_file(".binder/requirements.txt", io.IOBase.readlines, munge_binder_requirements, lambda data, f: f.writelines(data))
 
 
 def configure(args):
@@ -163,8 +156,8 @@ def changelog(args):
     date = args.date or datetime.date.today()
 
     log("Reading CHANGELOG")
-    with open("CHANGELOG.md") as f:
-        lines = f.readlines()
+    changelog_path = (Path(__file__).parent.parent / 'CHANGELOG.md')
+    lines = changelog_path.read_text().splitlines()
     url_base = "https://github.com/opendp/opendp/compare/"
     i, match = first_match(lines, fr"^## \[(\d+\.\d+\.\d+(?:-\S+)?)\]\({re.escape(url_base)}(\S+)\.\.\.\S+\) - \S+$")
     heading_version = semver.Version.parse(match.group(1))
@@ -195,8 +188,7 @@ def changelog(args):
         log(f"Prepending new heading for {version}")
         lines[i:i] = [f"## [{version}]({url_base}{diff_source}...HEAD) - TBD\n", "\n", "\n"]
 
-    with open("CHANGELOG.md", "w") as f:
-        f.writelines(lines)
+    changelog_path.write_text('\n'.join(lines))
 
 
 def bump_version(args):

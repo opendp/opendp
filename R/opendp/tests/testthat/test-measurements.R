@@ -6,13 +6,18 @@ test_that("make_randomized_response_bool", {
 
   expect_type(meas(arg = TRUE), "logical")
   expect_equal(meas(d_in = 1L), 1.0986122886681098)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
 })
 
-test_that("make_laplace", {
+test_that("then_laplace", {
   space <- c(atom_domain(.T = "i32"), absolute_distance(.T = "i32"))
   meas <- space |> then_laplace(1.)
   expect_type(meas(arg = 0L), "integer")
   expect_equal(meas(d_in = 1L), 1.0)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
+  expect_error(meas(0L), "numeric attr not allowed; Did you mean 'arg='?")
 
   space <- c(atom_domain(.T = "f64"), absolute_distance(.T = "f64"))
   (space |> then_laplace(1.))(arg = 0.)
@@ -22,6 +27,15 @@ test_that("make_laplace", {
 
   space <- c(vector_domain(atom_domain(.T = "int")), l1_distance(.T = "int"))
   (space |> then_laplace(1.))(arg = c(0L, 1L))
+})
+
+test_that("make_laplace", {
+  meas <- make_laplace(atom_domain(.T = "i32"), absolute_distance(.T = "i32"), 1.)
+  expect_type(meas(arg = 0L), "integer")
+  expect_equal(meas(d_in = 1L), 1.0)
+
+  expect_error(meas(), "expected exactly one of attr, arg or d_in")
+  expect_error(meas(0L), "numeric attr not allowed; Did you mean 'arg='?")
 })
 
 test_that("make_geometric", {
@@ -50,37 +64,47 @@ test_that("test_gaussian_curve", {
   meas <- make_zCDP_to_approxDP(input_space |> then_gaussian(4.))
   curve <- meas(d_in = 1.)
   expect_equal(curve(delta = 0.), Inf)
-  expect_equal(curve(delta = 1e-3), 0.6880024554878086)
+  # see cdp_delta for formula of 0.688...
+  expect_equal(curve(delta = 1e-3), 0.6880024554878085)
   expect_equal(curve(delta = 1.), 0.)
+
+  # see cdp_delta for formula of 0.1508...
+  expect_equal(curve(epsilon = 0.), 0.1508457845622862)
+  expect_equal(curve(epsilon = 0.6880024554878085), 1e-3)
 
   curve <- make_zCDP_to_approxDP(input_space |> then_gaussian(4.))(d_in = 0.0)
   expect_equal(curve(delta = 0.0), 0.0)
   expect_error(curve(delta = -0.0))
+  expect_error(curve(epsilon = -0.0))
 
   curve <- make_zCDP_to_approxDP(input_space |> then_gaussian(0.))(d_in = 1.0)
   expect_equal(curve(delta = 0.0), Inf)
   expect_equal(curve(delta = 0.1), Inf)
+  expect_equal(curve(epsilon = 0.0), 1.0)
+  expect_equal(curve(epsilon = 0.1), 1.0)
 
   curve <- make_zCDP_to_approxDP(input_space |> then_gaussian(0.))(d_in = 0.0)
   expect_equal(curve(delta = 0.0), 0.0)
   expect_equal(curve(delta = 0.1), 0.0)
+  expect_equal(curve(epsilon = 0.0), 0.0)
+  expect_equal(curve(epsilon = 0.1), 0.0)
 })
 
 test_that("test_gaussian_search", {
   input_space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
 
-  make_smd_gauss <- function(scale, delta) {
+  make_approx_gauss <- function(scale, delta) {
     make_fix_delta(make_zCDP_to_approxDP(input_space |> then_gaussian(scale)), delta)
   }
 
-  fixed_meas <- make_smd_gauss(1., 1e-5)
+  fixed_meas <- make_approx_gauss(1., 1e-5)
   fixed_meas(d_in = 1.)
 
   scale <- binary_search_param(
-    function(s) make_smd_gauss(s, 1e-5),
+    function(s) make_approx_gauss(s, 1e-5),
     d_in = 1., d_out = c(1., 1e-5)
   )
-  expect_equal(make_smd_gauss(scale, 1e-5)(d_in = 1.)[[1]], 1.)
+  expect_equal(make_approx_gauss(scale, 1e-5)(d_in = 1.)[[1]], 1.)
 })
 
 test_that("test_laplace", {
@@ -108,7 +132,7 @@ test_that("test_gaussian_smoothed_max_divergence", {
 
 test_that("test_gaussian_zcdp", {
   input_space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
-  meas <- input_space |> then_gaussian(scale = 1.5, .MO = "ZeroConcentratedDivergence<f64>")
+  meas <- input_space |> then_gaussian(scale = 1.5, .MO = "ZeroConcentratedDivergence")
   meas(arg = 100.)
 
   expect_lt(meas(d_in = 1.), 0.223)
@@ -189,7 +213,7 @@ test_that("test_laplace_threshold", {
   input_space <- c(vector_domain(atom_domain(.T = String)), symmetric_distance())
   meas <- input_space |>
     then_count_by(.MO = "L1Distance<f64>", .TV = f64) |>
-    then_base_laplace_threshold(scale = 2., threshold = 28.)
+    then_laplace_threshold(scale = 2., threshold = 28.)
 
   meas(arg = c(rep("CAT_A", each = 20), rep("CAT_B", each = 10)))
 
@@ -224,4 +248,17 @@ test_that("test_gaussian", {
 
   input_space <- c(vector_domain(atom_domain(.T = f64)), l2_distance(.T = f64))
   (input_space |> then_gaussian(1.))(arg = c(1., 2., 3.))
+})
+
+
+test_that("test_randomized_response_bitvec", {
+  xx <- raw(3)
+  xx[1] <- charToRaw("A")
+  xx[2] <- as.raw(1L)
+  input_space <- c(bitvector_domain(max_weight = 4L), discrete_distance())
+  m_rr <- input_space |> then_randomized_response_bitvec(f = 0.95)
+  # epsilon is 2 * m * ln((2 - f) / f)
+  # where m = 4 and f = .95
+  expect_equal(m_rr(d_in = 1L), 0.8006676684558611)
+  m_rr(arg = xx)
 })

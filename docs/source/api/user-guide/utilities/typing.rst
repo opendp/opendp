@@ -1,5 +1,9 @@
+.. _typing-user-guide:
+
 Typing
 ======
+
+(See also :py:mod:`opendp.typing` in the API reference.)
 
 OpenDP computations are always strict about the types being used. 
 Integers and floats are never treated interchangeably and there is never implicit casting between types.
@@ -18,13 +22,11 @@ For instance, the atom domain constructor accepts a type argument `T`:
 
   .. tab-item:: Python
 
-    .. doctest::
+    .. code:: python
 
-        >>> from opendp.domains import atom_domain
-        >>> from opendp.typing import *
-        ...
-        >>> str(atom_domain((0, 1), T=i32))
-        'AtomDomain(bounds=[0, 1], T=i32)'
+        >>> import opendp.prelude as dp
+        >>> dp.atom_domain((0, 1), T=dp.i32)
+        AtomDomain(bounds=[0, 1], T=i32)
 
 Many of the API docs indicate that parameters like `TIA` or `D` are type arguments.
 When you want to describe the type of a domain, metric, measure, or other elements, you can do so via a type descriptor.
@@ -94,7 +96,7 @@ Examples of these types include:
 * L1Distance[u128]
 
 The docstrings on the constructor APIs should typically guide you as to what types are permissible.
-If you aren't familiar with these concepts, it may help to review :ref:`domains` and :ref:`metrics`.
+If you aren't familiar with these concepts, it may help to review :ref:`domains-user-guide` and :ref:`metrics-user-guide`.
 
 
 Type Aliases

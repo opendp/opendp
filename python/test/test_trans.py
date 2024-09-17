@@ -242,6 +242,13 @@ def test_sum_of_squared_deviances():
     assert query(FLOAT_DATA) == 60.0
     assert query.check(2, 88.888888 + 1e-4)
 
+
+def test_transformation_check_debug():
+    transformation = dp.t.make_count(dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
+    assert not transformation.check(100, 1, debug=True)
+    assert transformation.check(1, 100, debug=True)
+    # Would be better with an example that actually throws an error, but better than nothing.
+
 def test_count():
     transformation = dp.t.make_count(dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
     arg = [1, 2, 3]
@@ -380,7 +387,7 @@ def test_quantile_score_candidates():
     input_domain = dp.vector_domain(dp.atom_domain(T=int))
     input_metric = dp.symmetric_distance()
     trans = dp.t.make_quantile_score_candidates(input_domain, input_metric, [20, 33, 40, 50, 72, 100], alpha=0.5)
-    scores = trans(list(range(100)))
-    print(scores)
-
-    assert trans.map(1) == 5_000
+    scores = trans(list(range(101)))
+    # score works out to 2 * |50 - cand|
+    assert scores == [60, 34, 20, 0, 44, 100]
+    assert trans.map(1) == 1

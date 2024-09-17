@@ -2,7 +2,7 @@
 def make_quantile_score_candidates(
     input_domain: VectorDomain[AtomDomain[TIA]],
     input_metric: MI,
-    candidates: List[TIA],
+    candidates: list[TIA],
     alpha: A
 ) -> Transformation:
 
@@ -22,7 +22,7 @@ def make_quantile_score_candidates(
     else:
         size_limit = (usize.MAX).neg_inf_div(alpha_den)
 
-    def function(arg: List[TIA]) -> List[usize]:
+    def function(arg: list[TIA]) -> list[usize]:
         return compute_score(arg, candidates, alpha_numer, alpha_denom, size_limit)
 
     if input_domain.size is not None:

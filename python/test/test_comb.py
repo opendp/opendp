@@ -1,7 +1,6 @@
 import opendp.prelude as dp
 import pytest
 
-dp.enable_features("floating-point", "contrib", "honest-but-curious")
 
 
 def test_amplification():
@@ -79,20 +78,35 @@ def test_make_basic_composition_approx():
 
 def test_cast_zcdp_approxdp():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
-    base_gaussian = input_space >> dp.m.then_gaussian(10., MO=dp.ZeroConcentratedDivergence[float])
+    base_gaussian = input_space >> dp.m.then_gaussian(10., MO=dp.ZeroConcentratedDivergence)
 
     print(base_gaussian.map(1.))
 
-    smd_gaussian = dp.c.make_zCDP_to_approxDP(base_gaussian)
+    approx_gaussian = dp.c.make_zCDP_to_approxDP(base_gaussian)
 
-    print(smd_gaussian.map(1.).epsilon(1e-6))
+    print(approx_gaussian.map(1.).epsilon(1e-6))
     
+def test_cast_azcdp_approxdp():
+    m_azcdp = dp.m.make_user_measurement(
+        dp.atom_domain(T=bool), dp.absolute_distance(T=float),
+        dp.approximate(dp.zero_concentrated_divergence()),
+        lambda x: x,
+        # rho, and catastrophic delta
+        lambda d_in: (d_in * .05, d_in * 1e-7)
+    )
+    m_asdp = dp.c.make_zCDP_to_approxDP(m_azcdp)
+    curve, delta = m_asdp.map(1.)
+    assert delta == 1e-7
+    
+    m_adp = dp.c.make_fix_delta(m_asdp, delta=1e-6)
+    assert m_adp.map(1.) == (curve.epsilon(1e-6 - 1e-7), 1e-6)
 
-def test_make_pureDP_to_fixed_approxDP():
+
+def test_make_approximate():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
 
     meas = dp.c.make_basic_composition([
-        dp.c.make_pureDP_to_fixed_approxDP(dp.m.make_laplace(*input_space, 10.)),
+        dp.c.make_approximate(dp.m.make_laplace(*input_space, 10.)),
         dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 10.)), delta=1e-6)
     ])
 
@@ -109,4 +123,4 @@ def test_make_pureDP_to_zCDP():
     print(meas.map(1.))
 
 if __name__ == "__main__":
-    test_make_pureDP_to_fixed_approxDP()
+    test_make_approximate()

@@ -6,6 +6,7 @@ from datetime import datetime
 import semver
 import pypandoc
 import re
+from sphinx.ext import autodoc
 
 # docs should be built without needing import the library binary for the specified version
 os.environ["OPENDP_HEADLESS"] = "true"
@@ -15,6 +16,9 @@ os.environ["OPENDP_HEADLESS"] = "true"
 rootdir = os.path.join(os.getenv("SPHINX_MULTIVERSION_SOURCEDIR", default=os.getcwd()), "..", "..", "python", "src")
 sys.path.insert(0, rootdir)
 
+# With sphinx-multiversion, the same configuration is used to build all versions of the documentation,
+# so we need some extensions even though they are not currently used in main,
+# and we should also be cautious about adding new extensions.
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
@@ -51,7 +55,9 @@ def is_rst(line):
 def docstring(app, what, name, obj, options, lines):
     path = name.split(".")
 
-    if len(path) > 1 and path[1] in markdown_modules:
+    # "len(path) > 2": We only need special processing for the contents of modules.
+    # The top-of-module docstrings are plain RST.
+    if len(path) > 2 and path[1] in markdown_modules:
         # split docstring into description and params
         param_index = next((i for i, line in enumerate(lines) if is_rst(line)), len(lines))
         description, params = lines[:param_index], lines[param_index:]
@@ -154,7 +160,7 @@ nitpick_ignore = [
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = ['**/code/*.rst']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -175,8 +181,10 @@ html_static_path = ['_static']
 html_last_updated_fmt = '%b %d, %Y'
 
 # Custom sidebar templates, maps document names to template names.
+# Full list of options at https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/layout.html#references
 html_theme_options = {
-    "github_url": "https://github.com/opendp"
+    "github_url": "https://github.com/opendp",
+    "article_header_end": ["old-version-warning"]
 }
 
 html_theme = 'pydata_sphinx_theme'
@@ -188,6 +196,10 @@ html_css_files = [
 # Note: Overridden in the Makefile for local builds. Be sure to update both places.
 html_sidebars = {
    '**': ['sidebar-nav-bs.html', 'versioning.html'],
+}
+html_context = {
+    # Expected sphinx-multiversion to set "latest_version", but it was None, so set it manually.
+    'latest_version_name': f'v{version}'
 }
 
 # SPHINX-MULTIVERSION STUFF
@@ -210,7 +222,8 @@ smv_released_pattern = r'^tags/v\d+\.\d+\.\d+$'
 # We use this to generate the templates for the Python API docs.
 # Because we need values to be calculated for each version, we can't use Python variables, so we have the shell expand them.
 version_cmd = 'VERSION=`cat ../VERSION`'
-sphinx_apidoc_cmd = 'sphinx-apidoc -f -F -e -H "OpenDP" -A "The OpenDP Project" -V $VERSION -o source/api/python ../python/src/opendp --templatedir source/_templates'
+# If sphinx-apidoc options change, also update Makefile!
+sphinx_apidoc_cmd = 'sphinx-apidoc -f -F -e -d 3 -H "OpenDP" -A "The OpenDP Project" -V $VERSION -o source/api/python ../python/src/opendp --templatedir source/_templates'
 smv_prebuild_command = '&&'.join([version_cmd, sphinx_apidoc_cmd])
 
 # This is the file name suffix for HTML files (e.g. ".xhtml").
@@ -223,23 +236,14 @@ rst_prolog = """
 .. |toctitle| replace:: Contents:
 """
 
-# insert this header on nbsphinx pages to link to binder and github:
-# we have to resolve the link ref here, at runtime, because sphinx-multiversion mediates the reading of this config
-nbsphinx_prolog = r"""
-{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}
-{% if env.config.release.endswith('-dev') %}
-    {% set frag = 'main' %}
-{% elif '-' in env.config.release %}
-    {% set frag = env.config.release.split('-', 1)[1].split('.', 1)[0] %}
-{% else %}
-    {% set frag = 'v' ~ env.config.version %}
-{% endif %}
-.. raw:: html
+class CustomClassDocumenter(autodoc.ClassDocumenter):
+    '''
+    Removes unneeded note from base classes.
+    From https://stackoverflow.com/a/75041544/10727889
+    '''
+    def add_line(self, line: str, source: str, *lineno: int) -> None:
+        if line == "   Bases: :py:class:`object`":
+            return
+        super().add_line(line, source, *lineno)
 
-    <div class="admonition note">
-      This page was generated from
-      <a class="reference external" href="https://github.com/opendp/opendp/tree/{{ frag|e }}/{{ docname|e }}" target="_blank">{{ docname|e }}</a>.
-      Interactive online version:
-      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp/{{ frag|e }}?filepath={{ docname|e }}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
-    </div>
-"""
+autodoc.ClassDocumenter = CustomClassDocumenter
