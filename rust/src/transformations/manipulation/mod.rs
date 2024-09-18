@@ -144,6 +144,9 @@ where
 /// # Generics
 /// * `D` - Domain of the identity function. Must be `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `M` - Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AtomDomain
+///
+/// # Why honest-but-curious?
+/// TODO
 pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D, M, M>>
 where
     D: Domain,

@@ -68,12 +68,12 @@ impl BootstrapDocstring {
             .into_iter()
             .any(|feature| feature == HONEST_FEATURE);
         if has_honest_feature && !has_honest_section {
-            println!(
+            panic!(
                 "{name} requires \"{HONEST_FEATURE}\" but is missing \"{HONEST_SECTION}\" section"
             );
         }
         if has_honest_section && !has_honest_feature {
-            println!("{name} has \"{HONEST_SECTION}\" section but is missing \"{HONEST_FEATURE}\" feature");
+            panic!("{name} has \"{HONEST_SECTION}\" section but is missing \"{HONEST_FEATURE}\" feature");
         }
 
         if let Some(sup_elements) = parse_sig_output(output)? {

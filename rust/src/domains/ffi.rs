@@ -457,6 +457,9 @@ impl Domain for UserDomain {
 /// * `identifier` - A string description of the data domain.
 /// * `member` - A function used to test if a value is a member of the data domain.
 /// * `descriptor` - Additional constraints on the domain.
+///
+/// # Why honest-but-curious?
+/// TODO
 #[no_mangle]
 pub extern "C" fn opendp_domains__user_domain(
     identifier: *mut c_char,

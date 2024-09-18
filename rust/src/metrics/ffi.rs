@@ -261,6 +261,9 @@ impl Metric for UserDistance {
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the metric.
+///
+/// # Why honest-but-curious?
+/// TODO
 #[no_mangle]
 pub extern "C" fn opendp_metrics__user_distance(
     descriptor: *mut c_char,

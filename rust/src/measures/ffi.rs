@@ -291,9 +291,6 @@ impl Measure for UserDivergence {
 ///
 /// Any two instances of UserDivergence are equal if their string descriptors are equal.
 ///
-/// "honest-but-curious" is required because your definition of the measure
-/// must have the property of closure under postprocessing.
-///
 /// # Proof definition
 ///
 /// For any two distributions $Y, Y'$ and any $d$,
@@ -306,6 +303,9 @@ impl Measure for UserDivergence {
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the privacy measure.
+///
+/// # Why honest-but-curious?
+/// Your definition of the measure must have the property of closure under postprocessing.
 #[no_mangle]
 pub extern "C" fn opendp_measures__user_divergence(
     descriptor: *mut c_char,
@@ -376,14 +376,14 @@ impl<Q> Measure for TypedMeasure<Q> {
 )]
 /// Construct a PrivacyProfile from a user-defined callback.
 ///
-/// Requires "honest-but-curious" because the privacy profile should implement a well-defined $\delta(\epsilon)$ curve.
+/// # Arguments
+/// * `curve` - A privacy curve mapping epsilon to delta
 ///
+/// # Why honest-but-curious?
+/// The privacy profile should implement a well-defined $\delta(\epsilon)$ curve:
 /// * monotonically decreasing
 /// * rejects epsilon values that are less than zero or nan
 /// * returns delta values only within [0, 1]
-///
-/// # Arguments
-/// * `curve` - A privacy curve mapping epsilon to delta
 #[allow(dead_code)]
 fn new_privacy_profile(curve: CallbackFn) -> Fallible<AnyObject> {
     let _ = curve;

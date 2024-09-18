@@ -40,6 +40,9 @@ use crate::{
 ///
 /// # Generics
 /// * `TO` - The data type of outputs from the function.
+///
+/// # Why honest-but-curious?
+/// TODO
 #[allow(dead_code)]
 fn make_user_measurement<TO>(
     input_domain: AnyDomain,
