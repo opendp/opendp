@@ -59,6 +59,17 @@ impl BootstrapDocstring {
 
         let mut doc_sections = parse_docstring_sections(attrs)?;
 
+        const HONEST_SECTION: &str = "Why honest-but-curious?";
+        const HONEST_FEATURE: &str = "honest-but-curious";
+        let has_honest_section = doc_sections.keys().any(|key| key == HONEST_SECTION);
+        let has_honest_feature = features.clone().into_iter().any(|feature| feature == HONEST_FEATURE);
+        if has_honest_feature && !has_honest_section {
+            panic!("Requires \"{HONEST_FEATURE}\" but missing \"{HONEST_SECTION}\" section");
+        }
+        if has_honest_section && !has_honest_feature {
+            panic!("Has \"{HONEST_SECTION}\" section but missing \"{HONEST_FEATURE}\" feature");
+        }
+
         if let Some(sup_elements) = parse_sig_output(output)? {
             doc_sections.insert("Supporting Elements".to_string(), sup_elements);
         }
@@ -87,7 +98,7 @@ impl BootstrapDocstring {
             })
         };
         // can add more sections here...
-        add_section_to_description("Why honest-but-curious?");
+        add_section_to_description(HONEST_SECTION);
         add_section_to_description("Citations");
         add_section_to_description("Supporting Elements");
         add_section_to_description("Proof Definition");
