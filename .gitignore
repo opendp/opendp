@@ -142,6 +142,7 @@ binary/
 
 # Auto-generated files
 rust/opendp.h
+R/opendp/NAMESPACE
 R/opendp/R/accuracy.R
 R/opendp/R/combinators.R
 R/opendp/R/core.R
