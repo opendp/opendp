@@ -459,7 +459,8 @@ impl Domain for UserDomain {
 /// * `descriptor` - Additional constraints on the domain.
 ///
 /// # Why honest-but-curious?
-/// TODO
+/// If an adversary provided the function, they could conceivably write out
+/// each input value to a file, which would be an obvious violation of privacy.
 #[no_mangle]
 pub extern "C" fn opendp_domains__user_domain(
     identifier: *mut c_char,

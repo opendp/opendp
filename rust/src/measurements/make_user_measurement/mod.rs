@@ -42,7 +42,9 @@ use crate::{
 /// * `TO` - The data type of outputs from the function.
 ///
 /// # Why honest-but-curious?
-/// TODO
+/// An extreme example, but if an adversary could specify the function,
+/// they could just write every input it receives to a file.
+/// This would be an obvious violation of privacy.
 #[allow(dead_code)]
 fn make_user_measurement<TO>(
     input_domain: AnyDomain,

@@ -855,7 +855,8 @@ struct FfiResult_____AnyDomain opendp_domains__map_domain(const struct AnyDomain
  * * `descriptor` - Additional constraints on the domain.
  *
  * # Why honest-but-curious?
- * TODO
+ * If an adversary provided the function, they could conceivably write out
+ * each input value to a file, which would be an obvious violation of privacy.
  */
 struct FfiResult_____AnyDomain opendp_domains__user_domain(char *identifier,
                                                            CallbackFn member,
@@ -1417,7 +1418,9 @@ struct FfiResult_____AnyTransformation opendp_transformations__make_lipschitz_fl
  * * `stability_map` - A function mapping distances from `input_metric` to `output_metric`.
  *
  * # Why honest-but-curious?
- * TODO
+ * An extreme example, but if an adversary could specify the function,
+ * they could just write every input it receives to a file.
+ * This would be an obvious violation of privacy.
  */
 struct FfiResult_____AnyTransformation opendp_transformations__make_user_transformation(const struct AnyDomain *input_domain,
                                                                                         const struct AnyMetric *input_metric,

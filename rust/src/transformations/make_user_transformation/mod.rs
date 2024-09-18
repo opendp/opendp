@@ -36,7 +36,9 @@ use crate::{
 /// * `stability_map` - A function mapping distances from `input_metric` to `output_metric`.
 ///
 /// # Why honest-but-curious?
-/// TODO
+/// An extreme example, but if an adversary could specify the function,
+/// they could just write every input it receives to a file.
+/// This would be an obvious violation of privacy.
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_user_transformation(
     input_domain: *const AnyDomain,
