@@ -32,6 +32,7 @@ pub struct DeprecationArguments {
 
 impl BootstrapDocstring {
     pub fn from_attrs(
+        name: &String,
         attrs: Vec<Attribute>,
         output: &ReturnType,
         path: Option<(&str, &str)>,
@@ -62,12 +63,17 @@ impl BootstrapDocstring {
         const HONEST_SECTION: &str = "Why honest-but-curious?";
         const HONEST_FEATURE: &str = "honest-but-curious";
         let has_honest_section = doc_sections.keys().any(|key| key == HONEST_SECTION);
-        let has_honest_feature = features.clone().into_iter().any(|feature| feature == HONEST_FEATURE);
+        let has_honest_feature = features
+            .clone()
+            .into_iter()
+            .any(|feature| feature == HONEST_FEATURE);
         if has_honest_feature && !has_honest_section {
-            panic!("Requires \"{HONEST_FEATURE}\" but missing \"{HONEST_SECTION}\" section");
+            println!(
+                "{name} requires \"{HONEST_FEATURE}\" but is missing \"{HONEST_SECTION}\" section"
+            );
         }
         if has_honest_section && !has_honest_feature {
-            panic!("Has \"{HONEST_SECTION}\" section but missing \"{HONEST_FEATURE}\" feature");
+            println!("{name} has \"{HONEST_SECTION}\" section but is missing \"{HONEST_FEATURE}\" feature");
         }
 
         if let Some(sup_elements) = parse_sig_output(output)? {
