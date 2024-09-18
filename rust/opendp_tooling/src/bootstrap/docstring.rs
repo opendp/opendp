@@ -87,6 +87,7 @@ impl BootstrapDocstring {
             })
         };
         // can add more sections here...
+        add_section_to_description("Why honest-but-curious?");
         add_section_to_description("Citations");
         add_section_to_description("Supporting Elements");
         add_section_to_description("Proof Definition");
