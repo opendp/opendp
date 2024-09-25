@@ -2,6 +2,19 @@ use super::*;
 use std::collections::HashMap;
 
 #[test]
+fn test_sample_from_uniform_bytes() -> Fallible<()> {
+    macro_rules! sample {
+        ($($ty:ty)+) => {$(
+            sample_from_uniform_bytes::<$ty, {size_of::<$ty>()}>()?;
+        )+}
+    }
+
+    // this is just testing that the algorithm runs; is not a distributional test
+    sample!(u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize);
+    Ok(())
+}
+
+#[test]
 fn test_uniform_int_below() -> Fallible<()> {
     assert!(sample_uniform_uint_below(7u32)? < 7);
     Ok(())

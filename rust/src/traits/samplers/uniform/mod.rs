@@ -49,11 +49,11 @@ pub fn sample_uniform_uint_below<T: Integer + Unsigned + FromBytes<N>, const N: 
     let threshold = T::MAX_FINITE - T::MAX_FINITE % upper;
 
     Ok(loop {
-        // algorithm is only valid when sample_uniform_int is non-negative
+        // algorithm is only valid when sample is non-negative, which is why T: Unsigned
         let sample = sample_from_uniform_bytes::<T, N>()?;
         if sample < threshold {
-            // v % upper is unbiased for any v < MAX - MAX % upper, because
-            // MAX - MAX % upper evenly folds into [0, upper) RAND_MAX/upper times
+            // sample % upper is unbiased for any v < MAX_FINITE - MAX_FINITE % upper, because
+            // MAX_FINITE - MAX_FINITE % upper evenly folds into [0, upper), MAX_FINITE // upper times
             break sample % upper;
         }
     })
@@ -71,7 +71,7 @@ pub fn sample_uniform_ubig_below(upper: UBig) -> Fallible<UBig> {
     let byte_len = upper.bit_len().div_ceil(8);
 
     // sample % upper is unbiased for any sample < threshold, because
-    // max - max % upper evenly folds into [0, upper) max/upper times
+    // max - max % upper evenly folds into [0, upper), max // upper times
     let max = UBig::from_be_bytes(&vec![u8::MAX; byte_len]);
     let threshold = &max - &max % &upper;
 

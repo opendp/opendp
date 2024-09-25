@@ -136,16 +136,6 @@ where
 /// # Return
 /// A true boolean with probability "prob".
 ///
-/// # Examples
-///
-/// ```
-/// // returns a true with Pr(bit = 1) = 0.7
-/// use dashu::rbig;
-/// use opendp::traits::samplers::sample_bernoulli_rational;
-/// let n = sample_bernoulli_rational(rbig!(7 / 10));
-/// # n.unwrap();
-/// ```
-///
 /// # Proof Definition
 /// For any setting of the input parameters,
 /// where `prob` is within $[0, 1]$,
