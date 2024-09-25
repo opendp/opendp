@@ -1,4 +1,4 @@
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
+use crate::core::{Domain, FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
@@ -22,6 +22,8 @@ pub extern "C" fn opendp_measurements__make_laplace(
     where
         AtomDomain<T>: LaplaceDomain,
         VectorDomain<AtomDomain<T>>: LaplaceDomain,
+        <AtomDomain<T> as Domain>::Carrier: Send + Sync,
+        <VectorDomain<AtomDomain<T>> as Domain>::Carrier: Send + Sync,
         (AtomDomain<T>, <AtomDomain<T> as LaplaceDomain>::InputMetric): MetricSpace,
         (
             VectorDomain<AtomDomain<T>>,
@@ -35,6 +37,7 @@ pub extern "C" fn opendp_measurements__make_laplace(
             k: Option<i32>,
         ) -> Fallible<AnyMeasurement>
         where
+            D::Carrier: Send + Sync,
             (D, D::InputMetric): MetricSpace,
         {
             let input_domain = input_domain.downcast_ref::<D>()?.clone();
@@ -55,6 +58,8 @@ pub extern "C" fn opendp_measurements__make_laplace(
     where
         AtomDomain<T>: LaplaceDomain,
         VectorDomain<AtomDomain<T>>: LaplaceDomain,
+        <AtomDomain<T> as Domain>::Carrier: Send + Sync,
+        <VectorDomain<AtomDomain<T>> as Domain>::Carrier: Send + Sync,
         (AtomDomain<T>, <AtomDomain<T> as LaplaceDomain>::InputMetric): MetricSpace,
         (
             VectorDomain<AtomDomain<T>>,
@@ -68,6 +73,7 @@ pub extern "C" fn opendp_measurements__make_laplace(
             k: Option<i32>,
         ) -> Fallible<AnyMeasurement>
         where
+            D::Carrier: Send + Sync,
             (D, D::InputMetric): MetricSpace,
         {
             let input_domain = input_domain.downcast_ref::<D>()?.clone();
