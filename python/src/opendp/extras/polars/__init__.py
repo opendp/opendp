@@ -57,7 +57,7 @@ class DPExpr(object):
           - Rename the expression
         * - `eq, ne, lt, le, gt, ge <https://docs.pola.rs/api/python/stable/reference/expressions/operators.html#comparison>`_
           - Comparison operators may be more readable: ``==`` ``!=`` ``<`` ``<=`` ``>`` ``>=``
-        * - `and, or, xor <https://docs.pola.rs/api/python/stable/reference/expressions/operators.html#conjunction>`_
+        * - `and_, or_, xor <https://docs.pola.rs/api/python/stable/reference/expressions/operators.html#conjunction>`_
           - Bit-wise operators may be more readable: ``&`` ``|`` ``^``
         * - `is_null, is_not_null, is_finite, is_not_finite, is_nan, is_not_nan, not <https://docs.pola.rs/api/python/stable/reference/expressions/boolean.html>`_
           - Boolean information
