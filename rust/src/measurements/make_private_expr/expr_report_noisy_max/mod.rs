@@ -2,8 +2,7 @@ use crate::core::{MetricSpace, PrivacyMap};
 use crate::measurements::{report_noisy_max_gumbel_map, select_score, Optimize};
 use crate::metrics::{IntDistance, LInfDistance, Parallel, PartitionDistance};
 use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
-use crate::traits::samplers::CastInternalRational;
-use crate::traits::{InfCast, InfMul, Number};
+use crate::traits::{CastInternalRational, InfCast, InfMul, Number};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
 use crate::{
@@ -41,7 +40,7 @@ mod test;
 /// * `input_domain` - ExprDomain
 /// * `input_metric` - The metric space under which neighboring LazyFrames are compared
 /// * `expr` - The expression to which the selection will be applied
-/// * `global_scale` - (Re)scale the noise parameter for the noise distribution
+/// * `global_scale` - (Re)scale the noise distribution
 pub fn make_expr_report_noisy_max<MI: 'static + UnboundedMetric>(
     input_domain: ExprDomain,
     input_metric: PartitionDistance<MI>,

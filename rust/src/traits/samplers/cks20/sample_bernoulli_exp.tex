@@ -23,15 +23,7 @@ This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsec
 $\texttt{x} \in \mathbb{Q} \land \texttt{x} > 0$
 
 \subsection*{Pseudocode}        
-\begin{lstlisting}[language=Python, escapechar=|]
-def sample_bernoulli_exp(x) -> bool:
-    while x >= 1:
-        if sample_bernoulli_exp1(1):  |\label{line:B_i}|
-            x -= 1
-        else: 
-            return False
-    return sample_bernoulli_exp1(x)   |\label{line:C}|
-\end{lstlisting}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_bernoulli_exp.py}
 
 \subsection*{Postcondition}
 \label{postcondition}

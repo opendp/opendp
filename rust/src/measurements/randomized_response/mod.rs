@@ -10,7 +10,7 @@ use crate::domains::AtomDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
-use crate::traits::samplers::{sample_bernoulli_float, SampleUniformIntBelow};
+use crate::traits::samplers::sample_bernoulli_float;
 use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 
 // There are two constructors:
@@ -73,6 +73,8 @@ pub fn make_randomized_response<T: Hashable>(
     categories: HashSet<T>,
     prob: f64,
 ) -> Fallible<Measurement<AtomDomain<T>, T, DiscreteDistance, MaxDivergence>> {
+    use crate::traits::samplers::sample_uniform_uint_below;
+
     let categories = categories.into_iter().collect::<Vec<_>>();
     if categories.len() < 2 {
         return fallible!(MakeMeasurement, "length of categories must be at least two");
@@ -104,10 +106,8 @@ pub fn make_randomized_response<T: Hashable>(
 
             // randomly sample a lie from among the categories with equal probability
             // if truth in categories, sample among n - 1 categories
-            let mut sample = usize::sample_uniform_int_below(
-                categories.len() - if index.is_some() { 1 } else { 0 },
-                None,
-            )?;
+            let mut sample =
+                sample_uniform_uint_below(categories.len() - if index.is_some() { 1 } else { 0 })?;
             // shift the sample by one if index is greater or equal to the index of truth
             if let Some(i) = index {
                 if sample >= i {
