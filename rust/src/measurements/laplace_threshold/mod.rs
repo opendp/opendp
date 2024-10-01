@@ -11,9 +11,10 @@ use crate::domains::{AtomDomain, MapDomain};
 use crate::error::{Error, ErrorVariant, Fallible};
 use crate::measures::{Approximate, MaxDivergence};
 use crate::metrics::L1Distance;
-use crate::traits::samplers::{sample_discrete_laplace_Z2k, CastInternalRational};
+use crate::traits::samplers::sample_discrete_laplace_Z2k;
 use crate::traits::{
-    ExactIntCast, Float, Hashable, InfAdd, InfCast, InfDiv, InfExp, InfLn, InfSub,
+    CastInternalRational, ExactIntCast, Float, Hashable, InfAdd, InfCast, InfDiv, InfExp, InfLn,
+    InfSub,
 };
 use num::Zero;
 

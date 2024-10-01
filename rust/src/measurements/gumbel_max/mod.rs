@@ -16,10 +16,7 @@ use crate::{
     traits::{InfAdd, InfCast, InfDiv, Number},
 };
 
-use crate::traits::{
-    samplers::{CastInternalRational, GumbelPSRN},
-    DistanceConstant,
-};
+use crate::traits::{samplers::GumbelPSRN, CastInternalRational, DistanceConstant};
 
 #[derive(PartialEq, Clone, Copy, Debug)]
 #[cfg_attr(feature = "polars", derive(serde::Serialize, serde::Deserialize))]

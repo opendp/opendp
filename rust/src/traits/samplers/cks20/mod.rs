@@ -51,7 +51,7 @@ use dashu::{
 };
 use opendp_derive::proven;
 
-use super::{sample_bernoulli_rational, sample_standard_bernoulli, SampleUniformIntBelow};
+use super::{sample_bernoulli_rational, sample_standard_bernoulli, sample_uniform_ubig_below};
 
 #[proven]
 /// Sample exactly from the Bernoulli(exp(-x)) distribution, where $x \in [0, 1]$.
@@ -63,7 +63,7 @@ use super::{sample_bernoulli_rational, sample_standard_bernoulli, SampleUniformI
 fn sample_bernoulli_exp1(x: RBig) -> Fallible<bool> {
     let mut k = UBig::ONE;
     loop {
-        if sample_bernoulli_rational(x.clone() / &k, None)? {
+        if sample_bernoulli_rational(x.clone() / &k)? {
             k += UBig::ONE;
         } else {
             return Ok(k % 2u8 == 1);
@@ -123,9 +123,9 @@ fn sample_geometric_exp_fast(x: RBig) -> Fallible<UBig> {
     }
 
     let (numer, denom) = x.into_parts();
-    let mut u = UBig::sample_uniform_int_below(denom.clone(), None)?;
+    let mut u = sample_uniform_ubig_below(denom.clone())?;
     while !sample_bernoulli_exp(RBig::from_parts(u.as_ibig().clone(), denom.clone()))? {
-        u = UBig::sample_uniform_int_below(denom.clone(), None)?;
+        u = sample_uniform_ubig_below(denom.clone())?;
     }
     let v2 = sample_geometric_exp_slow(RBig::ONE)?;
     Ok((v2 * denom + u) / numer.into_parts().1)

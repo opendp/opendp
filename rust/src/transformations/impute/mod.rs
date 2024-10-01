@@ -6,11 +6,12 @@ use opendp_derive::bootstrap;
 use crate::core::{Domain, Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::samplers::SampleUniform;
+use crate::traits::samplers::GeneratorOpenDP;
 use crate::traits::{CheckAtom, CheckNull, Float, InherentNull};
-use crate::transformations::{make_row_by_row, make_row_by_row_fallible};
+use crate::transformations::make_row_by_row;
 
 use super::DatasetMetric;
+use rand::distributions::{uniform::SampleUniform, Distribution, Uniform};
 
 #[bootstrap(
     features("contrib"),
@@ -44,20 +45,21 @@ where
     if upper.is_nan() {
         return fallible!(MakeTransformation, "upper may not be nan");
     }
-    if lower > upper {
-        return fallible!(MakeTransformation, "lower may not be greater than upper");
+    if lower >= upper {
+        return fallible!(MakeTransformation, "lower must be smaller than upper");
     }
-    let scale = upper - lower;
 
-    make_row_by_row_fallible(
+    make_row_by_row(
         input_domain,
         input_metric,
         AtomDomain::default(),
         move |v| {
             if v.is_null() {
-                TA::sample_standard_uniform(false).map(|v| v * scale + lower)
+                let mut rng = GeneratorOpenDP::new();
+                let sample = Uniform::from(lower..upper).sample(&mut rng);
+                rng.error.map(|_| sample).unwrap_or(lower)
             } else {
-                Ok(*v)
+                *v
             }
         },
     )
