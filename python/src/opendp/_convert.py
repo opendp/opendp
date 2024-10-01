@@ -530,6 +530,10 @@ def _slice_to_hashmap(raw: FfiSlicePtr) -> dict[Any, Any]:
 
 
 def _lazyframe_to_slice(val) -> FfiSlicePtr:
+    pl = import_optional_dependency('polars')
+    if not isinstance(val, pl.LazyFrame):
+        raise ValueError("expected Polars LazyFrame")
+    
     state = val.__getstate__()
     raw = _wrap_in_slice(state, len(state))
     raw.depends_on(state)
@@ -545,6 +549,10 @@ def _slice_to_lazyframe(raw: FfiSlicePtr):
 
 
 def _expr_to_slice(val) -> FfiSlicePtr:
+    pl = import_optional_dependency('polars')
+    if not isinstance(val, pl.Expr):
+        raise ValueError("expected Polars Expr")
+    
     state = val.__getstate__()
     raw = _wrap_in_slice(state, len(state))
     raw.depends_on(state)
@@ -559,6 +567,10 @@ def _slice_to_expr(raw: FfiSlicePtr):
     return expr
 
 def _dataframe_to_slice(val) -> FfiSlicePtr:
+    pl = import_optional_dependency('polars')
+    if not isinstance(val, pl.DataFrame):
+        raise ValueError("expected Polars DataFrame")
+    
     slices = list(_series_to_slice(s) for s in val.get_columns())
     raw = _wrap_in_slice(ctypes.pointer((FfiSlicePtr * val.width)(*slices)), val.width)
     # extend the lifetime of each series' slice to that of the frame slice
@@ -574,6 +586,10 @@ def _slice_to_dataframe(raw: FfiSlicePtr):
 
 def _series_to_slice(val) -> FfiSlicePtr:
     from opendp._data import new_arrow_array, arrow_array_free
+
+    pl = import_optional_dependency('polars')
+    if not isinstance(val, pl.Series):
+        raise ValueError("expected Polars Series")
 
     raw = new_arrow_array(val.name)
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
