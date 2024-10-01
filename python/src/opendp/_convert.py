@@ -2,7 +2,7 @@ from typing import Sequence, Union, cast
 from inspect import signature
 
 from opendp._lib import *
-from opendp.mod import Domain, UnknownTypeException, Transformation, Measurement, PrivacyProfile, Queryable
+from opendp.mod import Domain, UnknownTypeException, Transformation, Measurement, PrivacyProfile, Queryable, Function
 from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 
 ATOM_MAP = {
@@ -517,8 +517,7 @@ def _hashmap_to_slice(val: dict[Any, Any], type_name: RuntimeType) -> FfiSlicePt
     ffislice.depends_on(keys, vals)
     return ffislice
 
-def _slice_to_function(raw: FfiSlicePtr) -> dict[Any, Any]:
-    from opendp.mod import Function
+def _slice_to_function(raw: FfiSlicePtr) -> Function:
     function = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyFunction)).contents
     # put the contents behind a new, python pointer
     return ctypes.cast(ctypes.pointer(function), Function)

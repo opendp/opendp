@@ -1,4 +1,3 @@
-#[cfg(feature = "polars")]
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -614,14 +613,10 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         }
         TypeContents::GENERIC { name, args } => {
             if name == &"Function" {
-                if args.len() != 2 { return err!(FFI, "Functions should have 2 type arguments").into(); }
-                let I = try_!(Type::of_id(&args[0]));
-                let O = try_!(Type::of_id(&args[1]));
+                let [I, O] = try_!(parse_type_args(args, "Function"));
                 dispatch!(function_to_raw, [(I, @primitives), (O, @primitives)], (obj))
             } else if name == &"HashMap" {
-                if args.len() != 2 { return err!(FFI, "HashMaps should have 2 type arguments, found {}", args.len()).into(); }
-                let K = try_!(Type::of_id(&args[0]));
-                let V = try_!(Type::of_id(&args[1]));
+                let [K, V] = try_!(parse_type_args(args, "HashMap"));
                 if matches!(V.contents, TypeContents::PLAIN("ExtrinsicObject")) {
                     dispatch!(hashmap_to_raw, [(K, @hashable), (V, [ExtrinsicObject])], (obj))
                 } else {
@@ -632,6 +627,22 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         // This list is explicit because it allows us to avoid including u32 in the @primitives, and queryables
         _ => { dispatch!(plain_to_raw, [(obj.type_, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyQueryable])], (obj)) }
     }.into()
+}
+
+fn parse_type_args<const N: usize>(args: &Vec<TypeId>, name: &str) -> Fallible<[Type; N]> {
+    args.iter()
+        .map(|id| Type::of_id(id))
+        .collect::<Fallible<Vec<Type>>>()?
+        .try_into()
+        .map_err(|_| {
+            err!(
+                FFI,
+                "{} should have {} type arguments, found {}",
+                name,
+                N,
+                args.len()
+            )
+        })
 }
 
 /// Checks that a vector of three types satisfies the requirements of a partition distance.

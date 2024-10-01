@@ -57,3 +57,22 @@ fn test_make_basic_composition_2() -> Fallible<()> {
     assert!(!composition.check(&1., &1.9999)?);
     Ok(())
 }
+
+#[test]
+fn test_rdp_composition() -> Fallible<()> {
+    let m_gauss = Measurement::new(
+        AtomDomain::default(),
+        Function::new(|arg| *arg),
+        AbsoluteDistance::default(),
+        RenyiDivergence,
+        PrivacyMap::new(|&d_in: &f64| Function::new(move |alpha| alpha * d_in.powi(2) / 2.)),
+    )?;
+    let composition = make_basic_composition(vec![m_gauss; 2])?;
+    assert_eq!(composition.invoke(&2.)?, vec![2.; 2]);
+
+    // when alpha = 3. and d_in = 2., then \bar{\epsilon} = 3. * 2.^2 / 2 = 6.
+    // then we are composing two queries, so the total loss is 6. * 2. = 12.
+    let rdp_curve = composition.map(&2.)?;
+    assert_eq!(rdp_curve.eval(&3.0)?, 12.0);
+    Ok(())
+}

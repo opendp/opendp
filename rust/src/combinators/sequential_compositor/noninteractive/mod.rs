@@ -1,6 +1,10 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
+// UNIT TESTS
+#[cfg(test)]
+mod test;
+
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
@@ -162,7 +166,3 @@ impl BasicCompositionMeasure for RenyiDivergence {
         }))
     }
 }
-
-// UNIT TESTS
-#[cfg(test)]
-mod test;
