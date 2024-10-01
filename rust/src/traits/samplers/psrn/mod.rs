@@ -9,6 +9,7 @@ use dashu::{
     rational::RBig,
 };
 
+use super::sample_from_uniform_bytes;
 use crate::{error::Fallible, traits::RoundCast};
 
 #[cfg(test)]
@@ -16,8 +17,6 @@ mod test;
 
 mod gumbel;
 pub use gumbel::GumbelRV;
-
-use super::sample_from_uniform_bytes;
 
 pub trait InverseCDF: Sized {
     /// Type of lower or upper bound on the true random sample.
@@ -72,7 +71,7 @@ impl<D: InverseCDF> PartialSample<D> {
             .inverse_cdf::<R>(uniform_edge, self.refinements)
     }
 
-    // Randomly discard the lower or upper half of the remaining interval 64 times.
+    /// Randomly discard the lower or upper half of the remaining interval 64 times.
     fn refine(&mut self) -> Fallible<()> {
         self.randomness <<= 64;
         self.randomness += UBig::from(sample_from_uniform_bytes::<u64, 8>()?);
