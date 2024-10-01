@@ -1,5 +1,4 @@
 matplotlib
-numpy<2.0 # v2.0 incompatible with randomgen: https://github.com/bashtage/randomgen/issues/360
 randomgen
 pandas
 seaborn

@@ -10,6 +10,7 @@ use dashu::{
         FBig,
     },
     integer::{IBig, UBig},
+    rational::RBig,
 };
 use num::{NumCast, One, Zero};
 
@@ -69,6 +70,19 @@ pub trait SaturatingCast<TI>: Sized {
     /// For any `v` of type `TI`, `Self::saturating_cast(v)` either returns `Err(e)`,
     /// or `Ok(out)` where $out = clamp(v, TI::MIN, TI::MAX)$.
     fn saturating_cast(v: TI) -> Self;
+}
+
+/// Casting between floating-point and rational values.
+pub trait CastInternalRational {
+    /// # Proof Definition
+    /// For any [`RBig`] `v`, return `out`, the nearest representable value of type `Self`.
+    /// `out` may saturate to +/- infinity.
+    fn from_rational(v: RBig) -> Self;
+    /// # Proof Definition
+    /// For any `self` of type `Self`, either return
+    /// `Err(e)` if `self` is not finite, or
+    /// `Ok(out)`, where `out` is a [`RBig`] that exactly represents `self`.
+    fn into_rational(self) -> Fallible<RBig>;
 }
 
 macro_rules! cartesian {
@@ -649,3 +663,41 @@ macro_rules! impl_saturating_cast_ibig_uint {
     )+}
 }
 impl_saturating_cast_ibig_uint! {i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize}
+
+macro_rules! impl_cast_internal_rational_float {
+    ($ty:ty, $method:ident) => {
+        impl CastInternalRational for $ty {
+            fn from_rational(v: RBig) -> Self {
+                v.$method().value()
+            }
+            fn into_rational(self) -> Fallible<RBig> {
+                RBig::try_from(self).map_err(|_| {
+                    err!(
+                        FailedFunction,
+                        "{} must be representable as a fraction",
+                        self
+                    )
+                })
+            }
+        }
+    };
+}
+
+impl_cast_internal_rational_float!(f32, to_f32);
+impl_cast_internal_rational_float!(f64, to_f64);
+
+macro_rules! impl_cast_internal_rational_int {
+    ($($ty:ty)+) => {
+        $(impl CastInternalRational for $ty {
+            fn from_rational(v: RBig) -> Self {
+                <$ty>::try_from(v.round())
+                    .unwrap_or_else(|_| if v > RBig::ZERO { <$ty>::MAX } else { <$ty>::MIN })
+            }
+            fn into_rational(self) -> Fallible<RBig> {
+                Ok(RBig::from(self))
+            }
+        })+
+    };
+}
+
+impl_cast_internal_rational_int!(u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize);

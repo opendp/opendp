@@ -8,8 +8,7 @@ use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::{Type, TypeContents};
 use crate::measurements::make_laplace_threshold;
 use crate::metrics::L1Distance;
-use crate::traits::samplers::CastInternalRational;
-use crate::traits::{ExactIntCast, Float, Hashable, InfCast};
+use crate::traits::{CastInternalRational, ExactIntCast, Float, Hashable, InfCast};
 
 #[no_mangle]
 pub extern "C" fn opendp_measurements__make_laplace_threshold(

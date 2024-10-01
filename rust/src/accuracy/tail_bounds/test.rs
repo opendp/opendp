@@ -2,7 +2,7 @@ use crate::{
     domains::AtomDomain,
     measurements::{make_gaussian, make_laplace},
     metrics::AbsoluteDistance,
-    traits::{samplers::SampleUniformIntBelow, ExactIntCast},
+    traits::{samplers::sample_uniform_uint_below, ExactIntCast},
 };
 
 use super::*;
@@ -42,7 +42,7 @@ pub fn test_empirical_integrate_discrete_laplace_tail_fixed() -> Fallible<()> {
 #[test]
 pub fn test_empirical_integrate_discrete_laplace_tail_random() -> Fallible<()> {
     let scale = 1.;
-    let tail = 1 + u32::sample_uniform_int_below(10, None)?;
+    let tail = 1 + sample_uniform_uint_below(10)?;
     let alpha = conservative_discrete_laplacian_tail_to_alpha(scale, tail)?;
     test_laplace_tail(tail, alpha, "Discrete Laplace")
 }

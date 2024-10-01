@@ -17,8 +17,6 @@ pub use cast::*;
 mod operations;
 pub use operations::*;
 
-use self::samplers::CastInternalRational;
-
 pub mod samplers;
 
 /// A type that can be used as a stability or privacy constant to scale a distance.

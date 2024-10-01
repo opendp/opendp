@@ -1,5 +1,7 @@
 use dashu::rbig;
 
+use crate::traits::CastInternalRational;
+
 use super::*;
 #[test]
 fn test_sample_discrete_laplace() -> Fallible<()> {

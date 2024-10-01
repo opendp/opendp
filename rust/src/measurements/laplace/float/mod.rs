@@ -3,8 +3,8 @@ use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::*;
 use crate::measures::MaxDivergence;
 use crate::metrics::{AbsoluteDistance, L1Distance};
-use crate::traits::samplers::{sample_discrete_laplace_Z2k, CastInternalRational};
-use crate::traits::{ExactIntCast, Float, FloatBits, InfCast};
+use crate::traits::samplers::sample_discrete_laplace_Z2k;
+use crate::traits::{CastInternalRational, ExactIntCast, Float, FloatBits, InfCast};
 
 use super::laplace_puredp_map;
 
