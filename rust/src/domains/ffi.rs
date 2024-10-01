@@ -459,9 +459,9 @@ impl Domain for UserDomain {
 /// * `descriptor` - Additional constraints on the domain.
 ///
 /// # Why honest-but-curious?
-/// The identifier must uniquely identify this domain. 
-/// If the identifier is not uniquely identifying, 
-/// then two different domains with the same identifier will chain, 
+/// The identifier must uniquely identify this domain.
+/// If the identifier is not uniquely identifying,
+/// then two different domains with the same identifier will chain,
 /// which can violate transformation stability.
 ///
 /// In addition, the member function must:

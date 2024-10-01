@@ -53,18 +53,17 @@ impl Function {
         )?;
 
         // aggregate info from all sources
-        reconcile_function(name, arguments, docstring, signature)
+        reconcile_function(arguments, docstring, signature)
     }
 }
 
 pub fn reconcile_function(
-    name: String,
     mut bootstrap: BootstrapArguments,
     mut doc_comments: BootstrapDocstring,
     signature: BootstrapSignature,
 ) -> Result<Function> {
     Ok(Function {
-        name: name.clone(),
+        name: bootstrap.name.unwrap_or(signature.name),
         features: bootstrap.features.0,
         description: doc_comments.description,
         args: reconcile_arguments(
