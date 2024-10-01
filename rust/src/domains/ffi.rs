@@ -459,8 +459,14 @@ impl Domain for UserDomain {
 /// * `descriptor` - Additional constraints on the domain.
 ///
 /// # Why honest-but-curious?
-/// If an adversary provided the function, they could conceivably write out
-/// each input value to a file, which would be an obvious violation of privacy.
+/// The identifier must uniquely identify this domain. 
+/// If the identifier is not uniquely identifying, 
+/// then two different domains with the same identifier will chain, 
+/// which can violate transformation stability.
+///
+/// In addition, the member function must:
+/// 1. be a pure function
+/// 2. be sound (only return true if its input is a member of the domain).
 #[no_mangle]
 pub extern "C" fn opendp_domains__user_domain(
     identifier: *mut c_char,

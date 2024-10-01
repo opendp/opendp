@@ -146,7 +146,11 @@ where
 /// * `M` - Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AtomDomain
 ///
 /// # Why honest-but-curious?
-/// TODO
+/// For the result to be a valid transformation, the `input_domain` and `input_metric` pairing must form a valid metric space.
+/// For instance, the symmetric distance metric and atom domain do not form a valid metric space, 
+/// because the metric cannot be used to measure distances between any two elements of an atom domain.
+/// Whereas, the symmetric distance metric and vector domain, 
+/// or absolute distance metric and atom domain on a scalar type, both form valid metric spaces.
 pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D, M, M>>
 where
     D: Domain,

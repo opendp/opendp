@@ -263,7 +263,11 @@ impl Metric for UserDistance {
 /// * `descriptor` - A string description of the metric.
 ///
 /// # Why honest-but-curious?
-/// TODO
+/// Your definition of `d` must satisfy the requirements of a pseudo-metric:
+/// 1. for any $x$, $d(x, x) = 0$
+/// 2. for any $x, y$, $d(x, y) \ge 0 (non-negativity)
+/// 3. for any $x, y$, $d(x, y) = d(y, x)$ (symmetry)
+/// 4. for any $x, y, z$, $d(x, z) \le d(x, y) + d(y, z)$ (triangle inequality)
 #[no_mangle]
 pub extern "C" fn opendp_metrics__user_distance(
     descriptor: *mut c_char,

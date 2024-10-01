@@ -305,7 +305,10 @@ impl Measure for UserDivergence {
 /// * `descriptor` - A string description of the privacy measure.
 ///
 /// # Why honest-but-curious?
-/// Your definition of the measure must have the property of closure under postprocessing.
+/// The essential requirement of a privacy measure is that it is closed under postprocessing.
+/// Your privacy measure `D` must satisfy that, for any pure function `f` and any two distributions `Y, Y'`, then $D(Y, Y') \ge D(f(Y), f(Y'))$.
+///
+/// Beyond this, you should also consider whether your privacy measure can be used to provide meaningful privacy guarantees to your privacy units.
 #[no_mangle]
 pub extern "C" fn opendp_measures__user_divergence(
     descriptor: *mut c_char,
