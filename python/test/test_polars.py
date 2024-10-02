@@ -657,7 +657,7 @@ def test_pickle_bomb():
     # to allow injection of the specially-crafted pickle binary
     bomb_expr = wrap_expr(
         pl.polars.register_plugin_function(
-            plugin_path=str(lib_path),
+            plugin_path=lib_path,
             function_name="noise",
             args=py_exprs,
             kwargs=poison_binary,

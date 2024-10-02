@@ -26,16 +26,21 @@ def _load_library():
         lib_dir = Path(__file__).parent / ".." / ".." / ".." / 'rust' / 'target' / build_dir  # pragma: no cover
 
     if lib_dir.exists():
+        from importlib.machinery import EXTENSION_SUFFIXES
+        suffixes = EXTENSION_SUFFIXES + [".dylib"]
+
         lib_dir_file_names = [
-            p for p in lib_dir.iterdir()
-            if p.suffix in {".so", ".dylib", ".dll", ".pyd"}
-            and p.stem.replace("lib", "") == "opendp"]
+            str(p) for p in lib_dir.iterdir() 
+            if "opendp" in p.name and "derive" not in p.name
+            and any(p.name.endswith(suffix) for suffix in suffixes)
+        ]
+        
         if len(lib_dir_file_names) != 1:
             raise Exception(f"Expected exactly one binary to be present in {lib_dir}. Got: {lib_dir_file_names}")
         
-        lib_path = lib_dir / lib_dir_file_names[0]
+        lib_path = lib_dir_file_names[0]
         try:
-            return ctypes.cdll.LoadLibrary(str(lib_path)), lib_path
+            return ctypes.cdll.LoadLibrary(lib_path), lib_path
         except Exception as e: # pragma: no cover
             raise Exception("Unable to load OpenDP shared library", lib_path, e)
 
