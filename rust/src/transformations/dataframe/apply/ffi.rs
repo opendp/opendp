@@ -4,6 +4,7 @@ use std::os::raw::c_char;
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
 use crate::error::Fallible;
+#[allow(deprecated)]
 use crate::transformations::{
     make_df_cast_default, make_df_is_equal, DataFrameDomain, DatasetMetric,
 };
@@ -38,6 +39,7 @@ pub extern "C" fn opendp_transformations__make_df_cast_default(
         let input_domain = input_domain.downcast_ref::<DataFrameDomain<TK>>()?.clone();
         let input_metric = input_metric.downcast_ref::<M>()?.clone();
         let column_name: TK = try_as_ref!(column_name).downcast_ref::<TK>()?.clone();
+        #[allow(deprecated)]
         make_df_cast_default::<TK, TIA, TOA, M>(input_domain, input_metric, column_name).into_any()
     }
 
@@ -88,6 +90,7 @@ pub extern "C" fn opendp_transformations__make_df_is_equal(
         let input_metric = input_metric.downcast_ref::<M>()?.clone();
         let column_name: TK = column_name.downcast_ref::<TK>()?.clone();
         let value: TIA = value.downcast_ref::<TIA>()?.clone();
+        #[allow(deprecated)]
         make_df_is_equal::<TK, TIA, M>(input_domain, input_metric, column_name, value).into_any()
     }
     let TK = try_!(input_domain.type_.get_atom());

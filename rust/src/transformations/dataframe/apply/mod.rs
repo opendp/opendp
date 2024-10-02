@@ -14,6 +14,7 @@ use super::{DataFrame, DataFrameDomain};
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[deprecated(note = "Use Polars instead", since = "0.12.0")]
 /// Internal function to map a transformation onto a column of a dataframe.
 fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive, M>(
     input_domain: DataFrameDomain<K>,
@@ -59,6 +60,7 @@ where
     )
 }
 
+#[deprecated(note = "Use Polars instead", since = "0.12.0")]
 #[bootstrap(
     features("contrib"),
     arguments(
@@ -103,6 +105,7 @@ where
     (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
     (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
 {
+    #[allow(deprecated)]
     make_apply_transformation_dataframe(
         input_domain,
         input_metric.clone(),
@@ -123,6 +126,7 @@ where
         M = "$get_type(input_metric)"
     )
 )]
+#[deprecated(note = "Use Polars instead", since = "0.12.0")]
 /// Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`.
 ///
 /// # Arguments
@@ -147,6 +151,7 @@ where
     (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
 {
     let column_input_domain = VectorDomain::new(AtomDomain::default());
+    #[allow(deprecated)]
     make_apply_transformation_dataframe(
         input_domain,
         input_metric.clone(),

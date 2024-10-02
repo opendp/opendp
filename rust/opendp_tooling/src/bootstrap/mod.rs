@@ -86,6 +86,7 @@ pub fn reconcile_function(
         dependencies: bootstrap.dependencies.0,
         supports_partial: signature.supports_partial,
         has_ffi: bootstrap.has_ffi.unwrap_or(true),
+        deprecation: doc_comments.deprecated,
     })
 }
 

@@ -319,9 +319,10 @@ fn generate_docstring_examples(module_name: &str, func: &Function) -> String {
 ///     makes the call, handles errors, and converts the response to python
 fn generate_r_body(module_name: &str, func: &Function) -> String {
     format!(
-        r#"{flag_checker}{type_arg_formatter}{logger}{assert_is_similar}
+        r#"{deprecated}{flag_checker}{type_arg_formatter}{logger}{assert_is_similar}
 {make_call}
 output"#,
+        deprecated = generate_deprecated(func),
         flag_checker = generate_flag_check(&func.features),
         type_arg_formatter = generate_type_arg_formatter(func),
         assert_is_similar = generate_assert_is_similar(func),
@@ -556,6 +557,18 @@ fn generate_wrapper_call(module_name: &str, func: &Function) -> String {
         r#"# Call wrapper function.
 output <- {call}"#
     )
+}
+
+// generate call to ".Deprecated()" if needed
+fn generate_deprecated(func: &Function) -> String {
+    if let Some(deprecation) = &func.deprecation {
+        format!(
+            ".Deprecated(msg = \"{}\")\n",
+            deprecation.note.replace("\"", "\\\"")
+        )
+    } else {
+        String::default()
+    }
 }
 
 // generate code that checks that a set of feature flags are enabled

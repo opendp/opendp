@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env, path::PathBuf};
 
-use darling::{Error, Result};
+use darling::{Error, FromMeta, Result};
 use proc_macro2::{Literal, Punct, Spacing, TokenStream, TokenTree};
 use quote::format_ident;
 use syn::{
@@ -8,7 +8,10 @@ use syn::{
     ReturnType, Type, TypePath,
 };
 
-use crate::proven::filesystem::{get_src_dir, make_proof_link};
+use crate::{
+    proven::filesystem::{get_src_dir, make_proof_link},
+    Deprecation,
+};
 
 use super::arguments::BootstrapArguments;
 
@@ -18,6 +21,13 @@ pub struct BootstrapDocstring {
     pub arguments: HashMap<String, String>,
     pub generics: HashMap<String, String>,
     pub returns: Option<String>,
+    pub deprecated: Option<Deprecation>,
+}
+
+#[derive(Debug, FromMeta, Clone)]
+pub struct DeprecationArguments {
+    pub since: Option<String>,
+    pub note: Option<String>,
 }
 
 impl BootstrapDocstring {
@@ -27,6 +37,26 @@ impl BootstrapDocstring {
         path: Option<(&str, &str)>,
         features: Vec<String>,
     ) -> Result<BootstrapDocstring> {
+        // look for this attr:
+        // #[deprecated(note="please use `new_method` instead")]
+        let deprecated = attrs
+            .iter()
+            .find(|attr| {
+                attr.path.get_ident().map(ToString::to_string).as_deref() == Some("deprecated")
+            })
+            .map(|attr| {
+                let meta = DeprecationArguments::from_meta(&attr.parse_meta()?)?;
+                Result::Ok(Deprecation {
+                    since: meta.since.ok_or_else(|| {
+                        Error::custom("`since` must be specified").with_span(&attr)
+                    })?,
+                    note: meta.note.ok_or_else(|| {
+                        Error::custom("`note` must be specified").with_span(&attr)
+                    })?,
+                })
+            })
+            .transpose()?;
+
         let mut doc_sections = parse_docstring_sections(attrs)?;
 
         if let Some(sup_elements) = parse_sig_output(output)? {
@@ -76,6 +106,7 @@ impl BootstrapDocstring {
                 .map(parse_docstring_args)
                 .unwrap_or_else(HashMap::new),
             returns: doc_sections.remove("Returns"),
+            deprecated,
         })
     }
 }

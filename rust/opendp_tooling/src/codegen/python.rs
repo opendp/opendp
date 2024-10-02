@@ -139,6 +139,8 @@ We suggest importing under the conventional name ``dp``:
 '''
 {module_docs}
 '''
+from deprecated.sphinx import deprecated # noqa: F401 (Not every file actually has deprecated functions.)
+
 from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
@@ -228,9 +230,20 @@ def {then_name}(
         String::new()
     };
 
+    let deprecated_decorator = func
+        .deprecation
+        .as_ref()
+        .map(|deprecation| {
+            format!(
+                "@deprecated(version=\"{}\", reason=\"{}\")\n",
+                deprecation.since, deprecation.note
+            )
+        })
+        .unwrap_or_default();
+
     format!(
         r#"
-def {func_name}(
+{deprecated_decorator}def {func_name}(
 {args}
 ){sig_return}:
 {docstring}

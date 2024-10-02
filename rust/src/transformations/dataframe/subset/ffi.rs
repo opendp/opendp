@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 use std::os::raw::c_char;
 
 use crate::error::Fallible;
+#[allow(deprecated)]
 use crate::transformations::make_subset_by;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
@@ -24,6 +25,7 @@ pub extern "C" fn opendp_transformations__make_subset_by(
     {
         let indicator_column: TK = try_as_ref!(indicator_column).downcast_ref::<TK>()?.clone();
         let keep_columns: Vec<TK> = try_as_ref!(keep_columns).downcast_ref::<Vec<TK>>()?.clone();
+        #[allow(deprecated)]
         make_subset_by::<TK>(indicator_column, keep_columns).into_any()
     }
     let TK = try_!(Type::try_from(TK));

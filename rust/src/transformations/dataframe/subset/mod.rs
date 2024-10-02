@@ -12,6 +12,7 @@ use super::{DataFrame, DataFrameDomain};
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[deprecated(note = "Use Polars instead", since = "0.12.0")]
 #[bootstrap(features("contrib"))]
 /// Make a Transformation that subsets a dataframe by a boolean column.
 ///

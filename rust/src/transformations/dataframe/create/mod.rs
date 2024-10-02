@@ -62,6 +62,7 @@ fn create_dataframe<K: Hashable>(col_names: Vec<K>, records: &[Vec<&str>]) -> Da
 }
 
 #[bootstrap(features("contrib"))]
+#[deprecated(note = "Use Polars instead", since = "0.12.0")]
 /// Make a Transformation that constructs a dataframe from a `Vec<Vec<String>>` (a vector of records).
 ///
 /// # Arguments
@@ -106,6 +107,7 @@ fn split_dataframe<K: Hashable>(separator: &str, col_names: Vec<K>, s: &str) -> 
     features("contrib"),
     arguments(separator(c_type = "char *", rust_type = b"null"))
 )]
+#[deprecated(note = "Use Polars instead", since = "0.12.0")]
 /// Make a Transformation that splits each record in a String into a `Vec<Vec<String>>`,
 /// and loads the resulting table into a dataframe keyed by `col_names`.
 ///

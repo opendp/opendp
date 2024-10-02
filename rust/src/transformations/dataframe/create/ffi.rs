@@ -1,5 +1,6 @@
 use std::{convert::TryFrom, os::raw::c_char};
 
+#[allow(deprecated)]
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
     error::Fallible,
@@ -36,6 +37,7 @@ pub extern "C" fn opendp_transformations__make_create_dataframe(
         K: Hashable,
     {
         let col_names = try_as_ref!(col_names).downcast_ref::<Vec<K>>()?.clone();
+        #[allow(deprecated)]
         make_create_dataframe::<K>(col_names).into_any()
     }
     let K = try_!(Type::try_from(K));
@@ -56,6 +58,7 @@ pub extern "C" fn opendp_transformations__make_split_dataframe(
         K: Hashable,
     {
         let col_names = try_as_ref!(col_names).downcast_ref::<Vec<K>>()?.clone();
+        #[allow(deprecated)]
         make_split_dataframe::<K>(separator, col_names).into_any()
     }
     let K = try_!(Type::try_from(K));

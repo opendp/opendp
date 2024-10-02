@@ -3,6 +3,7 @@ use crate::{data::Column, error::ExplainUnwrap};
 
 #[test]
 fn test_make_select_column() {
+    #[allow(deprecated)]
     let transformation = make_select_column::<String, String>("1".to_owned()).unwrap_test();
     let arg: DataFrame<String> = vec![
         (

@@ -33,6 +33,7 @@ fn test_make_split_records() {
 
 #[test]
 fn test_make_create_dataframe() {
+    #[allow(deprecated)]
     let transformation = make_create_dataframe::<u32>(vec![0, 1]).unwrap_test();
     let arg = vec![
         vec!["ant".to_owned(), "foo".to_owned()],
@@ -57,6 +58,7 @@ fn test_make_create_dataframe() {
 
 #[test]
 fn test_make_split_dataframe() {
+    #[allow(deprecated)]
     let transformation =
         make_split_dataframe::<String>(None, vec!["0".to_string(), "1".to_string()]).unwrap_test();
     let arg = "ant, foo\nbat, bar\ncat, baz".to_owned();

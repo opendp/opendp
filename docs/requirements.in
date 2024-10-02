@@ -17,3 +17,4 @@ pypandoc
 semver
 linkchecker
 pip-tools
+deprecated # Transitive dependency of opendp, but we don't actually install opendp to build docs.
