@@ -52,6 +52,9 @@ jobs:
         # fix formatting with: cargo fmt --manifest-path=rust/Cargo.toml --all
         run: cargo fmt --manifest-path=Cargo.toml --all --check
 
+      - name: Transitively downgrade hashbrown to get Polars to compile
+        run: cargo update indexmap@2.6.0 --precise 2.5.0
+  
       - name: Build
         run: cargo build --verbose --all-features
       

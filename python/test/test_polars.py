@@ -821,3 +821,23 @@ def test_to_physical_unordered():
         )
 
 
+def test_float_sum_with_unlimited_reorderable_partitions():
+    pl = pytest.importorskip('polars')
+    
+    lf_domain = dp.lazyframe_domain([
+        dp.series_domain("region", dp.atom_domain(T=dp.i64)),
+        dp.series_domain("income", dp.atom_domain(T=dp.f64))
+    ])
+    lf_domain = dp.with_margin(lf_domain, by=["region"], public_info="lengths", max_partition_length=6)
+
+    from opendp.domains import _lazyframe_from_domain
+    lf = _lazyframe_from_domain(lf_domain)
+
+    # sum of income per region, add noise with scale of 1.0
+    plan = lf.group_by("region").agg([
+        pl.col("income").dp.sum(bounds=(1_000, 100_000), scale=1.0)
+    ])
+
+    # since there are an unknown number of partitions, and each partition has non-zero sensitivity, sensitivity is undefined
+    with pytest.raises(dp.OpenDPException, match='.*max_num_partitions must be known when the metric is not sensitive to ordering.*'):
+        dp.m.make_private_lazyframe(lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan)

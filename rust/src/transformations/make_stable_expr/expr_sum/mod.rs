@@ -125,6 +125,11 @@ where
         _ => TI::Sum::inf_cast(*d_in)?.inf_mul(&l.alerting_abs()?.total_max(u)?),
     };
 
+    // 'mnp_check: this invariant is used later
+    if !pp_relaxation.is_zero() && !MI::ORDERED {
+        return fallible!(MakeTransformation, "max_num_partitions must be known when the metric is not sensitive to ordering (SymmetricDistance)");
+    }
+
     Ok(StabilityMap::new_fallible(
         move |(l0, l1, l_inf): &(IntDistance, IntDistance, IntDistance)| {
             // max changed partitions
@@ -133,8 +138,9 @@ where
             } else if MI::ORDERED {
                 (*l0).min(margin.max_num_partitions.unwrap_or(*l0))
             } else {
-                margin.max_num_partitions
-                    .ok_or_else(|| err!(FailedFunction, "max_num_partitions must be known when the metric is not sensitive to ordering (SymmetricDistance)"))?
+                margin
+                    .max_num_partitions
+                    .expect("not none due to 'mnp_check above")
             };
 
             let mcp_p = norm_map(f64::from(mcp))?;
