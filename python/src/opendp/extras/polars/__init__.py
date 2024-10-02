@@ -79,8 +79,8 @@ class DPExpr(object):
           - Number of rows, including nulls
         * - `count <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.count.html>`_
           - Number of rows, not including nulls
-        * - `n_unique <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.n_unique.html>`_
-          - Number of unique rows
+        * - `sum <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.sum.html>`_
+          - Sum
     '''
     def __init__(self, expr):
         """Apply a differentially private plugin to a Polars expression."""
