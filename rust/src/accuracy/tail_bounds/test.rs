@@ -1,8 +1,15 @@
+use std::thread::{self, JoinHandle};
+
+use dashu::{integer::IBig, rational::RBig};
+
 use crate::{
     domains::AtomDomain,
-    measurements::{make_gaussian, make_laplace},
+    measurements::make_laplace,
     metrics::AbsoluteDistance,
-    traits::{samplers::sample_uniform_uint_below, ExactIntCast},
+    traits::{
+        samplers::{sample_discrete_gaussian, sample_uniform_uint_below},
+        ExactIntCast,
+    },
 };
 
 use super::*;
@@ -65,15 +72,11 @@ fn test_gaussian_tail(scale: f64, tail: u32) -> Fallible<()> {
     let alpha_upper = conservative_discrete_gaussian_tail_to_alpha(scale, tail)?;
     let alpha_avg = discrete_gaussian_tail_to_alpha(scale, tail)?;
 
-    let m_dnorm = make_gaussian::<_, _, f64>(
-        AtomDomain::<i8>::default(),
-        AbsoluteDistance::default(),
-        scale,
-        None,
-    )?;
+    let r_scale = RBig::try_from(scale)?;
+    let i_tail = IBig::from(tail);
     let n = 50_000;
     let alpha_emp = (0..n)
-        .filter(|_| m_dnorm.invoke(&0).unwrap().clamp(-127, 127) > tail as i8)
+        .filter(|_| sample_discrete_gaussian(r_scale.clone()).unwrap() > i_tail)
         .count() as f64
         / n as f64;
 
@@ -82,16 +85,33 @@ fn test_gaussian_tail(scale: f64, tail: u32) -> Fallible<()> {
     println!("Theoretical (avg):   {:?}", alpha_avg);
     println!("Empirical:           {:?}", alpha_emp);
 
-    // this test has a small likelihood of failing
-    // I'm observing that alpha_upper can be loose by a factor of ~10,
-    // as it uses the tail bound of the continuous gaussian
+    // This test has a small likelihood of failing.
+    // alpha_upper can be loose by a large factor when scale is small,
+    // as it uses the tail bound of the continuous gaussian.
     assert!(alpha_emp < alpha_upper);
     Ok(())
 }
 
 #[test]
-pub fn test_empirical_integrate_discrete_gaussian_tail_fixed() -> Fallible<()> {
+pub fn test_empirical_integrate_discrete_gaussian_tail() -> Fallible<()> {
     let scale = 10.;
-    let tail = 30;
+    let tail = 20;
     test_gaussian_tail(scale, tail)
+}
+
+#[test]
+// Ignored because this runs very slowly.
+// Checks that test_empirical_integrate_discrete_gaussian_tail doesn't fail when run many times.
+#[ignore]
+pub fn test_empirical_integrate_discrete_gaussian_tail_multi_run() -> Fallible<()> {
+    let scale = 10.;
+    let tail = 20;
+
+    let handles = (0..10)
+        .map(|_| thread::spawn(move || (0..10).try_for_each(|_| test_gaussian_tail(scale, tail))))
+        .collect::<Vec<JoinHandle<_>>>();
+
+    handles
+        .into_iter()
+        .try_for_each(|h| h.join().expect("thread failed"))
 }
