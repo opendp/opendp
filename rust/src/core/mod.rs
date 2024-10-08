@@ -67,7 +67,7 @@ pub trait Domain: Clone + PartialEq + Debug + Send + Sync {
     fn member(&self, val: &Self::Carrier) -> Fallible<bool>;
 }
 
-/// A mathematical function which maps values from an input [`Domain`] to an output [`Domain`].
+/// A mathematical function.
 pub struct Function<TI, TO> {
     pub function: Arc<dyn Fn(&TI) -> Fallible<TO> + Send + Sync>,
 }

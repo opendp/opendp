@@ -7,13 +7,15 @@ use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
+use crate::core::Function;
 use crate::domains::ffi::UserDomain;
 use crate::domains::{AtomDomain, BitVector, CategoricalDomain, OptionDomain, VectorDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
 use crate::measures::ffi::UserDivergence;
 use crate::measures::{
-    Approximate, MaxDivergence, PrivacyProfile, SmoothedMaxDivergence, ZeroConcentratedDivergence,
+    Approximate, MaxDivergence, PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence,
+    ZeroConcentratedDivergence,
 };
 use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
@@ -330,6 +332,7 @@ lazy_static! {
             vec![t!((DslPlan, Expr))],
             type_vec![Vec, <(DslPlan, Expr)>],
             type_vec![Vec<Expr>],
+            vec![t!(Function<f64, f64>)],
 
             type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyQueryable, AnyMeasurement],
             type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr, SeriesDomain>],
@@ -357,8 +360,8 @@ lazy_static! {
             type_vec![L2Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
 
             // measures
-            type_vec![MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, UserDivergence],
-            type_vec![Approximate, <MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, UserDivergence>],
+            type_vec![MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, RenyiDivergence, UserDivergence],
+            type_vec![Approximate, <MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, RenyiDivergence, UserDivergence>],
 
             // measure distances
             type_vec![PrivacyProfile],
