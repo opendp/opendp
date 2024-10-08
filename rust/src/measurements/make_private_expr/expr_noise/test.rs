@@ -18,7 +18,7 @@ fn test_make_expr_puredp() -> Fallible<()> {
 
     let m_quant = make_private_expr(
         expr_domain,
-        PartitionDistance(SymmetricDistance),
+        PartitionDistance(InsertDeleteDistance),
         MaxDivergence::default(),
         col("const_1f64").dp().sum((0., 1.), Some(scale)),
         None,
@@ -40,7 +40,7 @@ fn test_make_expr_zcdp() -> Fallible<()> {
 
     let m_quant = make_private_expr(
         expr_domain,
-        PartitionDistance(SymmetricDistance),
+        PartitionDistance(InsertDeleteDistance),
         ZeroConcentratedDivergence::default(),
         col("const_1f64").dp().sum((0., 1.), Some(scale)),
         None,
@@ -62,7 +62,7 @@ fn test_fail_make_expr_wrong_distribution() -> Fallible<()> {
 
     let variant = make_private_expr(
         expr_domain,
-        PartitionDistance(SymmetricDistance),
+        PartitionDistance(InsertDeleteDistance),
         MaxDivergence::default(),
         col("const_1f64")
             .clip(lit(0.), lit(1.))
@@ -88,7 +88,7 @@ fn test_make_expr_gaussian() -> Fallible<()> {
 
     let m_quant = make_private_expr(
         expr_domain,
-        PartitionDistance(SymmetricDistance),
+        PartitionDistance(InsertDeleteDistance),
         ZeroConcentratedDivergence::default(),
         col("const_1f64").dp().sum((0., 1.), Some(scale)),
         None,
