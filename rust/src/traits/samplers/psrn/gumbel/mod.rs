@@ -1,5 +1,7 @@
+use crate::error::Fallible;
+
 use super::{InverseCDF, ODPRound};
-use dashu::{float::FBig, rational::RBig};
+use dashu::{base::Sign, float::FBig, rational::RBig};
 
 #[cfg(test)]
 mod test;
@@ -7,8 +9,17 @@ mod test;
 /// A Gumbel random variable.
 #[derive(Clone)]
 pub struct GumbelRV {
-    pub shift: FBig,
-    pub scale: FBig,
+    shift: FBig,
+    scale: FBig,
+}
+
+impl GumbelRV {
+    pub fn new(shift: FBig, scale: FBig) -> Fallible<Self> {
+        if let Sign::Negative = scale.sign() {
+            return fallible!(FailedFunction, "scale ({}) must be non-negative", scale);
+        }
+        Ok(GumbelRV { shift, scale })
+    }
 }
 
 impl InverseCDF for GumbelRV {

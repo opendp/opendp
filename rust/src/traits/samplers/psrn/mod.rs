@@ -25,11 +25,6 @@ pub trait InverseCDF: Sized {
     /// Calculate either a lower or upper bound on the inverse cumulative distribution function.
     /// Returns None if the inverse CDF cannot be computed for the given uniform sample.
     fn inverse_cdf<R: ODPRound>(&self, uniform: RBig, refinements: usize) -> Option<Self::Edge>;
-
-    /// Initialize a partial sample from the random variable
-    fn sample(self) -> PartialSample<Self> {
-        PartialSample::new(self)
-    }
 }
 
 /// A partially sampled random number.
@@ -50,7 +45,7 @@ pub struct PartialSample<D: InverseCDF> {
 }
 
 impl<D: InverseCDF> PartialSample<D> {
-    fn new(distribution: D) -> Self {
+    pub fn new(distribution: D) -> Self {
         PartialSample {
             randomness: UBig::ZERO,
             refinements: 0,

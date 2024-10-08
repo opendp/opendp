@@ -13,7 +13,7 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
     metrics::LInfDistance,
-    traits::{samplers::InverseCDF, InfAdd, InfCast, InfDiv, Number},
+    traits::{samplers::PartialSample, InfAdd, InfCast, InfDiv, Number},
 };
 
 use crate::traits::{samplers::GumbelRV, DistanceConstant};
@@ -147,16 +147,16 @@ where
     }
 
     (iter.enumerate())
-        .map(|(i, v)| {
-            let mut shift = FBig::try_from(v).unwrap_or(FBig::ZERO);
+        // skip NaN scores. These should not be in the input domain, but this results in graceful failure
+        .filter_map(|(i, v)| Some((i, FBig::try_from(v).ok()?)))
+        .map(|(i, mut shift)| {
+            // normalize sign
             if optimize == Optimize::Min {
                 shift = -shift;
             }
-            let rv = GumbelRV {
-                shift,
-                scale: scale.clone(),
-            };
-            Ok((i, rv.sample()))
+
+            // create a partial sample
+            Ok((i, PartialSample::new(GumbelRV::new(shift, scale.clone())?)))
         })
         .reduce(|l, r| {
             let (mut l, mut r) = (l?, r?);

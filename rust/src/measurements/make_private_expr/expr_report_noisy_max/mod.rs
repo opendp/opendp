@@ -244,11 +244,11 @@ fn report_noisy_max_gumbel_udf(
     let ReportNoisyMaxPlugin { optimize, scale } = kwargs;
 
     if scale.is_sign_negative() {
-        polars_bail!(InvalidOperation: "{} scale must be non-negative", ReportNoisyMaxPlugin::NAME);
+        polars_bail!(InvalidOperation: "{} scale ({}) must be non-negative", ReportNoisyMaxPlugin::NAME, scale);
     }
 
     let Ok(scale) = FBig::try_from(scale) else {
-        polars_bail!(InvalidOperation: "{} scale must be a number", ReportNoisyMaxPlugin::NAME);
+        polars_bail!(InvalidOperation: "{} scale ({}) must be a number", ReportNoisyMaxPlugin::NAME, scale);
     };
 
     // PT stands for Polars Type

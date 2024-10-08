@@ -41,7 +41,7 @@ pub fn kolmogorov_smirnov(mut samples: [f64; 1000], cdf: impl Fn(f64) -> f64) ->
     // ```
     static CRIT_VALUE: f64 = 0.08494641956324511;
     if statistic > CRIT_VALUE {
-        return fallible!(FailedFunction, "Statistic ({statistic}) exceeds critical value ({CRIT_VALUE})! This indicates that the data is not sampled from the same distribution specified by the cdf.");
+        return fallible!(FailedFunction, "Statistic ({statistic}) exceeds critical value ({CRIT_VALUE})! This indicates that the data is not sampled from the same distribution specified by the cdf. There is a 1e-6 probability of this being a false positive.");
     }
 
     Ok(())
@@ -69,12 +69,6 @@ where
 
 struct UniformRV;
 
-impl UniformRV {
-    pub fn sample() -> PartialSample<Self> {
-        PartialSample::new(UniformRV)
-    }
-}
-
 impl InverseCDF for UniformRV {
     type Edge = RBig;
 
@@ -85,7 +79,7 @@ impl InverseCDF for UniformRV {
 
 #[test]
 fn test_value() -> Fallible<()> {
-    let mut psrn = UniformRV::sample();
+    let mut psrn = PartialSample::new(UniformRV);
     // sampled value will always be in [0, 1]
     assert!((0f64..1f64).contains(&psrn.value()?));
 
@@ -94,7 +88,7 @@ fn test_value() -> Fallible<()> {
 
 #[test]
 fn test_greater_than() -> Fallible<()> {
-    let (mut l, mut r) = (UniformRV::sample(), UniformRV::sample());
+    let (mut l, mut r) = (PartialSample::new(UniformRV), PartialSample::new(UniformRV));
 
     if l.greater_than(&mut r)? {
         assert!(l.value::<f64>()? > r.value::<f64>()?);
