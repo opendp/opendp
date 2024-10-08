@@ -57,3 +57,8 @@ pub use randomized_response_bitvec::*;
 mod alp;
 #[cfg(all(feature = "floating-point", feature = "contrib"))]
 pub use alp::*;
+
+#[cfg(all(feature = "contrib"))]
+mod above_threshold;
+#[cfg(all(feature = "contrib"))]
+pub use above_threshold::*;
