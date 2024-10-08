@@ -65,6 +65,11 @@ polars = { version = "=0.41.3", features = [
 polars-plan = { version = "=0.41.3", features = [
     "ffi_plugin",
 ], optional = true }
+
+# Temporary fix until Polars is updated.
+# See https://github.com/pola-rs/polars/issues/19063#issuecomment-2397815029
+hashbrown = { version = "=0.14.5", features = ["raw"] }
+
 polars-arrow = { version = "=0.41.3", optional = true }
 pyo3 = { version = "0.21.2", features = ["abi3-py39", "extension-module"], optional = true }
 pyo3-polars = { version = "=0.15.0", features = ["derive"], optional = true }
