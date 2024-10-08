@@ -126,7 +126,7 @@ where
     };
 
     // 'mnp_check: this invariant is used later
-    if !pp_relaxation.is_zero() && !MI::ORDERED {
+    if !pp_relaxation.is_zero() && !MI::ORDERED && margin.max_num_partitions.is_none() {
         return fallible!(MakeTransformation, "max_num_partitions must be known when the metric is not sensitive to ordering (SymmetricDistance)");
     }
 
