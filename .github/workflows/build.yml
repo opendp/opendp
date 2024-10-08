@@ -56,6 +56,17 @@ jobs:
     needs: credential-check
     runs-on: ubuntu-20.04
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false     # no: will remove rust
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: false        # no: little/no benefit
+          large-packages: false # no: slow
+          swap-storage: false   # no: having swap is useful
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -114,6 +125,17 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-13, macos-14]
 
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false     # no: will remove rust
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: false        # no: little/no benefit
+          large-packages: false # no: slow
+          swap-storage: false   # no: having swap is useful
+  
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -167,6 +189,7 @@ jobs:
                 apk update && apk add openssl pkgconfig
             fi
           CIBW_BUILD_VERBOSITY: 1
+          CIBW_TEST_COMMAND: python -c "import opendp"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -180,6 +203,17 @@ jobs:
       DOCKER_IMAGE: messense/manylinux_2_24-cross:aarch64
       TARGET: aarch64-unknown-linux-gnu
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false     # no: will remove rust
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: false        # no: little/no benefit
+          large-packages: false # no: slow
+          swap-storage: false   # no: having swap is useful
+
       - name: Checkout repository
         if: ${{ !inputs.fake }}
         uses: actions/checkout@v4
