@@ -125,6 +125,19 @@ impl<D: InverseCDF> PartialSample<D> {
             self.refine()?;
         })
     }
+
+    /// Check if `psrn` is greater than `threshold`
+    pub fn is_above(&mut self, threshold: &D::Edge) -> Fallible<bool> {
+        loop {
+            if self.lower().as_ref() > Some(threshold) {
+                return Ok(true);
+            }
+            if self.upper().as_ref() < Some(threshold) {
+                return Ok(false);
+            }
+            self.refine()?;
+        }
+    }
 }
 
 /// Rounding directions used in PSRNs.

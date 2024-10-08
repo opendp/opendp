@@ -15,8 +15,10 @@ fn test_count_by_ptr() -> Fallible<()> {
     let measurement = (make_count_by(
         VectorDomain::new(AtomDomain::default()),
         SymmetricDistance::default(),
-    )? >> then_laplace_threshold(scale, threshold, None))?;
-    let ret = measurement.invoke(&vec!['a', 'b', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'])?;
+    )? >> then_laplace_threshold(scale, threshold))?;
+
+    let data = vec!['a', 'b', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'];
+    let ret = measurement.invoke(&data)?;
     println!("stability eval: {:?}", ret);
 
     let epsilon_p = measurement.map(&max_influence)?.0;

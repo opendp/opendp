@@ -4,42 +4,35 @@ mod ffi;
 /// Algorithms that depend on the propose-test-release framework.
 use std::collections::HashMap;
 
+use dashu::float::FBig;
 use opendp_derive::bootstrap;
 
-use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
+use crate::core::{Function, Measurement, PrivacyMap};
 use crate::domains::{AtomDomain, MapDomain};
 use crate::error::{Error, ErrorVariant, Fallible};
 use crate::measures::{Approximate, MaxDivergence};
 use crate::metrics::L1Distance;
-use crate::traits::samplers::sample_discrete_laplace_Z2k;
-use crate::traits::{
-    CastInternalRational, ExactIntCast, Float, Hashable, InfAdd, InfCast, InfDiv, InfExp, InfLn,
-    InfSub,
-};
+use crate::traits::samplers::{LaplaceRV, PartialSample};
+use crate::traits::{Float, Hashable, InfCast, InfDiv, InfExp, InfLn, InfSub, RoundCast};
+use dashu::base::ConversionError;
 use num::Zero;
 
-use super::get_discretization_consts;
+#[cfg(all(test, feature = "partials"))]
+mod tests;
 
 #[bootstrap(
-    features("contrib", "floating-point"),
-    arguments(
-        threshold(c_type = "void *"),
-        k(default = -1074, rust_type = "i32", c_type = "uint32_t")),
+    features("contrib"),
+    arguments(threshold(c_type = "void *")),
     generics(TK(suppress), TV(suppress)),
     derived_types(TV = "$get_distance_type(input_metric)")
 )]
 /// Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
-///
-/// This function takes a noise granularity in terms of 2^k.
-/// Larger granularities are more computationally efficient, but have a looser privacy map.
-/// If k is not set, k defaults to the smallest granularity.
 ///
 /// # Arguments
 /// * `input_domain` - Domain of the input.
 /// * `input_metric` - Metric for the input domain.
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 /// * `threshold` - Exclude counts that are less than this minimum value.
-/// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
 /// * `TK` - Type of Key. Must be hashable/categorical.
@@ -49,7 +42,6 @@ pub fn make_laplace_threshold<TK, TV>(
     input_metric: L1Distance<TV>,
     scale: f64,
     threshold: TV,
-    k: Option<i32>,
 ) -> Fallible<
     Measurement<
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
@@ -60,17 +52,17 @@ pub fn make_laplace_threshold<TK, TV>(
 >
 where
     TK: Hashable,
-    TV: Float + CastInternalRational,
-    i32: ExactIntCast<TV::Bits>,
+    TV: Float + RoundCast<FBig>,
+
+    FBig: TryFrom<TV, Error = ConversionError> + TryFrom<f64>,
     f64: InfCast<TV>,
-    (MapDomain<AtomDomain<TK>, AtomDomain<TV>>, L1Distance<TV>): MetricSpace,
 {
     if input_domain.value_domain.nullable() {
-        return fallible!(FailedFunction, "values must be non-null");
+        return fallible!(MakeMeasurement, "values must be non-null");
     }
 
     if threshold < TV::zero() {
-        return fallible!(FailedFunction, "threshold must be non-negative");
+        return fallible!(MakeMeasurement, "threshold must be non-negative");
     }
 
     if scale.is_sign_negative() {
@@ -78,30 +70,27 @@ where
     }
 
     let _2 = TV::exact_int_cast(2)?;
-    let (k, relaxation) = get_discretization_consts(k)?;
 
-    // actually reject noisy values below threshold + relaxation, to account for discretization
-    let true_threshold = threshold.inf_add(&relaxation)?;
-
-    let relaxation = f64::inf_cast(relaxation)?;
-    let threshold = f64::neg_inf_cast(threshold)?;
-    let f_scale = scale.into_rational()?;
+    let f_scale = FBig::try_from(scale)?;
+    let f_threshold = FBig::try_from(threshold)?;
 
     Measurement::new(
         input_domain,
         Function::new_fallible(move |data: &HashMap<TK, TV>| {
             data.clone()
                 .into_iter()
+                .filter_map(|(k, value)| Some((k, FBig::try_from(value).ok()?)))
                 // noise output count
-                .map(|(key, v)| {
-                    sample_discrete_laplace_Z2k(v.into_rational()?, f_scale.clone(), k)
-                        .map(|v| (key, TV::from_rational(v)))
+                .map(|(key, f_value)| {
+                    let mut sample = PartialSample::new(LaplaceRV::new(f_value, f_scale.clone())?);
+                    let is_above = sample.is_above(&f_threshold)?;
+                    Ok((key, sample, is_above))
                 })
-                // only keep keys with values gte threshold
-                .filter(|res| {
-                    res.as_ref()
-                        .map(|(_k, v)| v >= &true_threshold)
-                        .unwrap_or(true)
+                // only keep keys with values above threshold
+                .filter(|res| res.as_ref().map(|(_, _, above)| *above).unwrap_or(true))
+                .map(|res: Fallible<(TK, PartialSample<LaplaceRV>, bool)>| {
+                    let (k, mut v, _) = res?;
+                    Ok((k, v.value()?))
                 })
                 // fail the whole computation if any cast or noise addition failed
                 .collect()
@@ -122,8 +111,8 @@ where
                 return Ok((f64::INFINITY, 1.0));
             }
 
-            let d_in = d_in.inf_add(&relaxation)?;
             let epsilon = d_in.inf_div(&scale)?;
+            let threshold = f64::neg_inf_cast(threshold)?;
 
             // delta is the probability that noise will push the count beyond the threshold
             // δ = d_in / exp(distance_to_instability) / 2
@@ -160,6 +149,3 @@ where
         }),
     )
 }
-
-#[cfg(all(test, feature = "partials"))]
-mod test;
