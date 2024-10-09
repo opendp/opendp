@@ -79,19 +79,18 @@ where
     f64: InfCast<TIA>,
 {
     if input_domain.element_domain.nullable() {
-        return fallible!(MakeMeasurement, "values must be non-null");
-    }
-
-    if input_domain.element_domain.nullable() {
-        return fallible!(MakeMeasurement, "input domain must be non-nullable");
+        return fallible!(
+            MakeMeasurement,
+            "elements in the input vector domain must be non-null"
+        );
     }
 
     if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
+        return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
     }
 
     let f_scale = FBig::try_from(scale.clone())
-        .map_err(|_| err!(MakeMeasurement, "scale parameter must be finite"))?;
+        .map_err(|_| err!(MakeMeasurement, "scale ({}) must be finite", scale))?;
 
     Measurement::new(
         input_domain,
