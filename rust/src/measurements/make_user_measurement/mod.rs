@@ -40,6 +40,16 @@ use crate::{
 ///
 /// # Generics
 /// * `TO` - The data type of outputs from the function.
+///
+/// # Why honest-but-curious?
+/// This constructor only returns a valid measurement if for every pair of elements $x, x'$ in `input_domain`,
+/// and for every pair `(d_in, d_out)`,
+/// where `d_in` has the associated type for `input_metric` and `d_out` has the associated type for `output_measure`,
+/// if $x, x'$ are `d_in`-close under `input_metric`, `privacy_map(d_in)` does not raise an exception,
+/// and `privacy_map(d_in) <= d_out`,
+/// then `function(x), function(x')` are d_out-close under `output_measure`.
+///
+/// In addition, `function` must not have side-effects, and `privacy_map` must be a pure function.
 #[allow(dead_code)]
 fn make_user_measurement<TO>(
     input_domain: AnyDomain,

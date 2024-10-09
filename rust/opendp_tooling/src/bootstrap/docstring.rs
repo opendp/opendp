@@ -32,6 +32,7 @@ pub struct DeprecationArguments {
 
 impl BootstrapDocstring {
     pub fn from_attrs(
+        name: &String,
         attrs: Vec<Attribute>,
         output: &ReturnType,
         path: Option<(&str, &str)>,
@@ -58,6 +59,26 @@ impl BootstrapDocstring {
             .transpose()?;
 
         let mut doc_sections = parse_docstring_sections(attrs)?;
+
+        const HONEST_SECTION: &str = "Why honest-but-curious?";
+        const HONEST_FEATURE: &str = "honest-but-curious";
+        let has_honest_section = doc_sections.keys().any(|key| key == HONEST_SECTION);
+        let has_honest_feature = features
+            .clone()
+            .into_iter()
+            .any(|feature| feature == HONEST_FEATURE);
+        if has_honest_feature && !has_honest_section {
+            let msg = format!(
+                "{name} requires \"{HONEST_FEATURE}\" but is missing \"{HONEST_SECTION}\" section"
+            );
+            return Err(Error::custom(msg));
+        }
+        if has_honest_section && !has_honest_feature {
+            let msg = format!(
+                "{name} has \"{HONEST_SECTION}\" section but is missing \"{HONEST_FEATURE}\" feature"
+            );
+            return Err(Error::custom(msg));
+        }
 
         if let Some(sup_elements) = parse_sig_output(output)? {
             doc_sections.insert("Supporting Elements".to_string(), sup_elements);
@@ -87,6 +108,7 @@ impl BootstrapDocstring {
             })
         };
         // can add more sections here...
+        add_section_to_description(HONEST_SECTION);
         add_section_to_description("Citations");
         add_section_to_description("Supporting Elements");
         add_section_to_description("Proof Definition");

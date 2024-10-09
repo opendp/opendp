@@ -85,12 +85,12 @@ impl IsSizedDomain for AnyDomain {
 ///
 /// The DIA, DO, MI and MO between the input measurement and amplified output measurement all match.
 ///
-/// Protected by the "honest-but-curious" feature flag
-/// because a dishonest adversary could set the population size to be arbitrarily large.
-///
 /// # Arguments
 /// * `measurement` - the computation to amplify
 /// * `population_size` - the size of the population from which the input dataset is a simple sample
+///
+/// # Why honest-but-curious?
+/// The privacy guarantees are only valid if the input dataset is a simple sample from a population with `population_size` records.
 fn make_population_amplification(
     measurement: &AnyMeasurement,
     population_size: usize,

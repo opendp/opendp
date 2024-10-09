@@ -52,6 +52,9 @@ pub(crate) mod expr_report_noisy_max;
 /// * `output_measure` - How to measure privacy loss.
 /// * `expr` - The [`Expr`] to be privatized.
 /// * `global_scale` - A tune-able parameter that affects the privacy-utility tradeoff.
+///
+/// # Why honest-but-curious?
+/// The privacy guarantee governs only at most one evaluation of the released expression.
 pub fn make_private_expr<MI: 'static + Metric, MO: 'static + Measure>(
     input_domain: ExprDomain,
     input_metric: MI,

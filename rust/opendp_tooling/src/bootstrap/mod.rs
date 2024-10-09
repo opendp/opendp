@@ -42,7 +42,10 @@ impl Function {
         } else {
             None
         };
+
+        let name = arguments.name.clone().unwrap_or(signature.name.clone());
         let docstring = BootstrapDocstring::from_attrs(
+            &name,
             item_fn.attrs,
             &item_fn.sig.output,
             path,
@@ -59,9 +62,8 @@ pub fn reconcile_function(
     mut doc_comments: BootstrapDocstring,
     signature: BootstrapSignature,
 ) -> Result<Function> {
-    let name = bootstrap.name.unwrap_or(signature.name);
     Ok(Function {
-        name: name.clone(),
+        name: bootstrap.name.unwrap_or(signature.name),
         features: bootstrap.features.0,
         description: doc_comments.description,
         args: reconcile_arguments(
