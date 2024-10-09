@@ -10,7 +10,7 @@ use crate::{
         any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast},
         util::to_str,
     },
-    measurements::{make_report_noisy_max_exponential, Optimize},
+    measurements::{Optimize, make_report_noisy_max_exponential},
     metrics::LInfDistance,
     traits::{InfCast, Number},
 };

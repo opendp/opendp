@@ -199,17 +199,20 @@ def test_gaussian():
     input_space = dp.vector_domain(dp.atom_domain(T=float, nan=False)), dp.l2_distance(T=float)
     (input_space >> dp.m.then_gaussian(1.))([1., 2., 3.])
 
+
 def test_report_noisy_max_gumbel():
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
 
     input_metric = dp.linf_distance(T=dp.usize)
     meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "max")
-    print("should be 8-ish", meas(list(range(10))))
+    # fails with very small probability
+    assert meas([0, 0, 20, 40]) == 3  # because score 3 is by far the greatest
     assert meas.map(2) == 4
 
     input_metric = dp.linf_distance(monotonic=True, T=dp.usize)
     meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "max")
-    print("should be 8-ish", meas(list(range(10))))
+    # fails with very small probability
+    assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
     assert meas.map(2) == 2
 
 
@@ -218,12 +221,14 @@ def test_report_noisy_max_exponential():
 
     input_metric = dp.linf_distance(T=dp.usize)
     meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_exponential(1., "max")
-    print(meas(list(range(10))))
+    # fails with probability about e^{-20} / 3
+    assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
     assert meas.map(2) == 4
 
     input_metric = dp.linf_distance(monotonic=True, T=dp.usize)
     meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_exponential(1., "max")
-    print(meas(list(range(10))))
+    # fails with probability about e^{-20} / 3
+    assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
     assert meas.map(2) == 2
 
 
