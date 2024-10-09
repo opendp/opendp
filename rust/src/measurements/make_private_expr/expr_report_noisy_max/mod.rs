@@ -1,6 +1,6 @@
 use crate::core::PrivacyMap;
 use crate::domains::{AtomDomain, ExprPlan, VectorDomain, WildExprDomain};
-use crate::measurements::{Optimize, report_noisy_max_gumbel_map, select_score};
+use crate::measurements::{Optimize, make_report_noisy_max_gumbel, report_noisy_max_gumbel_map, select_score};
 use crate::metrics::{IntDistance, L0InfDistance, L01InfDistance, LInfDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::traits::{InfCast, InfMul, Number};
@@ -261,7 +261,7 @@ fn report_noisy_max_gumbel_udf(
     if scale.is_nan() {
         polars_bail!(InvalidOperation: "{} scale ({}) must be a number", ReportNoisyMaxPlugin::NAME, scale);
     }
-    
+
     // PT stands for Polars Type
     fn rnm_gumbel_impl<PT: 'static + PolarsDataType>(
         column: &Column,
