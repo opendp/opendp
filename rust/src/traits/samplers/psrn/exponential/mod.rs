@@ -35,7 +35,7 @@ impl ExponentialRV {
 impl InverseCDF for ExponentialRV {
     type Edge = FBig;
     /// Retrieve either the lower or upper edge of the Exponential interval.
-    /// Returns None if the sample is invalid- it must be refined more
+    /// Returns None if the sample is invalid- it must be refined more.
     ///
     /// First, computes the inverse cdf of the standard exponential with controlled rounding:
     /// $-ln(u)$ where $u \sim \mathrm{Uniform}(0, 1)$

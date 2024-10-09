@@ -18,7 +18,7 @@ use crate::{
 use crate::traits::samplers::ExponentialRV;
 use dashu::float::FBig;
 
-use super::{select_score, Optimize};
+use super::{Optimize, select_score};
 
 #[cfg(test)]
 pub mod test;
@@ -28,18 +28,21 @@ pub mod test;
     arguments(optimize(c_type = "char *", rust_type = "String")),
     generics(TIA(suppress))
 )]
-/// Make a Measurement that takes a vector of scores and privately selects the index of the highest score
-/// with noise added from the exponential distribution.
+/// Make a Measurement that privately selects the index of the highest score.
+///
+/// The measurement takes a vector of scores, adds noise from the exponential distribution,
+/// and returns the index of the highest or lowest noisy score.
+///
+/// Dominates utility of report noisy max with gumbel noise in pure-DP, but vice-versa in zCDP.
 ///
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable VectorDomain.
 /// * `input_metric` - Metric on the input domain. Must be LInfDistance
-/// * `scale` - Higher scales are more private.
+/// * `scale` - Noise scale for the Exponential distribution.
 /// * `optimize` - Indicate whether to privately return the "max" or "min"
 ///
 /// # Generics
 /// * `TIA` - Atom Input Type. Type of each element in the score vector.
-/// * `QO` - Output Distance Type.
 pub fn make_report_noisy_max_exponential<TIA>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
     input_metric: LInfDistance<TIA>,
@@ -56,11 +59,11 @@ where
     }
 
     if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
+        return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
     }
 
-    let f_scale =
-        FBig::try_from(scale.clone()).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
+    let f_scale = FBig::try_from(scale.clone())
+        .map_err(|_| err!(MakeMeasurement, "scale ({}) must be finite", scale))?;
 
     Measurement::new(
         input_domain,
@@ -89,7 +92,11 @@ where
         let d_in = f64::inf_cast(d_in)?;
 
         if d_in.is_sign_negative() {
-            return fallible!(InvalidDistance, "sensitivity must be non-negative");
+            return fallible!(
+                InvalidDistance,
+                "sensitivity ({}) must be non-negative",
+                d_in
+            );
         }
 
         if scale.is_zero() {
