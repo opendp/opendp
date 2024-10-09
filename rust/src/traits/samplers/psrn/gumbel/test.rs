@@ -19,10 +19,7 @@ fn test_sample_gumbel_interval_progression() -> Fallible<()> {
 
 #[test]
 fn test_gumbel_psrn() -> Fallible<()> {
-    let gumbel = GumbelRV {
-        shift: FBig::ZERO,
-        scale: FBig::ONE,
-    };
+    let gumbel = GumbelRV::new(FBig::ZERO, FBig::ONE)?;
 
     let samples = (0..1000)
         .map(|_| PartialSample::new(gumbel.clone()).value::<f64>())
