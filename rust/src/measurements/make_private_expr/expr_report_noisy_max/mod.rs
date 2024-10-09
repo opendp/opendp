@@ -2,7 +2,7 @@ use crate::core::{MetricSpace, PrivacyMap};
 use crate::measurements::{report_noisy_max_gumbel_map, select_score, Optimize};
 use crate::metrics::{IntDistance, LInfDistance, Parallel, PartitionDistance};
 use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
-use crate::traits::{CastInternalRational, InfCast, InfMul, Number};
+use crate::traits::{InfCast, InfMul, Number};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
 };
-use dashu::rational::RBig;
+use dashu::float::FBig;
 
 use polars::datatypes::{
     DataType, Field, Float32Type, Float64Type, Int16Type, Int32Type, Int64Type, Int8Type,
@@ -243,22 +243,24 @@ fn report_noisy_max_gumbel_udf(
 
     let ReportNoisyMaxPlugin { optimize, scale } = kwargs;
 
-    let Ok(scale) = RBig::try_from(scale) else {
-        polars_bail!(InvalidOperation: "{} scale must be a number", ReportNoisyMaxPlugin::NAME);
-    };
-    if scale < RBig::ZERO {
-        polars_bail!(InvalidOperation: "{} scale must be non-negative", ReportNoisyMaxPlugin::NAME);
+    if scale.is_sign_negative() {
+        polars_bail!(InvalidOperation: "{} scale ({}) must be non-negative", ReportNoisyMaxPlugin::NAME, scale);
     }
+
+    let Ok(scale) = FBig::try_from(scale) else {
+        polars_bail!(InvalidOperation: "{} scale ({}) must be a number", ReportNoisyMaxPlugin::NAME, scale);
+    };
 
     // PT stands for Polars Type
     fn rnm_gumbel_impl<PT: 'static + PolarsDataType>(
         series: &Series,
-        scale: RBig,
+        scale: FBig,
         optimize: Optimize,
     ) -> PolarsResult<Series>
     where
         // the physical (rust) dtype must be a number that can be converted into a rational
-        for<'a> PT::Physical<'a>: NativeType + Number + CastInternalRational,
+        for<'a> PT::Physical<'a>: NativeType + Number,
+        for<'a> FBig: TryFrom<PT::Physical<'a>>,
     {
         Ok(series
             // unpack the series into a chunked array

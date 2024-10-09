@@ -16,24 +16,20 @@ fn test_exponential() -> Fallible<()> {
 #[test]
 fn test_max_vs_min() -> Fallible<()> {
     assert_eq!(
-        select_score(vec![1, 2, 3].into_iter(), Optimize::Max, RBig::ZERO)?,
+        select_score([1, 2, 3].into_iter(), Optimize::Max, FBig::ZERO)?,
         2
     );
     assert_eq!(
-        select_score(vec![1, 2, 3].into_iter(), Optimize::Min, RBig::ZERO)?,
+        select_score([1, 2, 3].into_iter(), Optimize::Min, FBig::ZERO)?,
         0
     );
 
     assert_eq!(
-        select_score(vec![1, 1, 100_000].into_iter(), Optimize::Max, RBig::ONE)?,
+        select_score([1, 1, 100_000].into_iter(), Optimize::Max, FBig::ONE)?,
         2
     );
     assert_eq!(
-        select_score(
-            vec![1, 100_000, 100_000].into_iter(),
-            Optimize::Min,
-            RBig::ONE
-        )?,
+        select_score([1, 100_000, 100_000].into_iter(), Optimize::Min, FBig::ONE)?,
         0
     );
     Ok(())
