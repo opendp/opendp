@@ -416,7 +416,21 @@ new_hashtab <- function(keys, vals) {
 }
 
 to_str <- function(x, depth) UseMethod("to_str")
+
+#' Convert a format-able value to a string representation
+#'
+#' @param x value to convert to string
+#' @param depth offset from start of string
+#' @concept mod
+#' @export to_str.default
 to_str.default <- function(x, depth) format(x)
+
+#' Convert hashtab to a string representation
+#'
+#' @param x value to convert to string
+#' @param depth offset from start of string
+#' @concept mod
+#' @export
 to_str.hashtab <- function(x, depth = 0L) {
   spacer <- strrep("  ", depth)
   val <- "hashtab(\n"
@@ -425,12 +439,6 @@ to_str.hashtab <- function(x, depth = 0L) {
   })
   val <- c(val, spacer, ")")
   paste0(val, collapse = "")
-}
-
-#' @concept mod
-#' @export
-print.hashtab <- function(x, ...) {
-  cat(to_str(x, ...))
 }
 
 CONSTRUCTOR_LOG_KEYS <- list("_type", "name", "module", "kwargs")
@@ -499,7 +507,7 @@ unbox2 <- function(x) {
 #' @param d_in how far apart input datasets can be
 #' @param d_out how far apart output datasets or distributions can be
 #' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
-#' @param .T type of argument to `make_chain`, one of {float, int}
+#' @param .T type of argument to `make_chain`, either "float" or "int"
 #' @return a Transformation or Measurement (chain) that is (`d_in`, `d_out`)-close.
 #' @export
 #' @examples
@@ -525,7 +533,7 @@ binary_search_chain <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 #' @param d_in how far apart input datasets can be
 #' @param d_out how far apart output datasets or distributions can be
 #' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
-#' @param .T type of argument to `make_chain`, one of {float, int}
+#' @param .T type of argument to `make_chain`, either "float" or "int"
 #' @return the parameter to `make_chain` that results in a (`d_in`, `d_out`)-close Transformation or Measurement
 #' @export
 binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NULL) {
