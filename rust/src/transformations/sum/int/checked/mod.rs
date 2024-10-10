@@ -2,16 +2,14 @@ use std::iter::Sum;
 
 use opendp_derive::bootstrap;
 
+use super::can_int_sum_overflow;
 use crate::{
     core::{Function, StabilityMap, Transformation},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
-    traits::Number,
-    transformations::CanIntSumOverflow,
+    traits::Integer,
 };
-
-use super::AddIsExact;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -30,7 +28,7 @@ mod ffi;
 ///
 /// # Generics
 /// * `T` - Atomic Input Type and Output Type
-pub fn make_sized_bounded_int_checked_sum<T>(
+pub fn make_sized_bounded_int_checked_sum<T: Integer>(
     size: usize,
     bounds: (T, T),
 ) -> Fallible<
@@ -42,10 +40,9 @@ pub fn make_sized_bounded_int_checked_sum<T>(
     >,
 >
 where
-    T: Number + AddIsExact + CanIntSumOverflow,
     for<'a> T: Sum<&'a T>,
 {
-    if T::int_sum_can_overflow(size, bounds.clone())? {
+    if can_int_sum_overflow(size, bounds.clone()) {
         return fallible!(
             MakeTransformation,
             "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds or by using a data type with greater bit-depth."

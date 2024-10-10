@@ -5,10 +5,8 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
-    traits::Number,
+    traits::{Integer, Number},
 };
-
-use super::AddIsExact;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -26,7 +24,7 @@ mod ffi;
 ///
 /// # Generics
 /// * `T` - Atomic Input Type and Output Type
-pub fn make_bounded_int_monotonic_sum<T>(
+pub fn make_bounded_int_monotonic_sum<T: Integer>(
     bounds: (T, T),
 ) -> Fallible<
     Transformation<
@@ -35,11 +33,8 @@ pub fn make_bounded_int_monotonic_sum<T>(
         SymmetricDistance,
         AbsoluteDistance<T>,
     >,
->
-where
-    T: Number + AddIsExact + IsMonotonic,
-{
-    if !T::is_monotonic(bounds.clone()) {
+> {
+    if !signs_agree(bounds) {
         return fallible!(
             MakeTransformation,
             "monotonic summation requires bounds to share the same sign"
@@ -72,7 +67,7 @@ where
 ///
 /// # Generics
 /// * `T` - Atomic Input Type and Output Type
-pub fn make_sized_bounded_int_monotonic_sum<T>(
+pub fn make_sized_bounded_int_monotonic_sum<T: Integer>(
     size: usize,
     bounds: (T, T),
 ) -> Fallible<
@@ -82,11 +77,8 @@ pub fn make_sized_bounded_int_monotonic_sum<T>(
         SymmetricDistance,
         AbsoluteDistance<T>,
     >,
->
-where
-    T: Number + AddIsExact + IsMonotonic,
-{
-    if !T::is_monotonic(bounds.clone()) {
+> {
+    if !signs_agree(bounds) {
         return fallible!(
             MakeTransformation,
             "monotonic summation requires bounds to share the same sign"
@@ -110,29 +102,13 @@ where
     )
 }
 
-#[doc(hidden)]
-/// Checks if two elements of type T have the same sign
-pub trait IsMonotonic: Sized {
-    fn is_monotonic(bounds: (Self, Self)) -> bool;
+/// # Proof Definition
+/// Returns true if and only if the signs of `a` and `b` agree,
+/// assuming that values of zero always agree.
+pub(crate) fn signs_agree<T: Number>((a, b): (T, T)) -> bool {
+    let _0 = T::zero();
+    a == _0 || b == _0 || (a > _0) == (b > _0)
 }
-
-macro_rules! impl_same_sign_signed_int {
-    ($($ty:ty)+) => ($(impl IsMonotonic for $ty {
-        fn is_monotonic((a, b): (Self, Self)) -> bool {
-            a == 0 || b == 0 || (a > 0) == (b > 0)
-        }
-    })+)
-}
-impl_same_sign_signed_int! { i8 i16 i32 i64 i128 isize }
-
-macro_rules! impl_same_sign_unsigned_int {
-    ($($ty:ty)+) => ($(impl IsMonotonic for $ty {
-        fn is_monotonic(_: (Self, Self)) -> bool {
-            true
-        }
-    })+)
-}
-impl_same_sign_unsigned_int! { u8 u16 u32 u64 u128 usize }
 
 #[cfg(test)]
 mod test;

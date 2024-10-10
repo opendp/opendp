@@ -5,10 +5,8 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, InsertDeleteDistance, IntDistance},
-    traits::Number,
+    traits::Integer,
 };
-
-use super::AddIsExact;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -37,7 +35,7 @@ pub fn make_bounded_int_ordered_sum<T>(
     >,
 >
 where
-    T: Number + AddIsExact,
+    T: Integer,
 {
     let (lower, upper) = bounds.clone();
     Transformation::new(
@@ -78,7 +76,7 @@ pub fn make_sized_bounded_int_ordered_sum<T>(
     >,
 >
 where
-    T: Number + AddIsExact,
+    T: Integer,
 {
     let (lower, upper) = bounds.clone();
     let range = upper.inf_sub(&lower)?;

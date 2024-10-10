@@ -7,9 +7,8 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::traits::Number;
+use crate::traits::Integer;
 use crate::transformations::make_sized_bounded_int_checked_sum;
-use crate::transformations::sum::int::AddIsExact;
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_sized_bounded_int_checked_sum(
@@ -19,7 +18,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_int_checked_sum(
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<T>(size: usize, bounds: *const AnyObject) -> Fallible<AnyTransformation>
     where
-        T: 'static + Number + AddIsExact,
+        T: 'static + Integer,
         for<'a> T: Sum<&'a T>,
     {
         let bounds = try_as_ref!(bounds).downcast_ref::<(T, T)>()?.clone();
