@@ -8,7 +8,9 @@ use crate::traits::{
     ProductOrd,
 };
 use crate::transformations::traits::UnboundedMetric;
-use crate::transformations::{CanFloatSumOverflow, CanIntSumOverflow, Sequential, SumRelaxation};
+use crate::transformations::{
+    can_int_sum_overflow, CanFloatSumOverflow, Sequential, SumRelaxation,
+};
 use num::Zero;
 use polars::prelude::*;
 use std::collections::HashMap;
@@ -188,7 +190,7 @@ macro_rules! impl_accumulator_for_float {
     ($t:ty) => {
         impl Accumulator for $t {
             fn relaxation(size_limit: usize, lower: Self, upper: Self) -> Fallible<Self> {
-                if Sequential::<$t>::float_sum_can_overflow(size_limit, (lower, upper))? {
+                if Sequential::<$t>::can_float_sum_overflow(size_limit, (lower, upper))? {
                     return fallible!(
                         MakeTransformation,
                         "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds."
@@ -207,7 +209,7 @@ macro_rules! impl_accumulator_for_int {
     ($($t:ty)+) => {
         $(impl Accumulator for $t {
             fn relaxation(size_limit: usize, lower: Self, upper: Self) -> Fallible<Self> {
-                if <$t>::int_sum_can_overflow(size_limit, (lower, upper))? {
+                if can_int_sum_overflow(size_limit, (lower, upper)) {
                     return fallible!(
                         MakeTransformation,
                         "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds or by using a data type with greater bit-depth."
