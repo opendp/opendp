@@ -1,0 +1,101 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+
+
+\title{\texttt{fn make\_randomized\_response\_bool}}
+\author{Vicki Xu, Hanwen Zhang, Zachary Ratliff}
+\begin{document}
+
+\maketitle
+
+\contrib
+
+Proves soundness of \rustdoc{measurements/fn}{make\_randomized\_response\_bool} in \asOfCommit{mod.rs}{f5bb719}.
+
+\texttt{make\_randomized\_response\_bool} accepts a parameter \texttt{prob} of type \texttt{Q} and a parameter \texttt{constant\_time} of type \texttt{bool}.
+The function on the resulting measurement takes in a boolean data point \texttt{arg} and returns the truthful value \texttt{arg} with probability \texttt{prob},
+or the complement $\texttt{!arg}$ with probability $1 - \texttt{prob}$.
+The measurement function makes mitigations against timing channels if \texttt{constant\_time} is set. 
+
+\begin{tcolorbox}
+    \begin{warning}[Code is not constant-time]
+        \texttt{make\_randomized\_response\_bool} takes in a boolean \texttt{constant\_time} parameter that protects against timing attacks on the Bernoulli sampling procedure. 
+        However, the current implementation does not guard against other types of timing side-channels that can break differential privacy, e.g., non-constant time code execution due to branching.
+    \end{warning}
+\end{tcolorbox}
+
+\subsection*{PR History}
+\begin{itemize}
+    \item \vettingPR{490}
+\end{itemize}
+
+\section{Hoare Triple}
+
+\subsection*{Preconditions}
+\begin{itemize}
+    \item Variable \texttt{prob} must be of type \texttt{QO}
+    \item Variable \texttt{constant\_time} must be of type \texttt{bool}
+    \item Type \texttt{bool} must have trait \rustdoc{traits/samplers/bernoulli/trait}{SampleBernoulli}\texttt{<QO>}
+    \item Type \texttt{QO} must have trait \rustdoc{traits/trait}{Float}
+\end{itemize}
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_randomized_response_bool.py}
+
+\subsection*{Postcondition}
+
+\validMeasurement{\texttt{(prob, constant\_time, QO)}}{\\ \texttt{make\_randomized\_response\_bool}}
+
+\section{Proof}
+
+\begin{proof} 
+\textbf{(Privacy guarantee.)} 
+
+\begin{tcolorbox}
+\begin{note}
+    The following proof makes use of the following lemma that asserts the correctness of a Bernoulli sampler function.
+    \begin{lemma}
+        \texttt{sample\_bernoulli\_float} satisfies its postcondition.
+    \end{lemma}
+\end{note}
+\end{tcolorbox}
+
+\texttt{sample\_bernoulli} can only fail due to lack of system entropy. 
+This is usually related to the computer's physical environment and not the dataset. 
+The rest of this proof is conditioned on the assumption that \texttt{sample\_bernoulli} does not raise an exception. 
+
+Let $x$ and $x'$ be datasets in the input domain (either $\top$ or $\bot$) that are \texttt{d\_in}-close with respect to \texttt{input\_metric}.
+Here, the metric is \texttt{DiscreteMetric} which enforces that $\din \geq 1$ if $x \ne x'$ and $\din = 0$ if $x = x'$. 
+If $x = x'$, then the output distributions on $x$ and $x'$ are identical, and therefore the max-divergence is 0.
+Consider $x \ne x'$ and assume without loss of generality that $x = \top$ and $x' = \bot$. 
+For shorthand, we let $p$ represent \texttt{prob}, the probability that \texttt{sample\_bernoulli\_float} returns $\top$. 
+Observe that $p = [0.5, 1.0)$ otherwise \texttt{make\_randomized\_response\_bool} raises an error. 
+
+We now consider the max-divergence $D_{\infty}(Y||Y')$ over the random variables $Y = \function(x)$ and $Y' = \function(x')$.
+
+\begin{align*}
+    \max_{x \sim x'} D_{\infty}(Y||Y')
+    =& \max_{x \sim x'} \max_{S \subseteq Supp(Y)}\ln (\frac{\Pr[Y \in S]}{\Pr[Y' \in S]}) \\
+    \le& \max_{x \sim x'} \max_{y \in Supp(Y)}\ln (\frac{\Pr[Y = y]}{\Pr[Y' = y]}) &&\text{Lemma 3.3 } \cite{Kasiviswanathan_2014} \\
+    =& \max_{x \sim x'} \max\left(\ln (\frac{\Pr[Y = \top]}{\Pr[Y' = \top]}), \ln(\frac{\Pr[Y = \bot]}{\Pr[Y' = \bot]})\right) \\
+    =& \max\left(\ln (\frac{p}{1 - p}), \ln(\frac{1 - p}{p})\right) \\
+    =& \ln (\frac{p}{1 - p})
+\end{align*}
+
+We let $c = \texttt{privacy\_map}(\din) = \texttt{QO.inf\_ln(prob.inf\_div(1.neg\_inf\_sub(prob)))}$.
+The computation of \texttt{c} rounds upward in the presence of floating point rounding errors. 
+This is because \texttt{1.neg\_inf\_sub(prob)} appears in the denominator, and to ensure that the bound holds even in the presence of rounding errors, the conservative choice is to round down (so the quantity as a whole is bounded above). 
+Similarly, \texttt{inf\_div} and \texttt{inf\_ln} round up. 
+
+When $\din > 0$ and no exception is raised in computing $\texttt{c} = \texttt{privacy\_map}(\din)$, then $\ln\left(\frac{p}{1 - p}\right) \leq \texttt{c}$. 
+
+Therefore we've shown that for every pair of elements $x, x' \in \{\bot, \top\}$ and every $d_{DM}(x, x') \le \din$ with $\din \ge 0$, 
+if $x, x'$ are $\din$-close then $\function(x),\function(x') \in \{\bot, \top\}$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_measure}$ (the Max-Divergence).
+\end{proof}
+
+
+\bibliographystyle{plain}
+\bibliography{randomized_response.bib}
+
+\end{document}

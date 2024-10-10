@@ -1,0 +1,22 @@
+[package]
+name = "opendp_tooling"
+description = "Tooling for proc-macros and code generation."
+version.workspace = true
+license-file.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+darling = { version = "0.14" }
+serde_json = { version = "1.0" }
+syn = { workspace = true }
+quote = { workspace = true }
+proc-macro2 = { workspace = true }
+regex = { version = "1.9.1" }
+
+[dev-dependencies]
+pretty_assertions = "1.4.0"
