@@ -221,11 +221,7 @@ where
 pub(crate) fn approximate_c_stability<MI: UnboundedMetric, MO: Metric>(
     trans: &Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, MO>,
 ) -> Fallible<MO::Distance> {
-    let margin = trans
-        .input_domain
-        .active_margin()
-        .cloned()
-        .unwrap_or_default();
+    let margin = trans.input_domain.active_margin()?;
 
     let d_in = match margin.public_info {
         // smallest valid dataset distance is 2 in bounded-DP

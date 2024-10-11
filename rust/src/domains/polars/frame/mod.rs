@@ -1,5 +1,6 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::marker::PhantomData;
 
 use polars::lazy::dsl::{col, len};
@@ -226,6 +227,68 @@ impl<F: Frame> FrameDomain<F> {
         self.margins.insert(grouping_columns, margin);
         Ok(self)
     }
+
+    /// # Proof Definition
+    /// Return margin descriptors about `grouping_columns`
+    /// that can be inferred from `self`.
+    ///
+    /// Best effort is made to derive more restrictive descriptors,
+    /// but optimal inference of descriptors is not guaranteed.
+    pub fn get_margin(&self, grouping_columns: BTreeSet<String>) -> Margin {
+        let mut margin = self
+            .margins
+            .get(&grouping_columns)
+            .cloned()
+            .unwrap_or_default();
+        let subset_margins = self
+            .margins
+            .iter()
+            .filter(|(id, _)| id.is_subset(&grouping_columns))
+            .collect::<Vec<(&BTreeSet<String>, &Margin)>>();
+
+        // the max_partition_* descriptors can take the minimum known value from any margin on a subset of the grouping columns
+        margin.max_partition_length = (subset_margins.iter())
+            .map(|(_, m)| m.max_partition_length)
+            .reduce(option_min)
+            .unwrap_or_default();
+
+        margin.max_partition_contributions = (subset_margins.iter())
+            .map(|(_, m)| m.max_partition_contributions)
+            .reduce(option_min)
+            .unwrap_or_default();
+
+        // in the worst case, the max partition length is the product of the max partition lengths of the cover
+        margin.max_num_partitions = find_min_covering(
+            grouping_columns.clone(),
+            self.margins
+                .iter()
+                .filter_map(|(set, m)| Some((set, m.max_num_partitions?)))
+                .collect(),
+        )
+        .map(|cover| cover.values().product());
+
+        // in the worst case, the max partition contributions is the product of the max partition contributions of the cover
+        margin.max_influenced_partitions = find_min_covering(
+            grouping_columns.clone(),
+            self.margins
+                .iter()
+                .filter_map(|(set, m)| Some((set, m.max_influenced_partitions?)))
+                .collect(),
+        )
+        .map(|cover| cover.values().product());
+
+        // if keys or lengths are known about any higher-way marginal,
+        // then the same is known about lower-way marginals
+        margin.public_info = self
+            .margins
+            .iter()
+            .filter(|(id, _)| grouping_columns.is_subset(id))
+            .map(|(_, margin)| margin.public_info)
+            .max()
+            .flatten();
+
+        margin
+    }
 }
 
 impl<F: Frame> Debug for FrameDomain<F> {
@@ -303,13 +366,22 @@ pub struct Margin {
     pub public_info: Option<MarginPub>,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord)]
 /// Denote how margins interact with the metric.
+///
+/// Order of elements in the enum is significant:
+/// variants are ordered by how restrictive they are as descriptors.
 pub enum MarginPub {
     /// The distance between data sets with different margin keys are is infinite.
     Keys,
     /// The distance between data sets with different margin keys or partition lengths is infinite.
     Lengths,
+}
+
+impl PartialOrd for MarginPub {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        (*self as usize).partial_cmp(&(*other as usize))
+    }
 }
 
 impl Margin {
@@ -388,4 +460,48 @@ impl Margin {
             .unwrap_or(l_1)
             .min(l_1)
     }
+}
+
+/// # Proof Definition
+/// Return a subset of `sets` whose intersection is a superset of `must_cover`.
+///
+/// While this algorithm also tries to minimize the number of sets returned,
+/// finding the optimal smallest set of sets is not a requirement to prove correctness of this algorithm.
+/// In fact, finding the optimal subset of sets is computationally infeasible, as the minimal set covering problem is NP-hard.
+///
+/// # Citation
+/// * A Greedy Heuristic for the Set-Covering Problem, V. Chvatal
+fn find_min_covering<T: Hash + Ord>(
+    mut must_cover: BTreeSet<T>,
+    sets: HashMap<&BTreeSet<T>, u32>,
+) -> Option<HashMap<&BTreeSet<T>, u32>> {
+    let mut covered = HashMap::<&BTreeSet<T>, u32>::new();
+    while !must_cover.is_empty() {
+        let (best_set, weight) = sets
+            .iter()
+            .max_by_key(|(set, len)| {
+                (
+                    // choose the set that covers the most uncovered elements
+                    set.intersection(&must_cover).count(),
+                    // of those, prioritize smaller sets
+                    -(set.len() as i32),
+                    // of those, prioritize lower weight
+                    -(**len as i32),
+                )
+            })
+            .and_then(|(&best_set, weight)| {
+                (!best_set.is_disjoint(&must_cover)).then(|| (best_set, *weight))
+            })?;
+
+        must_cover.retain(|x| !best_set.contains(x));
+        covered.insert(best_set, weight);
+    }
+    Some(covered)
+}
+
+/// # Proof Definition
+/// Returns the smaller of `a` or `b` if both are defined,
+/// `a` if defined, `b` if defined, otherwise none.
+fn option_min<T: Ord + Copy>(a: Option<T>, b: Option<T>) -> Option<T> {
+    a.zip(b).map(|(a, b)| std::cmp::min(a, b)).or(a).or(b)
 }
