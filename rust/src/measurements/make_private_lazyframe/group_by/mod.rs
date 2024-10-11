@@ -71,18 +71,13 @@ where
 
     let grouping_columns = match_grouping_columns(keys.clone())?;
 
-    let margin = middle_domain
-        .margins
-        .get(&grouping_columns)
-        .cloned()
-        .unwrap_or_default();
-
     let expr_domain = ExprDomain::new(
         middle_domain.clone(),
         ExprContext::Aggregate {
             grouping_columns: grouping_columns.clone(),
         },
     );
+    let margin = expr_domain.active_margin()?;
 
     let m_exprs = make_basic_composition(
         aggs.into_iter()
