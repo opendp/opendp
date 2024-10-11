@@ -117,7 +117,7 @@ pub struct ExprDomain {
 
 impl ExprDomain {
     /// # Proof Definition
-    /// Returns an expr domain with members matching those of `frame_domain`.
+    /// Returns an [`ExprDomain`] with members matching those of `frame_domain`.
     pub fn new<F: Frame>(frame_domain: FrameDomain<F>, context: ExprContext) -> ExprDomain {
         Self {
             frame_domain: frame_domain.cast_carrier(),
