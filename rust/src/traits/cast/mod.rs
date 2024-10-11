@@ -1,14 +1,16 @@
 use std::convert::TryFrom;
 
 use dashu::{
+    base::Approximation,
     float::{
         round::{
-            mode::{Down, Up},
-            Round,
+            mode::{Down, HalfEven, Up},
+            Round, Rounding,
         },
         FBig,
     },
     integer::{IBig, UBig},
+    rational::RBig,
 };
 use num::{NumCast, One, Zero};
 
@@ -68,6 +70,19 @@ pub trait SaturatingCast<TI>: Sized {
     /// For any `v` of type `TI`, `Self::saturating_cast(v)` either returns `Err(e)`,
     /// or `Ok(out)` where $out = clamp(v, TI::MIN, TI::MAX)$.
     fn saturating_cast(v: TI) -> Self;
+}
+
+/// Casting between floating-point and rational values.
+pub trait CastInternalRational {
+    /// # Proof Definition
+    /// For any [`RBig`] `v`, return `out`, the nearest representable value of type `Self`.
+    /// `out` may saturate to +/- infinity.
+    fn from_rational(v: RBig) -> Self;
+    /// # Proof Definition
+    /// For any `self` of type `Self`, either return
+    /// `Err(e)` if `self` is not finite, or
+    /// `Ok(out)`, where `out` is a [`RBig`] that exactly represents `self`.
+    fn into_rational(self) -> Fallible<RBig>;
 }
 
 macro_rules! cartesian {
@@ -236,20 +251,185 @@ impl ExactIntBounds for f32 {
     const MIN_CONSECUTIVE: Self = -16_777_216.0;
 }
 
+pub(crate) trait NextFloat {
+    // naming has a trailing underscore so as not to conflict with stabilization of the corresponding methods in Rust STD
+    fn next_up_(self) -> Self;
+    fn next_down_(self) -> Self;
+}
+
+impl NextFloat for f64 {
+    /// Returns the least number greater than `self`.
+    ///
+    /// Taken from the unstable Rust compiler implementation.
+    /// https://github.com/rust-lang/rust/blob/eb33b43bab08223fa6b46abacc1e95e859fe375d/library/core/src/num/f64.rs#L763-L810
+    fn next_up_(self) -> Self {
+        // Some targets violate Rust's assumption of IEEE semantics, e.g. by flushing
+        // denormals to zero. This is in general unsound and unsupported, but here
+        // we do our best to still produce the correct result on such targets.
+        const TINY_BITS: u64 = 0x1; // Smallest positive f64.
+        const CLEAR_SIGN_MASK: u64 = 0x7fff_ffff_ffff_ffff;
+
+        let bits = self.to_bits();
+        if self.is_nan() || bits == Self::INFINITY.to_bits() {
+            return self;
+        }
+
+        let abs = bits & CLEAR_SIGN_MASK;
+        let next_bits = if abs == 0 {
+            TINY_BITS
+        } else if bits == abs {
+            bits + 1
+        } else {
+            bits - 1
+        };
+        Self::from_bits(next_bits)
+    }
+
+    /// Returns the greatest number less than `self`.
+    ///
+    /// Taken from the unstable Rust compiler implementation.
+    /// https://github.com/rust-lang/rust/blob/eb33b43bab08223fa6b46abacc1e95e859fe375d/library/core/src/num/f64.rs#L812-L859
+    fn next_down_(self) -> Self {
+        // Some targets violate Rust's assumption of IEEE semantics, e.g. by flushing
+        // denormals to zero. This is in general unsound and unsupported, but here
+        // we do our best to still produce the correct result on such targets.
+        const NEG_TINY_BITS: u64 = 0x8000_0000_0000_0001; // Smallest (in magnitude) negative f64.
+        const CLEAR_SIGN_MASK: u64 = 0x7fff_ffff_ffff_ffff;
+
+        let bits = self.to_bits();
+        if self.is_nan() || bits == Self::NEG_INFINITY.to_bits() {
+            return self;
+        }
+
+        let abs = bits & CLEAR_SIGN_MASK;
+        let next_bits = if abs == 0 {
+            NEG_TINY_BITS
+        } else if bits == abs {
+            bits - 1
+        } else {
+            bits + 1
+        };
+        Self::from_bits(next_bits)
+    }
+}
+impl NextFloat for f32 {
+    /// Returns the least number greater than `self`.
+    ///
+    /// Taken from the unstable Rust compiler implementation.
+    /// https://github.com/rust-lang/rust/blob/eb33b43bab08223fa6b46abacc1e95e859fe375d/library/core/src/num/f32.rs#L750-L797
+    fn next_up_(self) -> Self {
+        // Some targets violate Rust's assumption of IEEE semantics, e.g. by flushing
+        // denormals to zero. This is in general unsound and unsupported, but here
+        // we do our best to still produce the correct result on such targets.
+        const TINY_BITS: u32 = 0x1; // Smallest positive f32.
+        const CLEAR_SIGN_MASK: u32 = 0x7fff_ffff;
+
+        let bits = self.to_bits();
+        if self.is_nan() || bits == Self::INFINITY.to_bits() {
+            return self;
+        }
+
+        let abs = bits & CLEAR_SIGN_MASK;
+        let next_bits = if abs == 0 {
+            TINY_BITS
+        } else if bits == abs {
+            bits + 1
+        } else {
+            bits - 1
+        };
+        Self::from_bits(next_bits)
+    }
+
+    /// Returns the greatest number less than `self`.
+    ///
+    /// Taken from the unstable Rust compiler implementation.
+    /// https://github.com/rust-lang/rust/blob/eb33b43bab08223fa6b46abacc1e95e859fe375d/library/core/src/num/f32.rs#L799-L846
+    fn next_down_(self) -> Self {
+        // Some targets violate Rust's assumption of IEEE semantics, e.g. by flushing
+        // denormals to zero. This is in general unsound and unsupported, but here
+        // we do our best to still produce the correct result on such targets.
+        const NEG_TINY_BITS: u32 = 0x8000_0001; // Smallest (in magnitude) negative f32.
+        const CLEAR_SIGN_MASK: u32 = 0x7fff_ffff;
+
+        let bits = self.to_bits();
+        if self.is_nan() || bits == Self::NEG_INFINITY.to_bits() {
+            return self;
+        }
+
+        let abs = bits & CLEAR_SIGN_MASK;
+        let next_bits = if abs == 0 {
+            NEG_TINY_BITS
+        } else if bits == abs {
+            bits - 1
+        } else {
+            bits + 1
+        };
+        Self::from_bits(next_bits)
+    }
+}
+
+/// Wrapper around Dashu's FBig::to_f32 and FBig::to_f32 that guarantees correct rounding, even in edge cases
+pub trait ToFloatRounded {
+    fn to_f32_rounded(self) -> f32;
+    fn to_f64_rounded(self) -> f64;
+}
+
+impl ToFloatRounded for FBig<Up> {
+    fn to_f32_rounded(self) -> f32 {
+        match self.to_f32() {
+            Approximation::Exact(v) | Approximation::Inexact(v, Rounding::AddOne) => v,
+            Approximation::Inexact(v, Rounding::SubOne)
+            | Approximation::Inexact(v, Rounding::NoOp) => v.next_up_(),
+        }
+    }
+
+    fn to_f64_rounded(self) -> f64 {
+        match self.to_f64() {
+            Approximation::Exact(v) | Approximation::Inexact(v, Rounding::AddOne) => v,
+            Approximation::Inexact(v, Rounding::SubOne)
+            | Approximation::Inexact(v, Rounding::NoOp) => v.next_up_(),
+        }
+    }
+}
+
+impl ToFloatRounded for FBig<Down> {
+    fn to_f32_rounded(self) -> f32 {
+        match self.to_f32() {
+            Approximation::Exact(v) | Approximation::Inexact(v, Rounding::SubOne) => v,
+            Approximation::Inexact(v, Rounding::AddOne)
+            | Approximation::Inexact(v, Rounding::NoOp) => v.next_down_(),
+        }
+    }
+
+    fn to_f64_rounded(self) -> f64 {
+        match self.to_f64() {
+            Approximation::Exact(v) | Approximation::Inexact(v, Rounding::SubOne) => v,
+            Approximation::Inexact(v, Rounding::AddOne)
+            | Approximation::Inexact(v, Rounding::NoOp) => v.next_down_(),
+        }
+    }
+}
+
 /// Convert from an FBig to a native type `Self` with controlled rounding
 trait FromFBig<R: Round> {
     fn from_fbig(value: FBig<R>) -> Self;
 }
 
-impl<R: Round> FromFBig<R> for f32 {
+impl<R: Round> FromFBig<R> for f32
+where
+    FBig<R>: ToFloatRounded,
+{
     fn from_fbig(value: FBig<R>) -> Self {
-        value.to_f32().value()
+        value.to_f32_rounded()
     }
 }
 
-impl<R: Round> FromFBig<R> for f64 {
+impl<R: Round> FromFBig<R> for f64
+where
+    FBig<R>: ToFloatRounded,
+{
     fn from_fbig(value: FBig<R>) -> Self {
-        value.to_f64().value()
+        value.to_f64_rounded()
     }
 }
 
@@ -420,6 +600,42 @@ impl RoundCast<bool> for String {
     }
 }
 
+impl<R: Round> RoundCast<f32> for FBig<R> {
+    fn round_cast(v: f32) -> Fallible<Self> {
+        FBig::try_from(v).map_err(|_| err!(FailedCast, "found NaN"))
+    }
+}
+
+impl<R: Round> RoundCast<f64> for FBig<R> {
+    fn round_cast(v: f64) -> Fallible<Self> {
+        FBig::try_from(v).map_err(|_| err!(FailedCast, "found NaN"))
+    }
+}
+
+impl<R: Round> RoundCast<FBig<R>> for f32 {
+    fn round_cast(v: FBig<R>) -> Fallible<Self> {
+        Ok(v.with_rounding::<HalfEven>().to_f32().value())
+    }
+}
+
+impl<R: Round> RoundCast<FBig<R>> for f64 {
+    fn round_cast(v: FBig<R>) -> Fallible<Self> {
+        Ok(v.with_rounding::<HalfEven>().to_f64().value())
+    }
+}
+
+impl RoundCast<RBig> for f32 {
+    fn round_cast(v: RBig) -> Fallible<Self> {
+        Ok(v.to_f32().value())
+    }
+}
+
+impl RoundCast<RBig> for f64 {
+    fn round_cast(v: RBig) -> Fallible<Self> {
+        Ok(v.to_f64().value())
+    }
+}
+
 impl<R: Round> InfCast<f32> for FBig<R> {
     fn inf_cast(v: f32) -> Fallible<Self> {
         FBig::try_from(v).map_err(|_| err!(FailedCast, "found NaN"))
@@ -442,21 +658,21 @@ impl<R: Round> InfCast<f64> for FBig<R> {
 
 impl<R: Round> InfCast<FBig<R>> for f32 {
     fn inf_cast(v: FBig<R>) -> Fallible<Self> {
-        Ok(v.with_rounding::<Up>().to_f32().value())
+        Ok(v.with_rounding::<Up>().to_f32_rounded())
     }
 
     fn neg_inf_cast(v: FBig<R>) -> Fallible<Self> {
-        Ok(v.with_rounding::<Down>().to_f32().value())
+        Ok(v.with_rounding::<Down>().to_f32_rounded())
     }
 }
 
 impl<R: Round> InfCast<FBig<R>> for f64 {
     fn inf_cast(v: FBig<R>) -> Fallible<Self> {
-        Ok(v.with_rounding::<Up>().to_f64().value())
+        Ok(v.with_rounding::<Up>().to_f64_rounded())
     }
 
     fn neg_inf_cast(v: FBig<R>) -> Fallible<Self> {
-        Ok(v.with_rounding::<Down>().to_f64().value())
+        Ok(v.with_rounding::<Down>().to_f64_rounded())
     }
 }
 
@@ -483,3 +699,41 @@ macro_rules! impl_saturating_cast_ibig_uint {
     )+}
 }
 impl_saturating_cast_ibig_uint! {i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize}
+
+macro_rules! impl_cast_internal_rational_float {
+    ($ty:ty, $method:ident) => {
+        impl CastInternalRational for $ty {
+            fn from_rational(v: RBig) -> Self {
+                v.$method().value()
+            }
+            fn into_rational(self) -> Fallible<RBig> {
+                RBig::try_from(self).map_err(|_| {
+                    err!(
+                        FailedFunction,
+                        "{} must be representable as a fraction",
+                        self
+                    )
+                })
+            }
+        }
+    };
+}
+
+impl_cast_internal_rational_float!(f32, to_f32);
+impl_cast_internal_rational_float!(f64, to_f64);
+
+macro_rules! impl_cast_internal_rational_int {
+    ($($ty:ty)+) => {
+        $(impl CastInternalRational for $ty {
+            fn from_rational(v: RBig) -> Self {
+                <$ty>::try_from(v.round())
+                    .unwrap_or_else(|_| if v > RBig::ZERO { <$ty>::MAX } else { <$ty>::MIN })
+            }
+            fn into_rational(self) -> Fallible<RBig> {
+                Ok(RBig::from(self))
+            }
+        })+
+    };
+}
+
+impl_cast_internal_rational_int!(u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize);

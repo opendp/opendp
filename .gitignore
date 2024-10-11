@@ -105,6 +105,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.venv-*
 env/
 venv/
 ENV/
@@ -197,6 +198,8 @@ Cargo.lock
 /python/docs_temp/
 /python/opendp
 
+sample_FR_LFS.csv
+__MACOSX/
 out/
 
 /python/src/opendp/rust/

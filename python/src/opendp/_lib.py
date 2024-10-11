@@ -26,14 +26,22 @@ def _load_library():
         lib_dir = Path(__file__).parent / ".." / ".." / ".." / 'rust' / 'target' / build_dir  # pragma: no cover
 
     if lib_dir.exists():
-        lib_dir_file_names = [p for p in lib_dir.iterdir() if p.suffix in {".so", ".dylib", ".dll", ".pyd"}]
+        from importlib.machinery import EXTENSION_SUFFIXES
+        suffixes = EXTENSION_SUFFIXES + [".dylib"]
+
+        lib_dir_file_names = [
+            str(p.name) for p in lib_dir.iterdir() 
+            if "opendp" in p.name and "derive" not in p.name
+            and any(p.name.endswith(suffix) for suffix in suffixes)
+        ]
+        
         if len(lib_dir_file_names) != 1:
-            raise Exception(f"Expected exactly one binary to be present. Got: {lib_dir_file_names}")
+            raise Exception(f"Expected exactly one binary to be present in {lib_dir}. Got: {lib_dir_file_names}")
         
         lib_path = lib_dir / lib_dir_file_names[0]
         try:
             return ctypes.cdll.LoadLibrary(str(lib_path)), lib_path
-        except Exception as e:
+        except Exception as e: # pragma: no cover
             raise Exception("Unable to load OpenDP shared library", lib_path, e)
 
     elif os.environ.get('OPENDP_HEADLESS', "false") != "false":
@@ -57,7 +65,7 @@ def import_optional_dependency(name, raise_error=True):
     '''
     try:
         return importlib.import_module(name)
-    except ImportError:
+    except ImportError: # pragma: no cover
         if raise_error:
             root_name = name.split(".")[0]
             install_name = install_names.get(root_name) or root_name
@@ -152,7 +160,7 @@ class AnyObjectPtr(ctypes.POINTER(AnyObject)): # type: ignore[misc]
         try:
             from opendp._data import object_free
             object_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
@@ -210,7 +218,7 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
         try:
             from opendp._data import extrinsic_object_free
             extrinsic_object_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -271,16 +279,15 @@ def proven(function):
         source_dir = os.path.dirname(inspect.getfile(function))
         absolute_proof_path = os.path.abspath(os.path.join(source_dir, matched_path))
 
-
-        # split the path at the extrinsics directory
-        extrinsics_path = os.path.join(os.path.dirname(__file__), "_extrinsics")
-        relative_proof_path = os.path.relpath(absolute_proof_path, extrinsics_path)
+        # split the path at the extras directory
+        extras_path = os.path.join(os.path.dirname(__file__), "extras")
+        relative_proof_path = os.path.relpath(absolute_proof_path, extras_path)
 
         # create the link
         proof_url = make_proof_link(
-            extrinsics_path,
+            extras_path,
             relative_path=relative_proof_path,
-            repo_path="python/src/opendp/_extrinsics",
+            repo_path="python/src/opendp/extras",
         )
 
         # replace the path with the link
@@ -326,7 +333,7 @@ def get_opendp_version():
 
     try:
         return unmangle_py_version(importlib.metadata.version("opendp"))
-    except importlib.metadata.PackageNotFoundError:
+    except importlib.metadata.PackageNotFoundError: # pragma: no cover
         return get_opendp_version_from_file()
 
 

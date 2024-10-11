@@ -8,7 +8,9 @@ use crate::traits::{
     ProductOrd,
 };
 use crate::transformations::traits::UnboundedMetric;
-use crate::transformations::{CanFloatSumOverflow, CanIntSumOverflow, Sequential, SumRelaxation};
+use crate::transformations::{
+    can_int_sum_overflow, CanFloatSumOverflow, Sequential, SumRelaxation,
+};
 use num::Zero;
 use polars::prelude::*;
 use std::collections::HashMap;
@@ -125,6 +127,11 @@ where
         _ => TI::Sum::inf_cast(*d_in)?.inf_mul(&l.alerting_abs()?.total_max(u)?),
     };
 
+    // 'mnp_check: this invariant is used later
+    if !pp_relaxation.is_zero() && !MI::ORDERED && margin.max_num_partitions.is_none() {
+        return fallible!(MakeTransformation, "max_num_partitions must be known when the metric is not sensitive to ordering (SymmetricDistance)");
+    }
+
     Ok(StabilityMap::new_fallible(
         move |(l0, l1, l_inf): &(IntDistance, IntDistance, IntDistance)| {
             // max changed partitions
@@ -133,8 +140,9 @@ where
             } else if MI::ORDERED {
                 (*l0).min(margin.max_num_partitions.unwrap_or(*l0))
             } else {
-                margin.max_num_partitions
-                    .ok_or_else(|| err!(FailedFunction, "max_num_partitions must be known when the metric is not sensitive to ordering (SymmetricDistance)"))?
+                margin
+                    .max_num_partitions
+                    .expect("not none due to 'mnp_check above")
             };
 
             let mcp_p = norm_map(f64::from(mcp))?;
@@ -182,7 +190,7 @@ macro_rules! impl_accumulator_for_float {
     ($t:ty) => {
         impl Accumulator for $t {
             fn relaxation(size_limit: usize, lower: Self, upper: Self) -> Fallible<Self> {
-                if Sequential::<$t>::float_sum_can_overflow(size_limit, (lower, upper))? {
+                if Sequential::<$t>::can_float_sum_overflow(size_limit, (lower, upper))? {
                     return fallible!(
                         MakeTransformation,
                         "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds."
@@ -201,7 +209,7 @@ macro_rules! impl_accumulator_for_int {
     ($($t:ty)+) => {
         $(impl Accumulator for $t {
             fn relaxation(size_limit: usize, lower: Self, upper: Self) -> Fallible<Self> {
-                if <$t>::int_sum_can_overflow(size_limit, (lower, upper))? {
+                if can_int_sum_overflow(size_limit, (lower, upper)) {
                     return fallible!(
                         MakeTransformation,
                         "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds or by using a data type with greater bit-depth."

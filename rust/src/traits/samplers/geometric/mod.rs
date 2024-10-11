@@ -1,6 +1,7 @@
 use std::ops::{AddAssign, SubAssign};
 
 use num::{One, Zero};
+use opendp_derive::proven;
 
 use crate::{
     error::Fallible,
@@ -8,6 +9,9 @@ use crate::{
 };
 
 use super::{fill_bytes, sample_bernoulli_float, sample_standard_bernoulli};
+
+#[cfg(test)]
+mod test;
 
 /// Sample from the censored geometric distribution.
 ///
@@ -187,6 +191,7 @@ where
     }
 }
 
+#[proven]
 /// Sample from a specific discrete/geometric distribution.
 ///
 /// # Proof Definition
@@ -230,6 +235,3 @@ pub(super) fn sample_geometric_buffer(
         None
     })
 }
-
-#[cfg(test)]
-mod test;

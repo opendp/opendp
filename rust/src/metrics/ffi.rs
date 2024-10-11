@@ -261,6 +261,13 @@ impl Metric for UserDistance {
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the metric.
+///
+/// # Why honest-but-curious?
+/// Your definition of `d` must satisfy the requirements of a pseudo-metric:
+/// 1. for any $x$, $d(x, x) = 0$
+/// 2. for any $x, y$, $d(x, y) \ge 0$ (non-negativity)
+/// 3. for any $x, y$, $d(x, y) = d(y, x)$ (symmetry)
+/// 4. for any $x, y, z$, $d(x, z) \le d(x, y) + d(y, z)$ (triangle inequality)
 #[no_mangle]
 pub extern "C" fn opendp_metrics__user_distance(
     descriptor: *mut c_char,
@@ -277,7 +284,12 @@ pub struct TypedMetric<Q> {
 impl<Q: 'static> TypedMetric<Q> {
     pub fn new(metric: AnyMetric) -> Fallible<TypedMetric<Q>> {
         if metric.distance_type != Type::of::<Q>() {
-            return fallible!(FFI, "unexpected distance type");
+            return fallible!(
+                FFI,
+                "unexpected distance type in metric. Expected {}, got {}",
+                Type::of::<Q>().to_string(),
+                metric.distance_type.to_string()
+            );
         }
 
         Ok(TypedMetric {

@@ -7,10 +7,8 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
-    traits::{Number, SaturatingAdd},
+    traits::{Integer, SaturatingAdd},
 };
-
-use super::AddIsExact;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -72,7 +70,7 @@ pub fn make_bounded_int_split_sum<T>(
     >,
 >
 where
-    T: Number + SplitSatSum + AddIsExact,
+    T: Integer + SplitSatSum,
 {
     let (lower, upper) = bounds.clone();
 
@@ -114,7 +112,7 @@ pub fn make_sized_bounded_int_split_sum<T>(
     >,
 >
 where
-    T: Number + SplitSatSum + AddIsExact,
+    T: Integer + SplitSatSum,
 {
     let (lower, upper) = bounds.clone();
     let range = upper.inf_sub(&lower)?;

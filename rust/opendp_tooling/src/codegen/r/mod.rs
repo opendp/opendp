@@ -9,7 +9,7 @@ use self::{
 };
 
 mod c;
-mod r;
+pub(crate) mod r;
 
 // some functions are called directly by R's C layer instead of through the codegen
 const BLACKLIST: &'static [&'static str] = &[
@@ -33,16 +33,19 @@ const BLACKLIST: &'static [&'static str] = &[
     "object_free",
     "extrinsic_object_free",
     "fill_bytes",
+    "erfc",
     // plugins
     "make_user_transformation",
     "make_user_measurement",
     "new_function",
     "new_queryable",
+    "new_privacy_profile",
     "user_domain",
     "_user_domain_descriptor",
     // polars
     "new_arrow_array",
     "series_domain",
+    "categorical_domain",
     "arrow_array_free",
     "dataframe_domain",
     "lazyframe_domain",
@@ -55,7 +58,7 @@ const BLACKLIST: &'static [&'static str] = &[
     "make_private_expr",
     "onceframe_collect",
     "onceframe_lazy",
-    "describe_polars_measurement_accuracy",
+    "summarize_polars_measurement",
 ];
 
 /// Top-level function to generate R bindings, including all modules.

@@ -8,8 +8,8 @@ use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util::Type;
-use crate::measures::{FixedSmoothedMaxDivergence, MaxDivergence};
-use crate::traits::{CheckAtom, ExactIntCast, InfDiv, InfExpM1, InfLn1P, InfMul, ProductOrd};
+use crate::measures::{Approximate, MaxDivergence};
+use crate::traits::{CheckAtom, ProductOrd};
 
 impl AmplifiableMeasure for AnyMeasure {
     fn amplify(
@@ -18,33 +18,23 @@ impl AmplifiableMeasure for AnyMeasure {
         population_size: usize,
         sample_size: usize,
     ) -> Fallible<AnyObject> {
-        fn monomorphize1<
-            QO: 'static + ExactIntCast<usize> + InfMul + InfExpM1 + InfLn1P + InfDiv + Clone,
-        >(
+        fn monomorphize<M: 'static + AmplifiableMeasure>(
             measure: &AnyMeasure,
             budget: &AnyObject,
             population_size: usize,
             sample_size: usize,
         ) -> Fallible<AnyObject> {
-            fn monomorphize2<M: 'static + AmplifiableMeasure>(
-                measure: &AnyMeasure,
-                budget: &AnyObject,
-                population_size: usize,
-                sample_size: usize,
-            ) -> Fallible<AnyObject> {
-                let measure = measure.downcast_ref::<M>()?;
-                let budget = budget.downcast_ref::<M::Distance>()?;
-                measure
-                    .amplify(budget, population_size, sample_size)
-                    .map(AnyObject::new)
-            }
-            let measure_type = Type::of_id(&measure.measure.value.type_id())?;
-            dispatch!(monomorphize2, [
-                (measure_type, [MaxDivergence<QO>, FixedSmoothedMaxDivergence<QO>])
-            ], (measure, budget, population_size, sample_size))
+            let measure = measure.downcast_ref::<M>()?;
+            let budget = budget.downcast_ref::<M::Distance>()?;
+            measure
+                .amplify(budget, population_size, sample_size)
+                .map(AnyObject::new)
         }
-
-        dispatch!(monomorphize1, [(self.distance_type, @floats)], (self, budget, population_size, sample_size))
+        dispatch!(
+            monomorphize,
+            [(self.type_, [MaxDivergence, Approximate<MaxDivergence>])],
+            (self, budget, population_size, sample_size)
+        )
     }
 }
 
@@ -95,12 +85,12 @@ impl IsSizedDomain for AnyDomain {
 ///
 /// The DIA, DO, MI and MO between the input measurement and amplified output measurement all match.
 ///
-/// Protected by the "honest-but-curious" feature flag
-/// because a dishonest adversary could set the population size to be arbitrarily large.
-///
 /// # Arguments
 /// * `measurement` - the computation to amplify
 /// * `population_size` - the size of the population from which the input dataset is a simple sample
+///
+/// # Why honest-but-curious?
+/// The privacy guarantees are only valid if the input dataset is a simple sample from a population with `population_size` records.
 fn make_population_amplification(
     measurement: &AnyMeasurement,
     population_size: usize,

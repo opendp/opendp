@@ -64,7 +64,7 @@ fn make_sequential_composition(
 
     dispatch!(monomorphize, [
         (QI, @numbers),
-        (QO, [f32, f64, (f32, f32), (f64, f64)])
+        (QO, [f64, (f64, f64)])
     ], (input_domain, input_metric, output_measure, d_in, d_mids))
 }
 

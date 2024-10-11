@@ -34,10 +34,19 @@ where
     (S::Item, S::Item): CheckAtom,
 {
     if size == 0 {
-        return fallible!(MakeTransformation, "size must be greater than zero");
+        return fallible!(
+            MakeTransformation,
+            "size ({}) must be greater than zero",
+            size
+        );
     }
     if ddof >= size {
-        return fallible!(MakeTransformation, "size - ddof must be greater than zero");
+        return fallible!(
+            MakeTransformation,
+            "size - ddof must be greater than zero. Size is {}, ddof is {}",
+            size,
+            ddof
+        );
     }
     let _size = S::Item::exact_int_cast(size)?;
     let _ddof = S::Item::exact_int_cast(ddof)?;

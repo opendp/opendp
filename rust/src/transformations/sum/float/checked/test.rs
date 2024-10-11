@@ -53,15 +53,15 @@ fn test_float_sum_overflows_sequential() -> Fallible<()> {
     let largest_size = usize::MAX;
 
     // should barely fail first check and significantly fail second check
-    let can_of = Sequential::<f64>::float_sum_can_overflow(largest_size, (0., ulp_max / 2.))?;
+    let can_of = Sequential::<f64>::can_float_sum_overflow(largest_size, (0., ulp_max / 2.))?;
     assert!(can_of);
 
     // should barely pass first check
-    let can_of = Sequential::<f64>::float_sum_can_overflow(largest_size, (0., ulp_max / 4.))?;
+    let can_of = Sequential::<f64>::can_float_sum_overflow(largest_size, (0., ulp_max / 4.))?;
     assert!(!can_of);
 
     // should barely fail first check and significantly pass second check
-    let can_of = Sequential::<f64>::float_sum_can_overflow(10, (0., ulp_max / 2.))?;
+    let can_of = Sequential::<f64>::can_float_sum_overflow(10, (0., ulp_max / 2.))?;
     assert!(!can_of);
     Ok(())
 }
@@ -73,18 +73,18 @@ fn test_float_sum_overflows_pairwise() -> Fallible<()> {
     let largest_size = usize::MAX;
 
     // should fail both checks
-    let can_of = Pairwise::<f64>::float_sum_can_overflow(largest_size, (0., ulp_max / 2.))?;
+    let can_of = Pairwise::<f64>::can_float_sum_overflow(largest_size, (0., ulp_max / 2.))?;
     assert!(can_of);
 
     // should barely fail first check and pass second check
-    let can_of = Pairwise::<f64>::float_sum_can_overflow(
+    let can_of = Pairwise::<f64>::can_float_sum_overflow(
         largest_size,
         (0., ulp_max / (largest_size as f64)),
     )?;
     assert!(!can_of);
 
     // should barely pass first check
-    let can_of = Pairwise::<f64>::float_sum_can_overflow(
+    let can_of = Pairwise::<f64>::can_float_sum_overflow(
         largest_size,
         (0., ulp_max / (largest_size as f64) / 2.),
     )?;
@@ -92,7 +92,7 @@ fn test_float_sum_overflows_pairwise() -> Fallible<()> {
 
     // should barely fail first check and significantly pass second check
     let can_of =
-        Pairwise::<f64>::float_sum_can_overflow(10, (0., ulp_max / (largest_size as f64)))?;
+        Pairwise::<f64>::can_float_sum_overflow(10, (0., ulp_max / (largest_size as f64)))?;
     assert!(!can_of);
     Ok(())
 }

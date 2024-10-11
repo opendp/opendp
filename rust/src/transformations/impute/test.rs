@@ -7,12 +7,13 @@ fn test_impute_uniform() -> Fallible<()> {
     let imputer = make_impute_uniform_float(
         VectorDomain::new(AtomDomain::default()),
         SymmetricDistance::default(),
-        (2.0, 2.0),
+        (2.0, 3.0),
     )?;
 
     let result = imputer.invoke(&vec![1.0, f64::NAN])?;
 
-    assert_eq!(result, vec![1., 2.]);
+    assert_eq!(result[0], 1.);
+    assert!((2.0..3.0).contains(&result[1]));
     assert!(imputer.check(&1, &1)?);
     Ok(())
 }

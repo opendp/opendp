@@ -2,7 +2,6 @@ import pytest
 import logging
 import opendp.prelude as dp
 
-dp.enable_features("contrib")
 
 
 def test_unit_of():
@@ -28,23 +27,27 @@ def test_unit_of():
 
 
 def test_privacy_loss_of():
-    assert dp.loss_of(epsilon=3.0) == (dp.max_divergence(T=float), 3.0)
-    assert dp.loss_of(rho=2.0) == (dp.zero_concentrated_divergence(T=float), 2.0)
+    assert dp.loss_of(epsilon=3) == (dp.max_divergence(), 3.0)
+    assert dp.loss_of(rho=2.0) == (dp.zero_concentrated_divergence(), 2.0)
     assert dp.loss_of(epsilon=2.0, delta=1e-6) == (
-        dp.fixed_smoothed_max_divergence(T=float),
+        dp.approximate(dp.max_divergence()),
         (2.0, 1e-6),
+    )
+    assert dp.loss_of(rho=0.5, delta=1e-7) == (
+        dp.approximate(dp.zero_concentrated_divergence()),
+        (0.5, 1e-7),
     )
 
 
 def test_loss_of_logging(caplog):
     with caplog.at_level(logging.INFO):
-        dp.loss_of(epsilon=100)
+        dp.loss_of(epsilon=100.)
         assert caplog.record_tuples == [
             ('opendp.context', logging.WARN, 'epsilon should be less than or equal to 5, and is typically less than or equal to 1')
         ]
         caplog.clear()
 
-        dp.loss_of(epsilon=2, delta=1e-5)
+        dp.loss_of(epsilon=2., delta=1e-5)
         assert caplog.record_tuples == [
             ('opendp.context', logging.INFO, 'epsilon is typically less than or equal to 1'),
             ('opendp.context', logging.WARN, 'delta should be less than or equal to 1e-06')
@@ -75,7 +78,7 @@ def test_context_repr():
     accountant = Measurement(
         input_domain   = VectorDomain(AtomDomain(T=i32)),
         input_metric   = SymmetricDistance(),
-        output_measure = MaxDivergence(f64)),
+        output_measure = MaxDivergence),
     d_in       = 3,
     d_mids     = [3.0])'''
 
@@ -94,7 +97,7 @@ def test_context_init_split_evenly_over():
     context = dp.Context.compositor(
         data=[1, 2, 3],
         privacy_unit=dp.unit_of(contributions=3),
-        privacy_loss=dp.loss_of(epsilon=3.0),
+        privacy_loss=dp.loss_of(epsilon=3),
         split_evenly_over=3,
         domain=dp.domain_of(list[int]),
     )
@@ -133,14 +136,14 @@ def test_query_repr():
     )
     assert repr(context.query()) == '''Query(
     chain          = (VectorDomain(AtomDomain(T=i32)), SymmetricDistance()),
-    output_measure = MaxDivergence(f64),
+    output_measure = MaxDivergence,
     d_in           = 1,
     d_out          = 1.0,
     context        = Context(
         accountant = Measurement(
             input_domain   = VectorDomain(AtomDomain(T=i32)),
             input_metric   = SymmetricDistance(),
-            output_measure = MaxDivergence(f64)),
+            output_measure = MaxDivergence),
         d_in       = 1,
         d_mids     = [1.0]))'''
 
@@ -205,7 +208,7 @@ def test_sc_query():
     # build a child sequential compositor in zCDP, and then use it to release some gaussian queries
     sub_context_2 = context.query().compositor(  # type: ignore[attr-defined]
         split_evenly_over=2, 
-        output_measure=dp.zero_concentrated_divergence(T=float)
+        output_measure=dp.zero_concentrated_divergence()
     ).release()
     dp_sum_2 = sub_context_2.query().clamp((1, 10)).sum().gaussian()
     # with partials, fusing, and measure convention, would shorten to
@@ -236,6 +239,30 @@ def test_rho_to_eps():
     dp_sum = context.query().clamp((1, 10)).sum().laplace()  # type: ignore
 
     print(dp_sum.release())
+
+
+def test_approx_to_approx_zCDP():
+    context = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-6),
+        split_evenly_over=1,
+    )
+
+    azcdp_measure = dp.approximate(dp.zero_concentrated_divergence())
+    context_azcdp = context.query().compositor(3, output_measure=azcdp_measure, alpha=0.3).release()
+
+    dom, met = context_azcdp.accountant.input_space
+    # the important test is that the following is a valid query for an approx-zCDP compositor
+    release = context_azcdp(dp.m.make_user_measurement(
+        dom, met,
+        azcdp_measure,
+        lambda x: x,
+        # remaining rho, and catastrophic delta
+        lambda _: (.006, 1e-6 * .3 / 3)
+    ))
+
+    assert release == [1, 2, 3]
 
 
 def test_transformation_release_error():

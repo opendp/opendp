@@ -1,0 +1,192 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+
+\title{\texttt{fn cdp\_delta}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+Proves soundness of \texttt{fn cdp\_delta} in \asOfCommit{cdp_delta.rs}{0b8f4222}.
+This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.2.3}{subsection 2.3} of \cite{CKS20}.
+\section{Bound Derivation}
+
+\begin{definition}
+\label{plrv}
+(Privacy Loss Random Variable). 
+Let $M: \mathcal{X}^n \rightarrow \mathbb{Y}$ be a randomized algorithm.
+Let $x, x' \in \mathcal{X}^n$ be neighboring inputs.
+Define $f: \mathcal{Y} \rightarrow \mathbb{R}$ by $f(y) = log \left( \frac{\mathbb{P}[M(x)=y]}{\mathbb{P}[M(x')=y]} \right)$.
+Let $Z = f(M(x))$, the privacy loss random variable, denoted $Z \leftarrow PrivLoss(M(x) || M(x'))$.
+\end{definition}
+
+\begin{lemma}
+\label{delta-bound}
+\cite{CKS20} Let $\epsilon, \delta \geq 0$. Let M: $\mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm. Then M satisfies $(\epsilon, \delta)$-differential privacy if and only if
+
+\begin{align}
+    \delta &\geq \underset{Z \leftarrow PrivLoss(M(x)|| M(x'))}{\mathbb{E}} [max(0, 1 - e^{\epsilon - Z})] \\
+    % &= \underset{Z \leftarrow PrivLoss(M(x)|| M(x'))}{\mathbb{P}} [Z > \epsilon] - e^\epsilon \underset{Z' \leftarrow PrivLoss(M(x')|| M(x))}{\mathbb{P}} [-Z' > \epsilon] \\
+    % &= \int_\epsilon^\infty e^{\epsilon - z} \underset{Z \leftarrow PrivLoss(M(x)|| M(x'))}{\mathbb{P}} [Z > z]dz
+\end{align}
+for all $x, x' \in \mathcal{X}^n$ differing on a single element.
+
+\begin{proof}
+Fix neighboring inputs $x, x' \in \mathcal{X}^n$. 
+Let $f: \mathcal{Y} \rightarrow \mathbb{R}$ be as in \ref{plrv}.
+For notational simplicity, let $Y = M(x)$, $Y' = M(x')$, $Z = f(Y)$ and $Z' = -f(Y')$.
+This is equivalent to $Z \leftarrow PrivLoss(M(x) || M(x'))$.
+Our first goal is to prove that
+
+\begin{equation}
+    \sup\limits_{E \subset \mathcal{Y}} \mathbb{P}[Y \in E] - e^\epsilon \mathbb{P}[Y' \in E] = \mathbb{E}[max\{0, 1 - e^{\epsilon - Z}\}].
+\end{equation}
+
+For any $E \subset \mathcal{Y}$, we have
+\begin{equation}
+    \mathbb{P}[Y' \in E] = \mathbb{E}[\mathbb{I}[Y' \in E]] = \mathbb{E}[\mathbb{I}[Y \in E] e^{-f(Y)}].
+\end{equation}
+This is because $e^{-f(y)} = \frac{\mathbb{P}[Y=y]}{\mathbb{P}[Y'=y]}$.
+
+Thus, for all $E \subset \mathcal{Y}$, we have 
+\begin{equation}
+    \mathbb{P}[Y \in E] - e^\epsilon \mathbb{P}[Y' \in E] = \mathbb{E} \left[ \mathbb{I}[Y \in E] (1 - e^{\epsilon - f(Y)}) \right]
+\end{equation}
+
+Now it is easy to identify the worst event as $E = \{y \in \mathcal{Y} : 1 - e^{\epsilon - f(y)} > 0\}$. Thus
+\begin{equation}
+    \sup\limits_{E \subset Y} \mathbb{P}[Y \in E] - e^{\epsilon} \mathbb{P}[Y' \in E] = \mathbb{E} \left[ \mathbb{I}[1 - e^{\epsilon - f(Y)} > 0] (1 - e^{\epsilon - f(Y)}) \right] = \mathbb{E}[max\{ 0, 1 - e^{\epsilon - Z} \}]
+\end{equation}
+
+% Alternatively, since the worst event is equivalently $E = \{y \in \mathcal{Y} : f(y) > \epsilon \}$, we have
+
+% \begin{equation}
+%     \sup\limits_{E \subset Y} \mathbb{P}[Y \in E] - e^{\epsilon} \mathbb{P}[Y' \in E] =
+%     \mathbb{P} [f(Y) > \epsilon] - e^\epsilon \mathbb{P} [f(Y') > \epsilon] =
+%     \mathbb{P} [Z > \epsilon] - e^\epsilon \mathbb{P}[-Z' > \epsilon]
+% \end{equation}
+
+% It only remains to show that
+% \begin{equation}
+%     \mathbb{E} [max \{0, 1 - e^{\epsilon - Z}\}] = \int_\epsilon^\infty e^{\epsilon - z} \mathbb{P}[Z > z] dz.
+% \end{equation}
+
+% This follows from integration by parts: Let $u(z) = \mathbb{P}[Z > z]$ and $v(z) = 1 - e^{\epsilon - z}$ and $w(z) = u(z)v(z)$. Then
+% \begin{align}
+%     \mathbb{E}[max\{ 0, 1 - e^{\epsilon - Z} \}] &= \int_\epsilon^\infty v(z) u'(z) dz = \int_\epsilon^\infty (w'(z) - v'(z) u(z)) dz
+%     &= \lim\limits_{z \rightarrow \infty} w(z) - w(\epsilon) + \int_\epsilon^\infty e^{\epsilon - z} \mathbb{P} [Z > z] dz
+% \end{align}
+
+% Now $w(\epsilon) = u(\epsilon) (1 - e^{\epsilon - \epsilon} = 0$ and $0 \leq \lim_{z \rightarrow \infty} w(z) \leq \lim_{z \rightarrow \infty} \mathbb{P}[Z > z] = 0$, as required.
+
+\end{proof}
+
+\end{lemma}
+
+\begin{theorem}
+\label{renyidp-approxdp-delta}
+\cite{CKS20} Let $M: \mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm. Let $\alpha \in (1, \infty)$ and $\epsilon \geq 0$. Suppose $D_\alpha(M(x) || M(x')) \leq \tau$ for all $x, x' \in \mathcal{X}^n$ differing in a single entry.\footnote{This is the definition of $(\alpha, \tau)$-R\'enyi differential privacy.} Then M is $(\epsilon, \delta)$-differentially private for 
+
+\begin{equation}
+    \delta = \frac{e^{(\alpha - 1) (\tau - \epsilon)}}{\alpha - 1} \left(1 - \frac{1}{\alpha}\right)^\alpha
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Fix neighboring $x, x' \in  \mathcal{X}^n$ and let $Z \leftarrow PrivLoss(M(x) || M(x'))$. We have
+\begin{equation}
+    \mathbb{E}[e^{(\alpha - 1) Z}] = e^{(\alpha - 1)D_\alpha(M(x) || M(x'))} \leq e^{(\alpha - 1)\tau}
+\end{equation}
+
+By \ref{delta-bound}, our goal is to prove that $\delta \geq \mathbb{E}[max\{0, 1 - e^{\epsilon - Z} \}]$. 
+Our approach is to pick $c > 0$ such that $max\{0, 1 - e^{\epsilon - Z} \} \leq c e^{(\alpha - 1) z}$ for all $z \in \mathbb{R}$. Then
+\begin{equation}
+    \mathbb{E}[max\{0, 1 - e^{\epsilon - Z} \}] \leq \mathbb{E}[c e^{(\alpha - 1) z}] \leq c e^{(\alpha - 1) \tau}.
+\end{equation}
+
+We identify the smallest possible value of $c$:
+\begin{equation}
+    c = \sup\limits_{z \in \mathbb{R}} \frac{max\{0, 1 - e^{\epsilon - z} \}}{e^{(\alpha -1)z}} 
+    = \sup\limits_{z \in \mathbb{R}} e^{z - \alpha z} - e^{\epsilon - \alpha z} 
+    = \sup\limits_{z \in \mathbb{R}}f(z)
+\end{equation}
+where $f(z) = e^{z - \alpha z} - e^{\epsilon - \alpha z}$. We have 
+
+\begin{equation}
+    f'(z) = e^{z - \alpha z} (1 - \alpha) - e^{\epsilon - \alpha z}(-\alpha) 
+    = e^{-\alpha z} (\alpha e^\epsilon - (\alpha - 1) e^z)
+\end{equation}
+
+Clearly $f'(z) = 0 \Longleftrightarrow e^z = \frac{\alpha}{\alpha - 1}e^{\epsilon} \Longleftrightarrow z = \epsilon - log(1 - 1/\alpha)$. Thus
+\begin{align}
+    c &= f(\epsilon - log(1 - 1 / \alpha)) \\
+    &= \left(\frac{\alpha}{\alpha - 1} e^\epsilon \right)^{1 - \alpha} - e^{\epsilon} \left(\frac{\alpha}{\alpha - 1} e^\epsilon \right)^{- \alpha} \\
+    &= \left(\frac{\alpha}{\alpha - 1} e^\epsilon  - e^\epsilon \right)  \left(\frac{\alpha}{\alpha - 1} e^{-\epsilon} \right)^{\alpha} \\
+    &= \frac{e^\epsilon}{\alpha - 1} \left(1 - \frac{1}{\alpha} \right)^\alpha  e^{-\alpha \epsilon}.
+\end{align}
+
+Thus
+\begin{equation}
+    \mathbb{E}[max\{0, 1 - e^{\epsilon - Z}\}] \leq \frac{e^\epsilon}{\alpha - 1}\left(1  - \frac{1}{\alpha} \right) ^\alpha e^{-\alpha \epsilon} e^{(\alpha -1)\tau}
+    = \frac{e^{(\alpha - 1)(\tau - \epsilon)}}{\alpha - 1} \left( 1 - \frac{1}{\alpha} \right)^\alpha
+    = \delta
+\end{equation}
+
+\end{proof}
+
+\begin{corollary}
+\label{renyidp-approxdp-epsilon}
+\cite{CKS20} Let $M: \mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm. Let $\alpha \in (1, \infty)$ and $\epsilon \geq 0$. Suppose $D_\alpha(M(x) || M(x')) \leq \tau$ for all $x, x' \in \mathcal{X}^n$ differing in a single entry. Then M is $(\epsilon, \delta)$-differentially private for 
+
+\begin{equation}
+    \epsilon = \tau + \frac{\ln(1 / \delta) + (\alpha - 1) \ln(1 - 1/\alpha) - \ln(\alpha)}{\alpha - 1}
+\end{equation}
+\end{corollary}
+
+\begin{proof}
+This follows by rearranging \ref{renyidp-approxdp-delta}.
+\end{proof}
+
+\begin{corollary}
+\label{zcdp-approxdp-epsilon}
+Let $M: \mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm satisfying $\rho$-concentrated differential privacy. Then M is $(\epsilon, \delta)$-differentially private for any $0 < \delta \leq 1$ and 
+\begin{equation}
+    \epsilon = \inf\limits_{\alpha \in (1, \infty)} \alpha \rho + \frac{\ln(1 / \delta) + (\alpha - 1) \ln(1 - 1/\alpha) - \ln(\alpha)}{\alpha - 1}
+\end{equation}
+\end{corollary}
+
+\begin{proof}
+This follows from \ref{renyidp-approxdp-epsilon} by taking the infimum over all divergence parameters $\alpha$.
+\end{proof}
+
+\section{Pseudocode}
+\subsubsection*{Precondition}
+None.
+
+\subsubsection*{Implementation}
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/cdp_delta.py}
+
+
+\subsubsection*{Postcondition}
+
+\begin{theorem}
+    For any possible setting of $\rho$ and $\epsilon$, $\texttt{cdp\_delta}$ either returns an error, 
+    or a $\delta$ such that any $\rho$-differentially private measurement is also $(\epsilon, \delta)$-differentially private.
+\end{theorem}
+
+\section{Proof}
+
+\begin{proof}
+The code always finds an $\alpha_{*} \approx \texttt{a\_max} \geq 1.01$.
+Since $\texttt{a\_max} \in (1, \infty)$, then by \ref{renyidp-approxdp-epsilon}, any $\rho$-differentially private measurement is also $(\epsilon(\texttt{a\_max}), \delta)$-differentially private.
+Define $\delta_{cons}(\alpha)$ as a ``conservative'' function for computing $\delta(\epsilon)$, 
+where floating-point arithmetic is computed with conservative rounding such that $\delta_{cons}(\alpha) \geq \delta(\alpha)$ for $\forall \alpha \in (1, \infty)$.
+Since $\texttt{delta} = \delta_{cons}(\texttt{a\_max}) \geq \delta(\texttt{a\_max})$, then any $(\epsilon, \delta(\texttt{a\_max}))$-differentially private measurement is also $(\texttt{epsilon}, \delta)$-differentially private.
+\end{proof}
+
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+
+\end{document}

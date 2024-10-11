@@ -55,7 +55,7 @@ try:
         np.float32: 'f32',
         np.float64: 'f64',  # np.double, np.float_
     })
-except ImportError:
+except ImportError: # pragma: no cover
     np = None # type: ignore[assignment]
 
 INTEGER_TYPES = {"i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "usize"}
@@ -207,7 +207,7 @@ class RuntimeType(object):
                 return RuntimeType('Tuple', cls._parse_args(type_name[1:-1], generics=generics))
             start, end = type_name.find('<'), type_name.rfind('>')
 
-            # attempt to upgrade strings to the metric/measure instance
+            # attempt to upgrade strings to the metric instance
             origin = type_name[:start] if 0 < start else type_name
             closeness: RuntimeType = { # type: ignore[assignment]
                 'ChangeOneDistance': ChangeOneDistance,
@@ -215,11 +215,9 @@ class RuntimeType(object):
                 'AbsoluteDistance': AbsoluteDistance,
                 'L1Distance': L1Distance,
                 'L2Distance': L2Distance,
-                'MaxDivergence': MaxDivergence,
-                'SmoothedMaxDivergence': SmoothedMaxDivergence
             }.get(origin)
             if closeness is not None:
-                if isinstance(closeness, (SensitivityMetric, PrivacyMeasure)):
+                if isinstance(closeness, SensitivityMetric):
                     return closeness[cls._parse_args(type_name[start + 1: end], generics=generics)[0]]
                 return closeness
 
@@ -403,18 +401,10 @@ L1Distance: SensitivityMetric = SensitivityMetric('L1Distance')
 L2Distance: SensitivityMetric = SensitivityMetric('L2Distance')
 
 
-class PrivacyMeasure(RuntimeType):
-    """All measure RuntimeTypes inherit from PrivacyMeasure.
-    Provides static type checking in user-code for privacy measures and a getitem interface like stdlib typing.
-    """
-    def __getitem__(self, associated_type):
-        return PrivacyMeasure(self.origin, [self.parse(type_name=associated_type)])
-
-
-MaxDivergence: PrivacyMeasure = PrivacyMeasure('MaxDivergence')
-SmoothedMaxDivergence: PrivacyMeasure = PrivacyMeasure('SmoothedMaxDivergence')
-FixedSmoothedMaxDivergence: PrivacyMeasure = PrivacyMeasure('FixedSmoothedMaxDivergence')
-ZeroConcentratedDivergence: PrivacyMeasure = PrivacyMeasure('ZeroConcentratedDivergence')
+MaxDivergence = 'MaxDivergence'
+SmoothedMaxDivergence = 'SmoothedMaxDivergence'
+FixedSmoothedMaxDivergence = 'FixedSmoothedMaxDivergence'
+ZeroConcentratedDivergence = 'ZeroConcentratedDivergence'
 
 class Carrier(RuntimeType):
     def __getitem__(self, subdomains):
@@ -440,6 +430,7 @@ usize: str = 'usize'
 f32: str = 'f32'
 f64: str = 'f64'
 String: str = 'String'
+BitVector: str = 'BitVector'
 LazyFrame: str = 'LazyFrame'
 DataFrame: str = 'DataFrame'
 Series: str = 'Series'

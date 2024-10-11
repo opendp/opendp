@@ -1,4 +1,3 @@
-#[cfg(feature = "polars")]
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -19,14 +18,16 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "polars")]
 mod polars;
+use bitvec::slice::BitSlice;
 
-use crate::core::{FfiError, FfiResult, FfiSlice};
+use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::data::Column;
+use crate::domains::BitVector;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
 use crate::ffi::util::{self, into_c_char_p, AnyDomainPtr, ExtrinsicObject};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
-use crate::measures::SMDCurve;
+use crate::measures::PrivacyProfile;
 use crate::metrics::IntDistance;
 use crate::traits::samplers::{fill_bytes, Shuffle};
 use crate::traits::ProductOrd;
@@ -58,12 +59,13 @@ pub extern "C" fn opendp_data__slice_as_object(
     T: *const c_char,
 ) -> FfiResult<*mut AnyObject> {
     let raw = try_as_ref!(raw);
-    let T = try_!(Type::try_from(T));
+    let T_ = try_!(Type::try_from(T));
     fn raw_to_plain<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
         if raw.len != 1 {
             return fallible!(
                 FFI,
-                "The slice length must be one when creating a scalar from FfiSlice"
+                "The slice length must be one when creating a scalar from FfiSlice, but is {}",
+                raw.len
             );
         }
         let plain = util::as_ref(raw.ptr as *const T)
@@ -76,8 +78,27 @@ pub extern "C" fn opendp_data__slice_as_object(
             .clone();
         Ok(AnyObject::new(plain))
     }
+    fn raw_to_bitvector(raw: &FfiSlice) -> Fallible<AnyObject> {
+        if raw.ptr.is_null() {
+            return fallible!(
+                FFI,
+                "Attempted to follow a null pointer to create a bitvector"
+            );
+        }
+
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len.div_ceil(8)) };
+
+        let bitslice = BitSlice::try_from_slice(slice).map_err(|_| {
+            err!(
+                FFI,
+                "Attempted to create a bitvector from a slice with non-zero padding"
+            )
+        })?;
+
+        Ok(AnyObject::new(BitVector::from_bitslice(&bitslice[..raw.len])))
+    }
     fn raw_to_string(raw: &FfiSlice) -> Fallible<AnyObject> {
-        let str_ptr = *util::as_ref(raw.ptr as *const *const c_char).ok_or_else(|| err!(FFI, "null pointer"))?;
+        let str_ptr = *util::as_ref(raw.ptr as *const *const c_char).ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a string"))?;
         let string = util::to_str(str_ptr)?.to_owned();
         Ok(AnyObject::new(string))
     }
@@ -103,7 +124,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const AnyObject, raw.len) };
         let vec = slice.iter()
             .map(|v| util::as_ref(*v)
-                .ok_or_else(|| err!(FFI, "null pointer"))
+                .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a vector"))
                 .and_then(|v| v.downcast_ref::<T>())
                 .map(Clone::clone))
             .collect::<Fallible<Vec<T>>>()?;
@@ -127,7 +148,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         raw: &FfiSlice,
     ) -> Fallible<AnyObject> {
         if raw.len != 3 {
-            return fallible!(FFI, "Expected a slice length of three");
+            return fallible!(FFI, "Expected a slice length of three, found a length of {}", raw.len);
         }
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, 3) };
 
@@ -144,7 +165,7 @@ pub extern "C" fn opendp_data__slice_as_object(
 
         // unpack keys and values into slices
         if slice.len() != 2 {
-            return fallible!(FFI, "HashMap FfiSlice must have length 2");
+            return fallible!(FFI, "HashMap FfiSlice must have length 2, found a length of {}", slice.len());
         }
         let keys = try_as_ref!(slice[0]).downcast_ref::<Vec<K>>()?;
         let vals = try_as_ref!(slice[1]).downcast_ref::<Vec<V>>()?;
@@ -153,7 +174,8 @@ pub extern "C" fn opendp_data__slice_as_object(
         if keys.len() != vals.len() {
             return fallible!(
                 FFI,
-                "HashMap FfiSlice must have an equivalent number of keys and values"
+                "HashMap FfiSlice must have an equivalent number of keys and values. Found {} keys and {} values.",
+                keys.len(), vals.len()
             );
         };
 
@@ -171,7 +193,7 @@ pub extern "C" fn opendp_data__slice_as_object(
     ) -> Fallible<Series> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
         if slice.len() != 3 {
-            return fallible!(FFI, "Series FfiSlice must have length 3");
+            return fallible!(FFI, "Series FfiSlice must have length 3, found a length of {}", slice.len());
         }
         Ok(unsafe {
             // consume the arrow array eagerly
@@ -244,7 +266,8 @@ pub extern "C" fn opendp_data__slice_as_object(
         
         Ok(AnyObject::new((dsl, expr)))
     }
-    match T.contents {
+    match T_.contents {
+        TypeContents::PLAIN("BitVector") => raw_to_bitvector(raw),
         TypeContents::PLAIN("String") => raw_to_string(raw),
         TypeContents::PLAIN("ExtrinsicObject") => raw_to_plain::<ExtrinsicObject>(raw),
 
@@ -290,18 +313,16 @@ pub extern "C" fn opendp_data__slice_as_object(
                     dispatch!(raw_to_tuple2, [(types[0], @primitives), (types[1], @primitives)], (raw))
                 },
                 3 => {
-                    if types[0] != Type::of::<IntDistance>() || types[1] != types[2] {
-                        return err!(FFI, "3-tuples are only implemented for partition distances").into();
-                    }
+                    try_!(check_partition_distance_types(&types));
                     dispatch!(raw_to_tuple3_partition_distance, [(types[1], @numbers)], (raw))
                 },
-                _ => return err!(FFI, "Only tuples of length 2 or 3 are supported").into()
+                l => return err!(FFI, "Only tuples of length 2 or 3 are supported, found a length of {}", l).into()
             }
         }
         TypeContents::GENERIC { name, args } => {
             if name == "HashMap" {
                 if args.len() != 2 {
-                    return err!(FFI, "HashMaps should have 2 type arguments").into();
+                    return err!(FFI, "HashMaps should have 2 type arguments, but found {}", args.len()).into();
                 }
                 let K = try_!(Type::of_id(&args[0]));
                 let V = try_!(Type::of_id(&args[1]));
@@ -319,7 +340,7 @@ pub extern "C" fn opendp_data__slice_as_object(
             dispatch!(
             raw_to_plain,
             [(
-                T,
+                T_,
                 [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyQueryable]
             )],
             (raw)
@@ -362,6 +383,13 @@ pub extern "C" fn opendp_data__object_type(this: *mut AnyObject) -> FfiResult<*m
 #[no_mangle]
 pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResult<*mut FfiSlice> {
     let obj = try_as_ref!(obj);
+    fn bitvector_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let vec: &BitVector = obj.downcast_ref()?;
+        Ok(FfiSlice::new(
+            vec.as_bitptr().pointer() as *mut c_void,
+            vec.len(),
+        ))
+    }
     fn plain_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let plain: &T = obj.downcast_ref()?;
         Ok(FfiSlice::new(plain as *const T as *mut c_void, 1))
@@ -404,6 +432,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             2,
         ))
     }
+
     fn tuple3_partition_distance_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let tuple: &(IntDistance, T, T) = obj.downcast_ref()?;
         Ok(FfiSlice::new(
@@ -415,6 +444,15 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             3,
         ))
     }
+
+    fn function_to_raw<I: 'static + Clone, O: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let func: &Function<I, O> = obj.downcast_ref::<Function<I, O>>()?;
+        Ok(FfiSlice::new(
+            util::into_raw(func.clone().into_any()) as *mut c_void,
+            1,
+        ))
+    }
+
     fn hashmap_to_raw<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
         obj: &AnyObject,
     ) -> Fallible<FfiSlice> {
@@ -514,7 +552,19 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             2,
         ))
     }
+    fn tuple_curve_f64_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let (curve, delta) = obj.downcast_ref::<(PrivacyProfile, f64)>()?;
+
+        Ok(FfiSlice::new(
+            util::into_raw([
+                AnyObject::new_raw(curve.clone()) as *const c_void,
+                util::into_raw(*delta) as *const c_void,
+            ]) as *mut c_void,
+            2,
+        ))
+    }
     match &obj.type_.contents {
+        TypeContents::PLAIN("BitVector") => bitvector_to_raw(obj),
         TypeContents::PLAIN("ExtrinsicObject") => plain_to_raw::<ExtrinsicObject>(obj),
         TypeContents::PLAIN("String") => string_to_raw(obj),
 
@@ -549,22 +599,24 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                     if types == vec![Type::of::<DslPlan>(), Type::of::<Expr>()] {
                         return tuple_lf_expr_to_raw(obj).into();
                     }
+                    if types == vec![Type::of::<PrivacyProfile>(), Type::of::<f64>()] {
+                        return tuple_curve_f64_to_raw(obj).into();
+                    }
                     dispatch!(tuple2_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))
                 },
                 3 => {
-                    if types[0] != Type::of::<IntDistance>() || types[1] != types[2] {
-                        return err!(FFI, "3-tuples are only implemented for partition distances").into();
-                    }
+                    try_!(check_partition_distance_types(&types));
                     dispatch!(tuple3_partition_distance_to_raw, [(types[1], @numbers)], (obj))
                 },
-                _ => return err!(FFI, "Only tuples of length 2 or 3 are supported").into()
+                l => return err!(FFI, "Only tuples of length 2 or 3 are supported, found length of {}", l).into()
             }
         }
         TypeContents::GENERIC { name, args } => {
-            if name == &"HashMap" {
-                if args.len() != 2 { return err!(FFI, "HashMaps should have 2 type arguments").into(); }
-                let K = try_!(Type::of_id(&args[0]));
-                let V = try_!(Type::of_id(&args[1]));
+            if name == &"Function" {
+                let [I, O] = try_!(parse_type_args(args, "Function"));
+                dispatch!(function_to_raw, [(I, @primitives), (O, @primitives)], (obj))
+            } else if name == &"HashMap" {
+                let [K, V] = try_!(parse_type_args(args, "HashMap"));
                 if matches!(V.contents, TypeContents::PLAIN("ExtrinsicObject")) {
                     dispatch!(hashmap_to_raw, [(K, @hashable), (V, [ExtrinsicObject])], (obj))
                 } else {
@@ -575,6 +627,39 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         // This list is explicit because it allows us to avoid including u32 in the @primitives, and queryables
         _ => { dispatch!(plain_to_raw, [(obj.type_, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyQueryable])], (obj)) }
     }.into()
+}
+
+fn parse_type_args<const N: usize>(args: &Vec<TypeId>, name: &str) -> Fallible<[Type; N]> {
+    args.iter()
+        .map(|id| Type::of_id(id))
+        .collect::<Fallible<Vec<Type>>>()?
+        .try_into()
+        .map_err(|_| {
+            err!(
+                FFI,
+                "{} should have {} type arguments, found {}",
+                name,
+                N,
+                args.len()
+            )
+        })
+}
+
+/// Checks that a vector of three types satisfies the requirements of a partition distance.
+fn check_partition_distance_types(types: &Vec<Type>) -> Fallible<()> {
+    if types[0] != Type::of::<IntDistance>() {
+        return fallible!(FFI,
+            "3-tuples are only implemented for partition distances. First type must be a u32, found {}",
+            types[0].to_string()
+        );
+    }
+    if types[1] != types[2] {
+        return fallible!(FFI,
+            "3-tuples are only implemented for partition distances. Last two types must be numbers of the same type, found {} and {}",
+            types[1].to_string(), types[2].to_string()
+        );
+    }
+    Ok(())
 }
 
 #[bootstrap(
@@ -619,6 +704,16 @@ pub extern "C" fn opendp_data__ffislice_of_anyobjectptrs(
 #[no_mangle]
 pub extern "C" fn opendp_data__object_free(this: *mut AnyObject) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
+}
+
+#[bootstrap(name = "erfc")]
+/// Internal function. Compute erfc.
+///
+/// Used to prove an upper bound on the error of erfc.
+#[no_mangle]
+pub extern "C" fn opendp_data__erfc(value: f64) -> f64 {
+    use statrs::function::erf::erfc;
+    erfc(value)
 }
 
 #[bootstrap(
@@ -841,7 +936,8 @@ impl Clone for AnyObject {
                             f64,
                             bool,
                             String,
-                            ExtrinsicObject
+                            ExtrinsicObject,
+                            BitVector
                         ]
                     )],
                     (self)
@@ -936,35 +1032,49 @@ impl Shuffle for AnyObject {
 }
 
 #[bootstrap(
-    name = "smd_curve_epsilon",
-    arguments(
-        curve(rust_type = b"null"),
-        delta(rust_type = "$get_atom(object_type(curve))")
-    )
+    name = "privacy_profile_delta",
+    arguments(curve(rust_type = b"null"), delta(rust_type = "f64"))
 )]
-/// Internal function. Use an SMDCurve to find epsilon at a given `delta`.
+/// Internal function. Use a PrivacyProfile to find epsilon at a given `epsilon`.
 ///
 /// # Arguments
-/// * `curve` - The SMDCurve.
+/// * `curve` - The PrivacyProfile.
+/// * `epsilon` - What to fix epsilon to compute delta.
+///
+/// # Returns
+/// Delta at a given `epsilon`.
+#[no_mangle]
+pub extern "C" fn opendp_data__privacy_profile_delta(
+    curve: *const AnyObject,
+    epsilon: f64,
+) -> FfiResult<*mut AnyObject> {
+    try_!(try_as_ref!(curve).downcast_ref::<PrivacyProfile>())
+        .delta(epsilon)
+        .map(AnyObject::new)
+        .into()
+}
+
+#[bootstrap(
+    name = "privacy_profile_epsilon",
+    arguments(profile(rust_type = b"null"), delta(rust_type = "f64"))
+)]
+/// Internal function. Use an PrivacyProfile to find epsilon at a given `delta`.
+///
+/// # Arguments
+/// * `profile` - The PrivacyProfile.
 /// * `delta` - What to fix delta to compute epsilon.
 ///
 /// # Returns
 /// Epsilon at a given `delta`.
 #[no_mangle]
-pub extern "C" fn opendp_data__smd_curve_epsilon(
-    curve: *const AnyObject,
-    delta: *const AnyObject,
+pub extern "C" fn opendp_data__privacy_profile_epsilon(
+    profile: *const AnyObject,
+    delta: f64,
 ) -> FfiResult<*mut AnyObject> {
-    fn monomorphize<T: 'static>(curve: &AnyObject, delta: &AnyObject) -> Fallible<AnyObject> {
-        let delta = delta.downcast_ref::<T>()?;
-        curve
-            .downcast_ref::<SMDCurve<T>>()?
-            .epsilon(delta)
-            .map(AnyObject::new)
-    }
-    let curve = try_as_ref!(curve);
-    let delta = try_as_ref!(delta);
-    dispatch!(monomorphize, [(delta.type_, @floats)], (curve, delta)).into()
+    try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>())
+        .epsilon(delta)
+        .map(AnyObject::new)
+        .into()
 }
 
 #[cfg(feature = "polars")]

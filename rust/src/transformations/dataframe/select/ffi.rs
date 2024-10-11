@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 use std::os::raw::c_char;
 
 use crate::error::Fallible;
+#[allow(deprecated)]
 use crate::transformations::make_select_column;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
@@ -21,6 +22,7 @@ pub extern "C" fn opendp_transformations__make_select_column(
         TOA: Primitive,
     {
         let key: K = try_as_ref!(key).downcast_ref::<K>()?.clone();
+        #[allow(deprecated)]
         make_select_column::<K, TOA>(key).into_any()
     }
     let K = try_!(Type::try_from(K));

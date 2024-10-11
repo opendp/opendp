@@ -15,7 +15,7 @@ pub extern "C" fn opendp_transformations__make_ordered_random(
 ) -> FfiResult<*mut AnyTransformation> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
-    let MI = input_metric.type_.clone();
+    let MI_ = input_metric.type_.clone();
 
     fn monomorphize<MI: 'static + UnorderedMetric<Distance = IntDistance>>(
         input_domain: &AnyDomain,
@@ -44,7 +44,7 @@ pub extern "C" fn opendp_transformations__make_ordered_random(
 
     dispatch!(
         monomorphize,
-        [(MI, [SymmetricDistance, ChangeOneDistance])],
+        [(MI_, [SymmetricDistance, ChangeOneDistance])],
         (input_domain, input_metric)
     )
 }
@@ -56,7 +56,7 @@ pub extern "C" fn opendp_transformations__make_unordered(
 ) -> FfiResult<*mut AnyTransformation> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
-    let MI = input_metric.type_.clone();
+    let MI_ = input_metric.type_.clone();
 
     fn monomorphize<MI: 'static + OrderedMetric<Distance = IntDistance>>(
         input_domain: &AnyDomain,
@@ -85,7 +85,7 @@ pub extern "C" fn opendp_transformations__make_unordered(
 
     dispatch!(
         monomorphize,
-        [(MI, [InsertDeleteDistance, HammingDistance])],
+        [(MI_, [InsertDeleteDistance, HammingDistance])],
         (input_domain, input_metric)
     )
 }
@@ -97,7 +97,7 @@ pub extern "C" fn opendp_transformations__make_metric_bounded(
 ) -> FfiResult<*mut AnyTransformation> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
-    let MI = input_metric.type_.clone();
+    let MI_ = input_metric.type_.clone();
 
     fn monomorphize<MI: 'static + UnboundedMetric<Distance = IntDistance>>(
         input_domain: &AnyDomain,
@@ -125,7 +125,7 @@ pub extern "C" fn opendp_transformations__make_metric_bounded(
     }
     dispatch!(
         monomorphize,
-        [(MI, [SymmetricDistance, InsertDeleteDistance])],
+        [(MI_, [SymmetricDistance, InsertDeleteDistance])],
         (input_domain, input_metric)
     )
 }
@@ -137,7 +137,7 @@ pub extern "C" fn opendp_transformations__make_metric_unbounded(
 ) -> FfiResult<*mut AnyTransformation> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
-    let MI = input_metric.type_.clone();
+    let MI_ = input_metric.type_.clone();
 
     fn monomorphize<MI: 'static + BoundedMetric<Distance = IntDistance>>(
         input_domain: &AnyDomain,
@@ -165,7 +165,7 @@ pub extern "C" fn opendp_transformations__make_metric_unbounded(
     }
     dispatch!(
         monomorphize,
-        [(MI, [ChangeOneDistance, HammingDistance])],
+        [(MI_, [ChangeOneDistance, HammingDistance])],
         (input_domain, input_metric)
     )
 }

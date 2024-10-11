@@ -1,19 +1,21 @@
 use crate::{
-    core::{Domain, Measurement, Metric, MetricSpace, PrivacyMap},
+    core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{SMDCurve, SmoothedMaxDivergence, ZeroConcentratedDivergence},
-    traits::Float,
+    measures::{Approximate, PrivacyProfile, SmoothedMaxDivergence, ZeroConcentratedDivergence},
 };
 
-use self::cdp_epsilon::cdp_epsilon;
+use self::cdp_delta::cdp_delta;
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
-mod cdp_epsilon;
+#[cfg(test)]
+mod test;
+
+mod cdp_delta;
 
 /// Constructs a new output measurement where the output measure
-/// is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
+/// is casted from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`.
 ///
 /// # Arguments
 /// * `meas` - a measurement with a privacy measure to be casted
@@ -22,14 +24,14 @@ mod cdp_epsilon;
 /// * `DI` - Input Domain
 /// * `TO` - Output Type
 /// * `MI` - Input Metric
-/// * `QO` - Output distance type. One of `f32` or `f64`.
-pub fn make_zCDP_to_approxDP<DI, TO, MI, QO>(
-    meas: Measurement<DI, TO, MI, ZeroConcentratedDivergence<QO>>,
-) -> Fallible<Measurement<DI, TO, MI, SmoothedMaxDivergence<QO>>>
+/// * `MO` - Privacy Measure
+pub fn make_zCDP_to_approxDP<DI, TO, MI, MO>(
+    meas: Measurement<DI, TO, MI, MO>,
+) -> Fallible<Measurement<DI, TO, MI, MO::ApproxMeasure>>
 where
     DI: Domain,
     MI: 'static + Metric,
-    QO: Float,
+    MO: 'static + ConcentratedMeasure,
     (DI, MI): MetricSpace,
 {
     let privacy_map = meas.privacy_map.clone();
@@ -37,11 +39,40 @@ where
         meas.input_domain.clone(),
         meas.function.clone(),
         meas.input_metric.clone(),
-        SmoothedMaxDivergence::default(),
+        MO::ApproxMeasure::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
-            let rho = privacy_map.eval(d_in)?;
+            let d_mid = privacy_map.eval(d_in)?;
 
-            Ok(SMDCurve::new(move |&delta: &QO| cdp_epsilon(rho, delta)))
+            MO::convert(d_mid)
         }),
     )
+}
+
+pub trait ConcentratedMeasure: Measure {
+    type ApproxMeasure: Measure;
+
+    fn convert(d_mid: Self::Distance) -> Fallible<<Self::ApproxMeasure as Measure>::Distance>;
+}
+
+impl ConcentratedMeasure for ZeroConcentratedDivergence {
+    type ApproxMeasure = SmoothedMaxDivergence;
+
+    fn convert(rho: Self::Distance) -> Fallible<<Self::ApproxMeasure as Measure>::Distance> {
+        Ok(PrivacyProfile::new(move |epsilon: f64| {
+            cdp_delta(rho, epsilon)
+        }))
+    }
+}
+
+impl ConcentratedMeasure for Approximate<ZeroConcentratedDivergence> {
+    type ApproxMeasure = Approximate<SmoothedMaxDivergence>;
+
+    fn convert(
+        (rho, delta): Self::Distance,
+    ) -> Fallible<<Self::ApproxMeasure as Measure>::Distance> {
+        Ok((
+            PrivacyProfile::new(move |epsilon: f64| cdp_delta(rho, epsilon)),
+            delta,
+        ))
+    }
 }

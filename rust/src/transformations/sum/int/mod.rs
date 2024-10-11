@@ -10,29 +10,16 @@ pub use ordered::*;
 mod split;
 pub use split::*;
 
-use crate::{
-    error::Fallible,
-    traits::{AlertingAbs, ExactIntCast, InfMul, ProductOrd},
-};
+use crate::traits::Integer;
 
-#[doc(hidden)]
-pub trait AddIsExact {}
-macro_rules! impl_addition_is_exact {
-    ($($ty:ty)+) => ($(impl AddIsExact for $ty {})+)
-}
-impl_addition_is_exact! { u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize }
-
-#[doc(hidden)]
-pub trait CanIntSumOverflow: Sized {
-    fn int_sum_can_overflow(size: usize, bounds: (Self, Self)) -> Fallible<bool>;
-}
-
-impl<T: ExactIntCast<usize> + AlertingAbs + ProductOrd + InfMul + AddIsExact> CanIntSumOverflow
-    for T
-{
-    fn int_sum_can_overflow(size: usize, (lower, upper): (Self, Self)) -> Fallible<bool> {
+/// # Proof Definition
+/// Returns true if, given data with `size` records, each of which has data bounded between `lower` and `upper`,
+/// the true sum of the records exceeds the greatest value representable of type `T`.
+pub(crate) fn can_int_sum_overflow<T: Integer>(size: usize, (lower, upper): (T, T)) -> bool {
+    (|| {
         let size = T::exact_int_cast(size)?;
         let mag = lower.alerting_abs()?.total_max(upper)?;
-        Ok(mag.inf_mul(&size).is_err())
-    }
+        mag.inf_mul(&size).map(|_| ())
+    })()
+    .is_err()
 }

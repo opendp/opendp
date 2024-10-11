@@ -4,6 +4,7 @@ use super::*;
 
 #[test]
 fn test_subset_by() -> Fallible<()> {
+    #[allow(deprecated)]
     let trans = make_subset_by::<String>("filter".to_string(), vec!["values".to_string()])?;
 
     let mut df = DataFrame::new();

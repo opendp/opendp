@@ -41,7 +41,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     Measurement(
         input_domain   = AtomDomain(T=i32),
         input_metric   = AbsoluteDistance(i32),
-        output_measure = MaxDivergence(f64))
+        output_measure = MaxDivergence)
 
     >>> # invoke the measurement (invoke and __call__ are equivalent)
     >>> print('explicit: ', laplace.invoke(100))  # -> 101   # doctest: +ELLIPSIS
@@ -110,7 +110,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
             return measurement_check(self, d_in, d_out)
         except OpenDPException as err:
             if err.variant == "RelationDebug":
-                return False
+                return False # pragma: no cover
             raise
 
     def __rshift__(self, other: Union["Function", "Transformation", Callable]) -> "Measurement":
@@ -191,7 +191,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         try:
             from opendp.core import _measurement_free
             _measurement_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -298,7 +298,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
 
         try:
             return transformation_check(self, d_in, d_out)
-        except OpenDPException as err:
+        except OpenDPException as err: # pragma: no cover
             if err.variant == "RelationDebug":
                 return False
             raise
@@ -410,7 +410,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         try:
             from opendp.core import _transformation_free
             _transformation_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -468,7 +468,7 @@ class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
         try:
             from opendp.core import _function_free
             _function_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -515,7 +515,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         try:
             from opendp.domains import _domain_free
             _domain_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -564,7 +564,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
         try:
             from opendp.metrics import _metric_free
             _metric_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -591,7 +591,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     >>> import opendp.prelude as dp
     >>> measure, distance = dp.loss_of(epsilon=1.0)
     >>> measure, distance
-    (MaxDivergence(f64), 1.0)
+    (MaxDivergence, 1.0)
 
     '''
     _type_ = AnyMeasure
@@ -616,7 +616,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
         try:
             from opendp.measures import _measure_free
             _measure_free(self)
-        except (ImportError, TypeError):
+        except (ImportError, TypeError): # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -631,13 +631,21 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
         raise ValueError("Measure does not support iteration")
 
 
-class SMDCurve(object):
+class PrivacyProfile(object):
     def __init__(self, curve):
         self.curve = curve
 
+    def delta(self, epsilon):
+        from opendp._data import privacy_profile_delta
+        return privacy_profile_delta(self.curve, epsilon)
+
     def epsilon(self, delta):
-        from opendp._data import smd_curve_epsilon
-        return smd_curve_epsilon(self.curve, delta)
+        from opendp._data import privacy_profile_epsilon
+        return privacy_profile_epsilon(self.curve, delta)
+    
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
 
 
 class PartialConstructor(object):
@@ -727,16 +735,27 @@ GLOBAL_FEATURES = set()
 
 
 def enable_features(*features: str) -> None:
+    '''
+    Allow the use of optional features. See :ref:`feature-listing` for details.
+    '''
     GLOBAL_FEATURES.update(set(features))
 
 
 def disable_features(*features: str) -> None:
+    '''
+    Disallow the use of optional features. See :ref:`feature-listing` for details.
+    '''
     GLOBAL_FEATURES.difference_update(set(features))
 
 
 def assert_features(*features: str) -> None:
-    for feature in features:
-        assert feature in GLOBAL_FEATURES, f"Attempted to use function that requires {feature}, but {feature} is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"{feature}\")"
+    '''
+    Check whether a given feature is enabled. See :ref:`feature-listing` for details.
+    '''
+    missing_features = [f for f in features if f not in GLOBAL_FEATURES]
+    if missing_features:
+        features_string = ', '.join(f'"{f}"' for f in features)
+        raise OpenDPException(f"Attempted to use function that requires {features_string}, but not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features({features_string})")
 
 
 M = TypeVar("M", Transformation, Measurement)
@@ -1031,7 +1050,7 @@ def exponential_bounds_search(
                 return False
             except OpenDPException as e:
                 if "No match for concrete type" in (e.message or ""):
-                    return False
+                    return False # pragma: no cover
             return True
         
         if check_type(0.):
@@ -1091,8 +1110,11 @@ def exponential_bounds_search(
     if exception_bounds is None:
         try:
             predicate(center)
-        except Exception:
-            raise ValueError(f"predicate always fails. An example traceback is shown above at {center}.")
+        except Exception as e:
+            # enrich the error message if in Python 3.11+.
+            if hasattr(e, "add_note"):
+                e.add_note(f"Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at {center}.")
+            raise
     
 
     center, sign = binary_search(exception_predicate, bounds=exception_bounds, T=T, return_sign=True)

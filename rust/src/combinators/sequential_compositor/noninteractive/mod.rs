@@ -1,13 +1,15 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use num::Zero;
+// UNIT TESTS
+#[cfg(test)]
+mod test;
 
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     interactive::wrap,
-    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
     traits::InfAdd,
 };
 
@@ -106,36 +108,61 @@ pub trait BasicCompositionMeasure: Measure {
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance>;
 }
 
-impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for MaxDivergence<Q> {
+impl BasicCompositionMeasure for MaxDivergence {
     fn concurrent(&self) -> Fallible<bool> {
         Ok(true)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_i.iter().try_fold(Q::zero(), |sum, d_i| sum.inf_add(d_i))
+        d_i.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
     }
 }
 
-impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for FixedSmoothedMaxDivergence<Q> {
+impl BasicCompositionMeasure for ZeroConcentratedDivergence {
     fn concurrent(&self) -> Fallible<bool> {
         Ok(true)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_i.iter()
-            .try_fold((Q::zero(), Q::zero()), |(e1, d1), (e2, d2)| {
-                Ok((e1.inf_add(e2)?, d1.inf_add(d2)?))
-            })
+        d_i.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
     }
 }
 
-impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for ZeroConcentratedDivergence<Q> {
+impl BasicCompositionMeasure for Approximate<MaxDivergence> {
     fn concurrent(&self) -> Fallible<bool> {
         Ok(true)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_i.iter().try_fold(Q::zero(), |sum, d_i| sum.inf_add(d_i))
+        let (d_i0, deltas): (Vec<_>, Vec<_>) = d_i.into_iter().unzip();
+        let delta = deltas
+            .iter()
+            .try_fold(0.0, |sum, delta| sum.inf_add(delta))?;
+
+        Ok((self.0.compose(d_i0)?, delta))
     }
 }
 
-// UNIT TESTS
-#[cfg(test)]
-mod test;
+impl BasicCompositionMeasure for Approximate<ZeroConcentratedDivergence> {
+    fn concurrent(&self) -> Fallible<bool> {
+        Ok(false)
+    }
+    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        let (d_i0, deltas): (Vec<_>, Vec<_>) = d_i.into_iter().unzip();
+        let delta = deltas
+            .iter()
+            .try_fold(0.0, |sum, delta| sum.inf_add(delta))?;
+
+        Ok((self.0.compose(d_i0)?, delta))
+    }
+}
+
+impl BasicCompositionMeasure for RenyiDivergence {
+    fn concurrent(&self) -> Fallible<bool> {
+        Ok(true)
+    }
+    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        Ok(Function::new_fallible(move |alpha| {
+            d_i.iter()
+                .map(|f| f.eval(alpha))
+                .try_fold(0.0, |sum, e2| sum.inf_add(&e2?))
+        }))
+    }
+}

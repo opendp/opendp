@@ -2,11 +2,11 @@ use opendp_derive::bootstrap;
 use polars_plan::dsl::Expr;
 
 use crate::{
-    combinators::{make_pureDP_to_fixed_approxDP, BasicCompositionMeasure},
-    core::{Measure, Measurement, Metric, MetricSpace},
-    domains::ExprDomain,
+    combinators::{make_approximate, BasicCompositionMeasure},
+    core::{Measure, Measurement, Metric, MetricSpace, Transformation},
+    domains::{ExprDomain, MarginPub},
     error::Fallible,
-    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
     polars::get_disabled_features_message,
     transformations::traits::UnboundedMetric,
@@ -14,6 +14,9 @@ use crate::{
 
 #[cfg(feature = "ffi")]
 mod ffi;
+
+#[cfg(test)]
+mod test;
 
 #[cfg(feature = "contrib")]
 mod expr_len;
@@ -43,15 +46,15 @@ pub(crate) mod expr_report_noisy_max;
 )]
 /// Create a differentially private measurement from an [`Expr`].
 ///
-/// # Features
-/// * `honest-but-curious` - The privacy guarantee governs only at most one evaluation of the released expression.
-///
 /// # Arguments
 /// * `input_domain` - The domain of the input data.
 /// * `input_metric` - How to measure distances between neighboring input data sets.
 /// * `output_measure` - How to measure privacy loss.
 /// * `expr` - The [`Expr`] to be privatized.
 /// * `global_scale` - A tune-able parameter that affects the privacy-utility tradeoff.
+///
+/// # Why honest-but-curious?
+/// The privacy guarantee governs only at most one evaluation of the released expression.
 pub fn make_private_expr<MI: 'static + Metric, MO: 'static + Measure>(
     input_domain: ExprDomain,
     input_metric: MI,
@@ -76,14 +79,14 @@ pub trait PrivateExpr<MI: Metric, MO: Measure> {
     ) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>;
 }
 
-impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergence<f64>> for Expr {
+impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergence> for Expr {
     fn make_private(
         self,
         input_domain: ExprDomain,
         input_metric: PartitionDistance<M>,
-        output_measure: MaxDivergence<f64>,
+        output_measure: MaxDivergence,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, MaxDivergence<f64>>> {
+    ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, MaxDivergence>> {
         if expr_noise::match_noise_shim(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
@@ -107,18 +110,17 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergen
     }
 }
 
-impl<M: 'static + UnboundedMetric>
-    PrivateExpr<PartitionDistance<M>, ZeroConcentratedDivergence<f64>> for Expr
+impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, ZeroConcentratedDivergence>
+    for Expr
 {
     fn make_private(
         self,
         input_domain: ExprDomain,
         input_metric: PartitionDistance<M>,
-        output_measure: ZeroConcentratedDivergence<f64>,
+        output_measure: ZeroConcentratedDivergence,
         global_scale: Option<f64>,
-    ) -> Fallible<
-        Measurement<ExprDomain, Expr, PartitionDistance<M>, ZeroConcentratedDivergence<f64>>,
-    > {
+    ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, ZeroConcentratedDivergence>>
+    {
         if expr_noise::match_noise_shim(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
@@ -133,22 +135,22 @@ impl<M: 'static + UnboundedMetric>
     }
 }
 
-impl<M: 'static + UnboundedMetric>
-    PrivateExpr<PartitionDistance<M>, FixedSmoothedMaxDivergence<f64>> for Expr
+impl<MI: 'static + UnboundedMetric, MO: 'static + Measure>
+    PrivateExpr<PartitionDistance<MI>, Approximate<MO>> for Expr
+where
+    Expr: PrivateExpr<PartitionDistance<MI>, MO>,
 {
     fn make_private(
         self,
         input_domain: ExprDomain,
-        input_metric: PartitionDistance<M>,
-        _output_measure: FixedSmoothedMaxDivergence<f64>,
+        input_metric: PartitionDistance<MI>,
+        output_measure: Approximate<MO>,
         global_scale: Option<f64>,
-    ) -> Fallible<
-        Measurement<ExprDomain, Expr, PartitionDistance<M>, FixedSmoothedMaxDivergence<f64>>,
-    > {
-        make_pureDP_to_fixed_approxDP(self.make_private(
+    ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, Approximate<MO>>> {
+        make_approximate(self.make_private(
             input_domain,
             input_metric,
-            MaxDivergence::default(),
+            output_measure.0,
             global_scale,
         )?)
     }
@@ -206,4 +208,29 @@ where
             get_disabled_features_message()
         ),
     }
+}
+
+/// Approximate the c-stability of a transformation.
+///
+/// See section 2.3 in [Privacy Integrated Queries, Frank McSherry](https://css.csail.mit.edu/6.5660/2024/readings/pinq.pdf)
+/// Since OpenDP uses privacy maps, the stability constant may vary as d_in is varied.
+///
+/// This function only approximates the stability constant `c`, when...
+/// * one row is added/removed in unbounded-DP
+/// * one row is changed in bounded-DP
+pub(crate) fn approximate_c_stability<MI: UnboundedMetric, MO: Metric>(
+    trans: &Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, MO>,
+) -> Fallible<MO::Distance> {
+    let margin = trans
+        .input_domain
+        .active_margin()
+        .cloned()
+        .unwrap_or_default();
+
+    let d_in = match margin.public_info {
+        // smallest valid dataset distance is 2 in bounded-DP
+        Some(MarginPub::Lengths) => 2,
+        _ => 1,
+    };
+    trans.map(&(margin.l_0(d_in), d_in, margin.l_inf(d_in)))
 }

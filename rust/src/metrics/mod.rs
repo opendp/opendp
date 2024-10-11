@@ -19,7 +19,7 @@ use std::marker::PhantomData;
 
 use crate::{
     core::{Domain, Metric, MetricSpace},
-    domains::{type_name, AtomDomain, MapDomain, VectorDomain},
+    domains::{type_name, AtomDomain, BitVectorDomain, MapDomain, VectorDomain},
     error::Fallible,
     traits::{CheckAtom, InfAdd},
 };
@@ -542,20 +542,9 @@ impl<T: CheckAtom> MetricSpace
 ///
 /// # Compatible Domains
 /// * `AtomDomain<T>` for any valid `T`.
-#[derive(Clone)]
+#[derive(Clone, Default, PartialEq)]
 pub struct DiscreteDistance;
 
-impl Default for DiscreteDistance {
-    fn default() -> Self {
-        DiscreteDistance
-    }
-}
-
-impl PartialEq for DiscreteDistance {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
 impl Debug for DiscreteDistance {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "DiscreteDistance()")
@@ -566,6 +555,12 @@ impl Metric for DiscreteDistance {
 }
 
 impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
+    }
+}
+
+impl MetricSpace for (BitVectorDomain, DiscreteDistance) {
     fn check_space(&self) -> Fallible<()> {
         Ok(())
     }

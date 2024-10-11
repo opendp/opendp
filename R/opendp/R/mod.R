@@ -327,18 +327,22 @@ new_function <- function(ptr, log) {
   opendp_function
 }
 
-#' new Smoothed Max Divergence curve
+#' new privacy profile
 #'
 #' @concept mod
-#' @param ptr a pointer to a SMD curve
-new_smd_curve <- function(ptr) {
-  smd_curve <- function(attr, delta) {
-    if (missing(attr) + missing(delta) != 1) {
-      stop("expected exactly one of attr or delta")
+#' @param ptr a pointer to a privacy profile
+new_privacy_profile <- function(ptr) {
+  privacy_profile <- function(attr, epsilon, delta) {
+    if (missing(attr) + missing(epsilon) + missing(delta) != 2) {
+      stop("expected exactly one of attr, epsilon or delta")
+    }
+
+    if (!missing(epsilon)) {
+      return(privacy_profile_delta(ptr, epsilon))
     }
 
     if (!missing(delta)) {
-      return(smd_curve_epsilon(ptr, delta))
+      return(privacy_profile_epsilon(ptr, delta))
     }
 
     switch(attr,
@@ -346,8 +350,8 @@ new_smd_curve <- function(ptr) {
       stop("unrecognized attribute")
     )
   }
-  class(smd_curve) <- "smd_curve"
-  smd_curve
+  class(privacy_profile) <- "privacy_profile"
+  privacy_profile
 }
 
 #' new queryable
@@ -412,7 +416,21 @@ new_hashtab <- function(keys, vals) {
 }
 
 to_str <- function(x, depth) UseMethod("to_str")
+
+#' Convert a format-able value to a string representation
+#'
+#' @param x value to convert to string
+#' @param depth offset from start of string
+#' @concept mod
+#' @export to_str.default
 to_str.default <- function(x, depth) format(x)
+
+#' Convert hashtab to a string representation
+#'
+#' @param x value to convert to string
+#' @param depth offset from start of string
+#' @concept mod
+#' @export
 to_str.hashtab <- function(x, depth = 0L) {
   spacer <- strrep("  ", depth)
   val <- "hashtab(\n"
@@ -421,12 +439,6 @@ to_str.hashtab <- function(x, depth = 0L) {
   })
   val <- c(val, spacer, ")")
   paste0(val, collapse = "")
-}
-
-#' @concept mod
-#' @export
-print.hashtab <- function(x, ...) {
-  cat(to_str(x, ...))
 }
 
 CONSTRUCTOR_LOG_KEYS <- list("_type", "name", "module", "kwargs")
@@ -495,7 +507,7 @@ unbox2 <- function(x) {
 #' @param d_in how far apart input datasets can be
 #' @param d_out how far apart output datasets or distributions can be
 #' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
-#' @param .T type of argument to `make_chain`, one of {float, int}
+#' @param .T type of argument to `make_chain`, either "float" or "int"
 #' @return a Transformation or Measurement (chain) that is (`d_in`, `d_out`)-close.
 #' @export
 #' @examples
@@ -521,7 +533,7 @@ binary_search_chain <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 #' @param d_in how far apart input datasets can be
 #' @param d_out how far apart output datasets or distributions can be
 #' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
-#' @param .T type of argument to `make_chain`, one of {float, int}
+#' @param .T type of argument to `make_chain`, either "float" or "int"
 #' @return the parameter to `make_chain` that results in a (`d_in`, `d_out`)-close Transformation or Measurement
 #' @export
 binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NULL) {
@@ -537,7 +549,7 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 #' @concept mod
 #' @param predicate a monotonic unary function from a number to a boolean
 #' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
-#' @param .T type of argument to `predicate`, one of {float, int}
+#' @param .T type of argument to `predicate`, one of float or int
 #' @param return_sign if True, also return the direction away from the decision boundary
 #' @return the discovered parameter within the bounds
 #' @export

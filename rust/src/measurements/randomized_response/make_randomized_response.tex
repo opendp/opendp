@@ -1,0 +1,145 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+
+
+\title{\texttt{fn make\_randomized\_response}}
+\author{Michael Shoemate}
+\begin{document}
+
+\maketitle
+
+\contrib
+
+Proves soundness of \rustdoc{measurements/fn}{make\_randomized\_response} in \asOfCommit{mod.rs}{f5bb719},
+a constructor taking a category set \texttt{categories} and probability \texttt{prob}.
+The mechanism returned by \texttt{make\_randomized\_response} takes in a data set \texttt{arg} (a single category), and...
+
+\begin{itemize}
+    \item ...if \texttt{arg} is in \texttt{categories},
+    the mechanism truthfully returns the same value \texttt{arg} with probability \texttt{prob},
+    otherwise it lies by selecting one of the other categories uniformly at random.
+    \item ...if \texttt{arg} is not in \texttt{categories}, 
+    it returns a category chosen uniformly at random.
+\end{itemize}
+
+\subsection*{PR History}
+\begin{itemize}
+    \item \vettingPR{490}
+\end{itemize}
+
+\section{Hoare Triple}
+
+\subsection*{Preconditions}
+\begin{itemize}
+    \item Variable \texttt{categories} must be a set with members of type \texttt{T}
+    \item Variable \texttt{prob} must be of type \texttt{QO}
+    \item Type \texttt{QO} must have trait \rustdoc{traits/trait}{Float}
+    \item The bit representation of type \texttt{QO} must support \texttt{ExactIntCast} to and from \texttt{usize}
+\end{itemize}
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_randomized_response.py}
+
+\subsection*{Postcondition}
+
+\validMeasurement{\texttt{(categories, prob, T, QO)}}{\\ \texttt{make\_randomized\_response}}
+
+\section{Proof}
+
+\begin{proof} 
+\textbf{(Privacy guarantee.)} 
+    
+\begin{tcolorbox}
+    The proof assumes the following lemma.
+    \begin{lemma}
+        \texttt{sample\_uniform\_int\_below} and \texttt{sample\_bernoulli\_float} satisfy their postconditions.
+    \end{lemma}
+\end{tcolorbox}
+
+\texttt{sample\_uniform\_int\_below} and \texttt{sample\_bernoulli\_float} can only fail due to lack of system entropy. 
+This is usually related to the computer's physical environment and not the dataset. 
+The rest of this proof is conditioned on the assumption that these functions do not raise an exception. 
+
+Let $x$ and $x'$ be datasets that are \texttt{d\_in}-close with respect to \texttt{input\_metric}.
+Here, the metric is \texttt{DiscreteMetric} which enforces that $\din \geq 1$ if $x \ne x'$ and $\din = 0$ if $x = x'$. 
+If $x = x'$, then the output distributions on $x$ and $x'$ are identical, and therefore the max-divergence is 0.
+
+Now consider the case where $x \ne x'$. 
+For shorthand, we let $p$ represent \texttt{prob}, the probability of returning the input,
+and $t$ denote the number of categories.
+Note that all categories must be unique as the input data type is a set.
+This means duplicate categories cannot influence the output distribution.
+
+$t$ must be at least two, by pseudocode line \ref{line:num_cats}, as any fewer would not be useful.
+$p$ is restricted to $[1/t, 1.0)$ by pseudocode line \ref{line:range}, as any less would not be useful.
+
+We'll first consider all possible output probabilities, 
+and then use this to upper bound the ratio of any two probabilities.
+For any outcome $y \in \texttt{candidates}$, 
+the probability of observing $y$ is one of three values:
+
+\begin{enumerate}
+    \item When the mechanism is honest: 
+    \[
+        \Pr[M(x) = y | y = x] = p
+    \]
+
+    \item When the mechanism lies: 
+    \[
+        \Pr[M(x) = y | y \ne x \wedge x \in \texttt{candidates}] = \frac{1 - p}{t - 1}
+    \]
+
+    \item When the input is not in the category set, the output is uniformly sampled from the candidates: 
+    \[
+        \Pr[M(x) = y | y \ne x \wedge x \not\in \texttt{candidates}] = \frac{1}{t}
+    \]
+\end{enumerate}
+
+\begin{tcolorbox}
+\begin{lemma}
+    \label{bounded-case-3}
+    The probability of case 3 is bounded by cases one and two:
+     \begin{equation}
+        \frac{1 - p}{t - 1} \leq \frac{1}{t} \leq p
+     \end{equation}
+\end{lemma}
+
+\begin{proof}
+$1 / t$ is bounded above by case one ($p$) due to pseudocode line \ref{line:range}. 
+Reusing \ref{line:range}, $\frac{1 - p}{t - 1} \leq \frac{1 - 1/t}{t - 1} = \frac{1}{t}$.
+Therefore $1 / t$ is also bounded below by case two ($\frac{1 - p}{t - 1}$).
+\end{proof}
+\end{tcolorbox}
+
+By \ref{bounded-case-3}, the divergence is never maximized when the input is not in the category set,
+which simplifies the following analysis.
+
+We now consider the max-divergence of the mechanism over all choices of neighboring datasets.
+    
+\begin{align}
+    &\max_{x \sim x'} D_{\infty}(M(x), M(x')) \\
+    =& \max_{x \sim x'} \max_{S \subseteq Supp(M(x))}\ln (\frac{\Pr[M(x) \in S]}{\Pr[M(x') \in S]}) \\
+    \le& \max_{x \sim x'} \max_{y \in Supp(M(x))}\ln (\frac{\Pr[M(x) = y]}{\Pr[M(x') = y]}) &&\text{Lemma 3.3 } \cite{Kasiviswanathan_2014} \\
+    =& \ln \left(\max\left(\frac{p \cdot (t - 1)}{1 - p}, \frac{(1 - p) \cdot (t - 1)}{p}, \frac{(1 - p) \cdot (t - 1)}{(1 - p) \cdot (t - 1)}\right)\right) \label{max-terms} \\
+    =& \ln (\frac{p \cdot (t - 1)}{1 - p})
+\end{align}
+
+The terms in the maximum on line \ref{max-terms} cover all combinations of $x$, $x'$ and $y$. Respectively:
+\begin{enumerate}
+    \item When $y = x$.
+    \item When $y \ne x$ and $y = x'$.
+    \item When $y \ne x$ and $y \ne x'$.
+\end{enumerate}
+
+Pseudocode line \ref{line:map} implements this bound with conservative rounding towards positive infinity. 
+When $\din > 0$ and no exception is raised in computing $\texttt{c} = \texttt{privacy\_map}(\din)$, then $\ln\left(\frac{p \cdot (t - 1)}{1 - p}\right) \leq \texttt{c}$. 
+
+Therefore it has been shown that for every pair of elements $x, x' \in \texttt{input\_domain}$ and every $d_{DM}(x, x') \le \din$ with $\din \ge 0$, 
+if $x, x'$ are $\din$-close then $\function(x),\function(x')$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_measure}$ (the Max-Divergence).
+\end{proof}
+
+\bibliographystyle{plain}
+\bibliography{randomized_response.bib}
+
+\end{document}

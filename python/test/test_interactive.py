@@ -1,7 +1,6 @@
 import opendp.prelude as dp
 import pytest
 
-dp.enable_features("contrib")
 
 
 def test_sequential_composition():
@@ -9,7 +8,7 @@ def test_sequential_composition():
     sc_meas = dp.c.make_sequential_composition(
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
         input_metric=dp.symmetric_distance(),
-        output_measure=dp.max_divergence(float),
+        output_measure=dp.max_divergence(),
         d_in=max_influence,
         d_mids=[0.2, 0.3, 0.4, 0.7],
     )
@@ -38,7 +37,7 @@ def test_sequential_composition():
         >> dp.c.make_sequential_composition(
             input_domain=exact_sum.output_domain,
             input_metric=exact_sum.output_metric,
-            output_measure=dp.max_divergence(float),
+            output_measure=dp.max_divergence(),
             d_in=exact_sum.map(max_influence),
             d_mids=[0.2, 0.09],
         )
@@ -55,7 +54,7 @@ def test_sequential_composition_approxdp():
     sc_meas = dp.c.make_sequential_composition(
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
         input_metric=dp.symmetric_distance(),
-        output_measure=dp.fixed_smoothed_max_divergence(float),
+        output_measure=dp.fixed_smoothed_max_divergence(),
         d_in=max_influence,
         d_mids=[(1.0, 1e-6), (1.0, 1e-6)],
     )

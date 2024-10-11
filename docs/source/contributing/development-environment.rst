@@ -2,6 +2,7 @@
 
 Development Environment
 =======================
+
 If you are writing code, the first task to tackle is setting up the development environment.
 
 You will need to check out the code, and at a minimum, build the Rust binaries.
@@ -10,6 +11,8 @@ Most developers will also install Python and/or R:
 If you are only interested in developing a feature in one of these languages,
 you will not need to set up the other.
 
+.. contents:: |toctitle|
+    :local:
 
 Clone the OpenDP Repo
 ---------------------
@@ -32,7 +35,7 @@ If you have not `set up SSH <https://docs.github.com/en/authentication/connectin
     git clone https://github.com/opendp/opendp.git
 
 
-Rust Build
+Rust Setup
 ----------
 
 If you have not already, install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
@@ -53,12 +56,11 @@ Now run ``cargo build`` in the ``rust`` subdirectory of the repo:
 This will compile a debug build of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. 
 (The specific name of the library file will vary depending on your platform.)
 
-Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to run a lightweight check that the code is valid.
+Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to check syntax.
 
-In the above commands, the features ``untrusted`` and ``bindings`` are enabled.
-
-Setting a feature changes how the crate compiles. 
-The comprehensive feature listing for Rust:
+Note that Python and R require builds with different features.
+Details are in the :ref:`python-setup` and :ref:`r-setup` sections below.
+Setting a feature changes how the crate compiles.
 
 .. _rust-feature-listing:
 
@@ -103,11 +105,29 @@ In contrast to debug builds, release builds are located in ``opendp/rust/target/
 To use a release-mode binary from the Python bindings, 
 set the environment variable ``OPENDP_TEST_RELEASE=1`` before importing OpenDP.
 
-If you run into problems, please contact us!
+For more on our Rust programming patterns:
 
+.. toctree::
+
+    rust-initiation
+
+.. _python-setup:
 
 Python Setup
 ------------
+
+First, build a debug binary that works with Python. (Note that the resulting binary will not work with R.)
+
+.. code-block:: bash
+
+    cd rust
+    cargo build --all-features
+
+If you only need to regenerate the Python bindings, this is sufficient:
+
+.. code-block:: bash
+
+    cargo check --all-features
 
 If you have not already, install `Python version 3.9 or higher <https://www.python.org>`_.
 
@@ -120,7 +140,7 @@ You can install a local Python package that uses your new OpenDP binary.
     .. code-block:: bash
 
         # recommended. conda is just as valid
-        cd opendp
+        cd python
         python3 -m venv .venv
         source .venv/bin/activate
 
@@ -194,13 +214,20 @@ The source code and developer documentation is
 R Setup
 -------
 
+First, build a debug binary that works with R. (Note that the resulting binary will not work with Python.)
+
+.. code-block:: bash
+
+    cd rust
+    cargo build --features untrusted,bindings
+
 If you have not already, `install R <https://cran.r-project.org/>`_.
 
 Then, set an environment variable to the absolute path of the OpenDP Library binary directory:
 
 .. code-block:: bash
 
-    export OPENDP_LIB_DIR=`realpath rust/target/debug`
+    export OPENDP_LIB_DIR=`realpath target/debug`
 
 The default R install for MacOS also includes GUI elements like Tcl/Tk,
 so for the smoothest development experience we suggest these additional installs:
@@ -280,6 +307,23 @@ and then uses ``pkgdown`` to render the documentation website.
     tools/r_stage.sh -d
 
 
+Docs Setup
+----------
+
+The documentation build is described in the `docs/README.md <https://github.com/opendp/opendp/tree/main/docs#readme>`_.
+
+For more on proof writing patterns:
+
+.. toctree::
+
+    proof-initiation
+
+Release Process
+-----------------
+
+Our `release process <https://github.com/opendp/opendp/tree/main/.github/workflows#making-a-release>`_
+uses github workflows.
+
 Environment Variables
 ---------------------
 
@@ -297,6 +341,7 @@ Environment Variables
        When OpenDP is used as a query server, library paths in queries submitted by clients are stale (local to the client).
        This environment variable overrides paths in new OpenDP Polars plugins and OnceFrames.
        For Python, you can read this value from ``opendp._lib.lib_path`` (read-only).
+       This is separate from ``OPENDP_LIB_DIR`` because we anticipate it diverging for R.
    * - ``OPENDP_HEADLESS``
      - Used by CI. When ``true``, The Python ``opendp`` package will import without the presence of the OpenDP Library binary.
    * - ``OPENDP_SPHINX_PORT`` and ``OPENDP_SPHINX_URI``

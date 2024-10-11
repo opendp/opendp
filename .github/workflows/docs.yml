@@ -32,6 +32,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: stable
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2

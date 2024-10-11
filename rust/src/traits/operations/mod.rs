@@ -400,6 +400,3 @@ impl FloatBits for f32 {
         Self::from_bits(bits)
     }
 }
-
-#[cfg(test)]
-mod test;

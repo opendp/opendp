@@ -2,7 +2,6 @@ use crate::core::{MetricSpace, PrivacyMap};
 use crate::measurements::{report_noisy_max_gumbel_map, select_score, Optimize};
 use crate::metrics::{IntDistance, LInfDistance, Parallel, PartitionDistance};
 use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
-use crate::traits::samplers::CastInternalRational;
 use crate::traits::{InfCast, InfMul, Number};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
@@ -12,7 +11,7 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
 };
-use dashu::rational::RBig;
+use dashu::float::FBig;
 
 use polars::datatypes::{
     DataType, Field, Float32Type, Float64Type, Int16Type, Int32Type, Int64Type, Int8Type,
@@ -30,6 +29,8 @@ use pyo3_polars::derive::polars_expr;
 use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 
+use super::approximate_c_stability;
+
 #[cfg(test)]
 mod test;
 
@@ -39,13 +40,13 @@ mod test;
 /// * `input_domain` - ExprDomain
 /// * `input_metric` - The metric space under which neighboring LazyFrames are compared
 /// * `expr` - The expression to which the selection will be applied
-/// * `global_scale` - (Re)scale the noise parameter for the noise distribution
+/// * `global_scale` - (Re)scale the noise distribution
 pub fn make_expr_report_noisy_max<MI: 'static + UnboundedMetric>(
     input_domain: ExprDomain,
     input_metric: PartitionDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MaxDivergence<f64>>>
+) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MaxDivergence>>
 where
     Expr: StableExpr<PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
     (ExprDomain, MI): MetricSpace,
@@ -69,9 +70,7 @@ where
     let scale = match scale {
         Some(scale) => scale,
         None => {
-            // when scale is unknown, set it relative to the sensitivity of the query
-            let margin = input_domain.active_margin().cloned().unwrap_or_default();
-            let (l_0, l_inf) = t_prior.map(&(margin.l_0(1), 1, margin.l_inf(1)))?;
+            let (l_0, l_inf) = approximate_c_stability(&t_prior)?;
             f64::inf_cast(l_0)?.inf_mul(&l_inf)?
         }
     };
@@ -87,7 +86,8 @@ where
     if global_scale.is_nan() || global_scale.is_sign_negative() {
         return fallible!(
             MakeMeasurement,
-            "global_scale must be a non-negative number"
+            "global_scale ({}) must be a non-negative number",
+            global_scale
         );
     }
 
@@ -146,8 +146,13 @@ pub(crate) fn match_report_noisy_max(
         );
     };
 
-    let optimize = literal_value_of::<String>(optimize)?
-        .ok_or_else(|| err!(MakeMeasurement, "Optimize must be \"max\" or \"min\"."))?;
+    let optimize = literal_value_of::<String>(optimize)?.ok_or_else(|| {
+        err!(
+            MakeMeasurement,
+            "Optimize must be \"max\" or \"min\", found \"{}\".",
+            optimize
+        )
+    })?;
     let optimize = Optimize::deserialize(optimize.as_str().into_deserializer())
         .map_err(|e: serde::de::value::Error| err!(FailedFunction, "{:?}", e))?;
 
@@ -238,22 +243,24 @@ fn report_noisy_max_gumbel_udf(
 
     let ReportNoisyMaxPlugin { optimize, scale } = kwargs;
 
-    let Ok(scale) = RBig::try_from(scale) else {
-        polars_bail!(InvalidOperation: "{} scale must be a number", ReportNoisyMaxPlugin::NAME);
-    };
-    if scale < RBig::ZERO {
-        polars_bail!(InvalidOperation: "{} scale must be non-negative", ReportNoisyMaxPlugin::NAME);
+    if scale.is_sign_negative() {
+        polars_bail!(InvalidOperation: "{} scale ({}) must be non-negative", ReportNoisyMaxPlugin::NAME, scale);
     }
+
+    let Ok(scale) = FBig::try_from(scale) else {
+        polars_bail!(InvalidOperation: "{} scale ({}) must be a number", ReportNoisyMaxPlugin::NAME, scale);
+    };
 
     // PT stands for Polars Type
     fn rnm_gumbel_impl<PT: 'static + PolarsDataType>(
         series: &Series,
-        scale: RBig,
+        scale: FBig,
         optimize: Optimize,
     ) -> PolarsResult<Series>
     where
         // the physical (rust) dtype must be a number that can be converted into a rational
-        for<'a> PT::Physical<'a>: NativeType + Number + CastInternalRational,
+        for<'a> PT::Physical<'a>: NativeType + Number,
+        for<'a> FBig: TryFrom<PT::Physical<'a>>,
     {
         Ok(series
             // unpack the series into a chunked array

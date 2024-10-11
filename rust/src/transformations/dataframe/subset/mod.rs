@@ -12,6 +12,7 @@ use super::{DataFrame, DataFrameDomain};
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[deprecated(note = "Use Polars instead", since = "0.12.0")]
 #[bootstrap(features("contrib"))]
 /// Make a Transformation that subsets a dataframe by a boolean column.
 ///
@@ -33,7 +34,13 @@ pub fn make_subset_by<TK: Hashable>(
         Function::new_fallible(move |data: &DataFrame<TK>| {
             // the partition to move each row into
             let indicator = (data.get(&indicator_column))
-                .ok_or_else(|| err!(FailedFunction, "{:?} does not exist in the input dataframe"))?
+                .ok_or_else(|| {
+                    err!(
+                        FailedFunction,
+                        "{:?} does not exist in the input dataframe",
+                        indicator_column
+                    )
+                })?
                 .as_form::<Vec<bool>>()?;
 
             // where to collect partitioned data
@@ -43,7 +50,11 @@ pub fn make_subset_by<TK: Hashable>(
             keep_columns.iter().try_for_each(|column_name| {
                 // retrieve a Column from the dataframe
                 let column = data.get(&column_name).ok_or_else(|| {
-                    err!(FailedFunction, "{:?} does not exist in the input dataframe")
+                    err!(
+                        FailedFunction,
+                        "{:?} does not exist in the input dataframe",
+                        column_name
+                    )
                 })?;
 
                 subsetted.insert(column_name.clone(), column.subset(&indicator));

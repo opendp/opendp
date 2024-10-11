@@ -18,6 +18,9 @@ use self::{
     signature::{BootSigArgType, BootstrapSignature},
 };
 
+#[cfg(test)]
+mod test;
+
 impl Function {
     pub fn from_ast(
         attr_args: AttributeArgs,
@@ -39,7 +42,15 @@ impl Function {
         } else {
             None
         };
-        let docstring = BootstrapDocstring::from_attrs(item_fn.attrs, &item_fn.sig.output, path)?;
+
+        let name = arguments.name.clone().unwrap_or(signature.name.clone());
+        let docstring = BootstrapDocstring::from_attrs(
+            &name,
+            item_fn.attrs,
+            &item_fn.sig.output,
+            path,
+            arguments.features.0.clone(),
+        )?;
 
         // aggregate info from all sources
         reconcile_function(arguments, docstring, signature)
@@ -51,9 +62,8 @@ pub fn reconcile_function(
     mut doc_comments: BootstrapDocstring,
     signature: BootstrapSignature,
 ) -> Result<Function> {
-    let name = bootstrap.name.unwrap_or(signature.name);
     Ok(Function {
-        name: name.clone(),
+        name: bootstrap.name.unwrap_or(signature.name),
         features: bootstrap.features.0,
         description: doc_comments.description,
         args: reconcile_arguments(
@@ -78,6 +88,7 @@ pub fn reconcile_function(
         dependencies: bootstrap.dependencies.0,
         supports_partial: signature.supports_partial,
         has_ffi: bootstrap.has_ffi.unwrap_or(true),
+        deprecation: doc_comments.deprecated,
     })
 }
 

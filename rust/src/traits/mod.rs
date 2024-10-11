@@ -17,8 +17,6 @@ pub use cast::*;
 mod operations;
 pub use operations::*;
 
-use self::samplers::CastInternalRational;
-
 pub mod samplers;
 
 /// A type that can be used as a stability or privacy constant to scale a distance.
@@ -82,13 +80,23 @@ impl<TI, TO> DistanceConstant<TI> for TO where
 /// test_func(1i8);
 /// ```
 pub trait Primitive:
-    'static + Clone + std::fmt::Debug + CheckNull + PartialEq + Default + CheckAtom + Send + Sync
+    'static
+    + Clone
+    + std::fmt::Debug
+    + std::fmt::Display
+    + CheckNull
+    + PartialEq
+    + Default
+    + CheckAtom
+    + Send
+    + Sync
 {
 }
 impl<T> Primitive for T where
     T: 'static
         + Clone
         + std::fmt::Debug
+        + std::fmt::Display
         + CheckNull
         + PartialEq
         + Default

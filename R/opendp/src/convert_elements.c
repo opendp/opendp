@@ -19,6 +19,8 @@
         if (TYPEOF(s) != EXTPTRSXP ||                                     \
             R_ExternalPtrTag(s) != AnyTransformation_tag)                 \
             error("expected a transformation, but got a different type"); \
+        if (!R_ExternalPtrAddr(s))                                        \
+            error("Got null pointer. Reusing a transformation from a previous session is not supported."); \
     } while (0)
 
 AnyTransformation *sexp_to_anytransformationptr(SEXP value)
@@ -75,6 +77,8 @@ SEXP anytransformationptr_to_sexp(AnyTransformation *input, SEXP log)
         if (TYPEOF(s) != EXTPTRSXP ||                                  \
             R_ExternalPtrTag(s) != AnyMeasurement_tag)                 \
             error("expected a measurement, but got a different type"); \
+        if (!R_ExternalPtrAddr(s))                                     \
+            error("Got null pointer. Reusing a measurement from a previous session is not supported."); \
     } while (0)
 
 AnyMeasurement *sexp_to_anymeasurementptr(SEXP value)
@@ -131,6 +135,8 @@ SEXP anymeasurementptr_to_sexp(AnyMeasurement *input, SEXP log)
         if (TYPEOF(s) != EXTPTRSXP ||                             \
             R_ExternalPtrTag(s) != AnyDomain_tag)                 \
             error("expected a domain, but got a different type"); \
+        if (!R_ExternalPtrAddr(s))                                \
+            error("Got null pointer. Reusing a domain from a previous session is not supported."); \
     } while (0)
 
 AnyDomain *sexp_to_anydomainptr(SEXP value)
@@ -187,6 +193,8 @@ SEXP anydomainptr_to_sexp(AnyDomain *input, SEXP log)
         if (TYPEOF(s) != EXTPTRSXP ||                             \
             R_ExternalPtrTag(s) != AnyMetric_tag)                 \
             error("expected a metric, but got a different type"); \
+        if (!R_ExternalPtrAddr(s))                                \
+            error("Got null pointer. Reusing a metric from a previous session is not supported."); \
     } while (0)
 
 AnyMetric *sexp_to_anymetricptr(SEXP value)
@@ -244,6 +252,8 @@ SEXP anymetricptr_to_sexp(AnyMetric *input, SEXP log)
         if (TYPEOF(s) != EXTPTRSXP ||                              \
             R_ExternalPtrTag(s) != AnyMeasure_tag)                 \
             error("expected a measure, but got a different type"); \
+        if (!R_ExternalPtrAddr(s))                                 \
+            error("Got null pointer. Reusing a measure from a previous session is not supported."); \
     } while (0)
 
 AnyMeasure *sexp_to_anymeasureptr(SEXP value)
@@ -301,6 +311,8 @@ SEXP anymeasureptr_to_sexp(AnyMeasure *input, SEXP log)
         if (TYPEOF(s) != EXTPTRSXP ||                               \
             R_ExternalPtrTag(s) != AnyFunction_tag)                 \
             error("expected a function, but got a different type"); \
+        if (!R_ExternalPtrAddr(s))                                  \
+            error("Got null pointer. Reusing an OpenDP function from a previous session is not supported."); \
     } while (0)
 
 AnyFunction *sexp_to_anyfunctionptr(SEXP value)
@@ -358,6 +370,8 @@ SEXP anyfunctionptr_to_sexp(AnyFunction *input, SEXP log)
         if (TYPEOF(s) != EXTPTRSXP ||                                 \
             R_ExternalPtrTag(s) != AnyObject_tag)                     \
             error("expected an AnyObject, but got a different type"); \
+        if (!R_ExternalPtrAddr(s))                                    \
+            error("Got null pointer. Reusing an AnyObject from a previous session is not supported."); \
     } while (0)
 
 void odp_AnyObject_finalizer(SEXP XPtr)
@@ -370,8 +384,8 @@ void odp_AnyObject_finalizer(SEXP XPtr)
     R_ClearExternalPtr(XPtr);
 }
 
-// AnyObject: SMDCurve
-AnyObject *sexp_to_smdcurveptr(SEXP value)
+// AnyObject: PrivacyProfile
+AnyObject *sexp_to_privacyprofileptr(SEXP value)
 {
     PROTECT(value);
 
@@ -381,7 +395,7 @@ AnyObject *sexp_to_smdcurveptr(SEXP value)
     if (errorOccurred)
         error("could not determine class");
 
-    if (str_equal(sexp_to_charptr(class), "smd_curve"))
+    if (str_equal(sexp_to_charptr(class), "privacy_profile"))
     {
         SEXP call = PROTECT(Rf_lang2(value, PROTECT(Rf_mkString("ptr"))));
         value = Rf_eval(call, R_GlobalEnv);
@@ -393,20 +407,20 @@ AnyObject *sexp_to_smdcurveptr(SEXP value)
     return (AnyObject *)R_ExternalPtrAddr(value);
 }
 
-SEXP smdcurveptr_to_sexp(AnyObject *input, SEXP info)
+SEXP privacyprofileptr_to_sexp(AnyObject *input, SEXP info)
 {
     SEXP XPtr = PROTECT(R_MakeExternalPtr(input, AnyObject_tag, info));
     R_RegisterCFinalizerEx(XPtr, odp_AnyObject_finalizer, TRUE);
 
     int errorOccurred;
-    SEXP new_smd_curve = get_private_func("new_smd_curve");
-    SEXP smdcurve_expr = lang2(new_smd_curve, XPtr);
-    SEXP smdcurve = R_tryEval(smdcurve_expr, R_GlobalEnv, &errorOccurred);
+    SEXP new_privacy_profile = get_private_func("new_privacy_profile");
+    SEXP privacyprofile_expr = lang2(new_privacy_profile, XPtr);
+    SEXP privacyprofile = R_tryEval(privacyprofile_expr, R_GlobalEnv, &errorOccurred);
     if (errorOccurred)
-        error("failed to construct smd_curve");
+        error("failed to construct privacy_profile");
 
     UNPROTECT(1);
-    return smdcurve;
+    return privacyprofile;
 }
 
 // AnyObject: Queryable

@@ -93,11 +93,15 @@ void *sexp_to_voidptr(SEXP input, SEXP rust_type)
     PROTECT(input);
     PROTECT(rust_type);
 
-    if (str_equal(sexp_to_charptr(get_origin(rust_type)), "Option")) {
-        if (input == R_NilValue) {
+    if (str_equal(sexp_to_charptr(get_origin(rust_type)), "Option"))
+    {
+        if (input == R_NilValue)
+        {
             UNPROTECT(2);
             return NULL;
-        } else {
+        }
+        else
+        {
             rust_type = VECTOR_ELT(get_args(rust_type), 0);
         }
     }
@@ -372,6 +376,23 @@ SEXP slice_to_vector(FfiSlice *raw, SEXP type_name)
     return slice_to_scalar(raw, atom_type);
 }
 
+FfiSlice bitvector_to_slice(SEXP value, SEXP type_name)
+{
+    PROTECT(value);
+    FfiSlice slice = {RAW(value), LENGTH(value) * 8};
+    UNPROTECT(1);
+    return slice;
+}
+
+SEXP slice_to_bitvector(FfiSlice *raw, SEXP type_name)
+{
+    uintptr_t n_bytes = (raw->len + 7) / 8;
+    SEXP buffer = Rf_allocVector(RAWSXP, n_bytes);
+    Rbyte* ptr = RAW(buffer);
+    memcpy(ptr, raw->ptr, n_bytes);
+    return buffer;
+}
+
 FfiSlice tuple_to_slice(SEXP value, SEXP type_name)
 {
     PROTECT(value);
@@ -480,6 +501,9 @@ FfiSlice sexp_to_slice(SEXP value, SEXP type_name)
     else if (str_equal(c_origin, "Vec"))
         result = vector_to_slice(value, type_name);
 
+    else if (str_equal(c_origin, "BitVector"))
+        result = bitvector_to_slice(value, type_name);
+
     else if (str_equal(c_origin, "HashMap"))
         result = hashmap_to_slice(value, type_name);
 
@@ -504,6 +528,9 @@ SEXP slice_to_sexp(FfiSlice *raw, SEXP type_name)
 
     if (str_equal(c_origin, "Vec"))
         result = slice_to_vector(raw, type_name);
+    
+    else if (str_equal(c_origin, "BitVector"))
+        result = slice_to_bitvector(raw, type_name);
 
     else if (str_equal(c_origin, "HashMap"))
         result = slice_to_hashmap(raw, type_name);
@@ -593,11 +620,11 @@ SEXP anyobjectptr_to_sexp(AnyObject *obj)
         error("failed to parse type");
 
     const char *c_origin = sexp_to_charptr(get_origin(type_name));
-    if (str_equal(c_origin, "SMDCurve"))
+    if (str_equal(c_origin, "PrivacyProfile"))
     {
-        SEXP curve = smdcurveptr_to_sexp(obj, R_NilValue);
+        SEXP profile = privacyprofileptr_to_sexp(obj, R_NilValue);
         UNPROTECT(4);
-        return curve;
+        return profile;
     }
 
     if (str_equal(c_origin, "AnyQueryable"))

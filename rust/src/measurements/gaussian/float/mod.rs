@@ -5,8 +5,8 @@ use crate::{
     measurements::get_discretization_consts,
     metrics::{AbsoluteDistance, L2Distance},
     traits::{
-        samplers::{sample_discrete_gaussian_Z2k, CastInternalRational},
-        ExactIntCast, Float, FloatBits,
+        samplers::sample_discrete_gaussian_Z2k, CastInternalRational, ExactIntCast, Float,
+        FloatBits, InfCast,
     },
 };
 
@@ -26,27 +26,36 @@ use super::GaussianMeasure;
 ///
 /// # Generics
 /// * `D` - Domain of the data to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
-/// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
+/// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence`.
 pub fn make_scalar_float_gaussian<MO, T>(
     input_domain: AtomDomain<T>,
     input_metric: AbsoluteDistance<T>,
-    scale: T,
+    scale: f64,
     k: Option<i32>,
 ) -> Fallible<Measurement<AtomDomain<T>, T, AbsoluteDistance<T>, MO>>
 where
     T: Float + CastInternalRational,
-    MO: GaussianMeasure<AbsoluteDistance<T>, Atom = T>,
+    MO: GaussianMeasure<AbsoluteDistance<T>>,
     i32: ExactIntCast<<T as FloatBits>::Bits>,
+    f64: InfCast<T>,
 {
     if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
+        return fallible!(MakeMeasurement, "scale ({:?}) must not be negative", scale);
     }
 
-    let (k, relaxation) = get_discretization_consts(k)?;
+    let (k, relaxation) = get_discretization_consts::<T>(k)?;
+
+    let relaxation = f64::inf_cast(relaxation)?;
+    let r_scale = scale.into_rational()?;
 
     Measurement::new(
         input_domain,
-        Function::new_fallible(move |arg: &T| sample_discrete_gaussian_Z2k(*arg, scale, k)),
+        Function::new_fallible(move |arg: &T| {
+            let sample = sample_discrete_gaussian_Z2k(arg.into_rational()?, r_scale.clone(), k)?;
+
+            // postprocessing: round to nearest T
+            Ok(T::from_rational(sample))
+        }),
         input_metric,
         MO::default(),
         MO::new_forward_map(scale, relaxation),
@@ -67,23 +76,24 @@ where
 ///
 /// # Generics
 /// * `D` - Domain of the data to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
-/// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
+/// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence`.
 pub fn make_vector_float_gaussian<MO, T>(
     input_domain: VectorDomain<AtomDomain<T>>,
     input_metric: L2Distance<T>,
-    scale: T,
+    scale: f64,
     k: Option<i32>,
 ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, L2Distance<T>, MO>>
 where
     T: Float + CastInternalRational,
-    MO: GaussianMeasure<L2Distance<T>, Atom = T>,
+    MO: GaussianMeasure<L2Distance<T>>,
     i32: ExactIntCast<<T as FloatBits>::Bits>,
+    f64: InfCast<T>,
 {
     if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative");
+        return fallible!(MakeMeasurement, "scale ({:?}) must not be negative", scale);
     }
 
-    let (k, mut relaxation): (i32, T) = get_discretization_consts(k)?;
+    let (k, mut relaxation) = get_discretization_consts::<T>(k)?;
 
     if !relaxation.is_zero() {
         let size = input_domain.size.ok_or_else(|| {
@@ -95,11 +105,20 @@ where
         relaxation = relaxation.inf_mul(&T::inf_cast(size)?)?;
     }
 
+    let relaxation = f64::inf_cast(relaxation)?;
+    let r_scale = scale.into_rational()?;
+
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &Vec<T>| {
             arg.iter()
-                .map(|shift| sample_discrete_gaussian_Z2k(shift.clone(), scale, k))
+                .map(|shift| {
+                    let sample =
+                        sample_discrete_gaussian_Z2k(shift.into_rational()?, r_scale.clone(), k)?;
+
+                    // postprocessing: round to nearest T
+                    Ok(T::from_rational(sample))
+                })
                 .collect()
         }),
         input_metric,

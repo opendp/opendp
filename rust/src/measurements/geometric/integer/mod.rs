@@ -1,5 +1,3 @@
-use dashu::{base::ConversionError, rational::RBig};
-
 use crate::{
     core::{Function, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
@@ -7,7 +5,7 @@ use crate::{
     measurements::laplace_puredp_map,
     measures::MaxDivergence,
     metrics::{AbsoluteDistance, L1Distance},
-    traits::{samplers::sample_discrete_laplace_linear, ExactIntCast, Float, InfCast, Integer},
+    traits::{samplers::sample_discrete_laplace_linear, ExactIntCast, InfCast, Integer},
 };
 
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
@@ -23,19 +21,16 @@ use crate::{
 ///
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
-/// * `QO` - Data type of the scale and output distance.
-pub(crate) fn make_scalar_geometric<T, QO>(
+pub(crate) fn make_scalar_geometric<T>(
     input_domain: AtomDomain<T>,
     input_metric: AbsoluteDistance<T>,
-    scale: QO,
+    scale: f64,
     bounds: Option<(T, T)>,
-) -> Fallible<Measurement<AtomDomain<T>, T, AbsoluteDistance<T>, MaxDivergence<QO>>>
+) -> Fallible<Measurement<AtomDomain<T>, T, AbsoluteDistance<T>, MaxDivergence>>
 where
     T: Integer,
-    QO: Float + InfCast<T>,
-    RBig: TryFrom<QO, Error = ConversionError>,
-    usize: ExactIntCast<QO::Bits> + ExactIntCast<T>,
-    QO::Bits: ExactIntCast<usize>,
+    f64: InfCast<T>,
+    usize: ExactIntCast<T>,
 {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative");
@@ -50,10 +45,12 @@ where
 
     Measurement::new(
         input_domain,
-        Function::new_fallible(move |v: &T| sample_discrete_laplace_linear(*v, scale, bounds)),
+        Function::new_fallible(move |v: &T| {
+            sample_discrete_laplace_linear::<T, f64>(*v, scale, bounds)
+        }),
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_puredp_map(scale, QO::zero())),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, 0.0)),
     )
 }
 
@@ -73,19 +70,16 @@ where
 ///
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
-/// * `QO` - Data type of the scale and output distance.
-pub(crate) fn make_vector_geometric<T, QO>(
+pub(crate) fn make_vector_geometric<T>(
     input_domain: VectorDomain<AtomDomain<T>>,
     input_metric: L1Distance<T>,
-    scale: QO,
+    scale: f64,
     bounds: Option<(T, T)>,
-) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, L1Distance<T>, MaxDivergence<QO>>>
+) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, L1Distance<T>, MaxDivergence>>
 where
     T: Integer,
-    QO: Float + InfCast<T>,
-    RBig: TryFrom<QO, Error = ConversionError>,
-    usize: ExactIntCast<QO::Bits> + ExactIntCast<T>,
-    QO::Bits: ExactIntCast<usize>,
+    f64: InfCast<T>,
+    usize: ExactIntCast<T>,
 {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative");
@@ -102,12 +96,12 @@ where
         input_domain,
         Function::new_fallible(move |arg: &Vec<T>| {
             arg.iter()
-                .map(|v| sample_discrete_laplace_linear(*v, scale, bounds))
+                .map(|v| sample_discrete_laplace_linear::<T, f64>(*v, scale, bounds))
                 .collect()
         }),
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(laplace_puredp_map(scale, QO::zero())),
+        PrivacyMap::new_fallible(laplace_puredp_map(scale, 0.0)),
     )
 }
 
