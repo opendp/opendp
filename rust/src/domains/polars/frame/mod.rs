@@ -21,20 +21,14 @@ mod test;
 mod ffi;
 
 pub trait Frame: Clone + Send + Sync {
-    fn new(series: Vec<Series>) -> Fallible<Self>;
-    fn schema(&self) -> Fallible<Schema>;
+    /// # Proof Definition
+    /// Returns a [`LazyFrame`] containing the same data as in `self`.
     fn lazyframe(self) -> LazyFrame;
+    /// # Proof Definition
+    /// Returns a [`DataFrame`] containing the same data as in `self`.
     fn dataframe(self) -> Fallible<DataFrame>;
 }
 impl Frame for LazyFrame {
-    fn new(series: Vec<Series>) -> Fallible<Self> {
-        Ok(IntoLazy::lazy(DataFrame::new(series)?))
-    }
-    fn schema(&self) -> Fallible<Schema> {
-        LazyFrame::schema(&mut self.clone())
-            .map(|schema| Arc::unwrap_or_clone(schema))
-            .map_err(Into::into)
-    }
     fn lazyframe(self) -> LazyFrame {
         self
     }
@@ -43,12 +37,6 @@ impl Frame for LazyFrame {
     }
 }
 impl Frame for DslPlan {
-    fn new(series: Vec<Series>) -> Fallible<Self> {
-        <LazyFrame as Frame>::new(series).map(|v| v.logical_plan)
-    }
-    fn schema(&self) -> Fallible<Schema> {
-        Ok(self.compute_schema()?.as_ref().clone())
-    }
     fn lazyframe(self) -> LazyFrame {
         LazyFrame::from(self)
     }
@@ -57,12 +45,6 @@ impl Frame for DslPlan {
     }
 }
 impl Frame for DataFrame {
-    fn new(series: Vec<Series>) -> Fallible<Self> {
-        Self::new(series).map_err(Into::into)
-    }
-    fn schema(&self) -> Fallible<Schema> {
-        Ok(self.schema())
-    }
     fn lazyframe(self) -> LazyFrame {
         IntoLazy::lazy(self)
     }
@@ -97,8 +79,8 @@ impl Frame for DataFrame {
 ///     SeriesDomain::new("A", AtomDomain::<i32>::default()),
 ///     SeriesDomain::new("B", AtomDomain::<String>::default()),
 /// ])?
-///         .with_margin(&["A"], Margin::new().with_public_keys())?
-///         .with_margin(&["B"], Margin::new().with_public_lengths())?;
+///         .with_margin(&["A"], Margin::default().with_public_keys())?
+///         .with_margin(&["B"], Margin::default().with_public_lengths())?;
 ///
 /// # opendp::error::Fallible::Ok(())
 /// ```
@@ -161,10 +143,24 @@ impl<Q> MetricSpace for (LazyFrameDomain, LInfDistance<Q>) {
 }
 
 impl<F: Frame> FrameDomain<F> {
+    /// Create a new FrameDomain.
+    /// Series names must be unique.
+    ///
+    /// # Proof Definition
+    /// Either returns a FrameDomain spanning all dataframes whose columns
+    /// are members of `series_domains`, respectively, or an error.
     pub fn new(series_domains: Vec<SeriesDomain>) -> Fallible<Self> {
         Self::new_with_margins(series_domains, HashMap::new())
     }
 
+    /// Create a new FrameDomain.
+    /// Series names must be unique.
+    ///
+    /// # Proof Definition
+    /// Either returns a FrameDomain spanning all dataframes whose columns
+    /// are members of `series_domains`, respectively,
+    /// and whose groupings abide by the descriptors in `margins`,
+    /// or an error.
     pub(crate) fn new_with_margins(
         series_domains: Vec<SeriesDomain>,
         margins: HashMap<BTreeSet<String>, Margin>,
@@ -184,6 +180,10 @@ impl<F: Frame> FrameDomain<F> {
         })
     }
 
+    /// Create a new FrameDomain that follows a schema.
+    ///
+    /// # Proof Definition
+    /// Either returns a FrameDomain spanning all dataframes with a schema `schema`, or an error.
     pub fn new_from_schema(schema: Schema) -> Fallible<Self> {
         let series_domains = (schema.iter_fields())
             .map(SeriesDomain::new_from_field)
@@ -191,10 +191,15 @@ impl<F: Frame> FrameDomain<F> {
         FrameDomain::new(series_domains)
     }
 
+    /// # Proof Definition
+    /// Return the schema shared by all members of the domain.
     pub fn schema(&self) -> Schema {
         Schema::from_iter(self.series_domains.iter().map(|s| s.field.clone()))
     }
 
+    /// # Proof Definition
+    /// Return a FrameDomain equivalent to `self`,
+    /// but whose carrier type (the type of a frame) is `FO`.
     pub(crate) fn cast_carrier<FO: Frame>(&self) -> FrameDomain<FO> {
         FrameDomain {
             series_domains: self.series_domains.clone(),
@@ -203,6 +208,10 @@ impl<F: Frame> FrameDomain<F> {
         }
     }
 
+    /// # Proof Definition
+    /// Return a FrameDomain that only includes those elements of `self` that,
+    /// when grouped by `grouping_columns`, observes those descriptors in `margin`,
+    /// or an error.
     #[must_use]
     pub fn with_margin<I: AsRef<str>>(
         mut self,
@@ -304,16 +313,6 @@ pub enum MarginPub {
 }
 
 impl Margin {
-    pub fn new() -> Self {
-        Margin {
-            max_partition_length: None,
-            max_num_partitions: None,
-            max_partition_contributions: None,
-            max_influenced_partitions: None,
-            public_info: None,
-        }
-    }
-
     pub fn with_max_partition_length(mut self, value: u32) -> Self {
         self.max_partition_length = Some(value);
         self
@@ -322,7 +321,6 @@ impl Margin {
         self.max_num_partitions = Some(value);
         self
     }
-
     pub fn with_max_partition_contributions(mut self, value: u32) -> Self {
         self.max_partition_contributions = Some(value);
         self
@@ -342,6 +340,8 @@ impl Margin {
         self
     }
 
+    /// # Proof Definition
+    /// Only returns `Ok(true)` if the grouped data `value` is consistent with the domain descriptors in `self`.
     fn member(&self, value: LazyGroupBy) -> Fallible<bool> {
         // retrieves the first row/first column from $tgt as type $ty
         macro_rules! item {
@@ -365,6 +365,11 @@ impl Margin {
         Ok(true)
     }
 
+    /// # Proof Definition
+    /// Returns the greatest number of partitions that may differ
+    /// when at most `l_1` records may be added or removed,
+    /// given optional domain descriptor `max_num_partitions`
+    /// and optional metric descriptor `max_influenced_partitions`.
     pub(crate) fn l_0(&self, l_1: u32) -> u32 {
         self.max_influenced_partitions
             .or(self.max_num_partitions)
@@ -372,6 +377,11 @@ impl Margin {
             .min(l_1)
     }
 
+    /// # Proof Definition
+    /// Returns the greatest number of records that may be added or removed in any any one partition
+    /// when at most `l_1` records may be added or removed,
+    /// given optional domain descriptor `max_partition_length`
+    /// and optional metric descriptor `max_partition_contributions`.
     pub(crate) fn l_inf(&self, l_1: u32) -> u32 {
         self.max_partition_contributions
             .or(self.max_partition_length)

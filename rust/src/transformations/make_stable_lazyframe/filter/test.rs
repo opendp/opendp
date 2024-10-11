@@ -14,7 +14,7 @@ fn test_filter() -> Fallible<()> {
         "chunk_2_null",
         OptionDomain::new(AtomDomain::<i64>::default()),
     )])?
-    .with_margin(&["chunk_2_null"], Margin::new().with_public_keys())?;
+    .with_margin(&["chunk_2_null"], Margin::default().with_public_keys())?;
 
     let t_filter = make_stable_lazyframe(
         lf_domain.clone(),
@@ -42,7 +42,7 @@ fn test_filter_fail_with_non_bool_predicate() -> Fallible<()> {
         "chunk_2_null",
         OptionDomain::new(AtomDomain::<i64>::default()),
     )])?
-    .with_margin(&["chunk_2_null"], Margin::new().with_public_keys())?;
+    .with_margin(&["chunk_2_null"], Margin::default().with_public_keys())?;
 
     let variant = make_stable_lazyframe(
         lf_domain.clone(),

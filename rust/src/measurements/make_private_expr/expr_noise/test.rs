@@ -171,7 +171,7 @@ fn check_autocalibration(
 #[test]
 fn test_sum_unbounded_dp_autocalibration() -> Fallible<()> {
     check_autocalibration(
-        Margin::new().with_max_partition_length(100),
+        Margin::default().with_max_partition_length(100),
         (4, 7),
         (1, 1, 1),
     )
@@ -180,7 +180,7 @@ fn test_sum_unbounded_dp_autocalibration() -> Fallible<()> {
 #[test]
 fn test_sum_bounded_dp_autocalibration() -> Fallible<()> {
     check_autocalibration(
-        Margin::new()
+        Margin::default()
             .with_max_partition_length(100)
             .with_public_lengths(),
         (4, 7),
