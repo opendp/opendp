@@ -10,7 +10,7 @@ use crate::{
     core::{Function, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measures::MaxDivergence,
+    measures::BoundedRange,
     metrics::LInfDistance,
     traits::{Float, InfAdd, InfCast, Number},
 };
@@ -69,7 +69,7 @@ pub fn make_report_noisy_max_gumbel<TIA, QO>(
     input_metric: LInfDistance<TIA>,
     scale: QO,
     optimize: Optimize,
-) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, MaxDivergence<QO>>>
+) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, BoundedRange<QO>>>
 where
     TIA: Number + CastInternalRational,
     QO: CastInternalRational + DistanceConstant<TIA> + Float,
@@ -90,7 +90,7 @@ where
             select_score(arg.iter().cloned(), optimize.clone(), scale_frac.clone())
         }),
         input_metric.clone(),
-        MaxDivergence::default(),
+        BoundedRange::default(),
         PrivacyMap::new_fallible(report_noisy_max_gumbel_map(scale, input_metric)),
     )
 }

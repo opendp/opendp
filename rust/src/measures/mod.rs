@@ -216,3 +216,43 @@ impl<Q> Debug for ZeroConcentratedDivergence<Q> {
 impl<Q> Measure for ZeroConcentratedDivergence<Q> {
     type Distance = Q;
 }
+
+// $epsilon$-bounded range.
+///
+/// The greatest bounded range divergence between any randomly selected subset of the support.
+///
+/// # Proof Definition
+///
+/// ### `d`-closeness
+/// For any two vectors $u, v \in \texttt{D}$ and any $d$ of generic type $\texttt{Q}$,
+/// define $P$ and $Q$ to be the distributions of $M(u)$ and $M(v)$.
+/// We say that $u, v$ are $d$-close under bounded range divergence measure (abbreviated as $D_{\alpha}$)
+/// TODO: Finish this
+
+pub struct BoundedRange<Q>(PhantomData<fn() -> Q>);
+impl<Q> Default for BoundedRange<Q> {
+    fn default() -> Self {
+        BoundedRange(PhantomData)
+    }
+}
+impl<Q> Clone for BoundedRange<Q> {
+    fn clone(&self) -> Self {
+        BoundedRange(PhantomData)
+    }
+}
+
+impl<Q> PartialEq for BoundedRange<Q> {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl<Q> Debug for BoundedRange<Q> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "BoundedRange({})", type_name!(Q))
+    }
+}
+
+impl<Q> Measure for BoundedRange<Q> {
+    type Distance = Q;
+}
