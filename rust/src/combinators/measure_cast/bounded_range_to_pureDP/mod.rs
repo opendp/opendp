@@ -1,10 +1,9 @@
 use crate::{
     core::{Domain, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{MaxDivergence, BoundedRange},
+    measures::{BoundedRange, MaxDivergence},
     traits::Float,
 };
-
 
 /// Constructs a new output measurement where the output measure
 /// is casted from `MaxDivergence<QO>` to `BoundedRange<QO>`.
@@ -18,7 +17,6 @@ use crate::{
 /// * `MI` - Input Metric
 /// * `QO` - Output distance type. One of `f32` or `f64`.
 /// For more details, see: https://differentialprivacy.org/exponential-mechanism-bounded-range/
-
 
 pub fn make_bounded_range_to_pureDP<DI, TO, MI, QO>(
     m: Measurement<DI, TO, MI, BoundedRange<QO>>,
