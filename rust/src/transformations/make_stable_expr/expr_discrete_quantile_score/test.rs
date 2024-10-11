@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub fn get_quantile_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
-    let pub_keys_margin = Margin::new()
+    let pub_keys_margin = Margin::default()
         .with_max_partition_length(1000)
         .with_public_keys();
     let lf_domain = LazyFrameDomain::new(vec![

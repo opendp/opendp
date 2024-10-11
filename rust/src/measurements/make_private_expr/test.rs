@@ -12,7 +12,7 @@ use super::*;
 fn test_approximate_c_stability_unbounded() -> Fallible<()> {
     let lf_domain =
         LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?
-            .with_margin::<&str>(&[], Margin::new().with_max_partition_length(100))?;
+            .with_margin::<&str>(&[], Margin::default().with_max_partition_length(100))?;
     let expr_domain = lf_domain.select();
 
     // Get resulting sum (expression result)
@@ -31,7 +31,7 @@ fn test_approximate_c_stability_bounded() -> Fallible<()> {
         LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?
             .with_margin::<&str>(
                 &[],
-                Margin::new()
+                Margin::default()
                     .with_max_partition_length(100)
                     .with_public_lengths(),
             )?;

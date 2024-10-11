@@ -23,7 +23,7 @@ fn test_margin() -> Fallible<()> {
     ])?
     .with_margin(
         &["A"],
-        Margin::new()
+        Margin::default()
             .with_max_partition_length(1)
             .with_max_num_partitions(2),
     )?;

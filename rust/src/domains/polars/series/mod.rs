@@ -18,10 +18,7 @@ mod ffi;
 mod test;
 
 /// # Proof Definition
-/// `SeriesDomain` is the domain of polars `Series` where:
-/// * `field` - Holds Series name and type of underlying data.
-/// * `element_domain` - Pointer to the atom domain of underlying data.
-/// * `nullable` - Indicates if Series contains null values.
+/// `SeriesDomain` describes a set of polars `Series`.
 ///
 /// # Example
 /// ```
@@ -35,8 +32,11 @@ mod test;
 /// ```
 #[derive(Clone)]
 pub struct SeriesDomain {
+    /// The name of the series and type of underlying data.
     pub field: Field,
-    pub element_domain: Arc<dyn DynSeriesAtomDomain>,
+    /// Domain of each element in the series.
+    pub element_domain: Arc<dyn DynSeriesElementDomain>,
+    /// Indicates if data can contain null values.
     pub nullable: bool,
 }
 
@@ -92,6 +92,9 @@ impl Domain for SeriesDomain {
 }
 
 impl SeriesDomain {
+    /// # Proof Definition
+    /// Returns a series domain spanning all series whose name is `name`
+    /// and elements of the series are members of `element_domain`.
     pub fn new<DA: 'static + SeriesElementDomain>(name: &str, element_domain: DA) -> Self {
         SeriesDomain {
             field: Field::new(name, DA::dtype()),
@@ -102,6 +105,10 @@ impl SeriesDomain {
 
     /// Instantiates the broadest possible domain given the limited information available from a field.
     /// The data could have NaNs or nulls, and is not bounded.
+    ///
+    /// # Proof Definition
+    /// Returns a series domain spanning all series
+    /// whose name and data type of elements are specified by `field`.
     pub fn new_from_field(field: Field) -> Fallible<Self> {
         macro_rules! new_series_domain {
             ($ty:ty, $func:ident) => {
@@ -127,6 +134,9 @@ impl SeriesDomain {
         })
     }
 
+    /// # Proof Definition
+    /// Removes the bounds domain descriptor from `self`,
+    /// and returns an error if the type of elements is not a recognized type.
     pub fn drop_bounds(&mut self) -> Fallible<()> {
         macro_rules! drop_bounds {
             ($ty:ty) => {{
@@ -141,7 +151,7 @@ impl SeriesDomain {
                     })?
                     .clone();
                 element_domain.bounds = None;
-                self.element_domain = Arc::new(element_domain) as Arc<dyn DynSeriesAtomDomain>;
+                self.element_domain = Arc::new(element_domain) as Arc<dyn DynSeriesElementDomain>;
             }};
         }
 
@@ -165,6 +175,9 @@ impl SeriesDomain {
         Ok(())
     }
 
+    /// # Proof Definition
+    /// If the domain of elements is of type `AtomDomain<T>`, then returns the domain as that type,
+    /// otherwise returns an error.
     pub fn atom_domain<T: 'static + CheckAtom>(&self) -> Fallible<&AtomDomain<T>> {
         (self.element_domain.as_any())
             .downcast_ref::<AtomDomain<T>>()
@@ -193,8 +206,20 @@ impl<D: UnboundedMetric> MetricSpace for (SeriesDomain, D) {
 /// Common trait for domains that can be used to describe the space of typed elements within a series.
 pub trait SeriesElementDomain: Domain + Send + Sync {
     type InnerDomain: SeriesElementDomain;
+    /// # Proof Definition
+    /// Returns the [`DataType`] of elements in the series.
     fn dtype() -> DataType;
+
+    /// # Proof Definition
+    /// Returns the domain elements in the physical backing store.
+    ///
+    /// Polars Series represents nullity via a separate validity bit vector,
+    /// so that non-null data can be stored contiguously.
+    /// This function returns specifically the domain of non-null elements.
     fn inner_domain(self) -> Self::InnerDomain;
+
+    /// # Proof Definition
+    /// True if Series domains may contain null elements, otherwise False.
     const NULLABLE: bool;
 }
 impl<T: CheckAtom + PrimitiveDataType> SeriesElementDomain for AtomDomain<T> {
@@ -235,21 +260,32 @@ impl SeriesElementDomain for CategoricalDomain {
     const NULLABLE: bool = false;
 }
 
-/// Object-safe version of SeriesAtomDomain.
-pub trait DynSeriesAtomDomain: Send + Sync {
+/// Object-safe version of [`SeriesElementDomain`].
+pub trait DynSeriesElementDomain: Send + Sync {
+    /// This method makes it possible to downcast a trait object of Self
+    /// (dyn DynSeriesElementDomain) to its concrete type.
+    ///
+    /// # Proof Definition
+    /// Return a reference to `self` as an Any trait object.
     fn as_any(&self) -> &dyn Any;
-    fn dyn_partial_eq(&self, other: &dyn DynSeriesAtomDomain) -> bool;
+
+    /// # Proof Definition
+    /// Returns true if `self` and `other` are equal.
+    ///
+    /// This is used to check if two [`SeriesDomain`] are equal,
+    /// because series domain holds a `Box<dyn DynSeriesAtomDomain>`.
+    fn dyn_partial_eq(&self, other: &dyn DynSeriesElementDomain) -> bool;
 }
-impl<D: 'static + SeriesElementDomain> DynSeriesAtomDomain for D {
+impl<D: 'static + SeriesElementDomain> DynSeriesElementDomain for D {
     fn as_any(&self) -> &dyn Any {
         self
     }
-    fn dyn_partial_eq(&self, other: &dyn DynSeriesAtomDomain) -> bool {
+    fn dyn_partial_eq(&self, other: &dyn DynSeriesElementDomain) -> bool {
         (other.as_any().downcast_ref::<D>()).map_or(false, |a| self == a)
     }
 }
 
-impl PartialEq for dyn DynSeriesAtomDomain + '_ {
+impl PartialEq for dyn DynSeriesElementDomain + '_ {
     fn eq(&self, other: &Self) -> bool {
         self.dyn_partial_eq(other)
     }
@@ -259,11 +295,24 @@ impl PartialEq for dyn DynSeriesAtomDomain + '_ {
 pub trait NumericDataType:
     NumericNative<PolarsType = Self::NumericPolars> + PrimitiveDataType + Literal
 {
+    /// Polars has defined its own marker types for elementary data types.
+    ///
+    /// # Proof Definition
+    /// `NumericPolars` is the Polars marker type that corresponds to `Self`.
     type NumericPolars: PolarsDataType + PolarsNumericType<Native = Self>;
 }
 
 pub trait PrimitiveDataType: 'static + Send + Sync {
+    /// Polars has defined its own marker types for elementary data types.
+    ///
+    /// # Proof Definition
+    /// `Polars` is the Polars marker type that corresponds to `Self`.
     type Polars: PolarsDataType;
+
+    /// # Proof Definition
+    /// Return an instance of the DataType enum of the variant that corresponds to `Self`.
+    ///
+    /// A default implementation is provided because Polars already implements this on the marker type (Self::Polars).
     fn dtype() -> DataType {
         Self::Polars::get_dtype()
     }
