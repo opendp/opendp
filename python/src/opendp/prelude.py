@@ -37,6 +37,7 @@ For example:
 
 from opendp.mod import *
 from opendp.extras import sklearn, numpy, polars
+from opendp.extras.polars import len_opendp as len
 import opendp.transformations as t
 import opendp.measurements as m
 import opendp.combinators as c

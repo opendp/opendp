@@ -2,7 +2,7 @@ use opendp_derive::bootstrap;
 use polars::{
     datatypes::{AnyValue, DataType, Field},
     frame::{row::Row, DataFrame},
-    prelude::{IntoLazy, LazyFrame, Schema},
+    prelude::{FunctionExpr, IntoLazy, LazyFrame, Schema},
 };
 use polars_plan::{
     dsl::{AggExpr, Expr},
@@ -210,7 +210,7 @@ fn summarize_expr<'a>(
     Ok(match expr {
         Expr::Len => vec![UtilitySummary {
             name: name.clone(),
-            aggregate: "Len".to_string(),
+            aggregate: "Context Length".to_string(),
             distribution: None,
             scale: None,
             accuracy: alpha.is_some().then_some(0.0),
@@ -242,7 +242,19 @@ fn expr_aggregate(expr: &Expr) -> Fallible<String> {
     }
     Ok(match expr {
         Expr::Agg(AggExpr::Sum(_)) => "Sum",
-        Expr::Len => "Len",
+        Expr::Len => "Context Length",
+        Expr::Agg(AggExpr::Count(_, include_null)) => {
+            if *include_null {
+                "Length"
+            } else {
+                "Count"
+            }
+        }
+        Expr::Function {
+            function: FunctionExpr::NullCount,
+            ..
+        } => "Null Count",
+        Expr::Agg(AggExpr::NUnique(_)) => "N Unique",
         expr => return fallible!(FailedFunction, "unrecognized aggregation: {:?}", expr),
     }
     .to_string())

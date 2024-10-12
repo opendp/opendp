@@ -1,3 +1,5 @@
+use core::f64;
+
 use polars::{
     df,
     prelude::{IntoLazy, NamedFrom},
@@ -48,7 +50,7 @@ fn test_summarize_polars_measurement() -> Fallible<()> {
 
     let mut expected = df![
         "column" => &["len", "A"],
-        "aggregate" => &["Len", "Sum"],
+        "aggregate" => &["Context Length", "Sum"],
         "distribution" => &["Integer Laplace", "Integer Laplace"],
         "scale" => &[1.0, 1.0]
     ]?;
@@ -84,7 +86,7 @@ fn test_summarize_polars_measurement_mean() -> Fallible<()> {
         lf_domain,
         SymmetricDistance,
         MaxDivergence::default(),
-        lf.select([col("A").dp().mean((3, 5), Some(1.0))]),
+        lf.select([col("A").dp().mean((3, 5), Some((1.0, 0.0)))]),
         None,
         None,
     )?;
@@ -93,9 +95,9 @@ fn test_summarize_polars_measurement_mean() -> Fallible<()> {
 
     let mut expected = df![
         "column" => &["A", "A"],
-        "aggregate" => &["Sum", "Len"],
-        "distribution" => &[Some("Integer Laplace"), None],
-        "scale" => &[Some(1.0), None]
+        "aggregate" => &["Sum", "Length"],
+        "distribution" => &[Some("Integer Laplace"), Some("Integer Laplace")],
+        "scale" => &[Some(1.0), Some(0.0)]
     ]?;
     println!("{:?}", expected);
     assert_eq!(expected, description);
@@ -103,9 +105,9 @@ fn test_summarize_polars_measurement_mean() -> Fallible<()> {
     let description = summarize_polars_measurement(meas.clone(), Some(0.05))?;
 
     let accuracy = discrete_laplacian_scale_to_accuracy(1.0, 0.05)?;
-    expected.with_column(Series::new("accuracy", &[Some(accuracy), Some(0.0)]))?;
+    expected.with_column(Series::new("accuracy", &[Some(accuracy), Some(f64::NAN)]))?;
     println!("{:?}", expected);
-    assert_eq!(expected, description);
+    assert_eq!(description, expected);
 
     Ok(())
 }
