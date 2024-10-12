@@ -51,7 +51,7 @@ where
     let dtype = &middle_domain.active_series()?.field.dtype;
 
     // check that we are in a context where it is ok to break row-alignment
-    middle_domain.context.break_alignment()?;
+    middle_domain.context.check_alignment_can_be_broken()?;
 
     // build output domain
     let mut output_domain = middle_domain.clone();

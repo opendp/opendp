@@ -14,7 +14,7 @@ use crate::{
 };
 use polars::{frame::DataFrame, lazy::frame::LazyFrame, prelude::NamedFrom, series::Series};
 use polars_plan::{
-    dsl::{len, lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
+    dsl::{lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
     plans::{Literal, LiteralValue, Null},
     prelude::FunctionOptions,
 };
@@ -339,11 +339,43 @@ impl DPExpr {
         self.noise(Some(Distribution::Gaussian), scale)
     }
 
+    /// Compute the differentially private len (including nulls).
+    ///
+    /// # Arguments
+    /// * `scale` - parameter for the noise distribution
+    pub fn len(self, scale: Option<f64>) -> Expr {
+        self.0.len().dp().noise(None, scale)
+    }
+
+    /// Compute the differentially private count (excluding nulls).
+    ///
+    /// # Arguments
+    /// * `scale` - parameter for the noise distribution
+    pub fn count(self, scale: Option<f64>) -> Expr {
+        self.0.count().dp().noise(None, scale)
+    }
+
+    /// Compute the differentially private null count (exclusively nulls).
+    ///
+    /// # Arguments
+    /// * `scale` - parameter for the noise distribution
+    pub fn null_count(self, scale: Option<f64>) -> Expr {
+        self.0.null_count().dp().noise(None, scale)
+    }
+
+    /// Compute the differentially private count of unique elements (including null).
+    ///
+    /// # Arguments
+    /// * `scale` - parameter for the noise distribution
+    pub fn n_unique(self, scale: Option<f64>) -> Expr {
+        self.0.n_unique().dp().noise(None, scale)
+    }
+
     /// Compute the differentially private sum.
     ///
     /// # Arguments
-    /// * `bounds` - The bounds of the input data.
-    /// * `scale` - Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
+    /// * `bounds` - The bounds of the input data
+    /// * `scale` - parameter for the noise distribution
     pub fn sum<L: Literal>(self, bounds: (L, L), scale: Option<f64>) -> Expr {
         self.0
             .clip(lit(bounds.0), lit(bounds.1))
@@ -354,13 +386,12 @@ impl DPExpr {
 
     /// Compute the differentially private mean.
     ///
-    /// The scale calibrates the amount of noise to be added to the sum.
-    ///
     /// # Arguments
-    /// * `bounds` - The bounds of the input data.
-    /// * `scale` - Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
-    pub fn mean<L: Literal>(self, bounds: (L, L), scale: Option<f64>) -> Expr {
-        self.0.dp().sum(bounds, scale) / len()
+    /// * `bounds` - The bounds of the input data
+    /// * `scales` - parameters for the noise distributions of the numerator and denominator
+    pub fn mean<L: Literal>(self, bounds: (L, L), scales: Option<(f64, f64)>) -> Expr {
+        let (numer, denom) = scales.unzip();
+        self.0.clone().dp().sum(bounds, numer) / self.0.dp().len(denom)
     }
 
     /// Score the utility of each candidate for representing the true quantile.
