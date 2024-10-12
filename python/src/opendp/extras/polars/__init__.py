@@ -22,7 +22,6 @@ from opendp.mod import (
     Domain,
     Measurement,
     OpenDPException,
-    assert_features,
     binary_search,
     binary_search_chain,
 )
@@ -321,11 +320,14 @@ class OnceFrame(object):
 
         Requires "honest-but-curious" because the privacy guarantees only apply if:
         1. The LazyFrame (compute plan) is only ever executed once.
-        2. The analyst does not observe ordering of rows in the output. To ensure this, shuffle the output.
+        2. The analyst does not observe ordering of rows in the output. 
+        
+        To ensure that row ordering is not observed:
+        1. Do not extend the compute plan with order-sensitive computations.
+        2. Shuffle the output once collected.
         """
         from opendp._data import onceframe_lazy
 
-        assert_features("honest-but-curious")
         return onceframe_lazy(self.queryable)
 
 

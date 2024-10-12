@@ -45,7 +45,11 @@ pub extern "C" fn opendp_data__onceframe_collect(
 /// # Why honest-but-curious?
 /// The privacy guarantees only apply if:
 /// 1. The LazyFrame (compute plan) is only ever executed once.
-/// 2. The analyst does not observe ordering of rows in the output. To ensure this, shuffle the output.
+/// 2. The analyst does not observe ordering of rows in the output.
+///    
+/// To ensure that row ordering is not observed:
+/// 1. Do not extend the compute plan with order-sensitive computations.
+/// 2. Shuffle the output once collected.
 #[no_mangle]
 pub extern "C" fn opendp_data__onceframe_lazy(
     onceframe: *mut AnyObject,
