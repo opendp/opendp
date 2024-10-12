@@ -108,7 +108,7 @@ def test_private_lazyframe_explicit_sum(measure):
     )
 
     expr = pl.col("A").fill_null(0.0).clip(0.0, 1.0).sum().dp.noise(0.0)
-    plan = seed(lf.collect_schema()).group_by("B").agg(expr).sort("B")
+    plan = seed(lf.collect_schema()).group_by("B").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 0.0
     )
@@ -134,7 +134,7 @@ def test_private_lazyframe_sum(measure):
         margin=["B"], public_info="keys", max_partition_length=50, max_num_partitions=10,
     )
     expr = pl.col("A").fill_null(0.0).dp.sum((1.0, 2.0), scale=0.0)
-    plan = seed(lf.collect_schema()).group_by("B").agg(expr).sort("B")
+    plan = seed(lf.collect_schema()).group_by("B").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 0.0
     )
@@ -160,7 +160,7 @@ def test_private_lazyframe_mean(measure):
     )
 
     expr = pl.col("A").fill_null(0.0).dp.mean((1.0, 2.0), scale=0.0)
-    plan = seed(lf.collect_schema()).group_by("B").agg(expr).sort("B")
+    plan = seed(lf.collect_schema()).group_by("B").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 1.0
     )
