@@ -491,7 +491,11 @@ impl OnceFrame {
     ///
     /// Requires "honest-but-curious" because the privacy guarantees only apply if:
     /// 1. The LazyFrame (compute plan) is only ever executed once.
-    /// 2. The analyst does not observe ordering of rows in the output. To ensure this, shuffle the output.
+    /// 2. The analyst does not observe ordering of rows in the output.
+    ///    
+    /// To ensure that row ordering is not observed:
+    /// 1. Do not extend the compute plan with order-sensitive computations.
+    /// 2. Shuffle the output once collected.
     #[cfg(feature = "honest-but-curious")]
     pub fn lazyframe(&mut self) -> LazyFrame {
         let answer = self.eval_query(Query::Internal(&ExtractLazyFrame)).unwrap();
