@@ -144,14 +144,12 @@ impl ExprDomain {
     }
 
     /// # Proof Definition
-    /// Returns the margin corresponding to the grouping columns in the context,
-    /// otherwise returns an error.
-    pub fn active_margin(&self) -> Fallible<&Margin> {
+    /// If `self.context` does not have grouping columns, return an error.
+    /// Otherwise return margin descriptors about the grouping columns in `self.context`
+    /// that can be inferred from `self.frame_domain`.
+    pub fn active_margin(&self) -> Fallible<Margin> {
         let grouping_columns = self.context.grouping_columns()?;
-        self.frame_domain
-            .margins
-            .get(&grouping_columns)
-            .ok_or_else(|| err!(FailedFunction, "No known margin for {:?}", grouping_columns))
+        Ok(self.frame_domain.get_margin(grouping_columns))
     }
 
     /// # Proof Definition

@@ -324,9 +324,8 @@ def test_polars_context():
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=2,
         margins={
-            # TODO: this is redundant with the second margin
             (): dp.polars.Margin(max_partition_length=5),
-            "B": dp.polars.Margin(public_info="keys", max_partition_length=5),
+            "B": dp.polars.Margin(public_info="keys"),
         },
     )
 

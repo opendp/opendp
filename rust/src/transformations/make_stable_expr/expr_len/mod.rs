@@ -45,10 +45,7 @@ where
     );
 
     // we only care about the margin that matches the current grouping columns
-    let margin_id = input_domain.context.grouping_columns()?;
-    let public_info = (input_domain.frame_domain.margins.get(&margin_id))
-        .map(|m| m.public_info.clone())
-        .unwrap_or_default();
+    let margin = input_domain.active_margin()?;
 
     //  norm_map(d_in) returns d_in^(1/p)
     let norm_map = move |d_in: f64| match P {
@@ -63,7 +60,7 @@ where
     };
 
     //  pp_map(d_in) returns the per-partition change in counts if d_in input records are changed
-    let pp_map = move |d_in: &IntDistance| match public_info {
+    let pp_map = move |d_in: &IntDistance| match margin.public_info {
         Some(MarginPub::Lengths) => 0,
         _ => *d_in,
     };
