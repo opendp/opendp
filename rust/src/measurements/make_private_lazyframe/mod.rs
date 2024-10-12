@@ -26,9 +26,6 @@ mod group_by;
 pub(crate) use group_by::is_threshold_predicate;
 
 #[cfg(feature = "contrib")]
-mod postprocess;
-
-#[cfg(feature = "contrib")]
 mod select;
 
 fn make_private_aggregation<MS, MI, MO>(
@@ -162,17 +159,6 @@ where
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, MaxDivergence>> {
-        if let Some(meas) = postprocess::match_postprocess(
-            input_domain.clone(),
-            input_metric.clone(),
-            output_measure.clone(),
-            self.clone(),
-            global_scale,
-            threshold,
-        )? {
-            return Ok(meas);
-        }
-
         make_private_aggregation::<MS, MS, _>(
             input_domain,
             input_metric,
@@ -200,17 +186,6 @@ where
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, ZeroConcentratedDivergence>> {
-        if let Some(meas) = postprocess::match_postprocess(
-            input_domain.clone(),
-            input_metric.clone(),
-            output_measure.clone(),
-            self.clone(),
-            global_scale,
-            threshold,
-        )? {
-            return Ok(meas);
-        }
-
         make_private_aggregation::<MS, MS, _>(
             input_domain,
             input_metric,
@@ -242,17 +217,6 @@ where
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, Approximate<MO>>> {
-        if let Some(meas) = postprocess::match_postprocess::<MS, Approximate<MO>>(
-            input_domain.clone(),
-            input_metric.clone(),
-            output_measure.clone(),
-            self.clone(),
-            global_scale,
-            threshold,
-        )? {
-            return Ok(meas);
-        }
-
         if let Ok(meas) = make_private_aggregation::<MS, MS, _>(
             input_domain.clone(),
             input_metric.clone(),
