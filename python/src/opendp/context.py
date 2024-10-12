@@ -382,7 +382,7 @@ class Context(object):
         split_evenly_over: Optional[int] = None,
         split_by_weights: Optional[list[float]] = None,
         domain: Optional[Domain] = None,
-        margins: Optional[dict[tuple[str, ...], Margin]] = None,
+        margins: Optional[dict[Union[tuple[str, ...], str], Margin]] = None,
     ) -> "Context":
         """Constructs a new context containing a sequential compositor with the given weights.
 
@@ -403,6 +403,8 @@ class Context(object):
 
         if margins:
             for by, margin in margins.items():
+                # wrap single strings in a singleton tuple
+                by = (by,) if isinstance(by, str) else by
                 domain = with_margin(domain, by=list(by), **asdict(margin))
 
         accountant, d_mids = _sequential_composition_by_weights(
