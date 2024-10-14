@@ -67,6 +67,12 @@ class DPExpr(object):
           - Fill missing values with provided value
         * - `lit <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.lit.html>`_
           - Return an expression representing a literal value 
+        * - `str.strptime <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.str.strptime.html>`_
+          - Parse a string into a date, time or datetime
+        * - `date components <https://docs.pola.rs/api/python/stable/reference/expressions/temporal.html>`_
+          - year, iso_year, quarter, month, week, weekday, day, ordinal_day
+        * - `time components <https://docs.pola.rs/api/python/stable/reference/expressions/temporal.html>`_
+          - hour, minute, second, millisecond, microsecond, nanosecond
 
     A few ``Expr`` aggregation methods are also available:
 

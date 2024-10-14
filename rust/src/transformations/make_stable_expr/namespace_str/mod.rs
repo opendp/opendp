@@ -18,7 +18,7 @@ mod expr_strptime;
 /// * `input_domain` - Expr domain
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared
 /// * `expr` - The str expression
-pub fn make_expr_str<M: OuterMetric>(
+pub fn make_namespace_str<M: OuterMetric>(
     input_domain: ExprDomain,
     input_metric: M,
     expr: Expr,
