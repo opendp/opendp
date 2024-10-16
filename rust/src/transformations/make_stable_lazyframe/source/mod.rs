@@ -23,7 +23,6 @@ where
         df: _, // DO NOT TOUCH THE DATA. Touching the data will degrade any downstream stability or privacy guarantees.
         filter,
         output_schema,
-        schema,
         ..
     } = plan
     else {
@@ -38,19 +37,6 @@ where
         return fallible!(
             MakeTransformation,
             "Dtype overrides are not currently supported."
-        );
-    }
-
-    let domain_schema = input_domain
-        .series_domains
-        .iter()
-        .map(|s| s.field.clone())
-        .collect::<Schema>();
-
-    if &domain_schema != schema.as_ref() {
-        return fallible!(
-            MakeTransformation,
-            "Schema mismatch. LazyFrame schema must match the schema from the input domain."
         );
     }
 

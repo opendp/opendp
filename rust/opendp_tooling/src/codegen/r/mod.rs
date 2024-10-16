@@ -46,6 +46,7 @@ const BLACKLIST: &'static [&'static str] = &[
     "new_arrow_array",
     "series_domain",
     "categorical_domain",
+    "unknown_value_domain",
     "arrow_array_free",
     "dataframe_domain",
     "lazyframe_domain",

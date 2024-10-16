@@ -199,6 +199,21 @@ impl<F: Frame> FrameDomain<F> {
     }
 
     /// # Proof Definition
+    /// Return the schema shared by all members of the domain,
+    /// but with any Unknown type replaced with String.
+    ///
+    /// The purpose of this is to produce a schema that is safe to use to generate a LazyFrame.
+    pub fn seed_schema(&self) -> Schema {
+        let mut schema = self.schema();
+        schema.iter_dtypes_mut().for_each(|dtype| {
+            if matches!(dtype, DataType::Unknown(_)) {
+                *dtype = DataType::String;
+            }
+        });
+        schema
+    }
+
+    /// # Proof Definition
     /// Return a FrameDomain equivalent to `self`,
     /// but whose carrier type (the type of a frame) is `FO`.
     pub(crate) fn cast_carrier<FO: Frame>(&self) -> FrameDomain<FO> {
@@ -288,6 +303,12 @@ impl<F: Frame> FrameDomain<F> {
             .flatten();
 
         margin
+    }
+}
+
+impl LazyFrameDomain {
+    pub(crate) fn seed_frame(&self) -> Fallible<LazyFrame> {
+        Ok(DataFrame::from_rows_and_schema(&[], &self.seed_schema())?.lazy())
     }
 }
 
