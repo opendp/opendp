@@ -325,7 +325,7 @@ def test_polars_context():
         context.query()
         .with_columns(pl.col("B").is_null().alias("B_nulls"))
         .filter(pl.col("B_nulls"))
-        .select(pl.col("A").fill_null(2.0).dp.sum((0, 3)))
+        .select(pl.col("A").dp.sum((0, 3)))
         .release()
         .collect()
     )
@@ -333,7 +333,7 @@ def test_polars_context():
     (
         context.query()
         .group_by("B")
-        .agg(dp.len(), pl.col("A").fill_null(2).dp.sum((0, 3)))
+        .agg(dp.len(), pl.col("A").dp.sum((0, 3)))
         .release()
         .collect()
     )
@@ -368,7 +368,7 @@ def test_polars_describe():
         }
     )
 
-    summer = pl.col("A").fill_null(2).dp.sum((0, 3))
+    summer = pl.col("A").dp.sum((0, 3))
 
     query = (
         context.query()
@@ -417,7 +417,7 @@ def test_polars_accuracy_threshold():
     query = (
         context.query()
         .group_by("B")
-        .agg(dp.len(), pl.col("A").fill_null(2).dp.sum((0, 3)))
+        .agg(dp.len(), pl.col("A").dp.sum((0, 3)))
     )
 
     actual = query.summarize()
@@ -825,7 +825,7 @@ def test_float_sum_with_unlimited_reorderable_partitions():
     # sum of income per region, add noise with scale of 1.0
     pl = pytest.importorskip('polars')
     plan = lf.group_by("region").agg([
-        pl.col("income").dp.sum(bounds=(1_000, 100_000), scale=1.0)
+        pl.col("income").dp.sum(bounds=(1_000.0, 100_000.0), scale=1.0)
     ])
 
     # since there are an unknown number of partitions, and each partition has non-zero sensitivity, sensitivity is undefined

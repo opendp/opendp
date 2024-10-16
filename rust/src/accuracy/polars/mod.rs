@@ -2,7 +2,7 @@ use opendp_derive::bootstrap;
 use polars::{
     datatypes::{AnyValue, DataType, Field},
     frame::{row::Row, DataFrame},
-    prelude::{FunctionExpr, IntoLazy, LazyFrame, Schema},
+    prelude::{FunctionExpr, LazyFrame, Schema},
 };
 use polars_plan::{
     dsl::{AggExpr, Expr},
@@ -59,11 +59,9 @@ pub fn summarize_polars_measurement<MI: Metric, MO: 'static + Measure>(
 where
     (LazyFrameDomain, MI): MetricSpace,
 {
-    let schema = measurement.input_domain.schema();
-    let lf = DataFrame::from_rows_and_schema(&[], &schema)?.lazy();
+    let lf = measurement.input_domain.seed_frame()?;
     let mut of = measurement.invoke(&lf)?;
     let lf: LazyFrame = of.eval_internal(&ExtractLazyFrame)?;
-
     summarize_lazyframe(&lf, alpha)
 }
 

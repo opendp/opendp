@@ -80,9 +80,11 @@ where
     } else {
         compute_labels(&breaks, left_closed)?
     };
-
-    let element_domain = CategoricalDomain::new_with_encoding(categories)?;
-    output_domain.column.set_element_domain(element_domain);
+    let series_domain = &mut output_domain.column;
+    if !series_domain.dtype().is_numeric() {
+        return fallible!(MakeTransformation, "cut requires input data type to be numeric, got {}. Cast your data first: `.cast(dtype)`.", series_domain.dtype());
+    }
+    series_domain.set_element_domain(CategoricalDomain::new_with_encoding(categories)?);
 
     t_prior
         >> Transformation::new(

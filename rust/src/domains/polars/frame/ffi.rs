@@ -36,14 +36,15 @@ pub extern "C" fn opendp_domains__lazyframe_domain(
 }
 
 #[bootstrap()]
-/// Construct an empty LazyFrame with the same schema as in the LazyFrameDomain.
+/// Construct an empty LazyFrame with the same schema as in the LazyFrameDomain,
+/// but where unknown types are substituted for string types.
 ///
 /// This is useful for creating a dummy lazyframe used to write a query plan.
 ///
 /// # Arguments
 /// * `domain` - A LazyFrameDomain.
 fn _lazyframe_from_domain(domain: LazyFrameDomain) -> Fallible<LazyFrame> {
-    Ok(DataFrame::from_rows_and_schema(&[], &domain.schema())?.lazy())
+    domain.seed_frame()
 }
 
 #[no_mangle]

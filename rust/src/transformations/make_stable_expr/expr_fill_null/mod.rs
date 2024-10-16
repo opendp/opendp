@@ -61,9 +61,11 @@ where
         );
     }
 
-    if matches!(data_domain.column.dtype(), DataType::Categorical(_, _)) {
-        return fallible!(MakeTransformation, "fill_null cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars");
-    }
+    match data_domain.column.dtype() {
+        DataType::Categorical(_, _) => return fallible!(MakeTransformation, "fill_null cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars"),
+        DataType::Unknown(_) => return fallible!(MakeTransformation, "fill_null requires input data type to be statically known. Cast your data first: `.cast(dtype)`."),
+        _ => ()
+    };
 
     if fill_domain.column.nullable {
         return fallible!(MakeTransformation, "fill expression must not be nullable");

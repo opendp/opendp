@@ -30,8 +30,7 @@ from opendp.domains import (
     series_domain,
     lazyframe_domain,
     option_domain,
-    atom_domain,
-    categorical_domain,
+    unknown_value_domain,
 )
 from opendp.measurements import make_private_lazyframe
 
@@ -355,21 +354,26 @@ class DPExpr(object):
         """
         return self.expr.n_unique().dp.noise(scale)
 
-    def sum(self, bounds: tuple[float, float], scale: float | None = None):
+    def sum(
+        self, bounds: tuple[float, float], scale: float | None = None, cast: bool = True
+    ):
         """Compute the differentially private sum.
 
         If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
         :param bounds: clip the input data to these lower and upper bounds
         :param scale: parameter for the noise distribution
+        :param cast: Whether to preprocess with a cast to the data type of bounds
 
         :example:
 
-        This function is a shortcut which actually implies several operations:
+        This function is a shortcut for the following expression:
 
-        * Clipping the values
-        * Summing them
-        * Applying noise to the sum
+        * Cast to the dtype of bounds
+        * Fill null values with the lower bound
+        * Clip to bounds
+        * Sum
+        * Add noise
 
         >>> import polars as pl
         >>> context = dp.Context.compositor(
@@ -379,7 +383,7 @@ class DPExpr(object):
         ...     split_evenly_over=1,
         ...     margins={(): dp.polars.Margin(max_partition_length=5)}
         ... )
-        >>> query = context.query().select(pl.col("visits").fill_null(0).dp.sum((0, 1)))
+        >>> query = context.query().select(pl.col("visits").dp.sum((0, 1)))
         >>> query.release().collect()
         shape: (1, 1)
         ┌────────┐
@@ -392,12 +396,15 @@ class DPExpr(object):
 
         Output is noise added to two due to each value being clipped to (0, 1).
         """
-        return self.expr.clip(*bounds).sum().dp.noise(scale)
+        c = bounds[0]
+        expr = self.expr.cast(type(c), strict=False) if cast else self.expr
+        return expr.fill_null(c).clip(*bounds).sum().dp.noise(scale)
 
     def mean(
         self,
         bounds: tuple[float, float],
         scale: tuple[float | None, float | None] = (None, None),
+        cast: bool = True,
     ):
         """Compute the differentially private mean.
 
@@ -406,6 +413,7 @@ class DPExpr(object):
 
         :param bounds: clip the input data to these lower and upper bounds
         :param scale: parameters for the noise distributions of the numerator and denominator
+        :param cast: Whether to preprocess with a cast to the data type of bounds
 
         :example:
 
@@ -417,7 +425,7 @@ class DPExpr(object):
         ...     split_evenly_over=1,
         ...     margins={(): dp.polars.Margin(max_partition_length=5)}
         ... )
-        >>> query = context.query().select(pl.col("visits").fill_null(0).dp.mean((0, 1)))
+        >>> query = context.query().select(pl.col("visits").dp.mean((0, 1)))
         >>> with pl.Config(float_precision=0): # just to prevent doctest from failing
         ...     query.release().collect()
         shape: (1, 1)
@@ -432,9 +440,11 @@ class DPExpr(object):
         Privately estimates the numerator and denominator separately, and then returns their ratio.
         """
         numer, denom = scale
-        return self.sum(bounds, numer) / self.len(denom)
+        return self.sum(bounds, numer, cast) / self.len(denom)
 
-    def _discrete_quantile_score(self, alpha: float, candidates: list[float]):
+    def _discrete_quantile_score(
+        self, alpha: float, candidates: list[float], cast: bool = True
+    ):
         """Score the utility of each candidate for representing the true quantile.
 
         Candidates closer to the true quantile are assigned scores closer to zero.
@@ -446,10 +456,12 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         from polars import Series  # type: ignore[import-not-found]
 
+        c = candidates[0]
+        expr = self.expr.cast(type(c), strict=False) if cast else self.expr
         return register_plugin_function(
             plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
             function_name="discrete_quantile_score",
-            args=[self.expr, alpha, Series(candidates)],
+            args=[expr.fill_null(c), alpha, Series(candidates)],
             returns_scalar=True,
         )
 
@@ -513,7 +525,7 @@ class DPExpr(object):
         ...     margins={(): dp.polars.Margin(max_partition_length=100)}
         ... )
         >>> candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
-        >>> query = context.query().select(pl.col("age").fill_null(0).dp.quantile(0.25, candidates))
+        >>> query = context.query().select(pl.col("age").dp.quantile(0.25, candidates))
         >>> query.release().collect()
         shape: (1, 1)
         ┌─────┐
@@ -527,7 +539,7 @@ class DPExpr(object):
         Output will be one of the candidates,
         with greater likelihood of being selected the closer the candidate is to the first quartile.
         """
-        dq_score = self.expr.dp._discrete_quantile_score(alpha, candidates)
+        dq_score = self._discrete_quantile_score(alpha, candidates)
         noisy_idx = dq_score.dp._report_noisy_max("min", scale)
         return noisy_idx.dp._index_candidates(candidates)
 
@@ -551,7 +563,7 @@ class DPExpr(object):
         ...     margins={(): dp.polars.Margin(max_partition_length=100)}
         ... )
         >>> candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
-        >>> query = context.query().select(pl.col("age").fill_null(0).dp.quantile(0.5, candidates))
+        >>> query = context.query().select(pl.col("age").dp.quantile(0.5, candidates))
         >>> query.release().collect()
         shape: (1, 1)
         ┌─────┐
@@ -565,7 +577,7 @@ class DPExpr(object):
         Output will be one of the candidates,
         with greater likelihood of being selected the closer the candidate is to the median.
         """
-        return self.expr.dp.quantile(0.5, candidates, scale)
+        return self.quantile(0.5, candidates, scale)
 
 
 try:
@@ -650,36 +662,11 @@ class OnceFrame(object):
 def _lazyframe_domain_from_schema(schema) -> Domain:
     """Builds the broadest possible LazyFrameDomain that matches a given LazyFrame schema."""
     return lazyframe_domain(
-        [_series_domain_from_field(field) for field in schema.items()]
+        [
+            series_domain(field[0], option_domain(unknown_value_domain()))
+            for field in schema.items()
+        ]
     )
-
-
-def _series_domain_from_field(field) -> Domain:
-    """Builds the broadest possible SeriesDomain that matches a given field."""
-    import polars as pl
-
-    name, dtype = field
-    if dtype == pl.Categorical:
-        return series_domain(name, option_domain(categorical_domain()))
-
-    T = {
-        pl.UInt32: "u32",
-        pl.UInt64: "u64",
-        pl.Int8: "i8",
-        pl.Int16: "i16",
-        pl.Int32: "i32",
-        pl.Int64: "i64",
-        pl.Float32: "f32",
-        pl.Float64: "f64",
-        pl.Boolean: "bool",
-        pl.String: "String",
-    }.get(dtype)
-
-    if T is None:
-        raise ValueError(f"unrecognized dtype: {dtype}")
-
-    element_domain = option_domain(atom_domain(T=T, nullable=T in {"f32", "f64"}))
-    return series_domain(name, element_domain)
 
 
 _LAZY_EXECUTION_METHODS = {
@@ -944,7 +931,7 @@ try:
 
             >>> query = context.query().select(
             ...     dp.len(),
-            ...     pl.col("convicted").fill_null(0).dp.sum((0, 1))
+            ...     pl.col("convicted").dp.sum((0, 1))
             ... )
 
             >>> query.summarize(alpha=.05)  # type: ignore[union-attr]

@@ -76,7 +76,7 @@ where
     let series_domain = &mut output_domain.column;
 
     // check input and output types
-    if series_domain.dtype() != DataType::String {
+    if !series_domain.dtype().is_string() {
         return fallible!(
             MakeTransformation,
             "str.strptime input dtype must be String, found {}",

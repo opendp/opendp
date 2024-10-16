@@ -18,6 +18,7 @@ use crate::transformations::{DatasetMetric, StableDslPlan};
 use dashu::integer::IBig;
 use make_private_expr::PrivateExpr;
 use matching::{find_len_expr, match_grouping_columns, MatchGroupBy};
+use polars::prelude::DataType;
 use polars_plan::dsl::{col, lit, Expr};
 use polars_plan::plans::DslPlan;
 
@@ -76,6 +77,21 @@ where
             margin: margin.clone(),
         },
     };
+
+    by.iter().try_for_each(|name| {
+        let Some(domain) = middle_domain.series_domains.iter().find(|dom| &dom.name == name) else {
+            return fallible!(MakeMeasurement, "unrecognized grouping column: {}", name);
+        };
+        if let DataType::Unknown(_) = domain.dtype() {
+            return fallible!(
+                MakeMeasurement,
+                "unknown data type in grouping column: {}. Try applying a cast transformation first: `.with_columns([col(\"{}\").cast(dtype)]).group_by(...)`", 
+                domain.name,
+                domain.name
+            );
+        }
+        Ok(())
+    })?;
 
     let m_exprs = make_basic_composition(
         aggs.into_iter()

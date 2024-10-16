@@ -52,13 +52,19 @@ where
         return fallible!(MakeTransformation, "unsupported operator: {:?}. Only binary operations that emit booleans are currently supported.", op);
     }
 
+    let left_series = &t_left.output_domain.column;
+    let right_series = &t_right.output_domain.column;
+
+    if matches!(left_series.dtype(), DataType::Unknown(_))
+        || matches!(right_series.dtype(), DataType::Unknown(_))
+    {
+        return fallible!(MakeTransformation, "{} requires input data types to be statically known. Cast your data first: `.cast(dtype)`.", op);
+    }
+
     let mut data_column =
         SeriesDomain::new(&*expr_output_name(&expr)?, AtomDomain::<bool>::default());
 
-    let left_nullable = t_left.output_domain.column.nullable;
-    let right_nullable = t_right.output_domain.column.nullable;
-
-    data_column.nullable = left_nullable || right_nullable;
+    data_column.nullable = left_series.nullable || right_series.nullable;
 
     let output_domain = ExprDomain {
         column: data_column,

@@ -52,14 +52,26 @@ where
         );
     }
 
+    match data_domain.column.dtype() {
+        DataType::Float32  | DataType::Float64 => (),
+        DataType::Unknown(_) => return fallible!(MakeTransformation, "fill_nan requires input data type to be statically known. Cast your data first: `.cast(dtype)`."),
+        dtype => return fallible!(MakeTransformation, "fill_nan requires input data type to be float, got {}. Cast your data first: `.cast(dtype)`.", dtype),
+    }
+
     let fill_series = &fill_domain.column;
-    let fill_can_be_nan = match fill_series.dtype() {
+    let fill_can_be_nan = match &fill_series.dtype() {
         // from the perspective of atom domain, null refers to existence of any missing value.
         // For float types, this is NaN.
         // Therefore if the float domain may be nullable, then the domain includes NaN
         DataType::Float32 => fill_series.atom_domain::<f32>()?.nullable(),
         DataType::Float64 => fill_series.atom_domain::<f64>()?.nullable(),
-        _ => return fallible!(MakeTransformation, "filler data for fill_nan must be float"),
+        dtype => {
+            return fallible!(
+                MakeTransformation,
+                "filler data for fill_nan must be float, got {}",
+                dtype
+            )
+        }
     };
 
     if fill_can_be_nan {
