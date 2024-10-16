@@ -33,6 +33,9 @@ mod expr_clip;
 mod expr_col;
 
 #[cfg(feature = "contrib")]
+mod expr_count;
+
+#[cfg(feature = "contrib")]
 mod expr_cut;
 
 #[cfg(feature = "contrib")]
@@ -155,7 +158,7 @@ where
 
             expr => fallible!(
                 MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
             )
@@ -176,6 +179,11 @@ where
         use Expr::*;
         match self {
             #[cfg(feature = "contrib")]
+            Agg(AggExpr::Count(_, _) | AggExpr::NUnique(_)) | Function { function: FunctionExpr::NullCount, .. } => {
+                expr_count::make_expr_count(input_domain, input_metric, self)
+            }
+
+            #[cfg(feature = "contrib")]
             Agg(AggExpr::Sum(_)) => {
                 expr_sum::make_expr_sum(input_domain, input_metric, self)
             }
@@ -185,7 +193,7 @@ where
 
             expr => fallible!(
                 MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
             )
@@ -214,7 +222,7 @@ where
         match self {
             expr => fallible!(
                 MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
             )

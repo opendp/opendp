@@ -20,23 +20,23 @@ First, create a measurement with the Polars API:
 This function extracts utility information about each aggregate in the resulting data frame:
 >>> dp.summarize_polars_measurement(meas)
 shape: (2, 4)
-┌────────┬───────────┬─────────────────┬───────┐
-│ column ┆ aggregate ┆ distribution    ┆ scale │
-│ ---    ┆ ---       ┆ ---             ┆ ---   │
-│ str    ┆ str       ┆ str             ┆ f64   │
-╞════════╪═══════════╪═════════════════╪═══════╡
-│ len    ┆ Len       ┆ Integer Laplace ┆ 1.0   │
-│ A      ┆ Sum       ┆ Integer Laplace ┆ 1.0   │
-└────────┴───────────┴─────────────────┴───────┘
+┌────────┬────────────────┬─────────────────┬───────┐
+│ column ┆ aggregate      ┆ distribution    ┆ scale │
+│ ---    ┆ ---            ┆ ---             ┆ ---   │
+│ str    ┆ str            ┆ str             ┆ f64   │
+╞════════╪════════════════╪═════════════════╪═══════╡
+│ len    ┆ Context Length ┆ Integer Laplace ┆ 1.0   │
+│ A      ┆ Sum            ┆ Integer Laplace ┆ 1.0   │
+└────────┴────────────────┴─────────────────┴───────┘
 
 If you pass an alpha argument, then you also get accuracy estimates:
 >>> dp.summarize_polars_measurement(meas, alpha=.05)
 shape: (2, 5)
-┌────────┬───────────┬─────────────────┬───────┬──────────┐
-│ column ┆ aggregate ┆ distribution    ┆ scale ┆ accuracy │
-│ ---    ┆ ---       ┆ ---             ┆ ---   ┆ ---      │
-│ str    ┆ str       ┆ str             ┆ f64   ┆ f64      │
-╞════════╪═══════════╪═════════════════╪═══════╪══════════╡
-│ len    ┆ Len       ┆ Integer Laplace ┆ 1.0   ┆ 3.375618 │
-│ A      ┆ Sum       ┆ Integer Laplace ┆ 1.0   ┆ 3.375618 │
-└────────┴───────────┴─────────────────┴───────┴──────────┘
+┌────────┬────────────────┬─────────────────┬───────┬──────────┐
+│ column ┆ aggregate      ┆ distribution    ┆ scale ┆ accuracy │
+│ ---    ┆ ---            ┆ ---             ┆ ---   ┆ ---      │
+│ str    ┆ str            ┆ str             ┆ f64   ┆ f64      │
+╞════════╪════════════════╪═════════════════╪═══════╪══════════╡
+│ len    ┆ Context Length ┆ Integer Laplace ┆ 1.0   ┆ 3.375618 │
+│ A      ┆ Sum            ┆ Integer Laplace ┆ 1.0   ┆ 3.375618 │
+└────────┴────────────────┴─────────────────┴───────┴──────────┘
