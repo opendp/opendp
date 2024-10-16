@@ -12,6 +12,8 @@ use polars::prelude::*;
 
 use crate::domains::{AtomDomain, CategoricalDomain, DatetimeDomain, OptionDomain};
 
+use super::UnknownValueDomain;
+
 #[cfg(feature = "ffi")]
 mod ffi;
 
@@ -275,6 +277,19 @@ impl SeriesElementDomain for DatetimeDomain {
 
     fn dtype(&self) -> DataType {
         DataType::Datetime(self.time_unit.clone(), self.time_zone.clone())
+    }
+    fn inner_domain(&self) -> &Self {
+        self
+    }
+
+    const NULLABLE: bool = false;
+}
+
+impl SeriesElementDomain for UnknownValueDomain {
+    type InnerDomain = Self;
+
+    fn dtype(&self) -> DataType {
+        DataType::Unknown(UnknownKind::Any)
     }
     fn inner_domain(&self) -> &Self {
         self

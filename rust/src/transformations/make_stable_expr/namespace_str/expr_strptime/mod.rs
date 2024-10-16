@@ -90,6 +90,14 @@ where
     let series_domain = output_domain.active_series_mut()?;
     let name = series_domain.field.name.as_ref();
 
+    if !series_domain.field.dtype.is_string() {
+        return fallible!(
+            MakeTransformation,
+            "expected a string input type, got {}",
+            series_domain.field.dtype
+        );
+    }
+
     *series_domain = SeriesDomain::new_from_field(Field::new(name, to_type.clone()))?;
 
     t_prior

@@ -77,6 +77,12 @@ where
     let mut output_domain = middle_domain.clone();
     let active_series = output_domain.active_series_mut()?;
 
+    if matches!(active_series.field.dtype, DataType::Unknown(_))
+        && !matches!(bool_function, IsNull | IsNotNull)
+    {
+        return fallible!(MakeTransformation, "{} requires input data type to be statically known. Cast your data first: `.cast(dtype)`.", bool_function);
+    }
+
     if matches!(bool_function, IsNull | IsNotNull) {
         active_series.nullable = false;
     }

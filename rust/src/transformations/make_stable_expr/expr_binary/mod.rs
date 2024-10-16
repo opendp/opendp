@@ -61,10 +61,16 @@ where
     let mut series_domain =
         SeriesDomain::new(&*expr_output_name(&expr)?, AtomDomain::<bool>::default());
 
-    let left_nullable = t_left.output_domain.active_series()?.nullable;
-    let right_nullable = t_right.output_domain.active_series()?.nullable;
+    let left_series = t_left.output_domain.active_series()?;
+    let right_series = t_right.output_domain.active_series()?;
 
-    series_domain.nullable = left_nullable || right_nullable;
+    if matches!(left_series.field.dtype, DataType::Unknown(_))
+        || matches!(right_series.field.dtype, DataType::Unknown(_))
+    {
+        return fallible!(MakeTransformation, "{} requires input data types to be statically known. Cast your data first: `.cast(dtype)`.", op);
+    }
+
+    series_domain.nullable = left_series.nullable || right_series.nullable;
 
     let output_domain = ExprDomain::new(DslPlanDomain::new(vec![series_domain])?, context);
 
