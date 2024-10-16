@@ -76,6 +76,7 @@ where
                 "u8 and u16 not supported in the OpenDP Polars plugin. Please use u32 or u64."
             )
         }
+        Unknown(_) => return fallible!(MakeTransformation, "{} requires input data type to be statically known. Cast your data first: `.cast(dtype)`.", DiscreteQuantileScoreShim::NAME),
         dtype => {
             return fallible!(
                 MakeTransformation,

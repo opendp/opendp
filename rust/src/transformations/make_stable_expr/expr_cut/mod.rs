@@ -80,6 +80,9 @@ where
         compute_labels(&breaks, left_closed)?
     };
     let series_domain = output_domain.active_series_mut()?;
+    if !series_domain.field.dtype.is_numeric() {
+        return fallible!(MakeTransformation, "cut requires input data type to be numeric, got {}. Cast your data first: `.cast(dtype)`.", series_domain.field.dtype);
+    }
     series_domain.element_domain = Arc::new(CategoricalDomain::new_with_encoding(categories)?);
     series_domain.field.dtype = DataType::Categorical(None, Default::default());
 

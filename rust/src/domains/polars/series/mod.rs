@@ -12,6 +12,8 @@ use polars::prelude::*;
 
 use crate::domains::{AtomDomain, CategoricalDomain, DatetimeDomain, OptionDomain};
 
+use super::UnknownValueDomain;
+
 #[cfg(feature = "ffi")]
 mod ffi;
 
@@ -36,14 +38,18 @@ pub struct SeriesDomain {
     /// The name of the series and type of underlying data.
     pub field: Field,
     /// Domain of each element in the series.
+    ///
+    /// When this type holds an UnknownValueDomain, all elements of the series are homogeneously typed.
     pub element_domain: Arc<dyn DynSeriesElementDomain>,
     /// Indicates if data can contain null values.
     pub nullable: bool,
 }
 
-impl core::cmp::PartialEq for SeriesDomain {
+impl PartialEq for SeriesDomain {
     fn eq(&self, other: &Self) -> bool {
-        self.field.eq(&other.field) && self.element_domain.eq(&self.element_domain)
+        self.field.eq(&other.field)
+            && self.element_domain.eq(&self.element_domain)
+            && self.nullable.eq(&other.nullable)
     }
 }
 
@@ -275,6 +281,19 @@ impl SeriesElementDomain for DatetimeDomain {
 
     fn dtype(&self) -> DataType {
         DataType::Datetime(self.time_unit.clone(), self.time_zone.clone())
+    }
+    fn inner_domain(&self) -> &Self {
+        self
+    }
+
+    const NULLABLE: bool = false;
+}
+
+impl SeriesElementDomain for UnknownValueDomain {
+    type InnerDomain = Self;
+
+    fn dtype(&self) -> DataType {
+        DataType::Unknown(UnknownKind::Any)
     }
     fn inner_domain(&self) -> &Self {
         self
