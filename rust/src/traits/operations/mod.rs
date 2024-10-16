@@ -236,7 +236,14 @@ macro_rules! impl_CheckAtom_number {
         }
     })+)
 }
+
 impl_CheckAtom_number!(f32 f64 i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
+
+#[cfg(feature = "polars")]
+impl_CheckAtom_number!(chrono::NaiveDate);
+#[cfg(feature = "polars")]
+impl_CheckAtom_number!(chrono::NaiveTime);
+
 impl CheckAtom for (f32, f32) {
     fn is_bounded(&self, bounds: Bounds<Self>) -> Fallible<bool> {
         bounds.member(self)
@@ -265,6 +272,12 @@ macro_rules! impl_CheckNull_for_non_nullable {
 impl_CheckNull_for_non_nullable!(
     u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, bool, String, &str, char, usize, isize
 );
+
+#[cfg(feature = "polars")]
+impl_CheckNull_for_non_nullable!(chrono::NaiveDate);
+#[cfg(feature = "polars")]
+impl_CheckNull_for_non_nullable!(chrono::NaiveTime);
+
 impl<T1: CheckNull, T2: CheckNull> CheckNull for (T1, T2) {
     fn is_null(&self) -> bool {
         self.0.is_null() || self.1.is_null()
@@ -316,14 +329,19 @@ macro_rules! impl_inherent_null_float {
 impl_inherent_null_float!(f64, f32);
 
 // TRAIT ProductOrd
-macro_rules! impl_total_ord_for_ord {
+macro_rules! impl_ProductOrd_for_ord {
     ($($ty:ty),*) => {$(impl ProductOrd for $ty {
         fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {Ok(Ord::cmp(self, other))}
     })*}
 }
-impl_total_ord_for_ord!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
+impl_ProductOrd_for_ord!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
 
-impl_total_ord_for_ord!(RBig, IBig);
+impl_ProductOrd_for_ord!(RBig, IBig);
+
+#[cfg(feature = "polars")]
+impl_ProductOrd_for_ord!(chrono::NaiveDate);
+#[cfg(feature = "polars")]
+impl_ProductOrd_for_ord!(chrono::NaiveTime);
 
 macro_rules! impl_total_ord_for_float {
     ($($ty:ty),*) => {

@@ -18,7 +18,7 @@ mod test;
 /// # Arguments
 /// * `input_domain` - Expr domain
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared
-/// * `expr` - The clipping expression
+/// * `expr` - The cast expression
 pub fn make_expr_cast<M: OuterMetric>(
     input_domain: ExprDomain,
     input_metric: M,

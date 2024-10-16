@@ -54,6 +54,9 @@ mod expr_len;
 mod expr_lit;
 
 #[cfg(feature = "contrib")]
+mod expr_str;
+
+#[cfg(feature = "contrib")]
 mod expr_sum;
 
 #[cfg(feature = "contrib")]
@@ -147,8 +150,13 @@ where
             } => expr_cut::make_expr_cut(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
-            Literal(_) => expr_lit::make_expr_lit(input_domain, input_metric, self),
+            Function {
+                function: FunctionExpr::StringExpr(_),
+                ..
+            } => expr_str::make_expr_str(input_domain, input_metric, self),
 
+            #[cfg(feature = "contrib")]
+            Literal(_) => expr_lit::make_expr_lit(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Function {

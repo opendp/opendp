@@ -7,9 +7,10 @@ use crate::error::Fallible;
 use crate::transformations::traits::UnboundedMetric;
 use crate::{core::Domain, traits::CheckAtom};
 
+use chrono::{NaiveDate, NaiveTime};
 use polars::prelude::*;
 
-use crate::domains::{AtomDomain, CategoricalDomain, OptionDomain};
+use crate::domains::{AtomDomain, CategoricalDomain, DatetimeDomain, OptionDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -97,8 +98,8 @@ impl SeriesDomain {
     /// and elements of the series are members of `element_domain`.
     pub fn new<DA: 'static + SeriesElementDomain>(name: &str, element_domain: DA) -> Self {
         SeriesDomain {
-            field: Field::new(name, DA::dtype()),
-            element_domain: Arc::new(element_domain.inner_domain()),
+            field: Field::new(name, element_domain.dtype()),
+            element_domain: Arc::new(element_domain.inner_domain().clone()),
             nullable: DA::NULLABLE,
         }
     }
@@ -130,6 +131,15 @@ impl SeriesDomain {
             DataType::Float32 => new_series_domain!(f64, new_nullable),
             DataType::Float64 => new_series_domain!(f64, new_nullable),
             DataType::String => new_series_domain!(String, default),
+            DataType::Date => new_series_domain!(NaiveDate, default),
+            DataType::Datetime(time_unit, time_zone) => SeriesDomain::new(
+                field.name.as_str(),
+                OptionDomain::new(DatetimeDomain {
+                    time_unit: time_unit.clone(),
+                    time_zone: time_zone.clone(),
+                }),
+            ),
+            DataType::Time => new_series_domain!(NaiveTime, default),
             dtype => return fallible!(MakeDomain, "unsupported type {}", dtype),
         })
     }
@@ -208,7 +218,7 @@ pub trait SeriesElementDomain: Domain + Send + Sync {
     type InnerDomain: SeriesElementDomain;
     /// # Proof Definition
     /// Returns the [`DataType`] of elements in the series.
-    fn dtype() -> DataType;
+    fn dtype(&self) -> DataType;
 
     /// # Proof Definition
     /// Returns the domain elements in the physical backing store.
@@ -216,7 +226,7 @@ pub trait SeriesElementDomain: Domain + Send + Sync {
     /// Polars Series represents nullity via a separate validity bit vector,
     /// so that non-null data can be stored contiguously.
     /// This function returns specifically the domain of non-null elements.
-    fn inner_domain(self) -> Self::InnerDomain;
+    fn inner_domain(&self) -> &Self::InnerDomain;
 
     /// # Proof Definition
     /// True if Series domains may contain null elements, otherwise False.
@@ -225,10 +235,10 @@ pub trait SeriesElementDomain: Domain + Send + Sync {
 impl<T: CheckAtom + PrimitiveDataType> SeriesElementDomain for AtomDomain<T> {
     type InnerDomain = Self;
 
-    fn dtype() -> DataType {
+    fn dtype(&self) -> DataType {
         T::dtype()
     }
-    fn inner_domain(self) -> Self {
+    fn inner_domain(&self) -> &Self {
         self
     }
 
@@ -237,11 +247,11 @@ impl<T: CheckAtom + PrimitiveDataType> SeriesElementDomain for AtomDomain<T> {
 impl<D: SeriesElementDomain> SeriesElementDomain for OptionDomain<D> {
     type InnerDomain = D;
 
-    fn dtype() -> DataType {
-        D::dtype()
+    fn dtype(&self) -> DataType {
+        self.inner_domain().dtype()
     }
-    fn inner_domain(self) -> D {
-        self.element_domain
+    fn inner_domain(&self) -> &D {
+        &self.element_domain
     }
 
     const NULLABLE: bool = true;
@@ -250,10 +260,23 @@ impl<D: SeriesElementDomain> SeriesElementDomain for OptionDomain<D> {
 impl SeriesElementDomain for CategoricalDomain {
     type InnerDomain = Self;
 
-    fn dtype() -> DataType {
+    fn dtype(&self) -> DataType {
         DataType::Categorical(None, Default::default())
     }
-    fn inner_domain(self) -> Self {
+    fn inner_domain(&self) -> &Self {
+        self
+    }
+
+    const NULLABLE: bool = false;
+}
+
+impl SeriesElementDomain for DatetimeDomain {
+    type InnerDomain = Self;
+
+    fn dtype(&self) -> DataType {
+        DataType::Datetime(self.time_unit.clone(), self.time_zone.clone())
+    }
+    fn inner_domain(&self) -> &Self {
         self
     }
 
@@ -341,4 +364,10 @@ impl PrimitiveDataType for bool {
 }
 impl PrimitiveDataType for String {
     type Polars = StringType;
+}
+impl PrimitiveDataType for NaiveDate {
+    type Polars = DateType;
+}
+impl PrimitiveDataType for NaiveTime {
+    type Polars = TimeType;
 }
