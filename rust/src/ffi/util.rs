@@ -42,7 +42,7 @@ pub struct Pairwise<T>(PhantomData<T>);
 
 // If polars is not enabled, then these structs don't exist.
 #[cfg(feature = "polars")]
-use crate::domains::{ExprDomain, LazyFrameDomain, SeriesDomain};
+use crate::domains::{ExprDomain, LazyFrameDomain, SeriesDomain, UnknownValueDomain};
 #[cfg(feature = "polars")]
 use polars::prelude::{DataFrame, DslPlan, Expr, LazyFrame, Series};
 
@@ -58,6 +58,8 @@ struct Series;
 struct Expr;
 #[cfg(not(feature = "polars"))]
 struct SeriesDomain;
+#[cfg(not(feature = "polars"))]
+struct UnknownValueDomain;
 #[cfg(not(feature = "polars"))]
 struct ExprDomain;
 #[cfg(not(feature = "polars"))]
@@ -349,8 +351,8 @@ lazy_static! {
             type_vec![UserDomain],
             type_vec![DataFrameDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>],
             type_vec![ExprDomain, LazyFrameDomain, SeriesDomain],
-            type_vec![CategoricalDomain],
-            type_vec![OptionDomain, <CategoricalDomain>],
+            type_vec![CategoricalDomain, UnknownValueDomain],
+            type_vec![OptionDomain, <CategoricalDomain, UnknownValueDomain>],
 
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],

@@ -4,7 +4,7 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{Domain, FfiResult, Function},
-    domains::{type_name, AtomDomain, MapDomain, VectorDomain},
+    domains::{type_name, AtomDomain, MapDomain, UnknownValueDomain, VectorDomain},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyObject, CallbackFn, Downcast},
@@ -236,6 +236,12 @@ pub extern "C" fn opendp_domains__option_domain(
     #[cfg(feature = "polars")]
     if T == Type::of::<CategoricalDomain>() {
         let element_domain = try_!(element_domain.downcast_ref::<CategoricalDomain>()).clone();
+        return Ok(AnyDomain::new(option_domain(element_domain))).into();
+    }
+
+    #[cfg(feature = "polars")]
+    if T == Type::of::<UnknownValueDomain>() {
+        let element_domain = try_!(element_domain.downcast_ref::<UnknownValueDomain>()).clone();
         return Ok(AnyDomain::new(option_domain(element_domain))).into();
     }
 
