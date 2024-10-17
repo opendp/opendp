@@ -53,6 +53,7 @@ impl ExprContext {
                     &grouping_columns
                         .iter()
                         .map(AsRef::as_ref)
+                        .map(PlSmallStr::from_str)
                         .map(col)
                         .collect::<Vec<_>>(),
                 )

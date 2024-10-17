@@ -104,7 +104,7 @@ impl SeriesDomain {
     /// and elements of the series are members of `element_domain`.
     pub fn new<DA: 'static + SeriesElementDomain>(name: &str, element_domain: DA) -> Self {
         SeriesDomain {
-            field: Field::new(name, element_domain.dtype()),
+            field: Field::new(name.into(), element_domain.dtype()),
             element_domain: Arc::new(element_domain.inner_domain().clone()),
             nullable: DA::NULLABLE,
         }
@@ -126,7 +126,7 @@ impl SeriesDomain {
             };
         }
 
-        Ok(match field.data_type() {
+        Ok(match field.dtype() {
             DataType::Boolean => new_series_domain!(bool, default),
             DataType::UInt32 => new_series_domain!(u32, default),
             DataType::UInt64 => new_series_domain!(u64, default),
@@ -142,7 +142,7 @@ impl SeriesDomain {
                 field.name.as_str(),
                 OptionDomain::new(DatetimeDomain {
                     time_unit: time_unit.clone(),
-                    time_zone: time_zone.clone(),
+                    time_zone: time_zone.as_ref().map(ToString::to_string),
                 }),
             ),
             DataType::Time => new_series_domain!(NaiveTime, default),
@@ -280,7 +280,7 @@ impl SeriesElementDomain for DatetimeDomain {
     type InnerDomain = Self;
 
     fn dtype(&self) -> DataType {
-        DataType::Datetime(self.time_unit.clone(), self.time_zone.clone())
+        DataType::Datetime(self.time_unit.clone(), self.time_zone.clone().map(PlSmallStr::from_string))
     }
     fn inner_domain(&self) -> &Self {
         self

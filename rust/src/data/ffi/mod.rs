@@ -203,9 +203,9 @@ pub extern "C" fn opendp_data__slice_as_object(
 
             let field = arrow::ffi::import_field_from_c(schema)
                 .map_err(|e| err!(FFI, "failed to import field from c: {}", e.to_string()))?;
-            let array = arrow::ffi::import_array_from_c(array, field.data_type)
+            let array = arrow::ffi::import_array_from_c(array, field.dtype)
                 .map_err(|e| err!(FFI, "failed to import array from c: {}", e.to_string()))?;
-            Series::try_from((name, array))
+            Series::try_from((PlSmallStr::from_str(name), array))
                 .map_err(|e| err!(FFI, "failed to construct Series: {}", e.to_string()))?
         })
     }
@@ -513,11 +513,11 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     fn concrete_series_to_raw(series: &Series) -> Fallible<FfiSlice> {
         // Rechunk aggregates all chunks to a contiguous array of memory.
         // since we rechunked, we can assume there is only one chunk
-        let array = series.rechunk().to_arrow(0, false);
+        let array = series.rechunk().to_arrow(0, CompatLevel::with_level(1)?);
 
         let schema = arrow::ffi::export_field_to_c(&ArrowField::new(
-            series.name(),
-            array.data_type().clone(),
+            series.name().clone(),
+            array.dtype().clone(),
             true,
         ));
         let array = arrow::ffi::export_array_to_c(array);

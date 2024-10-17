@@ -205,7 +205,7 @@ impl<F: Frame> FrameDomain<F> {
     /// The purpose of this is to produce a schema that is safe to use to generate a LazyFrame.
     pub fn seed_schema(&self) -> Schema {
         let mut schema = self.schema();
-        schema.iter_dtypes_mut().for_each(|dtype| {
+        schema.iter_mut().for_each(|(_, dtype)| {
             if matches!(dtype, DataType::Unknown(_)) {
                 *dtype = DataType::String;
             }

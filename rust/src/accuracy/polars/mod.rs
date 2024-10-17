@@ -134,12 +134,12 @@ fn summarize_logical_plan(
                     })
                     .collect::<Vec<_>>(),
                 &Schema::from_iter(vec![
-                    Field::new("column", DataType::String),
-                    Field::new("aggregate", DataType::String),
-                    Field::new("distribution", DataType::String),
-                    Field::new("scale", DataType::Float64),
-                    Field::new("accuracy", DataType::Float64),
-                    Field::new("threshold", DataType::UInt32),
+                    Field::new("column".into(), DataType::String),
+                    Field::new("aggregate".into(), DataType::String),
+                    Field::new("distribution".into(), DataType::String),
+                    Field::new("scale".into(), DataType::Float64),
+                    Field::new("accuracy".into(), DataType::Float64),
+                    Field::new("threshold".into(), DataType::UInt32),
                 ]),
             )?)
         }

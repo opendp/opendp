@@ -10,8 +10,8 @@ use polars::datatypes::{DataType, Field};
 use polars::error::PolarsResult;
 use polars::error::{polars_bail, polars_err};
 use polars::series::Series;
-use polars_plan::dsl::{Expr, GetOutput, SeriesUdf};
-use polars_plan::prelude::{ApplyOptions, FunctionOptions};
+use ::polars_plan::dsl::{Expr, GetOutput, SeriesUdf};
+use ::polars_plan::prelude::{ApplyOptions, FunctionOptions};
 use pyo3_polars::derive::polars_expr;
 #[cfg(feature = "ffi")]
 use serde::{Deserialize, Serialize};
@@ -152,7 +152,7 @@ impl SeriesUdf for IndexCandidatesPlugin {
     fn get_output(&self) -> Option<GetOutput> {
         let dtype = self.candidates.0.dtype().clone();
         Some(GetOutput::map_field(move |f| {
-            Ok(Field::new(f.name(), dtype.clone()))
+            Ok(Field::new(f.name().clone(), dtype.clone()))
         }))
     }
 }
@@ -165,7 +165,7 @@ fn index_candidates_udf(inputs: &[Series], kwargs: IndexCandidatesPlugin) -> Pol
         polars_bail!(InvalidOperation: "{:?} expects a single input field", IndexCandidatesShim::NAME);
     };
     let selections = kwargs.candidates.0.take(series.u32()?)?;
-    Ok(selections.with_name(series.name()))
+    Ok(selections.with_name(series.name().clone()))
 }
 
 // generate the FFI plugin for the index_candidates noise expression
@@ -186,12 +186,12 @@ pub(crate) fn index_candidates_plugin_type_udf(
         polars_bail!(InvalidOperation: "{:?} expects a single input field", IndexCandidatesShim::NAME)
     };
 
-    if field.data_type() != &DataType::UInt32 {
-        polars_bail!(InvalidOperation: "Expected u32 input field, found {:?}", field.data_type())
+    if field.dtype() != &DataType::UInt32 {
+        polars_bail!(InvalidOperation: "Expected u32 input field, found {:?}", field.dtype())
     }
 
     Ok(Field::new(
-        field.name(),
+        field.name().clone(),
         kwargs.candidates.0.dtype().clone(),
     ))
 }
