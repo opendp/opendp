@@ -1,0 +1,630 @@
+{
+ "cells": [
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Compositors\n",
+    "\n",
+    "Any constructors that have not completed the proof-writing and vetting process may still be accessed if you opt-in to \"contrib\".\n",
+    "Please contact us if you are interested in proof-writing. Thank you!"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from opendp.mod import enable_features\n",
+    "enable_features(\"contrib\")"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Define a few queries you might want to run up-front:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import opendp.prelude as dp\n",
+    "\n",
+    "count_meas = dp.t.make_count(TIA=int) >> dp.m.make_base_discrete_laplace(scale=1.0)\n",
+    "sum_meas = (\n",
+    "    dp.t.make_clamp((0, 10))\n",
+    "    >> dp.t.make_bounded_sum((0, 10))\n",
+    "    >> dp.m.make_base_discrete_laplace(scale=5.0)\n",
+    ")"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Notice that both of these measurements share the same input domain, input metric, and output measure:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "count: Measurement(\n",
+      "    input_domain   = VectorDomain(AtomDomain(T=i32)), \n",
+      "    input_metric   = SymmetricDistance(), \n",
+      "    output_measure = MaxDivergence(f64)\n",
+      ")\n",
+      "sum: Measurement(\n",
+      "    input_domain   = VectorDomain(AtomDomain(T=i32)), \n",
+      "    input_metric   = SymmetricDistance(), \n",
+      "    output_measure = MaxDivergence(f64)\n",
+      ")\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"count:\", count_meas)\n",
+    "print(\"sum:\", sum_meas)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "This is important, because compositors require these three supporting elements to match for all queries."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Basic Composition\n",
+    "\n",
+    "The basic composition compositor is non-interactive: it takes a collection of queries to execute on the dataset all-at-once.\n",
+    "When the data is passed in, all queries are evaluated together, in a single batch."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "dp sum: 54\n",
+      "dp count: 12\n"
+     ]
+    }
+   ],
+   "source": [
+    "mean_fraction_meas = dp.c.make_basic_composition([sum_meas, count_meas])\n",
+    "\n",
+    "int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]\n",
+    "dp_sum, dp_count = mean_fraction_meas(int_dataset)\n",
+    "print(\"dp sum:\", dp_sum)\n",
+    "print(\"dp count:\", dp_count)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The privacy map simply sums the constituent output distances."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "3.0"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "mean_fraction_meas.map(1)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Sequential Composition\n",
+    "\n",
+    "Sequential composition relaxes the basic compositor, allowing for queries to be submitted interactively.\n",
+    "That is, you can make submit a query, view the output, and then submit another query that uses the information gained from the prior release.\n",
+    "However, this API still requires `sequentiality`, which we'll discuss in more detail later.\n",
+    "\n",
+    "The API for interactive compositors is more verbose than in the non-interactive case\n",
+    "because you must explicitly pass the input domain, input metric, and output measure,\n",
+    "as well as an upper bound on input distances (`d_in`), and the privacy consumption allowed for each query (`d_mids`)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sc_meas = dp.c.make_sequential_composition(\n",
+    "    input_domain=dp.vector_domain(dp.atom_domain(T=int)),\n",
+    "    input_metric=dp.symmetric_distance(),\n",
+    "    output_measure=dp.max_divergence(T=float),\n",
+    "    d_in=1,\n",
+    "    d_mids=[2., 1.]\n",
+    ")"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Given this information, we know the privacy consumption of the entire composition:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "3.0"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "sc_meas.map(1)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "When the sequential composition measurement (`sc_meas`) is invoked, it returns a _queryable_."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]\n",
+    "sc_qbl = sc_meas(int_dataset)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "A queryable is like a state machine: it takes an input query, updates its internal state, and returns an answer.\n",
+    "For sequential compositors, the input query is a measurement, \n",
+    "the internal state is the dataset and privacy consumption, \n",
+    "and the answer is the differentially private release from the measurement.\n",
+    "\n",
+    "Similarly as before, we now interactively submit queries to estimate the sum and count:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "dp sum: 57\n",
+      "dp count: 10\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"dp sum:\", sc_qbl(sum_meas))\n",
+    "print(\"dp count:\", sc_qbl(count_meas))"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now, why is this compositor named _sequential_?\n",
+    "In order to prove that the privacy properties of this compositor hold in the interactive setting,\n",
+    "the compositor must lock, or freeze, any queryable it has previously spawned when a new query arrives.\n",
+    "\n",
+    "This is an artifact of how non-interactive composition results have been extended to work in the interactive setting.\n",
+    "Namely, that the second query can be viewed as a postprocessing of the first query.\n",
+    "Unfortunately, this postprocessing argument doesn't necessarily hold when the analyst may still interact with the first queryable.\n",
+    "This is the subject of a further line of research on concurrent compositors, \n",
+    "which we hope to make available in the next library release.\n",
+    "\n",
+    "An example of this constraint is demonstrated in the \"Nesting\" section below."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Chaining\n",
+    "\n",
+    "Since all compositors are just \"plain-old-measurements\" they also support chaining."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(48, 8)"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "str_sc_meas = dp.t.make_cast_default(str, int) >> sc_meas\n",
+    "\n",
+    "str_sc_qbl = str_sc_meas([\"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\", \"10\"])\n",
+    "str_sc_qbl(sum_meas), str_sc_qbl(count_meas)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "`str_sc_meas` is invoked with a string dataset, but returns a queryable that takes queries over integer datasets.\n",
+    "Chaining compositors can be used to avoid repeating the same transformations for each query.\n",
+    "\n",
+    "Keep in mind that the `d_in` on the interactive compositor must match the output distance from the previous transformation:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "max_contributions = 1\n",
+    "sum_trans = dp.t.make_clamp((0, 10)) >> dp.t.make_bounded_sum((0, 10))\n",
+    "sc_meas = sum_trans >> dp.c.make_sequential_composition(\n",
+    "    input_domain=sum_trans.output_domain,\n",
+    "    input_metric=sum_trans.output_metric,\n",
+    "    output_measure=dp.max_divergence(T=float),\n",
+    "    d_in=sum_trans.map(max_contributions),\n",
+    "    d_mids=[2., 1.]\n",
+    ")"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "In this code snip, we used the supporting elements and map from the transformation to fill in arguments to the sequential compositor constructor, and to derive a suitable `d_in` for the compositor, based on a known `d_in` for the sum transformation."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Nesting\n",
+    "\n",
+    "Just like in chaining, since all compositors are \"plain-old-measurements\" they can also be used as arguments to interactive compositors.\n",
+    "In this example, we nest a zCDP sequential compositor inside an approximate-DP sequential compositor.\n",
+    "\n",
+    "We first make the approximate-DP sequential compositor, accepting two queries.\n",
+    "The first query must be $(2 ε, 10^{-6} δ)$-DP, and the second $(1 ε, 0 δ)$-DP."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sc_meas = dp.c.make_sequential_composition(\n",
+    "    input_domain=dp.vector_domain(dp.atom_domain(T=int)),\n",
+    "    input_metric=dp.symmetric_distance(),\n",
+    "    output_measure=dp.fixed_smoothed_max_divergence(T=float),\n",
+    "    d_in=1,\n",
+    "    d_mids=[(2., 1e-6), (1., 0.)]\n",
+    ")\n",
+    "adp_sc_qbl = sc_meas(int_dataset)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The first query to the approximate-DP sequential compositor must be an approximate-DP measurement that satisfies $(2 ε, 10^{-6} δ)$-DP.\n",
+    "We will now use the library to find a set of $\\rho$ parameters that will satisfy this level of privacy, under a given set of weights.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(0.07346057364995517, 0.014692114729991036)"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# find ρ_1, ρ_2 such that ρ_1 + ρ_2 = ρ <= (2ε, 1e-6δ), \n",
+    "#    and ρ_1 is 5 times larger than ρ_2\n",
+    "weights = [5., 1.]\n",
+    "\n",
+    "\n",
+    "def scale_weights(scale, weights):\n",
+    "    return [scale * w for w in weights]\n",
+    "\n",
+    "def make_zcdp_sc(scale):\n",
+    "    return dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.c.make_sequential_composition(\n",
+    "        input_domain=dp.vector_domain(dp.atom_domain(T=int)),\n",
+    "        input_metric=dp.symmetric_distance(),\n",
+    "        output_measure=dp.zero_concentrated_divergence(T=float),\n",
+    "        d_in=1,\n",
+    "        d_mids=scale_weights(scale, weights)\n",
+    "    )), delta=1e-6)\n",
+    "\n",
+    "# find a scale parameter for the d_mids that makes the overall compositor satisfy (2., 1e-6)-approxDP\n",
+    "zcdp_compositor_scale = dp.binary_search_param(make_zcdp_sc, d_in=1, d_out=(2., 1e-6), T=float)\n",
+    "\n",
+    "# construct a zCDP sequential compositor that satisfies (2., 1e-6)-approxDP\n",
+    "zcdp_compositor = make_zcdp_sc(zcdp_compositor_scale)\n",
+    "\n",
+    "# query the root approx-DP compositor queryable to get a child zCDP queryable\n",
+    "zcdp_sc_qbl = adp_sc_qbl(zcdp_compositor)\n",
+    "\n",
+    "rho_1, rho_2 = scale_weights(zcdp_compositor_scale, weights)\n",
+    "rho_1, rho_2"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now that we've determined $\\rho_1$ and $\\rho_2$, make a release:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "7"
+      ]
+     },
+     "execution_count": 13,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "def make_zcdp_sum_query(scale):\n",
+    "    return (\n",
+    "        dp.t.make_clamp((0, 10))\n",
+    "        >> dp.t.make_bounded_sum((0, 10))\n",
+    "        >> dp.m.make_base_discrete_gaussian(scale)\n",
+    "    )\n",
+    "\n",
+    "\n",
+    "dg_scale = dp.binary_search_param(make_zcdp_sum_query, d_in=1, d_out=rho_1)\n",
+    "zcdp_sc_qbl(make_zcdp_sum_query(dg_scale))"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "At this point, we can either submit a second query to the root approx-DP compositor queryable (`adp_sc_qbl`), \n",
+    "or to the child zCDP compositor queryable (`zcdp_sc_qbl`).\n",
+    "\n",
+    "However, if you submit a query to `adp_sc_qbl` first, then to preserve sequentiality, \n",
+    "`zcdp_sc_qbl` becomes locked."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "10"
+      ]
+     },
+     "execution_count": 14,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# convert the pure-DP count measurement to a approx-DP count measurement (where δ=0.)\n",
+    "adp_count_meas = dp.c.make_pureDP_to_fixed_approxDP(count_meas)\n",
+    "\n",
+    "# submit the count measurement to the root approx-DP compositor queryable\n",
+    "adp_sc_qbl(adp_count_meas)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We've now exhausted the privacy budget of the root approx-DP queryable, \n",
+    "and locked the zCDP queryable, so all queryables will refuse to answer any more queries."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Continued Rust stack trace:\n",
+      "    opendp_core__queryable_query_type\n",
+      "      at /Users/michael/openDP/openDP/rust/src/core/ffi.rs:736:30\n",
+      "    opendp::interactive::Queryable<Q,A>::eval_internal\n",
+      "      at /Users/michael/openDP/openDP/rust/src/interactive/mod.rs:34:15\n",
+      "    opendp::interactive::Queryable<Q,A>::eval_query\n",
+      "      at /Users/michael/openDP/openDP/rust/src/interactive/mod.rs:51:16\n",
+      "    <opendp::interactive::Queryable<Q,A> as opendp::interactive::FromPolyQueryable>::from_poly::{{closure}}\n",
+      "      at /Users/michael/openDP/openDP/rust/src/interactive/mod.rs:239:47\n",
+      "    opendp::interactive::Queryable<Q,A>::eval_query\n",
+      "      at /Users/michael/openDP/openDP/rust/src/interactive/mod.rs:51:16\n",
+      "    opendp::interactive::WrapFn::new_pre_hook::{{closure}}::{{closure}}\n",
+      "      at /Users/michael/openDP/openDP/rust/src/interactive/mod.rs:134:21\n",
+      "    opendp::combinators::composition::sequential::make_sequential_composition::{{closure}}::{{closure}}::{{closure}}\n",
+      "      at /Users/michael/openDP/openDP/rust/src/combinators/composition/sequential/mod.rs:105:29\n",
+      "    opendp::interactive::Queryable<Q,A>::eval_internal\n",
+      "      at /Users/michael/openDP/openDP/rust/src/interactive/mod.rs:34:15\n",
+      "    opendp::interactive::Queryable<Q,A>::eval_query\n",
+      "      at /Users/michael/openDP/openDP/rust/src/interactive/mod.rs:51:16\n",
+      "    opendp::combinators::composition::sequential::make_sequential_composition::{{closure}}::{{closure}}\n",
+      "      at /Users/michael/openDP/openDP/rust/src/combinators/composition/sequential/mod.rs:124:40\n",
+      "  FailedFunction(\"sequential compositor has received a new query\")\n"
+     ]
+    }
+   ],
+   "source": [
+    "try:\n",
+    "    # submit the count measurement to the child zCDP queryable\n",
+    "    zcdp_sc_qbl(make_zcdp_sum_query(dg_scale))\n",
+    "except dp.OpenDPException as e:\n",
+    "    print(e)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Continued Rust stack trace:\n",
+      "    opendp_core__queryable_eval\n",
+      "      at /Users/michael/openDP/openDP/rust/src/core/ffi.rs:718:5\n",
+      "    opendp::interactive::Queryable<Q,A>::eval\n",
+      "      at /Users/michael/openDP/openDP/rust/src/interactive/mod.rs:16:15\n",
+      "    opendp::interactive::Queryable<Q,A>::eval_query\n",
+      "      at /Users/michael/openDP/openDP/rust/src/interactive/mod.rs:51:16\n",
+      "    opendp::ffi::any::<impl opendp::core::Measurement<opendp::ffi::any::AnyDomain,opendp::interactive::Queryable<Q,A>,opendp::ffi::any::AnyMetric,opendp::ffi::any::AnyMeasure>>::into_any_Q::{{closure}}::{{closure}}\n",
+      "      at /Users/michael/openDP/openDP/rust/src/ffi/any.rs:239:51\n",
+      "    opendp::interactive::Queryable<Q,A>::eval\n",
+      "      at /Users/michael/openDP/openDP/rust/src/interactive/mod.rs:16:15\n",
+      "    opendp::interactive::Queryable<Q,A>::eval_query\n",
+      "      at /Users/michael/openDP/openDP/rust/src/interactive/mod.rs:51:16\n",
+      "    opendp::combinators::composition::sequential::make_sequential_composition::{{closure}}::{{closure}}\n",
+      "      at /Users/michael/openDP/openDP/rust/src/combinators/composition/sequential/mod.rs:89:37\n",
+      "    opendp::combinators::composition::sequential::make_sequential_composition::{{closure}}::{{closure}}::{{closure}}\n",
+      "      at /Users/michael/openDP/openDP/rust/src/combinators/composition/sequential/mod.rs:90:44\n",
+      "  FailedFunction(\"out of queries\")\n"
+     ]
+    }
+   ],
+   "source": [
+    "try:\n",
+    "    # submit the count measurement to the child zCDP queryable\n",
+    "    adp_sc_qbl(adp_count_meas)\n",
+    "except dp.OpenDPException as e:\n",
+    "    print(e)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "In conclusion, OpenDP provides several compositors with different trade-offs, \n",
+    "and interactive compositors (like sequential composition) provide a protective, \n",
+    "differentially private interface for accessing any dataset stored within the queryable."
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "opendp",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.11.3"
+  },
+  "orig_nbformat": 4
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

@@ -1,0 +1,7 @@
+opendp.metrics module
+=====================
+
+.. automodule:: opendp.metrics
+   :members:
+   :undoc-members:
+   :show-inheritance:
