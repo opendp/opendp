@@ -15,7 +15,7 @@ fn test_select_make_sum_expr() -> Fallible<()> {
         .clip(lit(0), lit(1))
         .sum()
         .make_stable(expr_domain, PartitionDistance(InsertDeleteDistance))?;
-    let expr_res = t_sum.invoke(&lf.logical_plan)?.1;
+    let expr_res = t_sum.invoke(&lf.logical_plan)?.expr;
     // dtype in clip changes
     assert_eq!(expr_res, col("const_1f64").clip(lit(0.), lit(1.)).sum());
 
@@ -37,7 +37,7 @@ fn test_grouped_make_sum_expr() -> Fallible<()> {
         .sum()
         .clone()
         .make_stable(expr_domain, PartitionDistance(InsertDeleteDistance))?;
-    let expr_res = t_sum.invoke(&lf.logical_plan)?.1;
+    let expr_res = t_sum.invoke(&lf.logical_plan)?.expr;
 
     let df_actual = lf
         .group_by(["chunk_(..10u32)"])

@@ -1,5 +1,5 @@
 use crate::core::{Measure, PrivacyMap};
-use crate::domains::{MarginPub, WildExprDomain};
+use crate::domains::{ExprPlan, MarginPub, WildExprDomain};
 use crate::metrics::PartitionDistance;
 use crate::transformations::traits::UnboundedMetric;
 use crate::{
@@ -9,6 +9,7 @@ use crate::{
 
 use num::Zero;
 use polars::lazy::dsl::Expr;
+use polars::prelude::lit;
 use polars_plan::dsl::len;
 
 #[cfg(test)]
@@ -36,7 +37,7 @@ pub fn make_expr_private_len<MI: 'static + UnboundedMetric, MO: 'static + Measur
     input_metric: PartitionDistance<MI>,
     output_measure: MO,
     expr: Expr,
-) -> Fallible<Measurement<WildExprDomain, Expr, PartitionDistance<MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, PartitionDistance<MI>, MO>>
 where
     MO::Distance: Zero,
 {
@@ -56,7 +57,7 @@ where
 
     Measurement::new(
         input_domain,
-        Function::new(|_| len()),
+        Function::from_expr(len()).fill_with(lit(0u32)),
         input_metric,
         output_measure,
         PrivacyMap::new(move |_| MO::Distance::zero()),

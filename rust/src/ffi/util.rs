@@ -42,7 +42,7 @@ pub struct Pairwise<T>(PhantomData<T>);
 
 // If polars is not enabled, then these structs don't exist.
 #[cfg(feature = "polars")]
-use crate::domains::{CategoricalDomain, ExprDomain, LazyFrameDomain, SeriesDomain};
+use crate::domains::{CategoricalDomain, ExprDomain, ExprPlan, LazyFrameDomain, SeriesDomain};
 #[cfg(feature = "polars")]
 use polars::prelude::{DataFrame, DslPlan, Expr, LazyFrame, Series};
 
@@ -56,6 +56,8 @@ struct DslPlan;
 struct Series;
 #[cfg(not(feature = "polars"))]
 struct Expr;
+#[cfg(not(feature = "polars"))]
+struct ExprPlan;
 #[cfg(not(feature = "polars"))]
 struct SeriesDomain;
 #[cfg(not(feature = "polars"))]
@@ -340,7 +342,7 @@ lazy_static! {
             vec![t!((u32, usize, usize)), t!((u32, f32, f32)), t!((u32, f64, f64))],
             vec![t!(Option<(f64, AnyObject)>), t!(Option<(f64, ExtrinsicObject)>)],
             vec![t!((f64, AnyObject)), t!((f64, ExtrinsicObject))],
-            type_vec![DataFrame, LazyFrame, DslPlan, Series, Expr, OnceFrame, OnceFrameQuery, OnceFrameAnswer],
+            type_vec![DataFrame, LazyFrame, DslPlan, Series, Expr, ExprPlan, OnceFrame, OnceFrameQuery, OnceFrameAnswer],
             vec![t!((DslPlan, Expr))],
             type_vec![Vec, <(DslPlan, Expr)>],
             type_vec![Vec<Expr>],

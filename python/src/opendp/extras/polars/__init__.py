@@ -719,8 +719,10 @@ try:
             "Sphinx always fails to find a reference to LazyFrame. Falling back to dummy class."
         )
     from polars.lazyframe.frame import LazyFrame as _LazyFrame  # type: ignore[import-not-found]
+    from polars.dataframe.frame import DataFrame as _DataFrame  # type: ignore[import-not-found]
+    from polars.expr.expr import Expr as _Expr  # type: ignore[import-not-found]
     from polars.lazyframe.group_by import LazyGroupBy as _LazyGroupBy  # type: ignore[import-not-found]
-    from polars._typing import IntoExpr, IntoExprColumn  # type: ignore[import-not-found]
+    from polars._typing import IntoExpr, IntoExprColumn, JoinStrategy, JoinValidation  # type: ignore[import-not-found]
     import numpy as np  # type: ignore[import-not-found]
 
     class LazyFrameQuery(_LazyFrame):
@@ -865,6 +867,45 @@ try:
             expressions may not change the number or order of records
             """
             ...
+
+        def join(  # type: ignore[empty-body]
+            self,
+            other: _LazyFrame,
+            on: str | _Expr | Sequence[str | _Expr] | None = None,
+            how: JoinStrategy = "inner",
+            *,
+            left_on: str | _Expr | Sequence[str | _Expr] | None = None,
+            right_on: str | _Expr | Sequence[str | _Expr] | None = None,
+            suffix: str = "_right",
+            validate: JoinValidation = "m:m",
+            join_nulls: bool = False,
+            coalesce: bool | None = None,
+            allow_parallel: bool = True,
+            force_parallel: bool = False,
+        ) -> LazyFrameQuery:
+            """
+            Add a join operation to the Logical Plan.
+            """
+            ...
+
+        def with_keys(
+            self,
+            keys: _LazyFrame,
+            on: list[str] | None = None,
+        ) -> LazyFrameQuery:
+            """
+            Shorthand to join with an explicit key-set.
+            """
+            if isinstance(keys, _DataFrame):
+                keys = keys.lazy()
+            
+            if on is None:
+                on = keys.collect_schema().names()
+
+            return LazyFrameQuery(
+                keys.join(self._lf_plan, how="left", on=on),
+                self._query,
+            )
 
         def resolve(self) -> Measurement:
             """Resolve the query into a measurement."""

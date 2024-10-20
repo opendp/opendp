@@ -23,7 +23,7 @@ fn test_make_expr_private_lit() -> Fallible<()> {
     )?;
 
     let actual = m_lit.invoke(&lf.logical_plan)?;
-    assert_eq!(actual, lit(1));
+    assert_eq!(actual.expr, lit(1));
     Ok(())
 }
 

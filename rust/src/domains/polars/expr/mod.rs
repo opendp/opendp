@@ -1,7 +1,7 @@
 use polars::lazy::dsl::Expr;
 use polars::prelude::*;
 use std::collections::{BTreeSet, HashMap};
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 
 use crate::core::{Metric, MetricSpace};
 use crate::metrics::{
@@ -131,11 +131,55 @@ impl LazyFrameDomain {
     }
 }
 
+#[derive(Clone)]
+pub struct ExprPlan {
+    pub plan: DslPlan,
+    pub expr: Expr,
+    pub fill: Option<Expr>,
+}
+
+impl Debug for ExprPlan {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ExprPlan")
+            .field("expr", &self.expr)
+            .field("default", &self.fill.is_some())
+            .finish()
+    }
+}
+
+impl ExprPlan {
+    /// # Proof Definition
+    /// Return a compute plan where the expression and fill expression in `self` are extended by `function`.
+    pub fn then(&self, function: impl Fn(Expr) -> Expr) -> Self {
+        Self {
+            plan: self.plan.clone(),
+            expr: function(self.expr.clone()),
+            fill: self.fill.clone().map(function),
+        }
+    }
+}
+
+impl From<DslPlan> for ExprPlan {
+    fn from(value: DslPlan) -> Self {
+        ExprPlan {
+            plan: value,
+            expr: all(),
+            fill: None,
+        }
+    }
+}
+
+impl From<LazyFrame> for ExprPlan {
+    fn from(value: LazyFrame) -> Self {
+        ExprPlan::from(value.logical_plan)
+    }
+}
+
 impl Domain for ExprDomain {
-    type Carrier = (DslPlan, Expr);
+    type Carrier = ExprPlan;
 
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        let (plan, expr) = (LazyFrame::from(val.0.clone()), val.1.clone());
+        let (plan, expr) = (LazyFrame::from(val.plan.clone()), val.expr.clone());
         let frame = match &self.context {
             Context::RowByRow { .. } => plan.select([expr]),
             Context::Grouping { by, .. } => plan

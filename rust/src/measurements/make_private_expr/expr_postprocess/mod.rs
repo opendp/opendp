@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::combinators::{make_basic_composition, BasicCompositionMeasure};
 use crate::core::{Metric, MetricSpace};
-use crate::domains::WildExprDomain;
+use crate::domains::{ExprPlan, WildExprDomain};
 use crate::{
     core::{Function, Measurement},
     error::Fallible,
@@ -31,7 +31,7 @@ pub fn make_expr_postprocess<MI: 'static + Metric, MO: 'static + BasicCompositio
     input_exprs: Vec<Expr>,
     postprocessor: impl Fn(Vec<Expr>) -> Fallible<Expr> + 'static + Send + Sync,
     param: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, Expr, MI, MO>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, MI, MO>>
 where
     Expr: PrivateExpr<MI, MO>,
     (WildExprDomain, MI): MetricSpace,
@@ -53,7 +53,22 @@ where
 
     Measurement::new(
         input_domain,
-        Function::new_fallible(move |arg| postprocessor(f_comp.eval(&arg)?)),
+        Function::new_fallible(move |arg| {
+            let plans = f_comp.eval(&arg)?;
+            let plan = plans[0].plan.clone();
+            let (exprs, fills): (_, Vec<Option<Expr>>) =
+                plans.into_iter().map(|p| (p.expr, p.fill)).unzip();
+
+            Ok(ExprPlan {
+                plan,
+                expr: postprocessor(exprs)?,
+                fill: fills
+                    .into_iter()
+                    .collect::<Option<_>>()
+                    .map(|exprs| postprocessor(exprs))
+                    .transpose()?,
+            })
+        }),
         input_metric,
         output_measure,
         m_comp.privacy_map.clone(),
@@ -66,7 +81,7 @@ pub fn match_postprocess<MI: 'static + Metric, MO: 'static + BasicCompositionMea
     output_measure: MO,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Option<Measurement<WildExprDomain, Expr, MI, MO>>>
+) -> Fallible<Option<Measurement<WildExprDomain, ExprPlan, MI, MO>>>
 where
     Expr: PrivateExpr<MI, MO>,
     (WildExprDomain, MI): MetricSpace,

@@ -1,6 +1,7 @@
 use std::{collections::BTreeSet, sync::Arc};
 
 use polars::prelude::PlSmallStr;
+use polars::prelude::{JoinOptions, JoinType};
 use polars_plan::{
     dsl::{Expr, Operator},
     plans::DslPlan,
@@ -12,19 +13,73 @@ use crate::{measurements::expr_noise::NoisePlugin, polars::match_trusted_plugin}
 
 use super::Fallible;
 
+#[derive(Clone)]
+pub enum KeySanitizer {
+    Filter(Expr),
+    Join {
+        labels: Arc<DslPlan>,
+        how: JoinType,
+        left_on: Vec<Expr>,
+        right_on: Vec<Expr>,
+        options: Arc<JoinOptions>,
+        fill_null: Option<Vec<Expr>>,
+    },
+}
+
 pub(crate) struct MatchGroupBy {
     pub input: DslPlan,
     pub keys: Vec<Expr>,
     pub aggs: Vec<Expr>,
-    pub predicate: Option<Expr>,
+    pub key_sanitizer: Option<KeySanitizer>,
 }
 
 pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>> {
-    let predicate = if let DslPlan::Filter { input, predicate } = plan {
-        plan = input.as_ref().clone();
-        Some(predicate)
-    } else {
-        None
+    let key_sanitizer = match plan {
+        DslPlan::Filter { input, predicate } => {
+            plan = input.as_ref().clone();
+            Some(KeySanitizer::Filter(predicate))
+        }
+        DslPlan::Join {
+            input_left,
+            input_right,
+            left_on,
+            right_on,
+            predicates,
+            options,
+        } => {
+            if !predicates.is_empty() {
+                return fallible!(
+                    MakeMeasurement,
+                    "predicates are not supported in key-privatization joins"
+                );
+            }
+            let how = options.as_ref().args.how.clone();
+            let labels = match how {
+                JoinType::Left => {
+                    plan = input_right.as_ref().clone();
+                    input_left
+                }
+                JoinType::Right => {
+                    plan = input_left.as_ref().clone();
+                    input_right
+                }
+                _ => {
+                    return fallible!(
+                        MakeMeasurement,
+                        "only left or right joins can be used to privatize key-sets"
+                    )
+                }
+            };
+            Some(KeySanitizer::Join {
+                labels,
+                how,
+                left_on,
+                right_on,
+                options,
+                fill_null: None,
+            })
+        }
+        _ => None,
     };
 
     let DslPlan::GroupBy {
@@ -55,7 +110,7 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
         input: Arc::unwrap_or_clone(input),
         keys,
         aggs,
-        predicate,
+        key_sanitizer,
     }))
 }
 

@@ -1,8 +1,8 @@
 import pytest
 import opendp.prelude as dp
-import os
 import warnings
 import re
+import os
 import io
 
 
@@ -618,8 +618,7 @@ def test_replace_binary_path():
         dp.max_divergence(),
         expr,
     )
-
-    assert str(m_expr(pl.LazyFrame(dict()))) == "len().testing!:noise_plugin()"
+    assert 'testing!' in str(m_expr(pl.LazyFrame(dict())).expr)
 
     # check that local paths in new expressions get overwritten
     os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
@@ -679,8 +678,8 @@ def test_pickle_bomb():
     pl.LazyFrame.deserialize(io.BytesIO(ser_lf))
 
     # OpenDP explicitly rejects any pickled data it finds
-    err_msg_re = re.escape("OpenDP does not allow pickled keyword arguments as they may enable remote code execution.")
-    with pytest.raises(dp.OpenDPException, match=err_msg_re):
+    err_msg = "OpenDP does not allow pickled keyword arguments as they may enable remote code execution."
+    with pytest.raises(dp.OpenDPException, match=err_msg):
         dp.m.make_private_expr(
             dp.wild_expr_domain(example_series()[0], by=[]),
             dp.partition_distance(dp.symmetric_distance()),
@@ -688,7 +687,7 @@ def test_pickle_bomb():
             bomb_expr,
         )
 
-    with pytest.raises(dp.OpenDPException, match=err_msg_re):
+    with pytest.raises(dp.OpenDPException, match=err_msg):
         dp.m.make_private_lazyframe(
             lf_domain,
             dp.symmetric_distance(),
@@ -880,3 +879,56 @@ def test_count_queries():
         "null_count": [1],
     }).cast({pl.Int64: pl.UInt32})
     pl_testing.assert_frame_equal(release, expected)
+
+
+def test_explicit_grouping_keys():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    lf_domain, lf = example_lf(margin=["B"], max_partition_length=100)
+
+    plan_right = seed(lf.collect_schema()).group_by("B").agg(pl.col("D").dp.sum((0, 10)))
+    labels = pl.LazyFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
+    plan = labels.join(plan_right, on="B", how="left")
+    m_lf = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan, 0.0
+    )
+
+    df_act = m_lf(lf).collect()
+
+    df_exp = pl.DataFrame(
+        [
+            pl.Series("B", list(range(2, 7)), dtype=pl.Int32),
+            pl.Series("D", [20] * 4 + [0], dtype=pl.Int32),
+        ]
+    )
+    pl_testing.assert_frame_equal(df_act.sort("B"), df_exp)
+
+
+def test_explicit_grouping_keys_context():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    lf_domain, lf = example_lf(margin=["B"], max_partition_length=100)
+
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.),
+        split_evenly_over=1,
+        domain=lf_domain,
+    )
+
+    keys = pl.LazyFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
+    query = context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys)
+    observed = query.release().collect().sort("B")
+    
+    expected = pl.DataFrame(
+        [
+            pl.Series("B", list(range(2, 7)), dtype=pl.Int32),
+            pl.Series("D", [20] * 4 + [0], dtype=pl.Int32),
+        ]
+    )
+    assert observed.collect_schema() == expected.collect_schema()
+    observed = observed.with_columns(D=expected["D"])
+    pl_testing.assert_frame_equal(observed, expected)

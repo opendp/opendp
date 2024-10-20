@@ -2,7 +2,7 @@ use polars::datatypes::DataType;
 use polars_plan::dsl::Expr;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprDomain, OuterMetric, WildExprDomain};
+use crate::domains::{AtomDomain, ExprDomain, ExprPlan, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::transformations::DatasetMetric;
 
@@ -95,9 +95,14 @@ where
         input_domain,
         output_domain,
         Function::new_fallible(move |arg| {
-            let expr_data = t_data.invoke(arg)?.1;
-            let expr_fill = t_fill.invoke(arg)?.1;
-            Ok((arg.clone(), expr_data.fill_nan(expr_fill)))
+            let data = t_data.invoke(arg)?;
+            let fill = t_fill.invoke(arg)?;
+
+            Ok(ExprPlan {
+                plan: arg.clone(),
+                expr: data.expr.fill_nan(fill.expr),
+                fill: data.fill.zip(fill.fill).map(|(d, f)| d.fill_nan(f)),
+            })
         }),
         input_metric.clone(),
         input_metric,

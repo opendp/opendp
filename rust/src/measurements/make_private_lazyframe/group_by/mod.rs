@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -17,7 +18,8 @@ use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{DatasetMetric, StableDslPlan};
 use dashu::integer::IBig;
 use make_private_expr::PrivateExpr;
-use matching::{find_len_expr, match_grouping_columns, MatchGroupBy};
+use matching::{find_len_expr, match_grouping_columns};
+use polars::prelude::{len, JoinType, LazyFrame};
 use polars_plan::dsl::{col, lit, Expr};
 use polars_plan::plans::DslPlan;
 
@@ -25,7 +27,8 @@ use polars_plan::plans::DslPlan;
 mod test;
 
 mod matching;
-pub(crate) use matching::{is_threshold_predicate, match_group_by};
+pub(crate) use matching::{is_threshold_predicate, match_group_by, KeySanitizer, MatchGroupBy};
+use polars_plan::prelude::ProjectionOptions;
 
 /// Create a private version of an aggregate operation on a LazyFrame.
 ///
@@ -55,20 +58,70 @@ where
     (DslPlanDomain, MI): MetricSpace,
 {
     let Some(MatchGroupBy {
-        input: input_expr,
+        input,
         keys,
         aggs,
-        predicate,
+        mut key_sanitizer,
     }) = match_group_by(plan)?
     else {
         return fallible!(MakeMeasurement, "expected group by");
     };
 
-    let t_prior = input_expr.clone().make_stable(input_domain, input_metric)?;
+    let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let by = match_grouping_columns(keys.clone())?;
-    let margin = middle_domain.get_margin(&by);
+    let mut margin = middle_domain.get_margin(&by.clone());
+
+    let is_join = if let Some(KeySanitizer::Join {
+        labels,
+        left_on,
+        right_on,
+        ..
+    }) = &key_sanitizer
+    {
+        let left_on = match_grouping_columns(left_on.clone())
+            .map_err(|_| err!(MakeMeasurement, "left_on must consist of column exprs"))?;
+        let right_on = match_grouping_columns(right_on.clone())
+            .map_err(|_| err!(MakeMeasurement, "right_on must consist of column exprs"))?;
+
+        if right_on.len() != left_on.len() {
+            return fallible!(
+                MakeMeasurement,
+                "left_on and right_on must have same number of join keys"
+            );
+        }
+
+        let label_schema = labels.compute_schema()?;
+        if right_on != label_schema.iter_names().cloned().collect::<BTreeSet<_>>() {
+            return fallible!(
+                MakeMeasurement,
+                "label dataframe columns must match join keys"
+            );
+        }
+
+        if right_on != by {
+            return fallible!(
+                MakeMeasurement,
+                "key sanitization requires that label dataframe columns match right_on"
+            );
+        }
+
+        let max_num_partitions = LazyFrame::from(labels.as_ref().clone())
+            .select([len()])
+            .collect()?
+            .column("len")?
+            .u32()?
+            .last()
+            .unwrap();
+
+        margin.max_num_partitions = Some(max_num_partitions);
+
+        true
+    } else {
+        false
+    };
+
     let expr_domain = WildExprDomain {
         columns: middle_domain.series_domains.clone(),
         context: Context::Grouping {
@@ -84,7 +137,7 @@ where
                     expr_domain.clone(),
                     PartitionDistance(middle_metric.clone()),
                     output_measure.clone(),
-                    expr.clone(),
+                    expr,
                     global_scale,
                 )
             })
@@ -93,13 +146,15 @@ where
 
     let f_comp = m_exprs.function.clone();
     let privacy_map = m_exprs.privacy_map.clone();
-    let dp_exprs = m_exprs.invoke(&input_expr)?;
+    let (dp_exprs, null_exprs): (_, Vec<Option<Expr>>) = m_exprs
+        .invoke(&input)?
+        .into_iter()
+        .map(|ep| (ep.expr, ep.fill))
+        .unzip();
 
-    let threshold_info = if margin.public_info.is_some() {
+    let threshold_info = if margin.public_info.is_some() || is_join {
         None
-    } else if let Some((name, threshold_value)) =
-        predicate.clone().and_then(|p| is_threshold_predicate(p))
-    {
+    } else if let Some((name, threshold_value)) = match_filter(&key_sanitizer) {
         let noise = find_len_expr(&dp_exprs, Some(name.as_str()))?.1;
         Some((name, noise, threshold_value, false))
     } else if let Some(threshold_value) = threshold {
@@ -109,35 +164,75 @@ where
         return fallible!(MakeMeasurement, "The key-set of {:?} is private and cannot be released without filtering. Please pass a filtering threshold into make_private_lazyframe.", by);
     };
 
-    let final_predicate = if let Some((name, _, threshold_value, is_present)) = &threshold_info {
+    if let Some((name, _, threshold_value, is_present)) = &threshold_info {
         let threshold_expr = col(name).gt(lit(*threshold_value));
-        Some(match (is_present, predicate) {
-            (false, Some(predicate)) => threshold_expr.and(predicate),
+        key_sanitizer = Some(KeySanitizer::Filter(match (is_present, key_sanitizer) {
+            (false, Some(KeySanitizer::Filter(predicate))) => threshold_expr.and(predicate),
             _ => threshold_expr,
-        })
-    } else {
-        predicate
-    };
+        }))
+    } else if let Some(KeySanitizer::Join { fill_null, .. }) = key_sanitizer.as_mut() {
+        *fill_null = Some(
+            dp_exprs.iter().zip(null_exprs
+                .into_iter())
+                .map(|(dp_expr, null_expr)| {
+                    let name = dp_expr.clone().meta().output_name()?;
+                    let null_expr = null_expr.ok_or_else(|| {
+                        let name = dp_expr.clone().meta().output_name().map_or_else(|_| "an expression".to_string(), |n| format!("column \"{n}\""));
+                        err!(MakeMeasurement, "{} can't be joined with an explicit key set because missing partitions cannot be filled", name)
+                    })?;
+
+                    Ok(col(name).fill_null(null_expr))
+                })
+                .collect::<Fallible<_>>()?,
+        );
+    }
 
     let m_group_by_agg = Measurement::new(
         middle_domain,
         Function::new_fallible(move |arg: &DslPlan| {
-            let mut output = DslPlan::GroupBy {
+            let output = DslPlan::GroupBy {
                 input: Arc::new(arg.clone()),
                 keys: keys.clone(),
-                aggs: f_comp.eval(arg)?,
+                aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
                 apply: None,
                 maintain_order: false,
                 options: Default::default(),
             };
-
-            if let Some(final_predicate) = &final_predicate {
-                output = DslPlan::Filter {
+            Ok(match key_sanitizer.clone() {
+                Some(KeySanitizer::Filter(predicate)) => DslPlan::Filter {
                     input: Arc::new(output),
-                    predicate: final_predicate.clone(),
+                    predicate: predicate.clone(),
+                },
+                Some(KeySanitizer::Join {
+                    labels,
+                    how,
+                    left_on,
+                    right_on,
+                    options,
+                    fill_null,
+                }) => {
+                    let (input_left, input_right) = match how {
+                        JoinType::Left => (labels, Arc::new(output)),
+                        JoinType::Right => (Arc::new(output), labels),
+                        _ => unreachable!(
+                            "Invariant: by constructor checks, JoinType is only Left or Right"
+                        ),
+                    };
+                    DslPlan::HStack {
+                        input: Arc::new(DslPlan::Join {
+                            input_left,
+                            input_right,
+                            left_on,
+                            right_on,
+                            predicates: vec![],
+                            options,
+                        }),
+                        exprs: fill_null.unwrap(),
+                        options: ProjectionOptions::default(),
+                    }
                 }
-            }
-            Ok(output)
+                None => output,
+            })
         }),
         middle_metric,
         output_measure.clone(),
@@ -153,7 +248,9 @@ where
 
             let mut d_out = privacy_map.eval(&(l0, l1, li))?;
 
-            if let Some((_, noise, threshold_value, _)) = &threshold_info {
+            if is_join {
+                ()
+            } else if let Some((_, noise, threshold_value, _)) = &threshold_info {
                 if li >= *threshold_value {
                     return fallible!(FailedMap, "threshold must be greater than {:?}", li);
                 }
@@ -176,6 +273,19 @@ where
     )?;
 
     t_prior >> m_group_by_agg
+}
+
+fn match_filter(key_sanitizer: &Option<KeySanitizer>) -> Option<(String, u32)> {
+    key_sanitizer
+        .as_ref()
+        .and_then(|s| {
+            if let KeySanitizer::Filter(p) = s {
+                Some(p.clone())
+            } else {
+                None
+            }
+        })
+        .and_then(is_threshold_predicate)
 }
 
 pub trait ApproximateMeasure: BasicCompositionMeasure {

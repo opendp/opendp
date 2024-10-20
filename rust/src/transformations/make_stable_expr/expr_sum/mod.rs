@@ -1,10 +1,8 @@
 use crate::core::{Function, StabilityMap, Transformation};
-use crate::domains::{
-    Context, ExprDomain, Margin, MarginPub::Lengths, NumericDataType, SeriesDomain, WildExprDomain,
-};
+use crate::domains::{AtomDomain, Context, Margin, WildExprDomain};
+use crate::domains::{ExprDomain, MarginPub::Lengths, NumericDataType, SeriesDomain};
 use crate::error::*;
 use crate::metrics::{IntDistance, LpDistance, PartitionDistance};
-use crate::polars::ExprFunction;
 use crate::traits::{
     AlertingAbs, CheckAtom, ExactIntCast, InfAdd, InfCast, InfMul, InfSqrt, InfSub, Number,
     ProductOrd,
@@ -38,72 +36,94 @@ where
     MI: 'static + UnboundedMetric,
     Expr: StableExpr<PartitionDistance<MI>, PartitionDistance<MI>>,
 {
-    let Expr::Agg(AggExpr::Sum(prior_expr)) = expr else {
+    let Expr::Agg(AggExpr::Sum(input)) = expr else {
         return fallible!(MakeTransformation, "expected sum expression");
     };
 
-    let t_prior = prior_expr
+    let t_prior = input
         .as_ref()
         .clone()
         .make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    let dtype = middle_domain.column.dtype();
-
     let (by, input_margin) = middle_domain.context.grouping("sum")?;
 
-    // build output domain
-    let mut output_domain = middle_domain.clone();
+    let dtype = middle_domain.column.dtype();
 
-    // summation invalidates bounds on the active column
-    output_domain.column.drop_bounds()?;
-
-    // Set the margins on the output domain to consist of only one margin: 1 row per group, with at most 1 record in each group.
-    output_domain.context = Context::Grouping {
-        by,
-        margin: Margin {
-            max_partition_length: Some(1),
-            max_num_partitions: input_margin.max_num_partitions,
-            max_partition_contributions: None,
-            max_influenced_partitions: Some(1),
-            public_info: input_margin.public_info,
-        },
-    };
-
-    let series_domain = middle_domain.column.clone();
+    use DataType::*;
     let stability_map = match dtype {
-        DataType::UInt32 => sum_stability_map::<MI, P, u32>(series_domain, input_margin),
-        DataType::UInt64 => sum_stability_map::<MI, P, u64>(series_domain, input_margin),
-        DataType::Int8 => sum_stability_map::<MI, P, i8>(series_domain, input_margin),
-        DataType::Int16 => sum_stability_map::<MI, P, i16>(series_domain, input_margin),
-        DataType::Int32 => sum_stability_map::<MI, P, i32>(series_domain, input_margin),
-        DataType::Int64 => sum_stability_map::<MI, P, i64>(series_domain, input_margin),
-        DataType::Float32 => sum_stability_map::<MI, P, f32>(series_domain, input_margin),
-        DataType::Float64 => sum_stability_map::<MI, P, f64>(series_domain, input_margin),
+        UInt32 => sum_stability_map::<MI, P, u32>(&middle_domain),
+        UInt64 => sum_stability_map::<MI, P, u64>(&middle_domain),
+        Int8 => sum_stability_map::<MI, P, i8>(&middle_domain),
+        Int16 => sum_stability_map::<MI, P, i16>(&middle_domain),
+        Int32 => sum_stability_map::<MI, P, i32>(&middle_domain),
+        Int64 => sum_stability_map::<MI, P, i64>(&middle_domain),
+        Float32 => sum_stability_map::<MI, P, f32>(&middle_domain),
+        Float64 => sum_stability_map::<MI, P, f64>(&middle_domain),
         _ => fallible!(MakeTransformation, "unsupported data type"),
     }?;
+
+    let name = middle_domain.column.name.clone();
+
+    let (series_domain, fill_value) = match dtype {
+        UInt32 => sum_components::<u32>(name),
+        UInt64 => sum_components::<u64>(name),
+        Int8 => sum_components::<i8>(name),
+        Int16 => sum_components::<i16>(name),
+        Int32 => sum_components::<i32>(name),
+        Int64 => sum_components::<i64>(name),
+        Float32 => sum_components::<f32>(name),
+        Float64 => sum_components::<f64>(name),
+        _ => fallible!(MakeTransformation, "unsupported data type"),
+    }?;
+
+    // build output domain
+    let output_domain = ExprDomain {
+        column: series_domain,
+        context: Context::Grouping {
+            by,
+            margin: Margin {
+                max_partition_length: Some(1),
+                max_num_partitions: input_margin.max_num_partitions,
+                max_partition_contributions: None,
+                max_influenced_partitions: Some(1),
+                public_info: input_margin.public_info,
+            },
+        },
+    };
 
     t_prior
         >> Transformation::<_, _, PartitionDistance<MI>, LpDistance<P, _>>::new(
             middle_domain,
             output_domain,
-            Function::then_expr(Expr::sum),
+            Function::then_expr(Expr::sum).fill_with(fill_value),
             middle_metric.clone(),
             LpDistance::default(),
             stability_map,
         )?
 }
 
+fn sum_components<TI>(name: PlSmallStr) -> Fallible<(SeriesDomain, Expr)>
+where
+    TI: Summand,
+    TI::Sum: Zero,
+{
+    Ok((
+        SeriesDomain::new(name, AtomDomain::<TI::Sum>::default()),
+        lit(TI::Sum::zero()),
+    ))
+}
+
 fn sum_stability_map<MI, const P: usize, TI>(
-    series_domain: SeriesDomain,
-    margin: Margin,
+    domain: &ExprDomain,
 ) -> Fallible<StabilityMap<PartitionDistance<MI>, LpDistance<P, f64>>>
 where
     MI: UnboundedMetric,
     TI: Summand,
     f64: InfCast<TI::Sum> + InfCast<u32>,
 {
-    let (l, u) = series_domain.atom_domain::<TI>()?.get_closed_bounds()?;
+    let margin = domain.context.grouping("sum")?.1;
+    let (l, u) = domain.column.atom_domain::<TI>()?.get_closed_bounds()?;
     let (l, u) = (TI::Sum::neg_inf_cast(l)?, TI::Sum::inf_cast(u)?);
 
     let public_info = margin.public_info;

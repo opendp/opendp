@@ -18,7 +18,6 @@ def test_TODOs():
     assert str(dp.smoothed_max_divergence()) == 'SmoothedMaxDivergence'
 
     # TODO: Add meaningful tests of partial constructors:
-    dp.m.then_private_expr(None, None) # type: ignore[arg-type]
     dp.m.then_private_lazyframe(None, None) # type: ignore[arg-type]
     dp.t.then_is_equal(None)
     dp.t.then_metric_bounded()

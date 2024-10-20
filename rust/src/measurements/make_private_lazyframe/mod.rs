@@ -23,7 +23,7 @@ mod ffi;
 
 #[cfg(feature = "contrib")]
 mod group_by;
-pub(crate) use group_by::is_threshold_predicate;
+pub(crate) use group_by::{is_threshold_predicate, match_group_by, KeySanitizer, MatchGroupBy};
 
 #[cfg(feature = "contrib")]
 mod select;
