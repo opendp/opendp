@@ -247,25 +247,6 @@ pub extern "C" fn opendp_data__slice_as_object(
     fn raw_to_lazyframe(raw: &FfiSlice) -> Fallible<AnyObject> {
         Ok(AnyObject::new(LazyFrame::from(deserialize_raw::<DslPlan>(raw, "LazyFrame")?)))
     }
-    #[cfg(feature = "polars")]
-    fn raw_to_tuple_lf_expr(
-        raw: &FfiSlice,
-    ) -> Fallible<AnyObject> {
-        if raw.len != 2 {
-            return fallible!(FFI, "Expected a slice length of two, found length of {}", raw.len);
-        }
-        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const FfiSlice, 2) };
-
-        let dsl_ptr = util::as_ref(slice[0])
-            .ok_or_else(|| err!(FFI, "attempted to follow null pointer to LazyFrame"))?;
-        let dsl = deserialize_raw::<DslPlan>(dsl_ptr, "LazyFrame")?;
-
-        let expr_ptr = util::as_ref(slice[1])
-            .ok_or_else(|| err!(FFI, "attempted to follow null pointer to Expr"))?;
-        let expr = deserialize_raw::<Expr>(expr_ptr, "Expr")?;
-        
-        Ok(AnyObject::new((dsl, expr)))
-    }
     match T_.contents {
         TypeContents::PLAIN("BitVector") => raw_to_bitvector(raw),
         TypeContents::PLAIN("String") => raw_to_string(raw),
@@ -306,10 +287,6 @@ pub extern "C" fn opendp_data__slice_as_object(
             match element_ids.len() {
                 // In the inbound direction, we can handle tuples of primitives only.
                 2 => {
-                    #[cfg(feature = "polars")]
-                    if types == vec![Type::of::<DslPlan>(), Type::of::<Expr>()] {
-                        return raw_to_tuple_lf_expr(raw).into();
-                    }
                     dispatch!(raw_to_tuple2, [(types[0], @primitives), (types[1], @primitives)], (raw))
                 },
                 3 => {
@@ -540,18 +517,6 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         concrete_series_to_raw(obj.downcast_ref::<Series>()?)
     }
 
-    #[cfg(feature = "polars")]
-    fn tuple_lf_expr_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let (lp, expr) = obj.downcast_ref::<(DslPlan, Expr)>()?;
-
-        Ok(FfiSlice::new(
-            util::into_raw([
-                util::into_raw(serialize_obj(lp, "DslPlan")?) as *const c_void,
-                util::into_raw(serialize_obj(expr, "Expr")?) as *const c_void,
-            ]) as *mut c_void,
-            2,
-        ))
-    }
     fn tuple_curve_f64_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
         let (curve, delta) = obj.downcast_ref::<(PrivacyProfile, f64)>()?;
 
@@ -595,10 +560,6 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             match element_ids.len() {
                 // In the outbound direction, we can handle tuples of both primitives and AnyObjects.
                 2 => {
-                    #[cfg(feature = "polars")]
-                    if types == vec![Type::of::<DslPlan>(), Type::of::<Expr>()] {
-                        return tuple_lf_expr_to_raw(obj).into();
-                    }
                     if types == vec![Type::of::<PrivacyProfile>(), Type::of::<f64>()] {
                         return tuple_curve_f64_to_raw(obj).into();
                     }

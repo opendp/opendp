@@ -90,11 +90,11 @@ where
         middle_domain,
         output_domain,
         Function::new_fallible(move |plan: &DslPlan| {
-            let expr_arg = (plan.clone(), all());
+            let expr_arg = plan.clone().into();
             Ok(DslPlan::HStack {
                 input: Arc::new(plan.clone()),
                 exprs: (t_exprs.iter())
-                    .map(|t| t.invoke(&expr_arg).map(|p| p.1))
+                    .map(|t| t.invoke(&expr_arg).map(|p| p.expr))
                     .collect::<Fallible<Vec<_>>>()?,
                 options,
             })

@@ -5,7 +5,6 @@ use polars_plan::utils::expr_output_name;
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, DslPlanDomain, ExprDomain, Null, OuterMetric, SeriesDomain};
 use crate::error::Fallible;
-use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
 
 #[cfg(test)]

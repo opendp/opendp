@@ -1,5 +1,5 @@
 use polars::df;
-use polars_plan::dsl::{all, col, len, lit};
+use polars_plan::dsl::{col, len, lit};
 
 use crate::{
     measures::MaxDivergence,
@@ -23,7 +23,7 @@ fn test_postprocess_alias() -> Fallible<()> {
         Some(0.),
     )?;
 
-    let expr_p = m_expr.invoke(&(lf.logical_plan.clone(), all()))?;
+    let expr_p = m_expr.invoke(&lf.clone().into())?.expr;
     let actual = lf.group_by([col("chunk_2_bool")]).agg([expr_p]).collect()?;
     let expected = df!("chunk_2_bool" => [false, true], "new name" => [500u32, 500])?;
 
@@ -49,7 +49,7 @@ fn test_postprocess_binary() -> Fallible<()> {
         Some(0.),
     )?;
 
-    let expr_p = m_expr.invoke(&(lf.logical_plan.clone(), all()))?;
+    let expr_p = m_expr.invoke(&lf.clone().into())?.expr;
     let actual = lf.group_by([col("chunk_2_bool")]).agg([expr_p]).collect()?;
     let expected = df!("chunk_2_bool" => [false, true], "len" => [false, false])?;
 

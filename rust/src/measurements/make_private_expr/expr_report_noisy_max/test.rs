@@ -60,7 +60,7 @@ fn test_report_noisy_max_gumbel_expr() -> Fallible<()> {
         None,
     )?;
 
-    let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?;
+    let dp_expr = m_quant.invoke(&lf.clone().into())?.expr;
     let df = lf.select([dp_expr]).collect()?;
     let actual = df.column("cycle_(..101f64)")?.u32()?.get(0).unwrap();
     assert_eq!(actual, 5);

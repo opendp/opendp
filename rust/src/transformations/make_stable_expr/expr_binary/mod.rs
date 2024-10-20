@@ -4,7 +4,7 @@ use polars_plan::utils::expr_output_name;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{
-    AtomDomain, DslPlanDomain, ExprContext, ExprDomain, OuterMetric, SeriesDomain,
+    AtomDomain, DslPlanDomain, ExprContext, ExprDomain, ExprPlan, OuterMetric, SeriesDomain,
 };
 use crate::error::*;
 use crate::transformations::DatasetMetric;
@@ -77,16 +77,23 @@ where
     Transformation::new(
         input_domain,
         output_domain,
-        Function::new_fallible(move |arg: &(DslPlan, Expr)| {
-            let left = t_left.invoke(arg)?.1;
-            let right = t_right.invoke(arg)?.1;
+        Function::new_fallible(move |arg: &ExprPlan| {
+            let left = t_left.invoke(arg)?;
+            let right = t_right.invoke(arg)?;
 
-            let binary = Expr::BinaryExpr {
-                left: Arc::new(left),
-                right: Arc::new(right),
-                op: op.clone(),
-            };
-            Ok((arg.0.clone(), binary))
+            Ok(ExprPlan {
+                plan: arg.plan.clone(),
+                expr: Expr::BinaryExpr {
+                    left: Arc::new(left.expr),
+                    right: Arc::new(right.expr),
+                    op: op.clone(),
+                },
+                fill: left.fill.zip(right.fill).map(|(l, r)| Expr::BinaryExpr {
+                    left: Arc::new(l),
+                    right: Arc::new(r),
+                    op: op.clone(),
+                }),
+            })
         }),
         input_metric.clone(),
         input_metric,

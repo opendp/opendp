@@ -24,7 +24,7 @@ fn test_make_expr_puredp() -> Fallible<()> {
         None,
     )?;
 
-    let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?;
+    let dp_expr = m_quant.invoke(&lf.clone().into())?.expr;
     let df_actual = lf.select([dp_expr]).collect()?;
 
     assert_eq!(df_actual, df!("const_1f64" => [1000.0])?);
@@ -46,7 +46,7 @@ fn test_make_expr_zcdp() -> Fallible<()> {
         None,
     )?;
 
-    let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?;
+    let dp_expr = m_quant.invoke(&lf.clone().into())?.expr;
     let df_actual = lf.select([dp_expr]).collect()?;
 
     assert_eq!(df_actual, df!("const_1f64" => [1000.0])?);
@@ -94,7 +94,7 @@ fn test_make_expr_gaussian() -> Fallible<()> {
         None,
     )?;
 
-    let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?;
+    let dp_expr = m_quant.invoke(&lf.clone().into())?.expr;
     let df_actual = lf.select([dp_expr]).collect()?;
 
     assert_eq!(df_actual, df!("const_1f64" => [1000.0])?);

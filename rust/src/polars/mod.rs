@@ -2,6 +2,7 @@ use std::{env, sync::Arc};
 
 use crate::{
     core::Function,
+    domains::ExprPlan,
     error::Fallible,
     interactive::{Answer, Query, Queryable},
     measurements::{
@@ -114,9 +115,9 @@ where
 /// Augment the input expression to apply the plugin expression.
 ///
 /// # Arguments
-/// * `input_expr` - The input expression to which the Laplace noise will be added
+/// * `input_expr` - The input expression to which the plugin will be applied
 /// * `plugin_expr` - A plugin expression. The input to the plugin is replaced with input_expr.
-/// * `kwargs` - Extra parameters to the plugin
+/// * `kwargs_new` - Extra parameters to the plugin
 pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
     input_expr: Expr,
     plugin_expr: Expr,
@@ -233,44 +234,38 @@ impl ExtractValue for String {
     }
 }
 
-pub(crate) trait ExprFunction {
-    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self;
-    fn from_expr(expr: Expr) -> Self;
-}
+impl Function<ExprPlan, ExprPlan> {
+    /// # Proof Definition
+    /// Return a Function that, when passed a plan,
+    /// returns the same plan but with the expression extended via `function`.
+    pub(crate) fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
+        Self::new(move |arg: &ExprPlan| arg.then(&function))
+    }
 
-impl<F: Clone> ExprFunction for Function<(F, Expr), (F, Expr)> {
-    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
-        Self::new(move |arg: &(F, Expr)| (arg.0.clone(), function(arg.1.clone())))
-    }
-    fn from_expr(expr: Expr) -> Self {
-        Self::new_fallible(
-            move |(frame, expr_wild): &(F, Expr)| -> Fallible<(F, Expr)> {
-                assert_is_wildcard(expr_wild)?;
-                Ok((frame.clone(), expr.clone()))
-            },
-        )
-    }
-}
-impl<F: Clone> ExprFunction for Function<(F, Expr), Expr> {
-    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
-        Self::new(move |arg: &(F, Expr)| function(arg.1.clone()))
-    }
-    fn from_expr(expr: Expr) -> Self {
-        Self::new_fallible(move |(_, expr_wild): &(F, Expr)| -> Fallible<Expr> {
-            assert_is_wildcard(expr_wild)?;
-            Ok(expr.clone())
+    /// # Proof Definition
+    /// Return a Function that, if passed a plan with a wildcard expression,
+    /// returns the same plan but with `expr` expression instead.
+    pub(crate) fn from_expr(expr: Expr) -> Self {
+        Self::new_fallible(move |arg: &ExprPlan| -> Fallible<ExprPlan> {
+            assert_is_wildcard(&arg.expr)?;
+            Ok(ExprPlan {
+                plan: arg.plan.clone(),
+                expr: expr.clone(),
+                fill: None,
+            })
         })
     }
-}
 
-impl ExprFunction for Function<Expr, Expr> {
-    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
-        Self::new(move |arg: &Expr| function(arg.clone()))
-    }
-    fn from_expr(expr: Expr) -> Self {
-        Self::new_fallible(move |expr_wild: &Expr| -> Fallible<Expr> {
-            assert_is_wildcard(expr_wild)?;
-            Ok(expr.clone())
+    /// # Proof Definition
+    /// Returns a Function that specifies what the function should return if evaluated on an empty partition.
+    ///
+    /// Polars only keeps non-empty partitions in group-by,
+    /// so this is used to fill missing values after joining with an explicit key set.
+    pub(crate) fn fill_with(self, value: Expr) -> Self {
+        Self::new_fallible(move |arg: &ExprPlan| {
+            let mut plan = self.eval(arg)?;
+            plan.fill = Some(value.clone());
+            Ok(plan)
         })
     }
 }

@@ -2,8 +2,8 @@ use crate::core::{Function, MetricSpace, Transformation};
 use crate::domains::{AtomDomain, DslPlanDomain, ExprDomain, SeriesDomain};
 use crate::error::*;
 use crate::metrics::{LpDistance, PartitionDistance};
-use crate::polars::ExprFunction;
 use crate::transformations::traits::UnboundedMetric;
+use polars::prelude::lit;
 use polars_plan::dsl::{len, Expr};
 
 use super::expr_count::counting_query_stability_map;
@@ -51,7 +51,7 @@ where
     Transformation::new(
         input_domain,
         output_domain,
-        Function::from_expr(len()),
+        Function::from_expr(len()).fill_with(lit(0u32)),
         input_metric,
         LpDistance::default(),
         counting_query_stability_map(public_info),
