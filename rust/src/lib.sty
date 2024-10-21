@@ -30,6 +30,11 @@
 \newtcolorbox{warn_box}{colback=red!5!white,colframe=red!75!black}
 \newcommand{\contrib}{{\begin{warn_box}This proof resides in \textbf{``contrib''} because it has not completed the vetting process.\end{warn_box}}} 
 \newcommand{\floatingPoint}{{\begin{warn_box}This implementation is susceptible to floating-point vulnerabilities.\end{warn_box}}} 
+\newcommand{\timingMitigation}{{\begin{warn_box}  
+  This implementation contains partial mitigations for timing side-channel vulnerabilities.
+  Timing side-channel vulnerabilities may still be exploitable due to branching, 
+  compiler- and instruction-level optimizations, caching, and so on.
+\end{warn_box}}} 
 
 % asOfCommit macro to version a code dependency. Arguments:
 %    #1: relative path to file you are dependent on
