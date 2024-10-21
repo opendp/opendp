@@ -8,6 +8,9 @@ use crate::measures::{Approximate, MaxDivergence};
 use crate::traits::{ExactIntCast, InfDiv, InfExpM1, InfLn1P, InfMul};
 
 pub trait IsSizedDomain: Domain {
+    /// # Proof Definition
+    /// Returns Ok(size), if all members of the domain (`self`) have `size` elements.
+    /// Otherwise returns `Err(e)`.
     fn get_size(&self) -> Fallible<usize>;
 }
 impl<D: Domain> IsSizedDomain for VectorDomain<D> {
@@ -21,7 +24,14 @@ impl<D: Domain> IsSizedDomain for VectorDomain<D> {
     }
 }
 
+/// Implemented for privacy measures that support privacy amplification by subsampling.
 pub trait AmplifiableMeasure: Measure {
+    /// # Proof Definition
+    /// Given a privacy measure `self` with respective privacy loss `budget`,
+    /// returns either `Ok(out)`, where `out` is the privacy loss
+    /// if the analysis were conducted on a simple sample of `sample_size` records
+    /// from a population with `population_size` records,
+    /// or `Err(e)`.
     fn amplify(
         &self,
         budget: &Self::Distance,
