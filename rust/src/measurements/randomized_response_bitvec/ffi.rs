@@ -17,12 +17,12 @@ pub extern "C" fn opendp_measurements__make_randomized_response_bitvec(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
     f: c_double,
-    constant_time: c_bool,
+    mitigate_timing: c_bool,
 ) -> FfiResult<*mut AnyMeasurement> {
     let input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<BitVectorDomain>()).clone();
     let input_metric = try_!(try_as_ref!(input_metric).downcast_ref::<DiscreteDistance>()).clone();
 
-    make_randomized_response_bitvec(input_domain, input_metric, f, to_bool(constant_time))
+    make_randomized_response_bitvec(input_domain, input_metric, f, to_bool(mitigate_timing))
         .into_any()
         .into()
 }
