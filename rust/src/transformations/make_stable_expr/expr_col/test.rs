@@ -1,3 +1,4 @@
+use crate::domains::ExprPlan;
 use crate::metrics::SymmetricDistance;
 use crate::transformations::make_stable_expr::test_helper::get_test_data;
 use crate::transformations::StableExpr;
@@ -12,7 +13,7 @@ fn test_make_col_expr() -> Fallible<()> {
     let t_col = expected
         .clone()
         .make_stable(expr_domain.clone(), SymmetricDistance)?;
-    let actual = t_col.invoke(&(lf.logical_plan, all()))?.1;
+    let actual = t_col.invoke(&lf.into())?.expr;
 
     assert_eq!(actual, expected);
 
@@ -26,8 +27,11 @@ fn test_make_col_expr_no_wildcard() -> Fallible<()> {
 
     let t_col = col("const_1f64").make_stable(expr_domain.clone(), SymmetricDistance)?;
     let error_res = t_col
-        .invoke(&(lf.logical_plan, col("not wildcard")))
-        .map(|v| v.1)
+        .invoke(&ExprPlan {
+            plan: lf.logical_plan,
+            expr: col("not wildcard"),
+            fill: None,
+        })
         .unwrap_err()
         .variant;
     assert_eq!(error_res, ErrorVariant::FailedFunction);

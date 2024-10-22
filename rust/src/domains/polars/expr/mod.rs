@@ -42,10 +42,10 @@ pub enum ExprContext {
 
 impl ExprContext {
     /// # Proof Definition
-    /// Given a context (`self`), logical plan (`lp`) and expression,
+    /// Given a context (`self`), logical plan (`plan`) and expression,
     /// returns a new logical plan where the expression has been applied to the logical plan by means specified by the context.
-    fn get_plan(&self, (lp, expr): &(DslPlan, Expr)) -> DslPlan {
-        let frame = LazyFrame::from(lp.clone());
+    fn get_plan(&self, plan: DslPlan, expr: Expr) -> DslPlan {
+        let frame = LazyFrame::from(plan);
         match self {
             ExprContext::RowByRow => frame.select([expr.clone()]),
             ExprContext::Aggregate { grouping_columns } => frame
@@ -186,11 +186,55 @@ impl<F: Frame> FrameDomain<F> {
     }
 }
 
+#[derive(Clone)]
+pub struct ExprPlan {
+    pub plan: DslPlan,
+    pub expr: Expr,
+    pub fill: Option<Expr>,
+}
+
+impl Debug for ExprPlan {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ExprPlan")
+            .field("expr", &self.expr)
+            .field("default", &self.fill.is_some())
+            .finish()
+    }
+}
+
+impl ExprPlan {
+    /// # Proof Definition
+    /// Return a compute plan where the expression and fill expression in `self` are extended by `function`.
+    pub fn then(&self, function: impl Fn(Expr) -> Expr) -> Self {
+        Self {
+            plan: self.plan.clone(),
+            expr: function(self.expr.clone()),
+            fill: self.fill.clone().map(function),
+        }
+    }
+}
+
+impl From<DslPlan> for ExprPlan {
+    fn from(value: DslPlan) -> Self {
+        ExprPlan {
+            plan: value,
+            expr: all(),
+            fill: None,
+        }
+    }
+}
+
+impl From<LazyFrame> for ExprPlan {
+    fn from(value: LazyFrame) -> Self {
+        ExprPlan::from(value.logical_plan)
+    }
+}
+
 impl Domain for ExprDomain {
-    type Carrier = (DslPlan, Expr);
+    type Carrier = ExprPlan;
 
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        let frame = self.context.get_plan(val);
+        let frame = self.context.get_plan(val.plan.clone(), val.expr.clone());
         self.frame_domain.member(&frame)
     }
 }
@@ -198,7 +242,7 @@ impl Domain for ExprDomain {
 impl Debug for ExprDomain {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ExprDomain")
-            .field("lazy_frame_domain", &self.frame_domain)
+            .field("frame_domain", &self.frame_domain)
             .finish()
     }
 }

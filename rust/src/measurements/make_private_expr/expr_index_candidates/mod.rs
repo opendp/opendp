@@ -1,5 +1,6 @@
 use crate::core::{Measure, Metric, MetricSpace};
-use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
+use crate::domains::ExprPlan;
+use crate::polars::{apply_plugin, literal_value_of, match_plugin, OpenDPPlugin};
 use crate::{
     core::{Function, Measurement},
     domains::ExprDomain,
@@ -34,7 +35,7 @@ pub fn make_expr_index_candidates<MI: 'static + Metric, MO: 'static + Measure>(
     output_measure: MO,
     expr: Expr,
     param: Option<f64>,
-) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>
+) -> Fallible<Measurement<ExprDomain, ExprPlan, MI, MO>>
 where
     Expr: PrivateExpr<MI, MO>,
     (ExprDomain, MI): MetricSpace,

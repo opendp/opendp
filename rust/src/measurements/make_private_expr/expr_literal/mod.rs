@@ -1,6 +1,6 @@
 use crate::core::{Measure, Metric, MetricSpace, PrivacyMap};
+use crate::domains::ExprPlan;
 use crate::metrics::PartitionDistance;
-use crate::polars::ExprFunction;
 use crate::{
     core::{Function, Measurement},
     domains::ExprDomain,
@@ -25,7 +25,7 @@ pub fn make_expr_private_lit<MI: 'static + Metric, MO: 'static + Measure>(
     input_domain: ExprDomain,
     input_metric: PartitionDistance<MI>,
     expr: Expr,
-) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MO>>
+) -> Fallible<Measurement<ExprDomain, ExprPlan, PartitionDistance<MI>, MO>>
 where
     MO::Distance: Zero,
     (ExprDomain, PartitionDistance<MI>): MetricSpace,

@@ -7,7 +7,6 @@ use super::*;
 #[test]
 fn test_make_expr_clip() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
-    let lp = lf.logical_plan;
     let expr_domain = lf_domain.clone().select();
 
     let expected = col("const_1f64").clip(lit(0.), lit(0.5));
@@ -15,7 +14,7 @@ fn test_make_expr_clip() -> Fallible<()> {
     let t_clip = expected
         .clone()
         .make_stable(expr_domain, SymmetricDistance)?;
-    let actual = t_clip.invoke(&(lp, all()))?.1;
+    let actual = t_clip.invoke(&lf.into())?.expr;
 
     assert_eq!(expected, actual);
 

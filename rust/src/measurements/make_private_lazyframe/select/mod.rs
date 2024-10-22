@@ -122,7 +122,11 @@ where
             } = output
             {
                 *input = Arc::new(arg.clone());
-                *expr = m_select_expr.invoke(&(arg.clone(), all()))?;
+                *expr = m_select_expr
+                    .invoke(&arg.clone().into())?
+                    .into_iter()
+                    .map(|e| e.expr)
+                    .collect();
             };
             Ok(output)
         }),

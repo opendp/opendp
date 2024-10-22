@@ -1,8 +1,8 @@
 use polars_plan::dsl::Expr;
 
 use crate::{
-    core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure},
-    domains::ExprDomain,
+    core::{FfiResult, Function, IntoAnyMeasurementFfiResultExt, Measure},
+    domains::{ExprDomain, ExprPlan},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
@@ -50,14 +50,14 @@ pub extern "C" fn opendp_measurements__make_private_expr(
         Expr: PrivateExpr<PartitionDistance<SymmetricDistance>, MO>,
     {
         let output_measure = output_measure.downcast_ref::<MO>()?.clone();
-        make_private_expr(
+        let meas = make_private_expr(
             input_domain,
             input_metric,
             output_measure,
             expr,
             global_scale,
-        )
-        .into_any()
+        )?;
+        (meas >> Function::new(|plan: &ExprPlan| plan.expr.clone())).into_any()
     }
 
     dispatch!(

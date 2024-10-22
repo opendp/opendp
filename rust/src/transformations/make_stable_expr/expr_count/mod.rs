@@ -2,10 +2,9 @@ use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, DslPlanDomain, ExprContext, ExprDomain, MarginPub, SeriesDomain};
 use crate::error::*;
 use crate::metrics::{IntDistance, LpDistance, PartitionDistance};
-use crate::polars::ExprFunction;
 use crate::traits::{InfCast, InfMul, InfSqrt, ProductOrd};
 use crate::transformations::traits::UnboundedMetric;
-use polars::prelude::{AggExpr, FunctionExpr};
+use polars::prelude::{lit, AggExpr, FunctionExpr};
 use polars_plan::dsl::Expr;
 
 use super::StableExpr;
@@ -113,7 +112,8 @@ where
                 Strategy::NullCount => e.null_count(),
                 Strategy::Len => e.len(),
                 Strategy::NUnique => e.n_unique(),
-            }),
+            })
+            .fill_with(lit(0u32)),
             middle_metric,
             LpDistance::default(),
             counting_query_stability_map(public_info),

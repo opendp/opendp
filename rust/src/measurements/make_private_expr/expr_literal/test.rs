@@ -1,5 +1,5 @@
 use polars::df;
-use polars_plan::dsl::{all, lit};
+use polars_plan::dsl::lit;
 
 use crate::{
     measurements::{make_private_lazyframe, PrivateExpr},
@@ -22,8 +22,8 @@ fn test_make_expr_private_lit() -> Fallible<()> {
         None,
     )?;
 
-    let actual = m_lit.invoke(&(lf.logical_plan.clone(), all()))?;
-    assert_eq!(actual, lit(1));
+    let actual = m_lit.invoke(&lf.clone().into())?;
+    assert_eq!(actual.expr, lit(1));
     Ok(())
 }
 

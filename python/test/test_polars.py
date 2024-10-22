@@ -87,15 +87,6 @@ def test_lazyframe_ffi():
     pl_testing.assert_frame_equal(t_ident(lf).collect(), lf.collect())
 
 
-def test_expr_ffi():
-    """ensure that expr domain's carrier type can be passed to/from Rust"""
-    pl = pytest.importorskip("polars")
-    lf_domain, lf = example_lf()
-    expr_domain = dp.expr_domain(lf_domain, grouping_columns=[])
-    t_ident = (expr_domain, dp.symmetric_distance()) >> dp.t.then_identity()
-    assert str(t_ident((lf, pl.col("A")))[1]) == str(pl.col("A"))
-
-
 @pytest.mark.parametrize(
     "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
 )
@@ -870,3 +861,27 @@ def test_count_queries():
         "null_count": [1],
     }).cast({pl.Int64: pl.UInt32})
     pl_testing.assert_frame_equal(release, expected)
+
+
+def test_explicit_grouping_keys():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    lf_domain, lf = example_lf(margin=["B"], max_partition_length=100)
+
+    plan_right = seed(lf.collect_schema()).group_by("B").agg(pl.col("D").dp.sum((0, 10)))
+    labels = pl.LazyFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
+    plan = labels.join(plan_right, on="B", how="left")
+    m_lf = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan, 0.0
+    )
+
+    df_act = m_lf(lf).collect()
+
+    df_exp = pl.DataFrame(
+        [
+            pl.Series("B", list(range(2, 7)), dtype=pl.Int32),
+            pl.Series("D", [20] * 4 + [0]),
+        ]
+    )
+    pl_testing.assert_frame_equal(df_act.sort("B"), df_exp)

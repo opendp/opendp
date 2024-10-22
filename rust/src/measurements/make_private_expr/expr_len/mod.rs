@@ -1,7 +1,6 @@
 use crate::core::{Measure, MetricSpace, PrivacyMap};
-use crate::domains::MarginPub;
+use crate::domains::{ExprPlan, MarginPub};
 use crate::metrics::PartitionDistance;
-use crate::polars::ExprFunction;
 use crate::transformations::traits::UnboundedMetric;
 use crate::{
     core::{Function, Measurement},
@@ -38,7 +37,7 @@ pub fn make_expr_private_len<MI: 'static + UnboundedMetric, MO: 'static + Measur
     input_metric: PartitionDistance<MI>,
     output_measure: MO,
     expr: Expr,
-) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MO>>
+) -> Fallible<Measurement<ExprDomain, ExprPlan, PartitionDistance<MI>, MO>>
 where
     MO::Distance: Zero,
     (ExprDomain, PartitionDistance<MI>): MetricSpace,
