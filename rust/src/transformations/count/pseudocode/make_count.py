@@ -6,7 +6,7 @@ def make_count(
     output_domain = AtomDomain(TO) # |\label{line:output-domain}|
 
     def function(data: Vec[TIA]) -> TO: # |\label{line:TO-output}|
-        size = input_domain.size(data) # |\label{line:size}|
+        size = len(data) # |\label{line:size}|
         try: # |\label{line:try-catch}|
             return TO.exact_int_cast(size) # |\label{line:exact-int-cast}|
         except FailedCast:
