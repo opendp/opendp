@@ -11,7 +11,7 @@ use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, MapDomain, VectorDomain};
 use crate::error::*;
 use crate::metrics::{AbsoluteDistance, LpDistance, SymmetricDistance};
-use crate::traits::{CollectionSize, Hashable, Number, Primitive};
+use crate::traits::{Hashable, Number, Primitive};
 
 #[bootstrap(features("contrib"), generics(TIA(suppress), TO(default = "int")))]
 /// Make a Transformation that computes a count of the number of records in data.
@@ -46,9 +46,7 @@ where
         AtomDomain::default(),
         // think of this as: min(arg.len(), TO::max_value())
         Function::new(move |arg: &Vec<TIA>| {
-            // get size via the CollectionSize trait
-            let size = arg.size();
-
+            let size = arg.len();
             // cast to TO, and if cast fails (due to overflow) fill with largest value
             TO::exact_int_cast(size).unwrap_or(TO::MAX_CONSECUTIVE)
         }),
