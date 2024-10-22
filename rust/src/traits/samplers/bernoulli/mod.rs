@@ -138,8 +138,7 @@ where
 ///
 /// # Proof Definition
 /// For any setting of the input parameters,
-/// where `prob` is within $[0, 1]$,
-/// returns `Err(e)` if there is a lack of system entropy,
+/// returns `Err(e)` if there is a lack of system entropy or `prob` is not in $[0, 1]$,
 /// or `Ok(out)` where `out` is `true` with probability `prob`, otherwise `false`.
 pub fn sample_bernoulli_rational(prob: RBig) -> Fallible<bool> {
     let (numer, denom) = prob.into_parts();
