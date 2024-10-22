@@ -57,6 +57,9 @@ polars = { version = "=0.41.3", features = [
     "csv",
     "dtype-struct",
     "dtype-array",
+    "dtype-date",
+    "dtype-datetime",
+    "dtype-time",
     "parquet",
     "serde-lazy",
     "streaming",
@@ -65,11 +68,13 @@ polars = { version = "=0.41.3", features = [
     "polars-ops",
     "abs",
     "meta",
-    "cutqcut"
+    "cutqcut",
+    "strings",
 ], optional = true }
 polars-plan = { version = "=0.41.3", features = [
     "ffi_plugin",
 ], optional = true }
+chrono = { version = "*", optional = true }
 
 # Temporary fix until Polars is updated.
 # See https://github.com/pola-rs/polars/issues/19063#issuecomment-2397815029
@@ -108,6 +113,7 @@ polars = [
     "serde",
     "serde-pickle",
     "ciborium",
+    "chrono"
 ]
 use-openssl = ["openssl"]
 
