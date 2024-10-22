@@ -81,7 +81,7 @@ impl ExprContext {
     /// This is used to disallow operations like sorting, shuffling or filtering
     /// when row alignment must not change,
     /// like when augmenting a new column via `with_column`.
-    pub fn break_alignment(&self) -> Fallible<()> {
+    pub fn check_alignment_can_be_broken(&self) -> Fallible<()> {
         if !matches!(self, ExprContext::Aggregate { .. }) {
             return fallible!(
                 MakeMeasurement,

@@ -203,7 +203,7 @@ where
 
         expr => fallible!(
             MakeMeasurement,
-            "Expr is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+            "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
             expr,
             get_disabled_features_message()
         ),

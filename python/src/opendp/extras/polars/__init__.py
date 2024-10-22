@@ -75,10 +75,16 @@ class DPExpr(object):
 
         * - Method
           - Comments
+        * - `context len <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.len.html>`
+          - Number of elements in the context, including nulls
         * - `len <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.len.html>`_
-          - Number of rows, including nulls
+          - Number of elements in the column, including nulls
         * - `count <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.count.html>`_
-          - Number of rows, not including nulls
+          - Number of non-null elements in the column
+        * - `null_count <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.null_count.html>`_
+          - Number of null elements in the column
+        * - `n_unique <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.n_unique.html>`_
+          - Number of unique elements in the column, including null
         * - `sum <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.sum.html>`_
           - Sum
     '''
@@ -150,17 +156,89 @@ class DPExpr(object):
         """
         return self.noise(scale=scale, distribution="Gaussian")
 
+    def len(self, scale: float | None = None):
+        """Compute a differentially private estimate of the number of elements in `self`, including null values.
+
+        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+
+        :param scale: parameter for the noise distribution.
+
+        :example:
+
+        This function is a shortcut for the exact Polars ``len`` and then noise addition:
+
+        >>> import polars as pl
+        >>> expression = pl.col('numbers').dp.len()
+        >>> print(expression)
+        col("numbers").count()...:noise([...])
+        """
+        return self.expr.len().dp.noise(scale)
+    
+    def count(self, scale: float | None = None):
+        """Compute a differentially private estimate of the number of elements in `self`, not including null values.
+
+        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+
+        :param scale: parameter for the noise distribution.
+
+        :example:
+
+        This function is a shortcut for the exact Polars ``count`` and then noise addition:
+
+        >>> import polars as pl
+        >>> expression = pl.col('numbers').dp.count()
+        >>> print(expression)
+        col("numbers").count()...:noise([...])
+        """
+        return self.expr.count().dp.noise(scale)
+    
+    def null_count(self, scale: float | None = None):
+        """Compute a differentially private estimate of the number of null elements in `self`.
+
+        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+
+        :param scale: parameter for the noise distribution.
+
+        :example:
+
+        This function is a shortcut for the exact Polars ``null_count`` and then noise addition:
+
+        >>> import polars as pl
+        >>> expression = pl.col('numbers').dp.null_count()
+        >>> print(expression)
+        col("numbers").null_count()...:noise([...])
+        """
+        return self.expr.null_count().dp.noise(scale)
+    
+    def n_unique(self, scale: float | None = None):
+        """Compute a differentially private estimate of the number of unique elements in `self`.
+
+        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+
+        :param scale: parameter for the noise distribution.
+
+        :example:
+
+        This function is a shortcut for the exact Polars ``n_unique`` and then noise addition:
+
+        >>> import polars as pl
+        >>> expression = pl.col('numbers').dp.n_unique()
+        >>> print(expression)
+        col("numbers").n_unique()...:noise([...])
+        """
+        return self.expr.n_unique().dp.noise(scale)
+
     def sum(self, bounds: Tuple[float, float], scale: float | None = None):
         """Compute the differentially private sum.
 
         If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
         :param bounds: The bounds of the input data.
-        :param scale: Noise scale parameter for the Laplace distribution. ``scale == standard_deviation / sqrt(2)``
+        :param scale: Noise scale parameter for the noise distribution. ``scale == standard_deviation / sqrt(2)``
 
         :example:
 
-        Note that ``sum`` is a shortcut which actually implies several operations:
+        This function is a shortcut which actually implies several operations:
 
         * Clipping the values
         * Summing them
@@ -173,25 +251,24 @@ class DPExpr(object):
         """
         return self.expr.clip(*bounds).sum().dp.noise(scale)
 
-    def mean(self, bounds: Tuple[float, float], scale: float | None = None):
+    def mean(self, bounds: Tuple[float, float], scale: tuple[float, float] | None = None):
         """Compute the differentially private mean.
 
         The amount of noise to be added to the sum is determined by the scale.
         If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
-        :param bounds: The bounds of the input data.
-        :param scale: Noise scale parameter for the Laplace distribution. ``scale == standard_deviation / sqrt(2)``
+        :param bounds: The bounds of the input data
+        :param scale: parameter for the noise distribution
 
         :example:
 
         >>> import polars as pl
         >>> expression = pl.col('numbers').dp.mean((0, 10))
         >>> print(expression)
-        [(col("numbers").clip([...]).sum()...:noise([...])) / (len())]
+        [(col("numbers").clip(...).sum()...:noise(...)) / (col("numbers").count()...:noise(...))]
         """
-        import polars as pl  # type: ignore[import-not-found]
-
-        return self.expr.dp.sum(bounds, scale) / pl.len()
+        numer, denom = scale if scale else (1.0, 0.0)
+        return self.sum(bounds, numer) / self.len(denom)
 
     def _discrete_quantile_score(self, alpha: float, candidates: list[float]):
         """Score the utility of each candidate for representing the true quantile.
@@ -293,6 +370,25 @@ try:
     register_expr_namespace("dp")(DPExpr)
 except ImportError: # pragma: no cover
     pass
+
+def len_opendp(scale: float | None = None):
+    """Compute a differentially private estimate of the number of rows.
+
+    If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+
+    :param scale: parameter for the noise distribution.
+
+    :example:
+
+    This function is a shortcut for the exact Polars ``len`` and then noise addition:
+
+    >>> import opendp.prelude as dp
+    >>> expression = dp.len()
+    >>> print(expression)
+    len()...:noise([...])
+    """
+    from polars.functions import len  # type: ignore[import-not-found]
+    return DPExpr(len()).noise(scale=scale)
 
 
 class OnceFrame(object):
@@ -638,14 +734,14 @@ try:
 
             >>> query.summarize(alpha=.05)  # type: ignore[union-attr]
             shape: (2, 5)
-            ┌───────────┬───────────┬─────────────────┬───────┬──────────┐
-            │ column    ┆ aggregate ┆ distribution    ┆ scale ┆ accuracy │
-            │ ---       ┆ ---       ┆ ---             ┆ ---   ┆ ---      │
-            │ str       ┆ str       ┆ str             ┆ f64   ┆ f64      │
-            ╞═══════════╪═══════════╪═════════════════╪═══════╪══════════╡
-            │ len       ┆ Len       ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │
-            │ convicted ┆ Sum       ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │
-            └───────────┴───────────┴─────────────────┴───────┴──────────┘
+            ┌───────────┬────────────────┬─────────────────┬───────┬──────────┐
+            │ column    ┆ aggregate      ┆ distribution    ┆ scale ┆ accuracy │
+            │ ---       ┆ ---            ┆ ---             ┆ ---   ┆ ---      │
+            │ str       ┆ str            ┆ str             ┆ f64   ┆ f64      │
+            ╞═══════════╪════════════════╪═════════════════╪═══════╪══════════╡
+            │ len       ┆ Context Length ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │
+            │ convicted ┆ Sum            ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │
+            └───────────┴────────────────┴─────────────────┴───────┴──────────┘
 
             The accuracy in any given row can be interpreted with:
 
