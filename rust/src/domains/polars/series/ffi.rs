@@ -4,7 +4,7 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, MetricSpace},
-    domains::{AtomDomain, CategoricalDomain, OptionDomain, PrimitiveDataType},
+    domains::{AtomDomain, CategoricalDomain, OptionDomain, PrimitiveDataType, UnknownValueDomain},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMetric, Downcast},
@@ -50,6 +50,12 @@ pub extern "C" fn opendp_domains__series_domain(
             return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
         }
 
+        if T == Type::of::<UnknownValueDomain>() {
+            let element_domain =
+                try_!(element_domain.downcast_ref::<OptionDomain<UnknownValueDomain>>()).clone();
+            return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
+        }
+
         fn monomorphize_option<T: 'static + CheckAtom + PrimitiveDataType>(
             name: &str,
             element_domain: &AnyDomain,
@@ -71,6 +77,11 @@ pub extern "C" fn opendp_domains__series_domain(
     } else {
         if T == Type::of::<CategoricalDomain>() {
             let element_domain = try_!(element_domain.downcast_ref::<CategoricalDomain>()).clone();
+            return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
+        }
+
+        if T == Type::of::<UnknownValueDomain>() {
+            let element_domain = try_!(element_domain.downcast_ref::<UnknownValueDomain>()).clone();
             return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
         }
 
