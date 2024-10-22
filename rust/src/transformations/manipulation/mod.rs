@@ -1,7 +1,7 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use opendp_derive::bootstrap;
+use opendp_derive::{bootstrap, proven};
 
 use crate::core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, VectorDomain};
@@ -11,21 +11,21 @@ use crate::metrics::{
 };
 use crate::traits::{CheckAtom, CheckNull};
 
-/// A [`Domain`] representing a dataset.
+/// A [`Domain`] representing a microdata dataset.
 ///
 /// This is distinguished from other domains
-/// because each element in the dataset corresponds to an individual.
+/// because each row in the dataset corresponds to an individual.
 pub trait DatasetDomain: Domain {
-    /// The domain of each element in the dataset.
+    /// The domain of each row in the dataset.
     ///
     /// For vectors, this is the domain of the vector elements,
     /// for dataframes, this is the domain of the dataframe rows,
     /// and so on.
-    type ElementDomain: Domain;
+    type RowDomain: Domain;
 }
 
 impl<D: Domain> DatasetDomain for VectorDomain<D> {
-    type ElementDomain = D;
+    type RowDomain = D;
 }
 
 pub trait DatasetMetric: Metric<Distance = IntDistance> {
@@ -51,19 +51,19 @@ impl DatasetMetric for HammingDistance {
 }
 
 pub trait RowByRowDomain<DO: DatasetDomain>: DatasetDomain {
-    fn translate(&self, output_row_domain: DO::ElementDomain) -> DO;
+    fn translate(&self, output_row_domain: DO::RowDomain) -> DO;
     fn apply_rows(
         value: &Self::Carrier,
         row_function: &impl Fn(
-            &<Self::ElementDomain as Domain>::Carrier,
-        ) -> Fallible<<DO::ElementDomain as Domain>::Carrier>,
+            &<Self::RowDomain as Domain>::Carrier,
+        ) -> Fallible<<DO::RowDomain as Domain>::Carrier>,
     ) -> Fallible<DO::Carrier>;
 }
 
 impl<DIA: Domain, DOA: Domain> RowByRowDomain<VectorDomain<DOA>> for VectorDomain<DIA> {
     fn translate(
         &self,
-        output_row_domain: <VectorDomain<DOA> as DatasetDomain>::ElementDomain,
+        output_row_domain: <VectorDomain<DOA> as DatasetDomain>::RowDomain,
     ) -> VectorDomain<DOA> {
         VectorDomain {
             element_domain: output_row_domain,
@@ -79,13 +79,14 @@ impl<DIA: Domain, DOA: Domain> RowByRowDomain<VectorDomain<DOA>> for VectorDomai
     }
 }
 
+#[proven]
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
 pub(crate) fn make_row_by_row<DI, DO, M>(
     input_domain: DI,
     input_metric: M,
-    output_row_domain: DO::ElementDomain,
+    output_row_domain: DO::RowDomain,
     row_function: impl 'static
-        + Fn(&<DI::ElementDomain as Domain>::Carrier) -> <DO::ElementDomain as Domain>::Carrier
+        + Fn(&<DI::RowDomain as Domain>::Carrier) -> <DO::RowDomain as Domain>::Carrier
         + Send
         + Sync,
 ) -> Fallible<Transformation<DI, DO, M, M>>
@@ -96,19 +97,18 @@ where
     (DI, M): MetricSpace,
     (DO, M): MetricSpace,
 {
-    let row_function = move |arg: &<DI::ElementDomain as Domain>::Carrier| Ok(row_function(arg));
+    let row_function = move |arg: &<DI::RowDomain as Domain>::Carrier| Ok(row_function(arg));
     make_row_by_row_fallible(input_domain, input_metric, output_row_domain, row_function)
 }
 
+#[proven]
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
 pub(crate) fn make_row_by_row_fallible<DI, DO, M>(
     input_domain: DI,
     input_metric: M,
-    output_row_domain: DO::ElementDomain,
+    output_row_domain: DO::RowDomain,
     row_function: impl 'static
-        + Fn(
-            &<DI::ElementDomain as Domain>::Carrier,
-        ) -> Fallible<<DO::ElementDomain as Domain>::Carrier>
+        + Fn(&<DI::RowDomain as Domain>::Carrier) -> Fallible<<DO::RowDomain as Domain>::Carrier>
         + Send
         + Sync,
 ) -> Fallible<Transformation<DI, DO, M, M>>
