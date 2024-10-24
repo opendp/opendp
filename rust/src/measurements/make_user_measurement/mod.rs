@@ -87,3 +87,86 @@ pub extern "C" fn opendp_measurements__make_user_measurement(
     )
     .into()
 }
+
+#[bootstrap(
+    name = "_make_measurement",
+    arguments(
+        input_domain(hint = "Domain"),
+        input_metric(hint = "Metric"),
+        output_measure(hint = "Measure"),
+        function(rust_type = "$pass_through(TO)"),
+        privacy_map(rust_type = "$measure_distance_type(output_measure)"),
+    ),
+    generics(TO(default = "ExtrinsicObject")),
+    dependencies(
+        "input_domain",
+        "input_metric",
+        "output_measure",
+        "c_function",
+        "c_privacy_map"
+    )
+)]
+/// Construct a Measurement from user-defined callbacks.
+/// This is meant for internal use, as it does not require "honest-but-curious",
+/// unlike `make_user_measurement`.
+///
+/// This is used when you write a constructor in a bindings language that does not have preconditions,
+/// and is meant to be a part of the public API for the OpenDP Library.
+///
+/// `function` must not have side-effects and only raise data-independent exceptions,
+/// and `privacy_map` must be a pure function.
+///
+/// # Arguments
+/// * `input_domain` - A domain describing the set of valid inputs for the function.
+/// * `input_metric` - The metric from which distances between adjacent inputs are measured.
+/// * `output_measure` - The measure from which distances between adjacent output distributions are measured.
+/// * `function` - A function mapping data from `input_domain` to a release of type `TO`.
+/// * `privacy_map` - A function mapping distances from `input_metric` to `output_measure`.
+///
+/// # Generics
+/// * `TO` - The data type of outputs from the function.
+///
+/// # Proof Definition
+/// Returns a valid measurement where, for every pair of elements $x, x'$ in `input_domain`,
+/// and for every pair `(d_in, d_out)`,
+/// where `d_in` has the associated type for `input_metric` and `d_out` has the associated type for `output_measure`,
+/// if $x, x'$ are `d_in`-close under `input_metric`, `privacy_map(d_in)` does not raise an exception,
+/// and `privacy_map(d_in) <= d_out`,
+/// then `function(x), function(x')` are d_out-close under `output_measure`.
+#[allow(dead_code)]
+fn _make_measurement<TO>(
+    input_domain: AnyDomain,
+    input_metric: AnyMetric,
+    output_measure: AnyMeasure,
+    function: CallbackFn,
+    privacy_map: CallbackFn,
+) -> Fallible<Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>> {
+    let _ = (
+        input_domain,
+        input_metric,
+        output_measure,
+        privacy_map,
+        function,
+    );
+    panic!("this signature only exists for code generation")
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_measurements___make_measurement(
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
+    output_measure: *const AnyMeasure,
+    function: CallbackFn,
+    privacy_map: CallbackFn,
+    TO: *const c_char,
+) -> FfiResult<*mut AnyMeasurement> {
+    let _TO = TO;
+    Measurement::new(
+        try_as_ref!(input_domain).clone(),
+        Function::new_fallible(wrap_func(function)),
+        try_as_ref!(input_metric).clone(),
+        try_as_ref!(output_measure).clone(),
+        PrivacyMap::new_fallible(wrap_func(privacy_map)),
+    )
+    .into()
+}

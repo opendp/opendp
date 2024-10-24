@@ -17,7 +17,7 @@ def make_np_count(input_domain: Domain, input_metric: Metric) -> Measurement:
     if input_metric != dp.symmetric_distance():
         raise ValueError("input metric must be symmetric distance")
 
-    return dp.t.make_user_transformation(
+    return dp.t._make_transformation(
         input_domain,
         input_metric,
         dp.atom_domain(T=int),

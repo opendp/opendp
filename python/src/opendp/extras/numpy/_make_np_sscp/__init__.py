@@ -47,7 +47,7 @@ def make_np_sscp(
             "expected an output metric of either type SymmetricDistance or L2Distance<_>"
         )
 
-    return dp.t.make_user_transformation(
+    return dp.t._make_transformation(
         input_domain,
         input_metric,
         _sscp_domain(
