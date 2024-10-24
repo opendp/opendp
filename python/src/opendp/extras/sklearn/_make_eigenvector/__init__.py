@@ -79,7 +79,7 @@ def make_private_eigenvector(
             if np.exp(-u.T @ A @ u) / (M * (u.T @ Omega @ u) ** (d / 2)):
                 return u
 
-    return dp.m.make_user_measurement(
+    return dp.m._make_measurement(
         input_domain,
         input_metric,
         dp.max_divergence(),
@@ -118,7 +118,7 @@ def make_np_sscp_projection(
         )
 
     kwargs = input_desc._asdict() | {"num_features": P.shape[0]}
-    return dp.t.make_user_transformation(
+    return dp.t._make_transformation(
         input_domain,
         input_metric,
         _sscp_domain(**kwargs),
@@ -194,7 +194,7 @@ def make_private_eigenvectors(
 
         return theta.T
 
-    return dp.m.make_user_measurement(
+    return dp.m._make_measurement(
         input_domain,
         input_metric,
         m_compose.output_measure,

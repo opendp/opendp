@@ -156,7 +156,7 @@ def make_private_pca(
         # make full release
         return qbl(make_eigdecomp(norm, origin))
 
-    return dp.m.make_user_measurement(
+    return dp.m._make_measurement(
         input_domain,
         input_metric,
         compositor.output_measure,
@@ -319,7 +319,7 @@ def _make_center(input_domain, input_metric):
     input_desc = input_domain.descriptor
 
     kwargs = input_desc._asdict() | {"origin": np.zeros(input_desc.num_columns)}
-    return dp.t.make_user_transformation(
+    return dp.t._make_transformation(
         input_domain,
         input_metric,
         dp.numpy.array2_domain(**kwargs),

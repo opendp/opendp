@@ -41,7 +41,12 @@ const BLACKLIST: &'static [&'static str] = &[
     "new_queryable",
     "new_privacy_profile",
     "user_domain",
-    "_user_domain_descriptor",
+    "_make_transformation",
+    "_make_measurement",
+    "_extrinsic_domain",
+    "_extrinsic_domain_descriptor",
+    "_extrinsic_distance",
+    "_extrinsic_divergence",
     // polars
     "new_arrow_array",
     "series_domain",

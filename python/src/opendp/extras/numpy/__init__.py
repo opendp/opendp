@@ -18,6 +18,7 @@ from opendp.typing import RuntimeTypeDescriptor, ELEMENTARY_TYPES
 from opendp._convert import ATOM_MAP
 from opendp._lib import import_optional_dependency
 from opendp.extras._utilities import register_transformation
+from opendp.domains import _extrinsic_domain
 import typing
 
 if typing.TYPE_CHECKING: # pragma: no cover
@@ -160,7 +161,7 @@ def array2_domain(
         T=T,
     )
 
-    return dp.user_domain(f"NPArray2Domain({_fmt_attrs(desc)})", member, desc)
+    return _extrinsic_domain(f"NPArray2Domain({_fmt_attrs(desc)})", member, desc)
 
 
 def _sscp_domain(
@@ -217,7 +218,7 @@ def _sscp_domain(
         T=T,
     )
 
-    return dp.user_domain(f"NPSSCPDomain({_fmt_attrs(desc)})", member, desc)
+    return _extrinsic_domain(f"NPSSCPDomain({_fmt_attrs(desc)})", member, desc)
 
 
 def make_np_clamp(
@@ -263,7 +264,7 @@ def make_np_clamp(
         "p": p,
         "origin": origin,
     }
-    return dp.t.make_user_transformation(
+    return dp.t._make_transformation(
         input_domain,
         input_metric,
         dp.numpy.array2_domain(**kwargs),

@@ -33,7 +33,7 @@ def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
     else:
         stability = lambda d_in: d_in // 2 * 2 * norm
 
-    return dp.t.make_user_transformation(
+    return dp.t._make_transformation(
         input_domain,
         input_metric,
         dp.vector_domain(dp.atom_domain(T=input_desc.T)),
