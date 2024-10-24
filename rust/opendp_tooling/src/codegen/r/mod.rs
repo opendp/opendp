@@ -43,6 +43,7 @@ const BLACKLIST: &'static [&'static str] = &[
     "user_domain",
     "_make_transformation",
     "_make_measurement",
+    "_new_pure_function",
     "_extrinsic_domain",
     "_extrinsic_domain_descriptor",
     "_extrinsic_distance",
