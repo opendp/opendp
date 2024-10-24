@@ -1,0 +1,43 @@
+# for syntax highlighting in intellij
+# 1. install the GNU Makefile plugin
+# 2. right click on this file and associate the filetype with a Makefile
+
+# will always be located at src/libopendp.a once rust_build is done
+STATLIB = libopendp.a
+
+# PKG_LIBS tells R where to find the static library (libopendp.a)
+PKG_LIBS = $(STATLIB)
+
+all: rust_build
+
+rust_build:
+
+	@if [ -f "binary.tar.xz" ]; then \
+		echo "* extract binary"; \
+		$(TAR) --extract --xz -f binary.tar.xz -C .; \
+	fi
+
+	@if [ -d "binary/`uname -m`" ]; then \
+		echo "* detected suitable pre-compiled binary"; \
+		cp binary/`uname -m`/libopendp.a .; \
+	elif [ -f "source.tar.xz" ]; then \
+		echo "* extract opendp and vendor files"; \
+		$(TAR) --extract --xz -f source.tar.xz -C .; \
+		$(TAR) --extract --xz -f vendor.tar.xz -C rust; \
+		mkdir -p .cargo; \
+		cp cargo_vendor_config.toml .cargo/config.toml; \
+		echo "* build OpenDP Library (libopendp.a)"; \
+		@BEFORE_CARGO_BUILD@ cargo build --manifest-path rust/Cargo.toml --color always --release --jobs 2 --offline --features @RUST_FEATURES@; \
+		@AFTER_CARGO_BUILD@ \
+		cp rust/target/release/libopendp.a .; \
+	elif [ ! -z "@OPENDP_LIB_DIR@" ]; then \
+		cp @OPENDP_LIB_DIR@/libopendp.a .; \
+	else \
+		echo "expected either a src/binary.tar.xz, src/source.tar.xz (run bash tools/r_stage.sh) or OPENDP_LIB_DIR to be set"; \
+		exit 1; \
+	fi
+	    
+
+
+clean:
+	rm -Rf $(SHLIB) $(OBJECTS) $(STATLIB)

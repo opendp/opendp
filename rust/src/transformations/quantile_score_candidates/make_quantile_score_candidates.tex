@@ -1,0 +1,335 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+% \externaldocument[trans_mod:]{../mod}
+% \ref{trans_mod:thrm:privacy-proof}
+
+\title{\texttt{fn make\_quantile\_score\_candidates}}
+\author{Michael Shoemate \and Christian Covington \and Ira Globus-Harrus}
+\begin{document}
+\maketitle  
+
+
+\contrib
+
+Proves soundness of \rustdoc{transformations/fn}{make\_quantile\_score\_candidates} 
+in \asOfCommit{mod.rs}{f5bb719}.
+\texttt{make\_quantile\_score\_candidates} returns a Transformation that 
+takes a numeric vector database and a vector of numeric quantile candidates,
+and returns a vector of scores, where higher scores correspond to more accurate candidates.
+
+\subsection*{Vetting History}
+\begin{itemize}
+    \item \vettingPR{456}
+\end{itemize}
+
+\section{Intuition}
+The quantile score function scores each $c$ in a set of candidates $C$.
+
+\begin{equation}
+\begin{array}{rl}
+    s_i &= -|(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)|
+\end{array}
+\end{equation}
+
+Where $\#(x < C_i) = |\{x \in x | x < C_i\}|$ is the number of values in $x$ less than $C_i$, 
+and similarly for other variations of inequalities.
+The scalar score function can be equivalently stated:
+\begin{align}
+    s_i &= -|(1 - \alpha) \cdot \#(x < c) - \alpha \cdot \#(x > c)| \\
+    &= -|(1 - \alpha) \cdot \#(x < c) - \alpha \cdot (|x| - \#(x < c) - \#(x = c))| \\
+    &= -|\#(x < c) - \alpha \cdot (|x| - \#(x = c))|
+\end{align}
+
+It has an intuitive interpretation as $-|candidate\_rank - ideal\_rank|$, 
+where the absolute distance between the candidate and ideal rank penalizes the score.
+The ideal rank does not include values in the dataset equal to the candidate.
+This scoring function considers higher scores better, 
+and the score is maximized at zero when the candidate rank is equivalent to the rank at the ideal $\alpha$-quantile.
+
+The scalar scorer is almost equivalent to Smith's\cite{Smith11}, but adjusts for a source of bias when there are values in the dataset equal to the candidate.
+For comparison, we can equivalently write the OpenDP scorer as if there were some $\alpha$-discount on dataset entries equal to the candidate.
+
+\[
+\begin{array}{cl}
+    OpenDP &-|\#(x < c) + \alpha \cdot \#(x = c) - \alpha \cdot |x|| \\
+    Smith &-|\#(x < c) + 1 \cdot \#(x = c) - \alpha \cdot |x||
+\end{array}
+\]
+
+Observing that $\#(x \leq c) = \#(x < c) + 1 \cdot \#(x = c)$.
+
+
+\subsection{Examples}
+
+Let $x = \{0,1,2,3,4\}$ and $\alpha = 0.5$ (median):
+
+\begin{align*}
+    score(x, 0, \alpha) = -|0 - .5 \cdot (5 - 1)| = -2 \\
+    score(x, 1, \alpha) = -|1 - .5 \cdot (5 - 1)| = -1 \\
+    score(x, 2, \alpha) = -|2 - .5 \cdot (5 - 1)| = -0 \\
+    score(x, 3, \alpha) = -|3 - .5 \cdot (5 - 1)| = -1 \\
+    score(x, 4, \alpha) = -|4 - .5 \cdot (5 - 1)| = -2
+\end{align*}
+
+The score is maximized by the candidate at the true median.
+
+Let $x = \{0,1,2,3,4,5\}$ and $\alpha = 0.5$ (median):
+
+\begin{align*}
+    score(x, 0, \alpha) = -|0 - .5 \cdot (6 - 1)| = -2.5 \\
+    score(x, 1, \alpha) = -|1 - .5 \cdot (6 - 1)| = -1.5 \\
+    score(x, 2, \alpha) = -|2 - .5 \cdot (6 - 1)| = -0.5 \\
+    score(x, 3, \alpha) = -|3 - .5 \cdot (6 - 1)| = -0.5 \\
+    score(x, 4, \alpha) = -|4 - .5 \cdot (6 - 1)| = -1.5 \\
+    score(x, 5, \alpha) = -|5 - .5 \cdot (6 - 1)| = -2.5
+\end{align*}
+
+The two candidates nearest the median are scored equally and highest.
+
+Let $x = \{0,1,2,3,4\}$ and $\alpha = 0.25$ (first quartile):
+
+\begin{align*}
+    score(x, 0, \alpha) = -|0 - .25 \cdot (5 - 1)| = -1 \\
+    score(x, 1, \alpha) = -|1 - .25 \cdot (5 - 1)| = -0 \\
+    score(x, 2, \alpha) = -|2 - .25 \cdot (5 - 1)| = -1 \\
+    score(x, 3, \alpha) = -|3 - .25 \cdot (5 - 1)| = -2 \\
+    score(x, 4, \alpha) = -|4 - .25 \cdot (5 - 1)| = -3
+\end{align*}
+
+As expected, the score is maximized when $c = 1$.
+
+Let $x = \{0,1,2,3,4,5\}$ and $\alpha = 0.25$ (first quartile):
+
+\begin{align*}
+    score(x, 0, \alpha) = -|0 - .25 \cdot (6 - 1)| = -1.25 \\
+    score(x, 1, \alpha) = -|1 - .25 \cdot (6 - 1)| = -0.25 \\
+    score(x, 2, \alpha) = -|2 - .25 \cdot (6 - 1)| = -0.75 \\
+    score(x, 3, \alpha) = -|3 - .25 \cdot (6 - 1)| = -1.75 \\
+    score(x, 4, \alpha) = -|4 - .25 \cdot (6 - 1)| = -2.75 \\
+    score(x, 5, \alpha) = -|5 - .25 \cdot (6 - 1)| = -3.75
+\end{align*}
+
+The ideal rank is 1.25. The nearest candidate, 1, has the greatest score, followed by 2, and then 0. 
+
+
+\section{Finite Data Types}
+The previous equation assumes the existence of real numbers to represent $\alpha$.
+We instead assume $\alpha$ is rational, such that $\alpha = \frac{\alpha_{num}}{\alpha_{den}}$.
+Multiply the equation through by $\alpha_{den}$ to get the following, 
+which only uses integers:
+
+\begin{equation}
+    \textrm{score}(x, c, \alpha_{num}, \alpha_{den}) = -|\alpha_{den} \cdot \#(x < c) - \alpha_{num} \cdot (|x| - \#(x = c))|
+\end{equation}
+
+This adjustment also increases the sensitivity by a factor $\alpha_{den}$, 
+but does not affect the utility.
+We now make the scoring strictly non-negative.
+\begin{itemize}
+    \item Drop the negation and instead configure the exponential mechanism to minimize the score.
+    \item Compute the absolute difference in a function that swaps the order of arguments to keep the sign positive.
+\end{itemize}
+
+\begin{equation}
+    \textrm{score}(x, c, \alpha_{num}, \alpha_{den}) = \mathrm{abs\_diff}(\alpha_{den} \cdot \#(x < c), \alpha_{num} \cdot (|x| - \#(x = c)))
+\end{equation}
+
+To prevent a numerical overflow when computing the arguments to \texttt{abs\_diff}, 
+first choose a data type that the scores are to be represented in.
+If the number of records is greater than can be represented in this data type, 
+then sample the dataset down to at most this number of records.
+Notice that when any given record is added or removed, 
+the counts differ by no more than they would have without this sampling down.
+In the OpenDP implementation, the dataset size may be no greater than the max value of a Rust usize, 
+because each index into the dataset maps to a distinct computer memory address.
+
+Now allocate some of the bits of the data type for the alpha denominator,
+and use the remaining bits for counts of up to $l$, where $l$ is the effective dataset size.
+From this set-up, we choose an $\alpha_{den}$ such that $\alpha_{den} \cdot l$ is representable.
+Since $\alpha_{num} \le \alpha_{den}$, $\alpha_{num} \cdot l$ is representable.
+Since the dataset size fits in the choice of data type, then $|x|$ is representable.
+Therefore, no quantity in the following equation is not representable.
+
+\begin{equation}
+    \textrm{score}(x, c, \alpha_{num}, \alpha_{den}, l) = \mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(x < c), l), \alpha_{num} \cdot \min(|x| - \#(x = c), l))
+\end{equation}
+
+Should we compute counts with a 64-bit integer, we might choose $\alpha_{den}$ to be 10,000.
+This would allow for a fine fractional approximation of alpha,
+while still leaving enough room for datasets on the order of $10^{15}$ elements.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\begin{itemize}
+    \item \texttt{TIA} (input atom type) is a type with trait \rustdoc{traits/trait}{Number}.
+    \item \texttt{A} (alpha type) is a type with trait \rustdoc{traits/trait}{Float}.
+    \item \texttt{MI} is a type with trait \rustdoc{transformations/trait}{ARDatasetMetric}.
+\end{itemize}
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/make_quantile_score_candidates.py}
+
+
+\subsection*{Postcondition}
+\validTransformation
+    {(\texttt{input\_domain, input\_metric, candidates, alpha, TIA, A, MI})}
+    {\texttt{make\_quantile\_ score\_candidates}}
+
+\section{Proof}
+\subsection{Appropriate Output Domain}
+\label{sec:approp-output-domain}
+The raw type and domain are equivalent, save for potential nullity in the atomic type. 
+The scalar scorer structurally cannot emit null.
+Therefore the output of the function is a member of the output domain.
+
+\subsection{Stability Guarantee}
+
+The constructor first performs checks to ensure that the preconditions on \texttt{compute\_score} are met.
+It checks that vectors in the input domain do not contain null values,
+that the candidates are strictly increasing,
+that alpha is fractional and in the range $[0, 1]$,
+and computes a \texttt{size\_limit} for which $\texttt{size\_limit} \cdot \texttt{alpha\_den}$ does not overflow a \texttt{usize}.
+Thus by the definition of \texttt{compute\_score}, for each candidate, the response from the function is:
+
+\begin{equation}
+    \textrm{compute\_score}(x, c, \alpha_{num}, \alpha_{den}, l) = |\alpha_{den} \cdot \min(\#(x < c), l), \alpha_{num} \cdot \min(|x| - \#(x = c), l)|
+\end{equation}
+
+The sensitivity of this function differs depending on if the size of the input vector is known.
+
+\subsubsection{Unknown Size Stability}
+\label{unsized-stability}
+First, consider the case where the size is unknown.
+
+\begin{lemma}
+    \label{single-change-stab-sym}
+    If $d_{Sym}(x, x') = 1$, then $d_\infty(\function(x), \function(x')) \le \max(\alpha_{num}, \alpha_{den} - \alpha_{num})$.
+\end{lemma}
+
+\begin{proof}
+Assume $d_{Sym}(x, x') = 1$. 
+
+\begin{align*}
+    &d_\infty(\function(x)_i, \function(x')_i) \\
+    &= \max\limits_{i} |\function(x)_i - \function(x')_i| &&\text{by definition of } d_\infty \\
+    &= \max\limits_{i} |\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(x < C_i), l), \alpha_{num} \cdot \min(|x| - \#(x = C_i), l)) &&\text{by definition of } \function
+        \\&\hspace{1cm}\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(x' < C_i), l), \alpha_{num} \cdot \min(|x'| - \#(x' = C_i), l))| \\
+    &= \alpha_{den} \cdot \max\limits_{i} ||\min(\#(x < C_i), l) - \alpha \cdot \min(|x| - \#(x = C_i), l)|
+        \\&\hspace{1cm}|\min(\#(x' < C_i), l) - \alpha \cdot \min(|x'| - \#(x' = C_i), l)|| \\
+    &\le \alpha_{den} \cdot \max\limits_{i} ||\#(x < C_i) - \alpha \cdot (|x| - \#(x = C_i))|
+        \\&\hspace{1cm}|\#(x' < C_i) - \alpha \cdot (|x| - \#(x' = C_i))|| \\
+\intertext{Consider each of the three cases of adding or removing an element in x.}
+\intertext{Case 1. Assume $x'$ is equal to $x$, but with some $x_j < C_i$ added or removed.}
+    &= \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| 
+        \\&\hspace{1cm} - |(1 - \alpha) \cdot (\#(x < C_i) \pm 1) - \alpha \cdot \#(x > C_i)|| \\
+    &\leq \alpha_{den} \cdot  \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)|
+        \\&\hspace{1cm} - (|(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| + |\pm(1 - \alpha)|)| &&\text{by triangle inequality} \\
+    &= \alpha_{den} \cdot \max\limits_{i} |1 - \alpha| &&\text{scores cancel}\\
+    &= \alpha_{den} - \alpha_{num} &&\text{since } \alpha \leq 1
+\intertext{Case 2. Assume $x'$ is equal to $x$, but with some $x_j > C_i$ added or removed.}
+    &= \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| 
+        \\&\hspace{1cm} - |(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot (\#(x > C_i) \pm 1)|| \\
+    &\leq \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| 
+        \\&\hspace{1cm} - (|(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| + |\pm\alpha|)| &&\text{by triangle inequality} \\
+    &= \alpha_{den} \cdot \max\limits_{i} |\alpha| &&\text{scores cancel}\\
+    &= \alpha_{num} &&\text{since } \alpha \geq 0
+\intertext{Case 3. Assume $x'$ is equal to $x$, but with some $x_j = C_i$ added or removed.}
+    &= \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| 
+        \\&\hspace{1cm} - |(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)|| \\
+    &= 0 &&\text{no change in score}
+\intertext{Take the union bound over all cases.}
+    &\le \max(\alpha_{num}, \alpha_{den} - \alpha_{num})
+\end{align*}
+
+\end{proof}
+
+Take any two elements $x, x'$ in the \texttt{input\_domain} and any pair $(\din, \dout)$, 
+where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric}.
+Assume $x, x'$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$. 
+
+\begin{align*}
+    \dout &= \max\limits_{x \sim x'} d_{\infty}(s, s') &&\text{where } s = \function(x)\\
+    &= \max\limits_{x \sim x'} \max\limits_{i} |s_i - s'_i| &&\text{by definition of }\rustdoc{metrics/struct}{LInfDistance} \text{, without monotonicity} \\
+    &\leq \sum_j^{\din} \max\limits_{Z_{j} \sim Z_{j+1}} \max\limits_{i} |s_{i,j} - s_{i,j+1}| &&\text{by path property } d_{Sym}(Z_i, Z_{i+1}) = 1, x = Z_0 \text{ and } x' = Z_\din \\
+    &\leq \sum_j^{\din} \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) &&\text{by \ref{single-change-stab-sym}} \\
+    &\leq \din \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) \\
+\end{align*}
+\label{sec:unknown-size}
+This formula matches the stability map in the case where the dataset size is unknown.
+
+
+\subsubsection{Known Size Stability}
+\label{sec:known-size}
+Now consider the case where the dataset size is known.
+
+\begin{lemma}
+    \label{single-change-stab}
+    If $d_{CO}(x, x') \le 1$, then $d_\infty(\function(x), \function(x')) \le 2 \cdot \alpha_{den}$.
+\end{lemma}
+
+\begin{proof}
+Assume $d_{CO}(x, x') \le 1$. 
+
+\begin{align*}
+    &d_\infty(\function(x), \function(x')) \\
+    &= \max\limits_{i} |\function(x)_i - \function(x')_i| &&\text{by definition of } d_\infty \\
+    &= \max\limits_{i} |\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(x < C_i), l), \alpha_{num} \cdot \min(|x| - \#(x = C_i), l)) &&\text{by def. of } \function
+        \\&\hspace{1cm} -\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(x' < C_i), l), \alpha_{num} \cdot \min(|x'| - \#(x' = C_i), l))| \\
+    &= \alpha_{den} \cdot \max\limits_{i} ||\min(\#(x < C_i), l) - \alpha \cdot \min(|x| - \#(x = C_i), l)|
+        \\&\hspace{1cm}-|\min(\#(x' < C_i), l) - \alpha \cdot \min(|x'| - \#(x' = C_i), l)|| \\
+    &= \alpha_{den} \cdot \max\limits_{i} ||\#(x < C_i) - \alpha \cdot (|x| - \#(x = C_i))|
+        \\&\hspace{1cm}-|\#(x' < C_i) - \alpha \cdot (|x| - \#(x' = C_i))|| \\
+\end{align*}
+
+\begin{align*}
+\intertext{Consider each of the four cases of changing a row in x.}
+\intertext{Case 1. Assume $x'$ is equal to $x$, but with some $x_j < C_i$ replaced with $x'_j > C_i$.}
+    &= 2 \cdot \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| 
+        \\&\hspace{1cm} - (1 - \alpha) \cdot (\#(x < C_i) - 1) - \alpha \cdot (\#(x > C_i) + 1)|| &&\text{by definition of }\function \\
+    &\leq 2 \cdot \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)|
+        \\&\hspace{1cm} - (|(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| + |1|)| &&\text{by triangle inequality} \\
+    &= 2 \cdot \alpha_{den} \cdot \max\limits_{i} |1| &&\text{scores cancel}\\
+    &= 2 \cdot \alpha_{den}
+\intertext{Case 2. Assume $x'$ is equal to $x$, but with some $x_j > C_i$ replaced with $x'_j < C_i$.}
+    &= 2 \cdot \alpha_{den}
+    \intertext{\hspace{1cm}by symmetry, follows from Case 1.}
+\intertext{Case 3. Assume $x'$ is equal to $x$, but with some $x_j \neq C_i$ replaced with $C_i$.}
+    &\leq 2 \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num})\\
+    \intertext{\hspace{1cm}equivalent to one removal (see \rustdoc{transformations/fn}{make\_quantile\_score\_candidates})}
+\intertext{Case 4. Assume $x'$ is equal to $x$, but with some $x_j = C_i$ replaced with $x'_j \neq C_i$.}
+    &\leq 2 \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) \\
+\intertext{\hspace{1cm}equivalent to one addition (see \rustdoc{transformations/fn}{make\_quantile\_score\_candidates})}
+\intertext{Take the union bound over all cases.}
+    d_\infty(s_i, s'_i) &\le \max(2 \cdot \alpha_{den}, 2 \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num})) = 2 \cdot \alpha_{den}
+    \intertext{\hspace{1cm}since $\max(\alpha, 1 - \alpha) \leq 1$}
+\end{align*}
+\end{proof}
+
+Take any two elements $x, x'$ in the \texttt{input\_domain} and any pair $(\din, \dout)$, 
+where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric}.
+Assume $x, x'$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$. 
+
+\begin{align*}
+    \dout &= \max\limits_{x \sim x'} d_{\infty}(s, s') \\
+    &= \max\limits_{x \sim x'} \max\limits_{i} |s_i - s'_i| &&\text{by definition of }\rustdoc{metrics/struct}{LInfDistance}\text{, without monotonicity} \\
+    &\leq \sum_j^{\din // 2} \max\limits_{Z_{j} \sim Z_{j+1}} \max\limits_{i} |s_{i,j} - s_{i,j+1}| &&\text{by path property } d_{CO}(Z_i, Z_{i+1}) = 1, x = Z_0 \text{ and } Z_\din = x' \\
+    &\leq \sum_j^{\din // 2} 2 \cdot \alpha_{den} &&\text{by \ref{single-change-stab}} \\
+    &\leq 2 \cdot (\din // 2) \cdot \alpha_{den} \\
+\end{align*}
+
+This formula matches the stability map in the case where the dataset size is known.
+
+\subsubsection{Conclusion}
+Take any two elements $x, x'$ in the \texttt{input\_domain} and any pair $(\din, \dout)$, 
+where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric}.
+Assume $x, x'$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$. 
+
+By \ref{sec:unknown-size} and \ref{sec:known-size} it is shown that \function(x), \function(x') are \dout-close under \texttt{output\_metric} for any choice of input arguments.
+
+
+\bibliographystyle{plain}
+\bibliography{references.bib}
+
+\end{document}
