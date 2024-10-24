@@ -117,7 +117,7 @@ fn sample_geometric_exp_slow(x: RBig) -> Fallible<UBig> {
 /// For any non-negative rational `x`,
 /// `sample_geometric_exp_fast` either returns `Err(e)` due to a lack of system entropy,
 /// or `Ok(out)`, where `out` is distributed as $Geometric(1 - exp(-x))$.
-fn sample_geometric_exp_fast(x: RBig) -> Fallible<UBig> {
+pub(crate) fn sample_geometric_exp_fast(x: RBig) -> Fallible<UBig> {
     if x.is_zero() {
         return Ok(UBig::ZERO);
     }
