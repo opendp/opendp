@@ -4,7 +4,7 @@ use crate::{
     core::{FfiResult, Measure, PrivacyMap},
     error::Fallible,
     ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
-    measures::{ffi::UserDivergence, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{ffi::ExtrinsicDivergence, MaxDivergence, ZeroConcentratedDivergence},
 };
 
 #[bootstrap(features("contrib"))]
@@ -42,7 +42,11 @@ fn make_approximate(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
         monomorphize,
         [(
             measurement.output_measure.type_,
-            [MaxDivergence, ZeroConcentratedDivergence, UserDivergence]
+            [
+                MaxDivergence,
+                ZeroConcentratedDivergence,
+                ExtrinsicDivergence
+            ]
         )],
         (measurement)
     )
