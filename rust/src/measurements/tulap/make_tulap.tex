@@ -66,9 +66,7 @@ and returns a sample from the Tulap distribution centered at \texttt{arg}.
 \section{Proof}
 
 \begin{proof} 
-\hfill
-\begin{enumerate}
-    \item \textbf{(Privacy guarantee.)} 
+\textbf{(Privacy guarantee.)} 
 
 \begin{tcolorbox}
     \begin{note}[Proof relies on correctness of the Tulap sampler]
@@ -121,6 +119,7 @@ this construction yields a CND, which can be constructed as in Definition~\ref{d
 This CND can be used to add perfectly calibrated noise to a statistic to achieve $f$-DP~\parencite[Proposition~2.2]{dong2019gaussian}. 
 
 \begin{thm} \label{thm1}  % Thm 3.9
+\cite[Theorem~3.9]{awan2023canonical} \\
 Let $f$ be a symmetric nontrivial tradeoff function and let $F_f$ be as in Definition~\ref{def1}~\parencite{awan2023canonical}. 
 Then, as stated in \parencite[Theorem~3.9]{awan2023canonical}, $F_f$ is a canonical noise distribution for $f$. 
 \end{thm}
@@ -167,7 +166,6 @@ It is easy to verify that $F_N(x) = c(1/2-x) + (1-c)(x+1/2)$ for $x\in (-1/2,1/2
 %By \cite[Lemma 2.8]{awan2020differentially},
 We then have that $F_N$ satisfies the recurrence relation in Definition~\ref{def1}~\parencite{awan2023canonical}. 
 We conclude that $F_N = F_f$ and that $F_N$ is a CND for N. Therefore, The distribution $\mathrm{Tulap}(0,b,q)$ satisfies $(\epsilon, \delta)$-DP.
-\end{enumerate}
 \end{proof}
 
 \printbibliography
