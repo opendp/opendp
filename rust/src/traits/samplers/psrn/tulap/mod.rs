@@ -1,7 +1,7 @@
 use dashu::{
     float::{
-        round::mode::{Down, Up},
         FBig,
+        round::mode::{Down, Up},
     },
     rational::RBig,
     rbig,

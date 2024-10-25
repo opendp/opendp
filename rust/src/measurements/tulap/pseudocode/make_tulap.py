@@ -25,6 +25,6 @@ def make_tulap(
         input_domain,
         function,
         input_metric,
-        output_measure=dp.fixed_smoothed_max_divergence(T=float),
+        output_measure=dp.fixed_smoothed_max_divergence(),
         privacy_map=privacy_map,
     )

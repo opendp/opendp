@@ -112,6 +112,11 @@ impl<D: InverseCDF> PartialSample<D> {
     }
 
     /// Refine `psrn` until both bounds of interval round to same TO
+    ///
+    /// # Proof Definition
+    /// Returns a sample from the distribution with CDF as defined by `self`,
+    /// rounded to the nearest value of type `TO`,
+    /// or an error if there is a lack of system entropy.
     pub fn value<TO: RoundCast<D::Edge> + PartialEq>(&mut self) -> Fallible<TO> {
         Ok(loop {
             let Some((l, r)) = self.lower().zip(self.upper()) else {

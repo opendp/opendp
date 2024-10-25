@@ -1,4 +1,4 @@
-use crate::traits::samplers::{psrn::test::assert_ordered_progression, PartialSample};
+use crate::traits::samplers::{PartialSample, psrn::test::assert_ordered_progression};
 
 use super::*;
 
