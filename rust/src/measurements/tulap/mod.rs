@@ -8,7 +8,7 @@ use crate::{
     error::Fallible,
     measures::{Approximate, MaxDivergence},
     metrics::AbsoluteDistance,
-    traits::samplers::TulapRV,
+    traits::samplers::{PartialSample, TulapRV},
 };
 
 #[cfg(feature = "ffi")]
@@ -29,8 +29,6 @@ pub fn make_tulap(
     delta: f64,
 ) -> Fallible<Measurement<AtomDomain<f64>, f64, AbsoluteDistance<f64>, Approximate<MaxDivergence>>>
 {
-    use crate::traits::samplers::PartialSample;
-
     if input_domain.nullable() {
         return fallible!(
             MakeMeasurement,
