@@ -34,6 +34,9 @@ For example:
     >>> type(dp.c.make_basic_composition)
     <class 'function'>
 '''
+from pathlib import Path
+
+__version__ = (Path(__file__).parent.parent.parent.parent / 'VERSION').read_text().strip()
 
 from opendp.mod import *
 from opendp.extras import sklearn, numpy, polars

@@ -3,6 +3,9 @@ import pytest
 import opendp.prelude as dp
 
 
+def test_version():
+    assert dp.__version__
+
 
 def test_type_getters():
     transformation = dp.t.make_mean(
