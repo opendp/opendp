@@ -1,5 +1,5 @@
 '''
-This module requires extra installs: ``pip install opendp[scikit-learn]``
+This module requires extra installs: ``pip install 'opendp[scikit-learn]'``
 
 For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
