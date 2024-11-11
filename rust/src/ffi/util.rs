@@ -9,7 +9,7 @@ use std::str::Utf8Error;
 
 use crate::core::Function;
 use crate::domains::ffi::ExtrinsicDomain;
-use crate::domains::{AtomDomain, BitVector, CategoricalDomain, OptionDomain, VectorDomain};
+use crate::domains::{AtomDomain, BitVector, OptionDomain, VectorDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
 use crate::measures::ffi::ExtrinsicDivergence;
@@ -42,7 +42,7 @@ pub struct Pairwise<T>(PhantomData<T>);
 
 // If polars is not enabled, then these structs don't exist.
 #[cfg(feature = "polars")]
-use crate::domains::{ExprDomain, LazyFrameDomain, SeriesDomain};
+use crate::domains::{CategoricalDomain, ExprDomain, LazyFrameDomain, SeriesDomain};
 #[cfg(feature = "polars")]
 use polars::prelude::{DataFrame, DslPlan, Expr, LazyFrame, Series};
 
@@ -68,6 +68,16 @@ struct OnceFrame;
 struct OnceFrameAnswer;
 #[cfg(not(feature = "polars"))]
 struct OnceFrameQuery;
+#[cfg(not(feature = "polars"))]
+#[derive(Clone, PartialEq, Debug)]
+struct CategoricalDomain;
+#[cfg(not(feature = "polars"))]
+impl crate::core::Domain for CategoricalDomain {
+    type Carrier = ();
+    fn member(&self, _val: &()) -> Fallible<bool> {
+        unimplemented!()
+    }
+}
 
 pub type RefCountFn = extern "C" fn(*const c_void, bool) -> bool;
 

@@ -36,7 +36,7 @@ where
 
     macro_rules! series_domain {
         ($ty:ty, $null:expr) => {{
-            SeriesDomain::new(name.as_ref(), AtomDomain::<$ty>::new(None, $null))
+            SeriesDomain::new(name, AtomDomain::<$ty>::new(None, $null))
         }};
     }
 
