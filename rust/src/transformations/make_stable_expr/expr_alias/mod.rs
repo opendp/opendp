@@ -38,12 +38,12 @@ where
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut output_domain = middle_domain.clone();
-    output_domain.column.name = name.as_ref().into();
+    output_domain.column.name = name.clone();
 
     let t_alias = Transformation::new(
         middle_domain.clone(),
         output_domain,
-        Function::then_expr(move |expr| expr.alias(name.as_ref())),
+        Function::then_expr(move |expr| expr.alias(name.clone())),
         middle_metric.clone(),
         middle_metric,
         StabilityMap::new(Clone::clone),

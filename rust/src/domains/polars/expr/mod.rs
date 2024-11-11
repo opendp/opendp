@@ -38,7 +38,7 @@ pub enum Context {
     /// `.agg(exprs)` is the general case where there are grouping columns.
     /// `.select(exprs)` is the special case where there are no grouping columns.
     Grouping {
-        by: BTreeSet<SmartString>,
+        by: BTreeSet<PlSmallStr>,
         margin: Margin,
     },
 }
@@ -47,7 +47,7 @@ impl Context {
     /// # Proof Definition
     /// Return the grouping columns and margin specified by `self` if in a grouping context,
     /// otherwise return an error.
-    pub fn grouping(&self, operation: &str) -> Fallible<(BTreeSet<SmartString>, Margin)> {
+    pub fn grouping(&self, operation: &str) -> Fallible<(BTreeSet<PlSmallStr>, Margin)> {
         match self {
             Context::RowByRow { .. } => fallible!(
                 MakeDomain,
@@ -144,7 +144,8 @@ impl Domain for ExprDomain {
         }
         .collect()?;
 
-        if !(self.column).member(frame.column(self.column.name.as_str())?)? {
+        let series = frame.column(&self.column.name)?.as_materialized_series();
+        if !(self.column).member(series)? {
             return Ok(false);
         }
 

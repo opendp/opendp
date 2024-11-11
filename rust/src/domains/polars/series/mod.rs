@@ -34,7 +34,7 @@ mod test;
 #[derive(Clone)]
 pub struct SeriesDomain {
     /// The name of series in the domain.
-    pub name: SmartString,
+    pub name: PlSmallStr,
     /// Domain of each element in the series.
     pub element_domain: Arc<dyn DynSeriesElementDomain>,
     /// Indicates if elements can be null.
@@ -98,7 +98,7 @@ impl SeriesDomain {
     /// # Proof Definition
     /// Returns a series domain spanning all series whose name is `name`
     /// and elements of the series are members of `element_domain`.
-    pub fn new<S: Into<SmartString>, DA: 'static + SeriesElementDomain>(
+    pub fn new<S: Into<PlSmallStr>, DA: 'static + SeriesElementDomain>(
         name: S,
         element_domain: DA,
     ) -> Self {
@@ -138,8 +138,8 @@ impl SeriesDomain {
             DataType::String => Arc::new(AtomDomain::<String>::default()),
             DataType::Date => Arc::new(AtomDomain::<NaiveDate>::default()),
             DataType::Datetime(time_unit, time_zone) => Arc::new(DatetimeDomain {
-                time_unit: time_unit.clone(),
-                time_zone: time_zone.clone(),
+                time_unit,
+                time_zone,
             }),
             DataType::Time => Arc::new(AtomDomain::<NaiveTime>::default()),
             dtype => return fallible!(MakeDomain, "unsupported type {}", dtype),
