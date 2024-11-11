@@ -26,7 +26,7 @@ fn test_make_expr_strptime() -> Fallible<()> {
         col("time").str().strptime(
             DataType::Time,
             StrptimeOptions {
-                format: Some("%H:%M:%S".to_string()),
+                format: Some("%H:%M:%S".into()),
                 strict: false,
                 exact: true,
                 cache: true,
@@ -36,7 +36,7 @@ fn test_make_expr_strptime() -> Fallible<()> {
         col("datetime").str().strptime(
             DataType::Datetime(TimeUnit::Milliseconds, None),
             StrptimeOptions {
-                format: Some("%Y-%m-%d %H:%M:%S".to_string()),
+                format: Some("%Y-%m-%d %H:%M:%S".into()),
                 strict: false,
                 exact: false,
                 cache: true,
@@ -46,7 +46,7 @@ fn test_make_expr_strptime() -> Fallible<()> {
         col("date").str().strptime(
             DataType::Date,
             StrptimeOptions {
-                format: Some("%Y-%m-%d".to_string()),
+                format: Some("%Y-%m-%d".into()),
                 strict: false,
                 exact: false,
                 cache: true,
@@ -86,7 +86,7 @@ fn test_strptime_datetime_edge() -> Fallible<()> {
             .strptime(
                 DataType::Datetime(TimeUnit::Milliseconds, None),
                 StrptimeOptions {
-                    format: Some("%Y-%m-%dT%H:%M:%SZ".to_string()),
+                    format: Some("%Y-%m-%dT%H:%M:%SZ".into()),
                     strict: false,
                     exact: true,
                     cache: true,
@@ -110,7 +110,7 @@ fn test_strptime_time_ignore_bad_date() -> Fallible<()> {
         .with_column(col("t").str().strptime(
             DataType::Time,
             StrptimeOptions {
-                format: Some("%Y-%m-%dT%H:%M:%SZ".to_string()),
+                format: Some("%Y-%m-%dT%H:%M:%SZ".into()),
                 strict: false,
                 exact: true,
                 cache: true,
@@ -136,7 +136,7 @@ fn test_strptime_nano_panic() -> Fallible<()> {
             .with_column(col("d").str().strptime(
                 DataType::Datetime(TimeUnit::Nanoseconds, None),
                 StrptimeOptions {
-                    format: Some("%Y-%m-%dT%H:%M:%SZ".to_string()),
+                    format: Some("%Y-%m-%dT%H:%M:%SZ".into()),
                     strict: false,
                     exact: true,
                     cache: true,

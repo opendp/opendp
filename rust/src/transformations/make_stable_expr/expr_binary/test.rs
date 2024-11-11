@@ -58,7 +58,7 @@ macro_rules! test_binary {
                 .with_column(col("L").$op(col("R")))
                 .collect()?
                 .column("L")?,
-            &Series::new("L", $expected),
+            &Column::new("L".into(), $expected),
             "input: {:?}",
             lf.clone().collect()?
         );

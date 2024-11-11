@@ -1122,4 +1122,4 @@ def exponential_bounds_search(
     return signed_band_search(center, at_center, sign)
 
 
-_EXPECTED_POLARS_VERSION = '1.1.0' # Keep in sync with setup.cfg.
+_EXPECTED_POLARS_VERSION = '1.12.0' # Keep in sync with setup.cfg.

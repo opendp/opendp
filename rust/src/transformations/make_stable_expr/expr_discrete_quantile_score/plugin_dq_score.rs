@@ -8,6 +8,7 @@ use polars::{
         StaticArray, UInt32Type, UInt64Type,
     },
     error::{polars_bail, polars_err, PolarsResult},
+    prelude::{Column, CompatLevel, IntoColumn},
     series::Series,
 };
 use polars_arrow::{
@@ -15,7 +16,7 @@ use polars_arrow::{
     datatypes::Field as ArrowField,
 };
 use polars_plan::{
-    dsl::{GetOutput, SeriesUdf},
+    dsl::{ColumnsUdf, GetOutput},
     prelude::{ApplyOptions, FunctionOptions},
 };
 
@@ -24,26 +25,24 @@ use pyo3_polars::derive::polars_expr;
 #[cfg(feature = "ffi")]
 use serde::{Deserialize, Serialize};
 
-use crate::{polars::OpenDPPlugin, traits::RoundCast};
+use crate::{
+    polars::{function_flags, OpenDPPlugin},
+    traits::RoundCast,
+};
 
 use super::series_to_vec;
 
 #[derive(Clone)]
 #[cfg_attr(feature = "ffi", derive(Serialize, Deserialize))]
 pub(crate) struct DiscreteQuantileScoreShim;
-impl SeriesUdf for DiscreteQuantileScoreShim {
+impl ColumnsUdf for DiscreteQuantileScoreShim {
     // makes it possible to downcast the AnonymousFunction trait object back to Self
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
 
-    fn call_udf(&self, _: &mut [Series]) -> PolarsResult<Option<Series>> {
+    fn call_udf(&self, _: &mut [Column]) -> PolarsResult<Option<Column>> {
         polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
-    }
-
-    fn get_output(&self) -> Option<GetOutput> {
-        // dtype is unknown
-        Some(GetOutput::from_type(DataType::Null))
     }
 }
 
@@ -53,10 +52,14 @@ impl OpenDPPlugin for DiscreteQuantileScoreShim {
         FunctionOptions {
             collect_groups: ApplyOptions::GroupWise,
             fmt_str: Self::NAME,
-            returns_scalar: true,
-            changes_length: true,
+            flags: function_flags(["RETURNS_SCALAR", "CHANGES_LENGTH"]),
             ..Default::default()
         }
+    }
+
+    fn get_output(&self) -> Option<GetOutput> {
+        // dtype is unknown
+        Some(GetOutput::from_type(DataType::Array(Box::new(UInt64), 1)))
     }
 }
 
@@ -78,22 +81,9 @@ impl OpenDPPlugin for DiscreteQuantileScorePlugin {
         FunctionOptions {
             collect_groups: ApplyOptions::GroupWise,
             fmt_str: Self::NAME,
-            returns_scalar: true,
-            changes_length: true,
+            flags: function_flags(["RETURNS_SCALAR", "CHANGES_LENGTH"]),
             ..Default::default()
         }
-    }
-}
-
-// allow the DiscreteQuantileScoreArgs struct to be stored inside an AnonymousFunction, when used from Rust directly
-impl SeriesUdf for DiscreteQuantileScorePlugin {
-    // makes it possible to downcast the AnonymousFunction trait object back to DiscreteQuantileScoreArgs
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn call_udf(&self, s: &mut [Series]) -> PolarsResult<Option<Series>> {
-        discrete_quantile_score_udf(s, self.clone()).map(Some)
     }
 
     fn get_output(&self) -> Option<GetOutput> {
@@ -104,16 +94,29 @@ impl SeriesUdf for DiscreteQuantileScorePlugin {
     }
 }
 
+// allow the DiscreteQuantileScoreArgs struct to be stored inside an AnonymousFunction, when used from Rust directly
+impl ColumnsUdf for DiscreteQuantileScorePlugin {
+    // makes it possible to downcast the AnonymousFunction trait object back to DiscreteQuantileScoreArgs
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn call_udf(&self, s: &mut [Column]) -> PolarsResult<Option<Column>> {
+        discrete_quantile_score_udf(s, self.clone()).map(Some)
+    }
+}
+
 /// Implementation of the discrete quantile score expression.
 ///
 /// The Polars engine executes this function over chunks of data.
 fn discrete_quantile_score_udf(
-    inputs: &[Series],
+    inputs: &[Column],
     kwargs: DiscreteQuantileScorePlugin,
-) -> PolarsResult<Series> {
-    let Ok([series]) = <&[_; 1]>::try_from(inputs) else {
+) -> PolarsResult<Column> {
+    let Ok([column]) = <&[_; 1]>::try_from(inputs) else {
         polars_bail!(InvalidOperation: "{} expects a single input field", DiscreteQuantileScoreShim::NAME);
     };
+    let series = column.as_materialized_series();
 
     let n = series.len() as u64;
     let DiscreteQuantileScorePlugin {
@@ -161,12 +164,12 @@ fn discrete_quantile_score_udf(
     let scores = UInt64Array::from_values(scores_iter);
 
     let dtype = ArrowDataType::FixedSizeList(
-        Box::new(ArrowField::new("", ArrowDataType::UInt64, false)),
+        Box::new(ArrowField::new("".into(), ArrowDataType::UInt64, false)),
         scores.len(),
     );
 
-    let fsla = FixedSizeListArray::new(dtype, Box::new(scores), None);
-    Ok(Series::from(ArrayChunked::from(fsla)))
+    let fsla = FixedSizeListArray::new(dtype, 1, Box::new(scores), None);
+    Ok(Series::from(ArrayChunked::from(fsla)).into_column())
 }
 
 // PT stands for Polars Type
@@ -222,23 +225,23 @@ pub(crate) fn discrete_quantile_score_plugin_type_udf(
     let Ok([field]) = <&[Field; 1]>::try_from(input_fields) else {
         polars_bail!(InvalidOperation: "DQ Score expects a single input field")
     };
-    if matches!(field.data_type(), UInt8 | UInt16) {
+    if matches!(field.dtype(), UInt8 | UInt16) {
         polars_bail!(
             InvalidOperation: "u8 and u16 not supported in the OpenDP Polars plugin. Please use u32 or u64."
         );
     }
     if !matches!(
-        field.data_type(),
+        field.dtype(),
         UInt32 | UInt64 | Int8 | Int16 | Int32 | Int64 | Float32 | Float64
     ) {
         polars_bail!(
             InvalidOperation: "Expected numeric data type, found {:?}",
-            field.data_type()
+            field.dtype()
         );
     }
 
     let out_dtype = Array(Box::new(UInt64), kwargs.candidates.0.len());
-    Ok(Field::new(field.name(), out_dtype))
+    Ok(Field::new(field.name().clone(), out_dtype))
 }
 
 // generate the FFI plugin for the DQ score expression
@@ -248,5 +251,7 @@ fn discrete_quantile_score_plugin(
     inputs: &[Series],
     kwargs: DiscreteQuantileScorePlugin,
 ) -> PolarsResult<Series> {
-    discrete_quantile_score_udf(inputs, kwargs)
+    let inputs: Vec<Column> = inputs.iter().cloned().map(Column::Series).collect();
+    let out = discrete_quantile_score_udf(inputs.as_slice(), kwargs)?;
+    Ok(out.take_materialized_series())
 }
