@@ -1,6 +1,6 @@
 use std::{collections::BTreeSet, sync::Arc};
 
-use polars::prelude::SmartString;
+use polars::prelude::PlSmallStr;
 use polars_plan::{
     dsl::{Expr, Operator},
     plans::DslPlan,
@@ -59,13 +59,13 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
     }))
 }
 
-pub fn match_grouping_columns(keys: Vec<Expr>) -> Fallible<BTreeSet<SmartString>> {
+pub fn match_grouping_columns(keys: Vec<Expr>) -> Fallible<BTreeSet<PlSmallStr>> {
     Ok(keys
         .iter()
         .map(|e| {
             Ok(match e {
-                Expr::Column(name) => vec![name.as_ref().into()],
-                Expr::Columns(names) => names.iter().map(|s| s.as_ref().into()).collect(),
+                Expr::Column(name) => vec![name.clone()],
+                Expr::Columns(names) => names.to_vec(),
                 e => {
                     return fallible!(
                         MakeMeasurement,
@@ -102,7 +102,7 @@ fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoisePlugin)>
 
     // check if the expression matches the expected name
     if let Some(name) = name {
-        if name != output_name.as_ref() {
+        if name != output_name.as_str() {
             return None;
         }
     }

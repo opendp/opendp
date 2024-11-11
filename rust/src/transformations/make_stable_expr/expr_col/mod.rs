@@ -29,7 +29,7 @@ where
 
     let output_domain = ExprDomain {
         column: (input_domain.columns.iter())
-            .find(|s| s.name.as_str() == col_name.as_ref())
+            .find(|s| s.name == col_name)
             .ok_or_else(|| err!(MakeTransformation, "unrecognized column: {}", col_name))?
             .clone(),
         context: input_domain.context.clone(),

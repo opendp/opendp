@@ -53,7 +53,7 @@ where
     }
 
     let mut data_column =
-        SeriesDomain::new(&*expr_output_name(&expr)?, AtomDomain::<bool>::default());
+        SeriesDomain::new(expr_output_name(&expr)?, AtomDomain::<bool>::default());
 
     let left_nullable = t_left.output_domain.column.nullable;
     let right_nullable = t_right.output_domain.column.nullable;

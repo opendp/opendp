@@ -66,10 +66,10 @@ fn assert_temporal_op_schema<const L: usize>(df: DataFrame, ops: [TemporalFuncti
         })
         .collect::<Vec<_>>();
 
-    let observed = df.lazy().select(exprs).schema().unwrap();
+    let observed = df.lazy().select(exprs).collect_schema().unwrap();
     let expected = Arc::new(Schema::from_iter(ops.iter().map(|op| {
         Field::new(
-            op.to_string().as_ref(),
+            op.to_string().into(),
             match_datetime_component(op).unwrap().0,
         )
     })));

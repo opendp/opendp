@@ -110,7 +110,7 @@ where
     };
 
     let final_predicate = if let Some((name, _, threshold_value, is_present)) = &threshold_info {
-        let threshold_expr = col(&name).gt(lit(*threshold_value));
+        let threshold_expr = col(name).gt(lit(*threshold_value));
         Some(match (is_present, predicate) {
             (false, Some(predicate)) => threshold_expr.and(predicate),
             _ => threshold_expr,

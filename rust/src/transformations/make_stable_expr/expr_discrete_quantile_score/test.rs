@@ -30,7 +30,10 @@ pub fn get_quantile_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
 #[test]
 fn test_expr_discrete_quantile_score_float() -> Fallible<()> {
     let (lf_domain, lf) = get_quantile_test_data()?;
-    let candidates = Series::new("", [0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.]);
+    let candidates = Series::new(
+        "".into(),
+        [0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.],
+    );
 
     let m_quant: Transformation<_, _, _, Parallel<LInfDistance<f64>>> = col("cycle_(..101f64)")
         .dp()
@@ -60,7 +63,7 @@ fn test_expr_discrete_quantile_score_float() -> Fallible<()> {
 fn test_expr_discrete_quantile_score_int() -> Fallible<()> {
     let (lf_domain, lf) = get_quantile_test_data()?;
     let expr_domain = lf_domain.select();
-    let candidates = Series::new("", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    let candidates = Series::new("".into(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
     let m_quant: Transformation<_, _, _, Parallel<LInfDistance<f64>>> = col("cycle_(..10i32)")
         .dp()

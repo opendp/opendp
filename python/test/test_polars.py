@@ -3,6 +3,7 @@ import opendp.prelude as dp
 import os
 import warnings
 import re
+import io
 
 
 def test_polars_version():
@@ -436,10 +437,14 @@ def test_polars_non_wrapping():
     # only calls that return a LazyFrame or LazyGroupBy are wrapped
     assert context.query().explain() == 'DF ["A"]; PROJECT */1 COLUMNS; SELECTION: None'
     assert context.query().collect_schema() == {"A": pl.String}
-    serial = context.query().with_columns(pl.col("A") + 2).serialize(format="json")
-    assert serial.startswith('{"HStack":')
+
     # for coverage: attribute access works properly
     context.query()._ldf
+
+    # serialize/deserialize roundtrip
+    query = context.query().select(dp.len())
+    serde_plan = pl.LazyFrame.deserialize(io.BytesIO(query.serialize())) # type: ignore
+    assert query.serialize() == serde_plan.serialize()
 
 
 def test_polars_collect_early():
@@ -740,12 +745,12 @@ def test_csv_bad_encoding_loading():
         # With "delete=False", clean up when exiting "with" instead.
         fp.write(b'name\n' + name_b)
         fp.close()
-        df = pl.scan_csv(fp.name, ignore_errors=True)
+        observed = pl.scan_csv(fp.name, encoding="utf8-lossy")
         expected = pl.LazyFrame(
             {"name": [name]},
             schema={"name": pl.String},
         )
-        pl_testing.assert_frame_equal(df, expected)
+        pl_testing.assert_frame_equal(observed, expected)
 
 
 def test_categorical_domain():

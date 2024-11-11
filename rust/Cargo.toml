@@ -52,7 +52,7 @@ bitvec = "1.0"
 # A strict version requirement is necessary to keep the serialization format of LazyFrames stable.
 # If you change the version of Polars, 
 # be sure to also change the Python package version requirement and test binary compatibility.
-polars = { version = "=0.41.3", features = [
+polars = { version = "=0.44.2", features = [
     "lazy",
     "csv",
     "dtype-struct",
@@ -71,7 +71,7 @@ polars = { version = "=0.41.3", features = [
     "cutqcut",
     "strings",
 ], optional = true }
-polars-plan = { version = "=0.41.3", features = [
+polars-plan = { version = "=0.44.2", features = [
     "ffi_plugin",
 ], optional = true }
 chrono = { version = "*", optional = true }
@@ -80,9 +80,9 @@ chrono = { version = "*", optional = true }
 # See https://github.com/pola-rs/polars/issues/19063#issuecomment-2397815029
 hashbrown = { version = "=0.14.5", features = ["raw"] }
 
-polars-arrow = { version = "=0.41.3", optional = true }
+polars-arrow = { version = "=0.44.2", optional = true }
 pyo3 = { version = "0.21.2", features = ["abi3-py39", "extension-module"], optional = true }
-pyo3-polars = { version = "=0.15.0", features = ["derive"], optional = true }
+pyo3-polars = { version = "=0.18.0", features = ["derive", "dtype-array", "dtype-categorical", "dtype-struct"], optional = true }
 serde = { version = "1.0", optional = true }
 serde-pickle = { version = "1.1", optional = true }
 ciborium = { version = "0.2.1", optional = true }

@@ -1,3 +1,6 @@
+mod categorical;
+pub use categorical::*;
+
 mod datetime;
 pub use datetime::*;
 

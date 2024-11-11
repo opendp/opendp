@@ -21,25 +21,11 @@ where
 {
     let DslPlan::DataFrameScan {
         df: _, // DO NOT TOUCH THE DATA. Touching the data will degrade any downstream stability or privacy guarantees.
-        filter,
-        output_schema,
         schema,
-        ..
     } = plan
     else {
         return fallible!(MakeTransformation, "Expected dataframe scan");
     };
-
-    if filter.is_some() {
-        return fallible!(MakeTransformation, "Lazyframe must not be optimized. Wait to optimize until after making a private lazyframe.");
-    }
-
-    if output_schema.is_some() {
-        return fallible!(
-            MakeTransformation,
-            "Dtype overrides are not currently supported."
-        );
-    }
 
     if &input_domain.schema() != schema.as_ref() {
         return fallible!(

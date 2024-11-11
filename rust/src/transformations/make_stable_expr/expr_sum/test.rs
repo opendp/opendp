@@ -113,7 +113,7 @@ fn test_polars_sum_types() -> Fallible<()> {
     macro_rules! test_dtype {
         ($dtype:ident, $expected:ident) => {
             assert_eq!(
-                schema.get_field(stringify!($dtype)).unwrap().data_type(),
+                schema.get_field(stringify!($dtype)).unwrap().dtype(),
                 &DataType::$expected
             );
         };
