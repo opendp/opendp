@@ -1,4 +1,7 @@
-use dashu::{integer::IBig, rational::RBig};
+use dashu::{
+    integer::{IBig, fast_div::ConstDivisor},
+    rational::RBig,
+};
 use opendp_derive::proven;
 
 use crate::{
@@ -69,12 +72,25 @@ pub trait NoisePrivacyMap<MI: Metric, MO: Measure>: Sample {
 /// \text{where } X \sim \mathcal{N}_\mathbb{Z}(0, \sigma^2)
 /// ```
 /// where $\sigma = scale$.
-#[derive(Clone)]
 pub struct ZExpFamily<const P: usize> {
     pub scale: RBig,
+    pub divisor: Option<ConstDivisor>,
 }
 
-pub trait Sample: 'static + Clone + Send + Sync {
+pub trait SampleDiscreteNoise: 'static + Send + Sync {
+    fn sample_discrete_noise(&self) -> Fallible<IBig>;
+}
+impl SampleDiscreteNoise for ZExpFamily<1> {
+    fn sample_discrete_noise(&self) -> Fallible<IBig> {
+        sample_discrete_laplace(self.scale.clone())
+    }
+}
+impl SampleDiscreteNoise for ZExpFamily<2> {
+    fn sample_discrete_noise(&self) -> Fallible<IBig> {
+        sample_discrete_gaussian(self.scale.clone())
+    }
+}
+pub trait Sample: SampleDiscreteNoise {
     /// # Proof Definition
     /// `self` represents a valid distribution.
     ///
@@ -83,17 +99,19 @@ pub trait Sample: 'static + Clone + Send + Sync {
     fn sample(&self, shift: &IBig) -> Fallible<IBig>;
 }
 
-#[proven(proof_path = "measurements/noise/Sample_for_ZExpFamily1.tex")]
-impl Sample for ZExpFamily<1> {
-    fn sample(&self, shift: &IBig) -> Fallible<IBig> {
-        Ok(shift + sample_discrete_laplace(self.scale.clone())?)
-    }
-}
-
 #[proven(proof_path = "measurements/noise/Sample_for_ZExpFamily2.tex")]
-impl Sample for ZExpFamily<2> {
+impl<const P: usize> Sample for ZExpFamily<P>
+where
+    Self: SampleDiscreteNoise,
+{
     fn sample(&self, shift: &IBig) -> Fallible<IBig> {
-        Ok(shift + sample_discrete_gaussian(self.scale.clone())?)
+        let mut sample = shift + self.sample_discrete_noise()?;
+
+        if let Some(divisor) = &self.divisor {
+            sample %= divisor
+        }
+
+        Ok(sample)
     }
 }
 
@@ -109,13 +127,12 @@ where
         self,
         (input_domain, input_metric): (VectorDomain<AtomDomain<IBig>>, MI),
     ) -> Fallible<Measurement<VectorDomain<AtomDomain<IBig>>, Vec<IBig>, MI, MO>> {
-        let distribution = self.clone();
         let output_measure = MO::default();
         let privacy_map = self.noise_privacy_map(&input_metric, &output_measure)?;
         Measurement::new(
             input_domain,
             Function::new_fallible(move |x: &Vec<IBig>| {
-                x.into_iter().map(|x_i| distribution.sample(x_i)).collect()
+                x.into_iter().map(|x_i| self.sample(x_i)).collect()
             }),
             input_metric,
             output_measure,
