@@ -135,6 +135,7 @@ fn test_make_noise_threshold_zexpfamily2_large_scale() -> Fallible<()> {
     let metric = L0PInfDistance(AbsoluteDistance::<RBig>::default());
     let distribution = ZExpFamily::<2> {
         scale: rbig!(23948285282902934157),
+        divisor: None,
     };
 
     let meas = distribution.make_noise_threshold((domain, metric), ibig!(23948285282902934157))?;
@@ -151,7 +152,10 @@ fn test_make_noise_threshold_zexpfamily2_large_scale() -> Fallible<()> {
 fn test_make_noise_threshold_zexpfamily2_zero_scale() -> Fallible<()> {
     let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<IBig>::default());
     let metric = L0PInfDistance(AbsoluteDistance::<RBig>::default());
-    let distribution = ZExpFamily { scale: rbig!(0) };
+    let distribution = ZExpFamily {
+        scale: rbig!(0),
+        divisor: None,
+    };
 
     let meas: Measurement<_, _, _, Approximate<ZeroConcentratedDivergence>> =
         distribution.make_noise_threshold((domain, metric), ibig!(100))?;

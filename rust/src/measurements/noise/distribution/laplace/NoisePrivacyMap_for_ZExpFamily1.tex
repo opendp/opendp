@@ -64,11 +64,11 @@ None
             &&\text{substitute } \rustdoc{measures/struct}{MaxDivergence} \\
         &\leq\max_{x \sim x'} \max_{y \in \mathbb{Z}^d} \Big[\ln \dfrac{\Pr[M(x) = y]}{\Pr[M(x') = y]} \Big] 
             &&\text{mass is upper-bounded by point densities}\\
-        &=\max_{x \sim x'} \max_{y \in \mathbb{Z}^d} \ln \dfrac{\prod_{i=1}^d \frac{e^{-1/s} - 1}{e^{-1/s} + 1} e^{-|x_i - z_i|/s}}{\prod_{i=1}^d\frac{e^{-1/s} - 1}{e^{-1/s} + 1} e^{-|x'_i-z_i|/s}}
+        &=\max_{x \sim x'} \max_{y \in \mathbb{Z}^d} \ln \dfrac{\prod_{i=1}^d \frac{e^{-1/s} - 1}{e^{-1/s} + 1} e^{-|x_i - y_i|/s}}{\prod_{i=1}^d\frac{e^{-1/s} - 1}{e^{-1/s} + 1} e^{-|x'_i-y_i|/s}}
             &&\text{substitute pdf}\\
-        &=\max_{x \sim x'} \max_{y \in \mathbb{Z}^d} \ln \prod_{i=1}^d e^{\frac{|x'_i - z_i| - |x_i - z_i|}{s}}
+        &=\max_{x \sim x'} \max_{y \in \mathbb{Z}^d} \ln \prod_{i=1}^d e^{\frac{|x'_i - y_i| - |x_i - y_i|}{s}}
             &&\text{cancel constants} \\
-        &=\frac{1}{s}\max_{x \sim x'} \max_{y \in \mathbb{Z}^d} \sum_{i=1}^d|x'_i - z_i| - |x_i - z_i| 
+        &=\frac{1}{s}\max_{x \sim x'} \max_{y \in \mathbb{Z}^d} \sum_{i=1}^d|x'_i - y_i| - |x_i - y_i| 
             &&\text{simplify via log rules}\\
         &\leq\frac{1}{s}\max_{x \sim x'} \sum_{i=1}^d|x'_i - x_i|
             &&d \text{ applications of reverse triangle inequality} \\
@@ -80,5 +80,22 @@ None
 
     Line \ref{line:map} implements this bound with exact division and conservative cast to float.
 \end{proof}
+ 
+\begin{align}
+    &\max_{x \sim x'} D_\infty(M_m(x), M_m(x')) &&\text{where } M_m(\cdot) \text{ denotes the modular mechanism} \\
+    &=\max_{x \sim x'} \max_{S \subseteq \textrm{supp}(M_m(\cdot))} \Big[\ln \dfrac{\Pr[M_m(x) \in S]}{\Pr[M_m(x') \in S]} \Big]
+        &&\text{substitute } \rustdoc{measures/struct}{MaxDivergence} \\
+    &\leq\max_{x \sim x'} \max_{y \in \mathbb{Z}^d_m} \Big[\ln \dfrac{\Pr[M_m(x) = y]}{\Pr[M_m(x') = y]} \Big] 
+        &&\text{mass is upper-bounded by point densities}\\
+    &=\max_{x \sim x'} \max_{y \in \mathbb{Z}^d_m} \ln \dfrac{\sum_{z \in (m\mathbb{Z}^d + y)} \prod_{i=1}^d \frac{e^{-1/s} - 1}{e^{-1/s} + 1} e^{-|x_i - z_i|/s}}{\sum_{z \in (m\mathbb{Z}^d + y)} \prod_{i=1}^d\frac{e^{-1/s} - 1}{e^{-1/s} + 1} e^{-|x'_i-z_i|/s}}
+        &&\text{substitute pdf}\\
+    &=\max_{x \sim x'} \max_{y \in \mathbb{Z}^d_m} \ln \dfrac{\sum_{z \in (m\mathbb{Z}^d + y)} \prod_{i=1}^d e^{-|x_i - z_i|/s}}{\sum_{z \in (m\mathbb{Z}^d + y)} \prod_{i=1}^d e^{-|x'_i-z_i|/s}}
+        &&\text{eliminate shared terms}\\
+    &=\max_{x \sim x'} \max_{y \in \mathbb{Z}^d_m} \ln \dfrac{\sum_{z \in (m\mathbb{Z}^d + y)} \exp(\sum_{i=1}^d -|x_i - z_i|/s)}{\sum_{z \in (m\mathbb{Z}^d + y)} \exp(\sum_{i=1}^d -|x'_i-z_i|/s)}
+        &&\text{eliminate shared terms}
+    % I feel the numerator and denominator should each simplify into something like \Pr[M(x) = y] / (1 - q^d), a la geometric series,
+    % and then the extra terms cancel out, leaving you with a ratio of the non-modular probabilities. 
+    % Then the proof continues as in the non-modular setting.
+\end{align}
 
 \end{document}

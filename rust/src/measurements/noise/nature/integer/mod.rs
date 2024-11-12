@@ -1,4 +1,7 @@
-use dashu::{integer::IBig, rational::RBig};
+use dashu::{
+    integer::{IBig, fast_div::ConstDivisor},
+    rational::RBig,
+};
 use opendp_derive::proven;
 
 use crate::{
@@ -6,7 +9,7 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measurements::{MakeNoise, NoisePrivacyMap, ZExpFamily},
-    metrics::{AbsoluteDistance, LpDistance},
+    metrics::{AbsoluteDistance, LpDistance, ModularMetric},
     traits::{Integer, Number, SaturatingCast},
     transformations::{make_vec, then_index_or_default},
 };
@@ -18,6 +21,7 @@ mod test;
 
 pub struct IntExpFamily<const P: usize> {
     pub scale: f64,
+    pub divisor: Option<ConstDivisor>,
 }
 
 /// # Proof Definition
@@ -37,13 +41,26 @@ where
     IBig: From<T>,
     RBig: TryFrom<QI>,
 {
+    let modular = input_metric.modular();
     Transformation::new(
         input_domain.clone(),
         VectorDomain {
             element_domain: AtomDomain::<IBig>::default(),
             size: input_domain.size.clone(),
         },
-        Function::new(move |x: &Vec<T>| x.iter().cloned().map(IBig::from).collect()),
+        Function::new(move |x: &Vec<T>| {
+            x.iter()
+                .cloned()
+                .map(IBig::from)
+                .map(|x_i| {
+                    if modular {
+                        x_i + IBig::from(T::MIN_FINITE)
+                    } else {
+                        x_i
+                    }
+                })
+                .collect()
+        }),
         input_metric,
         LpDistance::default(),
         StabilityMap::new_fallible(move |&d_in: &QI| {
@@ -96,17 +113,36 @@ where
     ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, LpDistance<P, QI>, MO>> {
         let distribution = ZExpFamily {
             scale: integerize_scale(self.scale, 0)?,
+            divisor: self.divisor,
         };
+        let modular = input_space.1.modular();
 
         let t_int = make_int_to_bigint(input_space)?;
         let m_noise = distribution.make_noise(t_int.output_space())?;
-        t_int >> m_noise >> then_saturating_cast()
+        t_int >> m_noise >> then_saturating_cast(modular)
     }
 }
 
 /// # Proof Definition
 /// For any choice of arguments, returns a valid postprocessor.
 #[proven(proof_path = "measurements/noise/nature/integer/then_saturating_cast.tex")]
-fn then_saturating_cast<TO: SaturatingCast<IBig>>() -> Function<Vec<IBig>, Vec<TO>> {
-    Function::new(move |x: &Vec<IBig>| x.into_iter().cloned().map(TO::saturating_cast).collect())
+fn then_saturating_cast<TO: Integer + SaturatingCast<IBig>>(
+    modular: bool,
+) -> Function<Vec<IBig>, Vec<TO>>
+where
+    IBig: From<TO>,
+{
+    Function::new(move |x: &Vec<IBig>| {
+        x.into_iter()
+            .cloned()
+            .map(|x_i| {
+                if modular {
+                    x_i - IBig::from(TO::MIN_FINITE)
+                } else {
+                    x_i
+                }
+            })
+            .map(TO::saturating_cast)
+            .collect()
+    })
 }
