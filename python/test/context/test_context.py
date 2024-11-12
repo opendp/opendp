@@ -89,7 +89,7 @@ def test_context_repr():
     ) == '''Context(
     accountant = Measurement(
         input_domain   = VectorDomain(AtomDomain(T=i32)),
-        input_metric   = SymmetricDistance(),
+        input_metric   = SymmetricDistance,
         output_measure = MaxDivergence),
     d_in       = 3,
     d_mids     = [3.0],
@@ -104,7 +104,7 @@ def test_context_repr():
     ) == '''Context(
     accountant = Measurement(
         input_domain   = VectorDomain(AtomDomain(T=i32)),
-        input_metric   = SymmetricDistance(),
+        input_metric   = SymmetricDistance,
         output_measure = MaxDivergence),
     d_in       = 3,
     d_mids     = None,
@@ -119,7 +119,7 @@ def test_context_repr():
     ) == '''Context(
     accountant = Odometer(
         input_domain   = VectorDomain(AtomDomain(T=i32)),
-        input_metric   = SymmetricDistance(),
+        input_metric   = SymmetricDistance,
         output_measure = MaxDivergence),
     d_in       = 3,
     d_mids     = None,
@@ -213,14 +213,14 @@ def test_query_repr():
         split_evenly_over=1
     )
     assert repr(context.query()) == '''Query(
-    chain          = (VectorDomain(AtomDomain(T=i32)), SymmetricDistance()),
+    chain          = (VectorDomain(AtomDomain(T=i32)), SymmetricDistance),
     output_measure = MaxDivergence,
     d_in           = 1,
     d_out          = 1.0,
     context        = Context(
         accountant = Measurement(
             input_domain   = VectorDomain(AtomDomain(T=i32)),
-            input_metric   = SymmetricDistance(),
+            input_metric   = SymmetricDistance,
             output_measure = MaxDivergence),
         d_in       = 1,
         d_mids     = [1.0],

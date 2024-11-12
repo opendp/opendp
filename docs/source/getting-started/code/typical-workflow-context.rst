@@ -8,7 +8,7 @@
 
     >>> privacy_unit = dp.unit_of(contributions=1)
     >>> privacy_unit
-    (SymmetricDistance(), 1)
+    (SymmetricDistance, 1)
 
     # /unit-of-privacy
 

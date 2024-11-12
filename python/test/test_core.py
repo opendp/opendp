@@ -107,9 +107,9 @@ def test_supporting_elements():
     assert str(clamper.input_domain.carrier_type) == 'Vec<i32>'
     assert str(clamper.output_domain) == 'VectorDomain(AtomDomain(bounds=[0, 2], T=i32))'
     assert str(clamper.output_domain.carrier_type) == 'Vec<i32>'
-    assert str(clamper.input_metric) == 'SymmetricDistance()'
+    assert str(clamper.input_metric) == 'SymmetricDistance'
     assert str(clamper.input_metric.distance_type) == 'u32'
-    assert str(clamper.output_metric) == 'SymmetricDistance()'
+    assert str(clamper.output_metric) == 'SymmetricDistance'
     assert str(clamper.output_metric.distance_type) == 'u32'
 
     from opendp.measurements import make_laplace

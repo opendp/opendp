@@ -17,7 +17,7 @@ Proves soundness of the implementation of \rustdoc{measurements/noise/nature/fn}
 \subsubsection*{Compiler-Verified}
 
 \begin{itemize}
-    \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{SaturatingCast}\texttt{<IBig>}
+    \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{Integer}
 \end{itemize}
 
 \subsubsection*{User-Verified}
@@ -32,14 +32,31 @@ None
 \end{theorem}
 
 \begin{proof}
-    By the definition of the function on line \ref{line:function},
-    and since \texttt{IBig.from} is infallible, the function is infallible, 
-    meaning that the function cannot raise data-dependent errors.
-    The function also always returns a vector of IBigs, of the same length as the input, 
-    meaning the output of the function is always a member of the output domain,
-    as defined on line \ref{line:output-domain}.
-    Finally, the function is 1-stable, because the real values of the numbers remain un-changed,
-    meaning the distance between adjacent inputs always remains the same, satisfying the stability property.
+    Since \texttt{IBig.from} is infallible, and subtraction by the constant
+    \texttt{T::MIN\_FINITE} is also infallible, the function closure cannot raise
+    data-dependent errors.
+
+    The function always returns a vector of big integers of the same length as the input,
+    so the output is always a member of the output domain.
+
+    It remains to show stability.
+    When the metric is non-modular, the function is simply the coordinatewise exact cast
+    from \texttt{T} to \texttt{IBig}, so distances are unchanged.
+
+    When the metric is modular, each coordinate is translated by the same constant
+    $-\texttt{T::MIN\_FINITE}$.
+    Let $m = 2^{\texttt{bits}(T)}$ be the modulus of \texttt{T}.
+    The map $x \mapsto x - \texttt{T::MIN\_FINITE}$ is a bijection from the native integer
+    representation of \texttt{T} onto $\{0, \ldots, m - 1\} \subset \mathbb{Z}$.
+    For any two inputs $x, x'$ and any lift $z \in m\mathbb{Z}^d$,
+    \[
+        ((x - \texttt{T::MIN\_FINITE}) + z) - (x' - \texttt{T::MIN\_FINITE}) = (x + z) - x'.
+    \]
+    Therefore translating both arguments by the same constant does not change the set of
+    admissible lifts in the definition of modular $L_p$ distance, so the modular distance
+    is preserved exactly.
+
+    Hence the transformation is 1-stable in either branch, satisfying the stability property.
 \end{proof}
 
 

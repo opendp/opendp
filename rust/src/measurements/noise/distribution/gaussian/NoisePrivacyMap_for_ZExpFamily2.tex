@@ -57,21 +57,63 @@ None
     To avoid a rational division overflow, line \ref{line:zero-scale} returns infinity.
 
     By line \ref{line:map}, both the sensitivity and scale are positive rationals.
-    Recall Theorem~14 from \cite{CKS20}.
+    Write $\sigma$ for \texttt{self.scale}.
 
-    \begin{theorem}[Multivariate Discrete Gaussian Satisfies Concentrated Differential Privacy]
-        Let $\sigma_1, \ldots, \sigma_d > 0$ and $\varepsilon > 0$. 
-        Let $q: \mathcal{X}^n \rightarrow \mathbb{Z}^d$ satisfy $\sum_{j \in [d]} (q_j(x) - q_j(x'))^2 / \sigma^2_j \leq \varepsilon^2$ 
-        for all $x, x' \in \mathcal{X}^n$ differing on a single entry.
-        Define a randomized algorithm $M: \mathcal{X}^n \rightarrow \mathbb{Z}^d$ by $M(x) = q(x) + Y$ where $Y_j \leftarrow \mathcal{N}_\mathbb{Z}(0, \sigma^2_j)$
-        independently for all $j \in [d]$.
-        Then $M$ satisfies $\frac{1}{2}\varepsilon^2$-concentrated differential privacy.
-    \end{theorem}
+    If the metric is non-modular, Theorem~14 from \cite{CKS20} implies that
+    for all $\alpha > 1$,
+    \[
+        D_\alpha(M(x), M(x')) \leq \alpha \cdot \frac{(\texttt{d\_in}/\sigma)^2}{2}.
+    \]
 
-    Assuming that $\sigma_1, \ldots, \sigma_d = \sigma$, and re-defining $q(x)$ as $x$ and $q(x')$ as $x'$, 
-    then if $||x - x'||_2 / \sigma \leq \varepsilon$ then $M$ satisfies $\frac{1}{2}\varepsilon^2$-concentrated differential privacy.
+    Suppose instead that the metric is modular.
+    Let
+    \[
+        G = \mathbb{Z}_{m_1} \times \cdots \times \mathbb{Z}_{m_d}
+    \]
+    be the quotient group induced by the coordinatewise moduli, and let
+    $\pi : \mathbb{Z}^d \to G$ be coordinatewise reduction modulo those moduli.
+    The wrapped mechanism is
+    \[
+        M_m(x) = \pi(x + Y),
+    \]
+    where the coordinates of $Y$ are independent discrete-Gaussian random variables with
+    common scale $\sigma$.
 
-    Therefore, for all $\alpha > 1$, $D_\alpha(M(x), M(x')) \leq \alpha \cdot (\texttt{d\_in} / \sigma)^2 / 2$.
+    Consider neighboring inputs $x \sim x'$ and let $r = x' - x \in G$.
+    By the definition of modular $L_2$ distance, there exists a lift
+    $t \in \mathbb{Z}^d$ such that $\pi(t) = r$ and
+    \[
+        \sum_{i=1}^d \frac{t_i^2}{\sigma^2} \le \left(\frac{\texttt{d\_in}}{\sigma}\right)^2.
+    \]
+
+    Choose any lift $a \in \mathbb{Z}^d$ of $x$.
+    Then $a + t$ is a lift of $x'$.
+    Let $P$ be the law of $a + Y$ on $\mathbb{Z}^d$, and $Q$ the law of $a + t + Y$.
+    Their pushforwards under $\pi$ are exactly the laws of $M_m(x)$ and $M_m(x')$.
+    By data processing for R\'enyi divergence under the deterministic map $\pi$,
+    \[
+        D_\alpha(M_m(x), M_m(x')) \le D_\alpha(P, Q).
+    \]
+    Since adding the same constant does not change R\'enyi divergence,
+    \[
+        D_\alpha(P, Q) = D_\alpha(Y, Y + t).
+    \]
+
+    Proposition~5 of \cite{CKS20} gives the scalar discrete-Gaussian R\'enyi bound,
+    and Theorem~14 gives the multivariate independent-coordinate version.
+    Therefore, for all $\alpha > 1$,
+    \[
+        D_\alpha(Y, Y + t)
+        \le
+        \alpha \sum_{i=1}^d \frac{t_i^2}{2\sigma^2}
+        \le
+        \alpha \cdot \frac{(\texttt{d\_in}/\sigma)^2}{2}.
+    \]
+    Combining the displays yields the same bound for the wrapped mechanism.
+
+    Line \ref{line:map} implements this upper bound exactly as
+    \texttt{d\_in\textasciicircum 2 / (2 * scale\textasciicircum 2)} using exact rational arithmetic
+    and a conservative cast to float.
 \end{proof}
 
 \bibliographystyle{alpha}
